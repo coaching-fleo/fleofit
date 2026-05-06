@@ -153,8 +153,13 @@ export default function WorkoutDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [logoBase64, setLogoBase64] = useState(null)
 
   useEffect(() => { fetchWorkout() }, [id])
+
+  useEffect(() => {
+    getLogoDataURL().then(setLogoBase64)
+  }, [])
 
   // Carica la lista atleti solo quando si apre il modal per la prima volta
   useEffect(() => {
@@ -461,7 +466,7 @@ export default function WorkoutDetail() {
   const exportShare2 = async () => {
     if (!igRef.current) return
     const canvas = await html2canvas(igRef.current, {
-      backgroundColor: '#171717',
+      backgroundColor: 'transparent',
       scale: 3,
       useCORS: true
     })
@@ -481,7 +486,7 @@ export default function WorkoutDetail() {
 
       // 2. Genera Immagine in memoria
       const canvas = await html2canvas(igRef.current, {
-        backgroundColor: '#171717',
+        backgroundColor: 'transparent',
         scale: 3,
         useCORS: true
       })
@@ -638,110 +643,114 @@ export default function WorkoutDetail() {
       </div>
 
       {/* Share2 CARD (nascosta, usata per screenshot) */}
-      <div className="mt-8">
+      <div className="mt-8 overflow-hidden">
         <p className="text-gray-600 text-xs mb-2">Anteprima grafica Share2:</p>
-        <div ref={igRef} style={{
-          width: '400px',
-          background: 'linear-gradient(135deg, #171717 0%, #1e1e1e 100%)',
-          padding: '32px',
-          borderRadius: '0px',
-          fontFamily: 'system-ui, sans-serif',
-          border: '1px solid #2a2a2a'
-        }}>
-          {/* IG Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <div>
-              <div style={{ color: '#f1ba17', fontWeight: 900, fontSize: '20px', letterSpacing: '3px' }}>FLEO<span style={{ color: 'white' }}>FIT</span></div>
-              <div style={{ color: '#555', fontSize: '11px', marginTop: '2px', letterSpacing: '1px' }}>BY COACH FEDERICO LEO</div>
-            </div>
-            <div style={{
-              background: c.bg.includes('blue') ? '#1e3a5f' : c.bg.includes('green') ? '#14532d' : '#3b0764',
-              color: c.hex || '#f1ba17',
-              fontWeight: 800, fontSize: '13px',
-              padding: '6px 14px', borderRadius: '20px',
-              border: `1px solid ${c.hex || '#f1ba17'}40`
-            }}>{type}</div>
-          </div>
-
-          {/* Titolo */}
-          <div style={{ color: 'white', fontWeight: 800, fontSize: '22px', marginBottom: '4px', lineHeight: 1.2 }}>{workout.title}</div>
-          <div style={{ color: '#555', fontSize: '12px', marginBottom: '20px' }}>
-            {format(parseISO(workout.date), 'd MMMM yyyy', { locale: it })}
-          </div>
-
-          {/* Params */}
-          <div style={{
-            background: '#222', borderRadius: '10px', padding: '10px 14px',
-            marginBottom: '20px', borderLeft: `3px solid ${c.hex || '#f1ba17'}`
+        <div style={{ overflowX: 'auto', paddingBottom: '20px' }}>
+          <div ref={igRef} style={{
+            width: '800px',
+            backgroundColor: '#111111',
+            padding: '64px',
+            borderRadius: '40px',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
           }}>
-            <div style={{ color: c.hex || '#f1ba17', fontSize: '12px', fontWeight: 700 }}>{paramSummary()}</div>
-          </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '48px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                {logoBase64 && <img src={logoBase64} alt="Logo" style={{ height: '48px', objectFit: 'contain' }} />}
+                <div>
+                  <div style={{ color: 'white', fontWeight: 900, fontSize: '32px', letterSpacing: '1px', lineHeight: 1 }}>FLEO<span style={{ color: '#f1ba17' }}>FIT</span></div>
+                  <div style={{ color: '#888', fontSize: '14px', marginTop: '6px', letterSpacing: '1px', fontWeight: 600 }}>COACH FEDERICO LEO</div>
+                </div>
+              </div>
+              <div style={{
+                backgroundColor: type === 'Running' ? '#f1ba1715' : '#222',
+                color: c.hex || '#f1ba17',
+                  fontWeight: 800, fontSize: '18px',
+                padding: '10px 20px', borderRadius: '12px',
+                border: `2px solid ${c.hex || '#444'}40`,
+                letterSpacing: '1px'
+              }}>{type.toUpperCase()}</div>
+            </div>
 
-          {/* Esercizi */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
-            {isRunning ? (
-              (s?.steps || s?.main?.steps || []).map((step, i) => {
-                const typeLabels = { warmup: 'Warm Up', run: 'Run', recover: 'Recover', cooldown: 'Cool Down', repeat: 'Repeat' }
-                return (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', borderLeft: '2px solid #444', paddingLeft: '10px' }}>
-                    <div style={{ color: '#60a5fa', fontSize: '12px', fontWeight: 800 }}>
-                      {typeLabels[step.type]?.toUpperCase()} {step.type === 'repeat' ? `x${step.rounds}` : ''}
+            {/* Titolo */}
+            <div style={{ color: 'white', fontWeight: 900, fontSize: '42px', marginBottom: '12px', lineHeight: 1.1 }}>{workout.title}</div>
+            <div style={{ color: '#f1ba17', fontSize: '20px', marginBottom: '40px', fontWeight: 600 }}>
+              {format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }).toUpperCase()}
+            </div>
+
+            {/* Params */}
+            <div style={{
+              backgroundColor: '#1a1a1a', borderRadius: '16px', padding: '16px 24px',
+              marginBottom: '40px', borderLeft: `6px solid ${c.hex || '#f1ba17'}`
+            }}>
+              <div style={{ color: c.hex || '#f1ba17', fontSize: '18px', fontWeight: 700 }}>{paramSummary()}</div>
+            </div>
+
+            {/* Esercizi */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '40px' }}>
+              {isRunning ? (
+                (s?.steps || s?.main?.steps || []).map((step, i) => {
+                  const typeLabels = { warmup: 'Warm Up', run: 'Run', recover: 'Recover', cooldown: 'Cool Down', repeat: 'Repeat' }
+                  return (
+               <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '4px solid #333', paddingLeft: '16px' }}>
+                      <div style={{ color: step.type === 'repeat' ? '#f1ba17' : '#e5e5e5', fontSize: '20px', fontWeight: 800, letterSpacing: '0.5px' }}>
+                        {typeLabels[step.type]?.toUpperCase()} {step.type === 'repeat' ? `x${step.rounds}` : ''}
+                      </div>
+                      {step.type === 'repeat' ? (
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ color: '#e5e5e5', fontSize: '18px', fontWeight: 500 }}>Run: <span style={{ color: '#fff' }}>{step.runDuration}</span> {step.runPace ? `· ${step.runPace}` : ''}</div>
+                          <div style={{ color: '#a3a3a3', fontSize: '18px', fontWeight: 500 }}>Rec: <span style={{ color: '#ccc' }}>{step.recDuration}</span> {step.recPace ? `· ${step.recPace}` : ''}</div>
+                        </div>
+                      ) : (
+                         <div style={{ color: '#e5e5e5', fontSize: '18px', fontWeight: 500 }}>
+                          <span style={{ color: '#fff' }}>{step.duration}</span> {step.pace ? `· ${step.pace}` : ''} {step.notes ? `(${step.notes})` : ''}
+                        </div>
+                      )}
                     </div>
-                    {step.type === 'repeat' ? (
-                      <>
-                        <div style={{ color: '#e5e5e5', fontSize: '12px' }}>Run: {step.runDuration} {step.runPace ? `· ${step.runPace}` : ''}</div>
-                        <div style={{ color: '#a3a3a3', fontSize: '12px' }}>Rec: {step.recDuration} {step.recPace ? `· ${step.recPace}` : ''}</div>
-                      </>
+                  )
+                })
+              ) : (
+                blocks.map((block, bIdx) => (
+                <div key={bIdx}>
+                    <div style={{ color: TYPE_COLORS[block.type]?.hex || '#e5e5e5', fontSize: '20px', fontWeight: 800, marginBottom: '12px', letterSpacing: '0.5px' }}>
+                      {getBlockTitle(block).toUpperCase()}
+                    </div>
+                    {['WarmUp', 'Rest'].includes(block.type) ? (
+                      <div style={{ color: '#a3a3a3', fontSize: '18px', paddingLeft: '16px', borderLeft: '4px solid #333', fontWeight: 500 }}>
+                        {block.params?.duration} {block.notes ? ` · ${block.notes}` : ''}
+                      </div>
                     ) : (
-                      <div style={{ color: '#e5e5e5', fontSize: '12px' }}>
-                        {step.duration} {step.pace ? `· ${step.pace}` : ''} {step.notes ? `(${step.notes})` : ''}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '16px', borderLeft: '4px solid #333' }}>
+                        {block.exercises?.map((ex, i) => {
+                          const detail = isDistance(ex.name) ? (ex.meters && ex.meters !== '-' ? ex.meters : '') : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+                          const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
+                          return (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            {(block.type === 'EMOM' || block.type === 'ON/OFF') && (
+                              <div style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: '#222', border: `2px solid ${TYPE_COLORS[block.type]?.hex}40`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: TYPE_COLORS[block.type]?.hex, fontSize: '16px', fontWeight: 800, flexShrink: 0
+                              }}>{i + 1}</div>
+                            )}
+                            <div style={{ color: '#fff', fontSize: '22px', fontWeight: 600 }}>{ex.name}</div>
+                            <div style={{ color: '#999', fontSize: '20px', marginLeft: 'auto', fontWeight: 500 }}>
+                              {detail} {paceStr} {ex.kg ? ` · ${ex.kg}kg` : ''}
+                            </div>
+                          </div>
+                        )})}
                       </div>
                     )}
                   </div>
-                )
-              })
-            ) : (
-              blocks.map((block, bIdx) => (
-                <div key={bIdx} style={{ marginBottom: '10px' }}>
-                  <div style={{ color: TYPE_COLORS[block.type]?.hex || '#e5e5e5', fontSize: '12px', fontWeight: 800, marginBottom: '6px' }}>
-                    {getBlockTitle(block).toUpperCase()}
-                  </div>
-                  {['WarmUp', 'Rest'].includes(block.type) ? (
-                    <div style={{ color: '#a3a3a3', fontSize: '12px', paddingLeft: '10px', borderLeft: '2px solid #444' }}>
-                      {block.params?.duration} {block.notes ? ` · ${block.notes}` : ''}
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '10px', borderLeft: '2px solid #444' }}>
-                      {block.exercises?.map((ex, i) => {
-                        const detail = isDistance(ex.name) ? (ex.meters && ex.meters !== '-' ? ex.meters : '') : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
-                        const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
-                        return (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          {(block.type === 'EMOM' || block.type === 'ON/OFF') && (
-                            <div style={{
-                              width: '20px', height: '20px', borderRadius: '50%',
-                              background: '#222', border: `1px solid ${TYPE_COLORS[block.type]?.hex}40`,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              color: TYPE_COLORS[block.type]?.hex, fontSize: '9px', fontWeight: 700, flexShrink: 0
-                            }}>{i + 1}</div>
-                          )}
-                          <div style={{ color: '#e5e5e5', fontSize: '12px', fontWeight: 600 }}>{ex.name}</div>
-                          <div style={{ color: '#777', fontSize: '11px', marginLeft: 'auto' }}>
-                            {detail} {paceStr} {ex.kg ? ` · ${ex.kg}kg` : ''}
-                          </div>
-                        </div>
-                      )})}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+                ))
+              )}
+            </div>
 
-          {/* Footer */}
-          <div style={{ borderTop: '1px solid #2a2a2a', paddingTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ color: '#333', fontSize: '10px', letterSpacing: '1px' }}>HYROX TRAINING</div>
-            <div style={{ color: '#f1ba17', fontSize: '10px', fontWeight: 700 }}>@fleofit</div>
+            {/* Footer */}
+            <div style={{ borderTop: '2px solid #333', paddingTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <div style={{ color: '#f1ba17', fontSize: '18px', fontWeight: 800, letterSpacing: '1px' }}>@FLEOFIT</div>
+            </div>
           </div>
         </div>
       </div>
