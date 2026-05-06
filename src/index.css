@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #f1ba17;
+  --color-bg: #171717;
+  --color-surface: #222222;
+  --color-surface2: #2a2a2a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #171717;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+}
