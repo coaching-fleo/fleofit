@@ -2,17 +2,41 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 // TOGLI Share2, metti Share2
-import { ArrowLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check } from 'lucide-react'
+import { ArrowLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
 const TYPE_COLORS = {
-  EMOM: { text: 'text-blue-300', bg: 'bg-blue-900/40', border: 'border-blue-700', hex: '#3b82f6' },
+  'ON/OFF': { text: 'text-blue-300', bg: 'bg-blue-900/40', border: 'border-blue-700', hex: '#3b82f6' },
+  EMOM: { text: 'text-cyan-300', bg: 'bg-cyan-900/40', border: 'border-cyan-700', hex: '#06b6d4' },
   AMRAP: { text: 'text-green-300', bg: 'bg-green-900/40', border: 'border-green-700', hex: '#22c55e' },
   'For Time': { text: 'text-purple-300', bg: 'bg-purple-900/40', border: 'border-purple-700', hex: '#a855f7' },
   Running: { text: 'text-blue-400', bg: 'bg-blue-900/30', border: 'border-blue-600', hex: '#60a5fa' }
+}
+
+const getIntensityColor = (val) => {
+  const num = parseInt(val, 10);
+  if (isNaN(num)) return 'text-gray-500';
+  if (num <= 3) return 'text-green-400';
+  if (num <= 6) return 'text-yellow-400';
+  if (num <= 8) return 'text-orange-500';
+  return 'text-red-500';
+}
+
+const timeToSeconds = (timeStr) => {
+  if (!timeStr) return 0;
+  if (timeStr.includes(' min')) return parseInt(timeStr) * 60;
+  const parts = timeStr.split(':')
+  if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
+  return 0
+}
+const formatTime = (totalSeconds) => {
+  const m = Math.floor(totalSeconds / 60)
+  const s = totalSeconds % 60
+  if (s === 0) return `${m} min`
+  return `${m}:${s.toString().padStart(2, '0')} min`
 }
 
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike']
@@ -108,7 +132,8 @@ export default function WorkoutDetail() {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' })
     const s = workout.sections
     const main = s?.main
-    const type = main?.type || ''
+    const typeRaw = main?.type || ''
+    const type = (typeRaw === 'EMOM' && main?.params?.on) ? 'ON/OFF' : typeRaw
     const c = TYPE_COLORS[type]
     let y = 20
 
@@ -134,20 +159,46 @@ export default function WorkoutDetail() {
     doc.setTextColor(241, 186, 23)
     doc.setFont('helvetica', 'bold')
     doc.text(`[ ${type} ]`, 20, y)
-    if (type === 'EMOM') {
+    
+    let currentX = 45;
+    if (type === 'ON/OFF') {
       doc.setTextColor(180, 180, 180)
       doc.setFont('helvetica', 'normal')
-      doc.text(`  ${main.params.on} ON / ${main.params.off} OFF · ${main.params.total}`, 45, y)
+      doc.text(`  ${main.params.on} ON / ${main.params.off} OFF · ${main.params.total}`, currentX, y)
+      currentX += 60;
+    } else if (type === 'EMOM') {
+      doc.setTextColor(180, 180, 180)
+      doc.setFont('helvetica', 'normal')
+      const intervalSec = timeToSeconds(main.params.interval || '1:00')
+      const rounds = parseInt(main.params.rounds || '10', 10)
+      doc.text(`  ${main.params.interval} x ${rounds} rounds · ${formatTime(intervalSec * rounds)}`, currentX, y)
+      currentX += 60;
     } else if (type === 'AMRAP') {
       doc.setTextColor(180, 180, 180)
       doc.setFont('helvetica', 'normal')
-      doc.text(`  ${main.params.duration}`, 45, y)
+      doc.text(`  ${main.params.duration}`, currentX, y)
+      currentX += 30;
     } else if (type === 'For Time') {
       doc.setTextColor(180, 180, 180)
       doc.setFont('helvetica', 'normal')
       doc.text(`  ${main.params.rounds} rounds`, 55, y)
+      currentX = 55 + 30;
+    } else if (type === 'Running') {
+      currentX = 55;
     }
-    y += 8
+    y += 6
+
+    if (s?.intensity) {
+      doc.setTextColor(241, 186, 23)
+      doc.setFont('helvetica', 'bold')
+      doc.text('INTENSITA\': ', 20, y)
+      doc.setTextColor(200, 200, 200)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`${s.intensity} / 10`, 45, y)
+      y += 6
+    }
+    
+    y += 2
 
     // Divider
     doc.setDrawColor(60, 60, 60)
@@ -204,11 +255,11 @@ export default function WorkoutDetail() {
         doc.setFont('helvetica', 'normal')
         if (step.type === 'repeat') {
            doc.setTextColor(200, 200, 200)
-           doc.text(`  Corsa: ${step.runDuration} ${step.runPace ? '@'+step.runPace : ''}`, 30, y); y += 5
-           doc.text(`  Recupero: ${step.recDuration} ${step.recPace ? '@'+step.recPace : ''}`, 30, y); y += 5
+           doc.text(`  Corsa: ${step.runDuration} ${step.runPace ? '@'+step.runPace : ''} ${step.runIntensity ? '[Int: '+step.runIntensity+'/10]' : ''}`, 30, y); y += 5
+           doc.text(`  Recupero: ${step.recDuration} ${step.recPace ? '@'+step.recPace : ''} ${step.recIntensity ? '[Int: '+step.recIntensity+'/10]' : ''}`, 30, y); y += 5
         } else {
            doc.setTextColor(200, 200, 200)
-           const text = `${step.duration || ''} ${step.pace ? '@'+step.pace : ''} ${step.notes ? '('+step.notes+')' : ''}`
+           const text = `${step.duration || ''} ${step.pace ? '@'+step.pace : ''} ${step.intensity ? '[Int: '+step.intensity+'/10]' : ''} ${step.notes ? '('+step.notes+')' : ''}`
            doc.text(`  ${text}`, 30, y)
            y += 5
         }
@@ -220,11 +271,12 @@ export default function WorkoutDetail() {
         doc.setTextColor(200, 200, 200)
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(10)
-        const prefix = type === 'EMOM' ? `Min.${i + 1}  ` : `· `
+        const prefix = (type === 'EMOM' || type === 'ON/OFF') ? `Min.${i + 1}  ` : `· `
         const detail = isDistance(ex.name) ? ex.meters : `${ex.reps} reps`
         const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
         const noteStr = ex.notes ? `  → ${ex.notes}` : ''
-        doc.text(`${prefix}${ex.name}  ${detail}${kgStr}${noteStr}`, 25, y)
+        const intStr = ex.intensity ? `  [Int: ${ex.intensity}/10]` : ''
+        doc.text(`${prefix}${ex.name}  ${detail}${kgStr}${intStr}${noteStr}`, 25, y)
         y += 6
         if (y > 260) { doc.addPage(); y = 20 }
       })
@@ -344,11 +396,17 @@ export default function WorkoutDetail() {
 
   const s = workout.sections
   const main = s?.main
-  const type = main?.type || ''
+  const typeRaw = main?.type || ''
+  const type = (typeRaw === 'EMOM' && main?.params?.on) ? 'ON/OFF' : typeRaw
   const c = TYPE_COLORS[type] || TYPE_COLORS['Running']
 
   const paramSummary = () => {
-    if (type === 'EMOM') return `${main.params.on} ON · ${main.params.off} OFF · ${main.params.total}`
+    if (type === 'ON/OFF') return `${main.params.on} ON · ${main.params.off} OFF · ${main.params.total}`
+    if (type === 'EMOM') {
+      const intervalSec = timeToSeconds(main.params.interval || '1:00')
+      const rounds = parseInt(main.params.rounds || '10', 10)
+      return `${main.params.interval} x ${rounds} rounds · ${formatTime(intervalSec * rounds)}`
+    }
     if (type === 'AMRAP') return main.params.duration
     if (type === 'For Time') return `${main.params.rounds} rounds`
     if (type === 'Running') return `${main.steps?.length || 0} fasi`
@@ -372,9 +430,19 @@ export default function WorkoutDetail() {
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${c.bg} ${c.text} border ${c.border}`}>
-              {type}
-            </span>
+            <div className="flex items-center gap-2">
+              {workout.sections?.intensity && (
+                <div className="flex items-center gap-1 bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                  <span className={`text-xs font-bold ${getIntensityColor(workout.sections.intensity)}`}>
+                    {workout.sections.intensity}/10
+                  </span>
+                  <BicepsFlexed size={14} className={getIntensityColor(workout.sections.intensity)} />
+                </div>
+              )}
+              <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${c.bg} ${c.text} border ${c.border}`}>
+                {type}
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               <button onClick={() => navigate(`/create?edit=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
                 <Edit size={12} /> Modifica
@@ -409,7 +477,7 @@ export default function WorkoutDetail() {
         {type === 'Running' ? (
           <RunningList steps={main.steps || []} />
         ) : (
-          <ExList exercises={main.exercises || []} showMinute={type === 'EMOM'} typeColor={c.text} />
+          <ExList exercises={main.exercises || []} showMinute={type === 'EMOM' || type === 'ON/OFF'} typeColor={c.text} />
         )}
       </Section>
 
@@ -449,8 +517,7 @@ export default function WorkoutDetail() {
       <div className="mt-3">
         <button onClick={shareWorkoutFiles}
           className="w-full flex items-center justify-center gap-2 bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] font-semibold py-4 rounded-2xl hover:bg-[#25D366]/20 transition">
-          <Send size={18} /> Condividi (PDF + Grafica) via iOS
-        </button>
+          <Send size={18} /> Condividi (PDF + Social)</button>
       </div>
 
       <div className="mt-3">
@@ -526,7 +593,7 @@ export default function WorkoutDetail() {
             ) : (
               main.exercises?.map((ex, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {type === 'EMOM' && (
+                  {(type === 'EMOM' || type === 'ON/OFF') && (
                     <div style={{
                       width: '22px', height: '22px', borderRadius: '50%',
                       background: '#222', border: `1px solid ${c.hex}40`,
@@ -674,14 +741,23 @@ function RunningList({ steps }) {
           </div>
           {step.type === 'repeat' ? (
             <div className="text-sm flex flex-col gap-1 mt-1">
-              <div><span className="text-gray-400">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-gray-500 text-xs">@{step.runPace}</span>}</div>
-              <div><span className="text-gray-400">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-gray-500 text-xs">@{step.recPace}</span>}</div>
+              <div className="flex items-center justify-between pr-2">
+                <div><span className="text-gray-400">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-gray-500 text-xs">@{step.runPace}</span>}</div>
+                {step.runIntensity && <div className="flex items-center gap-1"><span className={`text-xs font-bold ${getIntensityColor(step.runIntensity)}`}>{step.runIntensity}/10</span><BicepsFlexed size={12} className={getIntensityColor(step.runIntensity)} /></div>}
+              </div>
+              <div className="flex items-center justify-between pr-2">
+                <div><span className="text-gray-400">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-gray-500 text-xs">@{step.recPace}</span>}</div>
+                {step.recIntensity && <div className="flex items-center gap-1"><span className={`text-xs font-bold ${getIntensityColor(step.recIntensity)}`}>{step.recIntensity}/10</span><BicepsFlexed size={12} className={getIntensityColor(step.recIntensity)} /></div>}
+              </div>
             </div>
           ) : (
-            <div className="text-sm">
-              {step.duration && <span className="font-semibold text-white">{step.duration}</span>}
-              {step.pace && <span className="ml-2 text-gray-400">@{step.pace}</span>}
-              {step.notes && <p className="text-gray-500 text-xs mt-1">{step.notes}</p>}
+            <div className="text-sm flex items-center justify-between pr-2">
+              <div>
+                {step.duration && <span className="font-semibold text-white">{step.duration}</span>}
+                {step.pace && <span className="ml-2 text-gray-400">@{step.pace}</span>}
+                {step.notes && <p className="text-gray-500 text-xs mt-1">{step.notes}</p>}
+              </div>
+              {step.intensity && <div className="flex items-center gap-1"><span className={`text-xs font-bold ${getIntensityColor(step.intensity)}`}>{step.intensity}/10</span><BicepsFlexed size={12} className={getIntensityColor(step.intensity)} /></div>}
             </div>
           )}
         </div>
@@ -721,6 +797,12 @@ function ExList({ exercises, showMinute, typeColor }) {
             {ex.kg && <span className="text-gray-400 text-xs ml-2 font-bold">{ex.kg}kg</span>}
             {ex.notes && <span className="text-gray-600 text-xs ml-2">· {ex.notes}</span>}
           </div>
+          {ex.intensity && (
+            <div className="flex items-center gap-1 pr-2 shrink-0">
+               <span className={`text-xs font-bold ${getIntensityColor(ex.intensity)}`}>{ex.intensity}/10</span>
+               <BicepsFlexed size={14} className={getIntensityColor(ex.intensity)} />
+            </div>
+          )}
         </div>
       ))}
     </div>

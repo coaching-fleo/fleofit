@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react'
+import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -28,10 +28,10 @@ const METERS_OPTIONS = [
 ]
 const REPS_OPTIONS = Array.from({ length: 50 }, (_, i) => `${i + 1}`)
 const MINUTES_OPTIONS = Array.from({ length: 60 }, (_, i) => `${i + 1} min`)
-const TIME_OPTIONS = [
-  '0:15','0:20','0:30','0:40','0:45',
-  ...Array.from({ length: 30 }, (_, i) => `${i + 1}:00`)
-]
+const TIME_OPTIONS = Array.from({ length: 120 }, (_, i) => {
+  const s = (i + 1) * 5;
+  return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+})
 const ROUNDS_OPTIONS = Array.from({ length: 40 }, (_, i) => `${i + 1}`)
 const KG_OPTIONS = [
   'Nessun peso',
@@ -42,22 +42,53 @@ const KG_OPTIONS = [
 // ─── COSTANTI RUNNING ─────────────────────────────────────────
 const RUN_DURATION_OPTIONS = [
   ...Array.from({ length: 60 }, (_, i) => `${i + 1} min`),
-  ...Array.from({ length: 60 }, (_, i) => `${i + 1} sec`),
+  ...Array.from({ length: 12 }, (_, i) => `${(i + 1) * 5} sec`),
   '50m', '100m', '200m', '300m', '400m', '500m', '600m', '800m', '1 km', '1.5 km', '2 km', '3 km', '4 km', '5 km', '10 km', '15 km', '21 km', '42 km'
 ]
 
 const RUN_PACE_OPTIONS = [
   'Libero', 'Camminata', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out', 'Gara',
-  ...Array.from({ length: 12 }, (_, i) => `3:${(i * 5).toString().padStart(2, '0')} /km`),
-  ...Array.from({ length: 12 }, (_, i) => `4:${(i * 5).toString().padStart(2, '0')} /km`),
-  ...Array.from({ length: 12 }, (_, i) => `5:${(i * 5).toString().padStart(2, '0')} /km`),
-  ...Array.from({ length: 12 }, (_, i) => `6:${(i * 5).toString().padStart(2, '0')} /km`),
-  ...Array.from({ length: 12 }, (_, i) => `7:${(i * 5).toString().padStart(2, '0')} /km`)
+  ...Array.from({ length: 96 }, (_, i) => {
+    const s = 120 + i * 5;
+    return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')} /km`;
+  })
+]
+
+const ERGO_PACE_OPTIONS = [
+  'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out',
+  ...Array.from({ length: 61 }, (_, i) => {
+    const s = 90 + i * 5;
+    return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')} /500m`;
+  }),
+  ...Array.from({ length: 17 }, (_, i) => `${40 + i * 5} RPM`)
 ]
 
 const MAX_PACE_OPTIONS = ['-', ...RUN_PACE_OPTIONS]
 
 const RUN_REPEAT_ROUNDS_OPTIONS = Array.from({ length: 30 }, (_, i) => `${i + 1}`)
+
+export const getIntensityColor = (val) => {
+  const num = parseInt(val, 10);
+  if (isNaN(num)) return 'text-gray-500';
+  if (num <= 3) return 'text-green-400';
+  if (num <= 6) return 'text-yellow-400';
+  if (num <= 8) return 'text-orange-500';
+  return 'text-red-500';
+}
+
+const timeToSeconds = (timeStr) => {
+  if (!timeStr) return 0;
+  if (timeStr.includes(' min')) return parseInt(timeStr) * 60;
+  const parts = timeStr.split(':')
+  if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
+  return 0
+}
+const formatTime = (totalSeconds) => {
+  const m = Math.floor(totalSeconds / 60)
+  const s = totalSeconds % 60
+  if (s === 0) return `${m} min`
+  return `${m}:${s.toString().padStart(2, '0')} min`
+}
 
 // ─── HELPER REORDER ───────────────────────────────────────────
 const moveElement = (list, from, to) => {
@@ -91,12 +122,14 @@ function ScrollPicker({ options, value, onChange, label }) {
 }
 
 // ─── EXERCISE PICKER MODAL ────────────────────────────────────
-function ExercisePicker({ onAdd, onClose, existingNames = [] }) {
+function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType }) {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState(null)
   const [meters, setMeters] = useState('200m')
+  const [ergoPace, setErgoPace] = useState('2:00 /500m')
   const [reps, setReps] = useState('10')
   const [kg, setKg] = useState('Nessun peso')
+  const [intensity, setIntensity] = useState('5')
   const [notes, setNotes] = useState('')
 
   const filtered = HYROX_EXERCISES.filter(ex =>
@@ -109,12 +142,26 @@ function ExercisePicker({ onAdd, onClose, existingNames = [] }) {
   const handleConfirm = () => {
     if (!selected) return
     const isDist = isDistance(selected)
+    
+    let finalMeters = isDist ? meters : ''
+    let finalReps = !isDist ? reps : ''
+    
+    if (workoutType === 'EMOM' || workoutType === 'ON/OFF') {
+      if (isErgo(selected)) {
+        finalMeters = ergoPace
+        finalReps = ''
+      } else if (isDist) {
+        finalMeters = ''
+      }
+    }
+
     onAdd({
       id: Math.random(),
       name: selected,
-      meters: isDist ? meters : '',
-      reps: !isDist ? reps : '',
+      meters: finalMeters,
+      reps: finalReps,
       kg: kg === 'Nessun peso' ? '' : kg.replace(' kg', ''),
+      intensity,
       notes
     })
     onClose()
@@ -161,18 +208,43 @@ function ExercisePicker({ onAdd, onClose, existingNames = [] }) {
                 <span className="text-white font-semibold">{selected}</span>
               </div>
 
-            {isErgo(selected) ? (
-                <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Metri" />
+              {(workoutType === 'EMOM' || workoutType === 'ON/OFF') ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {isErgo(selected) ? (
+                    <ScrollPicker options={ERGO_PACE_OPTIONS} value={ergoPace} onChange={setErgoPace} label="⏱ Passo" />
+                  ) : isDistance(selected) ? (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-transparent text-xs select-none">.</p>
+                      <div className="relative h-36 flex items-center justify-center bg-[#1a1a1a] rounded-xl border border-[#383838]">
+                        <span className="text-gray-500 text-xs">Solo peso</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <ScrollPicker options={REPS_OPTIONS} value={reps} onChange={setReps} label="🔁 Reps" />
+                  )}
+                  <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                </div>
               ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {isDistance(selected) ? (
-                  <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Metri" />
-                ) : (
-                  <ScrollPicker options={REPS_OPTIONS} value={reps} onChange={setReps} label="🔁 Reps" />
-                )}
-                <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
-              </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {isDistance(selected) ? (
+                    <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Metri" />
+                  ) : (
+                    <ScrollPicker options={REPS_OPTIONS} value={reps} onChange={setReps} label="🔁 Reps" />
+                  )}
+                  <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                </div>
               )}
+
+              <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-xs">💪 Intensità</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-bold ${getIntensityColor(intensity)}`}>{intensity}/10</span>
+                    <BicepsFlexed size={16} className={getIntensityColor(intensity)} />
+                  </div>
+                </div>
+                <input type="range" min="1" max="10" value={intensity} onChange={e => setIntensity(e.target.value)} className="w-full accent-[#f1ba17]" />
+              </div>
 
               <input
                 className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-sm"
@@ -228,6 +300,12 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDropI
           {ex.notes ? ` · ${ex.notes}` : ''}
         </p>
       </div>
+      {ex.intensity && (
+        <div className="flex items-center gap-1 pr-2 shrink-0">
+           <span className={`text-xs font-bold ${getIntensityColor(ex.intensity)}`}>{ex.intensity}/10</span>
+           <BicepsFlexed size={16} className={getIntensityColor(ex.intensity)} />
+        </div>
+      )}
       <button type="button" onClick={() => onRemove(ex.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
         <Trash2 size={15} />
       </button>
@@ -236,7 +314,7 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDropI
 }
 
 // ─── BLOCCO CASH IN/OUT ───────────────────────────────────────
-function CashBlock({ label, exercises, onAdd, onRemove, onMoveUp, onMoveDown, onDropIndex, icon }) {
+function CashBlock({ label, exercises, onAdd, onRemove, onMoveUp, onMoveDown, onDropIndex, icon, workoutType }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   return (
     <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-4">
@@ -267,6 +345,7 @@ function CashBlock({ label, exercises, onAdd, onRemove, onMoveUp, onMoveDown, on
           onAdd={onAdd}
           onClose={() => setPickerOpen(false)}
           existingNames={exercises.map(e => e.name)}
+          workoutType={workoutType}
         />
       )}
     </div>
@@ -279,14 +358,17 @@ function RunningStepPicker({ onAdd, onClose }) {
   const [duration, setDuration] = useState('10 min')
   const [pace, setPace] = useState('Libero')
   const [paceMax, setPaceMax] = useState('-')
+  const [intensity, setIntensity] = useState('5')
   const [notes, setNotes] = useState('')
   const [rounds, setRounds] = useState('8')
   const [runDuration, setRunDuration] = useState('1 min')
   const [runPace, setRunPace] = useState('Libero')
   const [runPaceMax, setRunPaceMax] = useState('-')
+  const [runIntensity, setRunIntensity] = useState('8')
   const [recDuration, setRecDuration] = useState('1 min')
   const [recPace, setRecPace] = useState('Libero')
   const [recPaceMax, setRecPaceMax] = useState('-')
+  const [recIntensity, setRecIntensity] = useState('3')
 
   const formatPace = (p, pMax) => {
     if (!pMax || pMax === '-') return p
@@ -299,9 +381,9 @@ function RunningStepPicker({ onAdd, onClose }) {
   const handleAdd = () => {
     onAdd({
       id: Math.random(), type, 
-      duration, pace: formatPace(pace, paceMax), notes,
-      rounds, runDuration, runPace: formatPace(runPace, runPaceMax), 
-      recDuration, recPace: formatPace(recPace, recPaceMax)
+      duration, pace: formatPace(pace, paceMax), intensity, notes,
+      rounds, runDuration, runPace: formatPace(runPace, runPaceMax), runIntensity,
+      recDuration, recPace: formatPace(recPace, recPaceMax), recIntensity
     })
     onClose()
   }
@@ -339,20 +421,34 @@ function RunningStepPicker({ onAdd, onClose }) {
             <div className="flex flex-col gap-4 mt-2">
               <ScrollPicker options={RUN_REPEAT_ROUNDS_OPTIONS} value={rounds} onChange={setRounds} label="Numero di ripetizioni" />
               <div className="p-3 bg-[#222] border border-[#333] rounded-xl flex flex-col gap-3">
-                <p className="text-blue-300 text-sm font-semibold">Fase Attiva (Corsa)</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-blue-300 text-sm font-semibold">Fase Attiva (Corsa)</p>
+                  <div className="flex items-center gap-1">
+                    <span className={`text-xs font-bold ${getIntensityColor(runIntensity)}`}>{runIntensity}/10</span>
+                    <BicepsFlexed size={14} className={getIntensityColor(runIntensity)} />
+                  </div>
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   <ScrollPicker options={RUN_DURATION_OPTIONS} value={runDuration} onChange={setRunDuration} label="Durata" />
                   <ScrollPicker options={RUN_PACE_OPTIONS} value={runPace} onChange={setRunPace} label="Da" />
                   <ScrollPicker options={MAX_PACE_OPTIONS} value={runPaceMax} onChange={setRunPaceMax} label="A (Opz.)" />
                 </div>
+                <input type="range" min="1" max="10" value={runIntensity} onChange={e => setRunIntensity(e.target.value)} className="w-full accent-blue-500" />
               </div>
               <div className="p-3 bg-[#222] border border-[#333] rounded-xl flex flex-col gap-3">
-                <p className="text-green-400 text-sm font-semibold">Fase Recupero</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-green-400 text-sm font-semibold">Fase Recupero</p>
+                  <div className="flex items-center gap-1">
+                    <span className={`text-xs font-bold ${getIntensityColor(recIntensity)}`}>{recIntensity}/10</span>
+                    <BicepsFlexed size={14} className={getIntensityColor(recIntensity)} />
+                  </div>
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   <ScrollPicker options={RUN_DURATION_OPTIONS} value={recDuration} onChange={setRecDuration} label="Durata" />
                   <ScrollPicker options={RUN_PACE_OPTIONS} value={recPace} onChange={setRecPace} label="Da" />
                   <ScrollPicker options={MAX_PACE_OPTIONS} value={recPaceMax} onChange={setRecPaceMax} label="A (Opz.)" />
                 </div>
+                <input type="range" min="1" max="10" value={recIntensity} onChange={e => setRecIntensity(e.target.value)} className="w-full accent-green-500" />
               </div>
             </div>
           ) : (
@@ -361,6 +457,16 @@ function RunningStepPicker({ onAdd, onClose }) {
                 <ScrollPicker options={RUN_DURATION_OPTIONS} value={duration} onChange={setDuration} label="Durata / Distanza" />
                 <ScrollPicker options={RUN_PACE_OPTIONS} value={pace} onChange={setPace} label="Da" />
                 <ScrollPicker options={MAX_PACE_OPTIONS} value={paceMax} onChange={setPaceMax} label="A (Opz.)" />
+              </div>
+              <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-xs">💪 Intensità</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-bold ${getIntensityColor(intensity)}`}>{intensity}/10</span>
+                    <BicepsFlexed size={16} className={getIntensityColor(intensity)} />
+                  </div>
+                </div>
+                <input type="range" min="1" max="10" value={intensity} onChange={e => setIntensity(e.target.value)} className="w-full accent-blue-500" />
               </div>
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Note</label>
@@ -422,6 +528,11 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown }) 
               <span className="text-green-400 font-medium">Recupero:</span> <span className="text-gray-300">{step.recDuration}</span>
               {step.recPace && <span className="text-gray-500 text-xs ml-1">@{step.recPace}</span>}
             </div>
+            {step.intensity && (
+              <div className="flex items-center gap-1">
+                <span className={`text-xs font-bold ${getIntensityColor(step.intensity)}`}>{step.intensity}/10</span><BicepsFlexed size={14} className={getIntensityColor(step.intensity)} />
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-sm mt-1 text-gray-300">
@@ -449,12 +560,15 @@ export default function CreateWorkout() {
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(defaultDate || '')
   const [workoutType, setWorkoutType] = useState(null)
+  const [workoutIntensity, setWorkoutIntensity] = useState('5')
   const [category, setCategory] = useState('Hyrox')
 
   // Parametri per tipo
-  const [emomOn, setEmomOn] = useState('1:00')
-  const [emomOff, setEmomOff] = useState('1:00')
-  const [emomTotal, setEmomTotal] = useState('21 min')
+  const [onOffOn, setOnOffOn] = useState('1:00')
+  const [onOffOff, setOnOffOff] = useState('1:00')
+  const [onOffTotal, setOnOffTotal] = useState('21 min')
+  const [emomInterval, setEmomInterval] = useState('1:00')
+  const [emomRounds, setEmomRounds] = useState('10')
   const [amrapDuration, setAmrapDuration] = useState('10 min')
   const [forTimeRounds, setForTimeRounds] = useState('3')
 
@@ -522,11 +636,20 @@ export default function CreateWorkout() {
           setRunningSteps(s.main.steps || [])
         } else {
           setCategory('Hyrox')
-          setWorkoutType(s.main.type)
-          setExercises(s.main.exercises || [])
-          if (s.main.type === 'EMOM') { setEmomOn(s.main.params?.on || '1:00'); setEmomOff(s.main.params?.off || '1:00'); setEmomTotal(s.main.params?.total || '21 min') } 
-          else if (s.main.type === 'AMRAP') { setAmrapDuration(s.main.params?.duration || '10 min') } 
-          else if (s.main.type === 'For Time') { setForTimeRounds(s.main.params?.rounds || '3') }
+          if (s.main.type === 'EMOM' && s.main.params?.on) {
+            setWorkoutType('ON/OFF')
+            setExercises(s.main.exercises || [])
+            setOnOffOn(s.main.params.on || '1:00')
+            setOnOffOff(s.main.params.off || '1:00')
+            setOnOffTotal(s.main.params.total || '21 min')
+          } else {
+            setWorkoutType(s.main.type)
+            setExercises(s.main.exercises || [])
+            if (s.main.type === 'ON/OFF') { setOnOffOn(s.main.params?.on || '1:00'); setOnOffOff(s.main.params?.off || '1:00'); setOnOffTotal(s.main.params?.total || '21 min') } 
+            else if (s.main.type === 'EMOM') { setEmomInterval(s.main.params?.interval || '1:00'); setEmomRounds(s.main.params?.rounds || '10') } 
+            else if (s.main.type === 'AMRAP') { setAmrapDuration(s.main.params?.duration || '10 min') } 
+            else if (s.main.type === 'For Time') { setForTimeRounds(s.main.params?.rounds || '3') }
+          }
         }
       }
     }
@@ -574,13 +697,19 @@ export default function CreateWorkout() {
   const isStep1Valid = title.trim() !== '' && date !== ''
 
   const TYPE_INFO = {
-    EMOM: { color: 'text-blue-300', border: 'border-blue-700', bg: 'bg-blue-900/40', desc: 'Every Minute On the Minute' },
+    'ON/OFF': { color: 'text-blue-300', border: 'border-blue-700', bg: 'bg-blue-900/40', desc: 'Work / Rest intervals' },
+    EMOM: { color: 'text-cyan-300', border: 'border-cyan-700', bg: 'bg-cyan-900/40', desc: 'Every Minute On the Minute' },
     AMRAP: { color: 'text-green-300', border: 'border-green-700', bg: 'bg-green-900/40', desc: 'As Many Rounds As Possible' },
     'For Time': { color: 'text-purple-300', border: 'border-purple-700', bg: 'bg-purple-900/40', desc: 'Completa il più veloce possibile' }
   }
 
   const workoutSummary = () => {
-    if (workoutType === 'EMOM') return `EMOM · ${emomOn} on / ${emomOff} off · ${emomTotal}`
+    if (workoutType === 'ON/OFF') return `ON/OFF · ${onOffOn} on / ${onOffOff} off · ${onOffTotal}`
+    if (workoutType === 'EMOM') {
+      const intervalSec = timeToSeconds(emomInterval)
+      const rounds = parseInt(emomRounds, 10) || 0
+      return `EMOM · ${emomInterval} x ${emomRounds} rounds · ${formatTime(intervalSec * rounds)}`
+    }
     if (workoutType === 'AMRAP') return `AMRAP · ${amrapDuration}`
     if (workoutType === 'For Time') return `For Time · ${forTimeRounds} rounds`
     return ''
@@ -594,15 +723,18 @@ export default function CreateWorkout() {
     
     setSaving(true)
     const sections = {
+      intensity: workoutIntensity,
       warmup: category === 'Hyrox' ? { duration: warmupDuration, notes: warmupNotes } : null,
       cashIn: (category === 'Hyrox' && hasCashIn) ? cashInExercises : null,
       main: category === 'Hyrox' ? {
         type: workoutType,
-        params: workoutType === 'EMOM'
-          ? { on: emomOn, off: emomOff, total: emomTotal }
-          : workoutType === 'AMRAP'
-            ? { duration: amrapDuration }
-            : { rounds: forTimeRounds },
+        params: workoutType === 'ON/OFF'
+          ? { on: onOffOn, off: onOffOff, total: onOffTotal }
+          : workoutType === 'EMOM'
+            ? { interval: emomInterval, rounds: emomRounds }
+            : workoutType === 'AMRAP'
+              ? { duration: amrapDuration }
+              : { rounds: forTimeRounds },
         exercises
       } : {
         type: 'Running',
@@ -716,11 +848,26 @@ export default function CreateWorkout() {
             <span className={`font-bold ${TYPE_INFO[workoutType].color}`}>{workoutType}</span>
           </div>
 
-          {workoutType === 'EMOM' && (
+          {workoutType === 'ON/OFF' && (
             <div className="grid grid-cols-3 gap-3">
-              <ScrollPicker options={TIME_OPTIONS} value={emomOn} onChange={setEmomOn} label="⏱ Minuti ON" />
-              <ScrollPicker options={TIME_OPTIONS} value={emomOff} onChange={setEmomOff} label="😮 Minuti OFF" />
-              <ScrollPicker options={MINUTES_OPTIONS} value={emomTotal} onChange={setEmomTotal} label="🕐 Durata tot." />
+              <ScrollPicker options={TIME_OPTIONS} value={onOffOn} onChange={setOnOffOn} label="⏱ Minuti ON" />
+              <ScrollPicker options={TIME_OPTIONS} value={onOffOff} onChange={setOnOffOff} label="😮 Minuti OFF" />
+              <ScrollPicker options={MINUTES_OPTIONS} value={onOffTotal} onChange={setOnOffTotal} label="🕐 Durata tot." />
+            </div>
+          )}
+
+          {workoutType === 'EMOM' && (
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-3">
+                <ScrollPicker options={TIME_OPTIONS} value={emomInterval} onChange={setEmomInterval} label="⏱ Durata Intervallo" />
+                <ScrollPicker options={ROUNDS_OPTIONS} value={emomRounds} onChange={setEmomRounds} label="🔁 Numero Intervalli" />
+              </div>
+              <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex items-center justify-between">
+                <span className="text-gray-400 text-sm">Durata totale calcolata:</span>
+                <span className="text-[#06b6d4] font-bold text-lg">
+                  {formatTime(timeToSeconds(emomInterval) * (parseInt(emomRounds, 10) || 0))}
+                </span>
+              </div>
             </div>
           )}
 
@@ -744,8 +891,15 @@ export default function CreateWorkout() {
         <div className="flex flex-col gap-4">
 
           {/* RIEPILOGO TIPO */}
-          <div className={`px-4 py-3 rounded-2xl border ${TYPE_INFO[workoutType].border} ${TYPE_INFO[workoutType].bg}`}>
-            <p className={`font-bold text-sm ${TYPE_INFO[workoutType].color}`}>{workoutSummary()}</p>
+          <div className={`px-4 py-4 rounded-2xl border ${TYPE_INFO[workoutType].border} ${TYPE_INFO[workoutType].bg} flex flex-col gap-3`}>
+            <div className="flex items-center justify-between">
+              <p className={`font-bold text-sm ${TYPE_INFO[workoutType].color}`}>{workoutSummary()}</p>
+              <div className="flex items-center gap-1">
+                 <span className={`text-sm font-bold ${getIntensityColor(workoutIntensity)}`}>{workoutIntensity}/10</span>
+                 <BicepsFlexed size={18} className={getIntensityColor(workoutIntensity)} />
+              </div>
+            </div>
+            <input type="range" min="1" max="10" value={workoutIntensity} onChange={e => setWorkoutIntensity(e.target.value)} className="w-full accent-[#f1ba17]" />
           </div>
 
           {/* WARM UP */}
@@ -780,6 +934,7 @@ export default function CreateWorkout() {
                 onMoveUp={idx => setCashInExercises(moveElement(cashInExercises, idx, idx - 1))}
                 onMoveDown={idx => setCashInExercises(moveElement(cashInExercises, idx, idx + 1))}
                 onDropIndex={(from, to) => setCashInExercises(moveElement(cashInExercises, from, to))}
+                workoutType={workoutType}
               />
               <button onClick={() => { setHasCashIn(false); setCashInExercises([]) }}
                 className="text-gray-600 hover:text-red-400 text-xs mt-1 ml-1">Rimuovi Cash In</button>
@@ -817,7 +972,7 @@ export default function CreateWorkout() {
                     ex={ex}
                     index={i}
                     total={exercises.length}
-                    showMinute={workoutType === 'EMOM'}
+                    showMinute={workoutType === 'EMOM' || workoutType === 'ON/OFF'}
                     onRemove={id => setExercises(exercises.filter(e => e.id !== id))}
                     onMoveUp={idx => setExercises(moveElement(exercises, idx, idx - 1))}
                     onMoveDown={idx => setExercises(moveElement(exercises, idx, idx + 1))}
@@ -844,6 +999,7 @@ export default function CreateWorkout() {
                 onMoveUp={idx => setCashOutExercises(moveElement(cashOutExercises, idx, idx - 1))}
                 onMoveDown={idx => setCashOutExercises(moveElement(cashOutExercises, idx, idx + 1))}
                 onDropIndex={(from, to) => setCashOutExercises(moveElement(cashOutExercises, from, to))}
+                workoutType={workoutType}
               />
               <button onClick={() => { setHasCashOut(false); setCashOutExercises([]) }}
                 className="text-gray-600 hover:text-red-400 text-xs mt-1 ml-1">Rimuovi Cash Out</button>
@@ -913,9 +1069,18 @@ export default function CreateWorkout() {
       {/* ── STEP 3: BUILD RUNNING WORKOUT ────────────────── */}
       {step === 3 && category === 'Running' && (
         <div className="flex flex-col gap-4">
-          <div className="px-4 py-3 rounded-2xl border border-blue-600 bg-blue-900/40 flex items-center gap-3">
-            <Timer size={18} className="text-blue-300" />
-            <span className="font-bold text-blue-300">Allenamento Corsa</span>
+          <div className="px-4 py-4 rounded-2xl border border-blue-600 bg-blue-900/40 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Timer size={18} className="text-blue-300" />
+                <span className="font-bold text-blue-300">Allenamento Corsa</span>
+              </div>
+              <div className="flex items-center gap-1">
+                 <span className={`text-sm font-bold ${getIntensityColor(workoutIntensity)}`}>{workoutIntensity}/10</span>
+                 <BicepsFlexed size={18} className={getIntensityColor(workoutIntensity)} />
+              </div>
+            </div>
+            <input type="range" min="1" max="10" value={workoutIntensity} onChange={e => setWorkoutIntensity(e.target.value)} className="w-full accent-blue-500" />
           </div>
 
           <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-4">

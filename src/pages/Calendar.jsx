@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, BicepsFlexed } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 
@@ -44,12 +44,26 @@ export default function Calendar() {
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
 
   const TYPE_COLORS = {
-    EMOM: '#3b82f6',
+    'ON/OFF': '#3b82f6',
+    EMOM: '#06b6d4',
     AMRAP: '#22c55e',
     'For Time': '#a855f7'
   }
 
-  const getWorkoutType = (w) => w.sections?.main?.type || ''
+  const getIntensityColor = (val) => {
+    const num = parseInt(val, 10);
+    if (isNaN(num)) return 'text-gray-500';
+    if (num <= 3) return 'text-green-400';
+    if (num <= 6) return 'text-yellow-400';
+    if (num <= 8) return 'text-orange-500';
+    return 'text-red-500';
+  }
+
+  const getWorkoutType = (w) => {
+    const t = w.sections?.main?.type || ''
+    if (t === 'EMOM' && w.sections?.main?.params?.on) return 'ON/OFF'
+    return t
+  }
 
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24">
@@ -143,12 +157,20 @@ export default function Calendar() {
                 <div key={w.id}
                   onClick={() => navigate(`/workout/${w.id}`)}
                   className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer hover:border-[#383838] transition">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-1 h-10 rounded-full" style={{ backgroundColor: color }} />
-                    <div>
-                      <p className="text-white font-semibold">{w.title}</p>
-                      <p className="text-xs mt-0.5" style={{ color }}>{type}</p>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-10 rounded-full" style={{ backgroundColor: color }} />
+                      <div>
+                        <p className="text-white font-semibold">{w.title}</p>
+                        <p className="text-xs mt-0.5" style={{ color }}>{type}</p>
+                      </div>
                     </div>
+                    {w.sections?.intensity && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className={`text-xs font-bold ${getIntensityColor(w.sections.intensity)}`}>{w.sections.intensity}/10</span>
+                        <BicepsFlexed size={16} className={getIntensityColor(w.sections.intensity)} />
+                      </div>
+                    )}
                   </div>
                   {exList && exList.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2 ml-4">
