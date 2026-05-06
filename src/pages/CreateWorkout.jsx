@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy } from 'lucide-react'
 import { supabase } from '../supabaseClient'
@@ -7,7 +7,7 @@ import { supabase } from '../supabaseClient'
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike']
 const HYROX_EXERCISES = [
   'SkiErg', 'Rowing', 'Assault Bike',
-  'Sled Push', 'Sled Pull', 'Burpee Broad Jump',
+  'Sled Push', 'Sled Pull', 'Burpee Broad Jump','Burpees', 'Burpees Jump',
   'Farmers Carry', 'Sandbag Lunges', 'Wall Balls',
   'Kettlebell Swing', 'Box Jump', 'Run',
   'Battle Ropes', 'Pull Up', 'Push Up', 'Thruster',
@@ -118,17 +118,47 @@ const moveElement = (list, from, to) => {
 // ─── SCROLL PICKER ────────────────────────────────────────────
 function ScrollPicker({ options = [], value, onChange, label, type }) {
   const displayOptions = type === 'time' && (!options || options.length === 0) ? TIME_OPTIONS : options || []
+  const containerRef = useRef(null)
+  const [isScrolling, setIsScrolling] = useState(false)
+  const scrollTimeout = useRef(null)
+
+  useEffect(() => {
+    const index = displayOptions.findIndex(opt => String(opt) === String(value))
+    if (index !== -1 && containerRef.current && !isScrolling) {
+       containerRef.current.scrollTop = index * 40
+    }
+  }, [value, isScrolling, displayOptions])
+
+  const handleScroll = () => {
+    setIsScrolling(true)
+    clearTimeout(scrollTimeout.current)
+    
+    const el = containerRef.current
+    if (!el) return
+    
+    const index = Math.round(el.scrollTop / 40)
+    if (displayOptions[index] !== undefined && String(displayOptions[index]) !== String(value)) {
+      onChange(displayOptions[index])
+    }
+
+    scrollTimeout.current = setTimeout(() => {
+      setIsScrolling(false)
+    }, 150)
+  }
 
   return (
     <div className="flex flex-col gap-1">
       {label && <p className="text-gray-400 text-xs">{label}</p>}
-      <div className="relative h-36 overflow-y-scroll snap-y snap-mandatory bg-[#1a1a1a] rounded-xl border border-[#383838]"
-        style={{ scrollbarWidth: 'none' }}>
-        <div className="py-[56px]">
+      <div 
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="relative h-36 overflow-y-scroll snap-y snap-mandatory bg-[#1a1a1a] rounded-xl border border-[#383838] hide-scrollbar"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="py-[52px]">
           {displayOptions.map(opt => (
             <div key={opt} onClick={() => onChange(opt)}
-              className={`snap-center h-10 flex items-center justify-center text-sm cursor-pointer select-none
-                ${value === opt ? 'text-[#f1ba17] font-bold text-base' : 'text-gray-600 hover:text-gray-400'}`}>
+              className={`snap-center h-10 flex items-center justify-center text-sm cursor-pointer select-none transition-colors
+                ${String(value) === String(opt) ? 'text-[#f1ba17] font-bold text-base' : 'text-gray-600 hover:text-gray-400'}`}>
               {opt}
             </div>
           ))}
@@ -665,6 +695,8 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown }) 
 export default function CreateWorkout() {
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
+ const duplicateId = searchParams.get('duplicate')
+  const sourceId = editId || duplicateId
   const defaultDate = searchParams.get('date')
   const defaultAthleteId = searchParams.get('athlete_id')
 
@@ -695,15 +727,15 @@ export default function CreateWorkout() {
     fetchAthletes()
   }, [])
 
-  // Se editId è presente, carichiamo i dati del workout per modificarli
+  // Se editId o duplicateId sono presenti, carichiamo i dati del workout
   useEffect(() => {
     const fetchWorkoutToEdit = async () => {
-      if (!editId) return
-      const { data, error } = await supabase.from('workouts').select('*').eq('id', editId).single()
+      if (!sourceId) return
+      const { data, error } = await supabase.from('workouts').select('*').eq('id', sourceId).single()
       if (error || !data) return
 
-      setTitle(data.title)
-      setDate(data.date)
+      setTitle(duplicateId ? `${data.title} (Copia)` : data.title)
+      if (!duplicateId) setDate(data.date)
       setCoachNotes(data.coach_notes || '')
       
       const s = data.sections || {}
@@ -737,7 +769,7 @@ export default function CreateWorkout() {
       }
     }
     fetchWorkoutToEdit()
-  }, [editId])
+  }, [sourceId, duplicateId])
 
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -822,6 +854,9 @@ export default function CreateWorkout() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24">
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+      `}</style>
       <h1 className="text-2xl font-bold text-[#f1ba17] mb-6">{editId ? 'Modifica Workout' : 'Crea Workout'}</h1>
 
       {/* ── STEP 1: TIPO ─────────────────────────────────── */}

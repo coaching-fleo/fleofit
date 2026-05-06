@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 // TOGLI Share2, metti Share2
-import { ArrowLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed } from 'lucide-react'
+import { ArrowLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -28,6 +28,15 @@ const getIntensityColor = (val) => {
   if (num <= 6) return 'text-yellow-400';
   if (num <= 8) return 'text-orange-500';
   return 'text-red-500';
+}
+
+const getPdfIntensityColor = (val) => {
+  const num = parseInt(val, 10);
+  if (isNaN(num)) return [156, 163, 175];
+  if (num <= 3) return [74, 222, 128];
+  if (num <= 6) return [250, 204, 21];
+  if (num <= 8) return [249, 115, 22];
+  return [239, 68, 68];
 }
 
 const timeToSeconds = (timeStr) => {
@@ -88,6 +97,36 @@ const getBlockTitle = (block) => {
   }
   if (block.type === 'For Time') return `For Time · ${block.params?.rounds || '3'} rounds`
   return block.type
+}
+
+const getEmojiDataURL = (emoji) => {
+  const canvas = document.createElement('canvas')
+  canvas.width = 64
+  canvas.height = 64
+  const ctx = canvas.getContext('2d')
+  ctx.clearRect(0, 0, 64, 64)
+  ctx.font = '48px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(emoji, 32, 36)
+  return canvas.toDataURL('image/png')
+}
+
+const getLogoDataURL = async () => {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'Anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width || 64
+      canvas.height = img.height || 64
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0)
+      resolve(canvas.toDataURL('image/png'))
+    }
+    img.onerror = () => resolve(null)
+    img.src = '/favicon.svg'
+  })
 }
 
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike']
@@ -179,7 +218,7 @@ export default function WorkoutDetail() {
     }
   }
 
-  const buildPDFDoc = () => {
+  const buildPDFDoc = async () => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' })
     const s = workout.sections
     const category = (s?.category === 'Running' || s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
@@ -190,10 +229,28 @@ export default function WorkoutDetail() {
     // Header
     doc.setFillColor(23, 23, 23)
     doc.rect(0, 0, 210, 297, 'F')
-    doc.setTextColor(241, 186, 23)
+    
+    const logoDataUrl = await getLogoDataURL()
+    let headerX = 20
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, 'PNG', headerX, y - 6, 8, 8)
+      headerX += 10
+    }
+
     doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
-    doc.text('FLEOFIT - Coach Federico Leo', 20, y)
+    doc.setTextColor(255, 255, 255)
+    doc.text('FLEO', headerX, y)
+    const fleoWidth = doc.getTextWidth('FLEO')
+    doc.setTextColor(241, 186, 23)
+    doc.text('FIT', headerX + fleoWidth, y)
+    
+    const fitWidth = doc.getTextWidth('FIT')
+    doc.setTextColor(150, 150, 150)
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    doc.text(' - Coach Federico Leo', headerX + fleoWidth + fitWidth, y)
+
     y += 8
     doc.setTextColor(200, 200, 200)
     doc.setFontSize(14)
@@ -216,9 +273,11 @@ export default function WorkoutDetail() {
       doc.setTextColor(241, 186, 23)
       doc.setFont('helvetica', 'bold')
       doc.text('INTENSITA\': ', 20, y)
-      doc.setTextColor(200, 200, 200)
+      doc.setTextColor(...getPdfIntensityColor(s.intensity))
       doc.setFont('helvetica', 'normal')
-      doc.text(`${s.intensity} / 10`, 45, y)
+      const intTxt = `${s.intensity} / 10 `
+      doc.text(intTxt, 45, y)
+      doc.addImage(getEmojiDataURL('💪'), 'PNG', 45 + doc.getTextWidth(intTxt), y - 3.2, 4, 4)
       y += 6
     }
     
@@ -250,12 +309,58 @@ export default function WorkoutDetail() {
         doc.setFont('helvetica', 'normal')
         if (step.type === 'repeat') {
            doc.setTextColor(200, 200, 200)
-           doc.text(`  Corsa: ${step.runDuration} ${step.runPace ? '@'+step.runPace : ''} ${step.runIntensity ? '[Int: '+step.runIntensity+'/10]' : ''}`, 30, y); y += 5
-           doc.text(`  Recupero: ${step.recDuration} ${step.recPace ? '@'+step.recPace : ''} ${step.recIntensity ? '[Int: '+step.recIntensity+'/10]' : ''}`, 30, y); y += 5
+           let cx = 30
+           let r1 = `  Corsa: ${step.runDuration} ${step.runPace ? '@'+step.runPace : ''}`
+           doc.text(r1, cx, y)
+           cx += doc.getTextWidth(r1)
+           if (step.runIntensity) {
+             let itxt = `   [Int: ${step.runIntensity}/10 `
+             doc.setTextColor(...getPdfIntensityColor(step.runIntensity))
+             doc.text(itxt, cx, y)
+             cx += doc.getTextWidth(itxt)
+             doc.addImage(getEmojiDataURL('💪'), 'PNG', cx, y - 3.2, 4, 4)
+             cx += 4.5
+             doc.text(']', cx, y)
+             doc.setTextColor(200, 200, 200)
+           }
+           y += 5
+           
+           cx = 30
+           let r2 = `  Recupero: ${step.recDuration} ${step.recPace ? '@'+step.recPace : ''}`
+           doc.text(r2, cx, y)
+           cx += doc.getTextWidth(r2)
+           if (step.recIntensity) {
+             let itxt = `   [Int: ${step.recIntensity}/10 `
+             doc.setTextColor(...getPdfIntensityColor(step.recIntensity))
+             doc.text(itxt, cx, y)
+             cx += doc.getTextWidth(itxt)
+             doc.addImage(getEmojiDataURL('💪'), 'PNG', cx, y - 3.2, 4, 4)
+             cx += 4.5
+             doc.text(']', cx, y)
+             doc.setTextColor(200, 200, 200)
+           }
+           y += 5
         } else {
            doc.setTextColor(200, 200, 200)
-           const text = `${step.duration || ''} ${step.pace ? '@'+step.pace : ''} ${step.intensity ? '[Int: '+step.intensity+'/10]' : ''} ${step.notes ? '('+step.notes+')' : ''}`
-           doc.text(`  ${text}`, 30, y)
+           let cx = 30
+           let r1 = `  ${step.duration || ''} ${step.pace ? '@'+step.pace : ''}`
+           doc.text(r1, cx, y)
+           cx += doc.getTextWidth(r1)
+           
+           if (step.intensity) {
+             let itxt = `   [Int: ${step.intensity}/10 `
+             doc.setTextColor(...getPdfIntensityColor(step.intensity))
+             doc.text(itxt, cx, y)
+             cx += doc.getTextWidth(itxt)
+             doc.addImage(getEmojiDataURL('💪'), 'PNG', cx, y - 3.2, 4, 4)
+             cx += 4.5
+             doc.text(']', cx, y)
+             cx += doc.getTextWidth(']')
+             doc.setTextColor(200, 200, 200)
+           }
+           if (step.notes) {
+             doc.text(`  (${step.notes})`, cx, y)
+           }
            y += 5
         }
         y += 2
@@ -285,9 +390,26 @@ export default function WorkoutDetail() {
              const detail = isDistance(ex.name) ? (ex.meters && ex.meters !== '-' ? ex.meters : '') : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
              const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? ` @ ${ex.ergoPace}` : ''
              const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
-             const noteStr = ex.notes ? `  (${ex.notes})` : ''
-             const intStr = ex.intensity ? `  [Int: ${ex.intensity}/10]` : ''
-             doc.text(`${prefix}${ex.name}  ${detail}${paceStr}${kgStr}${intStr}${noteStr}`, 25, y)
+             
+             let cx = 25
+             let baseStr = `${prefix}${ex.name}  ${detail}${paceStr}${kgStr}`
+             doc.text(baseStr, cx, y)
+             cx += doc.getTextWidth(baseStr)
+
+             if (ex.intensity) {
+               let itxt = `   [Int: ${ex.intensity}/10 `
+               doc.setTextColor(...getPdfIntensityColor(ex.intensity))
+               doc.text(itxt, cx, y)
+               cx += doc.getTextWidth(itxt)
+               doc.addImage(getEmojiDataURL('💪'), 'PNG', cx, y - 3.2, 4, 4)
+               cx += 4.5
+               doc.text(']', cx, y)
+               cx += doc.getTextWidth(']')
+               doc.setTextColor(200, 200, 200)
+             }
+             if (ex.notes) {
+               doc.text(`  (${ex.notes})`, cx, y)
+             }
              y += 6
              if (y > 260) { doc.addPage(); y = 20 }
            })
@@ -331,8 +453,9 @@ export default function WorkoutDetail() {
     return doc
   }
 
-  const exportPDF = () => {
-    buildPDFDoc().save(`${workout.title.replace(/ /g, '_')}.pdf`)
+  const exportPDF = async () => {
+    const doc = await buildPDFDoc()
+    doc.save(`${workout.title.replace(/ /g, '_')}.pdf`)
   }
 
   const exportShare2 = async () => {
@@ -352,7 +475,7 @@ export default function WorkoutDetail() {
     if (!igRef.current) return
     try {
       // 1. Genera PDF in memoria
-      const doc = buildPDFDoc()
+      const doc = await buildPDFDoc()
       const pdfBlob = doc.output('blob')
       const pdfFile = new File([pdfBlob], `${workout.title.replace(/ /g, '_')}.pdf`, { type: 'application/pdf' })
 
@@ -441,6 +564,9 @@ export default function WorkoutDetail() {
               </span>
             </div>
             <div className="flex items-center gap-2">
+              <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg" title="Duplica Workout">
+                <Copy size={12} /> Duplica
+              </button>
               <button onClick={() => navigate(`/create?edit=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
                 <Edit size={12} /> Modifica
               </button>
