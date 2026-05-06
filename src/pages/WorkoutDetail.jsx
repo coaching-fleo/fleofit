@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 // TOGLI Share2, metti Share2
-import { ArrowLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit } from 'lucide-react'
+import { ArrowLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -11,7 +11,8 @@ import html2canvas from 'html2canvas'
 const TYPE_COLORS = {
   EMOM: { text: 'text-blue-300', bg: 'bg-blue-900/40', border: 'border-blue-700', hex: '#3b82f6' },
   AMRAP: { text: 'text-green-300', bg: 'bg-green-900/40', border: 'border-green-700', hex: '#22c55e' },
-  'For Time': { text: 'text-purple-300', bg: 'bg-purple-900/40', border: 'border-purple-700', hex: '#a855f7' }
+  'For Time': { text: 'text-purple-300', bg: 'bg-purple-900/40', border: 'border-purple-700', hex: '#a855f7' },
+  Running: { text: 'text-blue-400', bg: 'bg-blue-900/30', border: 'border-blue-600', hex: '#60a5fa' }
 }
 
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike']
@@ -24,6 +25,9 @@ const isDistance = (name) => isErgo(name) || isSled(name) || name === 'Farmers C
 export default function WorkoutDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const queryAthleteId = searchParams.get('athlete_id')
+
   const [workout, setWorkout] = useState(null)
   const [loading, setLoading] = useState(true)
   const igRef = useRef(null)
@@ -31,6 +35,10 @@ export default function WorkoutDetail() {
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [athletes, setAthletes] = useState([])
   const [assigning, setAssigning] = useState(false)
+  const [athleteNote, setAthleteNote] = useState(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => { fetchWorkout() }, [id])
 
@@ -45,6 +53,20 @@ export default function WorkoutDetail() {
     const { data, error } = await supabase.from('workouts').select('*').eq('id', id).single()
     if (error) console.error('ERRORE:', error)
     setWorkout(data)
+
+    if (queryAthleteId && data) {
+      const { data: awData } = await supabase.from('athlete_workouts')
+        .select('notes, athletes(name, surname)')
+        .eq('workout_id', data.id)
+        .eq('athlete_id', queryAthleteId)
+        .order('completed_date', { ascending: false })
+        .limit(1)
+        
+      if (awData && awData.length > 0 && awData[0].notes) {
+        setAthleteNote({ text: awData[0].notes, athleteName: `${awData[0].athletes.name} ${awData[0].athletes.surname}` })
+      }
+    }
+
     setLoading(false)
   }
 
@@ -66,8 +88,19 @@ export default function WorkoutDetail() {
     if (error) {
       alert("Errore durante l'assegnazione: " + error.message)
     } else {
-      alert("Workout assegnato all'atleta con successo!")
       setAssignModalOpen(false)
+      setShowSuccessModal(true)
+    }
+  }
+
+  const handleDeleteWorkout = async () => {
+    setDeleting(true)
+    const { error } = await supabase.from('workouts').delete().eq('id', id)
+    setDeleting(false)
+    if (error) {
+      alert("Errore durante l'eliminazione: " + error.message)
+    } else {
+      navigate('/calendar')
     }
   }
 
@@ -156,20 +189,46 @@ export default function WorkoutDetail() {
     doc.setTextColor(241, 186, 23)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
-    doc.text(type.toUpperCase(), 20, y)
+    doc.text(type === 'Running' ? 'ALLENAMENTO CORSA' : type.toUpperCase(), 20, y)
     y += 6
-    main.exercises.forEach((ex, i) => {
-      doc.setTextColor(200, 200, 200)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      const prefix = type === 'EMOM' ? `Min.${i + 1}  ` : `· `
-      const detail = isDistance(ex.name) ? ex.meters : `${ex.reps} reps`
-      const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
-      const noteStr = ex.notes ? `  → ${ex.notes}` : ''
-      doc.text(`${prefix}${ex.name}  ${detail}${kgStr}${noteStr}`, 25, y)
-      y += 6
-      if (y > 260) { doc.addPage(); y = 20 }
-    })
+    if (type === 'Running') {
+      main.steps?.forEach((step, i) => {
+        doc.setTextColor(180, 180, 180)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(10)
+        
+        const typeLabels = { warmup: 'Riscaldamento', run: 'Corsa', recover: 'Recupero', cooldown: 'Defaticamento', repeat: 'Ripetute' }
+        doc.text(`· ${typeLabels[step.type] || ''}${step.type === 'repeat' ? ` x${step.rounds}` : ''}`, 25, y)
+        y += 5
+        
+        doc.setFont('helvetica', 'normal')
+        if (step.type === 'repeat') {
+           doc.setTextColor(200, 200, 200)
+           doc.text(`  Corsa: ${step.runDuration} ${step.runPace ? '@'+step.runPace : ''}`, 30, y); y += 5
+           doc.text(`  Recupero: ${step.recDuration} ${step.recPace ? '@'+step.recPace : ''}`, 30, y); y += 5
+        } else {
+           doc.setTextColor(200, 200, 200)
+           const text = `${step.duration || ''} ${step.pace ? '@'+step.pace : ''} ${step.notes ? '('+step.notes+')' : ''}`
+           doc.text(`  ${text}`, 30, y)
+           y += 5
+        }
+        y += 2
+        if (y > 260) { doc.addPage(); y = 20 }
+      })
+    } else {
+      main.exercises.forEach((ex, i) => {
+        doc.setTextColor(200, 200, 200)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10)
+        const prefix = type === 'EMOM' ? `Min.${i + 1}  ` : `· `
+        const detail = isDistance(ex.name) ? ex.meters : `${ex.reps} reps`
+        const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
+        const noteStr = ex.notes ? `  → ${ex.notes}` : ''
+        doc.text(`${prefix}${ex.name}  ${detail}${kgStr}${noteStr}`, 25, y)
+        y += 6
+        if (y > 260) { doc.addPage(); y = 20 }
+      })
+    }
     y += 4
 
     // Cash Out
@@ -286,12 +345,13 @@ export default function WorkoutDetail() {
   const s = workout.sections
   const main = s?.main
   const type = main?.type || ''
-  const c = TYPE_COLORS[type] || TYPE_COLORS['EMOM']
+  const c = TYPE_COLORS[type] || TYPE_COLORS['Running']
 
   const paramSummary = () => {
     if (type === 'EMOM') return `${main.params.on} ON · ${main.params.off} OFF · ${main.params.total}`
     if (type === 'AMRAP') return main.params.duration
     if (type === 'For Time') return `${main.params.rounds} rounds`
+    if (type === 'Running') return `${main.steps?.length || 0} fasi`
     return ''
   }
 
@@ -315,9 +375,14 @@ export default function WorkoutDetail() {
             <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${c.bg} ${c.text} border ${c.border}`}>
               {type}
             </span>
-            <button onClick={() => navigate(`/create?edit=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
-              <Edit size={12} /> Modifica
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => navigate(`/create?edit=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                <Edit size={12} /> Modifica
+              </button>
+              <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                <Trash2 size={12} />
+              </button>
+            </div>
           </div>
         </div>
         <div className={`mt-3 px-4 py-2 rounded-xl ${c.bg} border ${c.border}`}>
@@ -340,8 +405,12 @@ export default function WorkoutDetail() {
       )}
 
       {/* MAIN */}
-      <Section icon={<Dumbbell size={16} className={c.text} />} label={type} color={c.border}>
-        <ExList exercises={main.exercises} showMinute={type === 'EMOM'} typeColor={c.text} />
+      <Section icon={type === 'Running' ? <Timer size={16} className={c.text} /> : <Dumbbell size={16} className={c.text} />} label={type === 'Running' ? 'Allenamento Corsa' : type} color={c.border}>
+        {type === 'Running' ? (
+          <RunningList steps={main.steps || []} />
+        ) : (
+          <ExList exercises={main.exercises || []} showMinute={type === 'EMOM'} typeColor={c.text} />
+        )}
       </Section>
 
       {/* CASH OUT */}
@@ -355,6 +424,13 @@ export default function WorkoutDetail() {
       {workout.coach_notes && (
         <Section icon={<span className="text-[#f1ba17] text-sm">📋</span>} label="Note Coach" color="border-[#f1ba17]/40">
           <p className="text-gray-300 text-sm leading-relaxed">{workout.coach_notes}</p>
+        </Section>
+      )}
+
+      {/* NOTE ATLETA */}
+      {athleteNote && (
+        <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Note Atleta (${athleteNote.athleteName})`} color="border-[#3b82f6]/40">
+          <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{athleteNote.text}</p>
         </Section>
       )}
 
@@ -426,23 +502,46 @@ export default function WorkoutDetail() {
 
           {/* Esercizi */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
-            {main.exercises.map((ex, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {type === 'EMOM' && (
-                  <div style={{
-                    width: '22px', height: '22px', borderRadius: '50%',
-                    background: '#222', border: `1px solid ${c.hex}40`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: c.hex, fontSize: '10px', fontWeight: 700, flexShrink: 0
-                  }}>{i + 1}</div>
-                )}
-                <div style={{ color: '#e5e5e5', fontSize: '13px', fontWeight: 600 }}>{ex.name}</div>
-                <div style={{ color: '#555', fontSize: '12px', marginLeft: 'auto' }}>
-                  {isDistance(ex.name) ? ex.meters : `${ex.reps} reps`}
-                  {ex.kg ? ` · ${ex.kg}kg` : ''}
+            {type === 'Running' ? (
+              main.steps?.map((step, i) => {
+                const typeLabels = { warmup: 'Warm Up', run: 'Run', recover: 'Recover', cooldown: 'Cool Down', repeat: 'Repeat' }
+                return (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', borderLeft: '2px solid #444', paddingLeft: '10px' }}>
+                    <div style={{ color: '#60a5fa', fontSize: '12px', fontWeight: 800 }}>
+                      {typeLabels[step.type]?.toUpperCase()} {step.type === 'repeat' ? `x${step.rounds}` : ''}
+                    </div>
+                    {step.type === 'repeat' ? (
+                      <>
+                        <div style={{ color: '#e5e5e5', fontSize: '12px' }}>Run: {step.runDuration} {step.runPace ? `· ${step.runPace}` : ''}</div>
+                        <div style={{ color: '#a3a3a3', fontSize: '12px' }}>Rec: {step.recDuration} {step.recPace ? `· ${step.recPace}` : ''}</div>
+                      </>
+                    ) : (
+                      <div style={{ color: '#e5e5e5', fontSize: '12px' }}>
+                        {step.duration} {step.pace ? `· ${step.pace}` : ''} {step.notes ? `(${step.notes})` : ''}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            ) : (
+              main.exercises?.map((ex, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {type === 'EMOM' && (
+                    <div style={{
+                      width: '22px', height: '22px', borderRadius: '50%',
+                      background: '#222', border: `1px solid ${c.hex}40`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: c.hex, fontSize: '10px', fontWeight: 700, flexShrink: 0
+                    }}>{i + 1}</div>
+                  )}
+                  <div style={{ color: '#e5e5e5', fontSize: '13px', fontWeight: 600 }}>{ex.name}</div>
+                  <div style={{ color: '#555', fontSize: '12px', marginLeft: 'auto' }}>
+                    {isDistance(ex.name) ? ex.meters : `${ex.reps} reps`}
+                    {ex.kg ? ` · ${ex.kg}kg` : ''}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* Footer */}
@@ -484,6 +583,109 @@ export default function WorkoutDetail() {
           </div>
         </div>
       )}
+
+      {/* MODAL: CONFERMA ELIMINAZIONE WORKOUT */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
+            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2">
+              <AlertTriangle size={32} />
+            </div>
+            <h2 className="text-xl font-bold text-white">Sei sicuro?</h2>
+            <p className="text-gray-400 text-sm">
+              Questa azione eliminerà definitivamente il workout dal calendario e non può essere annullata.
+            </p>
+            <div className="flex gap-3 mt-4">
+              <button 
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button 
+                onClick={handleDeleteWorkout}
+                disabled={deleting}
+                className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-500 transition disabled:opacity-50"
+              >
+                {deleting ? 'Eliminazione...' : 'Elimina'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SUCCESSO ASSEGNAZIONE */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
+            <div className="w-16 h-16 rounded-full bg-green-900/30 text-green-500 flex items-center justify-center mx-auto mb-2">
+              <Check size={32} />
+            </div>
+            <h2 className="text-xl font-bold text-white">Workout Assegnato!</h2>
+            <p className="text-gray-400 text-sm">
+              L'allenamento è stato assegnato all'atleta con successo.
+            </p>
+            <button 
+              onClick={() => setShowSuccessModal(false)}
+              className="mt-4 w-full py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition"
+            >
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RunningList({ steps }) {
+  const getTypeLabel = (t) => {
+    switch(t) {
+      case 'warmup': return 'Riscaldamento'
+      case 'run': return 'Corsa'
+      case 'recover': return 'Recupero'
+      case 'cooldown': return 'Defaticamento'
+      case 'repeat': return 'Ripetute'
+      default: return ''
+    }
+  }
+
+  const getTypeColor = (t) => {
+    switch(t) {
+      case 'warmup': return 'text-orange-400'
+      case 'run': return 'text-blue-400'
+      case 'recover': return 'text-green-400'
+      case 'cooldown': return 'text-gray-400'
+      case 'repeat': return 'text-purple-400'
+      default: return 'text-white'
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {steps.map((step, i) => (
+        <div key={step.id || i} className="flex flex-col border-l-2 border-[#333] pl-3 py-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-xs font-bold ${getTypeColor(step.type)}`}>
+              {getTypeLabel(step.type)}
+            </span>
+            {step.type === 'repeat' && <span className="text-white text-sm font-bold bg-[#1a1a1a] px-2 py-0.5 rounded-full border border-[#333]">x{step.rounds}</span>}
+          </div>
+          {step.type === 'repeat' ? (
+            <div className="text-sm flex flex-col gap-1 mt-1">
+              <div><span className="text-gray-400">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-gray-500 text-xs">@{step.runPace}</span>}</div>
+              <div><span className="text-gray-400">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-gray-500 text-xs">@{step.recPace}</span>}</div>
+            </div>
+          ) : (
+            <div className="text-sm">
+              {step.duration && <span className="font-semibold text-white">{step.duration}</span>}
+              {step.pace && <span className="ml-2 text-gray-400">@{step.pace}</span>}
+              {step.notes && <p className="text-gray-500 text-xs mt-1">{step.notes}</p>}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   )
 }

@@ -156,20 +156,34 @@ function NewAthleteModal({ onClose, onSaved }) {
 
           {/* FORM */}
           <div className="grid grid-cols-2 gap-3">
-            <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
-              placeholder="Nome *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-            <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
-              placeholder="Cognome *" value={form.surname} onChange={e => setForm({ ...form, surname: e.target.value })} />
+            <div className="flex flex-col gap-1">
+              <label className="text-gray-400 text-xs pl-1">Nome *</label>
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
+                placeholder="Mario" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-gray-400 text-xs pl-1">Cognome *</label>
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
+                placeholder="Rossi" value={form.surname} onChange={e => setForm({ ...form, surname: e.target.value })} />
+            </div>
           </div>
 
-          <input type="date" className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17]"
-            value={form.birth_date} onChange={e => setForm({ ...form, birth_date: e.target.value })} />
+          <div className="flex flex-col gap-1">
+            <label className="text-gray-400 text-xs pl-1">Data di nascita</label>
+            <input type="date" className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17]" value={form.birth_date} onChange={e => setForm({ ...form, birth_date: e.target.value })} />
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
-              placeholder="Peso (kg)" type="number" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
-            <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
-              placeholder="Altezza (cm)" type="number" value={form.height} onChange={e => setForm({ ...form, height: e.target.value })} />
+            <div className="flex flex-col gap-1">
+              <label className="text-gray-400 text-xs pl-1">Peso (kg)</label>
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
+                placeholder="Es. 75" type="number" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-gray-400 text-xs pl-1">Altezza (cm)</label>
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
+                placeholder="Es. 180" type="number" value={form.height} onChange={e => setForm({ ...form, height: e.target.value })} />
+            </div>
           </div>
 
           <textarea className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none"

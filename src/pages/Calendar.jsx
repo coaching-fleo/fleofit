@@ -118,7 +118,7 @@ export default function Calendar() {
             {format(selectedDay, 'EEEE d MMMM', { locale: it })}
           </h2>
           <button
-            onClick={() => navigate('/create')}
+            onClick={() => navigate(`/create?date=${format(selectedDay, 'yyyy-MM-dd')}`)}
             className="flex items-center gap-1 text-[#f1ba17] text-sm font-medium hover:brightness-110"
           >
             <Plus size={16} /> Nuovo
@@ -128,7 +128,7 @@ export default function Calendar() {
         {dayWorkouts.length === 0 ? (
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 text-center">
             <p className="text-gray-600 text-sm">Nessun workout programmato</p>
-            <button onClick={() => navigate('/create')}
+            <button onClick={() => navigate(`/create?date=${format(selectedDay, 'yyyy-MM-dd')}`)}
               className="mt-3 text-[#f1ba17] text-sm font-medium hover:brightness-110">
               + Crea workout per questo giorno
             </button>
@@ -150,7 +150,7 @@ export default function Calendar() {
                       <p className="text-xs mt-0.5" style={{ color }}>{type}</p>
                     </div>
                   </div>
-                  {exList.length > 0 && (
+                  {exList && exList.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2 ml-4">
                       {exList.slice(0, 4).map((ex, i) => (
                         <span key={i} className="text-xs bg-[#2a2a2a] text-gray-400 px-2 py-0.5 rounded-full">
@@ -160,6 +160,13 @@ export default function Calendar() {
                       {exList.length > 4 && (
                         <span className="text-xs text-gray-600">+{exList.length - 4}</span>
                       )}
+                    </div>
+                  )}
+                  {type === 'Running' && w.sections?.main?.steps?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2 ml-4">
+                      <span className="text-xs bg-[#2a2a2a] text-gray-400 px-2 py-0.5 rounded-full">
+                        {w.sections.main.steps.length} fasi di corsa
+                      </span>
                     </div>
                   )}
                 </div>

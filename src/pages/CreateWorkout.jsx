@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown } from 'lucide-react'
+import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -38,6 +38,26 @@ const KG_OPTIONS = [
   ...Array.from({ length: 300 }, (_, i) => `${i + 1} kg`),
   ...[4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32].map(w => `2x${w} kg`)
 ]
+
+// ─── COSTANTI RUNNING ─────────────────────────────────────────
+const RUN_DURATION_OPTIONS = [
+  ...Array.from({ length: 60 }, (_, i) => `${i + 1} min`),
+  ...Array.from({ length: 60 }, (_, i) => `${i + 1} sec`),
+  '50m', '100m', '200m', '300m', '400m', '500m', '600m', '800m', '1 km', '1.5 km', '2 km', '3 km', '4 km', '5 km', '10 km', '15 km', '21 km', '42 km'
+]
+
+const RUN_PACE_OPTIONS = [
+  'Libero', 'Camminata', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out', 'Gara',
+  ...Array.from({ length: 12 }, (_, i) => `3:${(i * 5).toString().padStart(2, '0')} /km`),
+  ...Array.from({ length: 12 }, (_, i) => `4:${(i * 5).toString().padStart(2, '0')} /km`),
+  ...Array.from({ length: 12 }, (_, i) => `5:${(i * 5).toString().padStart(2, '0')} /km`),
+  ...Array.from({ length: 12 }, (_, i) => `6:${(i * 5).toString().padStart(2, '0')} /km`),
+  ...Array.from({ length: 12 }, (_, i) => `7:${(i * 5).toString().padStart(2, '0')} /km`)
+]
+
+const MAX_PACE_OPTIONS = ['-', ...RUN_PACE_OPTIONS]
+
+const RUN_REPEAT_ROUNDS_OPTIONS = Array.from({ length: 30 }, (_, i) => `${i + 1}`)
 
 // ─── HELPER REORDER ───────────────────────────────────────────
 const moveElement = (list, from, to) => {
@@ -199,6 +219,7 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDropI
           <span className="text-[#f1ba17] text-xs font-bold">{index + 1}</span>
         </div>
       )}
+
       <div className="flex-1">
         <p className="text-white text-sm font-medium">{ex.name}</p>
         <p className="text-gray-500 text-xs mt-0.5">
@@ -252,15 +273,183 @@ function CashBlock({ label, exercises, onAdd, onRemove, onMoveUp, onMoveDown, on
   )
 }
 
+// ─── COMPONENTI RUNNING BUILDER ────────────────────────────────
+function RunningStepPicker({ onAdd, onClose }) {
+  const [type, setType] = useState('run')
+  const [duration, setDuration] = useState('10 min')
+  const [pace, setPace] = useState('Libero')
+  const [paceMax, setPaceMax] = useState('-')
+  const [notes, setNotes] = useState('')
+  const [rounds, setRounds] = useState('8')
+  const [runDuration, setRunDuration] = useState('1 min')
+  const [runPace, setRunPace] = useState('Libero')
+  const [runPaceMax, setRunPaceMax] = useState('-')
+  const [recDuration, setRecDuration] = useState('1 min')
+  const [recPace, setRecPace] = useState('Libero')
+  const [recPaceMax, setRecPaceMax] = useState('-')
+
+  const formatPace = (p, pMax) => {
+    if (!pMax || pMax === '-') return p
+    if (p.includes(' /km') && pMax.includes(' /km')) {
+      return `${p.replace(' /km', '')} - ${pMax}`
+    }
+    return `${p} - ${pMax}`
+  }
+
+  const handleAdd = () => {
+    onAdd({
+      id: Math.random(), type, 
+      duration, pace: formatPace(pace, paceMax), notes,
+      rounds, runDuration, runPace: formatPace(runPace, runPaceMax), 
+      recDuration, recPace: formatPace(recPace, recPaceMax)
+    })
+    onClose()
+  }
+
+  const getTypeLabel = (t) => {
+    switch(t) {
+      case 'warmup': return 'Riscaldamento'
+      case 'run': return 'Corsa'
+      case 'recover': return 'Recupero'
+      case 'cooldown': return 'Defaticamento'
+      case 'repeat': return 'Ripetute'
+      default: return ''
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+        <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
+          <p className="text-white font-bold">Aggiungi Fase Corsa</p>
+          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+        </div>
+        <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
+          <div className="flex flex-wrap gap-2">
+            {['warmup', 'run', 'recover', 'cooldown', 'repeat'].map(t => (
+              <button key={t} onClick={() => setType(t)}
+                className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition ${
+                  type === t ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-[#2a2a2a] border-[#383838] text-gray-400 hover:text-white'
+                }`}>
+                {getTypeLabel(t)}
+              </button>
+            ))}
+          </div>
+          {type === 'repeat' ? (
+            <div className="flex flex-col gap-4 mt-2">
+              <ScrollPicker options={RUN_REPEAT_ROUNDS_OPTIONS} value={rounds} onChange={setRounds} label="Numero di ripetizioni" />
+              <div className="p-3 bg-[#222] border border-[#333] rounded-xl flex flex-col gap-3">
+                <p className="text-blue-300 text-sm font-semibold">Fase Attiva (Corsa)</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <ScrollPicker options={RUN_DURATION_OPTIONS} value={runDuration} onChange={setRunDuration} label="Durata" />
+                  <ScrollPicker options={RUN_PACE_OPTIONS} value={runPace} onChange={setRunPace} label="Da" />
+                  <ScrollPicker options={MAX_PACE_OPTIONS} value={runPaceMax} onChange={setRunPaceMax} label="A (Opz.)" />
+                </div>
+              </div>
+              <div className="p-3 bg-[#222] border border-[#333] rounded-xl flex flex-col gap-3">
+                <p className="text-green-400 text-sm font-semibold">Fase Recupero</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <ScrollPicker options={RUN_DURATION_OPTIONS} value={recDuration} onChange={setRecDuration} label="Durata" />
+                  <ScrollPicker options={RUN_PACE_OPTIONS} value={recPace} onChange={setRecPace} label="Da" />
+                  <ScrollPicker options={MAX_PACE_OPTIONS} value={recPaceMax} onChange={setRecPaceMax} label="A (Opz.)" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 mt-2">
+              <div className="grid grid-cols-3 gap-2">
+                <ScrollPicker options={RUN_DURATION_OPTIONS} value={duration} onChange={setDuration} label="Durata / Distanza" />
+                <ScrollPicker options={RUN_PACE_OPTIONS} value={pace} onChange={setPace} label="Da" />
+                <ScrollPicker options={MAX_PACE_OPTIONS} value={paceMax} onChange={setPaceMax} label="A (Opz.)" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs mb-1 block">Note</label>
+                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 text-sm" placeholder="Es: corsa leggera, focus tecnica..." />
+              </div>
+            </div>
+          )}
+          <button onClick={handleAdd} className="w-full mt-2 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 transition">
+            Aggiungi Fase
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown }) {
+  const getTypeLabel = (t) => {
+    switch(t) {
+      case 'warmup': return 'Riscaldamento'
+      case 'run': return 'Corsa'
+      case 'recover': return 'Recupero'
+      case 'cooldown': return 'Defaticamento'
+      case 'repeat': return 'Ripetute'
+      default: return ''
+    }
+  }
+  const getTypeColor = (t) => {
+    switch(t) {
+      case 'warmup': return 'text-orange-400 bg-orange-400/10 border-orange-400/30'
+      case 'run': return 'text-blue-400 bg-blue-400/10 border-blue-400/30'
+      case 'recover': return 'text-green-400 bg-green-400/10 border-green-400/30'
+      case 'cooldown': return 'text-gray-400 bg-gray-400/10 border-gray-400/30'
+      case 'repeat': return 'text-purple-400 bg-purple-400/10 border-purple-400/30'
+      default: return 'text-white'
+    }
+  }
+
+  return (
+    <div className="flex items-start gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 hover:border-[#444] transition">
+      <div className="flex flex-col items-center justify-center shrink-0 mt-1">
+        <button type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-blue-400 disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
+        <button type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-gray-500 hover:text-blue-400 disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
+      </div>
+      <div className="flex-1 mt-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-md border ${getTypeColor(step.type)}`}>
+            {getTypeLabel(step.type)}
+          </span>
+          {step.type === 'repeat' && <span className="text-white text-sm font-bold bg-[#1a1a1a] px-2 py-0.5 rounded-full border border-[#333]">x{step.rounds}</span>}
+        </div>
+        {step.type === 'repeat' ? (
+          <div className="text-sm mt-2 flex flex-col gap-1.5 ml-1 border-l-2 border-[#333] pl-3">
+            <div>
+              <span className="text-blue-300 font-medium">Corsa:</span> <span className="text-gray-300">{step.runDuration}</span>
+              {step.runPace && <span className="text-gray-500 text-xs ml-1">@{step.runPace}</span>}
+            </div>
+            <div>
+              <span className="text-green-400 font-medium">Recupero:</span> <span className="text-gray-300">{step.recDuration}</span>
+              {step.recPace && <span className="text-gray-500 text-xs ml-1">@{step.recPace}</span>}
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm mt-1 text-gray-300">
+            {step.duration && <span className="font-semibold text-white">{step.duration}</span>}
+            {step.pace && <span className="ml-2 text-gray-500">@{step.pace}</span>}
+            {step.notes && <p className="text-gray-500 text-xs mt-0.5">{step.notes}</p>}
+          </div>
+        )}
+      </div>
+      <button type="button" onClick={() => onRemove(step.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2 mt-1">
+        <Trash2 size={15} />
+      </button>
+    </div>
+  )
+}
+
 // ─── MAIN ─────────────────────────────────────────────────────
 export default function CreateWorkout() {
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
+  const defaultDate = searchParams.get('date')
+  const defaultAthleteId = searchParams.get('athlete_id')
 
   const [step, setStep] = useState(1) // 1=tipo, 2=parametri, 3=build
   const [title, setTitle] = useState('')
-  const [date, setDate] = useState('')
+  const [date, setDate] = useState(defaultDate || '')
   const [workoutType, setWorkoutType] = useState(null)
+  const [category, setCategory] = useState('Hyrox')
 
   // Parametri per tipo
   const [emomOn, setEmomOn] = useState('1:00')
@@ -282,12 +471,16 @@ export default function CreateWorkout() {
   // Esercizi blocco principale
   const [exercises, setExercises] = useState([])
   const [pickerOpen, setPickerOpen] = useState(false)
+  
+  // Running
+  const [runningSteps, setRunningSteps] = useState([])
+  const [runningPickerOpen, setRunningPickerOpen] = useState(false)
 
   // Note + pause
   const [coachNotes, setCoachNotes] = useState('')
 
   const [athletes, setAthletes] = useState([])
-  const [selectedAthlete, setSelectedAthlete] = useState('')
+  const [selectedAthlete, setSelectedAthlete] = useState(defaultAthleteId || '')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -323,11 +516,18 @@ export default function CreateWorkout() {
         setCashOutExercises(s.cashOut)
       }
       if (s.main) {
-        setWorkoutType(s.main.type)
-        setExercises(s.main.exercises || [])
-        if (s.main.type === 'EMOM') { setEmomOn(s.main.params?.on || '1:00'); setEmomOff(s.main.params?.off || '1:00'); setEmomTotal(s.main.params?.total || '21 min') } 
-        else if (s.main.type === 'AMRAP') { setAmrapDuration(s.main.params?.duration || '10 min') } 
-        else if (s.main.type === 'For Time') { setForTimeRounds(s.main.params?.rounds || '3') }
+        if (s.main.type === 'Running') {
+          setCategory('Running')
+          setWorkoutType('Running')
+          setRunningSteps(s.main.steps || [])
+        } else {
+          setCategory('Hyrox')
+          setWorkoutType(s.main.type)
+          setExercises(s.main.exercises || [])
+          if (s.main.type === 'EMOM') { setEmomOn(s.main.params?.on || '1:00'); setEmomOff(s.main.params?.off || '1:00'); setEmomTotal(s.main.params?.total || '21 min') } 
+          else if (s.main.type === 'AMRAP') { setAmrapDuration(s.main.params?.duration || '10 min') } 
+          else if (s.main.type === 'For Time') { setForTimeRounds(s.main.params?.rounds || '3') }
+        }
       }
     }
     fetchWorkoutToEdit()
@@ -335,6 +535,41 @@ export default function CreateWorkout() {
 
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [pendingPath, setPendingPath] = useState(null)
+
+  const hasUnsavedChanges = title.trim() !== '' || exercises.length > 0 || runningSteps.length > 0
+
+  useEffect(() => {
+    // 1. Intercetta chiusura/aggiornamento del tab del browser
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges && !saved) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // 2. Intercetta i click sui link di navigazione interna (es. bottoni della Navbar)
+    const handleLinkClick = (e) => {
+      if (hasUnsavedChanges && !saved) {
+        const link = e.target.closest('a')
+        if (link && link.host === window.location.host && link.pathname !== window.location.pathname) {
+          e.preventDefault()
+          e.stopPropagation()
+          setPendingPath(link.pathname + link.search)
+          setShowExitConfirm(true)
+        }
+      }
+    }
+    // Usiamo 'capture: true' per bloccare l'evento prima che React Router faccia cambiare pagina
+    document.addEventListener('click', handleLinkClick, { capture: true })
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('click', handleLinkClick, { capture: true })
+    }
+  }, [hasUnsavedChanges, saved])
 
   const isStep1Valid = title.trim() !== '' && date !== ''
 
@@ -354,12 +589,14 @@ export default function CreateWorkout() {
   const handleSave = async () => {
     if (!title || !date) return alert('Inserisci titolo e data!')
     if (!workoutType) return alert('Scegli il tipo di workout!')
-    if (exercises.length === 0) return alert('Aggiungi almeno un esercizio!')
+    if (category === 'Hyrox' && exercises.length === 0) return alert('Aggiungi almeno un esercizio!')
+    if (category === 'Running' && runningSteps.length === 0) return alert('Aggiungi almeno una fase di corsa!')
+    
     setSaving(true)
     const sections = {
-      warmup: { duration: warmupDuration, notes: warmupNotes },
-      cashIn: hasCashIn ? cashInExercises : null,
-      main: {
+      warmup: category === 'Hyrox' ? { duration: warmupDuration, notes: warmupNotes } : null,
+      cashIn: (category === 'Hyrox' && hasCashIn) ? cashInExercises : null,
+      main: category === 'Hyrox' ? {
         type: workoutType,
         params: workoutType === 'EMOM'
           ? { on: emomOn, off: emomOff, total: emomTotal }
@@ -367,8 +604,11 @@ export default function CreateWorkout() {
             ? { duration: amrapDuration }
             : { rounds: forTimeRounds },
         exercises
+      } : {
+        type: 'Running',
+        steps: runningSteps
       },
-      cashOut: hasCashOut ? cashOutExercises : null
+      cashOut: (category === 'Hyrox' && hasCashOut) ? cashOutExercises : null
     }
 
     const payload = { title, date, sections, coach_notes: coachNotes }
@@ -420,22 +660,51 @@ export default function CreateWorkout() {
             />
           </div>
 
-          <p className="text-gray-400 text-sm font-medium">Tipo di workout:</p>
+          <p className="text-gray-400 text-sm font-medium">Seleziona Categoria:</p>
+          <div className="flex gap-2 mb-2">
+            <button 
+              onClick={() => setCategory('Hyrox')} 
+              className={`flex-1 py-4 rounded-xl border font-bold transition flex items-center justify-center gap-2 ${category === 'Hyrox' ? 'bg-[#f1ba17]/10 border-[#f1ba17] text-[#f1ba17]' : 'bg-[#222] border-[#333] text-gray-500 hover:text-white'}`}>
+              <Dumbbell size={20} /> Hyrox
+            </button>
+            <button 
+              onClick={() => setCategory('Running')} 
+              className={`flex-1 py-4 rounded-xl border font-bold transition flex items-center justify-center gap-2 ${category === 'Running' ? 'bg-blue-500/10 border-blue-500 text-blue-400' : 'bg-[#222] border-[#333] text-gray-500 hover:text-white'}`}>
+              <Timer size={20} /> Running
+            </button>
+          </div>
+
           {!isStep1Valid && (
-            <p className="text-yellow-500 text-xs text-center -mt-2 mb-2">
+            <p className="text-yellow-500 text-xs text-center mb-2">
               ↑ Completa nome e data per proseguire
             </p>
           )}
-          {Object.entries(TYPE_INFO).map(([type, info]) => (
-            <button key={type} onClick={() => { setWorkoutType(type); setStep(2) }} disabled={!isStep1Valid}
-              className={`flex items-center justify-between p-5 rounded-2xl border ${info.border} ${info.bg} transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}>
-              <div className="text-left">
-                <p className={`font-bold text-lg ${info.color}`}>{type}</p>
-                <p className="text-gray-400 text-xs mt-1">{info.desc}</p>
-              </div>
-              <ChevronRight size={20} className={info.color} />
+
+          {category === 'Hyrox' && (
+            <>
+              <p className="text-gray-400 text-sm font-medium mt-2">Tipo di workout:</p>
+              {Object.entries(TYPE_INFO).map(([type, info]) => (
+                <button key={type} onClick={() => { setWorkoutType(type); setStep(2) }} disabled={!isStep1Valid}
+                  className={`flex items-center justify-between p-5 rounded-2xl border ${info.border} ${info.bg} transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}>
+                  <div className="text-left">
+                    <p className={`font-bold text-lg ${info.color}`}>{type}</p>
+                    <p className="text-gray-400 text-xs mt-1">{info.desc}</p>
+                  </div>
+                  <ChevronRight size={20} className={info.color} />
+                </button>
+              ))}
+            </>
+          )}
+
+          {category === 'Running' && (
+            <button 
+              onClick={() => { setWorkoutType('Running'); setStep(3) }} 
+              disabled={!isStep1Valid}
+              className={`w-full py-4 mt-2 rounded-2xl border border-blue-600 bg-blue-600/20 text-blue-300 font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
+            >
+              Crea Allenamento Corsa →
             </button>
-          ))}
+          )}
         </div>
       )}
 
@@ -471,7 +740,7 @@ export default function CreateWorkout() {
       )}
 
       {/* ── STEP 3: BUILD WORKOUT ────────────────────────── */}
-      {step === 3 && (
+      {step === 3 && category === 'Hyrox' && (
         <div className="flex flex-col gap-4">
 
           {/* RIEPILOGO TIPO */}
@@ -622,7 +891,7 @@ export default function CreateWorkout() {
 
           {/* BOTTONI */}
           <div className="flex gap-3">
-            <button onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl border border-[#444] text-gray-400 hover:text-white transition">← Parametri</button>
+            <button onClick={() => setStep(category === 'Running' ? 1 : 2)} className="flex-1 py-3 rounded-xl border border-[#444] text-gray-400 hover:text-white transition">← Indietro</button>
             <button onClick={handleSave} disabled={saving}
               className="flex-2 px-6 py-3 rounded-xl bg-[#f1ba17] text-black font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
               <Save size={18} />
@@ -639,6 +908,96 @@ export default function CreateWorkout() {
           onClose={() => setPickerOpen(false)}
           existingNames={exercises.map(e => e.name)}
         />
+      )}
+
+      {/* ── STEP 3: BUILD RUNNING WORKOUT ────────────────── */}
+      {step === 3 && category === 'Running' && (
+        <div className="flex flex-col gap-4">
+          <div className="px-4 py-3 rounded-2xl border border-blue-600 bg-blue-900/40 flex items-center gap-3">
+            <Timer size={18} className="text-blue-300" />
+            <span className="font-bold text-blue-300">Allenamento Corsa</span>
+          </div>
+
+          <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-white font-semibold text-sm">Fasi dell'allenamento</span>
+              <button onClick={() => setRunningPickerOpen(true)} className="text-blue-400 hover:brightness-110">
+                <Plus size={18} />
+              </button>
+            </div>
+
+            {runningSteps.length === 0 ? (
+              <button onClick={() => setRunningPickerOpen(true)}
+                className="w-full py-4 border border-dashed border-[#383838] rounded-xl text-gray-600 text-sm hover:border-blue-400 hover:text-blue-400 transition">
+                + Aggiungi prima fase (es. Riscaldamento)
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {runningSteps.map((step, i) => (
+                  <RunningStepRow
+                    key={step.id}
+                    step={step}
+                    index={i}
+                    total={runningSteps.length}
+                    onRemove={id => setRunningSteps(runningSteps.filter(s => s.id !== id))}
+                    onMoveUp={idx => setRunningSteps(moveElement(runningSteps, idx, idx - 1))}
+                    onMoveDown={idx => setRunningSteps(moveElement(runningSteps, idx, idx + 1))}
+                  />
+                ))}
+                <button onClick={() => setRunningPickerOpen(true)}
+                  className="flex items-center justify-center gap-2 border border-dashed border-[#383838] rounded-xl py-3 text-blue-400 text-sm font-medium mt-1 hover:border-blue-400 transition">
+                  <Plus size={16} /> Aggiungi fase
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl border border-[#444] text-gray-400 hover:text-white transition">← Indietro</button>
+            <button onClick={handleSave} disabled={saving}
+              className="flex-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
+              <Save size={18} />
+              {saving ? 'Salvo...' : saved ? '✅ Salvato!' : 'Salva Workout'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* RUNNING STEP PICKER MODAL */}
+      {runningPickerOpen && (
+        <RunningStepPicker
+          onAdd={step => setRunningSteps([...runningSteps, step])}
+          onClose={() => setRunningPickerOpen(false)}
+        />
+      )}
+
+      {/* EXIT CONFIRM MODAL */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
+            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2">
+              <AlertTriangle size={32} />
+            </div>
+            <h2 className="text-xl font-bold text-white">Sei sicuro?</h2>
+            <p className="text-gray-400 text-sm">
+              Hai delle modifiche non salvate. Se esci ora, i dati andranno persi.
+            </p>
+            <div className="flex gap-3 mt-4">
+              <button 
+                onClick={() => setShowExitConfirm(false)}
+                className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition"
+              >
+                Annulla
+              </button>
+              <button 
+                onClick={() => navigate(pendingPath)}
+                className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-500 transition"
+              >
+                Sì, esci
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
