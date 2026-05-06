@@ -21,15 +21,20 @@ export default function Home() {
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24">
       {/* Header */}
-      <div className="mb-8 mt-4">
-        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
-        <p className="text-gray-400 mt-1">Dashboard Coach Federico Leo</p>
+      <div className="mb-8 mt-4 flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <img src="/public/favicon.svg" alt="Logo" className="h-10 object-contain" />
+            <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+          </div>
+          <p className="text-gray-400 mt-1">Dashboard Coach Federico Leo</p>
+        </div>
       </div>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div onClick={() => navigate('/calendar')} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-[#f1ba17] transition flex flex-col gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-900/30 flex items-center justify-center text-blue-400">
+          <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300">
             <CalendarDays size={20} />
           </div>
           <div>
@@ -39,7 +44,7 @@ export default function Home() {
         </div>
 
         <div onClick={() => navigate('/athletes')} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-[#f1ba17] transition flex flex-col gap-3">
-          <div className="w-10 h-10 rounded-full bg-green-900/30 flex items-center justify-center text-green-400">
+          <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300">
             <Users size={20} />
           </div>
           <div>

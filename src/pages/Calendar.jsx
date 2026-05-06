@@ -44,19 +44,20 @@ export default function Calendar() {
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
 
   const TYPE_COLORS = {
-    'ON/OFF': '#3b82f6',
-    EMOM: '#06b6d4',
-    AMRAP: '#22c55e',
-    'For Time': '#a855f7'
+    'ON/OFF': '#a3a3a3',
+    EMOM: '#d1d5db',
+    AMRAP: '#9ca3af',
+    'For Time': '#6b7280',
+    Running: '#f1ba17'
   }
 
   const getIntensityColor = (val) => {
     const num = parseInt(val, 10);
     if (isNaN(num)) return 'text-gray-500';
-    if (num <= 3) return 'text-green-400';
-    if (num <= 6) return 'text-yellow-400';
-    if (num <= 8) return 'text-orange-500';
-    return 'text-red-500';
+    if (num <= 4) return 'text-gray-400';
+    if (num <= 7) return 'text-gray-300';
+    if (num <= 9) return 'text-white';
+    return 'text-[#f1ba17]';
   }
 
   const getWorkoutType = (w) => {

@@ -70,10 +70,10 @@ const RUN_REPEAT_ROUNDS_OPTIONS = Array.from({ length: 30 }, (_, i) => `${i + 1}
 export const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
   if (isNaN(num)) return 'text-gray-500';
-  if (num <= 3) return 'text-green-400';
-  if (num <= 6) return 'text-yellow-400';
-  if (num <= 8) return 'text-orange-500';
-  return 'text-red-500';
+  if (num <= 4) return 'text-gray-400';
+  if (num <= 7) return 'text-gray-300';
+  if (num <= 9) return 'text-white';
+  return 'text-[#f1ba17]';
 }
 
 const timeToSeconds = (timeStr) => {
@@ -496,12 +496,12 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown }) 
   }
   const getTypeColor = (t) => {
     switch(t) {
-      case 'warmup': return 'text-orange-400 bg-orange-400/10 border-orange-400/30'
-      case 'run': return 'text-blue-400 bg-blue-400/10 border-blue-400/30'
-      case 'recover': return 'text-green-400 bg-green-400/10 border-green-400/30'
-      case 'cooldown': return 'text-gray-400 bg-gray-400/10 border-gray-400/30'
+      case 'warmup': return 'text-gray-400 bg-[#2a2a2a] border-[#383838]'
+      case 'run': return 'text-white bg-[#333] border-[#444]'
+      case 'recover': return 'text-gray-500 bg-[#1e1e1e] border-[#2a2a2a]'
+      case 'cooldown': return 'text-gray-600 bg-[#111] border-[#222]'
       case 'repeat': return 'text-purple-400 bg-purple-400/10 border-purple-400/30'
-      default: return 'text-white'
+      default: return 'text-white bg-[#222] border-[#333]'
     }
   }
 
@@ -521,11 +521,11 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown }) 
         {step.type === 'repeat' ? (
           <div className="text-sm mt-2 flex flex-col gap-1.5 ml-1 border-l-2 border-[#333] pl-3">
             <div>
-              <span className="text-blue-300 font-medium">Corsa:</span> <span className="text-gray-300">{step.runDuration}</span>
+              <span className="text-gray-300 font-medium">Corsa:</span> <span className="text-white">{step.runDuration}</span>
               {step.runPace && <span className="text-gray-500 text-xs ml-1">@{step.runPace}</span>}
             </div>
             <div>
-              <span className="text-green-400 font-medium">Recupero:</span> <span className="text-gray-300">{step.recDuration}</span>
+              <span className="text-gray-500 font-medium">Recupero:</span> <span className="text-gray-400">{step.recDuration}</span>
               {step.recPace && <span className="text-gray-500 text-xs ml-1">@{step.recPace}</span>}
             </div>
             {step.intensity && (
@@ -697,10 +697,10 @@ export default function CreateWorkout() {
   const isStep1Valid = title.trim() !== '' && date !== ''
 
   const TYPE_INFO = {
-    'ON/OFF': { color: 'text-blue-300', border: 'border-blue-700', bg: 'bg-blue-900/40', desc: 'Work / Rest intervals' },
-    EMOM: { color: 'text-cyan-300', border: 'border-cyan-700', bg: 'bg-cyan-900/40', desc: 'Every Minute On the Minute' },
-    AMRAP: { color: 'text-green-300', border: 'border-green-700', bg: 'bg-green-900/40', desc: 'As Many Rounds As Possible' },
-    'For Time': { color: 'text-purple-300', border: 'border-purple-700', bg: 'bg-purple-900/40', desc: 'Completa il più veloce possibile' }
+    'ON/OFF': { color: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]', desc: 'Work / Rest intervals' },
+    EMOM: { color: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]', desc: 'Every Minute On the Minute' },
+    AMRAP: { color: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]', desc: 'As Many Rounds As Possible' },
+    'For Time': { color: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]', desc: 'Completa il più veloce possibile' }
   }
 
   const workoutSummary = () => {
@@ -801,7 +801,7 @@ export default function CreateWorkout() {
             </button>
             <button 
               onClick={() => setCategory('Running')} 
-              className={`flex-1 py-4 rounded-xl border font-bold transition flex items-center justify-center gap-2 ${category === 'Running' ? 'bg-blue-500/10 border-blue-500 text-blue-400' : 'bg-[#222] border-[#333] text-gray-500 hover:text-white'}`}>
+              className={`flex-1 py-4 rounded-xl border font-bold transition flex items-center justify-center gap-2 ${category === 'Running' ? 'bg-[#f1ba17]/10 border-[#f1ba17] text-[#f1ba17]' : 'bg-[#222] border-[#333] text-gray-500 hover:text-white'}`}>
               <Timer size={20} /> Running
             </button>
           </div>
@@ -832,7 +832,7 @@ export default function CreateWorkout() {
             <button 
               onClick={() => { setWorkoutType('Running'); setStep(3) }} 
               disabled={!isStep1Valid}
-              className={`w-full py-4 mt-2 rounded-2xl border border-blue-600 bg-blue-600/20 text-blue-300 font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
+              className={`w-full py-4 mt-2 rounded-2xl border border-[#f1ba17]/50 bg-[#f1ba17]/10 text-[#f1ba17] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
             >
               Crea Allenamento Corsa →
             </button>
@@ -864,7 +864,7 @@ export default function CreateWorkout() {
               </div>
               <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex items-center justify-between">
                 <span className="text-gray-400 text-sm">Durata totale calcolata:</span>
-                <span className="text-[#06b6d4] font-bold text-lg">
+                <span className="text-white font-bold text-lg">
                   {formatTime(timeToSeconds(emomInterval) * (parseInt(emomRounds, 10) || 0))}
                 </span>
               </div>
@@ -905,7 +905,7 @@ export default function CreateWorkout() {
           {/* WARM UP */}
           <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Timer size={16} className="text-orange-400" />
+              <Timer size={16} className="text-gray-400" />
               <span className="text-white font-semibold text-sm">Warm Up</span>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -927,7 +927,7 @@ export default function CreateWorkout() {
             <div>
               <CashBlock
                 label="Cash In"
-                icon={<Flag size={16} className="text-yellow-400" />}
+                icon={<Flag size={16} className="text-gray-400" />}
                 exercises={cashInExercises}
                 onAdd={ex => setCashInExercises([...cashInExercises, ex])}
                 onRemove={id => setCashInExercises(cashInExercises.filter(e => e.id !== id))}
@@ -992,7 +992,7 @@ export default function CreateWorkout() {
             <div>
               <CashBlock
                 label="Cash Out"
-                icon={<FlagOff size={16} className="text-red-400" />}
+                icon={<FlagOff size={16} className="text-gray-400" />}
                 exercises={cashOutExercises}
                 onAdd={ex => setCashOutExercises([...cashOutExercises, ex])}
                 onRemove={id => setCashOutExercises(cashOutExercises.filter(e => e.id !== id))}
@@ -1069,18 +1069,18 @@ export default function CreateWorkout() {
       {/* ── STEP 3: BUILD RUNNING WORKOUT ────────────────── */}
       {step === 3 && category === 'Running' && (
         <div className="flex flex-col gap-4">
-          <div className="px-4 py-4 rounded-2xl border border-blue-600 bg-blue-900/40 flex flex-col gap-3">
+          <div className="px-4 py-4 rounded-2xl border border-[#444] bg-[#222] flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Timer size={18} className="text-blue-300" />
-                <span className="font-bold text-blue-300">Allenamento Corsa</span>
+                <Timer size={18} className="text-[#f1ba17]" />
+                <span className="font-bold text-[#f1ba17]">Allenamento Corsa</span>
               </div>
               <div className="flex items-center gap-1">
                  <span className={`text-sm font-bold ${getIntensityColor(workoutIntensity)}`}>{workoutIntensity}/10</span>
                  <BicepsFlexed size={18} className={getIntensityColor(workoutIntensity)} />
               </div>
             </div>
-            <input type="range" min="1" max="10" value={workoutIntensity} onChange={e => setWorkoutIntensity(e.target.value)} className="w-full accent-blue-500" />
+            <input type="range" min="1" max="10" value={workoutIntensity} onChange={e => setWorkoutIntensity(e.target.value)} className="w-full accent-[#f1ba17]" />
           </div>
 
           <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-4">
@@ -1093,7 +1093,7 @@ export default function CreateWorkout() {
 
             {runningSteps.length === 0 ? (
               <button onClick={() => setRunningPickerOpen(true)}
-                className="w-full py-4 border border-dashed border-[#383838] rounded-xl text-gray-600 text-sm hover:border-blue-400 hover:text-blue-400 transition">
+                className="w-full py-4 border border-dashed border-[#383838] rounded-xl text-gray-600 text-sm hover:border-[#f1ba17] hover:text-[#f1ba17] transition">
                 + Aggiungi prima fase (es. Riscaldamento)
               </button>
             ) : (
@@ -1110,7 +1110,7 @@ export default function CreateWorkout() {
                   />
                 ))}
                 <button onClick={() => setRunningPickerOpen(true)}
-                  className="flex items-center justify-center gap-2 border border-dashed border-[#383838] rounded-xl py-3 text-blue-400 text-sm font-medium mt-1 hover:border-blue-400 transition">
+                  className="flex items-center justify-center gap-2 border border-dashed border-[#383838] rounded-xl py-3 text-[#f1ba17] text-sm font-medium mt-1 hover:border-[#f1ba17] transition">
                   <Plus size={16} /> Aggiungi fase
                 </button>
               </div>
@@ -1120,7 +1120,7 @@ export default function CreateWorkout() {
           <div className="flex gap-3">
             <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl border border-[#444] text-gray-400 hover:text-white transition">← Indietro</button>
             <button onClick={handleSave} disabled={saving}
-              className="flex-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
+              className="flex-2 px-6 py-3 rounded-xl bg-[#f1ba17] text-black font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
               <Save size={18} />
               {saving ? 'Salvo...' : saved ? '✅ Salvato!' : 'Salva Workout'}
             </button>

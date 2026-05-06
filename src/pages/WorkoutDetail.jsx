@@ -9,20 +9,20 @@ import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
 const TYPE_COLORS = {
-  'ON/OFF': { text: 'text-blue-300', bg: 'bg-blue-900/40', border: 'border-blue-700', hex: '#3b82f6' },
-  EMOM: { text: 'text-cyan-300', bg: 'bg-cyan-900/40', border: 'border-cyan-700', hex: '#06b6d4' },
-  AMRAP: { text: 'text-green-300', bg: 'bg-green-900/40', border: 'border-green-700', hex: '#22c55e' },
-  'For Time': { text: 'text-purple-300', bg: 'bg-purple-900/40', border: 'border-purple-700', hex: '#a855f7' },
-  Running: { text: 'text-blue-400', bg: 'bg-blue-900/30', border: 'border-blue-600', hex: '#60a5fa' }
+  'ON/OFF': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
+  EMOM: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
+  AMRAP: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
+  'For Time': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
+  Running: { text: 'text-[#f1ba17]', bg: 'bg-[#f1ba17]/10', border: 'border-[#f1ba17]/30', hex: '#f1ba17' }
 }
 
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
   if (isNaN(num)) return 'text-gray-500';
-  if (num <= 3) return 'text-green-400';
-  if (num <= 6) return 'text-yellow-400';
-  if (num <= 8) return 'text-orange-500';
-  return 'text-red-500';
+  if (num <= 4) return 'text-gray-400';
+  if (num <= 7) return 'text-gray-300';
+  if (num <= 9) return 'text-white';
+  return 'text-[#f1ba17]';
 }
 
 const timeToSeconds = (timeStr) => {
@@ -128,7 +128,7 @@ export default function WorkoutDetail() {
     }
   }
 
-  const buildPDFDoc = () => {
+  const buildPDFDoc = async () => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' })
     const s = workout.sections
     const main = s?.main
@@ -140,17 +140,49 @@ export default function WorkoutDetail() {
     // Header
     doc.setFillColor(23, 23, 23)
     doc.rect(0, 0, 210, 297, 'F')
-    doc.setTextColor(241, 186, 23)
-    doc.setFontSize(18)
+    
+    try {
+      const response = await fetch('/public/favicon.svg');
+      if (!response.ok) throw new Error('Logo non trovato');
+      const blob = await response.blob();
+      const reader = new FileReader();
+      const logoBase64 = await new Promise((resolve) => {
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+      doc.addImage(logoBase64, 'PNG', 20, 14, 8, 8);
+      
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(18)
+      doc.setFont('helvetica', 'bold')
+      doc.text('FLEO', 30, 21)
+      const textWidth = doc.getTextWidth('FLEO')
+      doc.setTextColor(241, 186, 23)
+      doc.text('FIT', 30 + textWidth, 21)
+    } catch(e) {
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(18)
+      doc.setFont('helvetica', 'bold')
+      doc.text('FLEO', 20, 22)
+      const textWidth = doc.getTextWidth('FLEO')
+      doc.setTextColor(241, 186, 23)
+      doc.text('FIT', 20 + textWidth, 22)
+    }
+
+    y += 14
+    doc.setTextColor(150, 150, 150)
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text('COACH FEDERICO LEO', 20, y)
+    y += 6
+    doc.setTextColor(230, 230, 230)
+    doc.setFontSize(16)
     doc.setFont('helvetica', 'bold')
-    doc.text('FLEOFIT - Coach Federico Leo', 20, y)
-    y += 8
-    doc.setTextColor(200, 200, 200)
-    doc.setFontSize(14)
     doc.text(workout.title, 20, y)
     y += 6
     doc.setFontSize(10)
-    doc.setTextColor(120, 120, 120)
+    doc.setTextColor(100, 100, 100)
+    doc.setFont('helvetica', 'normal')
     doc.text(format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }), 20, y)
     y += 10
 
@@ -201,17 +233,17 @@ export default function WorkoutDetail() {
     y += 2
 
     // Divider
-    doc.setDrawColor(60, 60, 60)
+    doc.setDrawColor(50, 50, 50)
     doc.line(20, y, 190, y)
     y += 8
 
     // Warm Up
     if (s?.warmup) {
-      doc.setTextColor(251, 146, 60)
+      doc.setTextColor(150, 150, 150)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(11)
       doc.text('WARM UP', 20, y)
-      doc.setTextColor(180, 180, 180)
+      doc.setTextColor(120, 120, 120)
       doc.setFont('helvetica', 'normal')
       doc.text(`  ${s.warmup.duration}${s.warmup.notes ? ' · ' + s.warmup.notes : ''}`, 52, y)
       y += 10
@@ -219,7 +251,7 @@ export default function WorkoutDetail() {
 
     // Cash In
     if (s?.cashIn?.length > 0) {
-      doc.setTextColor(241, 186, 23)
+      doc.setTextColor(150, 150, 150)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(11)
       doc.text('CASH IN', 20, y)
@@ -237,7 +269,7 @@ export default function WorkoutDetail() {
     }
 
     // Main
-    doc.setTextColor(241, 186, 23)
+    doc.setTextColor(150, 150, 150)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
     doc.text(type === 'Running' ? 'ALLENAMENTO CORSA' : type.toUpperCase(), 20, y)
@@ -285,7 +317,7 @@ export default function WorkoutDetail() {
 
     // Cash Out
     if (s?.cashOut?.length > 0) {
-      doc.setTextColor(239, 68, 68)
+      doc.setTextColor(150, 150, 150)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(11)
       doc.text('CASH OUT', 20, y)
@@ -337,8 +369,9 @@ export default function WorkoutDetail() {
     return doc
   }
 
-  const exportPDF = () => {
-    buildPDFDoc().save(`${workout.title.replace(/ /g, '_')}.pdf`)
+  const exportPDF = async () => {
+    const doc = await buildPDFDoc()
+    doc.save(`${workout.title.replace(/ /g, '_')}.pdf`)
   }
 
   const exportShare2 = async () => {
@@ -358,7 +391,7 @@ export default function WorkoutDetail() {
     if (!igRef.current) return
     try {
       // 1. Genera PDF in memoria
-      const doc = buildPDFDoc()
+      const doc = await buildPDFDoc()
       const pdfBlob = doc.output('blob')
       const pdfFile = new File([pdfBlob], `${workout.title.replace(/ /g, '_')}.pdf`, { type: 'application/pdf' })
 
@@ -460,14 +493,14 @@ export default function WorkoutDetail() {
 
       {/* WARM UP */}
       {s?.warmup && (
-        <Section icon={<Timer size={16} className="text-orange-400" />} label="Warm Up" color="border-orange-800">
+        <Section icon={<Timer size={16} className="text-gray-400" />} label="Warm Up" color="border-[#333]">
           <p className="text-gray-300 text-sm">{s.warmup.duration}{s.warmup.notes ? ` · ${s.warmup.notes}` : ''}</p>
         </Section>
       )}
 
       {/* CASH IN */}
       {s?.cashIn?.length > 0 && (
-        <Section icon={<Flag size={16} className="text-yellow-400" />} label="Cash In" color="border-yellow-800">
+        <Section icon={<Flag size={16} className="text-gray-400" />} label="Cash In" color="border-[#333]">
           <ExList exercises={s.cashIn} showMinute={false} />
         </Section>
       )}
@@ -483,7 +516,7 @@ export default function WorkoutDetail() {
 
       {/* CASH OUT */}
       {s?.cashOut?.length > 0 && (
-        <Section icon={<FlagOff size={16} className="text-red-400" />} label="Cash Out" color="border-red-800">
+        <Section icon={<FlagOff size={16} className="text-gray-400" />} label="Cash Out" color="border-[#333]">
           <ExList exercises={s.cashOut} showMinute={false} />
         </Section>
       )}
@@ -497,7 +530,7 @@ export default function WorkoutDetail() {
 
       {/* NOTE ATLETA */}
       {athleteNote && (
-        <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Note Atleta (${athleteNote.athleteName})`} color="border-[#3b82f6]/40">
+        <Section icon={<User size={16} className="text-gray-400" />} label={`Note Atleta (${athleteNote.athleteName})`} color="border-[#333]">
           <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{athleteNote.text}</p>
         </Section>
       )}
@@ -541,15 +574,18 @@ export default function WorkoutDetail() {
           {/* IG Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
             <div>
-              <div style={{ color: '#f1ba17', fontWeight: 900, fontSize: '20px', letterSpacing: '3px' }}>FLEO<span style={{ color: 'white' }}>FIT</span></div>
-              <div style={{ color: '#555', fontSize: '11px', marginTop: '2px', letterSpacing: '1px' }}>BY COACH FEDERICO LEO</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <img src="/public/favicon.svg" alt="Logo" style={{ height: '24px', objectFit: 'contain' }} />
+                <div style={{ color: 'white', fontWeight: 900, fontSize: '20px', letterSpacing: '2px' }}>FLEO<span style={{ color: '#f1ba17' }}>FIT</span></div>
+              </div>
+              <div style={{ color: '#777', fontSize: '10px', marginTop: '6px', letterSpacing: '1px' }}>BY COACH FEDERICO LEO</div>
             </div>
             <div style={{
-              background: c.bg.includes('blue') ? '#1e3a5f' : c.bg.includes('green') ? '#14532d' : '#3b0764',
-              color: c.hex || '#f1ba17',
+              background: type === 'Running' ? '#f1ba1715' : '#222',
+              color: c.hex || '#e5e5e5',
               fontWeight: 800, fontSize: '13px',
               padding: '6px 14px', borderRadius: '20px',
-              border: `1px solid ${c.hex || '#f1ba17'}40`
+              border: `1px solid ${c.hex || '#444'}40`
             }}>{type}</div>
           </div>
 
@@ -574,7 +610,7 @@ export default function WorkoutDetail() {
                 const typeLabels = { warmup: 'Warm Up', run: 'Run', recover: 'Recover', cooldown: 'Cool Down', repeat: 'Repeat' }
                 return (
                   <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', borderLeft: '2px solid #444', paddingLeft: '10px' }}>
-                    <div style={{ color: '#60a5fa', fontSize: '12px', fontWeight: 800 }}>
+                    <div style={{ color: step.type === 'repeat' ? '#f1ba17' : '#e5e5e5', fontSize: '12px', fontWeight: 800 }}>
                       {typeLabels[step.type]?.toUpperCase()} {step.type === 'repeat' ? `x${step.rounds}` : ''}
                     </div>
                     {step.type === 'repeat' ? (
@@ -720,12 +756,12 @@ function RunningList({ steps }) {
 
   const getTypeColor = (t) => {
     switch(t) {
-      case 'warmup': return 'text-orange-400'
-      case 'run': return 'text-blue-400'
-      case 'recover': return 'text-green-400'
-      case 'cooldown': return 'text-gray-400'
-      case 'repeat': return 'text-purple-400'
-      default: return 'text-white'
+      case 'warmup': return 'text-gray-400'
+      case 'run': return 'text-white'
+      case 'recover': return 'text-gray-500'
+      case 'cooldown': return 'text-gray-600'
+      case 'repeat': return 'text-[#f1ba17]'
+      default: return 'text-gray-300'
     }
   }
 

@@ -372,14 +372,14 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
   const today = startOfDay(new Date())
 
   let statusText = 'Pending'
-  let statusClass = 'bg-yellow-900/60 text-yellow-300'
+  let statusClass = 'bg-[#2a2a2a] text-gray-400 border border-[#333]'
 
   if (entry.status === 'completed') {
     statusText = 'Fatto'
-    statusClass = 'bg-green-900/60 text-green-300'
+    statusClass = 'bg-[#f1ba17]/10 text-[#f1ba17] border border-[#f1ba17]/30'
   } else if (isBefore(scheduledDate, today)) {
     statusText = 'Saltato'
-    statusClass = 'bg-red-900/60 text-red-300'
+    statusClass = 'bg-[#111] text-gray-600 border border-[#222]'
   }
 
   const handleSaveNote = async () => {
