@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 // TOGLI Share2, metti Share2
-import { ArrowLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send } from 'lucide-react'
+import { ArrowLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -16,6 +16,10 @@ const TYPE_COLORS = {
 
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike']
 const isErgo = (name) => ERGOMETERS.includes(name)
+
+const SLED_EXERCISES = ['Sled Push', 'Sled Pull']
+const isSled = (name) => SLED_EXERCISES.includes(name)
+const isDistance = (name) => isErgo(name) || isSled(name) || name === 'Farmers Carry'
 
 export default function WorkoutDetail() {
   const { id } = useParams()
@@ -79,9 +83,9 @@ export default function WorkoutDetail() {
     doc.setFillColor(23, 23, 23)
     doc.rect(0, 0, 210, 297, 'F')
     doc.setTextColor(241, 186, 23)
-    doc.setFontSize(22)
+    doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
-    doc.text('FLEOFIT', 20, y)
+    doc.text('FLEOFIT - Coach Federico Leo', 20, y)
     y += 8
     doc.setTextColor(200, 200, 200)
     doc.setFontSize(14)
@@ -140,8 +144,9 @@ export default function WorkoutDetail() {
         doc.setTextColor(200, 200, 200)
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(10)
-        const detail = isErgo(ex.name) ? ex.meters : `${ex.reps} reps`
-        doc.text(`· ${ex.name}  ${detail}${ex.notes ? '  (${ex.notes})' : ''}`, 25, y)
+        const detail = isDistance(ex.name) ? ex.meters : `${ex.reps} reps`
+        const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
+        doc.text(`· ${ex.name}  ${detail}${kgStr}${ex.notes ? '  (' + ex.notes + ')' : ''}`, 25, y)
         y += 6
       })
       y += 2
@@ -158,9 +163,10 @@ export default function WorkoutDetail() {
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(10)
       const prefix = type === 'EMOM' ? `Min.${i + 1}  ` : `· `
-      const detail = isErgo(ex.name) ? ex.meters : `${ex.reps} reps`
+      const detail = isDistance(ex.name) ? ex.meters : `${ex.reps} reps`
+      const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
       const noteStr = ex.notes ? `  → ${ex.notes}` : ''
-      doc.text(`${prefix}${ex.name}  ${detail}${noteStr}`, 25, y)
+      doc.text(`${prefix}${ex.name}  ${detail}${kgStr}${noteStr}`, 25, y)
       y += 6
       if (y > 260) { doc.addPage(); y = 20 }
     })
@@ -177,8 +183,9 @@ export default function WorkoutDetail() {
         doc.setTextColor(200, 200, 200)
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(10)
-        const detail = isErgo(ex.name) ? ex.meters : `${ex.reps} reps`
-        doc.text(`· ${ex.name}  ${detail}${ex.notes ? `  (${ex.notes})` : ''}`, 25, y)
+        const detail = isDistance(ex.name) ? ex.meters : `${ex.reps} reps`
+        const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
+        doc.text(`· ${ex.name}  ${detail}${kgStr}${ex.notes ? `  (${ex.notes})` : ''}`, 25, y)
         y += 6
       })
       y += 2
@@ -212,7 +219,7 @@ export default function WorkoutDetail() {
     doc.text('GLOSSARIO', 20, glossaryY + 6)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
-    doc.text('EMOM (Every Minute On the Minute): ogni minuto esegui gli esercizi indicati nel tempo stabilito, poi riposa fino al minuto successivo.', 20, glossaryY + 12, { maxWidth: 170 })
+    doc.text('EMOM (Every Minute On the Minute): bisogna seguire i tempi ON e OFF indicati dal workout.', 20, glossaryY + 12, { maxWidth: 170 })
     doc.text('AMRAP (As Many Rounds As Possible): completa più rounds possibili degli esercizi nel tempo indicato.', 20, glossaryY + 20, { maxWidth: 170 })
     doc.text('FOR TIME: completa tutti i rounds nel minor tempo possibile.', 20, glossaryY + 28, { maxWidth: 170 })
 
@@ -304,9 +311,14 @@ export default function WorkoutDetail() {
               {format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it })}
             </p>
           </div>
-          <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${c.bg} ${c.text} border ${c.border}`}>
-            {type}
-          </span>
+          <div className="flex flex-col items-end gap-2">
+            <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${c.bg} ${c.text} border ${c.border}`}>
+              {type}
+            </span>
+            <button onClick={() => navigate(`/create?edit=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+              <Edit size={12} /> Modifica
+            </button>
+          </div>
         </div>
         <div className={`mt-3 px-4 py-2 rounded-xl ${c.bg} border ${c.border}`}>
           <p className={`text-sm font-medium ${c.text}`}>{paramSummary()}</p>
@@ -426,7 +438,8 @@ export default function WorkoutDetail() {
                 )}
                 <div style={{ color: '#e5e5e5', fontSize: '13px', fontWeight: 600 }}>{ex.name}</div>
                 <div style={{ color: '#555', fontSize: '12px', marginLeft: 'auto' }}>
-                  {isErgo(ex.name) ? ex.meters : `${ex.reps} reps`}
+                  {isDistance(ex.name) ? ex.meters : `${ex.reps} reps`}
+                  {ex.kg ? ` · ${ex.kg}kg` : ''}
                 </div>
               </div>
             ))}
@@ -501,8 +514,9 @@ function ExList({ exercises, showMinute, typeColor }) {
           <div className="flex-1">
             <span className="text-white text-sm font-medium">{ex.name}</span>
             <span className="text-gray-500 text-xs ml-2">
-              {isErgo(ex.name) ? ex.meters : `${ex.reps} reps`}
+              {isDistance(ex.name) ? ex.meters : `${ex.reps} reps`}
             </span>
+            {ex.kg && <span className="text-gray-400 text-xs ml-2 font-bold">{ex.kg}kg</span>}
             {ex.notes && <span className="text-gray-600 text-xs ml-2">· {ex.notes}</span>}
           </div>
         </div>

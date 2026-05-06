@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
+import Home from './pages/Home'
 import Calendar from './pages/Calendar'
 import CreateWorkout from './pages/CreateWorkout'
 import Athletes from './pages/Athletes'
@@ -13,7 +14,8 @@ function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-[#171717] text-white pb-16">
         <Routes>
-          <Route path="/" element={<Calendar />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/calendar" element={<Calendar />} />
           <Route path="/create" element={<CreateWorkout />} />
           <Route path="/athletes" element={<Athletes />} />
           <Route path="/athletes/:id" element={<AthleteDetail />} />

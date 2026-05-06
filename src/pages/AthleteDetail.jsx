@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { ArrowLeft, User, Upload, BookOpen, Trash2 } from 'lucide-react'
-import { format, parseISO, differenceInYears } from 'date-fns'
+import { format, parseISO, differenceInYears, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 
 // Helper per calcolare l'età
@@ -97,6 +97,19 @@ export default function AthleteDetail() {
     navigate('/athletes')
   }
 
+  const toggleWorkoutStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed'
+    const { error } = await supabase
+      .from('athlete_workouts')
+      .update({ status: newStatus })
+      .eq('id', id)
+    
+    if (!error) {
+      // Aggiorna lo stato localmente per vedere subito il cambio colore
+      setWorkouts(workouts.map(w => w.id === id ? { ...w, status: newStatus } : w))
+    }
+  }
+
   if (loading) return <div className="p-6 text-gray-500">Caricamento scheda atleta...</div>
   if (!athlete) return <div className="p-6 text-red-400">Atleta non trovato.</div>
 
@@ -147,19 +160,37 @@ export default function AthleteDetail() {
           Diario Workout
         </h2>
         {workouts.length > 0 ? (
-          workouts.map(entry => (
-            <div key={entry.id} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-semibold text-white">{entry.workouts.title}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {format(parseISO(entry.completed_date), 'EEEE d MMMM yyyy', { locale: it })}
-                  </p>
+          workouts.map(entry => {
+            const scheduledDate = startOfDay(parseISO(entry.completed_date))
+            const today = startOfDay(new Date())
+
+            let statusText = 'Pending'
+            let statusClass = 'bg-yellow-900/60 text-yellow-300'
+
+            if (entry.status === 'completed') {
+              statusText = 'Fatto'
+              statusClass = 'bg-green-900/60 text-green-300'
+            } else if (isBefore(scheduledDate, today)) {
+              statusText = 'Saltato'
+              statusClass = 'bg-red-900/60 text-red-300'
+            }
+
+            return (
+              <div key={entry.id} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-semibold text-white">{entry.workouts.title}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {format(parseISO(entry.completed_date), 'EEEE d MMMM yyyy', { locale: it })}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => toggleWorkoutStatus(entry.id, entry.status)}
+                    className={`text-xs font-bold px-2 py-0.5 rounded-full cursor-pointer hover:brightness-125 transition ${statusClass}`}
+                  >
+                    {statusText}
+                  </button>
                 </div>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${entry.status === 'completed' ? 'bg-green-900/60 text-green-300' : 'bg-red-900/60 text-red-300'}`}>
-                  {entry.status === 'completed' ? 'Completato' : 'Saltato'}
-                </span>
-              </div>
               <div className="mt-3 pt-3 border-t border-[#2a2a2a]">
                 <textarea
                   className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-sm"
@@ -170,7 +201,8 @@ export default function AthleteDetail() {
                 />
               </div>
             </div>
-          ))
+            )
+          })
         ) : (
           <div className="bg-[#1e1e1e] border border-dashed border-[#2a2a2a] rounded-2xl p-6 text-center">
             <p className="text-gray-600 text-sm">Nessun workout registrato per questo atleta.</p>
