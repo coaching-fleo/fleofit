@@ -9,6 +9,10 @@ import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
 const TYPE_COLORS = {
+  'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
+  'Rest': { text: 'text-gray-500', bg: 'bg-[#1e1e1e]', border: 'border-[#2a2a2a]', hex: '#6b7280' },
+  'Cash In': { text: 'text-gray-300', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#d1d5db' },
+  'Cash Out': { text: 'text-gray-300', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#d1d5db' },
   'ON/OFF': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
   EMOM: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
   AMRAP: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
@@ -16,19 +20,20 @@ const TYPE_COLORS = {
   Running: { text: 'text-[#f1ba17]', bg: 'bg-[#f1ba17]/10', border: 'border-[#f1ba17]/30', hex: '#f1ba17' }
 }
 
+
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
   if (isNaN(num)) return 'text-gray-500';
-  if (num <= 4) return 'text-gray-400';
-  if (num <= 7) return 'text-gray-300';
-  if (num <= 9) return 'text-white';
-  return 'text-[#f1ba17]';
+  if (num <= 3) return 'text-green-400';
+  if (num <= 6) return 'text-yellow-400';
+  if (num <= 8) return 'text-orange-500';
+  return 'text-red-500';
 }
 
 const timeToSeconds = (timeStr) => {
   if (!timeStr) return 0;
-  if (timeStr.includes(' min')) return parseInt(timeStr) * 60;
-  const parts = timeStr.split(':')
+  const str = String(timeStr);
+  const parts = str.split(':')
   if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
   return 0
 }
@@ -37,6 +42,52 @@ const formatTime = (totalSeconds) => {
   const s = totalSeconds % 60
   if (s === 0) return `${m} min`
   return `${m}:${s.toString().padStart(2, '0')} min`
+}
+
+const getNormalizedBlocks = (workout) => {
+  const s = workout.sections || {}
+  if (s.blocks) return s.blocks
+  
+  const blocks = []
+  if (s.warmup) blocks.push({ id: 'w', type: 'WarmUp', params: { duration: s.warmup.duration }, notes: s.warmup.notes })
+  if (s.cashIn?.length > 0) blocks.push({ id: 'ci', type: 'Cash In', exercises: s.cashIn })
+  if (s.main && s.main.type !== 'Running') {
+    blocks.push({
+      id: 'm',
+      type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type,
+      params: s.main.params || {},
+      exercises: s.main.exercises || []
+    })
+  }
+  if (s.cashOut?.length > 0) blocks.push({ id: 'co', type: 'Cash Out', exercises: s.cashOut })
+  return blocks
+}
+
+const getBlockTitle = (block) => {
+  const formatVal = v => (v && !v.includes('min') && !v.includes('sec')) ? `${v} min` : (v || '1:00 min')
+
+  if (['WarmUp', 'Rest'].includes(block.type)) return block.type
+  if (block.type === 'ON/OFF') {
+    const onSec = timeToSeconds(block.params?.on || '1:00') || 60
+    const offSec = timeToSeconds(block.params?.off || '1:00') || 60
+    let rounds = parseInt(block.params?.rounds, 10)
+    if (isNaN(rounds) && block.params?.total) {
+      rounds = Math.ceil(timeToSeconds(block.params.total) / (onSec + offSec))
+    }
+    rounds = rounds || 10
+    return `ON/OFF · ${formatVal(block.params?.on)} ON / ${formatVal(block.params?.off)} OFF · ${rounds} rounds · ${formatTime((onSec + offSec) * rounds)}`
+  }
+  if (block.type === 'EMOM') {
+    const intervalSec = timeToSeconds(block.params?.interval || '1:00') || 60
+    const rounds = parseInt(block.params?.rounds || '10', 10) || 10
+    return `EMOM · ${formatVal(block.params?.interval)} x ${rounds} rounds · ${formatTime(intervalSec * rounds)}`
+  }
+  if (block.type === 'AMRAP') {
+     const dur = block.params?.duration || '10:00'
+     return dur.includes('min') ? `AMRAP · ${dur}` : `AMRAP · ${dur} min`
+  }
+  if (block.type === 'For Time') return `For Time · ${block.params?.rounds || '3'} rounds`
+  return block.type
 }
 
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike']
@@ -128,61 +179,28 @@ export default function WorkoutDetail() {
     }
   }
 
-  const buildPDFDoc = async () => {
+  const buildPDFDoc = () => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' })
     const s = workout.sections
-    const main = s?.main
-    const typeRaw = main?.type || ''
-    const type = (typeRaw === 'EMOM' && main?.params?.on) ? 'ON/OFF' : typeRaw
-    const c = TYPE_COLORS[type]
+    const category = (s?.category === 'Running' || s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
+    const isRunning = category === 'Running'
+    const type = isRunning ? 'Running' : 'Hyrox'
     let y = 20
 
     // Header
     doc.setFillColor(23, 23, 23)
     doc.rect(0, 0, 210, 297, 'F')
-    
-    try {
-      const response = await fetch('/public/favicon.svg');
-      if (!response.ok) throw new Error('Logo non trovato');
-      const blob = await response.blob();
-      const reader = new FileReader();
-      const logoBase64 = await new Promise((resolve) => {
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
-      });
-      doc.addImage(logoBase64, 'PNG', 20, 14, 8, 8);
-      
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(18)
-      doc.setFont('helvetica', 'bold')
-      doc.text('FLEO', 30, 21)
-      const textWidth = doc.getTextWidth('FLEO')
-      doc.setTextColor(241, 186, 23)
-      doc.text('FIT', 30 + textWidth, 21)
-    } catch(e) {
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(18)
-      doc.setFont('helvetica', 'bold')
-      doc.text('FLEO', 20, 22)
-      const textWidth = doc.getTextWidth('FLEO')
-      doc.setTextColor(241, 186, 23)
-      doc.text('FIT', 20 + textWidth, 22)
-    }
-
-    y += 14
-    doc.setTextColor(150, 150, 150)
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.text('COACH FEDERICO LEO', 20, y)
-    y += 6
-    doc.setTextColor(230, 230, 230)
-    doc.setFontSize(16)
+    doc.setTextColor(241, 186, 23)
+    doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
+    doc.text('FLEOFIT - Coach Federico Leo', 20, y)
+    y += 8
+    doc.setTextColor(200, 200, 200)
+    doc.setFontSize(14)
     doc.text(workout.title, 20, y)
     y += 6
     doc.setFontSize(10)
-    doc.setTextColor(100, 100, 100)
-    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(120, 120, 120)
     doc.text(format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }), 20, y)
     y += 10
 
@@ -190,34 +208,8 @@ export default function WorkoutDetail() {
     doc.setFontSize(11)
     doc.setTextColor(241, 186, 23)
     doc.setFont('helvetica', 'bold')
-    doc.text(`[ ${type} ]`, 20, y)
+    doc.text(`[ ${type.toUpperCase()} ]`, 20, y)
     
-    let currentX = 45;
-    if (type === 'ON/OFF') {
-      doc.setTextColor(180, 180, 180)
-      doc.setFont('helvetica', 'normal')
-      doc.text(`  ${main.params.on} ON / ${main.params.off} OFF · ${main.params.total}`, currentX, y)
-      currentX += 60;
-    } else if (type === 'EMOM') {
-      doc.setTextColor(180, 180, 180)
-      doc.setFont('helvetica', 'normal')
-      const intervalSec = timeToSeconds(main.params.interval || '1:00')
-      const rounds = parseInt(main.params.rounds || '10', 10)
-      doc.text(`  ${main.params.interval} x ${rounds} rounds · ${formatTime(intervalSec * rounds)}`, currentX, y)
-      currentX += 60;
-    } else if (type === 'AMRAP') {
-      doc.setTextColor(180, 180, 180)
-      doc.setFont('helvetica', 'normal')
-      doc.text(`  ${main.params.duration}`, currentX, y)
-      currentX += 30;
-    } else if (type === 'For Time') {
-      doc.setTextColor(180, 180, 180)
-      doc.setFont('helvetica', 'normal')
-      doc.text(`  ${main.params.rounds} rounds`, 55, y)
-      currentX = 55 + 30;
-    } else if (type === 'Running') {
-      currentX = 55;
-    }
     y += 6
 
     if (s?.intensity) {
@@ -233,49 +225,20 @@ export default function WorkoutDetail() {
     y += 2
 
     // Divider
-    doc.setDrawColor(50, 50, 50)
+    doc.setDrawColor(60, 60, 60)
     doc.line(20, y, 190, y)
     y += 8
 
-    // Warm Up
-    if (s?.warmup) {
-      doc.setTextColor(150, 150, 150)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(11)
-      doc.text('WARM UP', 20, y)
-      doc.setTextColor(120, 120, 120)
-      doc.setFont('helvetica', 'normal')
-      doc.text(`  ${s.warmup.duration}${s.warmup.notes ? ' · ' + s.warmup.notes : ''}`, 52, y)
-      y += 10
-    }
-
-    // Cash In
-    if (s?.cashIn?.length > 0) {
-      doc.setTextColor(150, 150, 150)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(11)
-      doc.text('CASH IN', 20, y)
-      y += 6
-      s.cashIn.forEach(ex => {
-        doc.setTextColor(200, 200, 200)
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(10)
-        const detail = isDistance(ex.name) ? ex.meters : `${ex.reps} reps`
-        const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
-        doc.text(`· ${ex.name}  ${detail}${kgStr}${ex.notes ? '  (' + ex.notes + ')' : ''}`, 25, y)
-        y += 6
-      })
-      y += 2
-    }
-
-    // Main
-    doc.setTextColor(150, 150, 150)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(11)
-    doc.text(type === 'Running' ? 'ALLENAMENTO CORSA' : type.toUpperCase(), 20, y)
-    y += 6
+    
     if (type === 'Running') {
-      main.steps?.forEach((step, i) => {
+           doc.setTextColor(150, 150, 150)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.text('ALLENAMENTO CORSA', 20, y)
+      y += 6
+      
+      const steps = s?.steps || s?.main?.steps || []
+      steps.forEach((step, i) => {
         doc.setTextColor(180, 180, 180)
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(10)
@@ -299,39 +262,38 @@ export default function WorkoutDetail() {
         if (y > 260) { doc.addPage(); y = 20 }
       })
     } else {
-      main.exercises.forEach((ex, i) => {
-        doc.setTextColor(200, 200, 200)
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(10)
-        const prefix = (type === 'EMOM' || type === 'ON/OFF') ? `Min.${i + 1}  ` : `· `
-        const detail = isDistance(ex.name) ? ex.meters : `${ex.reps} reps`
-        const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
-        const noteStr = ex.notes ? `  → ${ex.notes}` : ''
-        const intStr = ex.intensity ? `  [Int: ${ex.intensity}/10]` : ''
-        doc.text(`${prefix}${ex.name}  ${detail}${kgStr}${intStr}${noteStr}`, 25, y)
+      const blocks = getNormalizedBlocks(workout)
+      blocks.forEach(block => {
+        doc.setTextColor(150, 150, 150)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(11)
+        doc.text(getBlockTitle(block), 20, y)
         y += 6
-        if (y > 260) { doc.addPage(); y = 20 }
-      })
-    }
-    y += 4
 
-    // Cash Out
-    if (s?.cashOut?.length > 0) {
-      doc.setTextColor(150, 150, 150)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(11)
-      doc.text('CASH OUT', 20, y)
-      y += 6
-      s.cashOut.forEach(ex => {
-        doc.setTextColor(200, 200, 200)
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(10)
-        const detail = isDistance(ex.name) ? ex.meters : `${ex.reps} reps`
-        const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
-        doc.text(`· ${ex.name}  ${detail}${kgStr}${ex.notes ? `  (${ex.notes})` : ''}`, 25, y)
-        y += 6
+        if (['WarmUp', 'Rest'].includes(block.type)) {
+           doc.setTextColor(120, 120, 120)
+           doc.setFont('helvetica', 'normal')
+           doc.setFontSize(10)
+           doc.text(`  ${block.params?.duration || ''}${block.notes ? ' · ' + block.notes : ''}`, 20, y)
+           y += 8
+        } else {
+           (block.exercises || []).forEach((ex, i) => {
+             doc.setTextColor(200, 200, 200)
+             doc.setFont('helvetica', 'normal')
+             doc.setFontSize(10)
+             const prefix = (block.type === 'EMOM' || block.type === 'ON/OFF') ? `Min.${i + 1}  ` : `· `
+             const detail = isDistance(ex.name) ? (ex.meters && ex.meters !== '-' ? ex.meters : '') : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+             const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? ` @ ${ex.ergoPace}` : ''
+             const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
+             const noteStr = ex.notes ? `  (${ex.notes})` : ''
+             const intStr = ex.intensity ? `  [Int: ${ex.intensity}/10]` : ''
+             doc.text(`${prefix}${ex.name}  ${detail}${paceStr}${kgStr}${intStr}${noteStr}`, 25, y)
+             y += 6
+             if (y > 260) { doc.addPage(); y = 20 }
+           })
+           y += 2
+        }
       })
-      y += 2
     }
 
     // Note coach
@@ -369,9 +331,8 @@ export default function WorkoutDetail() {
     return doc
   }
 
-  const exportPDF = async () => {
-    const doc = await buildPDFDoc()
-    doc.save(`${workout.title.replace(/ /g, '_')}.pdf`)
+  const exportPDF = () => {
+    buildPDFDoc().save(`${workout.title.replace(/ /g, '_')}.pdf`)
   }
 
   const exportShare2 = async () => {
@@ -391,7 +352,7 @@ export default function WorkoutDetail() {
     if (!igRef.current) return
     try {
       // 1. Genera PDF in memoria
-      const doc = await buildPDFDoc()
+      const doc = buildPDFDoc()
       const pdfBlob = doc.output('blob')
       const pdfFile = new File([pdfBlob], `${workout.title.replace(/ /g, '_')}.pdf`, { type: 'application/pdf' })
 
@@ -428,22 +389,25 @@ export default function WorkoutDetail() {
   if (!workout) return <div className="p-6 text-red-400">Workout non trovato</div>
 
   const s = workout.sections
-  const main = s?.main
-  const typeRaw = main?.type || ''
-  const type = (typeRaw === 'EMOM' && main?.params?.on) ? 'ON/OFF' : typeRaw
-  const c = TYPE_COLORS[type] || TYPE_COLORS['Running']
+  const category = (s?.category === 'Running' || s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
+  const isRunning = category === 'Running'
+  const blocks = getNormalizedBlocks(workout)
+  const mainBlock = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type)) || blocks[0] || { type: 'Hyrox' }
+  const type = isRunning ? 'Running' : mainBlock.type
+  const c = TYPE_COLORS[type] || TYPE_COLORS['Hyrox'] || { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' }
 
   const paramSummary = () => {
-    if (type === 'ON/OFF') return `${main.params.on} ON · ${main.params.off} OFF · ${main.params.total}`
-    if (type === 'EMOM') {
-      const intervalSec = timeToSeconds(main.params.interval || '1:00')
-      const rounds = parseInt(main.params.rounds || '10', 10)
-      return `${main.params.interval} x ${rounds} rounds · ${formatTime(intervalSec * rounds)}`
-    }
-    if (type === 'AMRAP') return main.params.duration
-    if (type === 'For Time') return `${main.params.rounds} rounds`
-    if (type === 'Running') return `${main.steps?.length || 0} fasi`
-    return ''
+    if (isRunning) return `${s?.steps?.length || s?.main?.steps?.length || 0} fasi`
+    const mb = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type))
+    if (mb) return getBlockTitle(mb)
+    return `${blocks.length} blocchi`
+  }
+
+  const getIconForType = (t) => {
+    if (t === 'WarmUp' || t === 'Rest') return <Timer size={16} className={TYPE_COLORS[t]?.text} />
+    if (t === 'Cash In') return <Flag size={16} className={TYPE_COLORS[t]?.text} />
+    if (t === 'Cash Out') return <FlagOff size={16} className={TYPE_COLORS[t]?.text} />
+    return <Dumbbell size={16} className={TYPE_COLORS[t]?.text} />
   }
 
   return (
@@ -491,34 +455,21 @@ export default function WorkoutDetail() {
         </div>
       </div>
 
-      {/* WARM UP */}
-      {s?.warmup && (
-        <Section icon={<Timer size={16} className="text-gray-400" />} label="Warm Up" color="border-[#333]">
-          <p className="text-gray-300 text-sm">{s.warmup.duration}{s.warmup.notes ? ` · ${s.warmup.notes}` : ''}</p>
-        </Section>
-      )}
-
-      {/* CASH IN */}
-      {s?.cashIn?.length > 0 && (
-        <Section icon={<Flag size={16} className="text-gray-400" />} label="Cash In" color="border-[#333]">
-          <ExList exercises={s.cashIn} showMinute={false} />
-        </Section>
-      )}
-
-      {/* MAIN */}
-      <Section icon={type === 'Running' ? <Timer size={16} className={c.text} /> : <Dumbbell size={16} className={c.text} />} label={type === 'Running' ? 'Allenamento Corsa' : type} color={c.border}>
-        {type === 'Running' ? (
-          <RunningList steps={main.steps || []} />
-        ) : (
-          <ExList exercises={main.exercises || []} showMinute={type === 'EMOM' || type === 'ON/OFF'} typeColor={c.text} />
-        )}
-      </Section>
-
-      {/* CASH OUT */}
-      {s?.cashOut?.length > 0 && (
-        <Section icon={<FlagOff size={16} className="text-gray-400" />} label="Cash Out" color="border-[#333]">
-          <ExList exercises={s.cashOut} showMinute={false} />
-        </Section>
+      {/* BLOCKS */}
+      {!isRunning ? (
+        blocks.map((block, idx) => (
+          <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} color={TYPE_COLORS[block.type]?.border}>
+             {['WarmUp', 'Rest'].includes(block.type) ? (
+               <p className="text-gray-300 text-sm">{block.params?.duration} {block.notes ? ` · ${block.notes}` : ''}</p>
+             ) : (
+               <ExList exercises={block.exercises || []} showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'} typeColor={TYPE_COLORS[block.type]?.text} />
+             )}
+          </Section>
+        ))
+      ) : (
+         <Section icon={<Timer size={16} className={c.text} />} label="Allenamento Corsa" color={c.border}>
+           <RunningList steps={s?.steps || s?.main?.steps || []} />
+         </Section>
       )}
 
       {/* NOTE COACH */}
@@ -530,7 +481,7 @@ export default function WorkoutDetail() {
 
       {/* NOTE ATLETA */}
       {athleteNote && (
-        <Section icon={<User size={16} className="text-gray-400" />} label={`Note Atleta (${athleteNote.athleteName})`} color="border-[#333]">
+        <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Note Atleta (${athleteNote.athleteName})`} color="border-[#3b82f6]/40">
           <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{athleteNote.text}</p>
         </Section>
       )}
@@ -574,18 +525,15 @@ export default function WorkoutDetail() {
           {/* IG Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <img src="/public/favicon.svg" alt="Logo" style={{ height: '24px', objectFit: 'contain' }} />
-                <div style={{ color: 'white', fontWeight: 900, fontSize: '20px', letterSpacing: '2px' }}>FLEO<span style={{ color: '#f1ba17' }}>FIT</span></div>
-              </div>
-              <div style={{ color: '#777', fontSize: '10px', marginTop: '6px', letterSpacing: '1px' }}>BY COACH FEDERICO LEO</div>
+              <div style={{ color: '#f1ba17', fontWeight: 900, fontSize: '20px', letterSpacing: '3px' }}>FLEO<span style={{ color: 'white' }}>FIT</span></div>
+              <div style={{ color: '#555', fontSize: '11px', marginTop: '2px', letterSpacing: '1px' }}>BY COACH FEDERICO LEO</div>
             </div>
             <div style={{
-              background: type === 'Running' ? '#f1ba1715' : '#222',
-              color: c.hex || '#e5e5e5',
+              background: c.bg.includes('blue') ? '#1e3a5f' : c.bg.includes('green') ? '#14532d' : '#3b0764',
+              color: c.hex || '#f1ba17',
               fontWeight: 800, fontSize: '13px',
               padding: '6px 14px', borderRadius: '20px',
-              border: `1px solid ${c.hex || '#444'}40`
+              border: `1px solid ${c.hex || '#f1ba17'}40`
             }}>{type}</div>
           </div>
 
@@ -605,12 +553,12 @@ export default function WorkoutDetail() {
 
           {/* Esercizi */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
-            {type === 'Running' ? (
-              main.steps?.map((step, i) => {
+            {isRunning ? (
+              (s?.steps || s?.main?.steps || []).map((step, i) => {
                 const typeLabels = { warmup: 'Warm Up', run: 'Run', recover: 'Recover', cooldown: 'Cool Down', repeat: 'Repeat' }
                 return (
                   <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', borderLeft: '2px solid #444', paddingLeft: '10px' }}>
-                    <div style={{ color: step.type === 'repeat' ? '#f1ba17' : '#e5e5e5', fontSize: '12px', fontWeight: 800 }}>
+                    <div style={{ color: '#60a5fa', fontSize: '12px', fontWeight: 800 }}>
                       {typeLabels[step.type]?.toUpperCase()} {step.type === 'repeat' ? `x${step.rounds}` : ''}
                     </div>
                     {step.type === 'repeat' ? (
@@ -627,21 +575,38 @@ export default function WorkoutDetail() {
                 )
               })
             ) : (
-              main.exercises?.map((ex, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {(type === 'EMOM' || type === 'ON/OFF') && (
-                    <div style={{
-                      width: '22px', height: '22px', borderRadius: '50%',
-                      background: '#222', border: `1px solid ${c.hex}40`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: c.hex, fontSize: '10px', fontWeight: 700, flexShrink: 0
-                    }}>{i + 1}</div>
-                  )}
-                  <div style={{ color: '#e5e5e5', fontSize: '13px', fontWeight: 600 }}>{ex.name}</div>
-                  <div style={{ color: '#555', fontSize: '12px', marginLeft: 'auto' }}>
-                    {isDistance(ex.name) ? ex.meters : `${ex.reps} reps`}
-                    {ex.kg ? ` · ${ex.kg}kg` : ''}
+              blocks.map((block, bIdx) => (
+                <div key={bIdx} style={{ marginBottom: '10px' }}>
+                  <div style={{ color: TYPE_COLORS[block.type]?.hex || '#e5e5e5', fontSize: '12px', fontWeight: 800, marginBottom: '6px' }}>
+                    {getBlockTitle(block).toUpperCase()}
                   </div>
+                  {['WarmUp', 'Rest'].includes(block.type) ? (
+                    <div style={{ color: '#a3a3a3', fontSize: '12px', paddingLeft: '10px', borderLeft: '2px solid #444' }}>
+                      {block.params?.duration} {block.notes ? ` · ${block.notes}` : ''}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '10px', borderLeft: '2px solid #444' }}>
+                      {block.exercises?.map((ex, i) => {
+                        const detail = isDistance(ex.name) ? (ex.meters && ex.meters !== '-' ? ex.meters : '') : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+                        const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
+                        return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {(block.type === 'EMOM' || block.type === 'ON/OFF') && (
+                            <div style={{
+                              width: '20px', height: '20px', borderRadius: '50%',
+                              background: '#222', border: `1px solid ${TYPE_COLORS[block.type]?.hex}40`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: TYPE_COLORS[block.type]?.hex, fontSize: '9px', fontWeight: 700, flexShrink: 0
+                            }}>{i + 1}</div>
+                          )}
+                          <div style={{ color: '#e5e5e5', fontSize: '12px', fontWeight: 600 }}>{ex.name}</div>
+                          <div style={{ color: '#777', fontSize: '11px', marginLeft: 'auto' }}>
+                            {detail} {paceStr} {ex.kg ? ` · ${ex.kg}kg` : ''}
+                          </div>
+                        </div>
+                      )})}
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -756,12 +721,12 @@ function RunningList({ steps }) {
 
   const getTypeColor = (t) => {
     switch(t) {
-      case 'warmup': return 'text-gray-400'
-      case 'run': return 'text-white'
-      case 'recover': return 'text-gray-500'
-      case 'cooldown': return 'text-gray-600'
-      case 'repeat': return 'text-[#f1ba17]'
-      default: return 'text-gray-300'
+      case 'warmup': return 'text-orange-400'
+      case 'run': return 'text-blue-400'
+      case 'recover': return 'text-green-400'
+      case 'cooldown': return 'text-gray-400'
+      case 'repeat': return 'text-purple-400'
+      default: return 'text-white'
     }
   }
 
@@ -817,18 +782,22 @@ function Section({ icon, label, color, children }) {
 
 function ExList({ exercises, showMinute, typeColor }) {
   return (
-    <div className="flex flex-col gap-2">
-      {exercises.map((ex, i) => (
+    <div className="flex flex-col gap-2 mt-1">
+      {exercises.map((ex, i) => {
+        const detail = isDistance(ex.name) ? (ex.meters && ex.meters !== '-' ? ex.meters : '') : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+        const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
+
+        return (
         <div key={ex.id || i} className="flex items-center gap-3">
           {showMinute && (
-            <div className={`w-7 h-7 rounded-full bg-[#222] border border-[#333] flex items-center justify-center shrink-0`}>
+            <div className="w-7 h-7 rounded-full bg-[#222] border border-[#333] flex items-center justify-center shrink-0">
               <span className={`text-xs font-bold ${typeColor}`}>{i + 1}</span>
             </div>
           )}
           <div className="flex-1">
             <span className="text-white text-sm font-medium">{ex.name}</span>
             <span className="text-gray-500 text-xs ml-2">
-              {isDistance(ex.name) ? ex.meters : `${ex.reps} reps`}
+              {detail} {paceStr}
             </span>
             {ex.kg && <span className="text-gray-400 text-xs ml-2 font-bold">{ex.kg}kg</span>}
             {ex.notes && <span className="text-gray-600 text-xs ml-2">· {ex.notes}</span>}
@@ -840,7 +809,7 @@ function ExList({ exercises, showMinute, typeColor }) {
             </div>
           )}
         </div>
-      ))}
+      )})}
     </div>
   )
 }

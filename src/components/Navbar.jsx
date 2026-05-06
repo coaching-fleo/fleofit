@@ -11,18 +11,19 @@ export default function Navbar() {
         <span>Home</span>
       </NavLink>
 
-      <NavLink to="/calendar" className={({ isActive }) =>
-        `flex flex-col items-center gap-1 text-xs ${isActive ? 'text-[#f1ba17]' : 'text-gray-400'}`
-      }>
-        <Calendar size={22} />
-        <span>Calendario</span>
-      </NavLink>
-
       <NavLink to="/create" className={({ isActive }) =>
         `flex flex-col items-center gap-1 text-xs ${isActive ? 'text-[#f1ba17]' : 'text-gray-400'}`
       }>
         <Plus size={22} />
         <span>Workout</span>
+      </NavLink>
+
+
+      <NavLink to="/calendar" className={({ isActive }) =>
+        `flex flex-col items-center gap-1 text-xs ${isActive ? 'text-[#f1ba17]' : 'text-gray-400'}`
+      }>
+        <Calendar size={22} />
+        <span>Calendario</span>
       </NavLink>
 
       <NavLink to="/athletes" className={({ isActive }) =>

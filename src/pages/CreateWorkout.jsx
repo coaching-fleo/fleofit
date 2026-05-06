@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed } from 'lucide-react'
+import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -23,17 +23,21 @@ const isSled = (name) => SLED_EXERCISES.includes(name)
 const isDistance = (name) => isErgo(name) || isSled(name) || name === 'Farmers Carry'
 
 const METERS_OPTIONS = [
-  '50m','100m','150m','200m','250m','300m','400m','500m',
+   '-', 'Max','50m','100m','150m','200m','250m','300m','400m','500m',
   '600m','750m','1000m','1500m','2000m'
 ]
-const REPS_OPTIONS = Array.from({ length: 50 }, (_, i) => `${i + 1}`)
+const REPS_OPTIONS = ['-', 'Max', ...Array.from({ length: 100 }, (_, i) => `${i + 1}`)]
 const MINUTES_OPTIONS = Array.from({ length: 60 }, (_, i) => `${i + 1} min`)
-const TIME_OPTIONS = Array.from({ length: 120 }, (_, i) => {
-  const s = (i + 1) * 5;
-  return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
-})
+const TIME_OPTIONS = [
+  '-',
+  ...Array.from({ length: 120 }, (_, i) => {
+    const s = (i + 1) * 5;
+    return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+  })
+]
 const ROUNDS_OPTIONS = Array.from({ length: 40 }, (_, i) => `${i + 1}`)
 const KG_OPTIONS = [
+  '-',
   'Nessun peso',
   ...Array.from({ length: 300 }, (_, i) => `${i + 1} kg`),
   ...[4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32].map(w => `2x${w} kg`)
@@ -55,7 +59,7 @@ const RUN_PACE_OPTIONS = [
 ]
 
 const ERGO_PACE_OPTIONS = [
-  'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out',
+  '-', 'Libero', 'Gara', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out',
   ...Array.from({ length: 61 }, (_, i) => {
     const s = 90 + i * 5;
     return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')} /500m`;
@@ -90,6 +94,18 @@ const formatTime = (totalSeconds) => {
   return `${m}:${s.toString().padStart(2, '0')} min`
 }
 
+const TYPE_COLORS = {
+  'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
+  'Rest': { text: 'text-gray-500', bg: 'bg-[#1e1e1e]', border: 'border-[#2a2a2a]', hex: '#6b7280' },
+  'Cash In': { text: 'text-gray-300', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#d1d5db' },
+  'Cash Out': { text: 'text-gray-300', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#d1d5db' },
+  'ON/OFF': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
+  'EMOM': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
+  'AMRAP': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
+  'For Time': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
+  'Running': { text: 'text-[#f1ba17]', bg: 'bg-[#f1ba17]/10', border: 'border-[#f1ba17]/30', hex: '#f1ba17' }
+}
+
 // ─── HELPER REORDER ───────────────────────────────────────────
 const moveElement = (list, from, to) => {
   if (from < 0 || from >= list.length || to < 0 || to >= list.length) return list
@@ -100,14 +116,16 @@ const moveElement = (list, from, to) => {
 }
 
 // ─── SCROLL PICKER ────────────────────────────────────────────
-function ScrollPicker({ options, value, onChange, label }) {
+function ScrollPicker({ options = [], value, onChange, label, type }) {
+  const displayOptions = type === 'time' && (!options || options.length === 0) ? TIME_OPTIONS : options || []
+
   return (
     <div className="flex flex-col gap-1">
       {label && <p className="text-gray-400 text-xs">{label}</p>}
       <div className="relative h-36 overflow-y-scroll snap-y snap-mandatory bg-[#1a1a1a] rounded-xl border border-[#383838]"
         style={{ scrollbarWidth: 'none' }}>
         <div className="py-[56px]">
-          {options.map(opt => (
+          {displayOptions.map(opt => (
             <div key={opt} onClick={() => onChange(opt)}
               className={`snap-center h-10 flex items-center justify-center text-sm cursor-pointer select-none
                 ${value === opt ? 'text-[#f1ba17] font-bold text-base' : 'text-gray-600 hover:text-gray-400'}`}>
@@ -121,19 +139,40 @@ function ScrollPicker({ options, value, onChange, label }) {
   )
 }
 
+function BlockPickerModal({ onAdd, onClose }) {
+  const blockTypes = ['WarmUp', 'Cash In', 'ON/OFF', 'EMOM', 'AMRAP', 'For Time', 'Rest', 'Cash Out']
+  return (
+    <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-5 border border-[#333]">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-white font-bold text-lg">Aggiungi Blocco</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20}/></button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {blockTypes.map(t => (
+            <button key={t} onClick={() => onAdd(t)} className="bg-[#2a2a2a] border border-[#383838] text-white font-medium py-3 rounded-xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition text-sm">
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── EXERCISE PICKER MODAL ────────────────────────────────────
-function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType }) {
-  const [search, setSearch] = useState('')
-  const [selected, setSelected] = useState(null)
-  const [meters, setMeters] = useState('200m')
-  const [ergoPace, setErgoPace] = useState('2:00 /500m')
-  const [reps, setReps] = useState('10')
-  const [kg, setKg] = useState('Nessun peso')
-  const [intensity, setIntensity] = useState('5')
-  const [notes, setNotes] = useState('')
+function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initialExercise }) {
+  const [search, setSearch] = useState(initialExercise?.name || '')
+  const [selected, setSelected] = useState(initialExercise?.name || null)
+  const [meters, setMeters] = useState(initialExercise?.meters || '-')
+  const [ergoPace, setErgoPace] = useState(initialExercise?.ergoPace || '-')
+  const [reps, setReps] = useState(initialExercise?.reps || '-')
+  const [kg, setKg] = useState(initialExercise?.kg ? `${initialExercise.kg} kg` : '-')
+  const [intensity, setIntensity] = useState(initialExercise?.intensity || '5')
+  const [notes, setNotes] = useState(initialExercise?.notes || '')
 
   const filtered = HYROX_EXERCISES.filter(ex =>
-    ex.toLowerCase().includes(search.toLowerCase()) && !existingNames.includes(ex)
+    ex.toLowerCase().includes(search.toLowerCase()) && (!existingNames.includes(ex) || ex === initialExercise?.name)
   )
   const isCustom = search && !HYROX_EXERCISES.find(e => e.toLowerCase() === search.toLowerCase())
 
@@ -146,21 +185,13 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType }) {
     let finalMeters = isDist ? meters : ''
     let finalReps = !isDist ? reps : ''
     
-    if (workoutType === 'EMOM' || workoutType === 'ON/OFF') {
-      if (isErgo(selected)) {
-        finalMeters = ergoPace
-        finalReps = ''
-      } else if (isDist) {
-        finalMeters = ''
-      }
-    }
-
     onAdd({
-      id: Math.random(),
+      id: initialExercise ? initialExercise.id : Math.random(),
       name: selected,
       meters: finalMeters,
       reps: finalReps,
-      kg: kg === 'Nessun peso' ? '' : kg.replace(' kg', ''),
+      ergoPace: isErgo(selected) ? ergoPace : undefined,
+      kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) ? '' : kg.replace(' kg', ''),
       intensity,
       notes
     })
@@ -208,32 +239,24 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType }) {
                 <span className="text-white font-semibold">{selected}</span>
               </div>
 
-              {(workoutType === 'EMOM' || workoutType === 'ON/OFF') ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {isErgo(selected) ? (
-                    <ScrollPicker options={ERGO_PACE_OPTIONS} value={ergoPace} onChange={setErgoPace} label="⏱ Passo" />
-                  ) : isDistance(selected) ? (
-                    <div className="flex flex-col gap-1">
-                      <p className="text-transparent text-xs select-none">.</p>
-                      <div className="relative h-36 flex items-center justify-center bg-[#1a1a1a] rounded-xl border border-[#383838]">
-                        <span className="text-gray-500 text-xs">Solo peso</span>
-                      </div>
-                    </div>
-                  ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {isErgo(selected) ? (
+                  <>
+                    <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza / Cal" />
+                    <ScrollPicker options={ERGO_PACE_OPTIONS} value={ergoPace} onChange={setErgoPace} label="⏱ Passo (Opz.)" />
+                  </>
+                ) : isDistance(selected) ? (
+                  <>
+                    <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
+                    <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                  </>
+                ) : (
+                  <>
                     <ScrollPicker options={REPS_OPTIONS} value={reps} onChange={setReps} label="🔁 Reps" />
-                  )}
-                  <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {isDistance(selected) ? (
-                    <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Metri" />
-                  ) : (
-                    <ScrollPicker options={REPS_OPTIONS} value={reps} onChange={setReps} label="🔁 Reps" />
-                  )}
-                  <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
-                </div>
-              )}
+                    <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                  </>
+                )}
+              </div>
 
               <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
@@ -255,7 +278,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType }) {
 
               <button onClick={handleConfirm}
                 className="w-full py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition">
-                ✅ Aggiungi esercizio
+                {initialExercise ? '✅ Salva modifiche' : '✅ Aggiungi esercizio'}
               </button>
             </div>
           )}
@@ -266,18 +289,27 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType }) {
 }
 
 // ─── BLOCCO ESERCIZIO ─────────────────────────────────────────
-function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDropIndex, showMinute }) {
+function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDropIndex, showMinute, onEdit }) {
+  const detail = isDistance(ex.name) ? (ex.meters && ex.meters !== '-' ? ex.meters : '') : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+  const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
+
   return (
     <div
       draggable
-      onDragStart={(e) => e.dataTransfer.setData('text/plain', index)}
+      onDragStart={(e) => {
+        e.stopPropagation()
+        e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'exercise', index }))
+      }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault()
-        const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10)
-        if (!isNaN(fromIndex) && fromIndex !== index && onDropIndex) {
-          onDropIndex(fromIndex, index)
-        }
+        e.stopPropagation()
+        try {
+          const data = JSON.parse(e.dataTransfer.getData('text/plain'))
+          if (data.type === 'exercise' && data.index !== index && onDropIndex) {
+            onDropIndex(data.index, index)
+          }
+        } catch (err) {}
       }}
       className="flex items-center gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 cursor-move hover:border-[#444] transition"
     >
@@ -292,10 +324,10 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDropI
         </div>
       )}
 
-      <div className="flex-1">
-        <p className="text-white text-sm font-medium">{ex.name}</p>
-        <p className="text-gray-500 text-xs mt-0.5">
-          {isDistance(ex.name) ? ex.meters : `${ex.reps} reps`}
+      <div className="flex-1 cursor-pointer group" onClick={() => onEdit && onEdit(ex)}>
+        <p className="text-white text-sm font-medium group-hover:text-[#f1ba17] transition">{ex.name}</p>
+        <p className="text-gray-500 text-xs mt-0.5 group-hover:text-gray-400 transition">
+          {detail} {paceStr}
           {ex.kg ? ` · ${ex.kg}kg` : ''}
           {ex.notes ? ` · ${ex.notes}` : ''}
         </p>
@@ -313,39 +345,119 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDropI
   )
 }
 
-// ─── BLOCCO CASH IN/OUT ───────────────────────────────────────
-function CashBlock({ label, exercises, onAdd, onRemove, onMoveUp, onMoveDown, onDropIndex, icon, workoutType }) {
+// ─── BLOCCO HYROX ───────────────────────────────────────
+function HyroxBlock({ block, index, total, onUpdate, onRemove, onMoveUp, onMoveDown, onDropIndex, onDuplicate }) {
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [editingExercise, setEditingExercise] = useState(null)
+
+  const updateParam = (k, v) => onUpdate({ ...block, params: { ...block.params, [k]: v } })
+  const updateNotes = (notes) => onUpdate({ ...block, notes })
+
+  const c = TYPE_COLORS[block.type] || { text: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]' }
+
   return (
-    <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          {icon}
-          <span className="text-white font-semibold text-sm">{label}</span>
+    <div 
+      className={`bg-[#1e1e1e] border ${c.border} rounded-2xl p-4 flex flex-col gap-3 relative cursor-move`}
+      draggable
+      onDragStart={(e) => {
+        e.stopPropagation()
+        e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'block', index }))
+      }}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        try {
+          const data = JSON.parse(e.dataTransfer.getData('text/plain'))
+          if (data.type === 'block' && data.index !== index && onDropIndex) {
+            onDropIndex(data.index, index)
+          }
+        } catch (err) {}
+      }}
+    >
+      <div className="flex items-center justify-between border-b border-[#333] pb-2 cursor-auto">
+        <span className={`font-bold text-sm ${c.text}`}>{block.type}</span>
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={() => onDuplicate()} className="text-gray-500 hover:text-[#f1ba17] transition p-1" title="Duplica">
+            <Copy size={16}/>
+          </button>
+          <button type="button" onClick={() => onMoveUp()} disabled={index===0} className="text-gray-500 hover:text-white disabled:opacity-30 p-1"><ChevronUp size={16}/></button>
+          <button type="button" onClick={() => onMoveDown()} disabled={index===total-1} className="text-gray-500 hover:text-white disabled:opacity-30 p-1"><ChevronDown size={16}/></button>
+          <button type="button" onClick={onRemove} className="text-gray-500 hover:text-red-400 ml-1 p-1"><Trash2 size={16}/></button>
         </div>
-        <button onClick={() => setPickerOpen(true)}
-          className="text-[#f1ba17] hover:brightness-110 transition">
-          <Plus size={18} />
-        </button>
       </div>
-      {exercises.length === 0 ? (
-        <p className="text-gray-600 text-xs">Nessun esercizio — clicca + per aggiungere</p>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {exercises.map((ex, i) => (
-            <ExerciseRow key={ex.id} ex={ex} index={i} total={exercises.length}
-              onRemove={onRemove} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDropIndex={onDropIndex}
-              showMinute={false} 
-            />
-          ))}
+
+      {['WarmUp', 'Rest'].includes(block.type) && (
+        <div className="grid grid-cols-2 gap-3">
+          <ScrollPicker type="time" value={block.params?.duration} onChange={v => updateParam('duration', v)} label="Durata" />
+          <div className="flex flex-col gap-1">
+            <label className="text-gray-400 text-xs pl-1">Note</label>
+            <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-3 text-sm text-white focus:border-[#f1ba17] focus:outline-none" value={block.notes || ''} onChange={e => updateNotes(e.target.value)} placeholder="Opzionale..." />
+          </div>
         </div>
       )}
+
+      {block.type === 'ON/OFF' && (
+        <div className="grid grid-cols-3 gap-2">
+          <ScrollPicker type="time" value={block.params?.on} onChange={v => updateParam('on', v)} label="ON" />
+          <ScrollPicker type="time" value={block.params?.off} onChange={v => updateParam('off', v)} label="OFF" />
+          <ScrollPicker options={ROUNDS_OPTIONS} value={block.params?.rounds} onChange={v => updateParam('rounds', v)} label="Rounds" />
+        </div>
+      )}
+
+      {block.type === 'EMOM' && (
+        <div className="grid grid-cols-2 gap-2">
+          <ScrollPicker type="time" value={block.params?.interval} onChange={v => updateParam('interval', v)} label="Intervallo" />
+          <ScrollPicker options={ROUNDS_OPTIONS} value={block.params?.rounds} onChange={v => updateParam('rounds', v)} label="Rounds" />
+        </div>
+      )}
+
+      {block.type === 'AMRAP' && (
+        <ScrollPicker type="time" value={block.params?.duration} onChange={v => updateParam('duration', v)} label="Durata" />
+      )}
+
+      {block.type === 'For Time' && (
+        <ScrollPicker options={ROUNDS_OPTIONS} value={block.params?.rounds} onChange={v => updateParam('rounds', v)} label="Rounds" />
+      )}
+
+      {/* Exercises */}
+      {!['WarmUp', 'Rest'].includes(block.type) && (
+        <>
+          <div className="flex flex-col gap-2 mt-2">
+            {(block.exercises || []).map((ex, i) => (
+              <ExerciseRow 
+                key={ex.id} ex={ex} index={i} total={block.exercises.length}
+                showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'}
+                onRemove={(id) => onUpdate({ ...block, exercises: block.exercises.filter(e => e.id !== id) })}
+                onMoveUp={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx - 1) })}
+                onMoveDown={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx + 1) })}
+                onDropIndex={(from, to) => onUpdate({ ...block, exercises: moveElement(block.exercises, from, to) })}
+                onEdit={(exToEdit) => {
+                  setEditingExercise(exToEdit)
+                  setPickerOpen(true)
+                }}
+              />
+            ))}
+          </div>
+          <button onClick={() => setPickerOpen(true)} className="py-3 border border-dashed border-[#383838] rounded-xl text-[#f1ba17] text-sm hover:bg-[#f1ba17]/10 transition mt-1">
+            + Aggiungi Esercizio
+          </button>
+        </>
+      )}
+
       {pickerOpen && (
-        <ExercisePicker
-          onAdd={onAdd}
-          onClose={() => setPickerOpen(false)}
-          existingNames={exercises.map(e => e.name)}
-          workoutType={workoutType}
+        <ExercisePicker 
+          workoutType={block.type}
+          existingNames={(block.exercises || []).map(e => e.name)}
+          initialExercise={editingExercise}
+          onClose={() => { setPickerOpen(false); setEditingExercise(null); }}
+          onAdd={ex => {
+            if (editingExercise) {
+              onUpdate({ ...block, exercises: block.exercises.map(e => e.id === ex.id ? ex : e) })
+            } else {
+              onUpdate({ ...block, exercises: [...(block.exercises || []), ex] })
+            }
+          }}
         />
       )}
     </div>
@@ -556,35 +668,13 @@ export default function CreateWorkout() {
   const defaultDate = searchParams.get('date')
   const defaultAthleteId = searchParams.get('athlete_id')
 
-  const [step, setStep] = useState(1) // 1=tipo, 2=parametri, 3=build
+  const [step, setStep] = useState(1) // 1=tipo, 2=build
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(defaultDate || '')
-  const [workoutType, setWorkoutType] = useState(null)
   const [workoutIntensity, setWorkoutIntensity] = useState('5')
   const [category, setCategory] = useState('Hyrox')
-
-  // Parametri per tipo
-  const [onOffOn, setOnOffOn] = useState('1:00')
-  const [onOffOff, setOnOffOff] = useState('1:00')
-  const [onOffTotal, setOnOffTotal] = useState('21 min')
-  const [emomInterval, setEmomInterval] = useState('1:00')
-  const [emomRounds, setEmomRounds] = useState('10')
-  const [amrapDuration, setAmrapDuration] = useState('10 min')
-  const [forTimeRounds, setForTimeRounds] = useState('3')
-
-  // Warmup
-  const [warmupDuration, setWarmupDuration] = useState('10 min')
-  const [warmupNotes, setWarmupNotes] = useState('')
-
-  // Cash In/Out
-  const [hasCashIn, setHasCashIn] = useState(false)
-  const [hasCashOut, setHasCashOut] = useState(false)
-  const [cashInExercises, setCashInExercises] = useState([])
-  const [cashOutExercises, setCashOutExercises] = useState([])
-
-  // Esercizi blocco principale
-  const [exercises, setExercises] = useState([])
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const [blocks, setBlocks] = useState([])
+  const [blockPickerOpen, setBlockPickerOpen] = useState(false)
   
   // Running
   const [runningSteps, setRunningSteps] = useState([])
@@ -617,40 +707,33 @@ export default function CreateWorkout() {
       setCoachNotes(data.coach_notes || '')
       
       const s = data.sections || {}
-      if (s.warmup) {
-        setWarmupDuration(s.warmup.duration || '10 min')
-        setWarmupNotes(s.warmup.notes || '')
-      }
-      if (s.cashIn && s.cashIn.length > 0) {
-        setHasCashIn(true)
-        setCashInExercises(s.cashIn)
-      }
-      if (s.cashOut && s.cashOut.length > 0) {
-        setHasCashOut(true)
-        setCashOutExercises(s.cashOut)
-      }
-      if (s.main) {
-        if (s.main.type === 'Running') {
-          setCategory('Running')
-          setWorkoutType('Running')
-          setRunningSteps(s.main.steps || [])
-        } else {
-          setCategory('Hyrox')
-          if (s.main.type === 'EMOM' && s.main.params?.on) {
-            setWorkoutType('ON/OFF')
-            setExercises(s.main.exercises || [])
-            setOnOffOn(s.main.params.on || '1:00')
-            setOnOffOff(s.main.params.off || '1:00')
-            setOnOffTotal(s.main.params.total || '21 min')
+      if (s.blocks || s.steps || s.category) {
+        setBlocks(s.blocks || [])
+        setRunningSteps(s.steps || [])
+        setWorkoutIntensity(s.intensity || '5')
+        setCategory(s.category || (s.steps ? 'Running' : 'Hyrox'))
+      } else {
+        const migratedBlocks = []
+        if (s.warmup) migratedBlocks.push({ id: Math.random(), type: 'WarmUp', params: { duration: s.warmup.duration }, notes: s.warmup.notes })
+        if (s.cashIn && s.cashIn.length > 0) migratedBlocks.push({ id: Math.random(), type: 'Cash In', exercises: s.cashIn })
+        if (s.main) {
+          if (s.main.type === 'Running') {
+             setCategory('Running')
+             setRunningSteps(s.main.steps || [])
           } else {
-            setWorkoutType(s.main.type)
-            setExercises(s.main.exercises || [])
-            if (s.main.type === 'ON/OFF') { setOnOffOn(s.main.params?.on || '1:00'); setOnOffOff(s.main.params?.off || '1:00'); setOnOffTotal(s.main.params?.total || '21 min') } 
-            else if (s.main.type === 'EMOM') { setEmomInterval(s.main.params?.interval || '1:00'); setEmomRounds(s.main.params?.rounds || '10') } 
-            else if (s.main.type === 'AMRAP') { setAmrapDuration(s.main.params?.duration || '10 min') } 
-            else if (s.main.type === 'For Time') { setForTimeRounds(s.main.params?.rounds || '3') }
+             setCategory('Hyrox')
+             migratedBlocks.push({
+               id: Math.random(),
+               type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type,
+               params: s.main.params || {},
+               exercises: s.main.exercises || []
+             })
           }
         }
+        if (s.cashOut && s.cashOut.length > 0) migratedBlocks.push({ id: Math.random(), type: 'Cash Out', exercises: s.cashOut })
+        
+        setBlocks(migratedBlocks)
+        setWorkoutIntensity(s.intensity || '5')
       }
     }
     fetchWorkoutToEdit()
@@ -661,7 +744,7 @@ export default function CreateWorkout() {
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [pendingPath, setPendingPath] = useState(null)
 
-  const hasUnsavedChanges = title.trim() !== '' || exercises.length > 0 || runningSteps.length > 0
+  const hasUnsavedChanges = title.trim() !== '' || blocks.length > 0 || runningSteps.length > 0
 
   useEffect(() => {
     // 1. Intercetta chiusura/aggiornamento del tab del browser
@@ -696,51 +779,18 @@ export default function CreateWorkout() {
 
   const isStep1Valid = title.trim() !== '' && date !== ''
 
-  const TYPE_INFO = {
-    'ON/OFF': { color: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]', desc: 'Work / Rest intervals' },
-    EMOM: { color: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]', desc: 'Every Minute On the Minute' },
-    AMRAP: { color: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]', desc: 'As Many Rounds As Possible' },
-    'For Time': { color: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]', desc: 'Completa il più veloce possibile' }
-  }
-
-  const workoutSummary = () => {
-    if (workoutType === 'ON/OFF') return `ON/OFF · ${onOffOn} on / ${onOffOff} off · ${onOffTotal}`
-    if (workoutType === 'EMOM') {
-      const intervalSec = timeToSeconds(emomInterval)
-      const rounds = parseInt(emomRounds, 10) || 0
-      return `EMOM · ${emomInterval} x ${emomRounds} rounds · ${formatTime(intervalSec * rounds)}`
-    }
-    if (workoutType === 'AMRAP') return `AMRAP · ${amrapDuration}`
-    if (workoutType === 'For Time') return `For Time · ${forTimeRounds} rounds`
-    return ''
-  }
 
   const handleSave = async () => {
     if (!title || !date) return alert('Inserisci titolo e data!')
-    if (!workoutType) return alert('Scegli il tipo di workout!')
-    if (category === 'Hyrox' && exercises.length === 0) return alert('Aggiungi almeno un esercizio!')
+    if (category === 'Hyrox' && blocks.length === 0) return alert('Aggiungi almeno un blocco!')
     if (category === 'Running' && runningSteps.length === 0) return alert('Aggiungi almeno una fase di corsa!')
     
     setSaving(true)
     const sections = {
       intensity: workoutIntensity,
-      warmup: category === 'Hyrox' ? { duration: warmupDuration, notes: warmupNotes } : null,
-      cashIn: (category === 'Hyrox' && hasCashIn) ? cashInExercises : null,
-      main: category === 'Hyrox' ? {
-        type: workoutType,
-        params: workoutType === 'ON/OFF'
-          ? { on: onOffOn, off: onOffOff, total: onOffTotal }
-          : workoutType === 'EMOM'
-            ? { interval: emomInterval, rounds: emomRounds }
-            : workoutType === 'AMRAP'
-              ? { duration: amrapDuration }
-              : { rounds: forTimeRounds },
-        exercises
-      } : {
-        type: 'Running',
-        steps: runningSteps
-      },
-      cashOut: (category === 'Hyrox' && hasCashOut) ? cashOutExercises : null
+      category: category,
+      blocks: category === 'Hyrox' ? blocks : undefined,
+      steps: category === 'Running' ? runningSteps : undefined
     }
 
     const payload = { title, date, sections, coach_notes: coachNotes }
@@ -813,24 +863,18 @@ export default function CreateWorkout() {
           )}
 
           {category === 'Hyrox' && (
-            <>
-              <p className="text-gray-400 text-sm font-medium mt-2">Tipo di workout:</p>
-              {Object.entries(TYPE_INFO).map(([type, info]) => (
-                <button key={type} onClick={() => { setWorkoutType(type); setStep(2) }} disabled={!isStep1Valid}
-                  className={`flex items-center justify-between p-5 rounded-2xl border ${info.border} ${info.bg} transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}>
-                  <div className="text-left">
-                    <p className={`font-bold text-lg ${info.color}`}>{type}</p>
-                    <p className="text-gray-400 text-xs mt-1">{info.desc}</p>
-                  </div>
-                  <ChevronRight size={20} className={info.color} />
-                </button>
-              ))}
-            </>
+            <button 
+              onClick={() => setStep(2)} 
+              disabled={!isStep1Valid}
+              className={`w-full py-4 mt-2 rounded-2xl border border-[#f1ba17]/50 bg-[#f1ba17]/10 text-[#f1ba17] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
+            >
+              Crea Allenamento Hyrox →
+            </button>
           )}
 
           {category === 'Running' && (
             <button 
-              onClick={() => { setWorkoutType('Running'); setStep(3) }} 
+              onClick={() => setStep(2)} 
               disabled={!isStep1Valid}
               className={`w-full py-4 mt-2 rounded-2xl border border-[#f1ba17]/50 bg-[#f1ba17]/10 text-[#f1ba17] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
             >
@@ -840,60 +884,17 @@ export default function CreateWorkout() {
         </div>
       )}
 
-      {/* ── STEP 2: PARAMETRI ────────────────────────────── */}
-      {step === 2 && workoutType && (
-        <div className="flex flex-col gap-5">
-          <div className={`px-4 py-3 rounded-2xl border ${TYPE_INFO[workoutType].border} ${TYPE_INFO[workoutType].bg} flex items-center gap-3`}>
-            <Timer size={18} className={TYPE_INFO[workoutType].color} />
-            <span className={`font-bold ${TYPE_INFO[workoutType].color}`}>{workoutType}</span>
-          </div>
-
-          {workoutType === 'ON/OFF' && (
-            <div className="grid grid-cols-3 gap-3">
-              <ScrollPicker options={TIME_OPTIONS} value={onOffOn} onChange={setOnOffOn} label="⏱ Minuti ON" />
-              <ScrollPicker options={TIME_OPTIONS} value={onOffOff} onChange={setOnOffOff} label="😮 Minuti OFF" />
-              <ScrollPicker options={MINUTES_OPTIONS} value={onOffTotal} onChange={setOnOffTotal} label="🕐 Durata tot." />
-            </div>
-          )}
-
-          {workoutType === 'EMOM' && (
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-3">
-                <ScrollPicker options={TIME_OPTIONS} value={emomInterval} onChange={setEmomInterval} label="⏱ Durata Intervallo" />
-                <ScrollPicker options={ROUNDS_OPTIONS} value={emomRounds} onChange={setEmomRounds} label="🔁 Numero Intervalli" />
-              </div>
-              <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex items-center justify-between">
-                <span className="text-gray-400 text-sm">Durata totale calcolata:</span>
-                <span className="text-white font-bold text-lg">
-                  {formatTime(timeToSeconds(emomInterval) * (parseInt(emomRounds, 10) || 0))}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {workoutType === 'AMRAP' && (
-            <ScrollPicker options={MINUTES_OPTIONS} value={amrapDuration} onChange={setAmrapDuration} label="⏱ Durata totale" />
-          )}
-
-          {workoutType === 'For Time' && (
-            <ScrollPicker options={ROUNDS_OPTIONS} value={forTimeRounds} onChange={setForTimeRounds} label="🔁 Numero rounds" />
-          )}
-
-          <div className="flex gap-3 mt-2">
-            <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl border border-[#444] text-gray-400 hover:text-white transition">← Indietro</button>
-            <button onClick={() => setStep(3)} className="flex-1 py-3 rounded-xl bg-[#f1ba17] text-black font-bold hover:brightness-110 transition">Avanti →</button>
-          </div>
-        </div>
-      )}
-
-      {/* ── STEP 3: BUILD WORKOUT ────────────────────────── */}
-      {step === 3 && category === 'Hyrox' && (
+      {/* ── STEP 2: BUILD WORKOUT (HYROX) ────────────────────────── */}
+      {step === 2 && category === 'Hyrox' && (
         <div className="flex flex-col gap-4">
 
-          {/* RIEPILOGO TIPO */}
-          <div className={`px-4 py-4 rounded-2xl border ${TYPE_INFO[workoutType].border} ${TYPE_INFO[workoutType].bg} flex flex-col gap-3`}>
+          <div className="px-4 py-4 rounded-2xl border border-[#444] bg-[#222] flex flex-col gap-3">
+
             <div className="flex items-center justify-between">
-              <p className={`font-bold text-sm ${TYPE_INFO[workoutType].color}`}>{workoutSummary()}</p>
+              <div className="flex items-center gap-3">
+                <Dumbbell size={18} className="text-[#f1ba17]" />
+                <span className="font-bold text-[#f1ba17]">Allenamento Hyrox</span>
+              </div>
               <div className="flex items-center gap-1">
                  <span className={`text-sm font-bold ${getIntensityColor(workoutIntensity)}`}>{workoutIntensity}/10</span>
                  <BicepsFlexed size={18} className={getIntensityColor(workoutIntensity)} />
@@ -902,117 +903,39 @@ export default function CreateWorkout() {
             <input type="range" min="1" max="10" value={workoutIntensity} onChange={e => setWorkoutIntensity(e.target.value)} className="w-full accent-[#f1ba17]" />
           </div>
 
-          {/* WARM UP */}
-          <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Timer size={16} className="text-gray-400" />
-              <span className="text-white font-semibold text-sm">Warm Up</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <ScrollPicker options={MINUTES_OPTIONS} value={warmupDuration} onChange={setWarmupDuration} label="Durata" />
-              <div className="flex flex-col gap-1">
-                <p className="text-gray-400 text-xs">Note warm up</p>
-                <textarea
-                  className="flex-1 bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-sm h-36"
-                  placeholder="Es: corsa leggera, mobilità..."
-                  value={warmupNotes}
-                  onChange={e => setWarmupNotes(e.target.value)}
-                />
-              </div>
-            </div>
+          <div className="flex flex-col gap-4">
+            {blocks.map((block, idx) => (
+              <HyroxBlock 
+                key={block.id} block={block} index={idx} total={blocks.length}
+                onUpdate={newB => {
+                  const nb = [...blocks]
+                  nb[idx] = newB
+                  setBlocks(nb)
+                }}
+                onRemove={() => setBlocks(blocks.filter(b => b.id !== block.id))}
+                onMoveUp={() => setBlocks(moveElement(blocks, idx, idx - 1))}
+                onMoveDown={() => setBlocks(moveElement(blocks, idx, idx + 1))}
+                onDropIndex={(from, to) => setBlocks(moveElement(blocks, from, to))}
+                onDuplicate={() => {
+                  const duplicatedBlock = JSON.parse(JSON.stringify(block))
+                  duplicatedBlock.id = Math.random()
+                  if (duplicatedBlock.exercises) {
+                    duplicatedBlock.exercises = duplicatedBlock.exercises.map(ex => ({ ...ex, id: Math.random() }))
+                  }
+                  const newBlocks = [...blocks]
+                  newBlocks.splice(idx + 1, 0, duplicatedBlock)
+                  setBlocks(newBlocks)
+                }}
+              />
+            ))}
           </div>
 
-          {/* CASH IN */}
-          {hasCashIn ? (
-            <div>
-              <CashBlock
-                label="Cash In"
-                icon={<Flag size={16} className="text-gray-400" />}
-                exercises={cashInExercises}
-                onAdd={ex => setCashInExercises([...cashInExercises, ex])}
-                onRemove={id => setCashInExercises(cashInExercises.filter(e => e.id !== id))}
-                onMoveUp={idx => setCashInExercises(moveElement(cashInExercises, idx, idx - 1))}
-                onMoveDown={idx => setCashInExercises(moveElement(cashInExercises, idx, idx + 1))}
-                onDropIndex={(from, to) => setCashInExercises(moveElement(cashInExercises, from, to))}
-                workoutType={workoutType}
-              />
-              <button onClick={() => { setHasCashIn(false); setCashInExercises([]) }}
-                className="text-gray-600 hover:text-red-400 text-xs mt-1 ml-1">Rimuovi Cash In</button>
-            </div>
-          ) : (
-            <button onClick={() => setHasCashIn(true)}
-              className="flex items-center gap-2 text-gray-500 hover:text-[#f1ba17] text-sm transition border border-dashed border-[#333] rounded-xl px-4 py-3">
-              <Plus size={16} /> Aggiungi Cash In (opzionale)
-            </button>
-          )}
-
-          {/* BLOCCO PRINCIPALE */}
-          <div className={`bg-[#1e1e1e] border ${TYPE_INFO[workoutType].border} rounded-2xl p-4`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Dumbbell size={16} className={TYPE_INFO[workoutType].color} />
-                <span className={`font-bold text-sm ${TYPE_INFO[workoutType].color}`}>{workoutType}</span>
-                <span className="text-gray-500 text-xs">· {workoutSummary().split('·').slice(1).join('·')}</span>
-              </div>
-              <button onClick={() => setPickerOpen(true)} className="text-[#f1ba17] hover:brightness-110">
-                <Plus size={18} />
-              </button>
-            </div>
-
-            {exercises.length === 0 ? (
-              <button onClick={() => setPickerOpen(true)}
-                className="w-full py-4 border border-dashed border-[#383838] rounded-xl text-gray-600 text-sm hover:border-[#f1ba17] hover:text-[#f1ba17] transition">
-                + Aggiungi primo esercizio
-              </button>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {exercises.map((ex, i) => (
-                  <ExerciseRow
-                    key={ex.id}
-                    ex={ex}
-                    index={i}
-                    total={exercises.length}
-                    showMinute={workoutType === 'EMOM' || workoutType === 'ON/OFF'}
-                    onRemove={id => setExercises(exercises.filter(e => e.id !== id))}
-                    onMoveUp={idx => setExercises(moveElement(exercises, idx, idx - 1))}
-                    onMoveDown={idx => setExercises(moveElement(exercises, idx, idx + 1))}
-                    onDropIndex={(from, to) => setExercises(moveElement(exercises, from, to))}
-                  />
-                ))}
-                <button onClick={() => setPickerOpen(true)}
-                  className="flex items-center gap-2 text-[#f1ba17] text-sm font-medium mt-1 hover:brightness-110">
-                  <Plus size={16} /> Aggiungi esercizio
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* CASH OUT */}
-          {hasCashOut ? (
-            <div>
-              <CashBlock
-                label="Cash Out"
-                icon={<FlagOff size={16} className="text-gray-400" />}
-                exercises={cashOutExercises}
-                onAdd={ex => setCashOutExercises([...cashOutExercises, ex])}
-                onRemove={id => setCashOutExercises(cashOutExercises.filter(e => e.id !== id))}
-                onMoveUp={idx => setCashOutExercises(moveElement(cashOutExercises, idx, idx - 1))}
-                onMoveDown={idx => setCashOutExercises(moveElement(cashOutExercises, idx, idx + 1))}
-                onDropIndex={(from, to) => setCashOutExercises(moveElement(cashOutExercises, from, to))}
-                workoutType={workoutType}
-              />
-              <button onClick={() => { setHasCashOut(false); setCashOutExercises([]) }}
-                className="text-gray-600 hover:text-red-400 text-xs mt-1 ml-1">Rimuovi Cash Out</button>
-            </div>
-          ) : (
-            <button onClick={() => setHasCashOut(true)}
-              className="flex items-center gap-2 text-gray-500 hover:text-[#f1ba17] text-sm transition border border-dashed border-[#333] rounded-xl px-4 py-3">
-              <Plus size={16} /> Aggiungi Cash Out (opzionale)
-            </button>
-          )}
+          <button onClick={() => setBlockPickerOpen(true)} className="w-full py-4 border border-dashed border-[#383838] rounded-xl text-gray-400 text-sm hover:border-[#f1ba17] hover:text-[#f1ba17] transition font-medium">
+            + Aggiungi Blocco
+          </button>
 
           {/* NOTE COACH */}
-          <div>
+          <div className="mt-4">
             <label className="text-gray-400 text-sm mb-2 block">Note coach (appariranno nel PDF)</label>
             <textarea
               className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none text-sm"
@@ -1047,7 +970,7 @@ export default function CreateWorkout() {
 
           {/* BOTTONI */}
           <div className="flex gap-3">
-            <button onClick={() => setStep(category === 'Running' ? 1 : 2)} className="flex-1 py-3 rounded-xl border border-[#444] text-gray-400 hover:text-white transition">← Indietro</button>
+            <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl border border-[#444] text-gray-400 hover:text-white transition">← Indietro</button>
             <button onClick={handleSave} disabled={saving}
               className="flex-2 px-6 py-3 rounded-xl bg-[#f1ba17] text-black font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
               <Save size={18} />
@@ -1057,17 +980,24 @@ export default function CreateWorkout() {
         </div>
       )}
 
-      {/* EXERCISE PICKER MODAL */}
-      {pickerOpen && (
-        <ExercisePicker
-          onAdd={ex => setExercises([...exercises, ex])}
-          onClose={() => setPickerOpen(false)}
-          existingNames={exercises.map(e => e.name)}
+      {blockPickerOpen && (
+        <BlockPickerModal 
+          onClose={() => setBlockPickerOpen(false)}
+          onAdd={(type) => {
+            const newBlock = { id: Math.random(), type, params: {}, exercises: [] }
+            if (type === 'WarmUp' || type === 'Rest') newBlock.params.duration = '3:00'
+            if (type === 'ON/OFF') { newBlock.params.on = '1:00'; newBlock.params.off = '1:00'; newBlock.params.rounds = '10' }
+            if (type === 'EMOM') { newBlock.params.interval = '1:00'; newBlock.params.rounds = '10' }
+            if (type === 'AMRAP') { newBlock.params.duration = '10:00' }
+            if (type === 'For Time') { newBlock.params.rounds = '3' }
+            setBlocks([...blocks, newBlock])
+            setBlockPickerOpen(false)
+          }}
         />
       )}
 
-      {/* ── STEP 3: BUILD RUNNING WORKOUT ────────────────── */}
-      {step === 3 && category === 'Running' && (
+      {/* ── STEP 2: BUILD RUNNING WORKOUT ────────────────── */}
+      {step === 2 && category === 'Running' && (
         <div className="flex flex-col gap-4">
           <div className="px-4 py-4 rounded-2xl border border-[#444] bg-[#222] flex flex-col gap-3">
             <div className="flex items-center justify-between">

@@ -44,10 +44,14 @@ export default function Calendar() {
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
 
   const TYPE_COLORS = {
-    'ON/OFF': '#a3a3a3',
-    EMOM: '#d1d5db',
-    AMRAP: '#9ca3af',
-    'For Time': '#6b7280',
+    'WarmUp': '#9ca3af',
+    'Rest': '#6b7280',
+    'Cash In': '#d1d5db',
+    'Cash Out': '#d1d5db',
+    'ON/OFF': '#e5e5e5',
+    'EMOM': '#e5e5e5',
+    'AMRAP': '#e5e5e5',
+    'For Time': '#e5e5e5',
     Running: '#f1ba17'
   }
 
@@ -61,9 +65,15 @@ export default function Calendar() {
   }
 
   const getWorkoutType = (w) => {
-    const t = w.sections?.main?.type || ''
-    if (t === 'EMOM' && w.sections?.main?.params?.on) return 'ON/OFF'
-    return t
+    const s = w.sections || {}
+    if (s.category === 'Running' || s.main?.type === 'Running' || s.steps) return 'Running'
+    if (s.blocks) {
+      const mainBlock = s.blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type))
+      return mainBlock ? mainBlock.type : 'Hyrox'
+    }
+    const oldT = s.main?.type || ''
+    if (oldT === 'EMOM' && s.main?.params?.on) return 'ON/OFF'
+    return oldT || 'Hyrox'
   }
 
   return (
@@ -173,22 +183,30 @@ export default function Calendar() {
                       </div>
                     )}
                   </div>
-                  {exList && exList.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2 ml-4">
-                      {exList.slice(0, 4).map((ex, i) => (
-                        <span key={i} className="text-xs bg-[#2a2a2a] text-gray-400 px-2 py-0.5 rounded-full">
-                          {ex.name}
-                        </span>
-                      ))}
-                      {exList.length > 4 && (
-                        <span className="text-xs text-gray-600">+{exList.length - 4}</span>
-                      )}
-                    </div>
-                  )}
-                  {type === 'Running' && w.sections?.main?.steps?.length > 0 && (
+                  {w.sections?.blocks ? (
                     <div className="flex flex-wrap gap-1 mt-2 ml-4">
                       <span className="text-xs bg-[#2a2a2a] text-gray-400 px-2 py-0.5 rounded-full">
-                        {w.sections.main.steps.length} fasi di corsa
+                        {w.sections.blocks.length} blocchi
+                      </span>
+                    </div>
+                  ) : (
+                    exList && exList.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2 ml-4">
+                        {exList.slice(0, 4).map((ex, i) => (
+                          <span key={i} className="text-xs bg-[#2a2a2a] text-gray-400 px-2 py-0.5 rounded-full">
+                            {ex.name}
+                          </span>
+                        ))}
+                        {exList.length > 4 && (
+                          <span className="text-xs text-gray-600">+{exList.length - 4}</span>
+                        )}
+                      </div>
+                    )
+                  )}
+                  {type === 'Running' && (w.sections?.main?.steps?.length > 0 || w.sections?.steps?.length > 0) && (
+                    <div className="flex flex-wrap gap-1 mt-2 ml-4">
+                      <span className="text-xs bg-[#2a2a2a] text-gray-400 px-2 py-0.5 rounded-full">
+                        {w.sections?.steps?.length || w.sections?.main?.steps?.length || 0} fasi di corsa
                       </span>
                     </div>
                   )}

@@ -24,7 +24,7 @@ export default function Home() {
       <div className="mb-8 mt-4 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <img src="/public/favicon.svg" alt="Logo" className="h-10 object-contain" />
+            <img src="/favicon.svg" alt="Logo" className="h-10 object-contain" />
             <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
           </div>
           <p className="text-gray-400 mt-1">Dashboard Coach Federico Leo</p>
