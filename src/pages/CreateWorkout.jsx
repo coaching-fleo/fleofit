@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft } from 'lucide-react'
 import { supabase } from '../supabaseClient'
-import { CustomAlert } from '../components/CustomModals'
+import { CustomAlert, CustomConfirm } from '../components/CustomModals'
+import { useTouchDrag } from '../useTouchDrag'
+
 
 // ─── COSTANTI ────────────────────────────────────────────────
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike']
@@ -324,29 +326,31 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 }
 
 // ─── BLOCCO ESERCIZIO ─────────────────────────────────────────
-function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, showMinute, onEdit }) {
+function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, showMinute, onEdit, touchHandlers }) {
   const detail = isDistance(ex.name) ? (ex.meters && ex.meters !== '-' ? ex.meters : '') : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
   const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
 
   return (
     <div
+          {...(touchHandlers ? touchHandlers(index) : {})}
       draggable
       onDragStart={(e) => {
         e.stopPropagation()
         e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', index.toString())
         setTimeout(() => {
           if (e.target && e.target.classList) {
             e.target.classList.add('opacity-30', 'scale-[0.98]', 'shadow-lg')
           }
         }, 0)
-        if (onDragStartIndex) onDragStartIndex(index)
+        onDragStartIndex?.(index)
       }}
       onDragEnter={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        if (onDragEnterIndex) onDragEnterIndex(index)
+        onDragEnterIndex?.(index)
       }}
-      onDragOver={(e) => {
+   onDragOver={(e) => {
         e.preventDefault()
         e.stopPropagation()
         e.dataTransfer.dropEffect = 'move'
@@ -356,9 +360,10 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
         if (e.target && e.target.classList) {
           e.target.classList.remove('opacity-30', 'scale-[0.98]', 'shadow-lg')
         }
-        if (onDragEndIndex) onDragEndIndex()
+        onDragEndIndex?.()
       }}
-      className="flex items-center gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 cursor-move hover:border-[#444] transition-all duration-200"
+      data-drag-item
+      className="drag-item flex items-center gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 cursor-move hover:border-[#444] transition-all duration-200"
     >
       <div className="flex flex-col items-center justify-center shrink-0">
         <button type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
@@ -393,10 +398,18 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
 }
 
 // ─── BLOCCO HYROX ───────────────────────────────────────
-function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate }) {
+function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate, touchHandlers }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [editingExercise, setEditingExercise] = useState(null)
   const [draggedExIdx, setDraggedExIdx] = useState(null)
+
+  // Hook touch per riordinare gli ESERCIZI dentro questo blocco
+  const { getTouchHandlers: getExTouchHandlers } = useTouchDrag({
+    onReorder: (from, to) => {
+      onUpdate({ ...block, exercises: moveElement(block.exercises, from, to) })
+    }
+  })
+
 
   const updateParam = (k, v) => onUpdate({ ...block, params: { ...block.params, [k]: v } })
   const updateNotes = (notes) => onUpdate({ ...block, notes })
@@ -422,23 +435,24 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
   }
 
   return (
-    <div 
-      className={`bg-[#1e1e1e] border ${isOpen ? c.border : 'border-[#333] hover:border-[#444]'} rounded-2xl p-4 flex flex-col gap-3 relative cursor-move transition-all duration-200`}
+    <div
+      {...(touchHandlers ? touchHandlers(index) : {})}
       draggable
       onDragStart={(e) => {
         e.stopPropagation()
         e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', index.toString())
         setTimeout(() => {
           if (e.target && e.target.classList) {
             e.target.classList.add('opacity-30', 'scale-[0.98]', 'shadow-lg')
           }
         }, 0)
-        if (onDragStartIndex) onDragStartIndex(index)
+        onDragStartIndex?.(index)
       }}
-      onDragEnter={(e) => {
+       onDragEnter={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        if (onDragEnterIndex) onDragEnterIndex(index)
+        onDragEnterIndex?.(index)
       }}
       onDragOver={(e) => {
         e.preventDefault()
@@ -450,8 +464,10 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
         if (e.target && e.target.classList) {
           e.target.classList.remove('opacity-30', 'scale-[0.98]', 'shadow-lg')
         }
-        if (onDragEndIndex) onDragEndIndex()
+        onDragEndIndex?.()
       }}
+      data-drag-item
+      className={`drag-item bg-[#1e1e1e] border ${isOpen ? c.border : 'border-[#333] hover:border-[#444]'} rounded-2xl p-4 flex flex-col gap-3 relative cursor-move transition-all duration-200`}
     >
       <div 
         className={`flex flex-col cursor-pointer ${isOpen ? 'border-b border-[#333] pb-2' : ''}`}
@@ -543,7 +559,7 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
           {/* Exercises */}
           {!['WarmUp', 'Rest'].includes(block.type) && (
             <>
-              <div className="flex flex-col gap-2 mt-2">
+              <div className="flex flex-col gap-2 mt-2" data-drag-container>
                 {(block.exercises || []).map((ex, i) => (
                   <ExerciseRow 
                     key={ex.id} ex={ex} index={i} total={block.exercises.length}
@@ -551,18 +567,19 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
                     onRemove={(id) => onUpdate({ ...block, exercises: block.exercises.filter(e => e.id !== id) })}
                     onMoveUp={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx - 1) })}
                     onMoveDown={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx + 1) })}
-                    onDragStartIndex={(idx) => setDraggedExIdx(idx)}
-                    onDragEnterIndex={(idx) => {
+                    onDragStartIndex={(idx) => setDraggedExIdx(idx)} // Passa al componente ExerciseRow
+                    onDragEnterIndex={(idx) => { // Gestisce il riordino in tempo reale
                       if (draggedExIdx !== null && draggedExIdx !== idx) {
                         onUpdate({ ...block, exercises: moveElement(block.exercises, draggedExIdx, idx) })
-                        setDraggedExIdx(idx)
+                        setDraggedExIdx(idx) // Aggiorna l'indice dell'elemento trascinato
                       }
                     }}
-                    onDragEndIndex={() => setDraggedExIdx(null)}
+                    onDragEndIndex={() => setDraggedExIdx(null)} // Resetta l'indice al termine del drag
                     onEdit={(exToEdit) => {
                       setEditingExercise(exToEdit)
                       setPickerOpen(true)
                     }}
+                    touchHandlers={getExTouchHandlers}
                   />
                 ))}
               </div>
@@ -724,7 +741,7 @@ function RunningStepPicker({ onAdd, onClose }) {
   )
 }
 
-function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex }) {
+function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, touchHandlers }) {
   const getTypeLabel = (t) => {
     switch(t) {
       case 'warmup': return 'Riscaldamento'
@@ -748,21 +765,23 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
 
   return (
     <div 
+      {...(touchHandlers ? touchHandlers(index) : {})}
       draggable
       onDragStart={(e) => {
         e.stopPropagation()
         e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', index.toString())
         setTimeout(() => {
           if (e.target && e.target.classList) {
             e.target.classList.add('opacity-30', 'scale-[0.98]', 'shadow-lg')
           }
         }, 0)
-        if (onDragStartIndex) onDragStartIndex(index)
+        onDragStartIndex?.(index)
       }}
       onDragEnter={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        if (onDragEnterIndex) onDragEnterIndex(index)
+        onDragEnterIndex?.(index)
       }}
       onDragOver={(e) => {
         e.preventDefault()
@@ -774,9 +793,10 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
         if (e.target && e.target.classList) {
           e.target.classList.remove('opacity-30', 'scale-[0.98]', 'shadow-lg')
         }
-        if (onDragEndIndex) onDragEndIndex()
+        onDragEndIndex?.()
       }}
-      className="flex items-start gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 hover:border-[#444] transition-all duration-200 cursor-move"
+      data-drag-item
+      className="drag-item flex items-start gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 hover:border-[#444] transition-all duration-200 cursor-move"
     >
       <div className="flex flex-col items-center justify-center shrink-0 mt-1">
         <button type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-blue-400 disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
@@ -824,7 +844,7 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
 export default function CreateWorkout() {
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
- const duplicateId = searchParams.get('duplicate')
+  const duplicateId = searchParams.get('duplicate')
   const sourceId = editId || duplicateId
   const defaultDate = searchParams.get('date')
   const defaultAthleteId = searchParams.get('athlete_id')
@@ -850,6 +870,16 @@ export default function CreateWorkout() {
   const [athletes, setAthletes] = useState([])
   const [selectedAthlete, setSelectedAthlete] = useState(defaultAthleteId || '')
   const navigate = useNavigate()
+
+  // Hook touch per riordinare i BLOCCHI HYROX
+  const { getTouchHandlers: getBlockTouchHandlers } = useTouchDrag({
+    onReorder: (from, to) => setBlocks(prev => moveElement(prev, from, to))
+  })
+
+  // Hook touch per riordinare le FASI RUNNING
+  const { getTouchHandlers: getStepTouchHandlers } = useTouchDrag({
+    onReorder: (from, to) => setRunningSteps(prev => moveElement(prev, from, to))
+  })
 
   useEffect(() => {
     const fetchAthletes = async () => {
@@ -1009,6 +1039,17 @@ export default function CreateWorkout() {
     <div className="p-4 max-w-2xl mx-auto pb-24">
       <style>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .drag-item {
+          -webkit-touch-callout: none;
+          -webkit-user-select: none;
+          user-select: none;
+          -webkit-user-drag: element;
+        }
+        .drag-item input, .drag-item textarea, .drag-item select, .drag-item button {
+          -webkit-user-select: auto;
+          user-select: auto;
+          -webkit-user-drag: auto;
+        }
       `}</style>
       <button onClick={handleBack} className="flex items-center text-[#f1ba17] hover:brightness-110 mb-6 transition-all active:scale-95 active:opacity-70 font-semibold text-[17px]">
         <ChevronLeft size={26} strokeWidth={2.5} className="-ml-2 mr-0.5" /> Indietro
@@ -1094,7 +1135,7 @@ export default function CreateWorkout() {
             <input type="range" min="1" max="10" value={workoutIntensity} onChange={e => setWorkoutIntensity(e.target.value)} className="w-full accent-[#f1ba17]" />
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4" data-drag-container>
             {blocks.map((block, idx) => (
               <HyroxBlock 
                 key={block.id} block={block} index={idx} total={blocks.length}
@@ -1126,6 +1167,7 @@ export default function CreateWorkout() {
                   newBlocks.splice(idx + 1, 0, duplicatedBlock)
                   setBlocks(newBlocks)
                 }}
+                touchHandlers={getBlockTouchHandlers}
               />
             ))}
           </div>
@@ -1228,7 +1270,7 @@ export default function CreateWorkout() {
                 + Aggiungi prima fase (es. Riscaldamento)
               </button>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2" data-drag-container>
                 {runningSteps.map((step, i) => (
                   <RunningStepRow
                     key={step.id}
@@ -1246,6 +1288,7 @@ export default function CreateWorkout() {
                       }
                     }}
                     onDragEndIndex={() => setDraggedStepIdx(null)}
+                    touchHandlers={getStepTouchHandlers}
                   />
                 ))}
                 <button onClick={() => setRunningPickerOpen(true)}
