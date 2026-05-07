@@ -184,7 +184,8 @@ export default function AthleteDetail() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">{athlete.name} {athlete.surname}</h1>
-            <p className="text-gray-400">@{athlete.username || 'N/A'}</p>
+            {athlete.username && <p className="text-gray-400">@{athlete.username}</p>}
+            {athlete.notes && <p className="text-gray-500 text-sm mt-1 max-w-sm whitespace-pre-wrap">{athlete.notes}</p>}
           </div>
         </div>
         <div className="flex items-center gap-2">
