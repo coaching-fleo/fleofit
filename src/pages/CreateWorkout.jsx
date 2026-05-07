@@ -1036,7 +1036,7 @@ export default function CreateWorkout() {
   }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24">
+    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
       <style>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .drag-item {

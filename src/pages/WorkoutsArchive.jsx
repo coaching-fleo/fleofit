@@ -36,7 +36,7 @@ export default function WorkoutsArchive() {
   )
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24">
+    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
       <button onClick={() => navigate(-1)} className="flex items-center text-[#f1ba17] hover:brightness-110 mb-6 transition-all active:scale-95 active:opacity-70 font-semibold text-[17px]">
         <ChevronLeft size={26} strokeWidth={2.5} className="-ml-2 mr-0.5" /> Indietro
       </button>

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload } from 'lucide-react'
+import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format } from 'date-fns'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -121,8 +121,19 @@ export default function Settings() {
     e.target.value = ''
   }
 
+  const handleLogout = async () => {
+    setConfirmInfo({
+      title: "Uscita",
+      message: "Sei sicuro di voler uscire dal tuo account?",
+      onConfirm: async () => {
+        await supabase.auth.signOut()
+        navigate('/login')
+      }
+    })
+  }
+
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24">
+    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
       <button onClick={() => navigate(-1)} className="flex items-center text-[#f1ba17] hover:brightness-110 mb-6 transition-all active:scale-95 active:opacity-70 font-semibold text-[17px]">
         <ChevronLeft size={26} strokeWidth={2.5} className="-ml-2 mr-0.5" /> Indietro
       </button>
@@ -194,6 +205,23 @@ export default function Settings() {
           <input type="file" accept=".json" className="hidden" ref={athleteImportRef} onChange={handleImportAthlete} />
         </div>
       </div>
+
+          {/* SEZIONE ACCOUNT */}
+      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">
+        <h2 className="text-lg font-bold text-white mb-4">Account</h2>
+        <button onClick={handleLogout} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-red-500 transition group">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-red-500 transition text-gray-400 shrink-0">
+              <LogOut size={20} />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-semibold">Esci dall'account</p>
+              <p className="text-gray-500 text-xs">Disconnettiti dall'app FLEOFIT</p>
+            </div>
+          </div>
+        </button>
+      </div>
+      
       
       <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
       <CustomConfirm info={confirmInfo} onClose={() => setConfirmInfo(null)} />

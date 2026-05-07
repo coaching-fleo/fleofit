@@ -546,7 +546,7 @@ export default function WorkoutDetail() {
   }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24">
+    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
       {/* BACK */}
       <button onClick={() => navigate(-1)} className="flex items-center text-[#f1ba17] hover:brightness-110 mb-6 transition-all active:scale-95 active:opacity-70 font-semibold text-[17px]">
         <ChevronLeft size={26} strokeWidth={2.5} className="-ml-2 mr-0.5" /> Indietro
@@ -650,11 +650,13 @@ export default function WorkoutDetail() {
       </div>
 
       {/* Share2 CARD (nascosta, usata per screenshot) */}
-<div className="mt-8 overflow-hidden">
-  <p className="text-gray-600 text-xs mb-2">Anteprima grafica Share2:</p>
-  <div style={{ overflowX: 'auto', paddingBottom: '20px' }}>
+<div className="mt-8">
+  <p className="text-gray-600 text-xs mb-2 font-medium">Anteprima grafica:</p>
+  <div style={{ paddingBottom: '20px' }}>
     <div ref={igRef} style={{
-      width: '390px',
+      width: '100%',
+      maxWidth: '390px',
+      margin: '0 auto',
       backgroundColor: '#171717',
       borderRadius: '28px',
       fontFamily: "-apple-system, 'SF Pro Display', system-ui, sans-serif",

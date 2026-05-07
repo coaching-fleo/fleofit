@@ -20,7 +20,7 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24">
+    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
       {/* Header */}
       <div className="mb-8 mt-4 flex items-center justify-between">
         <div>
