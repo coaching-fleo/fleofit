@@ -19,7 +19,7 @@ import Login from './pages/Login'
 export const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)
 
-const ADMIN_EMAILS = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it']
+const ADMIN_EMAILS = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com']
 import { Camera } from 'lucide-react'
 
 function Onboarding({ user, onComplete }) {
