@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 import { ChevronLeft, ChevronRight, Plus, BicepsFlexed } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
+import { useAuth } from '../App'
 
 export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -11,6 +12,7 @@ export default function Calendar() {
   const [selectedDay, setSelectedDay] = useState(new Date())
   const [dayWorkouts, setDayWorkouts] = useState([])
   const navigate = useNavigate()
+  const { role, user } = useAuth()
 
   useEffect(() => {
     fetchWorkouts()
@@ -24,12 +26,27 @@ export default function Calendar() {
   const fetchWorkouts = async () => {
     const from = format(startOfMonth(currentMonth), 'yyyy-MM-dd')
     const to = format(endOfMonth(currentMonth), 'yyyy-MM-dd')
-    const { data } = await supabase
-      .from('workouts')
-      .select('id, title, date, sections')
-      .gte('date', from)
-      .lte('date', to)
-    setWorkouts(data || [])
+    
+    if (role === 'athlete') {
+      const { data } = await supabase
+        .from('athlete_workouts')
+        .select('id, completed_date, status, workouts (id, title, date, sections)')
+        .eq('athlete_id', user.id)
+        .gte('completed_date', from)
+        .lte('completed_date', to)
+      const mapped = (data || []).filter(aw => aw.workouts).map(aw => ({
+         ...aw.workouts,
+         date: aw.completed_date
+      }))
+      setWorkouts(mapped)
+    } else {
+      const { data } = await supabase
+        .from('workouts')
+        .select('id, title, date, sections')
+        .gte('date', from)
+        .lte('date', to)
+      setWorkouts(data || [])
+    }
   }
 
   const days = eachDayOfInterval({
@@ -142,21 +159,25 @@ export default function Calendar() {
           <h2 className="text-white font-semibold">
             {format(selectedDay, 'EEEE d MMMM', { locale: it })}
           </h2>
-          <button
-            onClick={() => navigate(`/create?date=${format(selectedDay, 'yyyy-MM-dd')}`)}
-            className="flex items-center gap-1 text-[#f1ba17] text-sm font-medium hover:brightness-110"
-          >
-            <Plus size={16} /> Nuovo
-          </button>
+          {role !== 'athlete' && (
+            <button
+              onClick={() => navigate(`/create?date=${format(selectedDay, 'yyyy-MM-dd')}`)}
+              className="flex items-center gap-1 text-[#f1ba17] text-sm font-medium hover:brightness-110"
+            >
+              <Plus size={16} /> Nuovo
+            </button>
+          )}
         </div>
 
         {dayWorkouts.length === 0 ? (
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 text-center">
             <p className="text-gray-600 text-sm">Nessun workout programmato</p>
-            <button onClick={() => navigate(`/create?date=${format(selectedDay, 'yyyy-MM-dd')}`)}
-              className="mt-3 text-[#f1ba17] text-sm font-medium hover:brightness-110">
-              + Crea workout per questo giorno
-            </button>
+            {role !== 'athlete' && (
+              <button onClick={() => navigate(`/create?date=${format(selectedDay, 'yyyy-MM-dd')}`)}
+                className="mt-3 text-[#f1ba17] text-sm font-medium hover:brightness-110">
+                + Crea workout per questo giorno
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-3">

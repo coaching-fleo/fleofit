@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { Plus, User, ChevronRight, Search } from 'lucide-react'
@@ -132,7 +133,7 @@ function NewAthleteModal({ onClose, onSaved }) {
     onSaved()
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4">
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
@@ -198,6 +199,7 @@ function NewAthleteModal({ onClose, onSaved }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft } from 'lucide-react'
 import { supabase } from '../supabaseClient'
@@ -178,7 +179,7 @@ function ScrollPicker({ options = [], value, onChange, label, type }) {
 
 function BlockPickerModal({ onAdd, onClose }) {
   const blockTypes = ['WarmUp', 'Cash In', 'ON/OFF', 'EMOM', 'AMRAP', 'For Time', 'Rest', 'Cash Out']
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-5 border border-[#333]">
         <div className="flex justify-between items-center mb-4">
@@ -193,7 +194,8 @@ function BlockPickerModal({ onAdd, onClose }) {
           ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -235,7 +237,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     onClose()
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
@@ -321,7 +323,8 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -657,7 +660,7 @@ function RunningStepPicker({ onAdd, onClose }) {
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
@@ -737,7 +740,8 @@ function RunningStepPicker({ onAdd, onClose }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -1318,7 +1322,7 @@ export default function CreateWorkout() {
       )}
 
       {/* EXIT CONFIRM MODAL */}
-      {showExitConfirm && (
+      {showExitConfirm && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
             <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
@@ -1343,10 +1347,14 @@ export default function CreateWorkout() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       
-      <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
+      {createPortal(
+        <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />,
+        document.body
+      )}
     </div>
   )
 }

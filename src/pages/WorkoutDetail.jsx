@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 // TOGLI Share2, metti Share2
@@ -8,6 +9,7 @@ import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { CustomAlert } from '../components/CustomModals'
+import { useAuth } from '../App'
 
 const TYPE_COLORS = {
   'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
@@ -160,6 +162,7 @@ export default function WorkoutDetail() {
   const [deleting, setDeleting] = useState(false)
   const [logoBase64, setLogoBase64] = useState(null)
   const [alertInfo, setAlertInfo] = useState(null)
+  const { role } = useAuth()
 
   useEffect(() => { fetchWorkout() }, [id])
 
@@ -561,32 +564,34 @@ export default function WorkoutDetail() {
               {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2">
-              {workout.sections?.intensity && (
-                <div className="flex items-center gap-1 bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
-                  <span className={`text-xs font-bold ${getIntensityColor(workout.sections.intensity)}`}>
-                    {workout.sections.intensity}/10
-                  </span>
-                  <BicepsFlexed size={14} className={getIntensityColor(workout.sections.intensity)} />
-                </div>
-              )}
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${c.bg} ${c.text} border ${c.border}`}>
-                {type}
-              </span>
+          {role !== 'athlete' && (
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2">
+                {workout.sections?.intensity && (
+                  <div className="flex items-center gap-1 bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                    <span className={`text-xs font-bold ${getIntensityColor(workout.sections.intensity)}`}>
+                      {workout.sections.intensity}/10
+                    </span>
+                    <BicepsFlexed size={14} className={getIntensityColor(workout.sections.intensity)} />
+                  </div>
+                )}
+                <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${c.bg} ${c.text} border ${c.border}`}>
+                  {type}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg" title="Duplica Workout">
+                  <Copy size={12} /> Duplica
+                </button>
+                <button onClick={() => navigate(`/create?edit=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                  <Edit size={12} /> Modifica
+                </button>
+                <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                  <Trash2 size={12} />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg" title="Duplica Workout">
-                <Copy size={12} /> Duplica
-              </button>
-              <button onClick={() => navigate(`/create?edit=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
-                <Edit size={12} /> Modifica
-              </button>
-              <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
-                <Trash2 size={12} />
-              </button>
-            </div>
-          </div>
+          )}
         </div>
         <div className={`mt-3 px-4 py-2 rounded-xl ${c.bg} border ${c.border}`}>
           <p className={`text-sm font-medium ${c.text}`}>{paramSummary()}</p>
@@ -642,12 +647,14 @@ export default function WorkoutDetail() {
           <Send size={18} /> Condividi (PDF + Social)</button>
       </div>
 
-      <div className="mt-3">
-        <button onClick={() => setAssignModalOpen(true)}
-          className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-4 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition">
-          <Users size={18} /> Assegna ad Atleta
-        </button>
-      </div>
+      {role !== 'athlete' && (
+        <div className="mt-3">
+          <button onClick={() => setAssignModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-4 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition">
+            <Users size={18} /> Assegna ad Atleta
+          </button>
+        </div>
+      )}
 
       {/* Share2 CARD (nascosta, usata per screenshot) */}
 <div className="mt-8">
@@ -885,7 +892,7 @@ export default function WorkoutDetail() {
   </div>
 </div>
       {/* MODAL: ASSEGNA AD ATLETA */}
-      {assignModalOpen && (
+      {assignModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
@@ -913,11 +920,12 @@ export default function WorkoutDetail() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL: CONFERMA ELIMINAZIONE WORKOUT */}
-      {showDeleteConfirm && (
+      {showDeleteConfirm && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
             <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
@@ -944,11 +952,12 @@ export default function WorkoutDetail() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL: SUCCESSO ASSEGNAZIONE */}
-      {showSuccessModal && (
+      {showSuccessModal && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
             <div className="w-16 h-16 rounded-full bg-green-900/30 text-green-500 flex items-center justify-center mx-auto mb-2 shrink-0">
@@ -965,10 +974,14 @@ export default function WorkoutDetail() {
               Chiudi
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       
-      <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
+      {createPortal(
+        <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />,
+        document.body
+      )}
     </div>
   )
 }

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert } from '../components/CustomModals'
+import { useAuth } from '../App'
 
 // Helper per calcolare l'età
 const calculateAge = (dob) => {
@@ -13,7 +15,9 @@ const calculateAge = (dob) => {
 }
 
 export default function AthleteDetail() {
-  const { id } = useParams()
+  const { id: paramId } = useParams()
+  const { role, user } = useAuth()
+  const id = paramId || user?.id
   const navigate = useNavigate()
   const [athlete, setAthlete] = useState(null)
   const [workouts, setWorkouts] = useState([])
@@ -157,9 +161,13 @@ export default function AthleteDetail() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
-      <button onClick={() => navigate('/athletes')} className="flex items-center text-[#f1ba17] hover:brightness-110 mb-6 transition-all active:scale-95 active:opacity-70 font-semibold text-[17px]">
-        <ChevronLeft size={26} strokeWidth={2.5} className="-ml-2 mr-0.5" /> Tutti gli atleti
-      </button>
+      {role !== 'athlete' ? (
+        <button onClick={() => navigate('/athletes')} className="flex items-center text-[#f1ba17] hover:brightness-110 mb-6 transition-all active:scale-95 active:opacity-70 font-semibold text-[17px]">
+          <ChevronLeft size={26} strokeWidth={2.5} className="-ml-2 mr-0.5" /> Tutti gli atleti
+        </button>
+      ) : (
+        <div className="mt-8 mb-4"></div>
+      )}
 
       {/* Header Atleta */}
       <div className="flex items-center justify-between mb-6">
@@ -213,12 +221,14 @@ export default function AthleteDetail() {
             <BookOpen size={20} className="text-[#f1ba17]" />
             Diario Workout
           </h2>
-          <button 
-            onClick={() => navigate(`/create?athlete_id=${id}`)}
-            className="flex items-center gap-1 text-[#f1ba17] text-sm font-medium hover:brightness-110 bg-[#f1ba17]/10 px-3 py-1.5 rounded-full transition"
-          >
-            <Plus size={16} /> Nuovo Workout
-          </button>
+          {role !== 'athlete' && (
+            <button 
+              onClick={() => navigate(`/create?athlete_id=${id}`)}
+              className="flex items-center gap-1 text-[#f1ba17] text-sm font-medium hover:brightness-110 bg-[#f1ba17]/10 px-3 py-1.5 rounded-full transition"
+            >
+              <Plus size={16} /> Nuovo Workout
+            </button>
+          )}
         </div>
         {workouts.length > 0 ? (
           workouts.map(entry => (
@@ -230,6 +240,7 @@ export default function AthleteDetail() {
               onRemove={requestRemoveWorkout}
               navigate={navigate}
               athleteId={id}
+              role={role}
             />
           ))
         ) : (
@@ -240,7 +251,7 @@ export default function AthleteDetail() {
       </div>
 
       {/* MODAL CONFERMA RIMOZIONE WORKOUT */}
-      {workoutToRemove && (
+      {workoutToRemove && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
             <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
@@ -265,11 +276,12 @@ export default function AthleteDetail() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL MODIFICA ATLETA */}
-      {showEditModal && (
+      {showEditModal && createPortal(
         <EditAthleteModal 
           athlete={athlete}
           onClose={() => setShowEditModal(false)}
@@ -277,16 +289,27 @@ export default function AthleteDetail() {
             setShowEditModal(false)
             fetchAthleteData()
           }}
-          onDelete={() => navigate('/athletes')}
-        />
+          onDelete={() => {
+            if (role === 'athlete') {
+              navigate('/login')
+            } else {
+              navigate('/athletes')
+            }
+          }}
+          role={role}
+        />,
+        document.body
       )}
       
-      <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
+      {createPortal(
+        <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />,
+        document.body
+      )}
     </div>
   )
 }
 
-function EditAthleteModal({ athlete, onClose, onSaved, onDelete }) {
+function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
   const [form, setForm] = useState({ 
     name: athlete.name || '', 
     surname: athlete.surname || '', 
@@ -322,6 +345,9 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete }) {
     if (error) {
       setAlertInfo({ title: 'Errore', message: "Errore durante l'eliminazione: " + error.message, type: 'error' })
       return
+    }
+    if (role === 'athlete') {
+      await supabase.auth.signOut()
     }
     onDelete()
   }
@@ -366,11 +392,11 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete }) {
           <div className="flex justify-center">
             {!showDeleteConfirm ? (
               <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 text-red-500 text-sm font-medium hover:underline">
-                <Trash2 size={16} /> Elimina profilo atleta
+                <Trash2 size={16} /> Elimina profilo{role !== 'athlete' ? ' atleta' : ''}
               </button>
             ) : (
               <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-4 text-center w-full">
-                <p className="text-red-400 text-sm font-semibold mb-3">Sei sicuro? Questa azione eliminerà l'atleta e non può essere annullata.</p>
+                <p className="text-red-400 text-sm font-semibold mb-3">Sei sicuro? Questa azione eliminerà {role === 'athlete' ? 'il tuo account' : 'l\'atleta'} e non può essere annullata.</p>
                 <div className="flex justify-center gap-3">
                   <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 bg-[#2a2a2a] text-white rounded-lg text-sm transition hover:bg-[#333]">Annulla</button>
                   <button onClick={handleDeleteAthlete} className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-sm font-bold transition">Sì, elimina</button>
@@ -385,7 +411,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete }) {
   )
 }
 
-function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId }) {
+function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role }) {
   const [note, setNote] = useState(entry.notes || '')
   const [saving, setSaving] = useState(false)
   
@@ -432,13 +458,15 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           >
             {statusText}
           </button>
-          <button 
-            onClick={() => onRemove(entry.id)}
-            className="text-gray-500 hover:text-red-500 transition p-1"
-            title="Rimuovi assegnazione"
-          >
-            <Trash2 size={16} />
-          </button>
+          {role !== 'athlete' && (
+            <button 
+              onClick={() => onRemove(entry.id)}
+              className="text-gray-500 hover:text-red-500 transition p-1"
+              title="Rimuovi assegnazione"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
       <div className="mt-3 pt-3 border-t border-[#2a2a2a]">

@@ -4,12 +4,14 @@ import { supabase } from '../supabaseClient'
 import { ChevronLeft, Calendar as CalendarIcon, Search } from 'lucide-react'
 import { format, parseISO, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
+import { useAuth } from '../App'
 
 export default function WorkoutsArchive() {
   const [workouts, setWorkouts] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const navigate = useNavigate()
+  const { role, user } = useAuth()
 
   useEffect(() => {
     fetchWorkouts()
@@ -17,15 +19,25 @@ export default function WorkoutsArchive() {
 
   const fetchWorkouts = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('workouts')
-      .select('id, title, date, sections')
-      .order('date', { ascending: false })
-    
-    if (error) {
-      console.error(error)
+    if (role === 'athlete') {
+      const { data, error } = await supabase
+        .from('athlete_workouts')
+        .select('completed_date, status, workouts (id, title, date, sections)')
+        .eq('athlete_id', user.id)
+        .order('completed_date', { ascending: false })
+      if (!error && data) {
+         const mapped = data.filter(aw => aw.workouts).map(aw => ({
+           ...aw.workouts,
+           date: aw.completed_date
+         }))
+         setWorkouts(mapped)
+      }
     } else {
-      setWorkouts(data || [])
+      const { data, error } = await supabase
+        .from('workouts')
+        .select('id, title, date, sections')
+        .order('date', { ascending: false })
+      if (!error) setWorkouts(data || [])
     }
     setLoading(false)
   }

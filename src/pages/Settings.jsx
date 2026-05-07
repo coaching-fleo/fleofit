@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format } from 'date-fns'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
+import { useAuth } from '../App'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -12,6 +14,7 @@ export default function Settings() {
   const [confirmInfo, setConfirmInfo] = useState(null)
   const fullImportRef = useRef(null)
   const athleteImportRef = useRef(null)
+  const { role } = useAuth()
 
   const handleExportFull = async () => {
     setLoading(true)
@@ -153,58 +156,62 @@ export default function Settings() {
       )}
 
       {/* SEZIONE TOTALE */}
-      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mb-6">
-        <h2 className="text-lg font-bold text-white mb-4">Backup Totale</h2>
-        <div className="flex flex-col gap-3">
-          <button onClick={handleExportFull} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition disabled:opacity-50 group">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-[#f1ba17] transition text-gray-400 shrink-0">
-                <HardDriveDownload size={20} />
+      {role === 'admin' && (
+        <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mb-6">
+          <h2 className="text-lg font-bold text-white mb-4">Backup Totale</h2>
+          <div className="flex flex-col gap-3">
+            <button onClick={handleExportFull} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition disabled:opacity-50 group">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-[#f1ba17] transition text-gray-400 shrink-0">
+                  <HardDriveDownload size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="text-white font-semibold">Esporta tutto il Database</p>
+                  <p className="text-gray-500 text-xs">Scarica un file .json con tutti gli atleti e i workout</p>
+                </div>
               </div>
-              <div className="text-left">
-                <p className="text-white font-semibold">Esporta tutto il Database</p>
-                <p className="text-gray-500 text-xs">Scarica un file .json con tutti gli atleti e i workout</p>
-              </div>
-            </div>
-            <Download size={18} className="text-gray-600 group-hover:text-[#f1ba17]" />
-          </button>
+              <Download size={18} className="text-gray-600 group-hover:text-[#f1ba17]" />
+            </button>
 
-          <button onClick={() => fullImportRef.current?.click()} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-blue-500 transition disabled:opacity-50 group">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-blue-500 transition text-gray-400 shrink-0">
-                <HardDriveUpload size={20} />
+            <button onClick={() => fullImportRef.current?.click()} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-blue-500 transition disabled:opacity-50 group">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-blue-500 transition text-gray-400 shrink-0">
+                  <HardDriveUpload size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="text-white font-semibold">Ripristina Database Totale</p>
+                  <p className="text-gray-500 text-xs">Carica un file .json di backup totale</p>
+                </div>
               </div>
-              <div className="text-left">
-                <p className="text-white font-semibold">Ripristina Database Totale</p>
-                <p className="text-gray-500 text-xs">Carica un file .json di backup totale</p>
-              </div>
-            </div>
-            <UploadCloud size={18} className="text-gray-600 group-hover:text-blue-500" />
-          </button>
-          <input type="file" accept=".json" className="hidden" ref={fullImportRef} onChange={handleImportFull} />
+              <UploadCloud size={18} className="text-gray-600 group-hover:text-blue-500" />
+            </button>
+            <input type="file" accept=".json" className="hidden" ref={fullImportRef} onChange={handleImportFull} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* SEZIONE ATLETA */}
-      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5">
-        <h2 className="text-lg font-bold text-white mb-4">Gestione Singolo Atleta</h2>
-        <p className="text-gray-500 text-sm mb-4">L'esportazione del singolo atleta si fa direttamente dal pulsante download nella pagina del suo Profilo.</p>
-        <div className="flex flex-col gap-3">
-          <button onClick={() => athleteImportRef.current?.click()} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-green-500 transition disabled:opacity-50 group">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-green-500 transition text-gray-400 shrink-0">
-                <UserCheck size={20} />
+      {role !== 'athlete' && (
+        <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5">
+          <h2 className="text-lg font-bold text-white mb-4">Gestione Singolo Atleta</h2>
+          <p className="text-gray-500 text-sm mb-4">L'esportazione del singolo atleta si fa direttamente dal pulsante download nella pagina del suo Profilo.</p>
+          <div className="flex flex-col gap-3">
+            <button onClick={() => athleteImportRef.current?.click()} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-green-500 transition disabled:opacity-50 group">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-green-500 transition text-gray-400 shrink-0">
+                  <UserCheck size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="text-white font-semibold">Importa Backup Atleta</p>
+                  <p className="text-gray-500 text-xs">Ripristina un atleta dal suo file .json dedicado</p>
+                </div>
               </div>
-              <div className="text-left">
-                <p className="text-white font-semibold">Importa Backup Atleta</p>
-                <p className="text-gray-500 text-xs">Ripristina un atleta dal suo file .json dedicato</p>
-              </div>
-            </div>
-            <UploadCloud size={18} className="text-gray-600 group-hover:text-green-500" />
-          </button>
-          <input type="file" accept=".json" className="hidden" ref={athleteImportRef} onChange={handleImportAthlete} />
+              <UploadCloud size={18} className="text-gray-600 group-hover:text-green-500" />
+            </button>
+            <input type="file" accept=".json" className="hidden" ref={athleteImportRef} onChange={handleImportAthlete} />
+          </div>
         </div>
-      </div>
+      )}
 
           {/* SEZIONE ACCOUNT */}
       <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">
@@ -223,8 +230,13 @@ export default function Settings() {
       </div>
       
       
-      <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
-      <CustomConfirm info={confirmInfo} onClose={() => setConfirmInfo(null)} />
+      {createPortal(
+        <>
+          <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
+          <CustomConfirm info={confirmInfo} onClose={() => setConfirmInfo(null)} />
+        </>,
+        document.body
+      )}
     </div>
   )
 }
