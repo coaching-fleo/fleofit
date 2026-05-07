@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus, FolderArchive } from 'lucide-react'
+import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 
 
@@ -30,12 +30,15 @@ export default function Home() {
           </div>
           <p className="text-gray-400 mt-1">Dashboard Coach Federico Leo</p>
         </div>
+        <button onClick={() => navigate('/settings')} className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+          <Settings size={22} />
+        </button>
       </div>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div onClick={() => navigate('/calendar')} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-[#f1ba17] transition flex flex-col gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300">
+          <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300 shrink-0">
             <CalendarDays size={20} />
           </div>
           <div>
@@ -45,7 +48,7 @@ export default function Home() {
         </div>
 
         <div onClick={() => navigate('/athletes')} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-[#f1ba17] transition flex flex-col gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300">
+          <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300 shrink-0">
             <Users size={20} />
           </div>
           <div>
@@ -61,7 +64,7 @@ export default function Home() {
           <Dumbbell size={64} className="text-[#f1ba17] -rotate-12" />
         </div>
         <div className="relative z-10">
-          <div className="w-12 h-12 rounded-full bg-[#f1ba17] flex items-center justify-center text-black mb-4 shadow-lg shadow-[#f1ba17]/20">
+          <div className="w-12 h-12 rounded-full bg-[#f1ba17] flex items-center justify-center text-black mb-4 shadow-lg shadow-[#f1ba17]/20 shrink-0">
             <Plus size={24} />
           </div>
           <h2 className="text-white font-bold text-xl mb-1">Crea Workout</h2>

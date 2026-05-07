@@ -7,6 +7,7 @@ import { format, parseISO, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import { CustomAlert } from '../components/CustomModals'
 
 const TYPE_COLORS = {
   'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
@@ -158,6 +159,7 @@ export default function WorkoutDetail() {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [logoBase64, setLogoBase64] = useState(null)
+  const [alertInfo, setAlertInfo] = useState(null)
 
   useEffect(() => { fetchWorkout() }, [id])
 
@@ -209,7 +211,7 @@ export default function WorkoutDetail() {
     
     setAssigning(false)
     if (error) {
-      alert("Errore durante l'assegnazione: " + error.message)
+      setAlertInfo({ title: 'Errore', message: "Errore durante l'assegnazione: " + error.message, type: 'error' })
     } else {
       setAssignModalOpen(false)
       setShowSuccessModal(true)
@@ -221,7 +223,7 @@ export default function WorkoutDetail() {
     const { error } = await supabase.from('workouts').delete().eq('id', id)
     setDeleting(false)
     if (error) {
-      alert("Errore durante l'eliminazione: " + error.message)
+      setAlertInfo({ title: 'Errore', message: "Errore durante l'eliminazione: " + error.message, type: 'error' })
     } else {
       navigate('/calendar')
     }
@@ -511,7 +513,7 @@ export default function WorkoutDetail() {
           text: `Ecco il tuo workout: ${workout.title}`
         })
       } else {
-        alert('Il tuo dispositivo o browser non supporta la condivisione diretta di più file. Usa i tasti di esportazione classici.')
+        setAlertInfo({ title: 'Non supportato', message: 'Il tuo dispositivo o browser non supporta la condivisione diretta di più file. Usa i tasti di esportazione classici.', type: 'error' })
       }
     } catch (error) {
       console.error('Errore durante la condivisione:', error)
@@ -916,7 +918,7 @@ export default function WorkoutDetail() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
-            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2">
+            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
               <AlertTriangle size={32} />
             </div>
             <h2 className="text-xl font-bold text-white">Sei sicuro?</h2>
@@ -947,7 +949,7 @@ export default function WorkoutDetail() {
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
-            <div className="w-16 h-16 rounded-full bg-green-900/30 text-green-500 flex items-center justify-center mx-auto mb-2">
+            <div className="w-16 h-16 rounded-full bg-green-900/30 text-green-500 flex items-center justify-center mx-auto mb-2 shrink-0">
               <Check size={32} />
             </div>
             <h2 className="text-xl font-bold text-white">Workout Assegnato!</h2>
@@ -963,6 +965,8 @@ export default function WorkoutDetail() {
           </div>
         </div>
       )}
+      
+      <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
     </div>
   )
 }

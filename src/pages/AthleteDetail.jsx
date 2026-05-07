@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X } from 'lucide-react'
+import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
+import { CustomAlert } from '../components/CustomModals'
 
 // Helper per calcolare l'età
 const calculateAge = (dob) => {
@@ -20,6 +21,7 @@ export default function AthleteDetail() {
   const [uploading, setUploading] = useState(false)
   const [workoutToRemove, setWorkoutToRemove] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [alertInfo, setAlertInfo] = useState(null)
 
   useEffect(() => {
     fetchAthleteData()
@@ -66,7 +68,7 @@ export default function AthleteDetail() {
 
     if (uploadError) {
       setUploading(false)
-      alert('Errore durante il caricamento della foto: ' + uploadError.message + '\n\nControlla le Policy di Storage su Supabase!')
+      setAlertInfo({ title: 'Errore', message: 'Errore durante il caricamento della foto: ' + uploadError.message + '\n\nControlla le Policy di Storage su Supabase!', type: 'error' })
       return
     }
 
@@ -80,7 +82,7 @@ export default function AthleteDetail() {
 
     if (updateError) {
       setUploading(false)
-      alert("Errore nell'aggiornamento del profilo: " + updateError.message)
+      setAlertInfo({ title: 'Errore', message: "Errore nell'aggiornamento del profilo: " + updateError.message, type: 'error' })
       return
     }
 
@@ -111,7 +113,7 @@ export default function AthleteDetail() {
     if (!error) {
       setWorkouts(workouts.map(w => w.id === workoutId ? { ...w, notes } : w))
     } else {
-      alert("Errore durante il salvataggio della nota: " + error.message)
+      setAlertInfo({ title: 'Errore', message: "Errore durante il salvataggio della nota: " + error.message, type: 'error' })
     }
   }
 
@@ -130,9 +132,24 @@ export default function AthleteDetail() {
     if (!error) {
       setWorkouts(workouts.filter(w => w.id !== workoutToRemove))
     } else {
-      alert("Errore durante la rimozione: " + error.message)
+      setAlertInfo({ title: 'Errore', message: "Errore durante la rimozione: " + error.message, type: 'error' })
     }
     setWorkoutToRemove(null)
+  }
+
+  const handleExportData = () => {
+    const exportData = {
+      athlete: athlete,
+      workouts: workouts
+    }
+    const dataStr = JSON.stringify(exportData, null, 2)
+    const blob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const linkElement = document.createElement('a')
+    linkElement.setAttribute('href', url)
+    linkElement.setAttribute('download', `${athlete.name}_${athlete.surname}_backup_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.json`.replace(/ /g, '_'))
+    linkElement.click()
+    URL.revokeObjectURL(url)
   }
 
   if (loading) return <div className="p-6 text-gray-500">Caricamento scheda atleta...</div>
@@ -147,11 +164,11 @@ export default function AthleteDetail() {
       {/* Header Atleta */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-5">
-          <div className="relative">
+          <div className="relative shrink-0">
             {athlete.photo_url ? (
-              <img src={athlete.photo_url} alt={`${athlete.name}`} className="w-24 h-24 rounded-full object-cover border-2 border-[#333]" />
+              <img src={athlete.photo_url} alt={`${athlete.name}`} className="w-24 h-24 rounded-full object-cover border-2 border-[#333] shrink-0" />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-[#2a2a2a] flex items-center justify-center border-2 border-[#333]">
+              <div className="w-24 h-24 rounded-full bg-[#2a2a2a] flex items-center justify-center border-2 border-[#333] shrink-0">
                 <User size={48} className="text-gray-500" />
               </div>
             )}
@@ -170,13 +187,14 @@ export default function AthleteDetail() {
             <p className="text-gray-400">@{athlete.username || 'N/A'}</p>
           </div>
         </div>
-        <button 
-          onClick={() => setShowEditModal(true)} 
-          className="p-2 bg-[#2a2a2a] rounded-xl text-gray-400 hover:text-white transition"
-          title="Modifica profilo atleta"
-        >
-          <Edit size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleExportData} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-[#f1ba17] transition" title="Esporta Backup Atleta">
+            <Download size={20} />
+          </button>
+          <button onClick={() => setShowEditModal(true)} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-[#f1ba17] transition" title="Modifica profilo atleta">
+            <Edit size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Statistiche */}
@@ -224,7 +242,7 @@ export default function AthleteDetail() {
       {workoutToRemove && (
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
-            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2">
+            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
               <AlertTriangle size={32} />
             </div>
             <h2 className="text-xl font-bold text-white">Sei sicuro?</h2>
@@ -261,6 +279,8 @@ export default function AthleteDetail() {
           onDelete={() => navigate('/athletes')}
         />
       )}
+      
+      <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
     </div>
   )
 }
@@ -276,9 +296,10 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete }) {
   })
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [alertInfo, setAlertInfo] = useState(null)
 
   const handleSave = async () => {
-    if (!form.name || !form.surname) return alert('Nome e cognome obbligatori!')
+    if (!form.name || !form.surname) return setAlertInfo({ title: 'Attenzione', message: 'Nome e cognome obbligatori!', type: 'error' })
     setSaving(true)
 
     const { error } = await supabase.from('athletes').update({
@@ -291,14 +312,14 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete }) {
     }).eq('id', athlete.id)
 
     setSaving(false)
-    if (error) { alert('Errore: ' + error.message); return }
+    if (error) { setAlertInfo({ title: 'Errore', message: 'Errore: ' + error.message, type: 'error' }); return }
     onSaved()
   }
 
   const handleDeleteAthlete = async () => {
     const { error } = await supabase.from('athletes').delete().eq('id', athlete.id)
     if (error) {
-      alert("Errore durante l'eliminazione: " + error.message)
+      setAlertInfo({ title: 'Errore', message: "Errore durante l'eliminazione: " + error.message, type: 'error' })
       return
     }
     onDelete()
@@ -356,6 +377,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete }) {
               </div>
             )}
           </div>
+          <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
         </div>
       </div>
     </div>

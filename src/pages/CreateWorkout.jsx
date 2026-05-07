@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft } from 'lucide-react'
 import { supabase } from '../supabaseClient'
+import { CustomAlert } from '../components/CustomModals'
 
 // ─── COSTANTI ────────────────────────────────────────────────
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike']
@@ -323,7 +324,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 }
 
 // ─── BLOCCO ESERCIZIO ─────────────────────────────────────────
-function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDropIndex, showMinute, onEdit }) {
+function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, showMinute, onEdit }) {
   const detail = isDistance(ex.name) ? (ex.meters && ex.meters !== '-' ? ex.meters : '') : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
   const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
 
@@ -332,20 +333,32 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDropI
       draggable
       onDragStart={(e) => {
         e.stopPropagation()
-        e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'exercise', index }))
+        e.dataTransfer.effectAllowed = 'move'
+        setTimeout(() => {
+          if (e.target && e.target.classList) {
+            e.target.classList.add('opacity-30', 'scale-[0.98]', 'shadow-lg')
+          }
+        }, 0)
+        if (onDragStartIndex) onDragStartIndex(index)
       }}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => {
+      onDragEnter={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        try {
-          const data = JSON.parse(e.dataTransfer.getData('text/plain'))
-          if (data.type === 'exercise' && data.index !== index && onDropIndex) {
-            onDropIndex(data.index, index)
-          }
-        } catch (err) {}
+        if (onDragEnterIndex) onDragEnterIndex(index)
       }}
-      className="flex items-center gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 cursor-move hover:border-[#444] transition"
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        e.dataTransfer.dropEffect = 'move'
+      }}
+      onDragEnd={(e) => {
+        e.stopPropagation()
+        if (e.target && e.target.classList) {
+          e.target.classList.remove('opacity-30', 'scale-[0.98]', 'shadow-lg')
+        }
+        if (onDragEndIndex) onDragEndIndex()
+      }}
+      className="flex items-center gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 cursor-move hover:border-[#444] transition-all duration-200"
     >
       <div className="flex flex-col items-center justify-center shrink-0">
         <button type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
@@ -380,9 +393,10 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDropI
 }
 
 // ─── BLOCCO HYROX ───────────────────────────────────────
-function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDropIndex, onDuplicate }) {
+function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [editingExercise, setEditingExercise] = useState(null)
+  const [draggedExIdx, setDraggedExIdx] = useState(null)
 
   const updateParam = (k, v) => onUpdate({ ...block, params: { ...block.params, [k]: v } })
   const updateNotes = (notes) => onUpdate({ ...block, notes })
@@ -409,22 +423,34 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
 
   return (
     <div 
-      className={`bg-[#1e1e1e] border ${isOpen ? c.border : 'border-[#333] hover:border-[#444]'} rounded-2xl p-4 flex flex-col gap-3 relative cursor-move transition-all`}
+      className={`bg-[#1e1e1e] border ${isOpen ? c.border : 'border-[#333] hover:border-[#444]'} rounded-2xl p-4 flex flex-col gap-3 relative cursor-move transition-all duration-200`}
       draggable
       onDragStart={(e) => {
         e.stopPropagation()
-        e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'block', index }))
+        e.dataTransfer.effectAllowed = 'move'
+        setTimeout(() => {
+          if (e.target && e.target.classList) {
+            e.target.classList.add('opacity-30', 'scale-[0.98]', 'shadow-lg')
+          }
+        }, 0)
+        if (onDragStartIndex) onDragStartIndex(index)
       }}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => {
+      onDragEnter={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        try {
-          const data = JSON.parse(e.dataTransfer.getData('text/plain'))
-          if (data.type === 'block' && data.index !== index && onDropIndex) {
-            onDropIndex(data.index, index)
-          }
-        } catch (err) {}
+        if (onDragEnterIndex) onDragEnterIndex(index)
+      }}
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        e.dataTransfer.dropEffect = 'move'
+      }}
+      onDragEnd={(e) => {
+        e.stopPropagation()
+        if (e.target && e.target.classList) {
+          e.target.classList.remove('opacity-30', 'scale-[0.98]', 'shadow-lg')
+        }
+        if (onDragEndIndex) onDragEndIndex()
       }}
     >
       <div 
@@ -525,7 +551,14 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
                     onRemove={(id) => onUpdate({ ...block, exercises: block.exercises.filter(e => e.id !== id) })}
                     onMoveUp={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx - 1) })}
                     onMoveDown={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx + 1) })}
-                    onDropIndex={(from, to) => onUpdate({ ...block, exercises: moveElement(block.exercises, from, to) })}
+                    onDragStartIndex={(idx) => setDraggedExIdx(idx)}
+                    onDragEnterIndex={(idx) => {
+                      if (draggedExIdx !== null && draggedExIdx !== idx) {
+                        onUpdate({ ...block, exercises: moveElement(block.exercises, draggedExIdx, idx) })
+                        setDraggedExIdx(idx)
+                      }
+                    }}
+                    onDragEndIndex={() => setDraggedExIdx(null)}
                     onEdit={(exToEdit) => {
                       setEditingExercise(exToEdit)
                       setPickerOpen(true)
@@ -691,7 +724,7 @@ function RunningStepPicker({ onAdd, onClose }) {
   )
 }
 
-function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown }) {
+function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex }) {
   const getTypeLabel = (t) => {
     switch(t) {
       case 'warmup': return 'Riscaldamento'
@@ -714,7 +747,37 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown }) 
   }
 
   return (
-    <div className="flex items-start gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 hover:border-[#444] transition">
+    <div 
+      draggable
+      onDragStart={(e) => {
+        e.stopPropagation()
+        e.dataTransfer.effectAllowed = 'move'
+        setTimeout(() => {
+          if (e.target && e.target.classList) {
+            e.target.classList.add('opacity-30', 'scale-[0.98]', 'shadow-lg')
+          }
+        }, 0)
+        if (onDragStartIndex) onDragStartIndex(index)
+      }}
+      onDragEnter={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (onDragEnterIndex) onDragEnterIndex(index)
+      }}
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        e.dataTransfer.dropEffect = 'move'
+      }}
+      onDragEnd={(e) => {
+        e.stopPropagation()
+        if (e.target && e.target.classList) {
+          e.target.classList.remove('opacity-30', 'scale-[0.98]', 'shadow-lg')
+        }
+        if (onDragEndIndex) onDragEndIndex()
+      }}
+      className="flex items-start gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 hover:border-[#444] transition-all duration-200 cursor-move"
+    >
       <div className="flex flex-col items-center justify-center shrink-0 mt-1">
         <button type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-blue-400 disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
         <button type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-gray-500 hover:text-blue-400 disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
@@ -774,10 +837,12 @@ export default function CreateWorkout() {
   const [blocks, setBlocks] = useState([])
   const [blockPickerOpen, setBlockPickerOpen] = useState(false)
   const [openBlockId, setOpenBlockId] = useState(null)
+  const [draggedBlockIdx, setDraggedBlockIdx] = useState(null)
   
   // Running
   const [runningSteps, setRunningSteps] = useState([])
   const [runningPickerOpen, setRunningPickerOpen] = useState(false)
+  const [draggedStepIdx, setDraggedStepIdx] = useState(null)
 
   // Note + pause
   const [coachNotes, setCoachNotes] = useState('')
@@ -849,6 +914,7 @@ export default function CreateWorkout() {
   const [saved, setSaved] = useState(false)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [pendingPath, setPendingPath] = useState(null)
+  const [alertInfo, setAlertInfo] = useState(null)
 
   const hasUnsavedChanges = title.trim() !== '' || blocks.length > 0 || runningSteps.length > 0
 
@@ -900,9 +966,9 @@ export default function CreateWorkout() {
 
 
   const handleSave = async () => {
-    if (!title || !date) return alert('Inserisci titolo e data!')
-    if (category === 'Hyrox' && blocks.length === 0) return alert('Aggiungi almeno un blocco!')
-    if (category === 'Running' && runningSteps.length === 0) return alert('Aggiungi almeno una fase di corsa!')
+    if (!title || !date) return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci titolo e data!', type: 'error' })
+    if (category === 'Hyrox' && blocks.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno un blocco!', type: 'error' })
+    if (category === 'Running' && runningSteps.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno una fase di corsa!', type: 'error' })
     
     setSaving(true)
     const sections = {
@@ -918,11 +984,11 @@ export default function CreateWorkout() {
     if (editId) {
       const { error } = await supabase.from('workouts').update(payload).eq('id', editId)
       setSaving(false)
-      if (error) { alert('Errore: ' + error.message); return }
+      if (error) { setAlertInfo({ title: 'Errore', message: error.message, type: 'error' }); return }
     } else {
       const { data: newWorkout, error } = await supabase.from('workouts').insert(payload).select().single()
       setSaving(false)
-      if (error) { alert('Errore: ' + error.message); return }
+      if (error) { setAlertInfo({ title: 'Errore', message: error.message, type: 'error' }); return }
       targetId = newWorkout.id
     }
 
@@ -933,7 +999,7 @@ export default function CreateWorkout() {
         completed_date: date,
         status: 'pending'
       })
-      if (assignError) alert("Workout salvato, ma errore nell'assegnazione: " + assignError.message)
+      if (assignError) setAlertInfo({ title: 'Attenzione', message: "Workout salvato, ma errore nell'assegnazione: " + assignError.message, type: 'error' })
     }
 
     navigate(`/workout/${targetId}`)
@@ -1042,7 +1108,14 @@ export default function CreateWorkout() {
                 onRemove={() => setBlocks(blocks.filter(b => b.id !== block.id))}
                 onMoveUp={() => setBlocks(moveElement(blocks, idx, idx - 1))}
                 onMoveDown={() => setBlocks(moveElement(blocks, idx, idx + 1))}
-                onDropIndex={(from, to) => setBlocks(moveElement(blocks, from, to))}
+                onDragStartIndex={(index) => setDraggedBlockIdx(index)}
+                onDragEnterIndex={(index) => {
+                  if (draggedBlockIdx !== null && draggedBlockIdx !== index) {
+                    setBlocks(prev => moveElement(prev, draggedBlockIdx, index))
+                    setDraggedBlockIdx(index)
+                  }
+                }}
+                onDragEndIndex={() => setDraggedBlockIdx(null)}
                 onDuplicate={() => {
                   const duplicatedBlock = JSON.parse(JSON.stringify(block))
                   duplicatedBlock.id = Math.random()
@@ -1165,6 +1238,14 @@ export default function CreateWorkout() {
                     onRemove={id => setRunningSteps(runningSteps.filter(s => s.id !== id))}
                     onMoveUp={idx => setRunningSteps(moveElement(runningSteps, idx, idx - 1))}
                     onMoveDown={idx => setRunningSteps(moveElement(runningSteps, idx, idx + 1))}
+                    onDragStartIndex={(idx) => setDraggedStepIdx(idx)}
+                    onDragEnterIndex={(idx) => {
+                      if (draggedStepIdx !== null && draggedStepIdx !== idx) {
+                        setRunningSteps(prev => moveElement(prev, draggedStepIdx, idx))
+                        setDraggedStepIdx(idx)
+                      }
+                    }}
+                    onDragEndIndex={() => setDraggedStepIdx(null)}
                   />
                 ))}
                 <button onClick={() => setRunningPickerOpen(true)}
@@ -1197,7 +1278,7 @@ export default function CreateWorkout() {
       {showExitConfirm && (
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
-            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2">
+            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
               <AlertTriangle size={32} />
             </div>
             <h2 className="text-xl font-bold text-white">Sei sicuro?</h2>
@@ -1221,6 +1302,8 @@ export default function CreateWorkout() {
           </div>
         </div>
       )}
+      
+      <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
     </div>
   )
 }
