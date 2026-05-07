@@ -47,12 +47,19 @@ jobs:
           filename = os.environ["FILENAME"]
           folder_id = os.environ["GDRIVE_FOLDER_ID"]
 
-          file_metadata = {"name": filename, "parents": [folder_id]}
+          file_metadata = {
+              "name": filename,
+              "parents": [folder_id]
+          }
           media = MediaFileUpload(filename, mimetype="application/gzip")
-          service.files().create(body=file_metadata, media_body=media).execute()
+          service.files().create(
+              body=file_metadata,
+              media_body=media,
+              supportsAllDrives=True,        # <-- aggiunto
+              fields="id"
+          ).execute()
           print(f"Uploaded {filename} to Google Drive ✓")
           EOF
-
       - name: Cleanup old backups (keep last 7)
         env:
           GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
