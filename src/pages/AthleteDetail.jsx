@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ArrowLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X } from 'lucide-react'
+import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 
@@ -17,7 +17,6 @@ export default function AthleteDetail() {
   const [athlete, setAthlete] = useState(null)
   const [workouts, setWorkouts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [workoutToRemove, setWorkoutToRemove] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -90,15 +89,6 @@ export default function AthleteDetail() {
     setUploading(false)
   }
 
-  const handleDeleteAthlete = async () => {
-    const { error } = await supabase.from('athletes').delete().eq('id', id)
-    if (error) {
-      alert("Errore durante l'eliminazione: " + error.message)
-      return
-    }
-    navigate('/athletes')
-  }
-
   const toggleWorkoutStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === 'completed' ? 'pending' : 'completed'
     const { error } = await supabase
@@ -150,8 +140,8 @@ export default function AthleteDetail() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24">
-      <button onClick={() => navigate('/athletes')} className="flex items-center gap-2 text-gray-500 hover:text-white mb-5 transition">
-        <ArrowLeft size={18} /> Tutti gli atleti
+      <button onClick={() => navigate('/athletes')} className="flex items-center text-[#f1ba17] hover:brightness-110 mb-6 transition-all active:scale-95 active:opacity-70 font-semibold text-[17px]">
+        <ChevronLeft size={26} strokeWidth={2.5} className="-ml-2 mr-0.5" /> Tutti gli atleti
       </button>
 
       {/* Header Atleta */}
@@ -230,23 +220,6 @@ export default function AthleteDetail() {
         )}
       </div>
 
-      {/* Sezione Eliminazione Atleta */}
-      <div className="mt-12 flex justify-center">
-        {!showDeleteConfirm ? (
-          <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 text-red-500 text-sm font-medium hover:underline">
-            <Trash2 size={16} /> Elimina profilo atleta
-          </button>
-        ) : (
-          <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-4 text-center w-full max-w-sm">
-            <p className="text-red-400 text-sm font-semibold mb-3">Sei sicuro? Questa azione eliminerà l'atleta e non può essere annullata.</p>
-            <div className="flex justify-center gap-3">
-              <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 bg-[#2a2a2a] text-white rounded-lg text-sm transition hover:bg-[#333]">Annulla</button>
-              <button onClick={handleDeleteAthlete} className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-sm font-bold transition">Sì, elimina</button>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* MODAL CONFERMA RIMOZIONE WORKOUT */}
       {workoutToRemove && (
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
@@ -285,13 +258,14 @@ export default function AthleteDetail() {
             setShowEditModal(false)
             fetchAthleteData()
           }}
+          onDelete={() => navigate('/athletes')}
         />
       )}
     </div>
   )
 }
 
-function EditAthleteModal({ athlete, onClose, onSaved }) {
+function EditAthleteModal({ athlete, onClose, onSaved, onDelete }) {
   const [form, setForm] = useState({ 
     name: athlete.name || '', 
     surname: athlete.surname || '', 
@@ -300,6 +274,7 @@ function EditAthleteModal({ athlete, onClose, onSaved }) {
     height: athlete.height || '', 
     notes: athlete.notes || '' 
   })
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
@@ -318,6 +293,15 @@ function EditAthleteModal({ athlete, onClose, onSaved }) {
     setSaving(false)
     if (error) { alert('Errore: ' + error.message); return }
     onSaved()
+  }
+
+  const handleDeleteAthlete = async () => {
+    const { error } = await supabase.from('athletes').delete().eq('id', athlete.id)
+    if (error) {
+      alert("Errore durante l'eliminazione: " + error.message)
+      return
+    }
+    onDelete()
   }
 
   return (
@@ -354,8 +338,24 @@ function EditAthleteModal({ athlete, onClose, onSaved }) {
           </div>
           <textarea className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none" rows={3} placeholder="Note biografiche (facoltativo)" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
         </div>
-        <div className="p-5 border-t border-[#2a2a2a]">
+        <div className="p-5 border-t border-[#2a2a2a] flex flex-col gap-4">
           <button onClick={handleSave} disabled={saving} className="w-full bg-[#f1ba17] text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">{saving ? 'Salvataggio...' : 'Salva Modifiche'}</button>
+          
+          <div className="flex justify-center">
+            {!showDeleteConfirm ? (
+              <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 text-red-500 text-sm font-medium hover:underline">
+                <Trash2 size={16} /> Elimina profilo atleta
+              </button>
+            ) : (
+              <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-4 text-center w-full">
+                <p className="text-red-400 text-sm font-semibold mb-3">Sei sicuro? Questa azione eliminerà l'atleta e non può essere annullata.</p>
+                <div className="flex justify-center gap-3">
+                  <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 bg-[#2a2a2a] text-white rounded-lg text-sm transition hover:bg-[#333]">Annulla</button>
+                  <button onClick={handleDeleteAthlete} className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-sm font-bold transition">Sì, elimina</button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

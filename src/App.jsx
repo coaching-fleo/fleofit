@@ -6,6 +6,9 @@ import CreateWorkout from './pages/CreateWorkout'
 import Athletes from './pages/Athletes'
 import AthleteDetail from './pages/AthleteDetail'
 import WorkoutDetail from './pages/WorkoutDetail'
+import WorkoutsArchive from './pages/WorkoutsArchive'
+
+
 
 
 
@@ -20,6 +23,7 @@ function App() {
           <Route path="/athletes" element={<Athletes />} />
           <Route path="/athletes/:id" element={<AthleteDetail />} />
           <Route path="/workout/:id" element={<WorkoutDetail />} />
+          <Route path="/archive" element={<WorkoutsArchive />} />
         </Routes>
         <Navbar />
       </div>

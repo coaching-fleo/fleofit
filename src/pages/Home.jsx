@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus } from 'lucide-react'
+import { CalendarDays, Users, Dumbbell, Plus, FolderArchive } from 'lucide-react'
 import { supabase } from '../supabaseClient'
+
 
 export default function Home() {
   const navigate = useNavigate()
@@ -67,6 +68,14 @@ export default function Home() {
           <p className="text-gray-400 text-sm w-3/4">Componi un nuovo allenamento Hyrox e assegnalo ai tuoi atleti.</p>
         </div>
       </div>
+
+      <button 
+        onClick={() => navigate('/archive')}
+        className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-4 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition mt-4"
+      >
+        <FolderArchive size={20} />
+        Archivio Storico
+      </button>
     </div>
   )
 }
