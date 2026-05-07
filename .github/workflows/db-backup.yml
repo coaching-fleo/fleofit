@@ -14,7 +14,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
-
+          - name: Test connection & list tables
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$DATABASE_URL" -c "\dt"
       - name: Run pg_dump
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
