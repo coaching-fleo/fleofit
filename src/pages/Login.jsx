@@ -66,17 +66,10 @@ export default function Login() {
           redirectTo: window.location.origin + '/',
           queryParams: {
             prompt: 'select_account'
-          },
-          // Diciamo a Supabase di NON fare il redirect automatico
-          skipBrowserRedirect: true
+          }
         }
       })
       if (error) throw error
-      
-      // Forziamo il redirect in un formato più "digeribile" per iOS
-      if (data?.url) {
-        window.location.href = data.url
-      }
     } catch (error) {
       setAlertInfo({ title: 'Errore Google OAuth', message: error.message, type: 'error' })
     }
