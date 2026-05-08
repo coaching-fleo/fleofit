@@ -21,7 +21,7 @@ jobs:
         run: |
           psql "$DATABASE_URL" -c "\dt"
 
-  - name: Run pg_dump
+      - name: Run pg_dump
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
