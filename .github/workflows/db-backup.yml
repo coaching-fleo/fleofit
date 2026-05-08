@@ -21,12 +21,21 @@ jobs:
         run: |
           psql "$DATABASE_URL" -c "\dt"
 
-      - name: Run pg_dump
+  - name: Run pg_dump
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           FILENAME="backup_$(date +%Y-%m-%d_%H-%M-%S).sql.gz"
-          pg_dump "$DATABASE_URL" | gzip > "$FILENAME"
+          pg_dump "$DATABASE_URL" \
+            --schema=public \
+            --no-owner \
+            --no-privileges \
+            -t athletes \
+            -t athlete_photos \
+            -t athlete_workouts \
+            -t workouts \
+            -t workout_logs \
+            | gzip > "$FILENAME"
           echo "FILENAME=$FILENAME" >> $GITHUB_ENV
 
       - name: Upload artifact
