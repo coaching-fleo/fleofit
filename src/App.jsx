@@ -66,7 +66,7 @@ function Onboarding({ user, onComplete }) {
     })
 
     if (role === 'athlete') {
-      await supabase.from('athletes').upsert({
+      const { error: dbError } = await supabase.from('athletes').upsert({
         id: user.id,
         name: name || user.email.split('@')[0],
         surname: surname || '',
@@ -75,6 +75,12 @@ function Onboarding({ user, onComplete }) {
         height: height ? parseFloat(height) : null,
         photo_url: photoUrl
       }, { onConflict: 'id' })
+
+      if (dbError) {
+        alert("Errore di salvataggio nel database: " + dbError.message)
+        setSaving(false)
+        return
+      }
     }
     
     setSaving(false)
@@ -192,7 +198,7 @@ function ProtectedRoute({ children }) {
       }
 
       if (r === 'athlete' || r === 'admin') {
-        const { data } = await supabase.from('athletes').select('id, name').eq('id', session.user.id).single()
+        const { data } = await supabase.from('athletes').select('id, name').eq('id', session.user.id).maybeSingle()
         if (!data || !data.name) {
           setNeedsOnboarding(true)
           setLoading(false)
