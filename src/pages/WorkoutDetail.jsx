@@ -120,12 +120,16 @@ const getEmojiDataURL = (emoji) => {
 }
 
 
-const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike']
+const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
 const isErgo = (name) => ERGOMETERS.includes(name)
 
-const SLED_EXERCISES = ['Sled Push', 'Sled Pull']
+const SLED_EXERCISES = ['Sled Push', 'Sled Pull', 'Prowler Push', 'Sled Drag']
 const isSled = (name) => SLED_EXERCISES.includes(name)
-const isDistance = (name) => isErgo(name) || isSled(name) || name === 'Farmers Carry'
+const DISTANCE_EXERCISES = [
+  'Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', 
+  "Waiter's Walk", 'Handstand Walk', 'Run', 'Bear Crawl', 'Shuttle Run', 'Swim'
+]
+const isDistance = (name) => isErgo(name) || isSled(name) || DISTANCE_EXERCISES.includes(name)
 
 export default function WorkoutDetail() {
   const { id } = useParams()

@@ -10,23 +10,40 @@ import { format } from 'date-fns'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
-const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike']
+const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
 const HYROX_EXERCISES = [
-  'SkiErg', 'Rowing', 'Assault Bike',
-  'Sled Push', 'Sled Pull', 'Burpee Broad Jump','Burpees', 'Burpees Jump',
-  'Farmers Carry', 'Sandbag Lunges', 'Wall Balls',
-  'Kettlebell Swing', 'Box Jump', 'Run',
-  'Battle Ropes', 'Pull Up', 'Push Up', 'Thruster',
-  'Clean', 'Deadlift', 'Squat', 'Plank',
-  'Hollow Body Hold', 'Toes to Bar', 'Double Under',
-  'Bear Crawl', 'Shuttle Run', 'Front Lunge'
+  'Assault Bike', 'Atlas Stone Load', 'Axle Bar Clean', 'Axle Bar Deadlift',
+  'Back Lunge', 'Back Squat', 'Bar Muscle-up', 'Bar Pullover', 'Battle Ropes', 'Bear Crawl', 'Box Jump', 'Burpees', 'Burpees Broad Jumps', 'Burpees Jump',
+  'Chest-to-Bar', 'Clean', 'Cluster', 'Crossover Double Unders', 'Curve Treadmill',
+  'D-Ball Clean', 'Deadlift', 'Deficit Deadlift', 'Deficit Handstand Push-up', 'Devil Press', 'Double Unders', 'Dragon Flag', 'Dual Dumbbell Clean and Jerk', 'Dual Dumbbell Snatch', 'Dumbbell Box Step-Over', 'Dumbbell Snatch', 'Dumbbell Step-Up',
+  'Echo Bike',
+  'Farmers Carry', 'Farmers Walk', 'Freestanding Handstand Push-up', 'Front Lunge', 'Front Squat',
+  'GHD Back Extension', 'GHD Hip Extension', 'GHD Sit-up', 'Good Morning',
+  'Handstand Push-up', 'Handstand Walk', 'Hang Power Clean', 'Hang Power Snatch', 'Hang Squat Clean', 'Hang Squat Snatch', 'Hollow Body Hold', 'Hollow Rock',
+  'Jumping Jack', 'Jumping Muscle-up',
+  'Kettlebell Clean and Press', 'Kettlebell Goblet Squat', 'Kettlebell Snatch', 'Kettlebell Swing',
+  'L-Sit', 'Log Press',
+  'Man Maker', 'Military Press', 'Muscle Clean', 'Muscle Snatch',
+  'Overhead Squat', 'Overhead Walking Lunge',
+  'Pegboard Ascent', 'Pistol Squat', 'Plank', 'Power Clean', 'Power Snatch', 'Prowler Push', 'Pull-up', 'Push Jerk', 'Push Press', 'Push Up',
+  'Ring Dips', 'Ring Muscle-up', 'Romanian Deadlift', 'Rope Climb', 'Rowing', 'Run',
+  'Sandbag Bear Hug Squat', 'Sandbag Carry', 'Sandbag Lunges', 'Sandbag Over Shoulder', 'Shuttle Run', 'SkiErg', 'Skin the Cat', 'Sled Drag', 'Sled Pull', 'Sled Push', 'Snatch Balance', 'Sots Press', 'Split Jerk', 'Squat', 'Squat Clean', 'Squat Jack', 'Squat Snatch', 'Strict Handstand Push-up', 'Strict Muscle-up', 'Strict Press', 'Strict Pull-up', 'Suitcase Carry', 'Suitcase Deadlift', 'Sumo Deadlift', 'Sumo Deadlift High Pull', 'Superman Rock', 'Swim',
+  'Thruster', 'Tire Flip', 'Toes-to-Bar', 'Triple Unders', 'TrueForm Runner', 'Turkish Get-Up',
+  'V-Up',
+  "Waiter's Walk", 'Wall Balls', 'Wall Walk', 'Weighted Pull-up',
+  'Yoke Carry',
+  'Zercher Squat'
 ]
 
 const isErgo = (name) => ERGOMETERS.includes(name)
 
-const SLED_EXERCISES = ['Sled Push', 'Sled Pull']
+const SLED_EXERCISES = ['Sled Push', 'Sled Pull', 'Prowler Push', 'Sled Drag']
 const isSled = (name) => SLED_EXERCISES.includes(name)
-const isDistance = (name) => isErgo(name) || isSled(name) || name === 'Farmers Carry'
+const DISTANCE_EXERCISES = [
+  'Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', 
+  "Waiter's Walk", 'Handstand Walk', 'Run', 'Bear Crawl', 'Shuttle Run', 'Swim'
+]
+const isDistance = (name) => isErgo(name) || isSled(name) || DISTANCE_EXERCISES.includes(name)
 
 const METERS_OPTIONS = [
    '-', 'Max','50m','100m','150m','200m','250m','300m','400m','500m',
@@ -926,6 +943,11 @@ export default function CreateWorkout() {
   // Note + pause
   const [coachNotes, setCoachNotes] = useState('')
 
+  // Modal Salvataggio
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [isSavingAsNew, setIsSavingAsNew] = useState(false)
+  const [newWorkoutName, setNewWorkoutName] = useState('')
+
   const navigate = useNavigate()
 
   // Hook touch per riordinare i BLOCCHI HYROX
@@ -1056,7 +1078,20 @@ export default function CreateWorkout() {
     if (category === 'Hyrox' && blocks.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno un blocco!', type: 'error' })
     if (category === 'Running' && runningSteps.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno una fase di corsa!', type: 'error' })
     
+    if (editId) {
+      setNewWorkoutName(title)
+      setIsSavingAsNew(false)
+      setShowSaveModal(true)
+    } else {
+      performSave(false)
+    }
+  }
+
+  const performSave = async (saveAsNew) => {
+    setShowSaveModal(false)
     setSaving(true)
+    const finalTitle = saveAsNew ? newWorkoutName : title
+
     const sections = {
       intensity: workoutIntensity,
       category: category,
@@ -1064,10 +1099,10 @@ export default function CreateWorkout() {
       steps: category === 'Running' ? runningSteps : undefined
     }
 
-    const payload = { title, date, sections, coach_notes: coachNotes }
-    let targetId = editId
+    const payload = { title: finalTitle, date, sections, coach_notes: coachNotes }
+    let targetId = saveAsNew ? null : editId
 
-    if (editId) {
+    if (targetId) {
       const { error } = await supabase.from('workouts').update(payload).eq('id', editId)
       if (awId) {
         await supabase.from('athlete_workouts').update({ completed_date: date }).eq('id', awId)
@@ -1083,7 +1118,13 @@ export default function CreateWorkout() {
       }
       targetId = newWorkout.id
 
-      if (athleteId) {
+      if (saveAsNew && awId) {
+        const { error: awError } = await supabase.from('athlete_workouts').update({
+          workout_id: targetId,
+          completed_date: date
+        }).eq('id', awId)
+        if (awError) console.error("Errore aggiornamento assegnazione:", awError)
+      } else if (athleteId) {
         const { error: awError } = await supabase.from('athlete_workouts').insert({
           athlete_id: athleteId,
           workout_id: targetId,
@@ -1095,6 +1136,7 @@ export default function CreateWorkout() {
       setSaving(false)
     }
 
+    setSaved(true)
     navigate(`/workout/${targetId}${athleteId ? `?athlete_id=${athleteId}` : ''}`)
   }
 
@@ -1368,6 +1410,65 @@ export default function CreateWorkout() {
           }}
           onClose={() => setRunningPickerOpen(false)}
         />
+      )}
+
+      {/* SAVE MODAL */}
+      {showSaveModal && createPortal(
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl">
+            <div className="flex justify-between items-center mb-2">
+               <h2 className="text-xl font-bold text-white">Salvataggio</h2>
+               <button onClick={() => setShowSaveModal(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+            </div>
+            
+            {!isSavingAsNew ? (
+              <>
+                <p className="text-gray-400 text-sm">Vuoi sovrascrivere questo allenamento o salvarlo come nuovo?</p>
+                <div className="flex flex-col gap-3 mt-2">
+                  <button 
+                    onClick={() => performSave(false)}
+                    className="w-full py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition"
+                  >
+                    Sovrascrivi esistente
+                  </button>
+                  <button 
+                    onClick={() => setIsSavingAsNew(true)}
+                    className="w-full py-3 bg-[#2a2a2a] border border-[#383838] text-white font-bold rounded-xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition"
+                  >
+                    Salva come nuovo
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-400 text-sm">Inserisci il nome per il nuovo allenamento:</p>
+                <input 
+                  autoFocus
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] w-full mt-1 text-sm"
+                  value={newWorkoutName}
+                  onChange={(e) => setNewWorkoutName(e.target.value)}
+                  placeholder="Nome del workout..."
+                />
+                <div className="flex gap-3 mt-4">
+                  <button 
+                    onClick={() => setIsSavingAsNew(false)}
+                    className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition text-sm"
+                  >
+                    Indietro
+                  </button>
+                  <button 
+                    onClick={() => performSave(true)}
+                    disabled={!newWorkoutName.trim() || saving}
+                    className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 text-sm"
+                  >
+                    {saving ? 'Salvataggio...' : 'Conferma'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* EXIT CONFIRM MODAL */}
