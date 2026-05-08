@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut } from 'lucide-react'
+import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format } from 'date-fns'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
-import { useAuth } from '../App'
+import { useAuth, ADMIN_EMAILS } from '../App'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -14,7 +14,9 @@ export default function Settings() {
   const [confirmInfo, setConfirmInfo] = useState(null)
   const fullImportRef = useRef(null)
   const athleteImportRef = useRef(null)
-  const { role } = useAuth()
+  const { role, user } = useAuth()
+  const isAdminEmail = ADMIN_EMAILS.includes(user?.email?.toLowerCase())
+  const isSimulatingAthlete = localStorage.getItem('adminRoleOverride') === 'athlete'
 
   const handleExportFull = async () => {
     setLoading(true)
@@ -124,6 +126,15 @@ export default function Settings() {
     e.target.value = ''
   }
 
+  const toggleSimulateAthlete = () => {
+    if (isSimulatingAthlete) {
+      localStorage.removeItem('adminRoleOverride')
+    } else {
+      localStorage.setItem('adminRoleOverride', 'athlete')
+    }
+    window.location.href = '/'
+  }
+
   const handleLogout = async () => {
     setConfirmInfo({
       title: "Uscita",
@@ -216,6 +227,21 @@ export default function Settings() {
           {/* SEZIONE ACCOUNT */}
       <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">
         <h2 className="text-lg font-bold text-white mb-4">Account</h2>
+        
+        {isAdminEmail && (
+          <button onClick={toggleSimulateAthlete} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-blue-500 transition group mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-blue-500 transition text-gray-400 shrink-0">
+                {isSimulatingAthlete ? <EyeOff size={20} /> : <Eye size={20} />}
+              </div>
+              <div className="text-left">
+                <p className="text-white font-semibold">{isSimulatingAthlete ? 'Torna alla vista Admin' : 'Simula vista Atleta'}</p>
+                <p className="text-gray-500 text-xs">{isSimulatingAthlete ? 'Ripristina tutti i controlli da Coach' : 'Vedi l\'app esattamente come un atleta'}</p>
+              </div>
+            </div>
+          </button>
+        )}
+
         <button onClick={handleLogout} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-red-500 transition group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-red-500 transition text-gray-400 shrink-0">

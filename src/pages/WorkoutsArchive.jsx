@@ -35,7 +35,7 @@ export default function WorkoutsArchive() {
     } else {
       const { data, error } = await supabase
         .from('workouts')
-        .select('id, title, date, sections')
+        .select('id, title, date, sections, athlete_workouts(id)')
         .order('date', { ascending: false })
       if (!error) setWorkouts(data || [])
     }
@@ -94,9 +94,14 @@ export default function WorkoutsArchive() {
                     <span>{w.date && isValid(parseISO(w.date)) ? format(parseISO(w.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}</span>
                   </div>
                 </div>
-                <span className={`text-xs font-bold px-3 py-1.5 rounded-xl ${category === 'Running' ? 'bg-[#f1ba17]/10 text-[#f1ba17] border border-[#f1ba17]/30' : 'bg-[#222] text-gray-200 border border-[#333]'}`}>
-                  {category}
-                </span>
+                <div className="flex flex-col items-end gap-2">
+                  <span className={`text-xs font-bold px-3 py-1.5 rounded-xl ${category === 'Running' ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+                    {category}
+                  </span>
+                  {role !== 'athlete' && w.athlete_workouts && (
+                    <span className="text-[10px] text-gray-500 font-medium">Assegnato: {w.athlete_workouts.length}</span>
+                  )}
+                </div>
               </div>
             )
           })}

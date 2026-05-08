@@ -132,6 +132,8 @@ export default function WorkoutDetail() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const queryAthleteId = searchParams.get('athlete_id')
+  const { role, user } = useAuth()
+  const isOwnProfile = queryAthleteId === user?.id
 
   const [workout, setWorkout] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -150,8 +152,7 @@ export default function WorkoutDetail() {
   const [athleteWorkoutId, setAthleteWorkoutId] = useState(null)
   const [workoutStatus, setWorkoutStatus] = useState('pending')
   const [selectedAthleteForAssign, setSelectedAthleteForAssign] = useState(null)
-  const { role } = useAuth()
-
+  const [assignments, setAssignments] = useState([])
   useEffect(() => { fetchWorkout() }, [id])
 
   // Carica la lista atleti solo quando si apre il modal per la prima volta
@@ -183,6 +184,14 @@ export default function WorkoutDetail() {
         }
         finalWorkout.date = awData[0].completed_date
       }
+    }
+
+    if (role !== 'athlete' && data) {
+      const { data: allAwData } = await supabase.from('athlete_workouts')
+        .select('id, completed_date, status, notes, athletes(id, name, surname, photo_url)')
+        .eq('workout_id', data.id)
+        .order('completed_date', { ascending: false })
+      if (allAwData) setAssignments(allAwData)
     }
 
     setWorkout(finalWorkout)
@@ -240,6 +249,7 @@ export default function WorkoutDetail() {
     } else {
       setAssignModalOpen(false)
       setShowSuccessModal(true)
+      fetchWorkout()
     }
   }
 
@@ -250,7 +260,7 @@ export default function WorkoutDetail() {
     if (error) {
       setAlertInfo({ title: 'Errore', message: "Errore durante l'eliminazione: " + error.message, type: 'error' })
     } else {
-      navigate('/calendar')
+      navigate(-1)
     }
   }
 
@@ -615,9 +625,9 @@ export default function WorkoutDetail() {
             </div>
           )}
         </div>
-        
-        {role === 'athlete' && athleteWorkoutId && (
-          <button 
+        {(role === 'athlete' || isOwnProfile) && athleteWorkoutId && (
+      
+          <button
             onClick={toggleStatus}
             className={`w-full mt-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 text-base font-bold transition border shadow-lg ${
               workoutStatus === 'completed' 
@@ -660,6 +670,45 @@ export default function WorkoutDetail() {
         <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Note Atleta (${athleteNote.athleteName})`} color="border-[#3b82f6]/40">
           <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{athleteNote.text}</p>
         </Section>
+      )}
+
+      {/* ASSEGNAZIONI ATLETI (SOLO COACH) */}
+      {role !== 'athlete' && assignments.length > 0 && (
+        <div className="mb-6 mt-2">
+          <h2 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
+            <Users size={20} className="text-[#f1ba17]" />
+            Assegnato a {assignments.length} atleti
+          </h2>
+          <div className="flex flex-col gap-3">
+            {assignments.map(a => (
+              <div key={a.id} onClick={() => navigate(`/athletes/${a.athletes?.id}`)} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer hover:border-[#f1ba17] transition">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333]">
+                      {a.athletes?.photo_url ? (
+                        <img src={a.athletes.photo_url} alt={a.athletes?.name} className="w-full h-full object-cover" onError={(e) => e.target.style.opacity = 0} />
+                      ) : (
+                        <User size={18} className="text-gray-500" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm">{a.athletes?.name} {a.athletes?.surname}</p>
+                      <p className="text-gray-500 text-xs capitalize">{format(parseISO(a.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
+                    </div>
+                  </div>
+                  <div className={`px-2 py-1 rounded-md border text-xs font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
+                    {a.status === 'completed' ? 'Fatto' : 'Da fare'}
+                  </div>
+                </div>
+                {a.notes && (
+                  <div className="mt-3 p-3 bg-[#111] rounded-xl border border-[#333]">
+                    <p className="text-gray-400 text-sm italic">"{a.notes}"</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* EXPORT BUTTONS */}

@@ -65,20 +65,18 @@ export default function Calendar() {
     'Rest': '#6b7280',
     'Cash In': '#d1d5db',
     'Cash Out': '#d1d5db',
-    'ON/OFF': '#e5e5e5',
-    'EMOM': '#e5e5e5',
-    'AMRAP': '#e5e5e5',
-    'For Time': '#e5e5e5',
-    Running: '#f1ba17'
+    'ON/OFF': '#f1ba17',
+    'EMOM': '#f1ba17',
+    'AMRAP': '#f1ba17',
+    'For Time': '#f1ba17',
+    Hyrox: '#f1ba17',
+    Running: '#0094C6'
   }
 
-  const getIntensityColor = (val) => {
+  const getIntensityColor = (val, type) => {
     const num = parseInt(val, 10);
     if (isNaN(num)) return 'text-gray-500';
-    if (num <= 4) return 'text-gray-400';
-    if (num <= 7) return 'text-gray-300';
-    if (num <= 9) return 'text-white';
-    return 'text-[#f1ba17]';
+    return type === 'Running' ? 'text-[#0094C6]' : 'text-[#f1ba17]';
   }
 
   const getWorkoutType = (w) => {
@@ -94,10 +92,15 @@ export default function Calendar() {
   }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24">
+    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
+      {/* BRAND HEADER */}
+      <div className="mb-6 mt-4">
+        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+      </div>
+
       {/* HEADER */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-white capitalize">
           {format(currentMonth, 'MMMM yyyy', { locale: it })}
         </h1>
         <div className="flex items-center gap-2">
@@ -199,8 +202,8 @@ export default function Calendar() {
                     </div>
                     {w.sections?.intensity && (
                       <div className="flex items-center gap-1 mt-1">
-                        <span className={`text-xs font-bold ${getIntensityColor(w.sections.intensity)}`}>{w.sections.intensity}/10</span>
-                        <BicepsFlexed size={16} className={getIntensityColor(w.sections.intensity)} />
+                        <span className={`text-xs font-bold ${getIntensityColor(w.sections.intensity, type)}`}>{w.sections.intensity}/10</span>
+                        <BicepsFlexed size={16} className={getIntensityColor(w.sections.intensity, type)} />
                       </div>
                     )}
                   </div>

@@ -19,7 +19,7 @@ import Login from './pages/Login'
 export const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)
 
-const ADMIN_EMAILS = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com']
+export const ADMIN_EMAILS = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com']
 import { User, Upload } from 'lucide-react'
 
 function Onboarding({ user, onComplete }) {
@@ -175,8 +175,14 @@ function ProtectedRoute({ children }) {
       let r = meta.role
 
       if (isAdmin) {
-        r = 'admin'
-        setRole('admin')
+        const override = localStorage.getItem('adminRoleOverride')
+        if (override === 'athlete') {
+          r = 'athlete'
+          setRole('athlete')
+        } else {
+          r = 'admin'
+          setRole('admin')
+        }
       } else if (!r) {
         setNeedsOnboarding(true)
         setLoading(false)
@@ -185,7 +191,7 @@ function ProtectedRoute({ children }) {
         setRole(r)
       }
 
-      if (r === 'athlete') {
+      if (r === 'athlete' || r === 'admin') {
         const { data } = await supabase.from('athletes').select('id, name').eq('id', session.user.id).single()
         if (!data || !data.name) {
           setNeedsOnboarding(true)
@@ -222,8 +228,9 @@ function ProtectedRoute({ children }) {
   }
 
   if (needsOnboarding) {
-    return <Onboarding user={session.user} onComplete={(newRole) => {
-      setRole(newRole)
+    return <Onboarding user={session.user} onComplete={async (newRole) => {
+      const isAdmin = ADMIN_EMAILS.includes(session.user.email?.toLowerCase())
+      setRole(isAdmin ? 'admin' : newRole)
       setNeedsOnboarding(false)
     }} />
   }
