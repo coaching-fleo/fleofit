@@ -18,6 +18,13 @@ body {
   margin: 0;
 }
 
+/* Evita lo zoom automatico della tastiera su iOS per i campi di input */
+@supports (-webkit-touch-callout: none) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
 /* Animazione morbida dal basso verso l'alto per le pagine */
 @keyframes pageSlideIn {
   from {

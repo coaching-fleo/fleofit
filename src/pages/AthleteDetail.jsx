@@ -2,12 +2,20 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy } from 'lucide-react'
+import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
+
+const InstagramIcon = ({ size = 24, className = "" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line>
+  </svg>
+)
 
 // Helper per calcolare l'età
 const calculateAge = (dob) => {
@@ -194,6 +202,16 @@ export default function AthleteDetail() {
             <h1 className="text-2xl font-bold text-white">{athlete.name} {athlete.surname}</h1>
             {athlete.username && <p className="text-gray-400">@{athlete.username}</p>}
             {athlete.notes && <p className="text-gray-500 text-sm mt-1 max-w-sm whitespace-pre-wrap">{athlete.notes}</p>}
+            {(athlete.instagram_url || athlete.strava_url) && (
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                {athlete.instagram_url && (
+                  <a href={athlete.instagram_url.startsWith('http') ? athlete.instagram_url : `https://instagram.com/${athlete.instagram_url.replace(/^@/, '')}`} target="_blank" rel="noopener noreferrer" title="Instagram" className="flex items-center justify-center w-8 h-8 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 text-white rounded-full hover:opacity-80 transition shadow-md shadow-pink-500/20"><InstagramIcon size={16} /></a>
+                )}
+                {athlete.strava_url && (
+                  <a href={athlete.strava_url} target="_blank" rel="noopener noreferrer" title="Strava" className="flex items-center justify-center w-8 h-8 bg-[#fc4c02] text-white rounded-full hover:opacity-80 transition shadow-md shadow-[#fc4c02]/20"><Activity size={16} /></a>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -680,7 +698,9 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
     birth_date: athlete.birth_date || '', 
     weight: athlete.weight || '', 
     height: athlete.height || '', 
-    notes: athlete.notes || '' 
+    notes: athlete.notes || '',
+    instagram_url: athlete.instagram_url || '',
+    strava_url: athlete.strava_url || ''
   })
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(athlete.photo_url || null)
@@ -723,6 +743,8 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
       weight: form.weight ? parseFloat(form.weight) : null,
       height: form.height ? parseFloat(form.height) : null,
       notes: form.notes,
+      instagram_url: form.instagram_url,
+      strava_url: form.strava_url,
       photo_url
     }).eq('id', athlete.id)
 
@@ -791,6 +813,28 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
             </div>
           </div>
           <textarea className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none" rows={3} placeholder="Note biografiche (facoltativo)" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
+          
+          <div className="flex flex-col gap-3">
+             <div className="flex items-center bg-[#2a2a2a] border border-[#383838] rounded-xl overflow-hidden focus-within:border-pink-500 transition">
+                <div className="pl-4 pr-3 py-3 text-gray-500 flex items-center justify-center bg-[#1e1e1e] border-r border-[#383838]">
+                   <InstagramIcon size={18} className="text-pink-500" />
+                </div>
+                <div className="pl-3 text-gray-400 text-sm font-semibold">@</div>
+                <input className="w-full bg-transparent pr-3 py-3 text-white placeholder-gray-500 focus:outline-none text-sm" placeholder="Nome utente" value={form.instagram_url?.replace(/^@/, '')} onChange={e => {
+                   let val = e.target.value.replace(/^@/, '').trim();
+                   if (val.includes('instagram.com/')) {
+                     val = val.split('instagram.com/')[1].split('/')[0].split('?')[0];
+                   }
+                   setForm({ ...form, instagram_url: val })
+                }} />
+             </div>
+             <div className="flex items-center bg-[#2a2a2a] border border-[#383838] rounded-xl overflow-hidden focus-within:border-[#fc4c02] transition">
+                <div className="pl-4 pr-3 py-3 text-gray-500 flex items-center justify-center bg-[#1e1e1e] border-r border-[#383838]">
+                   <Activity size={18} className="text-[#fc4c02]" />
+                </div>
+                <input className="w-full bg-transparent px-3 py-3 text-white placeholder-gray-500 focus:outline-none text-sm" placeholder="Link profilo Strava..." value={form.strava_url} onChange={e => setForm({ ...form, strava_url: e.target.value })} />
+             </div>
+          </div>
         </div>
         <div className="p-5 border-t border-[#2a2a2a] flex flex-col gap-4">
           <button onClick={handleSave} disabled={saving} className="w-full bg-[#f1ba17] text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">{saving ? 'Salvataggio...' : 'Salva Modifiche'}</button>
