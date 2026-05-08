@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download } from 'lucide-react'
-import { format, parseISO, differenceInYears, isBefore, startOfDay } from 'date-fns'
+import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle } from 'lucide-react'
+import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert } from '../components/CustomModals'
+import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 
 // Helper per calcolare l'età
@@ -25,6 +26,7 @@ export default function AthleteDetail() {
   const [uploading, setUploading] = useState(false)
   const [workoutToRemove, setWorkoutToRemove] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [alertInfo, setAlertInfo] = useState(null)
 
   useEffect(() => {
@@ -174,7 +176,7 @@ export default function AthleteDetail() {
         <div className="flex items-center gap-5">
           <div className="relative shrink-0">
             {athlete.photo_url ? (
-              <img src={athlete.photo_url} alt={`${athlete.name}`} className="w-24 h-24 rounded-full object-cover border-2 border-[#333] shrink-0" />
+              <img src={athlete.photo_url} alt={`${athlete.name}`} className="w-24 h-24 rounded-full object-cover border-2 border-[#333] shrink-0" onError={() => setAthlete({ ...athlete, photo_url: null })} />
             ) : (
               <div className="w-24 h-24 rounded-full bg-[#2a2a2a] flex items-center justify-center border-2 border-[#333] shrink-0">
                 <User size={48} className="text-gray-500" />
@@ -197,9 +199,11 @@ export default function AthleteDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleExportData} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-[#f1ba17] transition" title="Esporta Backup Atleta">
-            <Download size={20} />
-          </button>
+          {role !== 'athlete' && (
+            <button onClick={handleExportData} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-[#f1ba17] transition" title="Esporta Backup Atleta">
+              <Download size={20} />
+            </button>
+          )}
           <button onClick={() => setShowEditModal(true)} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-[#f1ba17] transition" title="Modifica profilo atleta">
             <Edit size={20} />
           </button>
@@ -222,12 +226,20 @@ export default function AthleteDetail() {
             Diario Workout
           </h2>
           {role !== 'athlete' && (
-            <button 
-              onClick={() => navigate(`/create?athlete_id=${id}`)}
-              className="flex items-center gap-1 text-[#f1ba17] text-sm font-medium hover:brightness-110 bg-[#f1ba17]/10 px-3 py-1.5 rounded-full transition"
-            >
-              <Plus size={16} /> Nuovo Workout
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setAssignModalOpen(true)}
+                className="flex items-center gap-1 text-black text-sm font-semibold bg-[#f1ba17] px-3 py-1.5 rounded-full transition hover:brightness-110 shadow-lg shadow-[#f1ba17]/20"
+              >
+                <Dumbbell size={14} className="hidden sm:block" /> Assegna
+              </button>
+              <button 
+                onClick={() => navigate(`/create?athlete_id=${id}`)}
+                className="flex items-center gap-1 text-[#f1ba17] text-sm font-semibold bg-[#f1ba17]/10 border border-[#f1ba17]/30 px-3 py-1.5 rounded-full transition hover:brightness-110"
+              >
+                <Plus size={16} /> Crea
+              </button>
+            </div>
           )}
         </div>
         {workouts.length > 0 ? (
@@ -277,6 +289,19 @@ export default function AthleteDetail() {
             </div>
           </div>
         </div>,
+        document.body
+      )}
+
+      {/* MODAL ASSEGNA WORKOUT DA LISTA */}
+      {assignModalOpen && createPortal(
+        <AssignWorkoutModal 
+          athleteId={id}
+          onClose={() => setAssignModalOpen(false)}
+          onAssigned={() => {
+            setAssignModalOpen(false)
+            fetchAthleteData()
+          }}
+        />,
         document.body
       )}
 
@@ -420,15 +445,14 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
   const scheduledDate = startOfDay(parseISO(entry.completed_date))
   const today = startOfDay(new Date())
 
-  let statusText = 'Pending'
-  let statusClass = 'bg-[#2a2a2a] text-gray-400 border border-[#333]'
+  let statusText = 'Da fare'
+  let Icon = Circle
 
   if (entry.status === 'completed') {
     statusText = 'Fatto'
-    statusClass = 'bg-[#f1ba17]/10 text-[#f1ba17] border border-[#f1ba17]/30'
+    Icon = CheckCircle2
   } else if (isBefore(scheduledDate, today)) {
     statusText = 'Saltato'
-    statusClass = 'bg-[#111] text-gray-600 border border-[#222]'
   }
 
   const handleSaveNote = async () => {
@@ -439,25 +463,32 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
 
   return (
     <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4">
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-start mb-3">
         <div 
-          className="cursor-pointer group"
+          className="cursor-pointer group flex-1 pr-4"
           onClick={() => navigate(`/workout/${entry.workouts.id}?athlete_id=${athleteId}`)}
         >
-          <p className="font-semibold text-white group-hover:text-[#f1ba17] transition underline decoration-[#f1ba17]/50 underline-offset-4">
+          <p className="font-semibold text-white group-hover:text-[#f1ba17] transition underline decoration-[#f1ba17]/50 underline-offset-4 leading-tight">
             {entry.workouts.title}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500 mt-1.5">
             {format(parseISO(entry.completed_date), 'EEEE d MMMM yyyy', { locale: it })}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-end gap-2 shrink-0">
           <button 
             onClick={() => onToggleStatus(entry.id, entry.status)}
-            className={`text-xs font-bold px-2 py-0.5 rounded-full cursor-pointer hover:brightness-125 transition ${statusClass}`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition border ${
+              entry.status === 'completed' 
+                ? 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500/20' 
+                : isBefore(scheduledDate, today)
+                  ? 'bg-[#111] border-[#333] text-gray-500 hover:border-[#f1ba17] hover:text-[#f1ba17]'
+                  : 'bg-[#2a2a2a] border-[#383838] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]'
+            }`}
           >
-            {statusText}
+            <Icon size={14} /> {statusText}
           </button>
+          
           {role !== 'athlete' && (
             <button 
               onClick={() => onRemove(entry.id)}
@@ -469,6 +500,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           )}
         </div>
       </div>
+
       <div className="mt-3 pt-3 border-t border-[#2a2a2a]">
         <textarea
           className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-sm"
@@ -489,6 +521,114 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
+  const [workouts, setWorkouts] = useState([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [assigning, setAssigning] = useState(null)
+  const [alertInfo, setAlertInfo] = useState(null)
+  const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [selectedWorkout, setSelectedWorkout] = useState(null)
+
+  useEffect(() => {
+    async function fetchW() {
+      const { data } = await supabase.from('workouts').select('id, title, date, sections').order('date', { ascending: false })
+      setWorkouts(data || [])
+      setLoading(false)
+    }
+    fetchW()
+  }, [])
+
+  const handleAssign = async () => {
+   if (!assignDate) {
+      setAlertInfo({ title: 'Errore', message: 'Seleziona una data per l\'assegnazione', type: 'error' })
+      return
+    }
+    setAssigning(selectedWorkout.id)
+    const { error } = await supabase.from('athlete_workouts').insert({
+      athlete_id: athleteId,
+      workout_id: selectedWorkout.id,
+      completed_date: assignDate,
+      status: 'pending'
+    })
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+      setAssigning(null)
+    } else {
+      onAssigned()
+    }
+  }
+
+  const filtered = workouts.filter(w => 
+    w.title.toLowerCase().includes(search.toLowerCase()) || 
+    (w.sections?.category || '').toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+        <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
+          <p className="text-white font-bold text-lg">Assegna Workout</p>
+          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+        </div>
+        {!selectedWorkout ? (
+          <>
+            <div className="p-4 border-b border-[#2a2a2a]">
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-3.5 text-gray-500" />
+                <input type="text" placeholder="Cerca workout..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-2.5 pl-9 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+              </div>
+            </div>
+            <div className="overflow-y-auto flex-1 p-4 flex flex-col gap-2">
+              {loading ? (
+                <p className="text-gray-500 text-sm text-center py-4">Caricamento...</p>
+              ) : filtered.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">Nessun workout trovato.</p>
+              ) : (
+                filtered.map(w => (
+                  <div key={w.id} className="flex items-center justify-between bg-[#2a2a2a] border border-[#333] p-3 rounded-xl hover:border-[#f1ba17] transition">
+                    <div className="flex-1 min-w-0 pr-3 text-left">
+                      <p className="text-white font-semibold text-sm truncate">{w.title}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{w.date && isValid(parseISO(w.date)) ? format(parseISO(w.date), 'dd/MM/yyyy') : 'Data sconosciuta'} • {w.sections?.category || 'Generico'}</p>
+                    </div>
+                    <button onClick={() => setSelectedWorkout(w)} className="shrink-0 bg-[#f1ba17]/10 text-[#f1ba17] font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-[#f1ba17] hover:text-black transition">
+                      Assegna
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="p-5 flex flex-col gap-4">
+            <div>
+              <p className="text-gray-400 text-sm mb-1">Stai assegnando:</p>
+              <p className="text-white font-bold">{selectedWorkout.title}</p>
+            </div>
+            <div>
+              <label className="text-gray-400 text-sm mb-2 block">Seleziona la data dell'allenamento</label>
+              <CustomDatePicker
+                date={assignDate}
+                onChange={setAssignDate}
+                className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17]"
+              />
+            </div>
+            <div className="flex gap-3 mt-2">
+              <button onClick={() => setSelectedWorkout(null)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
+                Indietro
+              </button>
+              <button onClick={handleAssign} disabled={assigning === selectedWorkout.id} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+                {assigning === selectedWorkout.id ? 'Assegno...' : 'Conferma'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      {alertInfo && <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />}
     </div>
   )
 }

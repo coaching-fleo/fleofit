@@ -58,7 +58,7 @@ export default function Athletes() {
               className="flex items-center gap-4 bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 hover:border-[#383838] transition text-left">
               <div className="w-12 h-12 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0">
                 {a.photo_url
-                  ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" />
+                  ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" onError={() => setAthletes(athletes.map(ath => ath.id === a.id ? { ...ath, photo_url: null } : ath))} />
                   : <User size={22} className="text-gray-500" />
                 }
               </div>
@@ -147,7 +147,7 @@ function NewAthleteModal({ onClose, onSaved }) {
             <label className="cursor-pointer">
               <div className="w-20 h-20 rounded-full bg-[#2a2a2a] border-2 border-dashed border-[#444] flex items-center justify-center overflow-hidden hover:border-[#f1ba17] transition">
                 {photoPreview
-                  ? <img src={photoPreview} className="w-full h-full object-cover" />
+                  ? <img src={photoPreview} className="w-full h-full object-cover" onError={() => setPhotoPreview(null)} />
                   : <User size={28} className="text-gray-500" />
                 }
               </div>

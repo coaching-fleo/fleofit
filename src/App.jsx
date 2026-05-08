@@ -20,7 +20,7 @@ export const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)
 
 const ADMIN_EMAILS = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com']
-import { Camera } from 'lucide-react'
+import { User, Upload } from 'lucide-react'
 
 function Onboarding({ user, onComplete }) {
   const [role, setRole] = useState('athlete')
@@ -91,20 +91,23 @@ function Onboarding({ user, onComplete }) {
         </div>
 
         <form onSubmit={handleComplete} className="flex flex-col gap-4">
-          <div className="flex gap-2 mb-2">
+          {/* OPZIONE COACH DISATTIVATA TEMPORANEAMENTE */}
+          {/* <div className="flex gap-2 mb-2">
             <button type="button" onClick={() => setRole('athlete')} className={`flex-1 py-3 rounded-xl font-bold text-sm transition ${role === 'athlete' ? 'bg-[#f1ba17]/10 text-[#f1ba17] border border-[#f1ba17]/50' : 'bg-[#111] text-gray-500 border border-[#333]'}`}>Sono un Atleta</button>
             <button type="button" onClick={() => setRole('coach')} className={`flex-1 py-3 rounded-xl font-bold text-sm transition ${role === 'coach' ? 'bg-[#f1ba17]/10 text-[#f1ba17] border border-[#f1ba17]/50' : 'bg-[#111] text-gray-500 border border-[#333]'}`}>Sono un Coach</button>
-          </div>
+          </div> */}
 
           <div className="flex flex-col items-center gap-2 mb-2 animate-in fade-in">
-            <div className="relative w-20 h-20 rounded-full bg-[#2a2a2a] border-2 border-[#333] flex items-center justify-center overflow-hidden shrink-0 group">
-              {photoPreview ? (
-                <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-              ) : (
-                <Camera size={24} className="text-gray-500" />
-              )}
-              <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition text-white text-xs font-bold">
-                Carica
+            <div className="relative shrink-0">
+              <div className="w-20 h-20 rounded-full bg-[#2a2a2a] border-2 border-[#333] flex items-center justify-center overflow-hidden">
+                {photoPreview ? (
+                  <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" onError={() => setPhotoPreview(null)} />
+                ) : (
+                  <User size={48} className="text-gray-400" />
+                )}
+              </div>
+              <label className="absolute bottom-0 right-0 bg-[#f1ba17] p-1.5 rounded-full cursor-pointer hover:brightness-110 shadow-lg">
+                <Upload size={14} className="text-black" />
                 <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
               </label>
             </div>

@@ -5,6 +5,7 @@ import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, Flag
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { useTouchDrag } from '../useTouchDrag'
+import { format } from 'date-fns'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -851,11 +852,10 @@ export default function CreateWorkout() {
   const duplicateId = searchParams.get('duplicate')
   const sourceId = editId || duplicateId
   const defaultDate = searchParams.get('date')
-  const defaultAthleteId = searchParams.get('athlete_id')
 
   const [step, setStep] = useState(1) // 1=tipo, 2=build
   const [title, setTitle] = useState('')
-  const [date, setDate] = useState(defaultDate || '')
+  const [date, setDate] = useState(defaultDate || format(new Date(), 'yyyy-MM-dd'))
   const [workoutIntensity, setWorkoutIntensity] = useState('5')
   const [category, setCategory] = useState('Hyrox')
   const [blocks, setBlocks] = useState([])
@@ -871,8 +871,6 @@ export default function CreateWorkout() {
   // Note + pause
   const [coachNotes, setCoachNotes] = useState('')
 
-  const [athletes, setAthletes] = useState([])
-  const [selectedAthlete, setSelectedAthlete] = useState(defaultAthleteId || '')
   const navigate = useNavigate()
 
   // Hook touch per riordinare i BLOCCHI HYROX
@@ -885,13 +883,6 @@ export default function CreateWorkout() {
     onReorder: (from, to) => setRunningSteps(prev => moveElement(prev, from, to))
   })
 
-  useEffect(() => {
-    const fetchAthletes = async () => {
-      const { data } = await supabase.from('athletes').select('id, name, surname').order('name')
-      setAthletes(data || [])
-    }
-    fetchAthletes()
-  }, [])
 
   // Se editId o duplicateId sono presenti, carichiamo i dati del workout
   useEffect(() => {
@@ -996,11 +987,11 @@ export default function CreateWorkout() {
     }
   }
 
-  const isStep1Valid = title.trim() !== '' && date !== ''
+  const isStep1Valid = title.trim() !== ''
 
 
   const handleSave = async () => {
-    if (!title || !date) return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci titolo e data!', type: 'error' })
+    if (!title) return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci il titolo del workout!', type: 'error' })
     if (category === 'Hyrox' && blocks.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno un blocco!', type: 'error' })
     if (category === 'Running' && runningSteps.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno una fase di corsa!', type: 'error' })
     
@@ -1024,16 +1015,6 @@ export default function CreateWorkout() {
       setSaving(false)
       if (error) { setAlertInfo({ title: 'Errore', message: error.message, type: 'error' }); return }
       targetId = newWorkout.id
-    }
-
-    if (selectedAthlete) {
-      const { error: assignError } = await supabase.from('athlete_workouts').insert({
-        athlete_id: selectedAthlete,
-        workout_id: targetId,
-        completed_date: date,
-        status: 'pending'
-      })
-      if (assignError) setAlertInfo({ title: 'Attenzione', message: "Workout salvato, ma errore nell'assegnazione: " + assignError.message, type: 'error' })
     }
 
     navigate(`/workout/${targetId}`)
@@ -1066,12 +1047,6 @@ export default function CreateWorkout() {
           placeholder="Nome workout (es. Hyrox Strength #1)"
           value={title}
           onChange={e => setTitle(e.target.value)}
-        />
-        <input
-          type="date"
-          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] text-sm"
-          value={date}
-          onChange={e => setDate(e.target.value)}
         />
       </div>
 
@@ -1192,27 +1167,6 @@ export default function CreateWorkout() {
             />
           </div>
 
-          {/* ASSEGNA AD ATLETA (Solo in creazione) */}
-          {!editId && (
-            <div>
-              <label className="text-gray-400 text-sm mb-2 block">Assegna ad Atleta (opzionale)</label>
-              <div className="relative">
-                <select
-                  className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white appearance-none focus:outline-none focus:border-[#f1ba17] text-sm"
-                  value={selectedAthlete}
-                  onChange={e => setSelectedAthlete(e.target.value)}
-                >
-                  <option value="">Nessuno (salva solo nel calendario)</option>
-                  {athletes.map(a => (
-                    <option key={a.id} value={a.id}>{a.name} {a.surname}</option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
-                  <ChevronRight size={16} className="text-gray-500 rotate-90" />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* BOTTONI */}
           <div className="flex gap-3">

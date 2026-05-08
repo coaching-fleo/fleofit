@@ -144,9 +144,9 @@ export default function Settings() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
           <Database size={24} className="text-[#f1ba17]" />
-          Impostazioni Database
+          Impostazioni
         </h1>
-        <p className="text-gray-400 text-sm mt-1">Gestisci i backup di sicurezza della tua app</p>
+        <p className="text-gray-400 text-sm mt-1">Gestisci la tua app</p>
       </div>
 
       {loading && (

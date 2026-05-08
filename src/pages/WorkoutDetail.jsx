@@ -3,12 +3,13 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 // TOGLI Share2, metti Share2
-import { ChevronLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy } from 'lucide-react'
+import { ChevronLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle } from 'lucide-react'
 import { format, parseISO, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { CustomAlert } from '../components/CustomModals'
+import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 
 const TYPE_COLORS = {
@@ -162,6 +163,10 @@ export default function WorkoutDetail() {
   const [deleting, setDeleting] = useState(false)
   const [logoBase64, setLogoBase64] = useState(null)
   const [alertInfo, setAlertInfo] = useState(null)
+  const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [athleteWorkoutId, setAthleteWorkoutId] = useState(null)
+  const [workoutStatus, setWorkoutStatus] = useState('pending')
+  const [selectedAthleteForAssign, setSelectedAthleteForAssign] = useState(null)
   const { role } = useAuth()
 
   useEffect(() => { fetchWorkout() }, [id])
@@ -180,22 +185,41 @@ export default function WorkoutDetail() {
   const fetchWorkout = async () => {
     const { data, error } = await supabase.from('workouts').select('*').eq('id', id).single()
     if (error) console.error('ERRORE:', error)
-    setWorkout(data)
+
+    let finalWorkout = { ...data }
 
     if (queryAthleteId && data) {
       const { data: awData } = await supabase.from('athlete_workouts')
-        .select('notes, athletes(name, surname)')
+        .select('id, notes, status, completed_date, athletes(name, surname)')
         .eq('workout_id', data.id)
         .eq('athlete_id', queryAthleteId)
         .order('completed_date', { ascending: false })
         .limit(1)
         
-      if (awData && awData.length > 0 && awData[0].notes) {
-        setAthleteNote({ text: awData[0].notes, athleteName: `${awData[0].athletes.name} ${awData[0].athletes.surname}` })
+      if (awData && awData.length > 0) {
+        setAthleteWorkoutId(awData[0].id)
+        setWorkoutStatus(awData[0].status)
+        if (awData[0].notes) {
+          setAthleteNote({ text: awData[0].notes, athleteName: `${awData[0].athletes.name} ${awData[0].athletes.surname}` })
+        }
+        finalWorkout.date = awData[0].completed_date
       }
     }
 
+    setWorkout(finalWorkout)
     setLoading(false)
+  }
+
+  const toggleStatus = async () => {
+    if (!athleteWorkoutId) return
+    const newStatus = workoutStatus === 'completed' ? 'pending' : 'completed'
+    setWorkoutStatus(newStatus)
+    
+    const { error } = await supabase.from('athlete_workouts').update({ status: newStatus }).eq('id', athleteWorkoutId)
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: "Impossibile aggiornare lo stato", type: 'error' })
+      setWorkoutStatus(workoutStatus) // ripristina in caso di errore
+    }
   }
 
   const fetchAthletes = async () => {
@@ -204,12 +228,16 @@ export default function WorkoutDetail() {
   }
 
   const handleAssign = async (athleteId) => {
+    if (!assignDate) {
+      setAlertInfo({ title: 'Errore', message: 'Inserisci la data di assegnazione.', type: 'error' })
+      return
+    }
     setAssigning(true)
     const { error } = await supabase.from('athlete_workouts').insert({
       athlete_id: athleteId,
       workout_id: workout.id,
-      completed_date: workout.date, // Registriamo la data originaria in cui il workout è pianificato
-      status: 'pending' // Lo inseriamo come 'in sospeso' finché l'atleta non lo fa
+      completed_date: assignDate,
+      status: 'pending'
     })
     
     setAssigning(false)
@@ -534,13 +562,6 @@ export default function WorkoutDetail() {
   const type = isRunning ? 'Running' : mainBlock.type
   const c = TYPE_COLORS[type] || TYPE_COLORS['Hyrox'] || { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' }
 
-  const paramSummary = () => {
-    if (isRunning) return `${s?.steps?.length || s?.main?.steps?.length || 0} fasi`
-    const mb = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type))
-    if (mb) return getBlockTitle(mb)
-    return `${blocks.length} blocchi`
-  }
-
   const getIconForType = (t) => {
     if (t === 'WarmUp' || t === 'Rest') return <Timer size={16} className={TYPE_COLORS[t]?.text} />
     if (t === 'Cash In') return <Flag size={16} className={TYPE_COLORS[t]?.text} />
@@ -560,9 +581,22 @@ export default function WorkoutDetail() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-white">{workout.title}</h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className={`text-gray-500 text-sm mt-1 ${role === 'athlete' && athleteWorkoutId ? 'mb-3' : ''}`}>
               {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}
             </p>
+            {role === 'athlete' && athleteWorkoutId && (
+              <button 
+                onClick={toggleStatus}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition border w-fit ${
+                  workoutStatus === 'completed' 
+                    ? 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500/20' 
+                    : 'bg-[#2a2a2a] border-[#383838] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]'
+                }`}
+              >
+                {workoutStatus === 'completed' ? <CheckCircle2 size={16} /> : <Circle size={16} />} 
+                {workoutStatus === 'completed' ? 'Completato' : 'Segna come completato'}
+              </button>
+            )}
           </div>
           {role !== 'athlete' && (
             <div className="flex flex-col items-end gap-2">
@@ -592,9 +626,6 @@ export default function WorkoutDetail() {
               </div>
             </div>
           )}
-        </div>
-        <div className={`mt-3 px-4 py-2 rounded-xl ${c.bg} border ${c.border}`}>
-          <p className={`text-sm font-medium ${c.text}`}>{paramSummary()}</p>
         </div>
       </div>
 
@@ -897,28 +928,54 @@ export default function WorkoutDetail() {
           <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg">Assegna Workout</p>
-              <button onClick={() => setAssignModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+              <button onClick={() => { setAssignModalOpen(false); setSelectedAthleteForAssign(null); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
             </div>
-            <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-3">
-              {athletes.length === 0 ? (
-                <p className="text-gray-500 text-center py-4 text-sm">Nessun atleta trovato.</p>
-              ) : (
-                athletes.map(a => (
-                  <button key={a.id} onClick={() => handleAssign(a.id)} disabled={assigning}
-                    className="flex items-center gap-4 bg-[#2a2a2a] border border-[#333] rounded-2xl p-3 hover:border-[#f1ba17] transition text-left disabled:opacity-50">
-                    <div className="w-10 h-10 rounded-full bg-[#1e1e1e] border border-[#444] flex items-center justify-center overflow-hidden shrink-0">
-                      {a.photo_url
-                        ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" />
-                        : <User size={18} className="text-gray-500" />
-                      }
-                    </div>
-                    <div>
-                      <p className="text-white font-semibold">{a.name} {a.surname}</p>
-                    </div>
+            
+            {!selectedAthleteForAssign ? (
+              <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-3">
+                {athletes.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4 text-sm">Nessun atleta trovato.</p>
+                ) : (
+                  athletes.map(a => (
+                    <button key={a.id} onClick={() => setSelectedAthleteForAssign(a)}
+                      className="flex items-center gap-4 bg-[#2a2a2a] border border-[#333] rounded-2xl p-3 hover:border-[#f1ba17] transition text-left">
+                      <div className="w-10 h-10 rounded-full bg-[#1e1e1e] border border-[#444] flex items-center justify-center overflow-hidden shrink-0">
+                        {a.photo_url
+                          ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" onError={() => setAthletes(athletes.map(ath => ath.id === a.id ? { ...ath, photo_url: null } : ath))} />
+                          : <User size={18} className="text-gray-500" />
+                        }
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold">{a.name} {a.surname}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="p-5 flex flex-col gap-4">
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Stai assegnando a:</p>
+                  <p className="text-white font-bold">{selectedAthleteForAssign.name} {selectedAthleteForAssign.surname}</p>
+                </div>
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">Seleziona la data dell'allenamento</label>
+                  <CustomDatePicker
+                    date={assignDate}
+                    onChange={setAssignDate}
+                    className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17]"
+                  />
+                </div>
+                <div className="flex gap-3 mt-2">
+                  <button onClick={() => setSelectedAthleteForAssign(null)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
+                    Indietro
                   </button>
-                ))
-              )}
-            </div>
+                  <button onClick={() => handleAssign(selectedAthleteForAssign.id)} disabled={assigning} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+                    {assigning ? 'Assegno...' : 'Conferma'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>,
         document.body
