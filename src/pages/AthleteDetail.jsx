@@ -42,34 +42,26 @@ export default function AthleteDetail() {
 
   async function fetchAthleteData(silent = false) {
     if (!silent) setLoading(true)
-    const { data: athleteData, error: athleteError } = await supabase
-      .from('athletes')
-      .select('*')
-      .eq('id', id)
-      .single()
+    
+    const [
+      { data: athleteData, error: athleteError },
+      { data: workoutHistory, error: historyError },
+      { data: prsData, error: prsError }
+    ] = await Promise.all([
+      supabase.from('athletes').select('*').eq('id', id).single(),
+      supabase.from('athlete_workouts').select(`id, completed_date, notes, status, workouts (id, title, sections)`).eq('athlete_id', id).order('completed_date', { ascending: false }),
+      supabase.from('personal_records').select('*').eq('athlete_id', id).order('date', { ascending: false })
+    ])
 
     if (athleteError) {
       console.error("Errore nel caricare l'atleta:", athleteError)
-      setLoading(false)
+      if (!silent) setLoading(false)
       return
     }
     setAthlete(athleteData)
 
-    const { data: workoutHistory, error: historyError } = await supabase
-      .from('athlete_workouts')
-      .select(`id, completed_date, notes, status, workouts (id, title, sections)`)
-      .eq('athlete_id', id)
-      .order('completed_date', { ascending: false })
-
     if (historyError) console.error("Errore nel caricare lo storico workout:", historyError)
     else setWorkouts(workoutHistory || [])
-
-    // Carichiamo anche i PR, ignorando l'errore se la tabella non esiste ancora
-    const { data: prsData, error: prsError } = await supabase
-      .from('personal_records')
-      .select('*')
-      .eq('athlete_id', id)
-      .order('date', { ascending: false })
 
     if (prsError && prsError.code !== '42P01' && prsError.code !== 'PGRST205') console.error("Errore PR:", prsError)
     else setPrs(prsData || [])

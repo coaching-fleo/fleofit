@@ -11,6 +11,8 @@ export default function Home() {
   const navigate = useNavigate()
   const [stats, setStats] = useState({ workouts: 0, athletes: 0 })
   const { role, user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [loadingRecent, setLoadingRecent] = useState(true)
   
   const [todayWorkouts, setTodayWorkouts] = useState([])
   const [upcomingWorkouts, setUpcomingWorkouts] = useState([])
@@ -48,87 +50,104 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    async function fetchStats() {
-      if (!role || !user) return
+    if (!role || !user) return
+
+    const fetchData = async () => {
+      setLoading(true)
+      setLoadingRecent(true)
 
       let wCountCoach = 0
       let aCountCoach = 0
       let wCountAthlete = 0
 
+      const todayStr = format(new Date(), 'yyyy-MM-dd')
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayStr = format(yesterday, 'yyyy-MM-dd')
+      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+      const weekStartStr = format(weekStart, 'yyyy-MM-dd')
+
+      const promises = []
+
       if (role === 'admin' || role === 'coach') {
-        const { count: wCount } = await supabase.from('workouts').select('*', { count: 'exact', head: true })
-        const { count: aCount } = await supabase.from('athletes').select('*', { count: 'exact', head: true })
-        wCountCoach = wCount || 0
-        aCountCoach = aCount || 0
-
-        const todayStr = format(new Date(), 'yyyy-MM-dd')
-        const yesterday = new Date()
-        yesterday.setDate(yesterday.getDate() - 1)
-        const yesterdayStr = format(yesterday, 'yyyy-MM-dd')
-
-        const { data: recentAw } = await supabase.from('athlete_workouts')
-          .select('id, completed_date, status, athletes(id, name, surname, photo_url), workouts(id, title, sections)')
-          .in('completed_date', [todayStr, yesterdayStr])
-          .order('completed_date', { ascending: false })
-        if (recentAw) setRecentAssignments(recentAw)
+        promises.push(
+          Promise.all([
+            supabase.from('workouts').select('*', { count: 'exact', head: true }),
+            supabase.from('athletes').select('*', { count: 'exact', head: true }),
+            supabase.from('athlete_workouts')
+              .select('id, completed_date, status, athletes(id, name, surname, photo_url), workouts(id, title, sections)')
+              .in('completed_date', [todayStr, yesterdayStr])
+              .order('completed_date', { ascending: false })
+          ]).then(([wRes, aRes, recentAwRes]) => {
+            wCountCoach = wRes.count || 0
+            aCountCoach = aRes.count || 0
+            if (recentAwRes.data) setRecentAssignments(recentAwRes.data)
+            setLoadingRecent(false)
+          })
+        )
+      } else {
+        setLoadingRecent(false)
       }
 
       if (role === 'athlete' || role === 'admin') {
-        const { count: wCount } = await supabase.from('athlete_workouts').select('*', { count: 'exact', head: true }).eq('athlete_id', user.id)
-        wCountAthlete = wCount || 0
+        promises.push(
+          Promise.all([
+            supabase.from('athlete_workouts').select('*', { count: 'exact', head: true }).eq('athlete_id', user.id),
+            supabase.from('athlete_workouts')
+              .select('id, completed_date, status, workouts (id, title, sections)')
+              .eq('athlete_id', user.id)
+              .gte('completed_date', weekStartStr)
+              .order('completed_date', { ascending: true })
+              .limit(30)
+          ]).then(([wRes, dataRes]) => {
+            wCountAthlete = wRes.count || 0
+            const data = dataRes.data
+            if (data) {
+              const todayWs = data.filter(w => w.completed_date === todayStr)
+              setTodayWorkouts(todayWs)
 
-        const todayStr = format(new Date(), 'yyyy-MM-dd')
-        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-        const weekStartStr = format(weekStart, 'yyyy-MM-dd')
+              const upcoming = data.filter(w => w.completed_date > todayStr && w.status !== 'completed').slice(0, 3)
+              setUpcomingWorkouts(upcoming)
 
-        const { data } = await supabase
-          .from('athlete_workouts')
-          .select('id, completed_date, status, workouts (id, title, sections)')
-          .eq('athlete_id', user.id)
-          .gte('completed_date', weekStartStr)
-          .order('completed_date', { ascending: true })
-          .limit(30)
-
-        if (data) {
-          const todayWs = data.filter(w => w.completed_date === todayStr)
-          setTodayWorkouts(todayWs)
-
-          const upcoming = data.filter(w => w.completed_date > todayStr && w.status !== 'completed').slice(0, 3)
-          setUpcomingWorkouts(upcoming)
-
-          const week = []
-          for(let i=0; i<7; i++) {
-            const d = new Date(weekStart)
-            d.setDate(d.getDate() + i)
-            const dStr = format(d, 'yyyy-MM-dd')
-            
-            const dayWorkouts = data.filter(w => w.completed_date === dStr)
-            
-            week.push({
-              date: d,
-              dayName: format(d, 'EEEEE', { locale: it }).toUpperCase(),
-              fullDayName: format(d, 'EEEE', { locale: it }),
-              isToday: dStr === todayStr,
-              workouts: dayWorkouts.map(w => ({
-                id: w.id,
-                workoutId: w.workouts?.id,
-                title: w.workouts?.title,
-                status: w.status,
-                category: w.workouts?.sections?.category || (w.workouts?.sections?.steps ? 'Running' : 'Hyrox')
-              }))
-            })
-          }
-          setWeeklyStatus(week)
-        }
+              const week = []
+              for(let i=0; i<7; i++) {
+                const d = new Date(weekStart)
+                d.setDate(d.getDate() + i)
+                const dStr = format(d, 'yyyy-MM-dd')
+                
+                const dayWorkouts = data.filter(w => w.completed_date === dStr)
+                
+                week.push({
+                  date: d,
+                  dayName: format(d, 'EEEEE', { locale: it }).toUpperCase(),
+                  fullDayName: format(d, 'EEEE', { locale: it }),
+                  isToday: dStr === todayStr,
+                  workouts: dayWorkouts.map(w => ({
+                    id: w.id,
+                    workoutId: w.workouts?.id,
+                    title: w.workouts?.title,
+                    status: w.status,
+                    category: w.workouts?.sections?.category || (w.workouts?.sections?.steps ? 'Running' : 'Hyrox')
+                  }))
+                })
+              }
+              setWeeklyStatus(week)
+            }
+          })
+        )
       }
+
+      await Promise.all(promises)
 
       if (role === 'athlete') {
         setStats({ workouts: wCountAthlete, athletes: 0 })
       } else {
         setStats({ workouts: wCountCoach, athletes: aCountCoach })
       }
+      setLoading(false)
     }
-    fetchStats()
+
+    fetchData()
   }, [role, user])
 
   const toggleTodayWorkout = async (e, workout) => {
@@ -260,46 +279,57 @@ export default function Home() {
       )}
 
       {/* RECENT ASSIGNMENTS FOR COACH */}
-      {role !== 'athlete' && recentAssignments.length > 0 && (
+      {role !== 'athlete' && (
         <div className="mb-6">
           <h2 className="text-lg font-bold text-white mb-3">Attività Atleti (Oggi e Ieri)</h2>
-          <div className="flex flex-col gap-3">
-            {recentAssignments.map(a => {
-              const category = a.workouts?.sections?.category || (a.workouts?.sections?.steps ? 'Running' : 'Hyrox');
-              const isRun = category === 'Running';
-              return (
-              <div key={a.id} onClick={() => navigate(`/athletes/${a.athletes?.id}`)} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer transition ${isRun ? 'hover:border-[#0094C6]' : 'hover:border-[#f1ba17]'}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333]">
-                      {a.athletes?.photo_url ? (
-                        <img src={a.athletes.photo_url} alt={a.athletes?.name} className="w-full h-full object-cover" onError={(e) => e.target.style.opacity = 0} />
-                      ) : (
-                        <User size={18} className="text-gray-500" />
-                      )}
+          {loadingRecent ? (
+            <div className="flex flex-col gap-3">
+              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-20 animate-pulse"></div>
+              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-20 animate-pulse"></div>
+            </div>
+          ) : recentAssignments.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {recentAssignments.map(a => {
+                const category = a.workouts?.sections?.category || (a.workouts?.sections?.steps ? 'Running' : 'Hyrox');
+                const isRun = category === 'Running';
+                return (
+                <div key={a.id} onClick={() => navigate(`/athletes/${a.athletes?.id}`)} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer transition ${isRun ? 'hover:border-[#0094C6]' : 'hover:border-[#f1ba17]'}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333]">
+                        {a.athletes?.photo_url ? (
+                          <img src={a.athletes.photo_url} alt={a.athletes?.name} className="w-full h-full object-cover" onError={(e) => e.target.style.opacity = 0} />
+                        ) : (
+                          <User size={18} className="text-gray-500" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white font-semibold text-sm truncate">{a.athletes?.name} {a.athletes?.surname}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+                            {category}
+                          </span>
+                          <p className="text-gray-500 text-xs truncate">{a.workouts?.title}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-white font-semibold text-sm truncate">{a.athletes?.name} {a.athletes?.surname}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
-                          {category}
-                        </span>
-                        <p className="text-gray-500 text-xs truncate">{a.workouts?.title}</p>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
+                        {a.completed_date === todayStrRender ? 'Oggi' : 'Ieri'}
+                      </p>
+                      <div className={`px-2 py-1 rounded-md border text-[10px] font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
+                        {a.status === 'completed' ? 'Fatto' : 'Da fare'}
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
-                      {a.completed_date === todayStrRender ? 'Oggi' : 'Ieri'}
-                    </p>
-                    <div className={`px-2 py-1 rounded-md border text-[10px] font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
-                      {a.status === 'completed' ? 'Fatto' : 'Da fare'}
-                    </div>
-                  </div>
                 </div>
-              </div>
-            )})}
-          </div>
+              )})}
+            </div>
+          ) : (
+            <div className="bg-[#1e1e1e] border border-[#2a2a2a] border-dashed rounded-2xl p-6 text-center">
+              <p className="text-gray-500 text-sm">Nessuna attività registrata tra oggi e ieri.</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -307,7 +337,9 @@ export default function Home() {
       {(role === 'athlete' || role === 'admin') && (
         <div className="mb-6">
           <h2 className="text-lg font-bold text-white mb-3">Oggi</h2>
-          {todayWorkouts.length > 0 ? (
+          {loading ? (
+             <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 h-32 animate-pulse"></div>
+          ) : todayWorkouts.length > 0 ? (
             <div className="flex flex-col gap-3">
               {todayWorkouts.map((todayWorkout) => {
                 const todayIsRun = todayWorkout.workouts?.sections?.category === 'Running' || todayWorkout.workouts?.sections?.steps ? true : false;
@@ -368,28 +400,35 @@ export default function Home() {
       )}
 
       {/* Upcoming Workouts for Athlete */}
-      {(role === 'athlete' || role === 'admin') && upcomingWorkouts.length > 0 && (
+      {(role === 'athlete' || role === 'admin') && (loading || upcomingWorkouts.length > 0) && (
         <div className="mb-8">
           <h2 className="text-lg font-bold text-white mb-3">I prossimi allenamenti</h2>
-          <div className="flex flex-col gap-3">
-            {upcomingWorkouts.map(w => (
-              <div 
-                key={w.id}
-                onClick={() => navigate(`/workout/${w.workouts.id}?athlete_id=${user.id}`)}
-                className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-[#383838] transition"
-              >
-                <div>
-                  <p className="text-white font-semibold">{w.workouts.title}</p>
-                  <p className="text-gray-500 text-xs mt-0.5 capitalize font-medium">
-                    {format(parseISO(w.completed_date), 'EEEE d MMMM', { locale: it })}
-                  </p>
+          {loading ? (
+            <div className="flex flex-col gap-3">
+              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-16 animate-pulse"></div>
+              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-16 animate-pulse"></div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {upcomingWorkouts.map(w => (
+                <div 
+                  key={w.id}
+                  onClick={() => navigate(`/workout/${w.workouts.id}?athlete_id=${user.id}`)}
+                  className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-[#383838] transition"
+                >
+                  <div>
+                    <p className="text-white font-semibold">{w.workouts.title}</p>
+                    <p className="text-gray-500 text-xs mt-0.5 capitalize font-medium">
+                      {format(parseISO(w.completed_date), 'EEEE d MMMM', { locale: it })}
+                    </p>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-400">
+                    <ChevronRight size={18} className="ml-0.5" />
+                  </div>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-400">
-                  <ChevronRight size={18} className="ml-0.5" />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

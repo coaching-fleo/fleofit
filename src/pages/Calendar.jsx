@@ -11,6 +11,7 @@ export default function Calendar() {
   const [workouts, setWorkouts] = useState([])
   const [selectedDay, setSelectedDay] = useState(new Date())
   const [dayWorkouts, setDayWorkouts] = useState([])
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const { role, user } = useAuth()
 
@@ -24,6 +25,7 @@ export default function Calendar() {
   }, [selectedDay, workouts])
 
   const fetchWorkouts = async () => {
+    setLoading(true)
     const from = format(startOfMonth(currentMonth), 'yyyy-MM-dd')
     const to = format(endOfMonth(currentMonth), 'yyyy-MM-dd')
     
@@ -47,6 +49,7 @@ export default function Calendar() {
         .lte('date', to)
       setWorkouts(data || [])
     }
+    setLoading(false)
   }
 
   const days = eachDayOfInterval({
@@ -172,7 +175,12 @@ export default function Calendar() {
           )}
         </div>
 
-        {dayWorkouts.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col gap-3">
+             <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-24 animate-pulse"></div>
+             <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-24 animate-pulse opacity-50"></div>
+          </div>
+        ) : dayWorkouts.length === 0 ? (
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 text-center">
             <p className="text-gray-600 text-sm">Nessun workout programmato</p>
             {role !== 'athlete' && (

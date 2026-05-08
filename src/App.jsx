@@ -199,9 +199,6 @@ function ProtectedRoute({ children }) {
           return
         }
       }
-
-      // Piccola pausa per mostrare la schermata di caricamento col nome
-      await new Promise(resolve => setTimeout(resolve, 1000))
     }
     setNeedsOnboarding(false)
     setLoading(false)
