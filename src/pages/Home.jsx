@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check } from 'lucide-react'
+import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO } from 'date-fns'
@@ -12,7 +12,7 @@ export default function Home() {
   const [stats, setStats] = useState({ workouts: 0, athletes: 0 })
   const { role, user } = useAuth()
   
-  const [todayWorkout, setTodayWorkout] = useState(null)
+  const [todayWorkouts, setTodayWorkouts] = useState([])
   const [upcomingWorkouts, setUpcomingWorkouts] = useState([])
   const [weeklyStatus, setWeeklyStatus] = useState([])
 
@@ -51,8 +51,8 @@ export default function Home() {
           .limit(30)
 
         if (data) {
-          const todayW = data.find(w => w.completed_date === todayStr)
-          setTodayWorkout(todayW || null)
+          const todayWs = data.filter(w => w.completed_date === todayStr)
+          setTodayWorkouts(todayWs)
 
           const upcoming = data.filter(w => w.completed_date > todayStr && w.status !== 'completed').slice(0, 3)
           setUpcomingWorkouts(upcoming)
@@ -63,16 +63,20 @@ export default function Home() {
             d.setDate(d.getDate() + i)
             const dStr = format(d, 'yyyy-MM-dd')
             
-            const wForDay = data.find(w => w.completed_date === dStr)
+            const dayWorkouts = data.filter(w => w.completed_date === dStr)
+            
             week.push({
               date: d,
               dayName: format(d, 'EEEEE', { locale: it }).toUpperCase(),
               fullDayName: format(d, 'EEEE', { locale: it }),
-              hasWorkout: !!wForDay,
-              completed: wForDay?.status === 'completed',
               isToday: dStr === todayStr,
-              workoutTitle: wForDay?.workouts?.title,
-              workoutId: wForDay?.workouts?.id
+              workouts: dayWorkouts.map(w => ({
+                id: w.id,
+                workoutId: w.workouts?.id,
+                title: w.workouts?.title,
+                status: w.status,
+                category: w.workouts?.sections?.category || (w.workouts?.sections?.steps ? 'Running' : 'Hyrox')
+              }))
             })
           }
           setWeeklyStatus(week)
@@ -86,16 +90,27 @@ export default function Home() {
     fetchStats()
   }, [role, user])
 
-  const toggleTodayWorkout = async (e) => {
-    e.stopPropagation() // Evita di aprire la pagina dettaglio se clicchiamo solo il tasto
-    if (!todayWorkout) return
-    const newStatus = todayWorkout.status === 'completed' ? 'pending' : 'completed'
-    setTodayWorkout({ ...todayWorkout, status: newStatus })
-    setWeeklyStatus(prev => prev.map(d => d.isToday ? { ...d, completed: newStatus === 'completed' } : d))
+  const toggleTodayWorkout = async (e, workout) => {
+    e.stopPropagation()
+    const newStatus = workout.status === 'completed' ? 'pending' : 'completed'
+    
+    setTodayWorkouts(prev => prev.map(w => w.id === workout.id ? { ...w, status: newStatus } : w))
+    setWeeklyStatus(prev => prev.map(d => {
+      if (d.isToday) {
+        return { ...d, workouts: d.workouts.map(dw => dw.id === workout.id ? { ...dw, status: newStatus } : dw) }
+      }
+      return d
+    }))
 
-    const { error } = await supabase.from('athlete_workouts').update({ status: newStatus }).eq('id', todayWorkout.id)
+    const { error } = await supabase.from('athlete_workouts').update({ status: newStatus }).eq('id', workout.id)
     if (error) {
-       setTodayWorkout({ ...todayWorkout, status: todayWorkout.status }) // ripristina
+       setTodayWorkouts(prev => prev.map(w => w.id === workout.id ? { ...w, status: workout.status } : w))
+       setWeeklyStatus(prev => prev.map(d => {
+         if (d.isToday) {
+           return { ...d, workouts: d.workouts.map(dw => dw.id === workout.id ? { ...dw, status: workout.status } : dw) }
+         }
+         return d
+       }))
     }
   }
 
@@ -127,47 +142,57 @@ export default function Home() {
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-white font-bold text-sm">La tua settimana</h3>
             <span className="text-xs text-[#f1ba17] bg-[#f1ba17]/10 border border-[#f1ba17]/20 px-3 py-1 rounded-full font-bold">
-              {weeklyStatus.filter(d => d.completed).length} / {weeklyStatus.filter(d => d.hasWorkout).length} completati
+              {weeklyStatus.reduce((acc, d) => acc + d.workouts.filter(w => w.status === 'completed').length, 0)} / {weeklyStatus.reduce((acc, d) => acc + d.workouts.length, 0)} completati
             </span>
           </div>
-          <div className="flex justify-between items-center w-full">
+          <div className="flex justify-between items-start w-full">
             {weeklyStatus.map((day, i) => {
-              let circleClass = ''
-              let textClass = ''
-
-              if (day.completed) {
-                circleClass = 'bg-green-500 border-green-500 shadow-[0_0_12px_rgba(34,197,94,0.4)]'
-                textClass = 'text-black'
-              } else if (day.hasWorkout) {
-                if (day.isToday) {
-                  circleClass = 'bg-[#f1ba17] border-[#f1ba17] shadow-[0_0_12px_rgba(241,186,23,0.4)]'
-                  textClass = 'text-black'
-                } else {
-                  circleClass = 'bg-transparent border-[#f1ba17]'
-                  textClass = 'text-white'
-                }
-              } else {
-                if (day.isToday) {
-                  circleClass = 'bg-[#333] border-[#333]'
-                  textClass = 'text-white'
-                } else {
-                  circleClass = 'bg-transparent border-[#333]'
-                  textClass = 'text-gray-500'
-                }
-              }
-
               return (
-                <div 
-                  key={i} 
-                  className={`flex flex-col items-center gap-2 flex-1 ${day.hasWorkout ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`} 
-                  onClick={() => { if(day.hasWorkout) navigate(`/workout/${day.workoutId}?athlete_id=${user.id}`) }}
-                >
-                  <span className={`text-[11px] font-bold ${day.isToday ? 'text-white' : 'text-gray-500'}`}>
+                <div key={i} className="flex flex-col items-center gap-1.5 flex-1">
+                  <span className={`text-[11px] font-bold ${day.isToday ? 'text-white' : 'text-gray-400'}`}>
                     {day.dayName.charAt(0)}
                   </span>
-                  <div className={`w-10 h-10 rounded-full border-[2.5px] flex items-center justify-center transition-all ${circleClass}`}>
-                    <span className={`text-sm font-bold ${textClass}`}>{format(day.date, 'd')}</span>
-                  </div>
+                  <span className={`text-xs font-bold mb-1 ${day.isToday ? 'text-[#f1ba17]' : 'text-gray-500'}`}>
+                    {format(day.date, 'd')}
+                  </span>
+                  
+                  {day.workouts.length > 0 ? (
+                    <div className="flex flex-col gap-1.5">
+                      {day.workouts.map((w, wIdx) => {
+                        const isRun = w.category === 'Running'
+                        let circleClass = ''
+                        let icon = null
+                        
+                        if (w.status === 'completed') {
+                           circleClass = 'bg-green-500 border-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
+                           icon = <CheckCircle2 size={14} className="text-black" />
+                        } else {
+                           if (day.isToday) {
+                             circleClass = isRun ? 'bg-[#0094C6] border-[#0094C6] shadow-[0_0_8px_rgba(0,148,198,0.4)]' : 'bg-[#f1ba17] border-[#f1ba17] shadow-[0_0_8px_rgba(241,186,23,0.4)]'
+                             icon = isRun ? <Timer size={14} className="text-white" /> : <Dumbbell size={14} className="text-black" />
+                           } else {
+                             circleClass = isRun ? 'bg-transparent border-[#0094C6]' : 'bg-transparent border-[#f1ba17]'
+                             icon = isRun ? <Timer size={14} className="text-[#0094C6]" /> : <Dumbbell size={14} className="text-[#f1ba17]" />
+                           }
+                        }
+
+                        return (
+                          <div 
+                            key={wIdx}
+                            className={`w-7 h-7 rounded-full border-[2px] flex items-center justify-center cursor-pointer hover:scale-110 transition-transform ${circleClass}`}
+                            onClick={() => navigate(`/workout/${w.workoutId}?athlete_id=${user.id}`)}
+                            title={w.title}
+                          >
+                            {icon}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className={`w-7 h-7 rounded-full border-[2px] flex items-center justify-center ${day.isToday ? 'bg-[#333] border-[#333]' : 'bg-transparent border-[#333]'}`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#444]"></span>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -179,42 +204,51 @@ export default function Home() {
       {role === 'athlete' && (
         <div className="mb-6">
           <h2 className="text-lg font-bold text-white mb-3">Oggi</h2>
-          {todayWorkout ? (
-            <div 
-              onClick={() => navigate(`/workout/${todayWorkout.workouts.id}?athlete_id=${user.id}`)}
-              className={`rounded-3xl p-6 cursor-pointer transition border relative overflow-hidden group ${
-                todayWorkout.status === 'completed' 
-                  ? 'bg-green-500/10 border-green-500/30 hover:border-green-500' 
-                  : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50 hover:border-[#f1ba17]'
-              }`}
-            >
-              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition">
-                {todayWorkout.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />}
-              </div>
-              <div className="relative z-10">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 shadow-lg shrink-0 ${
-                  todayWorkout.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20'
-                }`}>
-                  {todayWorkout.status === 'completed' ? <CheckCircle2 size={24} /> : <Dumbbell size={24} />}
-                </div>
-                <h3 className="text-white font-bold text-xl mb-1 truncate pr-8">{todayWorkout.workouts.title}</h3>
-                <p className={`text-sm font-medium ${todayWorkout.status === 'completed' ? 'text-green-400' : 'text-[#f1ba17]'}`}>
-                  {todayWorkout.status === 'completed' ? 'Ottimo lavoro, completato! 🎉' : 'Da completare oggi 🔥'}
-                </p>
-                <div className="mt-4">
-                  <button 
-                    onClick={toggleTodayWorkout}
-                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition border ${
-                      todayWorkout.status === 'completed' 
-                        ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30' 
-                        : 'bg-[#111] border-[#333] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]'
+          {todayWorkouts.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {todayWorkouts.map((todayWorkout) => {
+                const todayIsRun = todayWorkout.workouts?.sections?.category === 'Running' || todayWorkout.workouts?.sections?.steps ? true : false;
+                
+                return (
+                  <div 
+                    key={todayWorkout.id}
+                    onClick={() => navigate(`/workout/${todayWorkout.workouts.id}?athlete_id=${user.id}`)}
+                    className={`rounded-3xl p-6 cursor-pointer transition border relative overflow-hidden group ${
+                      todayWorkout.status === 'completed'
+                        ? 'bg-green-500/10 border-green-500/30 hover:border-green-500'
+                        : (todayIsRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50 hover:border-[#0094C6]' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50 hover:border-[#f1ba17]')
                     }`}
                   >
-                    {todayWorkout.status === 'completed' ? <CheckCircle2 size={16} /> : <Circle size={16} />} 
-                    {todayWorkout.status === 'completed' ? 'Fatto' : 'Segna come completato'}
-                  </button>
-                </div>
-              </div>
+                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition">
+                      {todayWorkout.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (todayIsRun ? <Timer size={80} className="text-[#0094C6] -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />)}
+                    </div>
+                    <div className="relative z-10">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 shadow-lg shrink-0 ${
+                        todayWorkout.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (todayIsRun ? 'bg-[#0094C6] text-white shadow-[#0094C6]/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20')
+                      }`}>
+                        {todayWorkout.status === 'completed' ? <CheckCircle2 size={24} /> : (todayIsRun ? <Timer size={24} /> : <Dumbbell size={24} />)}
+                      </div>
+                      <h3 className="text-white font-bold text-xl mb-1 truncate pr-8">{todayWorkout.workouts.title}</h3>
+                      <p className={`text-sm font-medium ${todayWorkout.status === 'completed' ? 'text-green-400' : (todayIsRun ? 'text-[#0094C6]' : 'text-[#f1ba17]')}`}>
+                        {todayWorkout.status === 'completed' ? 'Ottimo lavoro, completato! 🎉' : 'Da completare oggi 🔥'}
+                      </p>
+                      <div className="mt-4">
+                        <button 
+                          onClick={(e) => toggleTodayWorkout(e, todayWorkout)}
+                          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition border ${
+                            todayWorkout.status === 'completed' 
+                              ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30' 
+                              : (todayIsRun ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#0094C6] hover:text-[#0094C6]' : 'bg-[#111] border-[#333] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]')
+                          }`}
+                        >
+                          {todayWorkout.status === 'completed' ? <CheckCircle2 size={16} /> : <Circle size={16} />} 
+                          {todayWorkout.status === 'completed' ? 'Fatto' : 'Segna come completato'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           ) : (
             <div className="bg-[#1e1e1e] border border-[#2a2a2a] border-dashed rounded-3xl p-6 flex items-center gap-4">

@@ -21,10 +21,9 @@ const TYPE_COLORS = {
   EMOM: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
   AMRAP: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
   'For Time': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
-  Running: { text: 'text-[#f1ba17]', bg: 'bg-[#f1ba17]/10', border: 'border-[#f1ba17]/30', hex: '#f1ba17' }
+  'Running': { text: 'text-[#0094C6]', bg: 'bg-[#0094C6]/10', border: 'border-[#0094C6]/30', hex: '#0094C6' }
+
 }
-
-
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
   if (isNaN(num)) return 'text-gray-500';
@@ -293,14 +292,20 @@ export default function WorkoutDetail() {
 
     // Tipo badge
     doc.setFontSize(11)
-    doc.setTextColor(241, 186, 23)
+    if (type === 'Running') {
+    } else {
+      doc.setTextColor(241, 186, 23)
+    }
     doc.setFont('helvetica', 'bold')
     doc.text(`[ ${type.toUpperCase()} ]`, 20, y)
     
     y += 6
 
     if (s?.intensity) {
-      doc.setTextColor(241, 186, 23)
+      if (type === 'Running') {
+        doc.setTextColor(0, 148, 198)
+       doc.setTextColor(241, 186, 23)
+      }
       doc.setFont('helvetica', 'bold')
       doc.text('INTENSITA\': ', 20, y)
       doc.setTextColor(...getPdfIntensityColor(s.intensity))
@@ -370,6 +375,14 @@ export default function WorkoutDetail() {
              doc.setTextColor(200, 200, 200)
            }
            y += 5
+
+           if (step.notes) {
+             doc.setTextColor(180, 180, 180)
+             doc.setFont('helvetica', 'normal')
+             doc.setFontSize(9)
+             doc.text(`  Note: ${step.notes}`, 30, y)
+             y += 5
+           }
         } else {
            doc.setTextColor(200, 200, 200)
            let cx = 30
@@ -569,7 +582,7 @@ export default function WorkoutDetail() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-white">{workout.title}</h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="text-gray-500 text-sm mt-1 capitalize">
               {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}
             </p>
           </div>
@@ -592,7 +605,7 @@ export default function WorkoutDetail() {
                 <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg" title="Duplica Workout">
                   <Copy size={12} /> Duplica
                 </button>
-                <button onClick={() => navigate(`/create?edit=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                <button onClick={() => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
                   <Edit size={12} /> Modifica
                 </button>
                 <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
@@ -711,11 +724,11 @@ export default function WorkoutDetail() {
           </div>
         </div>
         <div style={{
-          background: '#f1ba17',
-          color: '#111',
+          background: type === 'Running' ? '#0094C6' : '#f1ba17',
+          color: type === 'Running' ? '#fff' : '#111',
           fontSize: '12px',
-          fontWeight: 900,
-          letterSpacing: '2px',
+          fontWeight: 800,
+          letterSpacing: '1px',
           textTransform: 'uppercase',
           padding: '7px 16px',
           borderRadius: '30px',
@@ -726,7 +739,7 @@ export default function WorkoutDetail() {
 
       {/* TITOLO */}
       <div style={{ padding: '22px 24px 18px', borderBottom: '1px solid #242424' }}>
-        <div style={{ color: '#f1ba17', fontSize: '11px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '7px' }}>
+        <div style={{ color: type === 'Running' ? '#0094C6' : '#f1ba17', fontSize: '11px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '7px' }}>
           {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }).toUpperCase() : 'DATA SCONOSCIUTA'}
         </div>
         <div style={{ color: '#fff', fontSize: '32px', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.5px' }}>
@@ -783,18 +796,18 @@ export default function WorkoutDetail() {
             <div style={{
               height: '100%',
               borderRadius: '4px',
-              background: '#f1ba17',
+              background: type === 'Running' ? '#0094C6' : '#f1ba17',
               width: `${parseInt(workout.sections.intensity, 10) * 10}%`,
             }} />
           </div>
-          <div style={{ color: '#f1ba17', fontSize: '16px', fontWeight: 900, minWidth: '38px', textAlign: 'right' }}>
+          <div style={{ color: type === 'Running' ? '#0094C6' : '#f1ba17', fontSize: '16px', fontWeight: 900, minWidth: '38px', textAlign: 'right' }}>
             {workout.sections.intensity}/10
           </div>
         </div>
       )}
 
-      {/* BLOCCHI */}
-      <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      {/* BLOCKS */}
+      <div style={{ paddingBottom: '20px' }}>
         {!isRunning ? blocks.map((block, bIdx) => (
           <div key={bIdx}>
             {/* Label blocco */}
@@ -849,24 +862,29 @@ export default function WorkoutDetail() {
             return (
               <div key={i}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#f1ba17', flexShrink: 0 }} />
-                  <div style={{ color: '#f1ba17', fontSize: '11px', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+                  <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#0094C6', flexShrink: 0 }} />
+                  <div style={{ color: '#0094C6', fontSize: '11px', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
                     {typeLabels[step.type] || step.type}{step.type === 'repeat' ? ` × ${step.rounds}` : ''}
                   </div>
                 </div>
                 {step.type === 'repeat' ? (
                   <>
-                    <div style={{ padding: '9px 0 9px 16px', borderLeft: '3px solid #f1ba17', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ padding: '9px 0 9px 16px', borderLeft: '3px solid #0094C6', display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: '#fff', fontSize: '18px', fontWeight: 700 }}>Corsa</span>
                       <span style={{ color: '#666', fontSize: '15px', fontWeight: 600 }}>{step.runDuration}{step.runPace ? ` @ ${step.runPace}` : ''}</span>
                     </div>
-                    <div style={{ padding: '9px 0 9px 16px', borderLeft: '3px solid #f1ba17', display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ padding: '9px 0 9px 16px', borderLeft: '3px solid #0094C6', display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: '#fff', fontSize: '18px', fontWeight: 700 }}>Recupero</span>
                       <span style={{ color: '#666', fontSize: '15px', fontWeight: 600 }}>{step.recDuration}{step.recPace ? ` @ ${step.recPace}` : ''}</span>
                     </div>
+                    {step.notes && (
+                      <div style={{ padding: '4px 0 9px 16px', borderLeft: '3px solid #0094C6' }}>
+                        <span style={{ color: '#aaa', fontSize: '14px', fontWeight: 500 }}>Note: {step.notes}</span>
+                      </div>
+                    )}
                   </>
                 ) : (
-                  <div style={{ padding: '9px 0 9px 16px', borderLeft: '3px solid #f1ba17', display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ padding: '9px 0 9px 16px', borderLeft: '3px solid #0094C6', display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#fff', fontSize: '18px', fontWeight: 700 }}>{step.duration}</span>
                     <span style={{ color: '#666', fontSize: '15px', fontWeight: 600 }}>
                       {step.pace ? `@ ${step.pace}` : ''}{step.notes ? ` · ${step.notes}` : ''}
@@ -879,14 +897,13 @@ export default function WorkoutDetail() {
         )}
       </div>
 
-      {/* NOTE COACH */}
       {workout.coach_notes && (
         <div style={{ padding: '0 24px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#f1ba17' }} />
-            <div style={{ color: '#f1ba17', fontSize: '11px', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Note Coach</div>
+            <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: type === 'Running' ? '#0094C6' : '#f1ba17' }} />
+            <div style={{ color: type === 'Running' ? '#0094C6' : '#f1ba17', fontSize: '11px', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Note Coach</div>
           </div>
-          <div style={{ padding: '9px 0 9px 16px', borderLeft: '3px solid #f1ba17' }}>
+          <div style={{ padding: '9px 0 9px 16px', borderLeft: `3px solid ${type === 'Running' ? '#0094C6' : '#f1ba17'}` }}>
             <span style={{ color: '#aaa', fontSize: '15px', fontWeight: 500, lineHeight: 1.5 }}>{workout.coach_notes}</span>
           </div>
         </div>
@@ -896,12 +913,11 @@ export default function WorkoutDetail() {
       <div style={{
         background: '#111',
         borderTop: '1px solid #242424',
-        padding: '14px 24px',
+ padding: '14px 24px',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        alignItems: 'center',        justifyContent: 'space-between',
       }}>
-        <div style={{ color: '#f1ba17', fontSize: '13px', fontWeight: 900, letterSpacing: '2px' }}>@FLEOFIT</div>
+         <div style={{ color: type === 'Running' ? '#0094C6' : '#f1ba17', fontSize: '13px', fontWeight: 900, letterSpacing: '2px' }}>@FLEOFIT</div>
         <div style={{ color: '#444', fontSize: '11px', fontWeight: 700, letterSpacing: '1px' }}>#HYROX · #TRAINING</div>
       </div>
 
@@ -915,9 +931,10 @@ export default function WorkoutDetail() {
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg">Assegna Workout</p>
               <button onClick={() => { setAssignModalOpen(false); setSelectedAthleteForAssign(null); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
-            </div>
+             </div>
             
             {!selectedAthleteForAssign ? (
+
               <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-3">
                 {athletes.length === 0 ? (
                   <p className="text-gray-500 text-center py-4 text-sm">Nessun atleta trovato.</p>
@@ -1020,6 +1037,7 @@ export default function WorkoutDetail() {
         </div>,
         document.body
       )}
+
       
       {createPortal(
         <>
@@ -1047,7 +1065,7 @@ function RunningList({ steps }) {
   const getTypeColor = (t) => {
     switch(t) {
       case 'warmup': return 'text-orange-400'
-      case 'run': return 'text-blue-400'
+      case 'run': return 'text-[#0094C6]'
       case 'recover': return 'text-green-400'
       case 'cooldown': return 'text-gray-400'
       case 'repeat': return 'text-purple-400'
@@ -1075,6 +1093,7 @@ function RunningList({ steps }) {
                 <div><span className="text-gray-400">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-gray-500 text-xs">@{step.recPace}</span>}</div>
                 {step.recIntensity && <div className="flex items-center gap-1"><span className={`text-xs font-bold ${getIntensityColor(step.recIntensity)}`}>{step.recIntensity}/10</span><BicepsFlexed size={12} className={getIntensityColor(step.recIntensity)} /></div>}
               </div>
+              {step.notes && <p className="text-gray-500 text-xs mt-0.5">{step.notes}</p>}
             </div>
           ) : (
             <div className="text-sm flex items-center justify-between pr-2">

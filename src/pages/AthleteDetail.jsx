@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle } from 'lucide-react'
+import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -22,11 +22,14 @@ export default function AthleteDetail() {
   const navigate = useNavigate()
   const [athlete, setAthlete] = useState(null)
   const [workouts, setWorkouts] = useState([])
+  const [prs, setPrs] = useState([])
+  const [tab, setTab] = useState('workouts') // 'workouts' | 'prs'
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [workoutToRemove, setWorkoutToRemove] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [prModalOpen, setPrModalOpen] = useState(false)
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
 
@@ -51,12 +54,22 @@ export default function AthleteDetail() {
 
     const { data: workoutHistory, error: historyError } = await supabase
       .from('athlete_workouts')
-      .select(`id, completed_date, notes, status, workouts (id, title)`)
+      .select(`id, completed_date, notes, status, workouts (id, title, sections)`)
       .eq('athlete_id', id)
       .order('completed_date', { ascending: false })
 
     if (historyError) console.error("Errore nel caricare lo storico workout:", historyError)
     else setWorkouts(workoutHistory || [])
+
+    // Carichiamo anche i PR, ignorando l'errore se la tabella non esiste ancora
+    const { data: prsData, error: prsError } = await supabase
+      .from('personal_records')
+      .select('*')
+      .eq('athlete_id', id)
+      .order('date', { ascending: false })
+
+    if (prsError && prsError.code !== '42P01' && prsError.code !== 'PGRST205') console.error("Errore PR:", prsError)
+    else setPrs(prsData || [])
 
     setLoading(false)
   }
@@ -172,6 +185,16 @@ export default function AthleteDetail() {
     URL.revokeObjectURL(url)
   }
 
+  const handleDeletePr = async (prId) => {
+    const { error } = await supabase.from('personal_records').delete().eq('id', prId)
+    if (!error) {
+      setPrs(prs.filter(p => p.id !== prId))
+      setAlertInfo({ title: 'Eliminato', message: 'Record personale rimosso.', type: 'success' })
+    } else {
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+    }
+  }
+
   if (loading) return <div className="p-6 text-gray-500">Caricamento scheda atleta...</div>
   if (!athlete) return <div className="p-6 text-red-400">Atleta non trovato.</div>
 
@@ -232,49 +255,93 @@ export default function AthleteDetail() {
         <StatCard label="Workouts" value={workouts.length} />
       </div>
 
-      {/* Diario Workout */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <BookOpen size={20} className="text-[#f1ba17]" />
-            Diario Workout
-          </h2>
-          {role !== 'athlete' && (
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setAssignModalOpen(true)}
-                className="flex items-center gap-1 text-black text-sm font-semibold bg-[#f1ba17] px-3 py-1.5 rounded-full transition hover:brightness-110 shadow-lg shadow-[#f1ba17]/20"
-              >
-                <Dumbbell size={14} className="hidden sm:block" /> Assegna
-              </button>
-              <button 
-                onClick={() => navigate(`/create?athlete_id=${id}`)}
-                className="flex items-center gap-1 text-[#f1ba17] text-sm font-semibold bg-[#f1ba17]/10 border border-[#f1ba17]/30 px-3 py-1.5 rounded-full transition hover:brightness-110"
-              >
-                <Plus size={16} /> Crea
-              </button>
+      {/* TABS */}
+      <div className="flex gap-6 mb-6 border-b border-[#2a2a2a]">
+        <button onClick={() => setTab('workouts')} className={`pb-3 border-b-2 font-semibold text-sm transition ${tab === 'workouts' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-gray-500 hover:text-white'}`}>
+          Diario Allenamenti
+        </button>
+        <button onClick={() => setTab('prs')} className={`pb-3 border-b-2 font-semibold text-sm transition ${tab === 'prs' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-gray-500 hover:text-white'}`}>
+          Personal Record (PR)
+        </button>
+      </div>
+
+      {tab === 'workouts' ? (
+        <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <BookOpen size={20} className="text-[#f1ba17]" />
+              Diario Workout
+            </h2>
+            {role !== 'athlete' && (
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setAssignModalOpen(true)}
+                  className="flex items-center gap-1 text-black text-sm font-semibold bg-[#f1ba17] px-3 py-1.5 rounded-full transition hover:brightness-110 shadow-lg shadow-[#f1ba17]/20"
+                >
+                  <Dumbbell size={14} className="hidden sm:block" /> Assegna
+                </button>
+                <button 
+                  onClick={() => navigate(`/create?athlete_id=${id}`)}
+                  className="flex items-center gap-1 text-[#f1ba17] text-sm font-semibold bg-[#f1ba17]/10 border border-[#f1ba17]/30 px-3 py-1.5 rounded-full transition hover:brightness-110"
+                >
+                  <Plus size={16} /> Crea
+                </button>
+              </div>
+            )}
+          </div>
+          {workouts.length > 0 ? (
+            workouts.map(entry => (
+              <WorkoutEntryCard 
+                key={entry.id} 
+                entry={entry} 
+                onToggleStatus={toggleWorkoutStatus} 
+                onUpdateNote={updateWorkoutNote} 
+                onRemove={requestRemoveWorkout}
+                navigate={navigate}
+                athleteId={id}
+                role={role}
+              />
+            ))
+          ) : (
+            <div className="bg-[#1e1e1e] border border-dashed border-[#2a2a2a] rounded-2xl p-6 text-center">
+              <p className="text-gray-600 text-sm">Nessun workout registrato per questo atleta.</p>
             </div>
           )}
         </div>
-        {workouts.length > 0 ? (
-          workouts.map(entry => (
-            <WorkoutEntryCard 
-              key={entry.id} 
-              entry={entry} 
-              onToggleStatus={toggleWorkoutStatus} 
-              onUpdateNote={updateWorkoutNote} 
-              onRemove={requestRemoveWorkout}
-              navigate={navigate}
-              athleteId={id}
-              role={role}
-            />
-          ))
-        ) : (
-          <div className="bg-[#1e1e1e] border border-dashed border-[#2a2a2a] rounded-2xl p-6 text-center">
-            <p className="text-gray-600 text-sm">Nessun workout registrato per questo atleta.</p>
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+           <div className="flex items-center justify-between">
+             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+               <Trophy size={20} className="text-[#f1ba17]" />
+               Traguardi e PR
+             </h2>
+             <button onClick={() => setPrModalOpen(true)} className="flex items-center gap-1 text-black text-sm font-semibold bg-[#f1ba17] px-3 py-1.5 rounded-full transition hover:brightness-110 shadow-lg shadow-[#f1ba17]/20">
+               <Plus size={16} /> Aggiungi PR
+             </button>
+           </div>
+           {prs.length > 0 ? (
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+               {prs.map(pr => (
+                  <div key={pr.id} className="bg-[#1e1e1e] border border-[#2a2a2a] p-4 rounded-2xl flex items-center justify-between group hover:border-[#f1ba17] transition">
+                     <div>
+                       <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-1">{pr.exercise}</p>
+                       <p className="text-white font-bold text-2xl">{pr.value}</p>
+                       <p className="text-gray-500 text-xs mt-1">{format(parseISO(pr.date), 'd MMMM yyyy', { locale: it })}</p>
+                     </div>
+                     <button onClick={() => setConfirmInfo({ title: 'Elimina PR', message: 'Vuoi davvero eliminare questo record personale?', onConfirm: () => { handleDeletePr(pr.id); setConfirmInfo(null); } })} className="p-2 text-gray-500 hover:text-red-500 transition opacity-0 group-hover:opacity-100">
+                       <Trash2 size={18} />
+                     </button>
+                  </div>
+               ))}
+             </div>
+           ) : (
+             <div className="bg-[#1e1e1e] border border-dashed border-[#2a2a2a] rounded-2xl p-6 text-center">
+               <p className="text-gray-600 text-sm mb-2">Nessun Personal Record registrato.</p>
+               <p className="text-gray-500 text-xs">Aggiungi i tuoi massimali di forza o i tuoi migliori tempi di corsa per tenerne traccia nel tempo!</p>
+             </div>
+           )}
+        </div>
+      )}
 
       {/* MODAL CONFERMA RIMOZIONE WORKOUT */}
       {workoutToRemove && createPortal(
@@ -319,6 +386,16 @@ export default function AthleteDetail() {
         document.body
       )}
 
+      {/* MODAL NUOVO PR */}
+      {prModalOpen && createPortal(
+        <PrModal 
+          athleteId={id} 
+          onClose={() => setPrModalOpen(false)} 
+          onSaved={() => { setPrModalOpen(false); fetchAthleteData() }} 
+        />,
+        document.body
+      )}
+
       {/* MODAL MODIFICA ATLETA */}
       {showEditModal && createPortal(
         <EditAthleteModal 
@@ -347,6 +424,52 @@ export default function AthleteDetail() {
         </>,
         document.body
       )}
+    </div>
+  )
+}
+
+function PrModal({ athleteId, onClose, onSaved }) {
+  const [exercise, setExercise] = useState('')
+  const [value, setValue] = useState('')
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [saving, setSaving] = useState(false)
+  const [alertInfo, setAlertInfo] = useState(null)
+
+  const handleSave = async () => {
+    if (!exercise || !value || !date) return setAlertInfo({ title: 'Dati mancanti', message: 'Tutti i campi sono obbligatori', type: 'error' })
+    setSaving(true)
+    const { error } = await supabase.from('personal_records').insert({ athlete_id: athleteId, exercise, value, date })
+    setSaving(false)
+    if (error) return setAlertInfo({ title: 'Errore', message: "Impossibile salvare: " + error.message, type: 'error' })
+    onSaved()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333]">
+        <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
+          <p className="text-white font-bold text-lg">Aggiungi PR</p>
+          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+        </div>
+        <div className="p-5 flex flex-col gap-4">
+          <div>
+            <label className="text-gray-400 text-xs pl-1 mb-1 block">Esercizio o Distanza *</label>
+            <input type="text" placeholder="Es. Back Squat, 5km Run" value={exercise} onChange={e => setExercise(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+          </div>
+          <div>
+            <label className="text-gray-400 text-xs pl-1 mb-1 block">Risultato / Record *</label>
+            <input type="text" placeholder="Es. 120 kg, 22:30 min" value={value} onChange={e => setValue(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+          </div>
+          <div>
+            <label className="text-gray-400 text-xs pl-1 mb-1 block">Data del record *</label>
+            <CustomDatePicker date={date} onChange={setDate} className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17]" />
+          </div>
+          <button onClick={handleSave} disabled={saving} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+            {saving ? 'Salvataggio...' : 'Salva Record'}
+          </button>
+        </div>
+      </div>
+      {alertInfo && <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />}
     </div>
   )
 }
@@ -472,6 +595,9 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
     statusText = 'Saltato'
   }
 
+  const category = entry.workouts?.sections?.category || (entry.workouts?.sections?.steps ? 'Running' : 'Hyrox')
+  const isRun = category === 'Running'
+
   const handleSaveNote = async () => {
     setSaving(true)
     await onUpdateNote(entry.id, note)
@@ -485,9 +611,14 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           className="cursor-pointer group flex-1 pr-4"
           onClick={() => navigate(`/workout/${entry.workouts.id}?athlete_id=${athleteId}`)}
         >
-          <p className="font-semibold text-white group-hover:text-[#f1ba17] transition underline decoration-[#f1ba17]/50 underline-offset-4 leading-tight">
-            {entry.workouts.title}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className={`font-semibold text-white transition underline underline-offset-4 leading-tight ${isRun ? 'group-hover:text-[#0094C6] decoration-[#0094C6]/50' : 'group-hover:text-[#f1ba17] decoration-[#f1ba17]/50'}`}>
+              {entry.workouts.title}
+            </p>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+              {category}
+            </span>
+          </div>
           <p className="text-xs text-gray-500 mt-1.5">
             {format(parseISO(entry.completed_date), 'EEEE d MMMM yyyy', { locale: it })}
           </p>
@@ -509,8 +640,8 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           entry.status === 'completed' 
             ? 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500/20' 
             : isBefore(scheduledDate, today)
-              ? 'bg-[#111] border-[#333] text-gray-500 hover:border-[#f1ba17] hover:text-[#f1ba17]'
-              : 'bg-[#2a2a2a] border-[#383838] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]'
+              ? `bg-[#111] border-[#333] text-gray-500 ${isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
+              : `bg-[#2a2a2a] border-[#383838] text-gray-300 ${isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
         }`}
       >
         <Icon size={18} /> {statusText}
@@ -518,7 +649,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
 
       <div className="mt-3 pt-3 border-t border-[#2a2a2a]">
         <textarea
-          className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-sm"
+          className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-sm transition-colors ${isRun ? 'focus:border-[#0094C6]' : 'focus:border-[#f1ba17]'}`}
           rows={3}
           placeholder="Copia qui le note dell'atleta su questo workout..."
           value={note}
@@ -529,7 +660,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             <button
               onClick={handleSaveNote}
               disabled={saving}
-              className="bg-[#f1ba17] text-black font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50"
+              className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isRun ? 'bg-[#0094C6] text-white' : 'bg-[#f1ba17] text-black'}`}
             >
               {saving ? 'Salvataggio...' : 'Conferma'}
             </button>
