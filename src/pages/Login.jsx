@@ -41,7 +41,7 @@ export default function Login() {
           password,
           options: {
             data: { role },
-            emailRedirectTo: window.location.href
+            emailRedirectTo: window.location.origin + '/'
           }
         })
         if (error) throw error
@@ -63,7 +63,7 @@ export default function Login() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.href
+          redirectTo: window.location.origin + '/'
         }
       })
       if (error) throw error
