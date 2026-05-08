@@ -37,8 +37,12 @@ export default function AthleteDetail() {
   const [confirmInfo, setConfirmInfo] = useState(null)
 
   useEffect(() => {
+    if (role === 'athlete' && !isOwnProfile) {
+      navigate('/')
+      return
+    }
     fetchAthleteData()
-  }, [id])
+  }, [id, role, isOwnProfile, navigate])
 
   async function fetchAthleteData(silent = false) {
     if (!silent) setLoading(true)

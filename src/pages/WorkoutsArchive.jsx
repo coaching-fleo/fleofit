@@ -22,12 +22,13 @@ export default function WorkoutsArchive() {
     if (role === 'athlete') {
       const { data, error } = await supabase
         .from('athlete_workouts')
-        .select('completed_date, status, workouts (id, title, date, sections)')
+        .select('id, completed_date, status, workouts (id, title, date, sections)')
         .eq('athlete_id', user.id)
         .order('completed_date', { ascending: false })
       if (!error && data) {
          const mapped = data.filter(aw => aw.workouts).map(aw => ({
            ...aw.workouts,
+           aw_id: aw.id,
            date: aw.completed_date
          }))
          setWorkouts(mapped)
@@ -83,7 +84,7 @@ export default function WorkoutsArchive() {
             const category = w.sections?.category || (w.sections?.steps ? 'Running' : 'Hyrox')
             return (
               <div 
-                key={w.id} 
+                key={w.aw_id || w.id} 
                 onClick={() => navigate(`/workout/${w.id}`)}
                 className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer hover:border-[#f1ba17]/50 transition flex items-center justify-between"
               >

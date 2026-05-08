@@ -3,14 +3,22 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { Plus, User, ChevronRight, Search } from 'lucide-react'
+import { useAuth } from '../App'
 
 export default function Athletes() {
   const [athletes, setAthletes] = useState([])
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const navigate = useNavigate()
+  const { role } = useAuth()
 
-  useEffect(() => { fetchAthletes() }, [])
+  useEffect(() => { 
+    if (role === 'athlete') {
+      navigate('/')
+      return
+    }
+    fetchAthletes() 
+  }, [role, navigate])
 
   const fetchAthletes = async () => {
     const { data } = await supabase.from('athletes').select('*').order('name')
