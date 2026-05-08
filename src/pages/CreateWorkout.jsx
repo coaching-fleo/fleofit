@@ -1100,10 +1100,13 @@ export default function CreateWorkout() {
           -webkit-user-drag: auto;
         }
       `}</style>
-      <button onClick={handleBack} className="flex items-center text-[#f1ba17] hover:brightness-110 mb-6 transition-all active:scale-95 active:opacity-70 font-semibold text-[17px]">
-        <ChevronLeft size={26} strokeWidth={2.5} className="-ml-2 mr-0.5" /> Indietro
-      </button>
-      <h1 className="text-2xl font-bold text-[#f1ba17] mb-4">{editId ? 'Modifica Workout' : 'Crea Workout'}</h1>
+      <div className="mb-6 mt-4 flex items-center gap-3">
+        <button onClick={handleBack} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+          <ChevronLeft size={22} className="-ml-0.5" />
+        </button>
+        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+      </div>
+      <h2 className="text-2xl font-bold text-[#f1ba17] mb-4">{editId ? 'Modifica Workout' : 'Crea Workout'}</h2>
 
       <div className="flex flex-col gap-3 mb-6">
         <input

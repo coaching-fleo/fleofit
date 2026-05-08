@@ -472,7 +472,7 @@ export default function Home() {
         className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-4 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition"
       >
         <FolderArchive size={20} />
-        Archivio Storico
+        Archivio Workout
       </button>
     </div>
   )

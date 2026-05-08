@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { Plus, User, ChevronRight, Search } from 'lucide-react'
+import { differenceInYears, parseISO } from 'date-fns'
 import { useAuth } from '../App'
 
 export default function Athletes() {
@@ -10,7 +11,7 @@ export default function Athletes() {
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const navigate = useNavigate()
-  const { role } = useAuth()
+  const { role, user } = useAuth()
 
   useEffect(() => { 
     if (role === 'athlete') {
@@ -22,7 +23,10 @@ export default function Athletes() {
 
   const fetchAthletes = async () => {
     const { data } = await supabase.from('athletes').select('*').order('name')
-    setAthletes(data || [])
+    
+    // Nascondiamo il profilo di coaching@federicoleo.it a TUTTI gli admin usando il suo ID univoco
+    const COACHING_ID = '0118e43f-8791-4fd6-8032-bee028334c99'
+    setAthletes((data || []).filter(a => a.id !== COACHING_ID))
   }
 
   const filtered = athletes.filter(a =>
@@ -73,7 +77,7 @@ export default function Athletes() {
               <div className="flex-1">
                 <p className="text-white font-semibold">{a.name} {a.surname}</p>
                 <p className="text-gray-500 text-xs mt-0.5">
-                  {[a.weight && `${a.weight}kg`, a.height && `${a.height}cm`, a.birth_date && `${new Date().getFullYear() - new Date(a.birth_date).getFullYear()} anni`].filter(Boolean).join(' · ')}
+                  {[a.weight && `${a.weight}kg`, a.height && `${a.height}cm`, a.birth_date && `${differenceInYears(new Date(), parseISO(a.birth_date))} anni`].filter(Boolean).join(' · ')}
                 </p>
               </div>
               <ChevronRight size={18} className="text-gray-600" />
