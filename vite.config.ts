@@ -7,4 +7,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    allowedHosts: true // Consente qualsiasi host, perfetto per i cambi continui di Ngrok
+  }
 })
