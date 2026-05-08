@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle } from 'lucide-react'
+import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
+import { getDailyMotivation } from './motivations'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -26,14 +27,7 @@ export default function Home() {
   }
 
   const randomMotiv = useMemo(() => {
-    const MOTIVATIONS = [
-      "Pronto a spaccare oggi? ⚡",
-      "La costanza batte il talento. 🔥",
-      "Ogni giorno è un'opportunità per migliorare. 💪",
-      "Fai in modo che oggi conti. 🎯",
-      "Non fermarti quando sei stanco, fermati quando hai finito. 🏁",
-    ]
-    return MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)]
+    return getDailyMotivation()
   }, [])
 
   useEffect(() => {
@@ -73,9 +67,12 @@ export default function Home() {
             week.push({
               date: d,
               dayName: format(d, 'EEEEE', { locale: it }).toUpperCase(),
+              fullDayName: format(d, 'EEEE', { locale: it }),
               hasWorkout: !!wForDay,
               completed: wForDay?.status === 'completed',
-              isToday: dStr === todayStr
+              isToday: dStr === todayStr,
+              workoutTitle: wForDay?.workouts?.title,
+              workoutId: wForDay?.workouts?.id
             })
           }
           setWeeklyStatus(week)
@@ -108,7 +105,6 @@ export default function Home() {
       <div className="mb-6 mt-4 flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <img src="/favicon.svg" alt="Logo" className="h-10 object-contain" />
             <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
           </div>
           {role === 'athlete' ? (
@@ -127,27 +123,54 @@ export default function Home() {
 
       {/* Settimana Atleta */}
       {role === 'athlete' && weeklyStatus.length > 0 && (
-        <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mb-6">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 mb-6">
+          <div className="flex justify-between items-center mb-6">
             <h3 className="text-white font-bold text-sm">La tua settimana</h3>
-            <span className="text-xs text-gray-400 bg-[#2a2a2a] px-2 py-1 rounded-lg font-medium">{weeklyStatus.filter(d => d.completed).length} completati</span>
+            <span className="text-xs text-[#f1ba17] bg-[#f1ba17]/10 border border-[#f1ba17]/20 px-3 py-1 rounded-full font-bold">
+              {weeklyStatus.filter(d => d.completed).length} / {weeklyStatus.filter(d => d.hasWorkout).length} completati
+            </span>
           </div>
-          <div className="flex justify-between relative">
-            <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-[#2a2a2a] -translate-y-1/2 z-0"></div>
-            {weeklyStatus.map((day, i) => (
-              <div key={i} className="flex flex-col items-center gap-2 relative z-10">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-[3px] transition-all bg-[#1e1e1e] ${
-                  day.completed 
-                    ? 'border-green-500 text-green-500' 
-                    : day.hasWorkout
-                      ? (day.isToday ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-[#444]')
-                      : 'border-[#2a2a2a] text-transparent'
-                }`}>
-                   {day.completed ? <CheckCircle2 size={16} strokeWidth={3} /> : (day.hasWorkout ? <div className="w-2 h-2 rounded-full bg-current" /> : <div className="w-1 h-1 rounded-full bg-[#333]" />)}
+          <div className="flex justify-between items-center w-full">
+            {weeklyStatus.map((day, i) => {
+              let circleClass = ''
+              let textClass = ''
+
+              if (day.completed) {
+                circleClass = 'bg-green-500 border-green-500 shadow-[0_0_12px_rgba(34,197,94,0.4)]'
+                textClass = 'text-black'
+              } else if (day.hasWorkout) {
+                if (day.isToday) {
+                  circleClass = 'bg-[#f1ba17] border-[#f1ba17] shadow-[0_0_12px_rgba(241,186,23,0.4)]'
+                  textClass = 'text-black'
+                } else {
+                  circleClass = 'bg-transparent border-[#f1ba17]'
+                  textClass = 'text-white'
+                }
+              } else {
+                if (day.isToday) {
+                  circleClass = 'bg-[#333] border-[#333]'
+                  textClass = 'text-white'
+                } else {
+                  circleClass = 'bg-transparent border-[#333]'
+                  textClass = 'text-gray-500'
+                }
+              }
+
+              return (
+                <div 
+                  key={i} 
+                  className={`flex flex-col items-center gap-2 flex-1 ${day.hasWorkout ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`} 
+                  onClick={() => { if(day.hasWorkout) navigate(`/workout/${day.workoutId}?athlete_id=${user.id}`) }}
+                >
+                  <span className={`text-[11px] font-bold ${day.isToday ? 'text-white' : 'text-gray-500'}`}>
+                    {day.dayName.charAt(0)}
+                  </span>
+                  <div className={`w-10 h-10 rounded-full border-[2.5px] flex items-center justify-center transition-all ${circleClass}`}>
+                    <span className={`text-sm font-bold ${textClass}`}>{format(day.date, 'd')}</span>
+                  </div>
                 </div>
-                <span className={`text-[10px] font-bold ${day.isToday ? 'text-[#f1ba17]' : 'text-gray-500'}`}>{day.dayName}</span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}

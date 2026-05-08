@@ -4,11 +4,11 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 // TOGLI Share2, metti Share2
 import { ChevronLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle } from 'lucide-react'
-import { format, parseISO, isValid } from 'date-fns'
+import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
-import { CustomAlert } from '../components/CustomModals'
+import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 
@@ -120,22 +120,6 @@ const getEmojiDataURL = (emoji) => {
   return canvas.toDataURL('image/png')
 }
 
-const getLogoDataURL = async () => {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.crossOrigin = 'Anonymous'
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = img.width || 64
-      canvas.height = img.height || 64
-      const ctx = canvas.getContext('2d')
-      ctx.drawImage(img, 0, 0)
-      resolve(canvas.toDataURL('image/png'))
-    }
-    img.onerror = () => resolve(null)
-    img.src = '/favicon.svg'
-  })
-}
 
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike']
 const isErgo = (name) => ERGOMETERS.includes(name)
@@ -161,8 +145,8 @@ export default function WorkoutDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [logoBase64, setLogoBase64] = useState(null)
   const [alertInfo, setAlertInfo] = useState(null)
+  const [confirmInfo, setConfirmInfo] = useState(null)
   const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [athleteWorkoutId, setAthleteWorkoutId] = useState(null)
   const [workoutStatus, setWorkoutStatus] = useState('pending')
@@ -170,10 +154,6 @@ export default function WorkoutDetail() {
   const { role } = useAuth()
 
   useEffect(() => { fetchWorkout() }, [id])
-
-  useEffect(() => {
-    getLogoDataURL().then(setLogoBase64)
-  }, [])
 
   // Carica la lista atleti solo quando si apre il modal per la prima volta
   useEffect(() => {
@@ -212,14 +192,29 @@ export default function WorkoutDetail() {
 
   const toggleStatus = async () => {
     if (!athleteWorkoutId) return
-    const newStatus = workoutStatus === 'completed' ? 'pending' : 'completed'
-    setWorkoutStatus(newStatus)
-    
-    const { error } = await supabase.from('athlete_workouts').update({ status: newStatus }).eq('id', athleteWorkoutId)
-    if (error) {
-      setAlertInfo({ title: 'Errore', message: "Impossibile aggiornare lo stato", type: 'error' })
-      setWorkoutStatus(workoutStatus) // ripristina in caso di errore
+    const doToggle = async () => {
+      const newStatus = workoutStatus === 'completed' ? 'pending' : 'completed'
+      setWorkoutStatus(newStatus)
+      const { error } = await supabase.from('athlete_workouts').update({ status: newStatus }).eq('id', athleteWorkoutId)
+      if (error) {
+        setAlertInfo({ title: 'Errore', message: "Impossibile aggiornare lo stato", type: 'error' })
+        setWorkoutStatus(workoutStatus) // ripristina in caso di errore
+      }
     }
+
+    if (workoutStatus !== 'completed' && workout?.date) {
+      const scheduledDate = startOfDay(parseISO(workout.date))
+      const today = startOfDay(new Date())
+      if (isBefore(today, scheduledDate)) {
+        setConfirmInfo({
+          title: 'Attenzione',
+          message: 'Questo allenamento è programmato per una data futura. Vuoi davvero segnarlo come completato oggi?',
+          onConfirm: () => { doToggle(); setConfirmInfo(null); }
+        })
+        return
+      }
+    }
+    doToggle()
   }
 
   const fetchAthletes = async () => {
@@ -272,26 +267,19 @@ export default function WorkoutDetail() {
     doc.setFillColor(23, 23, 23)
     doc.rect(0, 0, 210, 297, 'F')
     
-    const logoDataUrl = await getLogoDataURL()
-    let headerX = 20
-    if (logoDataUrl) {
-      doc.addImage(logoDataUrl, 'PNG', headerX, y - 6, 8, 8)
-      headerX += 10
-    }
-
     doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(255, 255, 255)
-    doc.text('FLEO', headerX, y)
+    doc.text('FLEO', 20, y)
     const fleoWidth = doc.getTextWidth('FLEO')
     doc.setTextColor(241, 186, 23)
-    doc.text('FIT', headerX + fleoWidth, y)
+    doc.text('FIT', 20 + fleoWidth, y)
     
     const fitWidth = doc.getTextWidth('FIT')
     doc.setTextColor(150, 150, 150)
     doc.setFontSize(12)
     doc.setFont('helvetica', 'normal')
-    doc.text(' - Coach Federico Leo', headerX + fleoWidth + fitWidth, y)
+    doc.text(' - Coach Federico Leo', 20 + fleoWidth + fitWidth, y)
 
     y += 8
     doc.setTextColor(200, 200, 200)
@@ -581,22 +569,9 @@ export default function WorkoutDetail() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-white">{workout.title}</h1>
-            <p className={`text-gray-500 text-sm mt-1 ${role === 'athlete' && athleteWorkoutId ? 'mb-3' : ''}`}>
+            <p className="text-gray-500 text-sm mt-1">
               {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}
             </p>
-            {role === 'athlete' && athleteWorkoutId && (
-              <button 
-                onClick={toggleStatus}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition border w-fit ${
-                  workoutStatus === 'completed' 
-                    ? 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500/20' 
-                    : 'bg-[#2a2a2a] border-[#383838] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]'
-                }`}
-              >
-                {workoutStatus === 'completed' ? <CheckCircle2 size={16} /> : <Circle size={16} />} 
-                {workoutStatus === 'completed' ? 'Completato' : 'Segna come completato'}
-              </button>
-            )}
           </div>
           {role !== 'athlete' && (
             <div className="flex flex-col items-end gap-2">
@@ -627,6 +602,20 @@ export default function WorkoutDetail() {
             </div>
           )}
         </div>
+        
+        {role === 'athlete' && athleteWorkoutId && (
+          <button 
+            onClick={toggleStatus}
+            className={`w-full mt-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 text-base font-bold transition border shadow-lg ${
+              workoutStatus === 'completed' 
+                ? 'bg-green-500 text-black border-green-500 hover:brightness-110 shadow-green-500/20' 
+                : 'bg-[#2a2a2a] border-[#383838] text-white hover:border-[#f1ba17] hover:text-[#f1ba17]'
+            }`}
+          >
+            {workoutStatus === 'completed' ? <CheckCircle2 size={20} /> : <Circle size={20} />} 
+            {workoutStatus === 'completed' ? 'Allenamento Completato!' : 'Segna come completato'}
+          </button>
+        )}
       </div>
 
       {/* BLOCKS */}
@@ -711,9 +700,6 @@ export default function WorkoutDetail() {
         borderBottom: '3px solid #f1ba17',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {logoBase64 && (
-            <img src={logoBase64} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-          )}
           <div>
             <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '0.5px', lineHeight: 1 }}>
               <span style={{ color: '#fff' }}>FLEO</span>
@@ -1036,7 +1022,10 @@ export default function WorkoutDetail() {
       )}
       
       {createPortal(
-        <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />,
+        <>
+          <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
+          <CustomConfirm info={confirmInfo} onClose={() => setConfirmInfo(null)} />
+        </>,
         document.body
       )}
     </div>

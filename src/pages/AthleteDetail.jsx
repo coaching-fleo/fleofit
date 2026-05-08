@@ -5,7 +5,7 @@ import { supabase } from '../supabaseClient'
 import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
-import { CustomAlert } from '../components/CustomModals'
+import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 
@@ -28,6 +28,7 @@ export default function AthleteDetail() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [alertInfo, setAlertInfo] = useState(null)
+  const [confirmInfo, setConfirmInfo] = useState(null)
 
   useEffect(() => {
     fetchAthleteData()
@@ -97,16 +98,29 @@ export default function AthleteDetail() {
     setUploading(false)
   }
 
-  const toggleWorkoutStatus = async (id, currentStatus) => {
-    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed'
-    const { error } = await supabase
-      .from('athlete_workouts')
-      .update({ status: newStatus })
-      .eq('id', id)
-    
-    if (!error) {
-      // Aggiorna lo stato localmente per vedere subito il cambio colore
-      setWorkouts(workouts.map(w => w.id === id ? { ...w, status: newStatus } : w))
+  const toggleWorkoutStatus = async (id, currentStatus, scheduledDateStr) => {
+    const doToggle = async () => {
+      const newStatus = currentStatus === 'completed' ? 'pending' : 'completed'
+      const { error } = await supabase
+        .from('athlete_workouts')
+        .update({ status: newStatus })
+        .eq('id', id)
+      
+      if (!error) {
+        setWorkouts(prev => prev.map(w => w.id === id ? { ...w, status: newStatus } : w))
+      }
+    }
+
+    const scheduledDate = startOfDay(parseISO(scheduledDateStr))
+    const today = startOfDay(new Date())
+    if (currentStatus !== 'completed' && isBefore(today, scheduledDate)) {
+      setConfirmInfo({
+        title: 'Attenzione',
+        message: 'Questo allenamento è programmato per una data futura. Vuoi davvero segnarlo come completato oggi?',
+        onConfirm: () => { doToggle(); setConfirmInfo(null); }
+      })
+    } else {
+      doToggle()
     }
   }
 
@@ -327,7 +341,10 @@ export default function AthleteDetail() {
       )}
       
       {createPortal(
-        <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />,
+        <>
+          <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
+          <CustomConfirm info={confirmInfo} onClose={() => setConfirmInfo(null)} />
+        </>,
         document.body
       )}
     </div>
@@ -475,31 +492,29 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             {format(parseISO(entry.completed_date), 'EEEE d MMMM yyyy', { locale: it })}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2 shrink-0">
+        {role !== 'athlete' && (
           <button 
-            onClick={() => onToggleStatus(entry.id, entry.status)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition border ${
-              entry.status === 'completed' 
-                ? 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500/20' 
-                : isBefore(scheduledDate, today)
-                  ? 'bg-[#111] border-[#333] text-gray-500 hover:border-[#f1ba17] hover:text-[#f1ba17]'
-                  : 'bg-[#2a2a2a] border-[#383838] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]'
-            }`}
+            onClick={() => onRemove(entry.id)}
+            className="text-gray-500 hover:text-red-500 transition p-1 shrink-0"
+            title="Rimuovi assegnazione"
           >
-            <Icon size={14} /> {statusText}
+            <Trash2 size={18} />
           </button>
-          
-          {role !== 'athlete' && (
-            <button 
-              onClick={() => onRemove(entry.id)}
-              className="text-gray-500 hover:text-red-500 transition p-1"
-              title="Rimuovi assegnazione"
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
-        </div>
+        )}
       </div>
+
+      <button 
+        onClick={() => onToggleStatus(entry.id, entry.status, entry.completed_date)}
+        className={`w-full py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition border ${
+          entry.status === 'completed' 
+            ? 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500/20' 
+            : isBefore(scheduledDate, today)
+              ? 'bg-[#111] border-[#333] text-gray-500 hover:border-[#f1ba17] hover:text-[#f1ba17]'
+              : 'bg-[#2a2a2a] border-[#383838] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]'
+        }`}
+      >
+        <Icon size={18} /> {statusText}
+      </button>
 
       <div className="mt-3 pt-3 border-t border-[#2a2a2a]">
         <textarea

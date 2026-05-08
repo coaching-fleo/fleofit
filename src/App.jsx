@@ -85,7 +85,7 @@ function Onboarding({ user, onComplete }) {
     <div className="min-h-screen bg-[#171717] flex flex-col items-center justify-center p-4 page-transition">
       <div className="w-full max-w-md bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 shadow-2xl">
         <div className="flex flex-col items-center mb-6">
-          <img src="/favicon.svg" alt="Logo" className="h-14 object-contain mb-3" />
+          <h1 className="text-4xl font-black text-white tracking-tight mb-3">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
           <h2 className="text-2xl font-bold text-white text-center">Completiamo il profilo!</h2>
           <p className="text-gray-400 text-sm mt-1 text-center">Abbiamo bisogno di qualche informazione in più per iniziare.</p>
         </div>
@@ -204,7 +204,7 @@ function ProtectedRoute({ children }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#171717] flex flex-col items-center justify-center text-center p-4">
-        <img src="/favicon.svg" alt="Logo" className="h-16 mb-6 animate-pulse" />
+        <h1 className="text-5xl font-black text-white tracking-tight mb-6 animate-pulse">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
         {userName ? (
           <>
             <h1 className="text-3xl font-bold text-white mb-2">Ciao, {userName}!</h1>

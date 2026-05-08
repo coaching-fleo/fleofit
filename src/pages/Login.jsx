@@ -85,7 +85,6 @@ export default function Login() {
         }}
       >
         <div className="flex-1 flex flex-col items-center justify-center">
-          <img src="/favicon.svg" alt="Logo" className="h-32 object-contain mb-4 animate-in zoom-in duration-500" />
           <h1 className="text-5xl font-black text-white tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
         </div>
         
@@ -118,7 +117,6 @@ export default function Login() {
         </button>
         
         <div className="flex flex-col items-center justify-center mb-8 mt-4">
-          <img src="/favicon.svg" alt="Logo" className="h-16 object-contain mb-3" />
           <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
           <p className="text-gray-400 text-sm mt-1">{isResetPassword ? 'Recupera la tua password' : (isSignUp ? 'Crea il tuo account' : 'Accedi alla tua dashboard')}</p>
         </div>
