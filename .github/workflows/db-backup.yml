@@ -10,37 +10,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      - name: Test connection
+      - name: Export tables via Supabase REST API
         env:
-          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          psql "$DATABASE_URL" -c "\dt"
-
-      - name: Run pg_dump
-        env:
-          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          FILENAME="backup_$(date +%Y-%m-%d_%H-%M-%S).sql.gz"
-          pg_dump "$DATABASE_URL" \
-            --schema=public \
-            --no-owner \
-            --no-privileges \
-            -t athletes \
-            -t athlete_photos \
-            -t athlete_workouts \
-            -t workouts \
-            -t workout_logs \
-            | gzip > "$FILENAME"
-          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+          mkdir -p backup
+          TABLES=("athletes" "athlete_photos" "athlete_workouts" "workouts" "workout_logs")
+          for TABLE in "${TABLES[@]}"; do
+            curl -s \
+              -H "apikey: $SUPABASE_SERVICE_KEY" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+              "$SUPABASE_URL/rest/v1/$TABLE?select=*" \
+              -o "backup/$TABLE.json"
+            echo "Exported $TABLE"
+          done
+          zip -r "backup_$(date +%Y-%m-%d).zip" backup/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: supabase-backup-${{ github.run_number }}
-          path: ${{ env.FILENAME }}
+          path: backup_*.zip
           retention-days: 90
