@@ -88,7 +88,7 @@ function Onboarding({ user, onComplete }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#171717] flex flex-col items-center justify-center p-4 page-transition">
+    <div className="min-h-screen bg-[#0B0B0B] flex flex-col items-center justify-center p-4 page-transition">
       <div className="w-full max-w-md bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 shadow-2xl">
         <div className="flex flex-col items-center mb-6">
           <h1 className="text-4xl font-black text-white tracking-tight mb-3">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
@@ -212,7 +212,7 @@ function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#171717] flex flex-col items-center justify-center text-center p-4">
+      <div className="min-h-screen bg-[#0B0B0B] flex flex-col items-center justify-center text-center p-4">
         <h1 className="text-5xl font-black text-white tracking-tight mb-6 animate-pulse">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
         {userName ? (
           <>
@@ -251,7 +251,7 @@ function ProtectedRoute({ children }) {
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-[#171717] text-white">
+      <div className="min-h-screen bg-[#0B0B0B] text-white">
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />

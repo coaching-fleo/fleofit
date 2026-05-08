@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight } from 'lucide-react'
+import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -920,6 +920,8 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
   const [alertInfo, setAlertInfo] = useState(null)
   const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [selectedWorkout, setSelectedWorkout] = useState(null)
+  const [previewWorkout, setPreviewWorkout] = useState(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     async function fetchW() {
@@ -977,14 +979,26 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                 <p className="text-gray-500 text-sm text-center py-4">Nessun workout trovato.</p>
               ) : (
                 filtered.map(w => (
-                  <div key={w.id} className="flex items-center justify-between bg-[#2a2a2a] border border-[#333] p-3 rounded-xl hover:border-[#f1ba17] transition">
-                    <div className="flex-1 min-w-0 pr-3 text-left">
-                      <p className="text-white font-semibold text-sm truncate">{w.title}</p>
+                  <div key={w.id} className="flex items-center justify-between bg-[#2a2a2a] border border-[#333] p-3 rounded-xl hover:border-[#f1ba17] transition group">
+                    <div 
+                      className="flex-1 min-w-0 pr-3 text-left cursor-pointer"
+                      onClick={() => setPreviewWorkout(w)}
+                    >
+                      <p className="text-white font-semibold text-sm truncate group-hover:text-[#f1ba17] transition">{w.title}</p>
                       <p className="text-gray-500 text-xs mt-0.5">{w.date && isValid(parseISO(w.date)) ? format(parseISO(w.date), 'dd/MM/yyyy') : 'Data sconosciuta'} • {w.sections?.category || 'Generico'}</p>
                     </div>
-                    <button onClick={() => setSelectedWorkout(w)} className="shrink-0 bg-[#f1ba17]/10 text-[#f1ba17] font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-[#f1ba17] hover:text-black transition">
-                      Assegna
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); navigate(`/create?duplicate=${w.id}&athlete_id=${athleteId}`); }} 
+                        className="p-1.5 bg-[#111] border border-[#333] rounded-lg text-gray-400 hover:text-white hover:border-[#f1ba17] transition"
+                        title="Duplica e Modifica"
+                      >
+                        <Copy size={16} />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setSelectedWorkout(w); }} className="bg-[#f1ba17]/10 text-[#f1ba17] font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-[#f1ba17] hover:text-black transition">
+                        Assegna
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -1015,6 +1029,103 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
           </div>
         )}
       </div>
+
+      {/* MODAL ANTEPRIMA WORKOUT */}
+      {previewWorkout && (
+        <div className="fixed inset-0 bg-black/90 z-[110] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col border border-[#333]" style={{ maxHeight: 'calc(100vh - 40px)' }}>
+            <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
+              <p className="text-white font-bold text-lg truncate pr-4">{previewWorkout.title}</p>
+              <button onClick={() => setPreviewWorkout(null)} className="text-gray-500 hover:text-white shrink-0"><X size={20} /></button>
+            </div>
+            <div className="overflow-y-auto p-5 flex flex-col gap-3">
+              {(() => {
+                const s = previewWorkout.sections || {};
+                const isRun = s.category === 'Running' || s.steps;
+                const blocks = s.blocks || [];
+                const steps = s.steps || s.main?.steps || [];
+                
+                if (isRun) {
+                  if (steps.length === 0) return <p className="text-gray-500 text-sm">Nessun dettaglio disponibile.</p>;
+                  return steps.map((step, i) => (
+                    <div key={i} className="bg-[#2a2a2a] p-3 rounded-xl border border-[#383838]">
+                      <p className="text-[#0094C6] font-bold text-xs uppercase mb-1">{step.type === 'repeat' ? `Ripetute (${step.rounds}x)` : step.type}</p>
+                      {step.type === 'repeat' ? (
+                        <div className="text-sm text-white flex flex-col gap-1">
+                          <p><span className="text-gray-400">Corsa:</span> {step.runDuration} {step.runPace ? <span className="text-gray-500 text-xs">@{step.runPace}</span> : ''}</p>
+                          <p><span className="text-gray-400">Recupero:</span> {step.recDuration} {step.recPace ? <span className="text-gray-500 text-xs">@{step.recPace}</span> : ''}</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-white">{step.duration} {step.pace ? <span className="text-gray-500 text-xs ml-1">@{step.pace}</span> : ''}</p>
+                      )}
+                      {step.notes && <p className="text-gray-400 text-xs mt-1.5 italic">"{step.notes}"</p>}
+                    </div>
+                  ));
+                } else {
+                  if (blocks.length === 0) return <p className="text-gray-500 text-sm">Nessun dettaglio disponibile.</p>;
+                  return blocks.map((b, i) => {
+                    let shortTitle = b.type;
+                    if (b.type === 'EMOM') shortTitle = `EMOM ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
+                    else if (b.type === 'AMRAP') shortTitle = `AMRAP ${b.params?.duration || ''}`;
+                    else if (b.type === 'ON/OFF') shortTitle = `ON/OFF ${b.params?.rounds ? b.params.rounds + 'x ' : ''}• ${b.params?.on || ''}/${b.params?.off || ''}`;
+                    else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
+                    else if (b.type === 'WarmUp') shortTitle = `WARM UP ${b.params?.duration ? '• ' + b.params.duration : ''}`;
+                    else if (b.type === 'Rest') shortTitle = `REST ${b.params?.duration ? '• ' + b.params.duration : ''}`;
+                    else if (b.type === 'Cash In' || b.type === 'Cash Out') shortTitle = b.type.toUpperCase();
+
+                    return (
+                      <div key={i} className="bg-[#2a2a2a] p-3 rounded-xl border border-[#383838]">
+                        <p className="text-[#f1ba17] font-bold text-xs uppercase mb-1.5">{shortTitle}</p>
+                        {['WarmUp', 'Rest'].includes(b.type) ? (
+                          b.notes && <p className="text-sm text-gray-300">{b.notes}</p>
+                        ) : (
+                          <div className="flex flex-col gap-1.5">
+                            {(b.exercises || []).map((ex, j) => {
+                              const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '');
+                              const pace = ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : '';
+                              return (
+                                <p key={j} className="text-sm text-white leading-tight">
+                                  <span className="font-medium">{ex.name}</span>
+                                  {(detail || pace || ex.kg) && (
+                                    <span className="text-gray-400 text-xs ml-1">
+                                      {detail} {pace} {ex.kg ? `· ${ex.kg}kg` : ''}
+                                    </span>
+                                  )}
+                                </p>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  });
+                }
+              })()}
+            </div>
+            <div className="p-4 border-t border-[#2a2a2a] flex flex-col gap-2">
+              <button 
+                onClick={() => {
+                  setSelectedWorkout(previewWorkout);
+                  setPreviewWorkout(null);
+                }}
+                className="w-full py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition shadow-lg shadow-[#f1ba17]/20"
+              >
+                Assegna questo Workout
+              </button>
+              <button 
+                onClick={() => {
+                  navigate(`/create?duplicate=${previewWorkout.id}&athlete_id=${athleteId}`);
+                  setPreviewWorkout(null);
+                }}
+                className="w-full py-3 bg-[#2a2a2a] border border-[#383838] text-white font-bold rounded-xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition flex items-center justify-center gap-2"
+              >
+                <Copy size={18} /> Duplica e Modifica
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {alertInfo && <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />}
     </div>
   )

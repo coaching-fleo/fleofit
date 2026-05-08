@@ -167,7 +167,7 @@ function ScrollPicker({ options = [], value, onChange, label, type, isRun }) {
       <div 
         ref={containerRef}
         onScroll={handleScroll}
-        className="relative h-36 overflow-y-scroll snap-y snap-mandatory bg-[#1a1a1a] rounded-xl border border-[#383838] hide-scrollbar"
+        className="relative h-36 overflow-y-scroll snap-y snap-mandatory bg-[#0B0B0B] rounded-xl border border-[#383838] hide-scrollbar"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <div className="py-[52px]">
           {displayOptions.map(opt => (
@@ -863,7 +863,7 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
           <span className={`text-xs font-bold px-2 py-0.5 rounded-md border ${getTypeColor(step.type)}`}>
             {getTypeLabel(step.type)}
           </span>
-          {step.type === 'repeat' && <span className="text-white text-sm font-bold bg-[#1a1a1a] px-2 py-0.5 rounded-full border border-[#333]">x{step.rounds}</span>}
+          {step.type === 'repeat' && <span className="text-white text-sm font-bold bg-[#0B0B0B] px-2 py-0.5 rounded-full border border-[#333]">x{step.rounds}</span>}
         </div>
         {step.type === 'repeat' ? (
           <div className="text-sm mt-2 flex flex-col gap-1.5 ml-1 border-l-2 border-[#333] pl-3">
@@ -1076,9 +1076,23 @@ export default function CreateWorkout() {
       if (error) { setAlertInfo({ title: 'Errore', message: error.message, type: 'error' }); return }
     } else {
       const { data: newWorkout, error } = await supabase.from('workouts').insert(payload).select().single()
-      setSaving(false)
-      if (error) { setAlertInfo({ title: 'Errore', message: error.message, type: 'error' }); return }
+      if (error) { 
+        setSaving(false)
+        setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+        return 
+      }
       targetId = newWorkout.id
+
+      if (athleteId) {
+        const { error: awError } = await supabase.from('athlete_workouts').insert({
+          athlete_id: athleteId,
+          workout_id: targetId,
+          completed_date: date,
+          status: 'pending'
+        })
+        if (awError) console.error("Errore assegnazione:", awError)
+      }
+      setSaving(false)
     }
 
     navigate(`/workout/${targetId}${athleteId ? `?athlete_id=${athleteId}` : ''}`)
@@ -1112,14 +1126,12 @@ export default function CreateWorkout() {
           value={title}
           onChange={e => setTitle(e.target.value)}
         />
-        {editId && (
-          <CustomDatePicker
-            date={date}
-            onChange={setDate}
-            placeholder="Data dell'allenamento"
-            className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-sm hover:border-[#f1ba17]"
-          />
-        )}
+        <CustomDatePicker
+          date={date}
+          onChange={setDate}
+          placeholder="Data dell'allenamento"
+          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-sm hover:border-[#f1ba17] w-full"
+        />
       </div>
 
       {/* ── STEP 1: TIPO ─────────────────────────────────── */}

@@ -2,7 +2,7 @@
 
 @theme {
   --color-brand: #f1ba17;
-  --color-bg: #171717;
+  --color-bg: #0B0B0B;
   --color-surface: #222222;
   --color-surface2: #2a2a2a;
 }
@@ -12,7 +12,7 @@
 }
 
 body {
-  background-color: #171717;
+  background-color: #0B0B0B;
   color: white;
   font-family: 'Inter', sans-serif;
   margin: 0;
