@@ -219,7 +219,7 @@ export default function AthleteDetail() {
 
   const todayStr = format(new Date(), 'yyyy-MM-dd')
   const todayWorkoutsList = workouts.filter(w => w.completed_date === todayStr)
-  const upcomingWorkoutsList = workouts.filter(w => w.completed_date > todayStr).reverse()
+  const upcomingWorkoutsList = workouts.filter(w => w.completed_date > todayStr && w.workouts?.sections?.category !== 'Event').reverse()
   const pastWorkoutsList = workouts.filter(w => w.completed_date < todayStr)
 
   const upcomingEvents = workouts.filter(w => w.workouts?.sections?.category === 'Event' && w.completed_date >= todayStr).sort((a, b) => a.completed_date.localeCompare(b.completed_date))

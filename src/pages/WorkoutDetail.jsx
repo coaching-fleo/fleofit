@@ -166,7 +166,7 @@ export default function WorkoutDetail() {
   const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
   const [savingAutonomous, setSavingAutonomous] = useState(false)
 
-  useEffect(() => { fetchWorkout() }, [id])
+  useEffect(() => { fetchWorkout() }, [id, queryAthleteId])
 
   // Carica la lista atleti solo quando si apre il modal per la prima volta
   useEffect(() => {
@@ -194,10 +194,22 @@ export default function WorkoutDetail() {
         setWorkoutStatus(awData[0].status)
         if (awData[0].notes) {
           setAthleteNote({ text: awData[0].notes, athleteName: `${awData[0].athletes.name} ${awData[0].athletes.surname}` })
+        } else {
+          setAthleteNote(null)
         }
         setEditingNote(awData[0].notes || '')
         finalWorkout.date = awData[0].completed_date
+      } else {
+        setAthleteWorkoutId(null)
+        setWorkoutStatus('pending')
+        setAthleteNote(null)
+        setEditingNote('')
       }
+    } else {
+      setAthleteWorkoutId(null)
+      setWorkoutStatus('pending')
+      setAthleteNote(null)
+      setEditingNote('')
     }
 
     if (role !== 'athlete' && data) {
@@ -799,11 +811,17 @@ export default function WorkoutDetail() {
             Assegnato a {assignments.length} atleti
           </h2>
           <div className="flex flex-col gap-3">
-            {assignments.map(a => (
-              <div key={a.id} onClick={() => navigate(`/athletes/${a.athletes?.id}`)} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer hover:border-[#f1ba17] transition">
+            {assignments.map(a => {
+              const isSelected = queryAthleteId === a.athletes?.id;
+              return (
+              <div key={a.id} onClick={() => navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`)} className={`bg-[#1e1e1e] border ${isSelected ? 'border-[#f1ba17]' : 'border-[#2a2a2a] hover:border-[#f1ba17]/50'} rounded-2xl p-4 cursor-pointer transition`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333]">
+                    <div 
+                      className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333] hover:border-[#f1ba17] transition"
+                      title="Vai al profilo dell'atleta"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/athletes/${a.athletes?.id}`); }}
+                    >
                       {a.athletes?.photo_url ? (
                         <img src={a.athletes.photo_url} alt={a.athletes?.name} className="w-full h-full object-cover" onError={(e) => e.target.style.opacity = 0} />
                       ) : (
@@ -811,7 +829,7 @@ export default function WorkoutDetail() {
                       )}
                     </div>
                     <div>
-                      <p className="text-white font-semibold text-sm">{a.athletes?.name} {a.athletes?.surname}</p>
+                      <p className={`font-semibold text-sm transition ${isSelected ? 'text-[#f1ba17]' : 'text-white'}`}>{a.athletes?.name} {a.athletes?.surname}</p>
                       <p className="text-gray-500 text-xs capitalize">{format(parseISO(a.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
                     </div>
                   </div>
@@ -819,13 +837,8 @@ export default function WorkoutDetail() {
                     {a.status === 'completed' ? 'Fatto' : 'Da fare'}
                   </div>
                 </div>
-                {a.notes && (
-                  <div className="mt-3 p-3 bg-[#111] rounded-xl border border-[#333]">
-                    <p className="text-gray-400 text-sm italic">"{a.notes}"</p>
-                  </div>
-                )}
               </div>
-            ))}
+            )})}
           </div>
         </div>
       )}
