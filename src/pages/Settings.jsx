@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut, Eye, EyeOff, Plus, Copy, Link as LinkIcon, Trash2 } from 'lucide-react'
+import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut, Eye, EyeOff, Plus, Copy, Link as LinkIcon, Trash2, ChevronDown, KeyRound, X } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -18,6 +18,7 @@ export default function Settings() {
   const { role, user } = useAuth()
   const isAdminEmail = ADMIN_EMAILS.includes(user?.email?.toLowerCase())
   const isSimulatingAthlete = localStorage.getItem('adminRoleOverride') === 'athlete'
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
 
   const handleExportFull = async () => {
     setLoading(true)
@@ -177,6 +178,18 @@ export default function Settings() {
       <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">
         <h2 className="text-lg font-bold text-white mb-4">Account</h2>
         
+        <button onClick={() => setPasswordModalOpen(true)} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition group mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-[#f1ba17] transition text-gray-400 shrink-0">
+              <KeyRound size={20} />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-semibold">Modifica Password</p>
+              <p className="text-gray-500 text-xs">Aggiorna la tua password di accesso</p>
+            </div>
+          </div>
+        </button>
+
         {isAdminEmail && (
           <button onClick={toggleSimulateAthlete} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-blue-500 transition group mb-3">
             <div className="flex items-center gap-3">
@@ -256,6 +269,15 @@ export default function Settings() {
       )}
       
       
+      {passwordModalOpen && createPortal(
+        <PasswordModal 
+          onClose={() => { setPasswordModalOpen(false); setIsRecovery(false); }} 
+          user={user} 
+          setAlertInfo={setAlertInfo} 
+        />,
+        document.body
+      )}
+
       {createPortal(
         <>
           <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
@@ -272,6 +294,8 @@ function InviteCodeManager() {
   const [loading, setLoading] = useState(true);
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
+  const [showActive, setShowActive] = useState(true)
+  const [showUsed, setShowUsed] = useState(false)
   const { user } = useAuth();
 
   useEffect(() => {
@@ -370,41 +394,125 @@ function InviteCodeManager() {
         </button>
       </div>
 
-      <h3 className="text-white font-semibold text-sm mb-2">Codici Attivi</h3>
-      {loading ? <p className="text-gray-500 text-xs">Caricamento...</p> : activeCodes.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {activeCodes.map(code => (
-            <div key={code.id} className="bg-[#2a2a2a] p-3 rounded-xl flex items-center justify-between">
-              <span className="font-mono text-lg text-[#f1ba17] tracking-widest">{code.code}</span>
-              <div className="flex items-center gap-2">
-                <button onClick={() => copyToClipboard(code.code, 'Codice')} title="Copia codice" className="p-2 text-gray-400 hover:text-white"><Copy size={16} /></button>
-                <button onClick={() => copyToClipboard(`${window.location.origin}/?invite=${code.code}`, 'Link')} title="Copia link" className="p-2 text-gray-400 hover:text-white"><LinkIcon size={16} /></button>
-                <button onClick={() => deleteCode(code.id)} title="Elimina" className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
-              </div>
+      <div className="flex flex-col gap-3">
+        {/* CODICI ATTIVI */}
+        <div className="bg-[#111] border border-[#333] rounded-2xl overflow-hidden">
+          <button onClick={() => setShowActive(!showActive)} className="w-full flex items-center justify-between p-4 hover:bg-[#222] transition">
+            <div className="flex items-center gap-2">
+              <span className="text-white font-semibold text-sm">Codici Attivi</span>
+              <span className="bg-[#f1ba17]/10 text-[#f1ba17] px-2 py-0.5 rounded-full text-xs font-bold">{activeCodes.length}</span>
             </div>
-          ))}
+            <ChevronDown size={18} className={`text-gray-500 transition-transform duration-300 ${showActive ? 'rotate-180' : ''}`} />
+          </button>
+          
+          <div className={`transition-all duration-300 ease-out overflow-hidden ${showActive ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="p-4 pt-0 flex flex-col gap-2 overflow-y-auto hide-scrollbar" style={{ maxHeight: '400px' }}>
+              {loading ? <p className="text-gray-500 text-xs">Caricamento...</p> : activeCodes.length > 0 ? (
+                activeCodes.map(code => (
+                  <div key={code.id} className="bg-[#2a2a2a] p-3 rounded-xl flex items-center justify-between border border-[#383838]">
+                    <span className="font-mono text-lg text-[#f1ba17] tracking-widest">{code.code}</span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => copyToClipboard(code.code, 'Codice')} title="Copia codice" className="p-2 text-gray-400 hover:text-white transition bg-[#111] rounded-lg border border-[#333]"><Copy size={16} /></button>
+                      <button onClick={() => copyToClipboard(`${window.location.origin}/?invite=${code.code}`, 'Link')} title="Copia link" className="p-2 text-gray-400 hover:text-white transition bg-[#111] rounded-lg border border-[#333]"><LinkIcon size={16} /></button>
+                      <button onClick={() => deleteCode(code.id)} title="Elimina" className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-lg border border-[#333]"><Trash2 size={16} /></button>
+                    </div>
+                  </div>
+                ))
+              ) : <p className="text-gray-500 text-xs">Nessun codice attivo. Generane uno nuovo.</p>}
+            </div>
+          </div>
         </div>
-      ) : <p className="text-gray-500 text-xs">Nessun codice attivo. Generane uno nuovo.</p>}
 
-      <h3 className="text-white font-semibold text-sm mt-6 mb-2">Codici Utilizzati</h3>
-       {loading ? <p className="text-gray-500 text-xs">Caricamento...</p> : usedCodes.length > 0 ? (
-        <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
-          {usedCodes.map(code => (
-            <div key={code.id} className="bg-[#111] p-3 rounded-xl flex items-center justify-between text-sm border border-[#222]">
-              <div className="flex-1 flex items-center justify-between">
-                <span className="font-mono text-gray-600 line-through">{code.code}</span>
-                <div className="text-right text-gray-400 pr-2 border-r border-[#333]">
-                  <p className="font-semibold text-white">{code.used_by_name || code.used_by_email || 'Utente Sconosciuto'}</p>
-                  <p className="text-xs text-gray-500">{format(parseISO(code.used_at), 'd MMM yyyy, HH:mm', { locale: it })}</p>
-                </div>
-              </div>
-              <button onClick={() => deleteCode(code.id)} title="Elimina log" className="p-2 text-gray-500 hover:text-red-500 ml-1"><Trash2 size={16} /></button>
+        {/* CODICI UTILIZZATI */}
+        <div className="bg-[#111] border border-[#333] rounded-2xl overflow-hidden">
+          <button onClick={() => setShowUsed(!showUsed)} className="w-full flex items-center justify-between p-4 hover:bg-[#222] transition">
+            <div className="flex items-center gap-2">
+              <span className="text-white font-semibold text-sm">Codici Utilizzati</span>
+              <span className="bg-[#222] text-gray-400 border border-[#333] px-2 py-0.5 rounded-full text-xs font-bold">{usedCodes.length}</span>
             </div>
-          ))}
+            <ChevronDown size={18} className={`text-gray-500 transition-transform duration-300 ${showUsed ? 'rotate-180' : ''}`} />
+          </button>
+          
+          <div className={`transition-all duration-300 ease-out overflow-hidden ${showUsed ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="p-4 pt-0 flex flex-col gap-2 overflow-y-auto hide-scrollbar" style={{ maxHeight: '400px' }}>
+              {loading ? <p className="text-gray-500 text-xs">Caricamento...</p> : usedCodes.length > 0 ? (
+                usedCodes.map(code => (
+                  <div key={code.id} className="bg-[#222] p-3 rounded-xl flex items-center justify-between text-sm border border-[#333]">
+                    <div className="flex-1 flex items-center justify-between">
+                      <span className="font-mono text-gray-500 line-through">{code.code}</span>
+                      <div className="text-right text-gray-400 pr-3 border-r border-[#444]">
+                        <p className="font-semibold text-gray-300">{code.used_by_name || code.used_by_email || 'Utente Sconosciuto'}</p>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">{format(parseISO(code.used_at), 'd MMM yyyy, HH:mm', { locale: it })}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => deleteCode(code.id)} title="Elimina log" className="p-2 text-gray-500 hover:text-red-500 ml-2 transition bg-[#111] rounded-lg border border-[#333]"><Trash2 size={16} /></button>
+                  </div>
+                ))
+              ) : <p className="text-gray-500 text-xs">Nessun codice è stato ancora utilizzato.</p>}
+            </div>
+          </div>
         </div>
-      ) : <p className="text-gray-500 text-xs">Nessun codice è stato ancora utilizzato.</p>}
+      </div>
       {alertInfo && createPortal(<CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />, document.body)}
       {confirmInfo && createPortal(<CustomConfirm info={confirmInfo} onClose={() => setConfirmInfo(null)} />, document.body)}
     </div>
   );
+}
+
+function PasswordModal({ onClose, user, setAlertInfo }) {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const handleUpdate = async (e) => {
+    if (e && e.preventDefault) e.preventDefault()
+    if (!currentPassword) return setAlertInfo({ title: 'Errore', message: 'Inserisci la password attuale.', type: 'error' })
+    if (!newPassword || newPassword.length < 6) return setAlertInfo({ title: 'Errore', message: 'La nuova password deve avere almeno 6 caratteri.', type: 'error' })
+    
+    setSaving(true)
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword
+    })
+    
+    if (signInError) {
+      setSaving(false)
+      return setAlertInfo({ title: 'Errore', message: 'La password attuale non è corretta.', type: 'error' })
+    }
+    
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword })
+    
+    setSaving(false)
+    if (updateError) {
+      setAlertInfo({ title: 'Errore', message: updateError.message, type: 'error' })
+    } else {
+      setAlertInfo({ title: 'Successo', message: 'Password aggiornata con successo!', type: 'success' })
+      onClose()
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+        <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
+          <p className="text-white font-bold text-lg">Modifica Password</p>
+          <button type="button" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+        </div>
+        <div className="p-5 flex flex-col gap-4" onKeyDown={e => { if (e.key === 'Enter') handleUpdate(e) }}>
+          <div>
+            <label className="text-gray-400 text-xs pl-1 mb-1 block">Password attuale</label>
+            <input type="password" placeholder="La tua password attuale" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+          </div>
+          <div>
+            <label className="text-gray-400 text-xs pl-1 mb-1 block">Nuova password</label>
+            <input type="password" placeholder="Scegli una nuova password sicura" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+          </div>
+          <button type="button" onClick={handleUpdate} disabled={saving || !currentPassword || !newPassword} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+            {saving ? 'Salvataggio...' : 'Aggiorna Password'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }

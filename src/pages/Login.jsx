@@ -10,7 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const [view, setView] = useState('welcome') // welcome, authForm, inviteForm
+  const [view, setView] = useState('welcome') // welcome, authForm, inviteForm, recoveryForm
   const [isSignUp, setIsSignUp] = useState(false)
   const [isResetPassword, setIsResetPassword] = useState(false)
   const showForm = view !== 'welcome'
@@ -25,13 +25,28 @@ export default function Login() {
   const [searchParams] = useSearchParams()
 
   useEffect(() => {
-    // Se l'utente è già loggato, lo rimandiamo subito alla Home
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate('/')
+    let isRecovery = window.location.hash.includes('type=recovery')
+    if (isRecovery) {
+      setView('recoveryForm')
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        isRecovery = true
+        setView('recoveryForm')
+      } else if (session && !isRecovery) {
+        navigate('/')
+      }
     })
 
+    if (!isRecovery) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) navigate('/')
+      })
+    }
+
     const codeFromUrl = searchParams.get('invite')
-    if (codeFromUrl) {
+    if (codeFromUrl && !isRecovery) {
       setInviteCode(codeFromUrl)
       setView('inviteForm')
 
@@ -64,20 +79,27 @@ export default function Login() {
       setAlertInfo({ title: 'Accesso Negato', message: 'Nessun account trovato o codice di invito mancante.', type: 'error' })
       navigate('/login', { replace: true })
     }
+
+    return () => subscription.unsubscribe()
   }, [navigate, searchParams])
 
   const handleEmailAuth = async (e) => {
-    e.preventDefault()
+    if (e && e.preventDefault) e.preventDefault()
+    if (!email || (!isResetPassword && !password)) {
+      setAlertInfo({ title: 'Errore', message: 'Compila tutti i campi richiesti.', type: 'error' })
+      return
+    }
     setLoading(true)
     
     try {
       if (isResetPassword) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin + '/settings',
+          redirectTo: window.location.origin + '/login',
         })
         if (error) throw error
         setAlertInfo({ title: 'Email inviata', message: 'Se l\'indirizzo è corretto, riceverai un link per reimpostare la password.', type: 'success' })
         setIsResetPassword(false)
+        setView('welcome')
       } else if (isSignUp) {
         const storedInviteCode = localStorage.getItem('fleofit_invite_code')
         if (!storedInviteCode) {
@@ -90,7 +112,7 @@ export default function Login() {
           password,
           options: {
             data: { role },
-            emailRedirectTo: window.location.origin + '/'
+            emailRedirectTo: `${window.location.origin}/?inviteCode=${storedInviteCode}`
           }
         })
         if (error) throw error
@@ -113,11 +135,16 @@ export default function Login() {
        setAlertInfo({ title: 'Accesso Negato', message: 'Per registrarti è necessario un codice di invito valido.', type: 'error' })
        return
     }
+    
+    const redirectUrl = inviteCode 
+      ? `${window.location.origin}/?inviteCode=${inviteCode}`
+      : `${window.location.origin}/`
+
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/',
+          redirectTo: redirectUrl,
           queryParams: {
             prompt: 'select_account'
           }
@@ -130,7 +157,7 @@ export default function Login() {
   }
 
   const handleInviteSubmit = async (e) => {
-    e.preventDefault()
+    if (e && e.preventDefault) e.preventDefault()
     const code = inviteCode.trim().toUpperCase()
     if (!code) {
       setInviteError('Inserisci un codice di invito.')
@@ -158,6 +185,23 @@ export default function Login() {
       setView('authForm')
       setInviteCode('')
       setInviteError('')
+    }
+  }
+
+  const handleRecoveryUpdate = async (e) => {
+    if (e && e.preventDefault) e.preventDefault()
+    if (!password || password.length < 6) {
+      return setAlertInfo({ title: 'Errore', message: 'La password deve avere almeno 6 caratteri.', type: 'error' })
+    }
+    setLoading(true)
+    const { error } = await supabase.auth.updateUser({ password })
+    setLoading(false)
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+    } else {
+      setAlertInfo({ title: 'Successo', message: 'Password aggiornata con successo! Ora puoi accedere.', type: 'success' })
+      window.history.replaceState(null, document.title, window.location.pathname + window.location.search)
+      navigate('/')
     }
   }
 
@@ -199,7 +243,11 @@ export default function Login() {
         
         {/* TASTO INDIETRO (Ben visibile) */}
         <button type="button" onClick={() => {
-          if (isResetPassword) setIsResetPassword(false)
+          if (view === 'recoveryForm') {
+            setView('welcome')
+            window.history.replaceState(null, document.title, window.location.pathname + window.location.search)
+          }
+          else if (isResetPassword) setIsResetPassword(false)
           else { setView('welcome'); setIsSignUp(false); }
         }} className="absolute top-5 left-5 w-10 h-10 bg-[#2a2a2a] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white transition shadow-md z-10" aria-label="Torna indietro">
           <ChevronLeft size={22} className="-ml-0.5" />
@@ -207,7 +255,9 @@ export default function Login() {
         
         <div className="flex flex-col items-center justify-center mb-8 mt-4">
           <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
-          <p className="text-gray-400 text-sm mt-1">{isResetPassword ? 'Recupera la tua password' : (isSignUp ? 'Crea il tuo account' : 'Accedi alla tua dashboard')}</p>
+          <p className="text-gray-400 text-sm mt-1">
+            {view === 'recoveryForm' ? 'Scegli la tua nuova password' : (isResetPassword ? 'Recupera la tua password' : (isSignUp ? 'Crea il tuo account' : 'Accedi alla tua dashboard'))}
+          </p>
         </div>
 
         {view === 'inviteForm' && (
@@ -216,17 +266,36 @@ export default function Login() {
               <h2 className="text-xl font-bold text-white">Codice di Invito Richiesto</h2>
               <p className="text-gray-500 text-sm mt-2">Per registrarti, inserisci il codice di invito che ti è stato fornito.</p>
             </div>
-            <form onSubmit={handleInviteSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4" onKeyDown={e => { if (e.key === 'Enter') handleInviteSubmit(e) }}>
               <div className="relative">
                 <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Il tuo codice di invito" className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-4 pl-11 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] transition uppercase" disabled={inviteLoading} />
               </div>
               {inviteError && <p className="text-red-500 text-xs text-center">{inviteError}</p>}
-              <button type="submit" disabled={inviteLoading || !inviteCode} className="w-full flex items-center justify-center gap-2 bg-[#f1ba17] text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">
+              <button type="button" onClick={handleInviteSubmit} disabled={inviteLoading || !inviteCode} className="w-full flex items-center justify-center gap-2 bg-[#f1ba17] text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">
                 {inviteLoading ? 'Verifica...' : 'Prosegui'}
                 {!inviteLoading && <ArrowRight size={18} />}
               </button>
-            </form>
+            </div>
+          </div>
+        )}
+
+        {view === 'recoveryForm' && (
+          <div className="flex flex-col gap-4 animate-in fade-in duration-300" onKeyDown={e => { if (e.key === 'Enter') handleRecoveryUpdate(e) }}>
+            <div className="relative">
+              <Lock size={18} className="absolute left-4 top-3.5 text-gray-500" />
+              <input 
+                type="password" 
+
+                placeholder="La tua nuova password" 
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-[#f1ba17] transition"
+              />
+            </div>
+            <button type="button" onClick={handleRecoveryUpdate} disabled={loading || !password} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2">
+              {loading ? 'Attendere...' : 'Aggiorna Password'}
+            </button>
           </div>
         )}
 
@@ -250,12 +319,12 @@ export default function Login() {
             </div>
           ) */}
 
-          {view === 'authForm' && <form onSubmit={handleEmailAuth} className="flex flex-col gap-4 animate-in fade-in duration-300">
+          {view === 'authForm' && <div className="flex flex-col gap-4 animate-in fade-in duration-300" onKeyDown={e => { if (e.key === 'Enter') handleEmailAuth(e) }}>
             <div className="relative">
               <Mail size={18} className="absolute left-4 top-3.5 text-gray-500" />
               <input 
                 type="email" 
-                required
+                
                 placeholder="La tua email" 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -268,7 +337,6 @@ export default function Login() {
                 <Lock size={18} className="absolute left-4 top-3.5 text-gray-500" />
                 <input 
                   type="password" 
-                  required
                   placeholder="La tua password" 
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -285,11 +353,11 @@ export default function Login() {
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2">
+            <button type="button" onClick={handleEmailAuth} disabled={loading} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2">
               {loading ? 'Attendere...' : (isResetPassword ? 'Invia link' : (isSignUp ? 'Registrati' : 'Accedi'))}
               {!loading && !isResetPassword && <LogIn size={18} />}
             </button>
-          </form>}
+          </div>}
 
           {view === 'authForm' && !isResetPassword && (
             <div className="animate-in fade-in duration-300">

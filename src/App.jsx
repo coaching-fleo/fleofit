@@ -161,7 +161,7 @@ function ProtectedRoute({ children }) {
       const { data: { session } } = await supabase.auth.getSession()
       await handleSession(session)
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
         handleSession(s)
       })
       sub = subscription
@@ -179,7 +179,8 @@ function ProtectedRoute({ children }) {
       if (!isAdmin) {
         const { data: athleteData } = await supabase.from('athletes').select('id').eq('id', session.user.id).maybeSingle()
         if (!athleteData) {
-          const inviteCode = localStorage.getItem('fleofit_invite_code')
+          const urlParams = new URLSearchParams(window.location.search)
+          const inviteCode = localStorage.getItem('fleofit_invite_code') || urlParams.get('inviteCode')
           let isAuthorized = false;
 
           if (inviteCode) {
