@@ -163,7 +163,7 @@ export default function Settings() {
         return;
       }
 
-      const registration = await navigator.serviceWorker.register('/sw.js');
+      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       await navigator.serviceWorker.ready;
 
       // ==============================================================
