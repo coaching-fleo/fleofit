@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X } from 'lucide-react'
+import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X, Edit, Trash2, AlertTriangle } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO, differenceInDays, startOfDay } from 'date-fns'
@@ -39,8 +39,9 @@ export default function Home() {
   const [recentAssignments, setRecentAssignments] = useState([])
 
   const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
-  const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '' })
+  const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
   const [savingAutonomous, setSavingAutonomous] = useState(false)
+  const [workoutToRemove, setWorkoutToRemove] = useState(null)
   const [dbName, setDbName] = useState('')
 
   const meta = user?.user_metadata || {}
@@ -201,34 +202,70 @@ export default function Home() {
 
   const todayStrRender = format(new Date(), 'yyyy-MM-dd')
 
+  const openEditAutonomous = (aw) => {
+    setAutonomousForm({
+      title: aw.workouts?.title || '',
+      date: aw.completed_date,
+      notes: aw.notes || '',
+      id: aw.workouts?.id,
+      awId: aw.id
+    })
+    setAutonomousModalOpen(true)
+  }
+
   const handleSaveAutonomous = async () => {
     setSavingAutonomous(true)
     try {
-      const { data: newW, error: wError } = await supabase.from('workouts').insert({
-        title: autonomousForm.title,
-        date: autonomousForm.date,
-        sections: { category: 'Custom', isAutonomous: true }
-      }).select().single()
+      if (autonomousForm.id) {
+        const { error: wError } = await supabase.from('workouts').update({
+          title: autonomousForm.title,
+          date: autonomousForm.date
+        }).eq('id', autonomousForm.id)
+        if (wError) throw wError
 
-      if (wError) throw wError
+        const { error: awError } = await supabase.from('athlete_workouts').update({
+          completed_date: autonomousForm.date,
+          notes: autonomousForm.notes
+        }).eq('id', autonomousForm.awId)
+        if (awError) throw awError
+      } else {
+        const { data: newW, error: wError } = await supabase.from('workouts').insert({
+          title: autonomousForm.title,
+          date: autonomousForm.date,
+          sections: { category: 'Custom', isAutonomous: true }
+        }).select().single()
 
-      const { error: awError } = await supabase.from('athlete_workouts').insert({
-        athlete_id: user.id,
-        workout_id: newW.id,
-        completed_date: autonomousForm.date,
-        status: 'completed',
-        notes: autonomousForm.notes
-      })
+        if (wError) throw wError
 
-      if (awError) throw awError
+        const { error: awError } = await supabase.from('athlete_workouts').insert({
+          athlete_id: user.id,
+          workout_id: newW.id,
+          completed_date: autonomousForm.date,
+          status: 'completed',
+          notes: autonomousForm.notes
+        })
+        if (awError) throw awError
+      }
 
       setAutonomousModalOpen(false)
-      setAutonomousForm({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '' })
+      setAutonomousForm({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
       window.location.reload()
     } catch (err) {
       alert("Errore: " + err.message)
     }
     setSavingAutonomous(false)
+  }
+
+  const confirmRemoveWorkout = async () => {
+    if (!workoutToRemove) return
+    try {
+      const { error } = await supabase.from('athlete_workouts').delete().eq('id', workoutToRemove)
+      if (error) throw error
+      setWorkoutToRemove(null)
+      window.location.reload()
+    } catch (err) {
+      alert("Errore: " + err.message)
+    }
   }
 
   return (
@@ -466,6 +503,12 @@ export default function Home() {
                           {todayWorkout.status === 'completed' ? <CheckCircle2 size={16} /> : <Circle size={16} />} 
                           {todayWorkout.status === 'completed' ? 'Fatto' : 'Segna come completato'}
                         </button>
+                        {todayIsCustom && role === 'athlete' && (
+                          <div className="flex items-center gap-2">
+                             <button onClick={(e) => { e.stopPropagation(); openEditAutonomous(todayWorkout); }} className="p-2 text-gray-400 hover:text-[#f1ba17] transition bg-[#111] rounded-full border border-[#333]" title="Modifica"><Edit size={16}/></button>
+                             <button onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(todayWorkout.id); }} className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-full border border-[#333]" title="Elimina"><Trash2 size={16}/></button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -509,23 +552,33 @@ export default function Home() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {upcomingWorkouts.map(w => (
-                <div 
-                  key={w.id}
-                  onClick={() => navigate(`/workout/${w.workouts.id}?athlete_id=${user.id}`)}
-                  className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-[#383838] transition"
-                >
-                  <div>
-                    <p className="text-white font-semibold">{w.workouts.title}</p>
-                    <p className="text-gray-500 text-xs mt-0.5 capitalize font-medium">
-                      {format(parseISO(w.completed_date), 'EEEE d MMMM', { locale: it })}
-                    </p>
+              {upcomingWorkouts.map(w => {
+                const isCustom = w.workouts?.sections?.category === 'Custom' || w.workouts?.sections?.category === 'Autonomo' || w.workouts?.sections?.isAutonomous;
+                return (
+                  <div 
+                    key={w.id}
+                    onClick={() => navigate(`/workout/${w.workouts.id}?athlete_id=${user.id}`)}
+                    className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-[#383838] transition"
+                  >
+                    <div>
+                      <p className="text-white font-semibold">{w.workouts.title}</p>
+                      <p className="text-gray-500 text-xs mt-0.5 capitalize font-medium">
+                        {format(parseISO(w.completed_date), 'EEEE d MMMM', { locale: it })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {role === 'athlete' && isCustom && (
+                        <>
+                          <button onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }} className="p-1.5 text-gray-500 hover:text-[#f1ba17] transition" title="Modifica"><Edit size={18}/></button>
+                          <button onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(w.id); }} className="p-1.5 text-gray-500 hover:text-red-500 transition" title="Elimina"><Trash2 size={18}/></button>
+                        </>
+                      )}
+                      <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-400 ml-1">
+                        <ChevronRight size={18} className="ml-0.5" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-400">
-                    <ChevronRight size={18} className="ml-0.5" />
-                  </div>
-                </div>
-              ))}
+              )})}
             </div>
           )}
         </div>
@@ -579,7 +632,7 @@ export default function Home() {
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl">
             <div className="flex justify-between items-center mb-2">
-               <h2 className="text-xl font-bold text-white">Allenamento Libero</h2>
+               <h2 className="text-xl font-bold text-white">{autonomousForm.id ? 'Modifica Allenamento' : 'Allenamento Libero'}</h2>
                <button onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
             </div>
             <div className="flex flex-col gap-3">
@@ -615,7 +668,37 @@ export default function Home() {
                 disabled={!autonomousForm.title || savingAutonomous}
                 className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
               >
-                {savingAutonomous ? 'Salvataggio...' : 'Salva Allenamento'}
+                {savingAutonomous ? 'Salvataggio...' : 'Conferma'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL CONFERMA RIMOZIONE WORKOUT */}
+      {workoutToRemove && createPortal(
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
+            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
+              <AlertTriangle size={32} />
+            </div>
+            <h2 className="text-xl font-bold text-white">Sei sicuro?</h2>
+            <p className="text-gray-400 text-sm">
+              Questa azione eliminerà l'allenamento e non può essere annullata.
+            </p>
+            <div className="flex gap-3 mt-4">
+              <button 
+                onClick={() => setWorkoutToRemove(null)}
+                className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition"
+              >
+                Annulla
+              </button>
+              <button 
+                onClick={confirmRemoveWorkout}
+                className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-500 transition"
+              >
+                Elimina
               </button>
             </div>
           </div>

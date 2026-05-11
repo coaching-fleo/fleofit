@@ -46,6 +46,10 @@ export default function AthleteDetail() {
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
 
+  const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
+  const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
+  const [savingAutonomous, setSavingAutonomous] = useState(false)
+
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(new Date())
 
@@ -123,6 +127,46 @@ export default function AthleteDetail() {
     } else {
       setAlertInfo({ title: 'Errore', message: "Errore durante il salvataggio della nota: " + error.message, type: 'error' })
     }
+  }
+
+  const openEditAutonomous = (aw) => {
+    setAutonomousForm({
+      title: aw.workouts?.title || '',
+      date: aw.completed_date,
+      notes: aw.notes || '',
+      id: aw.workouts?.id,
+      awId: aw.id
+    })
+    setAutonomousModalOpen(true)
+  }
+
+  const handleSaveAutonomous = async () => {
+    setSavingAutonomous(true)
+    try {
+      if (autonomousForm.id) {
+        const { error: wError } = await supabase.from('workouts').update({ title: autonomousForm.title, date: autonomousForm.date }).eq('id', autonomousForm.id)
+        if (wError) throw wError
+
+        const { error: awError } = await supabase.from('athlete_workouts').update({ completed_date: autonomousForm.date, notes: autonomousForm.notes }).eq('id', autonomousForm.awId)
+        if (awError) throw awError
+      } else {
+        const { data: newW, error: wError } = await supabase.from('workouts').insert({
+          title: autonomousForm.title,
+          date: autonomousForm.date,
+          sections: { category: 'Custom', isAutonomous: true }
+        }).select().single()
+        if (wError) throw wError
+
+        const { error: awError } = await supabase.from('athlete_workouts').insert({ athlete_id: id, workout_id: newW.id, completed_date: autonomousForm.date, status: 'completed', notes: autonomousForm.notes })
+        if (awError) throw awError
+      }
+      setAutonomousModalOpen(false)
+      setAutonomousForm({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
+      fetchAthleteData(true)
+    } catch (err) {
+      setAlertInfo({ title: 'Errore', message: err.message, type: 'error' })
+    }
+    setSavingAutonomous(false)
   }
 
   const requestRemoveWorkout = (athleteWorkoutId) => {
@@ -435,7 +479,7 @@ export default function AthleteDetail() {
                 ) : (
                     <div className="flex flex-col gap-3">
                      {workouts.filter(w => w.completed_date === format(selectedDay, 'yyyy-MM-dd')).map(w => (
-                       <WorkoutEntryCard key={w.id} entry={w} onToggleStatus={toggleWorkoutStatus} onUpdateNote={updateWorkoutNote} onRemove={requestRemoveWorkout} navigate={navigate} athleteId={id} role={role} />
+                       <WorkoutEntryCard key={w.id} entry={w} onToggleStatus={toggleWorkoutStatus} onUpdateNote={updateWorkoutNote} onRemove={requestRemoveWorkout} navigate={navigate} athleteId={id} role={role} onEditAutonomous={openEditAutonomous} />
                      ))}
                    </div>
                 )}
@@ -459,6 +503,8 @@ export default function AthleteDetail() {
                         navigate={navigate}
                         athleteId={id}
                         role={role}
+                        onEditAutonomous={openEditAutonomous}
+                        onEditAutonomous={openEditAutonomous}
                       />
                     ))}
                   </div>
@@ -554,7 +600,7 @@ export default function AthleteDetail() {
             </div>
             <h2 className="text-xl font-bold text-white">Sei sicuro?</h2>
             <p className="text-gray-400 text-sm">
-              Questa azione rimuoverà l'allenamento assegnato a questo atleta.
+              Questa azione eliminerà l'allenamento e non può essere annullata.
             </p>
             <div className="flex gap-3 mt-4">
               <button 
@@ -567,7 +613,7 @@ export default function AthleteDetail() {
                 onClick={confirmRemoveWorkout}
                 className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-500 transition"
               >
-                Rimuovi
+                Elimina
               </button>
             </div>
           </div>
@@ -646,6 +692,55 @@ export default function AthleteDetail() {
       
       {showCelebration && createPortal(
         <CelebrationOverlay onClose={() => setShowCelebration(false)} />,
+        document.body
+      )}
+
+      {/* MODAL ALLENAMENTO AUTONOMO */}
+      {autonomousModalOpen && createPortal(
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl">
+            <div className="flex justify-between items-center mb-2">
+               <h2 className="text-xl font-bold text-white">{autonomousForm.id ? 'Modifica Allenamento' : 'Allenamento Libero'}</h2>
+               <button onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+            </div>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo</label>
+                <input 
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm"
+                  value={autonomousForm.title}
+                  onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
+                  placeholder="Es. Corsa 5km, Calcetto..."
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Data</label>
+                <CustomDatePicker
+                  date={autonomousForm.date}
+                  onChange={(d) => setAutonomousForm({ ...autonomousForm, date: d })}
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full"
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Descrizione / Note</label>
+                <textarea 
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm resize-none"
+                  rows={3}
+                  value={autonomousForm.notes}
+                  onChange={(e) => setAutonomousForm({ ...autonomousForm, notes: e.target.value })}
+                  placeholder="Com'è andata?"
+                />
+              </div>
+              <button 
+                onClick={handleSaveAutonomous}
+                disabled={!autonomousForm.title || savingAutonomous}
+                className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
+              >
+                {savingAutonomous ? 'Salvataggio...' : 'Conferma'}
+              </button>
+            </div>
+          </div>
+        </div>,
         document.body
       )}
 
@@ -787,7 +882,7 @@ function CelebrationOverlay({ onClose }) {
   )
 }
 
-function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role }) {
+function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous }) {
   const [note, setNote] = useState(entry.notes || '')
   const [saving, setSaving] = useState(false)
   
@@ -844,14 +939,25 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
                {entry.status === 'completed' ? <CheckCircle2 size={14} /> : <Circle size={14} />} {entry.status === 'completed' ? 'Fatto' : 'Segna fatto'}
              </button>
              
-             {role !== 'athlete' && (
-               <button 
-                 onClick={(e) => { e.stopPropagation(); onRemove(entry.id); }}
-                 className="text-gray-500 hover:text-red-500 transition p-1"
-                 title="Rimuovi assegnazione"
-               >
-                 <Trash2 size={16} />
-               </button>
+             {(role !== 'athlete' || isAuto) && (
+               <div className="flex items-center gap-1 mt-1">
+                 {role === 'athlete' && isAuto && onEditAutonomous && (
+                   <button 
+                     onClick={(e) => { e.stopPropagation(); onEditAutonomous(entry); }}
+                     className="text-gray-500 hover:text-[#f1ba17] transition p-1"
+                     title="Modifica allenamento libero"
+                   >
+                     <Edit size={16} />
+                   </button>
+                 )}
+                 <button 
+                   onClick={(e) => { e.stopPropagation(); onRemove(entry.id); }}
+                   className="text-gray-500 hover:text-red-500 transition p-1"
+                   title={isAuto ? "Elimina allenamento libero" : "Rimuovi assegnazione"}
+                 >
+                   <Trash2 size={16} />
+                 </button>
+               </div>
              )}
            </div>
         </div>
@@ -1136,7 +1242,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
   )
 }
 
-function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role }) {
+function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous }) {
   const [note, setNote] = useState(entry.notes || '')
   const [saving, setSaving] = useState(false)
   
@@ -1186,14 +1292,25 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             {format(parseISO(entry.completed_date), 'EEEE d MMMM yyyy', { locale: it })}
           </p>
         </div>
-        {role !== 'athlete' && (
-          <button 
-            onClick={() => onRemove(entry.id)}
-            className="text-gray-500 hover:text-red-500 transition p-1 shrink-0"
-            title="Rimuovi assegnazione"
-          >
-            <Trash2 size={18} />
-          </button>
+        {(role !== 'athlete' || isAuto) && (
+          <div className="flex items-center gap-1 shrink-0 ml-2">
+            {role === 'athlete' && isAuto && onEditAutonomous && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onEditAutonomous(entry); }}
+                className="text-gray-500 hover:text-[#f1ba17] transition p-1"
+                title="Modifica allenamento libero"
+              >
+                <Edit size={18} />
+              </button>
+            )}
+            <button 
+              onClick={(e) => { e.stopPropagation(); onRemove(entry.id); }}
+              className="text-gray-500 hover:text-red-500 transition p-1"
+              title={isAuto ? "Elimina allenamento libero" : "Rimuovi assegnazione"}
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
         )}
       </div>
 

@@ -160,6 +160,11 @@ export default function WorkoutDetail() {
   const [workoutStatus, setWorkoutStatus] = useState('pending')
   const [selectedAthleteForAssign, setSelectedAthleteForAssign] = useState(null)
   const [assignments, setAssignments] = useState([])
+
+  const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
+  const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
+  const [savingAutonomous, setSavingAutonomous] = useState(false)
+
   useEffect(() => { fetchWorkout() }, [id])
 
   // Carica la lista atleti solo quando si apre il modal per la prima volta
@@ -264,13 +269,51 @@ export default function WorkoutDetail() {
 
   const handleDeleteWorkout = async () => {
     setDeleting(true)
-    const { error } = await supabase.from('workouts').delete().eq('id', id)
-    setDeleting(false)
-    if (error) {
-      setAlertInfo({ title: 'Errore', message: "Errore durante l'eliminazione: " + error.message, type: 'error' })
+    if (role === 'athlete' && athleteWorkoutId) {
+      const { error } = await supabase.from('athlete_workouts').delete().eq('id', athleteWorkoutId)
+      setDeleting(false)
+      if (error) setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+      else navigate(-1)
     } else {
-      navigate(-1)
+      const { error } = await supabase.from('workouts').delete().eq('id', id)
+      setDeleting(false)
+      if (error) {
+        setAlertInfo({ title: 'Errore', message: "Errore durante l'eliminazione: " + error.message, type: 'error' })
+      } else {
+        navigate(-1)
+      }
     }
+  }
+
+  const openEditAutonomous = () => {
+    setAutonomousForm({
+      title: workout.title || '',
+      date: workout.date || format(new Date(), 'yyyy-MM-dd'),
+      notes: athleteNote?.text || '',
+      id: workout.id,
+      awId: athleteWorkoutId
+    })
+    setAutonomousModalOpen(true)
+  }
+
+  const handleSaveAutonomous = async () => {
+    setSavingAutonomous(true)
+    try {
+      if (autonomousForm.id) {
+        const { error: wError } = await supabase.from('workouts').update({ title: autonomousForm.title, date: autonomousForm.date }).eq('id', autonomousForm.id)
+        if (wError) throw wError
+
+        if (autonomousForm.awId) {
+          const { error: awError } = await supabase.from('athlete_workouts').update({ completed_date: autonomousForm.date, notes: autonomousForm.notes }).eq('id', autonomousForm.awId)
+          if (awError) throw awError
+        }
+      }
+      setAutonomousModalOpen(false)
+      fetchWorkout()
+    } catch (err) {
+      setAlertInfo({ title: 'Errore', message: err.message, type: 'error' })
+    }
+    setSavingAutonomous(false)
   }
 
   const buildPDFDoc = async () => {
@@ -585,13 +628,15 @@ export default function WorkoutDetail() {
   if (loading) return <div className="p-6 text-gray-500">Caricamento...</div>
   if (!workout) return <div className="p-6 text-red-400">Workout non trovato</div>
 
-  const s = workout.sections
+  const s = workout.sections || {}
   const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
-  const category = (rawCat === 'Autonomo' || rawCat === 'Custom') ? 'Custom' : (rawCat === 'Event' ? 'Event' : rawCat)
+  const isAuto = rawCat === 'Custom' || rawCat === 'Autonomo' || s?.isAutonomous
+  const isEvent = rawCat === 'Event'
+  const category = isEvent ? 'Event' : (isAuto ? 'Custom' : rawCat)
   const isRunning = category === 'Running'
   const blocks = getNormalizedBlocks(workout)
   const mainBlock = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type)) || blocks[0] || { type: 'Hyrox' }
-  const type = category === 'Event' ? 'Event' : (category === 'Custom' ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
+  const type = isEvent ? 'Event' : (isAuto ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
   const c = TYPE_COLORS[type] || TYPE_COLORS['Hyrox'] || { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' }
 
   const getIconForType = (t) => {
@@ -619,7 +664,7 @@ export default function WorkoutDetail() {
               {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}
             </p>
           </div>
-          {role !== 'athlete' && (
+          {(role !== 'athlete' || isAuto) && (
             <div className="flex flex-col items-end gap-2">
               <div className="flex items-center gap-2">
                 {workout.sections?.intensity && (
@@ -635,15 +680,26 @@ export default function WorkoutDetail() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg" title="Duplica Workout">
-                  <Copy size={12} /> Duplica
-                </button>
-                <button onClick={() => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
-                  <Edit size={12} /> Modifica
-                </button>
-                <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
-                  <Trash2 size={12} />
-                </button>
+                {role !== 'athlete' && (
+                  <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg" title="Duplica Workout">
+                    <Copy size={12} /> Duplica
+                  </button>
+                )}
+                {role !== 'athlete' && !isAuto && (
+                  <button onClick={() => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                    <Edit size={12} /> Modifica
+                  </button>
+                )}
+                {isAuto && (
+                  <button onClick={openEditAutonomous} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                    <Edit size={12} /> Modifica
+                  </button>
+                )}
+                {(role !== 'athlete' || isAuto) && (
+                  <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                    <Trash2 size={12} />
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -965,6 +1021,55 @@ export default function WorkoutDetail() {
                 </div>
               </div>
             )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL ALLENAMENTO AUTONOMO */}
+      {autonomousModalOpen && createPortal(
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl">
+            <div className="flex justify-between items-center mb-2">
+               <h2 className="text-xl font-bold text-white">Modifica Allenamento Libero</h2>
+               <button onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+            </div>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo</label>
+                <input 
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm"
+                  value={autonomousForm.title}
+                  onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
+                  placeholder="Es. Corsa 5km, Calcetto..."
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Data</label>
+                <CustomDatePicker
+                  date={autonomousForm.date}
+                  onChange={(d) => setAutonomousForm({ ...autonomousForm, date: d })}
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full"
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Descrizione / Note</label>
+                <textarea 
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm resize-none"
+                  rows={3}
+                  value={autonomousForm.notes}
+                  onChange={(e) => setAutonomousForm({ ...autonomousForm, notes: e.target.value })}
+                  placeholder="Com'è andata?"
+                />
+              </div>
+              <button 
+                onClick={handleSaveAutonomous}
+                disabled={!autonomousForm.title || savingAutonomous}
+                className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
+              >
+                {savingAutonomous ? 'Salvataggio...' : 'Conferma'}
+              </button>
+            </div>
           </div>
         </div>,
         document.body
