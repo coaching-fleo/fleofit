@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer } from 'lucide-react'
+import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { getDailyMotivation } from './motivations'
+import CustomDatePicker from '../components/CustomDatePicker'
+import { createPortal } from 'react-dom'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -35,8 +37,14 @@ export default function Home() {
   })
   const [recentAssignments, setRecentAssignments] = useState([])
 
+  const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
+  const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '' })
+  const [savingAutonomous, setSavingAutonomous] = useState(false)
+  const [dbName, setDbName] = useState('')
+
   const meta = user?.user_metadata || {}
-  const userName = meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
+  const fallbackName = meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
+  const userName = dbName || fallbackName
 
   const getGreeting = () => {
     const hour = new Date().getHours()
@@ -68,6 +76,14 @@ export default function Home() {
       const weekStartStr = format(weekStart, 'yyyy-MM-dd')
 
       const promises = []
+
+      if (user?.id) {
+        promises.push(
+          supabase.from('athletes').select('name').eq('id', user.id).single().then(({ data }) => {
+            if (data?.name) setDbName(data.name)
+          })
+        )
+      }
 
       if (role === 'admin' || role === 'coach') {
         promises.push(
@@ -176,6 +192,36 @@ export default function Home() {
 
   const todayStrRender = format(new Date(), 'yyyy-MM-dd')
 
+  const handleSaveAutonomous = async () => {
+    setSavingAutonomous(true)
+    try {
+      const { data: newW, error: wError } = await supabase.from('workouts').insert({
+        title: autonomousForm.title,
+        date: autonomousForm.date,
+        sections: { category: 'Custom', isAutonomous: true }
+      }).select().single()
+
+      if (wError) throw wError
+
+      const { error: awError } = await supabase.from('athlete_workouts').insert({
+        athlete_id: user.id,
+        workout_id: newW.id,
+        completed_date: autonomousForm.date,
+        status: 'completed',
+        notes: autonomousForm.notes
+      })
+
+      if (awError) throw awError
+
+      setAutonomousModalOpen(false)
+      setAutonomousForm({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '' })
+      window.location.reload()
+    } catch (err) {
+      alert("Errore: " + err.message)
+    }
+    setSavingAutonomous(false)
+  }
+
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
       {/* Header */}
@@ -188,6 +234,11 @@ export default function Home() {
              <div className="mt-2">
                <p className="text-white font-bold text-xl">{getGreeting()}, {userName}!</p>
                <p className="text-[#f1ba17] text-sm mt-0.5 font-medium">{randomMotiv}</p>
+               {role === 'athlete' && (
+                 <button onClick={() => setAutonomousModalOpen(true)} className="mt-4 flex items-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:border-[#f1ba17] transition shadow-md">
+                   <Plus size={16} className="text-[#f1ba17]" /> Aggiungi allenamento libero
+                 </button>
+               )}
              </div>
           ) : (
             <p className="text-gray-400 mt-1">Dashboard Coach Federico Leo</p>
@@ -222,6 +273,7 @@ export default function Home() {
                     <div className="flex flex-col gap-1.5">
                       {day.workouts.map((w, wIdx) => {
                         const isRun = w.category === 'Running'
+                        const isCustom = w.category === 'Custom' || w.category === 'Autonomo'
                         let circleClass = ''
                         let icon = null
                         
@@ -230,11 +282,11 @@ export default function Home() {
                            icon = <CheckCircle2 size={14} className="text-black" />
                         } else {
                            if (day.isToday) {
-                             circleClass = isRun ? 'bg-[#0094C6] border-[#0094C6] shadow-[0_0_8px_rgba(0,148,198,0.4)]' : 'bg-[#f1ba17] border-[#f1ba17] shadow-[0_0_8px_rgba(241,186,23,0.4)]'
-                             icon = isRun ? <Timer size={14} className="text-white" /> : <Dumbbell size={14} className="text-black" />
+                             circleClass = isRun ? 'bg-[#0094C6] border-[#0094C6] shadow-[0_0_8px_rgba(0,148,198,0.4)]' : isCustom ? 'bg-[#D11149] border-[#D11149] shadow-[0_0_8px_rgba(209,17,73,0.4)]' : 'bg-[#f1ba17] border-[#f1ba17] shadow-[0_0_8px_rgba(241,186,23,0.4)]'
+                             icon = isRun ? <Timer size={14} className="text-white" /> : isCustom ? <Dumbbell size={14} className="text-white" /> : <Dumbbell size={14} className="text-black" />
                            } else {
-                             circleClass = isRun ? 'bg-transparent border-[#0094C6]' : 'bg-transparent border-[#f1ba17]'
-                             icon = isRun ? <Timer size={14} className="text-[#0094C6]" /> : <Dumbbell size={14} className="text-[#f1ba17]" />
+                             circleClass = isRun ? 'bg-transparent border-[#0094C6]' : isCustom ? 'bg-transparent border-[#D11149]' : 'bg-transparent border-[#f1ba17]'
+                             icon = isRun ? <Timer size={14} className="text-[#0094C6]" /> : isCustom ? <Dumbbell size={14} className="text-[#D11149]" /> : <Dumbbell size={14} className="text-[#f1ba17]" />
                            }
                         }
 
@@ -290,10 +342,12 @@ export default function Home() {
           ) : recentAssignments.length > 0 ? (
             <div className="flex flex-col gap-3">
               {recentAssignments.map(a => {
-                const category = a.workouts?.sections?.category || (a.workouts?.sections?.steps ? 'Running' : 'Hyrox');
+                const rawCat = a.workouts?.sections?.category || (a.workouts?.sections?.steps ? 'Running' : 'Hyrox');
+                const isCustom = rawCat === 'Custom' || rawCat === 'Autonomo';
+                const category = isCustom ? 'Custom' : rawCat;
                 const isRun = category === 'Running';
                 return (
-                <div key={a.id} onClick={() => navigate(`/athletes/${a.athletes?.id}`)} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer transition ${isRun ? 'hover:border-[#0094C6]' : 'hover:border-[#f1ba17]'}`}>
+                <div key={a.id} onClick={() => navigate(`/athletes/${a.athletes?.id}`)} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer transition ${isRun ? 'hover:border-[#0094C6]' : isCustom ? 'hover:border-[#D11149]' : 'hover:border-[#f1ba17]'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 min-w-0 pr-2">
                       <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333]">
@@ -306,7 +360,7 @@ export default function Home() {
                       <div className="min-w-0 flex-1">
                         <p className="text-white font-semibold text-sm truncate">{a.athletes?.name} {a.athletes?.surname}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
                             {category}
                           </span>
                           <p className="text-gray-500 text-xs truncate">{a.workouts?.title}</p>
@@ -342,7 +396,10 @@ export default function Home() {
           ) : todayWorkouts.length > 0 ? (
             <div className="flex flex-col gap-3">
               {todayWorkouts.map((todayWorkout) => {
-                const todayIsRun = todayWorkout.workouts?.sections?.category === 'Running' || todayWorkout.workouts?.sections?.steps ? true : false;
+                const rawCat = todayWorkout.workouts?.sections?.category || (todayWorkout.workouts?.sections?.steps ? 'Running' : 'Hyrox');
+                const todayIsCustom = rawCat === 'Custom' || rawCat === 'Autonomo';
+                const category = todayIsCustom ? 'Custom' : rawCat;
+                const todayIsRun = category === 'Running';
                 
                 return (
                   <div 
@@ -351,20 +408,20 @@ export default function Home() {
                     className={`rounded-3xl p-6 cursor-pointer transition border relative overflow-hidden group ${
                       todayWorkout.status === 'completed'
                         ? 'bg-green-500/10 border-green-500/30 hover:border-green-500'
-                        : (todayIsRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50 hover:border-[#0094C6]' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50 hover:border-[#f1ba17]')
+                        : (todayIsRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50 hover:border-[#0094C6]' : todayIsCustom ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#D11149]/50 hover:border-[#D11149]' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50 hover:border-[#f1ba17]')
                     }`}
                   >
                     <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition">
-                      {todayWorkout.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (todayIsRun ? <Timer size={80} className="text-[#0094C6] -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />)}
+                      {todayWorkout.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (todayIsRun ? <Timer size={80} className="text-[#0094C6] -rotate-12" /> : todayIsCustom ? <Dumbbell size={80} className="text-[#D11149] -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />)}
                     </div>
                     <div className="relative z-10">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 shadow-lg shrink-0 ${
-                        todayWorkout.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (todayIsRun ? 'bg-[#0094C6] text-white shadow-[#0094C6]/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20')
+                        todayWorkout.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (todayIsRun ? 'bg-[#0094C6] text-white shadow-[#0094C6]/20' : todayIsCustom ? 'bg-[#D11149] text-white shadow-[#D11149]/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20')
                       }`}>
                         {todayWorkout.status === 'completed' ? <CheckCircle2 size={24} /> : (todayIsRun ? <Timer size={24} /> : <Dumbbell size={24} />)}
                       </div>
                       <h3 className="text-white font-bold text-xl mb-1 truncate pr-8">{todayWorkout.workouts.title}</h3>
-                      <p className={`text-sm font-medium ${todayWorkout.status === 'completed' ? 'text-green-400' : (todayIsRun ? 'text-[#0094C6]' : 'text-[#f1ba17]')}`}>
+                      <p className={`text-sm font-medium ${todayWorkout.status === 'completed' ? 'text-green-400' : (todayIsRun ? 'text-[#0094C6]' : todayIsCustom ? 'text-[#D11149]' : 'text-[#f1ba17]')}`}>
                         {todayWorkout.status === 'completed' ? 'Ottimo lavoro, completato! 🎉' : 'Da completare oggi 🔥'}
                       </p>
                       <div className="mt-4">
@@ -373,7 +430,7 @@ export default function Home() {
                           className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition border ${
                             todayWorkout.status === 'completed' 
                               ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30' 
-                              : (todayIsRun ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#0094C6] hover:text-[#0094C6]' : 'bg-[#111] border-[#333] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]')
+                              : (todayIsRun ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#0094C6] hover:text-[#0094C6]' : todayIsCustom ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#D11149] hover:text-[#D11149]' : 'bg-[#111] border-[#333] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]')
                           }`}
                         >
                           {todayWorkout.status === 'completed' ? <CheckCircle2 size={16} /> : <Circle size={16} />} 
@@ -474,6 +531,55 @@ export default function Home() {
         <FolderArchive size={20} />
         Archivio Workout
       </button>
+
+      {/* MODAL ALLENAMENTO AUTONOMO */}
+      {autonomousModalOpen && createPortal(
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl">
+            <div className="flex justify-between items-center mb-2">
+               <h2 className="text-xl font-bold text-white">Allenamento Libero</h2>
+               <button onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+            </div>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo</label>
+                <input 
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm"
+                  value={autonomousForm.title}
+                  onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
+                  placeholder="Es. Corsa 5km, Calcetto..."
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Data</label>
+                <CustomDatePicker
+                  date={autonomousForm.date}
+                  onChange={(d) => setAutonomousForm({ ...autonomousForm, date: d })}
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full"
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Descrizione / Note</label>
+                <textarea 
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm resize-none"
+                  rows={3}
+                  value={autonomousForm.notes}
+                  onChange={(e) => setAutonomousForm({ ...autonomousForm, notes: e.target.value })}
+                  placeholder="Com'è andata?"
+                />
+              </div>
+              <button 
+                onClick={handleSaveAutonomous}
+                disabled={!autonomousForm.title || savingAutonomous}
+                className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
+              >
+                {savingAutonomous ? 'Salvataggio...' : 'Salva Allenamento'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

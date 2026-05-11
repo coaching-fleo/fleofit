@@ -73,17 +73,19 @@ export default function Calendar() {
     'AMRAP': '#f1ba17',
     'For Time': '#f1ba17',
     Hyrox: '#f1ba17',
-    Running: '#0094C6'
+    Running: '#0094C6',
+    Custom: '#D11149'
   }
 
   const getIntensityColor = (val, type) => {
     const num = parseInt(val, 10);
     if (isNaN(num)) return 'text-gray-500';
-    return type === 'Running' ? 'text-[#0094C6]' : 'text-[#f1ba17]';
+    return type === 'Running' ? 'text-[#0094C6]' : (type === 'Custom' ? 'text-[#D11149]' : 'text-[#f1ba17]');
   }
 
   const getWorkoutType = (w) => {
     const s = w.sections || {}
+    if (s.category === 'Custom' || s.category === 'Autonomo') return 'Custom'
     if (s.category === 'Running' || s.main?.type === 'Running' || s.steps) return 'Running'
     if (s.blocks) {
       const mainBlock = s.blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type))

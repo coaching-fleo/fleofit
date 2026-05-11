@@ -21,7 +21,8 @@ const TYPE_COLORS = {
   EMOM: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
   AMRAP: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
   'For Time': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
-  'Running': { text: 'text-[#0094C6]', bg: 'bg-[#0094C6]/10', border: 'border-[#0094C6]/30', hex: '#0094C6' }
+   'Running': { text: 'text-[#0094C6]', bg: 'bg-[#0094C6]/10', border: 'border-[#0094C6]/30', hex: '#0094C6' },
+  'Custom': { text: 'text-[#D11149]', bg: 'bg-[#D11149]/10', border: 'border-[#D11149]/30', hex: '#D11149' }
 
 }
 const getIntensityColor = (val) => {
@@ -275,9 +276,10 @@ export default function WorkoutDetail() {
   const buildPDFDoc = async () => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' })
     const s = workout.sections
-    const category = (s?.category === 'Running' || s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
+    const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
+    const category = (rawCat === 'Autonomo' || rawCat === 'Custom') ? 'Custom' : rawCat
     const isRunning = category === 'Running'
-    const type = isRunning ? 'Running' : 'Hyrox'
+    const type = category === 'Custom' ? 'Custom' : (isRunning ? 'Running' : 'Hyrox')
     let y = 20
 
     // Header
@@ -311,6 +313,9 @@ export default function WorkoutDetail() {
     // Tipo badge
     doc.setFontSize(11)
     if (type === 'Running') {
+      doc.setTextColor(0, 148, 198)
+    } else if (type === 'Custom') {
+      doc.setTextColor(209, 17, 73)
     } else {
       doc.setTextColor(241, 186, 23)
     }
@@ -322,7 +327,10 @@ export default function WorkoutDetail() {
     if (s?.intensity) {
       if (type === 'Running') {
         doc.setTextColor(0, 148, 198)
-       doc.setTextColor(241, 186, 23)
+      } else if (type === 'Custom') {
+        doc.setTextColor(209, 17, 73)
+      } else {
+        doc.setTextColor(241, 186, 23)
       }
       doc.setFont('helvetica', 'bold')
       doc.text('INTENSITA\': ', 20, y)
@@ -574,11 +582,12 @@ export default function WorkoutDetail() {
   if (!workout) return <div className="p-6 text-red-400">Workout non trovato</div>
 
   const s = workout.sections
-  const category = (s?.category === 'Running' || s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
+  const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
+  const category = (rawCat === 'Autonomo' || rawCat === 'Custom') ? 'Custom' : rawCat
   const isRunning = category === 'Running'
   const blocks = getNormalizedBlocks(workout)
   const mainBlock = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type)) || blocks[0] || { type: 'Hyrox' }
-  const type = isRunning ? 'Running' : mainBlock.type
+  const type = category === 'Custom' ? 'Custom' : (isRunning ? 'Running' : mainBlock.type)
   const c = TYPE_COLORS[type] || TYPE_COLORS['Hyrox'] || { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' }
 
   const getIconForType = (t) => {
@@ -652,7 +661,7 @@ export default function WorkoutDetail() {
       </div>
 
       {/* BLOCKS */}
-      {!isRunning ? (
+      {!isRunning && type !== 'Custom' ? (
         blocks.map((block, idx) => (
           <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} color={TYPE_COLORS[block.type]?.border}>
              {['WarmUp', 'Rest'].includes(block.type) ? (
@@ -662,11 +671,11 @@ export default function WorkoutDetail() {
              )}
           </Section>
         ))
-      ) : (
+      ) : isRunning ? (
          <Section icon={<Timer size={16} className={c.text} />} label="Allenamento Corsa" color={c.border}>
            <RunningList steps={s?.steps || s?.main?.steps || []} />
          </Section>
-      )}
+      ) : null}
 
       {/* NOTE COACH */}
       {workout.coach_notes && (
@@ -804,15 +813,15 @@ export default function WorkoutDetail() {
                   {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'dd MMM yyyy', { locale: it }) : ''}
                 </div>
               </div>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: type === 'Running' ? '#0094C6' : '#f1ba17', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: '16px', fontWeight: 900, color: type === 'Running' ? '#fff' : '#111' }}>FL</span>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: type === 'Running' ? '#0094C6' : (type === 'Custom' ? '#D11149' : '#f1ba17'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '16px', fontWeight: 900, color: type === 'Running' || type === 'Custom' ? '#fff' : '#111' }}>FL</span>
               </div>
             </div>
 
             {/* TITLE */}
             <div style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                <span style={{ background: type === 'Running' ? 'rgba(0, 148, 198, 0.2)' : 'rgba(241, 186, 23, 0.2)', color: type === 'Running' ? '#0094C6' : '#f1ba17', padding: '6px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <span style={{ background: type === 'Running' ? 'rgba(0, 148, 198, 0.2)' : (type === 'Custom' ? 'rgba(209, 17, 73, 0.2)' : 'rgba(241, 186, 23, 0.2)'), color: type === 'Running' ? '#0094C6' : (type === 'Custom' ? '#D11149' : '#f1ba17'), padding: '6px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
                   {type}
                 </span>
                 {workout.sections?.intensity && (

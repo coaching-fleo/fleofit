@@ -84,7 +84,8 @@ export default function WorkoutsArchive() {
       ) : (
         <div className="flex flex-col gap-3">
           {filteredWorkouts.map(w => {
-            const category = w.sections?.category || (w.sections?.steps ? 'Running' : 'Hyrox')
+            const rawCat = w.sections?.category || (w.sections?.steps ? 'Running' : 'Hyrox')
+            const category = (rawCat === 'Custom' || rawCat === 'Autonomo') ? 'Custom' : rawCat
             return (
               <div 
                 key={w.aw_id || w.id} 
@@ -99,7 +100,7 @@ export default function WorkoutsArchive() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  <span className={`text-xs font-bold px-3 py-1.5 rounded-xl ${category === 'Running' ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+                  <span className={`text-xs font-bold px-3 py-1.5 rounded-xl ${category === 'Running' ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : (category === 'Custom' ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30')}`}>
                     {category}
                   </span>
                   {role !== 'athlete' && w.athlete_workouts && (

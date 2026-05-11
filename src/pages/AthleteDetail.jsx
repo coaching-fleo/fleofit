@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity } from 'lucide-react'
-import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid } from 'date-fns'
+import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList } from 'lucide-react'
+import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isToday } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
@@ -33,16 +33,21 @@ export default function AthleteDetail() {
   const [workouts, setWorkouts] = useState([])
   const [prs, setPrs] = useState([])
   const [tab, setTab] = useState('workouts') // 'workouts' | 'prs'
+  const [workoutView, setWorkoutView] = useState('list') // 'list' | 'calendar'
   const [showHistory, setShowHistory] = useState(false)
   const [loading, setLoading] = useState(true)
   const [workoutToRemove, setWorkoutToRemove] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [socialModalType, setSocialModalType] = useState(null)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [prModalOpen, setPrModalOpen] = useState(false)
   const [editingPr, setEditingPr] = useState(null)
   const [showCelebration, setShowCelebration] = useState(false)
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
+
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [selectedDay, setSelectedDay] = useState(new Date())
 
   useEffect(() => {
     if (role === 'athlete' && !isOwnProfile) {
@@ -173,6 +178,15 @@ export default function AthleteDetail() {
   const upcomingWorkoutsList = workouts.filter(w => w.completed_date > todayStr).reverse()
   const pastWorkoutsList = workouts.filter(w => w.completed_date < todayStr)
 
+  const days = eachDayOfInterval({
+    start: startOfMonth(currentMonth),
+    end: endOfMonth(currentMonth)
+  })
+  const firstDayOfMonth = startOfMonth(currentMonth).getDay()
+  const offset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1
+  const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
+  const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
+
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
       {role !== 'athlete' && !isOwnProfile ? (
@@ -202,16 +216,18 @@ export default function AthleteDetail() {
             <h1 className="text-2xl font-bold text-white">{athlete.name} {athlete.surname}</h1>
             {athlete.username && <p className="text-gray-400">@{athlete.username}</p>}
             {athlete.notes && <p className="text-gray-500 text-sm mt-1 max-w-sm whitespace-pre-wrap">{athlete.notes}</p>}
-            {(athlete.instagram_url || athlete.strava_url) && (
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
-                {athlete.instagram_url && (
-                  <a href={athlete.instagram_url.startsWith('http') ? athlete.instagram_url : `https://instagram.com/${athlete.instagram_url.replace(/^@/, '')}`} target="_blank" rel="noopener noreferrer" title="Instagram" className="flex items-center justify-center w-8 h-8 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 text-white rounded-full hover:opacity-80 transition shadow-md shadow-pink-500/20"><InstagramIcon size={16} /></a>
-                )}
-                {athlete.strava_url && (
-                  <a href={athlete.strava_url} target="_blank" rel="noopener noreferrer" title="Strava" className="flex items-center justify-center w-8 h-8 bg-[#fc4c02] text-white rounded-full hover:opacity-80 transition shadow-md shadow-[#fc4c02]/20"><Activity size={16} /></a>
-                )}
-              </div>
-            )}
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              {athlete.instagram_url ? (
+                <a href={athlete.instagram_url.startsWith('http') ? athlete.instagram_url : `https://instagram.com/${athlete.instagram_url.replace(/^@/, '')}`} target="_blank" rel="noopener noreferrer" title="Instagram" className="flex items-center justify-center w-8 h-8 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 text-white rounded-full hover:opacity-80 transition shadow-md shadow-pink-500/20"><InstagramIcon size={16} /></a>
+              ) : (
+                <button onClick={() => setSocialModalType('instagram')} title="Aggiungi Instagram" className="flex items-center justify-center w-8 h-8 bg-[#2a2a2a] text-gray-600 rounded-full hover:text-pink-500 hover:border-pink-500/50 transition border border-[#383838]"><InstagramIcon size={16} /></button>
+              )}
+              {athlete.strava_url ? (
+                <a href={athlete.strava_url} target="_blank" rel="noopener noreferrer" title="Strava" className="flex items-center justify-center w-8 h-8 bg-[#fc4c02] text-white rounded-full hover:opacity-80 transition shadow-md shadow-[#fc4c02]/20"><Activity size={16} /></a>
+              ) : (
+                <button onClick={() => setSocialModalType('strava')} title="Aggiungi Strava" className="flex items-center justify-center w-8 h-8 bg-[#2a2a2a] text-gray-600 rounded-full hover:text-[#fc4c02] hover:border-[#fc4c02]/50 transition border border-[#383838]"><Activity size={16} /></button>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -235,7 +251,7 @@ export default function AthleteDetail() {
       </div>
 
       {/* TABS */}
-      <div className="flex gap-6 mb-6 border-b border-[#2a2a2a]">
+      <div className="flex gap-6 mb-6 border-b border-[#2a2a2a] overflow-x-auto hide-scrollbar">
         <button onClick={() => { setTab('workouts'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition ${tab === 'workouts' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-gray-500 hover:text-white'}`}>
           Diario Allenamenti
         </button>
@@ -273,30 +289,129 @@ export default function AthleteDetail() {
           </div>
         ) : (
         <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              <BookOpen size={20} className="text-[#f1ba17]" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <BookOpen size={22} className="text-[#f1ba17]" />
               Diario Workout
             </h2>
             {role !== 'athlete' && (
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setAssignModalOpen(true)}
-                  className="flex items-center gap-1 text-black text-sm font-semibold bg-[#f1ba17] px-3 py-1.5 rounded-full transition hover:brightness-110 shadow-lg shadow-[#f1ba17]/20"
+                  className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 text-black text-sm font-bold bg-[#f1ba17] px-4 py-2.5 rounded-xl transition hover:brightness-110 shadow-lg shadow-[#f1ba17]/20"
                 >
-                  <Dumbbell size={14} className="hidden sm:block" /> Assegna
+                  <Dumbbell size={16} /> Assegna
                 </button>
                 <button 
                   onClick={() => navigate(`/create?athlete_id=${id}`)}
-                  className="flex items-center gap-1 text-[#f1ba17] text-sm font-semibold bg-[#f1ba17]/10 border border-[#f1ba17]/30 px-3 py-1.5 rounded-full transition hover:brightness-110"
+                  className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 text-[#f1ba17] text-sm font-bold bg-[#f1ba17]/10 border border-[#f1ba17]/30 px-4 py-2.5 rounded-xl transition hover:brightness-110"
                 >
                   <Plus size={16} /> Crea
                 </button>
               </div>
             )}
           </div>
-          {workouts.length > 0 ? (
-            <div className="flex flex-col gap-8">
+          
+          {role !== 'athlete' && (
+            <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333]">
+              <div 
+                className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
+                  workoutView === 'list' ? 'translate-x-0' : 'translate-x-full'
+                }`}
+              />
+              <button 
+                onClick={() => setWorkoutView('list')}
+                className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'list' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                <LayoutList size={18} /> Elenco
+              </button>
+              <button 
+                onClick={() => setWorkoutView('calendar')}
+                className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'calendar' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                <CalendarDays size={18} /> Calendario
+              </button>
+            </div>
+          )}
+          
+          <div key={workoutView} className={`animate-in fade-in zoom-in-[0.98] duration-300 ease-out fill-mode-both ${workoutView === 'list' ? 'slide-in-from-left-4' : 'slide-in-from-right-4'}`}>
+            {role !== 'athlete' && workoutView === 'calendar' ? (
+              <div className="flex flex-col bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white capitalize">
+                  {format(currentMonth, 'MMMM yyyy', { locale: it })}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <button onClick={prevMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button onClick={() => { setCurrentMonth(new Date()); setSelectedDay(new Date()); }} className="px-3 py-1.5 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white text-sm transition">
+                    Oggi
+                  </button>
+                  <button onClick={nextMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 mb-2">
+                {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => (
+                  <div key={i} className="text-center text-gray-600 text-xs font-medium py-1">{d}</div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 mb-6">
+                {Array.from({ length: offset }).map((_, i) => <div key={`empty-${i}`} />)}
+                {days.map(day => {
+                  const dayStr = format(day, 'yyyy-MM-dd')
+                  const dayWorkoutsList = workouts.filter(w => w.completed_date === dayStr)
+                  const hasWorkout = dayWorkoutsList.length > 0
+                  const selected = format(selectedDay, 'yyyy-MM-dd') === dayStr
+                  const today = format(new Date(), 'yyyy-MM-dd') === dayStr
+
+                  return (
+                    <button
+                      key={day.toISOString()}
+                      onClick={() => setSelectedDay(day)}
+                      className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 rounded-xl aspect-square transition ${selected ? 'bg-[#f1ba17]' : today ? 'bg-[#2a2a2a]' : 'bg-[#111] hover:bg-[#2a2a2a] border border-[#222]'}`}
+                    >
+                      <span className={`text-sm font-medium leading-none ${selected ? 'text-black' : today ? 'text-[#f1ba17]' : 'text-white'}`}>
+                        {format(day, 'd')}
+                      </span>
+                      {hasWorkout && (
+                        <div className="flex gap-0.5 mt-1">
+                          {dayWorkoutsList.slice(0, 3).map((w, i) => {
+                            const cat = w.workouts?.sections?.category || 'Hyrox'
+                            const isCustom = cat === 'Custom' || cat === 'Autonomo'
+                            const color = cat === 'Running' ? '#0094C6' : (isCustom ? '#D11149' : '#f1ba17')
+                            return <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selected ? '#000' : color }} />
+                          })}
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="pt-4 border-t border-[#2a2a2a]">
+                <h3 className="text-white font-semibold mb-3">
+                  {format(selectedDay, 'EEEE d MMMM', { locale: it })}
+                </h3>
+                {workouts.filter(w => w.completed_date === format(selectedDay, 'yyyy-MM-dd')).length === 0 ? (
+                    <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-6 text-center">
+                     <p className="text-gray-600 text-sm">Nessun workout in questa data.</p>
+                   </div>
+                ) : (
+                    <div className="flex flex-col gap-3">
+                     {workouts.filter(w => w.completed_date === format(selectedDay, 'yyyy-MM-dd')).map(w => (
+                       <WorkoutEntryCard key={w.id} entry={w} onToggleStatus={toggleWorkoutStatus} onUpdateNote={updateWorkoutNote} onRemove={requestRemoveWorkout} navigate={navigate} athleteId={id} role={role} />
+                     ))}
+                   </div>
+                )}
+              </div>
+            </div>
+          ) : workouts.length > 0 ? (
+              <div className="flex flex-col gap-8">
               {todayWorkoutsList.length > 0 && (
                 <div>
                   <h3 className="text-white font-bold mb-3 flex items-center gap-2">
@@ -360,13 +475,14 @@ export default function AthleteDetail() {
               )}
             </div>
           ) : (
-            <div className="bg-[#1e1e1e] border border-dashed border-[#2a2a2a] rounded-2xl p-6 text-center">
+              <div className="bg-[#1e1e1e] border border-dashed border-[#2a2a2a] rounded-2xl p-6 text-center">
               <p className="text-gray-600 text-sm">Nessun workout registrato per questo atleta.</p>
             </div>
           )}
+          </div>
         </div>
         )
-      ) : (
+      ) : tab === 'prs' ? (
         <div className="flex flex-col gap-4 animate-in fade-in duration-300">
            <div className="flex items-center justify-between">
              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -396,7 +512,7 @@ export default function AthleteDetail() {
              </div>
            )}
         </div>
-      )}
+      ) : null}
 
       {/* MODAL CONFERMA RIMOZIONE WORKOUT */}
       {workoutToRemove && createPortal(
@@ -482,6 +598,20 @@ export default function AthleteDetail() {
         />,
         document.body
       )}
+
+      {/* MODAL SOCIAL LINK */}
+      {socialModalType && createPortal(
+        <SocialLinkModal 
+          athlete={athlete}
+          type={socialModalType}
+          onClose={() => setSocialModalType(null)}
+          onSaved={() => {
+            setSocialModalType(null)
+            fetchAthleteData(true)
+          }}
+        />,
+        document.body
+      )}
       
       {showCelebration && createPortal(
         <CelebrationOverlay onClose={() => setShowCelebration(false)} />,
@@ -495,6 +625,93 @@ export default function AthleteDetail() {
         </>,
         document.body
       )}
+    </div>
+  )
+}
+
+function SocialLinkModal({ athlete, type, onClose, onSaved }) {
+  const [url, setUrl] = useState(athlete[`${type}_url`] || '')
+  const [saving, setSaving] = useState(false)
+  const [alertInfo, setAlertInfo] = useState(null)
+
+  const handleSave = async () => {
+    if (!url.trim()) return
+    
+    let finalUrl = url.trim()
+    if (type === 'instagram') {
+       let val = finalUrl.replace(/^@/, '')
+       if (val.includes('instagram.com/')) {
+         val = val.split('instagram.com/')[1].split('/')[0].split('?')[0]
+       }
+       const instaRegex = /^[a-zA-Z0-9._]{1,30}$/
+       if (!instaRegex.test(val)) {
+         return setAlertInfo({ title: 'Errore', message: 'Username Instagram non valido. Usa solo lettere, numeri, punti e underscore.', type: 'error' })
+       }
+       finalUrl = val
+    } else if (type === 'strava') {
+       if (!/^https?:\/\//i.test(finalUrl)) {
+         finalUrl = 'https://' + finalUrl;
+       }
+       try {
+         const parsedUrl = new URL(finalUrl)
+         if (!parsedUrl.hostname.includes('strava.com') && !parsedUrl.hostname.includes('strava.app.link')) {
+           return setAlertInfo({ title: 'Errore', message: 'Inserisci un link valido a un profilo Strava (es. https://strava.app.link/...).', type: 'error' })
+         }
+       } catch (e) {
+         return setAlertInfo({ title: 'Errore', message: 'Inserisci un URL Strava valido.', type: 'error' })
+       }
+    }
+    
+    setSaving(true)
+    const { error } = await supabase.from('athletes').update({
+      [`${type}_url`]: finalUrl
+    }).eq('id', athlete.id)
+
+    setSaving(false)
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+    } else {
+      onSaved()
+    }
+  }
+
+  const isInsta = type === 'instagram'
+
+  return (
+    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
+          <p className="text-white font-bold text-lg">Aggiungi {isInsta ? 'Instagram' : 'Strava'}</p>
+          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+        </div>
+        <div className="p-5 flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-gray-400 text-xs pl-1 block mb-1">
+              {isInsta ? 'Username o link profilo' : 'Link profilo Strava'}
+            </label>
+            {isInsta ? (
+               <div className="flex items-center bg-[#111] border border-[#333] rounded-xl overflow-hidden focus-within:border-pink-500 transition">
+                  <div className="pl-4 pr-3 py-3 text-gray-500 flex items-center justify-center border-r border-[#333]">
+                     <InstagramIcon size={18} className="text-pink-500" />
+                  </div>
+                  <div className="pl-3 text-gray-400 text-sm font-semibold">@</div>
+                  <input autoFocus className="w-full bg-transparent pr-3 py-3 text-white placeholder-gray-500 focus:outline-none text-sm" placeholder="Nome utente" value={url} onChange={e => setUrl(e.target.value)} />
+               </div>
+            ) : (
+               <div className="flex items-center bg-[#111] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#fc4c02] transition">
+                  <div className="pl-4 pr-3 py-3 text-gray-500 flex items-center justify-center border-r border-[#333]">
+                     <Activity size={18} className="text-[#fc4c02]" />
+                  </div>
+                  <input autoFocus className="w-full bg-transparent px-3 py-3 text-white placeholder-gray-500 focus:outline-none text-sm" placeholder="Link profilo..." value={url} onChange={e => setUrl(e.target.value)} />
+               </div>
+            )}
+          </div>
+          <button onClick={handleSave} disabled={saving || !url.trim()} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+            {saving ? 'Salvataggio...' : 'Conferma'}
+          </button>
+        </div>
+      </div>
+      {alertInfo && <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />}
     </div>
   )
 }
@@ -545,7 +762,9 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
   
   const hasChanges = note !== (entry.notes || '')
 
-  const category = entry.workouts?.sections?.category || (entry.workouts?.sections?.steps ? 'Running' : 'Hyrox')
+  const rawCat = entry.workouts?.sections?.category || (entry.workouts?.sections?.steps ? 'Running' : 'Hyrox')
+  const isAuto = rawCat === 'Custom' || rawCat === 'Autonomo'
+  const category = isAuto ? 'Custom' : rawCat
   const isRun = category === 'Running'
 
   const handleSaveNote = async () => {
@@ -559,23 +778,23 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
       className={`rounded-3xl p-5 transition border relative overflow-hidden group ${
         entry.status === 'completed'
           ? 'bg-green-500/10 border-green-500/30'
-          : (isRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50')
+          : (isRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50' : isAuto ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#D11149]/50' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50')
       }`}
     >
       <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-        {entry.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (isRun ? <Timer size={80} className="text-[#0094C6] -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />)}
+        {entry.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (isRun ? <Timer size={80} className="text-[#0094C6] -rotate-12" /> : isAuto ? <Dumbbell size={80} className="text-[#D11149] -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />)}
       </div>
       <div className="relative z-10 flex flex-col gap-4">
         <div className="flex justify-between items-start gap-2">
            <div className="flex items-center gap-4 cursor-pointer flex-1 min-w-0" onClick={() => navigate(`/workout/${entry.workouts.id}?athlete_id=${athleteId}`)}>
              <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg shrink-0 ${
-               entry.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (isRun ? 'bg-[#0094C6] text-white shadow-[#0094C6]/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20')
+               entry.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (isRun ? 'bg-[#0094C6] text-white shadow-[#0094C6]/20' : isAuto ? 'bg-[#D11149] text-white shadow-[#D11149]/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20')
              }`}>
                {entry.status === 'completed' ? <CheckCircle2 size={24} /> : (isRun ? <Timer size={24} /> : <Dumbbell size={24} />)}
              </div>
              <div className="min-w-0">
                <h3 className="text-white font-bold text-xl leading-tight group-hover:underline underline-offset-4 truncate">{entry.workouts.title}</h3>
-               <p className={`text-sm font-medium mt-1 ${entry.status === 'completed' ? 'text-green-400' : (isRun ? 'text-[#0094C6]' : 'text-[#f1ba17]')}`}>
+               <p className={`text-sm font-medium mt-1 ${entry.status === 'completed' ? 'text-green-400' : (isRun ? 'text-[#0094C6]' : isAuto ? 'text-[#D11149]' : 'text-[#f1ba17]')}`}>
                  {entry.status === 'completed' ? 'Completato! 🎉' : 'Da fare oggi 🔥'}
                </p>
              </div>
@@ -587,7 +806,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition border bg-[#111]/50 backdrop-blur-md ${
                  entry.status === 'completed' 
                    ? 'border-green-500 text-green-500 hover:bg-green-500/20' 
-                   : `border-[#333] text-gray-300 ${isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
+                     : `border-[#333] text-gray-300 ${isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isAuto ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
                }`}
              >
                {entry.status === 'completed' ? <CheckCircle2 size={14} /> : <Circle size={14} />} {entry.status === 'completed' ? 'Fatto' : 'Segna fatto'}
@@ -607,7 +826,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
 
         <div className="pt-2 border-t border-white/5">
           <textarea
-            className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-sm transition-colors ${isRun ? 'focus:border-[#0094C6]' : 'focus:border-[#f1ba17]'}`}
+            className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-sm transition-colors ${isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
             rows={2}
             placeholder="Note dell'atleta su questo workout..."
             value={note}
@@ -618,7 +837,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
               <button
                 onClick={handleSaveNote}
                 disabled={saving}
-                className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isRun ? 'bg-[#0094C6] text-white' : 'bg-[#f1ba17] text-black'}`}
+                className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isRun ? 'bg-[#0094C6] text-white' : isAuto ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
               >
                 {saving ? 'Salvataggio...' : 'Conferma note'}
               </button>
@@ -717,6 +936,30 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
 
   const handleSave = async () => {
     if (!form.name || !form.surname) return setAlertInfo({ title: 'Attenzione', message: 'Nome e cognome obbligatori!', type: 'error' })
+    
+    let finalInstagram = form.instagram_url?.trim() || ''
+    if (finalInstagram) {
+      const instaRegex = /^[a-zA-Z0-9._]{1,30}$/
+      if (!instaRegex.test(finalInstagram)) {
+        return setAlertInfo({ title: 'Errore', message: 'Username Instagram non valido. Usa solo lettere, numeri, punti e underscore.', type: 'error' })
+      }
+    }
+
+    let finalStrava = form.strava_url?.trim() || ''
+    if (finalStrava) {
+      if (!/^https?:\/\//i.test(finalStrava)) {
+        finalStrava = 'https://' + finalStrava;
+      }
+      try {
+         const parsedUrl = new URL(finalStrava)
+         if (!parsedUrl.hostname.includes('strava.com') && !parsedUrl.hostname.includes('strava.app.link')) {
+           return setAlertInfo({ title: 'Errore', message: 'Inserisci un link valido a un profilo Strava (es. https://strava.app.link/...).', type: 'error' })
+         }
+      } catch (e) {
+         return setAlertInfo({ title: 'Errore', message: 'Inserisci un URL Strava valido.', type: 'error' })
+      }
+    }
+
     setSaving(true)
 
     let photo_url = athlete.photo_url
@@ -743,8 +986,8 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
       weight: form.weight ? parseFloat(form.weight) : null,
       height: form.height ? parseFloat(form.height) : null,
       notes: form.notes,
-      instagram_url: form.instagram_url,
-      strava_url: form.strava_url,
+      instagram_url: finalInstagram,
+      strava_url: finalStrava,
       photo_url
     }).eq('id', athlete.id)
 
@@ -880,7 +1123,9 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
     statusText = 'Saltato'
   }
 
-  const category = entry.workouts?.sections?.category || (entry.workouts?.sections?.steps ? 'Running' : 'Hyrox')
+  const rawCat = entry.workouts?.sections?.category || (entry.workouts?.sections?.steps ? 'Running' : 'Hyrox')
+  const isAuto = rawCat === 'Custom' || rawCat === 'Autonomo'
+  const category = isAuto ? 'Custom' : rawCat
   const isRun = category === 'Running'
 
   const handleSaveNote = async () => {
@@ -897,10 +1142,10 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           onClick={() => navigate(`/workout/${entry.workouts.id}?athlete_id=${athleteId}`)}
         >
           <div className="flex items-center gap-2 flex-wrap">
-            <p className={`font-semibold text-white transition underline underline-offset-4 leading-tight ${isRun ? 'group-hover:text-[#0094C6] decoration-[#0094C6]/50' : 'group-hover:text-[#f1ba17] decoration-[#f1ba17]/50'}`}>
+            <p className={`font-semibold text-white transition underline underline-offset-4 leading-tight ${isRun ? 'group-hover:text-[#0094C6] decoration-[#0094C6]/50' : isAuto ? 'group-hover:text-[#D11149] decoration-[#D11149]/50' : 'group-hover:text-[#f1ba17] decoration-[#f1ba17]/50'}`}>
               {entry.workouts.title}
             </p>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isAuto ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
               {category}
             </span>
           </div>
@@ -925,8 +1170,8 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           entry.status === 'completed' 
             ? 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500/20' 
             : isBefore(scheduledDate, today)
-              ? `bg-[#111] border-[#333] text-gray-500 ${isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
-              : `bg-[#2a2a2a] border-[#383838] text-gray-300 ${isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
+              ? `bg-[#111] border-[#333] text-gray-500 ${isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isAuto ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
+              : `bg-[#2a2a2a] border-[#383838] text-gray-300 ${isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isAuto ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
         }`}
       >
         <Icon size={18} /> {statusText}
@@ -934,7 +1179,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
 
       <div className="mt-3 pt-3 border-t border-[#2a2a2a]">
         <textarea
-          className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-sm transition-colors ${isRun ? 'focus:border-[#0094C6]' : 'focus:border-[#f1ba17]'}`}
+          className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-sm transition-colors ${isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
           rows={3}
           placeholder="Copia qui le note dell'atleta su questo workout..."
           value={note}
@@ -945,7 +1190,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             <button
               onClick={handleSaveNote}
               disabled={saving}
-              className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isRun ? 'bg-[#0094C6] text-white' : 'bg-[#f1ba17] text-black'}`}
+              className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isRun ? 'bg-[#0094C6] text-white' : isAuto ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
             >
               {saving ? 'Salvataggio...' : 'Conferma'}
             </button>
