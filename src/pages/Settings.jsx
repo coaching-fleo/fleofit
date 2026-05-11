@@ -437,15 +437,13 @@ function InviteCodeManager() {
             <div className="p-4 pt-0 flex flex-col gap-2 overflow-y-auto hide-scrollbar" style={{ maxHeight: '400px' }}>
               {loading ? <p className="text-gray-500 text-xs">Caricamento...</p> : usedCodes.length > 0 ? (
                 usedCodes.map(code => (
-                  <div key={code.id} className="bg-[#222] p-3 rounded-xl flex items-center justify-between text-sm border border-[#333]">
-                    <div className="flex-1 flex items-center justify-between">
-                      <span className="font-mono text-gray-500 line-through">{code.code}</span>
-                      <div className="text-right text-gray-400 pr-3 border-r border-[#444]">
-                        <p className="font-semibold text-gray-300">{code.used_by_name || code.used_by_email || 'Utente Sconosciuto'}</p>
-                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">{format(parseISO(code.used_at), 'd MMM yyyy, HH:mm', { locale: it })}</p>
-                      </div>
+                  <div key={code.id} className="bg-[#222] p-3 rounded-xl flex items-center gap-3 text-sm border border-[#333]">
+                    <span className="font-mono text-gray-500 line-through shrink-0">{code.code}</span>
+                    <div className="flex-1 text-right text-gray-400 pr-3 border-r border-[#444] min-w-0">
+                      <p className="font-semibold text-gray-300 truncate">{code.used_by_name || code.used_by_email || 'Utente Sconosciuto'}</p>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider truncate">{format(parseISO(code.used_at), 'd MMM yyyy, HH:mm', { locale: it })}</p>
                     </div>
-                    <button onClick={() => deleteCode(code.id)} title="Elimina log" className="p-2 text-gray-500 hover:text-red-500 ml-2 transition bg-[#111] rounded-lg border border-[#333]"><Trash2 size={16} /></button>
+                    <button onClick={() => deleteCode(code.id)} title="Elimina log" className="p-2 text-gray-500 hover:text-red-500 shrink-0 transition bg-[#111] rounded-lg border border-[#333]"><Trash2 size={16} /></button>
                   </div>
                 ))
               ) : <p className="text-gray-500 text-xs">Nessun codice è stato ancora utilizzato.</p>}
