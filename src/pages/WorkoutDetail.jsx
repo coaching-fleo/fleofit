@@ -101,8 +101,9 @@ const getBlockTitle = (block) => {
   }
   if (block.type === 'For Time') return `For Time · ${block.params?.rounds || '3'} rounds`
   if (['Cash In', 'Cash Out'].includes(block.type)) {
-    const rounds = block.params?.rounds || '1'
-    return rounds !== '1' ? `${block.type} · ${rounds} rounds` : block.type
+    const rounds = block.params?.rounds || '1';
+    const rest = (parseInt(rounds, 10) > 1 && block.params?.rest && block.params.rest !== '-') ? ` · ${block.params.rest} rest` : '';
+    return rounds !== '1' ? `${block.type} · ${rounds} rounds${rest}` : block.type;
   }
   return block.type
 }
@@ -503,7 +504,7 @@ export default function WorkoutDetail() {
              doc.setFont('helvetica', 'normal')
              doc.setFontSize(10)
              const prefix = (block.type === 'EMOM' || block.type === 'ON/OFF') ? `Min.${i + 1}  ` : `· `
-             const detail = isDistance(ex.name) ? (ex.meters && ex.meters !== '-' ? ex.meters : '') : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+             const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
              const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? ` @ ${ex.ergoPace}` : ''
              const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
              
@@ -914,7 +915,11 @@ export default function WorkoutDetail() {
                 else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
                 else if (b.type === 'WarmUp') shortTitle = `WARM UP ${b.params?.duration ? '• ' + b.params.duration : ''}`;
                 else if (b.type === 'Rest') shortTitle = `REST ${b.params?.duration ? '• ' + b.params.duration : ''}`;
-                else if (b.type === 'Cash In' || b.type === 'Cash Out') shortTitle = b.type.toUpperCase();
+                else if (b.type === 'Cash In' || b.type === 'Cash Out') {
+                    const rounds = b.params?.rounds || '1';
+                    const rest = (parseInt(rounds, 10) > 1 && b.params?.rest && b.params.rest !== '-') ? ` · ${b.params.rest} REST` : '';
+                    shortTitle = rounds !== '1' ? `${b.type.toUpperCase()} · ${rounds} ROUNDS${rest}` : b.type.toUpperCase();
+                }
 
                 let desc = '';
                 if (['WarmUp', 'Rest'].includes(b.type)) {
@@ -1219,7 +1224,7 @@ function ExList({ exercises, showMinute, typeColor }) {
   return (
     <div className="flex flex-col gap-2 mt-1">
       {exercises.map((ex, i) => {
-        const detail = isDistance(ex.name) ? (ex.meters && ex.meters !== '-' ? ex.meters : '') : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+        const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
         const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
 
         return (
