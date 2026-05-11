@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut, Eye, EyeOff, Plus, Copy, Link as LinkIcon, Trash2, ChevronDown, KeyRound, X } from 'lucide-react'
+import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut, Eye, EyeOff, Plus, Copy, Link as LinkIcon, Trash2, ChevronDown, KeyRound, X, Bell } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -148,6 +148,55 @@ export default function Settings() {
     })
   }
 
+  const handleEnableNotifications = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setAlertInfo({ title: 'Non supportato', message: 'Il tuo browser/dispositivo non supporta le notifiche push. Su iPhone ricordati di aggiungere l\'app alla schermata Home.', type: 'error' });
+      return;
+    }
+
+    try {
+      setLoading(true)
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        setLoading(false)
+        setAlertInfo({ title: 'Permesso negato', message: 'Hai negato il permesso per le notifiche. Sbloccalo dalle impostazioni del browser.', type: 'error' });
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+
+      // ==============================================================
+      // INSERISCI QUI LA PUBLIC KEY GENERATA CON npx web-push
+      // ==============================================================
+      const publicVapidKey = 'BFgnButtc-yZHbR6KCXV4khQDQkVRYUmVDekW5aeqQ-LEVFYBlYtGXvjLA7U0ObA9OqaX8Os5cDkEfZFpfsr-MQ'; 
+      
+      const urlBase64ToUint8Array = (base64String) => {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+        return outputArray;
+      };
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+      });
+
+      const subData = JSON.parse(JSON.stringify(subscription));
+      const { error } = await supabase.from('push_subscriptions').upsert({ user_id: user.id, endpoint: subData.endpoint, auth: subData.keys.auth, p256dh: subData.keys.p256dh }, { onConflict: 'endpoint' });
+      
+      setLoading(false)
+      if (error) throw error;
+      setAlertInfo({ title: 'Successo', message: 'Notifiche push abilitate con successo su questo dispositivo!', type: 'success' });
+    } catch (err) {
+      setLoading(false)
+      setAlertInfo({ title: 'Errore', message: err.message, type: 'error' });
+    }
+  }
+
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
@@ -173,6 +222,24 @@ export default function Settings() {
 
       {/* GESTIONE CODICI INVITO */}
       {role === 'admin' && <InviteCodeManager />}
+
+      {/* SEZIONE NOTIFICHE PUSH */}
+      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">
+        <h2 className="text-lg font-bold text-white mb-4">Notifiche Push</h2>
+        <p className="text-gray-400 text-sm mb-4">Ricevi promemoria per i tuoi allenamenti e avvisi quando il coach aggiorna la tua programmazione.</p>
+        
+        <button onClick={handleEnableNotifications} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition disabled:opacity-50 group">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-[#f1ba17] transition text-gray-400 shrink-0">
+              <Bell size={20} />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-semibold">Abilita Notifiche</p>
+              <p className="text-gray-500 text-xs">Attiva le notifiche su questo dispositivo</p>
+            </div>
+          </div>
+        </button>
+      </div>
 
           {/* SEZIONE ACCOUNT */}
       <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">
