@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronRight, Plus, BicepsFlexed } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, BicepsFlexed, CalendarDays, X, Search } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useAuth } from '../App'
+import { CustomAlert } from '../components/CustomModals'
+import CustomDatePicker from '../components/CustomDatePicker'
 
 export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -12,6 +15,7 @@ export default function Calendar() {
   const [selectedDay, setSelectedDay] = useState(new Date())
   const [dayWorkouts, setDayWorkouts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [eventModalOpen, setEventModalOpen] = useState(false)
   const navigate = useNavigate()
   const { role, user } = useAuth()
 
@@ -74,17 +78,19 @@ export default function Calendar() {
     'For Time': '#f1ba17',
     Hyrox: '#f1ba17',
     Running: '#0094C6',
-    Custom: '#D11149'
+    Custom: '#D11149',
+    Event: '#ffffff'
   }
 
   const getIntensityColor = (val, type) => {
     const num = parseInt(val, 10);
     if (isNaN(num)) return 'text-gray-500';
-    return type === 'Running' ? 'text-[#0094C6]' : (type === 'Custom' ? 'text-[#D11149]' : 'text-[#f1ba17]');
+    return type === 'Event' ? 'text-white' : type === 'Running' ? 'text-[#0094C6]' : (type === 'Custom' ? 'text-[#D11149]' : 'text-[#f1ba17]');
   }
 
   const getWorkoutType = (w) => {
     const s = w.sections || {}
+    if (s.category === 'Event') return 'Event'
     if (s.category === 'Custom' || s.category === 'Autonomo') return 'Custom'
     if (s.category === 'Running' || s.main?.type === 'Running' || s.steps) return 'Running'
     if (s.blocks) {
@@ -117,6 +123,23 @@ export default function Calendar() {
           </button>
           <button onClick={nextMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
             <ChevronRight size={18} />
+          </button>
+          
+          <div className="w-px h-6 bg-[#333] mx-1"></div>
+
+          <button 
+            onClick={() => navigate('/archive')}
+            className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition"
+            title="Cerca nel calendario"
+          >
+            <Search size={18} />
+          </button>
+          <button 
+            onClick={() => setEventModalOpen(true)}
+            className="p-2 rounded-xl bg-[#f1ba17] text-black hover:brightness-110 transition shadow-sm"
+            title="Aggiungi Evento"
+          >
+            <Plus size={18} strokeWidth={2.5} />
           </button>
         </div>
       </div>
@@ -250,6 +273,68 @@ export default function Calendar() {
           </div>
         )}
       </div>
+
+      {/* MODAL NUOVO EVENTO */}
+      {eventModalOpen && createPortal(
+        <EventModal 
+          athleteId={user.id} 
+          onClose={() => setEventModalOpen(false)} 
+          onSaved={() => { 
+            setEventModalOpen(false); 
+            fetchWorkouts() 
+          }} 
+        />,
+        document.body
+      )}
+    </div>
+  )
+}
+
+function EventModal({ athleteId, onClose, onSaved }) {
+  const [title, setTitle] = useState('')
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [saving, setSaving] = useState(false)
+  const [alertInfo, setAlertInfo] = useState(null)
+
+  const handleSave = async () => {
+    if (!title || !date) return setAlertInfo({ title: 'Errore', message: 'Titolo e data obbligatori', type: 'error' })
+    setSaving(true)
+    const { data: newW, error: wError } = await supabase.from('workouts').insert({
+      title,
+      date,
+      sections: { category: 'Event', isEvent: true, isAutonomous: true }
+    }).select().single()
+    if (wError) { setSaving(false); return setAlertInfo({ title: 'Errore', message: wError.message, type: 'error' }) }
+    const { error: awError } = await supabase.from('athlete_workouts').insert({
+      athlete_id: athleteId, workout_id: newW.id, completed_date: date, status: 'pending'
+    })
+    setSaving(false)
+    if (awError) return setAlertInfo({ title: 'Errore', message: awError.message, type: 'error' })
+    onSaved()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
+          <p className="text-white font-bold text-lg">Nuovo Evento / Gara</p>
+          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+        </div>
+        <div className="p-5 flex flex-col gap-4">
+          <div>
+            <label className="text-gray-400 text-xs pl-1 mb-1 block">Nome Evento *</label>
+            <input type="text" placeholder="Es. Maratona di Roma" value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-white text-sm" />
+          </div>
+          <div>
+            <label className="text-gray-400 text-xs pl-1 mb-1 block">Data *</label>
+            <CustomDatePicker date={date} onChange={setDate} className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-white w-full" />
+          </div>
+          <button onClick={handleSave} disabled={saving || !title} className="w-full mt-2 py-3.5 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition disabled:opacity-50">
+            {saving ? 'Salvataggio...' : 'Aggiungi al Calendario'}
+          </button>
+        </div>
+      </div>
+      {alertInfo && <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />}
     </div>
   )
 }

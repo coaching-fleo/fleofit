@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 // TOGLI Share2, metti Share2
-import { ChevronLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle } from 'lucide-react'
+import { ChevronLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -22,8 +22,8 @@ const TYPE_COLORS = {
   AMRAP: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
   'For Time': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
    'Running': { text: 'text-[#0094C6]', bg: 'bg-[#0094C6]/10', border: 'border-[#0094C6]/30', hex: '#0094C6' },
-  'Custom': { text: 'text-[#D11149]', bg: 'bg-[#D11149]/10', border: 'border-[#D11149]/30', hex: '#D11149' }
-
+  'Custom': { text: 'text-[#D11149]', bg: 'bg-[#D11149]/10', border: 'border-[#D11149]/30', hex: '#D11149' },
+  'Event': { text: 'text-white', bg: 'bg-white/10', border: 'border-white/30', hex: '#ffffff' }
 }
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
@@ -277,9 +277,9 @@ export default function WorkoutDetail() {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' })
     const s = workout.sections
     const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
-    const category = (rawCat === 'Autonomo' || rawCat === 'Custom') ? 'Custom' : rawCat
+    const category = (rawCat === 'Autonomo' || rawCat === 'Custom') ? 'Custom' : (rawCat === 'Event' ? 'Event' : rawCat)
     const isRunning = category === 'Running'
-    const type = category === 'Custom' ? 'Custom' : (isRunning ? 'Running' : 'Hyrox')
+    const type = category === 'Custom' ? 'Custom' : (category === 'Event' ? 'Event' : (isRunning ? 'Running' : 'Hyrox'))
     let y = 20
 
     // Header
@@ -316,6 +316,8 @@ export default function WorkoutDetail() {
       doc.setTextColor(0, 148, 198)
     } else if (type === 'Custom') {
       doc.setTextColor(209, 17, 73)
+    } else if (type === 'Event') {
+      doc.setTextColor(255, 255, 255)
     } else {
       doc.setTextColor(241, 186, 23)
     }
@@ -329,6 +331,8 @@ export default function WorkoutDetail() {
         doc.setTextColor(0, 148, 198)
       } else if (type === 'Custom') {
         doc.setTextColor(209, 17, 73)
+      } else if (type === 'Event') {
+        doc.setTextColor(255, 255, 255)
       } else {
         doc.setTextColor(241, 186, 23)
       }
@@ -583,11 +587,11 @@ export default function WorkoutDetail() {
 
   const s = workout.sections
   const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
-  const category = (rawCat === 'Autonomo' || rawCat === 'Custom') ? 'Custom' : rawCat
+  const category = (rawCat === 'Autonomo' || rawCat === 'Custom') ? 'Custom' : (rawCat === 'Event' ? 'Event' : rawCat)
   const isRunning = category === 'Running'
   const blocks = getNormalizedBlocks(workout)
   const mainBlock = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type)) || blocks[0] || { type: 'Hyrox' }
-  const type = category === 'Custom' ? 'Custom' : (isRunning ? 'Running' : mainBlock.type)
+  const type = category === 'Event' ? 'Event' : (category === 'Custom' ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
   const c = TYPE_COLORS[type] || TYPE_COLORS['Hyrox'] || { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' }
 
   const getIconForType = (t) => {
@@ -626,7 +630,7 @@ export default function WorkoutDetail() {
                     <BicepsFlexed size={14} className={getIntensityColor(workout.sections.intensity)} />
                   </div>
                 )}
-                <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${c.bg} ${c.text} border ${c.border}`}>
+                <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${type === 'Event' ? 'bg-white text-black border-white' : `${c.bg} ${c.text} border ${c.border}`}`}>
                   {type}
                 </span>
               </div>
@@ -661,7 +665,7 @@ export default function WorkoutDetail() {
       </div>
 
       {/* BLOCKS */}
-      {!isRunning && type !== 'Custom' ? (
+      {!isRunning && type !== 'Custom' && type !== 'Event' ? (
         blocks.map((block, idx) => (
           <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} color={TYPE_COLORS[block.type]?.border}>
              {['WarmUp', 'Rest'].includes(block.type) ? (
@@ -671,6 +675,15 @@ export default function WorkoutDetail() {
              )}
           </Section>
         ))
+      ) : type === 'Event' ? (
+         <div className="bg-gradient-to-r from-[#2a2a2a] to-[#111] border border-[#f1ba17]/30 rounded-3xl p-8 text-center mb-6 shadow-lg shadow-[#f1ba17]/5">
+           <div className="w-20 h-20 bg-gradient-to-br from-[#f1ba17] to-yellow-600 text-black rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+             <CalendarDays size={36} />
+           </div>
+           <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Evento / Gara</h2>
+           <p className="text-[#f1ba17] font-medium text-sm">Questo è il giorno dedicato al tuo obiettivo.</p>
+           <p className="text-gray-400 text-sm mt-1">Vai e spacca tutto! 🚀</p>
+         </div>
       ) : isRunning ? (
          <Section icon={<Timer size={16} className={c.text} />} label="Allenamento Corsa" color={c.border}>
            <RunningList steps={s?.steps || s?.main?.steps || []} />
@@ -813,15 +826,15 @@ export default function WorkoutDetail() {
                   {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'dd MMM yyyy', { locale: it }) : ''}
                 </div>
               </div>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: type === 'Running' ? '#0094C6' : (type === 'Custom' ? '#D11149' : '#f1ba17'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: '16px', fontWeight: 900, color: type === 'Running' || type === 'Custom' ? '#fff' : '#111' }}>FL</span>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: type === 'Running' ? '#0094C6' : (type === 'Custom' ? '#D11149' : (type === 'Event' ? '#4f46e5' : '#f1ba17')), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '16px', fontWeight: 900, color: type === 'Running' || type === 'Custom' || type === 'Event' ? '#fff' : '#111' }}>FL</span>
               </div>
             </div>
 
             {/* TITLE */}
             <div style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                <span style={{ background: type === 'Running' ? 'rgba(0, 148, 198, 0.2)' : (type === 'Custom' ? 'rgba(209, 17, 73, 0.2)' : 'rgba(241, 186, 23, 0.2)'), color: type === 'Running' ? '#0094C6' : (type === 'Custom' ? '#D11149' : '#f1ba17'), padding: '6px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <span style={{ background: type === 'Running' ? 'rgba(0, 148, 198, 0.2)' : (type === 'Event' ? '#fff' : (type === 'Custom' ? 'rgba(209, 17, 73, 0.2)' : 'rgba(241, 186, 23, 0.2)')), color: type === 'Running' ? '#0094C6' : (type === 'Event' ? '#000' : (type === 'Custom' ? '#D11149' : '#f1ba17')), padding: '6px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
                   {type}
                 </span>
                 {workout.sections?.intensity && (

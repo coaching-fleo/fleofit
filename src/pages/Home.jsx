@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
-import { startOfWeek, format, parseISO } from 'date-fns'
+import { startOfWeek, format, parseISO, differenceInDays, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { getDailyMotivation } from './motivations'
 import CustomDatePicker from '../components/CustomDatePicker'
@@ -18,6 +18,7 @@ export default function Home() {
   
   const [todayWorkouts, setTodayWorkouts] = useState([])
   const [upcomingWorkouts, setUpcomingWorkouts] = useState([])
+  const [nextEventHome, setNextEventHome] = useState(null)
   const [weeklyStatus, setWeeklyStatus] = useState(() => {
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
     const week = []
@@ -125,6 +126,9 @@ export default function Home() {
               const upcoming = data.filter(w => w.completed_date > todayStr && w.status !== 'completed').slice(0, 3)
               setUpcomingWorkouts(upcoming)
 
+              const events = data.filter(w => (w.workouts?.sections?.category === 'Event') && w.completed_date >= todayStr).sort((a, b) => a.completed_date.localeCompare(b.completed_date))
+              setNextEventHome(events[0] || null)
+
               const week = []
               for(let i=0; i<7; i++) {
                 const d = new Date(weekStart)
@@ -165,6 +169,11 @@ export default function Home() {
 
     fetchData()
   }, [role, user])
+
+  let countdownDays = null
+  if (nextEventHome) {
+    countdownDays = differenceInDays(parseISO(nextEventHome.completed_date), startOfDay(new Date()))
+  }
 
   const toggleTodayWorkout = async (e, workout) => {
     e.stopPropagation()
@@ -234,11 +243,6 @@ export default function Home() {
              <div className="mt-2">
                <p className="text-white font-bold text-xl">{getGreeting()}, {userName}!</p>
                <p className="text-[#f1ba17] text-sm mt-0.5 font-medium">{randomMotiv}</p>
-               {role === 'athlete' && (
-                 <button onClick={() => setAutonomousModalOpen(true)} className="mt-4 flex items-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:border-[#f1ba17] transition shadow-md">
-                   <Plus size={16} className="text-[#f1ba17]" /> Aggiungi allenamento libero
-                 </button>
-               )}
              </div>
           ) : (
             <p className="text-gray-400 mt-1">Dashboard Coach Federico Leo</p>
@@ -248,6 +252,29 @@ export default function Home() {
           <Settings size={22} />
         </button>
       </div>
+
+      {/* BANNER PROSSIMO EVENTO */}
+      {(role === 'athlete' || role === 'admin') && nextEventHome && (
+        <div 
+          onClick={() => navigate(`/workout/${nextEventHome.workouts.id}?athlete_id=${user.id}`)}
+          className="bg-gradient-to-r from-[#2a2a2a] to-[#111] border border-[#f1ba17]/30 rounded-3xl p-5 mb-6 flex items-center justify-between shadow-lg shadow-[#f1ba17]/10 cursor-pointer hover:border-[#f1ba17]/60 transition group"
+        >
+           <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-[#f1ba17]/10 rounded-full flex items-center justify-center text-[#f1ba17] shrink-0 shadow-inner group-hover:scale-110 transition-transform">
+                 <CalendarDays size={24} />
+              </div>
+              <div>
+                 <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-0.5">Prossimo Obiettivo</p>
+                 <p className="text-white font-black text-xl leading-tight group-hover:text-[#f1ba17] transition-colors">{nextEventHome.workouts.title}</p>
+                 <p className="text-[#f1ba17]/80 text-sm mt-0.5 font-medium">{format(parseISO(nextEventHome.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
+              </div>
+           </div>
+           <div className="flex flex-col items-center justify-center bg-gradient-to-br from-[#f1ba17] to-yellow-600 rounded-2xl px-5 py-2.5 shadow-xl min-w-[80px]">
+              <span className="text-3xl font-black text-black leading-none">{countdownDays}</span>
+              <span className="text-black/80 text-[10px] font-bold uppercase tracking-wider mt-1">{countdownDays === 1 ? 'giorno' : 'giorni'}</span>
+           </div>
+        </div>
+      )}
 
       {/* Settimana Atleta */}
       {(role === 'athlete' || role === 'admin') && weeklyStatus.length > 0 && (
@@ -274,6 +301,7 @@ export default function Home() {
                       {day.workouts.map((w, wIdx) => {
                         const isRun = w.category === 'Running'
                         const isCustom = w.category === 'Custom' || w.category === 'Autonomo'
+                        const isEvent = w.category === 'Event'
                         let circleClass = ''
                         let icon = null
                         
@@ -282,11 +310,11 @@ export default function Home() {
                            icon = <CheckCircle2 size={14} className="text-black" />
                         } else {
                            if (day.isToday) {
-                             circleClass = isRun ? 'bg-[#0094C6] border-[#0094C6] shadow-[0_0_8px_rgba(0,148,198,0.4)]' : isCustom ? 'bg-[#D11149] border-[#D11149] shadow-[0_0_8px_rgba(209,17,73,0.4)]' : 'bg-[#f1ba17] border-[#f1ba17] shadow-[0_0_8px_rgba(241,186,23,0.4)]'
-                             icon = isRun ? <Timer size={14} className="text-white" /> : isCustom ? <Dumbbell size={14} className="text-white" /> : <Dumbbell size={14} className="text-black" />
+                             circleClass = isEvent ? 'bg-white border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : isRun ? 'bg-[#0094C6] border-[#0094C6] shadow-[0_0_8px_rgba(0,148,198,0.4)]' : isCustom ? 'bg-[#D11149] border-[#D11149] shadow-[0_0_8px_rgba(209,17,73,0.4)]' : 'bg-[#f1ba17] border-[#f1ba17] shadow-[0_0_8px_rgba(241,186,23,0.4)]'
+                             icon = isEvent ? <CalendarDays size={14} className="text-black" /> : isRun ? <Timer size={14} className="text-white" /> : isCustom ? <Dumbbell size={14} className="text-white" /> : <Dumbbell size={14} className="text-black" />
                            } else {
-                             circleClass = isRun ? 'bg-transparent border-[#0094C6]' : isCustom ? 'bg-transparent border-[#D11149]' : 'bg-transparent border-[#f1ba17]'
-                             icon = isRun ? <Timer size={14} className="text-[#0094C6]" /> : isCustom ? <Dumbbell size={14} className="text-[#D11149]" /> : <Dumbbell size={14} className="text-[#f1ba17]" />
+                             circleClass = isEvent ? 'bg-transparent border-white' : isRun ? 'bg-transparent border-[#0094C6]' : isCustom ? 'bg-transparent border-[#D11149]' : 'bg-transparent border-[#f1ba17]'
+                             icon = isEvent ? <CalendarDays size={14} className="text-white" /> : isRun ? <Timer size={14} className="text-[#0094C6]" /> : isCustom ? <Dumbbell size={14} className="text-[#D11149]" /> : <Dumbbell size={14} className="text-[#f1ba17]" />
                            }
                         }
 
@@ -344,10 +372,11 @@ export default function Home() {
               {recentAssignments.map(a => {
                 const rawCat = a.workouts?.sections?.category || (a.workouts?.sections?.steps ? 'Running' : 'Hyrox');
                 const isCustom = rawCat === 'Custom' || rawCat === 'Autonomo';
-                const category = isCustom ? 'Custom' : rawCat;
+                const isEvent = rawCat === 'Event';
+                const category = isEvent ? 'Event' : isCustom ? 'Custom' : rawCat;
                 const isRun = category === 'Running';
                 return (
-                <div key={a.id} onClick={() => navigate(`/athletes/${a.athletes?.id}`)} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer transition ${isRun ? 'hover:border-[#0094C6]' : isCustom ? 'hover:border-[#D11149]' : 'hover:border-[#f1ba17]'}`}>
+                <div key={a.id} onClick={() => navigate(`/athletes/${a.athletes?.id}`)} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer transition ${isEvent ? 'hover:border-white' : isRun ? 'hover:border-[#0094C6]' : isCustom ? 'hover:border-[#D11149]' : 'hover:border-[#f1ba17]'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 min-w-0 pr-2">
                       <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333]">
@@ -360,8 +389,8 @@ export default function Home() {
                       <div className="min-w-0 flex-1">
                         <p className="text-white font-semibold text-sm truncate">{a.athletes?.name} {a.athletes?.surname}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
-                            {category}
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+                            {isEvent ? 'Evento' : category}
                           </span>
                           <p className="text-gray-500 text-xs truncate">{a.workouts?.title}</p>
                         </div>
@@ -397,8 +426,9 @@ export default function Home() {
             <div className="flex flex-col gap-3">
               {todayWorkouts.map((todayWorkout) => {
                 const rawCat = todayWorkout.workouts?.sections?.category || (todayWorkout.workouts?.sections?.steps ? 'Running' : 'Hyrox');
+                const todayIsEvent = rawCat === 'Event';
                 const todayIsCustom = rawCat === 'Custom' || rawCat === 'Autonomo';
-                const category = todayIsCustom ? 'Custom' : rawCat;
+                const category = todayIsEvent ? 'Event' : todayIsCustom ? 'Custom' : rawCat;
                 const todayIsRun = category === 'Running';
                 
                 return (
@@ -408,21 +438,21 @@ export default function Home() {
                     className={`rounded-3xl p-6 cursor-pointer transition border relative overflow-hidden group ${
                       todayWorkout.status === 'completed'
                         ? 'bg-green-500/10 border-green-500/30 hover:border-green-500'
-                        : (todayIsRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50 hover:border-[#0094C6]' : todayIsCustom ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#D11149]/50 hover:border-[#D11149]' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50 hover:border-[#f1ba17]')
+                        : (todayIsEvent ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-white/50 hover:border-white' : todayIsRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50 hover:border-[#0094C6]' : todayIsCustom ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#D11149]/50 hover:border-[#D11149]' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50 hover:border-[#f1ba17]')
                     }`}
                   >
                     <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition">
-                      {todayWorkout.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (todayIsRun ? <Timer size={80} className="text-[#0094C6] -rotate-12" /> : todayIsCustom ? <Dumbbell size={80} className="text-[#D11149] -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />)}
+                      {todayWorkout.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (todayIsEvent ? <CalendarDays size={80} className="text-white/30 -rotate-12" /> : todayIsRun ? <Timer size={80} className="text-[#0094C6] -rotate-12" /> : todayIsCustom ? <Dumbbell size={80} className="text-[#D11149] -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />)}
                     </div>
                     <div className="relative z-10">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 shadow-lg shrink-0 ${
-                        todayWorkout.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (todayIsRun ? 'bg-[#0094C6] text-white shadow-[#0094C6]/20' : todayIsCustom ? 'bg-[#D11149] text-white shadow-[#D11149]/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20')
+                        todayWorkout.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (todayIsEvent ? 'bg-white text-black shadow-white/20' : todayIsRun ? 'bg-[#0094C6] text-white shadow-[#0094C6]/20' : todayIsCustom ? 'bg-[#D11149] text-white shadow-[#D11149]/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20')
                       }`}>
-                        {todayWorkout.status === 'completed' ? <CheckCircle2 size={24} /> : (todayIsRun ? <Timer size={24} /> : <Dumbbell size={24} />)}
+                        {todayWorkout.status === 'completed' ? <CheckCircle2 size={24} /> : (todayIsEvent ? <CalendarDays size={24} /> : todayIsRun ? <Timer size={24} /> : <Dumbbell size={24} />)}
                       </div>
                       <h3 className="text-white font-bold text-xl mb-1 truncate pr-8">{todayWorkout.workouts.title}</h3>
-                      <p className={`text-sm font-medium ${todayWorkout.status === 'completed' ? 'text-green-400' : (todayIsRun ? 'text-[#0094C6]' : todayIsCustom ? 'text-[#D11149]' : 'text-[#f1ba17]')}`}>
-                        {todayWorkout.status === 'completed' ? 'Ottimo lavoro, completato! 🎉' : 'Da completare oggi 🔥'}
+                      <p className={`text-sm font-medium ${todayWorkout.status === 'completed' ? 'text-green-400' : (todayIsEvent ? 'text-gray-300' : todayIsRun ? 'text-[#0094C6]' : todayIsCustom ? 'text-[#D11149]' : 'text-[#f1ba17]')}`}>
+                        {todayWorkout.status === 'completed' ? 'Ottimo lavoro, completato! 🎉' : (todayIsEvent ? 'Oggi è il grande giorno! 🏁' : 'Da completare oggi 🔥')}
                       </p>
                       <div className="mt-4">
                         <button 
@@ -430,7 +460,7 @@ export default function Home() {
                           className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition border ${
                             todayWorkout.status === 'completed' 
                               ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30' 
-                              : (todayIsRun ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#0094C6] hover:text-[#0094C6]' : todayIsCustom ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#D11149] hover:text-[#D11149]' : 'bg-[#111] border-[#333] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]')
+                              : (todayIsEvent ? 'bg-[#111] border-[#333] text-white hover:border-white hover:text-white' : todayIsRun ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#0094C6] hover:text-[#0094C6]' : todayIsCustom ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#D11149] hover:text-[#D11149]' : 'bg-[#111] border-[#333] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]')
                           }`}
                         >
                           {todayWorkout.status === 'completed' ? <CheckCircle2 size={16} /> : <Circle size={16} />} 
@@ -453,6 +483,18 @@ export default function Home() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Bottone Aggiungi Allenamento Libero */}
+      {role === 'athlete' && (
+        <div className="mb-6">
+          <button 
+            onClick={() => setAutonomousModalOpen(true)} 
+            className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-3 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition shadow-sm"
+          >
+            <Plus size={18} className="text-[#f1ba17]" /> Aggiungi allenamento libero
+          </button>
         </div>
       )}
 
