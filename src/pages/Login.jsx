@@ -1,27 +1,70 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { Mail, Lock, LogIn, ChevronLeft } from 'lucide-react'
+import { Mail, Lock, LogIn, ChevronLeft, KeyRound, ArrowRight } from 'lucide-react'
 import { CustomAlert } from '../components/CustomModals'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const [view, setView] = useState('welcome') // welcome, authForm, inviteForm
   const [isSignUp, setIsSignUp] = useState(false)
   const [isResetPassword, setIsResetPassword] = useState(false)
-  const [showForm, setShowForm] = useState(false)
+  const showForm = view !== 'welcome'
+
+  const [inviteCode, setInviteCode] = useState('')
+  const [inviteError, setInviteError] = useState('')
+  const [inviteLoading, setInviteLoading] = useState(false)
+
   const [role, setRole] = useState('athlete')
   const [alertInfo, setAlertInfo] = useState(null)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   useEffect(() => {
     // Se l'utente è già loggato, lo rimandiamo subito alla Home
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) navigate('/')
     })
-  }, [navigate])
+
+    const codeFromUrl = searchParams.get('invite')
+    if (codeFromUrl) {
+      setInviteCode(codeFromUrl)
+      setView('inviteForm')
+
+      const autoValidate = async () => {
+        setInviteLoading(true)
+        const { data, error } = await supabase
+          .from('invitation_codes')
+          .select('code')
+          .eq('code', codeFromUrl.toUpperCase())
+          .eq('is_active', true)
+          .is('used_by', null)
+          .single()
+          
+        setInviteLoading(false)
+        if (error || !data) {
+          setInviteError('Codice di invito non valido o già utilizzato.')
+        } else {
+          localStorage.setItem('fleofit_invite_code', data.code)
+          setIsSignUp(true)
+          setView('authForm')
+          setInviteCode('')
+          navigate('/login', { replace: true })
+        }
+      }
+      autoValidate()
+    }
+
+    const err = searchParams.get('error')
+    if (err === 'unauthorized') {
+      setAlertInfo({ title: 'Accesso Negato', message: 'Nessun account trovato o codice di invito mancante.', type: 'error' })
+      navigate('/login', { replace: true })
+    }
+  }, [navigate, searchParams])
 
   const handleEmailAuth = async (e) => {
     e.preventDefault()
@@ -36,6 +79,12 @@ export default function Login() {
         setAlertInfo({ title: 'Email inviata', message: 'Se l\'indirizzo è corretto, riceverai un link per reimpostare la password.', type: 'success' })
         setIsResetPassword(false)
       } else if (isSignUp) {
+        const storedInviteCode = localStorage.getItem('fleofit_invite_code')
+        if (!storedInviteCode) {
+           setAlertInfo({ title: 'Accesso Negato', message: 'Per registrarti è necessario un codice di invito valido.', type: 'error' })
+           setLoading(false)
+           return
+        }
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -59,6 +108,11 @@ export default function Login() {
   }
 
   const handleGoogleLogin = async () => {
+    const inviteCode = localStorage.getItem('fleofit_invite_code')
+    if (view === 'authForm' && isSignUp && !inviteCode) {
+       setAlertInfo({ title: 'Accesso Negato', message: 'Per registrarti è necessario un codice di invito valido.', type: 'error' })
+       return
+    }
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -72,6 +126,38 @@ export default function Login() {
       if (error) throw error
     } catch (error) {
       setAlertInfo({ title: 'Errore Google OAuth', message: error.message, type: 'error' })
+    }
+  }
+
+  const handleInviteSubmit = async (e) => {
+    e.preventDefault()
+    const code = inviteCode.trim().toUpperCase()
+    if (!code) {
+      setInviteError('Inserisci un codice di invito.')
+      return
+    }
+    setInviteLoading(true)
+    setInviteError('')
+
+    const { data, error: dbError } = await supabase
+      .from('invitation_codes')
+      .select('code')
+      .eq('code', code)
+      .eq('is_active', true)
+      .is('used_by', null)
+      .single()
+
+    setInviteLoading(false)
+
+    if (dbError || !data) {
+      setInviteError('Codice di invito non valido o già utilizzato.')
+    } else {
+      localStorage.setItem('fleofit_invite_code', data.code)
+      // Transition to signup form
+      setIsSignUp(true)
+      setView('authForm')
+      setInviteCode('')
+      setInviteError('')
     }
   }
 
@@ -92,11 +178,11 @@ export default function Login() {
         </div>
         
         <div className="w-full max-w-md flex gap-4 pb-8 animate-in fade-in slide-in-from-bottom-8 duration-500 delay-300">
-          <button onClick={() => { setIsSignUp(false); setShowForm(true); }} className="flex-1 py-4 bg-[#2a2a2a] text-white border border-[#383838] font-bold text-lg rounded-2xl hover:bg-[#333] transition">
+          <button onClick={() => { setIsSignUp(false); setView('authForm'); }} className="flex-1 py-4 bg-[#2a2a2a] text-white border border-[#383838] font-bold text-lg rounded-2xl hover:bg-[#333] transition">
             Accedi
           </button>
-          <button onClick={() => { setIsSignUp(true); setShowForm(true); }} className="flex-1 py-4 bg-[#f1ba17] text-black font-bold text-lg rounded-2xl hover:brightness-110 transition shadow-lg shadow-[#f1ba17]/20">
-            Registrati
+          <button onClick={() => setView('inviteForm')} className="flex-1 py-4 bg-[#f1ba17] text-black font-bold text-lg rounded-2xl hover:brightness-110 transition shadow-lg shadow-[#f1ba17]/20">
+            Nuovo Utente
           </button>
         </div>
       </div>
@@ -114,7 +200,7 @@ export default function Login() {
         {/* TASTO INDIETRO (Ben visibile) */}
         <button type="button" onClick={() => {
           if (isResetPassword) setIsResetPassword(false)
-          else setShowForm(false)
+          else { setView('welcome'); setIsSignUp(false); }
         }} className="absolute top-5 left-5 w-10 h-10 bg-[#2a2a2a] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white transition shadow-md z-10" aria-label="Torna indietro">
           <ChevronLeft size={22} className="-ml-0.5" />
         </button>
@@ -123,6 +209,26 @@ export default function Login() {
           <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
           <p className="text-gray-400 text-sm mt-1">{isResetPassword ? 'Recupera la tua password' : (isSignUp ? 'Crea il tuo account' : 'Accedi alla tua dashboard')}</p>
         </div>
+
+        {view === 'inviteForm' && (
+          <div className="animate-in fade-in duration-300">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-white">Codice di Invito Richiesto</h2>
+              <p className="text-gray-500 text-sm mt-2">Per registrarti, inserisci il codice di invito che ti è stato fornito.</p>
+            </div>
+            <form onSubmit={handleInviteSubmit} className="flex flex-col gap-4">
+              <div className="relative">
+                <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Il tuo codice di invito" className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-4 pl-11 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] transition uppercase" disabled={inviteLoading} />
+              </div>
+              {inviteError && <p className="text-red-500 text-xs text-center">{inviteError}</p>}
+              <button type="submit" disabled={inviteLoading || !inviteCode} className="w-full flex items-center justify-center gap-2 bg-[#f1ba17] text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">
+                {inviteLoading ? 'Verifica...' : 'Prosegui'}
+                {!inviteLoading && <ArrowRight size={18} />}
+              </button>
+            </form>
+          </div>
+        )}
 
           {/* OPZIONE COACH DISATTIVATA TEMPORANEAMENTE */}
           {/* isSignUp && (
@@ -144,7 +250,7 @@ export default function Login() {
             </div>
           ) */}
 
-          <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
+          {view === 'authForm' && <form onSubmit={handleEmailAuth} className="flex flex-col gap-4 animate-in fade-in duration-300">
             <div className="relative">
               <Mail size={18} className="absolute left-4 top-3.5 text-gray-500" />
               <input 
@@ -183,10 +289,10 @@ export default function Login() {
               {loading ? 'Attendere...' : (isResetPassword ? 'Invia link' : (isSignUp ? 'Registrati' : 'Accedi'))}
               {!loading && !isResetPassword && <LogIn size={18} />}
             </button>
-          </form>
+          </form>}
 
-          {!isResetPassword && (
-            <>
+          {view === 'authForm' && !isResetPassword && (
+            <div className="animate-in fade-in duration-300">
               <div className="my-6 flex items-center gap-3">
                 <div className="flex-1 h-px bg-[#333]"></div>
                 <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Oppure</span>
@@ -204,9 +310,11 @@ export default function Login() {
               </button>
 
               <p className="mt-8 text-center text-sm text-gray-500">
-                {isSignUp ? 'Hai già un account?' : 'Non hai un account?'} <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-[#f1ba17] font-semibold hover:underline">{isSignUp ? 'Accedi' : 'Registrati'}</button>
+                {isSignUp ? 'Hai già un account?' : 'Non hai un account?'} <button type="button" onClick={() => isSignUp ? setIsSignUp(false) : setView('inviteForm')} className="text-[#f1ba17] font-semibold hover:underline">
+                  {isSignUp ? 'Accedi' : 'Registrati con Invito'}
+                </button>
               </p>
-            </>
+            </div>
           )}
         </div>
       {createPortal(

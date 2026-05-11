@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
@@ -153,6 +153,7 @@ function ProtectedRoute({ children }) {
   const [role, setRole] = useState(null)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
   const [userName, setUserName] = useState('')
+  const location = useLocation()
 
   useEffect(() => {
     let sub;
@@ -173,11 +174,53 @@ function ProtectedRoute({ children }) {
   const handleSession = async (session) => {
     setSession(session)
     if (session?.user) {
+      const isAdmin = ADMIN_EMAILS.includes(session.user.email?.toLowerCase())
+      
+      if (!isAdmin) {
+        const { data: athleteData } = await supabase.from('athletes').select('id').eq('id', session.user.id).maybeSingle()
+        if (!athleteData) {
+          const inviteCode = localStorage.getItem('fleofit_invite_code')
+          let isAuthorized = false;
+
+          if (inviteCode) {
+            const { data } = await supabase.from('invitation_codes').update({
+               used_by: session.user.id,
+               used_at: new Date().toISOString(),
+               is_active: false,
+               used_by_email: session.user.email
+            })
+            .eq('code', inviteCode)
+            .is('used_by', null)
+            .select()
+    
+            if (data && data.length > 0) {
+              isAuthorized = true;
+            } else {
+              const { data: checkData } = await supabase.from('invitation_codes').select('id').eq('code', inviteCode).eq('used_by', session.user.id).maybeSingle()
+              if (checkData) isAuthorized = true;
+            }
+          }
+
+          if (!isAuthorized) {
+            const { data: usedCode } = await supabase.from('invitation_codes').select('id').eq('used_by', session.user.id).maybeSingle()
+            if (usedCode) isAuthorized = true;
+          }
+
+          if (!isAuthorized) {
+            localStorage.removeItem('fleofit_invite_code')
+            await supabase.auth.signOut()
+            window.location.href = '/login?error=unauthorized'
+            return;
+          }
+        } else {
+          localStorage.removeItem('fleofit_invite_code')
+        }
+      }
+
       const meta = session.user.user_metadata || {}
       const name = meta.first_name || meta.full_name?.split(' ')[0] || session.user.email?.split('@')[0] || ''
       setUserName(name)
 
-      const isAdmin = ADMIN_EMAILS.includes(session.user.email?.toLowerCase())
       let r = meta.role
 
       if (isAdmin) {
@@ -227,7 +270,7 @@ function ProtectedRoute({ children }) {
   }
 
   if (!session) {
-    return <Navigate to="/login" replace />
+    return <Navigate to={`/login${location.search}`} replace />
   }
 
   if (needsOnboarding) {

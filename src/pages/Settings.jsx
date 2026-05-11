@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut, Eye, EyeOff } from 'lucide-react'
+import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut, Eye, EyeOff, Plus, Copy, Link as LinkIcon, Trash2 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
+import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { useAuth, ADMIN_EMAILS } from '../App'
 
@@ -169,63 +170,8 @@ export default function Settings() {
         </div>
       )}
 
-      {/* SEZIONE TOTALE */}
-      {role === 'admin' && (
-        <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mb-6">
-          <h2 className="text-lg font-bold text-white mb-4">Backup Totale</h2>
-          <div className="flex flex-col gap-3">
-            <button onClick={handleExportFull} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition disabled:opacity-50 group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-[#f1ba17] transition text-gray-400 shrink-0">
-                  <HardDriveDownload size={20} />
-                </div>
-                <div className="text-left">
-                  <p className="text-white font-semibold">Esporta tutto il Database</p>
-                  <p className="text-gray-500 text-xs">Scarica un file .json con tutti gli atleti e i workout</p>
-                </div>
-              </div>
-              <Download size={18} className="text-gray-600 group-hover:text-[#f1ba17]" />
-            </button>
-
-            <button onClick={() => fullImportRef.current?.click()} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-blue-500 transition disabled:opacity-50 group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-blue-500 transition text-gray-400 shrink-0">
-                  <HardDriveUpload size={20} />
-                </div>
-                <div className="text-left">
-                  <p className="text-white font-semibold">Ripristina Database Totale</p>
-                  <p className="text-gray-500 text-xs">Carica un file .json di backup totale</p>
-                </div>
-              </div>
-              <UploadCloud size={18} className="text-gray-600 group-hover:text-blue-500" />
-            </button>
-            <input type="file" accept=".json" className="hidden" ref={fullImportRef} onChange={handleImportFull} />
-          </div>
-        </div>
-      )}
-
-      {/* SEZIONE ATLETA */}
-      {role !== 'athlete' && (
-        <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5">
-          <h2 className="text-lg font-bold text-white mb-4">Gestione Singolo Atleta</h2>
-          <p className="text-gray-500 text-sm mb-4">L'esportazione del singolo atleta si fa direttamente dal pulsante download nella pagina del suo Profilo.</p>
-          <div className="flex flex-col gap-3">
-            <button onClick={() => athleteImportRef.current?.click()} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-green-500 transition disabled:opacity-50 group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-green-500 transition text-gray-400 shrink-0">
-                  <UserCheck size={20} />
-                </div>
-                <div className="text-left">
-                  <p className="text-white font-semibold">Importa Backup Atleta</p>
-                  <p className="text-gray-500 text-xs">Ripristina un atleta dal suo file .json dedicado</p>
-                </div>
-              </div>
-              <UploadCloud size={18} className="text-gray-600 group-hover:text-green-500" />
-            </button>
-            <input type="file" accept=".json" className="hidden" ref={athleteImportRef} onChange={handleImportAthlete} />
-          </div>
-        </div>
-      )}
+      {/* GESTIONE CODICI INVITO */}
+      {role === 'admin' && <InviteCodeManager />}
 
           {/* SEZIONE ACCOUNT */}
       <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">
@@ -257,6 +203,57 @@ export default function Settings() {
           </div>
         </button>
       </div>
+
+      {/* SEZIONE BACKUP */}
+      {role === 'admin' && (
+        <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">
+          <h2 className="text-lg font-bold text-white mb-4">Backup e Ripristino</h2>
+          <div className="flex flex-col gap-3">
+            <button onClick={handleExportFull} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition disabled:opacity-50 group">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-[#f1ba17] transition text-gray-400 shrink-0">
+                  <HardDriveDownload size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="text-white font-semibold">Esporta tutto il Database</p>
+                  <p className="text-gray-500 text-xs">Scarica un file .json con tutti gli atleti e i workout</p>
+                </div>
+              </div>
+              <Download size={18} className="text-gray-600 group-hover:text-[#f1ba17]" />
+            </button>
+
+            <button onClick={() => fullImportRef.current?.click()} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-blue-500 transition disabled:opacity-50 group">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-blue-500 transition text-gray-400 shrink-0">
+                  <HardDriveUpload size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="text-white font-semibold">Ripristina Database Totale</p>
+                  <p className="text-gray-500 text-xs">Carica un file .json di backup totale</p>
+                </div>
+              </div>
+              <UploadCloud size={18} className="text-gray-600 group-hover:text-blue-500" />
+            </button>
+            <input type="file" accept=".json" className="hidden" ref={fullImportRef} onChange={handleImportFull} />
+            
+            <div className="w-full h-px bg-[#333] my-2"></div>
+
+            <button onClick={() => athleteImportRef.current?.click()} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-green-500 transition disabled:opacity-50 group">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-green-500 transition text-gray-400 shrink-0">
+                  <UserCheck size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="text-white font-semibold">Importa Backup Atleta</p>
+                  <p className="text-gray-500 text-xs">L'esportazione si fa dal profilo del singolo atleta.</p>
+                </div>
+              </div>
+              <UploadCloud size={18} className="text-gray-600 group-hover:text-green-500" />
+            </button>
+            <input type="file" accept=".json" className="hidden" ref={athleteImportRef} onChange={handleImportAthlete} />
+          </div>
+        </div>
+      )}
       
       
       {createPortal(
@@ -268,4 +265,146 @@ export default function Settings() {
       )}
     </div>
   )
+}
+
+function InviteCodeManager() {
+  const [codes, setCodes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [alertInfo, setAlertInfo] = useState(null)
+  const [confirmInfo, setConfirmInfo] = useState(null)
+  const { user } = useAuth();
+
+  useEffect(() => {
+    fetchCodes();
+  }, []);
+
+  const fetchCodes = async () => {
+    setLoading(true);
+    const { data: codesData, error } = await supabase
+      .from('invitation_codes')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+    } else {
+      // Estraiamo i nomi reali di chi ha riscattato il codice (se hanno completato il profilo)
+      const usedByIds = codesData.filter(c => c.used_by).map(c => c.used_by);
+      if (usedByIds.length > 0) {
+        const { data: athletesData } = await supabase.from('athletes').select('id, name, surname').in('id', usedByIds);
+        if (athletesData) {
+          const athletesMap = {};
+          athletesData.forEach(a => athletesMap[a.id] = `${a.name} ${a.surname}`);
+          codesData.forEach(c => {
+            if (c.used_by && athletesMap[c.used_by]) {
+              c.used_by_name = athletesMap[c.used_by];
+            }
+          });
+        }
+      }
+      setCodes(codesData);
+    }
+    setLoading(false);
+  };
+
+  const generateCode = async () => {
+    const newCode = [...Array(8)].map(() => Math.random().toString(36)[2]).join('').toUpperCase();
+    const { error } = await supabase
+      .from('invitation_codes')
+      .insert({ code: newCode, created_by: user.id });
+    
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: 'Errore nella generazione del codice: ' + error.message, type: 'error' })
+    } else {
+      fetchCodes();
+    }
+  };
+
+  const copyToClipboard = (text, type) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        setAlertInfo({ title: 'Copiato!', message: `${type} copiato negli appunti.`, type: 'success' })
+      }).catch(() => {
+        setAlertInfo({ title: 'Errore', message: 'Impossibile copiare il testo.', type: 'error' })
+      })
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setAlertInfo({ title: 'Copiato!', message: `${type} copiato negli appunti.`, type: 'success' })
+      } catch (err) {
+        setAlertInfo({ title: 'Errore', message: 'Impossibile copiare il testo.', type: 'error' })
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  const deleteCode = async (id) => {
+    setConfirmInfo({
+      title: "Elimina codice",
+      message: "Sei sicuro di voler eliminare definitivamente questo codice?",
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('invitation_codes').delete().eq('id', id);
+        if (error) setAlertInfo({ title: 'Errore', message: error.message, type: 'error' });
+        fetchCodes();
+        setConfirmInfo(null);
+      }
+    });
+  };
+
+  const activeCodes = codes.filter(c => c.is_active);
+  const usedCodes = codes.filter(c => !c.is_active && c.used_by);
+
+  return (
+    <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mb-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-bold text-white">Gestione Codici Invito</h2>
+        <button onClick={generateCode} className="flex items-center gap-1.5 bg-[#f1ba17] text-black text-sm font-semibold px-3 py-1.5 rounded-full hover:brightness-110 transition">
+          <Plus size={16} /> Genera Nuovo
+        </button>
+      </div>
+
+      <h3 className="text-white font-semibold text-sm mb-2">Codici Attivi</h3>
+      {loading ? <p className="text-gray-500 text-xs">Caricamento...</p> : activeCodes.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {activeCodes.map(code => (
+            <div key={code.id} className="bg-[#2a2a2a] p-3 rounded-xl flex items-center justify-between">
+              <span className="font-mono text-lg text-[#f1ba17] tracking-widest">{code.code}</span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => copyToClipboard(code.code, 'Codice')} title="Copia codice" className="p-2 text-gray-400 hover:text-white"><Copy size={16} /></button>
+                <button onClick={() => copyToClipboard(`${window.location.origin}/?invite=${code.code}`, 'Link')} title="Copia link" className="p-2 text-gray-400 hover:text-white"><LinkIcon size={16} /></button>
+                <button onClick={() => deleteCode(code.id)} title="Elimina" className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : <p className="text-gray-500 text-xs">Nessun codice attivo. Generane uno nuovo.</p>}
+
+      <h3 className="text-white font-semibold text-sm mt-6 mb-2">Codici Utilizzati</h3>
+       {loading ? <p className="text-gray-500 text-xs">Caricamento...</p> : usedCodes.length > 0 ? (
+        <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
+          {usedCodes.map(code => (
+            <div key={code.id} className="bg-[#111] p-3 rounded-xl flex items-center justify-between text-sm border border-[#222]">
+              <div className="flex-1 flex items-center justify-between">
+                <span className="font-mono text-gray-600 line-through">{code.code}</span>
+                <div className="text-right text-gray-400 pr-2 border-r border-[#333]">
+                  <p className="font-semibold text-white">{code.used_by_name || code.used_by_email || 'Utente Sconosciuto'}</p>
+                  <p className="text-xs text-gray-500">{format(parseISO(code.used_at), 'd MMM yyyy, HH:mm', { locale: it })}</p>
+                </div>
+              </div>
+              <button onClick={() => deleteCode(code.id)} title="Elimina log" className="p-2 text-gray-500 hover:text-red-500 ml-1"><Trash2 size={16} /></button>
+            </div>
+          ))}
+        </div>
+      ) : <p className="text-gray-500 text-xs">Nessun codice è stato ancora utilizzato.</p>}
+      {alertInfo && createPortal(<CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />, document.body)}
+      {confirmInfo && createPortal(<CustomConfirm info={confirmInfo} onClose={() => setConfirmInfo(null)} />, document.body)}
+    </div>
+  );
 }
