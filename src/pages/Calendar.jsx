@@ -315,7 +315,7 @@ function EventModal({ athleteId, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Nuovo Evento / Gara</p>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>

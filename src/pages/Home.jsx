@@ -630,7 +630,7 @@ export default function Home() {
       {/* MODAL ALLENAMENTO AUTONOMO */}
       {autonomousModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">{autonomousForm.id ? 'Modifica Allenamento' : 'Allenamento Libero'}</h2>
                <button onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
@@ -679,7 +679,7 @@ export default function Home() {
       {/* MODAL CONFERMA RIMOZIONE WORKOUT */}
       {workoutToRemove && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
               <AlertTriangle size={32} />
             </div>

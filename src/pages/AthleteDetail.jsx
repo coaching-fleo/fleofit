@@ -504,7 +504,6 @@ export default function AthleteDetail() {
                         athleteId={id}
                         role={role}
                         onEditAutonomous={openEditAutonomous}
-                        onEditAutonomous={openEditAutonomous}
                       />
                     ))}
                   </div>
@@ -594,7 +593,7 @@ export default function AthleteDetail() {
       {/* MODAL CONFERMA RIMOZIONE WORKOUT */}
       {workoutToRemove && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
               <AlertTriangle size={32} />
             </div>
@@ -698,7 +697,7 @@ export default function AthleteDetail() {
       {/* MODAL ALLENAMENTO AUTONOMO */}
       {autonomousModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">{autonomousForm.id ? 'Modifica Allenamento' : 'Allenamento Libero'}</h2>
                <button onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
@@ -805,7 +804,7 @@ function SocialLinkModal({ athlete, type, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Aggiungi {isInsta ? 'Instagram' : 'Strava'}</p>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
@@ -970,8 +969,8 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
-          {hasChanges && (
-            <div className="mt-2 flex justify-end">
+        <div className={`transition-all duration-300 ease-out overflow-hidden ${hasChanges ? 'max-h-16 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}`}>
+          <div className="flex justify-end">
               <button
                 onClick={handleSaveNote}
                 disabled={saving}
@@ -980,7 +979,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
                 {saving ? 'Salvataggio...' : 'Conferma note'}
               </button>
             </div>
-          )}
+        </div>
         </div>
       </div>
     </div>
@@ -1013,7 +1012,7 @@ function PrModal({ athleteId, initialPr, onClose, onSaved, onDelete }) {
 
   return (
     <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333]">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">{initialPr ? 'Modifica PR' : 'Aggiungi PR'}</p>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
@@ -1148,7 +1147,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
 
   return (
     <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Modifica Atleta</p>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
@@ -1335,8 +1334,8 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
-        {hasChanges && (
-          <div className="mt-2 flex justify-end">
+        <div className={`transition-all duration-300 ease-out overflow-hidden ${hasChanges ? 'max-h-16 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}`}>
+          <div className="flex justify-end">
             <button
               onClick={handleSaveNote}
               disabled={saving}
@@ -1345,7 +1344,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
               {saving ? 'Salvataggio...' : 'Conferma'}
             </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )
@@ -1398,7 +1397,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
 
   return (
     <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Assegna Workout</p>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
@@ -1472,7 +1471,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
       {/* MODAL ANTEPRIMA WORKOUT */}
       {previewWorkout && (
         <div className="fixed inset-0 bg-black/90 z-[110] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col border border-[#333]" style={{ maxHeight: 'calc(100vh - 40px)' }}>
+          <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col border border-[#333] animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 40px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg truncate pr-4">{previewWorkout.title}</p>
               <button onClick={() => setPreviewWorkout(null)} className="text-gray-500 hover:text-white shrink-0"><X size={20} /></button>

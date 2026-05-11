@@ -764,8 +764,8 @@ export default function WorkoutDetail() {
             value={editingNote}
             onChange={(e) => setEditingNote(e.target.value)}
           />
-          {editingNote !== (athleteNote?.text || '') && (
-            <div className="mt-2 flex justify-end">
+          <div className={`transition-all duration-300 ease-out overflow-hidden ${editingNote !== (athleteNote?.text || '') ? 'max-h-16 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}`}>
+            <div className="flex justify-end">
               <button
                 onClick={async () => {
                   setSavingNote(true)
@@ -783,7 +783,7 @@ export default function WorkoutDetail() {
                 {savingNote ? 'Salvataggio...' : 'Conferma note'}
               </button>
             </div>
-          )}
+          </div>
         </Section>
       ) : athleteNote ? (
         <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Note Atleta (${athleteNote.athleteName})`} color="border-[#3b82f6]/40">
@@ -974,7 +974,7 @@ export default function WorkoutDetail() {
       {/* MODAL: ASSEGNA AD ATLETA */}
       {assignModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+          <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg">Assegna Workout</p>
               <button onClick={() => { setAssignModalOpen(false); setSelectedAthleteForAssign(null); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
@@ -1034,7 +1034,7 @@ export default function WorkoutDetail() {
       {/* MODAL ALLENAMENTO AUTONOMO */}
       {autonomousModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">Modifica Allenamento Libero</h2>
                <button onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
@@ -1083,7 +1083,7 @@ export default function WorkoutDetail() {
       {/* MODAL: CONFERMA ELIMINAZIONE WORKOUT */}
       {showDeleteConfirm && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
               <AlertTriangle size={32} />
             </div>
@@ -1115,7 +1115,7 @@ export default function WorkoutDetail() {
       {/* MODAL: SUCCESSO ASSEGNAZIONE */}
       {showSuccessModal && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="w-16 h-16 rounded-full bg-green-900/30 text-green-500 flex items-center justify-center mx-auto mb-2 shrink-0">
               <Check size={32} />
             </div>

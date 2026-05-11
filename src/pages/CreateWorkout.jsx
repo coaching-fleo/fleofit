@@ -210,7 +210,7 @@ function BlockPickerModal({ onAdd, onClose }) {
   const blockTypes = ['WarmUp', 'Cash In', 'ON/OFF', 'EMOM', 'AMRAP', 'For Time', 'Rest', 'Cash Out']
   return createPortal(
     <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-5 border border-[#333]">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-5 border border-[#333] animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-white font-bold text-lg">Aggiungi Blocco</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20}/></button>
@@ -270,7 +270,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 
   return createPortal(
     <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold">Scegli esercizio</p>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
@@ -310,25 +310,30 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
               </div>
 
               {isHybrid(selected) && (
-                <div className="flex bg-[#111] rounded-xl p-1.5 border border-[#333]">
+                <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] mb-1">
+                  <div 
+                    className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
+                      hybridMode === 'reps' ? 'translate-x-0' : 'translate-x-full'
+                    }`}
+                  />
                   <button 
                     type="button"
                     onClick={() => { setHybridMode('reps'); setMeters('-'); }}
-                    className={`flex-1 py-2.5 text-xs uppercase font-bold rounded-lg transition ${hybridMode === 'reps' ? 'bg-[#f1ba17] text-black shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'reps' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}
                   >
                     🔁 Reps
                   </button>
                   <button 
                     type="button"
                     onClick={() => { setHybridMode('distance'); setReps('-'); }}
-                    className={`flex-1 py-2.5 text-xs uppercase font-bold rounded-lg transition ${hybridMode === 'distance' ? 'bg-[#f1ba17] text-black shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'distance' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}
                   >
                     📏 Distanza
                   </button>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300" key={`${selected}-${hybridMode}`}>
                 {isErgo(selected) ? (
                   <>
                     <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza / Cal" />
@@ -699,14 +704,19 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
 // ─── COMPONENTI RUNNING BUILDER ────────────────────────────────
 function ModeToggle({ mode, onModeChange, value, onChange }) {
   return (
-    <div className="flex bg-[#111] rounded-xl p-1.5 border border-[#333] mb-3">
+    <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] mb-3">
+      <div 
+        className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
+          mode === 'time' ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      />
       <button 
         type="button"
         onClick={() => {
            onModeChange('time');
            if (!RUN_TIME_OPTIONS.includes(value)) onChange('1 min');
         }}
-        className={`flex-1 py-2.5 text-xs uppercase font-bold rounded-lg transition ${mode === 'time' ? 'bg-[#0094C6] text-white shadow-md shadow-[#0094C6]/20' : 'text-gray-500 hover:text-gray-300'}`}
+        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'time' ? 'text-[#0094C6]' : 'text-gray-500 hover:text-gray-300'}`}
       >
         ⏱ Tempo
       </button>
@@ -716,7 +726,7 @@ function ModeToggle({ mode, onModeChange, value, onChange }) {
            onModeChange('distance');
            if (!RUN_DISTANCE_OPTIONS.includes(value)) onChange('100m');
         }}
-        className={`flex-1 py-2.5 text-xs uppercase font-bold rounded-lg transition ${mode === 'distance' ? 'bg-[#0094C6] text-white shadow-md shadow-[#0094C6]/20' : 'text-gray-500 hover:text-gray-300'}`}
+        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'distance' ? 'text-[#0094C6]' : 'text-gray-500 hover:text-gray-300'}`}
       >
         📏 Distanza
       </button>
@@ -779,13 +789,13 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold">{initialStep ? 'Modifica Fase Corsa' : 'Aggiungi Fase Corsa'}</p>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
         </div>
         <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mb-1">
             {['warmup', 'run', 'recover', 'cooldown', 'repeat'].map(t => (
               <button key={t} onClick={() => setType(t)}
                 className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition ${
@@ -795,8 +805,10 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
               </button>
             ))}
           </div>
-          {type === 'repeat' ? (
-            <div className="flex flex-col gap-4 mt-2">
+          
+          <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out" key={type}>
+            {type === 'repeat' ? (
+              <>
               <ScrollPicker isRun options={RUN_REPEAT_ROUNDS_OPTIONS} value={rounds} onChange={setRounds} label="Numero di ripetizioni" />
               <div className="p-3 bg-[#222] border border-[#333] rounded-xl flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -807,7 +819,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
                   </div>
                 </div>
                 <ModeToggle mode={runDurationMode} onModeChange={setRunDurationMode} value={runDuration} onChange={setRunDuration} />
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2 animate-in fade-in duration-300" key={runDurationMode}>
                   <ScrollPicker isRun options={runDurationMode === 'time' ? RUN_TIME_OPTIONS : RUN_DISTANCE_OPTIONS} value={runDuration} onChange={setRunDuration} label={runDurationMode === 'time' ? 'Durata' : 'Distanza'} />
                   <ScrollPicker isRun options={RUN_PACE_OPTIONS} value={runPace} onChange={setRunPace} label="Da" />
                   <ScrollPicker isRun options={MAX_PACE_OPTIONS} value={runPaceMax} onChange={setRunPaceMax} label="A (Opz.)" />
@@ -823,7 +835,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
                   </div>
                 </div>
                 <ModeToggle mode={recDurationMode} onModeChange={setRecDurationMode} value={recDuration} onChange={setRecDuration} />
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2 animate-in fade-in duration-300" key={recDurationMode}>
                   <ScrollPicker isRun options={recDurationMode === 'time' ? RUN_TIME_OPTIONS : RUN_DISTANCE_OPTIONS} value={recDuration} onChange={setRecDuration} label={recDurationMode === 'time' ? 'Durata' : 'Distanza'} />
                   <ScrollPicker isRun options={RUN_PACE_OPTIONS} value={recPace} onChange={setRecPace} label="Da" />
                   <ScrollPicker isRun options={MAX_PACE_OPTIONS} value={recPaceMax} onChange={setRecPaceMax} label="A (Opz.)" />
@@ -834,11 +846,11 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
                 <label className="text-gray-400 text-xs mb-1 block">Note</label>
                 <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0094C6] text-sm" placeholder="Es: mantieni la zona 2 costante..." />
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3 mt-2">
+              </>
+            ) : (
+              <>
               <ModeToggle mode={durationMode} onModeChange={setDurationMode} value={duration} onChange={setDuration} />
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2 animate-in fade-in duration-300" key={durationMode}>
                 <ScrollPicker isRun options={durationMode === 'time' ? RUN_TIME_OPTIONS : RUN_DISTANCE_OPTIONS} value={duration} onChange={setDuration} label={durationMode === 'time' ? 'Durata' : 'Distanza'} />
                 <ScrollPicker isRun options={RUN_PACE_OPTIONS} value={pace} onChange={setPace} label="Da" />
                 <ScrollPicker isRun options={MAX_PACE_OPTIONS} value={paceMax} onChange={setPaceMax} label="A (Opz.)" />
@@ -857,8 +869,9 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
                 <label className="text-gray-400 text-xs mb-1 block">Note</label>
                 <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0094C6] text-sm" placeholder="Es: corsa leggera, focus tecnica..." />
               </div>
-            </div>
-          )}
+              </>
+            )}
+          </div>
           <button onClick={handleAdd} className="w-full mt-2 py-3 bg-[#0094C6] text-white font-bold rounded-xl hover:brightness-110 transition">
             {initialStep ? 'Salva Modifiche' : 'Aggiungi Fase'}
           </button>
@@ -1235,44 +1248,49 @@ export default function CreateWorkout() {
       {step === 1 && (
         <div className="flex flex-col gap-4">
           <p className="text-gray-400 text-sm font-medium">Seleziona Categoria:</p>
-          <div className="flex gap-2 mb-2">
+          <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] mb-2">
+            <div 
+              className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] rounded-xl shadow-md transition-all duration-300 ease-out ${
+                category === 'Hyrox' ? 'translate-x-0 bg-[#f1ba17]/10 border border-[#f1ba17]/50' : 'translate-x-full bg-[#0094C6]/10 border border-[#0094C6]/50'
+              }`}
+            />
             <button 
               onClick={() => setCategory('Hyrox')} 
-              className={`flex-1 py-4 rounded-xl border font-bold transition flex items-center justify-center gap-2 ${category === 'Hyrox' ? 'bg-[#f1ba17]/10 border-[#f1ba17] text-[#f1ba17]' : 'bg-[#222] border-[#333] text-gray-500 hover:text-white'}`}>
+              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-2 ${category === 'Hyrox' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}>
               <Dumbbell size={20} /> Hyrox
             </button>
             <button 
               onClick={() => setCategory('Running')} 
-              className={`flex-1 py-4 rounded-xl border font-bold transition flex items-center justify-center gap-2 ${category === 'Running' ? 'bg-[#0094C6]/10 border-[#0094C6] text-[#0094C6]' : 'bg-[#222] border-[#333] text-gray-500 hover:text-white'}`}>
+              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-2 ${category === 'Running' ? 'text-[#0094C6]' : 'text-gray-500 hover:text-gray-300'}`}>
               <Timer size={20} /> Running
             </button>
           </div>
 
           {!isStep1Valid && (
-            <p className="text-yellow-500 text-xs text-center mb-2">
+            <p className="text-yellow-500 text-xs text-center mb-2 animate-in fade-in duration-300">
               ↑ Completa nome e data per proseguire
             </p>
           )}
 
-          {category === 'Hyrox' && (
-            <button 
-              onClick={() => setStep(2)} 
-              disabled={!isStep1Valid}
-              className={`w-full py-4 mt-2 rounded-2xl border border-[#f1ba17]/50 bg-[#f1ba17]/10 text-[#f1ba17] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
-            >
-              Crea Allenamento Hyrox →
-            </button>
-          )}
-
-          {category === 'Running' && (
-            <button 
-              onClick={() => setStep(2)} 
-              disabled={!isStep1Valid}
-              className={`w-full py-4 mt-2 rounded-2xl border border-[#0094C6]/50 bg-[#0094C6]/10 text-[#0094C6] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
-            >
-              Crea Allenamento Corsa →
-            </button>
-          )}
+          <div key={category} className="animate-in fade-in zoom-in-[0.98] duration-300 ease-out">
+            {category === 'Hyrox' ? (
+              <button 
+                onClick={() => setStep(2)} 
+                disabled={!isStep1Valid}
+                className={`w-full py-4 mt-2 rounded-2xl border border-[#f1ba17]/50 bg-[#f1ba17]/10 text-[#f1ba17] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
+              >
+                Crea Allenamento Hyrox →
+              </button>
+            ) : (
+              <button 
+                onClick={() => setStep(2)} 
+                disabled={!isStep1Valid}
+                className={`w-full py-4 mt-2 rounded-2xl border border-[#0094C6]/50 bg-[#0094C6]/10 text-[#0094C6] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
+              >
+                Crea Allenamento Corsa →
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -1470,7 +1488,7 @@ export default function CreateWorkout() {
       {/* SAVE MODAL */}
       {showSaveModal && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">Salvataggio</h2>
                <button onClick={() => setShowSaveModal(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
@@ -1529,7 +1547,7 @@ export default function CreateWorkout() {
       {/* EXIT CONFIRM MODAL */}
       {showExitConfirm && createPortal(
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
               <AlertTriangle size={32} />
             </div>
