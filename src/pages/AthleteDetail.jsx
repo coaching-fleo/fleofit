@@ -124,7 +124,7 @@ export default function AthleteDetail() {
     }
   }
 
-  const updateWorkoutNote = async (workoutId, notes) => {
+  const updateWorkoutNote = async (workoutId, notes, workoutTitle) => {
     const { error } = await supabase
       .from('athlete_workouts')
       .update({ notes })
