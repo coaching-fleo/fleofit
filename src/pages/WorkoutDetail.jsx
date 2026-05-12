@@ -7,7 +7,7 @@ import { ChevronLeft, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
+import { toBlob } from 'html-to-image'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
@@ -296,6 +296,26 @@ export default function WorkoutDetail() {
         navigate(-1)
       }
     }
+  }
+
+  const handleRemoveAssignment = (assignmentId) => {
+    setConfirmInfo({
+      title: 'Rimuovi Assegnazione',
+      message: "Sei sicuro di voler rimuovere questo allenamento per l'atleta?",
+      onConfirm: async () => {
+        setConfirmInfo(null)
+        const { error } = await supabase.from('athlete_workouts').delete().eq('id', assignmentId)
+        if (error) {
+          setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+        } else {
+          if (queryAthleteId && assignmentId === athleteWorkoutId) {
+             navigate(`/workout/${id}`)
+          } else {
+             fetchWorkout()
+          }
+        }
+      }
+    })
   }
 
   const openEditAutonomous = () => {
@@ -590,38 +610,37 @@ export default function WorkoutDetail() {
 
   const exportShare2 = async () => {
     if (!igRef.current) return
-    const canvas = await html2canvas(igRef.current, {
-      backgroundColor: 'transparent',
-      scale: 3,
-      useCORS: true
-    })
-    const link = document.createElement('a')
-    link.download = `${workout.title.replace(/ /g, '_')}_Share2.png`
-    link.href = canvas.toDataURL('image/png')
-    link.click()
+    try {
+      const blob = await toBlob(igRef.current, { pixelRatio: 2, cacheBust: true })
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `${workout.title.replace(/ /g, '_')}_IG.png`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   const shareWorkoutFiles = async () => {
     if (!igRef.current) return
     try {
-      // 1. Genera PDF in memoria
-      const doc = await buildPDFDoc()
-      const pdfBlob = doc.output('blob')
-      const pdfFile = new File([pdfBlob], `${workout.title.replace(/ /g, '_')}.pdf`, { type: 'application/pdf' })
+      const filesArray = []
+      const isEventWorkout = workout?.sections?.category === 'Event' || workout?.sections?.isEvent
 
-      // 2. Genera Immagine in memoria
-      const canvas = await html2canvas(igRef.current, {
-        backgroundColor: 'transparent',
-        scale: 3,
-        useCORS: true
-      })
-      const pngFile = await new Promise(resolve => {
-        canvas.toBlob(blob => {
-          resolve(new File([blob], `${workout.title.replace(/ /g, '_')}.png`, { type: 'image/png' }))
-        }, 'image/png')
-      })
+      if (!isEventWorkout) {
+        // 1. Genera PDF in memoria
+        const doc = await buildPDFDoc()
+        const pdfBlob = doc.output('blob')
+        const pdfFile = new File([pdfBlob], `${workout.title.replace(/ /g, '_')}.pdf`, { type: 'application/pdf' })
+        filesArray.push(pdfFile)
+      }
 
-      const filesArray = [pdfFile, pngFile]
+      // 2. Genera Immagine in memoria con html-to-image
+      const blob = await toBlob(igRef.current, { pixelRatio: 3, cacheBust: true })
+      const pngFile = new File([blob], `${workout.title.replace(/ /g, '_')}.png`, { type: 'image/png' })
 
       // 3. Usa lo Share nativo di iOS / Android
       if (navigator.canShare && navigator.canShare({ files: filesArray })) {
@@ -768,7 +787,7 @@ export default function WorkoutDetail() {
 
       {/* NOTE ATLETA */}
       {(role === 'athlete' || isOwnProfile) && athleteWorkoutId ? (
-        <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Le tue note su questo allenamento`} color="border-[#3b82f6]/40">
+        <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Le tue note su questo ${type === 'Event' ? 'evento' : 'allenamento'}`} color="border-[#3b82f6]/40">
           <textarea
             className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-sm transition-colors focus:border-[#3b82f6]"
             rows={3}
@@ -833,8 +852,19 @@ export default function WorkoutDetail() {
                       <p className="text-gray-500 text-xs capitalize">{format(parseISO(a.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
                     </div>
                   </div>
-                  <div className={`px-2 py-1 rounded-md border text-xs font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
-                    {a.status === 'completed' ? 'Fatto' : 'Da fare'}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className={`px-2 py-1 rounded-md border text-xs font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
+                      {a.status === 'completed' ? 'Fatto' : 'Da fare'}
+                    </div>
+                    {role === 'admin' && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleRemoveAssignment(a.id); }}
+                        className="p-1.5 text-gray-500 hover:text-red-500 transition rounded-lg hover:bg-[#111]"
+                        title="Rimuovi assegnazione"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -845,10 +875,12 @@ export default function WorkoutDetail() {
 
       {/* EXPORT BUTTONS */}
       <div className="flex gap-3 mt-6">
-        <button onClick={exportPDF}
-          className="flex-1 flex items-center justify-center gap-2 bg-[#222] border border-[#333] text-white font-semibold py-4 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition">
-          <Download size={18} /> Esporta PDF
-        </button>
+        {type !== 'Event' && (
+          <button onClick={exportPDF}
+            className="flex-1 flex items-center justify-center gap-2 bg-[#222] border border-[#333] text-white font-semibold py-4 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition">
+            <Download size={18} /> Esporta PDF
+          </button>
+        )}
         <button onClick={exportShare2}
           className="flex-1 flex items-center justify-center gap-2 bg-[#222] border border-[#333] text-white font-semibold py-4 rounded-2xl hover:border-pink-500 hover:text-pink-400 transition">
           <Share2 size={18} /> Grafica IG
@@ -858,7 +890,8 @@ export default function WorkoutDetail() {
       <div className="mt-3">
         <button onClick={shareWorkoutFiles}
           className="w-full flex items-center justify-center gap-2 bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] font-semibold py-4 rounded-2xl hover:bg-[#25D366]/20 transition">
-          <Send size={18} /> Condividi (PDF + Social)</button>
+          <Send size={18} /> Condividi {type !== 'Event' ? '(PDF + Social)' : 'Grafica'}
+        </button>
       </div>
 
       {role !== 'athlete' && (
@@ -875,10 +908,10 @@ export default function WorkoutDetail() {
         <p className="text-gray-600 text-xs mb-4 font-medium text-center uppercase tracking-wider">Anteprima Sticker per Instagram</p>
         <div className="flex justify-center pb-8">
           <div ref={igRef} style={{
-            width: '380px',
+            width: '420px',
             background: 'linear-gradient(145deg, #0B0B0B 0%, #171717 100%)',
             borderRadius: '32px',
-            fontFamily: "-apple-system, 'SF Pro Display', system-ui, sans-serif",
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
             overflow: 'hidden',
             border: '1px solid rgba(255,255,255,0.05)',
             boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
@@ -888,39 +921,42 @@ export default function WorkoutDetail() {
             {/* HEADER: FLEOFIT LOGO & DATE */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
-                <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '0.5px', lineHeight: 1 }}>
+                <div style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '0.5px', lineHeight: 1 }}>
                   <span style={{ color: '#fff' }}>FLEO</span>
                   <span style={{ color: '#f1ba17' }}>FIT</span>
                 </div>
-                <div style={{ color: '#888', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>
+                <div style={{ color: '#888', fontSize: '16px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '6px' }}>
                   {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'dd MMM yyyy', { locale: it }) : ''}
                 </div>
               </div>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: type === 'Running' ? '#0094C6' : (type === 'Custom' ? '#D11149' : (type === 'Event' ? '#4f46e5' : '#f1ba17')), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: '16px', fontWeight: 900, color: type === 'Running' || type === 'Custom' || type === 'Event' ? '#fff' : '#111' }}>FL</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: type === 'Running' ? 'rgba(0, 148, 198, 0.2)' : (type === 'Event' ? '#fff' : (type === 'Custom' ? 'rgba(209, 17, 73, 0.2)' : 'rgba(241, 186, 23, 0.2)')), color: type === 'Running' ? '#0094C6' : (type === 'Event' ? '#000' : (type === 'Custom' ? '#D11149' : '#f1ba17')), padding: '6px 12px', borderRadius: '8px', fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  {type}
+                </div>
+                {workout.sections?.intensity && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#222', color: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    INT: {workout.sections.intensity}/10
+                  </div>
+                )}
               </div>
             </div>
 
             {/* TITLE */}
             <div style={{ marginBottom: '32px' }}>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                <span style={{ background: type === 'Running' ? 'rgba(0, 148, 198, 0.2)' : (type === 'Event' ? '#fff' : (type === 'Custom' ? 'rgba(209, 17, 73, 0.2)' : 'rgba(241, 186, 23, 0.2)')), color: type === 'Running' ? '#0094C6' : (type === 'Event' ? '#000' : (type === 'Custom' ? '#D11149' : '#f1ba17')), padding: '6px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  {type}
-                </span>
-                {workout.sections?.intensity && (
-                  <span style={{ background: '#222', color: '#fff', padding: '6px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    🔥 Int: {workout.sections.intensity}/10
-                  </span>
-                )}
-              </div>
-              <div style={{ color: '#fff', fontSize: '30px', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-1px', wordWrap: 'break-word' }}>
+              <div style={{ color: '#fff', fontSize: '36px', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-1px', wordWrap: 'break-word' }}>
                 {workout.title}
               </div>
             </div>
 
             {/* WORKOUT RECAP */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '36px' }}>
-              {!isRunning ? blocks.map((b, i) => {
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '36px' }}>
+              {type === 'Event' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', background: 'rgba(255,255,255,0.05)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ fontSize: '60px', marginBottom: '16px' }}>🚀</div>
+                  <div style={{ color: '#fff', fontSize: '24px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px', textAlign: 'center' }}>Giorno di Gara</div>
+                  <div style={{ color: '#aaa', fontSize: '18px', fontWeight: 500, textAlign: 'center' }}>Oggi è il momento di dare tutto. Spacca!</div>
+                </div>
+              ) : !isRunning ? blocks.map((b, i) => {
                 let shortTitle = b.type;
                 if (b.type === 'EMOM') shortTitle = `EMOM ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
                 else if (b.type === 'AMRAP') shortTitle = `AMRAP ${b.params?.duration || ''}`;
@@ -934,17 +970,26 @@ export default function WorkoutDetail() {
                     shortTitle = rounds !== '1' ? `${b.type.toUpperCase()} · ${rounds} ROUNDS${rest}` : b.type.toUpperCase();
                 }
 
-                let desc = '';
-                if (['WarmUp', 'Rest'].includes(b.type)) {
-                   desc = b.notes || '';
-                } else {
-                   desc = (b.exercises || []).map(e => e.name).join(' • ');
-                }
-
                 return (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                     <div style={{ fontSize: '16px', fontWeight: 900, color: '#f1ba17', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{shortTitle}</div>
-                     {desc && <div style={{ fontSize: '22px', fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{desc}</div>}
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', background: 'rgba(255,255,255,0.04)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                     <div style={{ fontSize: '15px', fontWeight: 900, color: '#f1ba17', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{shortTitle}</div>
+                     {!['WarmUp', 'Rest'].includes(b.type) && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                           {(b.exercises || []).map((ex, j) => {
+                              const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '');
+                              const isErgo = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill'].includes(ex.name);
+                              const paceStr = isErgo && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : '';
+                              const kgStr = ex.kg ? `${ex.kg}kg` : '';
+                              const specs = [detail, paceStr, kgStr].filter(Boolean).join(' · ');
+                              return (
+                                <div key={j} style={{ display: 'flex', flexDirection: 'column' }}>
+                                   <span style={{ fontSize: '18px', fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{ex.name}</span>
+                                   {specs && <span style={{ fontSize: '15px', fontWeight: 600, color: '#888', marginTop: '2px' }}>{specs}</span>}
+                                </div>
+                              )
+                           })}
+                        </div>
+                     )}
                   </div>
                 )
               }) : (s?.steps || s?.main?.steps || []).map((step, i) => {
@@ -959,13 +1004,23 @@ export default function WorkoutDetail() {
                   desc = `${step.runDuration} ON / ${step.recDuration} OFF`; 
                 }
 
-                if (step.notes && !desc) desc = step.notes;
-                else if (step.notes && desc) desc += ` • ${step.notes}`;
-
                 return (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                     <div style={{ fontSize: '16px', fontWeight: 900, color: '#0094C6', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</div>
-                     {desc && <div style={{ fontSize: '22px', fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{desc}</div>}
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', background: 'rgba(0,148,198,0.05)', borderRadius: '16px', border: '1px solid rgba(0,148,198,0.1)' }}>
+                     <div style={{ fontSize: '15px', fontWeight: 900, color: '#0094C6', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</div>
+                     {step.type === 'repeat' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                           <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: '17px', fontWeight: 700, color: '#fff' }}>Run: {step.runDuration}</span>
+                              {step.runPace && <span style={{ fontSize: '15px', fontWeight: 600, color: '#888' }}>@ {step.runPace}</span>}
+                           </div>
+                           <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: '17px', fontWeight: 700, color: '#ccc' }}>Recover: {step.recDuration}</span>
+                              {step.recPace && <span style={{ fontSize: '15px', fontWeight: 600, color: '#888' }}>@ {step.recPace}</span>}
+                           </div>
+                        </div>
+                     ) : (
+                       desc && <div style={{ fontSize: '17px', fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{desc}</div>
+                     )}
                   </div>
                 )
               })}
@@ -973,10 +1028,10 @@ export default function WorkoutDetail() {
 
             {/* FOOTER */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
-              <div style={{ color: '#aaa', fontSize: '14px', fontWeight: 600 }}>
+              <div style={{ color: '#aaa', fontSize: '16px', fontWeight: 600 }}>
                 Coach Federico Leo
               </div>
-              <div style={{ color: '#fff', fontSize: '14px', fontWeight: 800, letterSpacing: '0.5px' }}>
+              <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, letterSpacing: '0.5px' }}>
                 @FLEOFIT
               </div>
             </div>
