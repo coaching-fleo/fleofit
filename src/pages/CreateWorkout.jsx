@@ -93,6 +93,8 @@ const RUN_PACE_OPTIONS = [
   })
 ]
 
+const SPEED_OPTIONS = ['-', ...Array.from({ length: 41 }, (_, i) => `${(5 + i * 0.5).toFixed(1)} km/h`)]
+
 const ERGO_PACE_OPTIONS = [
   '-', 'Libero', 'Gara', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out',
   ...Array.from({ length: 61 }, (_, i) => {
@@ -233,8 +235,10 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   const [search, setSearch] = useState(initialExercise?.name || '')
   const [selected, setSelected] = useState(initialExercise?.name || null)
   const [hybridMode, setHybridMode] = useState(initialExercise?.meters && initialExercise.meters !== '-' ? 'distance' : 'reps')
+  const [runPaceMode, setRunPaceMode] = useState(initialExercise?.speed && initialExercise.speed !== '-' ? 'speed' : 'pace')
   const [meters, setMeters] = useState(initialExercise?.meters || '-')
   const [ergoPace, setErgoPace] = useState(initialExercise?.ergoPace || '-')
+  const [speed, setSpeed] = useState(initialExercise?.speed || '-')
   const [reps, setReps] = useState(initialExercise?.reps || '-')
   const [kg, setKg] = useState(initialExercise?.kg ? `${initialExercise.kg} kg` : '-')
   const [intensity, setIntensity] = useState(initialExercise?.intensity || '5')
@@ -260,8 +264,9 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
       name: selected,
       meters: finalMeters,
       reps: finalReps,
-      ergoPace: isErgo(selected) ? ergoPace : undefined,
-      kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) ? '' : kg.replace(' kg', ''),
+      ergoPace: isErgo(selected) || (selected === 'Run' && runPaceMode === 'pace') ? ergoPace : undefined,
+      speed: selected === 'Run' && runPaceMode === 'speed' ? speed : undefined,
+      kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) || selected === 'Run' ? '' : kg.replace(' kg', ''),
       intensity,
       notes
     })
@@ -333,11 +338,44 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300" key={`${selected}-${hybridMode}`}>
+              {selected === 'Run' && (
+                <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] mb-1">
+                  <div 
+                    className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
+                      runPaceMode === 'pace' ? 'translate-x-0' : 'translate-x-full'
+                    }`}
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => { setRunPaceMode('pace'); setSpeed('-'); }}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'pace' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}
+                  >
+                    ⏱ Passo
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => { setRunPaceMode('speed'); setErgoPace('-'); }}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'speed' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}
+                  >
+                    ⚡ Velocità
+                  </button>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300" key={`${selected}-${hybridMode}-${runPaceMode}`}>
                 {isErgo(selected) ? (
                   <>
                     <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza / Cal" />
                     <ScrollPicker options={ERGO_PACE_OPTIONS} value={ergoPace} onChange={setErgoPace} label="⏱ Passo (Opz.)" />
+                  </>
+                ) : selected === 'Run' ? (
+                  <>
+                    <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
+                    {runPaceMode === 'pace' ? (
+                      <ScrollPicker options={['-'].concat(RUN_PACE_OPTIONS)} value={ergoPace} onChange={setErgoPace} label="⏱ Passo (Opz.)" />
+                    ) : (
+                      <ScrollPicker options={SPEED_OPTIONS} value={speed} onChange={setSpeed} label="⚡ Velocità" />
+                    )}
                   </>
                 ) : isHybrid(selected) ? (
                   <>
@@ -393,9 +431,11 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 }
 
 // ─── BLOCCO ESERCIZIO ─────────────────────────────────────────
-function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, showMinute, onEdit, touchHandlers }) {
+function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, showMinute, onEdit, touchHandlers, onDuplicate }) {
+
   const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
-  const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
+  const paceStr = (isErgo(ex.name) || ex.name === 'Run') && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
+  const speedStr = ex.name === 'Run' && ex.speed && ex.speed !== '-' ? `@ ${ex.speed}` : ''
 
   return (
     <div
@@ -446,7 +486,7 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
       <div className="flex-1 cursor-pointer group" onClick={() => onEdit && onEdit(ex)}>
         <p className="text-white text-sm font-medium group-hover:text-[#f1ba17] transition">{ex.name}</p>
         <p className="text-gray-500 text-xs mt-0.5 group-hover:text-gray-400 transition">
-          {detail} {paceStr}
+          {detail} {paceStr} {speedStr}
           {ex.kg ? ` · ${ex.kg}kg` : ''}
           {ex.notes ? ` · ${ex.notes}` : ''}
         </p>
@@ -457,15 +497,20 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
            <BicepsFlexed size={16} className={getIntensityColor(ex.intensity)} />
         </div>
       )}
-      <button type="button" onClick={() => onRemove(ex.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
-        <Trash2 size={15} />
-      </button>
+      <div className="flex items-center shrink-0">
+        <button type="button" onClick={() => onDuplicate && onDuplicate(ex)} className="text-gray-500 hover:text-[#f1ba17] transition shrink-0 p-2" title="Duplica esercizio">
+          <Copy size={15} />
+        </button>
+        <button type="button" onClick={() => onRemove(ex.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
+          <Trash2 size={15} />
+        </button>
+      </div>
     </div>
   )
 }
 
 // ─── BLOCCO HYROX ───────────────────────────────────────
-function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate, touchHandlers }) {
+function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate, touchHandlers, onDuplicateExerciseRequest }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [editingExercise, setEditingExercise] = useState(null)
   const [draggedExIdx, setDraggedExIdx] = useState(null)
@@ -566,9 +611,10 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {block.exercises.map((ex, i) => {
                     const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
-                    const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
+                    const paceStr = (isErgo(ex.name) || ex.name === 'Run') && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
+                    const speedStr = ex.name === 'Run' && ex.speed && ex.speed !== '-' ? `@ ${ex.speed}` : ''
                     const kgStr = ex.kg ? `${ex.kg}kg` : ''
-                    const specs = [detail, paceStr, kgStr].filter(Boolean).join(' ')
+                    const specs = [detail, paceStr, speedStr, kgStr].filter(Boolean).join(' ')
                     return (
                       <span key={i} className="text-xs bg-[#111] border border-[#333] text-gray-400 px-2 py-1.5 rounded-lg flex items-center gap-1">
                         <span className="text-gray-300 font-medium">{ex.name}</span>
@@ -670,6 +716,7 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
                       setEditingExercise(exToEdit)
                       setPickerOpen(true)
                     }}
+                    onDuplicate={onDuplicateExerciseRequest}
                     touchHandlers={getExTouchHandlers}
                   />
                 ))}
@@ -882,7 +929,8 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
   )
 }
 
-function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, touchHandlers, onEdit }) {
+function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, touchHandlers, onEdit, onDuplicate }) {
+
   const getTypeLabel = (t) => {
     switch(t) {
       case 'warmup': return 'Riscaldamento'
@@ -975,9 +1023,14 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
           </div>
         )}
       </div>
-      <button type="button" onClick={() => onRemove(step.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2 mt-1">
-        <Trash2 size={15} />
-      </button>
+      <div className="flex items-center shrink-0 mt-1">
+        <button type="button" onClick={() => onDuplicate && onDuplicate(step)} className="text-gray-500 hover:text-[#0094C6] transition shrink-0 p-2" title="Duplica fase">
+          <Copy size={15} />
+        </button>
+        <button type="button" onClick={() => onRemove(step.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
+          <Trash2 size={15} />
+        </button>
+      </div>
     </div>
   )
 }
@@ -1083,6 +1136,40 @@ export default function CreateWorkout() {
       }
       setStep(2)
     }
+
+    const draftStr = localStorage.getItem('fleofit_workout_draft')
+    if (draftStr) {
+      try {
+        const draft = JSON.parse(draftStr)
+        if ((draft.sourceId || null) === (sourceId || null)) {
+          setConfirmInfo({
+            title: 'Bozza Trovata',
+            message: 'Hai un allenamento non salvato! Vuoi ripristinarlo da dove eri rimasto?',
+            onConfirm: () => {
+              setTitle(draft.title || '')
+              setDate(draft.date || format(new Date(), 'yyyy-MM-dd'))
+              setWorkoutIntensity(draft.workoutIntensity || '5')
+              setCategory(draft.category || 'Hyrox')
+              setBlocks(draft.blocks || [])
+              setRunningSteps(draft.runningSteps || [])
+              setCoachNotes(draft.coachNotes || '')
+              if (draft.title) setStep(2)
+              setConfirmInfo(null)
+            },
+            onCancel: () => {
+              localStorage.removeItem('fleofit_workout_draft')
+              setConfirmInfo(null)
+              fetchWorkoutToEdit()
+            }
+          })
+          return
+        } else {
+          localStorage.removeItem('fleofit_workout_draft')
+        }
+      } catch (e) {
+        localStorage.removeItem('fleofit_workout_draft')
+      }
+    }
     fetchWorkoutToEdit()
   }, [sourceId, duplicateId])
 
@@ -1091,18 +1178,61 @@ export default function CreateWorkout() {
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [pendingPath, setPendingPath] = useState(null)
   const [alertInfo, setAlertInfo] = useState(null)
+  const [confirmInfo, setConfirmInfo] = useState(null)
 
   const hasUnsavedChanges = title.trim() !== '' || blocks.length > 0 || runningSteps.length > 0
+
+  // 0. Salvataggio automatico bozza in locale
+  useEffect(() => {
+    if (hasUnsavedChanges && !saved) {
+      const draft = { sourceId: sourceId || null, title, date, workoutIntensity, category, blocks, runningSteps, coachNotes }
+      localStorage.setItem('fleofit_workout_draft', JSON.stringify(draft))
+    }
+  }, [title, date, workoutIntensity, category, blocks, runningSteps, coachNotes, sourceId, hasUnsavedChanges, saved])
+
+  useEffect(() => {
+    if (saved) localStorage.removeItem('fleofit_workout_draft')
+  }, [saved])
 
   useEffect(() => {
     // 1. Intercetta chiusura/aggiornamento del tab del browser
     const handleBeforeUnload = (e) => {
       if (hasUnsavedChanges && !saved) {
         e.preventDefault()
+        // I browser moderni (specialmente iOS Safari) ignorano i messaggi personalizzati
+        // e richiedono esplicitamente il ritorno di una stringa vuota per attivare il popup nativo
         e.returnValue = ''
+        return ''
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
+    // Fix specifico per forzare l'avviso su iOS Safari
+    window.onbeforeunload = handleBeforeUnload
+
+    // Blocca fisicamente il "Pull to Refresh" (trascinamento verso il basso) su mobile
+    if (hasUnsavedChanges && !saved) {
+      document.body.style.overscrollBehavior = 'none'
+      document.documentElement.style.overscrollBehavior = 'none'
+    } else {
+      document.body.style.overscrollBehavior = 'auto'
+      document.documentElement.style.overscrollBehavior = 'auto'
+    }
+
+    // Blocca fisicamente il "Pull to Refresh" tramite Javascript per Safari iOS
+    let touchStartY = 0
+    const handleTouchStart = (e) => {
+      if (e.touches && e.touches.length > 0) touchStartY = e.touches[0].clientY
+    }
+    const handleTouchMove = (e) => {
+      // Se stiamo scorrendo verso il basso partendo dalla cima della pagina
+      if (hasUnsavedChanges && !saved && window.scrollY <= 0) {
+        if (e.touches && e.touches.length > 0 && e.touches[0].clientY > touchStartY) {
+          e.preventDefault() // Annulla il ricaricamento manuale
+        }
+      }
+    }
+    document.addEventListener('touchstart', handleTouchStart, { passive: false })
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
 
     // 2. Intercetta i click sui link di navigazione interna (es. bottoni della Navbar)
     const handleLinkClick = (e) => {
@@ -1121,7 +1251,12 @@ export default function CreateWorkout() {
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.onbeforeunload = null
       document.removeEventListener('click', handleLinkClick, { capture: true })
+      document.removeEventListener('touchstart', handleTouchStart)
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.body.style.overscrollBehavior = 'auto'
+      document.documentElement.style.overscrollBehavior = 'auto'
     }
   }, [hasUnsavedChanges, saved])
 
@@ -1133,6 +1268,7 @@ export default function CreateWorkout() {
         setPendingPath(-1)
         setShowExitConfirm(true)
       } else {
+        localStorage.removeItem('fleofit_workout_draft')
         navigate(-1)
       }
     }
@@ -1345,6 +1481,12 @@ export default function CreateWorkout() {
                   newBlocks.splice(idx + 1, 0, duplicatedBlock)
                   setBlocks(newBlocks)
                 }}
+                onDuplicateExerciseRequest={(exToDuplicate) => {
+                  const nb = [...blocks]
+                  const currentExercises = nb[idx].exercises || []
+                  nb[idx] = { ...nb[idx], exercises: [...currentExercises, { ...exToDuplicate, id: Math.random() }] }
+                  setBlocks(nb)
+                }}
                 touchHandlers={getBlockTouchHandlers}
               />
             ))}
@@ -1448,6 +1590,9 @@ export default function CreateWorkout() {
                     onEdit={stepToEdit => {
                       setEditingStep(stepToEdit)
                       setRunningPickerOpen(true)
+                    }}
+                    onDuplicate={(stepToDuplicate) => {
+                      setRunningSteps(prev => [...prev, { ...stepToDuplicate, id: Math.random() }])
                     }}
                     touchHandlers={getStepTouchHandlers}
                   />
@@ -1563,7 +1708,10 @@ export default function CreateWorkout() {
                 Annulla
               </button>
               <button 
-                onClick={() => navigate(pendingPath)}
+                onClick={() => {
+                  localStorage.removeItem('fleofit_workout_draft')
+                  navigate(pendingPath)
+                }}
                 className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-500 transition"
               >
                 Sì, esci
@@ -1575,7 +1723,13 @@ export default function CreateWorkout() {
       )}
       
       {createPortal(
-        <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />,
+        <>
+          <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
+          <CustomConfirm info={confirmInfo} onClose={() => {
+            if (confirmInfo?.onCancel) confirmInfo.onCancel()
+            else setConfirmInfo(null)
+          }} />
+        </>,
         document.body
       )}
     </div>
