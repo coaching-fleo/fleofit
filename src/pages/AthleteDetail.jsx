@@ -100,6 +100,14 @@ export default function AthleteDetail() {
       
       if (!error) {
         setWorkouts(prev => prev.map(w => w.id === id ? { ...w, status: newStatus } : w))
+        if (newStatus === 'completed' && role === 'athlete') {
+          const w = workouts.find(wo => wo.id === id)
+          if (w) {
+            supabase.functions.invoke('send-reminders', {
+              body: { mode: 'coach_notification', action: 'completed', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: w.workouts?.title || 'Workout' }
+            }).catch(console.error)
+          }
+        }
       }
     }
 
@@ -124,6 +132,11 @@ export default function AthleteDetail() {
     
     if (!error) {
       setWorkouts(workouts.map(w => w.id === workoutId ? { ...w, notes } : w))
+        if (role === 'athlete') {
+          supabase.functions.invoke('send-reminders', {
+            body: { mode: 'coach_notification', action: 'note', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: workoutTitle || 'Workout', noteText: notes }
+          }).catch(console.error)
+        }
     } else {
       setAlertInfo({ title: 'Errore', message: "Errore durante il salvataggio della nota: " + error.message, type: 'error' })
     }
@@ -159,6 +172,12 @@ export default function AthleteDetail() {
 
         const { error: awError } = await supabase.from('athlete_workouts').insert({ athlete_id: id, workout_id: newW.id, completed_date: autonomousForm.date, status: 'completed', notes: autonomousForm.notes })
         if (awError) throw awError
+      }
+      
+      if (role === 'athlete' && !autonomousForm.id) {
+         supabase.functions.invoke('send-reminders', {
+           body: { mode: 'coach_notification', action: 'custom_workout', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: autonomousForm.title }
+         }).catch(console.error)
       }
       setAutonomousModalOpen(false)
       setAutonomousForm({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
@@ -895,7 +914,8 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
 
   const handleSaveNote = async () => {
     setSaving(true)
-    await onUpdateNote(entry.id, note)
+    await onUpdateNote(entry.id, note, entry.workouts?.title)
+    await onUpdateNote(entry.id, note, entry.workouts?.title)
     setSaving(false)
   }
 

@@ -69,6 +69,53 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // ==========================================
+    // MODALITÀ COACH NOTIFICATION
+    // ==========================================
+    if (mode === 'coach_notification') {
+      console.log(`Notifica al coach da ${body.athleteName} per ${body.action}`);
+      
+      const adminEmails = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com'];
+      const { data: authData, error: authErr } = await supabase.auth.admin.listUsers();
+      if (authErr) throw authErr;
+
+      const adminUserIds = authData.users.filter((u: any) => adminEmails.includes(u.email)).map((u: any) => u.id);
+
+      const { data: subscriptions, error: subError } = await supabase
+        .from('push_subscriptions')
+        .select('*')
+        .in('user_id', adminUserIds);
+
+      if (subError) throw subError;
+
+      let title = "Aggiornamento Atleta";
+      let bodyMsg = "";
+
+      if (body.action === 'note') {
+        title = `📝 Nota da ${body.athleteName}`;
+        bodyMsg = `${body.workoutTitle}: "${body.noteText}"`;
+      } else if (body.action === 'completed') {
+        title = `✅ Workout completato!`;
+        bodyMsg = `${body.athleteName} ha completato: ${body.workoutTitle}`;
+      } else if (body.action === 'custom_workout') {
+        title = `🏃‍♂️ Nuovo allenamento libero`;
+        bodyMsg = `${body.athleteName} ha aggiunto: ${body.workoutTitle}`;
+      }
+
+      const notifications = [];
+      for (const sub of subscriptions) {
+        const pushSubscription = { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } };
+        const payload = JSON.stringify({ title, body: bodyMsg, url: '/' });
+        notifications.push(
+          webpush.sendNotification(pushSubscription, payload).catch(async (error: any) => {
+            if (error.statusCode === 404 || error.statusCode === 410) await supabase.from('push_subscriptions').delete().eq('id', sub.id);
+          })
+        );
+      }
+      await Promise.all(notifications);
+      return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     // Calcola le date: "oggi" per la mattina, "domani" per la sera
     const targetDate = new Date();
     if (mode === 'evening') {

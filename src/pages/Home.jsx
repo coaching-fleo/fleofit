@@ -176,6 +176,16 @@ export default function Home() {
     countdownDays = differenceInDays(parseISO(nextEventHome.completed_date), startOfDay(new Date()))
   }
 
+  const updateWorkoutNote = async (workoutId, notes, workoutTitle) => {
+    const { error } = await supabase.from('athlete_workouts').update({ notes }).eq('id', workoutId)
+    if (!error && role === 'athlete') {
+      supabase.functions.invoke('send-reminders', {
+        body: { mode: 'coach_notification', action: 'note', athleteName: userName, workoutTitle: workoutTitle || 'Workout', noteText: notes }
+      }).catch(console.error)
+    }
+    return { error }
+  }
+
   const toggleTodayWorkout = async (e, workout) => {
     e.stopPropagation()
     const newStatus = workout.status === 'completed' ? 'pending' : 'completed'
@@ -197,6 +207,12 @@ export default function Home() {
          }
          return d
        }))
+      } else {
+        if (newStatus === 'completed' && role === 'athlete') {
+          supabase.functions.invoke('send-reminders', {
+            body: { mode: 'coach_notification', action: 'completed', athleteName: userName, workoutTitle: workout.workouts?.title || workout.title }
+          }).catch(console.error)
+        }
     }
   }
 
@@ -245,6 +261,12 @@ export default function Home() {
           notes: autonomousForm.notes
         })
         if (awError) throw awError
+      
+        if (role === 'athlete') {
+          supabase.functions.invoke('send-reminders', {
+            body: { mode: 'coach_notification', action: 'custom_workout', athleteName: userName, workoutTitle: autonomousForm.title }
+          }).catch(console.error)
+        }
       }
 
       setAutonomousModalOpen(false)

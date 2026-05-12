@@ -233,6 +233,12 @@ export default function WorkoutDetail() {
       if (error) {
         setAlertInfo({ title: 'Errore', message: "Impossibile aggiornare lo stato", type: 'error' })
         setWorkoutStatus(workoutStatus) // ripristina in caso di errore
+      } else {
+        if (newStatus === 'completed' && role === 'athlete') {
+          supabase.functions.invoke('send-reminders', {
+            body: { mode: 'coach_notification', action: 'completed', athleteName: user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title }
+          }).catch(console.error)
+        }
       }
     }
 
@@ -804,6 +810,11 @@ export default function WorkoutDetail() {
                   setSavingNote(false)
                   if (!error) {
                      setAthleteNote({ text: editingNote, athleteName: athleteNote?.athleteName || '' })
+                 if (role === 'athlete') {
+                   supabase.functions.invoke('send-reminders', {
+                     body: { mode: 'coach_notification', action: 'note', athleteName: athleteNote?.athleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title, noteText: editingNote }
+                   }).catch(console.error)
+                 }
                   } else {
                      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
                   }
