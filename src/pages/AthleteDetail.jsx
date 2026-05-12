@@ -1647,6 +1647,7 @@ function VoiceRecorder({ onSave, onCancel }) {
 
   const handleRecordStart = (e) => {
     if (e.type === 'mousedown' && e.button !== 0) return;
+    if (e.cancelable) e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX
     const clientY = e.touches ? e.touches[0].clientY : e.clientY
     startPos.current = { x: clientX, y: clientY }
@@ -1677,7 +1678,7 @@ function VoiceRecorder({ onSave, onCancel }) {
   }
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full select-none" style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}>
       <div className="flex items-center gap-2 bg-[#111] border border-[#333] p-1.5 rounded-full h-12 w-full">
         {recordState === 'idle' ? (
           <>
@@ -1687,7 +1688,9 @@ function VoiceRecorder({ onSave, onCancel }) {
             <button 
               onMouseDown={handleRecordStart}
               onTouchStart={handleRecordStart}
+              onContextMenu={(e) => e.preventDefault()}
               className="w-9 h-9 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 active:scale-95 transition-all select-none touch-none"
+              style={{ WebkitTouchCallout: 'none', WebkitTapHighlightColor: 'transparent' }}
             >
               <Mic size={18} />
             </button>
@@ -1735,11 +1738,14 @@ function VoiceRecorder({ onSave, onCancel }) {
 
       {recordState === 'recording' && createPortal(
         <div 
-          className="fixed inset-0 z-[200] touch-none"
+          className="fixed inset-0 z-[200] touch-none select-none"
+          style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
           onMouseMove={handleRecordMove}
           onTouchMove={handleRecordMove}
           onMouseUp={handleRecordEnd}
           onTouchEnd={handleRecordEnd}
+          onTouchCancel={handleRecordEnd}
+          onContextMenu={(e) => e.preventDefault()}
         />,
         document.body
       )}
