@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList } from 'lucide-react'
+import { ChevronLeft, ChevronUp, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Play, Pause, Send } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isToday, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -16,6 +16,12 @@ const InstagramIcon = ({ size = 24, className = "" }) => (
     <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line>
   </svg>
 )
+
+const isVoiceNoteValid = (url) => {
+  if (!url) return false
+  if (url.includes('#deleted=')) return false
+  return true
+}
 
 // Helper per calcolare l'età
 const calculateAge = (dob) => {
@@ -70,7 +76,7 @@ export default function AthleteDetail() {
       { data: prsData, error: prsError }
     ] = await Promise.all([
       supabase.from('athletes').select('*').eq('id', id).single(),
-      supabase.from('athlete_workouts').select(`id, completed_date, notes, status, workouts (id, title, sections)`).eq('athlete_id', id).order('completed_date', { ascending: false }),
+      supabase.from('athlete_workouts').select(`id, completed_date, notes, voice_note_url, status, workouts (id, title, sections)`).eq('athlete_id', id).order('completed_date', { ascending: false }),
       supabase.from('personal_records').select('*').eq('athlete_id', id).order('date', { ascending: false })
     ])
 
@@ -82,12 +88,48 @@ export default function AthleteDetail() {
     setAthlete(athleteData)
 
     if (historyError) console.error("Errore nel caricare lo storico workout:", historyError)
-    else setWorkouts(workoutHistory || [])
+    else {
+      setWorkouts((workoutHistory || []).map(w => ({
+        ...w,
+        voice_note_url: isVoiceNoteValid(w.voice_note_url) ? w.voice_note_url : null
+      })))
+    }
 
     if (prsError && prsError.code !== '42P01' && prsError.code !== 'PGRST205') console.error("Errore PR:", prsError)
     else setPrs(prsData || [])
 
     if (!silent) setLoading(false)
+  }
+
+  const uploadVoiceNote = async (athleteWorkoutId, audioBlob, ext) => {
+    const fileName = `voice_${athleteWorkoutId}_${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage.from('voice-notes').upload(fileName, audioBlob, { contentType: audioBlob.type })
+    if (uploadError) return setAlertInfo({ title: 'Errore', message: 'Caricamento fallito: ' + uploadError.message, type: 'error' })
+    const { data: urlData } = supabase.storage.from('voice-notes').getPublicUrl(fileName)
+    const { error } = await supabase.from('athlete_workouts').update({ voice_note_url: urlData.publicUrl }).eq('id', athleteWorkoutId)
+    if (!error) {
+      setWorkouts(workouts.map(w => w.id === athleteWorkoutId ? { ...w, voice_note_url: urlData.publicUrl } : w))
+    } else setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+  }
+
+  const deleteVoiceNote = async (athleteWorkoutId) => {
+    setConfirmInfo({
+      title: "Elimina nota vocale",
+      message: "La nota verrà nascosta dall'app, ma per sicurezza rimarrà nel database per 24 ore prima di essere eliminata definitivamente.",
+      onConfirm: async () => {
+        setConfirmInfo(null)
+        const workout = workouts.find(w => w.id === athleteWorkoutId)
+        if (workout?.voice_note_url) {
+          const deletedUrl = workout.voice_note_url + '#deleted=' + Date.now()
+          const { error } = await supabase.from('athlete_workouts').update({ voice_note_url: deletedUrl }).eq('id', athleteWorkoutId)
+          if (error) {
+            setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+          } else {
+            setWorkouts(workouts.map(w => w.id === athleteWorkoutId ? { ...w, voice_note_url: null } : w))
+          }
+        }
+      }
+    })
   }
 
   const toggleWorkoutStatus = async (id, currentStatus, scheduledDateStr) => {
@@ -375,6 +417,8 @@ export default function AthleteDetail() {
                     navigate={navigate}
                     athleteId={id}
                     role={role}
+                    onUploadVoiceNote={uploadVoiceNote}
+                    onDeleteVoiceNote={deleteVoiceNote}
                   />
                 ))}
               </div>
@@ -522,6 +566,8 @@ export default function AthleteDetail() {
                         navigate={navigate}
                         athleteId={id}
                         role={role}
+                        onUploadVoiceNote={uploadVoiceNote}
+                        onDeleteVoiceNote={deleteVoiceNote}
                         onEditAutonomous={openEditAutonomous}
                       />
                     ))}
@@ -544,6 +590,8 @@ export default function AthleteDetail() {
                         onRemove={requestRemoveWorkout}
                         navigate={navigate}
                         athleteId={id}
+                        onUploadVoiceNote={uploadVoiceNote}
+                        onDeleteVoiceNote={deleteVoiceNote}
                         role={role}
                       />
                     ))}
@@ -900,7 +948,7 @@ function CelebrationOverlay({ onClose }) {
   )
 }
 
-function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous }) {
+function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous, onUploadVoiceNote, onDeleteVoiceNote }) {
   const [note, setNote] = useState(entry.notes || '')
   const [saving, setSaving] = useState(false)
   
@@ -981,6 +1029,17 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
         </div>
 
         <div className="pt-2 border-t border-white/5">
+          {entry.voice_note_url ? (
+            <div className="mb-3">
+              <p className="text-[#f1ba17] text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Nota Vocale del Coach</p>
+              <CustomAudioPlayer src={entry.voice_note_url} onDelete={() => onDeleteVoiceNote(entry.id)} role={role} />
+            </div>
+          ) : role === 'admin' ? (
+            <div className="mb-3">
+              <p className="text-[#f1ba17] text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Invia Nota Vocale</p>
+              <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />
+            </div>
+          ) : null}
           <textarea
             className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-sm transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
             rows={2}
@@ -1260,7 +1319,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
   )
 }
 
-function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous }) {
+function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous, onUploadVoiceNote, onDeleteVoiceNote }) {
   const [note, setNote] = useState(entry.notes || '')
   const [saving, setSaving] = useState(false)
   
@@ -1346,6 +1405,17 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
       </button>
 
       <div className="mt-3 pt-3 border-t border-[#2a2a2a]">
+        {entry.voice_note_url ? (
+          <div className="mb-3">
+            <p className="text-[#f1ba17] text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Nota Vocale del Coach</p>
+            <CustomAudioPlayer src={entry.voice_note_url} onDelete={() => onDeleteVoiceNote(entry.id)} role={role} />
+          </div>
+        ) : role === 'admin' ? (
+          <div className="mb-3">
+            <p className="text-[#f1ba17] text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Invia Nota Vocale</p>
+            <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />
+          </div>
+        ) : null}
         <textarea
           className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-sm transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
           rows={3}
@@ -1365,6 +1435,314 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function CustomAudioPlayer({ src, onDelete, role }) {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [currentTime, setCurrentTime] = useState('0:00')
+  const [duration, setDuration] = useState('0:00')
+  const audioRef = useRef(null)
+
+  const formatAudioTime = (time) => {
+    if (isNaN(time)) return '0:00'
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  const togglePlay = () => {
+    if (isPlaying) {
+      audioRef.current.pause()
+    } else {
+      audioRef.current.play()
+    }
+    setIsPlaying(!isPlaying)
+  }
+
+  const handleTimeUpdate = () => {
+    const current = audioRef.current.currentTime
+    const total = audioRef.current.duration
+    if (!isNaN(total)) {
+      setProgress((current / total) * 100)
+      setCurrentTime(formatAudioTime(current))
+    }
+  }
+
+  const handleLoadedMetadata = () => {
+    setDuration(formatAudioTime(audioRef.current.duration))
+  }
+
+  const handleSeek = (e) => {
+    const seekTime = (e.target.value / 100) * audioRef.current.duration
+    audioRef.current.currentTime = seekTime
+    setProgress(e.target.value)
+  }
+
+  return (
+    <div className="flex items-center gap-3 bg-[#111] p-2 rounded-xl border border-[#333] w-full mb-2">
+      <audio 
+        ref={audioRef} 
+        src={src} 
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={() => { setIsPlaying(false); setProgress(0); audioRef.current.currentTime = 0; setCurrentTime('0:00') }}
+      />
+      <button onClick={togglePlay} className="w-10 h-10 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
+        {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
+      </button>
+      <div className="flex-1 flex flex-col justify-center px-1">
+         <div className="flex items-center gap-2 h-4">
+            <input 
+              type="range" 
+              min="0" max="100" 
+              value={progress} 
+              onChange={handleSeek}
+              className="w-full h-1.5 bg-[#333] rounded-lg appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-[#f1ba17] [&::-webkit-slider-thumb]:rounded-full cursor-pointer"
+              style={{ background: `linear-gradient(to right, #f1ba17 ${progress}%, #333 ${progress}%)` }}
+            />
+         </div>
+         <div className="flex justify-between items-center mt-1">
+            <span className="text-[10px] text-gray-500 font-medium">{currentTime}</span>
+            <span className="text-[10px] text-gray-500 font-medium">{duration}</span>
+         </div>
+      </div>
+      {role === 'admin' && onDelete && (
+        <button onClick={onDelete} className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-500 transition shrink-0" title="Elimina vocale">
+          <Trash2 size={18} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+function AudioVisualizer({ stream }) {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    if (!stream) return
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    const analyser = audioCtx.createAnalyser()
+    const source = audioCtx.createMediaStreamSource(stream)
+    source.connect(analyser)
+    analyser.fftSize = 64
+    const bufferLength = analyser.frequencyBinCount
+    const dataArray = new Uint8Array(bufferLength)
+    const canvas = canvasRef.current
+    const canvasCtx = canvas.getContext('2d')
+    let animationId
+
+    const draw = () => {
+      animationId = requestAnimationFrame(draw)
+      analyser.getByteFrequencyData(dataArray)
+      canvasCtx.clearRect(0, 0, canvas.width, canvas.height)
+      
+      const barWidth = (canvas.width / bufferLength) * 1.5
+      let x = 0
+
+      for (let i = 0; i < bufferLength; i++) {
+        let barHeight = dataArray[i] / 8
+        if (barHeight < 2) barHeight = 2
+        
+        canvasCtx.fillStyle = '#f1ba17'
+        const y = (canvas.height - barHeight) / 2
+        
+        canvasCtx.beginPath()
+        canvasCtx.roundRect ? canvasCtx.roundRect(x, y, barWidth - 2, barHeight, 4) : canvasCtx.rect(x, y, barWidth - 2, barHeight)
+        canvasCtx.fill()
+        
+        x += barWidth
+      }
+    }
+    draw()
+
+    return () => {
+      cancelAnimationFrame(animationId)
+      if (audioCtx.state !== 'closed') audioCtx.close()
+    }
+  }, [stream])
+
+  return <canvas ref={canvasRef} className="w-full h-8" width={200} height={32} />
+}
+
+function VoiceRecorder({ onSave, onCancel }) {
+  const [recordState, setRecordState] = useState('idle') 
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [mediaStream, setMediaStream] = useState(null)
+  
+  const mediaRecorder = useRef(null)
+  const chunksRef = useRef([])
+  const timerRef = useRef(null)
+  const startPos = useRef({ x: 0, y: 0 })
+  const isCancelledRef = useRef(false)
+
+  useEffect(() => {
+    return () => {
+      clearInterval(timerRef.current)
+      if (mediaStream) mediaStream.getTracks().forEach(t => t.stop())
+    }
+  }, [mediaStream])
+
+  const startRecording = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('Il tuo browser non supporta la registrazione vocale.')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      setMediaStream(stream)
+      const recorder = new MediaRecorder(stream)
+      chunksRef.current = []
+      isCancelledRef.current = false
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data)
+      }
+      
+      recorder.onstop = () => {
+        const mimeType = recorder.mimeType || 'audio/webm'
+        const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('aac') ? 'aac' : 'webm'
+        const audioBlob = new Blob(chunksRef.current, { type: mimeType })
+        stream.getTracks().forEach(track => track.stop())
+        setMediaStream(null)
+        if (!isCancelledRef.current) {
+          onSave(audioBlob, ext)
+        } else if (onCancel) {
+          onCancel()
+        }
+      }
+      
+      recorder.start()
+      mediaRecorder.current = recorder
+      setRecordState('recording')
+      setRecordingTime(0)
+      timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
+    } catch (err) {
+      console.error(err)
+      setRecordState('idle')
+      alert('Impossibile accedere al microfono.')
+    }
+  }
+
+  const cancelRecording = () => {
+    if (mediaRecorder.current) {
+      isCancelledRef.current = true
+      mediaRecorder.current.stop()
+      setRecordState('idle')
+      clearInterval(timerRef.current)
+    }
+  }
+
+  const stopRecordingAndSave = () => {
+    if (mediaRecorder.current && recordState !== 'idle') {
+      isCancelledRef.current = false
+      mediaRecorder.current.stop()
+      setRecordState('idle')
+      clearInterval(timerRef.current)
+    }
+  }
+
+  const handleRecordStart = (e) => {
+    if (e.type === 'mousedown' && e.button !== 0) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY
+    startPos.current = { x: clientX, y: clientY }
+    setDragOffset({ x: 0, y: 0 })
+    startRecording()
+  }
+
+  const handleRecordMove = (e) => {
+    if (recordState !== 'recording') return
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY
+    const dx = clientX - startPos.current.x
+    const dy = clientY - startPos.current.y
+    setDragOffset({ x: dx, y: dy })
+
+    if (dx < -70) {
+       cancelRecording()
+    } else if (dy < -70) {
+       setRecordState('locked')
+       setDragOffset({ x: 0, y: 0 })
+    }
+  }
+
+  const handleRecordEnd = () => {
+    if (recordState === 'recording') {
+       stopRecordingAndSave()
+    }
+  }
+
+  return (
+    <div className="relative w-full">
+      <div className="flex items-center gap-2 bg-[#111] border border-[#333] p-1.5 rounded-full h-12 w-full">
+        {recordState === 'idle' ? (
+          <>
+            <div className="flex-1 px-3 text-gray-500 text-xs italic select-none">
+              Tieni premuto per registrare...
+            </div>
+            <button 
+              onMouseDown={handleRecordStart}
+              onTouchStart={handleRecordStart}
+              className="w-9 h-9 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 active:scale-95 transition-all select-none touch-none"
+            >
+              <Mic size={18} />
+            </button>
+          </>
+        ) : (
+          <div className="flex items-center justify-between w-full px-2 gap-2">
+            <div className="flex items-center gap-1 text-red-500 font-semibold animate-pulse w-12 shrink-0 select-none text-xs">
+              <div className="w-2 h-2 rounded-full bg-red-500"></div> 
+              {Math.floor(recordingTime/60)}:{(recordingTime%60).toString().padStart(2,'0')}
+            </div>
+            
+            {recordState === 'recording' ? (
+              <div className="flex-1 flex items-center justify-between pointer-events-none">
+                <div className="flex-1 mx-2 overflow-hidden h-6 flex items-center">
+                  <AudioVisualizer stream={mediaStream} />
+                </div>
+                <div className="flex items-center gap-2 text-gray-400 text-[9px] uppercase font-bold shrink-0">
+                  <div className="flex items-center gap-0.5 opacity-70"><ChevronLeft size={10}/> Annulla</div>
+                  <div className="flex items-center gap-0.5 opacity-70"><ChevronUp size={10}/> Blocca</div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between flex-1">
+                <div className="flex-1 mx-2 overflow-hidden h-6 flex items-center opacity-50">
+                  <AudioVisualizer stream={mediaStream} />
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1"><Trash2 size={16}/></button>
+                  <button onClick={stopRecordingAndSave} className="w-8 h-8 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition pl-0.5"><Send size={14}/></button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {recordState === 'recording' && (
+        <div 
+          className="absolute right-1.5 top-1.5 w-9 h-9 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shadow-lg pointer-events-none transition-none z-10"
+          style={{ transform: `translate(${Math.min(0, dragOffset.x)}px, ${Math.min(0, dragOffset.y)}px)` }}
+        >
+          <Mic size={18} />
+        </div>
+      )}
+
+      {recordState === 'recording' && createPortal(
+        <div 
+          className="fixed inset-0 z-[200] touch-none"
+          onMouseMove={handleRecordMove}
+          onTouchMove={handleRecordMove}
+          onMouseUp={handleRecordEnd}
+          onTouchEnd={handleRecordEnd}
+        />,
+        document.body
+      )}
     </div>
   )
 }
