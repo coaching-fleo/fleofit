@@ -251,14 +251,16 @@ export default function Settings() {
           </div>
         </button>
 
-        <div className="flex gap-3 mt-3">
-          <button onClick={testMorningReminder} disabled={loading} className="flex-1 p-3 rounded-xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition text-sm text-white font-semibold">
-            Test Mattina
-          </button>
-          <button onClick={testEveningReminder} disabled={loading} className="flex-1 p-3 rounded-xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition text-sm text-white font-semibold">
-            Test Sera
-          </button>
-        </div>
+        {role === 'admin' && (
+          <div className="flex gap-3 mt-3">
+            <button onClick={testMorningReminder} disabled={loading} className="flex-1 p-3 rounded-xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition text-sm text-white font-semibold">
+              Test Mattina
+            </button>
+            <button onClick={testEveningReminder} disabled={loading} className="flex-1 p-3 rounded-xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition text-sm text-white font-semibold">
+              Test Sera
+            </button>
+          </div>
+        )}
       </div>
 
           {/* SEZIONE ACCOUNT */}
