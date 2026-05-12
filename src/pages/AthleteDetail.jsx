@@ -915,7 +915,6 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
   const handleSaveNote = async () => {
     setSaving(true)
     await onUpdateNote(entry.id, note, entry.workouts?.title)
-    await onUpdateNote(entry.id, note, entry.workouts?.title)
     setSaving(false)
   }
 
@@ -1288,7 +1287,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
 
   const handleSaveNote = async () => {
     setSaving(true)
-    await onUpdateNote(entry.id, note)
+    await onUpdateNote(entry.id, note, entry.workouts?.title)
     setSaving(false)
   }
 
