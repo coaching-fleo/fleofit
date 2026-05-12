@@ -197,6 +197,17 @@ export default function Settings() {
     }
   }
 
+  const testMorningReminder = async () => {
+    setLoading(true)
+    await supabase.functions.invoke('send-reminders', { body: { mode: 'morning' } })
+    setLoading(false)
+  }
+  const testEveningReminder = async () => {
+    setLoading(true)
+    await supabase.functions.invoke('send-reminders', { body: { mode: 'evening' } })
+    setLoading(false)
+  }
+
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
@@ -239,6 +250,15 @@ export default function Settings() {
             </div>
           </div>
         </button>
+
+        <div className="flex gap-3 mt-3">
+          <button onClick={testMorningReminder} disabled={loading} className="flex-1 p-3 rounded-xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition text-sm text-white font-semibold">
+            Test Mattina
+          </button>
+          <button onClick={testEveningReminder} disabled={loading} className="flex-1 p-3 rounded-xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition text-sm text-white font-semibold">
+            Test Sera
+          </button>
+        </div>
       </div>
 
           {/* SEZIONE ACCOUNT */}

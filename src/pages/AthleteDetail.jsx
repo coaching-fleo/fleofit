@@ -1376,16 +1376,23 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
       return
     }
     setAssigning(selectedWorkout.id)
-    const { error } = await supabase.from('athlete_workouts').insert({
+    const { data: newAssignment, error } = await supabase.from('athlete_workouts').insert({
       athlete_id: athleteId,
       workout_id: selectedWorkout.id,
       completed_date: assignDate,
       status: 'pending'
-    })
+    }).select('id').single()
+
     if (error) {
       setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
       setAssigning(null)
     } else {
+      // Invia la notifica in background, senza bloccare l'interfaccia
+      if (newAssignment) {
+        supabase.functions.invoke('send-reminders', {
+          body: { mode: 'immediate', record_id: newAssignment.id }
+        }).catch(console.error)
+      }
       onAssigned()
     }
   }
