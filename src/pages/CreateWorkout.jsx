@@ -26,7 +26,7 @@ const HYROX_EXERCISES = [
   'Man Maker', 'Military Press', 'Muscle Clean', 'Muscle Snatch',
   'Overhead Squat', 'Overhead Walking Lunge',
   'Pegboard Ascent', 'Pistol Squat', 'Plank', 'Power Clean', 'Power Snatch', 'Prowler Push', 'Pull-up', 'Push Jerk', 'Push Press', 'Push Up',
-  'Ring Dips', 'Ring Muscle-up', 'Romanian Deadlift', 'Rope Climb', 'Rowing', 'Run',
+  'Rest', 'Ring Dips', 'Ring Muscle-up', 'Romanian Deadlift', 'Rope Climb', 'Rowing', 'Run',
   'Sandbag Bear Hug Squat', 'Sandbag Carry', 'Sandbag Lunges', 'Sandbag Over Shoulder', 'Shuttle Run', 'SkiErg', 'Skin the Cat', 'Sled Drag', 'Sled Pull', 'Sled Push', 'Snatch Balance', 'Sots Press', 'Split Jerk', 'Squat', 'Squat Clean', 'Squat Jack', 'Squat Snatch', 'Strict Handstand Push-up', 'Strict Muscle-up', 'Strict Press', 'Strict Pull-up', 'Suitcase Carry', 'Suitcase Deadlift', 'Sumo Deadlift', 'Sumo Deadlift High Pull', 'Superman Rock', 'Swim',
   'Thruster', 'Tire Flip', 'Toes-to-Bar', 'Triple Unders', 'TrueForm Runner', 'Turkish Get-Up',
   'V-Up',
@@ -67,6 +67,15 @@ const TIME_OPTIONS = [
     return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
   })
 ]
+
+const REST_TIME_OPTIONS = [
+  '-',
+  ...Array.from({ length: 90 }, (_, i) => { // Fino a 15:00 in scatti da 10 sec
+    const s = (i + 1) * 10;
+    return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+  })
+]
+
 const ROUNDS_OPTIONS = Array.from({ length: 40 }, (_, i) => `${i + 1}`)
 const KG_OPTIONS = [
   '-',
@@ -256,8 +265,8 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     const isDist = isDistance(selected)
     const isHyb = isHybrid(selected)
     
-    let finalMeters = (isDist || (isHyb && hybridMode === 'distance')) ? meters : ''
-    let finalReps = (!isDist && !isHyb) || (isHyb && hybridMode === 'reps') ? reps : ''
+    let finalMeters = (isDist || (isHyb && hybridMode === 'distance') || selected === 'Rest') ? meters : ''
+    let finalReps = (!isDist && !isHyb && selected !== 'Rest') || (isHyb && hybridMode === 'reps') ? reps : ''
     
     onAdd({
       id: initialExercise ? initialExercise.id : Math.random(),
@@ -266,8 +275,8 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
       reps: finalReps,
       ergoPace: isErgo(selected) || (selected === 'Run' && runPaceMode === 'pace') ? ergoPace : undefined,
       speed: selected === 'Run' && runPaceMode === 'speed' ? speed : undefined,
-      kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) || selected === 'Run' ? '' : kg.replace(' kg', ''),
-      intensity,
+      kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) || selected === 'Run' || selected === 'Rest' ? '' : kg.replace(' kg', ''),
+      intensity: selected === 'Rest' ? undefined : intensity,
       notes
     })
     onClose()
@@ -377,6 +386,10 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                       <ScrollPicker options={SPEED_OPTIONS} value={speed} onChange={setSpeed} label="⚡ Velocità" />
                     )}
                   </>
+                ) : selected === 'Rest' ? (
+                  <div className="col-span-2">
+                    <ScrollPicker options={REST_TIME_OPTIONS} value={meters} onChange={setMeters} label="⏱ Durata" />
+                  </div>
                 ) : isHybrid(selected) ? (
                   <>
                     {hybridMode === 'distance' ? (
@@ -399,7 +412,8 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                 )}
               </div>
 
-              <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex flex-col gap-2">
+              {selected !== 'Rest' && (
+                <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400 text-xs">💪 Intensità</span>
                   <div className="flex items-center gap-2">
@@ -408,7 +422,8 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                   </div>
                 </div>
                 <input type="range" min="1" max="10" value={intensity} onChange={e => setIntensity(e.target.value)} className="w-full accent-[#f1ba17]" />
-              </div>
+                </div>
+              )}
 
               <input
                 className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-sm"
