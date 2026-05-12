@@ -22,9 +22,9 @@ export default function WorkoutsArchive() {
     if (role === 'athlete') {
       const { data, error } = await supabase
         .from('athlete_workouts')
-        .select('id, completed_date, status, workouts (id, title, date, sections)')
+        .select('id, completed_date, status, created_at, workouts (id, title, date, sections)')
         .eq('athlete_id', user.id)
-        .order('completed_date', { ascending: false })
+        .order('created_at', { ascending: false })
       if (!error && data) {
          const mapped = data.filter(aw => aw.workouts).map(aw => ({
            ...aw.workouts,
@@ -36,8 +36,8 @@ export default function WorkoutsArchive() {
     } else {
       const { data, error } = await supabase
         .from('workouts')
-        .select('id, title, date, sections, athlete_workouts(id)')
-        .order('date', { ascending: false })
+        .select('id, title, date, created_at, sections, athlete_workouts(id)')
+        .order('created_at', { ascending: false })
       if (!error) setWorkouts(data || [])
     }
     setLoading(false)

@@ -54,6 +54,7 @@ const METERS_OPTIONS = [
   '600m','750m','1000m','1500m','2000m'
 ]
 const HYBRID_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 50 }, (_, i) => `${(i + 1) * 10}m`)]
+const SLED_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 30 }, (_, i) => `${(i + 1) * 10}m`)]
 const REPS_OPTIONS = ['-', 'Max', ...Array.from({ length: 100 }, (_, i) => `${i + 1}`)]
 const MINUTES_OPTIONS = Array.from({ length: 60 }, (_, i) => `${i + 1} min`)
 const TIME_OPTIONS = [
@@ -397,6 +398,11 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                     ) : (
                        <ScrollPicker options={REPS_OPTIONS} value={reps} onChange={setReps} label="🔁 Reps" />
                     )}
+                    <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                  </>
+                ) : isSled(selected) ? (
+                  <>
+                    <ScrollPicker options={SLED_METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
                     <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
                   </>
                 ) : isDistance(selected) ? (

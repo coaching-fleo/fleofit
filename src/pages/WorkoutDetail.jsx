@@ -1531,15 +1531,13 @@ function AudioVisualizer({ stream }) {
 }
 
 function VoiceRecorder({ onSave, onCancel }) {
-  const [recordState, setRecordState] = useState('idle') 
+  const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [mediaStream, setMediaStream] = useState(null)
   
   const mediaRecorder = useRef(null)
   const chunksRef = useRef([])
   const timerRef = useRef(null)
-  const startPos = useRef({ x: 0, y: 0 })
   const isCancelledRef = useRef(false)
 
   useEffect(() => {
@@ -1548,6 +1546,14 @@ function VoiceRecorder({ onSave, onCancel }) {
       if (mediaStream) mediaStream.getTracks().forEach(t => t.stop())
     }
   }, [mediaStream])
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecordingAndSave()
+    } else {
+      startRecording()
+    }
+  }
 
   const startRecording = async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1580,12 +1586,12 @@ function VoiceRecorder({ onSave, onCancel }) {
       
       recorder.start()
       mediaRecorder.current = recorder
-      setRecordState('recording')
+      setIsRecording(true)
       setRecordingTime(0)
       timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
     } catch (err) {
       console.error(err)
-      setRecordState('idle')
+      setIsRecording(false)
       alert('Impossibile accedere al microfono.')
     }
   }
@@ -1594,124 +1600,52 @@ function VoiceRecorder({ onSave, onCancel }) {
     if (mediaRecorder.current) {
       isCancelledRef.current = true
       mediaRecorder.current.stop()
-      setRecordState('idle')
+      setIsRecording(false)
       clearInterval(timerRef.current)
     }
   }
 
   const stopRecordingAndSave = () => {
-    if (mediaRecorder.current && recordState !== 'idle') {
+    if (mediaRecorder.current && isRecording) {
       isCancelledRef.current = false
       mediaRecorder.current.stop()
-      setRecordState('idle')
+      setIsRecording(false)
       clearInterval(timerRef.current)
     }
   }
 
-  const handleRecordStart = (e) => {
-    if (e.type === 'mousedown' && e.button !== 0) return;
-    if (e.cancelable) e.preventDefault();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY
-    startPos.current = { x: clientX, y: clientY }
-    setDragOffset({ x: 0, y: 0 })
-    startRecording()
-  }
-
-  const handleRecordMove = (e) => {
-    if (recordState !== 'recording') return
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY
-    const dx = clientX - startPos.current.x
-    const dy = clientY - startPos.current.y
-    setDragOffset({ x: dx, y: dy })
-
-    if (dx < -70) {
-       cancelRecording()
-    } else if (dy < -70) {
-       setRecordState('locked')
-       setDragOffset({ x: 0, y: 0 })
-    }
-  }
-
-  const handleRecordEnd = () => {
-    if (recordState === 'recording') {
-       stopRecordingAndSave()
-    }
-  }
-
   return (
-    <div className="relative w-full select-none" style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}>
+    <div className="relative w-full">
       <div className="flex items-center gap-2 bg-[#111] border border-[#333] p-1.5 rounded-full h-12 w-full">
-        {recordState === 'idle' ? (
-          <>
-            <div className="flex-1 px-3 text-gray-500 text-xs italic select-none">
-              Tieni premuto per registrare...
-            </div>
-            <button 
-              onMouseDown={handleRecordStart}
-              onTouchStart={handleRecordStart}
-              onContextMenu={(e) => e.preventDefault()}
-              className="w-9 h-9 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 active:scale-95 transition-all select-none touch-none"
-              style={{ WebkitTouchCallout: 'none', WebkitTapHighlightColor: 'transparent' }}
-            >
-              <Mic size={18} />
-            </button>
-          </>
+        {!isRecording ? (
+          <button 
+            onClick={toggleRecording}
+            className="w-full h-full rounded-full flex items-center justify-center gap-2 text-gray-400 hover:text-white transition-all"
+          >
+            <Mic size={18} className="text-[#f1ba17]" /> Tocca per registrare...
+          </button>
         ) : (
           <div className="flex items-center justify-between w-full px-2 gap-2">
             <div className="flex items-center gap-1 text-red-500 font-semibold animate-pulse w-12 shrink-0 select-none text-xs">
-              <div className="w-2 h-2 rounded-full bg-red-500"></div> 
+              <div className="w-2 h-2 rounded-full bg-red-500"></div>
               {Math.floor(recordingTime/60)}:{(recordingTime%60).toString().padStart(2,'0')}
             </div>
             
-            {recordState === 'recording' ? (
-              <div className="flex-1 flex items-center justify-between pointer-events-none">
-                <div className="flex-1 mx-2 overflow-hidden h-6 flex items-center">
-                  <AudioVisualizer stream={mediaStream} />
-                </div>
-                <div className="flex items-center gap-2 text-gray-400 text-[9px] uppercase font-bold shrink-0">
-                  <div className="flex items-center gap-0.5 opacity-70"><ChevronLeft size={10}/> Annulla</div>
-                  <div className="flex items-center gap-0.5 opacity-70"><ChevronUp size={10}/> Blocca</div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between flex-1">
-                <div className="flex-1 mx-2 overflow-hidden h-6 flex items-center opacity-50">
-                  <AudioVisualizer stream={mediaStream} />
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1"><Trash2 size={16}/></button>
-                  <button onClick={stopRecordingAndSave} className="w-8 h-8 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition pl-0.5"><Send size={14}/></button>
-                </div>
-              </div>
-            )}
+            <div className="flex-1 mx-2 overflow-hidden h-6 flex items-center">
+              <AudioVisualizer stream={mediaStream} />
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
+                <Trash2 size={16} />
+              </button>
+              <button onClick={stopRecordingAndSave} className="w-9 h-9 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
+                <Square size={14} fill="currentColor" />
+              </button>
+            </div>
           </div>
         )}
       </div>
-      
-      {recordState === 'recording' && (
-        <div 
-          className="absolute right-1.5 top-1.5 w-9 h-9 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shadow-lg pointer-events-none transition-none z-10"
-          style={{ transform: `translate(${Math.min(0, dragOffset.x)}px, ${Math.min(0, dragOffset.y)}px)` }}
-        >
-          <Mic size={18} />
-        </div>
-      )}
-
-      {recordState === 'recording' && createPortal(
-        <div 
-          className="fixed inset-0 z-[200] touch-none select-none"
-          style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
-          onMouseMove={handleRecordMove}
-          onTouchMove={handleRecordMove}
-          onMouseUp={handleRecordEnd}
-          onTouchEnd={handleRecordEnd}
-          onTouchCancel={handleRecordEnd}
-          onContextMenu={(e) => e.preventDefault()}
-        />,
-        document.body
-      )}
     </div>
   )
 }
