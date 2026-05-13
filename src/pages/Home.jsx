@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X, Edit, Trash2, AlertTriangle } from 'lucide-react'
+import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X, Edit, Trash2, AlertTriangle, Bell, BellRing } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO, differenceInDays, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { getDailyMotivation } from './motivations'
 import CustomDatePicker from '../components/CustomDatePicker'
+import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { createPortal } from 'react-dom'
 
 export default function Home() {
@@ -43,6 +44,9 @@ export default function Home() {
   const [savingAutonomous, setSavingAutonomous] = useState(false)
   const [workoutToRemove, setWorkoutToRemove] = useState(null)
   const [dbName, setDbName] = useState('')
+  const [alertInfo, setAlertInfo] = useState(null)
+  const [confirmInfo, setConfirmInfo] = useState(null)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
 
   const meta = user?.user_metadata || {}
   const fallbackName = meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
@@ -57,6 +61,19 @@ export default function Home() {
 
   const randomMotiv = useMemo(() => {
     return getDailyMotivation()
+  }, [])
+
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        const registration = await navigator.serviceWorker.getRegistration()
+        if (registration) {
+          const subscription = await registration.pushManager.getSubscription()
+          setNotificationsEnabled(!!subscription)
+        }
+      }
+    }
+    checkSubscription()
   }, [])
 
   useEffect(() => {
@@ -81,9 +98,11 @@ export default function Home() {
 
       if (user?.id) {
         promises.push(
-          supabase.from('athletes').select('name').eq('id', user.id).single().then(({ data }) => {
+          (async () => {
+            await supabase.from('athletes').update({ deleted_at: null }).eq('id', user.id)
+            const { data } = await supabase.from('athletes').select('name').eq('id', user.id).single()
             if (data?.name) setDbName(data.name)
-          })
+          })()
         )
       }
 
@@ -91,7 +110,7 @@ export default function Home() {
         promises.push(
           Promise.all([
             supabase.from('workouts').select('*', { count: 'exact', head: true }),
-            supabase.from('athletes').select('*', { count: 'exact', head: true }),
+            supabase.from('athletes').select('*', { count: 'exact', head: true }).is('deleted_at', null),
             supabase.from('athlete_workouts')
               .select('id, completed_date, status, athletes(id, name, surname, photo_url), workouts(id, title, sections)')
               .in('completed_date', [todayStr, yesterdayStr])
@@ -216,6 +235,74 @@ export default function Home() {
     }
   }
 
+  const handleToggleNotifications = async () => {
+    if (notificationsEnabled) {
+      setConfirmInfo({
+        title: "Disabilita Notifiche",
+        message: "Sei sicuro di voler disabilitare le notifiche su questo dispositivo?",
+        onConfirm: async () => {
+          setConfirmInfo(null)
+          try {
+            const registration = await navigator.serviceWorker.getRegistration()
+            if (registration) {
+              const subscription = await registration.pushManager.getSubscription()
+              if (subscription) {
+                const subData = JSON.parse(JSON.stringify(subscription))
+                await supabase.from('push_subscriptions').delete().eq('endpoint', subData.endpoint)
+                await subscription.unsubscribe()
+              }
+            }
+            setNotificationsEnabled(false)
+            setAlertInfo({ title: 'Successo', message: 'Notifiche disabilitate con successo.', type: 'success' })
+          } catch (e) {
+            setAlertInfo({ title: 'Errore', message: e.message, type: 'error' })
+          }
+        }
+      })
+    } else {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        setAlertInfo({ title: 'Non supportato', message: 'Il tuo browser/dispositivo non supporta le notifiche push. Su iPhone ricordati di aggiungere l\'app alla schermata Home.', type: 'error' });
+        return;
+      }
+
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          setAlertInfo({ title: 'Permesso negato', message: 'Hai negato il permesso per le notifiche. Sbloccalo dalle impostazioni del browser.', type: 'error' });
+          return;
+        }
+
+        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        await navigator.serviceWorker.ready;
+
+        const publicVapidKey = 'BFgnButtc-yZHbR6KCXV4khQDQkVRYUmVDekW5aeqQ-LEVFYBlYtGXvjLA7U0ObA9OqaX8Os5cDkEfZFpfsr-MQ'; 
+        
+        const urlBase64ToUint8Array = (base64String) => {
+          const padding = '='.repeat((4 - base64String.length % 4) % 4);
+          const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+          const rawData = window.atob(base64);
+          const outputArray = new Uint8Array(rawData.length);
+          for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+          return outputArray;
+        };
+
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+        });
+
+        const subData = JSON.parse(JSON.stringify(subscription));
+        const { error } = await supabase.from('push_subscriptions').upsert({ user_id: user.id, endpoint: subData.endpoint, auth: subData.keys.auth, p256dh: subData.keys.p256dh }, { onConflict: 'endpoint' });
+        
+        if (error) throw error;
+        setNotificationsEnabled(true)
+        setAlertInfo({ title: 'Successo', message: 'Notifiche push abilitate con successo su questo dispositivo!', type: 'success' });
+      } catch (err) {
+        setAlertInfo({ title: 'Errore', message: err.message, type: 'error' });
+      }
+    }
+  }
+
   const todayStrRender = format(new Date(), 'yyyy-MM-dd')
 
   const openEditAutonomous = (aw) => {
@@ -307,9 +394,14 @@ export default function Home() {
             <p className="text-gray-400 mt-1">Dashboard Coach Federico Leo</p>
           )}
         </div>
-        <button onClick={() => navigate('/settings')} className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
-          <Settings size={22} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleToggleNotifications} className={`w-11 h-11 rounded-full bg-[#1e1e1e] border flex items-center justify-center transition shadow-sm shrink-0 ${notificationsEnabled ? 'text-[#f1ba17] border-[#f1ba17]/50 hover:bg-[#f1ba17]/10' : 'text-gray-400 border-[#333] hover:text-white hover:border-[#f1ba17]'}`} title={notificationsEnabled ? "Disabilita notifiche" : "Abilita notifiche"}>
+            {notificationsEnabled ? <BellRing size={20} /> : <Bell size={20} />}
+          </button>
+          <button onClick={() => navigate('/settings')} className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+            <Settings size={22} />
+          </button>
+        </div>
       </div>
 
       {/* BANNER PROSSIMO EVENTO */}
@@ -725,6 +817,14 @@ export default function Home() {
             </div>
           </div>
         </div>,
+        document.body
+      )}
+
+      {createPortal(
+        <>
+          {alertInfo && <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />}
+          {confirmInfo && <CustomConfirm info={confirmInfo} onClose={() => setConfirmInfo(null)} />}
+        </>,
         document.body
       )}
     </div>

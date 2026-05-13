@@ -1212,7 +1212,8 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
   }
 
   const handleDeleteAthlete = async () => {
-    const { error } = await supabase.from('athletes').delete().eq('id', athlete.id)
+    const deletedAt = Date.now()
+    const { error } = await supabase.from('athletes').update({ deleted_at: deletedAt }).eq('id', athlete.id)
     if (error) {
       setAlertInfo({ title: 'Errore', message: "Errore durante l'eliminazione: " + error.message, type: 'error' })
       return
@@ -1304,7 +1305,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
               </button>
             ) : (
               <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-4 text-center w-full">
-                <p className="text-red-400 text-sm font-semibold mb-3">Sei sicuro? Questa azione eliminerà {role === 'athlete' ? 'il tuo account' : 'l\'atleta'} e non può essere annullata.</p>
+                <p className="text-red-400 text-sm font-semibold mb-3">Sei sicuro? Il profilo verrà nascosto e poi eliminato definitivamente tra 7 giorni.</p>
                 <div className="flex justify-center gap-3">
                   <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 bg-[#2a2a2a] text-white rounded-lg text-sm transition hover:bg-[#333]">Annulla</button>
                   <button onClick={handleDeleteAthlete} className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-sm font-bold transition">Sì, elimina</button>
@@ -1579,7 +1580,12 @@ function VoiceRecorder({ onSave, onCancel }) {
 
   useEffect(() => {
     return () => {
-      clearInterval(timerRef.current)
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
       if (mediaStream) mediaStream.getTracks().forEach(t => t.stop())
     }
   }, [mediaStream])

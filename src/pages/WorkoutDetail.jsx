@@ -278,7 +278,7 @@ export default function WorkoutDetail() {
   }
 
   const fetchAthletes = async () => {
-    const { data } = await supabase.from('athletes').select('id, name, surname, photo_url').order('name')
+    const { data } = await supabase.from('athletes').select('id, name, surname, photo_url').is('deleted_at', null).order('name')
     const COACHING_ID = '0118e43f-8791-4fd6-8032-bee028334c99'
     setAthletes((data || []).filter(a => a.id !== COACHING_ID))
   }
@@ -782,17 +782,17 @@ export default function WorkoutDetail() {
                   </button>
                 )}
                 {role !== 'athlete' && !isAuto && (
-                  <button onClick={() => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                  <button onClick={() => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
                     <Edit size={12} /> Modifica
                   </button>
                 )}
                 {isAuto && (
-                  <button onClick={openEditAutonomous} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                  <button onClick={openEditAutonomous} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
                     <Edit size={12} /> Modifica
                   </button>
                 )}
                 {(role !== 'athlete' || isAuto) && (
-                  <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                  <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
                     <Trash2 size={12} />
                   </button>
                 )}
@@ -1542,7 +1542,12 @@ function VoiceRecorder({ onSave, onCancel }) {
 
   useEffect(() => {
     return () => {
-      clearInterval(timerRef.current)
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
       if (mediaStream) mediaStream.getTracks().forEach(t => t.stop())
     }
   }, [mediaStream])

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut, Eye, EyeOff, Plus, Copy, Link as LinkIcon, Trash2, ChevronDown, KeyRound, X, Bell } from 'lucide-react'
+import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut, Eye, EyeOff, Plus, Copy, Link as LinkIcon, Trash2, ChevronDown, KeyRound, X, Bell, BellRing } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -19,6 +19,20 @@ export default function Settings() {
   const isAdminEmail = ADMIN_EMAILS.includes(user?.email?.toLowerCase())
   const isSimulatingAthlete = localStorage.getItem('adminRoleOverride') === 'athlete'
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        const registration = await navigator.serviceWorker.getRegistration()
+        if (registration) {
+          const subscription = await registration.pushManager.getSubscription()
+          setNotificationsEnabled(!!subscription)
+        }
+      }
+    }
+    checkSubscription()
+  }, [])
 
   const handleExportFull = async () => {
     setLoading(true)
@@ -190,11 +204,39 @@ export default function Settings() {
       
       setLoading(false)
       if (error) throw error;
+      setNotificationsEnabled(true)
       setAlertInfo({ title: 'Successo', message: 'Notifiche push abilitate con successo su questo dispositivo!', type: 'success' });
     } catch (err) {
       setLoading(false)
       setAlertInfo({ title: 'Errore', message: err.message, type: 'error' });
     }
+  }
+
+  const handleDisableNotifications = async () => {
+    setConfirmInfo({
+      title: "Disabilita Notifiche",
+      message: "Sei sicuro di voler disabilitare le notifiche su questo dispositivo?",
+      onConfirm: async () => {
+        setConfirmInfo(null)
+        setLoading(true)
+        try {
+          const registration = await navigator.serviceWorker.getRegistration()
+          if (registration) {
+            const subscription = await registration.pushManager.getSubscription()
+            if (subscription) {
+              const subData = JSON.parse(JSON.stringify(subscription));
+              await supabase.from('push_subscriptions').delete().eq('endpoint', subData.endpoint)
+              await subscription.unsubscribe()
+            }
+          }
+          setNotificationsEnabled(false)
+          setAlertInfo({ title: 'Successo', message: 'Notifiche disabilitate con successo.', type: 'success' })
+        } catch (e) {
+          setAlertInfo({ title: 'Errore', message: e.message, type: 'error' })
+        }
+        setLoading(false)
+      }
+    })
   }
 
   const testMorningReminder = async () => {
@@ -239,14 +281,14 @@ export default function Settings() {
         <h2 className="text-lg font-bold text-white mb-4">Notifiche Push</h2>
         <p className="text-gray-400 text-sm mb-4">Ricevi promemoria per i tuoi allenamenti e avvisi quando il coach aggiorna la tua programmazione.</p>
         
-        <button onClick={handleEnableNotifications} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition disabled:opacity-50 group">
+        <button onClick={notificationsEnabled ? handleDisableNotifications : handleEnableNotifications} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition disabled:opacity-50 group">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-[#f1ba17] transition text-gray-400 shrink-0">
-              <Bell size={20} />
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition shrink-0 ${notificationsEnabled ? 'bg-[#f1ba17]/10 text-[#f1ba17]' : 'bg-[#111] text-gray-400 group-hover:text-[#f1ba17]'}`}>
+              {notificationsEnabled ? <BellRing size={20} /> : <Bell size={20} />}
             </div>
             <div className="text-left">
-              <p className="text-white font-semibold">Abilita Notifiche</p>
-              <p className="text-gray-500 text-xs">Attiva le notifiche su questo dispositivo</p>
+              <p className="text-white font-semibold">{notificationsEnabled ? 'Disabilita Notifiche' : 'Abilita Notifiche'}</p>
+              <p className="text-gray-500 text-xs">{notificationsEnabled ? 'Non riceverai più promemoria su questo dispositivo' : 'Attiva le notifiche su questo dispositivo'}</p>
             </div>
           </div>
         </button>

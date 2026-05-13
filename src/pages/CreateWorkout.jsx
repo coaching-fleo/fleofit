@@ -297,7 +297,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
             placeholder="Cerca o scrivi esercizio custom..."
             value={search}
             onChange={e => { setSearch(e.target.value); setSelected(null) }}
-            autoFocus
+            autoFocus={!initialExercise}
           />
 
           {!selected ? (
@@ -504,7 +504,7 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
         </div>
       )}
 
-      <div className="flex-1 cursor-pointer group" onClick={() => onEdit && onEdit(ex)}>
+      <div className="flex-1 cursor-pointer group self-stretch flex flex-col justify-center py-2 -my-2" onClick={() => onEdit && onEdit(ex)}>
         <p className="text-white text-sm font-medium group-hover:text-[#f1ba17] transition">{ex.name}</p>
         <p className="text-gray-500 text-xs mt-0.5 group-hover:text-gray-400 transition">
           {detail} {paceStr} {speedStr}
@@ -513,7 +513,7 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
         </p>
       </div>
       {ex.intensity && (
-        <div className="flex items-center gap-1 pr-2 shrink-0">
+        <div className="flex items-center gap-1 pr-2 shrink-0 cursor-pointer hover:opacity-80 transition" onClick={() => onEdit && onEdit(ex)}>
            <span className={`text-xs font-bold ${getIntensityColor(ex.intensity)}`}>{ex.intensity}/10</span>
            <BicepsFlexed size={16} className={getIntensityColor(ex.intensity)} />
         </div>
@@ -1008,7 +1008,7 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
         <button type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
         <button type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-gray-500 hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
       </div>
-      <div className="flex-1 mt-1 cursor-pointer group" onClick={() => onEdit && onEdit(step)}>
+      <div className="flex-1 cursor-pointer group self-stretch flex flex-col justify-center py-2 -my-2" onClick={() => onEdit && onEdit(step)}>
         <div className="flex items-center gap-2 mb-1 group-hover:opacity-80 transition">
           <span className={`text-xs font-bold px-2 py-0.5 rounded-md border ${getTypeColor(step.type)}`}>
             {getTypeLabel(step.type)}

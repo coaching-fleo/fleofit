@@ -22,7 +22,7 @@ export default function Athletes() {
   }, [role, navigate])
 
   const fetchAthletes = async () => {
-    const { data } = await supabase.from('athletes').select('*').order('name')
+    const { data } = await supabase.from('athletes').select('*').is('deleted_at', null).order('name')
     
     // Nascondiamo il profilo di coaching@federicoleo.it a TUTTI gli admin usando il suo ID univoco
     const COACHING_ID = '0118e43f-8791-4fd6-8032-bee028334c99'
