@@ -26,7 +26,13 @@ export default function WorkoutsArchive() {
         .eq('athlete_id', user.id)
         .order('created_at', { ascending: false })
       if (!error && data) {
-         const mapped = data.filter(aw => aw.workouts).map(aw => ({
+         const mapped = data.filter(aw => {
+           if (!aw.workouts) return false
+           const s = aw.workouts.sections || {}
+           const cat = s.category
+           if (cat === 'Event' || s.isEvent || cat === 'Custom' || cat === 'Autonomo' || s.isAutonomous) return false
+           return true
+         }).map(aw => ({
            ...aw.workouts,
            aw_id: aw.id,
            date: aw.completed_date
@@ -38,7 +44,15 @@ export default function WorkoutsArchive() {
         .from('workouts')
         .select('id, title, date, created_at, sections, athlete_workouts(id)')
         .order('created_at', { ascending: false })
-      if (!error) setWorkouts(data || [])
+      if (!error) {
+        const filtered = (data || []).filter(w => {
+           const s = w.sections || {}
+           const cat = s.category
+           if (cat === 'Event' || s.isEvent || cat === 'Custom' || cat === 'Autonomo' || s.isAutonomous) return false
+           return true
+        })
+        setWorkouts(filtered)
+      }
     }
     setLoading(false)
   }

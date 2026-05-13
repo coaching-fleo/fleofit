@@ -1358,7 +1358,7 @@ export default function CreateWorkout() {
     }
 
     setSaved(true)
-    navigate(`/workout/${targetId}${athleteId ? `?athlete_id=${athleteId}` : ''}`)
+    navigate(`/workout/${targetId}${athleteId ? `?athlete_id=${athleteId}` : ''}`, { replace: true })
   }
 
   return (
@@ -1377,8 +1377,8 @@ export default function CreateWorkout() {
           -webkit-user-drag: auto;
         }
       `}</style>
-      <button onClick={handleBack} className="flex items-center text-[#f1ba17] hover:brightness-110 mb-6 transition-all active:scale-95 active:opacity-70 font-semibold text-[17px]">
-        <ChevronLeft size={26} strokeWidth={2.5} className="-ml-2 mr-0.5" /> Indietro
+      <button onClick={handleBack} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0 mb-6">
+        <X size={22} />
       </button>
       <h1 className="text-2xl font-bold text-[#f1ba17] mb-4">{editId ? 'Modifica Workout' : 'Crea Workout'}</h1>
 
