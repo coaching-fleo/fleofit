@@ -98,6 +98,9 @@ export function useTouchDrag({ onReorder }) {
       // Ignora se il tocco è su un button/input/select figlio
       if (e.target.closest('button, input, select, textarea, a')) return
 
+      // Impedisce che il drag di un elemento figlio (es. esercizio) inneschi anche il drag del genitore (es. blocco)
+      e.stopPropagation()
+
       const touch = e.touches[0]
       const clientX = touch.clientX
       const clientY = touch.clientY
