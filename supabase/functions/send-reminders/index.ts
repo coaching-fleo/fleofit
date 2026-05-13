@@ -163,6 +163,11 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Se arriviamo fin qui e la modalità non è morning o evening, fermiamo tutto per sicurezza
+    if (mode !== 'morning' && mode !== 'evening') {
+      return new Response(JSON.stringify({ success: false, message: 'Modalità ignorata' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     // Calcola le date: "oggi" per la mattina, "domani" per la sera
     const targetDate = new Date();
     if (mode === 'evening') {
