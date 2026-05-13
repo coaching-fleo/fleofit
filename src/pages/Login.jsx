@@ -91,10 +91,14 @@ export default function Login() {
     }
     setLoading(true)
     
+    // Usa il custom scheme per iOS nativo, altrimenti l'origin web
+    const isNative = typeof window !== 'undefined' && !!window?.Capacitor?.isNativePlatform?.()
+    const baseUrl = isNative ? 'fleofit://login-callback' : window.location.origin
+
     try {
       if (isResetPassword) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin + '/login',
+          redirectTo: baseUrl + '/login',
         })
         if (error) throw error
         setAlertInfo({ title: 'Email inviata', message: 'Se l\'indirizzo è corretto, riceverai un link per reimpostare la password.', type: 'success' })
@@ -112,7 +116,7 @@ export default function Login() {
           password,
           options: {
             data: { role },
-            emailRedirectTo: `${window.location.origin}/?inviteCode=${storedInviteCode}`
+            emailRedirectTo: `${baseUrl}/?inviteCode=${storedInviteCode}`
           }
         })
         if (error) throw error
@@ -136,9 +140,13 @@ export default function Login() {
        return
     }
     
+    // Verifica se l'app è eseguita in un contesto nativo (es. Capacitor)
+    const isNative = typeof window !== 'undefined' && !!window?.Capacitor?.isNativePlatform?.()
+    const baseUrl = isNative ? 'fleofit://login-callback' : window.location.origin
+
     const redirectUrl = inviteCode 
-      ? `${window.location.origin}/?inviteCode=${inviteCode}`
-      : `${window.location.origin}/`
+      ? `${baseUrl}/?inviteCode=${inviteCode}`
+      : `${baseUrl}/`
 
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
