@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { Mail, Lock, LogIn, ChevronLeft, KeyRound, ArrowRight } from 'lucide-react'
 import { CustomAlert } from '../components/CustomModals'
+import { Browser } from '@capacitor/browser'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -98,7 +99,7 @@ export default function Login() {
     try {
       if (isResetPassword) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: baseUrl + '/login',
+          redirectTo: baseUrl,
         })
         if (error) throw error
         setAlertInfo({ title: 'Email inviata', message: 'Se l\'indirizzo è corretto, riceverai un link per reimpostare la password.', type: 'success' })
@@ -116,7 +117,7 @@ export default function Login() {
           password,
           options: {
             data: { role },
-            emailRedirectTo: `${baseUrl}/?inviteCode=${storedInviteCode}`
+            emailRedirectTo: `${baseUrl}?inviteCode=${storedInviteCode}`
           }
         })
         if (error) throw error
@@ -145,20 +146,31 @@ export default function Login() {
     const baseUrl = isNative ? 'fleofit://login-callback' : window.location.origin
 
     const redirectUrl = inviteCode 
-      ? `${baseUrl}/?inviteCode=${inviteCode}`
-      : `${baseUrl}/`
+      ? `${baseUrl}?inviteCode=${inviteCode}`
+      : baseUrl
 
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          queryParams: {
-            prompt: 'select_account'
+      if (isNative) {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUrl,
+            skipBrowserRedirect: true,
+            queryParams: { prompt: 'select_account' }
           }
-        }
-      })
-      if (error) throw error
+        })
+        if (error) throw error
+        if (data?.url) await Browser.open({ url: data.url })
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUrl,
+            queryParams: { prompt: 'select_account' }
+          }
+        })
+        if (error) throw error
+      }
     } catch (error) {
       setAlertInfo({ title: 'Errore Google OAuth', message: error.message, type: 'error' })
     }

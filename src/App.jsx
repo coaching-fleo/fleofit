@@ -1,6 +1,8 @@
 import { useState, useEffect, createContext, useContext } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
+import { App as CapacitorApp } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Calendar from './pages/Calendar'
@@ -271,7 +273,7 @@ function ProtectedRoute({ children }) {
   }
 
   if (!session) {
-    return <Navigate to={`/login${location.search}`} replace />
+    return <Navigate to={`/login${location.search}${location.hash}`} replace />
   }
 
   if (needsOnboarding) {
@@ -292,9 +294,46 @@ function ProtectedRoute({ children }) {
   )
 }
 
+function DeeplinkHandler() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const isNative = typeof window !== 'undefined' && !!window?.Capacitor?.isNativePlatform?.();
+
+    if (isNative) {
+      CapacitorApp.addListener('appUrlOpen', async (event) => {
+        const url = new URL(event.url);
+        if (url.protocol === 'fleofit:') {
+          Browser.close().catch(() => {});
+          
+          // 1. Estrae eventuale codice invito dalla URL per non perderlo
+          const inviteCode = url.searchParams.get('inviteCode');
+          if (inviteCode) localStorage.setItem('fleofit_invite_code', inviteCode);
+
+          // 2. Estrae i token di accesso direttamente dall'hash
+          const hashParams = new URLSearchParams(url.hash.substring(1));
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+
+          if (accessToken && refreshToken) {
+            // 3. Forza la creazione della sessione in Supabase in modo esplicito
+            const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+            if (!error) return navigate('/', { replace: true });
+          }
+          
+          navigate(`/login${url.search}${url.hash}`, { replace: true });
+        }
+      });
+    }
+  }, [navigate]);
+
+  return null;
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <DeeplinkHandler />
       <div className="min-h-screen bg-[#0B0B0B] text-white">
         <Routes>
           <Route path="/login" element={<Login />} />
