@@ -661,10 +661,6 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
                 <label className="text-gray-400 text-xs pl-1">Note</label>
                 <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-3 text-base text-white focus:border-[#f1ba17] focus:outline-none" value={block.notes || ''} onChange={e => updateNotes(e.target.value)} placeholder="Opzionale..." />
               </div>
-              <div>
-                <label className="text-gray-400 text-xs mb-1 block">Note</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0094C6] text-base" placeholder="Es: mantieni la zona 2 costante..." />
-              </div>
             </div>
           )}
 
