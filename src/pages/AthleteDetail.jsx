@@ -1045,24 +1045,32 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
               <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />
             </div>
           ) : null}
-          <textarea
-            className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
-            rows={2}
-            placeholder="Note dell'atleta su questo workout..."
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        <div className={`transition-all duration-300 ease-out overflow-hidden ${hasChanges ? 'max-h-16 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}`}>
-          <div className="flex justify-end">
-              <button
-                onClick={handleSaveNote}
-                disabled={saving}
-                className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-[#0094C6] text-white' : isAuto ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
-              >
-                {saving ? 'Salvataggio...' : 'Conferma note'}
-              </button>
+          {role === 'athlete' ? (
+            <>
+              <textarea
+                className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
+                rows={2}
+                placeholder="Note dell'atleta su questo workout..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+              <div className={`transition-all duration-300 ease-out overflow-hidden ${hasChanges ? 'max-h-16 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}`}>
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSaveNote}
+                    disabled={saving}
+                    className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-[#0094C6] text-white' : isAuto ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
+                  >
+                    {saving ? 'Salvataggio...' : 'Conferma note'}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : note ? (
+            <div className="mt-2 p-3 bg-black/20 border border-white/10 rounded-xl">
+              <p className="text-gray-300 text-sm whitespace-pre-wrap">{note}</p>
             </div>
-        </div>
+          ) : null}
         </div>
       </div>
     </div>
@@ -1422,24 +1430,32 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />
           </div>
         ) : null}
-        <textarea
-          className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-base transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
-          rows={3}
-          placeholder="Copia qui le note dell'atleta su questo workout..."
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
-        <div className={`transition-all duration-300 ease-out overflow-hidden ${hasChanges ? 'max-h-16 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}`}>
-          <div className="flex justify-end">
-            <button
-              onClick={handleSaveNote}
-              disabled={saving}
-              className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-[#0094C6] text-white' : isAuto ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
-            >
-              {saving ? 'Salvataggio...' : 'Conferma'}
-            </button>
+        {role === 'athlete' ? (
+          <>
+            <textarea
+              className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-base transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
+              rows={3}
+              placeholder="Copia qui le note dell'atleta su questo workout..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+            <div className={`transition-all duration-300 ease-out overflow-hidden ${hasChanges ? 'max-h-16 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}`}>
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveNote}
+                  disabled={saving}
+                  className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-[#0094C6] text-white' : isAuto ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
+                >
+                  {saving ? 'Salvataggio...' : 'Conferma'}
+                </button>
+              </div>
+            </div>
+          </>
+        ) : note ? (
+          <div className="mt-2 p-3 bg-[#2a2a2a] border border-[#383838] rounded-xl">
+            <p className="text-gray-300 text-sm whitespace-pre-wrap">{note}</p>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   )
