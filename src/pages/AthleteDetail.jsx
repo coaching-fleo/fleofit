@@ -11,6 +11,7 @@ import { useAuth } from '../App'
 import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
+import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
 
 const InstagramIcon = ({ size = 24, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -1547,6 +1548,9 @@ function AudioVisualizer({ stream }) {
   useEffect(() => {
     if (!stream) return
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {})
+    }
     const analyser = audioCtx.createAnalyser()
     const source = audioCtx.createMediaStreamSource(stream)
     source.connect(analyser)
@@ -1594,6 +1598,7 @@ function VoiceRecorder({ onSave, onCancel }) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [mediaStream, setMediaStream] = useState(null)
+  const isNative = Capacitor.isNativePlatform()
   
   const mediaRecorder = useRef(null)
   const chunksRef = useRef([])
@@ -1621,61 +1626,125 @@ function VoiceRecorder({ onSave, onCancel }) {
   }
 
   const startRecording = async () => {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      alert('Il tuo browser non supporta la registrazione vocale.')
+    let stream = null;
+
+    if (isNative) {
+      try {
+        let hasPerm = await NativeVoiceRecorder.hasAudioRecordingPermission()
+        if (!hasPerm.value) {
+          hasPerm = await NativeVoiceRecorder.requestAudioRecordingPermission()
+          if (!hasPerm.value) return alert('Devi abilitare il microfono dalle impostazioni di iOS.')
+        }
+      } catch (e) {
+        console.error("Errore permessi nativi:", e)
+      }
+    }
+
+    // Ottiene il microfono tramite Web API unicamente per il visualizzatore visivo (l'onda)
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        setMediaStream(stream)
+      } catch (err) {
+        console.error("Web API fallita (nessun problema, usiamo animazione fallback):", err)
+      }
+    }
+
+    if (isNative) {
+      try {
+        await NativeVoiceRecorder.startRecording()
+        isCancelledRef.current = false
+        setIsRecording(true)
+        setRecordingTime(0)
+        timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
+      } catch (e) {
+        console.error("Errore avvio rec nativo:", e)
+        alert('Impossibile accedere al microfono.')
+      }
+    } else {
+      if (!window.MediaRecorder || !stream) {
+        return alert('Il tuo browser non supporta la registrazione vocale.')
+      }
+      try {
+        const recorder = new MediaRecorder(stream)
+        chunksRef.current = []
+        isCancelledRef.current = false
+        
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data)
+        }
+        
+        recorder.onstop = () => {
+          const mimeType = recorder.mimeType || 'audio/webm'
+          const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('aac') ? 'aac' : 'webm'
+          const audioBlob = new Blob(chunksRef.current, { type: mimeType })
+          if (stream) stream.getTracks().forEach(track => track.stop())
+          setMediaStream(null)
+          if (!isCancelledRef.current) {
+            onSave(audioBlob, ext)
+          } else if (onCancel) {
+            onCancel()
+          }
+        }
+        
+        recorder.start()
+        mediaRecorder.current = recorder
+        setIsRecording(true)
+        setRecordingTime(0)
+        timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
+      } catch (err) {
+        console.error("Errore avvio MediaRecorder:", err)
+      }
+    }
+  }
+
+  const cancelRecording = async () => {
+    isCancelledRef.current = true
+    setIsRecording(false)
+    clearInterval(timerRef.current)
+
+    if (!isNative && mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
+      mediaRecorder.current.stop()
       return
     }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      setMediaStream(stream)
-      const recorder = new MediaRecorder(stream)
-      chunksRef.current = []
-      isCancelledRef.current = false
-      
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data)
-      }
-      
-      recorder.onstop = () => {
-        const mimeType = recorder.mimeType || 'audio/webm'
-        const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('aac') ? 'aac' : 'webm'
-        const audioBlob = new Blob(chunksRef.current, { type: mimeType })
-        stream.getTracks().forEach(track => track.stop())
+
+    if (isNative) {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop())
         setMediaStream(null)
-        if (!isCancelledRef.current) {
-          onSave(audioBlob, ext)
-        } else if (onCancel) {
-          onCancel()
-        }
       }
-      
-      recorder.start()
-      mediaRecorder.current = recorder
-      setIsRecording(true)
-      setRecordingTime(0)
-      timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
-    } catch (err) {
-      console.error(err)
-      setIsRecording(false)
-      alert('Impossibile accedere al microfono.')
+      try { await NativeVoiceRecorder.stopRecording() } catch(e) {}
+      if (onCancel) onCancel()
     }
   }
 
-  const cancelRecording = () => {
-    if (mediaRecorder.current) {
-      isCancelledRef.current = true
-      mediaRecorder.current.stop()
-      setIsRecording(false)
-      clearInterval(timerRef.current)
-    }
-  }
+  const stopRecordingAndSave = async () => {
+    isCancelledRef.current = false
+    setIsRecording(false)
+    clearInterval(timerRef.current)
 
-  const stopRecordingAndSave = () => {
-    if (mediaRecorder.current && isRecording) {
-      isCancelledRef.current = false
+    if (!isNative && mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
       mediaRecorder.current.stop()
-      setIsRecording(false)
-      clearInterval(timerRef.current)
+      return
+    }
+
+    if (isNative) {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop())
+        setMediaStream(null)
+      }
+      try {
+        const result = await NativeVoiceRecorder.stopRecording()
+        if (result.value && result.value.recordDataBase64) {
+          const mimeType = result.value.mimeType || 'audio/aac'
+          const ext = mimeType.includes('mp4') ? 'mp4' : 'aac'
+          const response = await fetch(`data:${mimeType};base64,${result.value.recordDataBase64}`)
+          const audioBlob = await response.blob()
+          onSave(audioBlob, ext)
+        } else if (onCancel) onCancel()
+      } catch(e) {
+        console.error("Errore stop nativo:", e)
+      }
     }
   }
 
@@ -1696,8 +1765,16 @@ function VoiceRecorder({ onSave, onCancel }) {
               {Math.floor(recordingTime/60)}:{(recordingTime%60).toString().padStart(2,'0')}
             </div>
             
-            <div className="flex-1 mx-2 overflow-hidden h-6 flex items-center">
-              <AudioVisualizer stream={mediaStream} />
+            <div className="flex-1 mx-2 overflow-hidden h-6 flex items-center justify-center gap-1">
+              {mediaStream ? (
+                <AudioVisualizer stream={mediaStream} />
+              ) : (
+                <div className="flex items-center gap-1 h-full py-1">
+                  {[...Array(12)].map((_, i) => (
+                    <div key={i} className="w-1.5 bg-[#f1ba17] rounded-full animate-bounce" style={{ height: '100%', animationDelay: `${i * 0.1}s`, animationDuration: '0.8s' }}></div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-1 shrink-0">

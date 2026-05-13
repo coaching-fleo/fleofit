@@ -335,8 +335,17 @@ function DeeplinkHandler() {
         if (data && data.route) {
           navigate(data.route);
         }
-        PushNotifications.removeAllDeliveredNotifications().catch(() => {});
-        Badge.clear().catch(() => {});
+        const resetBadge = async () => {
+          try {
+            await PushNotifications.removeAllDeliveredNotifications();
+            await Badge.clear();
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              await supabase.from('push_subscriptions').update({ badge_count: 0 }).eq('user_id', session.user.id).eq('auth', 'capacitor_ios');
+            }
+          } catch (e) { }
+        };
+        resetBadge();
       });
     }
   }, [navigate]);
@@ -353,14 +362,22 @@ function App() {
           await StatusBar.setStyle({ style: Style.Dark })
           await Keyboard.setAccessoryBarVisible({ isVisible: false })
           
-          // Pulisce il centro notifiche in automatico quando apri l'app e azzera il badge
-          await PushNotifications.removeAllDeliveredNotifications().catch(() => {});
-          await Badge.clear().catch(() => {});
+          const resetBadge = async () => {
+            try {
+              await PushNotifications.removeAllDeliveredNotifications();
+              await Badge.clear();
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.user) {
+                await supabase.from('push_subscriptions').update({ badge_count: 0 }).eq('user_id', session.user.id).eq('auth', 'capacitor_ios');
+              }
+            } catch (e) { console.error(e) }
+          };
+
+          resetBadge();
 
           CapacitorApp.addListener('appStateChange', ({ isActive }) => {
             if (isActive) {
-              PushNotifications.removeAllDeliveredNotifications().catch(() => {});
-              Badge.clear().catch(() => {});
+              resetBadge();
             }
           });
         } catch (err) {

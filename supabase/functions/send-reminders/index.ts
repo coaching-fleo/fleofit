@@ -110,6 +110,10 @@ serve(async (req) => {
           if (firebaseServiceAccount.client_email && firebaseServiceAccount.private_key) {
             const accessToken = await getGoogleAccessToken(firebaseServiceAccount.client_email, firebaseServiceAccount.private_key);
 
+            // Calcola il nuovo contatore per il badge e aggiorna il DB in background
+            const newBadgeCount = (sub.badge_count || 0) + 1;
+            supabase.from('push_subscriptions').update({ badge_count: newBadgeCount }).eq('id', sub.id).then();
+
             const res = await fetch(
               `https://fcm.googleapis.com/v1/projects/${firebaseServiceAccount.project_id.trim()}/messages:send`,
               {
@@ -126,7 +130,7 @@ serve(async (req) => {
                     apns: {
                       payload: {
                         aps: {
-                          badge: 1,
+                          badge: newBadgeCount,
                           sound: "default"
                         }
                       }
@@ -225,6 +229,26 @@ serve(async (req) => {
     if (mode === 'coach_notification') {
       console.log(`Notifica al coach da ${body.athleteName} per ${body.action}`);
       
+      // Recupera gli ID degli admin scorrendo la lista utenti di Supabase in modo sicuro
+      const adminEmails = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com'];
+      const adminUserIds: string[] = [];
+      let page = 1;
+      while (true) {
+        const { data: authData, error: authErr } = await supabase.auth.admin.listUsers({ page, perPage: 50 });
+        if (authErr) {
+          console.error('Errore in listUsers:', authErr);
+          throw authErr;
+        }
+        const users = authData?.users || [];
+        if (users.length === 0) break;
+        const foundIds = users
+          .filter((u: any) => u.email && adminEmails.includes(u.email.trim().toLowerCase()))
+          .map((u: any) => u.id);
+        adminUserIds.push(...foundIds);
+        if (users.length < 50) break;
+        page++;
+      }
+
       console.log('Trovati ID Admin:', adminUserIds);
       
       if (adminUserIds.length === 0) {
@@ -238,6 +262,13 @@ serve(async (req) => {
         .in('user_id', adminUserIds);
 
       if (subError) throw subError;
+
+      console.log(`Trovate ${adminSubscriptions?.length || 0} iscrizioni push per gli Admin.`);
+
+      if (!adminSubscriptions || adminSubscriptions.length === 0) {
+         console.log('Attenzione: Nessun dispositivo admin ha le notifiche attive nel database.');
+         return new Response(JSON.stringify({ success: true, message: 'Nessun dispositivo admin iscritto' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
 
       let title = "Aggiornamento Atleta";
       let bodyMsg = "";
@@ -257,7 +288,9 @@ serve(async (req) => {
       for (const sub of adminSubscriptions) {
         notifications.push(sendPush(sub, title, bodyMsg, '/'));
       }
+      console.log(`Sto per inviare ${notifications.length} notifiche ai coach...`);
       await Promise.all(notifications);
+      console.log('Notifiche inviate con successo ai coach.');
       return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 

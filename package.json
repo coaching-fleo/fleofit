@@ -20,6 +20,7 @@
     "@capacitor/share": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capawesome/capacitor-badge": "^8.0.2",
+    "@independo/capacitor-voice-recorder": "^8.2.9",
     "@supabase/supabase-js": "^2.105.3",
     "@tailwindcss/vite": "^4.2.4",
     "date-fns": "^4.1.0",
