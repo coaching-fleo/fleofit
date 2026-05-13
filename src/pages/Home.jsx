@@ -9,6 +9,9 @@ import { getDailyMotivation } from './motivations'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { createPortal } from 'react-dom'
+import { Capacitor } from '@capacitor/core'
+import { PushNotifications } from '@capacitor/push-notifications'
+import { FCM } from '@capacitor-community/fcm'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -65,11 +68,20 @@ export default function Home() {
 
   useEffect(() => {
     const checkSubscription = async () => {
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        const registration = await navigator.serviceWorker.getRegistration()
-        if (registration) {
-          const subscription = await registration.pushManager.getSubscription()
-          setNotificationsEnabled(!!subscription)
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const permStatus = await PushNotifications.checkPermissions()
+          setNotificationsEnabled(permStatus.receive === 'granted')
+        } catch (e) {
+          console.error(e)
+        }
+      } else {
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+          const registration = await navigator.serviceWorker.getRegistration()
+          if (registration) {
+            const subscription = await registration.pushManager.getSubscription()
+            setNotificationsEnabled(!!subscription)
+          }
         }
       }
     }
@@ -243,13 +255,18 @@ export default function Home() {
         onConfirm: async () => {
           setConfirmInfo(null)
           try {
-            const registration = await navigator.serviceWorker.getRegistration()
-            if (registration) {
-              const subscription = await registration.pushManager.getSubscription()
-              if (subscription) {
-                const subData = JSON.parse(JSON.stringify(subscription))
-                await supabase.from('push_subscriptions').delete().eq('endpoint', subData.endpoint)
-                await subscription.unsubscribe()
+            if (Capacitor.isNativePlatform()) {
+               await supabase.from('push_subscriptions').delete().eq('user_id', user.id).eq('auth', 'capacitor_ios')
+               await PushNotifications.removeAllListeners()
+            } else {
+              const registration = await navigator.serviceWorker.getRegistration()
+              if (registration) {
+                const subscription = await registration.pushManager.getSubscription()
+                if (subscription) {
+                  const subData = JSON.parse(JSON.stringify(subscription))
+                  await supabase.from('push_subscriptions').delete().eq('endpoint', subData.endpoint)
+                  await subscription.unsubscribe()
+                }
               }
             }
             setNotificationsEnabled(false)
@@ -260,6 +277,52 @@ export default function Home() {
         }
       })
     } else {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          let permStatus = await PushNotifications.checkPermissions();
+          if (permStatus.receive === 'prompt') {
+            permStatus = await PushNotifications.requestPermissions();
+          }
+          if (permStatus.receive !== 'granted') {
+            setAlertInfo({ title: 'Permesso negato', message: 'Devi autorizzare le notifiche dalle impostazioni di iOS.', type: 'error' });
+            return;
+          }
+  
+          await PushNotifications.removeAllListeners();
+  
+          PushNotifications.addListener('registration', async (token) => {
+            let deviceToken = token.value;
+            try {
+               const fcmRes = await FCM.getToken();
+               if (fcmRes.token) deviceToken = fcmRes.token;
+            } catch (e) {
+               console.log("Errore recupero FCM token:", e);
+            }
+
+            const { error } = await supabase.from('push_subscriptions').upsert({ 
+              user_id: user.id, 
+              endpoint: deviceToken, 
+              auth: 'capacitor_ios', 
+              p256dh: 'capacitor_ios' 
+            }, { onConflict: 'endpoint' });
+            
+            if (error) setAlertInfo({ title: 'Errore DB', message: error.message, type: 'error' });
+            else {
+              setNotificationsEnabled(true)
+              setAlertInfo({ title: 'Successo', message: 'Notifiche push native abilitate!', type: 'success' });
+            }
+          });
+  
+          PushNotifications.addListener('registrationError', (error) => {
+            setAlertInfo({ title: 'Errore', message: 'Errore di registrazione ad APNs: ' + error.error, type: 'error' });
+          });
+  
+          await PushNotifications.register();
+        } catch (err) {
+          setAlertInfo({ title: 'Errore', message: err.message, type: 'error' });
+        }
+        return;
+      }
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         setAlertInfo({ title: 'Non supportato', message: 'Il tuo browser/dispositivo non supporta le notifiche push. Su iPhone ricordati di aggiungere l\'app alla schermata Home.', type: 'error' });
         return;
@@ -378,7 +441,7 @@ export default function Home() {
   }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       {/* Header */}
       <div className="mb-6 mt-4 flex items-start justify-between">
         <div>

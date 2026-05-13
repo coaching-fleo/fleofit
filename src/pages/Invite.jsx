@@ -50,7 +50,7 @@ export default function Invite() {
   };
 
   return (
-    <div className="min-h-screen bg-[#111] flex flex-col items-center justify-center p-4 text-white">
+    <div className="min-h-screen bg-[#111] flex flex-col items-center justify-center px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] text-white">
       <div className="w-full max-w-md text-center">
         <h1 className="text-5xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
         <p className="text-gray-400 mt-4">La piattaforma di coaching per atleti e allenatori.</p>

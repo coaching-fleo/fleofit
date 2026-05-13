@@ -3,6 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { supabase } from './supabaseClient'
 import { App as CapacitorApp } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
+import { StatusBar, Style } from '@capacitor/status-bar'
+import { Keyboard } from '@capacitor/keyboard'
+import { PushNotifications } from '@capacitor/push-notifications'
+import { Badge } from '@capawesome/capacitor-badge'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Calendar from './pages/Calendar'
@@ -90,7 +94,7 @@ function Onboarding({ user, onComplete }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0B0B] flex flex-col items-center justify-center p-4 page-transition">
+    <div className="min-h-screen bg-[#0B0B0B] flex flex-col items-center justify-center px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="w-full max-w-md bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 shadow-2xl">
         <div className="flex flex-col items-center mb-6">
           <h1 className="text-4xl font-black text-white tracking-tight mb-3">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
@@ -324,6 +328,16 @@ function DeeplinkHandler() {
           navigate(`/login${url.search}${url.hash}`, { replace: true });
         }
       });
+
+      // 4. Ascolta il "Tap" (tocco) dell'utente su una notifica push in entrata
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+        const data = notification.notification.data;
+        if (data && data.route) {
+          navigate(data.route);
+        }
+        PushNotifications.removeAllDeliveredNotifications().catch(() => {});
+        Badge.clear().catch(() => {});
+      });
     }
   }, [navigate]);
 
@@ -331,6 +345,32 @@ function DeeplinkHandler() {
 }
 
 function App() {
+  useEffect(() => {
+    const setupNative = async () => {
+      if (typeof window !== 'undefined' && !!window?.Capacitor?.isNativePlatform?.()) {
+        try {
+          // Forza l'orologio bianco e rimuove la barra extra della tastiera web
+          await StatusBar.setStyle({ style: Style.Dark })
+          await Keyboard.setAccessoryBarVisible({ isVisible: false })
+          
+          // Pulisce il centro notifiche in automatico quando apri l'app e azzera il badge
+          await PushNotifications.removeAllDeliveredNotifications().catch(() => {});
+          await Badge.clear().catch(() => {});
+
+          CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+            if (isActive) {
+              PushNotifications.removeAllDeliveredNotifications().catch(() => {});
+              Badge.clear().catch(() => {});
+            }
+          });
+        } catch (err) {
+          console.log("Errore impostazione plugin nativi:", err)
+        }
+      }
+    }
+    setupNative()
+  }, [])
+
   return (
     <BrowserRouter>
       <DeeplinkHandler />

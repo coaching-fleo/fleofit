@@ -103,7 +103,7 @@ export default function Calendar() {
   }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       {/* BRAND HEADER */}
       <div className="mb-6 mt-4">
         <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>

@@ -8,6 +8,9 @@ import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
+import { Capacitor } from '@capacitor/core'
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
 
 const InstagramIcon = ({ size = 24, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -255,19 +258,33 @@ export default function AthleteDetail() {
     setWorkoutToRemove(null)
   }
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
     const exportData = {
       athlete: athlete,
       workouts: workouts
     }
     const dataStr = JSON.stringify(exportData, null, 2)
-    const blob = new Blob([dataStr], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const linkElement = document.createElement('a')
-    linkElement.setAttribute('href', url)
-    linkElement.setAttribute('download', `${athlete.name}_${athlete.surname}_backup_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.json`.replace(/ /g, '_'))
-    linkElement.click()
-    URL.revokeObjectURL(url)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: dataStr,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8
+        })
+        await Share.share({ title: `Backup ${athlete.name}`, url: result.uri })
+      } catch (err) {
+        setAlertInfo({ title: 'Errore', message: "Errore esportazione: " + err.message, type: 'error' })
+      }
+    } else {
+      const blob = new Blob([dataStr], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const linkElement = document.createElement('a')
+      linkElement.setAttribute('href', url)
+      linkElement.setAttribute('download', fileName)
+      linkElement.click()
+      URL.revokeObjectURL(url)
+    }
   }
 
   const handleDeletePr = async (prId) => {
@@ -305,7 +322,7 @@ export default function AthleteDetail() {
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       {role !== 'athlete' && !isOwnProfile ? (
         <div className="mb-6 mt-4 flex items-center gap-3">
           <button onClick={() => navigate('/athletes')} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">

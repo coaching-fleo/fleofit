@@ -226,11 +226,11 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 page-transition relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition relative overflow-hidden">
       
       {/* SCHERMATA WELCOME */}
       <div 
-        className={`absolute inset-0 flex flex-col items-center justify-between p-6 ${showForm ? 'pointer-events-none' : ''}`}
+        className={`absolute inset-0 flex flex-col items-center justify-between px-6 pb-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] ${showForm ? 'pointer-events-none' : ''}`}
         style={{
           transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
           transform: showForm ? 'translateY(-50px)' : 'translateY(0)',
@@ -269,7 +269,7 @@ export default function Login() {
           }
           else if (isResetPassword) setIsResetPassword(false)
           else { setView('welcome'); setIsSignUp(false); }
-        }} className="absolute top-5 left-5 w-10 h-10 bg-[#2a2a2a] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white transition shadow-md z-10" aria-label="Torna indietro">
+        }} className="absolute top-[calc(env(safe-area-inset-top)+1.25rem)] left-5 w-10 h-10 bg-[#2a2a2a] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white transition shadow-md z-10" aria-label="Torna indietro">
           <ChevronLeft size={22} className="-ml-0.5" />
         </button>
         

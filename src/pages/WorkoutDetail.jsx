@@ -6,10 +6,14 @@ import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbel
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
-import { toBlob } from 'html-to-image'
+import { toBlob, toPng } from 'html-to-image'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
+import { Capacitor } from '@capacitor/core'
+import { Filesystem, Directory } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
+import { Media } from '@capacitor-community/media'
 
 const TYPE_COLORS = {
   'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
@@ -289,17 +293,22 @@ export default function WorkoutDetail() {
       return
     }
     setAssigning(true)
-    const { error } = await supabase.from('athlete_workouts').insert({
+    const { data: newAssignment, error } = await supabase.from('athlete_workouts').insert({
       athlete_id: athleteId,
       workout_id: workout.id,
       completed_date: assignDate,
       status: 'pending'
-    })
+    }).select('id').single()
     
     setAssigning(false)
     if (error) {
       setAlertInfo({ title: 'Errore', message: "Errore durante l'assegnazione: " + error.message, type: 'error' })
     } else {
+      if (newAssignment) {
+        supabase.functions.invoke('send-reminders', {
+          body: { mode: 'immediate', record_id: newAssignment.id }
+        }).catch(console.error)
+      }
       setAssignModalOpen(false)
       setShowSuccessModal(true)
       fetchWorkout()
@@ -677,52 +686,114 @@ export default function WorkoutDetail() {
 
   const exportPDF = async () => {
     const doc = await buildPDFDoc()
-    doc.save(`${workout.title.replace(/ /g, '_')}.pdf`)
+    const fileName = `${workout.title.replace(/ /g, '_')}.pdf`
+    
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const dataUri = doc.output('datauristring')
+        const base64Data = dataUri.split(',')[1]
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Cache
+        })
+        await Share.share({ title: workout.title, url: result.uri })
+      } catch (e) {
+        console.error("Errore esportazione PDF", e)
+      }
+    } else {
+      doc.save(fileName)
+    }
   }
 
   const exportShare2 = async () => {
     if (!igRef.current) return
     try {
-      const blob = await toBlob(igRef.current, { pixelRatio: 2, cacheBust: true })
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `${workout.title.replace(/ /g, '_')}_IG.png`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
+      const fileName = `${workout.title.replace(/ /g, '_')}_IG.png`
+      if (Capacitor.isNativePlatform()) {
+        const dataUrl = await toPng(igRef.current, { pixelRatio: 2, cacheBust: true })
+        const base64Data = dataUrl.split(',')[1]
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Cache
+        })
+        
+        try {
+          await Media.savePhoto({ path: result.uri })
+          setAlertInfo({ title: 'Salvato!', message: 'La grafica IG è stata salvata direttamente nella tua galleria fotografica.', type: 'success' })
+        } catch (mediaErr) {
+          setAlertInfo({ title: 'Errore', message: 'Permesso negato o errore durante il salvataggio in galleria.', type: 'error' })
+        }
+      } else {
+        const blob = await toBlob(igRef.current, { pixelRatio: 2, cacheBust: true })
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
     } catch (err) {
       console.error(err)
+      setAlertInfo({ title: 'Errore', message: 'Impossibile generare la grafica.', type: 'error' })
     }
   }
 
   const shareWorkoutFiles = async () => {
     if (!igRef.current) return
     try {
-      const filesArray = []
+      const safeTitle = workout.title.replace(/ /g, '_')
       const isEventWorkout = workout?.sections?.category === 'Event' || workout?.sections?.isEvent
 
-      if (!isEventWorkout) {
-        // 1. Genera PDF in memoria
-        const doc = await buildPDFDoc()
-        const pdfBlob = doc.output('blob')
-        const pdfFile = new File([pdfBlob], `${workout.title.replace(/ /g, '_')}.pdf`, { type: 'application/pdf' })
-        filesArray.push(pdfFile)
-      }
+      if (Capacitor.isNativePlatform()) {
+        const filesArray = []
+        
+        if (!isEventWorkout) {
+          const doc = await buildPDFDoc()
+          const pdfDataUri = doc.output('datauristring')
+          const pdfResult = await Filesystem.writeFile({
+            path: `${safeTitle}.pdf`,
+            data: pdfDataUri.split(',')[1],
+            directory: Directory.Cache
+          })
+          filesArray.push(pdfResult.uri)
+        }
 
-      // 2. Genera Immagine in memoria con html-to-image
-      const blob = await toBlob(igRef.current, { pixelRatio: 3, cacheBust: true })
-      const pngFile = new File([blob], `${workout.title.replace(/ /g, '_')}.png`, { type: 'image/png' })
+        const pngDataUrl = await toPng(igRef.current, { pixelRatio: 3, cacheBust: true })
+        const pngResult = await Filesystem.writeFile({
+          path: `${safeTitle}.png`,
+          data: pngDataUrl.split(',')[1],
+          directory: Directory.Cache
+        })
+        filesArray.push(pngResult.uri)
 
-      // 3. Usa lo Share nativo di iOS / Android
-      if (navigator.canShare && navigator.canShare({ files: filesArray })) {
-        await navigator.share({
-          files: filesArray,
+        await Share.share({
           title: workout.title,
-          text: `Ecco il tuo workout: ${workout.title}`
+          text: `Ecco il tuo workout: ${workout.title}`,
+          files: filesArray
         })
       } else {
-        setAlertInfo({ title: 'Non supportato', message: 'Il tuo dispositivo o browser non supporta la condivisione diretta di più file. Usa i tasti di esportazione classici.', type: 'error' })
+        const filesArray = []
+        if (!isEventWorkout) {
+          const doc = await buildPDFDoc()
+          const pdfBlob = doc.output('blob')
+          filesArray.push(new File([pdfBlob], `${safeTitle}.pdf`, { type: 'application/pdf' }))
+        }
+
+        const blob = await toBlob(igRef.current, { pixelRatio: 3, cacheBust: true })
+        filesArray.push(new File([blob], `${safeTitle}.png`, { type: 'image/png' }))
+
+        if (navigator.canShare && navigator.canShare({ files: filesArray })) {
+          await navigator.share({
+            files: filesArray,
+            title: workout.title,
+            text: `Ecco il tuo workout: ${workout.title}`
+          })
+        } else {
+          setAlertInfo({ title: 'Non supportato', message: 'Il tuo dispositivo o browser non supporta la condivisione diretta di più file. Usa i tasti di esportazione classici.', type: 'error' })
+        }
       }
     } catch (error) {
       console.error('Errore durante la condivisione:', error)
@@ -751,7 +822,7 @@ export default function WorkoutDetail() {
   }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
           <ChevronLeft size={22} className="-ml-0.5" />
@@ -971,7 +1042,7 @@ export default function WorkoutDetail() {
         )}
         <button onClick={exportShare2}
           className="flex-1 flex items-center justify-center gap-2 bg-[#222] border border-[#333] text-white font-semibold py-4 rounded-2xl hover:border-pink-500 hover:text-pink-400 transition">
-          <Share2 size={18} /> Grafica IG
+          <Download size={18} /> Salva Grafica IG
         </button>
       </div>
 

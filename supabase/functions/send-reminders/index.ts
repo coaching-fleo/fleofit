@@ -18,6 +18,74 @@ webpush.setVapidDetails(
   Deno.env.get('VAPID_PRIVATE_KEY')!
 );
 
+// --- FUNZIONE DI SUPPORTO PER GENERARE TOKEN GOOGLE OAUTH2 ---
+// Usa le Web Crypto API native di Deno, aggirando completamente
+// i bug di incompatibilità tra Deno e i pacchetti NPM come google-auth-library.
+async function getGoogleAccessToken(clientEmail: string, privateKey: string): Promise<string> {
+  const arrayBufferToBase64Url = (buffer: ArrayBuffer) => {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  };
+
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: clientEmail,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now,
+  };
+
+  const unsignedToken = `${arrayBufferToBase64Url(new TextEncoder().encode(JSON.stringify(header)).buffer)}.${arrayBufferToBase64Url(new TextEncoder().encode(JSON.stringify(payload)).buffer)}`;
+
+  const pemContents = privateKey.replace(/-----BEGIN PRIVATE KEY-----/, '').replace(/-----END PRIVATE KEY-----/, '').replace(/\s/g, '');
+  const binaryDerString = atob(pemContents);
+  const binaryDer = new Uint8Array(binaryDerString.length);
+  for (let i = 0; i < binaryDerString.length; i++) {
+    binaryDer[i] = binaryDerString.charCodeAt(i);
+  }
+
+  const cryptoKey = await crypto.subtle.importKey('pkcs8', binaryDer.buffer, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, new TextEncoder().encode(unsignedToken));
+  const signedJwt = `${unsignedToken}.${arrayBufferToBase64Url(signature)}`;
+
+  // Utilizza URLSearchParams per assicurare la corretta formattazione URL-encoded (i "due punti" in urn:ietf vanno convertiti)
+  const bodyParams = new URLSearchParams();
+  bodyParams.append('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer');
+  bodyParams.append('assertion', signedJwt);
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: bodyParams.toString(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`FCM Token Generation Failed: ${response.status} ${errorText}`);
+  }
+
+  const data = await response.json();
+  if (!data.access_token) {
+    throw new Error(`Google Auth response missing access_token: ${JSON.stringify(data)}`);
+  }
+  return data.access_token;
+}
+
+// Inizializzazione Firebase Admin per le notifiche native iOS/Android
+const firebaseServiceAccountStr = Deno.env.get('FIREBASE_SERVICE_ACCOUNT') || '{}';
+const firebaseServiceAccount = JSON.parse(firebaseServiceAccountStr);
+
+if (firebaseServiceAccount.private_key) {
+  // Corregge le andate a capo della chiave privata che spesso si corrompono nei Secret
+  firebaseServiceAccount.private_key = firebaseServiceAccount.private_key.replace(/\\n/g, '\n');
+}
+
 serve(async (req) => {
   // Gestione della richiesta preflight CORS (inviata dal browser prima della vera richiesta)
   if (req.method === 'OPTIONS') {
@@ -34,6 +102,61 @@ serve(async (req) => {
       if (body.mode) mode = body.mode;
     }
 
+
+    // Helper per inviare la notifica in base al tipo di token (Web vs Nativo)
+    const sendPush = async (sub: any, title: string, bodyMsg: string, route: string = '/') => {
+      try {
+        if (sub.auth === 'capacitor_ios') {
+          if (firebaseServiceAccount.client_email && firebaseServiceAccount.private_key) {
+            const accessToken = await getGoogleAccessToken(firebaseServiceAccount.client_email, firebaseServiceAccount.private_key);
+
+            const res = await fetch(
+              `https://fcm.googleapis.com/v1/projects/${firebaseServiceAccount.project_id.trim()}/messages:send`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken.trim()}`
+                },
+                body: JSON.stringify({
+                  message: {
+                    token: sub.endpoint,
+                    notification: { title: title, body: bodyMsg },
+                    data: { route: route },
+                    apns: {
+                      payload: {
+                        aps: {
+                          badge: 1,
+                          sound: "default"
+                        }
+                      }
+                    }
+                  },
+                }),
+              }
+            );
+            if (!res.ok) {
+              const errorText = await res.text();
+              if (res.status === 404 || errorText.includes('UNREGISTERED') || errorText.includes('INVALID_ARGUMENT')) {
+                await supabase.from('push_subscriptions').delete().eq('id', sub.id);
+              } else {
+                throw new Error(`FCM Error: ${res.status} ${errorText}`);
+              }
+            }
+          } else console.error("Firebase Service Account mancante o non valido.");
+        } else {
+          const pushSubscription = { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } };
+          const payload = JSON.stringify({ title, body: bodyMsg, url: route });
+          await webpush.sendNotification(pushSubscription, payload);
+        }
+      } catch (error: any) {
+        console.error('Errore invio notifica a', sub.endpoint, error);
+        if (error.statusCode === 404 || error.statusCode === 410) {
+          await supabase.from('push_subscriptions').delete().eq('id', sub.id);
+        }
+      }
+    };
+
     // ==========================================
     // MODALITÀ VOICE NOTE (Nuova nota vocale)
     // ==========================================
@@ -42,7 +165,7 @@ serve(async (req) => {
       
       const { data: assignment, error: awError } = await supabase
         .from('athlete_workouts')
-        .select(`athlete_id, workouts(title)`)
+        .select(`athlete_id, workout_id, workouts(title)`)
         .eq('id', body.record_id)
         .single();
 
@@ -59,11 +182,7 @@ serve(async (req) => {
       for (const sub of subscriptions) {
         const title = "Nuova Nota Vocale! 🎙️";
         const bodyMsg = `Il coach ti ha lasciato un messaggio vocale per l'allenamento: ${(assignment.workouts as any).title}. Ascoltalo subito!`;
-        const pushSubscription = { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } };
-        const payload = JSON.stringify({ title, body: bodyMsg, url: '/' });
-        notifications.push(webpush.sendNotification(pushSubscription, payload).catch(async (error: any) => {
-          if (error.statusCode === 404 || error.statusCode === 410) await supabase.from('push_subscriptions').delete().eq('id', sub.id);
-        }));
+        notifications.push(sendPush(sub, title, bodyMsg, `/workout/${assignment.workout_id}?athlete_id=${assignment.athlete_id}`));
       }
       await Promise.all(notifications);
       return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -77,7 +196,7 @@ serve(async (req) => {
       
       const { data: assignment, error: awError } = await supabase
         .from('athlete_workouts')
-        .select(`athlete_id, workouts(title)`)
+        .select(`athlete_id, workout_id, workouts(title)`)
         .eq('id', body.record_id)
         .single();
 
@@ -94,11 +213,7 @@ serve(async (req) => {
       for (const sub of subscriptions) {
         const title = "Nuovo Allenamento! 🏋️‍♂️";
         const bodyMsg = `Il coach ti ha appena assegnato: ${(assignment.workouts as any).title}. Dai un'occhiata!`;
-        const pushSubscription = { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } };
-        const payload = JSON.stringify({ title, body: bodyMsg, url: '/' });
-        notifications.push(webpush.sendNotification(pushSubscription, payload).catch(async (error: any) => {
-          if (error.statusCode === 404 || error.statusCode === 410) await supabase.from('push_subscriptions').delete().eq('id', sub.id);
-        }));
+        notifications.push(sendPush(sub, title, bodyMsg, `/workout/${assignment.workout_id}?athlete_id=${assignment.athlete_id}`));
       }
       await Promise.all(notifications);
       return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -110,25 +225,14 @@ serve(async (req) => {
     if (mode === 'coach_notification') {
       console.log(`Notifica al coach da ${body.athleteName} per ${body.action}`);
       
-      const adminEmails = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com'];
-      const { data: authData, error: authErr } = await supabase.auth.admin.listUsers();
-
-      if (authErr) {
-        console.error('Errore in listUsers:', authErr);
-        throw authErr;
-      }
-
-      const adminUserIds = authData?.users
-        ?.filter((u: any) => u.email && adminEmails.includes(u.email.toLowerCase()))
-        .map((u: any) => u.id) || [];
-        
       console.log('Trovati ID Admin:', adminUserIds);
       
       if (adminUserIds.length === 0) {
-         return new Response(JSON.stringify({ success: true, message: 'Nessun admin trovato nel database' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+         return new Response(JSON.stringify({ success: true, message: 'Nessun admin trovato o iscritto alle notifiche' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      const { data: subscriptions, error: subError } = await supabase
+      // Recupera direttamente dal database solo le iscrizioni push degli admin
+      const { data: adminSubscriptions, error: subError } = await supabase
         .from('push_subscriptions')
         .select('*')
         .in('user_id', adminUserIds);
@@ -150,14 +254,8 @@ serve(async (req) => {
       }
 
       const notifications = [];
-      for (const sub of subscriptions) {
-        const pushSubscription = { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } };
-        const payload = JSON.stringify({ title, body: bodyMsg, url: '/' });
-        notifications.push(
-          webpush.sendNotification(pushSubscription, payload).catch(async (error: any) => {
-            if (error.statusCode === 404 || error.statusCode === 410) await supabase.from('push_subscriptions').delete().eq('id', sub.id);
-          })
-        );
+      for (const sub of adminSubscriptions) {
+        notifications.push(sendPush(sub, title, bodyMsg, '/'));
       }
       await Promise.all(notifications);
       return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -228,15 +326,7 @@ serve(async (req) => {
           : "Domani non hai allenamenti in programma. Goditi il riposo!";
       }
 
-      const pushSubscription = { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } };
-      const payload = JSON.stringify({ title, body: bodyMsg, url: '/' });
-
-      notifications.push(
-        webpush.sendNotification(pushSubscription, payload).catch(async (error: any) => {
-          console.error('Errore invio notifica a', sub.endpoint, error);
-          if (error.statusCode === 404 || error.statusCode === 410) await supabase.from('push_subscriptions').delete().eq('id', sub.id);
-        })
-      );
+      notifications.push(sendPush(sub, title, bodyMsg, '/'));
     }
     await Promise.all(notifications);
     console.log(`Notifiche inviate: ${notifications.length}`);

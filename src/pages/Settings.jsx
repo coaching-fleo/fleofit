@@ -7,6 +7,11 @@ import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { useAuth, ADMIN_EMAILS } from '../App'
+import { Capacitor } from '@capacitor/core'
+import { PushNotifications } from '@capacitor/push-notifications'
+import { FCM } from '@capacitor-community/fcm'
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -23,11 +28,20 @@ export default function Settings() {
 
   useEffect(() => {
     const checkSubscription = async () => {
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        const registration = await navigator.serviceWorker.getRegistration()
-        if (registration) {
-          const subscription = await registration.pushManager.getSubscription()
-          setNotificationsEnabled(!!subscription)
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const permStatus = await PushNotifications.checkPermissions()
+          setNotificationsEnabled(permStatus.receive === 'granted')
+        } catch (e) {
+          console.error(e)
+        }
+      } else {
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+          const registration = await navigator.serviceWorker.getRegistration()
+          if (registration) {
+            const subscription = await registration.pushManager.getSubscription()
+            setNotificationsEnabled(!!subscription)
+          }
         }
       }
     }
@@ -53,13 +67,25 @@ export default function Settings() {
 
       // Salviamo in un file JSON
       const dataStr = JSON.stringify(backup, null, 2)
-      const blob = new Blob([dataStr], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `FLEOFIT_Full_Backup_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.json`
-      link.click()
-      URL.revokeObjectURL(url)
+      const fileName = `FLEOFIT_Full_Backup_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.json`
+
+      if (Capacitor.isNativePlatform()) {
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: dataStr,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8
+        })
+        await Share.share({ title: 'Backup FLEOFIT', url: result.uri })
+      } else {
+        const blob = new Blob([dataStr], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = fileName
+        link.click()
+        URL.revokeObjectURL(url)
+      }
     } catch (e) {
       setAlertInfo({ title: 'Errore', message: "Errore esportazione: " + e.message, type: 'error' })
     }
@@ -163,6 +189,58 @@ export default function Settings() {
   }
 
   const handleEnableNotifications = async () => {
+    if (Capacitor.isNativePlatform()) {
+      setLoading(true)
+      try {
+        let permStatus = await PushNotifications.checkPermissions();
+        if (permStatus.receive === 'prompt') {
+          permStatus = await PushNotifications.requestPermissions();
+        }
+        if (permStatus.receive !== 'granted') {
+          setLoading(false)
+          setAlertInfo({ title: 'Permesso negato', message: 'Devi autorizzare le notifiche dalle impostazioni di iOS.', type: 'error' });
+          return;
+        }
+
+        await PushNotifications.removeAllListeners();
+
+        PushNotifications.addListener('registration', async (token) => {
+          let deviceToken = token.value;
+          try {
+             const fcmRes = await FCM.getToken();
+             if (fcmRes.token) deviceToken = fcmRes.token;
+          } catch (e) {
+             console.log("Errore recupero FCM token:", e);
+          }
+
+          const { error } = await supabase.from('push_subscriptions').upsert({ 
+            user_id: user.id, 
+            endpoint: deviceToken, 
+            auth: 'capacitor_ios', 
+            p256dh: 'capacitor_ios' 
+          }, { onConflict: 'endpoint' });
+          
+          setLoading(false)
+          if (error) setAlertInfo({ title: 'Errore DB', message: error.message, type: 'error' });
+          else {
+            setNotificationsEnabled(true)
+            setAlertInfo({ title: 'Successo', message: 'Notifiche push native abilitate!', type: 'success' });
+          }
+        });
+
+        PushNotifications.addListener('registrationError', (error) => {
+          setLoading(false)
+          setAlertInfo({ title: 'Errore', message: 'Errore di registrazione ad APNs: ' + error.error, type: 'error' });
+        });
+
+        await PushNotifications.register();
+      } catch (err) {
+        setLoading(false)
+        setAlertInfo({ title: 'Errore', message: err.message, type: 'error' });
+      }
+      return;
+    }
+
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setAlertInfo({ title: 'Non supportato', message: 'Il tuo browser/dispositivo non supporta le notifiche push. Su iPhone ricordati di aggiungere l\'app alla schermata Home.', type: 'error' });
       return;
@@ -220,17 +298,24 @@ export default function Settings() {
         setConfirmInfo(null)
         setLoading(true)
         try {
-          const registration = await navigator.serviceWorker.getRegistration()
-          if (registration) {
-            const subscription = await registration.pushManager.getSubscription()
-            if (subscription) {
-              const subData = JSON.parse(JSON.stringify(subscription));
-              await supabase.from('push_subscriptions').delete().eq('endpoint', subData.endpoint)
-              await subscription.unsubscribe()
+          if (Capacitor.isNativePlatform()) {
+             await supabase.from('push_subscriptions').delete().eq('user_id', user.id).eq('auth', 'capacitor_ios')
+             await PushNotifications.removeAllListeners()
+             setNotificationsEnabled(false)
+             setAlertInfo({ title: 'Successo', message: 'Notifiche native disabilitate con successo.', type: 'success' })
+          } else {
+            const registration = await navigator.serviceWorker.getRegistration()
+            if (registration) {
+              const subscription = await registration.pushManager.getSubscription()
+              if (subscription) {
+                const subData = JSON.parse(JSON.stringify(subscription));
+                await supabase.from('push_subscriptions').delete().eq('endpoint', subData.endpoint)
+                await subscription.unsubscribe()
+              }
             }
+            setNotificationsEnabled(false)
+            setAlertInfo({ title: 'Successo', message: 'Notifiche disabilitate con successo.', type: 'success' })
           }
-          setNotificationsEnabled(false)
-          setAlertInfo({ title: 'Successo', message: 'Notifiche disabilitate con successo.', type: 'success' })
         } catch (e) {
           setAlertInfo({ title: 'Errore', message: e.message, type: 'error' })
         }
@@ -251,7 +336,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
           <ChevronLeft size={22} className="-ml-0.5" />

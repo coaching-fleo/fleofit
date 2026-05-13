@@ -1346,13 +1346,19 @@ export default function CreateWorkout() {
         }).eq('id', awId)
         if (awError) console.error("Errore aggiornamento assegnazione:", awError)
       } else if (athleteId) {
-        const { error: awError } = await supabase.from('athlete_workouts').insert({
+        const { data: newAssignment, error: awError } = await supabase.from('athlete_workouts').insert({
           athlete_id: athleteId,
           workout_id: targetId,
           completed_date: date,
           status: 'pending'
-        })
-        if (awError) console.error("Errore assegnazione:", awError)
+        }).select('id').single()
+        if (awError) {
+          console.error("Errore assegnazione:", awError)
+        } else if (newAssignment) {
+          supabase.functions.invoke('send-reminders', {
+            body: { mode: 'immediate', record_id: newAssignment.id }
+          }).catch(console.error)
+        }
       }
       setSaving(false)
     }
@@ -1362,7 +1368,7 @@ export default function CreateWorkout() {
   }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <style>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .drag-item {
@@ -1375,6 +1381,54 @@ export default function CreateWorkout() {
           -webkit-user-select: auto;
           user-select: auto;
           -webkit-user-drag: auto;
+        }
+        .custom-slider {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 100%;
+          height: 60px;
+          margin: 0;
+          background: transparent;
+          touch-action: none;
+        }
+        .custom-slider:focus {
+          outline: none;
+        }
+        .custom-slider::-webkit-slider-runnable-track {
+          width: 100%;
+          height: 100%;
+          cursor: pointer;
+          border-radius: 30px;
+          background: transparent;
+        }
+        .custom-slider::-webkit-slider-thumb {
+          height: 44px;
+          width: 44px;
+          border-radius: 50%;
+          cursor: pointer;
+          -webkit-appearance: none;
+          appearance: none;
+          margin-top: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+          position: relative;
+        }
+        .custom-slider.slider-yellow {
+          background: linear-gradient(to right, #f1ba17 var(--progress), #383838 var(--progress));
+          background-size: 100% 10px;
+          background-position: center;
+          background-repeat: no-repeat;
+        }
+        .custom-slider.slider-yellow::-webkit-slider-thumb {
+          background: #f1ba17;
+        }
+        .custom-slider.slider-blue {
+          background: linear-gradient(to right, #0094C6 var(--progress), #383838 var(--progress));
+          background-size: 100% 10px;
+          background-position: center;
+          background-repeat: no-repeat;
+        }
+        .custom-slider.slider-blue::-webkit-slider-thumb {
+          background: #0094C6;
         }
       `}</style>
       <button onClick={handleBack} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0 mb-6">
