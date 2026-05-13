@@ -109,6 +109,11 @@ export default function AthleteDetail() {
     const { error } = await supabase.from('athlete_workouts').update({ voice_note_url: urlData.publicUrl }).eq('id', athleteWorkoutId)
     if (!error) {
       setWorkouts(workouts.map(w => w.id === athleteWorkoutId ? { ...w, voice_note_url: urlData.publicUrl } : w))
+      if (role === 'admin') {
+        supabase.functions.invoke('send-reminders', {
+          body: { mode: 'voice_note', record_id: athleteWorkoutId }
+        }).catch(console.error)
+      }
     } else setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
   }
 

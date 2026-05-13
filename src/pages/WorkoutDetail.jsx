@@ -390,8 +390,16 @@ export default function WorkoutDetail() {
     const { error } = await supabase.from('athlete_workouts').update({ voice_note_url: urlData.publicUrl }).eq('id', athleteWorkoutId)
     setSavingNote(false)
     
-    if (!error) setVoiceNoteUrl(urlData.publicUrl)
-    else setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+    if (!error) {
+      setVoiceNoteUrl(urlData.publicUrl)
+      if (role === 'admin') {
+        supabase.functions.invoke('send-reminders', {
+          body: { mode: 'voice_note', record_id: athleteWorkoutId }
+        }).catch(console.error)
+      }
+    } else {
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+    }
   }
 
   const deleteVoiceNote = async () => {

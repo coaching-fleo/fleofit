@@ -35,6 +35,41 @@ serve(async (req) => {
     }
 
     // ==========================================
+    // MODALITÀ VOICE NOTE (Nuova nota vocale)
+    // ==========================================
+    if (mode === 'voice_note' && body.record_id) {
+      console.log(`Notifica per nuova voice note (AW ID: ${body.record_id})`);
+      
+      const { data: assignment, error: awError } = await supabase
+        .from('athlete_workouts')
+        .select(`athlete_id, workouts(title)`)
+        .eq('id', body.record_id)
+        .single();
+
+      if (awError || !assignment) throw awError || new Error("Assegnazione non trovata");
+
+      const { data: subscriptions, error: subError } = await supabase
+        .from('push_subscriptions')
+        .select('*')
+        .eq('user_id', assignment.athlete_id);
+
+      if (subError) throw subError;
+
+      const notifications = [];
+      for (const sub of subscriptions) {
+        const title = "Nuova Nota Vocale! 🎙️";
+        const bodyMsg = `Il coach ti ha lasciato un messaggio vocale per l'allenamento: ${(assignment.workouts as any).title}. Ascoltalo subito!`;
+        const pushSubscription = { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } };
+        const payload = JSON.stringify({ title, body: bodyMsg, url: '/' });
+        notifications.push(webpush.sendNotification(pushSubscription, payload).catch(async (error: any) => {
+          if (error.statusCode === 404 || error.statusCode === 410) await supabase.from('push_subscriptions').delete().eq('id', sub.id);
+        }));
+      }
+      await Promise.all(notifications);
+      return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ==========================================
     // MODALITÀ IMMEDIATA (Nuovo workout assegnato)
     // ==========================================
     if (mode === 'immediate' && body.record_id) {
@@ -77,9 +112,21 @@ serve(async (req) => {
       
       const adminEmails = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com'];
       const { data: authData, error: authErr } = await supabase.auth.admin.listUsers();
-      if (authErr) throw authErr;
 
-      const adminUserIds = authData.users.filter((u: any) => adminEmails.includes(u.email)).map((u: any) => u.id);
+      if (authErr) {
+        console.error('Errore in listUsers:', authErr);
+        throw authErr;
+      }
+
+      const adminUserIds = authData?.users
+        ?.filter((u: any) => u.email && adminEmails.includes(u.email.toLowerCase()))
+        .map((u: any) => u.id) || [];
+        
+      console.log('Trovati ID Admin:', adminUserIds);
+      
+      if (adminUserIds.length === 0) {
+         return new Response(JSON.stringify({ success: true, message: 'Nessun admin trovato nel database' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
 
       const { data: subscriptions, error: subError } = await supabase
         .from('push_subscriptions')
