@@ -46,7 +46,7 @@ export default function Athletes() {
       <div className="relative mb-4">
         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
         <input
-          className="w-full bg-[#222] border border-[#333] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
+          className="w-full bg-[#222] border border-[#333] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base"
           placeholder="Cerca atleta..."
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -171,35 +171,35 @@ function NewAthleteModal({ onClose, onSaved }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Nome *</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base"
                 placeholder="Mario" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Cognome *</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base"
                 placeholder="Rossi" value={form.surname} onChange={e => setForm({ ...form, surname: e.target.value })} />
             </div>
           </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-gray-400 text-xs pl-1">Data di nascita</label>
-            <input type="date" className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17]" value={form.birth_date} onChange={e => setForm({ ...form, birth_date: e.target.value })} />
+            <input type="date" className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] text-base" value={form.birth_date} onChange={e => setForm({ ...form, birth_date: e.target.value })} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Peso (kg)</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base"
                 placeholder="Es. 75" type="number" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Altezza (cm)</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]"
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base"
                 placeholder="Es. 180" type="number" value={form.height} onChange={e => setForm({ ...form, height: e.target.value })} />
             </div>
           </div>
 
-          <textarea className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none"
+          <textarea className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none text-base"
             rows={3} placeholder="Note biografiche (facoltativo)"
             value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
         </div>

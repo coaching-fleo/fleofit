@@ -864,7 +864,7 @@ export default function WorkoutDetail() {
       {(role === 'athlete' || isOwnProfile) && athleteWorkoutId ? (
         <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Le tue note su questo ${type === 'Event' ? 'evento' : 'allenamento'}`} color="border-[#3b82f6]/40">
           <textarea
-            className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-sm transition-colors focus:border-[#3b82f6]"
+            className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-colors focus:border-[#3b82f6]"
             rows={3}
             placeholder="Com'è andata? Segna qui i tuoi pesi, i tempi o come ti sei sentito..."
             value={editingNote}
@@ -1161,7 +1161,7 @@ export default function WorkoutDetail() {
                   <CustomDatePicker
                     date={assignDate}
                     onChange={setAssignDate}
-                    className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17]"
+                    className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] text-base w-full"
                   />
                 </div>
                 <div className="flex gap-3 mt-2">
@@ -1191,7 +1191,7 @@ export default function WorkoutDetail() {
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo</label>
                 <input 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
                   value={autonomousForm.title}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
                   placeholder="Es. Corsa 5km, Calcetto..."
@@ -1202,13 +1202,13 @@ export default function WorkoutDetail() {
                 <CustomDatePicker
                   date={autonomousForm.date}
                   onChange={(d) => setAutonomousForm({ ...autonomousForm, date: d })}
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full text-base"
                 />
               </div>
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Descrizione / Note</label>
                 <textarea 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm resize-none"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base resize-none"
                   rows={3}
                   value={autonomousForm.notes}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, notes: e.target.value })}

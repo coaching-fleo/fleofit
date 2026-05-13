@@ -589,11 +589,11 @@ function PasswordModal({ onClose, user, setAlertInfo }) {
         <div className="p-5 flex flex-col gap-4" onKeyDown={e => { if (e.key === 'Enter') handleUpdate(e) }}>
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Password attuale</label>
-            <input type="password" placeholder="La tua password attuale" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+            <input type="password" placeholder="La tua password attuale" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base" />
           </div>
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Nuova password</label>
-            <input type="password" placeholder="Scegli una nuova password sicura" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+            <input type="password" placeholder="Scegli una nuova password sicura" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base" />
           </div>
           <button type="button" onClick={handleUpdate} disabled={saving || !currentPassword || !newPassword} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
             {saving ? 'Salvataggio...' : 'Aggiorna Password'}

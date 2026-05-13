@@ -661,7 +661,7 @@ export default function Home() {
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo</label>
                 <input 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
                   value={autonomousForm.title}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
                   placeholder="Es. Corsa 5km, Calcetto..."
@@ -672,13 +672,13 @@ export default function Home() {
                 <CustomDatePicker
                   date={autonomousForm.date}
                   onChange={(d) => setAutonomousForm({ ...autonomousForm, date: d })}
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full text-base"
                 />
               </div>
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Descrizione / Note</label>
                 <textarea 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm resize-none"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base resize-none"
                   rows={3}
                   value={autonomousForm.notes}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, notes: e.target.value })}

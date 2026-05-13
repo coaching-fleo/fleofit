@@ -293,7 +293,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 
         <div className="p-4 flex flex-col gap-3 overflow-y-auto flex-1">
           <input
-            className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-sm"
+            className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base"
             placeholder="Cerca o scrivi esercizio custom..."
             value={search}
             onChange={e => { setSearch(e.target.value); setSelected(null) }}
@@ -432,7 +432,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
               )}
 
               <input
-                className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-sm"
+                className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base"
                 placeholder="Note (es. vai a cedimento, body weight...)"
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -659,11 +659,11 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
               <ScrollPicker type="time" value={block.params?.duration} onChange={v => updateParam('duration', v)} label="Durata" />
               <div className="flex flex-col gap-1">
                 <label className="text-gray-400 text-xs pl-1">Note</label>
-                <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-3 text-sm text-white focus:border-[#f1ba17] focus:outline-none" value={block.notes || ''} onChange={e => updateNotes(e.target.value)} placeholder="Opzionale..." />
+                <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-3 text-base text-white focus:border-[#f1ba17] focus:outline-none" value={block.notes || ''} onChange={e => updateNotes(e.target.value)} placeholder="Opzionale..." />
               </div>
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Note</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0094C6] text-sm" placeholder="Es: mantieni la zona 2 costante..." />
+                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0094C6] text-base" placeholder="Es: mantieni la zona 2 costante..." />
               </div>
             </div>
           )}
@@ -912,7 +912,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
               </div>
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Note</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0094C6] text-sm" placeholder="Es: mantieni la zona 2 costante..." />
+                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0094C6] text-base" placeholder="Es: mantieni la zona 2 costante..." />
               </div>
               </>
             ) : (
@@ -935,7 +935,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
               </div>
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Note</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0094C6] text-sm" placeholder="Es: corsa leggera, focus tecnica..." />
+                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0094C6] text-base" placeholder="Es: corsa leggera, focus tecnica..." />
               </div>
               </>
             )}
@@ -1388,7 +1388,7 @@ export default function CreateWorkout() {
 
       <div className="flex flex-col gap-3 mb-6">
         <input
-          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] font-medium"
+          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] font-medium text-base"
           placeholder="Nome workout (es. Hyrox Strength #1)"
           value={title}
           onChange={e => setTitle(e.target.value)}
@@ -1397,7 +1397,7 @@ export default function CreateWorkout() {
           date={date}
           onChange={setDate}
           placeholder="Data dell'allenamento"
-          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-sm hover:border-[#f1ba17] w-full"
+          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-base hover:border-[#f1ba17] w-full"
         />
       </div>
 
@@ -1521,7 +1521,7 @@ export default function CreateWorkout() {
           <div className="mt-4">
             <label className="text-gray-400 text-sm mb-2 block">Note coach (appariranno nel PDF)</label>
             <textarea
-              className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none text-sm"
+              className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none text-base"
               rows={3}
               placeholder="Es: vai a cedimento sull'ultimo esercizio, mantieni il ritmo..."
               value={coachNotes}
@@ -1683,7 +1683,7 @@ export default function CreateWorkout() {
                 <p className="text-gray-400 text-sm">Inserisci il nome per il nuovo allenamento:</p>
                 <input 
                   autoFocus
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] w-full mt-1 text-sm"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] w-full mt-1 text-base"
                   value={newWorkoutName}
                   onChange={(e) => setNewWorkoutName(e.target.value)}
                   placeholder="Nome del workout..."

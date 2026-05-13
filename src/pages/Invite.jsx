@@ -62,7 +62,7 @@ export default function Invite() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="relative">
               <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Il tuo codice di invito" className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-4 pl-11 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] transition uppercase" disabled={loading} />
+              <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Il tuo codice di invito" className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-4 pl-11 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] transition uppercase text-base" disabled={loading} />
             </div>
             {error && <p className="text-red-500 text-xs text-center">{error}</p>}
             <button type="submit" disabled={loading || !inviteCode} className="w-full flex items-center justify-center gap-2 bg-[#f1ba17] text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">{loading ? 'Verifica...' : 'Accedi'}{!loading && <ArrowRight size={18} />}</button>

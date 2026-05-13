@@ -323,11 +323,11 @@ function EventModal({ athleteId, onClose, onSaved }) {
         <div className="p-5 flex flex-col gap-4">
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Nome Evento *</label>
-            <input type="text" placeholder="Es. Maratona di Roma" value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-white text-sm" />
+            <input type="text" placeholder="Es. Maratona di Roma" value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-white text-base" />
           </div>
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Data *</label>
-            <CustomDatePicker date={date} onChange={setDate} className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-white w-full" />
+            <CustomDatePicker date={date} onChange={setDate} className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-white w-full text-base" />
           </div>
           <button onClick={handleSave} disabled={saving || !title} className="w-full mt-2 py-3.5 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition disabled:opacity-50">
             {saving ? 'Salvataggio...' : 'Aggiungi al Calendario'}

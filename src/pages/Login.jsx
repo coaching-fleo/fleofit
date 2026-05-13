@@ -269,7 +269,7 @@ export default function Login() {
             <div className="flex flex-col gap-4" onKeyDown={e => { if (e.key === 'Enter') handleInviteSubmit(e) }}>
               <div className="relative">
                 <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Il tuo codice di invito" className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-4 pl-11 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] transition uppercase" disabled={inviteLoading} />
+                <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Il tuo codice di invito" className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-4 pl-11 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] transition uppercase text-base" disabled={inviteLoading} />
               </div>
               {inviteError && <p className="text-red-500 text-xs text-center">{inviteError}</p>}
               <button type="button" onClick={handleInviteSubmit} disabled={inviteLoading || !inviteCode} className="w-full flex items-center justify-center gap-2 bg-[#f1ba17] text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">
@@ -290,7 +290,7 @@ export default function Login() {
                 placeholder="La tua nuova password" 
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-[#f1ba17] transition"
+                className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-[#f1ba17] transition text-base"
               />
             </div>
             <button type="button" onClick={handleRecoveryUpdate} disabled={loading || !password} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2">
@@ -328,7 +328,7 @@ export default function Login() {
                 placeholder="La tua email" 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-[#f1ba17] transition"
+                className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-[#f1ba17] transition text-base"
               />
             </div>
 
@@ -340,7 +340,7 @@ export default function Login() {
                   placeholder="La tua password" 
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-[#f1ba17] transition"
+                  className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-[#f1ba17] transition text-base"
                 />
               </div>
             )}

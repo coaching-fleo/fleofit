@@ -773,7 +773,7 @@ export default function AthleteDetail() {
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo</label>
                 <input 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
                   value={autonomousForm.title}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
                   placeholder="Es. Corsa 5km, Calcetto..."
@@ -784,13 +784,13 @@ export default function AthleteDetail() {
                 <CustomDatePicker
                   date={autonomousForm.date}
                   onChange={(d) => setAutonomousForm({ ...autonomousForm, date: d })}
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full text-base"
                 />
               </div>
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Descrizione / Note</label>
                 <textarea 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-sm resize-none"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base resize-none"
                   rows={3}
                   value={autonomousForm.notes}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, notes: e.target.value })}
@@ -887,14 +887,14 @@ function SocialLinkModal({ athlete, type, onClose, onSaved }) {
                      <InstagramIcon size={18} className="text-pink-500" />
                   </div>
                   <div className="pl-3 text-gray-400 text-sm font-semibold">@</div>
-                  <input autoFocus className="w-full bg-transparent pr-3 py-3 text-white placeholder-gray-500 focus:outline-none text-sm" placeholder="Nome utente" value={url} onChange={e => setUrl(e.target.value)} />
+                <input autoFocus className="w-full bg-transparent pr-3 py-3 text-white placeholder-gray-500 focus:outline-none text-base" placeholder="Nome utente" value={url} onChange={e => setUrl(e.target.value)} />
                </div>
             ) : (
                <div className="flex items-center bg-[#111] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#fc4c02] transition">
                   <div className="pl-4 pr-3 py-3 text-gray-500 flex items-center justify-center border-r border-[#333]">
                      <Activity size={18} className="text-[#fc4c02]" />
                   </div>
-                  <input autoFocus className="w-full bg-transparent px-3 py-3 text-white placeholder-gray-500 focus:outline-none text-sm" placeholder="Link profilo..." value={url} onChange={e => setUrl(e.target.value)} />
+                  <input autoFocus className="w-full bg-transparent px-3 py-3 text-white placeholder-gray-500 focus:outline-none text-base" placeholder="Link profilo..." value={url} onChange={e => setUrl(e.target.value)} />
                </div>
             )}
           </div>
@@ -1041,7 +1041,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
             </div>
           ) : null}
           <textarea
-            className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-sm transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
+            className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
             rows={2}
             placeholder="Note dell'atleta su questo workout..."
             value={note}
@@ -1098,11 +1098,11 @@ function PrModal({ athleteId, initialPr, onClose, onSaved, onDelete }) {
         <div className="p-5 flex flex-col gap-4">
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Esercizio o Distanza *</label>
-            <input type="text" placeholder="Es. Back Squat, 5km Run" value={exercise} onChange={e => setExercise(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+            <input type="text" placeholder="Es. Back Squat, 5km Run" value={exercise} onChange={e => setExercise(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base" />
           </div>
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Risultato / Record *</label>
-            <input type="text" placeholder="Es. 120 kg, 22:30 min" value={value} onChange={e => setValue(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+            <input type="text" placeholder="Es. 120 kg, 22:30 min" value={value} onChange={e => setValue(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base" />
           </div>
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Data del record *</label>
@@ -1249,28 +1249,28 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Nome *</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]" placeholder="Mario" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base" placeholder="Mario" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Cognome *</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]" placeholder="Rossi" value={form.surname} onChange={e => setForm({ ...form, surname: e.target.value })} />
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base" placeholder="Rossi" value={form.surname} onChange={e => setForm({ ...form, surname: e.target.value })} />
             </div>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-gray-400 text-xs pl-1">Data di nascita</label>
-            <input type="date" className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17]" value={form.birth_date} onChange={e => setForm({ ...form, birth_date: e.target.value })} />
+            <input type="date" className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] text-base" value={form.birth_date} onChange={e => setForm({ ...form, birth_date: e.target.value })} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Peso (kg)</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]" placeholder="Es. 75" type="number" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base" placeholder="Es. 75" type="number" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Altezza (cm)</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17]" placeholder="Es. 180" type="number" value={form.height} onChange={e => setForm({ ...form, height: e.target.value })} />
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base" placeholder="Es. 180" type="number" value={form.height} onChange={e => setForm({ ...form, height: e.target.value })} />
             </div>
           </div>
-          <textarea className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none" rows={3} placeholder="Note biografiche (facoltativo)" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
+          <textarea className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none text-base" rows={3} placeholder="Note biografiche (facoltativo)" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
           
           <div className="flex flex-col gap-3">
              <div className="flex items-center bg-[#2a2a2a] border border-[#383838] rounded-xl overflow-hidden focus-within:border-pink-500 transition">
@@ -1278,7 +1278,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
                    <InstagramIcon size={18} className="text-pink-500" />
                 </div>
                 <div className="pl-3 text-gray-400 text-sm font-semibold">@</div>
-                <input className="w-full bg-transparent pr-3 py-3 text-white placeholder-gray-500 focus:outline-none text-sm" placeholder="Nome utente" value={form.instagram_url?.replace(/^@/, '')} onChange={e => {
+                <input className="w-full bg-transparent pr-3 py-3 text-white placeholder-gray-500 focus:outline-none text-base" placeholder="Nome utente" value={form.instagram_url?.replace(/^@/, '')} onChange={e => {
                    let val = e.target.value.replace(/^@/, '').trim();
                    if (val.includes('instagram.com/')) {
                      val = val.split('instagram.com/')[1].split('/')[0].split('?')[0];
@@ -1290,7 +1290,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
                 <div className="pl-4 pr-3 py-3 text-gray-500 flex items-center justify-center bg-[#1e1e1e] border-r border-[#383838]">
                    <Activity size={18} className="text-[#fc4c02]" />
                 </div>
-                <input className="w-full bg-transparent px-3 py-3 text-white placeholder-gray-500 focus:outline-none text-sm" placeholder="Link profilo Strava..." value={form.strava_url} onChange={e => setForm({ ...form, strava_url: e.target.value })} />
+                <input className="w-full bg-transparent px-3 py-3 text-white placeholder-gray-500 focus:outline-none text-base" placeholder="Link profilo Strava..." value={form.strava_url} onChange={e => setForm({ ...form, strava_url: e.target.value })} />
              </div>
           </div>
         </div>
@@ -1417,7 +1417,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           </div>
         ) : null}
         <textarea
-          className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-sm transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
+          className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-base transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
           rows={3}
           placeholder="Copia qui le note dell'atleta su questo workout..."
           value={note}
@@ -1751,7 +1751,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
             <div className="p-4 border-b border-[#2a2a2a]">
               <div className="relative">
                 <Search size={16} className="absolute left-3 top-3.5 text-gray-500" />
-                <input type="text" placeholder="Cerca workout..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-2.5 pl-9 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+                <input type="text" placeholder="Cerca workout..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-2.5 pl-9 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base" />
               </div>
             </div>
             <div className="overflow-y-auto flex-1 p-4 flex flex-col gap-2">

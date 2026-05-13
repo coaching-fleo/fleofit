@@ -70,7 +70,7 @@ export default function WorkoutsArchive() {
           placeholder="Cerca per nome o categoria..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="w-full bg-[#1e1e1e] border border-[#333] text-white px-4 py-3 pl-10 rounded-xl focus:outline-none focus:border-[#f1ba17]"
+          className="w-full bg-[#1e1e1e] border border-[#333] text-white px-4 py-3 pl-10 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base"
         />
         <Search size={18} className="absolute left-3 top-3.5 text-gray-500" />
       </div>
