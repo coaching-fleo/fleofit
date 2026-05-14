@@ -8,6 +8,8 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    allowedHosts: true // Consente qualsiasi host, perfetto per i cambi continui di Ngrok
+    host: '0.0.0.0',  
+    port: 5173,       
+    allowedHosts: true
   }
 })

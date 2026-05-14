@@ -335,27 +335,8 @@ function DeeplinkHandler() {
         if (data && data.route) {
           navigate(data.route);
         }
-        const markAsRead = async () => {
-          try {
-            await PushNotifications.removeAllDeliveredNotifications().catch(() => {});
-                const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.user) return;
-            
-            if (data && data.notif_id) {
-              await supabase.from('notifications').update({ is_read: true }).eq('id', data.notif_id);
-              } else if (data && data.route) {
-              await supabase.from('notifications').update({ is_read: true }).eq('user_id', session.user.id).eq('route', data.route);
-                          }
+          PushNotifications.removeAllDeliveredNotifications().catch(() => {});
 
-              const { count } = await supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('is_read', false);
-            if (count !== null) {
-              if (count === 0) await Badge.clear().catch(()=>{});
-              else await Badge.set({ count }).catch(()=>{});
-              await supabase.from('push_subscriptions').update({ badge_count: count }).eq('user_id', session.user.id).eq('auth', 'capacitor_ios');
-            }
-          } catch (e) { console.error(e); }
-        };
-        markAsRead();
       });
     }
   }, [navigate]);
@@ -372,7 +353,7 @@ function App() {
           await StatusBar.setStyle({ style: Style.Dark })
           await Keyboard.setAccessoryBarVisible({ isVisible: false })
           
-             PushNotifications.removeAllDeliveredNotifications().catch(() => {});
+              PushNotifications.removeAllDeliveredNotifications().catch(() => {});
 
 
           CapacitorApp.addListener('appStateChange', ({ isActive }) => {

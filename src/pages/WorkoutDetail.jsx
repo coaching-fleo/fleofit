@@ -11,6 +11,7 @@ import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 import { Capacitor } from '@capacitor/core'
+import { Badge } from '@capawesome/capacitor-badge'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { Media } from '@capacitor-community/media'
@@ -182,6 +183,35 @@ export default function WorkoutDetail() {
 
   useEffect(() => { fetchWorkout() }, [id, queryAthleteId])
 
+  // Quando entri nel workout, se c'è una notifica pendente ad esso collegata, segnala come letta
+  useEffect(() => {
+    if (user?.id && id) {
+      const routePath = `/workout/${id}?athlete_id=${queryAthleteId || user.id}`;
+      const clearNotif = async () => {
+        try {
+          const { data: notifs } = await supabase.from('notifications')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('route', routePath)
+            .eq('is_read', false);
+            
+          if (notifs && notifs.length > 0) {
+            await supabase.from('notifications').update({ is_read: true }).in('id', notifs.map(n => n.id));
+            if (Capacitor.isNativePlatform()) {
+              const { count } = await supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false);
+              if (count !== null) {
+                if (count === 0) await Badge.clear().catch(()=>{});
+                else await Badge.set({ count }).catch(()=>{});
+                await supabase.from('push_subscriptions').update({ badge_count: count }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
+              }
+            }
+          }
+        } catch (e) {}
+      };
+      clearNotif();
+    }
+  }, [id, queryAthleteId, user]);
+
   // Carica la lista atleti solo quando si apre il modal per la prima volta
   useEffect(() => {
     if (assignModalOpen && athletes.length === 0) {
@@ -261,7 +291,7 @@ export default function WorkoutDetail() {
       } else {
         if (newStatus === 'completed' && role === 'athlete') {
           supabase.functions.invoke('send-reminders', {
-            body: { mode: 'coach_notification', action: 'completed', athleteName: user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title }
+            body: { mode: 'coach_notification', action: 'completed', athleteName: user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title, route: `/workout/${id}?athlete_id=${queryAthleteId || user.id}` }
           }).catch(console.error)
         }
       }
@@ -961,7 +991,7 @@ export default function WorkoutDetail() {
                      setAthleteNote({ text: editingNote, athleteName: athleteNote?.athleteName || '' })
                  if (role === 'athlete') {
                    supabase.functions.invoke('send-reminders', {
-                     body: { mode: 'coach_notification', action: 'note', athleteName: athleteNote?.athleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title, noteText: editingNote }
+                     body: { mode: 'coach_notification', action: 'note', athleteName: athleteNote?.athleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title, noteText: editingNote, route: `/workout/${id}?athlete_id=${queryAthleteId || user.id}` }
                    }).catch(console.error)
                  }
                   } else {

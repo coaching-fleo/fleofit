@@ -103,8 +103,8 @@ serve(async (req) => {
     }
 
 
-// Helper per inviare la notifica in base al tipo di token (con ID notifica nascosto)
-    const sendPush = async (sub: any, title: string, bodyMsg: string, route: string = '/', notifId?: string) => {
+    // Helper per inviare la notifica in base al tipo di token (Web vs Nativo)
+    const sendPush = async (sub: any, title: string, bodyMsg: string, route: string = '/') => {
       try {
         if (sub.auth === 'capacitor_ios') {
           if (firebaseServiceAccount.client_email && firebaseServiceAccount.private_key) {
@@ -126,7 +126,7 @@ serve(async (req) => {
                   message: {
                     token: sub.endpoint,
                     notification: { title: title, body: bodyMsg },
-                    data: { route: route, notif_id: notifId || '' },
+                    data: { route: route },
                     apns: {
                       payload: {
                         aps: {
@@ -186,20 +186,16 @@ serve(async (req) => {
       const bodyMsg = `Il coach ti ha lasciato un messaggio vocale per l'allenamento: ${(assignment.workouts as any).title}. Ascoltalo subito!`;
       const route = `/workout/${assignment.workout_id}?athlete_id=${assignment.athlete_id}`;
 
-      const { data: dbNotifs, error: dbErr } = await supabase.from('notifications').insert({
+      await supabase.from('notifications').insert({
         user_id: assignment.athlete_id,
         title,
         message: bodyMsg,
         route
-            }).select();
-
-      if (dbErr) console.error("Errore DB (voice_note):", dbErr);
-            const notifId = dbNotifs && dbNotifs.length > 0 ? dbNotifs[0].id : undefined;
-
+      });
 
       const notifications = [];
       for (const sub of subscriptions) {
-        notifications.push(sendPush(sub, title, bodyMsg, route, notifId));
+        notifications.push(sendPush(sub, title, bodyMsg, route));
       }
       await Promise.all(notifications);
       return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -230,20 +226,16 @@ serve(async (req) => {
       const bodyMsg = `Il coach ti ha appena assegnato: ${(assignment.workouts as any).title}. Dai un'occhiata!`;
       const route = `/workout/${assignment.workout_id}?athlete_id=${assignment.athlete_id}`;
 
-            const { data: dbNotifs, error: dbErr } = await supabase.from('notifications').insert({
-
+      await supabase.from('notifications').insert({
         user_id: assignment.athlete_id,
         title,
         message: bodyMsg,
         route
-      }).select();
-      if (dbErr) console.error("Errore DB (immediate):", dbErr);
-      const notifId = dbNotifs && dbNotifs.length > 0 ? dbNotifs[0].id : undefined;
-
+      });
 
       const notifications = [];
       for (const sub of subscriptions) {
-        notifications.push(sendPush(sub, title, bodyMsg, route, notifId));
+        notifications.push(sendPush(sub, title, bodyMsg, route));
       }
       await Promise.all(notifications);
       return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -317,19 +309,13 @@ serve(async (req) => {
         message: bodyMsg,
         route
       }));
-            let insertedNotifs: any[] = [];
-
       if (notifInserts.length > 0) {
-        const { data: dbNotifs, error: dbErr } = await supabase.from('notifications').insert(notifInserts).select();
-        if (dbErr) console.error("Errore DB (coach_notification):", dbErr);
-                if (dbNotifs) insertedNotifs = dbNotifs;
-
+        await supabase.from('notifications').insert(notifInserts);
       }
 
       const notifications = [];
       for (const sub of adminSubscriptions) {
-        const adminNotif = insertedNotifs.find(n => n.user_id === sub.user_id);
-        notifications.push(sendPush(sub, title, bodyMsg, route, adminNotif?.id));
+        notifications.push(sendPush(sub, title, bodyMsg, route));
       }
       console.log(`Sto per inviare ${notifications.length} notifiche ai coach...`);
       await Promise.all(notifications);
@@ -383,11 +369,6 @@ serve(async (req) => {
 
     // 3. Prepara e invia le notifiche
     const notifications = [];
-    const notifInserts = [];
-    const seenUsers = new Set();
-        const pushTasksData = [];
-
-
     for (const sub of subscriptions) {
       const assignment = assignments?.find(a => a.athlete_id === sub.user_id);
       const athleteName = athletes?.find(a => a.id === sub.user_id)?.name || 'Campione';
@@ -407,31 +388,8 @@ serve(async (req) => {
           : "Domani non hai allenamenti in programma. Goditi il riposo!";
       }
 
-      pushTasksData.push({ sub, title, bodyMsg, route: '/' });
-
-
-      if (!seenUsers.has(sub.user_id)) {
-        seenUsers.add(sub.user_id);
-        notifInserts.push({
-          user_id: sub.user_id,
-          title,
-          message: bodyMsg,
-          route: '/'
-        });
-      }
-      }
-          let insertedNotifs: any[] = [];
-    if (notifInserts.length > 0) {
-      const { data: dbNotifs, error: dbErr } = await supabase.from('notifications').insert(notifInserts).select();
-      if (dbErr) console.error("Errore DB (promemoria):", dbErr);
-      if (dbNotifs) insertedNotifs = dbNotifs;
+      notifications.push(sendPush(sub, title, bodyMsg, '/'));
     }
-    
-for (const task of pushTasksData) {
-      const userNotif = insertedNotifs.find(n => n.user_id === task.sub.user_id);
-      notifications.push(sendPush(task.sub, task.title, task.bodyMsg, task.route, userNotif?.id));
-    }
-    
     await Promise.all(notifications);
     console.log(`Notifiche inviate: ${notifications.length}`);
     return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

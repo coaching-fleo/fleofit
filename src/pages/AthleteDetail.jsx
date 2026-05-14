@@ -155,7 +155,7 @@ export default function AthleteDetail() {
           const w = workouts.find(wo => wo.id === id)
           if (w) {
             supabase.functions.invoke('send-reminders', {
-              body: { mode: 'coach_notification', action: 'completed', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: w.workouts?.title || 'Workout' }
+              body: { mode: 'coach_notification', action: 'completed', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: w.workouts?.title || 'Workout', route: `/workout/${w.workouts?.id || id}?athlete_id=${athlete.id}` }
             }).catch(console.error)
           }
         }
@@ -185,7 +185,7 @@ export default function AthleteDetail() {
       setWorkouts(workouts.map(w => w.id === workoutId ? { ...w, notes } : w))
         if (role === 'athlete') {
           supabase.functions.invoke('send-reminders', {
-            body: { mode: 'coach_notification', action: 'note', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: workoutTitle || 'Workout', noteText: notes }
+            body: { mode: 'coach_notification', action: 'note', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: workoutTitle || 'Workout', noteText: notes, route: `/workout/${workoutId}?athlete_id=${id}` }
           }).catch(console.error)
         }
     } else {
@@ -227,7 +227,7 @@ export default function AthleteDetail() {
       
       if (role === 'athlete' && !autonomousForm.id) {
          supabase.functions.invoke('send-reminders', {
-           body: { mode: 'coach_notification', action: 'custom_workout', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: autonomousForm.title }
+           body: { mode: 'coach_notification', action: 'custom_workout', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: autonomousForm.title, route: `/workout/${newW.id}?athlete_id=${id}` }
          }).catch(console.error)
       }
       setAutonomousModalOpen(false)

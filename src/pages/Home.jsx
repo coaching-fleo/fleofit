@@ -9,9 +9,10 @@ import { getDailyMotivation } from './motivations'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { createPortal } from 'react-dom'
+import { App as CapacitorApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
-import { PushNotifications } from '@capacitor/push-notifications'
-import { FCM } from '@capacitor-community/fcm'
+import { Badge } from '@capawesome/capacitor-badge'
+
 
 export default function Home() {
   const navigate = useNavigate()
@@ -49,7 +50,13 @@ export default function Home() {
   const [dbName, setDbName] = useState('')
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [isClosingNotifications, setIsClosingNotifications] = useState(false)
+  const [isOpeningNotifications, setIsOpeningNotifications] = useState(false)
+  const [startY, setStartY] = useState(null)
+  const [currentY, setCurrentY] = useState(null)
 
   const meta = user?.user_metadata || {}
   const fallbackName = meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
@@ -64,28 +71,6 @@ export default function Home() {
 
   const randomMotiv = useMemo(() => {
     return getDailyMotivation()
-  }, [])
-
-  useEffect(() => {
-    const checkSubscription = async () => {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          const permStatus = await PushNotifications.checkPermissions()
-          setNotificationsEnabled(permStatus.receive === 'granted')
-        } catch (e) {
-          console.error(e)
-        }
-      } else {
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-          const registration = await navigator.serviceWorker.getRegistration()
-          if (registration) {
-            const subscription = await registration.pushManager.getSubscription()
-            setNotificationsEnabled(!!subscription)
-          }
-        }
-      }
-    }
-    checkSubscription()
   }, [])
 
   useEffect(() => {
@@ -108,6 +93,27 @@ export default function Home() {
 
       const promises = []
 
+      const fetchNotifications = async () => {
+        if (!user?.id) return;
+        const { data } = await supabase.from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(30);
+        if (data) {
+          setNotifications(data);
+          const unread = data.filter(n => !n.is_read).length;
+          setUnreadCount(unread);
+          if (Capacitor.isNativePlatform()) {
+            try {
+              if (unread === 0) await Badge.clear();
+              else await Badge.set({ count: unread });
+              await supabase.from('push_subscriptions').update({ badge_count: unread }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
+            } catch (e) {}
+          }
+        }
+      };
+
       if (user?.id) {
         promises.push(
           (async () => {
@@ -116,6 +122,8 @@ export default function Home() {
             if (data?.name) setDbName(data.name)
           })()
         )
+        promises.push(fetchNotifications())
+
       }
 
       if (role === 'admin' || role === 'coach') {
@@ -200,7 +208,101 @@ export default function Home() {
     }
 
     fetchData()
+
+    // Rende le notifiche in Home in "Tempo Reale"
+    let notifSub;
+        let stateListener;
+
+    if (user?.id) {
+      notifSub = supabase.channel('public:notifications')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
+setNotifications(prev => {
+            if (prev.find(n => n.id === payload.new.id)) return prev;
+            return [payload.new, ...prev].slice(0, 30);
+          });
+          setUnreadCount(prev => {
+            const newCount = prev + 1;
+            if (Capacitor.isNativePlatform()) {
+              Badge.set({ count: newCount }).catch(()=>{});
+              supabase.from('push_subscriptions').update({ badge_count: newCount }).eq('user_id', user.id).eq('auth', 'capacitor_ios').then();
+            }
+            return newCount;
+          });
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
+          setNotifications(prev => {
+            const updated = prev.map(n => n.id === payload.new.id ? payload.new : n);
+            const unread = updated.filter(n => !n.is_read).length;
+            setUnreadCount(unread);
+            if (Capacitor.isNativePlatform()) {
+              if (unread === 0) Badge.clear().catch(()=>{});
+              else Badge.set({ count: unread }).catch(()=>{});
+              supabase.from('push_subscriptions').update({ badge_count: unread }).eq('user_id', user.id).eq('auth', 'capacitor_ios').then();
+            }
+            return updated;
+          });
+        })
+        .subscribe();
+        if (Capacitor.isNativePlatform()) {
+        CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) fetchNotifications();
+        }).then(l => stateListener = l);
+      }
+    }
+    return () => {
+      if (notifSub) supabase.removeChannel(notifSub);
+            if (stateListener) stateListener.remove();
+
+    }
   }, [role, user])
+
+  useEffect(() => {
+    if (showNotifications) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'auto'
+    }
+    return () => { document.body.style.overflow = 'auto' }
+  }, [showNotifications])
+
+  const openNotifications = () => {
+    setIsOpeningNotifications(true)
+    setShowNotifications(true)
+    setTimeout(() => {
+      setIsOpeningNotifications(false)
+    }, 10) // 10ms permettono al browser di preparare l'elemento prima di scivolare
+  }
+
+  const closeNotifications = () => {
+    setIsClosingNotifications(true)
+    setTimeout(() => {
+      setShowNotifications(false)
+      setIsClosingNotifications(false)
+      setStartY(null)
+      setCurrentY(null)
+    }, 300)
+  }
+
+  const handleTouchStart = (e) => setStartY(e.touches[0].clientY)
+  const handleTouchMove = (e) => {
+    if (startY === null) return
+    const y = e.touches[0].clientY
+    if (y > startY) setCurrentY(y)
+  }
+  const handleTouchEnd = () => {
+    if (startY !== null && currentY !== null) {
+      if (currentY - startY > 100) {
+        closeNotifications()
+      } else {
+        setStartY(null)
+        setCurrentY(null)
+      }
+    } else {
+      setStartY(null)
+      setCurrentY(null)
+    }
+  }
+  const swipeOffset = startY !== null && currentY !== null && currentY > startY ? currentY - startY : 0;
 
   let countdownDays = null
   if (nextEventHome) {
@@ -211,7 +313,7 @@ export default function Home() {
     const { error } = await supabase.from('athlete_workouts').update({ notes }).eq('id', workoutId)
     if (!error && role === 'athlete') {
       supabase.functions.invoke('send-reminders', {
-        body: { mode: 'coach_notification', action: 'note', athleteName: userName, workoutTitle: workoutTitle || 'Workout', noteText: notes }
+        body: { mode: 'coach_notification', action: 'note', athleteName: userName, workoutTitle: workoutTitle || 'Workout', noteText: notes, route: `/workout/${workoutId}?athlete_id=${user.id}` }
       }).catch(console.error)
     }
     return { error }
@@ -241,128 +343,9 @@ export default function Home() {
       } else {
         if (newStatus === 'completed' && role === 'athlete') {
           supabase.functions.invoke('send-reminders', {
-            body: { mode: 'coach_notification', action: 'completed', athleteName: userName, workoutTitle: workout.workouts?.title || workout.title }
+            body: { mode: 'coach_notification', action: 'completed', athleteName: userName, workoutTitle: workout.workouts?.title || workout.title, route: `/workout/${workout.workouts?.id || workout.id}?athlete_id=${user.id}` }
           }).catch(console.error)
         }
-    }
-  }
-
-  const handleToggleNotifications = async () => {
-    if (notificationsEnabled) {
-      setConfirmInfo({
-        title: "Disabilita Notifiche",
-        message: "Sei sicuro di voler disabilitare le notifiche su questo dispositivo?",
-        onConfirm: async () => {
-          setConfirmInfo(null)
-          try {
-            if (Capacitor.isNativePlatform()) {
-               await supabase.from('push_subscriptions').delete().eq('user_id', user.id).eq('auth', 'capacitor_ios')
-               await PushNotifications.removeAllListeners()
-            } else {
-              const registration = await navigator.serviceWorker.getRegistration()
-              if (registration) {
-                const subscription = await registration.pushManager.getSubscription()
-                if (subscription) {
-                  const subData = JSON.parse(JSON.stringify(subscription))
-                  await supabase.from('push_subscriptions').delete().eq('endpoint', subData.endpoint)
-                  await subscription.unsubscribe()
-                }
-              }
-            }
-            setNotificationsEnabled(false)
-            setAlertInfo({ title: 'Successo', message: 'Notifiche disabilitate con successo.', type: 'success' })
-          } catch (e) {
-            setAlertInfo({ title: 'Errore', message: e.message, type: 'error' })
-          }
-        }
-      })
-    } else {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          let permStatus = await PushNotifications.checkPermissions();
-          if (permStatus.receive === 'prompt') {
-            permStatus = await PushNotifications.requestPermissions();
-          }
-          if (permStatus.receive !== 'granted') {
-            setAlertInfo({ title: 'Permesso negato', message: 'Devi autorizzare le notifiche dalle impostazioni di iOS.', type: 'error' });
-            return;
-          }
-  
-          await PushNotifications.removeAllListeners();
-  
-          PushNotifications.addListener('registration', async (token) => {
-            let deviceToken = token.value;
-            try {
-               const fcmRes = await FCM.getToken();
-               if (fcmRes.token) deviceToken = fcmRes.token;
-            } catch (e) {
-               console.log("Errore recupero FCM token:", e);
-            }
-
-            const { error } = await supabase.from('push_subscriptions').upsert({ 
-              user_id: user.id, 
-              endpoint: deviceToken, 
-              auth: 'capacitor_ios', 
-              p256dh: 'capacitor_ios' 
-            }, { onConflict: 'endpoint' });
-            
-            if (error) setAlertInfo({ title: 'Errore DB', message: error.message, type: 'error' });
-            else {
-              setNotificationsEnabled(true)
-              setAlertInfo({ title: 'Successo', message: 'Notifiche push native abilitate!', type: 'success' });
-            }
-          });
-  
-          PushNotifications.addListener('registrationError', (error) => {
-            setAlertInfo({ title: 'Errore', message: 'Errore di registrazione ad APNs: ' + error.error, type: 'error' });
-          });
-  
-          await PushNotifications.register();
-        } catch (err) {
-          setAlertInfo({ title: 'Errore', message: err.message, type: 'error' });
-        }
-        return;
-      }
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        setAlertInfo({ title: 'Non supportato', message: 'Il tuo browser/dispositivo non supporta le notifiche push. Su iPhone ricordati di aggiungere l\'app alla schermata Home.', type: 'error' });
-        return;
-      }
-
-      try {
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-          setAlertInfo({ title: 'Permesso negato', message: 'Hai negato il permesso per le notifiche. Sbloccalo dalle impostazioni del browser.', type: 'error' });
-          return;
-        }
-
-        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        await navigator.serviceWorker.ready;
-
-        const publicVapidKey = 'BFgnButtc-yZHbR6KCXV4khQDQkVRYUmVDekW5aeqQ-LEVFYBlYtGXvjLA7U0ObA9OqaX8Os5cDkEfZFpfsr-MQ'; 
-        
-        const urlBase64ToUint8Array = (base64String) => {
-          const padding = '='.repeat((4 - base64String.length % 4) % 4);
-          const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-          const rawData = window.atob(base64);
-          const outputArray = new Uint8Array(rawData.length);
-          for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
-          return outputArray;
-        };
-
-        const subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
-        });
-
-        const subData = JSON.parse(JSON.stringify(subscription));
-        const { error } = await supabase.from('push_subscriptions').upsert({ user_id: user.id, endpoint: subData.endpoint, auth: subData.keys.auth, p256dh: subData.keys.p256dh }, { onConflict: 'endpoint' });
-        
-        if (error) throw error;
-        setNotificationsEnabled(true)
-        setAlertInfo({ title: 'Successo', message: 'Notifiche push abilitate con successo su questo dispositivo!', type: 'success' });
-      } catch (err) {
-        setAlertInfo({ title: 'Errore', message: err.message, type: 'error' });
-      }
     }
   }
 
@@ -414,7 +397,7 @@ export default function Home() {
       
         if (role === 'athlete') {
           supabase.functions.invoke('send-reminders', {
-            body: { mode: 'coach_notification', action: 'custom_workout', athleteName: userName, workoutTitle: autonomousForm.title }
+            body: { mode: 'coach_notification', action: 'custom_workout', athleteName: userName, workoutTitle: autonomousForm.title, route: `/workout/${newW.id}?athlete_id=${user.id}` }
           }).catch(console.error)
         }
       }
@@ -458,8 +441,9 @@ export default function Home() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleToggleNotifications} className={`w-11 h-11 rounded-full bg-[#1e1e1e] border flex items-center justify-center transition shadow-sm shrink-0 ${notificationsEnabled ? 'text-[#f1ba17] border-[#f1ba17]/50 hover:bg-[#f1ba17]/10' : 'text-gray-400 border-[#333] hover:text-white hover:border-[#f1ba17]'}`} title={notificationsEnabled ? "Disabilita notifiche" : "Abilita notifiche"}>
-            {notificationsEnabled ? <BellRing size={20} /> : <Bell size={20} />}
+          <button onClick={openNotifications} className="relative w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0" title="Centro Notifiche">
+            <Bell size={20} />
+            {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-[#1e1e1e]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
           </button>
           <button onClick={() => navigate('/settings')} className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
             <Settings size={22} />
@@ -803,6 +787,113 @@ export default function Home() {
         <FolderArchive size={20} />
         Archivio Workout
       </button>
+
+      {/* MODAL CENTRO NOTIFICHE */}
+      {showNotifications && createPortal(
+        <div 
+          className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 transition-colors duration-300 ${isClosingNotifications || isOpeningNotifications ? 'bg-black/0' : 'bg-black/85'}`}
+          onClick={closeNotifications}
+        >
+          <div 
+            className={`bg-[#1e1e1e] w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl h-[80vh] sm:h-[60vh] flex flex-col border border-[#333] shadow-2xl transition-all duration-300 ease-out ${isClosingNotifications || isOpeningNotifications ? 'translate-y-full sm:scale-95 sm:opacity-0' : (swipeOffset > 0 ? 'transition-none' : 'translate-y-0 sm:scale-100 sm:opacity-100')}`}
+            style={{ transform: swipeOffset > 0 ? `translateY(${swipeOffset}px)` : undefined }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-full flex justify-center pt-3 pb-2 touch-none cursor-grab active:cursor-grabbing sm:hidden" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+              <div className="w-12 h-1.5 bg-[#333] rounded-full"></div>
+            </div>
+            <div className="flex items-center justify-between px-5 pb-4 sm:pt-5 border-b border-[#2a2a2a]">
+              <div className="flex items-center gap-2">
+                <p className="text-white font-bold text-lg">Notifiche</p>
+                {unreadCount > 0 && <span className="bg-[#f1ba17] text-black text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount} nuove</span>}
+              </div>
+              <div className="flex items-center gap-3">
+                {unreadCount > 0 && (
+                  <button onClick={async () => {
+                    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+                    setUnreadCount(0)
+                    await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false)
+                    if (Capacitor.isNativePlatform()) {
+                      try {
+                        await Badge.clear();
+                        await supabase.from('push_subscriptions').update({ badge_count: 0 }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
+                      } catch (e) {}
+                    }
+                  }} className="text-[11px] font-semibold text-[#f1ba17] hover:underline whitespace-nowrap">
+                    Segna come lette
+                  </button>
+                )}
+                           <div className="w-px h-4 bg-[#333] ml-1 mr-0.5"></div>
+
+                <button onClick={closeNotifications} className="text-gray-500 hover:text-white"><X size={20} /></button>
+              </div>
+            </div>
+            <div className="overflow-y-auto p-4 flex flex-col gap-2 flex-1 hide-scrollbar">
+              {notifications.length > 0 ? (
+                                <>
+                  {notifications.map(notif => (
+                    <div key={notif.id} onClick={async () => {
+                      if (!notif.is_read) {
+                        setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n))
+                      const newCount = Math.max(0, unreadCount - 1)
+                      setUnreadCount(newCount)
+                      await supabase.from('notifications').update({ is_read: true }).eq('id', notif.id)
+                      if (Capacitor.isNativePlatform()) {
+                        try {
+                          if (newCount === 0) {
+                            await Badge.clear();
+                          } else {
+                            await Badge.set({ count: newCount });
+                          }
+                          await supabase.from('push_subscriptions').update({ badge_count: newCount }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
+                        } catch (e) {}
+                      }
+                    }
+                    closeNotifications()
+                    if (notif.route) setTimeout(() => navigate(notif.route), 300)
+                  }} className={`p-4 rounded-2xl cursor-pointer transition border ${notif.is_read ? 'bg-[#111] border-[#333] opacity-70' : 'bg-[#2a2a2a] border-[#f1ba17]/30 hover:border-[#f1ba17]'}`}>
+                    <div className="flex justify-between items-start gap-2 mb-1">
+                      <p className={`font-bold text-base ${notif.is_read ? 'text-gray-300' : 'text-white'}`}>{notif.title}</p>
+                      <p className="text-[10px] text-gray-500 whitespace-nowrap pt-1">{format(parseISO(notif.created_at), 'd MMM HH:mm', { locale: it })}</p>
+                    </div>
+                    <p className={`text-sm leading-snug ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>{notif.message}</p>
+ </div>
+                  ))}
+                  <div className="mt-2 mb-2 flex justify-center">
+                    <button onClick={() => {
+                      setConfirmInfo({
+                        title: "Svuota Notifiche",
+                        message: "Vuoi eliminare definitivamente tutto lo storico delle notifiche?",
+                        onConfirm: async () => {
+                          setNotifications([])
+                          setUnreadCount(0)
+                          await supabase.from('notifications').delete().eq('user_id', user.id)
+                          if (Capacitor.isNativePlatform()) {
+                            try {
+                              await Badge.clear();
+                              await supabase.from('push_subscriptions').update({ badge_count: 0 }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
+                            } catch (e) {}
+                          }
+                          setConfirmInfo(null)
+                        }
+                      })
+                    }} className="text-xs font-semibold text-gray-500 hover:text-red-400 transition flex items-center gap-1.5 px-4 py-2 rounded-full border border-transparent hover:border-red-500/30 hover:bg-red-900/20">
+                      <Trash2 size={14} /> Svuota cronologia
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center p-6 opacity-50">
+                  <BellRing size={48} className="text-gray-500 mb-4" />
+                  <p className="text-gray-400 font-medium">Nessuna notifica</p>
+                  <p className="text-gray-500 text-xs mt-1">Quando ci saranno novità, le vedrai qui.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* MODAL ALLENAMENTO AUTONOMO */}
       {autonomousModalOpen && createPortal(
