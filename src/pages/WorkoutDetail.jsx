@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp } from 'lucide-react'
+import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp, SkipBack, SkipForward, PlaySquare } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -176,7 +176,8 @@ export default function WorkoutDetail() {
   const [tvCode, setTvCode] = useState('')
   const [tvConnecting, setTvConnecting] = useState(false)
   const [isTvInputFocused, setIsTvInputFocused] = useState(false)
-    const [connectedTvCode, setConnectedTvCode] = useState(null)
+  const [connectedTvCode, setConnectedTvCode] = useState(null)
+  const tvChannelRef = useRef(null)
 
 
   // Voice Notes
@@ -187,6 +188,22 @@ export default function WorkoutDetail() {
   const [savingAutonomous, setSavingAutonomous] = useState(false)
 
   useEffect(() => { fetchWorkout() }, [id, queryAthleteId])
+
+  useEffect(() => {
+    if (connectedTvCode) {
+      tvChannelRef.current = supabase.channel(`tv_${connectedTvCode}`)
+      tvChannelRef.current.subscribe()
+    } else if (tvChannelRef.current) {
+      supabase.removeChannel(tvChannelRef.current)
+      tvChannelRef.current = null
+    }
+    return () => {
+      if (tvChannelRef.current) {
+        supabase.removeChannel(tvChannelRef.current)
+        tvChannelRef.current = null
+      }
+    }
+  }, [connectedTvCode])
 
   // Carica la lista atleti solo quando si apre il modal per la prima volta
   useEffect(() => {
@@ -487,6 +504,15 @@ export default function WorkoutDetail() {
       setConnectedTvCode(null)
       setAlertInfo({ title: 'Scollegato', message: 'La TV è tornata alla schermata iniziale.', type: 'success' })
     }
+  }
+
+  const sendTvCommand = async (command) => {
+    if (!tvChannelRef.current) return;
+    tvChannelRef.current.send({
+      type: 'broadcast',
+      event: 'tv_command',
+      payload: { command }
+    });
   }
 
   const buildPDFDoc = async () => {
@@ -885,6 +911,20 @@ export default function WorkoutDetail() {
             </div>
           )}
         </div>
+        
+        {connectedTvCode && (
+          <div className="w-full bg-[#1e1e1e] border-2 border-[#f1ba17]/50 rounded-2xl p-4 mt-5 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-2 text-[#f1ba17] font-bold text-sm">
+              <MonitorUp size={20} /> Telecomando TV
+            </div>
+            <div className="flex items-center gap-6">
+              <button onClick={() => sendTvCommand('prev')} className="text-white hover:text-[#f1ba17] transition p-2"><SkipBack size={24} fill="currentColor" /></button>
+              <button onClick={() => sendTvCommand('toggle_play')} className="text-white hover:text-[#f1ba17] transition p-2"><PlaySquare size={28} fill="currentColor" /></button>
+              <button onClick={() => sendTvCommand('next')} className="text-white hover:text-[#f1ba17] transition p-2"><SkipForward size={24} fill="currentColor" /></button>
+            </div>
+          </div>
+        )}
+
         {(role === 'athlete' || isOwnProfile) && athleteWorkoutId && (
       
           <button
