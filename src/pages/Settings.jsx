@@ -629,7 +629,12 @@ function InviteCodeManager() {
                     <span className="font-mono text-lg text-[#f1ba17] tracking-widest">{code.code}</span>
                     <div className="flex items-center gap-1">
                       <button onClick={() => copyToClipboard(code.code, 'Codice')} title="Copia codice" className="p-2 text-gray-400 hover:text-white transition bg-[#111] rounded-lg border border-[#333]"><Copy size={16} /></button>
-                      <button onClick={() => copyToClipboard(`${window.location.origin}/?invite=${code.code}`, 'Link')} title="Copia link" className="p-2 text-gray-400 hover:text-white transition bg-[#111] rounded-lg border border-[#333]"><LinkIcon size={16} /></button>
+                     <button onClick={() => {
+                        // 🔴 Sostituisci con il vero dominio dove caricherai il sito web (es. https://app.fleofit.it)
+                        const baseUrl = Capacitor.isNativePlatform() ? 'https://www.fleofit.it' : window.location.origin;
+                        copyToClipboard(`${baseUrl}/?invite=${code.code}`, 'Link');
+                      }} title="Copia link" className="p-2 text-gray-400 hover:text-white transition bg-[#111] rounded-lg border border-[#333]"><LinkIcon size={16} /></button>
+                      
                       <button onClick={() => deleteCode(code.id)} title="Elimina" className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-lg border border-[#333]"><Trash2 size={16} /></button>
                     </div>
                   </div>

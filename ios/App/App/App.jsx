@@ -7,6 +7,7 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { Keyboard } from '@capacitor/keyboard'
 import { PushNotifications } from '@capacitor/push-notifications'
 import { Badge } from '@capawesome/capacitor-badge'
+import { ScreenOrientation } from '@capacitor/screen-orientation'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Calendar from './pages/Calendar'
@@ -49,7 +50,12 @@ function Onboarding({ user, onComplete }) {
   }
 
   const handleComplete = async (e) => {
-    e.preventDefault()
+    if (e && e.preventDefault) e.preventDefault()
+    
+    if (!name || !surname || (role === 'athlete' && !dob)) {
+      alert("Per favore, compila tutti i campi obbligatori (*).");
+      return;
+    }
     setSaving(true)
     
     let photoUrl = meta.avatar_url || null
@@ -102,7 +108,8 @@ function Onboarding({ user, onComplete }) {
           <p className="text-gray-400 text-sm mt-1 text-center">Abbiamo bisogno di qualche informazione in più per iniziare.</p>
         </div>
 
-        <form onSubmit={handleComplete} className="flex flex-col gap-4">
+                  <div onKeyDown={(e) => { if (e.key === 'Enter') handleComplete(e) }} className="flex flex-col gap-4">
+
           {/* OPZIONE COACH DISATTIVATA TEMPORANEAMENTE */}
           {/* <div className="flex gap-2 mb-2">
             <button type="button" onClick={() => setRole('athlete')} className={`flex-1 py-3 rounded-xl font-bold text-sm transition ${role === 'athlete' ? 'bg-[#f1ba17]/10 text-[#f1ba17] border border-[#f1ba17]/50' : 'bg-[#111] text-gray-500 border border-[#333]'}`}>Sono un Atleta</button>
@@ -127,15 +134,15 @@ function Onboarding({ user, onComplete }) {
           </div>
 
           <div className="grid grid-cols-2 gap-3 animate-in fade-in">
-            <input required placeholder="Nome *" value={name} onChange={e => setName(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17]" />
-            <input required placeholder="Cognome *" value={surname} onChange={e => setSurname(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17]" />
+            <input placeholder="Nome *" value={name} onChange={e => setName(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17]" />
+            <input placeholder="Cognome *" value={surname} onChange={e => setSurname(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17]" />
           </div>
 
           {role === 'athlete' && (
             <div className="flex flex-col gap-4 animate-in fade-in">
               <div className="flex flex-col gap-1">
                 <label className="text-gray-400 text-xs pl-1">Data di Nascita *</label>
-                <input type="date" required value={dob} onChange={e => setDob(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+                <input type="date" value={dob} onChange={e => setDob(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <input type="number" placeholder="Peso (kg)" value={weight} onChange={e => setWeight(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17]" />
@@ -144,10 +151,10 @@ function Onboarding({ user, onComplete }) {
             </div>
           )}
 
-          <button type="submit" disabled={saving} className="w-full mt-4 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg flex justify-center items-center">
+          <button type="button" onClick={handleComplete} disabled={saving} className="w-full mt-4 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg flex justify-center items-center">
             {saving ? 'Salvataggio...' : 'Inizia ad usare l\'app!'}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   )
@@ -361,6 +368,8 @@ function App() {
               PushNotifications.removeAllDeliveredNotifications().catch(() => {});
             }
           });
+                    // Blocca forzatamente l'app in verticale (Portrait)
+          await ScreenOrientation.lock({ orientation: 'portrait' }).catch(() => {});
         } catch (err) {
           console.log("Errore impostazione plugin nativi:", err)
         }
