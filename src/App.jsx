@@ -4,6 +4,7 @@ import { supabase } from './supabaseClient'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Calendar from './pages/Calendar'
+import TVDashboard from './pages/TvDashboard'
 import CreateWorkout from './pages/CreateWorkout'
 import Athletes from './pages/Athletes'
 import AthleteDetail from './pages/AthleteDetail'
@@ -11,6 +12,7 @@ import WorkoutDetail from './pages/WorkoutDetail'
 import WorkoutsArchive from './pages/WorkoutsArchive'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
+import { User, Upload } from 'lucide-react'
 
 
 
@@ -20,7 +22,6 @@ export const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)
 
 export const ADMIN_EMAILS = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com']
-import { User, Upload } from 'lucide-react'
 
 function Onboarding({ user, onComplete }) {
   const [role, setRole] = useState('athlete')
