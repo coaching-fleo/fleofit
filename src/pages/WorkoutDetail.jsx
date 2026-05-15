@@ -176,6 +176,8 @@ export default function WorkoutDetail() {
   const [tvCode, setTvCode] = useState('')
   const [tvConnecting, setTvConnecting] = useState(false)
   const [isTvInputFocused, setIsTvInputFocused] = useState(false)
+    const [connectedTvCode, setConnectedTvCode] = useState(null)
+
 
   // Voice Notes
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null)
@@ -349,6 +351,7 @@ export default function WorkoutDetail() {
         if (error) {
           setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
         } else {
+          
           if (queryAthleteId && assignmentId === athleteWorkoutId) {
              navigate(`/workout/${id}`)
           } else {
@@ -460,9 +463,29 @@ export default function WorkoutDetail() {
     if (error) {
       setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
     } else {
+            setConnectedTvCode(tvCode)
+
       setTvModalOpen(false)
       setTvCode('')
       setAlertInfo({ title: 'Connesso!', message: 'Il workout è ora visibile sulla tua TV.', type: 'success' })
+    }
+  }
+
+  const handleDisconnectTV = async () => {
+    if (!connectedTvCode) return
+    setTvConnecting(true)
+    const { error } = await supabase.from('tv_sessions').update({ 
+      workout_id: null, 
+      athlete_id: null,
+      updated_at: new Date().toISOString()
+    }).eq('code', connectedTvCode)
+    
+    setTvConnecting(false)
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+    } else {
+      setConnectedTvCode(null)
+      setAlertInfo({ title: 'Scollegato', message: 'La TV è tornata alla schermata iniziale.', type: 'success' })
     }
   }
 
@@ -829,9 +852,15 @@ export default function WorkoutDetail() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
+             {connectedTvCode ? (
+                <button onClick={handleDisconnectTV} disabled={tvConnecting} className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-red-900/50 px-3 py-1.5 rounded-lg" title="Scollega TV">
+                  <MonitorUp size={12} /> Scollega
+                </button>
+              ) : (
                 <button onClick={() => setTvModalOpen(true)} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg" title="Trasmetti alla TV">
                   <MonitorUp size={12} /> TV
                 </button>
+              )}
                 {role !== 'athlete' && (
                   <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg" title="Duplica Workout">
                     <Copy size={12} /> Duplica
