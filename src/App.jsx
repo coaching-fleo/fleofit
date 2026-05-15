@@ -295,7 +295,6 @@ function ProtectedRoute({ children }) {
 function App() {
   return (
     <BrowserRouter>
-      <DeeplinkHandler />
       <div className="min-h-screen bg-[#0B0B0B] text-white">
         <Routes>
           <Route path="/login" element={<Login />} />
