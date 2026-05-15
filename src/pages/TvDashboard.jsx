@@ -73,7 +73,7 @@ export default function TVDashboard() {
           const newWorkoutId = payload.new.workout_id
           if (newWorkoutId) {
             setStatus('loading')
-            const { data: wData } = await supabase.from('workouts').select('*').eq('id', newWorkoutId).single()
+            const { data: wData } = await supabase.from('workouts').select('*').eq('id', newWorkoutId).maybeSingle()
             if (wData) {
               setWorkout(wData)
               setStatus('active')
