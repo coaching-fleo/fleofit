@@ -1048,8 +1048,13 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
           {role === 'athlete' ? (
             <>
               <textarea
-                className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
-                rows={2}
+                ref={(el) => {
+                  if (el) {
+                    el.style.height = 'auto'
+                    el.style.height = el.scrollHeight + 'px'
+                  }
+                }}
+                className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-300 ease-out overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'} ${note ? 'min-h-[120px]' : 'min-h-[60px] focus:min-h-[120px]'}`}
                 placeholder="Note dell'atleta su questo workout..."
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
@@ -1433,8 +1438,13 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
         {role === 'athlete' ? (
           <>
             <textarea
-              className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-base transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
-              rows={3}
+                ref={(el) => {
+                  if (el) {
+                    el.style.height = 'auto'
+                    el.style.height = el.scrollHeight + 'px'
+                  }
+                }}
+                className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-base transition-all duration-300 ease-out overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'} ${note ? 'min-h-[120px]' : 'min-h-[60px] focus:min-h-[120px]'}`}
               placeholder="Copia qui le note dell'atleta su questo workout..."
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -1728,8 +1738,14 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
 
   useEffect(() => {
     async function fetchW() {
-      const { data } = await supabase.from('workouts').select('id, title, date, sections').order('date', { ascending: false })
-      setWorkouts(data || [])
+      const { data } = await supabase.from('workouts').select('id, title, date, sections, created_at').order('created_at', { ascending: false })
+      const assignableWorkouts = (data || []).filter(w => {
+        const cat = w.sections?.category;
+        if (cat === 'Event' || w.sections?.isEvent) return false;
+        if (cat === 'Custom' || cat === 'Autonomo' || w.sections?.isAutonomous) return false;
+        return true;
+      })
+      setWorkouts(assignableWorkouts)
       setLoading(false)
     }
     fetchW()

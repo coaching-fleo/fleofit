@@ -879,8 +879,13 @@ export default function WorkoutDetail() {
       {(role === 'athlete' || isOwnProfile) && athleteWorkoutId ? (
         <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Le tue note su questo ${type === 'Event' ? 'evento' : 'allenamento'}`} color="border-[#3b82f6]/40">
           <textarea
-            className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-colors focus:border-[#3b82f6]"
-            rows={3}
+            ref={(el) => {
+              if (el) {
+                el.style.height = 'auto'
+                el.style.height = el.scrollHeight + 'px'
+              }
+            }}
+            className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-300 ease-out overflow-hidden focus:border-[#3b82f6] ${editingNote ? 'min-h-[120px]' : 'min-h-[60px] focus:min-h-[120px]'}`}
             placeholder="Com'è andata? Segna qui i tuoi pesi, i tempi o come ti sei sentito..."
             value={editingNote}
             onChange={(e) => setEditingNote(e.target.value)}
