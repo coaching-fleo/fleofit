@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause } from 'lucide-react'
+import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -170,6 +170,12 @@ export default function WorkoutDetail() {
   const [assignStep, setAssignStep] = useState(1)
   const [assignments, setAssignments] = useState([])
   const [currentAthleteName, setCurrentAthleteName] = useState('')
+
+  // TV Sync
+  const [tvModalOpen, setTvModalOpen] = useState(false)
+  const [tvCode, setTvCode] = useState('')
+  const [tvConnecting, setTvConnecting] = useState(false)
+  const [isTvInputFocused, setIsTvInputFocused] = useState(false)
 
   // Voice Notes
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null)
@@ -428,6 +434,36 @@ export default function WorkoutDetail() {
         }
       }
     })
+  }
+
+  const handleConnectTV = async () => {
+    if (!tvCode || tvCode.length !== 4) {
+      setAlertInfo({ title: 'Errore', message: 'Inserisci un codice valido a 4 cifre', type: 'error' })
+      return
+    }
+    setTvConnecting(true)
+    const { data, error: fetchErr } = await supabase.from('tv_sessions').select('*').eq('code', tvCode).single()
+    
+    if (fetchErr || !data) {
+      setTvConnecting(false)
+      setAlertInfo({ title: 'Errore', message: 'Codice TV non trovato o scaduto.', type: 'error' })
+      return
+    }
+
+    const { error } = await supabase.from('tv_sessions').update({ 
+      workout_id: id, 
+      athlete_id: queryAthleteId || user?.id,
+      updated_at: new Date().toISOString()
+    }).eq('code', tvCode)
+
+    setTvConnecting(false)
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+    } else {
+      setTvModalOpen(false)
+      setTvCode('')
+      setAlertInfo({ title: 'Connesso!', message: 'Il workout è ora visibile sulla tua TV.', type: 'success' })
+    }
   }
 
   const buildPDFDoc = async () => {
@@ -793,6 +829,9 @@ export default function WorkoutDetail() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
+                <button onClick={() => setTvModalOpen(true)} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg" title="Trasmetti alla TV">
+                  <MonitorUp size={12} /> TV
+                </button>
                 {role !== 'athlete' && (
                   <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg" title="Duplica Workout">
                     <Copy size={12} /> Duplica
@@ -1341,6 +1380,40 @@ export default function WorkoutDetail() {
         document.body
       )}
 
+      {/* MODAL: TV SYNC */}
+      {tvModalOpen && createPortal(
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+          <div className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isTvInputFocused ? '-translate-y-32' : ''}`}>
+            <div className="flex justify-between items-center mb-2">
+               <h2 className="text-xl font-bold text-white flex items-center gap-2"><MonitorUp size={24} className="text-[#f1ba17]" /> Trasmetti in TV</h2>
+               <button onClick={() => setTvModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+            </div>
+            <p className="text-gray-400 text-sm text-left">
+              Apri il browser della tua Fire Stick o Smart TV, vai su <strong className="text-white">fleofit.vercel.app/tv</strong> e inserisci qui sotto il codice che vedi a schermo.
+            </p>
+            <input 
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              className="bg-[#111] border border-[#333] rounded-xl px-4 py-4 text-white text-center text-3xl font-black tracking-[0.5em] focus:outline-none focus:border-[#f1ba17] w-full"
+              value={tvCode}
+              onChange={(e) => setTvCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+              onFocus={() => setIsTvInputFocused(true)}
+              onBlur={() => setIsTvInputFocused(false)}
+              placeholder="1234"
+            />
+            <button 
+              onClick={handleConnectTV}
+              disabled={tvConnecting || tvCode.length !== 4}
+              className="w-full mt-2 py-4 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 text-lg"
+            >
+              {tvConnecting ? 'Connessione...' : 'Trasmetti ora'}
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
       
       {createPortal(
         <>
