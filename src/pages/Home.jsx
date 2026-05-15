@@ -43,14 +43,13 @@ export default function Home() {
   const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
   const [savingAutonomous, setSavingAutonomous] = useState(false)
   const [workoutToRemove, setWorkoutToRemove] = useState(null)
-  const [dbName, setDbName] = useState('')
+  const [dbName, setDbName] = useState(() => localStorage.getItem(`fleofit_name_${user?.id}`) || '')
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
 
-  const meta = user?.user_metadata || {}
-  const fallbackName = meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
-  const userName = dbName || fallbackName
+  const isFirstLoadWithoutDbName = loading && !dbName;
+  const userName = dbName
 
   const getGreeting = () => {
     const hour = new Date().getHours()
@@ -101,7 +100,10 @@ export default function Home() {
           (async () => {
             await supabase.from('athletes').update({ deleted_at: null }).eq('id', user.id)
             const { data } = await supabase.from('athletes').select('name').eq('id', user.id).single()
-            if (data?.name) setDbName(data.name)
+            if (data?.name) {
+              setDbName(data.name)
+              localStorage.setItem(`fleofit_name_${user.id}`, data.name)
+            }
           })()
         )
       }
@@ -199,7 +201,7 @@ export default function Home() {
     const { error } = await supabase.from('athlete_workouts').update({ notes }).eq('id', workoutId)
     if (!error && role === 'athlete') {
       supabase.functions.invoke('send-reminders', {
-        body: { mode: 'coach_notification', action: 'note', athleteName: userName, workoutTitle: workoutTitle || 'Workout', noteText: notes }
+        body: { mode: 'coach_notification', action: 'note', athleteName: userName || 'Un atleta', workoutTitle: workoutTitle || 'Workout', noteText: notes }
       }).catch(console.error)
     }
     return { error }
@@ -229,7 +231,7 @@ export default function Home() {
       } else {
         if (newStatus === 'completed' && role === 'athlete') {
           supabase.functions.invoke('send-reminders', {
-            body: { mode: 'coach_notification', action: 'completed', athleteName: userName, workoutTitle: workout.workouts?.title || workout.title }
+            body: { mode: 'coach_notification', action: 'completed', athleteName: userName || 'Un atleta', workoutTitle: workout.workouts?.title || workout.title }
           }).catch(console.error)
         }
     }
@@ -351,7 +353,7 @@ export default function Home() {
       
         if (role === 'athlete') {
           supabase.functions.invoke('send-reminders', {
-            body: { mode: 'coach_notification', action: 'custom_workout', athleteName: userName, workoutTitle: autonomousForm.title }
+            body: { mode: 'coach_notification', action: 'custom_workout', athleteName: userName || 'Un atleta', workoutTitle: autonomousForm.title }
           }).catch(console.error)
         }
       }
@@ -386,9 +388,18 @@ export default function Home() {
             <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
           </div>
           {role === 'athlete' || role === 'admin' ? (
-             <div className="mt-2">
-               <p className="text-white font-bold text-xl">{getGreeting()}, {userName}!</p>
-               <p className="text-[#f1ba17] text-sm mt-0.5 font-medium">{randomMotiv}</p>
+             <div className="mt-2 min-h-[50px]">
+               {isFirstLoadWithoutDbName ? (
+                 <div className="flex flex-col gap-2 mt-1">
+                   <div className="h-6 w-48 bg-[#2a2a2a] rounded animate-pulse"></div>
+                   <div className="h-4 w-64 bg-[#f1ba17]/20 rounded animate-pulse"></div>
+                 </div>
+               ) : (
+                 <div className="animate-in fade-in duration-500">
+                   <p className="text-white font-bold text-xl">{getGreeting()}{userName ? `, ${userName}` : ''}!</p>
+                   <p className="text-[#f1ba17] text-sm mt-0.5 font-medium">{randomMotiv}</p>
+                 </div>
+               )}
              </div>
           ) : (
             <p className="text-gray-400 mt-1">Dashboard Coach Federico Leo</p>

@@ -164,7 +164,8 @@ export default function WorkoutDetail() {
   const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [athleteWorkoutId, setAthleteWorkoutId] = useState(null)
   const [workoutStatus, setWorkoutStatus] = useState('pending')
-  const [selectedAthleteForAssign, setSelectedAthleteForAssign] = useState(null)
+  const [selectedAthletes, setSelectedAthletes] = useState([])
+  const [assignStep, setAssignStep] = useState(1)
   const [assignments, setAssignments] = useState([])
   const [currentAthleteName, setCurrentAthleteName] = useState('')
 
@@ -256,7 +257,7 @@ export default function WorkoutDetail() {
       } else {
         if (newStatus === 'completed' && role === 'athlete') {
           supabase.functions.invoke('send-reminders', {
-            body: { mode: 'coach_notification', action: 'completed', athleteName: user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title }
+            body: { mode: 'coach_notification', action: 'completed', athleteName: currentAthleteName || 'Un atleta', workoutTitle: workout.title }
           }).catch(console.error)
         }
       }
@@ -283,24 +284,30 @@ export default function WorkoutDetail() {
     setAthletes((data || []).filter(a => a.id !== COACHING_ID))
   }
 
-  const handleAssign = async (athleteId) => {
+  const handleAssign = async () => {
     if (!assignDate) {
       setAlertInfo({ title: 'Errore', message: 'Inserisci la data di assegnazione.', type: 'error' })
       return
     }
+    if (selectedAthletes.length === 0) return
+
     setAssigning(true)
-    const { error } = await supabase.from('athlete_workouts').insert({
-      athlete_id: athleteId,
+    const newAssignments = selectedAthletes.map(a => ({
+      athlete_id: a.id,
       workout_id: workout.id,
       completed_date: assignDate,
       status: 'pending'
-    })
+    }))
+
+    const { error } = await supabase.from('athlete_workouts').insert(newAssignments)
     
     setAssigning(false)
     if (error) {
       setAlertInfo({ title: 'Errore', message: "Errore durante l'assegnazione: " + error.message, type: 'error' })
     } else {
       setAssignModalOpen(false)
+      setSelectedAthletes([])
+      setAssignStep(1)
       setShowSuccessModal(true)
       fetchWorkout()
     }
@@ -889,7 +896,7 @@ export default function WorkoutDetail() {
                      setAthleteNote({ text: editingNote, athleteName: athleteNote?.athleteName || '' })
                  if (role === 'athlete') {
                    supabase.functions.invoke('send-reminders', {
-                     body: { mode: 'coach_notification', action: 'note', athleteName: athleteNote?.athleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title, noteText: editingNote }
+                     body: { mode: 'coach_notification', action: 'note', athleteName: currentAthleteName || athleteNote?.athleteName || 'Un atleta', workoutTitle: workout.title, noteText: editingNote }
                    }).catch(console.error)
                  }
                   } else {
@@ -1133,36 +1140,72 @@ export default function WorkoutDetail() {
           <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg">Assegna Workout</p>
-              <button onClick={() => { setAssignModalOpen(false); setSelectedAthleteForAssign(null); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
+              <button onClick={() => { setAssignModalOpen(false); setSelectedAthletes([]); setAssignStep(1); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
              </div>
             
-            {!selectedAthleteForAssign ? (
-
-              <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-3">
-                {athletes.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4 text-sm">Nessun atleta trovato.</p>
-                ) : (
-                  athletes.map(a => (
-                    <button key={a.id} onClick={() => setSelectedAthleteForAssign(a)}
-                      className="flex items-center gap-4 bg-[#2a2a2a] border border-[#333] rounded-2xl p-3 hover:border-[#f1ba17] transition text-left">
-                      <div className="w-10 h-10 rounded-full bg-[#1e1e1e] border border-[#444] flex items-center justify-center overflow-hidden shrink-0">
-                        {a.photo_url
-                          ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" onError={() => setAthletes(athletes.map(ath => ath.id === a.id ? { ...ath, photo_url: null } : ath))} />
-                          : <User size={18} className="text-gray-500" />
-                        }
-                      </div>
-                      <div>
-                        <p className="text-white font-semibold">{a.name} {a.surname}</p>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
+            {assignStep === 1 ? (
+              <>
+                <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-3">
+                  {athletes.length === 0 ? (
+                    <p className="text-gray-500 text-center py-4 text-sm">Nessun atleta trovato.</p>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => {
+                          if (selectedAthletes.length === athletes.length) {
+                            setSelectedAthletes([])
+                          } else {
+                            setSelectedAthletes([...athletes])
+                          }
+                        }}
+                        className="text-[#f1ba17] text-sm font-semibold text-right mb-2"
+                      >
+                        {selectedAthletes.length === athletes.length ? 'Deseleziona tutti' : 'Seleziona tutti'}
+                      </button>
+                      {athletes.map(a => {
+                        const isSelected = selectedAthletes.some(sa => sa.id === a.id);
+                        return (
+                          <button key={a.id} onClick={() => {
+                            if (isSelected) {
+                              setSelectedAthletes(selectedAthletes.filter(sa => sa.id !== a.id))
+                            } else {
+                              setSelectedAthletes([...selectedAthletes, a])
+                            }
+                          }}
+                            className={`flex items-center gap-4 bg-[#2a2a2a] border ${isSelected ? 'border-[#f1ba17]' : 'border-[#333]'} rounded-2xl p-3 hover:border-[#f1ba17] transition text-left`}>
+                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${isSelected ? 'border-[#f1ba17] bg-[#f1ba17]' : 'border-[#555]'}`}>
+                               {isSelected && <Check size={14} className="text-black" />}
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-[#1e1e1e] border border-[#444] flex items-center justify-center overflow-hidden shrink-0">
+                              {a.photo_url
+                                ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" onError={() => setAthletes(athletes.map(ath => ath.id === a.id ? { ...ath, photo_url: null } : ath))} />
+                                : <User size={18} className="text-gray-500" />
+                              }
+                            </div>
+                            <div>
+                              <p className="text-white font-semibold">{a.name} {a.surname}</p>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </>
+                  )}
+                </div>
+                <div className="p-5 border-t border-[#2a2a2a]">
+                  <button 
+                    onClick={() => setAssignStep(2)} 
+                    disabled={selectedAthletes.length === 0} 
+                    className="w-full py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
+                  >
+                    Avanti ({selectedAthletes.length} selezionati)
+                  </button>
+                </div>
+              </>
             ) : (
               <div className="p-5 flex flex-col gap-4">
                 <div>
                   <p className="text-gray-400 text-sm mb-1">Stai assegnando a:</p>
-                  <p className="text-white font-bold">{selectedAthleteForAssign.name} {selectedAthleteForAssign.surname}</p>
+                  <p className="text-white font-bold">{selectedAthletes.length} {selectedAthletes.length === 1 ? 'atleta' : 'atleti'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400 text-sm mb-2 block">Seleziona la data dell'allenamento</label>
@@ -1173,10 +1216,10 @@ export default function WorkoutDetail() {
                   />
                 </div>
                 <div className="flex gap-3 mt-2">
-                  <button onClick={() => setSelectedAthleteForAssign(null)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
+                  <button onClick={() => setAssignStep(1)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
                     Indietro
                   </button>
-                  <button onClick={() => handleAssign(selectedAthleteForAssign.id)} disabled={assigning} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+                  <button onClick={handleAssign} disabled={assigning} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
                     {assigning ? 'Assegno...' : 'Conferma'}
                   </button>
                 </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Play, Pause, Send, Square } from 'lucide-react'
+import { ChevronLeft, ChevronUp, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Play, Pause, Send, Square, Check } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isToday, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -1721,7 +1721,8 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
   const [assigning, setAssigning] = useState(null)
   const [alertInfo, setAlertInfo] = useState(null)
   const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [selectedWorkout, setSelectedWorkout] = useState(null)
+  const [selectedWorkouts, setSelectedWorkouts] = useState([])
+  const [assignStep, setAssignStep] = useState(1)
   const [previewWorkout, setPreviewWorkout] = useState(null)
   const navigate = useNavigate()
 
@@ -1739,23 +1740,27 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
       setAlertInfo({ title: 'Errore', message: 'Seleziona una data per l\'assegnazione', type: 'error' })
       return
     }
-    setAssigning(selectedWorkout.id)
-    const { data: newAssignment, error } = await supabase.from('athlete_workouts').insert({
+    if (selectedWorkouts.length === 0) return
+    setAssigning(true)
+    const newAssignments = selectedWorkouts.map(w => ({
       athlete_id: athleteId,
-      workout_id: selectedWorkout.id,
+      workout_id: w.id,
       completed_date: assignDate,
       status: 'pending'
-    }).select('id').single()
+    }))
+
+    const { data: insertedAssignments, error } = await supabase.from('athlete_workouts').insert(newAssignments).select('id')
 
     if (error) {
       setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
-      setAssigning(null)
+      setAssigning(false)
     } else {
-      // Invia la notifica in background, senza bloccare l'interfaccia
-      if (newAssignment) {
-        supabase.functions.invoke('send-reminders', {
-          body: { mode: 'immediate', record_id: newAssignment.id }
-        }).catch(console.error)
+      if (insertedAssignments && insertedAssignments.length > 0) {
+        insertedAssignments.forEach(assignment => {
+          supabase.functions.invoke('send-reminders', {
+            body: { mode: 'immediate', record_id: assignment.id }
+          }).catch(console.error)
+        })
       }
       onAssigned()
     }
@@ -1770,10 +1775,10 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
     <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
-          <p className="text-white font-bold text-lg">Assegna Workout</p>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <p className="text-white font-bold text-lg">Assegna Workouts</p>
+          <button onClick={() => { onClose(); setSelectedWorkouts([]); setAssignStep(1); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
         </div>
-        {!selectedWorkout ? (
+        {assignStep === 1 ? (
           <>
             <div className="p-4 border-b border-[#2a2a2a]">
               <div className="relative">
@@ -1787,13 +1792,35 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
               ) : filtered.length === 0 ? (
                 <p className="text-gray-500 text-sm text-center py-4">Nessun workout trovato.</p>
               ) : (
-                filtered.map(w => (
-                  <div key={w.id} className="flex items-center justify-between bg-[#2a2a2a] border border-[#333] p-3 rounded-xl hover:border-[#f1ba17] transition group">
-                    <div 
-                      className="flex-1 min-w-0 pr-3 text-left cursor-pointer"
-                      onClick={() => setPreviewWorkout(w)}
-                    >
-                      <p className="text-white font-semibold text-sm truncate group-hover:text-[#f1ba17] transition">{w.title}</p>
+                <>
+                <button 
+                  onClick={() => {
+                    if (selectedWorkouts.length === filtered.length) {
+                      setSelectedWorkouts([])
+                    } else {
+                      setSelectedWorkouts([...filtered])
+                    }
+                  }}
+                  className="text-[#f1ba17] text-sm font-semibold text-right mb-1"
+                >
+                  {selectedWorkouts.length === filtered.length ? 'Deseleziona tutti' : 'Seleziona tutti'}
+                </button>
+                {filtered.map(w => (
+                  <div key={w.id} 
+                    className={`flex items-center justify-between bg-[#2a2a2a] border ${selectedWorkouts.some(sw => sw.id === w.id) ? 'border-[#f1ba17]' : 'border-[#333]'} p-3 rounded-xl hover:border-[#f1ba17] transition group cursor-pointer`}
+                    onClick={() => {
+                      if (selectedWorkouts.some(sw => sw.id === w.id)) {
+                        setSelectedWorkouts(selectedWorkouts.filter(sw => sw.id !== w.id))
+                      } else {
+                        setSelectedWorkouts([...selectedWorkouts, w])
+                      }
+                    }}
+                  >
+                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mr-3 ${selectedWorkouts.some(sw => sw.id === w.id) ? 'border-[#f1ba17] bg-[#f1ba17]' : 'border-[#555]'}`}>
+                       {selectedWorkouts.some(sw => sw.id === w.id) && <Check size={14} className="text-black" />}
+                    </div>
+                    <div className="flex-1 min-w-0 pr-3 text-left">
+                      <p className="text-white font-semibold text-sm truncate">{w.title}</p>
                       <p className="text-gray-500 text-xs mt-0.5">{w.date && isValid(parseISO(w.date)) ? format(parseISO(w.date), 'dd/MM/yyyy') : 'Data sconosciuta'} • {w.sections?.category || 'Generico'}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -1804,20 +1831,29 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                       >
                         <Copy size={16} />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setSelectedWorkout(w); }} className="bg-[#f1ba17]/10 text-[#f1ba17] font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-[#f1ba17] hover:text-black transition">
-                        Assegna
+                      <button onClick={(e) => { e.stopPropagation(); setPreviewWorkout(w); }} className="bg-[#f1ba17]/10 text-[#f1ba17] font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-[#f1ba17] hover:text-black transition">
+                        Vedi
                       </button>
                     </div>
                   </div>
-                ))
+                ))}
+                </>
               )}
+            </div>
+            <div className="p-4 border-t border-[#2a2a2a]">
+              <button 
+                onClick={() => setAssignStep(2)} 
+                disabled={selectedWorkouts.length === 0} 
+                className="w-full py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
+              >
+                Avanti ({selectedWorkouts.length} selezionati)
+              </button>
             </div>
           </>
         ) : (
           <div className="p-5 flex flex-col gap-4">
             <div>
-              <p className="text-gray-400 text-sm mb-1">Stai assegnando:</p>
-              <p className="text-white font-bold">{selectedWorkout.title}</p>
+              <p className="text-gray-400 text-sm mb-1">Stai assegnando {selectedWorkouts.length} {selectedWorkouts.length === 1 ? 'workout' : 'workouts'}.</p>
             </div>
             <div>
               <label className="text-gray-400 text-sm mb-2 block">Seleziona la data dell'allenamento</label>
@@ -1828,11 +1864,11 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
               />
             </div>
             <div className="flex gap-3 mt-2">
-              <button onClick={() => setSelectedWorkout(null)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
+              <button onClick={() => setAssignStep(1)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
                 Indietro
               </button>
-              <button onClick={handleAssign} disabled={assigning === selectedWorkout.id} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
-                {assigning === selectedWorkout.id ? 'Assegno...' : 'Conferma'}
+              <button onClick={handleAssign} disabled={assigning} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+                {assigning ? 'Assegno...' : 'Conferma'}
               </button>
             </div>
           </div>
@@ -1914,12 +1950,12 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
             <div className="p-4 border-t border-[#2a2a2a] flex flex-col gap-2">
               <button 
                 onClick={() => {
-                  setSelectedWorkout(previewWorkout);
+                  setSelectedWorkouts(prev => prev.some(sw => sw.id === previewWorkout.id) ? prev : [...prev, previewWorkout]);
                   setPreviewWorkout(null);
                 }}
                 className="w-full py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition shadow-lg shadow-[#f1ba17]/20"
               >
-                Assegna questo Workout
+                Seleziona questo Workout
               </button>
               <button 
                 onClick={() => {
