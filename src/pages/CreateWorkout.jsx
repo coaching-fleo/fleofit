@@ -150,6 +150,7 @@ const TYPE_COLORS = {
   'EMOM': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
   'AMRAP': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
   'For Time': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
+  'Interval': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
   'Running': { text: 'text-[#0094C6]', bg: 'bg-[#0094C6]/10', border: 'border-[#0094C6]/30', hex: '#0094C6' }
 }
 
@@ -219,7 +220,7 @@ function ScrollPicker({ options = [], value, onChange, label, type, isRun }) {
 }
 
 function BlockPickerModal({ onAdd, onClose }) {
-  const blockTypes = ['WarmUp', 'Cash In', 'ON/OFF', 'EMOM', 'AMRAP', 'For Time', 'Rest', 'Cash Out']
+  const blockTypes = ['WarmUp', 'Cash In', 'ON/OFF', 'EMOM', 'AMRAP', 'For Time', 'Interval', 'Rest', 'Cash Out']
   return createPortal(
     <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-5 border border-[#333] animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
@@ -250,6 +251,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   const [ergoPace, setErgoPace] = useState(initialExercise?.ergoPace || '-')
   const [speed, setSpeed] = useState(initialExercise?.speed || '-')
   const [reps, setReps] = useState(initialExercise?.reps || '-')
+  const [exTime, setExTime] = useState(initialExercise?.exTime || '-')
   const [kg, setKg] = useState(initialExercise?.kg ? `${initialExercise.kg} kg` : '-')
   const [intensity, setIntensity] = useState(initialExercise?.intensity || '5')
   const [notes, setNotes] = useState(initialExercise?.notes || '')
@@ -272,8 +274,9 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     onAdd({
       id: initialExercise ? initialExercise.id : Math.random(),
       name: selected,
-      meters: finalMeters,
-      reps: finalReps,
+      meters: workoutType === 'Interval' ? '' : finalMeters,
+      reps: workoutType === 'Interval' ? '' : finalReps,
+      exTime: workoutType === 'Interval' ? exTime : undefined,
       ergoPace: isErgo(selected) || (selected === 'Run' && runPaceMode === 'pace') ? ergoPace : undefined,
       speed: selected === 'Run' && runPaceMode === 'speed' ? speed : undefined,
       kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) || selected === 'Run' || selected === 'Rest' ? '' : kg.replace(' kg', ''),
@@ -373,7 +376,22 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
               )}
 
               <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300" key={`${selected}-${hybridMode}-${runPaceMode}`}>
-                {isErgo(selected) ? (
+                {workoutType === 'Interval' ? (
+                  <>
+                    <ScrollPicker options={TIME_OPTIONS} value={exTime} onChange={setExTime} label="⏱ Durata" />
+                    {isErgo(selected) ? (
+                      <ScrollPicker options={ERGO_PACE_OPTIONS} value={ergoPace} onChange={setErgoPace} label="⏱ Passo (Opz.)" />
+                    ) : selected === 'Run' ? (
+                      runPaceMode === 'pace' ? (
+                        <ScrollPicker options={['-'].concat(RUN_PACE_OPTIONS)} value={ergoPace} onChange={setErgoPace} label="⏱ Passo (Opz.)" />
+                      ) : (
+                        <ScrollPicker options={SPEED_OPTIONS} value={speed} onChange={setSpeed} label="⚡ Velocità" />
+                      )
+                    ) : (
+                      <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                    )}
+                  </>
+                ) : isErgo(selected) ? (
                   <>
                     <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza / Cal" />
                     <ScrollPicker options={ERGO_PACE_OPTIONS} value={ergoPace} onChange={setErgoPace} label="⏱ Passo (Opz.)" />
@@ -454,7 +472,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 // ─── BLOCCO ESERCIZIO ─────────────────────────────────────────
 function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, showMinute, onEdit, touchHandlers, onDuplicate }) {
 
-  const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+  const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
   const paceStr = (isErgo(ex.name) || ex.name === 'Run') && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
   const speedStr = ex.name === 'Run' && ex.speed && ex.speed !== '-' ? `@ ${ex.speed}` : ''
 
@@ -560,6 +578,8 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
       return `${block.params?.duration || '10:00'}`
     } else if (block.type === 'For Time') {
       return `${block.params?.rounds || '3'} rounds`
+    } else if (block.type === 'Interval') {
+      return `${block.params?.rounds || '1'} rounds`
     } else if (['Cash In', 'Cash Out'].includes(block.type)) {
       const rounds = block.params?.rounds || '1';
       const rest = (parseInt(rounds, 10) > 1 && block.params?.rest && block.params.rest !== '-') ? ` · ${block.params.rest} rest` : '';
@@ -631,7 +651,7 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
               block.exercises && block.exercises.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {block.exercises.map((ex, i) => {
-                    const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+                    const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
                     const paceStr = (isErgo(ex.name) || ex.name === 'Run') && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
                     const speedStr = ex.name === 'Run' && ex.speed && ex.speed !== '-' ? `@ ${ex.speed}` : ''
                     const kgStr = ex.kg ? `${ex.kg}kg` : ''
@@ -683,7 +703,7 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
             <ScrollPicker type="time" value={block.params?.duration} onChange={v => updateParam('duration', v)} label="Durata" />
           )}
 
-          {block.type === 'For Time' && (
+          {['For Time', 'Interval'].includes(block.type) && (
             <ScrollPicker options={ROUNDS_OPTIONS} value={block.params?.rounds} onChange={v => updateParam('rounds', v)} label="Rounds" />
           )}
 
@@ -1547,6 +1567,7 @@ export default function CreateWorkout() {
             if (type === 'EMOM') { newBlock.params.interval = '1:00'; newBlock.params.rounds = '10' }
             if (type === 'AMRAP') { newBlock.params.duration = '10:00' }
             if (type === 'For Time') { newBlock.params.rounds = '3' }
+            if (type === 'Interval') { newBlock.params.rounds = '1' }
             if (type === 'Cash In' || type === 'Cash Out') { newBlock.params.rounds = '1' }
             setBlocks([...blocks, newBlock])
             setOpenBlockId(newBlock.id)

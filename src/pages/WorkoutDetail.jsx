@@ -20,6 +20,7 @@ const TYPE_COLORS = {
   EMOM: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
   AMRAP: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
   'For Time': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
+  'Interval': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
    'Running': { text: 'text-[#0094C6]', bg: 'bg-[#0094C6]/10', border: 'border-[#0094C6]/30', hex: '#0094C6' },
   'Custom': { text: 'text-[#D11149]', bg: 'bg-[#D11149]/10', border: 'border-[#D11149]/30', hex: '#D11149' },
   'Event': { text: 'text-white', bg: 'bg-white/10', border: 'border-white/30', hex: '#ffffff' }
@@ -99,6 +100,7 @@ const getBlockTitle = (block) => {
      return dur.includes('min') ? `AMRAP · ${dur}` : `AMRAP · ${dur} min`
   }
   if (block.type === 'For Time') return `For Time · ${block.params?.rounds || '3'} rounds`
+  if (block.type === 'Interval') return `Interval · ${block.params?.rounds || '1'} rounds`
   if (['Cash In', 'Cash Out'].includes(block.type)) {
     const rounds = block.params?.rounds || '1';
     const rest = (parseInt(rounds, 10) > 1 && block.params?.rest && block.params.rest !== '-') ? ` · ${block.params.rest} rest` : '';
@@ -615,7 +617,7 @@ export default function WorkoutDetail() {
              doc.setFont('helvetica', 'normal')
              doc.setFontSize(10)
              const prefix = (block.type === 'EMOM' || block.type === 'ON/OFF') ? `Min.${i + 1}  ` : `· `
-             const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+             const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
              const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? ` @ ${ex.ergoPace}` : ''
              const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
              
@@ -1062,6 +1064,7 @@ export default function WorkoutDetail() {
                 else if (b.type === 'AMRAP') shortTitle = `AMRAP ${b.params?.duration || ''}`;
                 else if (b.type === 'ON/OFF') shortTitle = `ON/OFF ${b.params?.rounds ? b.params.rounds + 'x ' : ''}• ${b.params?.on || ''}/${b.params?.off || ''}`;
                 else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
+                else if (b.type === 'Interval') shortTitle = `INTERVAL ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
                 else if (b.type === 'WarmUp') shortTitle = `WARM UP ${b.params?.duration ? '• ' + b.params.duration : ''}`;
                 else if (b.type === 'Rest') shortTitle = `REST ${b.params?.duration ? '• ' + b.params.duration : ''}`;
                 else if (b.type === 'Cash In' || b.type === 'Cash Out') {
@@ -1076,7 +1079,7 @@ export default function WorkoutDetail() {
                      {!['WarmUp', 'Rest'].includes(b.type) && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                            {(b.exercises || []).map((ex, j) => {
-                              const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '');
+                              const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''));
                               const isErgo = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill'].includes(ex.name);
                               const paceStr = isErgo && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : '';
                               const kgStr = ex.kg ? `${ex.kg}kg` : '';
@@ -1428,7 +1431,7 @@ function ExList({ exercises, showMinute, typeColor }) {
   return (
     <div className="flex flex-col gap-2 mt-1">
       {exercises.map((ex, i) => {
-        const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+        const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
         const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
 
         return (

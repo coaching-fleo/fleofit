@@ -1930,6 +1930,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                     else if (b.type === 'AMRAP') shortTitle = `AMRAP ${b.params?.duration || ''}`;
                     else if (b.type === 'ON/OFF') shortTitle = `ON/OFF ${b.params?.rounds ? b.params.rounds + 'x ' : ''}• ${b.params?.on || ''}/${b.params?.off || ''}`;
                     else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
+                    else if (b.type === 'Interval') shortTitle = `INTERVAL ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
                     else if (b.type === 'WarmUp') shortTitle = `WARM UP ${b.params?.duration ? '• ' + b.params.duration : ''}`;
                     else if (b.type === 'Rest') shortTitle = `REST ${b.params?.duration ? '• ' + b.params.duration : ''}`;
                     else if (b.type === 'Cash In' || b.type === 'Cash Out') shortTitle = b.type.toUpperCase();
@@ -1942,7 +1943,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                         ) : (
                           <div className="flex flex-col gap-1.5">
                             {(b.exercises || []).map((ex, j) => {
-                              const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '');
+                              const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''));
                               const pace = ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : '';
                               return (
                                 <p key={j} className="text-sm text-white leading-tight">
