@@ -59,7 +59,7 @@ export default function Home() {
   const [currentY, setCurrentY] = useState(null)
 
   const meta = user?.user_metadata || {}
-  const fallbackName = meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
+  const fallbackName = localStorage.getItem(`fleofit_name_${user?.id}`) || meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
   const userName = dbName || fallbackName
 
   const getGreeting = () => {
@@ -856,7 +856,7 @@ setNotifications(prev => {
                       <p className={`font-bold text-base ${notif.is_read ? 'text-gray-300' : 'text-white'}`}>{notif.title}</p>
                       <p className="text-[10px] text-gray-500 whitespace-nowrap pt-1">{format(parseISO(notif.created_at), 'd MMM HH:mm', { locale: it })}</p>
                     </div>
-                    <p className={`text-sm leading-snug ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>{notif.message}</p>
+                    <p className={`text-sm leading-snug line-clamp-2 break-words ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>{notif.message}</p>
  </div>
                   ))}
                   <div className="mt-2 mb-2 flex justify-center">

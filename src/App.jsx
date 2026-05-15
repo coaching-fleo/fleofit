@@ -10,6 +10,7 @@ import { Badge } from '@capawesome/capacitor-badge'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Calendar from './pages/Calendar'
+import TVDashboard from './pages/TVDashboard'
 import CreateWorkout from './pages/CreateWorkout'
 import Athletes from './pages/Athletes'
 import AthleteDetail from './pages/AthleteDetail'
@@ -87,6 +88,7 @@ function Onboarding({ user, onComplete }) {
         setSaving(false)
         return
       }
+      localStorage.setItem(`fleofit_name_${user.id}`, name || user.email.split('@')[0])
     }
     
     setSaving(false)
@@ -225,7 +227,7 @@ function ProtectedRoute({ children }) {
       }
 
       const meta = session.user.user_metadata || {}
-      const name = meta.first_name || meta.full_name?.split(' ')[0] || session.user.email?.split('@')[0] || ''
+      const name = localStorage.getItem(`fleofit_name_${session.user.id}`) || meta.first_name || meta.full_name?.split(' ')[0] || session.user.email?.split('@')[0] || ''
       setUserName(name)
 
       let r = meta.role
@@ -248,11 +250,16 @@ function ProtectedRoute({ children }) {
       }
 
       if (r === 'athlete' || r === 'admin') {
-        const { data } = await supabase.from('athletes').select('id, name').eq('id', session.user.id).maybeSingle()
+        const { data } = await supabase.from('athletes').select('id, name, surname').eq('id', session.user.id).maybeSingle()
         if (!data || !data.name) {
           setNeedsOnboarding(true)
           setLoading(false)
           return
+        }
+        setUserName(data.name)
+        localStorage.setItem(`fleofit_name_${session.user.id}`, data.name)
+        if (data.name !== meta.first_name) {
+          supabase.auth.updateUser({ data: { first_name: data.name, last_name: data.surname } }).catch(()=>{})
         }
       }
     }
@@ -266,7 +273,7 @@ function ProtectedRoute({ children }) {
         <h1 className="text-5xl font-black text-white tracking-tight mb-6 animate-pulse">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
         {userName ? (
           <>
-            <h1 className="text-3xl font-bold text-white mb-2">Ciao, {userName}!</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">Ciao!</h1>
             <p className="text-[#f1ba17] text-sm font-medium">Stiamo preparando la tua app...</p>
           </>
         ) : (
@@ -394,6 +401,7 @@ function App() {
       <div className="min-h-screen bg-[#0B0B0B] text-white">
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/tv" element={<TVDashboard />} />
           <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
           <Route path="/create" element={<ProtectedRoute><CreateWorkout /></ProtectedRoute>} />
@@ -403,6 +411,7 @@ function App() {
           <Route path="/workout/:id" element={<ProtectedRoute><WorkoutDetail /></ProtectedRoute>} />
           <Route path="/archive" element={<ProtectedRoute><WorkoutsArchive /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </BrowserRouter>

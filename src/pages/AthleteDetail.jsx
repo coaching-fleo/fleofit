@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Play, Pause, Send, Square } from 'lucide-react'
+import { ChevronLeft, ChevronUp, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Play, Pause, Send, Square, Check, Eye } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isToday, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -974,6 +974,14 @@ function CelebrationOverlay({ onClose }) {
 function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous, onUploadVoiceNote, onDeleteVoiceNote }) {
   const [note, setNote] = useState(entry.notes || '')
   const [saving, setSaving] = useState(false)
+  const noteRef = useRef(null)
+
+  useEffect(() => {
+    if (noteRef.current) {
+      noteRef.current.style.height = 'auto'
+      noteRef.current.style.height = `${noteRef.current.scrollHeight}px`
+    }
+  }, [note])
   
   const hasChanges = note !== (entry.notes || '')
 
@@ -1064,7 +1072,8 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
             </div>
           ) : null}
           <textarea
-            className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
+          ref={noteRef}
+          className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
             rows={2}
             placeholder="Note dell'atleta su questo workout..."
             value={note}
@@ -1231,6 +1240,10 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
 
     setSaving(false)
     if (error) { setAlertInfo({ title: 'Errore', message: 'Errore: ' + error.message, type: 'error' }); return }
+    
+    localStorage.setItem(`fleofit_name_${athlete.id}`, form.name)
+    supabase.auth.updateUser({ data: { first_name: form.name, last_name: form.surname, avatar_url: photo_url } }).catch(()=>{})
+
     onSaved()
   }
 
@@ -1346,6 +1359,14 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
 function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous, onUploadVoiceNote, onDeleteVoiceNote }) {
   const [note, setNote] = useState(entry.notes || '')
   const [saving, setSaving] = useState(false)
+  const noteRef = useRef(null)
+
+  useEffect(() => {
+    if (noteRef.current) {
+      noteRef.current.style.height = 'auto'
+      noteRef.current.style.height = `${noteRef.current.scrollHeight}px`
+    }
+  }, [note])
   
   const hasChanges = note !== (entry.notes || '')
 
@@ -1441,7 +1462,8 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           </div>
         ) : null}
         <textarea
-          className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-base transition-colors ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
+          ref={noteRef}
+          className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
           rows={3}
           placeholder="Copia qui le note dell'atleta su questo workout..."
           value={note}
@@ -1796,17 +1818,24 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
   const [workouts, setWorkouts] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
-  const [assigning, setAssigning] = useState(null)
+  const [assigning, setAssigning] = useState(false)
   const [alertInfo, setAlertInfo] = useState(null)
   const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [selectedWorkout, setSelectedWorkout] = useState(null)
+  const [selectedWorkouts, setSelectedWorkouts] = useState([])
+  const [assignStep, setAssignStep] = useState(1)
   const [previewWorkout, setPreviewWorkout] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
     async function fetchW() {
-      const { data } = await supabase.from('workouts').select('id, title, date, sections').order('date', { ascending: false })
-      setWorkouts(data || [])
+      const { data } = await supabase.from('workouts').select('id, title, date, sections, created_at').order('created_at', { ascending: false })
+      const assignableWorkouts = (data || []).filter(w => {
+        const cat = w.sections?.category;
+        if (cat === 'Event' || w.sections?.isEvent) return false;
+        if (cat === 'Custom' || cat === 'Autonomo' || w.sections?.isAutonomous) return false;
+        return true;
+      })
+      setWorkouts(assignableWorkouts)
       setLoading(false)
     }
     fetchW()
@@ -1817,23 +1846,29 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
       setAlertInfo({ title: 'Errore', message: 'Seleziona una data per l\'assegnazione', type: 'error' })
       return
     }
-    setAssigning(selectedWorkout.id)
-    const { data: newAssignment, error } = await supabase.from('athlete_workouts').insert({
+    if (selectedWorkouts.length === 0) return
+    setAssigning(true)
+    
+    const assignmentsToInsert = selectedWorkouts.map(w => ({
       athlete_id: athleteId,
-      workout_id: selectedWorkout.id,
+      workout_id: w.id,
       completed_date: assignDate,
       status: 'pending'
-    }).select('id').single()
+    }))
+
+    const { data: newAssignments, error } = await supabase.from('athlete_workouts').insert(assignmentsToInsert).select('id')
 
     if (error) {
       setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
-      setAssigning(null)
+      setAssigning(false)
     } else {
       // Invia la notifica in background, senza bloccare l'interfaccia
-      if (newAssignment) {
-        supabase.functions.invoke('send-reminders', {
-          body: { mode: 'immediate', record_id: newAssignment.id }
-        }).catch(console.error)
+      if (newAssignments && newAssignments.length > 0) {
+        newAssignments.forEach(na => {
+          supabase.functions.invoke('send-reminders', {
+            body: { mode: 'immediate', record_id: na.id }
+          }).catch(console.error)
+        })
       }
       onAssigned()
     }
@@ -1849,10 +1884,10 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Assegna Workout</p>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button onClick={() => { onClose(); setSelectedWorkouts([]); setAssignStep(1); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
         </div>
-        {!selectedWorkout ? (
-          <>
+        {assignStep === 1 ? (
+          <div className="flex flex-col flex-1 overflow-hidden">
             <div className="p-4 border-b border-[#2a2a2a]">
               <div className="relative">
                 <Search size={16} className="absolute left-3 top-3.5 text-gray-500" />
@@ -1865,14 +1900,32 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
               ) : filtered.length === 0 ? (
                 <p className="text-gray-500 text-sm text-center py-4">Nessun workout trovato.</p>
               ) : (
-                filtered.map(w => (
-                  <div key={w.id} className="flex items-center justify-between bg-[#2a2a2a] border border-[#333] p-3 rounded-xl hover:border-[#f1ba17] transition group">
-                    <div 
-                      className="flex-1 min-w-0 pr-3 text-left cursor-pointer"
-                      onClick={() => setPreviewWorkout(w)}
+                <>
+                  <div className="flex justify-between items-center mb-1 px-1">
+                    <span className="text-gray-400 text-sm">Seleziona workout:</span>
+                    <button 
+                      onClick={() => setSelectedWorkouts(selectedWorkouts.length === filtered.length ? [] : [...filtered])}
+                      className="text-[#f1ba17] text-xs font-semibold hover:underline"
                     >
-                      <p className="text-white font-semibold text-sm truncate group-hover:text-[#f1ba17] transition">{w.title}</p>
-                      <p className="text-gray-500 text-xs mt-0.5">{w.date && isValid(parseISO(w.date)) ? format(parseISO(w.date), 'dd/MM/yyyy') : 'Data sconosciuta'} • {w.sections?.category || 'Generico'}</p>
+                      {selectedWorkouts.length === filtered.length ? 'Deseleziona tutti' : 'Seleziona tutti'}
+                    </button>
+                  </div>
+                  {filtered.map(w => {
+                    const isSelected = selectedWorkouts.some(sw => sw.id === w.id);
+                    return (
+                      <div key={w.id} 
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedWorkouts(selectedWorkouts.filter(sw => sw.id !== w.id));
+                          } else {
+                            setSelectedWorkouts([...selectedWorkouts, w]);
+                          }
+                        }}
+                        className={`flex items-center justify-between bg-[#2a2a2a] border p-3 rounded-xl hover:border-[#f1ba17] transition cursor-pointer group ${isSelected ? 'border-[#f1ba17]' : 'border-[#333]'}`}
+                      >
+                        <div className="flex-1 min-w-0 pr-3 text-left">
+                          <p className={`font-semibold text-sm truncate transition ${isSelected ? 'text-[#f1ba17]' : 'text-white group-hover:text-[#f1ba17]'}`}>{w.title}</p>
+                          <p className="text-gray-500 text-xs mt-0.5">{w.date && isValid(parseISO(w.date)) ? format(parseISO(w.date), 'dd/MM/yyyy') : 'Data sconosciuta'} • {w.sections?.category || 'Generico'}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button 
@@ -1882,35 +1935,54 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                       >
                         <Copy size={16} />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setSelectedWorkout(w); }} className="bg-[#f1ba17]/10 text-[#f1ba17] font-semibold px-3 py-1.5 rounded-lg text-xs hover:bg-[#f1ba17] hover:text-black transition">
-                        Assegna
+                      <button 
+                            onClick={(e) => { e.stopPropagation(); setPreviewWorkout(w); }} 
+                            className="p-1.5 bg-[#111] border border-[#333] rounded-lg text-gray-400 hover:text-white hover:border-[#f1ba17] transition"
+                            title="Anteprima"
+                          >
+                            <Eye size={16} />
                       </button>
+                      <div className={`w-6 h-6 rounded-full border flex items-center justify-center ml-1 ${isSelected ? 'bg-[#f1ba17] border-[#f1ba17]' : 'border-[#555] bg-[#111]'}`}>
+                            {isSelected && <Check size={14} className="text-black" />}
+                        </div>
                     </div>
                   </div>
-                ))
+                  )
+                  })}
+                </>
               )}
             </div>
-          </>
+            {selectedWorkouts.length > 0 && (
+              <div className="p-4 border-t border-[#2a2a2a]">
+                <button onClick={() => setAssignStep(2)} className="w-full py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition shadow-lg">
+                  Procedi ({selectedWorkouts.length})
+                </button>
+              
+            </div>
+                        )}
+
+        </div>
+
         ) : (
           <div className="p-5 flex flex-col gap-4">
             <div>
               <p className="text-gray-400 text-sm mb-1">Stai assegnando:</p>
-              <p className="text-white font-bold">{selectedWorkout.title}</p>
+              <p className="text-white font-bold">{selectedWorkouts.length === 1 ? selectedWorkouts[0].title : `${selectedWorkouts.length} workout selezionati`}</p>
             </div>
             <div>
               <label className="text-gray-400 text-sm mb-2 block">Seleziona la data dell'allenamento</label>
               <CustomDatePicker
                 date={assignDate}
                 onChange={setAssignDate}
-                className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17]"
+                className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full text-base"
               />
             </div>
             <div className="flex gap-3 mt-2">
-              <button onClick={() => setSelectedWorkout(null)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
+              <button onClick={() => setAssignStep(1)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
                 Indietro
               </button>
-              <button onClick={handleAssign} disabled={assigning === selectedWorkout.id} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
-                {assigning === selectedWorkout.id ? 'Assegno...' : 'Conferma'}
+                       <button onClick={handleAssign} disabled={assigning} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+                {assigning ? 'Assegno...' : 'Conferma'}
               </button>
             </div>
           </div>
@@ -1956,6 +2028,8 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                     else if (b.type === 'AMRAP') shortTitle = `AMRAP ${b.params?.duration || ''}`;
                     else if (b.type === 'ON/OFF') shortTitle = `ON/OFF ${b.params?.rounds ? b.params.rounds + 'x ' : ''}• ${b.params?.on || ''}/${b.params?.off || ''}`;
                     else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
+                                       else if (b.type === 'Interval') shortTitle = `INTERVAL ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
+
                     else if (b.type === 'WarmUp') shortTitle = `WARM UP ${b.params?.duration ? '• ' + b.params.duration : ''}`;
                     else if (b.type === 'Rest') shortTitle = `REST ${b.params?.duration ? '• ' + b.params.duration : ''}`;
                     else if (b.type === 'Cash In' || b.type === 'Cash Out') shortTitle = b.type.toUpperCase();
@@ -1968,7 +2042,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                         ) : (
                           <div className="flex flex-col gap-1.5">
                             {(b.exercises || []).map((ex, j) => {
-                              const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '');
+                              const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''));
                               const pace = ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : '';
                               return (
                                 <p key={j} className="text-sm text-white leading-tight">
@@ -1992,12 +2066,13 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
             <div className="p-4 border-t border-[#2a2a2a] flex flex-col gap-2">
               <button 
                 onClick={() => {
-                  setSelectedWorkout(previewWorkout);
+                  const isAlreadySelected = selectedWorkouts.some(sw => sw.id === previewWorkout.id);
+                  if (!isAlreadySelected) setSelectedWorkouts([...selectedWorkouts, previewWorkout]);
                   setPreviewWorkout(null);
                 }}
                 className="w-full py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition shadow-lg shadow-[#f1ba17]/20"
               >
-                Assegna questo Workout
+                Seleziona questo Workout
               </button>
               <button 
                 onClick={() => {

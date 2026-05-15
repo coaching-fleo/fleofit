@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause } from 'lucide-react'
+import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -26,6 +26,8 @@ const TYPE_COLORS = {
   EMOM: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
   AMRAP: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
   'For Time': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
+    'Interval': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
+
    'Running': { text: 'text-[#0094C6]', bg: 'bg-[#0094C6]/10', border: 'border-[#0094C6]/30', hex: '#0094C6' },
   'Custom': { text: 'text-[#D11149]', bg: 'bg-[#D11149]/10', border: 'border-[#D11149]/30', hex: '#D11149' },
   'Event': { text: 'text-white', bg: 'bg-white/10', border: 'border-white/30', hex: '#ffffff' }
@@ -105,6 +107,8 @@ const getBlockTitle = (block) => {
      return dur.includes('min') ? `AMRAP · ${dur}` : `AMRAP · ${dur} min`
   }
   if (block.type === 'For Time') return `For Time · ${block.params?.rounds || '3'} rounds`
+    if (block.type === 'Interval') return `Interval · ${block.params?.rounds || '1'} rounds`
+
   if (['Cash In', 'Cash Out'].includes(block.type)) {
     const rounds = block.params?.rounds || '1';
     const rest = (parseInt(rounds, 10) > 1 && block.params?.rest && block.params.rest !== '-') ? ` · ${block.params.rest} rest` : '';
@@ -170,12 +174,21 @@ export default function WorkoutDetail() {
   const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [athleteWorkoutId, setAthleteWorkoutId] = useState(null)
   const [workoutStatus, setWorkoutStatus] = useState('pending')
-  const [selectedAthleteForAssign, setSelectedAthleteForAssign] = useState(null)
+const [selectedAthletes, setSelectedAthletes] = useState([])
+  const [assignStep, setAssignStep] = useState(1)
   const [assignments, setAssignments] = useState([])
   const [currentAthleteName, setCurrentAthleteName] = useState('')
 
+  // TV Sync
+  const [tvModalOpen, setTvModalOpen] = useState(false)
+  const [tvCode, setTvCode] = useState('')
+  const [tvConnecting, setTvConnecting] = useState(false)
+  const [isTvInputFocused, setIsTvInputFocused] = useState(false)
+  const [connectedTvCode, setConnectedTvCode] = useState(null)
+
   // Voice Notes
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null)
+  const noteRef = useRef(null)
 
   const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
   const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
@@ -211,6 +224,13 @@ export default function WorkoutDetail() {
       clearNotif();
     }
   }, [id, queryAthleteId, user]);
+
+  useEffect(() => {
+    if (noteRef.current) {
+      noteRef.current.style.height = 'auto'
+      noteRef.current.style.height = `${noteRef.current.scrollHeight}px`
+    }
+  }, [editingNote])
 
   // Carica la lista atleti solo quando si apre il modal per la prima volta
   useEffect(() => {
@@ -318,29 +338,37 @@ export default function WorkoutDetail() {
     setAthletes((data || []).filter(a => a.id !== COACHING_ID))
   }
 
-  const handleAssign = async (athleteId) => {
+  const handleAssignMultiple = async () => {
     if (!assignDate) {
       setAlertInfo({ title: 'Errore', message: 'Inserisci la data di assegnazione.', type: 'error' })
       return
     }
+        if (selectedAthletes.length === 0) return
+
     setAssigning(true)
-    const { data: newAssignment, error } = await supabase.from('athlete_workouts').insert({
-      athlete_id: athleteId,
+ const assignmentsToInsert = selectedAthletes.map(ath => ({
+      athlete_id: ath.id,
       workout_id: workout.id,
       completed_date: assignDate,
       status: 'pending'
-    }).select('id').single()
+    }))
+    const { data: newAssignments, error } = await supabase.from('athlete_workouts').insert(assignmentsToInsert).select('id')
+
     
     setAssigning(false)
     if (error) {
       setAlertInfo({ title: 'Errore', message: "Errore durante l'assegnazione: " + error.message, type: 'error' })
     } else {
-      if (newAssignment) {
-        supabase.functions.invoke('send-reminders', {
-          body: { mode: 'immediate', record_id: newAssignment.id }
-        }).catch(console.error)
+      if (newAssignments && newAssignments.length > 0) {
+        newAssignments.forEach(na => {
+          supabase.functions.invoke('send-reminders', {
+            body: { mode: 'immediate', record_id: na.id }
+          }).catch(console.error)
+        })
       }
       setAssignModalOpen(false)
+            setSelectedAthletes([])
+      setAssignStep(1)
       setShowSuccessModal(true)
       fetchWorkout()
     }
@@ -459,6 +487,55 @@ export default function WorkoutDetail() {
         }
       }
     })
+  }
+
+  const handleConnectTV = async () => {
+    if (!tvCode || tvCode.length !== 4) {
+      setAlertInfo({ title: 'Errore', message: 'Inserisci un codice valido a 4 cifre', type: 'error' })
+      return
+    }
+    setTvConnecting(true)
+    const { data, error: fetchErr } = await supabase.from('tv_sessions').select('*').eq('code', tvCode).single()
+    
+    if (fetchErr || !data) {
+      setTvConnecting(false)
+      setAlertInfo({ title: 'Errore', message: 'Codice TV non trovato o scaduto.', type: 'error' })
+      return
+    }
+
+    const { error } = await supabase.from('tv_sessions').update({ 
+      workout_id: id, 
+      athlete_id: queryAthleteId || user?.id,
+      updated_at: new Date().toISOString()
+    }).eq('code', tvCode)
+
+    setTvConnecting(false)
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+    } else {
+      setConnectedTvCode(tvCode)
+      setTvModalOpen(false)
+      setTvCode('')
+      setAlertInfo({ title: 'Connesso!', message: 'Il workout è ora visibile sulla tua TV.', type: 'success' })
+    }
+  }
+
+  const handleDisconnectTV = async () => {
+    if (!connectedTvCode) return
+    setTvConnecting(true)
+    const { error } = await supabase.from('tv_sessions').update({ 
+      workout_id: null, 
+      athlete_id: null,
+      updated_at: new Date().toISOString()
+    }).eq('code', connectedTvCode)
+    
+    setTvConnecting(false)
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+    } else {
+      setConnectedTvCode(null)
+      setAlertInfo({ title: 'Scollegato', message: 'La TV è tornata alla schermata iniziale.', type: 'success' })
+    }
   }
 
   const buildPDFDoc = async () => {
@@ -648,7 +725,7 @@ export default function WorkoutDetail() {
              doc.setFont('helvetica', 'normal')
              doc.setFontSize(10)
              const prefix = (block.type === 'EMOM' || block.type === 'ON/OFF') ? `Min.${i + 1}  ` : `· `
-             const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+             const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
              const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? ` @ ${ex.ergoPace}` : ''
              const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
              
@@ -870,45 +947,52 @@ export default function WorkoutDetail() {
               {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}
             </p>
           </div>
-          {(role !== 'athlete' || isAuto) && (
-            <div className="flex flex-col items-end gap-2">
-              <div className="flex items-center gap-2">
-                {workout.sections?.intensity && (
-                  <div className="flex items-center gap-1 bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
-                    <span className={`text-xs font-bold ${getIntensityColor(workout.sections.intensity)}`}>
-                      {workout.sections.intensity}/10
-                    </span>
-                    <BicepsFlexed size={14} className={getIntensityColor(workout.sections.intensity)} />
-                  </div>
-                )}
-                <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${type === 'Event' ? 'bg-white text-black border-white' : `${c.bg} ${c.text} border ${c.border}`}`}>
-                  {type}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {role !== 'athlete' && (
-                  <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg" title="Duplica Workout">
-                    <Copy size={12} /> Duplica
-                  </button>
-                )}
-                {role !== 'athlete' && !isAuto && (
-                  <button onClick={() => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
-                    <Edit size={12} /> Modifica
-                  </button>
-                )}
-                {isAuto && (
-                  <button onClick={openEditAutonomous} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
-                    <Edit size={12} /> Modifica
-                  </button>
-                )}
-                {(role !== 'athlete' || isAuto) && (
-                  <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
-                    <Trash2 size={12} />
-                  </button>
-                )}
-              </div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              {workout.sections?.intensity && (
+                <div className="flex items-center gap-1 bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                  <span className={`text-xs font-bold ${getIntensityColor(workout.sections.intensity)}`}>
+                    {workout.sections.intensity}/10
+                  </span>
+                  <BicepsFlexed size={14} className={getIntensityColor(workout.sections.intensity)} />
+                </div>
+              )}
+              <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${type === 'Event' ? 'bg-white text-black border-white' : `${c.bg} ${c.text} border ${c.border}`}`}>
+                {type}
+              </span>
             </div>
-          )}
+            <div className="flex items-center gap-2">
+              {connectedTvCode ? (
+                <button onClick={handleDisconnectTV} disabled={tvConnecting} className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-red-900/50 px-3 py-1.5 rounded-lg" title="Scollega TV">
+                  <MonitorUp size={12} /> Scollega
+                </button>
+              ) : (
+                <button onClick={() => setTvModalOpen(true)} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg" title="Trasmetti alla TV">
+                  <MonitorUp size={12} /> TV
+                </button>
+              )}
+              {role !== 'athlete' && (
+                <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg" title="Duplica Workout">
+                  <Copy size={12} /> Duplica
+                </button>
+              )}
+              {role !== 'athlete' && !isAuto && (
+                <button onClick={() => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
+                  <Edit size={12} /> Modifica
+                </button>
+              )}
+              {isAuto && (
+                <button onClick={openEditAutonomous} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
+                  <Edit size={12} /> Modifica
+                </button>
+              )}
+              {(role !== 'athlete' || isAuto) && (
+                <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
         {(role === 'athlete' || isOwnProfile) && athleteWorkoutId && (
       
@@ -974,7 +1058,8 @@ export default function WorkoutDetail() {
       {(role === 'athlete' || isOwnProfile) && athleteWorkoutId ? (
         <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Le tue note su questo ${type === 'Event' ? 'evento' : 'allenamento'}`} color="border-[#3b82f6]/40">
           <textarea
-            className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-colors focus:border-[#3b82f6]"
+            ref={noteRef}
+            className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden focus:border-[#3b82f6]"
             rows={3}
             placeholder="Com'è andata? Segna qui i tuoi pesi, i tempi o come ti sei sentito..."
             value={editingNote}
@@ -1086,7 +1171,7 @@ export default function WorkoutDetail() {
 
       {role !== 'athlete' && (
         <div className="mt-3">
-          <button onClick={() => setAssignModalOpen(true)}
+          <button onClick={() => { setAssignModalOpen(true); setSelectedAthletes([]); setAssignStep(1); }}
             className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-4 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition">
             <Users size={18} /> Assegna ad Atleta
           </button>
@@ -1152,6 +1237,8 @@ export default function WorkoutDetail() {
                 else if (b.type === 'AMRAP') shortTitle = `AMRAP ${b.params?.duration || ''}`;
                 else if (b.type === 'ON/OFF') shortTitle = `ON/OFF ${b.params?.rounds ? b.params.rounds + 'x ' : ''}• ${b.params?.on || ''}/${b.params?.off || ''}`;
                 else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
+                                else if (b.type === 'Interval') shortTitle = `INTERVAL ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
+
                 else if (b.type === 'WarmUp') shortTitle = `WARM UP ${b.params?.duration ? '• ' + b.params.duration : ''}`;
                 else if (b.type === 'Rest') shortTitle = `REST ${b.params?.duration ? '• ' + b.params.duration : ''}`;
                 else if (b.type === 'Cash In' || b.type === 'Cash Out') {
@@ -1166,7 +1253,7 @@ export default function WorkoutDetail() {
                      {!['WarmUp', 'Rest'].includes(b.type) && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                            {(b.exercises || []).map((ex, j) => {
-                              const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '');
+                              const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''));
                               const isErgo = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill'].includes(ex.name);
                               const paceStr = isErgo && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : '';
                               const kgStr = ex.kg ? `${ex.kg}kg` : '';
@@ -1235,36 +1322,65 @@ export default function WorkoutDetail() {
           <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg">Assegna Workout</p>
-              <button onClick={() => { setAssignModalOpen(false); setSelectedAthleteForAssign(null); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
+              <button onClick={() => { setAssignModalOpen(false); setSelectedAthletes([]); setAssignStep(1); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
              </div>
             
-            {!selectedAthleteForAssign ? (
-
+            {assignStep === 1 ? (
               <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-3">
                 {athletes.length === 0 ? (
                   <p className="text-gray-500 text-center py-4 text-sm">Nessun atleta trovato.</p>
                 ) : (
-                  athletes.map(a => (
-                    <button key={a.id} onClick={() => setSelectedAthleteForAssign(a)}
-                      className="flex items-center gap-4 bg-[#2a2a2a] border border-[#333] rounded-2xl p-3 hover:border-[#f1ba17] transition text-left">
-                      <div className="w-10 h-10 rounded-full bg-[#1e1e1e] border border-[#444] flex items-center justify-center overflow-hidden shrink-0">
-                        {a.photo_url
-                          ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" onError={() => setAthletes(athletes.map(ath => ath.id === a.id ? { ...ath, photo_url: null } : ath))} />
-                          : <User size={18} className="text-gray-500" />
-                        }
-                      </div>
-                      <div>
-                        <p className="text-white font-semibold">{a.name} {a.surname}</p>
-                      </div>
-                    </button>
-                  ))
+                  <>
+                    <div className="flex justify-between items-center mb-2 px-1">
+                      <span className="text-gray-400 text-sm">Seleziona atleti:</span>
+                      <button 
+                        onClick={() => setSelectedAthletes(selectedAthletes.length === athletes.length ? [] : [...athletes])}
+                        className="text-[#f1ba17] text-xs font-semibold hover:underline"
+                      >
+                        {selectedAthletes.length === athletes.length ? 'Deseleziona tutti' : 'Seleziona tutti'}
+                      </button>
+                    </div>
+                    {athletes.map(a => {
+                      const isSelected = selectedAthletes.some(sa => sa.id === a.id);
+                      return (
+                        <button key={a.id} onClick={() => {
+                          if (isSelected) {
+                            setSelectedAthletes(selectedAthletes.filter(sa => sa.id !== a.id));
+                          } else {
+                            setSelectedAthletes([...selectedAthletes, a]);
+                          }
+                        }}
+                          className={`flex items-center justify-between bg-[#2a2a2a] border rounded-2xl p-3 hover:border-[#f1ba17] transition text-left ${isSelected ? 'border-[#f1ba17]' : 'border-[#333]'}`}>
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-[#1e1e1e] border border-[#444] flex items-center justify-center overflow-hidden shrink-0">
+                              {a.photo_url
+                                ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" onError={() => setAthletes(athletes.map(ath => ath.id === a.id ? { ...ath, photo_url: null } : ath))} />
+                                : <User size={18} className="text-gray-500" />
+                              }
+                            </div>
+                            <div>
+                              <p className="text-white font-semibold">{a.name} {a.surname}</p>
+                            </div>
+                          </div>
+                          <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${isSelected ? 'bg-[#f1ba17] border-[#f1ba17]' : 'border-[#555] bg-[#111]'}`}>
+                            {isSelected && <Check size={14} className="text-black" />}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </>
+                )}
+                {selectedAthletes.length > 0 && (
+                  <button onClick={() => setAssignStep(2)} className="w-full mt-3 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition sticky bottom-0 shadow-lg">
+                    Procedi ({selectedAthletes.length})
+                  </button>
                 )}
               </div>
             ) : (
               <div className="p-5 flex flex-col gap-4">
                 <div>
                   <p className="text-gray-400 text-sm mb-1">Stai assegnando a:</p>
-                  <p className="text-white font-bold">{selectedAthleteForAssign.name} {selectedAthleteForAssign.surname}</p>
+                  <p className="text-white font-bold">{selectedAthletes.length === 1 ? `${selectedAthletes[0].name} ${selectedAthletes[0].surname}` : `${selectedAthletes.length} atleti selezionati`}</p>
                 </div>
                 <div>
                   <label className="text-gray-400 text-sm mb-2 block">Seleziona la data dell'allenamento</label>
@@ -1275,10 +1391,10 @@ export default function WorkoutDetail() {
                   />
                 </div>
                 <div className="flex gap-3 mt-2">
-                  <button onClick={() => setSelectedAthleteForAssign(null)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
+                  <button onClick={() => setAssignStep(1)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
                     Indietro
                   </button>
-                  <button onClick={() => handleAssign(selectedAthleteForAssign.id)} disabled={assigning} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+                  <button onClick={handleAssignMultiple} disabled={assigning} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
                     {assigning ? 'Assegno...' : 'Conferma'}
                   </button>
                 </div>
@@ -1392,7 +1508,40 @@ export default function WorkoutDetail() {
         document.body
       )}
 
-      
+       {/* MODAL: TV SYNC */}
+      {tvModalOpen && createPortal(
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
+          <div className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isTvInputFocused ? '-translate-y-32' : ''}`}>
+            <div className="flex justify-between items-center mb-2">
+               <h2 className="text-xl font-bold text-white flex items-center gap-2"><MonitorUp size={24} className="text-[#f1ba17]" /> Trasmetti in TV</h2>
+               <button onClick={() => setTvModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+            </div>
+            <p className="text-gray-400 text-sm text-left">
+              Apri il browser della tua Fire Stick o Smart TV, vai su <strong className="text-white">fleofit.vercel.app/tv</strong> e inserisci qui sotto il codice che vedi a schermo.
+            </p>
+            <input 
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              className="bg-[#111] border border-[#333] rounded-xl px-4 py-4 text-white text-center text-3xl font-black tracking-[0.5em] focus:outline-none focus:border-[#f1ba17] w-full"
+              value={tvCode}
+              onChange={(e) => setTvCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+              onFocus={() => setIsTvInputFocused(true)}
+              onBlur={() => setIsTvInputFocused(false)}
+              placeholder="1234"
+            />
+            <button 
+              onClick={handleConnectTV}
+              disabled={tvConnecting || tvCode.length !== 4}
+              className="w-full mt-2 py-4 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 text-lg"
+            >
+              {tvConnecting ? 'Connessione...' : 'Trasmetti ora'}
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
       {createPortal(
         <>
           <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
@@ -1482,7 +1631,7 @@ function ExList({ exercises, showMinute, typeColor }) {
   return (
     <div className="flex flex-col gap-2 mt-1">
       {exercises.map((ex, i) => {
-        const detail = (ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : '')
+        const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
         const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
 
         return (

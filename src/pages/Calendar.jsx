@@ -76,6 +76,8 @@ export default function Calendar() {
     'EMOM': '#f1ba17',
     'AMRAP': '#f1ba17',
     'For Time': '#f1ba17',
+        'Interval': '#f1ba17',
+
     Hyrox: '#f1ba17',
     Running: '#0094C6',
     Custom: '#D11149',
@@ -94,7 +96,7 @@ export default function Calendar() {
     if (s.category === 'Custom' || s.category === 'Autonomo') return 'Custom'
     if (s.category === 'Running' || s.main?.type === 'Running' || s.steps) return 'Running'
     if (s.blocks) {
-      const mainBlock = s.blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type))
+      const mainBlock = s.blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time', 'Interval'].includes(b.type))
       return mainBlock ? mainBlock.type : 'Hyrox'
     }
     const oldT = s.main?.type || ''

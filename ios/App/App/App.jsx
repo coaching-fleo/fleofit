@@ -273,7 +273,7 @@ function ProtectedRoute({ children }) {
         <h1 className="text-5xl font-black text-white tracking-tight mb-6 animate-pulse">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
         {userName ? (
           <>
-            <h1 className="text-3xl font-bold text-white mb-2">Ciao, {userName}!</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">Ciao!</h1>
             <p className="text-[#f1ba17] text-sm font-medium">Stiamo preparando la tua app...</p>
           </>
         ) : (
