@@ -15,46 +15,6 @@ const SCHEMES = {
   done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' }
 }
 
-function TVTimer({ state }) {
-  const { timeLeft, step } = state;
-  const currentTheme = SCHEMES[step?.theme || 'base'] || SCHEMES.base;
-
-  const formatT = (totalSeconds) => {
-    const m = Math.floor(totalSeconds / 60);
-    const s = totalSeconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <div className={`absolute inset-0 z-[200] ${currentTheme.bg} flex flex-col animate-in slide-in-from-bottom-full duration-500 ease-out`}>
-      <div className="flex-1 flex flex-col items-center justify-between p-16 text-center w-full mx-auto">
-        <div className="w-full mt-10">
-          <h2 className={`text-6xl font-black tracking-widest uppercase mb-4 drop-shadow-md ${currentTheme.text}`}>{step?.title}</h2>
-          <p className={`text-4xl font-bold h-10 ${currentTheme.sub}`}>{step?.subtitle || ''}</p>
-        </div>
-        
-        <div className="flex flex-col items-center my-8 w-full max-w-[1200px]">
-          <div className={`backdrop-blur-md rounded-[3rem] p-12 mb-12 w-full shadow-2xl ${currentTheme.card}`}>
-            <p className={`text-2xl font-bold uppercase tracking-widest mb-4 ${currentTheme.cardLabel}`}>Esercizio</p>
-            <p className="font-bold text-7xl leading-tight min-h-[160px] flex items-center justify-center break-words">{step?.task || 'Workout'}</p>
-          </div>
-          <div className={`text-[350px] font-black tracking-tighter leading-none drop-shadow-2xl tabular-nums ${currentTheme.text}`}>
-            {formatT(timeLeft)}
-          </div>
-        </div>
-
-        <div className="w-full min-h-[100px] flex flex-col items-center justify-center mb-10">
-          {step?.nextTask && (
-            <div className={`inline-flex items-center justify-center gap-4 px-10 py-5 rounded-full backdrop-blur-md max-w-full shadow-xl ${currentTheme.card}`}>
-              <span className={`font-bold text-3xl truncate ${currentTheme.cardLabel}`}>Next: <span className={currentTheme.text}>{step.nextTask}</span></span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const timeToSeconds = (timeStr) => {
   if (!timeStr) return 0;
   const str = String(timeStr);
@@ -128,9 +88,9 @@ const getIntensityColor = (val) => {
   return 'text-red-500';
 }
 
-function Section({ icon, label, color, stepNumber, className = "", children }) {
+function Section({ icon, label, color, stepNumber, className = "", isActive, children }) {
   return (
-    <div className={`bg-[#1e1e1e] border-4 ${color} rounded-[2rem] p-6 flex flex-col gap-4 shadow-2xl relative ${className}`}>
+    <div className={`bg-[#1e1e1e] border-4 ${isActive ? 'border-[#f1ba17] shadow-[0_0_40px_rgba(241,186,23,0.3)] scale-[1.02]' : color} rounded-[2rem] p-6 flex flex-col gap-4 shadow-2xl relative transition-all duration-500 ${className}`}>
       {stepNumber && (
         <div className="absolute top-4 right-6 w-14 h-14 bg-[#111] border-4 border-[#333] text-[#f1ba17] font-black text-2xl flex items-center justify-center rounded-full z-10 shadow-lg">
           {stepNumber}
@@ -180,7 +140,7 @@ function ExList({ exercises, showMinute, typeColor }) {
   )
 }
 
-function RunningList({ steps }) {
+function RunningList({ steps, activeIdx }) {
   const getTypeLabel = (t) => {
     switch(t) {
       case 'warmup': return 'Riscaldamento'
@@ -206,7 +166,7 @@ function RunningList({ steps }) {
   return (
     <div className="flex flex-col w-full gap-4">
       {steps.map((step, i) => (
-        <div key={step.id || i} className="flex flex-col justify-center border-l-[8px] border-[#333] pl-6 py-2">
+        <div key={step.id || i} className={`flex flex-col justify-center border-l-[8px] ${i === activeIdx ? 'border-[#0094C6] bg-[#0094C6]/10 shadow-[inset_0_0_20px_rgba(0,148,198,0.2)] rounded-r-2xl py-4' : 'border-[#333] py-2'} pl-6 transition-all duration-500`}>
           <div className="flex items-center gap-4 mb-2">
             <span className={`text-3xl font-black uppercase tracking-wider ${getTypeColor(step.type)}`}>
               {getTypeLabel(step.type)}
@@ -398,6 +358,21 @@ export default function TVDashboard() {
     const type = isEvent ? 'Event' : (isAuto ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
     const c = TYPE_COLORS[type] || TYPE_COLORS['Hyrox'] || { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' }
 
+    let activeIdx = -1;
+    if (timerState?.step?.id) {
+      const parts = timerState.step.id.split('-');
+      if (parts[0] === 'blk' || parts[0] === 'run' || parts[0] === 'step') {
+        activeIdx = parseInt(parts[1], 10);
+      }
+    }
+
+    const formatT = (totalSeconds) => {
+      if (isNaN(totalSeconds)) return '0:00';
+      const m = Math.floor(totalSeconds / 60);
+      const s = totalSeconds % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
     const totalItems = (isRunning ? 1 : blocks.length) + (workout.coach_notes ? 1 : 0);
     
     let cols = 1;
@@ -465,7 +440,7 @@ export default function TVDashboard() {
            >
              {!isRunning && type !== 'Custom' && type !== 'Event' ? (
                 blocks.map((block, idx) => (
-                  <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} color={TYPE_COLORS[block.type]?.border} stepNumber={blocks.length > 1 ? idx + 1 : null} className={getSectionClass(block.type)}>
+                  <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} color={TYPE_COLORS[block.type]?.border} stepNumber={blocks.length > 1 ? idx + 1 : null} className={getSectionClass(block.type)} isActive={idx === activeIdx}>
                       {['WarmUp', 'Rest'].includes(block.type) ? (
                         <p className="text-gray-300 text-4xl font-bold">{block.params?.duration} {block.notes ? <span className="text-gray-500 text-3xl block mt-4">· {block.notes}</span> : ''}</p>
                       ) : (
@@ -475,7 +450,7 @@ export default function TVDashboard() {
                 ))
               ) : isRunning ? (
                   <Section icon={<Timer size={40} className={c.text} />} label="Allenamento Corsa" color={c.border}>
-                    <RunningList steps={s?.steps || s?.main?.steps || []} />
+                    <RunningList steps={s?.steps || s?.main?.steps || []} activeIdx={activeIdx} />
                   </Section>
               ) : null}
 
@@ -487,6 +462,20 @@ export default function TVDashboard() {
               )}
            </div>
         </div>
+        
+        {/* TIMER FLOATING BAR NON INVASIVA */}
+        {timerState && (
+          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 bg-[#111] border-4 border-[#333] rounded-[3rem] px-12 py-6 flex items-center justify-between min-w-[1000px] shadow-[0_30px_80px_rgba(0,0,0,0.9)] z-[100] animate-in slide-in-from-bottom-24 duration-500">
+             <div className="flex flex-col flex-1 pr-8">
+               <span className="text-[#f1ba17] font-bold text-3xl uppercase tracking-widest">{timerState.step?.title}</span>
+               <span className="text-white font-medium text-5xl truncate mt-2">{timerState.step?.task}</span>
+             </div>
+             <div className="w-1 h-24 bg-[#333] rounded-full mx-8"></div>
+             <span className="text-[120px] font-black text-white tabular-nums tracking-tighter leading-none shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
+               {formatT(timerState.timeLeft)}
+             </span>
+          </div>
+        )}
       </div>
     )
   }
@@ -518,7 +507,6 @@ export default function TVDashboard() {
           }}
         >
           {renderContent()}
-          {timerState && <TVTimer state={timerState} />}
         </div>
       </div>
     </div>
