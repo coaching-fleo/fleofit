@@ -247,20 +247,29 @@ export default function TVDashboard() {
 
       // Resta in ascolto degli aggiornamenti in "Tempo Reale" via Supabase
       channel = supabase.channel(`tv_${newCode}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tv_sessions', filter: `code=eq.${newCode}` }, async (payload) => {
-          const newWorkoutId = payload.new.workout_id
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tv_sessions', filter: `code=eq.${newCode}` }, async (payload) => {
+          if (payload.eventType === 'DELETE') {
+            setStatus('waiting')
+            setWorkout(null)
+            setError(null)
+            return
+          }
+          
+          const newWorkoutId = payload.new?.workout_id
           if (newWorkoutId) {
             setStatus('loading')
             const { data: wData } = await supabase.from('workouts').select('*').eq('id', newWorkoutId).maybeSingle()
             if (wData) {
               setWorkout(wData)
               setStatus('active')
+              setError(null)
             } else {
               setError("Workout non trovato.")
             }
           } else {
             setStatus('waiting')
             setWorkout(null)
+            setError(null)
           }
         })
         .subscribe()

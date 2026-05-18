@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import AVFoundation
 import FirebaseCore
 import FirebaseMessaging
 
@@ -10,6 +11,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         FirebaseApp.configure()
+        
         return true
     }
 
@@ -39,6 +41,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        
+        // Forza la sessione audio in Playback dopo il caricamento della WKWebView
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Errore audio in applicationDidBecomeActive: \(error.localizedDescription)")
+        }
     }
 
     func applicationWillTerminate(_ application: UIApplication) {

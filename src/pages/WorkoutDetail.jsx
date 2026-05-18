@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp } from 'lucide-react'
+import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -16,6 +16,8 @@ import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { Media } from '@capacitor-community/media'
 import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
+import { KeepAwake } from '@capacitor-community/keep-awake'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
 const TYPE_COLORS = {
   'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
@@ -117,6 +119,83 @@ const getBlockTitle = (block) => {
   return block.type
 }
 
+const parseDuration = (val) => {
+  if (!val) return 0;
+  const str = String(val).toLowerCase().replace(/[^0-9:\.]/g, '').trim();
+  if (String(val).toLowerCase().includes('sec')) return parseInt(str, 10) || 0;
+  const parts = str.split(':');
+  if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  if (parts.length === 3) return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+  return Math.round((parseFloat(str) || 0) * 60); 
+}
+
+const buildTimerSequence = (workout) => {
+  const seq = [];
+  seq.push({ id: 'prep', title: 'Preparazione', subtitle: 'Il workout sta per iniziare', duration: 10, color: 'bg-yellow-500', type: 'prep' });
+
+  const s = workout.sections || {};
+  const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox');
+  const isRunning = rawCat === 'Running';
+
+  if (isRunning) {
+    const steps = s?.steps || s?.main?.steps || [];
+    steps.forEach((step, i) => {
+      if (step.type === 'repeat') {
+        const rounds = parseInt(step.rounds, 10) || 1;
+        const runSec = parseDuration(step.runDuration);
+        const recSec = parseDuration(step.recDuration);
+        for(let r=1; r<=rounds; r++) {
+          if (runSec > 0) seq.push({ id: `run-${i}-${r}-work`, title: 'Corsa', subtitle: `Ripetuta ${r}/${rounds}`, duration: runSec, color: 'bg-[#0094C6]', type: 'work' });
+          if (recSec > 0) seq.push({ id: `run-${i}-${r}-rest`, title: 'Recupero', subtitle: `Ripetuta ${r}/${rounds}`, duration: recSec, color: 'bg-green-500', type: 'rest' });
+        }
+      } else {
+        const sec = parseDuration(step.duration);
+        let title = 'Corsa'; let color = 'bg-[#0094C6]';
+        if (step.type === 'warmup') { title = 'Riscaldamento'; color = 'bg-orange-500'; }
+        if (step.type === 'recover') { title = 'Recupero'; color = 'bg-green-500'; }
+        if (step.type === 'cooldown') { title = 'Defaticamento'; color = 'bg-gray-500'; }
+        seq.push({ id: `step-${i}`, title, subtitle: step.notes || '', duration: sec, color, type: step.type === 'recover' ? 'rest' : 'work' });
+      }
+    });
+  } else {
+    const blocks = getNormalizedBlocks(workout);
+    blocks.forEach((b, i) => {
+      if (b.type === 'WarmUp' || b.type === 'Rest') {
+        const sec = parseDuration(b.params?.duration);
+        seq.push({ id: `blk-${i}`, title: b.type, subtitle: b.notes || '', duration: sec, color: b.type==='Rest' ? 'bg-green-500' : 'bg-orange-500', type: b.type==='Rest' ? 'rest' : 'work' });
+      } else if (b.type === 'ON/OFF') {
+        const rounds = parseInt(b.params?.rounds, 10) || 10;
+        const onSec = parseDuration(b.params?.on || '1:00');
+        const offSec = parseDuration(b.params?.off || '1:00');
+        for(let r=1; r<=rounds; r++) {
+           seq.push({ id: `blk-${i}-${r}-on`, title: 'WORK (ON)', subtitle: `Round ${r}/${rounds}`, duration: onSec, color: 'bg-red-500', type: 'work' });
+           seq.push({ id: `blk-${i}-${r}-off`, title: 'REST (OFF)', subtitle: `Round ${r}/${rounds}`, duration: offSec, color: 'bg-green-500', type: 'rest' });
+        }
+      } else if (b.type === 'EMOM') {
+        const rounds = parseInt(b.params?.rounds, 10) || 10;
+        const intSec = parseDuration(b.params?.interval || '1:00');
+        for(let r=1; r<=rounds; r++) {
+           seq.push({ id: `blk-${i}-${r}`, title: 'EMOM', subtitle: `Round ${r}/${rounds}`, duration: intSec, color: 'bg-purple-500', type: 'work' });
+        }
+      } else if (b.type === 'AMRAP') {
+        const sec = parseDuration(b.params?.duration || '10:00');
+        seq.push({ id: `blk-${i}`, title: 'AMRAP', subtitle: '', duration: sec, color: 'bg-red-500', type: 'work' });
+      } else if (b.type === 'For Time' || b.type === 'Interval') {
+        const rounds = parseInt(b.params?.rounds, 10) || 1;
+        const sec = parseDuration(b.params?.timecap || '0'); 
+        for(let r=1; r<=rounds; r++) {
+           seq.push({ id: `blk-${i}-${r}`, title: b.type.toUpperCase(), subtitle: `Round ${r}/${rounds}`, duration: sec, color: 'bg-blue-500', type: sec > 0 ? 'work' : 'stopwatch' });
+        }
+      } else {
+        seq.push({ id: `blk-${i}`, title: b.type.toUpperCase(), subtitle: '', duration: 0, color: 'bg-yellow-600', type: 'stopwatch' });
+      }
+    });
+  }
+
+  seq.push({ id: 'done', title: 'Completato!', subtitle: 'Ottimo lavoro', duration: 0, color: 'bg-green-600', type: 'done' });
+  return seq;
+}
+
 const isVoiceNoteValid = (url) => {
   if (!url) return false
   if (url.includes('#deleted=')) return false
@@ -147,6 +226,55 @@ const DISTANCE_EXERCISES = [
   "Waiter's Walk", 'Handstand Walk', 'Run', 'Bear Crawl', 'Shuttle Run', 'Swim'
 ]
 const isDistance = (name) => isErgo(name) || isSled(name) || DISTANCE_EXERCISES.includes(name)
+
+// --- AUDIO GENERATOR HELPER ---
+const writeString = (view, offset, string) => {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i));
+  }
+};
+
+const createBeepURI = (freq, durationMs) => {
+  const sampleRate = 44100;
+  const numSamples = Math.floor(sampleRate * (durationMs / 1000));
+  const buffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(buffer);
+  
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true); 
+  view.setUint16(20, 1, true); 
+  view.setUint16(22, 1, true); 
+  view.setUint32(24, sampleRate, true); 
+  view.setUint32(28, sampleRate * 2, true); 
+  view.setUint16(32, 2, true); 
+  view.setUint16(34, 16, true); 
+  writeString(view, 36, 'data');
+  view.setUint32(40, numSamples * 2, true); 
+  
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    const sample = Math.sin(2 * Math.PI * freq * t);
+    let envelope = 1;
+    if (i < 1000) envelope = i / 1000;
+    else if (i > numSamples - 1000) envelope = (numSamples - i) / 1000;
+    view.setInt16(44 + i * 2, sample * 32767 * envelope, true);
+  }
+  
+  const blob = new Blob([buffer], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+};
+
+let shortBeepURI = null;
+let longBeepURI = null;
+let longerBeepURI = null;
+if (typeof window !== 'undefined') {
+  shortBeepURI = createBeepURI(600, 200);
+  longBeepURI = createBeepURI(1200, 600);
+  longerBeepURI = createBeepURI(1200, 800);
+}
 
 export default function WorkoutDetail() {
   const { id } = useParams()
@@ -184,7 +312,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [tvCode, setTvCode] = useState('')
   const [tvConnecting, setTvConnecting] = useState(false)
   const [isTvInputFocused, setIsTvInputFocused] = useState(false)
-  const [connectedTvCode, setConnectedTvCode] = useState(null)
+  const [connectedTvCode, setConnectedTvCode] = useState(() => localStorage.getItem('fleofit_tv_code') || null)
 
   // Voice Notes
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null)
@@ -193,6 +321,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
   const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
   const [savingAutonomous, setSavingAutonomous] = useState(false)
+
+  // Timer
+  const [timerOpen, setTimerOpen] = useState(false)
+  const [timerSequence, setTimerSequence] = useState([])
 
   useEffect(() => { fetchWorkout() }, [id, queryAthleteId])
 
@@ -514,6 +646,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
     } else {
       setConnectedTvCode(tvCode)
+      localStorage.setItem('fleofit_tv_code', tvCode)
       setTvModalOpen(false)
       setTvCode('')
       setAlertInfo({ title: 'Connesso!', message: 'Il workout è ora visibile sulla tua TV.', type: 'success' })
@@ -534,6 +667,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
     } else {
       setConnectedTvCode(null)
+      localStorage.removeItem('fleofit_tv_code')
       setAlertInfo({ title: 'Scollegato', message: 'La TV è tornata alla schermata iniziale.', type: 'success' })
     }
   }
@@ -1148,6 +1282,16 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         </div>
       )}
 
+      {/* TIMER BUTTON GIGANTE IN BASSO */}
+      {type !== 'Event' && (
+        <div className="mt-8 mb-2">
+          <button onClick={() => { setTimerSequence(buildTimerSequence(workout)); setTimerOpen(true); }}
+            className="w-full flex items-center justify-center gap-2 bg-[#f1ba17] text-black font-bold py-4 rounded-2xl hover:brightness-110 transition shadow-lg shadow-[#f1ba17]/20 text-lg">
+            <Play size={20} fill="currentColor" /> Avvia Timer Allenamento
+          </button>
+        </div>
+      )}
+
       {/* EXPORT BUTTONS */}
       <div className="flex gap-3 mt-6">
         {type !== 'Event' && (
@@ -1542,6 +1686,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         </div>,
         document.body
       )}
+
+      {timerOpen && timerSequence.length > 0 && (
+        <WorkoutTimer sequence={timerSequence} onClose={() => setTimerOpen(false)} />
+      )}
       {createPortal(
         <>
           <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
@@ -1551,6 +1699,198 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       )}
     </div>
   )
+}
+
+function WorkoutTimer({ sequence, onClose }) {
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(sequence[0]?.duration || 0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const shortBeepAudio = useRef(null);
+  const longBeepAudio = useRef(null);
+  const longerBeepAudio = useRef(null);
+  const silentAudioRef = useRef(null);
+  
+  useEffect(() => {
+    shortBeepAudio.current = new Audio(shortBeepURI);
+    longBeepAudio.current = new Audio(longBeepURI);
+    longerBeepAudio.current = new Audio(longerBeepURI);
+  }, []);
+
+  const playBeep = useCallback(async (freq, type, duration, isEnd) => {
+    if (isMuted) return;
+
+    // Vibrazione (più forte alla fine del round)
+    try {
+      if (Capacitor.isNativePlatform()) {
+        await Haptics.impact({ style: isEnd ? ImpactStyle.Heavy : ImpactStyle.Light });
+      } else if (navigator.vibrate) {
+        navigator.vibrate(isEnd ? 400 : 100);
+      }
+    } catch (e) {}
+
+    try {
+      let audio;
+      if (duration <= 0.2) audio = shortBeepAudio.current;
+      else if (duration <= 0.6) audio = longBeepAudio.current;
+      else audio = longerBeepAudio.current;
+
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      }
+    } catch (e) {}
+  }, [isMuted]);
+
+  // Inizializza l'audio in modo sicuro al primo tocco
+  const initAudioAndPlay = () => {
+
+    // HACK iOS: Riprodurre un audio HTML5 invisibile in loop forza WKWebView a ignorare il tasto Silenzioso
+    if (!silentAudioRef.current) {
+      silentAudioRef.current = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+      silentAudioRef.current.loop = true;
+      
+      // Sblocca i suoni
+      [shortBeepAudio.current, longBeepAudio.current, longerBeepAudio.current].forEach(a => {
+        if (a) {
+          a.volume = 0;
+          a.play().then(() => {
+            a.pause();
+            a.currentTime = 0;
+            a.volume = 1;
+          }).catch(()=>{});
+        }
+      });
+    }
+
+    if (!isRunning) {
+      silentAudioRef.current.play().catch(()=>{});
+    } else {
+      silentAudioRef.current.pause();
+    }
+
+    setIsRunning(!isRunning);
+  };
+
+  // MANTIENI LO SCHERMO ACCESO
+  useEffect(() => {
+    let wakeLock = null;
+    const keepScreenAwake = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await KeepAwake.keepAwake();
+        } catch (e) {}
+      } else if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {}
+      }
+    };
+
+    const allowScreenSleep = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await KeepAwake.allowSleep();
+        } catch (e) {}
+      } else if (wakeLock !== null) {
+        try {
+          await wakeLock.release();
+          wakeLock = null;
+        } catch (err) {}
+      }
+    };
+
+    keepScreenAwake();
+    return () => { allowScreenSleep(); };
+  }, []);
+
+  useEffect(() => {
+    let interval = null;
+    if (isRunning) {
+      interval = setInterval(() => {
+        setTimeLeft(prev => {
+          const step = sequence[currentIdx];
+          if (step.type === 'stopwatch' || step.type === 'done') return prev + 1;
+          
+          if (prev <= 1) {
+             if (currentIdx < sequence.length - 1) {
+               const nextStep = sequence[currentIdx + 1];
+               setCurrentIdx(currentIdx + 1);
+               playBeep(1200, 'sine', 0.6, true); 
+               return nextStep.duration || 0;
+             } else {
+               setIsRunning(false);
+               playBeep(1200, 'sine', 0.8, true);
+               if (silentAudioRef.current) silentAudioRef.current.pause();
+               return 0;
+             }
+          }
+          
+          if (prev <= 4 && prev > 0) playBeep(600, 'sine', 0.2, false);
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isRunning, currentIdx, sequence, playBeep]);
+
+  const handleNext = () => {
+    if (currentIdx < sequence.length - 1) {
+      setCurrentIdx(c => c + 1);
+      setTimeLeft(sequence[currentIdx + 1].duration || 0);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentIdx > 0) {
+      setCurrentIdx(c => c - 1);
+      setTimeLeft(sequence[currentIdx - 1].duration || 0);
+    }
+  };
+
+  const handleClose = () => {
+    if (silentAudioRef.current) {
+      silentAudioRef.current.pause();
+    }
+    setIsClosing(true);
+    setTimeout(onClose, 300); // Aspetta che finisca l'animazione
+  };
+
+  const currentStep = sequence[currentIdx];
+  const isDone = currentStep?.type === 'done';
+  const formatT = (totalSeconds) => {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  return createPortal(
+    <div className={`fixed inset-0 z-[200] ${currentStep?.color || 'bg-[#0b0b0b]'} transition-colors duration-500 flex flex-col ${isClosing ? 'animate-out fade-out zoom-out-95 duration-300 ease-in' : 'animate-in fade-in zoom-in-95 duration-300 ease-out'}`}>
+      <div className="flex justify-between items-center p-6 pt-12">
+        <button onClick={handleClose} className="w-12 h-12 bg-black/20 rounded-full flex items-center justify-center text-white backdrop-blur-md transition hover:scale-105"><X size={24} /></button>
+        <button onClick={() => setIsMuted(!isMuted)} className="w-12 h-12 bg-black/20 rounded-full flex items-center justify-center text-white backdrop-blur-md">
+          {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+        </button>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+        <h2 className="text-4xl font-black text-white/90 tracking-widest uppercase mb-2 drop-shadow-md">{currentStep?.title}</h2>
+        {currentStep?.subtitle && <p className="text-xl font-bold text-white/70 mb-8">{currentStep?.subtitle}</p>}
+        <div className="text-[120px] font-black text-white tracking-tighter leading-none drop-shadow-2xl tabular-nums">{formatT(timeLeft)}</div>
+        {currentStep?.type === 'stopwatch' && <p className="text-white/60 font-medium mt-4">Cronometro in corso. Premi avanti quando hai finito il blocco.</p>}
+      </div>
+      <div className="p-8 pb-16 flex items-center justify-center gap-6">
+        <button onClick={handlePrev} disabled={currentIdx === 0} className="w-16 h-16 bg-black/20 rounded-full flex items-center justify-center text-white backdrop-blur-md disabled:opacity-30"><StepBack size={28} /></button>
+        {!isDone && (
+          <button onClick={initAudioAndPlay} className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-105 transition-transform">
+            {isRunning ? <Pause size={40} fill="currentColor" /> : <Play size={40} fill="currentColor" className="ml-2" />}
+          </button>
+        )}
+        <button onClick={handleNext} disabled={isDone} className="w-16 h-16 bg-black/20 rounded-full flex items-center justify-center text-white backdrop-blur-md disabled:opacity-30"><StepForward size={28} /></button>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 function RunningList({ steps }) {
