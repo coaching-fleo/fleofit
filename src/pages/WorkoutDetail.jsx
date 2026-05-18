@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX } from 'lucide-react'
+import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -129,9 +129,20 @@ const parseDuration = (val) => {
   return Math.round((parseFloat(str) || 0) * 60); 
 }
 
+const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
+const isErgo = (name) => ERGOMETERS.includes(name)
+
+const SLED_EXERCISES = ['Sled Push', 'Sled Pull', 'Prowler Push', 'Sled Drag']
+const isSled = (name) => SLED_EXERCISES.includes(name)
+const DISTANCE_EXERCISES = [
+  'Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', 
+  "Waiter's Walk", 'Handstand Walk', 'Run', 'Bear Crawl', 'Shuttle Run', 'Swim'
+]
+const isDistance = (name) => isErgo(name) || isSled(name) || DISTANCE_EXERCISES.includes(name)
+
 const buildTimerSequence = (workout) => {
   const seq = [];
-  seq.push({ id: 'prep', title: 'Preparazione', subtitle: 'Il workout sta per iniziare', duration: 10, color: 'bg-yellow-500', type: 'prep' });
+  seq.push({ id: 'prep', title: 'Preparazione', subtitle: 'Il workout sta per iniziare', duration: 10, theme: 'prep', type: 'prep', task: 'Preparati!' });
 
   const s = workout.sections || {};
   const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox');
@@ -145,54 +156,71 @@ const buildTimerSequence = (workout) => {
         const runSec = parseDuration(step.runDuration);
         const recSec = parseDuration(step.recDuration);
         for(let r=1; r<=rounds; r++) {
-          if (runSec > 0) seq.push({ id: `run-${i}-${r}-work`, title: 'Corsa', subtitle: `Ripetuta ${r}/${rounds}`, duration: runSec, color: 'bg-[#0094C6]', type: 'work' });
-          if (recSec > 0) seq.push({ id: `run-${i}-${r}-rest`, title: 'Recupero', subtitle: `Ripetuta ${r}/${rounds}`, duration: recSec, color: 'bg-green-500', type: 'rest' });
+          if (runSec > 0) seq.push({ id: `run-${i}-${r}-work`, title: 'Corsa', subtitle: `Ripetuta ${r}/${rounds}`, duration: runSec, theme: 'run', type: 'work', task: `Corsa ${step.runPace ? '@ '+step.runPace : ''}`.trim() });
+          if (recSec > 0) seq.push({ id: `run-${i}-${r}-rest`, title: 'Recupero', subtitle: `Ripetuta ${r}/${rounds}`, duration: recSec, theme: 'rest', type: 'rest', task: `Recupero ${step.recPace ? '@ '+step.recPace : ''}`.trim() });
         }
       } else {
         const sec = parseDuration(step.duration);
-        let title = 'Corsa'; let color = 'bg-[#0094C6]';
-        if (step.type === 'warmup') { title = 'Riscaldamento'; color = 'bg-orange-500'; }
-        if (step.type === 'recover') { title = 'Recupero'; color = 'bg-green-500'; }
-        if (step.type === 'cooldown') { title = 'Defaticamento'; color = 'bg-gray-500'; }
-        seq.push({ id: `step-${i}`, title, subtitle: step.notes || '', duration: sec, color, type: step.type === 'recover' ? 'rest' : 'work' });
+        let title = 'Corsa'; let theme = 'run';
+        if (step.type === 'warmup') { title = 'Riscaldamento'; theme = 'base'; }
+        if (step.type === 'recover') { title = 'Recupero'; theme = 'rest'; }
+        if (step.type === 'cooldown') { title = 'Defaticamento'; theme = 'base'; }
+        seq.push({ id: `step-${i}`, title, subtitle: step.notes || '', duration: sec, theme, type: step.type === 'recover' ? 'rest' : 'work', task: `${title} ${step.pace ? '@ '+step.pace : ''}`.trim() });
       }
     });
   } else {
     const blocks = getNormalizedBlocks(workout);
     blocks.forEach((b, i) => {
+      const exNames = (b.exercises || []).map(e => e.name).join(' • ');
+      
+      const getTaskForRound = (r) => {
+        if (!b.exercises || b.exercises.length === 0) return null;
+        const ex = b.exercises[(r - 1) % b.exercises.length];
+        const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''));
+        const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : '';
+        const kgStr = ex.kg ? `${ex.kg}kg` : '';
+        return [ex.name, detail, paceStr, kgStr].filter(Boolean).join(' · ');
+      };
+      
       if (b.type === 'WarmUp' || b.type === 'Rest') {
         const sec = parseDuration(b.params?.duration);
-        seq.push({ id: `blk-${i}`, title: b.type, subtitle: b.notes || '', duration: sec, color: b.type==='Rest' ? 'bg-green-500' : 'bg-orange-500', type: b.type==='Rest' ? 'rest' : 'work' });
+        seq.push({ id: `blk-${i}`, title: b.type, subtitle: b.notes || '', duration: sec, theme: b.type==='Rest' ? 'rest' : 'base', type: b.type==='Rest' ? 'rest' : 'work', task: b.type === 'WarmUp' ? 'Riscaldamento' : 'Riposo' });
       } else if (b.type === 'ON/OFF') {
         const rounds = parseInt(b.params?.rounds, 10) || 10;
         const onSec = parseDuration(b.params?.on || '1:00');
         const offSec = parseDuration(b.params?.off || '1:00');
         for(let r=1; r<=rounds; r++) {
-           seq.push({ id: `blk-${i}-${r}-on`, title: 'WORK (ON)', subtitle: `Round ${r}/${rounds}`, duration: onSec, color: 'bg-red-500', type: 'work' });
-           seq.push({ id: `blk-${i}-${r}-off`, title: 'REST (OFF)', subtitle: `Round ${r}/${rounds}`, duration: offSec, color: 'bg-green-500', type: 'rest' });
+           seq.push({ id: `blk-${i}-${r}-on`, title: 'WORK (ON)', subtitle: `Round ${r}/${rounds}`, duration: onSec, theme: 'hyrox', type: 'work', task: getTaskForRound(r) || 'Lavoro' });
+           seq.push({ id: `blk-${i}-${r}-off`, title: 'REST (OFF)', subtitle: `Round ${r}/${rounds}`, duration: offSec, theme: 'rest', type: 'rest', task: 'Riposo' });
         }
       } else if (b.type === 'EMOM') {
         const rounds = parseInt(b.params?.rounds, 10) || 10;
         const intSec = parseDuration(b.params?.interval || '1:00');
         for(let r=1; r<=rounds; r++) {
-           seq.push({ id: `blk-${i}-${r}`, title: 'EMOM', subtitle: `Round ${r}/${rounds}`, duration: intSec, color: 'bg-purple-500', type: 'work' });
+           seq.push({ id: `blk-${i}-${r}`, title: 'EMOM', subtitle: `Round ${r}/${rounds}`, duration: intSec, theme: 'emom', type: 'work', task: getTaskForRound(r) || 'EMOM' });
         }
       } else if (b.type === 'AMRAP') {
         const sec = parseDuration(b.params?.duration || '10:00');
-        seq.push({ id: `blk-${i}`, title: 'AMRAP', subtitle: '', duration: sec, color: 'bg-red-500', type: 'work' });
+        seq.push({ id: `blk-${i}`, title: 'AMRAP', subtitle: '', duration: sec, theme: 'emom', type: 'work', task: exNames || 'AMRAP' });
       } else if (b.type === 'For Time' || b.type === 'Interval') {
         const rounds = parseInt(b.params?.rounds, 10) || 1;
         const sec = parseDuration(b.params?.timecap || '0'); 
         for(let r=1; r<=rounds; r++) {
-           seq.push({ id: `blk-${i}-${r}`, title: b.type.toUpperCase(), subtitle: `Round ${r}/${rounds}`, duration: sec, color: 'bg-blue-500', type: sec > 0 ? 'work' : 'stopwatch' });
+           seq.push({ id: `blk-${i}-${r}`, title: b.type.toUpperCase(), subtitle: `Round ${r}/${rounds}`, duration: sec, theme: 'base', type: sec > 0 ? 'work' : 'stopwatch', task: exNames || b.type.toUpperCase() });
         }
       } else {
-        seq.push({ id: `blk-${i}`, title: b.type.toUpperCase(), subtitle: '', duration: 0, color: 'bg-yellow-600', type: 'stopwatch' });
+        seq.push({ id: `blk-${i}`, title: b.type.toUpperCase(), subtitle: '', duration: 0, theme: 'base', type: 'stopwatch', task: exNames || b.type.toUpperCase() });
       }
     });
   }
 
-  seq.push({ id: 'done', title: 'Completato!', subtitle: 'Ottimo lavoro', duration: 0, color: 'bg-green-600', type: 'done' });
+  seq.push({ id: 'done', title: 'Completato!', subtitle: 'Ottimo lavoro', duration: 0, theme: 'done', type: 'done', task: 'Workout terminato 🎉' });
+  
+  // Assegna il nextTask a ogni step
+  for(let i=0; i<seq.length-1; i++) {
+    seq[i].nextTask = seq[i+1].task;
+  }
+
   return seq;
 }
 
@@ -216,16 +244,6 @@ const getEmojiDataURL = (emoji) => {
 }
 
 
-const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
-const isErgo = (name) => ERGOMETERS.includes(name)
-
-const SLED_EXERCISES = ['Sled Push', 'Sled Pull', 'Prowler Push', 'Sled Drag']
-const isSled = (name) => SLED_EXERCISES.includes(name)
-const DISTANCE_EXERCISES = [
-  'Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', 
-  "Waiter's Walk", 'Handstand Walk', 'Run', 'Bear Crawl', 'Shuttle Run', 'Swim'
-]
-const isDistance = (name) => isErgo(name) || isSled(name) || DISTANCE_EXERCISES.includes(name)
 
 // --- AUDIO GENERATOR HELPER ---
 const writeString = (view, offset, string) => {
@@ -324,6 +342,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
   // Timer
   const [timerOpen, setTimerOpen] = useState(false)
+  const [timerMinimized, setTimerMinimized] = useState(false)
   const [timerSequence, setTimerSequence] = useState([])
 
   useEffect(() => { fetchWorkout() }, [id, queryAthleteId])
@@ -1144,6 +1163,33 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         )}
       </div>
 
+      {/* TIMER BUTTON SPOSTATO IN CIMA */}
+      {type !== 'Event' && (
+        <div className="mb-8">
+          <button onClick={() => { 
+          if (timerOpen && !timerMinimized) {
+                setTimerMinimized(true);
+              } else if (timerOpen && timerMinimized) {                setTimerMinimized(false);
+              } else {
+                setTimerSequence(buildTimerSequence(workout)); 
+                setTimerOpen(true); 
+                setTimerMinimized(false);
+              }
+            }}
+            className={`w-full flex items-center justify-center gap-2 font-black py-4 rounded-3xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl text-lg uppercase tracking-wide ${timerOpen && !timerMinimized ? 'bg-gradient-to-r from-gray-600 to-gray-500 text-white shadow-gray-500/20' : connectedTvCode ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-blue-500/20' : 'bg-gradient-to-r from-[#f1ba17] to-yellow-500 text-black shadow-[#f1ba17]/20'}`}>
+            {timerOpen && !timerMinimized ? (
+              <><ChevronDown size={24} className="stroke-[2.5]" /> Minimizza Telecomando</>
+            ) : timerOpen && timerMinimized ? (
+              <><ChevronUp size={24} className="stroke-[2.5]" /> Apri Telecomando</>
+            ) : connectedTvCode ? (
+              <><MonitorUp size={24} className="stroke-[2.5]" /> Avvia Telecomando TV</>
+            ) : (
+              <><Timer size={24} className="stroke-[2.5]" /> Avvia Allenamento</>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* BLOCKS */}
       {!isRunning && type !== 'Custom' && type !== 'Event' ? (
         blocks.map((block, idx) => (
@@ -1279,16 +1325,6 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               </div>
             )})}
           </div>
-        </div>
-      )}
-
-      {/* TIMER BUTTON GIGANTE IN BASSO */}
-      {type !== 'Event' && (
-        <div className="mt-8 mb-2">
-          <button onClick={() => { setTimerSequence(buildTimerSequence(workout)); setTimerOpen(true); }}
-            className="w-full flex items-center justify-center gap-2 bg-[#f1ba17] text-black font-bold py-4 rounded-2xl hover:brightness-110 transition shadow-lg shadow-[#f1ba17]/20 text-lg">
-            <Play size={20} fill="currentColor" /> Avvia Timer Allenamento
-          </button>
         </div>
       )}
 
@@ -1688,7 +1724,17 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       )}
 
       {timerOpen && timerSequence.length > 0 && (
-        <WorkoutTimer sequence={timerSequence} onClose={() => setTimerOpen(false)} />
+        <WorkoutTimer 
+         sequence={timerSequence}
+          onClose={() => {
+            setTimerOpen(false);
+            setTimerMinimized(false);
+          }}
+          tvCode={connectedTvCode}
+          isMinimized={timerMinimized}
+          onMinimize={() => setTimerMinimized(true)}
+          onMaximize={() => setTimerMinimized(false)}
+        />
       )}
       {createPortal(
         <>
@@ -1701,21 +1747,88 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   )
 }
 
-function WorkoutTimer({ sequence, onClose }) {
+const SCHEMES = {
+  prep:  { bg: 'bg-[#f1ba17]', text: 'text-black', sub: 'text-black/70', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-[#f1ba17]' },
+  run:   { bg: 'bg-[#0094C6]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#0094C6]' },
+  rest:  { bg: 'bg-[#1e1e1e]', text: 'text-green-400', sub: 'text-green-500/80', card: 'bg-[#111] border-green-500/20 text-green-400', cardLabel: 'text-green-500/60', icon: 'text-gray-400', btnBg: 'bg-green-500 text-black' },
+  hyrox: { bg: 'bg-[#D11149]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#D11149]' },
+  emom:  { bg: 'bg-[#111]', text: 'text-[#f1ba17]', sub: 'text-[#f1ba17]/80', card: 'bg-[#1e1e1e] border-[#f1ba17]/20 text-[#f1ba17]', cardLabel: 'text-[#f1ba17]/60', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
+  base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-gray-500', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
+  done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' }
+}
+
+function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMaximize }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(sequence[0]?.duration || 0);
   const [isRunning, setIsRunning] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isOpening, setIsOpening] = useState(true);
   const shortBeepAudio = useRef(null);
   const longBeepAudio = useRef(null);
   const longerBeepAudio = useRef(null);
   const silentAudioRef = useRef(null);
+  const tvChannelRef = useRef(null);
+  const tvJoinedRef = useRef(false);
+  const [tvJoined, setTvJoined] = useState(false);
+
+  // Touch Handlers per minimizzare con lo swipe
+  const [startY, setStartY] = useState(null);
+  const [currentY, setCurrentY] = useState(null);
+  const handleTouchStart = (e) => setStartY(e.touches[0].clientY);
+  const handleTouchMove = (e) => {
+    if (startY === null) return;
+    const y = e.touches[0].clientY;
+    if (y > startY) setCurrentY(y);
+  };
+  const handleTouchEnd = () => {
+    if (startY !== null && currentY !== null && currentY - startY > 100) onMinimize();
+    setStartY(null);
+    setCurrentY(null);
+  };
+  const swipeOffset = startY !== null && currentY !== null && currentY > startY ? currentY - startY : 0;
+
+  useEffect(() => {
+    if (tvCode) {
+      const channel = supabase.channel(`tv_${tvCode}`, {
+        config: { broadcast: { ack: false } }
+      });
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          tvJoinedRef.current = true;
+          setTvJoined(true);
+        }
+      });
+      tvChannelRef.current = channel;
+      return () => {
+        if (tvJoinedRef.current) {
+          channel.send({ type: 'broadcast', event: 'timer_close', payload: {} }).catch(()=>{});
+        }
+        supabase.removeChannel(channel);
+        tvJoinedRef.current = false;
+        setTvJoined(false);
+      };
+    }
+  }, [tvCode]);
+
+  useEffect(() => {
+    if (tvJoined && tvChannelRef.current) {
+      tvChannelRef.current.send({
+        type: 'broadcast',
+        event: 'timer_state',
+        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx] }
+      }).catch(()=>{});
+    }
+  }, [currentIdx, timeLeft, isRunning, sequence, tvJoined]);
   
   useEffect(() => {
     shortBeepAudio.current = new Audio(shortBeepURI);
     longBeepAudio.current = new Audio(longBeepURI);
     longerBeepAudio.current = new Audio(longerBeepURI);
+    
+    // Avvia l'animazione di entrata "Slide-Up" 10 millisecondi dopo il rendering
+    const t = setTimeout(() => setIsOpening(false), 10);
+    return () => clearTimeout(t);
   }, []);
 
   const playBeep = useCallback(async (freq, type, duration, isEnd) => {
@@ -1854,7 +1967,7 @@ function WorkoutTimer({ sequence, onClose }) {
       silentAudioRef.current.pause();
     }
     setIsClosing(true);
-    setTimeout(onClose, 300); // Aspetta che finisca l'animazione
+    setTimeout(onClose, 500); // Aspetta che finisca l'animazione
   };
 
   const currentStep = sequence[currentIdx];
@@ -1865,32 +1978,101 @@ function WorkoutTimer({ sequence, onClose }) {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  return createPortal(
-    <div className={`fixed inset-0 z-[200] ${currentStep?.color || 'bg-[#0b0b0b]'} transition-colors duration-500 flex flex-col ${isClosing ? 'animate-out fade-out zoom-out-95 duration-300 ease-in' : 'animate-in fade-in zoom-in-95 duration-300 ease-out'}`}>
-      <div className="flex justify-between items-center p-6 pt-12">
-        <button onClick={handleClose} className="w-12 h-12 bg-black/20 rounded-full flex items-center justify-center text-white backdrop-blur-md transition hover:scale-105"><X size={24} /></button>
-        <button onClick={() => setIsMuted(!isMuted)} className="w-12 h-12 bg-black/20 rounded-full flex items-center justify-center text-white backdrop-blur-md">
-          {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+  const currentTheme = SCHEMES[currentStep?.theme || 'base'] || SCHEMES.base;
+
+return createPortal(
+  <>
+    <div 
+      className={`fixed bottom-24 left-4 right-4 z-[150] bg-[#1e1e1e]/95 backdrop-blur-xl border border-[#333] rounded-3xl p-4 flex items-center justify-between shadow-2xl transition-all duration-500 ease-out ${
+        isMinimized && !isClosing ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-32 opacity-0 pointer-events-none'
+      }`}
+    >
+      <div className="flex-1 min-w-0 pr-4 cursor-pointer" onClick={onMaximize}>
+        <div className="flex items-center gap-2 mb-1">
+          <span className={`w-2 h-2 rounded-full ${currentTheme.bg.replace('bg-', 'bg-')}`}></span>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">{currentStep?.title}</p>
+        </div>
+        <p className="text-3xl font-black text-white tabular-nums leading-none mb-1">{formatT(timeLeft)}</p>
+        <p className="text-sm font-medium text-gray-400 truncate">{currentStep?.task || 'Workout'}</p>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <button onClick={handlePrev} className="p-3 text-gray-400 hover:text-white transition"><StepBack size={20}/></button>
+        <button onClick={(e) => { e.stopPropagation(); initAudioAndPlay(); }} className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${currentTheme.btnBg}`}>
+          {isRunning ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
         </button>
+        <button onClick={handleNext} className="p-3 text-gray-400 hover:text-white transition"><StepForward size={20}/></button>
+        <div className="w-px h-8 bg-[#333] mx-1"></div>
+        <button onClick={handleClose} className="p-3 text-red-500 hover:text-red-400 transition"><X size={20}/></button>
       </div>
-      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-        <h2 className="text-4xl font-black text-white/90 tracking-widest uppercase mb-2 drop-shadow-md">{currentStep?.title}</h2>
-        {currentStep?.subtitle && <p className="text-xl font-bold text-white/70 mb-8">{currentStep?.subtitle}</p>}
-        <div className="text-[120px] font-black text-white tracking-tighter leading-none drop-shadow-2xl tabular-nums">{formatT(timeLeft)}</div>
-        {currentStep?.type === 'stopwatch' && <p className="text-white/60 font-medium mt-4">Cronometro in corso. Premi avanti quando hai finito il blocco.</p>}
-      </div>
-      <div className="p-8 pb-16 flex items-center justify-center gap-6">
-        <button onClick={handlePrev} disabled={currentIdx === 0} className="w-16 h-16 bg-black/20 rounded-full flex items-center justify-center text-white backdrop-blur-md disabled:opacity-30"><StepBack size={28} /></button>
-        {!isDone && (
-          <button onClick={initAudioAndPlay} className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-105 transition-transform">
-            {isRunning ? <Pause size={40} fill="currentColor" /> : <Play size={40} fill="currentColor" className="ml-2" />}
+    </div>
+
+    <div className={`fixed inset-0 z-[200] flex flex-col justify-end transition-all duration-500 ${!isMinimized && !isClosing ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <div 
+        className={`absolute inset-0 bg-black transition-opacity duration-500 ease-out ${!isMinimized && !isClosing && !isOpening ? 'opacity-60' : 'opacity-0'}`}
+        onClick={onMinimize} 
+      />
+      <div
+        className={`relative ${currentTheme.bg} flex flex-col rounded-t-3xl shadow-2xl ease-out ${swipeOffset > 0 ? 'transition-none' : 'transition-transform duration-500'}`}
+        style={{  
+          height: 'calc(100% - env(safe-area-inset-top) - 10px)', 
+          transform: !isMinimized && !isClosing && !isOpening ? (swipeOffset > 0 ? `translateY(${swipeOffset}px)` : 'translateY(0)') : 'translateY(100%)'
+        }}
+      >
+        <div className="w-full flex justify-center pt-3 pb-2 touch-none cursor-grab active:cursor-grabbing" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+          <div className="w-12 h-1.5 bg-black/20 rounded-full"></div>
+        </div>
+        <div className="flex justify-between items-center px-6 pb-2">
+          <button onClick={onMinimize} className={`w-12 h-12 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md transition hover:scale-105 ${currentTheme.icon}`}><ChevronDown size={28} /></button>
+          <button onClick={() => setIsMuted(!isMuted)} className={`w-12 h-12 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md ${currentTheme.icon}`}>
+            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
           </button>
+        </div>
+
+        {tvCode && (
+          <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-4 py-1.5 rounded-full font-bold text-xs shadow-xl animate-pulse flex items-center gap-2">
+            <MonitorUp size={14} /> Telecomando TV Attivo
+          </div>
         )}
-        <button onClick={handleNext} disabled={isDone} className="w-16 h-16 bg-black/20 rounded-full flex items-center justify-center text-white backdrop-blur-md disabled:opacity-30"><StepForward size={28} /></button>
-      </div>
-    </div>,
-    document.body
-  );
+
+        <div className="flex-1 flex flex-col items-center justify-between p-6 text-center w-full max-w-md mx-auto overflow-y-auto">
+          <div className="w-full">
+            <h2 className={`text-4xl font-black tracking-widest uppercase mb-1 drop-shadow-md ${currentTheme.text}`}>{currentStep?.title}</h2>
+            <p className={`text-xl font-bold h-7 ${currentTheme.sub}`}>{currentStep?.subtitle || ''}</p>
+          </div>
+
+          <div className="flex flex-col items-center my-4">
+            <div className={`backdrop-blur-md rounded-2xl p-4 mb-6 w-full shadow-lg ${currentTheme.card}`}>
+              <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${currentTheme.cardLabel}`}>Esercizio</p>
+              <p className="font-bold text-2xl leading-tight min-h-[60px] flex items-center justify-center">{currentStep?.task || 'Workout'}</p>
+            </div>
+            <div className={`text-[120px] font-black tracking-tighter leading-none drop-shadow-2xl tabular-nums ${currentTheme.text}`}>{formatT(timeLeft)}</div>
+          </div>
+
+          <div className="w-full min-h-[70px] flex flex-col items-center justify-center">
+            <p className={`font-medium text-sm px-4 h-5 mb-2 ${currentTheme.sub}`}>{currentStep?.type === 'stopwatch' ? 'Cronometro libero. Usa le frecce in basso per cambiare blocco.' : ''}</p>
+            {currentStep?.nextTask && (
+              <div className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full backdrop-blur-md max-w-full ${currentTheme.card}`}>
+                <span className={`font-semibold text-sm truncate ${currentTheme.cardLabel}`}>Next: <span className={currentTheme.text}>{currentStep.nextTask}</span></span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="p-8 pb-16 flex items-center justify-center gap-6 shrink-0">
+          <button onClick={handlePrev} disabled={currentIdx === 0} className={`w-16 h-16 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md disabled:opacity-30 ${currentTheme.icon}`}><StepBack size={28} /></button>
+          {!isDone && (
+            <button onClick={initAudioAndPlay} className={`w-24 h-24 rounded-full flex items-center justify-center shadow-2xl hover:scale-105 transition-transform ${currentTheme.btnBg}`}>
+              {isRunning ? <Pause size={40} fill="currentColor" /> : <Play size={40} fill="currentColor" className="ml-2" />}
+            </button>
+          )}
+          <button onClick={handleNext} disabled={isDone} className={`w-16 h-16 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md disabled:opacity-30 ${currentTheme.icon}`}><StepForward size={28} /></button>
+        </div>
+
+      </div> {/* ← chiude: relative ${currentTheme.bg} flex flex-col rounded-t-3xl */}
+    </div> {/* ← chiude: fixed inset-0 z-[200] */}
+  </>,
+  document.body
+);
 }
 
 function RunningList({ steps }) {

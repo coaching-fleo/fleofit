@@ -5,6 +5,16 @@ import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw } fro
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
 const isErgo = (name) => ERGOMETERS.includes(name)
 
+const SCHEMES = {
+  prep:  { bg: 'bg-[#f1ba17]', text: 'text-black', sub: 'text-black/70', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-[#f1ba17]' },
+  run:   { bg: 'bg-[#0094C6]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#0094C6]' },
+  rest:  { bg: 'bg-[#1e1e1e]', text: 'text-green-400', sub: 'text-green-500/80', card: 'bg-[#111] border-green-500/20 text-green-400', cardLabel: 'text-green-500/60', icon: 'text-gray-400', btnBg: 'bg-green-500 text-black' },
+  hyrox: { bg: 'bg-[#D11149]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#D11149]' },
+  emom:  { bg: 'bg-[#111]', text: 'text-[#f1ba17]', sub: 'text-[#f1ba17]/80', card: 'bg-[#1e1e1e] border-[#f1ba17]/20 text-[#f1ba17]', cardLabel: 'text-[#f1ba17]/60', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
+  base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-gray-500', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
+  done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' }
+}
+
 const timeToSeconds = (timeStr) => {
   if (!timeStr) return 0;
   const str = String(timeStr);
@@ -78,9 +88,9 @@ const getIntensityColor = (val) => {
   return 'text-red-500';
 }
 
-function Section({ icon, label, color, stepNumber, className = "", children }) {
+function Section({ icon, label, color, stepNumber, className = "", isActive, children }) {
   return (
-    <div className={`bg-[#1e1e1e] border-4 ${color} rounded-[2rem] p-6 flex flex-col gap-4 shadow-2xl relative ${className}`}>
+    <div className={`bg-[#1e1e1e] border-4 ${isActive ? 'border-[#f1ba17] shadow-[0_0_40px_rgba(241,186,23,0.3)] scale-[1.02]' : color} rounded-[2rem] p-6 flex flex-col gap-4 shadow-2xl relative transition-all duration-500 ${className}`}>
       {stepNumber && (
         <div className="absolute top-4 right-6 w-14 h-14 bg-[#111] border-4 border-[#333] text-[#f1ba17] font-black text-2xl flex items-center justify-center rounded-full z-10 shadow-lg">
           {stepNumber}
@@ -130,7 +140,7 @@ function ExList({ exercises, showMinute, typeColor }) {
   )
 }
 
-function RunningList({ steps }) {
+function RunningList({ steps, activeIdx }) {
   const getTypeLabel = (t) => {
     switch(t) {
       case 'warmup': return 'Riscaldamento'
@@ -156,7 +166,7 @@ function RunningList({ steps }) {
   return (
     <div className="flex flex-col w-full gap-4">
       {steps.map((step, i) => (
-        <div key={step.id || i} className="flex flex-col justify-center border-l-[8px] border-[#333] pl-6 py-2">
+        <div key={step.id || i} className={`flex flex-col justify-center border-l-[8px] ${i === activeIdx ? 'border-[#0094C6] bg-[#0094C6]/10 shadow-[inset_0_0_20px_rgba(0,148,198,0.2)] rounded-r-2xl py-4' : 'border-[#333] py-2'} pl-6 transition-all duration-500`}>
           <div className="flex items-center gap-4 mb-2">
             <span className={`text-3xl font-black uppercase tracking-wider ${getTypeColor(step.type)}`}>
               {getTypeLabel(step.type)}
@@ -197,6 +207,14 @@ export default function TVDashboard() {
   const [status, setStatus] = useState('waiting') // 'waiting', 'loading', 'active'
   const [error, setError] = useState(null)
   const [rotated, setRotated] = useState(false)
+  const [timerState, setTimerState] = useState(null)
+  const [lastTimerState, setLastTimerState] = useState(null)
+
+  useEffect(() => {
+    if (timerState) {
+      setLastTimerState(timerState)
+    }
+  }, [timerState])
 
   useEffect(() => {
     const updateScale = () => {
@@ -246,12 +264,15 @@ export default function TVDashboard() {
       }
 
       // Resta in ascolto degli aggiornamenti in "Tempo Reale" via Supabase
-      channel = supabase.channel(`tv_${newCode}`)
+      channel = supabase.channel(`tv_${newCode}`, {
+        config: { broadcast: { ack: false } }
+      })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'tv_sessions', filter: `code=eq.${newCode}` }, async (payload) => {
           if (payload.eventType === 'DELETE') {
             setStatus('waiting')
             setWorkout(null)
             setError(null)
+            setTimerState(null)
             return
           }
           
@@ -270,7 +291,14 @@ export default function TVDashboard() {
             setStatus('waiting')
             setWorkout(null)
             setError(null)
+            setTimerState(null)
           }
+        })
+        .on('broadcast', { event: 'timer_state' }, (payload) => {
+          setTimerState(payload.payload)
+        })
+        .on('broadcast', { event: 'timer_close' }, () => {
+          setTimerState(null)
         })
         .subscribe()
     }
@@ -337,6 +365,21 @@ export default function TVDashboard() {
     const type = isEvent ? 'Event' : (isAuto ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
     const c = TYPE_COLORS[type] || TYPE_COLORS['Hyrox'] || { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' }
 
+    let activeIdx = -1;
+    if (timerState?.step?.id) {
+      const parts = timerState.step.id.split('-');
+      if (parts[0] === 'blk' || parts[0] === 'run' || parts[0] === 'step') {
+        activeIdx = parseInt(parts[1], 10);
+      }
+    }
+
+    const formatT = (totalSeconds) => {
+      if (isNaN(totalSeconds)) return '0:00';
+      const m = Math.floor(totalSeconds / 60);
+      const s = totalSeconds % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
     const totalItems = (isRunning ? 1 : blocks.length) + (workout.coach_notes ? 1 : 0);
     
     let cols = 1;
@@ -394,17 +437,33 @@ export default function TVDashboard() {
           </div>
         </div>
 
+        <div className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${timerState ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+          <div className="overflow-hidden">
+              <div className={`bg-[#111] border-4 border-[#333] rounded-[3rem] px-12 py-6 flex items-center justify-between min-w-[1000px] shadow-[0_30px_80px_rgba(0,0,0,0.9)] transition-all duration-500 mb-8 ${timerState ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8'}`}>
+                 <div className="flex flex-col flex-1 pr-8">
+                   <span className="text-[#f1ba17] font-bold text-3xl uppercase tracking-widest">{lastTimerState?.step?.title}</span>
+                   <span className="text-white font-bold text-5xl truncate mt-2">{lastTimerState?.step?.task}</span>
+                 </div>
+                 <div className="w-1 h-24 bg-[#333] rounded-full mx-8"></div>
+                 <span className="text-[120px] font-black text-white tabular-nums tracking-tighter leading-none shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                   {lastTimerState ? formatT(lastTimerState.timeLeft) : '0:00'}
+                 </span>
+              </div>
+          </div>
+        </div>
+
         {/* Blocks */}
-        <div className="w-full flex-1">
+        <div className="w-full flex-1 min-h-0">
            <div 
-             className={rotated ? "flex flex-col gap-8 w-full" : "grid gap-8 w-full"}
+             className={rotated ? "flex flex-col gap-8 w-full h-full" : "grid gap-8 w-full h-full"}
              style={!rotated ? {
-               gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`
+               gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+               gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`
              } : undefined}
            >
              {!isRunning && type !== 'Custom' && type !== 'Event' ? (
                 blocks.map((block, idx) => (
-                  <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} color={TYPE_COLORS[block.type]?.border} stepNumber={blocks.length > 1 ? idx + 1 : null} className={getSectionClass(block.type)}>
+                  <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} color={TYPE_COLORS[block.type]?.border} stepNumber={blocks.length > 1 ? idx + 1 : null} className={getSectionClass(block.type)} isActive={idx === activeIdx}>
                       {['WarmUp', 'Rest'].includes(block.type) ? (
                         <p className="text-gray-300 text-4xl font-bold">{block.params?.duration} {block.notes ? <span className="text-gray-500 text-3xl block mt-4">· {block.notes}</span> : ''}</p>
                       ) : (
@@ -414,7 +473,7 @@ export default function TVDashboard() {
                 ))
               ) : isRunning ? (
                   <Section icon={<Timer size={40} className={c.text} />} label="Allenamento Corsa" color={c.border}>
-                    <RunningList steps={s?.steps || s?.main?.steps || []} />
+                    <RunningList steps={s?.steps || s?.main?.steps || []} activeIdx={activeIdx} />
                   </Section>
               ) : null}
 
