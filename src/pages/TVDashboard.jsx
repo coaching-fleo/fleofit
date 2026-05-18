@@ -430,19 +430,22 @@ export default function TVDashboard() {
           </div>
         </div>
 
-        {/* TIMER BAR REACTIVE */}
-        {timerState && (
-          <div className="bg-[#111] border-4 border-[#333] rounded-[3rem] px-12 py-6 flex items-center justify-between min-w-[1000px] shadow-[0_30px_80px_rgba(0,0,0,0.9)] animate-in fade-in duration-500">
-             <div className="flex flex-col flex-1 pr-8">
-               <span className="text-[#f1ba17] font-bold text-3xl uppercase tracking-widest">{timerState.step?.title}</span>
-               <span className="text-white font-medium text-5xl truncate mt-2">{timerState.step?.task}</span>
-             </div>
-             <div className="w-1 h-24 bg-[#333] rounded-full mx-8"></div>
-             <span className="text-[120px] font-black text-white tabular-nums tracking-tighter leading-none shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
-               {formatT(timerState.timeLeft)}
-             </span>
+        <div className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${timerState ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+          <div className="overflow-hidden">
+            {timerState && (
+              <div className="bg-[#111] border-4 border-[#333] rounded-[3rem] px-12 py-6 flex items-center justify-between min-w-[1000px] shadow-[0_30px_80px_rgba(0,0,0,0.9)] animate-in fade-in duration-500 mb-8">
+                 <div className="flex flex-col flex-1 pr-8">
+                   <span className="text-[#f1ba17] font-bold text-3xl uppercase tracking-widest">{timerState.step?.title}</span>
+                   <span className="text-white font-medium text-5xl truncate mt-2">{timerState.step?.task}</span>
+                 </div>
+                 <div className="w-1 h-24 bg-[#333] rounded-full mx-8"></div>
+                 <span className="text-[120px] font-black text-white tabular-nums tracking-tighter leading-none shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                   {formatT(timerState.timeLeft)}
+                 </span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Blocks */}
         <div className="w-full flex-1 min-h-0">
