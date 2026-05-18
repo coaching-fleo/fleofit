@@ -208,6 +208,13 @@ export default function TVDashboard() {
   const [error, setError] = useState(null)
   const [rotated, setRotated] = useState(false)
   const [timerState, setTimerState] = useState(null)
+  const [lastTimerState, setLastTimerState] = useState(null)
+
+  useEffect(() => {
+    if (timerState) {
+      setLastTimerState(timerState)
+    }
+  }, [timerState])
 
   useEffect(() => {
     const updateScale = () => {
@@ -432,18 +439,16 @@ export default function TVDashboard() {
 
         <div className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${timerState ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
           <div className="overflow-hidden">
-            {timerState && (
-              <div className="bg-[#111] border-4 border-[#333] rounded-[3rem] px-12 py-6 flex items-center justify-between min-w-[1000px] shadow-[0_30px_80px_rgba(0,0,0,0.9)] animate-in fade-in duration-500 mb-8">
+              <div className={`bg-[#111] border-4 border-[#333] rounded-[3rem] px-12 py-6 flex items-center justify-between min-w-[1000px] shadow-[0_30px_80px_rgba(0,0,0,0.9)] transition-all duration-500 mb-8 ${timerState ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8'}`}>
                  <div className="flex flex-col flex-1 pr-8">
-                   <span className="text-[#f1ba17] font-bold text-3xl uppercase tracking-widest">{timerState.step?.title}</span>
-                   <span className="text-white font-medium text-5xl truncate mt-2">{timerState.step?.task}</span>
+                   <span className="text-[#f1ba17] font-bold text-3xl uppercase tracking-widest">{lastTimerState?.step?.title}</span>
+                   <span className="text-white font-bold text-5xl truncate mt-2">{lastTimerState?.step?.task}</span>
                  </div>
                  <div className="w-1 h-24 bg-[#333] rounded-full mx-8"></div>
                  <span className="text-[120px] font-black text-white tabular-nums tracking-tighter leading-none shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                   {formatT(timerState.timeLeft)}
+                   {lastTimerState ? formatT(lastTimerState.timeLeft) : '0:00'}
                  </span>
               </div>
-            )}
           </div>
         </div>
 
