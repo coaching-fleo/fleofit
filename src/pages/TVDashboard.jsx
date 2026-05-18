@@ -1,20 +1,66 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
-import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw, Play, Pause, SkipForward, SkipBack } from 'lucide-react'
+import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw } from 'lucide-react'
 
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
 const isErgo = (name) => ERGOMETERS.includes(name)
 
+const SCHEMES = {
+  prep:  { bg: 'bg-[#f1ba17]', text: 'text-black', sub: 'text-black/70', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-[#f1ba17]' },
+  run:   { bg: 'bg-[#0094C6]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#0094C6]' },
+  rest:  { bg: 'bg-[#1e1e1e]', text: 'text-green-400', sub: 'text-green-500/80', card: 'bg-[#111] border-green-500/20 text-green-400', cardLabel: 'text-green-500/60', icon: 'text-gray-400', btnBg: 'bg-green-500 text-black' },
+  hyrox: { bg: 'bg-[#D11149]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#D11149]' },
+  emom:  { bg: 'bg-[#111]', text: 'text-[#f1ba17]', sub: 'text-[#f1ba17]/80', card: 'bg-[#1e1e1e] border-[#f1ba17]/20 text-[#f1ba17]', cardLabel: 'text-[#f1ba17]/60', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
+  base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-gray-500', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
+  done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' }
+}
+
+function TVTimer({ state }) {
+  const { timeLeft, step } = state;
+  const currentTheme = SCHEMES[step?.theme || 'base'] || SCHEMES.base;
+
+  const formatT = (totalSeconds) => {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className={`absolute inset-0 z-[200] ${currentTheme.bg} flex flex-col animate-in slide-in-from-bottom-full duration-500 ease-out`}>
+      <div className="flex-1 flex flex-col items-center justify-between p-16 text-center w-full mx-auto">
+        <div className="w-full mt-10">
+          <h2 className={`text-6xl font-black tracking-widest uppercase mb-4 drop-shadow-md ${currentTheme.text}`}>{step?.title}</h2>
+          <p className={`text-4xl font-bold h-10 ${currentTheme.sub}`}>{step?.subtitle || ''}</p>
+        </div>
+        
+        <div className="flex flex-col items-center my-8 w-full max-w-[1200px]">
+          <div className={`backdrop-blur-md rounded-[3rem] p-12 mb-12 w-full shadow-2xl ${currentTheme.card}`}>
+            <p className={`text-2xl font-bold uppercase tracking-widest mb-4 ${currentTheme.cardLabel}`}>Esercizio</p>
+            <p className="font-bold text-7xl leading-tight min-h-[160px] flex items-center justify-center break-words">{step?.task || 'Workout'}</p>
+          </div>
+          <div className={`text-[350px] font-black tracking-tighter leading-none drop-shadow-2xl tabular-nums ${currentTheme.text}`}>
+            {formatT(timeLeft)}
+          </div>
+        </div>
+
+        <div className="w-full min-h-[100px] flex flex-col items-center justify-center mb-10">
+          {step?.nextTask && (
+            <div className={`inline-flex items-center justify-center gap-4 px-10 py-5 rounded-full backdrop-blur-md max-w-full shadow-xl ${currentTheme.card}`}>
+              <span className={`font-bold text-3xl truncate ${currentTheme.cardLabel}`}>Next: <span className={currentTheme.text}>{step.nextTask}</span></span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const timeToSeconds = (timeStr) => {
   if (!timeStr) return 0;
-  const str = String(timeStr).trim().toLowerCase();
-  if (str.includes(':')) {
-    const parts = str.replace(/[^0-9:]/g, '').split(':');
-    if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-  }
-  if (str.includes('min')) return parseInt(str, 10) * 60;
-  if (str.includes('sec')) return parseInt(str, 10);
-  return parseInt(str, 10) * 60 || 0;
+  const str = String(timeStr);
+  const parts = str.split(':')
+  if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
+  return 0
 }
 
 const formatTime = (totalSeconds) => {
@@ -22,13 +68,6 @@ const formatTime = (totalSeconds) => {
   const s = totalSeconds % 60
   if (s === 0) return `${m} min`
   return `${m}:${s.toString().padStart(2, '0')} min`
-}
-
-const formatTimer = (totalSeconds) => {
-  if (!totalSeconds) return '00:00';
-  const m = Math.floor(totalSeconds / 60);
-  const s = totalSeconds % 60;
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
 const getBlockTitle = (block) => {
@@ -141,7 +180,7 @@ function ExList({ exercises, showMinute, typeColor }) {
   )
 }
 
-function RunningList({ steps, activeBlockIdx }) {
+function RunningList({ steps }) {
   const getTypeLabel = (t) => {
     switch(t) {
       case 'warmup': return 'Riscaldamento'
@@ -166,10 +205,8 @@ function RunningList({ steps, activeBlockIdx }) {
 
   return (
     <div className="flex flex-col w-full gap-4">
-      {steps.map((step, i) => {
-        const isActive = i === activeBlockIdx;
-        return (
-        <div key={step.id || i} className={`flex flex-col justify-center border-l-[8px] pl-6 py-4 transition-all ${isActive ? 'border-[#f1ba17] bg-white/5 rounded-r-3xl shadow-lg' : 'border-[#333] opacity-40'}`}>
+      {steps.map((step, i) => (
+        <div key={step.id || i} className="flex flex-col justify-center border-l-[8px] border-[#333] pl-6 py-2">
           <div className="flex items-center gap-4 mb-2">
             <span className={`text-3xl font-black uppercase tracking-wider ${getTypeColor(step.type)}`}>
               {getTypeLabel(step.type)}
@@ -199,7 +236,7 @@ function RunningList({ steps, activeBlockIdx }) {
             </div>
           )}
         </div>
-      )})}
+      ))}
     </div>
   )
 }
@@ -210,144 +247,7 @@ export default function TVDashboard() {
   const [status, setStatus] = useState('waiting') // 'waiting', 'loading', 'active'
   const [error, setError] = useState(null)
   const [rotated, setRotated] = useState(false)
-  
-  // Timer State
-  const [currentSegmentIdx, setCurrentSegmentIdx] = useState(0)
-  const [timeLeft, setTimeLeft] = useState(0)
-  const [isRunningTimer, setIsRunningTimer] = useState(false)
-  const [preTimerLeft, setPreTimerLeftState] = useState(0)
-  const preTimerRef = useRef(0)
-  const audioCtxRef = useRef(null)
-
-  const segments = useMemo(() => {
-    if (!workout) return [];
-    const s = workout.sections || {};
-    const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox');
-    const isAuto = rawCat === 'Custom' || rawCat === 'Autonomo' || s?.isAutonomous;
-    const isEvent = rawCat === 'Event';
-    const category = isEvent ? 'Event' : (isAuto ? 'Custom' : rawCat);
-    const isRunning = category === 'Running';
-    
-    const segs = [];
-    if (isRunning) {
-       const steps = s.steps || s.main?.steps || [];
-       steps.forEach((step, i) => {
-          if (step.type === 'repeat') {
-             const rounds = parseInt(step.rounds, 10) || 1;
-             const runSec = timeToSeconds(step.runDuration);
-             const recSec = timeToSeconds(step.recDuration);
-             for (let r=1; r<=rounds; r++) {
-                 segs.push({ blockIndex: i, title: `Ripetuta ${r}/${rounds} - Corsa`, durationSec: runSec, type: 'work' });
-                 segs.push({ blockIndex: i, title: `Ripetuta ${r}/${rounds} - Recupero`, durationSec: recSec, type: 'rest' });
-             }
-          } else {
-             const t = timeToSeconds(step.duration);
-             segs.push({ blockIndex: i, title: step.type.toUpperCase(), durationSec: t, isCountUp: t === 0, type: step.type === 'recover' ? 'rest' : 'work' });
-          }
-       });
-    } else {
-       let bks = [];
-       if (s.blocks) bks = s.blocks;
-       else {
-          if (s.warmup) bks.push({ id: 'w', type: 'WarmUp', params: { duration: s.warmup.duration }, notes: s.warmup.notes });
-          if (s.cashIn?.length > 0) bks.push({ id: 'ci', type: 'Cash In', exercises: s.cashIn });
-          if (s.main && !isRunning) bks.push({ id: 'm', type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type, params: s.main.params || {}, exercises: s.main.exercises || [] });
-          if (s.cashOut?.length > 0) bks.push({ id: 'co', type: 'Cash Out', exercises: s.cashOut });
-       }
-
-       bks.forEach((b, i) => {
-          if (b.type === 'WarmUp' || b.type === 'Rest') {
-              segs.push({ blockIndex: i, title: b.type, durationSec: timeToSeconds(b.params?.duration), type: b.type === 'Rest' ? 'rest' : 'work' });
-          } else if (b.type === 'AMRAP') {
-              segs.push({ blockIndex: i, title: 'AMRAP', durationSec: timeToSeconds(b.params?.duration), type: 'work' });
-          } else if (b.type === 'EMOM') {
-              const rounds = parseInt(b.params?.rounds || '10', 10);
-              const interval = timeToSeconds(b.params?.interval || '1:00');
-              for (let r = 1; r <= rounds; r++) {
-                  segs.push({ blockIndex: i, title: `EMOM - Round ${r}/${rounds}`, durationSec: interval, type: 'work' });
-              }
-          } else if (b.type === 'ON/OFF') {
-              const rounds = parseInt(b.params?.rounds || '10', 10);
-              const onSec = timeToSeconds(b.params?.on || '1:00');
-              const offSec = timeToSeconds(b.params?.off || '1:00');
-              for (let r = 1; r <= rounds; r++) {
-                  segs.push({ blockIndex: i, title: `ON - Round ${r}/${rounds}`, durationSec: onSec, type: 'work' });
-                  segs.push({ blockIndex: i, title: `OFF - Round ${r}/${rounds}`, durationSec: offSec, type: 'rest' });
-              }
-          } else {
-              segs.push({ blockIndex: i, title: b.type, durationSec: 0, isCountUp: true, type: 'work' });
-          }
-       });
-    }
-    return segs;
-  }, [workout]);
-
-  const playBeep = useCallback((freq, duration, type = 'sine') => {
-    try {
-       if (!audioCtxRef.current) {
-          audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-       }
-       if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
-       const oscillator = audioCtxRef.current.createOscillator();
-       const gainNode = audioCtxRef.current.createGain();
-       oscillator.type = type;
-       oscillator.frequency.value = freq;
-       oscillator.connect(gainNode);
-       gainNode.connect(audioCtxRef.current.destination);
-       oscillator.start();
-       gainNode.gain.setValueAtTime(1, audioCtxRef.current.currentTime);
-       gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtxRef.current.currentTime + duration);
-       oscillator.stop(audioCtxRef.current.currentTime + duration);
-    } catch (e) {
-       console.warn("AudioContext non supportato o bloccato", e);
-    }
-  }, []);
-
-  const playCountdownBeep = useCallback(() => playBeep(440, 0.5), [playBeep]); 
-  const playStartBeep = useCallback(() => playBeep(880, 1.0), [playBeep]);
-
-  const toggleTimer = useCallback(() => {
-     if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-     setIsRunningTimer(prev => {
-        if (!prev) {
-           preTimerRef.current = 5;
-           setPreTimerLeftState(5);
-           setTimeout(() => playCountdownBeep(), 0);
-        } else {
-           preTimerRef.current = 0;
-           setPreTimerLeftState(0);
-        }
-        return !prev;
-     });
-  }, [playCountdownBeep]);
-
-  const moveToSegment = useCallback((idx) => {
-    if (idx >= 0 && idx < segments.length) {
-       setCurrentSegmentIdx(idx);
-       setTimeLeft(segments[idx].isCountUp ? 0 : segments[idx].durationSec);
-       preTimerRef.current = 0;
-       setPreTimerLeftState(0);
-    }
-  }, [segments]);
-
-  const handleNextSegment = useCallback(() => {
-    moveToSegment(currentSegmentIdx + 1);
-  }, [currentSegmentIdx, moveToSegment]);
-
-  const handlePrevSegment = useCallback(() => {
-    moveToSegment(currentSegmentIdx - 1);
-  }, [currentSegmentIdx, moveToSegment]);
-
-  useEffect(() => {
-    const handleCmd = (e) => {
-       const cmd = e.detail;
-       if (cmd === 'toggle_play') toggleTimer();
-       if (cmd === 'next') handleNextSegment();
-       if (cmd === 'prev') handlePrevSegment();
-    };
-    window.addEventListener('tv_command', handleCmd);
-    return () => window.removeEventListener('tv_command', handleCmd);
-  }, [toggleTimer, handleNextSegment, handlePrevSegment]);
+  const [timerState, setTimerState] = useState(null)
 
   useEffect(() => {
     const updateScale = () => {
@@ -397,12 +297,15 @@ export default function TVDashboard() {
       }
 
       // Resta in ascolto degli aggiornamenti in "Tempo Reale" via Supabase
-      channel = supabase.channel(`tv_${newCode}`)
+      channel = supabase.channel(`tv_${newCode}`, {
+        config: { broadcast: { ack: false } }
+      })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'tv_sessions', filter: `code=eq.${newCode}` }, async (payload) => {
           if (payload.eventType === 'DELETE') {
             setStatus('waiting')
             setWorkout(null)
             setError(null)
+            setTimerState(null)
             return
           }
           
@@ -421,11 +324,14 @@ export default function TVDashboard() {
             setStatus('waiting')
             setWorkout(null)
             setError(null)
+            setTimerState(null)
           }
         })
-        .on('broadcast', { event: 'tv_command' }, (payload) => {
-          const cmd = payload.payload?.command;
-          if (cmd) window.dispatchEvent(new CustomEvent('tv_command', { detail: cmd }));
+        .on('broadcast', { event: 'timer_state' }, (payload) => {
+          setTimerState(payload.payload)
+        })
+        .on('broadcast', { event: 'timer_close' }, () => {
+          setTimerState(null)
         })
         .subscribe()
     }
@@ -439,50 +345,6 @@ export default function TVDashboard() {
       if (inner) resizeObserver.unobserve(inner);
     }
   }, [])
-
-  useEffect(() => {
-    setCurrentSegmentIdx(0);
-    setIsRunningTimer(false);
-    preTimerRef.current = 0;
-    setPreTimerLeftState(0);
-    if (segments[0]) setTimeLeft(segments[0].isCountUp ? 0 : segments[0].durationSec);
-  }, [segments]);
-
-  useEffect(() => {
-    let interval;
-    if (isRunningTimer) {
-       interval = setInterval(() => {
-          if (preTimerRef.current > 0) {
-             const nextPre = preTimerRef.current - 1;
-             preTimerRef.current = nextPre;
-             setPreTimerLeftState(nextPre);
-             if (nextPre > 0) playCountdownBeep();
-             else playStartBeep();
-          } else {
-             setTimeLeft(prev => {
-                const seg = segments[currentSegmentIdx];
-                if (!seg) return prev;
-                if (seg.isCountUp) return prev + 1;
-                if (prev === 4 || prev === 3 || prev === 2) playCountdownBeep();
-                else if (prev === 1) playStartBeep();
-                return prev > 0 ? prev - 1 : 0;
-             });
-          }
-       }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isRunningTimer, currentSegmentIdx, segments, playCountdownBeep, playStartBeep]);
-
-  useEffect(() => {
-    const seg = segments[currentSegmentIdx];
-    if (seg && !seg.isCountUp && timeLeft === 0 && isRunningTimer) {
-       if (currentSegmentIdx < segments.length - 1) {
-          handleNextSegment();
-       } else {
-          setIsRunningTimer(false);
-       }
-    }
-  }, [timeLeft, isRunningTimer, currentSegmentIdx, segments, handleNextSegment]);
 
   const renderContent = () => {
     if (error) {
@@ -550,7 +412,9 @@ export default function TVDashboard() {
       else { cols = Math.ceil(totalItems / 2); rows = 2; }
     }
 
-    const activeBlockIdx = segments[currentSegmentIdx]?.blockIndex;
+    const getSectionClass = (t) => {
+      return "";
+    }
 
     const getIconForType = (t) => {
       const sz = 40;
@@ -591,31 +455,6 @@ export default function TVDashboard() {
           </div>
         </div>
 
-        {segments.length > 0 && (
-           <div className="w-full flex items-center justify-between bg-[#111] border-4 border-[#333] rounded-[2.5rem] p-8 shadow-2xl shrink-0 mt-8 mb-4">
-             <div className="flex flex-col flex-1">
-               <span className="text-[#f1ba17] text-4xl font-black uppercase tracking-wider">{segments[currentSegmentIdx]?.title}</span>
-               <span className="text-gray-500 text-2xl font-bold mt-2">Segmento {currentSegmentIdx + 1} di {segments.length}</span>
-             </div>
-             
-             <div className="text-[120px] font-black tabular-nums tracking-tighter leading-none mx-8" style={{ color: preTimerLeft > 0 ? '#f1ba17' : (segments[currentSegmentIdx]?.type === 'rest' ? '#22c55e' : '#f1ba17') }}>
-               {preTimerLeft > 0 ? `-${formatTimer(preTimerLeft)}` : formatTimer(timeLeft)}
-             </div>
-             
-             <div className="flex items-center gap-6 flex-1 justify-end">
-               <button onClick={handlePrevSegment} disabled={currentSegmentIdx === 0} className="p-6 bg-[#222] rounded-full disabled:opacity-30 hover:bg-[#333] transition border-4 border-[#444]">
-                  <SkipBack size={48} className="text-white" />
-               </button>
-               <button onClick={toggleTimer} className="p-8 bg-[#f1ba17] rounded-full hover:brightness-110 transition border-4 border-[#f1ba17] shadow-[0_0_30px_rgba(241,186,23,0.3)]">
-                  {isRunningTimer ? <Pause size={64} className="text-black fill-current" /> : <Play size={64} className="text-black fill-current ml-2" />}
-               </button>
-               <button onClick={handleNextSegment} disabled={currentSegmentIdx === segments.length - 1} className="p-6 bg-[#222] rounded-full disabled:opacity-30 hover:bg-[#333] transition border-4 border-[#444]">
-                  <SkipForward size={48} className="text-white" />
-               </button>
-             </div>
-           </div>
-        )}
-
         {/* Blocks */}
         <div className="w-full flex-1">
            <div 
@@ -625,20 +464,18 @@ export default function TVDashboard() {
              } : undefined}
            >
              {!isRunning && type !== 'Custom' && type !== 'Event' ? (
-                blocks.map((block, idx) => {
-                  const isActive = idx === activeBlockIdx;
-                  return (
-                  <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} color={isActive ? 'border-[#f1ba17] shadow-[0_0_40px_rgba(241,186,23,0.15)]' : TYPE_COLORS[block.type]?.border} stepNumber={blocks.length > 1 ? idx + 1 : null} className={isActive ? "scale-[1.02] transition-transform z-10" : "opacity-40 transition-opacity scale-100"}>
+                blocks.map((block, idx) => (
+                  <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} color={TYPE_COLORS[block.type]?.border} stepNumber={blocks.length > 1 ? idx + 1 : null} className={getSectionClass(block.type)}>
                       {['WarmUp', 'Rest'].includes(block.type) ? (
                         <p className="text-gray-300 text-4xl font-bold">{block.params?.duration} {block.notes ? <span className="text-gray-500 text-3xl block mt-4">· {block.notes}</span> : ''}</p>
                       ) : (
                         <ExList exercises={block.exercises || []} showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'} typeColor={TYPE_COLORS[block.type]?.text} />
                       )}
                   </Section>
-                )})
+                ))
               ) : isRunning ? (
                   <Section icon={<Timer size={40} className={c.text} />} label="Allenamento Corsa" color={c.border}>
-                    <RunningList steps={s?.steps || s?.main?.steps || []} activeBlockIdx={activeBlockIdx} />
+                    <RunningList steps={s?.steps || s?.main?.steps || []} />
                   </Section>
               ) : null}
 
@@ -681,6 +518,7 @@ export default function TVDashboard() {
           }}
         >
           {renderContent()}
+          {timerState && <TVTimer state={timerState} />}
         </div>
       </div>
     </div>
