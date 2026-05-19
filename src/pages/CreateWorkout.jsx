@@ -39,9 +39,14 @@ const isErgo = (name) => ERGOMETERS.includes(name)
 
 const SLED_EXERCISES = ['Sled Push', 'Sled Pull', 'Prowler Push', 'Sled Drag']
 const isSled = (name) => SLED_EXERCISES.includes(name)
+
+const CARRY_EXERCISES = ['Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', "Waiter's Walk", 'Handstand Walk', 'Bear Crawl', 'Shuttle Run']
+const isCarry = (name) => CARRY_EXERCISES.includes(name)
+
 const DISTANCE_EXERCISES = [
   'Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', 
   "Waiter's Walk", 'Handstand Walk', 'Run', 'Bear Crawl', 'Shuttle Run', 'Swim'
+  ...CARRY_EXERCISES, 'Run', 'Swim'
 ]
 
 const HYBRID_EXERCISES = ['Sandbag Lunges', 'Burpees Broad Jumps']
@@ -421,6 +426,11 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                 ) : isSled(selected) ? (
                   <>
                     <ScrollPicker options={SLED_METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
+                    <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                  </>
+                ) : isCarry(selected) ? (
+                  <>
+                    <ScrollPicker options={HYBRID_METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
                     <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
                   </>
                 ) : isDistance(selected) ? (
