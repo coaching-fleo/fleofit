@@ -109,7 +109,7 @@ const RUN_PACE_OPTIONS = [
 const SPEED_OPTIONS = ['-', ...Array.from({ length: 41 }, (_, i) => `${(5 + i * 0.5).toFixed(1)} km/h`)]
 
 const ERGO_PACE_OPTIONS = [
-  '-', 'Libero', 'Gara', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out',
+  '-', 'Libero', 'Gara Singola', 'Gara Doppia', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out',
   ...Array.from({ length: 61 }, (_, i) => {
     const s = 90 + i * 5;
     return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')} /500m`;
