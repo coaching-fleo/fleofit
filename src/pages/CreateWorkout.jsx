@@ -44,8 +44,6 @@ const CARRY_EXERCISES = ['Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'San
 const isCarry = (name) => CARRY_EXERCISES.includes(name)
 
 const DISTANCE_EXERCISES = [
-  'Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', 
-  "Waiter's Walk", 'Handstand Walk', 'Run', 'Bear Crawl', 'Shuttle Run', 'Swim'
   ...CARRY_EXERCISES, 'Run', 'Swim'
 ]
 
