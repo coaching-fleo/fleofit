@@ -1,6 +1,55 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
-import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw } from 'lucide-react'
+import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw, Volume2, VolumeX } from 'lucide-react'
+
+// --- AUDIO GENERATOR HELPER ---
+const writeString = (view, offset, string) => {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i));
+  }
+};
+
+const createBeepURI = (freq, durationMs) => {
+  const sampleRate = 44100;
+  const numSamples = Math.floor(sampleRate * (durationMs / 1000));
+  const buffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(buffer);
+  
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true); 
+  view.setUint16(20, 1, true); 
+  view.setUint16(22, 1, true); 
+  view.setUint32(24, sampleRate, true); 
+  view.setUint32(28, sampleRate * 2, true); 
+  view.setUint16(32, 2, true); 
+  view.setUint16(34, 16, true); 
+  writeString(view, 36, 'data');
+  view.setUint32(40, numSamples * 2, true); 
+  
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    const sample = Math.sin(2 * Math.PI * freq * t);
+    let envelope = 1;
+    if (i < 1000) envelope = i / 1000;
+    else if (i > numSamples - 1000) envelope = (numSamples - i) / 1000;
+    view.setInt16(44 + i * 2, sample * 32767 * envelope, true);
+  }
+  
+  const blob = new Blob([buffer], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+};
+
+let shortBeepURI = null;
+let longBeepURI = null;
+let longerBeepURI = null;
+if (typeof window !== 'undefined') {
+  shortBeepURI = createBeepURI(600, 200);
+  longBeepURI = createBeepURI(1200, 600);
+  longerBeepURI = createBeepURI(1200, 800);
+}
 
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
 const isErgo = (name) => ERGOMETERS.includes(name)
@@ -209,6 +258,104 @@ export default function TVDashboard() {
   const [rotated, setRotated] = useState(false)
   const [timerState, setTimerState] = useState(null)
   const [lastTimerState, setLastTimerState] = useState(null)
+  
+  // Audio Sync System
+  const [audioUnlocked, setAudioUnlocked] = useState(false)
+  const shortBeepAudio = useRef(null)
+  const longBeepAudio = useRef(null)
+  const longerBeepAudio = useRef(null)
+  const prevTimerStateRef = useRef(null)
+
+  useEffect(() => {
+    shortBeepAudio.current = new Audio(shortBeepURI);
+    longBeepAudio.current = new Audio(longBeepURI);
+    longerBeepAudio.current = new Audio(longerBeepURI);
+
+    const handleFirstInteraction = () => {
+      [shortBeepAudio.current, longBeepAudio.current, longerBeepAudio.current].forEach(a => {
+        if (a) {
+          a.volume = 0;
+          const p = a.play();
+          if (p !== undefined) {
+            p.then(() => {
+              a.pause();
+              a.currentTime = 0;
+              a.volume = 1;
+            }).catch(()=>{});
+          }
+        }
+      });
+      setAudioUnlocked(true);
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+    };
+    
+    window.addEventListener('click', handleFirstInteraction);
+    window.addEventListener('keydown', handleFirstInteraction);
+    
+    return () => {
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+    }
+  }, []);
+
+  const toggleAudio = () => {
+    if (!audioUnlocked) {
+       [shortBeepAudio.current, longBeepAudio.current, longerBeepAudio.current].forEach(a => {
+          if (a) {
+            a.volume = 0;
+            const p = a.play();
+            if (p !== undefined) {
+              p.then(() => {
+                a.pause();
+                a.currentTime = 0;
+                a.volume = 1;
+              }).catch(()=>{});
+            }
+          }
+        });
+    }
+    setAudioUnlocked(!audioUnlocked);
+  };
+
+  const playBeep = useCallback((freq, duration, isEnd) => {
+    try {
+      let audio;
+      if (duration <= 0.2) audio = shortBeepAudio.current;
+      else if (duration <= 0.6) audio = longBeepAudio.current;
+      else audio = longerBeepAudio.current;
+
+      if (audio) {
+        audio.currentTime = 0;
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {});
+        }
+      }
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
+    if (timerState && timerState.isRunning && audioUnlocked) {
+      const pt = prevTimerStateRef.current;
+      const tl = timerState.timeLeft;
+      const ptl = pt?.timeLeft;
+      
+      if (pt && pt.isRunning && tl !== ptl) {
+        const stepType = timerState.step?.type;
+        if (stepType !== 'stopwatch' && stepType !== 'done') {
+          if (tl <= 4 && tl > 0) {
+             playBeep(600, 0.2, false);
+          } else if (tl === 0) {
+             playBeep(1200, 0.6, true);
+          }
+        } else if (stepType === 'done' && pt.step?.type !== 'done') {
+          playBeep(1200, 0.8, true);
+        }
+      }
+    }
+    prevTimerStateRef.current = timerState;
+  }, [timerState, audioUnlocked, playBeep]);
 
   useEffect(() => {
     if (timerState) {
@@ -324,7 +471,10 @@ export default function TVDashboard() {
           <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
             <MonitorUp size={rotated ? 800 : 600} className="text-[#f1ba17]" />
           </div>
-          <div className="absolute top-8 right-8 z-50">
+          <div className="absolute top-8 right-8 z-50 flex items-center gap-4">
+            <button onClick={toggleAudio} className={`p-4 bg-[#111] border-2 border-[#333] rounded-full transition shadow-2xl ${audioUnlocked ? 'text-[#f1ba17]' : 'text-gray-400 hover:text-white'}`} title="Suoni TV">
+              {audioUnlocked ? <Volume2 size={32} /> : <VolumeX size={32} />}
+            </button>
             <button onClick={() => setRotated(!rotated)} className="p-4 bg-[#111] border-2 border-[#333] rounded-full text-gray-400 hover:text-white transition shadow-2xl">
               <RotateCw size={32} />
             </button>
@@ -428,6 +578,9 @@ export default function TVDashboard() {
           </div>
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-4 mb-2">
+              <button onClick={toggleAudio} className={`p-4 bg-[#111] border-2 border-[#333] rounded-full transition shadow-2xl ${audioUnlocked ? 'text-[#f1ba17]' : 'text-gray-400 hover:text-white'}`} title="Suoni TV">
+                {audioUnlocked ? <Volume2 size={36} /> : <VolumeX size={36} />}
+              </button>
               <button onClick={() => setRotated(!rotated)} className="p-4 bg-[#111] border-2 border-[#333] rounded-full text-gray-400 hover:text-white transition" title="Ruota Orientamento">
                 <RotateCw size={36} />
               </button>
