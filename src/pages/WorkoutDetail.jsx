@@ -290,8 +290,8 @@ let longBeepURI = null;
 let longerBeepURI = null;
 if (typeof window !== 'undefined') {
   shortBeepURI = createBeepURI(600, 200);
-  longBeepURI = createBeepURI(1200, 600);
-  longerBeepURI = createBeepURI(1200, 800);
+  longBeepURI = createBeepURI(1200, 1000);
+  longerBeepURI = createBeepURI(1200, 1500);
 }
 
 export default function WorkoutDetail() {
@@ -1093,17 +1093,17 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
       {/* HEADER */}
       <div className="mb-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-white">{workout.title}</h1>
-            <p className="text-gray-500 text-sm mt-1 capitalize">
-              {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-bold text-white break-words">{workout.title}</h1>
+              <p className="text-gray-500 text-sm mt-1 capitalize truncate">
+                {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
               {workout.sections?.intensity && (
-                <div className="flex items-center gap-1 bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg">
+                <div className="flex items-center gap-1 bg-[#2a2a2a] border border-[#383838] px-2 py-1.5 rounded-lg shrink-0">
                   <span className={`text-xs font-bold ${getIntensityColor(workout.sections.intensity)}`}>
                     {workout.sections.intensity}/10
                   </span>
@@ -1114,37 +1114,37 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 {type}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              {connectedTvCode ? (
-                <button onClick={handleDisconnectTV} disabled={tvConnecting} className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-red-900/50 px-3 py-1.5 rounded-lg" title="Scollega TV">
-                  <MonitorUp size={12} /> Scollega
-                </button>
-              ) : (
-                <button onClick={() => setTvModalOpen(true)} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg" title="Trasmetti alla TV">
-                  <MonitorUp size={12} /> TV
-                </button>
-              )}
-              {role !== 'athlete' && (
-                <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-2 py-1 rounded-lg" title="Duplica Workout">
-                  <Copy size={12} /> Duplica
-                </button>
-              )}
-              {role !== 'athlete' && !isAuto && (
-                <button onClick={() => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
-                  <Edit size={12} /> Modifica
-                </button>
-              )}
-              {isAuto && (
-                <button onClick={openEditAutonomous} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
-                  <Edit size={12} /> Modifica
-                </button>
-              )}
-              {(role !== 'athlete' || isAuto) && (
-                <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
-                  <Trash2 size={12} />
-                </button>
-              )}
-            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {connectedTvCode ? (
+              <button onClick={handleDisconnectTV} disabled={tvConnecting} className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-red-900/50 px-3 py-2 rounded-xl" title="Scollega TV">
+                <MonitorUp size={14} /> Scollega
+              </button>
+            ) : (
+              <button onClick={() => setTvModalOpen(true)} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl" title="Trasmetti alla TV">
+                <MonitorUp size={14} /> TV
+              </button>
+            )}
+            {role !== 'athlete' && (
+              <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl" title="Duplica Workout">
+                <Copy size={14} /> Duplica
+              </button>
+            )}
+            {role !== 'athlete' && !isAuto && (
+              <button onClick={() => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl">
+                <Edit size={14} /> Modifica
+              </button>
+            )}
+            {isAuto && (
+              <button onClick={openEditAutonomous} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl">
+                <Edit size={14} /> Modifica
+              </button>
+            )}
+            {(role !== 'athlete' || isAuto) && (
+              <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl" title="Elimina">
+                <Trash2 size={14} />
+              </button>
+            )}
           </div>
         </div>
         {(role === 'athlete' || isOwnProfile) && athleteWorkoutId && (
@@ -1329,7 +1329,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       )}
 
       {/* EXPORT BUTTONS */}
-      <div className="flex gap-3 mt-6">
+      <div className="flex flex-col sm:flex-row gap-3 mt-6">
         {type !== 'Event' && (
           <button onClick={exportPDF}
             className="flex-1 flex items-center justify-center gap-2 bg-[#222] border border-[#333] text-white font-semibold py-4 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition">
@@ -1846,7 +1846,7 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
     try {
       let audio;
       if (duration <= 0.2) audio = shortBeepAudio.current;
-      else if (duration <= 0.6) audio = longBeepAudio.current;
+      else if (duration <= 1.0) audio = longBeepAudio.current;
       else audio = longerBeepAudio.current;
 
       if (audio) {
@@ -1930,11 +1930,11 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
              if (currentIdx < sequence.length - 1) {
                const nextStep = sequence[currentIdx + 1];
                setCurrentIdx(currentIdx + 1);
-               playBeep(1200, 'sine', 0.6, true); 
+               playBeep(1200, 'sine', 1.0, true); 
                return nextStep.duration || 0;
              } else {
                setIsRunning(false);
-               playBeep(1200, 'sine', 0.8, true);
+               playBeep(1200, 'sine', 1.5, true);
                if (silentAudioRef.current) silentAudioRef.current.pause();
                return 0;
              }

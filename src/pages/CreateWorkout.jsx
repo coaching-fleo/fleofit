@@ -39,6 +39,8 @@ const isErgo = (name) => ERGOMETERS.includes(name)
 
 const SLED_EXERCISES = ['Sled Push', 'Sled Pull', 'Prowler Push', 'Sled Drag']
 const isSled = (name) => SLED_EXERCISES.includes(name)
+const CARRY_EXERCISES = ['Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', "Waiter's Walk", 'Handstand Walk', 'Bear Crawl']
+const isCarry = (name) => CARRY_EXERCISES.includes(name)
 const DISTANCE_EXERCISES = [
   'Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', 
   "Waiter's Walk", 'Handstand Walk', 'Run', 'Bear Crawl', 'Shuttle Run', 'Swim'
@@ -55,6 +57,7 @@ const METERS_OPTIONS = [
 ]
 const HYBRID_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 50 }, (_, i) => `${(i + 1) * 10}m`)]
 const SLED_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 30 }, (_, i) => `${(i + 1) * 10}m`)]
+const CARRY_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 50 }, (_, i) => `${(i + 1) * 10}m`)]
 const REPS_OPTIONS = ['-', 'Max', ...Array.from({ length: 100 }, (_, i) => `${i + 1}`)]
 const MINUTES_OPTIONS = Array.from({ length: 60 }, (_, i) => `${i + 1} min`)
 const TIME_OPTIONS = [
@@ -106,7 +109,7 @@ const RUN_PACE_OPTIONS = [
 const SPEED_OPTIONS = ['-', ...Array.from({ length: 41 }, (_, i) => `${(5 + i * 0.5).toFixed(1)} km/h`)]
 
 const ERGO_PACE_OPTIONS = [
-  '-', 'Libero', 'Gara', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out',
+  '-', 'Libero', 'Gara Singola', 'Gara Doppia', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out',
   ...Array.from({ length: 61 }, (_, i) => {
     const s = 90 + i * 5;
     return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')} /500m`;
@@ -423,6 +426,11 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                 ) : isSled(selected) ? (
                   <>
                     <ScrollPicker options={SLED_METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
+                    <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                  </>
+                ) : isCarry(selected) ? (
+                  <>
+                    <ScrollPicker options={CARRY_METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
                     <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
                   </>
                 ) : isDistance(selected) ? (
