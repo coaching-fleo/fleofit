@@ -47,8 +47,8 @@ let longBeepURI = null;
 let longerBeepURI = null;
 if (typeof window !== 'undefined') {
   shortBeepURI = createBeepURI(600, 200);
-  longBeepURI = createBeepURI(1200, 600);
-  longerBeepURI = createBeepURI(1200, 800);
+  longBeepURI = createBeepURI(1200, 1000);
+  longerBeepURI = createBeepURI(1200, 1500);
 }
 
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
@@ -312,7 +312,7 @@ export default function TVDashboard() {
     try {
       let audio;
       if (duration <= 0.2) audio = shortBeepAudio.current;
-      else if (duration <= 0.6) audio = longBeepAudio.current;
+      else if (duration <= 1.0) audio = longBeepAudio.current;
       else audio = longerBeepAudio.current;
 
       if (audio) {
@@ -337,10 +337,10 @@ export default function TVDashboard() {
           if (tl <= 4 && tl > 0) {
              playBeep(600, 0.2, false);
           } else if (tl === 0) {
-             playBeep(1200, 0.6, true);
+             playBeep(1200, 1.0, true);
           }
         } else if (stepType === 'done' && pt.step?.type !== 'done') {
-          playBeep(1200, 0.8, true);
+          playBeep(1200, 1.5, true);
         }
       }
     }
