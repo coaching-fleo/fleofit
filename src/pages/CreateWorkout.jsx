@@ -246,6 +246,76 @@ function BlockPickerModal({ onAdd, onClose }) {
   )
 }
 
+function IntensityPicker({ value, onChange, activeColor = 'bg-[#f1ba17]' }) {
+  const segments = Array.from({ length: 10 }, (_, i) => i + 1);
+  const containerRef = useRef(null);
+  const isDragging = useRef(false);
+
+  const calculateValue = (clientX) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    let x = clientX - rect.left;
+    if (x < 0) x = 0;
+    if (x > rect.width) x = rect.width;
+    
+    let newValue = Math.ceil((x / rect.width) * 10);
+    if (newValue < 1) newValue = 1;
+    if (newValue > 10) newValue = 10;
+    
+    if (String(newValue) !== String(value)) {
+      onChange(String(newValue));
+    }
+  };
+
+  const handlePointerDown = (e) => {
+    isDragging.current = true;
+    const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    calculateValue(clientX);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging.current) return;
+    const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    calculateValue(clientX);
+  };
+
+  useEffect(() => {
+    const handlePointerUp = () => { isDragging.current = false; };
+    document.addEventListener('mouseup', handlePointerUp);
+    document.addEventListener('touchend', handlePointerUp);
+    return () => {
+      document.removeEventListener('mouseup', handlePointerUp);
+      document.removeEventListener('touchend', handlePointerUp);
+    };
+  }, []);
+
+  return (
+    <div 
+      ref={containerRef}
+      className="flex items-center gap-1.5 w-full pt-1 cursor-pointer touch-none select-none"
+      onMouseDown={handlePointerDown}
+      onMouseMove={handlePointerMove}
+      onTouchStart={handlePointerDown}
+      onTouchMove={handlePointerMove}
+    >
+      {segments.map(s => (
+        <div
+          key={s}
+          className={`flex-1 h-8 rounded-lg transition-all duration-75 ${
+            s <= parseInt(value)
+              ? `${activeColor} shadow-lg`
+              : 'bg-[#333]'
+          }`}
+          style={{
+            boxShadow: s <= parseInt(value) ? `0 4px 15px ${activeColor === 'bg-[#f1ba17]' ? 'rgba(241,186,23,0.3)' : 'rgba(0,148,198,0.3)'}` : 'none',
+            pointerEvents: 'none'
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ─── EXERCISE PICKER MODAL ────────────────────────────────────
 function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initialExercise }) {
   const [search, setSearch] = useState(initialExercise?.name || '')
@@ -455,8 +525,8 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                     <BicepsFlexed size={16} className={getIntensityColor(intensity)} />
                   </div>
                 </div>
-                <input type="range" min="1" max="10" value={intensity} onChange={e => setIntensity(e.target.value)} className="w-full accent-[#f1ba17]" />
-                </div>
+                <IntensityPicker value={intensity} onChange={setIntensity} />
+              </div>
               )}
 
               <input
@@ -918,7 +988,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
                   <ScrollPicker isRun options={RUN_PACE_OPTIONS} value={runPace} onChange={setRunPace} label="Da" />
                   <ScrollPicker isRun options={MAX_PACE_OPTIONS} value={runPaceMax} onChange={setRunPaceMax} label="A (Opz.)" />
                 </div>
-                <input type="range" min="1" max="10" value={runIntensity} onChange={e => setRunIntensity(e.target.value)} className="w-full accent-[#0094C6]" />
+                <IntensityPicker value={runIntensity} onChange={setRunIntensity} activeColor="bg-[#0094C6]" />
               </div>
               <div className="p-3 bg-[#222] border border-[#333] rounded-xl flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -934,7 +1004,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
                   <ScrollPicker isRun options={RUN_PACE_OPTIONS} value={recPace} onChange={setRecPace} label="Da" />
                   <ScrollPicker isRun options={MAX_PACE_OPTIONS} value={recPaceMax} onChange={setRecPaceMax} label="A (Opz.)" />
                 </div>
-                <input type="range" min="1" max="10" value={recIntensity} onChange={e => setRecIntensity(e.target.value)} className="w-full accent-[#0094C6]" />
+                <IntensityPicker value={recIntensity} onChange={setRecIntensity} activeColor="bg-[#0094C6]" />
               </div>
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Note</label>
@@ -957,7 +1027,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
                     <BicepsFlexed size={16} className={getIntensityColor(intensity)} />
                   </div>
                 </div>
-                <input type="range" min="1" max="10" value={intensity} onChange={e => setIntensity(e.target.value)} className="w-full accent-[#0094C6]" />
+                <IntensityPicker value={intensity} onChange={setIntensity} activeColor="bg-[#0094C6]" />
               </div>
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Note</label>
@@ -1547,7 +1617,7 @@ export default function CreateWorkout() {
                  <BicepsFlexed size={18} className={getIntensityColor(workoutIntensity)} />
               </div>
             </div>
-            <input type="range" min="1" max="10" value={workoutIntensity} onChange={e => setWorkoutIntensity(e.target.value)} className="w-full accent-[#f1ba17]" />
+            <IntensityPicker value={workoutIntensity} onChange={setWorkoutIntensity} />
           </div>
 
           <div className="flex flex-col gap-4" data-drag-container>

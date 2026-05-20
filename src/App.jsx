@@ -395,6 +395,26 @@ function App() {
     setupNative()
   }, [])
 
+  // Chiude la tastiera quando si tocca fuori dai campi di testo
+  useEffect(() => {
+    const handleTouchOutside = (e) => {
+      if (Capacitor.isNativePlatform()) {
+        const target = e.target;
+        // Controlla se l'elemento toccato è un input, una textarea o un elemento contenteditable
+        if (
+          target.tagName.toLowerCase() !== 'input' &&
+          target.tagName.toLowerCase() !== 'textarea' &&
+          target.getAttribute('contenteditable') !== 'true'
+        ) {
+          Keyboard.hide().catch(() => {});
+        }
+      }
+    };
+
+    document.addEventListener('touchstart', handleTouchOutside);
+    return () => document.removeEventListener('touchstart', handleTouchOutside);
+  }, []);
+
   return (
     <BrowserRouter>
       <DeeplinkHandler />

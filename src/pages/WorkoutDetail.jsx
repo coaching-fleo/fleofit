@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown } from 'lucide-react'
+import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, Activity } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -127,6 +127,26 @@ const parseDuration = (val) => {
   if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
   if (parts.length === 3) return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
   return Math.round((parseFloat(str) || 0) * 60); 
+}
+
+const parseNotesAndRpe = (fullNote) => {
+  if (!fullNote) return { rpe: '5', text: '' };
+  const match = fullNote.match(/^\[RPE:\s*(\d+)\/10\]\n?([\s\S]*)$/);
+  if (match) {
+    return { rpe: match[1], text: match[2] };
+  }
+  return { rpe: '5', text: fullNote };
+}
+const formatNotesWithRpe = (rpe, text) => {
+  const cleanText = text.trim();
+  if (!cleanText && rpe === '5') return '';
+  return `[RPE: ${rpe}/10]\n${cleanText}`;
+}
+const getRpeColorText = (val) => {
+  if (val <= 3) return 'text-green-500';
+  if (val <= 6) return 'text-yellow-400';
+  if (val <= 8) return 'text-orange-500';
+  return 'text-red-500';
 }
 
 const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
@@ -340,6 +360,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
   const [savingAutonomous, setSavingAutonomous] = useState(false)
 
+  const [showRpeModal, setShowRpeModal] = useState(false)
+  const [rpeScore, setRpeScore] = useState('5')
+  const [rpeNotes, setRpeNotes] = useState('')
+
   // Timer
   const [timerOpen, setTimerOpen] = useState(false)
   const [timerMinimized, setTimerMinimized] = useState(false)
@@ -410,11 +434,15 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         setVoiceNoteUrl(isVoiceNoteValid(awData[0].voice_note_url) ? awData[0].voice_note_url : null)
         setCurrentAthleteName(`${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim())
         if (awData[0].notes) {
-          setAthleteNote({ text: awData[0].notes, athleteName: `${awData[0].athletes.name} ${awData[0].athletes.surname}` })
+          const parsed = parseNotesAndRpe(awData[0].notes);
+          setAthleteNote({ text: parsed.text, rpe: parsed.rpe, athleteName: `${awData[0].athletes.name} ${awData[0].athletes.surname}` })
+          setEditingNote(parsed.text)
+          setRpeScore(parsed.rpe)
         } else {
           setAthleteNote(null)
+          setEditingNote('')
+          setRpeScore('5')
         }
-        setEditingNote(awData[0].notes || '')
         finalWorkout.date = awData[0].completed_date
       } else {
         setAthleteWorkoutId(null)
@@ -452,20 +480,16 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
   const toggleStatus = async () => {
     if (!athleteWorkoutId) return
-    const doToggle = async () => {
-      const newStatus = workoutStatus === 'completed' ? 'pending' : 'completed'
+    
+    if (workoutStatus === 'completed') {
+      const newStatus = 'pending'
       setWorkoutStatus(newStatus)
       const { error } = await supabase.from('athlete_workouts').update({ status: newStatus }).eq('id', athleteWorkoutId)
       if (error) {
         setAlertInfo({ title: 'Errore', message: "Impossibile aggiornare lo stato", type: 'error' })
-        setWorkoutStatus(workoutStatus) // ripristina in caso di errore
-      } else {
-        if (newStatus === 'completed' && role === 'athlete') {
-          supabase.functions.invoke('send-reminders', {
-            body: { mode: 'coach_notification', action: 'completed', athleteName: user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title, route: `/workout/${id}?athlete_id=${queryAthleteId || user.id}` }
-          }).catch(console.error)
-        }
+        setWorkoutStatus('completed')
       }
+      return
     }
 
     if (workoutStatus !== 'completed' && workout?.date) {
@@ -475,12 +499,46 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         setConfirmInfo({
           title: 'Attenzione',
           message: 'Questo allenamento è programmato per una data futura. Vuoi davvero segnarlo come completato oggi?',
-          onConfirm: () => { doToggle(); setConfirmInfo(null); }
+          onConfirm: () => { 
+            setConfirmInfo(null);
+            setRpeNotes(editingNote);
+            setShowRpeModal(true); 
+          }
         })
         return
       }
     }
-    doToggle()
+    
+    setRpeNotes(editingNote);
+    setShowRpeModal(true);
+  }
+
+  const handleRpeSubmit = async () => {
+    setSavingNote(true)
+    const newStatus = 'completed'
+    const finalNote = formatNotesWithRpe(rpeScore, rpeNotes)
+
+    const { error } = await supabase.from('athlete_workouts').update({ 
+      status: newStatus, 
+      notes: finalNote
+    }).eq('id', athleteWorkoutId)
+
+    setSavingNote(false)
+
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: "Impossibile salvare: " + error.message, type: 'error' })
+    } else {
+      setWorkoutStatus(newStatus)
+      setEditingNote(rpeNotes)
+      setAthleteNote({ text: rpeNotes, rpe: rpeScore, athleteName: athleteNote?.athleteName || '' })
+      setShowRpeModal(false)
+
+      if (role === 'athlete') {
+        supabase.functions.invoke('send-reminders', {
+          body: { mode: 'coach_notification', action: 'completed', athleteName: currentAthleteName || user?.user_metadata?.first_name || 'Atleta', workoutTitle: workout.title, route: `/workout/${id}?athlete_id=${queryAthleteId || user.id}` }
+        }).catch(console.error)
+      }
+    }
   }
 
   const fetchAthletes = async () => {
@@ -688,6 +746,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       setConnectedTvCode(null)
       localStorage.removeItem('fleofit_tv_code')
       setAlertInfo({ title: 'Scollegato', message: 'La TV è tornata alla schermata iniziale.', type: 'success' })
+      setTimerOpen(false)
+      setTimerMinimized(false)
     }
   }
 
@@ -1178,15 +1238,28 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             }}
             className={`w-full flex items-center justify-center gap-2 font-black py-4 rounded-3xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl text-lg uppercase tracking-wide ${timerOpen && !timerMinimized ? 'bg-gradient-to-r from-gray-600 to-gray-500 text-white shadow-gray-500/20' : connectedTvCode ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-blue-500/20' : 'bg-gradient-to-r from-[#f1ba17] to-yellow-500 text-black shadow-[#f1ba17]/20'}`}>
             {timerOpen && !timerMinimized ? (
-              <><ChevronDown size={24} className="stroke-[2.5]" /> Minimizza Telecomando</>
+              <><ChevronDown size={24} className="stroke-[2.5]" /> Minimizza {connectedTvCode ? 'Telecomando' : 'Timer'}</>
             ) : timerOpen && timerMinimized ? (
-              <><ChevronUp size={24} className="stroke-[2.5]" /> Apri Telecomando</>
+              <><ChevronUp size={24} className="stroke-[2.5]" /> Apri {connectedTvCode ? 'Telecomando' : 'Timer'}</>
             ) : connectedTvCode ? (
               <><MonitorUp size={24} className="stroke-[2.5]" /> Avvia Telecomando TV</>
             ) : (
               <><Timer size={24} className="stroke-[2.5]" /> Avvia Allenamento</>
             )}
           </button>
+        </div>
+      )}
+
+      {/* AVVISO SICUREZZA E RISCALDAMENTO AUTOMATICO */}
+      {type !== 'Event' && type !== 'Custom' && (
+        <div className="mb-4 bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 flex items-start gap-3 animate-in fade-in duration-500">
+          <div className="text-orange-400 mt-0.5"><Activity size={20} /></div>
+          <div>
+            <h3 className="text-orange-400 font-bold text-sm mb-1">Prima di iniziare</h3>
+            <p className="text-gray-300 text-xs leading-relaxed">
+              Esegui sempre 5-10 minuti di mobilità articolare. Approccia l'allenamento in modo graduale per preparare il corpo allo sforzo e prevenire infortuni. Non partire mai a freddo!
+            </p>
+          </div>
         </div>
       )}
 
@@ -1250,10 +1323,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               <button
                 onClick={async () => {
                   setSavingNote(true)
-                  const { error } = await supabase.from('athlete_workouts').update({ notes: editingNote }).eq('id', athleteWorkoutId)
+                  const finalNote = formatNotesWithRpe(rpeScore, editingNote)
+                  const { error } = await supabase.from('athlete_workouts').update({ notes: finalNote }).eq('id', athleteWorkoutId)
                   setSavingNote(false)
                   if (!error) {
-                     setAthleteNote({ text: editingNote, athleteName: athleteNote?.athleteName || '' })
+                     setAthleteNote({ text: editingNote, rpe: rpeScore, athleteName: athleteNote?.athleteName || '' })
                  if (role === 'athlete') {
                    supabase.functions.invoke('send-reminders', {
                      body: { mode: 'coach_notification', action: 'note', athleteName: athleteNote?.athleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title, noteText: editingNote, route: `/workout/${id}?athlete_id=${queryAthleteId || user.id}` }
@@ -1273,6 +1347,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         </Section>
       ) : athleteNote ? (
         <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Note Atleta (${athleteNote.athleteName})`} color="border-[#3b82f6]/40">
+          {athleteNote.rpe && athleteNote.rpe !== '5' && (
+            <div className="mb-2 inline-flex items-center gap-1.5 bg-[#111] px-2 py-1 rounded border border-[#333]">
+              <span className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Sforzo percepito:</span>
+              <span className={`text-xs font-bold ${getRpeColorText(parseInt(athleteNote.rpe))}`}>{athleteNote.rpe}/10</span>
+            </div>
+          )}
           <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{athleteNote.text}</p>
         </Section>
       ) : null}
@@ -1736,6 +1816,18 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           onMaximize={() => setTimerMinimized(false)}
         />
       )}
+      {showRpeModal && createPortal(
+        <RpeModal 
+          score={rpeScore} 
+          onScoreChange={setRpeScore} 
+          notes={rpeNotes} 
+          onNotesChange={setRpeNotes} 
+          onSave={handleRpeSubmit} 
+          onCancel={() => setShowRpeModal(false)} 
+          saving={savingNote} 
+        />,
+        document.body
+      )}
       {createPortal(
         <>
           <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
@@ -1764,6 +1856,7 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
   const [isMuted, setIsMuted] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isOpening, setIsOpening] = useState(true);
+  const timerRef = useRef(null);
   const shortBeepAudio = useRef(null);
   const longBeepAudio = useRef(null);
   const longerBeepAudio = useRef(null);
@@ -1919,46 +2012,92 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
   }, []);
 
   useEffect(() => {
-    let interval = null;
-    if (isRunning) {
-      interval = setInterval(() => {
-        setTimeLeft(prev => {
-          const step = sequence[currentIdx];
-          if (step.type === 'stopwatch' || step.type === 'done') return prev + 1;
-          
-          if (prev <= 1) {
-             if (currentIdx < sequence.length - 1) {
-               const nextStep = sequence[currentIdx + 1];
-               setCurrentIdx(currentIdx + 1);
-               playBeep(1200, 'sine', 1.0, true); 
-               return nextStep.duration || 0;
-             } else {
-               setIsRunning(false);
-               playBeep(1200, 'sine', 1.5, true);
-               if (silentAudioRef.current) silentAudioRef.current.pause();
-               return 0;
-             }
-          }
-          
-          if (prev <= 4 && prev > 0) playBeep(600, 'sine', 0.2, false);
-          return prev - 1;
-        });
-      }, 1000);
+    if (!isRunning) {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = null;
+      return;
     }
-    return () => clearInterval(interval);
+
+    const currentStep = sequence[currentIdx];
+    const isStopwatch = currentStep.type === 'stopwatch' || currentStep.type === 'done';
+
+    if (isStopwatch) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft(prev => prev + 1);
+      }, 1000);
+    } else {
+      let expected = performance.now() + 1000;
+
+      const tick = () => {
+        const drift = performance.now() - expected;
+        
+        setTimeLeft(prev => {
+          if (isStopwatch) return prev + 1;
+          
+          const newTime = prev - 1;
+
+          if (newTime < 0) {
+            // Transizione al prossimo step
+            if (currentIdx < sequence.length - 1) {
+              const nextStep = sequence[currentIdx + 1];
+              setCurrentIdx(currentIdx + 1);
+              
+              // Beep lungo di transizione o beep finale
+              if (nextStep.type === 'done') {
+                setIsRunning(false);
+                if (silentAudioRef.current) silentAudioRef.current.pause();
+              }
+             
+              return nextStep.duration || 0;
+            } else {
+              // Fine del workout
+              setIsRunning(false);
+              if (silentAudioRef.current) silentAudioRef.current.pause();
+              return 0;
+            }
+          } else {
+            // Beep del conto alla rovescia per 4, 3, 2, 1 secondi rimanenti
+            if (prev <= 4 && prev > 1) {
+              playBeep(600, 'sine', 0.2, false);
+            } else if (prev === 1) { // Beep di transizione quando manca 1 secondo (quindi a 0)
+              const nextStep = sequence[currentIdx + 1];
+              if (nextStep?.type === 'done') {
+                playBeep(1200, 'sine', 1.5, true);
+              } else {
+                playBeep(1200, 'sine', 1.0, true);
+              }
+            }
+          }
+          return newTime;
+        });
+
+        expected += 1000;
+        timerRef.current = setTimeout(tick, Math.max(0, 1000 - drift));
+      };
+      timerRef.current = setTimeout(tick, 1000);
+    }
+
+    return () => { if (timerRef.current) isStopwatch ? clearInterval(timerRef.current) : clearTimeout(timerRef.current) };
   }, [isRunning, currentIdx, sequence, playBeep]);
 
   const handleNext = () => {
     if (currentIdx < sequence.length - 1) {
-      setCurrentIdx(c => c + 1);
-      setTimeLeft(sequence[currentIdx + 1].duration || 0);
+      const nextStep = sequence[currentIdx + 1];
+      if (nextStep.type === 'done') {
+        playBeep(1200, 'sine', 1.5, true);
+      } else {
+        playBeep(1200, 'sine', 1.0, true);
+      }
+      setCurrentIdx(currentIdx + 1);
+      setTimeLeft(nextStep.duration || 0);
     }
   };
 
   const handlePrev = () => {
     if (currentIdx > 0) {
-      setCurrentIdx(c => c - 1);
-      setTimeLeft(sequence[currentIdx - 1].duration || 0);
+      const prevStep = sequence[currentIdx - 1];
+      setCurrentIdx(currentIdx - 1);
+      setTimeLeft(prevStep.duration || 0);
     }
   };
 
@@ -2018,18 +2157,37 @@ return createPortal(
           transform: !isMinimized && !isClosing && !isOpening ? (swipeOffset > 0 ? `translateY(${swipeOffset}px)` : 'translateY(0)') : 'translateY(100%)'
         }}
       >
-        <div className="w-full flex justify-center pt-3 pb-2 touch-none cursor-grab active:cursor-grabbing" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-          <div className="w-12 h-1.5 bg-black/20 rounded-full"></div>
-        </div>
-        <div className="flex justify-between items-center px-6 pb-2">
-          <button onClick={onMinimize} className={`w-12 h-12 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md transition hover:scale-105 ${currentTheme.icon}`}><ChevronDown size={28} /></button>
-          <button onClick={() => setIsMuted(!isMuted)} className={`w-12 h-12 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md ${currentTheme.icon}`}>
-            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
-          </button>
+        <div 
+          className="w-full flex flex-col touch-none cursor-grab active:cursor-grabbing"
+          onTouchStart={handleTouchStart} 
+          onTouchMove={handleTouchMove} 
+          onTouchEnd={handleTouchEnd}
+        >
+          <div className="w-full flex justify-center pt-5 pb-6">
+            <div className="w-12 h-1.5 bg-black/20 rounded-full"></div>
+          </div>
+          <div className="flex justify-between items-center px-6 pb-4">
+            <button 
+              onClick={onMinimize}
+              onTouchStart={e => e.stopPropagation()} 
+              onTouchMove={e => e.stopPropagation()} 
+              className={`w-12 h-12 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md transition hover:scale-105 relative z-10 ${currentTheme.icon}`}
+            >
+              <ChevronDown size={28} />
+            </button>
+            <button 
+              onClick={() => setIsMuted(!isMuted)}
+              onTouchStart={e => e.stopPropagation()} 
+              onTouchMove={e => e.stopPropagation()} 
+              className={`w-12 h-12 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md relative z-10 ${currentTheme.icon}`}
+            >
+              {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+            </button>
+          </div>
         </div>
 
         {tvCode && (
-          <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-4 py-1.5 rounded-full font-bold text-xs shadow-xl animate-pulse flex items-center gap-2">
+          <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-4 py-1.5 rounded-full font-bold text-xs shadow-xl animate-pulse flex items-center gap-2 pointer-events-none">
             <MonitorUp size={14} /> Telecomando TV Attivo
           </div>
         )}
@@ -2507,6 +2665,70 @@ function VoiceRecorder({ onSave, onCancel }) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving }) {
+  const getRpeColor = (val) => {
+    if (val <= 3) return 'bg-green-500';
+    if (val <= 6) return 'bg-yellow-400';
+    if (val <= 8) return 'bg-orange-500';
+    return 'bg-red-500';
+  }
+  const getRpeLabel = (val) => {
+    if (val <= 3) return 'Molto leggero 🟢';
+    if (val <= 6) return 'Moderato 🟡';
+    if (val <= 8) return 'Impegnativo 🟠';
+    return 'Massimale 🔴';
+  }
+  return (
+    <div className="fixed inset-0 bg-black/85 z-[150] flex items-center justify-center p-4">
+      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+        <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Com'è andata?</h2>
+        <p className="text-gray-400 text-sm mb-6">Valuta lo sforzo percepito (RPE) e aggiungi eventuali note per il coach.</p>
+        <div className="flex flex-col gap-2 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-white font-bold">Sforzo: {score}/10</span>
+            <span className={`text-xs font-bold px-2 py-1 rounded-md text-black ${getRpeColor(parseInt(score))}`}>
+              {getRpeLabel(parseInt(score))}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 w-full">
+            {Array.from({ length: 10 }, (_, i) => i + 1).map(s => {
+              const isActive = s <= parseInt(score);
+              let color = 'bg-[#333]';
+              if (isActive) color = getRpeColor(parseInt(score));
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onScoreChange(String(s))}
+                  className={`flex-1 h-10 rounded-md transition-all duration-150 ${color} ${isActive ? 'shadow-md scale-105' : 'hover:bg-[#444]'}`}
+                />
+              )
+            })}
+          </div>
+          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-gray-500 mt-1">
+            <span>Leggero</span>
+            <span>Estremo</span>
+          </div>
+        </div>
+        <div className="mb-6">
+          <label className="text-white font-bold mb-2 block text-sm">Note sull'allenamento</label>
+          <textarea
+            className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-base transition-colors"
+            rows={3}
+            placeholder="Sensazioni, pesi usati, dolori..."
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onCancel} disabled={saving} className="flex-1 py-3.5 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">Annulla</button>
+          <button onClick={onSave} disabled={saving} className="flex-1 py-3.5 bg-[#f1ba17] text-black font-black rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-[#f1ba17]/20">{saving ? '...' : 'Fatto! 🎉'}</button>
+        </div>
       </div>
     </div>
   )

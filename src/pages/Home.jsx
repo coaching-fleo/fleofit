@@ -13,6 +13,19 @@ import { App as CapacitorApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { Badge } from '@capawesome/capacitor-badge'
 
+const parseNotesAndRpe = (fullNote) => {
+  if (!fullNote) return { rpe: '5', text: '' };
+  const match = fullNote.match(/^\[RPE:\s*(\d+)\/10\]\n?([\s\S]*)$/);
+  if (match) {
+    return { rpe: match[1], text: match[2] };
+  }
+  return { rpe: '5', text: fullNote };
+}
+const formatNotesWithRpe = (rpe, text) => {
+  const cleanText = text.trim();
+  if (!cleanText && rpe === '5') return '';
+  return `[RPE: ${rpe}/10]\n${cleanText}`;
+}
 
 export default function Home() {
   const navigate = useNavigate()
@@ -57,6 +70,12 @@ export default function Home() {
   const [isOpeningNotifications, setIsOpeningNotifications] = useState(false)
   const [startY, setStartY] = useState(null)
   const [currentY, setCurrentY] = useState(null)
+  
+  const [showRpeModal, setShowRpeModal] = useState(false)
+  const [workoutToComplete, setWorkoutToComplete] = useState(null)
+  const [rpeScore, setRpeScore] = useState('5')
+  const [rpeNotes, setRpeNotes] = useState('')
+  const [savingRpe, setSavingRpe] = useState(false)
 
   const meta = user?.user_metadata || {}
   const fallbackName = localStorage.getItem(`fleofit_name_${user?.id}`) || meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
@@ -321,32 +340,69 @@ setNotifications(prev => {
 
   const toggleTodayWorkout = async (e, workout) => {
     e.stopPropagation()
-    const newStatus = workout.status === 'completed' ? 'pending' : 'completed'
+
+    if (workout.status === 'completed') {
+      const newStatus = 'pending'
+      setTodayWorkouts(prev => prev.map(w => w.id === workout.id ? { ...w, status: newStatus } : w))
+      setWeeklyStatus(prev => prev.map(d => {
+        if (d.isToday) {
+          return { ...d, workouts: d.workouts.map(dw => dw.id === workout.id ? { ...dw, status: newStatus } : dw) }
+        }
+        return d
+      }))
+      const { error } = await supabase.from('athlete_workouts').update({ status: newStatus }).eq('id', workout.id)
+      if (error) {
+         setTodayWorkouts(prev => prev.map(w => w.id === workout.id ? { ...w, status: workout.status } : w))
+         setWeeklyStatus(prev => prev.map(d => {
+           if (d.isToday) {
+             return { ...d, workouts: d.workouts.map(dw => dw.id === workout.id ? { ...dw, status: workout.status } : dw) }
+           }
+           return d
+         }))
+      }
+      return
+    }
+
+    setWorkoutToComplete(workout)
+    const parsed = parseNotesAndRpe(workout.notes)
+    setRpeNotes(parsed.text)
+    setRpeScore(parsed.rpe)
+    setShowRpeModal(true)
+  }
+
+  const handleRpeSubmitHome = async () => {
+    setSavingRpe(true)
+    const newStatus = 'completed'
+    const finalNote = formatNotesWithRpe(rpeScore, rpeNotes)
     
-    setTodayWorkouts(prev => prev.map(w => w.id === workout.id ? { ...w, status: newStatus } : w))
+    const { error } = await supabase.from('athlete_workouts').update({ 
+      status: newStatus,
+      notes: finalNote
+    }).eq('id', workoutToComplete.id)
+
+    setSavingRpe(false)
+
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+      return
+    }
+
+    setTodayWorkouts(prev => prev.map(w => w.id === workoutToComplete.id ? { ...w, status: newStatus, notes: finalNote } : w))
     setWeeklyStatus(prev => prev.map(d => {
       if (d.isToday) {
-        return { ...d, workouts: d.workouts.map(dw => dw.id === workout.id ? { ...dw, status: newStatus } : dw) }
+        return { ...d, workouts: d.workouts.map(dw => dw.id === workoutToComplete.id ? { ...dw, status: newStatus } : dw) }
       }
       return d
     }))
 
-    const { error } = await supabase.from('athlete_workouts').update({ status: newStatus }).eq('id', workout.id)
-    if (error) {
-       setTodayWorkouts(prev => prev.map(w => w.id === workout.id ? { ...w, status: workout.status } : w))
-       setWeeklyStatus(prev => prev.map(d => {
-         if (d.isToday) {
-           return { ...d, workouts: d.workouts.map(dw => dw.id === workout.id ? { ...dw, status: workout.status } : dw) }
-         }
-         return d
-       }))
-      } else {
-        if (newStatus === 'completed' && role === 'athlete') {
-          supabase.functions.invoke('send-reminders', {
-            body: { mode: 'coach_notification', action: 'completed', athleteName: userName, workoutTitle: workout.workouts?.title || workout.title, route: `/workout/${workout.workouts?.id || workout.id}?athlete_id=${user.id}` }
-          }).catch(console.error)
-        }
+    setShowRpeModal(false)
+    
+    if (role === 'athlete') {
+      supabase.functions.invoke('send-reminders', {
+        body: { mode: 'coach_notification', action: 'completed', athleteName: userName, workoutTitle: workoutToComplete.workouts?.title || workoutToComplete.title, route: `/workout/${workoutToComplete.workouts?.id || workoutToComplete.id}?athlete_id=${user.id}` }
+      }).catch(console.error)
     }
+    setWorkoutToComplete(null)
   }
 
   const todayStrRender = format(new Date(), 'yyyy-MM-dd')
@@ -981,6 +1037,82 @@ setNotifications(prev => {
         </>,
         document.body
       )}
+      {showRpeModal && createPortal(
+        <RpeModal 
+          score={rpeScore} 
+          onScoreChange={setRpeScore} 
+          notes={rpeNotes} 
+          onNotesChange={setRpeNotes} 
+          onSave={handleRpeSubmitHome} 
+          onCancel={() => { setShowRpeModal(false); setWorkoutToComplete(null); }} 
+          saving={savingRpe} 
+        />,
+        document.body
+      )}
+    </div>
+  )
+}
+
+function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving }) {
+  const getRpeColor = (val) => {
+    if (val <= 3) return 'bg-green-500';
+    if (val <= 6) return 'bg-yellow-400';
+    if (val <= 8) return 'bg-orange-500';
+    return 'bg-red-500';
+  }
+  const getRpeLabel = (val) => {
+    if (val <= 3) return 'Molto leggero 🟢';
+    if (val <= 6) return 'Moderato 🟡';
+    if (val <= 8) return 'Impegnativo 🟠';
+    return 'Massimale 🔴';
+  }
+  return (
+    <div className="fixed inset-0 bg-black/85 z-[150] flex items-center justify-center p-4">
+      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+        <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Com'è andata?</h2>
+        <p className="text-gray-400 text-sm mb-6">Valuta lo sforzo percepito (RPE) e aggiungi eventuali note per il coach.</p>
+        <div className="flex flex-col gap-2 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-white font-bold">Sforzo: {score}/10</span>
+            <span className={`text-xs font-bold px-2 py-1 rounded-md text-black ${getRpeColor(parseInt(score))}`}>
+              {getRpeLabel(parseInt(score))}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 w-full">
+            {Array.from({ length: 10 }, (_, i) => i + 1).map(s => {
+              const isActive = s <= parseInt(score);
+              let color = 'bg-[#333]';
+              if (isActive) color = getRpeColor(parseInt(score));
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onScoreChange(String(s))}
+                  className={`flex-1 h-10 rounded-md transition-all duration-150 ${color} ${isActive ? 'shadow-md scale-105' : 'hover:bg-[#444]'}`}
+                />
+              )
+            })}
+          </div>
+          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-gray-500 mt-1">
+            <span>Leggero</span>
+            <span>Estremo</span>
+          </div>
+        </div>
+        <div className="mb-6">
+          <label className="text-white font-bold mb-2 block text-sm">Note sull'allenamento</label>
+          <textarea
+            className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-base transition-colors"
+            rows={3}
+            placeholder="Sensazioni, pesi usati, dolori..."
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onCancel} disabled={saving} className="flex-1 py-3.5 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">Annulla</button>
+          <button onClick={onSave} disabled={saving} className="flex-1 py-3.5 bg-[#f1ba17] text-black font-black rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-[#f1ba17]/20">{saving ? '...' : 'Fatto! 🎉'}</button>
+        </div>
+      </div>
     </div>
   )
 }

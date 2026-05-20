@@ -13,6 +13,26 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
 
+const parseNotesAndRpe = (fullNote) => {
+  if (!fullNote) return { rpe: '5', text: '' };
+  const match = fullNote.match(/^\[RPE:\s*(\d+)\/10\]\n?([\s\S]*)$/);
+  if (match) {
+    return { rpe: match[1], text: match[2] };
+  }
+  return { rpe: '5', text: fullNote };
+}
+const formatNotesWithRpe = (rpe, text) => {
+  const cleanText = text.trim();
+  if (!cleanText && rpe === '5') return '';
+  return `[RPE: ${rpe}/10]\n${cleanText}`;
+}
+const getRpeColorText = (val) => {
+  if (val <= 3) return 'text-green-500';
+  if (val <= 6) return 'text-yellow-400';
+  if (val <= 8) return 'text-orange-500';
+  return 'text-red-500';
+}
+
 const InstagramIcon = ({ size = 24, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
@@ -52,13 +72,18 @@ export default function AthleteDetail() {
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [prModalOpen, setPrModalOpen] = useState(false)
   const [editingPr, setEditingPr] = useState(null)
-  const [showCelebration, setShowCelebration] = useState(false)
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
 
   const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
   const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
   const [savingAutonomous, setSavingAutonomous] = useState(false)
+
+  const [showRpeModal, setShowRpeModal] = useState(false)
+  const [workoutToComplete, setWorkoutToComplete] = useState(null)
+  const [rpeScore, setRpeScore] = useState('5')
+  const [rpeNotes, setRpeNotes] = useState('')
+  const [savingRpe, setSavingRpe] = useState(false)
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(new Date())
@@ -142,36 +167,65 @@ export default function AthleteDetail() {
   }
 
   const toggleWorkoutStatus = async (id, currentStatus, scheduledDateStr) => {
-    const doToggle = async () => {
-      const newStatus = currentStatus === 'completed' ? 'pending' : 'completed'
-      const { error } = await supabase
-        .from('athlete_workouts')
-        .update({ status: newStatus })
-        .eq('id', id)
-      
+    const w = workouts.find(wo => wo.id === id)
+
+    if (currentStatus === 'completed') {
+      const { error } = await supabase.from('athlete_workouts').update({ status: 'pending' }).eq('id', id)
       if (!error) {
-        setWorkouts(prev => prev.map(w => w.id === id ? { ...w, status: newStatus } : w))
-        if (newStatus === 'completed' && role === 'athlete') {
-          const w = workouts.find(wo => wo.id === id)
-          if (w) {
-            supabase.functions.invoke('send-reminders', {
-              body: { mode: 'coach_notification', action: 'completed', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: w.workouts?.title || 'Workout', route: `/workout/${w.workouts?.id || id}?athlete_id=${athlete.id}` }
-            }).catch(console.error)
-          }
-        }
+        setWorkouts(prev => prev.map(wk => wk.id === id ? { ...wk, status: 'pending' } : wk))
       }
+      return
     }
 
     const scheduledDate = startOfDay(parseISO(scheduledDateStr))
     const today = startOfDay(new Date())
-    if (currentStatus !== 'completed' && isBefore(today, scheduledDate)) {
+    if (isBefore(today, scheduledDate)) {
       setConfirmInfo({
         title: 'Attenzione',
         message: 'Questo allenamento è programmato per una data futura. Vuoi davvero segnarlo come completato oggi?',
-        onConfirm: () => { doToggle(); setConfirmInfo(null); }
+        onConfirm: () => { 
+          setConfirmInfo(null);
+          setWorkoutToComplete(w);
+          const parsed = parseNotesAndRpe(w.notes);
+          setRpeNotes(parsed.text);
+          setRpeScore(parsed.rpe);
+          setShowRpeModal(true);
+        }
       })
+      return
+    }
+
+    setWorkoutToComplete(w);
+    const parsed = parseNotesAndRpe(w.notes);
+    setRpeNotes(parsed.text);
+    setRpeScore(parsed.rpe);
+    setShowRpeModal(true);
+  }
+
+  const handleRpeSubmitAthleteDetail = async () => {
+    setSavingRpe(true)
+    const newStatus = 'completed'
+    const finalNote = formatNotesWithRpe(rpeScore, rpeNotes)
+
+    const { error } = await supabase
+      .from('athlete_workouts')
+      .update({ status: newStatus, notes: finalNote })
+      .eq('id', workoutToComplete.id)
+    
+    setSavingRpe(false)
+
+    if (!error) {
+      setWorkouts(prev => prev.map(w => w.id === workoutToComplete.id ? { ...w, status: newStatus, notes: finalNote } : w))
+      setShowRpeModal(false)
+
+      if (role === 'athlete') {
+        supabase.functions.invoke('send-reminders', {
+          body: { mode: 'coach_notification', action: 'completed', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: workoutToComplete.workouts?.title || 'Workout', route: `/workout/${workoutToComplete.workouts?.id || workoutToComplete.id}?athlete_id=${athlete.id}` }
+        }).catch(console.error)
+      }
+      setWorkoutToComplete(null)
     } else {
-      doToggle()
+      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
     }
   }
 
@@ -732,7 +786,6 @@ export default function AthleteDetail() {
           onSaved={(isNew) => { 
             setPrModalOpen(false); 
             setEditingPr(null);
-            if (isNew) setShowCelebration(true); 
             fetchAthleteData(true) 
           }} 
           onDelete={(prId) => {
@@ -776,11 +829,6 @@ export default function AthleteDetail() {
             fetchAthleteData(true)
           }}
         />,
-        document.body
-      )}
-      
-      {showCelebration && createPortal(
-        <CelebrationOverlay onClose={() => setShowCelebration(false)} />,
         document.body
       )}
 
@@ -830,6 +878,18 @@ export default function AthleteDetail() {
             </div>
           </div>
         </div>,
+        document.body
+      )}
+      {showRpeModal && createPortal(
+        <RpeModal 
+          score={rpeScore} 
+          onScoreChange={setRpeScore} 
+          notes={rpeNotes} 
+          onNotesChange={setRpeNotes} 
+          onSave={handleRpeSubmitAthleteDetail} 
+          onCancel={() => { setShowRpeModal(false); setWorkoutToComplete(null); }} 
+          saving={savingRpe} 
+        />,
         document.body
       )}
 
@@ -931,50 +991,15 @@ function SocialLinkModal({ athlete, type, onClose, onSaved }) {
   )
 }
 
-function CelebrationOverlay({ onClose }) {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 3500)
-    return () => clearTimeout(timer)
-  }, [onClose])
-  
-  return (
-    <div className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center overflow-hidden">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-500"></div>
-      <div className="relative z-10 flex flex-col items-center animate-in zoom-in-50 duration-500 slide-in-from-bottom-10">
-        <div className="text-9xl mb-4 animate-bounce" style={{ animationDuration: '1s' }}>🏆</div>
-        <h2 className="text-5xl font-black text-white text-center drop-shadow-2xl italic tracking-wider">NUOVO PR!</h2>
-        <p className="text-[#f1ba17] font-bold text-2xl mt-3 drop-shadow-lg">Ottimo lavoro!</p>
-      </div>
-      {Array.from({ length: 100 }).map((_, i) => (
-        <div 
-          key={i}
-          className="absolute w-3 h-3 rounded-sm animate-confetti"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `-5%`,
-            backgroundColor: ['#f1ba17', '#0094C6', '#22c55e', '#ef4444', '#a855f7', '#ffffff'][Math.floor(Math.random() * 6)],
-            animationDelay: `${Math.random() * 2}s`,
-            animationDuration: `${1.5 + Math.random() * 2}s`
-          }}
-        />
-      ))}
-      <style>{`
-        @keyframes confetti {
-          0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
-          100% { transform: translateY(100vh) rotate(720deg) scale(0.5); opacity: 0; }
-        }
-        .animate-confetti {
-          animation: confetti linear forwards;
-        }
-      `}</style>
-    </div>
-  )
-}
-
 function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous, onUploadVoiceNote, onDeleteVoiceNote }) {
-  const [note, setNote] = useState(entry.notes || '')
+  const parsed = parseNotesAndRpe(entry.notes)
+  const [note, setNote] = useState(parsed.text)
   const [saving, setSaving] = useState(false)
   const noteRef = useRef(null)
+
+  useEffect(() => {
+    setNote(parseNotesAndRpe(entry.notes).text)
+  }, [entry.notes])
 
   useEffect(() => {
     if (noteRef.current) {
@@ -983,7 +1008,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
     }
   }, [note])
   
-  const hasChanges = note !== (entry.notes || '')
+  const hasChanges = note !== parsed.text
 
   const rawCat = entry.workouts?.sections?.category || (entry.workouts?.sections?.steps ? 'Running' : 'Hyrox')
   const isAuto = rawCat === 'Custom' || rawCat === 'Autonomo'
@@ -993,7 +1018,8 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
 
   const handleSaveNote = async () => {
     setSaving(true)
-    await onUpdateNote(entry.id, note, entry.workouts?.title)
+    const finalNote = formatNotesWithRpe(parsed.rpe, note)
+    await onUpdateNote(entry.id, finalNote, entry.workouts?.title)
     setSaving(false)
   }
 
@@ -1071,6 +1097,12 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
               <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />
             </div>
           ) : null}
+          {parsed.rpe !== '5' && entry.status === 'completed' && (
+            <div className="mb-2 inline-flex items-center gap-1.5 bg-[#111] px-2 py-1 rounded border border-[#333]">
+              <span className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Sforzo:</span>
+              <span className={`text-xs font-bold ${getRpeColorText(parseInt(parsed.rpe))}`}>{parsed.rpe}/10</span>
+            </div>
+          )}
           <textarea
           ref={noteRef}
           className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
@@ -1357,9 +1389,14 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
 }
 
 function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous, onUploadVoiceNote, onDeleteVoiceNote }) {
-  const [note, setNote] = useState(entry.notes || '')
+  const parsed = parseNotesAndRpe(entry.notes)
+  const [note, setNote] = useState(parsed.text)
   const [saving, setSaving] = useState(false)
   const noteRef = useRef(null)
+
+  useEffect(() => {
+    setNote(parseNotesAndRpe(entry.notes).text)
+  }, [entry.notes])
 
   useEffect(() => {
     if (noteRef.current) {
@@ -1368,7 +1405,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
     }
   }, [note])
   
-  const hasChanges = note !== (entry.notes || '')
+  const hasChanges = note !== parsed.text
 
   const scheduledDate = startOfDay(parseISO(entry.completed_date))
   const today = startOfDay(new Date())
@@ -1391,7 +1428,8 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
 
   const handleSaveNote = async () => {
     setSaving(true)
-    await onUpdateNote(entry.id, note, entry.workouts?.title)
+    const finalNote = formatNotesWithRpe(parsed.rpe, note)
+    await onUpdateNote(entry.id, finalNote, entry.workouts?.title)
     setSaving(false)
   }
 
@@ -1461,6 +1499,12 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />
           </div>
         ) : null}
+        {parsed.rpe !== '5' && entry.status === 'completed' && (
+          <div className="mb-2 inline-flex items-center gap-1.5 bg-[#111] px-2 py-1 rounded border border-[#333]">
+            <span className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Sforzo:</span>
+            <span className={`text-xs font-bold ${getRpeColorText(parseInt(parsed.rpe))}`}>{parsed.rpe}/10</span>
+          </div>
+        )}
         <textarea
           ref={noteRef}
           className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
@@ -2089,6 +2133,70 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
       )}
 
       {alertInfo && <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />}
+    </div>
+  )
+}
+
+function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving }) {
+  const getRpeColor = (val) => {
+    if (val <= 3) return 'bg-green-500';
+    if (val <= 6) return 'bg-yellow-400';
+    if (val <= 8) return 'bg-orange-500';
+    return 'bg-red-500';
+  }
+  const getRpeLabel = (val) => {
+    if (val <= 3) return 'Molto leggero 🟢';
+    if (val <= 6) return 'Moderato 🟡';
+    if (val <= 8) return 'Impegnativo 🟠';
+    return 'Massimale 🔴';
+  }
+  return (
+    <div className="fixed inset-0 bg-black/85 z-[150] flex items-center justify-center p-4">
+      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+        <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Com'è andata?</h2>
+        <p className="text-gray-400 text-sm mb-6">Valuta lo sforzo percepito (RPE) e aggiungi eventuali note per il coach.</p>
+        <div className="flex flex-col gap-2 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-white font-bold">Sforzo: {score}/10</span>
+            <span className={`text-xs font-bold px-2 py-1 rounded-md text-black ${getRpeColor(parseInt(score))}`}>
+              {getRpeLabel(parseInt(score))}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 w-full">
+            {Array.from({ length: 10 }, (_, i) => i + 1).map(s => {
+              const isActive = s <= parseInt(score);
+              let color = 'bg-[#333]';
+              if (isActive) color = getRpeColor(parseInt(score));
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onScoreChange(String(s))}
+                  className={`flex-1 h-10 rounded-md transition-all duration-150 ${color} ${isActive ? 'shadow-md scale-105' : 'hover:bg-[#444]'}`}
+                />
+              )
+            })}
+          </div>
+          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-gray-500 mt-1">
+            <span>Leggero</span>
+            <span>Estremo</span>
+          </div>
+        </div>
+        <div className="mb-6">
+          <label className="text-white font-bold mb-2 block text-sm">Note sull'allenamento</label>
+          <textarea
+            className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-base transition-colors"
+            rows={3}
+            placeholder="Sensazioni, pesi usati, dolori..."
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onCancel} disabled={saving} className="flex-1 py-3.5 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">Annulla</button>
+          <button onClick={onSave} disabled={saving} className="flex-1 py-3.5 bg-[#f1ba17] text-black font-black rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-[#f1ba17]/20">{saving ? '...' : 'Fatto! 🎉'}</button>
+        </div>
+      </div>
     </div>
   )
 }
