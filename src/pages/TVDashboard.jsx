@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw, Volume2, VolumeX } from 'lucide-react'
+import { Capacitor } from '@capacitor/core'
+import { KeepAwake } from '@capacitor-community/keep-awake'
 
 // --- AUDIO GENERATOR HELPER ---
 const writeString = (view, offset, string) => {
@@ -147,7 +149,7 @@ function Section({ icon, label, color, stepNumber, className = "", isActive, chi
       )}
       <div className="flex items-start gap-4 border-b-2 border-[#333] pb-4 shrink-0 pr-16">
         <div className="mt-1 shrink-0">{icon}</div>
-        <span className="text-white font-black text-3xl uppercase tracking-wider leading-tight">{label}</span>
+        <span className="text-white font-black text-3xl uppercase tracking-wider leading-tight flex-1 min-w-0 break-words">{label}</span>
       </div>
       <div className="flex-1 flex flex-col justify-center gap-4">
         {children}
@@ -170,7 +172,7 @@ function ExList({ exercises, showMinute, typeColor }) {
               <span className={`text-lg font-black ${typeColor}`}>{i + 1}</span>
             </div>
           )}
-          <div className="flex-1 flex flex-col justify-center">
+      <div className="flex-1 flex flex-col justify-center min-w-0">
             <span className="text-white text-3xl font-black leading-tight break-words">{ex.name}</span>
             <span className="text-gray-400 text-2xl font-bold mt-1 break-words">
               {[detail, paceStr, ex.kg ? `${ex.kg}kg` : ''].filter(Boolean).join(' · ')}
@@ -225,18 +227,18 @@ function RunningList({ steps, activeIdx }) {
           {step.type === 'repeat' ? (
             <div className="text-3xl font-bold flex flex-col gap-4 mt-2">
               <div className="flex items-start justify-between bg-[#111] px-6 py-5 rounded-3xl border-2 border-[#333]">
-                <div className="flex-1 break-words pr-4"><span className="text-gray-500 mr-3">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-[#0094C6] ml-3 whitespace-nowrap">@{step.runPace}</span>}</div>
+            <div className="flex-1 min-w-0 break-words pr-4"><span className="text-gray-500 mr-3">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-[#0094C6] ml-3 whitespace-nowrap">@{step.runPace}</span>}</div>
                 {step.runIntensity && <div className="flex items-center gap-2 shrink-0 mt-1"><span className={`text-3xl font-black ${getIntensityColor(step.runIntensity)}`}>{step.runIntensity}/10</span><BicepsFlexed size={36} className={getIntensityColor(step.runIntensity)} /></div>}
               </div>
               <div className="flex items-start justify-between bg-[#111] px-6 py-5 rounded-3xl border-2 border-[#333]">
-                <div className="flex-1 break-words pr-4"><span className="text-gray-500 mr-3">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-green-500 ml-3 whitespace-nowrap">@{step.recPace}</span>}</div>
+            <div className="flex-1 min-w-0 break-words pr-4"><span className="text-gray-500 mr-3">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-green-500 ml-3 whitespace-nowrap">@{step.recPace}</span>}</div>
                 {step.recIntensity && <div className="flex items-center gap-2 shrink-0 mt-1"><span className={`text-3xl font-black ${getIntensityColor(step.recIntensity)}`}>{step.recIntensity}/10</span><BicepsFlexed size={36} className={getIntensityColor(step.recIntensity)} /></div>}
               </div>
               {step.notes && <p className="text-gray-500 text-2xl font-medium mt-1 break-words">"{step.notes}"</p>}
             </div>
           ) : (
             <div className="flex items-start justify-between text-4xl font-bold mt-2">
-              <div className="flex-1 break-words pr-4">
+            <div className="flex-1 min-w-0 break-words pr-4">
                 {step.duration && <span className="font-semibold text-white">{step.duration}</span>}
                 {step.pace && <span className="ml-4 text-gray-400 whitespace-nowrap">@{step.pace}</span>}
                 {step.notes && <p className="text-gray-500 text-2xl font-medium mt-3 break-words">"{step.notes}"</p>}
@@ -267,6 +269,38 @@ export default function TVDashboard() {
   const longerBeepAudio = useRef(null)
   const prevTimerStateRef = useRef(null)
   const containerRef = useRef(null)
+
+  // MANTIENI LO SCHERMO ACCESO SULLA TV
+  useEffect(() => {
+    let wakeLock = null;
+    const keepScreenAwake = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await KeepAwake.keepAwake();
+        } catch (e) {}
+      } else if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {}
+      }
+    };
+
+    const allowScreenSleep = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await KeepAwake.allowSleep();
+        } catch (e) {}
+      } else if (wakeLock !== null) {
+        try {
+          await wakeLock.release();
+          wakeLock = null;
+        } catch (err) {}
+      }
+    };
+
+    keepScreenAwake();
+    return () => { allowScreenSleep(); };
+  }, []);
 
   const unlockAudio = useCallback(() => {
     if (!audioUnlockedRef.current) {
@@ -328,19 +362,21 @@ export default function TVDashboard() {
   useEffect(() => {
     if (timerState && timerState.isRunning && audioUnlocked) {
       const pt = prevTimerStateRef.current;
+      const currentStep = timerState.step;
       const tl = timerState.timeLeft;
-      const ptl = pt?.timeLeft;
       
-      if (pt && pt.isRunning && tl !== ptl) {
-        const stepType = timerState.step?.type;
+      if (pt && pt.isRunning && tl !== pt.timeLeft) {
+        const stepType = currentStep?.type;
         if (stepType !== 'stopwatch' && stepType !== 'done') {
-          if (tl <= 4 && tl > 0) {
-             playBeep(600, 0.2, false);
-          } else if (tl === 0) {
-             playBeep(1200, 1.0, true);
+          if (tl === 0) {
+            if (currentStep?.nextTask === 'Workout terminato 🎉') {
+              playBeep(1200, 1.5, true);
+            } else {
+              playBeep(1200, 1.0, true);
+            }
+          } else if (tl <= 3 && tl > 0) {
+            playBeep(600, 0.2, false);
           }
-        } else if (stepType === 'done' && pt.step?.type !== 'done') {
-          playBeep(1200, 1.5, true);
         }
       }
     }
@@ -558,15 +594,15 @@ export default function TVDashboard() {
     return (
       <div className="w-full min-h-full p-10 flex flex-col gap-8 relative">
         {/* Header */}
-        <div className="flex items-center justify-between gap-6 shrink-0 bg-[#1e1e1e] p-8 rounded-[2.5rem] border-4 border-[#333] shadow-2xl">
-          <div className="flex flex-col gap-4 flex-1">
+        <div className="flex items-start justify-between gap-6 shrink-0 bg-[#1e1e1e] p-8 rounded-[2.5rem] border-4 border-[#333] shadow-2xl">
+          <div className="flex flex-col gap-4 flex-1 min-w-0">
             <h1 className="text-6xl font-black text-white tracking-tight leading-none break-words">{workout.title}</h1>
-            <div className="flex items-center gap-4">
-              <span className={`text-3xl font-black px-6 py-2.5 rounded-2xl uppercase tracking-wider ${type === 'Event' ? 'bg-white text-black border-white' : `${c.bg} ${c.text} border-2 ${c.border}`}`}>
+            <div className="flex flex-wrap items-center gap-4">
+              <span className={`text-3xl font-black px-6 py-2.5 rounded-2xl uppercase tracking-wider shrink-0 ${type === 'Event' ? 'bg-white text-black border-white' : `${c.bg} ${c.text} border-2 ${c.border}`}`}>
                 {type === 'Event' ? 'Gara / Evento' : (isRunning ? 'Allenamento Corsa' : 'Allenamento Hyrox')}
               </span>
               {workout.sections?.intensity && (
-                <div className="flex items-center gap-3 bg-[#111] border-2 border-[#333] px-6 py-2.5 rounded-2xl">
+                <div className="flex items-center gap-3 bg-[#111] border-2 border-[#333] px-6 py-2.5 rounded-2xl shrink-0">
                   <span className={`text-3xl font-black ${getIntensityColor(workout.sections.intensity)}`}>
                     Intensità {workout.sections.intensity}/10
                   </span>
@@ -575,8 +611,8 @@ export default function TVDashboard() {
               )}
             </div>
           </div>
-          <div className="flex flex-col items-end">
-            <div className="flex items-center gap-4 mb-2">
+          <div className="flex flex-col items-end shrink-0">
+            <div className="flex flex-wrap items-center justify-end gap-4 mb-2">
               <div className={`p-4 bg-[#111] border-2 border-[#333] rounded-full transition shadow-2xl ${audioUnlocked ? 'text-[#f1ba17]' : 'text-red-500 animate-pulse'}`} title="Suoni TV">
                 {audioUnlocked ? <Volume2 size={36} /> : <VolumeX size={36} />}
               </div>
@@ -592,7 +628,7 @@ export default function TVDashboard() {
         <div className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${timerState ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
           <div className="overflow-hidden">
               <div className={`bg-[#111] border-4 border-[#333] rounded-[3rem] px-12 py-6 flex items-center justify-between min-w-[1000px] shadow-[0_30px_80px_rgba(0,0,0,0.9)] transition-all duration-500 mb-8 ${timerState ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8'}`}>
-                 <div className="flex flex-col flex-1 pr-8">
+                 <div className="flex flex-col flex-1 pr-8 min-w-0">
                    <span className="text-[#f1ba17] font-bold text-3xl uppercase tracking-widest">{lastTimerState?.step?.title}</span>
                    <span className="text-white font-bold text-5xl truncate mt-2">{lastTimerState?.step?.task}</span>
                  </div>
