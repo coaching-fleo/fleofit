@@ -807,6 +807,7 @@ export default function WorkoutDetail() {
       // 2. Genera Immagine in memoria con html-to-image
       const blob = await toBlob(igRef.current, { pixelRatio: 3, cacheBust: true })
       const pngFile = new File([blob], `${workout.title.replace(/ /g, '_')}.png`, { type: 'image/png' })
+      filesArray.push(pngFile)
 
       // 3. Usa lo Share nativo di iOS / Android
       if (navigator.canShare && navigator.canShare({ files: filesArray })) {
