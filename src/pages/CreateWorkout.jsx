@@ -94,10 +94,22 @@ const RUN_TIME_OPTIONS = [
   ...Array.from({ length: 12 }, (_, i) => `${(i + 1) * 5} sec`)
 ]
 
+
 const RUN_DISTANCE_OPTIONS = [
+  // 10m → 100m (a scatti da 10m)
   ...Array.from({ length: 10 }, (_, i) => `${(i + 1) * 10}m`),
-  '150m', '200m', '250m', '300m', '400m', '500m', '600m', '800m', '1 km', '1.5 km', '2 km', '3 km', '4 km', '5 km', '10 km', '15 km', '21 km', '42 km'
+  // 150m → 950m (a scatti da 50m)
+  ...Array.from({ length: 17 }, (_, i) => `${150 + i * 50}m`),
+  // 1000m → 2000m (a scatti da 100m)
+  ...Array.from({ length: 11 }, (_, i) => `${1000 + i * 100}m`),
+  // 2200m → 4000m (a scatti da 200m)
+  ...Array.from({ length: 10 }, (_, i) => `${2200 + i * 200}m`),
+  // 4500m, 5000m
+  '4500m', '5000m',
+  // In km
+  '6 km', '7 km', '8 km', '9 km', '10 km', '12 km', '15 km', '21 km', '42 km'
 ]
+
 const RUN_PACE_OPTIONS = [
   'Libero', 'Camminata', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out', 'Gara',
   ...Array.from({ length: 96 }, (_, i) => {
