@@ -18,7 +18,7 @@ const config: CapacitorConfig = {
     }
   },
   server: {
-    url: 'http://192.168.1.166:5173', // Sostituisci con il tuo IP e porta di Vite
+    url: 'http://192.168.1.21:5173', // Sostituisci con il tuo IP e porta di Vite
     cleartext: true
   }
 };

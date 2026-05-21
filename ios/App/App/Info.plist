@@ -49,6 +49,8 @@
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>FLEOFIT necessita di questo permesso per comprendere i tuoi comandi vocali durante la creazione degli allenamenti.</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
@@ -57,10 +59,10 @@
 	</array>
 	<key>UIRequiresFullScreen</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
-	<key>ITSAppUsesNonExemptEncryption</key>
-<false/>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>

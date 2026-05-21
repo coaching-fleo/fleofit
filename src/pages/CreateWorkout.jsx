@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2 } from 'lucide-react'
+import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
+import { Capacitor } from '@capacitor/core'
+import { VoiceRecorder } from 'capacitor-voice-recorder'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useTouchDrag } from '../useTouchDrag'
 import { format } from 'date-fns'
@@ -322,17 +324,155 @@ function AiGenerationModal({ onClose, onGenerate }) {
   const [isFocused, setIsFocused] = useState(false);
   const blurTimeoutRef = useRef(null);
 
+  const [isListening, setIsListening] = useState(false);
+  const [interimResult, setInterimResult] = useState('');
+  const recognitionRef = useRef(null);
+  const [audioLevel, setAudioLevel] = useState(1);
+
   useEffect(() => {
+    // Manteniamo il fallback Web per quando testi l'app dal browser su PC
+    if (!Capacitor.isNativePlatform()) {
+      const WebSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (WebSpeechRecognition) {
+        const recognition = new WebSpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'it-IT';
+
+        recognition.onstart = () => setIsListening(true);
+        
+        recognition.onresult = (event) => {
+          let finalTrans = '';
+          let interimTrans = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTrans += transcript + ' ';
+            } else {
+              interimTrans += transcript;
+            }
+          }
+          if (finalTrans) {
+            setText(prev => (prev + ' ' + finalTrans).trim());
+          }
+          setInterimResult(interimTrans);
+        };
+
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error', event.error);
+          setIsListening(false);
+        };
+        
+        recognition.onend = () => {
+          setIsListening(false);
+          setInterimResult('');
+        };
+
+        recognitionRef.current = recognition;
+      }
+    }
+
     return () => {
       if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+      if (recognitionRef.current) recognitionRef.current.stop();
+      if (Capacitor.isNativePlatform()) {
+        VoiceRecorder.stopRecording().catch(() => {});
+      }
     };
   }, []);
 
+  useEffect(() => {
+    let interval;
+    if (isListening) {
+      interval = setInterval(() => {
+        setAudioLevel(1 + Math.random() * 0.4); // animazione tra 1 e 1.4
+      }, 150);
+    } else {
+      setAudioLevel(1);
+    }
+    return () => clearInterval(interval);
+  }, [isListening]);
+
+  const toggleListen = async () => {
+    if (isListening) {
+      if (Capacitor.isNativePlatform()) {
+        setIsListening(false);
+        try {
+          const result = await VoiceRecorder.stopRecording();
+          if (result.value && result.value.recordDataBase64) {
+            setLoading(true);
+            const { data, error } = await supabase.functions.invoke('ai-workout', { 
+              body: { 
+                prompt: text,
+                audioBase64: result.value.recordDataBase64,
+                mimeType: result.value.mimeType || 'audio/aac' // Includiamo il mimeType, con un fallback
+              } 
+            });
+            
+            if (error) {
+              let errorMsg = error.message;
+              if (error.context && typeof error.context.json === 'function') {
+                try { const errBody = await error.context.json(); if (errBody && errBody.error) errorMsg = errBody.error; } catch (_) {}
+              }
+              throw new Error(errorMsg);
+            }
+            if (data?.error) throw new Error(data.error);
+            
+            if (data.blocks) {
+              onGenerate(data.blocks);
+              onClose();
+            }
+          }
+        } catch (e) {
+          console.error(e);
+          alert("Errore elaborazione audio: " + e.message);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        recognitionRef.current?.stop();
+      }
+    } else {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const perm = await VoiceRecorder.requestAudioRecordingPermission();
+          if (!perm.value) {
+            alert("Devi concedere i permessi per il microfono nelle impostazioni di iOS.");
+            return;
+          }
+          await VoiceRecorder.startRecording();
+          setIsListening(true);
+          setInterimResult('Sto ascoltando... 🎙️');
+        } catch (e) {
+          console.error(e);
+          setIsListening(false);
+          alert("Errore nell'avvio della registrazione: " + e.message);
+        }
+      } else {
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.start();
+          } catch (e) {
+            console.error(e);
+          }
+        } else {
+          alert("Il riconoscimento vocale nativo non è supportato su questo dispositivo. Usa la dettatura integrata della tastiera.");
+        }
+      }
+    }
+  };
+
   const handleGenerate = async () => {
     if (!text.trim()) return;
+    const finalPrompt = text.trim();
     setLoading(true);
+    if (isListening) {
+      if (Capacitor.isNativePlatform()) VoiceRecorder.stopRecording().catch(()=>{});
+      else recognitionRef.current?.stop();
+      setIsListening(false);
+    }
     try {
-      const { data, error } = await supabase.functions.invoke('ai-workout', { body: { prompt: text } });
+      const { data, error } = await supabase.functions.invoke('ai-workout', { body: { prompt: finalPrompt } });
       if (error) {
         let errorMsg = error.message;
         if (error.context && typeof error.context.json === 'function') {
@@ -340,6 +480,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
         }
         throw new Error(errorMsg);
       }
+      if (data?.error) throw new Error(data.error);
       onGenerate(data.blocks || []);
       onClose();
     } catch (e) {
@@ -360,26 +501,60 @@ function AiGenerationModal({ onClose, onGenerate }) {
           <h3 className="text-white font-bold text-lg flex items-center gap-2"><Wand2 size={20} className="text-[#a855f7]" /> Genera con IA</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20}/></button>
         </div>
-        <p className="text-gray-400 text-sm mb-4">Usa il <strong className="text-white">microfono della tastiera</strong> per dettare il tuo allenamento (es. "Fammi un EMOM di 12 minuti con 15 burpees e 10 box jump").</p>
-        <textarea 
-          autoFocus 
-          className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#a855f7] resize-none text-base transition-colors" 
-          rows={4} 
-          placeholder="Ditta o scrivi qui..." 
-          value={text} 
-          onChange={e => setText(e.target.value)} 
-          onFocus={() => {
-            if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-            setIsFocused(true);
-          }}
-          onBlur={() => {
-            blurTimeoutRef.current = setTimeout(() => {
-              setIsFocused(false);
-            }, 250);
-          }}
-        />
+        
+        {isListening ? (
+          <div className="flex flex-col items-center justify-center py-6">
+            <div className="relative flex items-center justify-center w-32 h-32 mb-6">
+              <div 
+                className="absolute inset-0 bg-[#a855f7] rounded-full opacity-20 transition-transform duration-150 ease-out"
+                style={{ transform: `scale(${audioLevel + 0.2})` }}
+              ></div>
+              <div 
+                className="absolute inset-0 bg-[#a855f7] rounded-full opacity-40 transition-transform duration-150 ease-out"
+                style={{ transform: `scale(${audioLevel})` }}
+              ></div>
+              <button onClick={toggleListen} className="relative z-10 w-16 h-16 bg-[#a855f7] rounded-full flex items-center justify-center text-white shadow-lg shadow-[#a855f7]/50 hover:brightness-110 transition">
+                <Square size={24} fill="currentColor" />
+              </button>
+            </div>
+            <p className="text-white font-medium text-center min-h-[48px] px-4">
+              {interimResult}
+            </p>
+          </div>
+        ) : (
+          <>
+            <p className="text-gray-400 text-sm mb-4">Puoi usare il <strong className="text-white">microfono</strong> per dettare il tuo allenamento (es. "Fammi un EMOM di 12 minuti con 15 burpees e 10 box jump").</p>
+            <div className="relative">
+              <textarea 
+                autoFocus 
+                className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 pb-12 text-white placeholder-gray-600 focus:outline-none focus:border-[#a855f7] resize-none text-base transition-colors" 
+                rows={4} 
+                placeholder="Ditta o scrivi qui..." 
+                value={text} 
+                onChange={e => setText(e.target.value)} 
+                onFocus={() => {
+                  if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+                  setIsFocused(true);
+                }}
+                onBlur={() => {
+                  blurTimeoutRef.current = setTimeout(() => {
+                    setIsFocused(false);
+                  }, 250);
+                }}
+              />
+              <button 
+                onClick={toggleListen}
+                className="absolute bottom-3 right-3 w-10 h-10 bg-[#2a2a2a] hover:bg-[#333] border border-[#444] rounded-full flex items-center justify-center text-[#a855f7] transition shadow-md"
+                title="Dettatura vocale"
+              >
+                <Mic size={18} />
+              </button>
+            </div>
+          </>
+        )}
+
         <button onClick={handleGenerate} disabled={loading || !text.trim()} className="w-full mt-4 py-3.5 bg-[#a855f7] text-white font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-[#a855f7]/20">
-          {loading ? 'Elaborazione in corso...' : 'Genera Blocchi ✨'}
+          {loading ? 'Elaborazione in corso...' : 'Genera Workout'}
         </button>
       </div>
     </div>,
