@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw, Volume2, VolumeX } from 'lucide-react'
-import { Capacitor } from '@capacitor/core'
+/*import { Capacitor } from '@capacitor/core'
 import { KeepAwake } from '@capacitor-community/keep-awake'
-
+*/
 // --- AUDIO GENERATOR HELPER ---
 const writeString = (view, offset, string) => {
   for (let i = 0; i < string.length; i++) {
@@ -272,35 +272,40 @@ export default function TVDashboard() {
 
   // MANTIENI LO SCHERMO ACCESO SULLA TV
   useEffect(() => {
-    let wakeLock = null;
-    const keepScreenAwake = async () => {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          await KeepAwake.keepAwake();
-        } catch (e) {}
-      } else if ('wakeLock' in navigator) {
-        try {
-          wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) {}
-      }
-    };
+  let wakeLock = null;
+  const keepScreenAwake = async () => {
+    // Prova Capacitor solo se disponibile (app nativa)
+    const isNative = typeof window !== 'undefined' && window?.Capacitor?.isNativePlatform?.()
+    if (isNative) {
+      try {
+        const { KeepAwake } = await import('@capacitor-community/keep-awake')
+        await KeepAwake.keepAwake()
+      } catch (e) {}
+    } else if ('wakeLock' in navigator) {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen')
+      } catch (err) {}
+    }
+  }
 
-    const allowScreenSleep = async () => {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          await KeepAwake.allowSleep();
-        } catch (e) {}
-      } else if (wakeLock !== null) {
-        try {
-          await wakeLock.release();
-          wakeLock = null;
-        } catch (err) {}
-      }
-    };
+  const allowScreenSleep = async () => {
+    const isNative = typeof window !== 'undefined' && window?.Capacitor?.isNativePlatform?.()
+    if (isNative) {
+      try {
+        const { KeepAwake } = await import('@capacitor-community/keep-awake')
+        await KeepAwake.allowSleep()
+      } catch (e) {}
+    } else if (wakeLock !== null) {
+      try {
+        await wakeLock.release()
+        wakeLock = null
+      } catch (err) {}
+    }
+  }
 
-    keepScreenAwake();
-    return () => { allowScreenSleep(); };
-  }, []);
+  keepScreenAwake()
+  return () => { allowScreenSleep() }
+}, [])
 
   const unlockAudio = useCallback(() => {
     if (!audioUnlockedRef.current) {
