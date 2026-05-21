@@ -8,6 +8,11 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    allowedHosts: true // Consente qualsiasi host, perfetto per i cambi continui di Ngrok
+    allowedHosts: true
+  },
+  build: {
+    rollupOptions: {
+      external: (id) => id.startsWith('@capacitor')
+    }
   }
 })
