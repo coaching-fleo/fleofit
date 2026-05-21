@@ -1,46 +1,72 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 
-// Setup type definitions for built-in Supabase Runtime APIs
-import "@supabase/functions-js/edge-runtime.d.ts";
-import { withSupabase } from "@supabase/server";
-
-console.log("Hello from Functions!");
-
-// This endpoint uses 'publishable' | 'secret' access, apiKey is required.
-// Use publishable for Client-facing, key-validated endpoints
-// Use secret for Server-to-server, internal calls
-export default {
-  fetch: withSupabase({ auth: ["publishable", "secret"] }, async (req, ctx) => {
-    // Called by another service with a secret key
-    // ctx.supabaseAdmin bypasses RLS — use for privileged operations
-    /*
-    if (ctx.authMode === "secret") {
-      const { user_id } = await req.json();
-      const { data } = await ctx.supabaseAdmin.auth.admin.getUserById(user_id);
-
-      return Response.json({
-        email: data?.user?.email,
-      });
-    }
-    */
-
-    const { name } = await req.json();
-
-    return Response.json({
-      message: `Hello ${name}!`,
-    });
-  }),
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-/* To invoke locally:
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+  
+  try {
+    const { prompt } = await req.json();
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
 
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
+    if (!apiKey) {
+      throw new Error("Chiave API GEMINI_API_KEY non trovata. Esegui: npx supabase secrets set GEMINI_API_KEY=tua_chiave");
+    }
 
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/ai-workout' \
-    --header 'apiKey: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH' \
-    --data '{"name":"Functions"}'
+    const systemPrompt = `
+Traduci questo workout dettato a voce in un array JSON compatibile con l'app di fitness.
+Tipi di blocco ammessi: "WarmUp", "Cash In", "ON/OFF", "EMOM", "AMRAP", "For Time", "Interval", "Rest", "Cash Out".
+Devi restituire ESCLUSIVAMENTE la struttura JSON.
 
-*/
+Esempio di struttura richiesta:
+[
+  {
+    "type": "EMOM",
+    "params": { "interval": "1:00", "rounds": "12" },
+    "exercises": [
+      { "name": "Burpees", "reps": "15" },
+      { "name": "Wall Balls", "reps": "10", "kg": "9" },
+      { "name": "Rowing", "meters": "250m" }
+    ]
+  }
+]
+
+Testo dettato dall'utente: "${prompt}"
+`;
+
+    // Chiamata gratuita all'API del nuovo modello Gemini 2.5 Flash
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: systemPrompt }] }],
+        // Forza l'IA a rispondere con un JSON puro e valido!
+        generationConfig: { responseMimeType: "application/json" }
+      })
+    });
+
+    const data = await response.json();
+    if (!data.candidates) throw new Error(JSON.stringify(data));
+    
+    // Estraiamo il JSON dal testo dell'IA e lo processiamo
+    let jsonString = data.candidates[0].content.parts[0].text;
+    jsonString = jsonString.replace(/```json/gi, '').replace(/```/g, '').trim();
+    
+    const blocks = JSON.parse(jsonString);
+
+    return new Response(JSON.stringify({ blocks }), { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
+
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e.message }), { 
+      status: 500, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
+  }
+});

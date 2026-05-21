@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft } from 'lucide-react'
+import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
@@ -314,6 +314,77 @@ function IntensityPicker({ value, onChange, activeColor = 'bg-[#f1ba17]' }) {
       ))}
     </div>
   );
+}
+
+function AiGenerationModal({ onClose, onGenerate }) {
+  const [text, setText] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [isFocused, setIsFocused] = useState(false);
+  const blurTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
+
+  const handleGenerate = async () => {
+    if (!text.trim()) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-workout', { body: { prompt: text } });
+      if (error) {
+        let errorMsg = error.message;
+        if (error.context && typeof error.context.json === 'function') {
+          try { const errBody = await error.context.json(); if (errBody && errBody.error) errorMsg = errBody.error; } catch (_) {}
+        }
+        throw new Error(errorMsg);
+      }
+      onGenerate(data.blocks || []);
+      onClose();
+    } catch (e) {
+      let msg = e.message;
+      if (msg.includes('503') || msg.toLowerCase().includes('high demand') || msg.toLowerCase().includes('overloaded')) {
+        msg = "I server dell'Intelligenza Artificiale sono attualmente sovraccarichi. Riprova tra qualche istante.";
+      }
+      alert('Errore generazione IA: ' + msg);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
+      <div className={`bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-6 border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isFocused ? '-translate-y-36' : ''}`}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-white font-bold text-lg flex items-center gap-2"><Wand2 size={20} className="text-[#a855f7]" /> Genera con IA</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20}/></button>
+        </div>
+        <p className="text-gray-400 text-sm mb-4">Usa il <strong className="text-white">microfono della tastiera</strong> per dettare il tuo allenamento (es. "Fammi un EMOM di 12 minuti con 15 burpees e 10 box jump").</p>
+        <textarea 
+          autoFocus 
+          className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#a855f7] resize-none text-base transition-colors" 
+          rows={4} 
+          placeholder="Ditta o scrivi qui..." 
+          value={text} 
+          onChange={e => setText(e.target.value)} 
+          onFocus={() => {
+            if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+            setIsFocused(true);
+          }}
+          onBlur={() => {
+            blurTimeoutRef.current = setTimeout(() => {
+              setIsFocused(false);
+            }, 250);
+          }}
+        />
+        <button onClick={handleGenerate} disabled={loading || !text.trim()} className="w-full mt-4 py-3.5 bg-[#a855f7] text-white font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-[#a855f7]/20">
+          {loading ? 'Elaborazione in corso...' : 'Genera Blocchi ✨'}
+        </button>
+      </div>
+    </div>,
+    document.body
+  )
 }
 
 // ─── EXERCISE PICKER MODAL ────────────────────────────────────
@@ -1169,6 +1240,7 @@ export default function CreateWorkout() {
   const [category, setCategory] = useState('Hyrox')
   const [blocks, setBlocks] = useState([])
   const [blockPickerOpen, setBlockPickerOpen] = useState(false)
+  const [aiModalOpen, setAiModalOpen] = useState(false)
   const [openBlockId, setOpenBlockId] = useState(null)
   const [draggedBlockIdx, setDraggedBlockIdx] = useState(null)
   
@@ -1663,9 +1735,14 @@ export default function CreateWorkout() {
             ))}
           </div>
 
-          <button onClick={() => setBlockPickerOpen(true)} className="w-full py-4 border border-dashed border-[#383838] rounded-xl text-gray-400 text-sm hover:border-[#f1ba17] hover:text-[#f1ba17] transition font-medium">
-            + Aggiungi Blocco
-          </button>
+          <div className="flex gap-3">
+            <button onClick={() => setBlockPickerOpen(true)} className="flex-1 py-4 border border-dashed border-[#383838] rounded-xl text-gray-400 text-sm hover:border-[#f1ba17] hover:text-[#f1ba17] transition font-medium">
+              + Aggiungi Blocco
+            </button>
+            <button onClick={() => setAiModalOpen(true)} className="flex-1 py-4 border border-dashed border-[#a855f7]/30 bg-[#a855f7]/10 rounded-xl text-[#a855f7] text-sm hover:border-[#a855f7] hover:bg-[#a855f7]/20 transition font-medium flex items-center justify-center gap-2">
+              <Wand2 size={18} /> Genera con IA
+            </button>
+          </div>
 
           {/* NOTE COACH */}
           <div className="mt-4">
@@ -1707,6 +1784,24 @@ export default function CreateWorkout() {
             setBlocks([...blocks, newBlock])
             setOpenBlockId(newBlock.id)
             setBlockPickerOpen(false)
+          }}
+        />
+      )}
+
+      {aiModalOpen && (
+        <AiGenerationModal 
+          onClose={() => setAiModalOpen(false)}
+          onGenerate={(newBlocks) => {
+            const formattedBlocks = newBlocks.map(b => ({
+              ...b,
+              id: Math.random(),
+              exercises: (b.exercises || []).map(ex => ({
+                ...ex,
+                id: Math.random()
+              }))
+            }))
+            setBlocks([...blocks, ...formattedBlocks])
+            if (formattedBlocks.length > 0) setOpenBlockId(formattedBlocks[formattedBlocks.length - 1].id)
           }}
         />
       )}
