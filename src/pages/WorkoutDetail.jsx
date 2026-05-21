@@ -2671,6 +2671,53 @@ function VoiceRecorder({ onSave, onCancel }) {
 }
 
 function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving }) {
+  const [isFocused, setIsFocused] = useState(false);
+  const containerRef = useRef(null);
+  const isDragging = useRef(false);
+  const blurTimeoutRef = useRef(null);
+
+  const calculateValue = (clientX) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    let x = clientX - rect.left;
+    if (x < 0) x = 0;
+    if (x > rect.width) x = rect.width;
+    
+    let newValue = Math.ceil((x / rect.width) * 10);
+    if (newValue < 1) newValue = 1;
+    if (newValue > 10) newValue = 10;
+    
+    if (String(newValue) !== String(score)) {
+      onScoreChange(String(newValue));
+    }
+  };
+
+  const handlePointerDown = (e) => {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+    isDragging.current = true;
+    const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    calculateValue(clientX);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging.current) return;
+    const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    calculateValue(clientX);
+  };
+
+  useEffect(() => {
+    const handlePointerUp = () => { isDragging.current = false; };
+    document.addEventListener('mouseup', handlePointerUp);
+    document.addEventListener('touchend', handlePointerUp);
+    return () => {
+      document.removeEventListener('mouseup', handlePointerUp);
+      document.removeEventListener('touchend', handlePointerUp);
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
+
   const getRpeColor = (val) => {
     if (val <= 3) return 'bg-green-500';
     if (val <= 6) return 'bg-yellow-400';
@@ -2685,7 +2732,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
   }
   return (
     <div className="fixed inset-0 bg-black/85 z-[150] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+      <div className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isFocused ? '-translate-y-36' : ''}`}>
         <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Com'è andata?</h2>
         <p className="text-gray-400 text-sm mb-6">Valuta lo sforzo percepito (RPE) e aggiungi eventuali note per il coach.</p>
         <div className="flex flex-col gap-2 mb-6">
@@ -2695,17 +2742,23 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
               {getRpeLabel(parseInt(score))}
             </span>
           </div>
-          <div className="flex items-center gap-1 w-full">
+          <div 
+            ref={containerRef}
+            className="flex items-center gap-1 w-full cursor-pointer touch-none select-none"
+            onMouseDown={handlePointerDown}
+            onMouseMove={handlePointerMove}
+            onTouchStart={handlePointerDown}
+            onTouchMove={handlePointerMove}
+          >
             {Array.from({ length: 10 }, (_, i) => i + 1).map(s => {
               const isActive = s <= parseInt(score);
               let color = 'bg-[#333]';
               if (isActive) color = getRpeColor(parseInt(score));
               return (
-                <button
+                <div
                   key={s}
-                  type="button"
-                  onClick={() => onScoreChange(String(s))}
-                  className={`flex-1 h-10 rounded-md transition-all duration-150 ${color} ${isActive ? 'shadow-md scale-105' : 'hover:bg-[#444]'}`}
+                  className={`flex-1 h-10 rounded-md transition-all duration-75 ${color} ${isActive ? 'shadow-md scale-105' : ''}`}
+                  style={{ pointerEvents: 'none' }}
                 />
               )
             })}
@@ -2723,6 +2776,15 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
             placeholder="Sensazioni, pesi usati, dolori..."
             value={notes}
             onChange={(e) => onNotesChange(e.target.value)}
+            onFocus={() => {
+              if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+              setIsFocused(true);
+            }}
+            onBlur={() => {
+              blurTimeoutRef.current = setTimeout(() => {
+                setIsFocused(false);
+              }, 250);
+            }}
           />
         </div>
         <div className="flex gap-3">

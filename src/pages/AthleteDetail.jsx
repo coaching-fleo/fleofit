@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Play, Pause, Send, Square, Check, Eye } from 'lucide-react'
-import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isToday, differenceInDays } from 'date-fns'
+import { ChevronLeft, ChevronUp, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Play, Pause, Send, Square, Check, Eye, LineChart, Target, PieChart, BarChart2 } from 'lucide-react'
+import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isToday, differenceInDays, startOfWeek } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
@@ -62,7 +62,7 @@ export default function AthleteDetail() {
   const [athlete, setAthlete] = useState(null)
   const [workouts, setWorkouts] = useState([])
   const [prs, setPrs] = useState([])
-  const [tab, setTab] = useState('workouts') // 'workouts' | 'prs'
+  const [tab, setTab] = useState('workouts') // 'workouts' | 'prs' | 'stats'
   const [workoutView, setWorkoutView] = useState('list') // 'list' | 'calendar'
   const [showHistory, setShowHistory] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -84,6 +84,7 @@ export default function AthleteDetail() {
   const [rpeScore, setRpeScore] = useState('5')
   const [rpeNotes, setRpeNotes] = useState('')
   const [savingRpe, setSavingRpe] = useState(false)
+  const [weeklyStats, setWeeklyStats] = useState({ time: 0, completed: 0, avgRpe: '-' })
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(new Date())
@@ -129,6 +130,87 @@ export default function AthleteDetail() {
 
     if (!silent) setLoading(false)
   }
+
+  useEffect(() => {
+    if (!workouts || workouts.length === 0) return;
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd')
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekStart.getDate() + 6)
+    const weekEndStr = format(weekEnd, 'yyyy-MM-dd')
+
+    const weekData = workouts.filter(w => w.completed_date >= weekStartStr && w.completed_date <= weekEndStr)
+
+    let time = 0
+    let completed = 0
+    let rpeSum = 0
+    let rpeCount = 0
+
+    const parseTime = (val) => {
+      if (!val || val === '-') return 0
+      const s = String(val).toLowerCase()
+      if (s.includes('sec')) return (parseInt(s) || 0) / 60
+      if (s.includes('min')) {
+        const parts = s.replace('min', '').trim().split(':')
+        if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
+        return parseInt(s) || 0
+      }
+      const parts = s.split(':')
+      if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
+      return parseInt(s) || 0
+    }
+
+    weekData.forEach(w => {
+      if (w.status === 'completed') {
+        completed++
+        const parsed = parseNotesAndRpe(w.notes)
+        const rpeVal = parseInt(parsed.rpe)
+        if (!isNaN(rpeVal)) { rpeSum += rpeVal; rpeCount++ }
+
+        const s = w.workouts?.sections || {}
+        const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
+        let workoutTime = 0
+        if (cat === 'Running') {
+          const steps = s.steps || s.main?.steps || []
+          steps.forEach(step => {
+            if (step.type === 'repeat') {
+              const rounds = parseInt(step.rounds) || 1
+              workoutTime += parseTime(step.runDuration) * rounds
+              workoutTime += parseTime(step.recDuration) * rounds
+            } else {
+              let stepTime = parseTime(step.duration)
+              if (stepTime === 0 && step.duration) {
+                const ds = String(step.duration).toLowerCase()
+                if (ds.includes('km')) stepTime = parseFloat(ds) * 6
+                else if (ds.includes('m')) stepTime = (parseInt(ds) || 0) / 1000 * 6
+              }
+              workoutTime += stepTime
+            }
+          })
+        } else {
+          let blocks = s.blocks || []
+          if (blocks.length === 0) {
+            if (s.warmup) blocks.push({type: 'WarmUp', params: { duration: s.warmup.duration }})
+            if (s.cashIn && s.cashIn.length > 0) blocks.push({type: 'Cash In', exercises: s.cashIn})
+            if (s.main) blocks.push({type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type, params: s.main.params || {}, exercises: s.main.exercises || []})
+            if (s.cashOut && s.cashOut.length > 0) blocks.push({type: 'Cash Out', exercises: s.cashOut})
+          }
+          blocks.forEach(b => {
+            let blockRounds = parseInt(b.params?.rounds) || 1
+            if (b.type === 'ON/OFF') workoutTime += (parseTime(b.params?.on) + parseTime(b.params?.off)) * blockRounds
+            else if (b.type === 'EMOM') workoutTime += parseTime(b.params?.interval) * blockRounds
+            else if (b.type === 'AMRAP' || b.type === 'WarmUp' || b.type === 'Rest') workoutTime += parseTime(b.params?.duration)
+            else if (b.type === 'For Time') workoutTime += 15 * blockRounds
+            else if (b.type === 'Cash In' || b.type === 'Cash Out') workoutTime += 5 * blockRounds
+            ;(b.exercises || []).forEach(ex => { if (b.type === 'Interval') workoutTime += parseTime(ex.exTime) * blockRounds })
+          })
+        }
+        if (workoutTime === 0) workoutTime = 45;
+        time += workoutTime
+      }
+    })
+    setWeeklyStats({ time: Math.round(time), completed, avgRpe: rpeCount > 0 ? (rpeSum / rpeCount).toFixed(1) : '-' })
+  }, [workouts])
 
   const uploadVoiceNote = async (athleteWorkoutId, audioBlob, ext) => {
     const fileName = `voice_${athleteWorkoutId}_${Date.now()}.${ext}`
@@ -318,6 +400,7 @@ export default function AthleteDetail() {
       athlete: athlete,
       workouts: workouts
     }
+    const fileName = `Backup_${athlete.name}_${athlete.surname}.json`
     const dataStr = JSON.stringify(exportData, null, 2)
     if (Capacitor.isNativePlatform()) {
       try {
@@ -327,7 +410,7 @@ export default function AthleteDetail() {
           directory: Directory.Cache,
           encoding: Encoding.UTF8
         })
-        await Share.share({ title: `Backup ${athlete.name}`, url: result.uri })
+        await Share.share({ title: `Backup ${athlete.name}`, files: [result.uri] })
       } catch (err) {
         setAlertInfo({ title: 'Errore', message: "Errore esportazione: " + err.message, type: 'error' })
       }
@@ -462,13 +545,38 @@ export default function AthleteDetail() {
         <StatCard label="Workouts" value={workouts.length} />
       </div>
 
+      {/* Statistiche della Settimana */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-white font-bold text-sm">Statistiche della settimana</h3>
+          <Activity size={16} className="text-[#f1ba17]" />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Tempo</p>
+            <p className="text-white font-black text-2xl">{weeklyStats.time}<span className="text-sm font-medium text-gray-500 ml-0.5">m</span></p>
+          </div>
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Workout Completati</p>
+            <p className="text-[#f1ba17] font-black text-2xl">{weeklyStats.completed}</p>
+          </div>
+          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">RPE</p>
+            <p className="text-white font-black text-2xl">{weeklyStats.avgRpe}<span className="text-sm font-medium text-gray-500 ml-0.5">/10</span></p>
+          </div>
+        </div>
+      </div>
+
       {/* TABS */}
       <div className="flex gap-6 mb-6 border-b border-[#2a2a2a] overflow-x-auto hide-scrollbar">
-        <button onClick={() => { setTab('workouts'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition ${tab === 'workouts' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-gray-500 hover:text-white'}`}>
-          Diario Allenamenti
+        <button onClick={() => { setTab('workouts'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'workouts' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-gray-500 hover:text-white'}`}>
+          Diario
         </button>
-        <button onClick={() => { setTab('prs'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition ${tab === 'prs' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-gray-500 hover:text-white'}`}>
-          Personal Record (PR)
+        <button onClick={() => { setTab('prs'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'prs' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-gray-500 hover:text-white'}`}>
+          Personal Record
+        </button>
+        <button onClick={() => { setTab('stats'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'stats' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-gray-500 hover:text-white'}`}>
+          Statistiche
         </button>
       </div>
 
@@ -732,6 +840,8 @@ export default function AthleteDetail() {
              </div>
            )}
         </div>
+      ) : tab === 'stats' ? (
+        <AthleteStatsTab workouts={workouts} />
       ) : null}
 
       {/* MODAL CONFERMA RIMOZIONE WORKOUT */}
@@ -900,6 +1010,314 @@ export default function AthleteDetail() {
         </>,
         document.body
       )}
+    </div>
+  )
+}
+
+function AthleteStatsTab({ workouts }) {
+  const [weeks, setWeeks] = useState([])
+  const [completion, setCompletion] = useState({ assigned: 0, done: 0 })
+  const [rpeDist, setRpeDist] = useState({ light: 0, moderate: 0, hard: 0, extreme: 0, total: 0 })
+
+  useEffect(() => {
+    const parseTime = (val) => {
+      if (!val || val === '-') return 0
+      const s = String(val).toLowerCase()
+      if (s.includes('sec')) return (parseInt(s) || 0) / 60
+      if (s.includes('min')) {
+        const parts = s.replace('min', '').trim().split(':')
+        if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
+        return parseInt(s) || 0
+      }
+      const parts = s.split(':')
+      if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
+      return parseInt(s) || 0
+    }
+
+    const today = new Date()
+    const wks = []
+    for (let i = 3; i >= 0; i--) {
+       const start = startOfWeek(new Date(today.getTime() - i * 7 * 24 * 60 * 60 * 1000), { weekStartsOn: 1 })
+       const end = new Date(start)
+       end.setDate(start.getDate() + 6)
+       wks.push({
+         label: i === 0 ? 'Questa sett.' : `${format(start, 'd MMM')} - ${format(end, 'd MMM')}`,
+         startStr: format(start, 'yyyy-MM-dd'),
+         endStr: format(end, 'yyyy-MM-dd'),
+         time: 0,
+         load: 0
+       })
+    }
+
+    let assigned30 = 0
+    let done30 = 0
+    let rpeLight = 0, rpeMod = 0, rpeHard = 0, rpeExt = 0, rpeTot = 0
+    const thirtyDaysAgoStr = format(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')
+
+    workouts.forEach(w => {
+      if (w.completed_date >= thirtyDaysAgoStr && w.completed_date <= format(today, 'yyyy-MM-dd')) {
+        assigned30++
+        if (w.status === 'completed') done30++
+      }
+
+      if (w.status === 'completed') {
+        const parsed = parseNotesAndRpe(w.notes)
+        
+        const wk = wks.find(k => w.completed_date >= k.startStr && w.completed_date <= k.endStr)
+        if (wk) {
+          const s = w.workouts?.sections || {}
+          let workoutTime = 0;
+          const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
+          if (cat === 'Running') {
+            const steps = s.steps || s.main?.steps || []
+            steps.forEach(step => {
+              if (step.type === 'repeat') {
+                const rounds = parseInt(step.rounds) || 1
+                workoutTime += parseTime(step.runDuration) * rounds
+                workoutTime += parseTime(step.recDuration) * rounds
+              } else {
+                let stepTime = parseTime(step.duration)
+                if (stepTime === 0 && step.duration) {
+                  const ds = String(step.duration).toLowerCase()
+                  if (ds.includes('km')) stepTime = parseFloat(ds) * 6
+                  else if (ds.includes('m')) stepTime = (parseInt(ds) || 0) / 1000 * 6
+                }
+                workoutTime += stepTime
+              }
+            })
+          } else {
+            let blocks = s.blocks || []
+            if (blocks.length === 0) {
+              if (s.warmup) blocks.push({type: 'WarmUp', params: { duration: s.warmup.duration }})
+              if (s.cashIn && s.cashIn.length > 0) blocks.push({type: 'Cash In', exercises: s.cashIn})
+              if (s.main) blocks.push({type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type, params: s.main.params || {}, exercises: s.main.exercises || []})
+              if (s.cashOut && s.cashOut.length > 0) blocks.push({type: 'Cash Out', exercises: s.cashOut})
+            }
+            blocks.forEach(b => {
+              let blockRounds = parseInt(b.params?.rounds) || 1
+              if (b.type === 'ON/OFF') workoutTime += (parseTime(b.params?.on) + parseTime(b.params?.off)) * blockRounds
+              else if (b.type === 'EMOM') workoutTime += parseTime(b.params?.interval) * blockRounds
+              else if (b.type === 'AMRAP' || b.type === 'WarmUp' || b.type === 'Rest') workoutTime += parseTime(b.params?.duration)
+              else if (b.type === 'For Time') workoutTime += 15 * blockRounds
+              else if (b.type === 'Cash In' || b.type === 'Cash Out') workoutTime += 5 * blockRounds
+              ;(b.exercises || []).forEach(ex => { if (b.type === 'Interval') workoutTime += parseTime(ex.exTime) * blockRounds })
+            })
+          }
+          if (workoutTime === 0) workoutTime = 45;
+          wk.time += Math.round(workoutTime)
+
+          let loadRpe = parseInt(parsed.rpe)
+          if (isNaN(loadRpe)) loadRpe = 5;
+          wk.load += Math.round(workoutTime) * loadRpe
+        }
+
+        const rpeVal = parseInt(parsed.rpe)
+        if (!isNaN(rpeVal)) {
+          rpeTot++
+          if (rpeVal <= 4) rpeLight++
+          else if (rpeVal <= 6) rpeMod++
+          else if (rpeVal <= 8) rpeHard++
+          else rpeExt++
+        }
+      }
+    })
+
+    setWeeks(wks)
+    setCompletion({ assigned: assigned30, done: done30 })
+    setRpeDist({ light: rpeLight, moderate: rpeMod, hard: rpeHard, extreme: rpeExt, total: rpeTot })
+
+  }, [workouts])
+
+  const maxTime = Math.max(...weeks.map(w => w.time), 60)
+  const maxLoad = Math.max(...weeks.map(w => w.load), 100)
+  const completionRate = completion.assigned > 0 ? Math.round((completion.done / completion.assigned) * 100) : 0
+
+  return (
+    <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+      
+      {/* COMPLETION RATE */}
+      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg flex items-center justify-between">
+        <div>
+           <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
+             <Target size={20} className="text-[#f1ba17]" /> Completamento
+           </h3>
+           <p className="text-gray-500 text-sm">Ultimi 30 giorni</p>
+           <p className="text-gray-400 mt-2 text-sm">Workout completati: <strong className="text-white">{completion.done}</strong> su {completion.assigned}</p>
+        </div>
+        <div className="relative w-24 h-24 flex items-center justify-center">
+          <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#333" strokeWidth="8" />
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#f1ba17" strokeWidth="8" strokeDasharray={`${completionRate * 2.51} 251`} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center flex-col">
+            <span className="text-xl font-black text-white">{completionRate}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* LINE CHART VOLUME */}
+      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg">
+         <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
+           <LineChart size={20} className="text-[#0094C6]" /> Volume di Allenamento
+         </h3>
+         <p className="text-gray-500 text-sm mb-6">Minuti stimati (Ultime 4 settimane)</p>
+         
+         <div className="relative h-32 mt-8 mb-2 ml-8 mr-4">
+           {/* Y Axis Grid */}
+           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0">
+             <div className="relative w-full border-t border-[#333]/50">
+               <span className="absolute -left-8 -top-2 text-[9px] font-bold text-gray-500">{maxTime}</span>
+             </div>
+             <div className="relative w-full border-t border-[#333]/50">
+               <span className="absolute -left-8 -top-2 text-[9px] font-bold text-gray-500">{Math.round(maxTime / 2)}</span>
+             </div>
+             <div className="relative w-full border-t border-[#333]/50">
+               <span className="absolute -left-8 -top-2 text-[9px] font-bold text-gray-500">0</span>
+             </div>
+           </div>
+
+           {/* Area fill */}
+           <svg className="absolute inset-0 w-full h-full overflow-visible z-10" preserveAspectRatio="none" viewBox="0 0 100 100">
+             <defs>
+               <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                 <stop offset="0%" stopColor="rgba(0, 148, 198, 0.4)" />
+                 <stop offset="100%" stopColor="rgba(0, 148, 198, 0)" />
+               </linearGradient>
+             </defs>
+             <polygon 
+               points={`0,100 ${weeks.map((wk, i) => `${(i / (weeks.length - 1)) * 100},${100 - Math.max((wk.time / maxTime) * 100, 2)}`).join(' ')} 100,100`}
+               fill="url(#lineGrad)"
+             />
+             <polyline 
+               points={weeks.map((wk, i) => `${(i / (weeks.length - 1)) * 100},${100 - Math.max((wk.time / maxTime) * 100, 2)}`).join(' ')}
+               fill="none" 
+               stroke="#0094C6" 
+               strokeWidth="3" 
+               vectorEffect="non-scaling-stroke"
+               strokeLinecap="round"
+               strokeLinejoin="round"
+             />
+           </svg>
+
+           {/* Points and Hover zones */}
+           <div className="absolute inset-0 z-20">
+             {weeks.map((wk, i) => {
+               const heightPct = Math.max((wk.time / maxTime) * 100, 2)
+               const leftPct = (i / (weeks.length - 1)) * 100
+               return (
+                 <div 
+                   key={i} 
+                   className="absolute h-full flex flex-col items-center group cursor-pointer"
+                   style={{ left: `${leftPct}%`, width: '40px', transform: 'translateX(-50%)' }}
+                 >
+                   {/* Point */}
+                   <div 
+                     className="absolute w-3.5 h-3.5 bg-[#1e1e1e] rounded-full border-[3px] border-[#0094C6] transition-transform group-hover:scale-[1.5] z-10" 
+                     style={{ bottom: `calc(${heightPct}% - 7px)` }}
+                   />
+                   {/* Tooltip */}
+                   <div 
+                     className="absolute text-white font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] border border-[#333] px-2 py-1 rounded-lg z-20 pointer-events-none whitespace-nowrap shadow-lg" 
+                     style={{ bottom: `calc(${heightPct}% + 12px)` }}
+                   >
+                     {wk.time} min
+                   </div>
+                 </div>
+               )
+             })}
+           </div>
+         </div>
+         
+         {/* X Axis Labels */}
+         <div className="relative h-6 mt-2 ml-8 mr-4">
+           {weeks.map((wk, i) => {
+             const leftPct = (i / (weeks.length - 1)) * 100
+             return (
+               <div key={i} className="absolute text-[10px] text-gray-500 font-bold whitespace-nowrap text-center" style={{ left: `${leftPct}%`, transform: 'translateX(-50%)' }}>
+                 {wk.label}
+               </div>
+             )
+           })}
+         </div>
+      </div>
+
+      {/* BAR CHART TRAINING LOAD */}
+      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg">
+         <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
+           <BarChart2 size={20} className="text-green-500" /> Carico di Allenamento
+         </h3>
+         <p className="text-gray-500 text-sm mb-6">Punteggio di stress (Minuti x RPE)</p>
+         
+         <div className="relative mt-8 mb-2 ml-8 mr-2">
+           {/* Y Axis Grid */}
+           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0 pb-6 pt-5">
+             <div className="relative w-full border-t border-[#333]/50">
+               <span className="absolute -left-8 -top-2 text-[9px] font-bold text-gray-500">{maxLoad}</span>
+             </div>
+             <div className="relative w-full border-t border-[#333]/50">
+               <span className="absolute -left-8 -top-2 text-[9px] font-bold text-gray-500">{Math.round(maxLoad / 2)}</span>
+             </div>
+             <div className="relative w-full border-t border-[#333]/50">
+               <span className="absolute -left-8 -top-2 text-[9px] font-bold text-gray-500">0</span>
+             </div>
+           </div>
+
+           <div className="relative flex items-end justify-between h-40 gap-2 z-10">
+           {weeks.map((wk, i) => {
+             const heightPct = Math.max((wk.load / maxLoad) * 100, 2)
+             return (
+               <div key={i} className="flex flex-col items-center flex-1 gap-2 group h-full">
+                 <div className="text-gray-300 font-bold text-[10px] opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] px-2 py-0.5 rounded border border-[#333] shadow-lg whitespace-nowrap">
+                   {wk.load} pt
+                 </div>
+                 <div className="w-full bg-[#111] rounded-t-lg relative flex items-end justify-center flex-1">
+                    <div 
+                      className="w-full bg-green-500 rounded-t-lg transition-all duration-1000 ease-out" 
+                      style={{ height: `${heightPct}%` }}
+                    />
+                 </div>
+                 <span className="text-[10px] text-gray-500 font-bold whitespace-nowrap">{wk.label}</span>
+               </div>
+             )
+           })}
+           </div>
+         </div>
+      </div>
+
+      {/* RPE DISTRIBUTION */}
+      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg">
+         <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
+           <PieChart size={20} className="text-purple-500" /> Sforzo Percepito (RPE)
+         </h3>
+         <p className="text-gray-500 text-sm mb-6">Distribuzione dell'intensità</p>
+         
+         {rpeDist.total === 0 ? (
+           <p className="text-gray-500 text-sm text-center py-4">Nessun dato RPE disponibile.</p>
+         ) : (
+           <div className="flex flex-col gap-4">
+             <RpeBar label="Leggero (1-4)" color="bg-green-500" count={rpeDist.light} total={rpeDist.total} />
+             <RpeBar label="Moderato (5-6)" color="bg-yellow-400" count={rpeDist.moderate} total={rpeDist.total} />
+             <RpeBar label="Impegnativo (7-8)" color="bg-orange-500" count={rpeDist.hard} total={rpeDist.total} />
+             <RpeBar label="Massimale (9-10)" color="bg-red-500" count={rpeDist.extreme} total={rpeDist.total} />
+           </div>
+         )}
+      </div>
+
+    </div>
+  )
+}
+
+function RpeBar({ label, color, count, total }) {
+  const pct = total > 0 ? (count / total) * 100 : 0
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex justify-between text-xs font-bold text-gray-400">
+        <span>{label}</span>
+        <span>{count} workout ({Math.round(pct)}%)</span>
+      </div>
+      <div className="w-full h-2.5 bg-[#111] rounded-full overflow-hidden">
+        <div className={`h-full ${color} rounded-full transition-all duration-1000 ease-out`} style={{ width: `${pct}%` }} />
+      </div>
     </div>
   )
 }
@@ -2138,6 +2556,53 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
 }
 
 function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving }) {
+  const [isFocused, setIsFocused] = useState(false);
+  const containerRef = useRef(null);
+  const isDragging = useRef(false);
+  const blurTimeoutRef = useRef(null);
+
+  const calculateValue = (clientX) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    let x = clientX - rect.left;
+    if (x < 0) x = 0;
+    if (x > rect.width) x = rect.width;
+    
+    let newValue = Math.ceil((x / rect.width) * 10);
+    if (newValue < 1) newValue = 1;
+    if (newValue > 10) newValue = 10;
+    
+    if (String(newValue) !== String(score)) {
+      onScoreChange(String(newValue));
+    }
+  };
+
+  const handlePointerDown = (e) => {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+    isDragging.current = true;
+    const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    calculateValue(clientX);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging.current) return;
+    const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    calculateValue(clientX);
+  };
+
+  useEffect(() => {
+    const handlePointerUp = () => { isDragging.current = false; };
+    document.addEventListener('mouseup', handlePointerUp);
+    document.addEventListener('touchend', handlePointerUp);
+    return () => {
+      document.removeEventListener('mouseup', handlePointerUp);
+      document.removeEventListener('touchend', handlePointerUp);
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
+
   const getRpeColor = (val) => {
     if (val <= 3) return 'bg-green-500';
     if (val <= 6) return 'bg-yellow-400';
@@ -2152,7 +2617,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
   }
   return (
     <div className="fixed inset-0 bg-black/85 z-[150] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+      <div className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isFocused ? '-translate-y-36' : ''}`}>
         <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Com'è andata?</h2>
         <p className="text-gray-400 text-sm mb-6">Valuta lo sforzo percepito (RPE) e aggiungi eventuali note per il coach.</p>
         <div className="flex flex-col gap-2 mb-6">
@@ -2162,17 +2627,23 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
               {getRpeLabel(parseInt(score))}
             </span>
           </div>
-          <div className="flex items-center gap-1 w-full">
+          <div 
+            ref={containerRef}
+            className="flex items-center gap-1 w-full cursor-pointer touch-none select-none"
+            onMouseDown={handlePointerDown}
+            onMouseMove={handlePointerMove}
+            onTouchStart={handlePointerDown}
+            onTouchMove={handlePointerMove}
+          >
             {Array.from({ length: 10 }, (_, i) => i + 1).map(s => {
               const isActive = s <= parseInt(score);
               let color = 'bg-[#333]';
               if (isActive) color = getRpeColor(parseInt(score));
               return (
-                <button
+                <div
                   key={s}
-                  type="button"
-                  onClick={() => onScoreChange(String(s))}
-                  className={`flex-1 h-10 rounded-md transition-all duration-150 ${color} ${isActive ? 'shadow-md scale-105' : 'hover:bg-[#444]'}`}
+                  className={`flex-1 h-10 rounded-md transition-all duration-75 ${color} ${isActive ? 'shadow-md scale-105' : ''}`}
+                  style={{ pointerEvents: 'none' }}
                 />
               )
             })}
@@ -2190,6 +2661,15 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
             placeholder="Sensazioni, pesi usati, dolori..."
             value={notes}
             onChange={(e) => onNotesChange(e.target.value)}
+            onFocus={() => {
+              if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+              setIsFocused(true);
+            }}
+            onBlur={() => {
+              blurTimeoutRef.current = setTimeout(() => {
+                setIsFocused(false);
+              }, 250);
+            }}
           />
         </div>
         <div className="flex gap-3">

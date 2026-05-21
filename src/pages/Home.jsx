@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X, Edit, Trash2, AlertTriangle, Bell, BellRing } from 'lucide-react'
+import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Activity } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO, differenceInDays, startOfDay } from 'date-fns'
@@ -55,6 +55,7 @@ export default function Home() {
     return week
   })
   const [recentAssignments, setRecentAssignments] = useState([])
+  const [weeklyStats, setWeeklyStats] = useState({ distance: '0 m', time: 0, reps: 0, completed: 0, avgRpe: '-' })
 
   const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
   const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
@@ -72,6 +73,7 @@ export default function Home() {
   const [currentY, setCurrentY] = useState(null)
   
   const [showRpeModal, setShowRpeModal] = useState(false)
+  const [activeSlide, setActiveSlide] = useState(0)
   const [workoutToComplete, setWorkoutToComplete] = useState(null)
   const [rpeScore, setRpeScore] = useState('5')
   const [rpeNotes, setRpeNotes] = useState('')
@@ -170,7 +172,7 @@ export default function Home() {
           Promise.all([
             supabase.from('athlete_workouts').select('*', { count: 'exact', head: true }).eq('athlete_id', user.id),
             supabase.from('athlete_workouts')
-              .select('id, completed_date, status, workouts (id, title, sections)')
+              .select('id, completed_date, status, notes, workouts (id, title, sections)')
               .eq('athlete_id', user.id)
               .gte('completed_date', weekStartStr)
               .order('completed_date', { ascending: true })
@@ -211,6 +213,125 @@ export default function Home() {
                 })
               }
               setWeeklyStatus(week)
+
+              // Calcolo Statistiche Settimanali
+              const weekEnd = new Date(weekStart)
+              weekEnd.setDate(weekStart.getDate() + 6)
+              const weekEndStr = format(weekEnd, 'yyyy-MM-dd')
+
+              const weekData = data.filter(w => w.completed_date >= weekStartStr && w.completed_date <= weekEndStr)
+
+              let distance = 0
+              let time = 0
+              let reps = 0
+              let completed = 0
+              let rpeSum = 0
+              let rpeCount = 0
+
+              const parseTime = (val) => {
+                 if (!val || val === '-') return 0
+                 const s = String(val).toLowerCase()
+                 if (s.includes('sec')) return (parseInt(s) || 0) / 60
+                 if (s.includes('min')) {
+                    const parts = s.replace('min', '').trim().split(':')
+                    if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
+                    return parseInt(s) || 0
+                 }
+                 const parts = s.split(':')
+                 if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
+                 return parseInt(s) || 0
+              }
+
+              const parseDist = (val) => {
+                 if (!val || val === '-') return 0
+                 const s = String(val).toLowerCase()
+                 if (s.includes('km')) return parseFloat(s) * 1000
+                 if (s.includes('m') && !s.includes('min')) return parseInt(s) || 0
+                 return 0
+              }
+
+              weekData.forEach(w => {
+                if (w.status === 'completed') {
+                  completed++
+                  
+                  const parsed = parseNotesAndRpe(w.notes)
+                  const rpeVal = parseInt(parsed.rpe)
+                  if (!isNaN(rpeVal)) {
+                      rpeSum += rpeVal
+                      rpeCount++
+                  }
+
+                  const s = w.workouts?.sections || {}
+                  const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
+                  let workoutTime = 0;
+
+                  if (cat === 'Running') {
+                    const steps = s.steps || s.main?.steps || []
+                    steps.forEach(step => {
+                      if (step.type === 'repeat') {
+                         const rounds = parseInt(step.rounds) || 1
+                         distance += parseDist(step.runDuration) * rounds
+                         distance += parseDist(step.recDuration) * rounds
+                         workoutTime += parseTime(step.runDuration) * rounds
+                         workoutTime += parseTime(step.recDuration) * rounds
+                      } else {
+                         distance += parseDist(step.duration)
+                         let stepTime = parseTime(step.duration)
+                         if (stepTime === 0 && step.duration) {
+                           const ds = String(step.duration).toLowerCase()
+                           if (ds.includes('km')) stepTime = parseFloat(ds) * 6
+                           else if (ds.includes('m')) stepTime = (parseInt(ds) || 0) / 1000 * 6
+                         }
+                         workoutTime += stepTime
+                      }
+                    })
+                  } else {
+                    let blocks = s.blocks || []
+                    if (blocks.length === 0) {
+                      if (s.warmup) blocks.push({type: 'WarmUp', params: { duration: s.warmup.duration }})
+                      if (s.cashIn && s.cashIn.length > 0) blocks.push({type: 'Cash In', exercises: s.cashIn})
+                      if (s.main) blocks.push({type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type, params: s.main.params || {}, exercises: s.main.exercises || []})
+                      if (s.cashOut && s.cashOut.length > 0) blocks.push({type: 'Cash Out', exercises: s.cashOut})
+                    }
+
+                    blocks.forEach(b => {
+                       let blockRounds = parseInt(b.params?.rounds) || 1
+                       if (b.type === 'ON/OFF') {
+                           workoutTime += (parseTime(b.params?.on) + parseTime(b.params?.off)) * blockRounds
+                       } else if (b.type === 'EMOM') {
+                           workoutTime += parseTime(b.params?.interval) * blockRounds
+                       } else if (b.type === 'AMRAP' || b.type === 'WarmUp' || b.type === 'Rest') {
+                           workoutTime += parseTime(b.params?.duration)
+                       } else if (b.type === 'For Time') {
+                           workoutTime += 15 * blockRounds
+                       } else if (b.type === 'Cash In' || b.type === 'Cash Out') {
+                           workoutTime += 5 * blockRounds
+                       }
+
+                       (b.exercises || []).forEach(ex => {
+                          distance += parseDist(ex.meters) * blockRounds
+                          const r = ex.reps || ''
+                          if (r && r !== '-' && r.toLowerCase() !== 'max') {
+                             reps += (parseInt(r) || 0) * blockRounds
+                          }
+                          if (b.type === 'Interval') {
+                              workoutTime += parseTime(ex.exTime) * blockRounds
+                          }
+                       })
+                    })
+                  }
+                  if (workoutTime === 0) workoutTime = 45;
+                  time += workoutTime;
+                }
+              })
+              
+              setWeeklyStats({ 
+                 distance: distance >= 1000 ? (distance / 1000).toFixed(2).replace(/\.00$/, '') + ' km' : distance + ' m', 
+                 time: Math.round(time), 
+                 reps, 
+                 completed,
+                 avgRpe: rpeCount > 0 ? (rpeSum / rpeCount).toFixed(1) : '-'
+              })
             }
           })
         )
@@ -479,6 +600,15 @@ setNotifications(prev => {
     }
   }
 
+  const handleSliderScroll = (e) => {
+    const scrollLeft = e.target.scrollLeft;
+    const width = e.target.clientWidth;
+    const index = Math.round(scrollLeft / width);
+    if (activeSlide !== index) {
+      setActiveSlide(index);
+    }
+  };
+
   return (
     <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       {/* Header */}
@@ -530,68 +660,109 @@ setNotifications(prev => {
         </div>
       )}
 
-      {/* Settimana Atleta */}
+      {/* SLIDER: SETTIMANA E STATISTICHE */}
       {(role === 'athlete' || role === 'admin') && weeklyStatus.length > 0 && (
-        <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 mb-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-white font-bold text-sm">La tua settimana</h3>
-            <span className="text-xs text-[#f1ba17] bg-[#f1ba17]/10 border border-[#f1ba17]/20 px-3 py-1 rounded-full font-bold">
-              {weeklyStatus.reduce((acc, d) => acc + d.workouts.filter(w => w.status === 'completed').length, 0)} / {weeklyStatus.reduce((acc, d) => acc + d.workouts.length, 0)} completati
-            </span>
-          </div>
-          <div className="flex justify-between items-start w-full">
-            {weeklyStatus.map((day, i) => {
-              return (
-                <div key={i} className="flex flex-col items-center gap-1.5 flex-1">
-                  <span className={`text-[11px] font-bold ${day.isToday ? 'text-white' : 'text-gray-400'}`}>
-                    {day.dayName.charAt(0)}
+        <div className="mb-6 -mx-4">
+          <div 
+            className="flex w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar" 
+            style={{ scrollbarWidth: 'none' }}
+            onScroll={handleSliderScroll}
+          >
+            {/* SLIDE 1: CALENDARIO SETTIMANALE */}
+            <div className="w-full shrink-0 snap-center px-4">
+              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 h-full flex flex-col">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-white font-bold text-sm">La tua settimana</h3>
+                  <span className="text-xs text-[#f1ba17] bg-[#f1ba17]/10 border border-[#f1ba17]/20 px-3 py-1 rounded-full font-bold">
+                    {weeklyStatus.reduce((acc, d) => acc + d.workouts.filter(w => w.status === 'completed').length, 0)} / {weeklyStatus.reduce((acc, d) => acc + d.workouts.length, 0)} completati
                   </span>
-                  <span className={`text-xs font-bold mb-1 ${day.isToday ? 'text-[#f1ba17]' : 'text-gray-500'}`}>
-                    {format(day.date, 'd')}
-                  </span>
-                  
-                  {day.workouts.length > 0 ? (
-                    <div className="flex flex-col gap-1.5">
-                      {day.workouts.map((w, wIdx) => {
-                        const isRun = w.category === 'Running'
-                        const isCustom = w.category === 'Custom' || w.category === 'Autonomo'
-                        const isEvent = w.category === 'Event'
-                        let circleClass = ''
-                        let icon = null
-                        
-                        if (w.status === 'completed') {
-                           circleClass = 'bg-green-500 border-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
-                           icon = <CheckCircle2 size={14} className="text-black" />
-                        } else {
-                           if (day.isToday) {
-                             circleClass = isEvent ? 'bg-white border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : isRun ? 'bg-[#0094C6] border-[#0094C6] shadow-[0_0_8px_rgba(0,148,198,0.4)]' : isCustom ? 'bg-[#D11149] border-[#D11149] shadow-[0_0_8px_rgba(209,17,73,0.4)]' : 'bg-[#f1ba17] border-[#f1ba17] shadow-[0_0_8px_rgba(241,186,23,0.4)]'
-                             icon = isEvent ? <CalendarDays size={14} className="text-black" /> : isRun ? <Timer size={14} className="text-white" /> : isCustom ? <Dumbbell size={14} className="text-white" /> : <Dumbbell size={14} className="text-black" />
-                           } else {
-                             circleClass = isEvent ? 'bg-transparent border-white' : isRun ? 'bg-transparent border-[#0094C6]' : isCustom ? 'bg-transparent border-[#D11149]' : 'bg-transparent border-[#f1ba17]'
-                             icon = isEvent ? <CalendarDays size={14} className="text-white" /> : isRun ? <Timer size={14} className="text-[#0094C6]" /> : isCustom ? <Dumbbell size={14} className="text-[#D11149]" /> : <Dumbbell size={14} className="text-[#f1ba17]" />
-                           }
-                        }
-
-                        return (
-                          <div 
-                            key={wIdx}
-                            className={`w-7 h-7 rounded-full border-[2px] flex items-center justify-center cursor-pointer hover:scale-110 transition-transform ${circleClass}`}
-                            onClick={() => navigate(`/workout/${w.workoutId}?athlete_id=${user.id}`)}
-                            title={w.title}
-                          >
-                            {icon}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <div className={`w-7 h-7 rounded-full border-[2px] flex items-center justify-center ${day.isToday ? 'bg-[#333] border-[#333]' : 'bg-transparent border-[#333]'}`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#444]"></span>
-                    </div>
-                  )}
                 </div>
-              )
-            })}
+                <div className="flex justify-between items-start w-full">
+                  {weeklyStatus.map((day, i) => {
+                    return (
+                      <div key={i} className="flex flex-col items-center gap-1.5 flex-1">
+                        <span className={`text-[11px] font-bold ${day.isToday ? 'text-white' : 'text-gray-400'}`}>
+                          {day.dayName.charAt(0)}
+                        </span>
+                        <span className={`text-xs font-bold mb-1 ${day.isToday ? 'text-[#f1ba17]' : 'text-gray-500'}`}>
+                          {format(day.date, 'd')}
+                        </span>
+                        
+                        {day.workouts.length > 0 ? (
+                          <div className="flex flex-col gap-1.5">
+                            {day.workouts.map((w, wIdx) => {
+                              const isRun = w.category === 'Running'
+                              const isCustom = w.category === 'Custom' || w.category === 'Autonomo'
+                              const isEvent = w.category === 'Event'
+                              let circleClass = ''
+                              let icon = null
+                              
+                              if (w.status === 'completed') {
+                                 circleClass = 'bg-green-500 border-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
+                                 icon = <CheckCircle2 size={14} className="text-black" />
+                              } else {
+                                 if (day.isToday) {
+                                   circleClass = isEvent ? 'bg-white border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : isRun ? 'bg-[#0094C6] border-[#0094C6] shadow-[0_0_8px_rgba(0,148,198,0.4)]' : isCustom ? 'bg-[#D11149] border-[#D11149] shadow-[0_0_8px_rgba(209,17,73,0.4)]' : 'bg-[#f1ba17] border-[#f1ba17] shadow-[0_0_8px_rgba(241,186,23,0.4)]'
+                                   icon = isEvent ? <CalendarDays size={14} className="text-black" /> : isRun ? <Timer size={14} className="text-white" /> : isCustom ? <Dumbbell size={14} className="text-white" /> : <Dumbbell size={14} className="text-black" />
+                                 } else {
+                                   circleClass = isEvent ? 'bg-transparent border-white' : isRun ? 'bg-transparent border-[#0094C6]' : isCustom ? 'bg-transparent border-[#D11149]' : 'bg-transparent border-[#f1ba17]'
+                                   icon = isEvent ? <CalendarDays size={14} className="text-white" /> : isRun ? <Timer size={14} className="text-[#0094C6]" /> : isCustom ? <Dumbbell size={14} className="text-[#D11149]" /> : <Dumbbell size={14} className="text-[#f1ba17]" />
+                                 }
+                              }
+
+                              return (
+                                <div 
+                                  key={wIdx}
+                                  className={`w-7 h-7 rounded-full border-[2px] flex items-center justify-center cursor-pointer hover:scale-110 transition-transform ${circleClass}`}
+                                  onClick={() => navigate(`/workout/${w.workoutId}?athlete_id=${user.id}`)}
+                                  title={w.title}
+                                >
+                                  {icon}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className={`w-7 h-7 rounded-full border-[2px] flex items-center justify-center ${day.isToday ? 'bg-[#333] border-[#333]' : 'bg-transparent border-[#333]'}`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#444]"></span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* SLIDE 2: STATISTICHE DELLA SETTIMANA */}
+            <div className="w-full shrink-0 snap-center px-4">
+              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 h-full flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-bold text-sm">Statistiche della settimana</h3>
+                  <Activity size={16} className="text-[#f1ba17]" />
+                </div>
+                <div className="flex-1 grid grid-cols-3 gap-3">
+                  <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Tempo</p>
+                    <p className="text-white font-black text-2xl">{weeklyStats.time}<span className="text-sm font-medium text-gray-500 ml-0.5">m</span></p>
+                  </div>
+                  <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Workout Completati</p>
+                    <p className="text-[#f1ba17] font-black text-2xl">{weeklyStats.completed}</p>
+                  </div>
+                  <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">RPE</p>
+                    <p className="text-white font-black text-2xl">{weeklyStats.avgRpe}<span className="text-sm font-medium text-gray-500 ml-0.5">/10</span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Paginazione */}
+          <div className="flex justify-center items-center gap-2 mt-4">
+            <div className={`h-1.5 rounded-full transition-all duration-300 ${activeSlide === 0 ? 'bg-[#f1ba17] w-5' : 'bg-[#444] w-1.5'}`}></div>
+            <div className={`h-1.5 rounded-full transition-all duration-300 ${activeSlide === 1 ? 'bg-[#f1ba17] w-5' : 'bg-[#444] w-1.5'}`}></div>
           </div>
         </div>
       )}
@@ -1054,6 +1225,53 @@ setNotifications(prev => {
 }
 
 function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving }) {
+  const [isFocused, setIsFocused] = useState(false);
+  const containerRef = useRef(null);
+  const isDragging = useRef(false);
+  const blurTimeoutRef = useRef(null);
+
+  const calculateValue = (clientX) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    let x = clientX - rect.left;
+    if (x < 0) x = 0;
+    if (x > rect.width) x = rect.width;
+    
+    let newValue = Math.ceil((x / rect.width) * 10);
+    if (newValue < 1) newValue = 1;
+    if (newValue > 10) newValue = 10;
+    
+    if (String(newValue) !== String(score)) {
+      onScoreChange(String(newValue));
+    }
+  };
+
+  const handlePointerDown = (e) => {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+    isDragging.current = true;
+    const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    calculateValue(clientX);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging.current) return;
+    const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    calculateValue(clientX);
+  };
+
+  useEffect(() => {
+    const handlePointerUp = () => { isDragging.current = false; };
+    document.addEventListener('mouseup', handlePointerUp);
+    document.addEventListener('touchend', handlePointerUp);
+    return () => {
+      document.removeEventListener('mouseup', handlePointerUp);
+      document.removeEventListener('touchend', handlePointerUp);
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
+
   const getRpeColor = (val) => {
     if (val <= 3) return 'bg-green-500';
     if (val <= 6) return 'bg-yellow-400';
@@ -1068,7 +1286,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
   }
   return (
     <div className="fixed inset-0 bg-black/85 z-[150] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+      <div className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isFocused ? '-translate-y-36' : ''}`}>
         <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Com'è andata?</h2>
         <p className="text-gray-400 text-sm mb-6">Valuta lo sforzo percepito (RPE) e aggiungi eventuali note per il coach.</p>
         <div className="flex flex-col gap-2 mb-6">
@@ -1078,17 +1296,23 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
               {getRpeLabel(parseInt(score))}
             </span>
           </div>
-          <div className="flex items-center gap-1 w-full">
+          <div 
+            ref={containerRef}
+            className="flex items-center gap-1 w-full cursor-pointer touch-none select-none"
+            onMouseDown={handlePointerDown}
+            onMouseMove={handlePointerMove}
+            onTouchStart={handlePointerDown}
+            onTouchMove={handlePointerMove}
+          >
             {Array.from({ length: 10 }, (_, i) => i + 1).map(s => {
               const isActive = s <= parseInt(score);
               let color = 'bg-[#333]';
               if (isActive) color = getRpeColor(parseInt(score));
               return (
-                <button
+                <div
                   key={s}
-                  type="button"
-                  onClick={() => onScoreChange(String(s))}
-                  className={`flex-1 h-10 rounded-md transition-all duration-150 ${color} ${isActive ? 'shadow-md scale-105' : 'hover:bg-[#444]'}`}
+                  className={`flex-1 h-10 rounded-md transition-all duration-75 ${color} ${isActive ? 'shadow-md scale-105' : ''}`}
+                  style={{ pointerEvents: 'none' }}
                 />
               )
             })}
@@ -1106,6 +1330,15 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
             placeholder="Sensazioni, pesi usati, dolori..."
             value={notes}
             onChange={(e) => onNotesChange(e.target.value)}
+            onFocus={() => {
+              if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+              setIsFocused(true);
+            }}
+            onBlur={() => {
+              blurTimeoutRef.current = setTimeout(() => {
+                setIsFocused(false);
+              }, 250);
+            }}
           />
         </div>
         <div className="flex gap-3">

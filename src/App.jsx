@@ -407,6 +407,9 @@ function App() {
           target.getAttribute('contenteditable') !== 'true'
         ) {
           Keyboard.hide().catch(() => {});
+          if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
+          }
         }
       }
     };
@@ -417,6 +420,18 @@ function App() {
 
   return (
     <BrowserRouter>
+      <style>{`
+        body {
+          -webkit-user-select: none;
+          user-select: none;
+          -webkit-touch-callout: none;
+        }
+        input, textarea, [contenteditable="true"] {
+          -webkit-user-select: auto;
+          user-select: auto;
+          -webkit-touch-callout: default;
+        }
+      `}</style>
       <DeeplinkHandler />
       <div className="min-h-screen bg-[#0B0B0B] text-white">
         <Routes>

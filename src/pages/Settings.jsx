@@ -76,7 +76,7 @@ export default function Settings() {
           directory: Directory.Cache,
           encoding: Encoding.UTF8
         })
-        await Share.share({ title: 'Backup FLEOFIT', url: result.uri })
+        await Share.share({ title: 'Backup FLEOFIT', files: [result.uri] })
       } else {
         const blob = new Blob([dataStr], { type: 'application/json' })
         const url = URL.createObjectURL(blob)
