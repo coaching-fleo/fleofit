@@ -1355,6 +1355,7 @@ export default function CreateWorkout() {
     if (!title) return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci il titolo del workout!', type: 'error' })
     if (category === 'Hyrox' && blocks.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno un blocco!', type: 'error' })
     if (category === 'Running' && runningSteps.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno una fase di corsa!', type: 'error' })
+    if (category === 'Custom' && !coachNotes) return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci una descrizione per il workout!', type: 'error' })
     
     if (editId) {
       setNewWorkoutName(title)
@@ -1460,8 +1461,10 @@ export default function CreateWorkout() {
           <p className="text-gray-400 text-sm font-medium">Seleziona Categoria:</p>
           <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] mb-2">
             <div 
-              className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] rounded-xl shadow-md transition-all duration-300 ease-out ${
-                category === 'Hyrox' ? 'translate-x-0 bg-[#f1ba17]/10 border border-[#f1ba17]/50' : 'translate-x-full bg-[#0094C6]/10 border border-[#0094C6]/50'
+              className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(33.333%-4px)] rounded-xl shadow-md transition-all duration-300 ease-out ${
+                category === 'Hyrox' ? 'translate-x-0 bg-[#f1ba17]/10 border border-[#f1ba17]/50' : 
+                category === 'Running' ? 'translate-x-[100%] bg-[#0094C6]/10 border border-[#0094C6]/50' :
+                'translate-x-[200%] bg-[#D11149]/10 border border-[#D11149]/50'
               }`}
             />
             <button 
@@ -1472,7 +1475,12 @@ export default function CreateWorkout() {
             <button 
               onClick={() => setCategory('Running')} 
               className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-2 ${category === 'Running' ? 'text-[#0094C6]' : 'text-gray-500 hover:text-gray-300'}`}>
-              <Timer size={20} /> Running
+              <Timer size={20} /> Corsa
+            </button>
+            <button 
+              onClick={() => setCategory('Custom')} 
+              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-2 ${category === 'Custom' ? 'text-[#D11149]' : 'text-gray-500 hover:text-gray-300'}`}>
+              <Dumbbell size={20} /> Custom
             </button>
           </div>
 
@@ -1491,13 +1499,21 @@ export default function CreateWorkout() {
               >
                 Crea Allenamento Hyrox →
               </button>
-            ) : (
+            ) : category === 'Running' ? (
               <button 
                 onClick={() => setStep(2)} 
                 disabled={!isStep1Valid}
                 className={`w-full py-4 mt-2 rounded-2xl border border-[#0094C6]/50 bg-[#0094C6]/10 text-[#0094C6] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
               >
                 Crea Allenamento Corsa →
+              </button>
+            ) : (
+              <button 
+                onClick={() => setStep(2)} 
+                disabled={!isStep1Valid}
+                className={`w-full py-4 mt-2 rounded-2xl border border-[#D11149]/50 bg-[#D11149]/10 text-[#D11149] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
+              >
+                Crea Allenamento Custom →
               </button>
             )}
           </div>
@@ -1611,6 +1627,44 @@ export default function CreateWorkout() {
             setBlockPickerOpen(false)
           }}
         />
+      )}
+
+      {/* ── STEP 2: BUILD CUSTOM WORKOUT ────────────────────────── */}
+      {step === 2 && category === 'Custom' && (
+        <div className="flex flex-col gap-4">
+          <div className="px-4 py-4 rounded-2xl border border-[#444] bg-[#222] flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Dumbbell size={18} className="text-[#D11149]" />
+                <span className="font-bold text-[#D11149]">Allenamento Custom</span>
+              </div>
+              <div className="flex items-center gap-1">
+                 <span className={`text-sm font-bold ${getIntensityColor(workoutIntensity)}`}>{workoutIntensity}/10</span>
+                 <BicepsFlexed size={18} className={getIntensityColor(workoutIntensity)} />
+              </div>
+            </div>
+            <input type="range" min="1" max="10" value={workoutIntensity} onChange={e => setWorkoutIntensity(e.target.value)} className="w-full accent-[#D11149]" />
+          </div>
+
+          <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-4">
+            <label className="text-gray-400 text-sm mb-2 block">Descrizione / Note Allenamento</label>
+            <textarea
+              className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D11149] resize-none text-base"
+              rows={8}
+              placeholder="Descrivi qui l'allenamento custom..."
+              value={coachNotes}
+              onChange={e => setCoachNotes(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <button onClick={handleSave} disabled={saving}
+              className="w-full justify-center px-6 py-3 rounded-xl bg-[#D11149] text-white font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
+              <Save size={18} />
+              {saving ? 'Salvo...' : saved ? '✅ Salvato!' : 'Salva Workout'}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── STEP 2: BUILD RUNNING WORKOUT ────────────────── */}

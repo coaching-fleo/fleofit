@@ -1742,7 +1742,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
       const assignableWorkouts = (data || []).filter(w => {
         const cat = w.sections?.category;
         if (cat === 'Event' || w.sections?.isEvent) return false;
-        if (cat === 'Custom' || cat === 'Autonomo' || w.sections?.isAutonomous) return false;
+        if (w.sections?.isAutonomous) return false;
         return true;
       })
       setWorkouts(assignableWorkouts)

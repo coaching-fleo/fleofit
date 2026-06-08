@@ -30,7 +30,8 @@ export default function WorkoutsArchive() {
            if (!aw.workouts) return false
            const s = aw.workouts.sections || {}
            const cat = s.category
-           if (cat === 'Event' || s.isEvent || cat === 'Custom' || cat === 'Autonomo' || s.isAutonomous) return false
+           if (cat === 'Event' || s.isEvent || s.isAutonomous) return false
+           if (cat === 'Event' || s.isEvent || s.isAutonomous) return false
            return true
          }).map(aw => ({
            ...aw.workouts,

@@ -672,8 +672,8 @@ export default function TVDashboard() {
 
               {/* Note Coach */}
               {workout.coach_notes && (
-                <Section icon={<span className="text-[#f1ba17] text-5xl">📋</span>} label="Note Coach" color="border-[#f1ba17]/40">
-                  <p className="text-gray-300 text-4xl leading-relaxed font-semibold italic">"{workout.coach_notes}"</p>
+                <Section icon={<span className={type === 'Custom' ? "text-[#D11149] text-5xl" : "text-[#f1ba17] text-5xl"}>📋</span>} label={type === 'Custom' ? "Descrizione Allenamento" : "Note Coach"} color={type === 'Custom' ? "border-[#D11149]/40" : "border-[#f1ba17]/40"}>
+                  <p className="text-gray-300 text-4xl leading-relaxed font-semibold italic whitespace-pre-wrap">"{workout.coach_notes}"</p>
                 </Section>
               )}
            </div>

@@ -738,10 +738,14 @@ export default function WorkoutDetail() {
       doc.setDrawColor(60, 60, 60)
       doc.line(20, y, 190, y)
       y += 6
-      doc.setTextColor(241, 186, 23)
+      if (type === 'Custom') {
+        doc.setTextColor(209, 17, 73)
+      } else {
+        doc.setTextColor(241, 186, 23)
+      }
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(11)
-      doc.text('NOTE COACH', 20, y)
+      doc.text(type === 'Custom' ? 'DESCRIZIONE ALLENAMENTO' : 'NOTE COACH', 20, y)
       y += 6
       doc.setTextColor(200, 200, 200)
       doc.setFont('helvetica', 'normal')
@@ -925,21 +929,6 @@ export default function WorkoutDetail() {
             </div>
           </div>
         )}
-
-        {(role === 'athlete' || isOwnProfile) && athleteWorkoutId && (
-      
-          <button
-            onClick={toggleStatus}
-            className={`w-full mt-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 text-base font-bold transition border shadow-lg ${
-              workoutStatus === 'completed' 
-                ? 'bg-green-500 text-black border-green-500 hover:brightness-110 shadow-green-500/20' 
-                : 'bg-[#2a2a2a] border-[#383838] text-white hover:border-[#f1ba17] hover:text-[#f1ba17]'
-            }`}
-          >
-            {workoutStatus === 'completed' ? <CheckCircle2 size={20} /> : <Circle size={20} />} 
-            {workoutStatus === 'completed' ? 'Allenamento Completato!' : 'Segna come completato'}
-          </button>
-        )}
       </div>
 
       {/* BLOCKS */}
@@ -970,8 +959,8 @@ export default function WorkoutDetail() {
 
       {/* NOTE COACH */}
       {workout.coach_notes && (
-        <Section icon={<span className="text-[#f1ba17] text-sm">📋</span>} label="Note Coach" color="border-[#f1ba17]/40">
-          <p className="text-gray-300 text-sm leading-relaxed">{workout.coach_notes}</p>
+        <Section icon={<span className={type === 'Custom' ? "text-[#D11149] text-sm" : "text-[#f1ba17] text-sm"}>📋</span>} label={type === 'Custom' ? "Descrizione Allenamento" : "Note Coach"} color={type === 'Custom' ? "border-[#D11149]/40" : "border-[#f1ba17]/40"}>
+          <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{workout.coach_notes}</p>
         </Section>
       )}
 
@@ -984,6 +973,20 @@ export default function WorkoutDetail() {
              <VoiceRecorder onSave={uploadVoiceNote} />
            ) : null}
         </Section>
+      )}
+
+      {(role === 'athlete' || isOwnProfile) && athleteWorkoutId && (
+        <button
+          onClick={toggleStatus}
+          className={`w-full mb-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 text-base font-bold transition border shadow-lg ${
+            workoutStatus === 'completed' 
+              ? 'bg-green-500 text-black border-green-500 hover:brightness-110 shadow-green-500/20' 
+              : 'bg-[#2a2a2a] border-[#383838] text-white hover:border-[#f1ba17] hover:text-[#f1ba17]'
+          }`}
+        >
+          {workoutStatus === 'completed' ? <CheckCircle2 size={20} /> : <Circle size={20} />} 
+          {workoutStatus === 'completed' ? 'Allenamento Completato!' : 'Segna come completato'}
+        </button>
       )}
 
       {/* NOTE ATLETA */}
@@ -1166,6 +1169,11 @@ export default function WorkoutDetail() {
                   <div style={{ fontSize: '60px', marginBottom: '16px' }}>🚀</div>
                   <div style={{ color: '#fff', fontSize: '24px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px', textAlign: 'center' }}>Giorno di Gara</div>
                   <div style={{ color: '#aaa', fontSize: '18px', fontWeight: 500, textAlign: 'center' }}>Oggi è il momento di dare tutto. Spacca!</div>
+                </div>
+              ) : type === 'Custom' && workout.coach_notes ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', background: 'rgba(209,17,73,0.05)', borderRadius: '16px', border: '1px solid rgba(209,17,73,0.1)' }}>
+                   <div style={{ fontSize: '15px', fontWeight: 900, color: '#D11149', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Descrizione</div>
+                   <div style={{ fontSize: '17px', fontWeight: 500, color: '#fff', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{workout.coach_notes}</div>
                 </div>
               ) : !isRunning ? blocks.map((b, i) => {
                 let shortTitle = b.type;
