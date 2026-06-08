@@ -53,8 +53,19 @@ const isHybrid = (name) => HYBRID_EXERCISES.includes(name)
 const isDistance = (name) => isErgo(name) || isSled(name) || DISTANCE_EXERCISES.includes(name)
 
 const METERS_OPTIONS = [
-   '-', 'Max','50m','100m','150m','200m','250m','300m','400m','500m',
-  '600m','750m','1000m','1500m','2000m'
+  '-', 'Max',
+  // 10m → 100m (a scatti da 10m, utilissimo anche come "proxy" per le Calorie es. 10, 20...)
+  ...Array.from({ length: 10 }, (_, i) => `${(i + 1) * 10}m`),
+  // 150m → 1000m (a scatti da 50m)
+  ...Array.from({ length: 18 }, (_, i) => `${150 + i * 50}m`),
+  // 1100m → 3000m (a scatti da 100m)
+  ...Array.from({ length: 20 }, (_, i) => `${1100 + i * 100}m`),
+  // 3500m → 5000m (a scatti da 500m)
+  ...Array.from({ length: 4 }, (_, i) => `${3500 + i * 500}m`),
+  // 6000m → 10000m (a scatti da 1000m)
+  ...Array.from({ length: 5 }, (_, i) => `${6000 + i * 1000}m`),
+  // Distanze extra lunghe (Mezza Maratona e Maratona)
+  '15000m', '21097m', '42195m'
 ]
 const HYBRID_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 50 }, (_, i) => `${(i + 1) * 10}m`)]
 const SLED_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 30 }, (_, i) => `${(i + 1) * 10}m`)]
