@@ -30,7 +30,8 @@ export default function WorkoutsArchive() {
            if (!aw.workouts) return false
            const s = aw.workouts.sections || {}
            const cat = s.category
-           if (cat === 'Event' || s.isEvent || cat === 'Custom' || cat === 'Autonomo' || s.isAutonomous) return false
+           if (cat === 'Event' || s.isEvent || s.isAutonomous) return false
+           if (cat === 'Event' || s.isEvent || s.isAutonomous) return false
            return true
          }).map(aw => ({
            ...aw.workouts,
@@ -99,8 +100,10 @@ export default function WorkoutsArchive() {
         <div className="flex flex-col gap-3">
           {filteredWorkouts.map(w => {
             const rawCat = w.sections?.category || (w.sections?.steps ? 'Running' : 'Hyrox')
-            const isEvent = rawCat === 'Event'
-            const category = isEvent ? 'Event' : ((rawCat === 'Custom' || rawCat === 'Autonomo') ? 'Custom' : rawCat)
+            const isEvent = rawCat === 'Event' || w.sections?.isEvent === true
+            const isAuto = w.sections?.isAutonomous === true || rawCat === 'Autonomo'
+            const isCustom = rawCat === 'Custom' || isAuto
+            const category = isEvent ? 'Event' : (isCustom ? 'Custom' : rawCat)
             return (
               <div 
                 key={w.aw_id || w.id} 

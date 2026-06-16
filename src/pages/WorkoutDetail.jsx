@@ -166,9 +166,13 @@ const buildTimerSequence = (workout) => {
 
   const s = workout.sections || {};
   const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox');
+  const isAuto = s?.isAutonomous === true || rawCat === 'Autonomo';
+  const isCustom = rawCat === 'Custom' || isAuto;
   const isRunning = rawCat === 'Running';
 
-  if (isRunning) {
+  if (isCustom) {
+    seq.push({ id: 'custom-blk', title: 'ALLENAMENTO', subtitle: 'Cronometro libero', duration: 0, theme: 'custom', type: 'stopwatch', task: workout.title || 'Workout Custom' });
+  } else if (isRunning) {
     const steps = s?.steps || s?.main?.steps || [];
     steps.forEach((step, i) => {
       if (step.type === 'repeat') {
@@ -435,7 +439,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         setCurrentAthleteName(`${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim())
         if (awData[0].notes) {
           const parsed = parseNotesAndRpe(awData[0].notes);
-          setAthleteNote({ text: parsed.text, rpe: parsed.rpe, athleteName: `${awData[0].athletes.name} ${awData[0].athletes.surname}` })
+          setAthleteNote({ text: parsed.text, rpe: parsed.rpe, athleteName: `${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim() })
           setEditingNote(parsed.text)
           setRpeScore(parsed.rpe)
         } else {
@@ -832,7 +836,15 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     y += 8
 
     
-    if (type === 'Running') {
+    if (type === 'Custom') {
+      doc.setTextColor(200, 200, 200)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      const textToPrint = workout.coach_notes || athleteNote?.text || 'Allenamento Custom'
+      const lines = doc.splitTextToSize(textToPrint, 170)
+      doc.text(lines, 20, y)
+      y += lines.length * 5 + 6
+    } else if (type === 'Running') {
            doc.setTextColor(150, 150, 150)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(11)
@@ -1126,13 +1138,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
   const s = workout.sections || {}
   const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
-  const isAuto = rawCat === 'Custom' || rawCat === 'Autonomo' || s?.isAutonomous
-  const isEvent = rawCat === 'Event'
-  const category = isEvent ? 'Event' : (isAuto ? 'Custom' : rawCat)
+  const isAuto = s?.isAutonomous === true || rawCat === 'Autonomo'
+  const isEvent = rawCat === 'Event' || s?.isEvent === true
+  const isCustom = rawCat === 'Custom' || isAuto
+  const category = isEvent ? 'Event' : (isCustom ? 'Custom' : rawCat)
   const isRunning = category === 'Running'
   const blocks = getNormalizedBlocks(workout)
   const mainBlock = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type)) || blocks[0] || { type: 'Hyrox' }
-  const type = isEvent ? 'Event' : (isAuto ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
+  const type = isEvent ? 'Event' : (isCustom ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
   const c = TYPE_COLORS[type] || TYPE_COLORS['Hyrox'] || { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' }
 
   const getIconForType = (t) => {
@@ -1236,7 +1249,17 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 setTimerMinimized(false);
               }
             }}
-            className={`w-full flex items-center justify-center gap-2 font-black py-4 rounded-3xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl text-lg uppercase tracking-wide ${timerOpen && !timerMinimized ? 'bg-gradient-to-r from-gray-600 to-gray-500 text-white shadow-gray-500/20' : connectedTvCode ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-blue-500/20' : 'bg-gradient-to-r from-[#f1ba17] to-yellow-500 text-black shadow-[#f1ba17]/20'}`}>
+            className={`w-full flex items-center justify-center gap-2 font-black py-4 rounded-3xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl text-lg uppercase tracking-wide ${
+              timerOpen && !timerMinimized 
+                ? 'bg-gradient-to-r from-gray-600 to-gray-500 text-white shadow-gray-500/20' 
+                : connectedTvCode 
+                  ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-blue-500/20' 
+                  : type === 'Custom' 
+                    ? 'bg-gradient-to-r from-[#D11149] to-red-600 text-white shadow-[#D11149]/20' 
+                    : type === 'Running' 
+                      ? 'bg-gradient-to-r from-[#0094C6] to-cyan-500 text-white shadow-[#0094C6]/20' 
+                      : 'bg-gradient-to-r from-[#f1ba17] to-yellow-500 text-black shadow-[#f1ba17]/20'
+            }`}>
             {timerOpen && !timerMinimized ? (
               <><ChevronDown size={24} className="stroke-[2.5]" /> Minimizza {connectedTvCode ? 'Telecomando' : 'Timer'}</>
             ) : timerOpen && timerMinimized ? (
@@ -1283,6 +1306,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
            <p className="text-[#f1ba17] font-medium text-sm">Questo è il giorno dedicato al tuo obiettivo.</p>
            <p className="text-gray-400 text-sm mt-1">Vai e spacca tutto! 🚀</p>
          </div>
+      ) : type === 'Custom' ? (
+         <Section icon={<Dumbbell size={16} className={c.text} />} label="Allenamento Custom" color={c.border}>
+           <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{workout.coach_notes || athleteNote?.text || 'Dettagli non specificati.'}</p>
+         </Section>
       ) : isRunning ? (
          <Section icon={<Timer size={16} className={c.text} />} label="Allenamento Corsa" color={c.border}>
            <RunningList steps={s?.steps || s?.main?.steps || []} />
@@ -1290,9 +1317,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       ) : null}
 
       {/* NOTE COACH */}
-      {workout.coach_notes && (
+      {type !== 'Custom' && workout.coach_notes && (
         <Section icon={<span className="text-[#f1ba17] text-sm">📋</span>} label="Note Coach" color="border-[#f1ba17]/40">
-          <p className="text-gray-300 text-sm leading-relaxed">{workout.coach_notes}</p>
+          <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{workout.coach_notes}</p>
         </Section>
       )}
 
@@ -1490,6 +1517,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                   <div style={{ fontSize: '60px', marginBottom: '16px' }}>🚀</div>
                   <div style={{ color: '#fff', fontSize: '24px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px', textAlign: 'center' }}>Giorno di Gara</div>
                   <div style={{ color: '#aaa', fontSize: '18px', fontWeight: 500, textAlign: 'center' }}>Oggi è il momento di dare tutto. Spacca!</div>
+                </div>
+              ) : type === 'Custom' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', background: 'rgba(209,17,73,0.05)', borderRadius: '16px', border: '1px solid rgba(209,17,73,0.1)' }}>
+                  <div style={{ fontSize: '17px', fontWeight: 500, color: '#fff', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{workout.coach_notes || athleteNote?.text || 'Allenamento Custom'}</div>
                 </div>
               ) : !isRunning ? blocks.map((b, i) => {
                 let shortTitle = b.type;
@@ -1814,6 +1845,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           isMinimized={timerMinimized}
           onMinimize={() => setTimerMinimized(true)}
           onMaximize={() => setTimerMinimized(false)}
+          athleteWorkoutId={athleteWorkoutId}
+          athleteName={currentAthleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Atleta'}
+          workoutTitle={workout.title}
         />
       )}
       {showRpeModal && createPortal(
@@ -1846,10 +1880,11 @@ const SCHEMES = {
   hyrox: { bg: 'bg-[#D11149]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#D11149]' },
   emom:  { bg: 'bg-[#111]', text: 'text-[#f1ba17]', sub: 'text-[#f1ba17]/80', card: 'bg-[#1e1e1e] border-[#f1ba17]/20 text-[#f1ba17]', cardLabel: 'text-[#f1ba17]/60', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
   base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-gray-500', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
-  done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' }
+  done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' },
+  custom: { bg: 'bg-[#0B0B0B]', text: 'text-[#D11149]', sub: 'text-[#D11149]/80', card: 'bg-[#1e1e1e] border-[#D11149]/20 text-[#D11149]', cardLabel: 'text-[#D11149]/60', icon: 'text-gray-400', btnBg: 'bg-[#D11149] text-white' }
 }
 
-function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMaximize }) {
+function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(sequence[0]?.duration || 0);
   const [isRunning, setIsRunning] = useState(false);
@@ -1864,6 +1899,11 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
   const tvChannelRef = useRef(null);
   const tvJoinedRef = useRef(false);
   const [tvJoined, setTvJoined] = useState(false);
+  const [reaction, setReaction] = useState(null);
+  const [reactionType, setReactionType] = useState(null);
+  const [reactionVisible, setReactionVisible] = useState(false);
+  const reactionTimeoutRef = useRef(null);
+  const liveChannelRef = useRef(null);
 
   // Touch Handlers per minimizzare con lo swipe
   const [startY, setStartY] = useState(null);
@@ -1904,6 +1944,63 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
     }
   }, [tvCode]);
 
+  // Live Coach Cam - Presence & Broadcasting
+  useEffect(() => {
+    if (!athleteWorkoutId) return;
+    
+    const presenceChannel = supabase.channel('global_live_workouts', {
+      config: { presence: { key: athleteWorkoutId } }
+    });
+
+    const coachChannel = supabase.channel(`live_coach_${athleteWorkoutId}`);
+    coachChannel.on('broadcast', { event: 'reaction' }, (payload) => {
+      if (reactionTimeoutRef.current) clearTimeout(reactionTimeoutRef.current);
+      setReaction(payload.payload.emoji);
+      setReactionType('emoji');
+      setReactionVisible(true);
+      try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch(e) {}
+      reactionTimeoutRef.current = setTimeout(() => {
+        setReactionVisible(false);
+        reactionTimeoutRef.current = setTimeout(() => setReaction(null), 500);
+      }, 3000);
+    }).on('broadcast', { event: 'live_audio' }, (payload) => {
+      const audioUrl = payload.payload.url;
+      if (audioUrl) {
+        if (reactionTimeoutRef.current) clearTimeout(reactionTimeoutRef.current);
+        setReaction('🎙️');
+        setReactionType('voice');
+        setReactionVisible(true);
+        try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch(e) {}
+        const audio = new Audio(audioUrl);
+        const closeVoice = () => {
+           setReactionVisible(false);
+           reactionTimeoutRef.current = setTimeout(() => setReaction(null), 500);
+        };
+        audio.onended = closeVoice;
+        audio.onerror = closeVoice;
+        audio.play().catch(e => {
+          console.error("Error playing live audio:", e);
+          closeVoice();
+        });
+      }
+    }).subscribe();
+
+    liveChannelRef.current = coachChannel;
+
+    presenceChannel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await presenceChannel.track({
+          athleteWorkoutId, athleteName, workoutTitle, startedAt: new Date().toISOString()
+        });
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(presenceChannel);
+      supabase.removeChannel(coachChannel);
+    };
+  }, [athleteWorkoutId, athleteName, workoutTitle]);
+
   useEffect(() => {
     if (tvJoined && tvChannelRef.current) {
       tvChannelRef.current.send({
@@ -1912,7 +2009,14 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
         payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx] }
       }).catch(()=>{});
     }
-  }, [currentIdx, timeLeft, isRunning, sequence, tvJoined]);
+    if (liveChannelRef.current) {
+      liveChannelRef.current.send({
+        type: 'broadcast',
+        event: 'timer_state',
+        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx] }
+      }).catch(()=>{});
+    }
+  }, [currentIdx, timeLeft, isRunning, sequence, tvJoined, athleteWorkoutId]);
   
   useEffect(() => {
     shortBeepAudio.current = new Audio(shortBeepURI);
@@ -2228,6 +2332,30 @@ return createPortal(
 
       </div> {/* ← chiude: relative ${currentTheme.bg} flex flex-col rounded-t-3xl */}
     </div> {/* ← chiude: fixed inset-0 z-[200] */}
+
+    {reaction && (
+      <div className={`fixed inset-0 z-[300] flex items-center justify-center pointer-events-none transition-all duration-500 ease-out ${reactionVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
+        {reactionType === 'emoji' && (
+          <span className="text-[200px] drop-shadow-[0_0_60px_rgba(255,255,255,0.4)] animate-bounce" style={{ animationDuration: '0.6s' }}>{reaction}</span>
+        )}
+        {reactionType === 'voice' && (
+          <div className="bg-[#111]/90 backdrop-blur-md border-2 border-[#f1ba17]/50 rounded-[2rem] px-8 py-6 flex items-center gap-5 shadow-[0_0_50px_rgba(241,186,23,0.3)]">
+            <div className="w-16 h-16 rounded-full bg-[#f1ba17] flex items-center justify-center animate-pulse shrink-0 shadow-lg shadow-[#f1ba17]/40">
+               <Mic size={32} className="text-black" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[#f1ba17] font-black text-xs uppercase tracking-widest mb-0.5">Walkie-Talkie</span>
+              <span className="text-white font-bold text-xl leading-tight">Messaggio dal Coach</span>
+            </div>
+            <div className="flex items-center gap-1.5 ml-4 h-8 shrink-0">
+               {[...Array(4)].map((_, i) => (
+                  <div key={i} className="w-1.5 bg-[#f1ba17] rounded-full animate-bounce" style={{ height: '100%', animationDelay: `${i * 0.15}s`, animationDuration: '0.8s' }}></div>
+               ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )}
   </>,
   document.body
 );

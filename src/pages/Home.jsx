@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Activity } from 'lucide-react'
+import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Activity, Mic, Square } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO, differenceInDays, startOfDay } from 'date-fns'
@@ -11,6 +11,7 @@ import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { createPortal } from 'react-dom'
 import { App as CapacitorApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
+import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
 import { Badge } from '@capawesome/capacitor-badge'
 
 const parseNotesAndRpe = (fullNote) => {
@@ -78,6 +79,8 @@ export default function Home() {
   const [rpeScore, setRpeScore] = useState('5')
   const [rpeNotes, setRpeNotes] = useState('')
   const [savingRpe, setSavingRpe] = useState(false)
+  const [liveAthletes, setLiveAthletes] = useState([])
+  const [spectatingAthlete, setSpectatingAthlete] = useState(null)
 
   const meta = user?.user_metadata || {}
   const fallbackName = localStorage.getItem(`fleofit_name_${user?.id}`) || meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
@@ -389,10 +392,33 @@ setNotifications(prev => {
         }).then(l => stateListener = l);
       }
     }
+
+       // Rende visibili gli atleti LIVE nella dashboard
+    let presenceRoom;
+    if (role === 'admin' || role === 'coach') {
+      presenceRoom = supabase.channel('global_live_workouts', {
+        config: {
+          presence: {
+            key: user.id,
+          },
+        },
+      });
+      presenceRoom.on('presence', { event: 'sync' }, () => {
+        const state = presenceRoom.presenceState();
+        const active = [];
+        for (const id in state) {
+          if (state[id][0].athleteWorkoutId) {
+            active.push(state[id][0]);
+          }
+        }
+        setLiveAthletes(active);
+      }).subscribe();
+    }
     return () => {
       if (notifSub) supabase.removeChannel(notifSub);
             if (stateListener) stateListener.remove();
 
+      if (presenceRoom) supabase.removeChannel(presenceRoom);
     }
   }, [role, user])
 
@@ -767,6 +793,38 @@ setNotifications(prev => {
         </div>
       )}
 
+      {/* LIVE COACH CAM */}
+      {role !== 'athlete' && (
+        <div 
+          className={`transition-all duration-700 ease-in-out overflow-hidden ${liveAthletes.length > 0 ? 'max-h-[1000px] opacity-100 mb-6' : 'max-h-0 opacity-0 mb-0'}`}
+        >
+          <div className="pt-2 pb-1">
+            <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
+              Live Coach Cam
+            </h2>
+            <div className="flex flex-col gap-3">
+              {liveAthletes.map(la => (
+                <div key={la.athleteWorkoutId} onClick={() => setSpectatingAthlete(la)} className="bg-gradient-to-r from-red-600/20 to-red-900/10 border border-red-500/30 rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:border-red-500/60 transition-all duration-300 shadow-lg shadow-red-500/5 group animate-in fade-in zoom-in-[0.95] slide-in-from-top-2">
+                  <div className="flex items-center gap-3 flex-1 min-w-0 pr-3">
+                    <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 shrink-0 group-hover:scale-110 transition-transform">
+                      <Activity size={24} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-white font-bold text-base truncate drop-shadow-md">{la.athleteName} è in allenamento!</p>
+                      <p className="text-red-400 text-xs font-medium truncate">{la.workoutTitle}</p>
+                    </div>
+                  </div>
+                  <button className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-xl hover:bg-red-500 shadow-md shrink-0">
+                    Guarda
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main CTA */}
       {role !== 'athlete' && (
         <div onClick={() => navigate('/create')} className="bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border border-[#f1ba17]/50 rounded-3xl p-6 cursor-pointer hover:border-[#f1ba17] transition relative overflow-hidden group mb-6">
@@ -852,7 +910,8 @@ setNotifications(prev => {
               {todayWorkouts.map((todayWorkout) => {
                 const rawCat = todayWorkout.workouts?.sections?.category || (todayWorkout.workouts?.sections?.steps ? 'Running' : 'Hyrox');
                 const todayIsEvent = rawCat === 'Event';
-                const todayIsCustom = rawCat === 'Custom' || rawCat === 'Autonomo';
+                const todayIsAuto = todayWorkout.workouts?.sections?.isAutonomous === true || rawCat === 'Autonomo';
+                const todayIsCustom = rawCat === 'Custom' || todayIsAuto;
                 const category = todayIsEvent ? 'Event' : todayIsCustom ? 'Custom' : rawCat;
                 const todayIsRun = category === 'Running';
                 
@@ -891,7 +950,7 @@ setNotifications(prev => {
                           {todayWorkout.status === 'completed' ? <CheckCircle2 size={16} /> : <Circle size={16} />} 
                           {todayWorkout.status === 'completed' ? 'Fatto' : 'Segna come completato'}
                         </button>
-                        {todayIsCustom && role === 'athlete' && (
+                        {todayIsAuto && role === 'athlete' && (
                           <div className="flex items-center gap-2">
                              <button onClick={(e) => { e.stopPropagation(); openEditAutonomous(todayWorkout); }} className="p-2 text-gray-400 hover:text-[#f1ba17] transition bg-[#111] rounded-full border border-[#333]" title="Modifica"><Edit size={16}/></button>
                              <button onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(todayWorkout.id); }} className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-full border border-[#333]" title="Elimina"><Trash2 size={16}/></button>
@@ -941,7 +1000,7 @@ setNotifications(prev => {
           ) : (
             <div className="flex flex-col gap-3">
               {upcomingWorkouts.map(w => {
-                const isCustom = w.workouts?.sections?.category === 'Custom' || w.workouts?.sections?.category === 'Autonomo' || w.workouts?.sections?.isAutonomous;
+                const isAuto = w.workouts?.sections?.isAutonomous === true || w.workouts?.sections?.category === 'Autonomo';
                 return (
                   <div 
                     key={w.id}
@@ -955,7 +1014,7 @@ setNotifications(prev => {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {role === 'athlete' && isCustom && (
+                      {role === 'athlete' && isAuto && (
                         <>
                           <button onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }} className="p-1.5 text-gray-500 hover:text-[#f1ba17] transition" title="Modifica"><Edit size={18}/></button>
                           <button onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(w.id); }} className="p-1.5 text-gray-500 hover:text-red-500 transition" title="Elimina"><Trash2 size={18}/></button>
@@ -1220,6 +1279,14 @@ setNotifications(prev => {
         />,
         document.body
       )}
+      
+      {/* MODAL SPETTATORE LIVE COACH */}
+      {spectatingAthlete && createPortal(
+        <LiveSpectatorModal 
+          athlete={spectatingAthlete} 
+          onClose={() => setSpectatingAthlete(null)} 
+        />, document.body
+      )}
     </div>
   )
 }
@@ -1345,6 +1412,310 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
           <button onClick={onCancel} disabled={saving} className="flex-1 py-3.5 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">Annulla</button>
           <button onClick={onSave} disabled={saving} className="flex-1 py-3.5 bg-[#f1ba17] text-black font-black rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-[#f1ba17]/20">{saving ? '...' : 'Fatto! 🎉'}</button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function LiveSpectatorModal({ athlete, onClose }) {
+  const [timerState, setTimerState] = useState(null);
+  const [isSendingAudio, setIsSendingAudio] = useState(false);
+  const channelRef = useRef(null);
+
+  useEffect(() => {
+    const channel = supabase.channel(`live_coach_${athlete.athleteWorkoutId}`);
+    channel.on('broadcast', { event: 'timer_state' }, (payload) => {
+      setTimerState(payload.payload);
+    }).subscribe();
+    channelRef.current = channel;
+    return () => supabase.removeChannel(channel);
+  }, [athlete]);
+
+  const sendReaction = (emoji) => {
+    if (channelRef.current) {
+      channelRef.current.send({ type: 'broadcast', event: 'reaction', payload: { emoji } });
+    }
+  };
+
+  const formatT = (totalSeconds) => {
+    if (isNaN(totalSeconds)) return '0:00';
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/90 z-[150] flex items-center justify-center p-4">
+      <div className="bg-[#1e1e1e] border border-red-500/30 rounded-3xl w-full max-w-sm flex flex-col overflow-hidden shadow-2xl shadow-red-500/10 animate-in fade-in zoom-in-[0.96] duration-300">
+        <div className="bg-red-600 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-white animate-pulse"></div><p className="text-white font-bold">LIVE: {athlete.athleteName}</p></div>
+          <button onClick={onClose} className="text-white/80 hover:text-white"><X size={20}/></button>
+        </div>
+        <div className="p-6 flex flex-col items-center justify-center min-h-[220px]">
+          {timerState ? (<><p className="text-red-400 font-bold text-sm uppercase tracking-widest mb-1 text-center">{timerState.step?.title || 'Workout'}</p><p className="text-white font-black text-[5rem] tabular-nums tracking-tighter mb-4 leading-none">{formatT(timerState.timeLeft)}</p><div className="bg-[#111] border border-[#333] px-4 py-3 rounded-xl text-center w-full"><p className="text-gray-400 text-xs mb-1 uppercase font-bold tracking-wider">In Esecuzione</p><p className="text-white font-semibold truncate text-lg">{timerState.step?.task || 'Workout libero'}</p></div></>) : (<p className="text-gray-500 font-medium animate-pulse text-center px-4">Connessione al telefono dell'atleta in corso...</p>)}
+        </div>
+        <div className="bg-[#111] p-5 border-t border-[#333]">
+          <p className="text-gray-500 text-xs font-bold text-center uppercase tracking-wider mb-4">Invia Reazione all'Atleta</p>
+          <div className="flex justify-center gap-5 mb-6">
+            {['🔥', '💪', '🚀', '👏', '💀'].map(emoji => (
+              <button key={emoji} onClick={() => sendReaction(emoji)} className="text-4xl hover:scale-125 active:scale-90 hover:-translate-y-2 transition-all">{emoji}</button>
+            ))}
+          </div>
+          <p className="text-gray-500 text-xs font-bold text-center uppercase tracking-wider mb-2">
+            {isSendingAudio ? 'Invio in corso...' : 'Walkie Talkie (Audio Live)'}
+          </p>
+          <VoiceRecorder onSave={async (blob, ext) => {
+            setIsSendingAudio(true);
+            const fileName = `live_audio_${athlete.athleteWorkoutId}_${Date.now()}.${ext}`;
+            const { error } = await supabase.storage.from('voice-notes').upload(fileName, blob, { contentType: blob.type });
+            if (!error) {
+              const { data } = supabase.storage.from('voice-notes').getPublicUrl(fileName);
+              if (channelRef.current) {
+                channelRef.current.send({ type: 'broadcast', event: 'live_audio', payload: { url: data.publicUrl } });
+              }
+              // Auto-distruzione del file da Supabase dopo 60 secondi per non occupare spazio
+              setTimeout(() => {
+                supabase.storage.from('voice-notes').remove([fileName]).catch(() => {});
+              }, 60000);
+            }
+            setIsSendingAudio(false);
+          }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AudioVisualizer({ stream }) {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    if (!stream) return
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {})
+    }
+    const analyser = audioCtx.createAnalyser()
+    const source = audioCtx.createMediaStreamSource(stream)
+    source.connect(analyser)
+    analyser.fftSize = 64
+    const bufferLength = analyser.frequencyBinCount
+    const dataArray = new Uint8Array(bufferLength)
+    const canvas = canvasRef.current
+    const canvasCtx = canvas.getContext('2d')
+    let animationId
+
+    const draw = () => {
+      animationId = requestAnimationFrame(draw)
+      analyser.getByteFrequencyData(dataArray)
+      canvasCtx.clearRect(0, 0, canvas.width, canvas.height)
+      
+      const barWidth = (canvas.width / bufferLength) * 1.5
+      let x = 0
+
+      for (let i = 0; i < bufferLength; i++) {
+        let barHeight = dataArray[i] / 8
+        if (barHeight < 2) barHeight = 2
+        
+        canvasCtx.fillStyle = '#f1ba17'
+        const y = (canvas.height - barHeight) / 2
+        
+        canvasCtx.beginPath()
+        canvasCtx.roundRect ? canvasCtx.roundRect(x, y, barWidth - 2, barHeight, 4) : canvasCtx.rect(x, y, barWidth - 2, barHeight)
+        canvasCtx.fill()
+        
+        x += barWidth
+      }
+    }
+    draw()
+
+    return () => {
+      cancelAnimationFrame(animationId)
+      if (audioCtx.state !== 'closed') audioCtx.close()
+    }
+  }, [stream])
+
+  return <canvas ref={canvasRef} className="w-full h-8" width={200} height={32} />
+}
+
+function VoiceRecorder({ onSave, onCancel }) {
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [mediaStream, setMediaStream] = useState(null)
+  const isNative = Capacitor.isNativePlatform()
+  
+  const mediaRecorder = useRef(null)
+  const chunksRef = useRef([])
+  const timerRef = useRef(null)
+  const isCancelledRef = useRef(false)
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (mediaStream) mediaStream.getTracks().forEach(t => t.stop())
+    }
+  }, [mediaStream])
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecordingAndSave()
+    } else {
+      startRecording()
+    }
+  }
+
+  const startRecording = async () => {
+    let stream = null;
+    if (isNative) {
+      try {
+        let hasPerm = await NativeVoiceRecorder.hasAudioRecordingPermission()
+        if (!hasPerm.value) {
+          hasPerm = await NativeVoiceRecorder.requestAudioRecordingPermission()
+          if (!hasPerm.value) return alert('Devi abilitare il microfono dalle impostazioni di iOS.')
+        }
+      } catch (e) {
+        console.error("Errore permessi nativi:", e)
+      }
+    }
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        setMediaStream(stream)
+      } catch (err) {}
+    }
+    if (isNative) {
+      try {
+        await NativeVoiceRecorder.startRecording()
+        isCancelledRef.current = false
+        setIsRecording(true)
+        setRecordingTime(0)
+        timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
+      } catch (e) {
+        alert('Impossibile accedere al microfono.')
+      }
+    } else {
+      if (!window.MediaRecorder || !stream) {
+        return alert('Il tuo browser non supporta la registrazione vocale.')
+      }
+      try {
+        const recorder = new MediaRecorder(stream)
+        chunksRef.current = []
+        isCancelledRef.current = false
+        
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data)
+        }
+        
+        recorder.onstop = () => {
+          const mimeType = recorder.mimeType || 'audio/webm'
+          const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('aac') ? 'aac' : 'webm'
+          const audioBlob = new Blob(chunksRef.current, { type: mimeType })
+          if (stream) stream.getTracks().forEach(track => track.stop())
+          setMediaStream(null)
+          if (!isCancelledRef.current) {
+            onSave(audioBlob, ext)
+          } else if (onCancel) {
+            onCancel()
+          }
+        }
+        
+        recorder.start()
+        mediaRecorder.current = recorder
+        setIsRecording(true)
+        setRecordingTime(0)
+        timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
+      } catch (err) {}
+    }
+  }
+
+  const cancelRecording = async () => {
+    isCancelledRef.current = true
+    setIsRecording(false)
+    clearInterval(timerRef.current)
+    if (!isNative && mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
+      mediaRecorder.current.stop()
+      return
+    }
+    if (isNative) {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop())
+        setMediaStream(null)
+      }
+      try { await NativeVoiceRecorder.stopRecording() } catch(e) {}
+      if (onCancel) onCancel()
+    }
+  }
+
+  const stopRecordingAndSave = async () => {
+    isCancelledRef.current = false
+    setIsRecording(false)
+    clearInterval(timerRef.current)
+    if (!isNative && mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
+      mediaRecorder.current.stop()
+      return
+    }
+    if (isNative) {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop())
+        setMediaStream(null)
+      }
+      try {
+        const result = await NativeVoiceRecorder.stopRecording()
+        if (result.value && result.value.recordDataBase64) {
+          const mimeType = result.value.mimeType || 'audio/aac'
+          const ext = mimeType.includes('mp4') ? 'mp4' : 'aac'
+          const response = await fetch(`data:${mimeType};base64,${result.value.recordDataBase64}`)
+          const audioBlob = await response.blob()
+          onSave(audioBlob, ext)
+        } else if (onCancel) onCancel()
+      } catch(e) {}
+    }
+  }
+
+  return (
+    <div className="relative w-full">
+      <div className="flex items-center gap-2 bg-[#111] border border-[#333] p-1.5 rounded-full h-12 w-full">
+        {!isRecording ? (
+          <button 
+            onClick={toggleRecording}
+            className="w-full h-full rounded-full flex items-center justify-center gap-2 text-gray-400 hover:text-white transition-all"
+          >
+            <Mic size={18} className="text-[#f1ba17]" /> Tocca per registrare...
+          </button>
+        ) : (
+          <div className="flex items-center justify-between w-full px-2 gap-2">
+            <div className="flex items-center gap-1 text-red-500 font-semibold animate-pulse w-12 shrink-0 select-none text-xs">
+              <div className="w-2 h-2 rounded-full bg-red-500"></div>
+              {Math.floor(recordingTime/60)}:{(recordingTime%60).toString().padStart(2,'0')}
+            </div>
+            
+            <div className="flex-1 mx-2 overflow-hidden h-6 flex items-center justify-center gap-1">
+              {mediaStream ? (
+                <AudioVisualizer stream={mediaStream} />
+              ) : (
+                <div className="flex items-center gap-1 h-full py-1">
+                  {[...Array(12)].map((_, i) => (
+                    <div key={i} className="w-1.5 bg-[#f1ba17] rounded-full animate-bounce" style={{ height: '100%', animationDelay: `${i * 0.1}s`, animationDuration: '0.8s' }}></div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
+                <Trash2 size={16} />
+              </button>
+              <button onClick={stopRecordingAndSave} className="w-9 h-9 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
+                <Square size={14} fill="currentColor" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

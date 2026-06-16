@@ -63,7 +63,8 @@ const SCHEMES = {
   hyrox: { bg: 'bg-[#D11149]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#D11149]' },
   emom:  { bg: 'bg-[#111]', text: 'text-[#f1ba17]', sub: 'text-[#f1ba17]/80', card: 'bg-[#1e1e1e] border-[#f1ba17]/20 text-[#f1ba17]', cardLabel: 'text-[#f1ba17]/60', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
   base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-gray-500', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
-  done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' }
+  done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' },
+  custom: { bg: 'bg-[#0B0B0B]', text: 'text-[#D11149]', sub: 'text-[#D11149]/80', card: 'bg-[#1e1e1e] border-[#D11149]/20 text-[#D11149]', cardLabel: 'text-[#D11149]/60', icon: 'text-gray-400', btnBg: 'bg-[#D11149] text-white' }
 }
 
 const timeToSeconds = (timeStr) => {

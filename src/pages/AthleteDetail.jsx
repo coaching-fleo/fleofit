@@ -704,9 +704,9 @@ export default function AthleteDetail() {
                         <div className="flex gap-0.5 mt-1">
                           {dayWorkoutsList.slice(0, 3).map((w, i) => {
                             const cat = w.workouts?.sections?.category || 'Hyrox'
-                            const isCustom = cat === 'Custom' || cat === 'Autonomo'
-                              const isEvent = cat === 'Event'
-                              const color = isEvent ? '#ffffff' : (cat === 'Running' ? '#0094C6' : (isCustom ? '#D11149' : '#f1ba17'))
+                            const isCustom = cat === 'Custom' || cat === 'Autonomo' || w.workouts?.sections?.isAutonomous === true
+                            const isEvent = cat === 'Event' || w.workouts?.sections?.isEvent === true
+                            const color = isEvent ? '#ffffff' : (cat === 'Running' ? '#0094C6' : (isCustom ? '#D11149' : '#f1ba17'))
                             return <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selected ? '#000' : color }} />
                           })}
                         </div>
@@ -1429,9 +1429,10 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
   const hasChanges = note !== parsed.text
 
   const rawCat = entry.workouts?.sections?.category || (entry.workouts?.sections?.steps ? 'Running' : 'Hyrox')
-  const isAuto = rawCat === 'Custom' || rawCat === 'Autonomo'
-  const isEvent = rawCat === 'Event'
-  const category = isEvent ? 'Event' : (isAuto ? 'Custom' : rawCat)
+  const isAuto = entry.workouts?.sections?.isAutonomous === true || rawCat === 'Autonomo'
+  const isEvent = rawCat === 'Event' || entry.workouts?.sections?.isEvent === true
+  const isCustom = rawCat === 'Custom' || isAuto
+  const category = isEvent ? 'Event' : (isCustom ? 'Custom' : rawCat)
   const isRun = category === 'Running'
 
   const handleSaveNote = async () => {
@@ -1446,23 +1447,23 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
       className={`rounded-3xl p-5 transition border relative overflow-hidden group ${
         entry.status === 'completed'
           ? 'bg-green-500/10 border-green-500/30'
-          : (isEvent ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-white/50' : isRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50' : isAuto ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#D11149]/50' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50')
+          : (isEvent ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-white/50' : isRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50' : isCustom ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#D11149]/50' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50')
       }`}
     >
       <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-        {entry.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (isEvent ? <CalendarDays size={80} className="text-white/30 -rotate-12" /> : isRun ? <Timer size={80} className="text-[#0094C6] -rotate-12" /> : isAuto ? <Dumbbell size={80} className="text-[#D11149] -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />)}
+        {entry.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (isEvent ? <CalendarDays size={80} className="text-white/30 -rotate-12" /> : isRun ? <Timer size={80} className="text-[#0094C6] -rotate-12" /> : isCustom ? <Dumbbell size={80} className="text-[#D11149] -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />)}
       </div>
       <div className="relative z-10 flex flex-col gap-4">
         <div className="flex justify-between items-start gap-2">
            <div className="flex items-center gap-4 cursor-pointer flex-1 min-w-0" onClick={() => navigate(`/workout/${entry.workouts.id}?athlete_id=${athleteId}`)}>
              <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg shrink-0 ${
-               entry.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (isEvent ? 'bg-white text-black shadow-white/20' : isRun ? 'bg-[#0094C6] text-white shadow-[#0094C6]/20' : isAuto ? 'bg-[#D11149] text-white shadow-[#D11149]/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20')
+               entry.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (isEvent ? 'bg-white text-black shadow-white/20' : isRun ? 'bg-[#0094C6] text-white shadow-[#0094C6]/20' : isCustom ? 'bg-[#D11149] text-white shadow-[#D11149]/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20')
              }`}>
                {entry.status === 'completed' ? <CheckCircle2 size={24} /> : (isEvent ? <CalendarDays size={24} /> : isRun ? <Timer size={24} /> : <Dumbbell size={24} />)}
              </div>
              <div className="min-w-0">
                <h3 className="text-white font-bold text-xl leading-tight group-hover:underline underline-offset-4 truncate">{entry.workouts.title}</h3>
-               <p className={`text-sm font-medium mt-1 ${entry.status === 'completed' ? 'text-green-400' : (isEvent ? 'text-gray-300' : isRun ? 'text-[#0094C6]' : isAuto ? 'text-[#D11149]' : 'text-[#f1ba17]')}`}>
+               <p className={`text-sm font-medium mt-1 ${entry.status === 'completed' ? 'text-green-400' : (isEvent ? 'text-gray-300' : isRun ? 'text-[#0094C6]' : isCustom ? 'text-[#D11149]' : 'text-[#f1ba17]')}`}>
                  {entry.status === 'completed' ? 'Completato! 🎉' : (isEvent ? 'In programma oggi 🏁' : 'Da fare oggi 🔥')}
                </p>
              </div>
@@ -1474,7 +1475,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition border bg-[#111]/50 backdrop-blur-md ${
                  entry.status === 'completed' 
                    ? 'border-green-500 text-green-500 hover:bg-green-500/20' 
-                     : `border-[#333] text-gray-300 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isAuto ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
+                     : `border-[#333] text-gray-300 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isCustom ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
                }`}
              >
                {entry.status === 'completed' ? <CheckCircle2 size={14} /> : <Circle size={14} />} {entry.status === 'completed' ? 'Fatto' : 'Segna fatto'}
@@ -1523,7 +1524,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
           )}
           <textarea
           ref={noteRef}
-          className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
+          className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isCustom ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
             rows={2}
             placeholder="Note dell'atleta su questo workout..."
             value={note}
@@ -1534,7 +1535,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
               <button
                 onClick={handleSaveNote}
                 disabled={saving}
-                className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-[#0094C6] text-white' : isAuto ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
+                className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-[#0094C6] text-white' : isCustom ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
               >
                 {saving ? 'Salvataggio...' : 'Conferma note'}
               </button>
@@ -1839,9 +1840,10 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
   }
 
   const rawCat = entry.workouts?.sections?.category || (entry.workouts?.sections?.steps ? 'Running' : 'Hyrox')
-  const isAuto = rawCat === 'Custom' || rawCat === 'Autonomo'
-  const isEvent = rawCat === 'Event'
-  const category = isEvent ? 'Event' : (isAuto ? 'Custom' : rawCat)
+  const isAuto = entry.workouts?.sections?.isAutonomous === true || rawCat === 'Autonomo'
+  const isEvent = rawCat === 'Event' || entry.workouts?.sections?.isEvent === true
+  const isCustom = rawCat === 'Custom' || isAuto
+  const category = isEvent ? 'Event' : (isCustom ? 'Custom' : rawCat)
   const isRun = category === 'Running'
 
   const handleSaveNote = async () => {
@@ -1859,10 +1861,10 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           onClick={() => navigate(`/workout/${entry.workouts.id}?athlete_id=${athleteId}`)}
         >
           <div className="flex items-center gap-2 flex-wrap">
-            <p className={`font-semibold text-white transition underline underline-offset-4 leading-tight ${isEvent ? 'group-hover:text-white decoration-white/50' : isRun ? 'group-hover:text-[#0094C6] decoration-[#0094C6]/50' : isAuto ? 'group-hover:text-[#D11149] decoration-[#D11149]/50' : 'group-hover:text-[#f1ba17] decoration-[#f1ba17]/50'}`}>
+            <p className={`font-semibold text-white transition underline underline-offset-4 leading-tight ${isEvent ? 'group-hover:text-white decoration-white/50' : isRun ? 'group-hover:text-[#0094C6] decoration-[#0094C6]/50' : isCustom ? 'group-hover:text-[#D11149] decoration-[#D11149]/50' : 'group-hover:text-[#f1ba17] decoration-[#f1ba17]/50'}`}>
               {entry.workouts.title}
             </p>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isAuto ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
               {isEvent ? 'Evento / Gara' : category}
             </span>
           </div>
@@ -1898,8 +1900,8 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           entry.status === 'completed' 
             ? 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500/20' 
             : isBefore(scheduledDate, today)
-              ? `bg-[#111] border-[#333] text-gray-500 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isAuto ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
-              : `bg-[#2a2a2a] border-[#383838] text-gray-300 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isAuto ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
+              ? `bg-[#111] border-[#333] text-gray-500 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isCustom ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
+              : `bg-[#2a2a2a] border-[#383838] text-gray-300 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isCustom ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
         }`}
       >
         <Icon size={18} /> {statusText}
@@ -1927,7 +1929,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           ref={noteRef}
           className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
           rows={3}
-          placeholder="Copia qui le note dell'atleta su questo workout..."
+          placeholder="Inserisci o modifica le note dell'atleta su questo workout..."
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
@@ -1936,7 +1938,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             <button
               onClick={handleSaveNote}
               disabled={saving}
-              className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-[#0094C6] text-white' : isAuto ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
+              className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-[#0094C6] text-white' : isCustom ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
             >
               {saving ? 'Salvataggio...' : 'Conferma'}
             </button>
@@ -2294,7 +2296,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
       const assignableWorkouts = (data || []).filter(w => {
         const cat = w.sections?.category;
         if (cat === 'Event' || w.sections?.isEvent) return false;
-        if (cat === 'Custom' || cat === 'Autonomo' || w.sections?.isAutonomous) return false;
+        if (w.sections?.isAutonomous) return false;
         return true;
       })
       setWorkouts(assignableWorkouts)
