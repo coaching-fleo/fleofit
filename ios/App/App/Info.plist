@@ -35,22 +35,32 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>FLEOFIT utilizza il Bluetooth per connettersi alla tua fascia cardio e leggere i battiti in tempo reale.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>FLEOFIT utilizza il Bluetooth per connettersi ai tuoi dispositivi.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>FLEOFIT necessita di leggere i tuoi allenamenti da Salute per sincronizzare le calorie bruciate e i battiti medi a fine workout.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>FLEOFIT necessita del permesso per aggiornare l'app Salute.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>FLEOFIT ha bisogno del microfono per permetterti di registrare e inviare note vocali.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>FLEOFIT necessita di questo permesso per salvare la grafica del tuo allenamento direttamente nella galleria fotografica.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>FLEOFIT necessita di questo permesso per salvare la grafica del tuo allenamento direttamente nella galleria fotografica.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>FLEOFIT necessita di questo permesso per comprendere i tuoi comandi vocali durante la creazione degli allenamenti.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>FLEOFIT necessita di questo permesso per comprendere i tuoi comandi vocali durante la creazione degli allenamenti.</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
@@ -59,8 +69,6 @@
 	</array>
 	<key>UIRequiresFullScreen</key>
 	<true/>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
-import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw, Volume2, VolumeX, Activity } from 'lucide-react'
+import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw, Volume2, VolumeX, Activity, Heart } from 'lucide-react'
 import { Capacitor } from '@capacitor/core'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 
@@ -608,6 +608,12 @@ export default function TVDashboard() {
                     Intensità {workout.sections.intensity}/10
                   </span>
                   <BicepsFlexed size={36} className={getIntensityColor(workout.sections.intensity)} />
+                </div>
+              )}
+              {lastTimerState?.heartRate && (
+                <div className="flex items-center gap-3 bg-red-500/10 border-2 border-red-500/30 px-6 py-2.5 rounded-2xl shrink-0 text-red-500">
+                  <Heart size={36} className="animate-pulse" fill="currentColor" />
+                  <span className="text-3xl font-black tabular-nums">{lastTimerState.heartRate} BPM</span>
                 </div>
               )}
             </div>

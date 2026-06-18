@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut, Eye, EyeOff, Plus, Copy, Link as LinkIcon, Trash2, ChevronDown, KeyRound, X, Bell, BellRing } from 'lucide-react'
+import { ChevronLeft, Database, UploadCloud, Download, UserCheck, HardDriveDownload, HardDriveUpload, LogOut, Eye, EyeOff, Plus, Copy, Link as LinkIcon, Trash2, ChevronDown, KeyRound, X, Bell, BellRing, Heart } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -12,6 +12,7 @@ import { PushNotifications } from '@capacitor/push-notifications'
 import { FCM } from '@capacitor-community/fcm'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
+import { BluetoothService } from './bluetooth'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -25,6 +26,8 @@ export default function Settings() {
   const isSimulatingAthlete = localStorage.getItem('adminRoleOverride') === 'athlete'
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [hrConnected, setHrConnected] = useState(false)
+  const [heartRate, setHeartRate] = useState(null)
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -46,6 +49,13 @@ export default function Settings() {
       }
     }
     checkSubscription()
+  }, [])
+
+  useEffect(() => {
+    return BluetoothService.subscribe((connected, hr) => {
+      setHrConnected(connected)
+      setHeartRate(hr)
+    })
   }, [])
 
   const handleExportFull = async () => {
@@ -335,6 +345,21 @@ export default function Settings() {
     setLoading(false)
   }
 
+  const toggleHeartRate = async () => {
+    try {
+      if (hrConnected) {
+        await BluetoothService.disconnect()
+      } else {
+        await BluetoothService.connect()
+      }
+    } catch (error) {
+      const msg = error?.message || String(error);
+      if (!msg.includes('cancelled') && !msg.includes('User cancelled')) {
+        setAlertInfo({ title: 'Errore BLE', message: msg, type: 'error' })
+      }
+    }
+  }
+
   return (
     <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
@@ -389,6 +414,31 @@ export default function Settings() {
           </div>
         )}
       </div>
+
+      {/* SEZIONE FASCIA CARDIO */}
+      {(role === 'athlete' || isSimulatingAthlete) && (
+        <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">
+          <h2 className="text-lg font-bold text-white mb-4">Dispositivi e Sensori</h2>
+          <p className="text-gray-400 text-sm mb-4">
+            Collega direttamente la tua Fascia Cardio (Polar, Wahoo, Garmin HRM) o il tuo sportwatch. La connessione rimarrà attiva per tutto l'utilizzo dell'app.
+            <br/><br/><span className="text-yellow-500 font-semibold">💡 Info:</span> Se usi una fascia cardio, <strong className="text-white">collegala direttamente all'app</strong> (puoi tenerla collegata in contemporanea anche all'orologio). Se usi un Garmin senza fascia, assicurati di attivare la funzione "Trasmetti FC" o "Broadcast Heart Rate" nelle impostazioni dell'orologio.
+          </p>
+          
+          <button onClick={toggleHeartRate} disabled={loading} className={`w-full flex items-center justify-between p-4 rounded-2xl border transition group ${hrConnected ? 'bg-red-500/10 border-red-500/30' : 'bg-[#2a2a2a] border-[#383838] hover:border-red-500'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition shrink-0 ${hrConnected ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-[#111] text-gray-400 group-hover:text-red-500'}`}>
+                <Heart size={20} className={hrConnected && heartRate ? 'animate-pulse' : ''} fill={hrConnected ? 'currentColor' : 'none'} />
+              </div>
+              <div className="text-left">
+                <p className={`font-semibold ${hrConnected ? 'text-red-500' : 'text-white'}`}>{hrConnected ? 'Cardiofrequenzimetro Connesso' : 'Connetti Fascia Cardio / Garmin'}</p>
+                <p className={`text-xs ${hrConnected ? 'text-red-400' : 'text-gray-500'}`}>
+                  {hrConnected ? (heartRate ? `${heartRate} BPM in tempo reale` : 'In attesa dei dati...') : 'Trasmetti via Bluetooth (BLE)'}
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
+      )}
 
           {/* SEZIONE ACCOUNT */}
       <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">

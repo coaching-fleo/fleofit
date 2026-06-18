@@ -2562,6 +2562,21 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
   const containerRef = useRef(null);
   const isDragging = useRef(false);
   const blurTimeoutRef = useRef(null);
+  const [syncingHealth, setSyncingHealth] = useState(false);
+
+  const handleHealthSync = async () => {
+    try {
+      setSyncingHealth(true);
+      const { HealthService } = await import('./health');
+      const data = await HealthService.syncLatestWorkout();
+      const textToAppend = `\n\n🍏 [Apple Health] Durata: ${data.duration || '--'} min | Calorie: ${data.calories || '--'} kcal | Battiti Medi: ${data.avgHeartRate || '--'} bpm`;
+      onNotesChange(notes ? notes + textToAppend : textToAppend.trim());
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setSyncingHealth(false);
+    }
+  };
 
   const calculateValue = (clientX) => {
     if (!containerRef.current) return;
@@ -2656,7 +2671,16 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
           </div>
         </div>
         <div className="mb-6">
-          <label className="text-white font-bold mb-2 block text-sm">Note sull'allenamento</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-white font-bold text-sm">Note sull'allenamento</label>
+            <button 
+              onClick={handleHealthSync} 
+              disabled={syncingHealth}
+              className="text-[10px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-md border border-[#444] transition disabled:opacity-50"
+            >
+              {syncingHealth ? 'Sincro in corso...' : '🍏 Apple Health'}
+            </button>
+          </div>
           <textarea
             className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-base transition-colors"
             rows={3}

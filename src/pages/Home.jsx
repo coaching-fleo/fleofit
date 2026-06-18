@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Activity, Mic, Square } from 'lucide-react'
+import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Activity, Mic, Square, Heart, WifiOff, RefreshCw } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO, differenceInDays, startOfDay } from 'date-fns'
@@ -13,6 +13,8 @@ import { App as CapacitorApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
 import { Badge } from '@capawesome/capacitor-badge'
+import { BluetoothService } from './bluetooth'
+import { Network } from '@capacitor/network'
 
 const parseNotesAndRpe = (fullNote) => {
   if (!fullNote) return { rpe: '5', text: '' };
@@ -82,6 +84,11 @@ export default function Home() {
   const [liveAthletes, setLiveAthletes] = useState([])
   const [spectatingAthlete, setSpectatingAthlete] = useState(null)
 
+  const [hrConnected, setHrConnected] = useState(false)
+  const [heartRate, setHeartRate] = useState(null)
+  const [isOffline, setIsOffline] = useState(false)
+  const [syncingQueue, setSyncingQueue] = useState(false)
+
   const meta = user?.user_metadata || {}
   const fallbackName = localStorage.getItem(`fleofit_name_${user?.id}`) || meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
   const userName = dbName || fallbackName
@@ -92,6 +99,51 @@ export default function Home() {
     if (hour < 18) return 'Buon pomeriggio'
     return 'Buonasera'
   }
+
+  useEffect(() => {
+    const initNetwork = async () => {
+      const status = await Network.getStatus()
+      setIsOffline(!status.connected)
+      if (status.connected) processOfflineQueue()
+    }
+    initNetwork()
+
+    const listener = Network.addListener('networkStatusChange', status => {
+      setIsOffline(!status.connected)
+      if (status.connected) {
+        processOfflineQueue()
+      }
+    })
+
+    return () => { listener.then(l => l.remove()) }
+  }, [])
+
+  const processOfflineQueue = async () => {
+    const queueStr = localStorage.getItem('fleofit_offline_queue')
+    if (!queueStr) return
+    let queue = []
+    try { queue = JSON.parse(queueStr) } catch (e) { return }
+    if (queue.length === 0) return
+
+    setSyncingQueue(true)
+    const remaining = []
+    for (const action of queue) {
+      if (action.type === 'UPDATE_WORKOUT') {
+        const { id, status, notes } = action.payload
+        const { error } = await supabase.from('athlete_workouts').update({ status, notes }).eq('id', id)
+        if (error) remaining.push(action)
+      }
+    }
+    localStorage.setItem('fleofit_offline_queue', JSON.stringify(remaining))
+    setSyncingQueue(false)
+  }
+
+  useEffect(() => {
+    return BluetoothService.subscribe((connected, hr) => {
+      setHrConnected(connected)
+      setHeartRate(hr)
+    })
+  }, [])
 
   const randomMotiv = useMemo(() => {
     return getDailyMotivation()
@@ -182,7 +234,16 @@ export default function Home() {
               .limit(30)
           ]).then(([wRes, dataRes]) => {
             wCountAthlete = wRes.count || 0
-            const data = dataRes.data
+            let data = dataRes.data
+            if (dataRes.error || !data) {
+              const cached = localStorage.getItem(`fleofit_cache_workouts_${user.id}`)
+              if (cached) {
+                try { data = JSON.parse(cached) } catch(e){}
+              }
+            } else {
+              localStorage.setItem(`fleofit_cache_workouts_${user.id}`, JSON.stringify(data))
+            }
+
             if (data) {
               const todayWs = data.filter(w => w.completed_date === todayStr)
               setTodayWorkouts(todayWs)
@@ -522,17 +583,29 @@ setNotifications(prev => {
     const newStatus = 'completed'
     const finalNote = formatNotesWithRpe(rpeScore, rpeNotes)
     
-    const { error } = await supabase.from('athlete_workouts').update({ 
-      status: newStatus,
-      notes: finalNote
-    }).eq('id', workoutToComplete.id)
+    const status = await Network.getStatus()
+    if (!status.connected) {
+      const queue = JSON.parse(localStorage.getItem('fleofit_offline_queue') || '[]')
+      queue.push({ type: 'UPDATE_WORKOUT', payload: { id: workoutToComplete.id, status: newStatus, notes: finalNote } })
+      localStorage.setItem('fleofit_offline_queue', JSON.stringify(queue))
+      
+      const cached = JSON.parse(localStorage.getItem(`fleofit_cache_workouts_${user.id}`) || '[]')
+      const updatedCache = cached.map(w => w.id === workoutToComplete.id ? { ...w, status: newStatus, notes: finalNote } : w)
+      localStorage.setItem(`fleofit_cache_workouts_${user.id}`, JSON.stringify(updatedCache))
+    } else {
+      const { error } = await supabase.from('athlete_workouts').update({ 
+        status: newStatus,
+        notes: finalNote
+      }).eq('id', workoutToComplete.id)
+
+      if (error) {
+        setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+        setSavingRpe(false)
+        return
+      }
+    }
 
     setSavingRpe(false)
-
-    if (error) {
-      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
-      return
-    }
 
     setTodayWorkouts(prev => prev.map(w => w.id === workoutToComplete.id ? { ...w, status: newStatus, notes: finalNote } : w))
     setWeeklyStatus(prev => prev.map(d => {
@@ -653,6 +726,11 @@ setNotifications(prev => {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {hrConnected && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 border border-red-500/30 text-red-500 rounded-full text-xs font-bold shrink-0">
+              <Heart size={14} className={heartRate ? "animate-pulse" : ""} fill="currentColor" /> {heartRate ? `${heartRate} bpm` : 'BLE'}
+            </div>
+          )}
           <button onClick={openNotifications} className="relative w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0" title="Centro Notifiche">
             <Bell size={20} />
             {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-[#1e1e1e]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
@@ -662,6 +740,25 @@ setNotifications(prev => {
           </button>
         </div>
       </div>
+
+      {/* OFFLINE BANNER */}
+      {isOffline && (
+        <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 mb-6 flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-3">
+            <WifiOff size={24} className="text-orange-500" />
+            <div>
+              <p className="text-orange-500 text-xs font-bold uppercase tracking-wider">Modalità Bunker (Offline)</p>
+              <p className="text-orange-500/80 text-[10px] font-medium leading-tight">Puoi allenarti e salvare. Sincronizzeremo tutto appena torna la linea.</p>
+            </div>
+          </div>
+        </div>
+      )}
+      {syncingQueue && (
+         <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-3 mb-6 flex items-center justify-center gap-2">
+           <RefreshCw size={16} className="text-green-500 animate-spin" />
+           <p className="text-green-500 text-xs font-bold uppercase tracking-wider">Sincronizzazione in corso...</p>
+         </div>
+      )}
 
       {/* BANNER PROSSIMO EVENTO */}
       {(role === 'athlete' || role === 'admin') && nextEventHome && (
@@ -1296,6 +1393,21 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
   const containerRef = useRef(null);
   const isDragging = useRef(false);
   const blurTimeoutRef = useRef(null);
+  const [syncingHealth, setSyncingHealth] = useState(false);
+
+  const handleHealthSync = async () => {
+    try {
+      setSyncingHealth(true);
+      const { HealthService } = await import('./health');
+      const data = await HealthService.syncLatestWorkout();
+      const textToAppend = `\n\n🍏 [Apple Health] Durata: ${data.duration || '--'} min | Calorie: ${data.calories || '--'} kcal | Battiti Medi: ${data.avgHeartRate || '--'} bpm`;
+      onNotesChange(notes ? notes + textToAppend : textToAppend.trim());
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setSyncingHealth(false);
+    }
+  };
 
   const calculateValue = (clientX) => {
     if (!containerRef.current) return;
@@ -1390,7 +1502,16 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
           </div>
         </div>
         <div className="mb-6">
-          <label className="text-white font-bold mb-2 block text-sm">Note sull'allenamento</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-white font-bold text-sm">Note sull'allenamento</label>
+            <button 
+              onClick={handleHealthSync} 
+              disabled={syncingHealth}
+              className="text-[10px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-md border border-[#444] transition disabled:opacity-50"
+            >
+              {syncingHealth ? 'Sincro in corso...' : '🍏 Apple Health'}
+            </button>
+          </div>
           <textarea
             className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-base transition-colors"
             rows={3}
@@ -1451,7 +1572,12 @@ function LiveSpectatorModal({ athlete, onClose }) {
           <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-white animate-pulse"></div><p className="text-white font-bold">LIVE: {athlete.athleteName}</p></div>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X size={20}/></button>
         </div>
-        <div className="p-6 flex flex-col items-center justify-center min-h-[220px]">
+        <div className="p-6 flex flex-col items-center justify-center min-h-[220px] relative">
+          {timerState?.heartRate && (
+            <div className="absolute top-2 right-4 flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 text-red-500 px-3 py-1 rounded-full text-xs font-bold">
+              <Heart size={14} className="animate-pulse" fill="currentColor" /> {timerState.heartRate} bpm
+            </div>
+          )}
           {timerState ? (<><p className="text-red-400 font-bold text-sm uppercase tracking-widest mb-1 text-center">{timerState.step?.title || 'Workout'}</p><p className="text-white font-black text-[5rem] tabular-nums tracking-tighter mb-4 leading-none">{formatT(timerState.timeLeft)}</p><div className="bg-[#111] border border-[#333] px-4 py-3 rounded-xl text-center w-full"><p className="text-gray-400 text-xs mb-1 uppercase font-bold tracking-wider">In Esecuzione</p><p className="text-white font-semibold truncate text-lg">{timerState.step?.task || 'Workout libero'}</p></div></>) : (<p className="text-gray-500 font-medium animate-pulse text-center px-4">Connessione al telefono dell'atleta in corso...</p>)}
         </div>
         <div className="bg-[#111] p-5 border-t border-[#333]">

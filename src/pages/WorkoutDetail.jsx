@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, Activity } from 'lucide-react'
+import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, Activity, Heart, WifiOff } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -17,6 +17,8 @@ import { Share } from '@capacitor/share'
 import { Media } from '@capacitor-community/media'
 import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
 import { KeepAwake } from '@capacitor-community/keep-awake'
+import { BluetoothService } from './bluetooth'
+import { Network } from '@capacitor/network'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
 const TYPE_COLORS = {
@@ -360,6 +362,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null)
   const noteRef = useRef(null)
 
+  // Heart Rate (BLE)
+  const [heartRate, setHeartRate] = useState(null)
+  const [hrConnected, setHrConnected] = useState(false)
+  const [isOffline, setIsOffline] = useState(false)
+
   const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
   const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
   const [savingAutonomous, setSavingAutonomous] = useState(false)
@@ -374,6 +381,39 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [timerSequence, setTimerSequence] = useState([])
 
   useEffect(() => { fetchWorkout() }, [id, queryAthleteId])
+
+  useEffect(() => {
+    const initNetwork = async () => {
+      const status = await Network.getStatus()
+      setIsOffline(!status.connected)
+    }
+    initNetwork()
+    const listener = Network.addListener('networkStatusChange', status => setIsOffline(!status.connected))
+    return () => { listener.then(l => l.remove()) }
+  }, [])
+
+  useEffect(() => {
+    return BluetoothService.subscribe((connected, hr) => {
+      setHrConnected(connected)
+      setHeartRate(hr)
+    })
+  }, [])
+
+  const toggleHeartRate = async () => {
+    try {
+      if (hrConnected) {
+        await BluetoothService.disconnect()
+      } else {
+        await BluetoothService.connect()
+      }
+    } catch (error) {
+      console.error("BLE Error:", error);
+      const msg = error?.message || String(error);
+      if (!msg.includes('cancelled') && !msg.includes('User cancelled')) {
+        setAlertInfo({ title: 'Errore BLE', message: msg, type: 'error' })
+      }
+    }
+  }
 
   // Quando entri nel workout, se c'è una notifica pendente ad esso collegata, segnala come letta
   useEffect(() => {
@@ -419,20 +459,46 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   }, [assignModalOpen])
 
   const fetchWorkout = async () => {
-    const { data, error } = await supabase.from('workouts').select('*').eq('id', id).single()
-    if (error) console.error('ERRORE:', error)
+    const status = await Network.getStatus()
+    let data, awData, allAwData;
+
+    if (status.connected) {
+      const wRes = await supabase.from('workouts').select('*').eq('id', id).single()
+      data = wRes.data
+      if (data) localStorage.setItem(`fleofit_cache_w_${id}`, JSON.stringify(data))
+
+      if (queryAthleteId && data) {
+        const awRes = await supabase.from('athlete_workouts')
+          .select('id, notes, voice_note_url, status, completed_date, athletes(name, surname)')
+          .eq('workout_id', data.id)
+          .eq('athlete_id', queryAthleteId)
+          .order('completed_date', { ascending: false })
+          .limit(1)
+        awData = awRes.data
+        if (awData) localStorage.setItem(`fleofit_cache_aw_${id}_${queryAthleteId}`, JSON.stringify(awData))
+      }
+      
+      if (role !== 'athlete' && data) {
+        const allRes = await supabase.from('athlete_workouts')
+          .select('id, completed_date, status, notes, voice_note_url, athletes(id, name, surname, photo_url)')
+          .eq('workout_id', data.id)
+          .order('completed_date', { ascending: false })
+        allAwData = allRes.data
+        if (allAwData) localStorage.setItem(`fleofit_cache_all_aw_${id}`, JSON.stringify(allAwData))
+      }
+    } else {
+      data = JSON.parse(localStorage.getItem(`fleofit_cache_w_${id}`) || 'null')
+      if (queryAthleteId) {
+        awData = JSON.parse(localStorage.getItem(`fleofit_cache_aw_${id}_${queryAthleteId}`) || 'null')
+      }
+      if (role !== 'athlete') {
+        allAwData = JSON.parse(localStorage.getItem(`fleofit_cache_all_aw_${id}`) || 'null')
+      }
+    }
 
     let finalWorkout = { ...data }
 
-    if (queryAthleteId && data) {
-      const { data: awData } = await supabase.from('athlete_workouts')
-        .select('id, notes, voice_note_url, status, completed_date, athletes(name, surname)')
-        .eq('workout_id', data.id)
-        .eq('athlete_id', queryAthleteId)
-        .order('completed_date', { ascending: false })
-        .limit(1)
-        
-      if (awData && awData.length > 0) {
+    if (queryAthleteId && awData && awData.length > 0) {
         setAthleteWorkoutId(awData[0].id)
         setWorkoutStatus(awData[0].status)
         setVoiceNoteUrl(isVoiceNoteValid(awData[0].voice_note_url) ? awData[0].voice_note_url : null)
@@ -448,14 +514,13 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           setRpeScore('5')
         }
         finalWorkout.date = awData[0].completed_date
-      } else {
+    } else if (queryAthleteId && data) {
         setAthleteWorkoutId(null)
         setVoiceNoteUrl(null)
         setWorkoutStatus('pending')
         setAthleteNote(null)
         setEditingNote('')
         setCurrentAthleteName('')
-      }
     } else {
       setAthleteWorkoutId(null)
       setVoiceNoteUrl(null)
@@ -465,17 +530,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       setCurrentAthleteName('')
     }
 
-    if (role !== 'athlete' && data) {
-      const { data: allAwData } = await supabase.from('athlete_workouts')
-        .select('id, completed_date, status, notes, voice_note_url, athletes(id, name, surname, photo_url)')
-        .eq('workout_id', data.id)
-        .order('completed_date', { ascending: false })
-      if (allAwData) {
+    if (role !== 'athlete' && allAwData) {
         setAssignments(allAwData.map(aw => ({
           ...aw,
           voice_note_url: isVoiceNoteValid(aw.voice_note_url) ? aw.voice_note_url : null
         })))
-      }
     }
 
     setWorkout(finalWorkout)
@@ -522,22 +581,33 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     const newStatus = 'completed'
     const finalNote = formatNotesWithRpe(rpeScore, rpeNotes)
 
-    const { error } = await supabase.from('athlete_workouts').update({ 
-      status: newStatus, 
-      notes: finalNote
-    }).eq('id', athleteWorkoutId)
+    const status = await Network.getStatus()
+    let hasError = false;
+    let errorMessage = '';
+
+    if (!status.connected) {
+      const queue = JSON.parse(localStorage.getItem('fleofit_offline_queue') || '[]')
+      queue.push({ type: 'UPDATE_WORKOUT', payload: { id: athleteWorkoutId, status: newStatus, notes: finalNote } })
+      localStorage.setItem('fleofit_offline_queue', JSON.stringify(queue))
+    } else {
+      const { error } = await supabase.from('athlete_workouts').update({ status: newStatus, notes: finalNote }).eq('id', athleteWorkoutId)
+      if (error) {
+        hasError = true;
+        errorMessage = error.message;
+      }
+    }
 
     setSavingNote(false)
 
-    if (error) {
-      setAlertInfo({ title: 'Errore', message: "Impossibile salvare: " + error.message, type: 'error' })
+    if (hasError) {
+      setAlertInfo({ title: 'Errore', message: "Impossibile salvare: " + errorMessage, type: 'error' })
     } else {
       setWorkoutStatus(newStatus)
       setEditingNote(rpeNotes)
       setAthleteNote({ text: rpeNotes, rpe: rpeScore, athleteName: athleteNote?.athleteName || '' })
       setShowRpeModal(false)
 
-      if (role === 'athlete') {
+      if (role === 'athlete' && status.connected) {
         supabase.functions.invoke('send-reminders', {
           body: { mode: 'coach_notification', action: 'completed', athleteName: currentAthleteName || user?.user_metadata?.first_name || 'Atleta', workoutTitle: workout.title, route: `/workout/${id}?athlete_id=${queryAthleteId || user.id}` }
         }).catch(console.error)
@@ -1164,6 +1234,19 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
       </div>
 
+      {/* OFFLINE BANNER */}
+      {isOffline && (
+        <div className="mb-4 bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-3">
+            <WifiOff size={24} className="text-orange-500" />
+            <div>
+              <p className="text-orange-500 text-xs font-bold uppercase tracking-wider">Modalità Bunker (Offline)</p>
+              <p className="text-orange-500/80 text-[10px] font-medium leading-tight">Puoi allenarti e salvare. Sincronizzeremo tutto appena torna la linea.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="mb-6">
         <div className="flex flex-col gap-4">
@@ -1196,6 +1279,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             ) : (
               <button onClick={() => setTvModalOpen(true)} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl" title="Trasmetti alla TV">
                 <MonitorUp size={14} /> TV
+              </button>
+            )}
+            {(role === 'athlete' || isOwnProfile) && (
+              <button onClick={toggleHeartRate} className={`text-xs flex items-center gap-1.5 transition border px-3 py-2 rounded-xl ${hrConnected ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-[#2a2a2a] border-[#383838] text-gray-400 hover:text-red-400'}`} title="Connetti Fascia Cardio">
+                <Heart size={14} className={hrConnected && heartRate ? 'animate-pulse' : ''} /> {hrConnected ? (heartRate ? `${heartRate} bpm` : 'Connesso') : 'Cardio'}
               </button>
             )}
             {role !== 'athlete' && (
@@ -1351,17 +1439,27 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 onClick={async () => {
                   setSavingNote(true)
                   const finalNote = formatNotesWithRpe(rpeScore, editingNote)
-                  const { error } = await supabase.from('athlete_workouts').update({ notes: finalNote }).eq('id', athleteWorkoutId)
+                  
+                  const status = await Network.getStatus()
+                  let success = true;
+                  
+                  if (!status.connected) {
+                    const queue = JSON.parse(localStorage.getItem('fleofit_offline_queue') || '[]')
+                    queue.push({ type: 'UPDATE_WORKOUT', payload: { id: athleteWorkoutId, status: workoutStatus, notes: finalNote } })
+                    localStorage.setItem('fleofit_offline_queue', JSON.stringify(queue))
+                  } else {
+                    const { error } = await supabase.from('athlete_workouts').update({ notes: finalNote }).eq('id', athleteWorkoutId)
+                    if (error) { success = false; setAlertInfo({ title: 'Errore', message: error.message, type: 'error' }) }
+                  }
+                  
                   setSavingNote(false)
-                  if (!error) {
+                  if (success) {
                      setAthleteNote({ text: editingNote, rpe: rpeScore, athleteName: athleteNote?.athleteName || '' })
-                 if (role === 'athlete') {
+                 if (role === 'athlete' && status.connected) {
                    supabase.functions.invoke('send-reminders', {
                      body: { mode: 'coach_notification', action: 'note', athleteName: athleteNote?.athleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title, noteText: editingNote, route: `/workout/${id}?athlete_id=${queryAthleteId || user.id}` }
                    }).catch(console.error)
                  }
-                  } else {
-                     setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
                   }
                 }}
                 disabled={savingNote}
@@ -1848,6 +1946,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           athleteWorkoutId={athleteWorkoutId}
           athleteName={currentAthleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Atleta'}
           workoutTitle={workout.title}
+          heartRate={heartRate}
         />
       )}
       {showRpeModal && createPortal(
@@ -1884,7 +1983,7 @@ const SCHEMES = {
   custom: { bg: 'bg-[#0B0B0B]', text: 'text-[#D11149]', sub: 'text-[#D11149]/80', card: 'bg-[#1e1e1e] border-[#D11149]/20 text-[#D11149]', cardLabel: 'text-[#D11149]/60', icon: 'text-gray-400', btnBg: 'bg-[#D11149] text-white' }
 }
 
-function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle }) {
+function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle, heartRate }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(sequence[0]?.duration || 0);
   const [isRunning, setIsRunning] = useState(false);
@@ -2006,17 +2105,17 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
       tvChannelRef.current.send({
         type: 'broadcast',
         event: 'timer_state',
-        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx] }
+        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx], heartRate }
       }).catch(()=>{});
     }
     if (liveChannelRef.current) {
       liveChannelRef.current.send({
         type: 'broadcast',
         event: 'timer_state',
-        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx] }
+        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx], heartRate }
       }).catch(()=>{});
     }
-  }, [currentIdx, timeLeft, isRunning, sequence, tvJoined, athleteWorkoutId]);
+  }, [currentIdx, timeLeft, isRunning, sequence, tvJoined, athleteWorkoutId, heartRate]);
   
   useEffect(() => {
     shortBeepAudio.current = new Audio(shortBeepURI);
@@ -2235,7 +2334,14 @@ return createPortal(
           <span className={`w-2 h-2 rounded-full ${currentTheme.bg.replace('bg-', 'bg-')}`}></span>
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">{currentStep?.title}</p>
         </div>
-        <p className="text-3xl font-black text-white tabular-nums leading-none mb-1">{formatT(timeLeft)}</p>
+        <div className="flex items-center gap-3 mb-1">
+          <p className="text-3xl font-black text-white tabular-nums leading-none">{formatT(timeLeft)}</p>
+          {heartRate && (
+            <div className="flex items-center gap-1 text-red-500 font-bold bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-lg">
+              <Heart size={14} className="animate-pulse" fill="currentColor" /> {heartRate}
+            </div>
+          )}
+        </div>
         <p className="text-sm font-medium text-gray-400 truncate">{currentStep?.task || 'Workout'}</p>
       </div>
       <div className="flex items-center gap-1 shrink-0">
@@ -2279,6 +2385,12 @@ return createPortal(
             >
               <ChevronDown size={28} />
             </button>
+            {heartRate && (
+              <div className="flex items-center gap-2 px-5 py-2 bg-black/30 border border-red-500/30 backdrop-blur-md rounded-full text-red-500 font-bold shadow-lg">
+                <Heart size={20} className="animate-pulse" fill="currentColor" />
+                <span className="text-xl tabular-nums">{heartRate} bpm</span>
+              </div>
+            )}
             <button 
               onClick={() => setIsMuted(!isMuted)}
               onTouchStart={e => e.stopPropagation()} 
@@ -2803,6 +2915,21 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
   const containerRef = useRef(null);
   const isDragging = useRef(false);
   const blurTimeoutRef = useRef(null);
+  const [syncingHealth, setSyncingHealth] = useState(false);
+
+  const handleHealthSync = async () => {
+    try {
+      setSyncingHealth(true);
+      const { HealthService } = await import('./health');
+      const data = await HealthService.syncLatestWorkout();
+      const textToAppend = `\n\n🍏 [Apple Health] Durata: ${data.duration || '--'} min | Calorie: ${data.calories || '--'} kcal | Battiti Medi: ${data.avgHeartRate || '--'} bpm`;
+      onNotesChange(notes ? notes + textToAppend : textToAppend.trim());
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setSyncingHealth(false);
+    }
+  };
 
   const calculateValue = (clientX) => {
     if (!containerRef.current) return;
@@ -2897,7 +3024,16 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
           </div>
         </div>
         <div className="mb-6">
-          <label className="text-white font-bold mb-2 block text-sm">Note sull'allenamento</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-white font-bold text-sm">Note sull'allenamento</label>
+            <button 
+              onClick={handleHealthSync} 
+              disabled={syncingHealth}
+              className="text-[10px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-md border border-[#444] transition disabled:opacity-50"
+            >
+              {syncingHealth ? 'Sincro in corso...' : '🍏 Apple Health'}
+            </button>
+          </div>
           <textarea
             className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-base transition-colors"
             rows={3}
