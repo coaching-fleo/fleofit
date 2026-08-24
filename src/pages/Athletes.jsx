@@ -56,9 +56,9 @@ export default function Athletes() {
       {filtered.length === 0 ? (
         <div className="text-center py-16">
           <div className="w-16 h-16 rounded-full bg-[#222] flex items-center justify-center mx-auto mb-4">
-            <User size={28} className="text-gray-600" />
+            <User size={28} className="text-gray-400" />
           </div>
-          <p className="text-gray-600">Nessun atleta ancora</p>
+          <p className="text-gray-400">Nessun atleta ancora</p>
           <button onClick={() => setModalOpen(true)} className="mt-3 text-[#f1ba17] text-sm font-medium">
             + Aggiungi il primo atleta
           </button>
@@ -80,7 +80,7 @@ export default function Athletes() {
                   {[a.weight && `${a.weight}kg`, a.height && `${a.height}cm`, a.birth_date && `${differenceInYears(new Date(), parseISO(a.birth_date))} anni`].filter(Boolean).join(' · ')}
                 </p>
               </div>
-              <ChevronRight size={18} className="text-gray-600" />
+              <ChevronRight size={18} className="text-gray-400" />
             </button>
           ))}
         </div>

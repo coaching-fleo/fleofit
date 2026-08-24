@@ -241,7 +241,7 @@ function ScrollPicker({ options = [], value, onChange, label, type, isRun }) {
           {displayOptions.map(opt => (
             <div key={opt} onClick={() => onChange(opt)}
               className={`snap-center h-10 flex items-center justify-center text-sm cursor-pointer select-none transition-colors
-                ${String(value) === String(opt) ? `${activeTextColor} font-bold text-base` : 'text-gray-600 hover:text-gray-400'}`}>
+                ${String(value) === String(opt) ? `${activeTextColor} font-bold text-base` : 'text-gray-400 hover:text-gray-400'}`}>
               {opt}
             </div>
           ))}
@@ -259,7 +259,7 @@ function BlockPickerModal({ onAdd, onClose }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-5 border border-[#333] animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-white font-bold text-lg">Aggiungi Blocco</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20}/></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20}/></button>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {blockTypes.map(t => (
@@ -324,7 +324,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold">Scegli esercizio</p>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
         </div>
 
         <div className="p-4 flex flex-col gap-3 overflow-y-auto flex-1">
@@ -345,7 +345,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                 </button>
               )}
               {filtered.map(ex => (
-                <button key={ex} onClick={() => handleSelect(ex)}
+                <button aria-label="Scegli questo esercizio" key={ex} onClick={() => handleSelect(ex)}
                   className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#2a2a2a] hover:bg-[#333] text-white text-sm transition">
                   <span>{ex}</span>
                   {isErgo(ex) && <span className="text-xs text-blue-400 bg-blue-900/40 px-2 py-0.5 rounded-full">ergometro</span>}
@@ -550,8 +550,8 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
       className="drag-item flex items-center gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 cursor-move hover:border-[#444] transition-all duration-200"
     >
       <div className="flex flex-col items-center justify-center shrink-0">
-        <button type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
-        <button type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-gray-500 hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
+        <button aria-label="Sposta l'esercizio su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
+        <button aria-label="Sposta l'esercizio giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-gray-500 hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
       </div>
 
       {showMinute && (
@@ -575,10 +575,10 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
         </div>
       )}
       <div className="flex items-center shrink-0">
-        <button type="button" onClick={() => onDuplicate && onDuplicate(ex)} className="text-gray-500 hover:text-[#f1ba17] transition shrink-0 p-2" title="Duplica esercizio">
+        <button aria-label="Duplica l'esercizio" type="button" onClick={() => onDuplicate && onDuplicate(ex)} className="text-gray-500 hover:text-[#f1ba17] transition shrink-0 p-2" title="Duplica esercizio">
           <Copy size={15} />
         </button>
-        <button type="button" onClick={() => onRemove(ex.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
+        <button aria-label="Rimuovi l'esercizio" type="button" onClick={() => onRemove(ex.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
           <Trash2 size={15} />
         </button>
       </div>
@@ -668,12 +668,12 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
         <div className="flex items-center justify-between">
           <span className={`font-bold text-sm ${c.text}`}>{block.type}</span>
           <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-            <button type="button" onClick={() => onDuplicate()} className="text-gray-500 hover:text-[#f1ba17] transition p-1" title="Duplica">
+            <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate()} className="text-gray-500 hover:text-[#f1ba17] transition p-1" title="Duplica">
               <Copy size={16}/>
             </button>
-            <button type="button" onClick={() => onMoveUp()} disabled={index===0} className="text-gray-500 hover:text-white disabled:opacity-30 p-1"><ChevronUp size={16}/></button>
-            <button type="button" onClick={() => onMoveDown()} disabled={index===total-1} className="text-gray-500 hover:text-white disabled:opacity-30 p-1"><ChevronDown size={16}/></button>
-            <button type="button" onClick={onRemove} className="text-gray-500 hover:text-red-400 ml-1 p-1"><Trash2 size={16}/></button>
+            <button aria-label="Sposta il blocco su" type="button" onClick={() => onMoveUp()} disabled={index===0} className="text-gray-500 hover:text-white disabled:opacity-30 p-1"><ChevronUp size={16}/></button>
+            <button aria-label="Sposta il blocco giù" type="button" onClick={() => onMoveDown()} disabled={index===total-1} className="text-gray-500 hover:text-white disabled:opacity-30 p-1"><ChevronDown size={16}/></button>
+            <button aria-label="Elimina il blocco" type="button" onClick={onRemove} className="text-gray-500 hover:text-red-400 ml-1 p-1"><Trash2 size={16}/></button>
           </div>
         </div>
 
@@ -703,7 +703,7 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
                   })}
                 </div>
               ) : (
-                <span className="text-xs text-gray-600 italic">Nessun esercizio aggiunto</span>
+                <span className="text-xs text-gray-400 italic">Nessun esercizio aggiunto</span>
               )
             )}
           </div>
@@ -914,7 +914,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold">{initialStep ? 'Modifica Fase Corsa' : 'Aggiungi Fase Corsa'}</p>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
         </div>
         <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
           <div className="flex flex-wrap gap-2 mb-1">
@@ -1021,7 +1021,7 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
       case 'warmup': return 'text-gray-400 bg-[#2a2a2a] border-[#383838]'
       case 'run': return 'text-[#0094C6] bg-[#0094C6]/10 border-[#0094C6]/30'
       case 'recover': return 'text-gray-500 bg-[#1e1e1e] border-[#2a2a2a]'
-      case 'cooldown': return 'text-gray-600 bg-[#111] border-[#222]'
+      case 'cooldown': return 'text-gray-400 bg-[#111] border-[#222]'
       case 'repeat': return 'text-purple-400 bg-purple-400/10 border-purple-400/30'
       default: return 'text-white bg-[#222] border-[#333]'
     }
@@ -1063,8 +1063,8 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
       className="drag-item flex items-start gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 hover:border-[#444] transition-all duration-200 cursor-move"
     >
       <div className="flex flex-col items-center justify-center shrink-0 mt-1">
-        <button type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
-        <button type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-gray-500 hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
+        <button aria-label="Sposta la fase su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
+        <button aria-label="Sposta la fase giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-gray-500 hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
       </div>
       <div className="flex-1 cursor-pointer group self-stretch flex flex-col justify-center py-2 -my-2" onClick={() => onEdit && onEdit(step)}>
         <div className="flex items-center gap-2 mb-1 group-hover:opacity-80 transition">
@@ -1099,10 +1099,10 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
         )}
       </div>
       <div className="flex items-center shrink-0 mt-1">
-        <button type="button" onClick={() => onDuplicate && onDuplicate(step)} className="text-gray-500 hover:text-[#0094C6] transition shrink-0 p-2" title="Duplica fase">
+        <button aria-label="Duplica la fase" type="button" onClick={() => onDuplicate && onDuplicate(step)} className="text-gray-500 hover:text-[#0094C6] transition shrink-0 p-2" title="Duplica fase">
           <Copy size={15} />
         </button>
-        <button type="button" onClick={() => onRemove(step.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
+        <button aria-label="Elimina la fase" type="button" onClick={() => onRemove(step.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
           <Trash2 size={15} />
         </button>
       </div>
@@ -1440,7 +1440,7 @@ export default function CreateWorkout() {
           -webkit-user-drag: auto;
         }
       `}</style>
-      <button onClick={handleBack} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0 mb-6">
+      <button aria-label="Torna indietro" onClick={handleBack} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0 mb-6">
         <X size={22} />
       </button>
       <h1 className="text-2xl font-bold text-[#f1ba17] mb-4">{editId ? 'Modifica Workout' : 'Crea Workout'}</h1>
@@ -1692,14 +1692,14 @@ export default function CreateWorkout() {
           <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-white font-semibold text-sm">Fasi dell'allenamento</span>
-              <button onClick={() => setRunningPickerOpen(true)} className="text-[#0094C6] hover:brightness-110">
+              <button aria-label="Aggiungi una fase di corsa" onClick={() => setRunningPickerOpen(true)} className="text-[#0094C6] hover:brightness-110">
                 <Plus size={18} />
               </button>
             </div>
 
             {runningSteps.length === 0 ? (
               <button onClick={() => setRunningPickerOpen(true)}
-                className="w-full py-4 border border-dashed border-[#383838] rounded-xl text-gray-600 text-sm hover:border-[#0094C6] hover:text-[#0094C6] transition">
+                className="w-full py-4 border border-dashed border-[#383838] rounded-xl text-gray-400 text-sm hover:border-[#0094C6] hover:text-[#0094C6] transition">
                 + Aggiungi prima fase (es. Riscaldamento)
               </button>
             ) : (
@@ -1770,7 +1770,7 @@ export default function CreateWorkout() {
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">Salvataggio</h2>
-               <button onClick={() => setShowSaveModal(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setShowSaveModal(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
             </div>
             
             {!isSavingAsNew ? (

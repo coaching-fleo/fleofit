@@ -858,7 +858,7 @@ export default function WorkoutDetail() {
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
           <ChevronLeft size={22} className="-ml-0.5" />
         </button>
         <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
@@ -914,7 +914,7 @@ export default function WorkoutDetail() {
                   </button>
                 )}
                 {(role !== 'athlete' || isAuto) && (
-                  <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
+                  <button aria-label="Elimina il workout" onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1 transition bg-[#2a2a2a] border border-[#383838] px-3 py-1.5 rounded-lg">
                     <Trash2 size={12} />
                   </button>
                 )}
@@ -929,9 +929,9 @@ export default function WorkoutDetail() {
               <MonitorUp size={20} /> Telecomando TV
             </div>
             <div className="flex items-center gap-6">
-              <button onClick={() => sendTvCommand('prev')} className="text-white hover:text-[#f1ba17] transition p-2"><SkipBack size={24} fill="currentColor" /></button>
-              <button onClick={() => sendTvCommand('toggle_play')} className="text-white hover:text-[#f1ba17] transition p-2"><PlaySquare size={28} fill="currentColor" /></button>
-              <button onClick={() => sendTvCommand('next')} className="text-white hover:text-[#f1ba17] transition p-2"><SkipForward size={24} fill="currentColor" /></button>
+              <button aria-label="Passaggio precedente sulla TV" onClick={() => sendTvCommand('prev')} className="text-white hover:text-[#f1ba17] transition p-2"><SkipBack size={24} fill="currentColor" /></button>
+              <button aria-label="Avvia o metti in pausa la TV" onClick={() => sendTvCommand('toggle_play')} className="text-white hover:text-[#f1ba17] transition p-2"><PlaySquare size={28} fill="currentColor" /></button>
+              <button aria-label="Passaggio successivo sulla TV" onClick={() => sendTvCommand('next')} className="text-white hover:text-[#f1ba17] transition p-2"><SkipForward size={24} fill="currentColor" /></button>
             </div>
           </div>
         )}
@@ -1077,7 +1077,7 @@ export default function WorkoutDetail() {
                       {a.status === 'completed' ? 'Fatto' : 'Da fare'}
                     </div>
                     {role === 'admin' && (
-                      <button 
+                      <button aria-label="Rimuovi l'assegnazione" 
                         onClick={(e) => { e.stopPropagation(); handleRemoveAssignment(a.id); }}
                         className="p-1.5 text-gray-500 hover:text-red-500 transition rounded-lg hover:bg-[#111]"
                         title="Rimuovi assegnazione"
@@ -1125,7 +1125,7 @@ export default function WorkoutDetail() {
 
       {/* Share2 CARD (nascosta, usata per screenshot) */}
       <div className="mt-12">
-        <p className="text-gray-600 text-xs mb-4 font-medium text-center uppercase tracking-wider">Anteprima Sticker per Instagram</p>
+        <p className="text-gray-400 text-xs mb-4 font-medium text-center uppercase tracking-wider">Anteprima Sticker per Instagram</p>
         <div className="flex justify-center pb-8">
           <div ref={igRef} style={{
             width: '420px',
@@ -1271,7 +1271,7 @@ export default function WorkoutDetail() {
           <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg">Assegna Workout</p>
-              <button onClick={() => { setAssignModalOpen(false); setSelectedAthletes([]); setAssignStep(1); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
+              <button aria-label="Chiudi" onClick={() => { setAssignModalOpen(false); setSelectedAthletes([]); setAssignStep(1); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
              </div>
             
             {assignStep === 1 ? (
@@ -1367,7 +1367,7 @@ export default function WorkoutDetail() {
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">Modifica Allenamento Libero</h2>
-               <button onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
             </div>
             <div className="flex flex-col gap-3">
               <div>
@@ -1470,7 +1470,7 @@ export default function WorkoutDetail() {
           <div className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isTvInputFocused ? '-translate-y-32' : ''}`}>
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white flex items-center gap-2"><MonitorUp size={24} className="text-[#f1ba17]" /> Trasmetti in TV</h2>
-               <button onClick={() => setTvModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setTvModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
             </div>
             <p className="text-gray-400 text-sm text-left">
               Apri il browser della tua Fire Stick o Smart TV, vai su <strong className="text-white">fleofit.vercel.app/tv</strong> e inserisci qui sotto il codice che vedi a schermo.
@@ -1604,7 +1604,7 @@ function ExList({ exercises, showMinute, typeColor }) {
               {detail} {paceStr}
             </span>
             {ex.kg && <span className="text-gray-400 text-xs ml-2 font-bold">{ex.kg}kg</span>}
-            {ex.notes && <span className="text-gray-600 text-xs ml-2">· {ex.notes}</span>}
+            {ex.notes && <span className="text-gray-400 text-xs ml-2">· {ex.notes}</span>}
           </div>
           {ex.intensity && (
             <div className="flex items-center gap-1 pr-2 shrink-0">
@@ -1669,7 +1669,7 @@ function CustomAudioPlayer({ src, onDelete, role }) {
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={() => { setIsPlaying(false); setProgress(0); audioRef.current.currentTime = 0; setCurrentTime('0:00') }}
       />
-      <button onClick={togglePlay} className="w-10 h-10 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
+      <button aria-label={isPlaying ? 'Metti in pausa la nota vocale' : 'Riproduci la nota vocale'} onClick={togglePlay} className="w-10 h-10 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
         {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
       </button>
       <div className="flex-1 flex flex-col justify-center px-1">
@@ -1684,12 +1684,12 @@ function CustomAudioPlayer({ src, onDelete, role }) {
             />
          </div>
          <div className="flex justify-between items-center mt-1">
-            <span className="text-[10px] text-gray-500 font-medium">{currentTime}</span>
-            <span className="text-[10px] text-gray-500 font-medium">{duration}</span>
+            <span className="text-[11px] text-gray-500 font-medium">{currentTime}</span>
+            <span className="text-[11px] text-gray-500 font-medium">{duration}</span>
          </div>
       </div>
       {role === 'admin' && onDelete && (
-        <button onClick={onDelete} className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-500 transition shrink-0" title="Elimina vocale">
+        <button aria-label="Elimina la nota vocale" onClick={onDelete} className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-500 transition shrink-0" title="Elimina vocale">
           <Trash2 size={18} />
         </button>
       )}
@@ -1857,10 +1857,10 @@ function VoiceRecorder({ onSave, onCancel }) {
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
-              <button onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
+              <button aria-label="Annulla la registrazione" onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
                 <Trash2 size={16} />
               </button>
-              <button onClick={stopRecordingAndSave} className="w-9 h-9 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
+              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-9 h-9 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
                 <Square size={14} fill="currentColor" />
               </button>
             </div>

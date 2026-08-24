@@ -253,7 +253,7 @@ export default function Settings() {
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24 page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
           <ChevronLeft size={22} className="-ml-0.5" />
         </button>
         <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
@@ -363,7 +363,7 @@ export default function Settings() {
                   <p className="text-gray-500 text-xs">Scarica un file .json con tutti gli atleti e i workout</p>
                 </div>
               </div>
-              <Download size={18} className="text-gray-600 group-hover:text-[#f1ba17]" />
+              <Download size={18} className="text-gray-400 group-hover:text-[#f1ba17]" />
             </button>
 
             <button onClick={() => fullImportRef.current?.click()} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-blue-500 transition disabled:opacity-50 group">
@@ -376,7 +376,7 @@ export default function Settings() {
                   <p className="text-gray-500 text-xs">Carica un file .json di backup totale</p>
                 </div>
               </div>
-              <UploadCloud size={18} className="text-gray-600 group-hover:text-blue-500" />
+              <UploadCloud size={18} className="text-gray-400 group-hover:text-blue-500" />
             </button>
             <input type="file" accept=".json" className="hidden" ref={fullImportRef} onChange={handleImportFull} />
             
@@ -392,7 +392,7 @@ export default function Settings() {
                   <p className="text-gray-500 text-xs">L'esportazione si fa dal profilo del singolo atleta.</p>
                 </div>
               </div>
-              <UploadCloud size={18} className="text-gray-600 group-hover:text-green-500" />
+              <UploadCloud size={18} className="text-gray-400 group-hover:text-green-500" />
             </button>
             <input type="file" accept=".json" className="hidden" ref={athleteImportRef} onChange={handleImportAthlete} />
           </div>
@@ -543,9 +543,9 @@ function InviteCodeManager() {
                   <div key={code.id} className="bg-[#2a2a2a] p-3 rounded-xl flex items-center justify-between border border-[#383838]">
                     <span className="font-mono text-lg text-[#f1ba17] tracking-widest">{code.code}</span>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => copyToClipboard(code.code, 'Codice')} title="Copia codice" className="p-2 text-gray-400 hover:text-white transition bg-[#111] rounded-lg border border-[#333]"><Copy size={16} /></button>
-                      <button onClick={() => copyToClipboard(`${window.location.origin}/?invite=${code.code}`, 'Link')} title="Copia link" className="p-2 text-gray-400 hover:text-white transition bg-[#111] rounded-lg border border-[#333]"><LinkIcon size={16} /></button>
-                      <button onClick={() => deleteCode(code.id)} title="Elimina" className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-lg border border-[#333]"><Trash2 size={16} /></button>
+                      <button aria-label="Copia il codice invito" onClick={() => copyToClipboard(code.code, 'Codice')} title="Copia codice" className="p-2 text-gray-400 hover:text-white transition bg-[#111] rounded-lg border border-[#333]"><Copy size={16} /></button>
+                      <button aria-label="Copia il link di invito" onClick={() => copyToClipboard(`${window.location.origin}/?invite=${code.code}`, 'Link')} title="Copia link" className="p-2 text-gray-400 hover:text-white transition bg-[#111] rounded-lg border border-[#333]"><LinkIcon size={16} /></button>
+                      <button aria-label="Elimina il codice invito" onClick={() => deleteCode(code.id)} title="Elimina" className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-lg border border-[#333]"><Trash2 size={16} /></button>
                     </div>
                   </div>
                 ))
@@ -572,9 +572,9 @@ function InviteCodeManager() {
                     <span className="font-mono text-gray-500 line-through shrink-0">{code.code}</span>
                     <div className="flex-1 text-right text-gray-400 pr-3 border-r border-[#444] min-w-0">
                       <p className="font-semibold text-gray-300 truncate">{code.used_by_name || code.used_by_email || 'Utente Sconosciuto'}</p>
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wider truncate">{format(parseISO(code.used_at), 'd MMM yyyy, HH:mm', { locale: it })}</p>
+                      <p className="text-[11px] text-gray-500 uppercase tracking-wider truncate">{format(parseISO(code.used_at), 'd MMM yyyy, HH:mm', { locale: it })}</p>
                     </div>
-                    <button onClick={() => deleteCode(code.id)} title="Elimina log" className="p-2 text-gray-500 hover:text-red-500 shrink-0 transition bg-[#111] rounded-lg border border-[#333]"><Trash2 size={16} /></button>
+                    <button aria-label="Elimina il codice invito" onClick={() => deleteCode(code.id)} title="Elimina log" className="p-2 text-gray-500 hover:text-red-500 shrink-0 transition bg-[#111] rounded-lg border border-[#333]"><Trash2 size={16} /></button>
                   </div>
                 ))
               ) : <p className="text-gray-500 text-xs">Nessun codice è stato ancora utilizzato.</p>}
@@ -626,7 +626,7 @@ function PasswordModal({ onClose, user, setAlertInfo }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Modifica Password</p>
-          <button type="button" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" type="button" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
         </div>
         <div className="p-5 flex flex-col gap-4" onKeyDown={e => { if (e.key === 'Enter') handleUpdate(e) }}>
           <div>

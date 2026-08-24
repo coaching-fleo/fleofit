@@ -412,10 +412,10 @@ export default function Home() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleToggleNotifications} className={`w-11 h-11 rounded-full bg-[#1e1e1e] border flex items-center justify-center transition shadow-sm shrink-0 ${notificationsEnabled ? 'text-[#f1ba17] border-[#f1ba17]/50 hover:bg-[#f1ba17]/10' : 'text-gray-400 border-[#333] hover:text-white hover:border-[#f1ba17]'}`} title={notificationsEnabled ? "Disabilita notifiche" : "Abilita notifiche"}>
+          <button aria-label={notificationsEnabled ? 'Disattiva le notifiche' : 'Attiva le notifiche'} onClick={handleToggleNotifications} className={`w-11 h-11 rounded-full bg-[#1e1e1e] border flex items-center justify-center transition shadow-sm shrink-0 ${notificationsEnabled ? 'text-[#f1ba17] border-[#f1ba17]/50 hover:bg-[#f1ba17]/10' : 'text-gray-400 border-[#333] hover:text-white hover:border-[#f1ba17]'}`} title={notificationsEnabled ? "Disabilita notifiche" : "Abilita notifiche"}>
             {notificationsEnabled ? <BellRing size={20} /> : <Bell size={20} />}
           </button>
-          <button onClick={() => navigate('/settings')} className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+          <button aria-label="Apri le impostazioni" onClick={() => navigate('/settings')} className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
             <Settings size={22} />
           </button>
         </div>
@@ -439,7 +439,7 @@ export default function Home() {
            </div>
            <div className="flex flex-col items-center justify-center bg-gradient-to-br from-[#f1ba17] to-yellow-600 rounded-2xl px-5 py-2.5 shadow-xl min-w-[80px]">
               <span className="text-3xl font-black text-black leading-none">{countdownDays}</span>
-              <span className="text-black/80 text-[10px] font-bold uppercase tracking-wider mt-1">{countdownDays === 1 ? 'giorno' : 'giorni'}</span>
+              <span className="text-black/80 text-[11px] font-bold uppercase tracking-wider mt-1">{countdownDays === 1 ? 'giorno' : 'giorni'}</span>
            </div>
         </div>
       )}
@@ -557,7 +557,7 @@ export default function Home() {
                       <div className="min-w-0 flex-1">
                         <p className="text-white font-semibold text-sm truncate">{a.athletes?.name} {a.athletes?.surname}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
                             {isEvent ? 'Evento' : category}
                           </span>
                           <p className="text-gray-500 text-xs truncate">{a.workouts?.title}</p>
@@ -565,10 +565,10 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
+                      <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">
                         {a.completed_date === todayStrRender ? 'Oggi' : 'Ieri'}
                       </p>
-                      <div className={`px-2 py-1 rounded-md border text-[10px] font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
+                      <div className={`px-2 py-1 rounded-md border text-[11px] font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
                         {a.status === 'completed' ? 'Fatto' : 'Da fare'}
                       </div>
                     </div>
@@ -636,8 +636,8 @@ export default function Home() {
                         </button>
                         {todayIsCustom && role === 'athlete' && (
                           <div className="flex items-center gap-2">
-                             <button onClick={(e) => { e.stopPropagation(); openEditAutonomous(todayWorkout); }} className="p-2 text-gray-400 hover:text-[#f1ba17] transition bg-[#111] rounded-full border border-[#333]" title="Modifica"><Edit size={16}/></button>
-                             <button onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(todayWorkout.id); }} className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-full border border-[#333]" title="Elimina"><Trash2 size={16}/></button>
+                             <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(todayWorkout); }} className="p-2 text-gray-400 hover:text-[#f1ba17] transition bg-[#111] rounded-full border border-[#333]" title="Modifica"><Edit size={16}/></button>
+                             <button aria-label="Elimina l'allenamento" onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(todayWorkout.id); }} className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-full border border-[#333]" title="Elimina"><Trash2 size={16}/></button>
                           </div>
                         )}
                       </div>
@@ -700,8 +700,8 @@ export default function Home() {
                     <div className="flex items-center gap-2">
                       {role === 'athlete' && isCustom && (
                         <>
-                          <button onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }} className="p-1.5 text-gray-500 hover:text-[#f1ba17] transition" title="Modifica"><Edit size={18}/></button>
-                          <button onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(w.id); }} className="p-1.5 text-gray-500 hover:text-red-500 transition" title="Elimina"><Trash2 size={18}/></button>
+                          <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }} className="p-1.5 text-gray-500 hover:text-[#f1ba17] transition" title="Modifica"><Edit size={18}/></button>
+                          <button aria-label="Elimina l'allenamento" onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(w.id); }} className="p-1.5 text-gray-500 hover:text-red-500 transition" title="Elimina"><Trash2 size={18}/></button>
                         </>
                       )}
                       <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-400 ml-1">
@@ -764,7 +764,7 @@ export default function Home() {
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">{autonomousForm.id ? 'Modifica Allenamento' : 'Allenamento Libero'}</h2>
-               <button onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
             </div>
             <div className="flex flex-col gap-3">
               <div>

@@ -68,7 +68,7 @@ export default function Invite() {
             <button type="submit" disabled={loading || !inviteCode} className="w-full flex items-center justify-center gap-2 bg-[#f1ba17] text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">{loading ? 'Verifica...' : 'Accedi'}{!loading && <ArrowRight size={18} />}</button>
           </form>
         </div>
-        <p className="text-xs text-gray-600 mt-6">Sei già registrato? <a href="/login" className="text-[#f1ba17] hover:underline">Accedi qui</a>.</p>
+        <p className="text-xs text-gray-400 mt-6">Sei già registrato? <a href="/login" className="text-[#f1ba17] hover:underline">Accedi qui</a>.</p>
       </div>
     </div>
   );
