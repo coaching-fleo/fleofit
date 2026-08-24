@@ -3,9 +3,11 @@
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
 > Ultimo aggiornamento: **24 agosto 2026**.
-> **Due branch attivi**: `main` = web app in produzione · `ios-version` = app per l'App Store (§1.1).
-> Sessione corrente su `ios-version`, ultimo commit `b5ee095 (added bunker mode)`.
-> Modifiche non ancora committate: `CLAUDE.md` (nuovo), `.github/workflows/db-backup.yml` (riscritto).
+> **Due branch attivi e DIVERGENTI**: `main` = web app in produzione · `ios-version` = app per
+> l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due branch).
+> Sessione corrente su `ios-version`, ultimo commit `5c02b81`, allineato con `origin/ios-version`.
+> Build **1.1.0 (3)** caricata su App Store Connect il 24/08/2026 dopo un rifiuto: stato e
+> correzioni in §9-ter.
 
 ---
 
@@ -52,28 +54,46 @@ Il progetto vive su **due branch con due prodotti diversi**, entrambi attivi:
 
 | Branch | Cos'è | Stato | Ultimo commit |
 |---|---|---|---|
-| **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi su Vercel | LIVE, non rompere | `1912ae5` — 13 mag 2026 |
-| **`ios-version`** | Versione nativa iOS/Capacitor, **da pubblicare sull'App Store** | branch di lavoro attivo | `b5ee095` — 18 giu 2026 |
+| **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi su Vercel | LIVE, non rompere | `8919bfd` — 8 giu 2026 |
+| **`ios-version`** | Versione nativa iOS/Capacitor, **in revisione sull'App Store** (§9-ter) | branch di lavoro attivo | `5c02b81` — 24 ago 2026 |
 
-### Rapporto tra i due
-`ios-version` è **18 commit avanti** e `main` non ha **nessun** commit che `ios-version` non abbia
-(`git rev-list --left-right --count origin/main...HEAD` → `0 18`). Non sono divergenti: `ios-version`
-contiene tutto `main` più il lavoro iOS. Quindi un merge sarebbe tecnicamente un fast-forward —
-ma **non va fatto a cuor leggero**: significherebbe mandare in produzione sul web ~15.000 righe di
-codice pensate per iOS (Capacitor, BLE, Apple Health, push FCM native, TV, modalità Bunker).
+### Rapporto tra i due: SONO DIVERGENTI
+Verificato il 24/08/2026 **dopo un `git fetch`**:
+`git rev-list --left-right --count origin/main...origin/ios-version` → **`41 21`**.
+`main` ha 41 commit che `ios-version` non ha, `ios-version` ne ha 21 che `main` non ha.
+**Un merge non è un fast-forward**: è un merge vero.
 
-### Cosa c'è solo su `ios-version` (assente dalla web app live)
-Timer guidato con beep, **TV Dashboard** (`/tv`, `tv_sessions`), **Live Coach Cam** (Presence,
-reazioni, walkie-talkie), **modalità Bunker** offline (`fleofit_offline_queue`), **generazione IA**
-(`ai-workout`), **Apple Health**, **fascia cardio BLE**, **RPE**, centro notifiche + badge,
-`privacy-policy.html`, tutta la cartella `ios/`.
+> ⚠️ Fino al 24/08/2026 questo documento affermava `0 18` e "non sono divergenti". Era **falso**:
+> il riferimento locale a `origin/main` era fermo a maggio e nessuno aveva fatto fetch. `main` non
+> è affatto abbandonato, è arrivato all'**8 giugno 2026**.
+> **Regola**: fare `git fetch` prima di qualunque affermazione sul rapporto fra i due branch.
+
+Peggio del conteggio: i due branch hanno lavorato **in parallelo sugli stessi file**. Fra il 15 e
+il 21 maggio `main` ha ricevuto una propria linea di sviluppo su `TVDashboard.jsx`,
+`CreateWorkout.jsx` e `WorkoutDetail.jsx` (TV, opzioni ergometri, distanze di corsa, fix PDF/story
+IG, beep del timer), cioè proprio i file più grandi del progetto, che `ios-version` ha modificato
+per conto suo. Un merge produrrà conflitti reali lì dentro, non banali da risolvere.
+
+### Cosa c'è davvero solo su `ios-version` (verificato su `origin/main` il 24/08/2026)
+Assenti da `main`: tutta la cartella `ios/`, `capacitor.config.ts`, `privacy-policy.html`,
+`src/pages/bluetooth.js` (fascia cardio BLE), `src/pages/health.js` (Apple Health),
+`supabase/functions/ai-workout/` (generazione IA), `src/lib/blockHints.js`, l'**RPE**, la
+**Live Coach Cam**, la **modalità Offline** (ex "Bunker"), push FCM native, centro notifiche + badge.
+
+Due correzioni rispetto a quanto scritto qui in passato:
+- ⚠️ **`TVDashboard.jsx` esiste anche su `main`.** La TV Dashboard non è esclusiva di `ios-version`:
+  esistono due implementazioni diverse, sviluppate in parallelo a maggio.
+- `main` **conosce** `Interval`, `Custom`, `Event` e `isAutonomous` (l'8 giugno ha ricevuto
+  "Coach can create custom workout"). Quel pezzo di incompatibilità non c'è più — resta solo l'RPE.
 
 ### ⚠️ Il database e le Edge Function sono CONDIVISI
 Entrambi i branch puntano allo **stesso progetto Supabase** (`riyqtcssllupakjtoehj`) e alle **stesse
 Edge Function deployate**. Non esiste un ambiente di staging. Conseguenze concrete:
 - Una **migrazione di schema** fatta per iOS colpisce subito la web app in produzione.
-- `send-reminders` è **una sola funzione deployata**: la versione su `ios-version` ha 237 righe in
-  più rispetto a quella su `main`. Qualunque versione sia deployata, serve entrambe le app.
+- `send-reminders` è **una sola funzione deployata**: 443 righe su `ios-version` contro 247 su
+  `main`, cioè 196 in più (misurate il 24/08/2026). Qualunque versione sia deployata, serve
+  entrambe le app. La lista `adminEmails` al suo interno va tenuta allineata a `ADMIN_EMAILS`
+  di `src/App.jsx` (§9 punto 7).
 - Il fix del backup (`db-backup.yml`) deve stare su `main` perché i cron di GitHub girano solo dal
   branch di default → **portare solo quel file**, non l'intero branch:
   `git checkout main && git checkout ios-version -- .github/workflows/db-backup.yml`
@@ -87,9 +107,6 @@ Edge Function deployate**. Non esiste un ambiente di staging. Conseguenze concre
   (`.update({ notes })`, `AthleteDetail.jsx:177`, `Home.jsx:199`, `WorkoutDetail.jsx:886`):
   se cancella il prefisso, **l'RPE è perso** e le statistiche iOS (RPE medio, carico settimanale)
   ricadono silenziosamente sul default 5.
-- Stesso discorso per i tipi introdotti dopo: `main` ha una conoscenza parziale del blocco
-  `Interval` e delle categorie `Custom`/`Event`.
-
 Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **retroportare
 `parseNotesAndRpe` su `main`** (anche solo in lettura, per non distruggere il dato).
 
@@ -145,8 +162,9 @@ Per testare su iPhone in dev live: scommentare `server.url` in `capacitor.config
 
 ## 3. Struttura dei file
 
-> Struttura del branch `ios-version`. Su `main` mancano `ios/`, `privacy-policy.html`,
-> `TVDashboard.jsx`, `bluetooth.js`, `health.js` e le Edge Function `ai-workout` (§1.1).
+> Struttura del branch `ios-version`. Su `main` mancano `ios/`, `capacitor.config.ts`,
+> `privacy-policy.html`, `bluetooth.js`, `health.js`, `src/lib/` e la Edge Function `ai-workout`.
+> ⚠️ `TVDashboard.jsx` **c'è anche su `main`**, in una versione diversa (§1.1).
 
 ```
 src/
@@ -156,6 +174,8 @@ src/
 ├─ App.css                     # ⚠️ boilerplate Vite residuo, NON usato — eliminabile
 ├─ supabaseClient.js           # createClient con URL + anon key hardcodati
 ├─ useTouchDrag.js             # hook drag&drop touch nativo (usato da CreateWorkout)
+├─ lib/
+│  └─ blockHints.js            # BLOCK_HINT: didascalie in chiaro dei tipi di blocco (§9-ter)
 ├─ components/
 │  ├─ Navbar.jsx               # bottom nav fissa, voci variabili per ruolo
 │  ├─ CustomModals.jsx         # CustomAlert + CustomConfirm (sostituiscono alert/confirm nativi)
@@ -350,7 +370,7 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
 | **IA / voce** | `#a855f7` (viola) | modale "Genera con IA" |
 | **Successo** | `green-500` Tailwind | workout completato |
 | **Live / errore** | `red-500/600` | Live Coach Cam, cardio BLE, eliminazioni |
-| **Offline** | `orange-500` | banner "Modalità Bunker" |
+| **Offline** | `orange-500` | banner "Modalità Offline" |
 | Testi | `white` → `gray-300` → `gray-400` → `gray-500` → `gray-600` | gerarchia discendente |
 
 > ⚠️ In `src/index.css` sono definiti i token `--color-brand`, `--color-bg`, `--color-surface`,
@@ -403,7 +423,7 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
 - **Completamento workout** → apre la **modale RPE**: slider 1-10 draggabile + note + pulsante
   **🍏 Apple Health** che appende durata/calorie/battiti medi alle note.
 - **Allenamento libero**: l'atleta crea un workout Custom autonomo con titolo, data e note.
-- **Modalità Bunker (offline)**: `@capacitor/network` rileva l'assenza di rete → banner arancione,
+- **Modalità Offline**: `@capacitor/network` rileva l'assenza di rete → banner arancione,
   le azioni finiscono in `localStorage.fleofit_offline_queue` e vengono sincronizzate al ritorno
   della linea. Cache read in `fleofit_cache_workouts_<uid>`, `fleofit_cache_w_<id>`, ecc.
 - **Profilo** (`/profile` → `AthleteDetail`): tab Workout / PR / Statistiche, vista lista o
@@ -472,6 +492,7 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
    `VoiceRecorder`, `AudioVisualizer`, `CustomAudioPlayer`, `TYPE_COLORS`, `ERGOMETERS`,
    il calcolo del tempo/carico settimanale e i beep WAV sono **ricopiati** in Home, WorkoutDetail,
    AthleteDetail, CreateWorkout e TVDashboard. Candidati naturali a `src/lib/` + `src/components/`.
+   `src/lib/` **esiste dal 24/08/2026** (`blockHints.js`): è il posto dove spostarli.
 2. **File morti verificati** (nessun import li referenzia): `src/pages/useTouchDrag.js`
    (duplicato di `src/useTouchDrag.js`, che è quello vero), `src/pages/patch.js`,
    `src/pages/Invite.jsx` (nessuna rotta), `src/App.css` (boilerplate Vite),
@@ -486,59 +507,92 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
 7. **`ADMIN_EMAILS` hardcodata** in `App.jsx` **e** ri-hardcodata nell'Edge Function `send-reminders`:
    se si aggiunge un admin va cambiata in **due** posti.
 8. **`COACHING_ID` hardcodato** (`0118e43f-…`) in due file.
-9. ~~Backup GitHub Action con lista tabelle obsoleta~~ → **risolto il 24/08/2026** (vedi §4).
-   Resta aperto: il file corretto non è ancora su `main`, quindi il cron notturno gira ancora con
-   la versione rotta (§1.1).
+9. ~~Backup GitHub Action con lista tabelle obsoleta~~ → **riscritto il 24/08/2026** (vedi §4),
+   committato in `79d146a` e pushato su `ios-version`.
+   **Resta aperto**: il file non è ancora su `main`, e gli scheduled workflow girano solo dal branch
+   di default → il cron notturno usa tuttora la versione rotta. Portare **solo quel file**:
+   `git checkout main && git checkout ios-version -- .github/workflows/db-backup.yml`
 9-bis. **Due app sullo stesso database senza staging** e la web app (`main`) che non capisce l'RPE:
    è il debito architetturale più serio del progetto. Dettagli e conseguenze in §1.1.
-10. **`cloud-sync`** invocata dal client (`health.js`) ma assente dal repo → la sincronizzazione
-    Strava/Garmin non è funzionante.
+10. ~~**`cloud-sync`** invocata dal client (`health.js`) ma assente dal repo~~ → `CloudSyncService`
+    **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
+    inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
+    non implementata (§10), ora senza codice morto a suggerire il contrario.
 11. Nessun test automatico, nessun TypeScript effettivo nel `src/` (tutto `.jsx`) anche se il build
     esegue `tsc -b`.
 
 ---
 
-## 9-ter. Rifiuti App Store — diagnosi 24/08/2026
+## 9-ter. App Store — rifiuto del 1.1.0 (2) e ri-sottomissione del 1.1.0 (3)
 
-La build 1.1.0 è stata respinta con **2.3.1(a) Hidden features** e **3.2.1(viii) Financial Services**.
-Scansione fatta sul commit `b5ee095`, incluso il bundle in `ios/App/App/public/assets/`.
+### Cronologia
+- **22 mag 2026** — caricata `1.1.0 (2)`. **Respinta** con **2.3.1(a) Hidden features** e
+  **3.2.1(viii) Financial Services**.
+- **24 ago 2026** — correzioni applicate nel commit `fc81404`, caricata `1.1.0 (3)`.
+  ⚠️ Il `pbxproj` era rimasto a `CURRENT_PROJECT_VERSION = 1` mentre su App Store Connect la (2)
+  era già bruciata: Xcode ha incrementato da solo a 3 in fase di distribuzione. Il progetto è stato
+  riallineato a 3 in `5c02b81`. **Prima di archiviare, controllare il build number reale su ASC**,
+  non fidarsi del pbxproj.
 
-- **3.2.1(viii) = falso positivo**, causa identificata: i tipi di blocco **`'Cash In'` / `'Cash Out'`**
-  (46 occorrenze letterali nel bundle spedito). Sono termini Hyrox, ma per lo scanner sono movimenti
-  di denaro; il segnale è rinforzato da `push_subscriptions`/`subscription` e da `invitation_codes`.
-  **DECISIONE DEL COMMITTENTE (24/08/2026): la terminologia NON si tocca.** "Cash In"/"Cash Out" sono
-  i termini tecnici Hyrox corretti e restano. Strategia scelta: **non rinominare, disambiguare** —
-  aggiungere una didascalia sotto ogni tipo di blocco (`BLOCK_HINT` in `CreateWorkout.jsx:237`,
-  `'Cash In'→'Blocco di apertura'`, `'Cash Out'→'Blocco di chiusura'`) nel picker
-  (`CreateWorkout.jsx:247-251`), nell'intestazione blocco (`:972`) e in `getBlockTitle()`
-  (`WorkoutDetail.jsx:90-121`, che alimenta anche PDF e story IG) + spiegazione esplicita nelle note
-  al revisore. `block.type` resta `'Cash In'` ovunque.
-  ⚠️ In ogni caso **non fare find&replace**: sono valori persistiti in
-  `workouts.sections.blocks[].type` (jsonb) e, nel legacy, chiavi `sections.cashIn`/`cashOut`;
-  il DB è condiviso con la web app in produzione.
-- **2.3.1(a) — causa accertata: l'account admin dato ad Apple era inerte.** Il ruolo coach non viene
-  dal DB ma da `ADMIN_EMAILS` **hardcoded nel JS compilato**; nel bundle spedito
-  (`ios/App/App/public/assets/*.js`) ci sono solo le 4 email personali, nessuna email di revisione.
-  Quindi al login del revisore `isAdmin` era `false` → o vedeva solo il lato atleta, o veniva
-  espulso da `signOut()` a `/login?error=unauthorized` (`App.jsx:185-223`). **Il ruolo coach in sé
-  non è una violazione**: gli accessi per ruolo sono leciti, devono solo essere raggiungibili.
-  Correzione: email di revisione in `App.jsx:29` **e** in `send-reminders/index.ts:259` (due liste),
-  utente creato su Supabase Auth **con riga `athletes` pre-creata** (altrimenti finisce in onboarding),
-  più dati demo. **Controllo obbligatorio prima dell'archive**:
-  `grep -c "<email-revisione>" dist/assets/*.js` deve dare ≥ 1.
-- Rinforzano 2.3.1(a): `NSSpeechRecognitionUsageDescription` dichiarato per una funzione che su iOS
-  non esiste (`CreateWorkout.jsx:349` è dentro `if (!Capacitor.isNativePlatform())`), e
-  `CloudSyncService` (`health.js:78`) che invoca la Edge Function inesistente `cloud-sync` e non è
-  richiamato da nessuna UI → codice dormiente.
-- Altro da ripulire: blocco `server` con `cleartext: true` in `capacitor.config.ts` (finisce nell'IPA),
-  blocchi commentati "OPZIONE COACH DISATTIVATA", `UIRequiredDeviceCapabilities` = `armv7` (deve
-  essere `arm64`), "Modalità Bunker" → "Modalità Offline".
-- Verificato **non** problematico: `hidden`/`unlock` sono classi Tailwind e `unlockAudio`; i file morti
-  non vengono bundlati (Vite li esclude); nessuna eccezione ATS; nessun codice di pagamento/IAP.
-- Se il rifiuto su 3.2.1(viii) si ripete: **non ricaricare una terza build in silenzio** — rispondere
-  in Resolution Center e chiedere una chiamata con App Review.
-- Documento operativo completo (reperti, note revisore, checklist):
-  artifact "Riammissione FLEOFIT" — https://claude.ai/code/artifact/b2b8e586-a617-4172-98dc-f06e2b34ce6a
+### 2.3.1(a) — causa accertata: l'account admin dato ad Apple era inerte
+Il ruolo coach non viene dal DB ma da `ADMIN_EMAILS` **hardcoded nel JS compilato**; nel bundle
+spedito a maggio c'erano solo le 4 email personali. Al login del revisore `isAdmin` era `false` →
+o vedeva solo il lato atleta, o veniva espulso da `signOut()` a `/login?error=unauthorized`
+(`App.jsx:185-223`). **Il ruolo coach in sé non è una violazione**: gli accessi per ruolo sono
+leciti, devono solo essere raggiungibili.
+
+> ⚠️ Corollario da ricordare: **che l'account esista su Supabase non significa nulla.** Può avere
+> tutti i permessi del mondo sul DB ed essere comunque `isAdmin = false`. Conta solo l'elenco
+> compilato dentro il bundle.
+
+### 3.2.1(viii) — falso positivo su "Cash In" / "Cash Out"
+46 occorrenze letterali nel bundle. Sono termini Hyrox (blocco di apertura e di chiusura), ma per
+lo scanner sono movimenti di denaro; il segnale è rinforzato da `push_subscriptions` e
+`invitation_codes`.
+**DECISIONE DEL COMMITTENTE (24/08/2026): la terminologia NON si tocca.** Strategia scelta:
+**non rinominare, disambiguare**. `block.type` resta `'Cash In'` ovunque.
+⚠️ **Mai fare find&replace**: sono valori persistiti in `workouts.sections.blocks[].type` (jsonb) e,
+nel legacy, chiavi `sections.cashIn`/`cashOut`; il DB è condiviso con la web app in produzione.
+
+### Correzioni applicate (commit `fc81404`)
+- `demo@fleofit.it` aggiunta a `ADMIN_EMAILS` (`src/App.jsx`) **e** alla lista gemella in
+  `send-reminders/index.ts` (§9 punto 7: sono due liste).
+- Nuovo `src/lib/blockHints.js` (`BLOCK_HINT`), didascalie affiancate al termine nel picker blocchi
+  e nell'intestazione blocco (`CreateWorkout.jsx`), nella scheda workout e nel PDF
+  (`WorkoutDetail.jsx`), e sulla TV (`TVDashboard.jsx`).
+- Rimossi: `NSSpeechRecognitionUsageDescription` (funzione inesistente su iOS), `CloudSyncService`
+  (codice dormiente), blocco `server`/`cleartext` da `capacitor.config.ts`, blocchi commentati
+  "OPZIONE COACH DISATTIVATA" (`App.jsx`, `Login.jsx`).
+- `UIRequiredDeviceCapabilities` da `armv7` ad `arm64`.
+- Toggle Settings → "Anteprima come atleta"; "Modalità Bunker" → "Modalità Offline".
+
+### Verifiche fatte sul binario spedito (24/08/2026)
+Fatte **dentro `App.app` dell'archivio caricato**, non sul sorgente: `demo@fleofit.it` presente nel
+bundle JS, didascalie presenti, zero occorrenze di `cloud-sync` e "Modalità Bunker", zero
+`cleartext` in `capacitor.config.json`, `arm64`, bundle id `it.federicoleo.fleofit` (non il `.dev`
+della configurazione Debug).
+
+> **Controllo obbligatorio prima di ogni archive**, è quello che è mancato a maggio:
+> `grep -l "demo@fleofit.it" dist/assets/*.js` deve stampare un file.
+> Attenzione a `grep -c` su più file: stampa una riga per file (quasi tutte `:0`) ed esce con
+> codice 1 quando non trova nulla — si legge come un fallimento e non lo è.
+
+### Cosa non sta nel repo e va fatto a mano
+Account `demo@fleofit.it` su Supabase Auth **con riga `athletes` pre-creata** (senza, il revisore
+finisce in onboarding), dati demo perché la dashboard coach non si apra vuota, secondo account
+atleta, redeploy di `send-reminders`, note per il revisore, risposta nel **Resolution Center**.
+
+### Verificato non problematico
+`hidden`/`unlock` sono classi Tailwind e `unlockAudio`; i file morti non vengono bundlati (Vite li
+esclude); nessuna eccezione ATS; nessun codice di pagamento/IAP; `ITSAppUsesNonExemptEncryption`
+già a `false`.
+
+### Se il rifiuto su 3.2.1(viii) si ripete
+**Non ricaricare una terza build in silenzio** — rispondere in Resolution Center e chiedere una
+chiamata con App Review.
+
+Documento operativo completo (reperti, note revisore, checklist):
+artifact "Riammissione FLEOFIT" — https://claude.ai/code/artifact/b2b8e586-a617-4172-98dc-f06e2b34ce6a
 
 ---
 
