@@ -1,35 +1,190 @@
-name: Daily Supabase Backup
+name: Backup giornaliero Supabase
+
+# ATTENZIONE: GitHub esegue gli scheduled workflow SOLO dal branch di default (main).
+# Se modifichi questo file su un altro branch, il backup notturno continua a girare
+# con la versione presente su main finché non fai il merge.
 
 on:
   schedule:
+    # 02:00 UTC = 04:00 in Italia con l'ora legale, 03:00 con l'ora solare.
     - cron: '0 2 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-backup
+  cancel-in-progress: false
+
 jobs:
   backup:
+    name: Esporta le tabelle Supabase
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      # ── Tabelle da salvare ────────────────────────────────────────────────
+      # Se aggiungi una tabella al database, aggiungila anche qui.
+      # Escluse di proposito:
+      #   push_subscriptions -> token dispositivo, non ripristinabili e a rotazione
+      #   tv_sessions        -> effimera, si rigenera a ogni sessione TV
+      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications'
+
+      # Tabelle che non devono MAI essere vuote o mancanti:
+      # se lo sono, il backup viene considerato non valido e il job fallisce.
+      REQUIRED_TABLES: 'athletes workouts athlete_workouts'
+
+      # La REST API di Supabase tronca le risposte troppo grandi:
+      # scarichiamo a pagine finché non arriva una pagina incompleta.
+      PAGE_SIZE: '1000'
 
     steps:
-      - name: Export tables via Supabase REST API
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      - name: Verifica i secret
         run: |
-          mkdir -p backup
-          TABLES=("athletes" "athlete_photos" "athlete_workouts" "workouts" "workout_logs")
-          for TABLE in "${TABLES[@]}"; do
-            curl -s \
-              -H "apikey: $SUPABASE_SERVICE_KEY" \
-              -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
-              "$SUPABASE_URL/rest/v1/$TABLE?select=*" \
-              -o "backup/$TABLE.json"
-            echo "Exported $TABLE"
-          done
-          zip -r "backup_$(date +%Y-%m-%d).zip" backup/
+          set -euo pipefail
+          missing=0
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            echo "::error::Secret SUPABASE_URL mancante nelle impostazioni del repository"
+            missing=1
+          fi
+          if [ -z "${SUPABASE_SERVICE_KEY:-}" ]; then
+            echo "::error::Secret SUPABASE_SERVICE_KEY mancante nelle impostazioni del repository"
+            missing=1
+          fi
+          exit "$missing"
 
-      - name: Upload artifact
+      - name: Esporta le tabelle via REST API
+        id: export
+        run: |
+          set -euo pipefail
+
+          BASE_URL="${SUPABASE_URL%/}"                    # toglie lo slash finale se presente
+          STAMP="$(date -u +%Y-%m-%d_%H-%M-%S)"
+          echo "stamp=$STAMP" >> "$GITHUB_OUTPUT"
+
+          mkdir -p backup
+          TMP="$(mktemp -d)"
+          REPORT="$TMP/report.tsv"                        # tabella <TAB> righe <TAB> stato
+          : > "$REPORT"
+
+          for TABLE in $TABLES; do
+            echo "::group::$TABLE"
+            ACC="$TMP/$TABLE.pages"
+            : > "$ACC"
+            offset=0
+            rows=0
+            status='ok'
+
+            while :; do
+              PAGE="$TMP/page.json"
+              http="$(curl -sS -o "$PAGE" -w '%{http_code}' \
+                --retry 3 --retry-delay 5 --retry-connrefused \
+                -H "apikey: $SUPABASE_SERVICE_KEY" \
+                -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+                -H "Accept: application/json" \
+                "$BASE_URL/rest/v1/$TABLE?select=*&order=id.asc&limit=$PAGE_SIZE&offset=$offset")"
+
+              # Tabella inesistente: avviso e passo oltre, senza far fallire tutto il backup.
+              if [ "$http" = "404" ]; then
+                echo "::warning::La tabella '$TABLE' non esiste nel database: la salto"
+                status='missing'
+                break
+              fi
+
+              if [ "$http" != "200" ] && [ "$http" != "206" ]; then
+                echo "::error::$TABLE — la REST API ha risposto HTTP $http"
+                head -c 500 "$PAGE" || true
+                exit 1
+              fi
+
+              # Un errore PostgREST arriva come oggetto JSON, non come array:
+              # senza questo controllo finirebbe dentro il backup come se fosse un dato valido.
+              if ! jq -e 'type == "array"' "$PAGE" > /dev/null 2>&1; then
+                echo "::error::$TABLE — risposta non valida, atteso un array JSON"
+                head -c 500 "$PAGE" || true
+                exit 1
+              fi
+
+              n="$(jq 'length' "$PAGE")"
+              cat "$PAGE" >> "$ACC"
+              printf '\n' >> "$ACC"
+              rows=$((rows + n))
+              echo "  ... $rows righe"
+
+              if [ "$n" -lt "$PAGE_SIZE" ]; then
+                break
+              fi
+              offset=$((offset + PAGE_SIZE))
+            done
+
+            if [ "$status" = 'ok' ]; then
+              jq -s 'add // []' "$ACC" > "backup/$TABLE.json"
+              echo "OK $TABLE: $rows righe"
+            fi
+
+            printf '%s\t%s\t%s\n' "$TABLE" "$rows" "$status" >> "$REPORT"
+            echo "::endgroup::"
+          done
+
+          # ── Controllo di sanità: le tabelle critiche non possono essere vuote ──
+          fail=0
+          for TABLE in $REQUIRED_TABLES; do
+            line="$(awk -F'\t' -v t="$TABLE" '$1 == t' "$REPORT" || true)"
+            rows="$(printf '%s' "$line" | cut -f2)"
+            state="$(printf '%s' "$line" | cut -f3)"
+            if [ "$state" != 'ok' ] || [ "${rows:-0}" -eq 0 ]; then
+              echo "::error::'$TABLE' è vuota o mancante: il backup non è attendibile"
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+
+          # ── Manifest: quante righe per tabella, per controllare a colpo d'occhio ──
+          jq -Rn \
+            --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg run_number "${GITHUB_RUN_NUMBER}" \
+            --arg commit "${GITHUB_SHA}" \
+            '[inputs | split("\t")] as $r
+             | {
+                 generated_at: $generated_at,
+                 run_number:   $run_number,
+                 commit:       $commit,
+                 row_counts:   ([$r[] | select(.[2] == "ok")      | {(.[0]): (.[1] | tonumber)}] | add // {}),
+                 missing:      [$r[] | select(.[2] == "missing")  | .[0]]
+               }' < "$REPORT" > backup/_manifest.json
+
+          zip -qr "supabase_backup_$STAMP.zip" backup/
+          echo "Archivio creato: supabase_backup_$STAMP.zip"
+
+          # ── Riepilogo leggibile nella pagina del run ──
+          {
+            echo "### Backup Supabase — $STAMP UTC"
+            echo ""
+            echo "| Tabella | Righe | Stato |"
+            echo "|---|---:|---|"
+            while IFS=$'\t' read -r t r s; do
+              if [ "$s" = 'ok' ]; then
+                echo "| \`$t\` | $r | OK |"
+              else
+                echo "| \`$t\` | — | NON TROVATA |"
+              fi
+            done < "$REPORT"
+            echo ""
+            echo "_Nota: i file in Storage (\`athlete-photos\`, \`voice-notes\`) non sono inclusi._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Carica l'archivio come artifact
         uses: actions/upload-artifact@v4
         with:
-          name: supabase-backup-${{ github.run_number }}
-          path: backup_*.zip
+          name: supabase-backup-${{ steps.export.outputs.stamp }}
+          path: supabase_backup_*.zip
+          # 90 giorni è il massimo per i repo pubblici; su repo privato puoi alzarlo
+          # fino a 400 in Settings > Actions > General > Artifact retention.
           retention-days: 90
+          if-no-files-found: error
