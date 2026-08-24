@@ -32,7 +32,7 @@ export default function CustomDatePicker({ date, onChange, placeholder = "Selezi
 
   return (
     <>
-      <button
+      <button aria-label="Scegli una data"
         type="button"
         onClick={() => {
           setCurrentMonth(date && isValid(parseISO(date)) ? parseISO(date) : new Date())
@@ -50,11 +50,11 @@ export default function CustomDatePicker({ date, onChange, placeholder = "Selezi
         <div className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setIsOpen(false)}>
           <div className="bg-[#1e1e1e] border border-[#333] rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <button type="button" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 rounded-xl bg-[#2a2a2a] text-gray-400 hover:text-white hover:bg-[#f1ba17] hover:text-black transition">
+              <button aria-label="Mese precedente" type="button" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 rounded-xl bg-[#2a2a2a] text-gray-400 hover:text-white hover:bg-[#f1ba17] hover:text-black transition">
                 <ChevronLeft size={20} />
               </button>
               <span className="text-white font-bold text-lg capitalize">{format(currentMonth, 'MMMM yyyy', { locale: it })}</span>
-              <button type="button" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 rounded-xl bg-[#2a2a2a] text-gray-400 hover:text-white hover:bg-[#f1ba17] hover:text-black transition">
+              <button aria-label="Mese successivo" type="button" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 rounded-xl bg-[#2a2a2a] text-gray-400 hover:text-white hover:bg-[#f1ba17] hover:text-black transition">
                 <ChevronRight size={20} />
               </button>
             </div>

@@ -105,7 +105,7 @@ export default function Calendar() {
   }
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       {/* BRAND HEADER */}
       <div className="mb-6 mt-4">
         <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
@@ -117,26 +117,26 @@ export default function Calendar() {
           {format(currentMonth, 'MMMM yyyy', { locale: it })}
         </h1>
         <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
+          <button aria-label="Mese precedente" onClick={prevMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
             <ChevronLeft size={18} />
           </button>
           <button onClick={() => setCurrentMonth(new Date())} className="px-3 py-1.5 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white text-sm transition">
             Oggi
           </button>
-          <button onClick={nextMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
+          <button aria-label="Mese successivo" onClick={nextMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
             <ChevronRight size={18} />
           </button>
           
           <div className="w-px h-6 bg-[#333] mx-1"></div>
 
-          <button 
+          <button aria-label="Cerca nell'archivio workout" 
             onClick={() => navigate('/archive')}
             className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition"
             title="Cerca nel calendario"
           >
             <Search size={18} />
           </button>
-          <button 
+          <button aria-label="Aggiungi un evento o una gara" 
             onClick={() => setEventModalOpen(true)}
             className="p-2 rounded-xl bg-[#f1ba17] text-black hover:brightness-110 transition shadow-sm"
             title="Aggiungi Evento"
@@ -149,7 +149,7 @@ export default function Calendar() {
       {/* GIORNI SETTIMANA */}
       <div className="grid grid-cols-7 mb-2">
         {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => (
-          <div key={i} className="text-center text-gray-600 text-xs font-medium py-1">{d}</div>
+          <div key={i} className="text-center text-gray-400 text-xs font-medium py-1">{d}</div>
         ))}
       </div>
 
@@ -209,7 +209,7 @@ export default function Calendar() {
           </div>
         ) : dayWorkouts.length === 0 ? (
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 text-center">
-            <p className="text-gray-600 text-sm">Nessun workout programmato</p>
+            <p className="text-gray-400 text-sm">Nessun workout programmato</p>
             {role !== 'athlete' && (
               <button onClick={() => navigate(`/create?date=${format(selectedDay, 'yyyy-MM-dd')}`)}
                 className="mt-3 text-[#f1ba17] text-sm font-medium hover:brightness-110">
@@ -257,7 +257,7 @@ export default function Calendar() {
                           </span>
                         ))}
                         {exList.length > 4 && (
-                          <span className="text-xs text-gray-600">+{exList.length - 4}</span>
+                          <span className="text-xs text-gray-400">+{exList.length - 4}</span>
                         )}
                       </div>
                     )
@@ -320,7 +320,7 @@ function EventModal({ athleteId, onClose, onSaved }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Nuovo Evento / Gara</p>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
         </div>
         <div className="p-5 flex flex-col gap-4">
           <div>

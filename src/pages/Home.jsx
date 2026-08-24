@@ -15,6 +15,7 @@ import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice
 import { Badge } from '@capawesome/capacitor-badge'
 import { BluetoothService } from './bluetooth'
 import { Network } from '@capacitor/network'
+import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 
 const parseNotesAndRpe = (fullNote) => {
   if (!fullNote) return { rpe: '5', text: '' };
@@ -640,10 +641,15 @@ setNotifications(prev => {
 
   const handleSaveAutonomous = async () => {
     setSavingAutonomous(true)
+    const titoloFinale = titoloOppureGenerato(
+      autonomousForm.title,
+      autonomousForm.date,
+      await titoliDelGiorno(supabase, autonomousForm.date)
+    )
     try {
       if (autonomousForm.id) {
         const { error: wError } = await supabase.from('workouts').update({
-          title: autonomousForm.title,
+          title: titoloFinale,
           date: autonomousForm.date
         }).eq('id', autonomousForm.id)
         if (wError) throw wError
@@ -655,7 +661,7 @@ setNotifications(prev => {
         if (awError) throw awError
       } else {
         const { data: newW, error: wError } = await supabase.from('workouts').insert({
-          title: autonomousForm.title,
+          title: titoloFinale,
           date: autonomousForm.date,
           sections: { category: 'Custom', isAutonomous: true }
         }).select().single()
@@ -673,7 +679,7 @@ setNotifications(prev => {
       
         if (role === 'athlete') {
           supabase.functions.invoke('send-reminders', {
-            body: { mode: 'coach_notification', action: 'custom_workout', athleteName: userName, workoutTitle: autonomousForm.title, route: `/workout/${newW.id}?athlete_id=${user.id}` }
+            body: { mode: 'coach_notification', action: 'custom_workout', athleteName: userName, workoutTitle: titoloFinale, route: `/workout/${newW.id}?athlete_id=${user.id}` }
           }).catch(console.error)
         }
       }
@@ -709,7 +715,7 @@ setNotifications(prev => {
   };
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       {/* Header */}
       <div className="mb-6 mt-4 flex items-start justify-between">
         <div>
@@ -733,9 +739,9 @@ setNotifications(prev => {
           )}
           <button onClick={openNotifications} className="relative w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0" title="Centro Notifiche">
             <Bell size={20} />
-            {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-[#1e1e1e]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+            {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[11px] font-bold rounded-full border-2 border-[#1e1e1e]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
           </button>
-          <button onClick={() => navigate('/settings')} className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+          <button aria-label="Apri le impostazioni" onClick={() => navigate('/settings')} className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
             <Settings size={22} />
           </button>
         </div>
@@ -748,7 +754,7 @@ setNotifications(prev => {
             <WifiOff size={24} className="text-orange-500" />
             <div>
               <p className="text-orange-500 text-xs font-bold uppercase tracking-wider">Modalità Offline</p>
-              <p className="text-orange-500/80 text-[10px] font-medium leading-tight">Puoi allenarti e salvare. Sincronizzeremo tutto appena torna la linea.</p>
+              <p className="text-orange-500/80 text-[11px] font-medium leading-tight">Puoi allenarti e salvare. Sincronizzeremo tutto appena torna la linea.</p>
             </div>
           </div>
         </div>
@@ -778,7 +784,7 @@ setNotifications(prev => {
            </div>
            <div className="flex flex-col items-center justify-center bg-gradient-to-br from-[#f1ba17] to-yellow-600 rounded-2xl px-5 py-2.5 shadow-xl min-w-[80px]">
               <span className="text-3xl font-black text-black leading-none">{countdownDays}</span>
-              <span className="text-black/80 text-[10px] font-bold uppercase tracking-wider mt-1">{countdownDays === 1 ? 'giorno' : 'giorni'}</span>
+              <span className="text-black/80 text-[11px] font-bold uppercase tracking-wider mt-1">{countdownDays === 1 ? 'giorno' : 'giorni'}</span>
            </div>
         </div>
       )}
@@ -866,15 +872,15 @@ setNotifications(prev => {
                 </div>
                 <div className="flex-1 grid grid-cols-3 gap-3">
                   <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Tempo</p>
+                    <p className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">Tempo</p>
                     <p className="text-white font-black text-2xl">{weeklyStats.time}<span className="text-sm font-medium text-gray-500 ml-0.5">m</span></p>
                   </div>
                   <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Workout Completati</p>
+                    <p className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">Workout Completati</p>
                     <p className="text-[#f1ba17] font-black text-2xl">{weeklyStats.completed}</p>
                   </div>
                   <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">RPE</p>
+                    <p className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">RPE</p>
                     <p className="text-white font-black text-2xl">{weeklyStats.avgRpe}<span className="text-sm font-medium text-gray-500 ml-0.5">/10</span></p>
                   </div>
                 </div>
@@ -969,7 +975,7 @@ setNotifications(prev => {
                       <div className="min-w-0 flex-1">
                         <p className="text-white font-semibold text-sm truncate">{a.athletes?.name} {a.athletes?.surname}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
                             {isEvent ? 'Evento' : category}
                           </span>
                           <p className="text-gray-500 text-xs truncate">{a.workouts?.title}</p>
@@ -977,10 +983,10 @@ setNotifications(prev => {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
+                      <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">
                         {a.completed_date === todayStrRender ? 'Oggi' : 'Ieri'}
                       </p>
-                      <div className={`px-2 py-1 rounded-md border text-[10px] font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
+                      <div className={`px-2 py-1 rounded-md border text-[11px] font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
                         {a.status === 'completed' ? 'Fatto' : 'Da fare'}
                       </div>
                     </div>
@@ -1049,8 +1055,8 @@ setNotifications(prev => {
                         </button>
                         {todayIsAuto && role === 'athlete' && (
                           <div className="flex items-center gap-2">
-                             <button onClick={(e) => { e.stopPropagation(); openEditAutonomous(todayWorkout); }} className="p-2 text-gray-400 hover:text-[#f1ba17] transition bg-[#111] rounded-full border border-[#333]" title="Modifica"><Edit size={16}/></button>
-                             <button onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(todayWorkout.id); }} className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-full border border-[#333]" title="Elimina"><Trash2 size={16}/></button>
+                             <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(todayWorkout); }} className="p-2 text-gray-400 hover:text-[#f1ba17] transition bg-[#111] rounded-full border border-[#333]" title="Modifica"><Edit size={16}/></button>
+                             <button aria-label="Elimina l'allenamento" onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(todayWorkout.id); }} className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-full border border-[#333]" title="Elimina"><Trash2 size={16}/></button>
                           </div>
                         )}
                       </div>
@@ -1113,8 +1119,8 @@ setNotifications(prev => {
                     <div className="flex items-center gap-2">
                       {role === 'athlete' && isAuto && (
                         <>
-                          <button onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }} className="p-1.5 text-gray-500 hover:text-[#f1ba17] transition" title="Modifica"><Edit size={18}/></button>
-                          <button onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(w.id); }} className="p-1.5 text-gray-500 hover:text-red-500 transition" title="Elimina"><Trash2 size={18}/></button>
+                          <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }} className="p-1.5 text-gray-500 hover:text-[#f1ba17] transition" title="Modifica"><Edit size={18}/></button>
+                          <button aria-label="Elimina l'allenamento" onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(w.id); }} className="p-1.5 text-gray-500 hover:text-red-500 transition" title="Elimina"><Trash2 size={18}/></button>
                         </>
                       )}
                       <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-400 ml-1">
@@ -1208,7 +1214,7 @@ setNotifications(prev => {
                 )}
                            <div className="w-px h-4 bg-[#333] ml-1 mr-0.5"></div>
 
-                <button onClick={closeNotifications} className="text-gray-500 hover:text-white"><X size={20} /></button>
+                <button aria-label="Chiudi le notifiche" onClick={closeNotifications} className="text-gray-500 hover:text-white"><X size={20} /></button>
               </div>
             </div>
             <div className="overflow-y-auto p-4 flex flex-col gap-2 flex-1 hide-scrollbar">
@@ -1237,7 +1243,7 @@ setNotifications(prev => {
                   }} className={`p-4 rounded-2xl cursor-pointer transition border ${notif.is_read ? 'bg-[#111] border-[#333] opacity-70' : 'bg-[#2a2a2a] border-[#f1ba17]/30 hover:border-[#f1ba17]'}`}>
                     <div className="flex justify-between items-start gap-2 mb-1">
                       <p className={`font-bold text-base ${notif.is_read ? 'text-gray-300' : 'text-white'}`}>{notif.title}</p>
-                      <p className="text-[10px] text-gray-500 whitespace-nowrap pt-1">{format(parseISO(notif.created_at), 'd MMM HH:mm', { locale: it })}</p>
+                      <p className="text-[11px] text-gray-500 whitespace-nowrap pt-1">{format(parseISO(notif.created_at), 'd MMM HH:mm', { locale: it })}</p>
                     </div>
                     <p className={`text-sm leading-snug line-clamp-2 break-words ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>{notif.message}</p>
  </div>
@@ -1284,16 +1290,16 @@ setNotifications(prev => {
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">{autonomousForm.id ? 'Modifica Allenamento' : 'Allenamento Libero'}</h2>
-               <button onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
             </div>
             <div className="flex flex-col gap-3">
               <div>
-                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo</label>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-gray-500 font-normal">(facoltativo)</span></label>
                 <input 
                   className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
                   value={autonomousForm.title}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
-                  placeholder="Es. Corsa 5km, Calcetto..."
+                  placeholder={generaTitolo(autonomousForm.date)}
                 />
               </div>
               <div>
@@ -1316,7 +1322,7 @@ setNotifications(prev => {
               </div>
               <button 
                 onClick={handleSaveAutonomous}
-                disabled={!autonomousForm.title || savingAutonomous}
+                disabled={savingAutonomous}
                 className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
               >
                 {savingAutonomous ? 'Salvataggio...' : 'Conferma'}
@@ -1496,7 +1502,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
               )
             })}
           </div>
-          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-gray-500 mt-1">
+          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-1">
             <span>Leggero</span>
             <span>Estremo</span>
           </div>
@@ -1507,7 +1513,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
             <button 
               onClick={handleHealthSync} 
               disabled={syncingHealth}
-              className="text-[10px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-md border border-[#444] transition disabled:opacity-50"
+              className="text-[11px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-md border border-[#444] transition disabled:opacity-50"
             >
               {syncingHealth ? 'Sincro in corso...' : '🍏 Apple Health'}
             </button>
@@ -1570,7 +1576,7 @@ function LiveSpectatorModal({ athlete, onClose }) {
       <div className="bg-[#1e1e1e] border border-red-500/30 rounded-3xl w-full max-w-sm flex flex-col overflow-hidden shadow-2xl shadow-red-500/10 animate-in fade-in zoom-in-[0.96] duration-300">
         <div className="bg-red-600 p-4 flex items-center justify-between">
           <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-white animate-pulse"></div><p className="text-white font-bold">LIVE: {athlete.athleteName}</p></div>
-          <button onClick={onClose} className="text-white/80 hover:text-white"><X size={20}/></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-white/80 hover:text-white"><X size={20}/></button>
         </div>
         <div className="p-6 flex flex-col items-center justify-center min-h-[220px] relative">
           {timerState?.heartRate && (
@@ -1833,10 +1839,10 @@ function VoiceRecorder({ onSave, onCancel }) {
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
-              <button onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
+              <button aria-label="Annulla la registrazione" onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
                 <Trash2 size={16} />
               </button>
-              <button onClick={stopRecordingAndSave} className="w-9 h-9 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
+              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-9 h-9 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
                 <Square size={14} fill="currentColor" />
               </button>
             </div>

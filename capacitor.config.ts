@@ -14,7 +14,10 @@ const config: CapacitorConfig = {
       overlaysWebView: true
     },
     Keyboard: {
-      resize: 'none'
+      // 'native' fa rimpicciolire la webview quando la tastiera sale: senza,
+      // i campi dentro le modali centrate finiscono sotto la tastiera e non
+      // sono più raggiungibili (ExercisePicker, form atleta, note).
+      resize: 'native'
     }
   }
 };

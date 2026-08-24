@@ -512,7 +512,7 @@ export default function TVDashboard() {
             <div className={`p-4 bg-[#111] border-2 border-[#333] rounded-full transition shadow-2xl ${audioUnlocked ? 'text-[#f1ba17]' : 'text-red-500 animate-pulse'}`} title="Suoni TV">
               {audioUnlocked ? <Volume2 size={32} /> : <VolumeX size={32} />}
             </div>
-            <button onClick={() => setRotated(!rotated)} className="p-4 bg-[#111] border-2 border-[#333] rounded-full text-gray-400 hover:text-white transition shadow-2xl">
+            <button aria-label="Ruota lo schermo" onClick={() => setRotated(!rotated)} className="p-4 bg-[#111] border-2 border-[#333] rounded-full text-gray-400 hover:text-white transition shadow-2xl">
               <RotateCw size={32} />
             </button>
           </div>
@@ -627,7 +627,7 @@ export default function TVDashboard() {
               <div className={`p-4 bg-[#111] border-2 border-[#333] rounded-full transition shadow-2xl ${audioUnlocked ? 'text-[#f1ba17]' : 'text-red-500 animate-pulse'}`} title="Suoni TV">
                 {audioUnlocked ? <Volume2 size={36} /> : <VolumeX size={36} />}
               </div>
-              <button onClick={() => setRotated(!rotated)} className="p-4 bg-[#111] border-2 border-[#333] rounded-full text-gray-400 hover:text-white transition" title="Ruota Orientamento">
+              <button aria-label="Ruota lo schermo" onClick={() => setRotated(!rotated)} className="p-4 bg-[#111] border-2 border-[#333] rounded-full text-gray-400 hover:text-white transition" title="Ruota Orientamento">
                 <RotateCw size={36} />
               </button>
               <h1 className="text-6xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span> TV</h1>

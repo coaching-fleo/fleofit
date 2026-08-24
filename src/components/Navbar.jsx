@@ -6,7 +6,7 @@ export default function Navbar() {
   const { role } = useAuth()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#222222] border-t border-[#333] flex justify-around items-center h-16 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-[#222222] border-t border-[#333] flex justify-around items-center z-50 h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)]">
       <NavLink to="/" className={({ isActive }) =>
         `flex flex-col items-center gap-1 text-xs ${isActive ? 'text-[#f1ba17]' : 'text-gray-400'}`
       }>

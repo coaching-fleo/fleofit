@@ -226,11 +226,11 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition relative overflow-hidden">
       
       {/* SCHERMATA WELCOME */}
       <div 
-        className={`absolute inset-0 flex flex-col items-center justify-between px-6 pb-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] ${showForm ? 'pointer-events-none' : ''}`}
+        className={`absolute inset-0 flex flex-col items-center justify-between px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1.5rem)] ${showForm ? 'pointer-events-none' : ''}`}
         style={{
           transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
           transform: showForm ? 'translateY(-50px)' : 'translateY(0)',

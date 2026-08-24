@@ -21,6 +21,7 @@ import { BluetoothService } from './bluetooth'
 import { Network } from '@capacitor/network'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { blockHint } from '../lib/blockHints'
+import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 
 const TYPE_COLORS = {
   'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
@@ -709,9 +710,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
   const handleSaveAutonomous = async () => {
     setSavingAutonomous(true)
+    const titoloFinale = titoloOppureGenerato(
+      autonomousForm.title,
+      autonomousForm.date,
+      await titoliDelGiorno(supabase, autonomousForm.date)
+    )
     try {
       if (autonomousForm.id) {
-        const { error: wError } = await supabase.from('workouts').update({ title: autonomousForm.title, date: autonomousForm.date }).eq('id', autonomousForm.id)
+        const { error: wError } = await supabase.from('workouts').update({ title: titoloFinale, date: autonomousForm.date }).eq('id', autonomousForm.id)
         if (wError) throw wError
 
         if (autonomousForm.awId) {
@@ -1228,9 +1234,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   }
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
           <ChevronLeft size={22} className="-ml-0.5" />
         </button>
         <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
@@ -1243,7 +1249,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             <WifiOff size={24} className="text-orange-500" />
             <div>
               <p className="text-orange-500 text-xs font-bold uppercase tracking-wider">Modalità Offline</p>
-              <p className="text-orange-500/80 text-[10px] font-medium leading-tight">Puoi allenarti e salvare. Sincronizzeremo tutto appena torna la linea.</p>
+              <p className="text-orange-500/80 text-[11px] font-medium leading-tight">Puoi allenarti e salvare. Sincronizzeremo tutto appena torna la linea.</p>
             </div>
           </div>
         </div>
@@ -1304,7 +1310,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               </button>
             )}
             {(role !== 'athlete' || isAuto) && (
-              <button onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl" title="Elimina">
+              <button aria-label="Elimina il workout" onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl" title="Elimina">
                 <Trash2 size={14} />
               </button>
             )}
@@ -1476,7 +1482,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Note Atleta (${athleteNote.athleteName})`} color="border-[#3b82f6]/40">
           {athleteNote.rpe && athleteNote.rpe !== '5' && (
             <div className="mb-2 inline-flex items-center gap-1.5 bg-[#111] px-2 py-1 rounded border border-[#333]">
-              <span className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Sforzo percepito:</span>
+              <span className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">Sforzo percepito:</span>
               <span className={`text-xs font-bold ${getRpeColorText(parseInt(athleteNote.rpe))}`}>{athleteNote.rpe}/10</span>
             </div>
           )}
@@ -1519,7 +1525,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                       {a.status === 'completed' ? 'Fatto' : 'Da fare'}
                     </div>
                     {role === 'admin' && (
-                      <button 
+                      <button aria-label="Rimuovi l'assegnazione" 
                         onClick={(e) => { e.stopPropagation(); handleRemoveAssignment(a.id); }}
                         className="p-1.5 text-gray-500 hover:text-red-500 transition rounded-lg hover:bg-[#111]"
                         title="Rimuovi assegnazione"
@@ -1567,7 +1573,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
       {/* Share2 CARD (nascosta, usata per screenshot) */}
       <div className="mt-12">
-        <p className="text-gray-600 text-xs mb-4 font-medium text-center uppercase tracking-wider">Anteprima Sticker per Instagram</p>
+        <p className="text-gray-400 text-xs mb-4 font-medium text-center uppercase tracking-wider">Anteprima Sticker per Instagram</p>
         <div className="flex justify-center pb-8">
           <div ref={igRef} style={{
             width: '420px',
@@ -1713,7 +1719,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg">Assegna Workout</p>
-              <button onClick={() => { setAssignModalOpen(false); setSelectedAthletes([]); setAssignStep(1); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
+              <button aria-label="Chiudi" onClick={() => { setAssignModalOpen(false); setSelectedAthletes([]); setAssignStep(1); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
              </div>
             
             {assignStep === 1 ? (
@@ -1802,16 +1808,16 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">Modifica Allenamento Libero</h2>
-               <button onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
             </div>
             <div className="flex flex-col gap-3">
               <div>
-                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo</label>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-gray-500 font-normal">(facoltativo)</span></label>
                 <input 
                   className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
                   value={autonomousForm.title}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
-                  placeholder="Es. Corsa 5km, Calcetto..."
+                  placeholder={generaTitolo(autonomousForm.date)}
                 />
               </div>
               <div>
@@ -1834,7 +1840,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               </div>
               <button 
                 onClick={handleSaveAutonomous}
-                disabled={!autonomousForm.title || savingAutonomous}
+                disabled={savingAutonomous}
                 className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
               >
                 {savingAutonomous ? 'Salvataggio...' : 'Conferma'}
@@ -1905,7 +1911,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <div className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isTvInputFocused ? '-translate-y-32' : ''}`}>
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white flex items-center gap-2"><MonitorUp size={24} className="text-[#f1ba17]" /> Trasmetti in TV</h2>
-               <button onClick={() => setTvModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setTvModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
             </div>
             <p className="text-gray-400 text-sm text-left">
               Apri il browser della tua Fire Stick o Smart TV, vai su <strong className="text-white">fleofit.vercel.app/tv</strong> e inserisci qui sotto il codice che vedi a schermo.
@@ -2334,7 +2340,7 @@ return createPortal(
       <div className="flex-1 min-w-0 pr-4 cursor-pointer" onClick={onMaximize}>
         <div className="flex items-center gap-2 mb-1">
           <span className={`w-2 h-2 rounded-full ${currentTheme.bg.replace('bg-', 'bg-')}`}></span>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">{currentStep?.title}</p>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest truncate">{currentStep?.title}</p>
         </div>
         <div className="flex items-center gap-3 mb-1">
           <p className="text-3xl font-black text-white tabular-nums leading-none">{formatT(timeLeft)}</p>
@@ -2347,13 +2353,13 @@ return createPortal(
         <p className="text-sm font-medium text-gray-400 truncate">{currentStep?.task || 'Workout'}</p>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <button onClick={handlePrev} className="p-3 text-gray-400 hover:text-white transition"><StepBack size={20}/></button>
-        <button onClick={(e) => { e.stopPropagation(); initAudioAndPlay(); }} className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${currentTheme.btnBg}`}>
+        <button aria-label="Passaggio precedente" onClick={handlePrev} className="p-3 text-gray-400 hover:text-white transition"><StepBack size={20}/></button>
+        <button aria-label={isRunning ? 'Metti in pausa il timer' : 'Avvia il timer'} onClick={(e) => { e.stopPropagation(); initAudioAndPlay(); }} className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${currentTheme.btnBg}`}>
           {isRunning ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
         </button>
-        <button onClick={handleNext} className="p-3 text-gray-400 hover:text-white transition"><StepForward size={20}/></button>
+        <button aria-label="Passaggio successivo" onClick={handleNext} className="p-3 text-gray-400 hover:text-white transition"><StepForward size={20}/></button>
         <div className="w-px h-8 bg-[#333] mx-1"></div>
-        <button onClick={handleClose} className="p-3 text-red-500 hover:text-red-400 transition"><X size={20}/></button>
+        <button aria-label="Chiudi il timer" onClick={handleClose} className="p-3 text-red-500 hover:text-red-400 transition"><X size={20}/></button>
       </div>
     </div>
 
@@ -2379,7 +2385,7 @@ return createPortal(
             <div className="w-12 h-1.5 bg-black/20 rounded-full"></div>
           </div>
           <div className="flex justify-between items-center px-6 pb-4">
-            <button 
+            <button aria-label="Riduci il timer a icona" 
               onClick={onMinimize}
               onTouchStart={e => e.stopPropagation()} 
               onTouchMove={e => e.stopPropagation()} 
@@ -2393,7 +2399,7 @@ return createPortal(
                 <span className="text-xl tabular-nums">{heartRate} bpm</span>
               </div>
             )}
-            <button 
+            <button aria-label={isMuted ? 'Riattiva i suoni' : 'Disattiva i suoni'} 
               onClick={() => setIsMuted(!isMuted)}
               onTouchStart={e => e.stopPropagation()} 
               onTouchMove={e => e.stopPropagation()} 
@@ -2435,13 +2441,13 @@ return createPortal(
         </div>
 
         <div className="p-8 pb-16 flex items-center justify-center gap-6 shrink-0">
-          <button onClick={handlePrev} disabled={currentIdx === 0} className={`w-16 h-16 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md disabled:opacity-30 ${currentTheme.icon}`}><StepBack size={28} /></button>
+          <button aria-label="Passaggio precedente" onClick={handlePrev} disabled={currentIdx === 0} className={`w-16 h-16 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md disabled:opacity-30 ${currentTheme.icon}`}><StepBack size={28} /></button>
           {!isDone && (
-            <button onClick={initAudioAndPlay} className={`w-24 h-24 rounded-full flex items-center justify-center shadow-2xl hover:scale-105 transition-transform ${currentTheme.btnBg}`}>
+            <button aria-label={isRunning ? 'Metti in pausa il timer' : 'Avvia il timer'} onClick={initAudioAndPlay} className={`w-24 h-24 rounded-full flex items-center justify-center shadow-2xl hover:scale-105 transition-transform ${currentTheme.btnBg}`}>
               {isRunning ? <Pause size={40} fill="currentColor" /> : <Play size={40} fill="currentColor" className="ml-2" />}
             </button>
           )}
-          <button onClick={handleNext} disabled={isDone} className={`w-16 h-16 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md disabled:opacity-30 ${currentTheme.icon}`}><StepForward size={28} /></button>
+          <button aria-label="Passaggio successivo" onClick={handleNext} disabled={isDone} className={`w-16 h-16 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md disabled:opacity-30 ${currentTheme.icon}`}><StepForward size={28} /></button>
         </div>
 
       </div> {/* ← chiude: relative ${currentTheme.bg} flex flex-col rounded-t-3xl */}
@@ -2543,7 +2549,7 @@ function Section({ icon, label, hint, color, children }) {
       <div className="flex items-baseline gap-2 mb-3">
         {icon}
         <span className="text-white font-semibold text-sm">{label}</span>
-        {hint && <span className="text-[10px] text-gray-500 font-normal">{hint}</span>}
+        {hint && <span className="text-[11px] text-gray-500 font-normal">{hint}</span>}
       </div>
       {children}
     </div>
@@ -2570,7 +2576,7 @@ function ExList({ exercises, showMinute, typeColor }) {
               {detail} {paceStr}
             </span>
             {ex.kg && <span className="text-gray-400 text-xs ml-2 font-bold">{ex.kg}kg</span>}
-            {ex.notes && <span className="text-gray-600 text-xs ml-2">· {ex.notes}</span>}
+            {ex.notes && <span className="text-gray-400 text-xs ml-2">· {ex.notes}</span>}
           </div>
           {ex.intensity && (
             <div className="flex items-center gap-1 pr-2 shrink-0">
@@ -2635,7 +2641,7 @@ function CustomAudioPlayer({ src, onDelete, role }) {
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={() => { setIsPlaying(false); setProgress(0); audioRef.current.currentTime = 0; setCurrentTime('0:00') }}
       />
-      <button onClick={togglePlay} className="w-10 h-10 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
+      <button aria-label={isPlaying ? 'Metti in pausa la nota vocale' : 'Riproduci la nota vocale'} onClick={togglePlay} className="w-10 h-10 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
         {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
       </button>
       <div className="flex-1 flex flex-col justify-center px-1">
@@ -2650,12 +2656,12 @@ function CustomAudioPlayer({ src, onDelete, role }) {
             />
          </div>
          <div className="flex justify-between items-center mt-1">
-            <span className="text-[10px] text-gray-500 font-medium">{currentTime}</span>
-            <span className="text-[10px] text-gray-500 font-medium">{duration}</span>
+            <span className="text-[11px] text-gray-500 font-medium">{currentTime}</span>
+            <span className="text-[11px] text-gray-500 font-medium">{duration}</span>
          </div>
       </div>
       {role === 'admin' && onDelete && (
-        <button onClick={onDelete} className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-500 transition shrink-0" title="Elimina vocale">
+        <button aria-label="Elimina la nota vocale" onClick={onDelete} className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-500 transition shrink-0" title="Elimina vocale">
           <Trash2 size={18} />
         </button>
       )}
@@ -2899,10 +2905,10 @@ function VoiceRecorder({ onSave, onCancel }) {
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
-              <button onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
+              <button aria-label="Annulla la registrazione" onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
                 <Trash2 size={16} />
               </button>
-              <button onClick={stopRecordingAndSave} className="w-9 h-9 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
+              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-9 h-9 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
                 <Square size={14} fill="currentColor" />
               </button>
             </div>
@@ -3021,7 +3027,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
               )
             })}
           </div>
-          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-gray-500 mt-1">
+          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-1">
             <span>Leggero</span>
             <span>Estremo</span>
           </div>
@@ -3032,7 +3038,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
             <button 
               onClick={handleHealthSync} 
               disabled={syncingHealth}
-              className="text-[10px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-md border border-[#444] transition disabled:opacity-50"
+              className="text-[11px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-md border border-[#444] transition disabled:opacity-50"
             >
               {syncingHealth ? 'Sincro in corso...' : '🍏 Apple Health'}
             </button>

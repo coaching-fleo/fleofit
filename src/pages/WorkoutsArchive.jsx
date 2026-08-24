@@ -64,9 +64,9 @@ export default function WorkoutsArchive() {
   )
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
           <ChevronLeft size={22} className="-ml-0.5" />
         </button>
         <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
@@ -122,7 +122,7 @@ export default function WorkoutsArchive() {
                     {isEvent ? 'Evento' : category}
                   </span>
                   {role !== 'athlete' && w.athlete_workouts && (
-                    <span className="text-[10px] text-gray-500 font-medium">Assegnato: {w.athlete_workouts.length}</span>
+                    <span className="text-[11px] text-gray-500 font-medium">Assegnato: {w.athlete_workouts.length}</span>
                   )}
                 </div>
               </div>
