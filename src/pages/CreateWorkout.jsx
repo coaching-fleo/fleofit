@@ -9,6 +9,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { VoiceRecorder } from 'capacitor-voice-recorder'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useTouchDrag } from '../useTouchDrag'
+import { blockHint } from '../lib/blockHints'
 import { format } from 'date-fns'
 
 
@@ -245,8 +246,9 @@ function BlockPickerModal({ onAdd, onClose }) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           {blockTypes.map(t => (
-            <button key={t} onClick={() => onAdd(t)} className="bg-[#2a2a2a] border border-[#383838] text-white font-medium py-3 rounded-xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition text-sm">
-              {t}
+            <button key={t} onClick={() => onAdd(t)} className="bg-[#2a2a2a] border border-[#383838] text-white font-medium py-3 px-2 rounded-xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition text-sm flex flex-col items-center gap-0.5 group">
+              <span>{t}</span>
+              <span className="text-[10px] font-normal text-gray-500 group-hover:text-[#f1ba17]/70 leading-tight text-center">{blockHint(t)}</span>
             </button>
           ))}
         </div>
@@ -969,7 +971,10 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
         onClick={onToggle}
       >
         <div className="flex items-center justify-between">
-          <span className={`font-bold text-sm ${c.text}`}>{block.type}</span>
+          <span className="flex items-baseline gap-2 min-w-0">
+            <span className={`font-bold text-sm ${c.text}`}>{block.type}</span>
+            <span className="text-[10px] text-gray-500 font-normal truncate">{blockHint(block.type)}</span>
+          </span>
           <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
             <button type="button" onClick={() => onDuplicate()} className="text-gray-500 hover:text-[#f1ba17] transition p-1" title="Duplica">
               <Copy size={16}/>

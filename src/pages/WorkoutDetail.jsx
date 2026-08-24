@@ -20,6 +20,7 @@ import { KeepAwake } from '@capacitor-community/keep-awake'
 import { BluetoothService } from './bluetooth'
 import { Network } from '@capacitor/network'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
+import { blockHint } from '../lib/blockHints'
 
 const TYPE_COLORS = {
   'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
@@ -1005,7 +1006,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         doc.setTextColor(150, 150, 150)
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(11)
-        doc.text(getBlockTitle(block), 20, y)
+        const blkHint = blockHint(block.type)
+        doc.text(blkHint ? `${getBlockTitle(block)}  (${blkHint})` : getBlockTitle(block), 20, y)
         y += 6
 
         if (['WarmUp', 'Rest'].includes(block.type)) {
@@ -1240,7 +1242,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <div className="flex items-center gap-3">
             <WifiOff size={24} className="text-orange-500" />
             <div>
-              <p className="text-orange-500 text-xs font-bold uppercase tracking-wider">Modalità Bunker (Offline)</p>
+              <p className="text-orange-500 text-xs font-bold uppercase tracking-wider">Modalità Offline</p>
               <p className="text-orange-500/80 text-[10px] font-medium leading-tight">Puoi allenarti e salvare. Sincronizzeremo tutto appena torna la linea.</p>
             </div>
           </div>
@@ -1377,7 +1379,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       {/* BLOCKS */}
       {!isRunning && type !== 'Custom' && type !== 'Event' ? (
         blocks.map((block, idx) => (
-          <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} color={TYPE_COLORS[block.type]?.border}>
+          <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} hint={blockHint(block.type)} color={TYPE_COLORS[block.type]?.border}>
              {['WarmUp', 'Rest'].includes(block.type) ? (
                <p className="text-gray-300 text-sm">{block.params?.duration} {block.notes ? ` · ${block.notes}` : ''}</p>
              ) : (
@@ -2535,12 +2537,13 @@ function RunningList({ steps }) {
 }
 
 // ── HELPERS ─────────────────────────────────────────────────
-function Section({ icon, label, color, children }) {
+function Section({ icon, label, hint, color, children }) {
   return (
     <div className={`bg-[#1e1e1e] border ${color} rounded-2xl p-4 mb-3`}>
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-baseline gap-2 mb-3">
         {icon}
         <span className="text-white font-semibold text-sm">{label}</span>
+        {hint && <span className="text-[10px] text-gray-500 font-normal">{hint}</span>}
       </div>
       {children}
     </div>

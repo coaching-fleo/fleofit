@@ -1,5 +1,4 @@
 import { Capacitor } from '@capacitor/core';
-import { supabase } from '../supabaseClient';
 
 export const HealthService = {
   async syncLatestWorkout() {
@@ -72,23 +71,5 @@ export const HealthService = {
 
     let calories = latest.totalEnergyBurned || null;
     return { calories: calories ? Math.round(calories) : null, avgHeartRate: avgHr, duration };
-  }
-};
-
-export const CloudSyncService = {
-  async syncFromCloud(athleteId) {
-    // Chiama la Supabase Edge Function che interroga le API di Strava/Garmin per l'atleta
-    const { data, error } = await supabase.functions.invoke('cloud-sync', {
-      body: { athlete_id: athleteId }
-    });
-
-    if (error) throw new Error("Errore durante la sincronizzazione col Cloud: " + error.message);
-    if (!data || (!data.duration && !data.calories)) throw new Error("Nessun allenamento recente trovato nel Cloud (Strava/Garmin). Assicurati che l'orologio si sia sincronizzato.");
-
-    return {
-      duration: data.duration,       // in minuti
-      calories: data.calories,       // kcal
-      avgHeartRate: data.avgHeartRate // bpm
-    };
   }
 };

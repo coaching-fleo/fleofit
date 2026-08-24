@@ -747,7 +747,7 @@ setNotifications(prev => {
           <div className="flex items-center gap-3">
             <WifiOff size={24} className="text-orange-500" />
             <div>
-              <p className="text-orange-500 text-xs font-bold uppercase tracking-wider">Modalità Bunker (Offline)</p>
+              <p className="text-orange-500 text-xs font-bold uppercase tracking-wider">Modalità Offline</p>
               <p className="text-orange-500/80 text-[10px] font-medium leading-tight">Puoi allenarti e salvare. Sincronizzeremo tutto appena torna la linea.</p>
             </div>
           </div>

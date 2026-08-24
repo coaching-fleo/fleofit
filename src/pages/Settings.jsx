@@ -220,7 +220,6 @@ export default function Settings() {
              const fcmRes = await FCM.getToken();
              if (fcmRes.token) deviceToken = fcmRes.token;
           } catch (e) {
-             console.log("Errore recupero FCM token:", e);
           }
 
           const { error } = await supabase.from('push_subscriptions').upsert({ 
@@ -463,8 +462,8 @@ export default function Settings() {
                 {isSimulatingAthlete ? <EyeOff size={20} /> : <Eye size={20} />}
               </div>
               <div className="text-left">
-                <p className="text-white font-semibold">{isSimulatingAthlete ? 'Torna alla vista Admin' : 'Simula vista Atleta'}</p>
-                <p className="text-gray-500 text-xs">{isSimulatingAthlete ? 'Ripristina tutti i controlli da Coach' : 'Vedi l\'app esattamente come un atleta'}</p>
+                <p className="text-white font-semibold">{isSimulatingAthlete ? 'Torna alla vista Coach' : 'Anteprima come atleta'}</p>
+                <p className="text-gray-500 text-xs">{isSimulatingAthlete ? 'Ripristina tutti i controlli da Coach' : 'Mostra la stessa app con la navigazione dell\'atleta. Non sblocca nulla.'}</p>
               </div>
             </div>
           </button>

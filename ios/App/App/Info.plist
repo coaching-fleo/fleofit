@@ -53,8 +53,6 @@
 	<string>FLEOFIT necessita di questo permesso per salvare la grafica del tuo allenamento direttamente nella galleria fotografica.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>FLEOFIT necessita di questo permesso per salvare la grafica del tuo allenamento direttamente nella galleria fotografica.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>FLEOFIT necessita di questo permesso per comprendere i tuoi comandi vocali durante la creazione degli allenamenti.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
@@ -65,7 +63,7 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UIRequiresFullScreen</key>
 	<true/>

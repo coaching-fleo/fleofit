@@ -26,7 +26,13 @@ import Login from './pages/Login'
 export const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)
 
-export const ADMIN_EMAILS = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com']
+// Il ruolo coach dipende da questo elenco: un indirizzo che non è qui NON ottiene
+// l'accesso coach, per quanti permessi abbia sul database.
+// 'demo@fleofit.it' è l'account fornito ad App Review: va tenuto in elenco finché
+// l'app è in revisione, altrimenti il revisore vede solo la parte atleta.
+// ⚠️ La stessa lista è ri-hardcodata in supabase/functions/send-reminders/index.ts:
+// se aggiungi un indirizzo qui, aggiungilo anche lì e rideploya la function.
+export const ADMIN_EMAILS = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com', 'demo@fleofit.it']
 import { User, Upload } from 'lucide-react'
 
 function Onboarding({ user, onComplete }) {
@@ -105,12 +111,6 @@ function Onboarding({ user, onComplete }) {
         </div>
 
         <form onSubmit={handleComplete} className="flex flex-col gap-4">
-          {/* OPZIONE COACH DISATTIVATA TEMPORANEAMENTE */}
-          {/* <div className="flex gap-2 mb-2">
-            <button type="button" onClick={() => setRole('athlete')} className={`flex-1 py-3 rounded-xl font-bold text-sm transition ${role === 'athlete' ? 'bg-[#f1ba17]/10 text-[#f1ba17] border border-[#f1ba17]/50' : 'bg-[#111] text-gray-500 border border-[#333]'}`}>Sono un Atleta</button>
-            <button type="button" onClick={() => setRole('coach')} className={`flex-1 py-3 rounded-xl font-bold text-sm transition ${role === 'coach' ? 'bg-[#f1ba17]/10 text-[#f1ba17] border border-[#f1ba17]/50' : 'bg-[#111] text-gray-500 border border-[#333]'}`}>Sono un Coach</button>
-          </div> */}
-
           <div className="flex flex-col items-center gap-2 mb-2 animate-in fade-in">
             <div className="relative shrink-0">
               <div className="w-20 h-20 rounded-full bg-[#2a2a2a] border-2 border-[#333] flex items-center justify-center overflow-hidden">
@@ -387,8 +387,8 @@ function App() {
               PushNotifications.removeAllDeliveredNotifications().catch(() => {});
             }
           });
-        } catch (err) {
-          console.log("Errore impostazione plugin nativi:", err)
+        } catch {
+          // I plugin nativi non sono critici: se non si inizializzano, l'app prosegue.
         }
       }
     }

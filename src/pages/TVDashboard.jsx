@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw, Volume2, VolumeX, Activity, Heart } from 'lucide-react'
 import { Capacitor } from '@capacitor/core'
 import { KeepAwake } from '@capacitor-community/keep-awake'
+import { blockHint } from '../lib/blockHints'
 
 // --- AUDIO GENERATOR HELPER ---
 const writeString = (view, offset, string) => {
@@ -140,7 +141,7 @@ const getIntensityColor = (val) => {
   return 'text-red-500';
 }
 
-function Section({ icon, label, color, stepNumber, className = "", isActive, children }) {
+function Section({ icon, label, hint, color, stepNumber, className = "", isActive, children }) {
   return (
     <div className={`bg-[#1e1e1e] border-4 ${isActive ? 'border-[#f1ba17] shadow-[0_0_40px_rgba(241,186,23,0.3)] scale-[1.02]' : color} rounded-[2rem] p-6 flex flex-col gap-4 shadow-2xl relative transition-all duration-500 ${className}`}>
       {stepNumber && (
@@ -150,7 +151,10 @@ function Section({ icon, label, color, stepNumber, className = "", isActive, chi
       )}
       <div className="flex items-start gap-4 border-b-2 border-[#333] pb-4 shrink-0 pr-16">
         <div className="mt-1 shrink-0">{icon}</div>
-        <span className="text-white font-black text-3xl uppercase tracking-wider leading-tight flex-1 min-w-0 break-words">{label}</span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-white font-black text-3xl uppercase tracking-wider leading-tight break-words">{label}</span>
+          {hint && <span className="block text-gray-500 font-medium text-lg normal-case tracking-normal mt-1">{hint}</span>}
+        </span>
       </div>
       <div className="flex-1 flex flex-col justify-center gap-4">
         {children}
@@ -673,7 +677,7 @@ export default function TVDashboard() {
 
              {!isRunning && type !== 'Custom' && type !== 'Event' ? (
                 blocks.map((block, idx) => (
-                  <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} color={TYPE_COLORS[block.type]?.border} stepNumber={blocks.length > 1 ? idx + 1 : null} className={getSectionClass(block.type)} isActive={idx === activeIdx}>
+                  <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} hint={blockHint(block.type)} color={TYPE_COLORS[block.type]?.border} stepNumber={blocks.length > 1 ? idx + 1 : null} className={getSectionClass(block.type)} isActive={idx === activeIdx}>
                       {['WarmUp', 'Rest'].includes(block.type) ? (
                         <p className="text-gray-300 text-4xl font-bold">{block.params?.duration} {block.notes ? <span className="text-gray-500 text-3xl block mt-4">· {block.notes}</span> : ''}</p>
                       ) : (

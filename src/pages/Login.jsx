@@ -319,26 +319,6 @@ export default function Login() {
           </div>
         )}
 
-          {/* OPZIONE COACH DISATTIVATA TEMPORANEAMENTE */}
-          {/* isSignUp && (
-            <div className="flex gap-2 mb-4">
-              <button
-                type="button"
-                onClick={() => setRole('athlete')}
-                className={`flex-1 py-3 rounded-xl font-bold text-sm transition ${role === 'athlete' ? 'bg-[#f1ba17]/10 text-[#f1ba17] border border-[#f1ba17]/50' : 'bg-[#111] text-gray-500 border border-[#333]'}`}
-              >
-                Sono un Atleta
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('coach')}
-                className={`flex-1 py-3 rounded-xl font-bold text-sm transition ${role === 'coach' ? 'bg-[#f1ba17]/10 text-[#f1ba17] border border-[#f1ba17]/50' : 'bg-[#111] text-gray-500 border border-[#333]'}`}
-              >
-                Sono un Coach
-              </button>
-            </div>
-          ) */}
-
           {view === 'authForm' && <div className="flex flex-col gap-4 animate-in fade-in duration-300" onKeyDown={e => { if (e.key === 'Enter') handleEmailAuth(e) }}>
             <div className="relative">
               <Mail size={18} className="absolute left-4 top-3.5 text-gray-500" />

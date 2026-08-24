@@ -256,7 +256,9 @@ serve(async (req) => {
       console.log(`Notifica al coach da ${body.athleteName} per ${body.action}`);
       
       // Recupera gli ID degli admin scorrendo la lista utenti di Supabase in modo sicuro
-      const adminEmails = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com'];
+      // Deve restare allineata a ADMIN_EMAILS in src/App.jsx.
+      // 'demo@fleofit.it' è l'account fornito ad App Review.
+      const adminEmails = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com', 'demo@fleofit.it'];
       const adminUserIds: string[] = [];
       let page = 1;
       while (true) {
