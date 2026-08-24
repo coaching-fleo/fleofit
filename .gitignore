@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Tooling locale (skill Claude e stato del pannello design)
+.claude/
+.impeccable/config.local.json

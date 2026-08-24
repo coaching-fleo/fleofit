@@ -16,6 +16,11 @@
 0. **Esistono DUE branch vivi con due destinazioni diverse** (`main` = web app in produzione,
    `ios-version` = app per l'App Store). Prima di proporre un merge, un deploy o una modifica
    condivisa (DB, Edge Function), leggere il §1.1: non sono intercambiabili.
+0-bis. 🔒 **LO SCHEMA DEL DATABASE È CONGELATO** fino all'approvazione su App Store (decisione del
+   committente, 24/08/2026). Niente migrazioni, niente tabelle nuove, nessuna modifica alle policy
+   RLS: l'unico database serve anche la web app in produzione e non c'è staging. **Le letture sono
+   permesse** (verifica policy, conteggi, export). Se una funzione richiede una migrazione, va
+   proposta e messa in attesa, non implementata. Vedi PRODUCT.md → Capabilities and Constraints.
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -52,15 +57,32 @@ tempo reale.
 
 Il progetto vive su **due branch con due prodotti diversi**, entrambi attivi:
 
-| Branch | Cos'è | Stato | Ultimo commit |
+| Branch | Cos'è | Dove finisce | Ultimo commit |
 |---|---|---|---|
-| **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi su Vercel | LIVE, non rompere | `8919bfd` — 8 giu 2026 |
-| **`ios-version`** | Versione nativa iOS/Capacitor, **in revisione sull'App Store** (§9-ter) | branch di lavoro attivo | `5c02b81` — 24 ago 2026 |
+| **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi | **collegato a Vercel** → `https://fleofit.vercel.app`. LIVE, non rompere | `8919bfd` — 8 giu 2026 |
+| **`ios-version`** | Versione nativa iOS/Capacitor, quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. L'app arriva sull'App Store da Xcode, non da un deploy | `848648f` — 24 ago 2026 |
+
+### ⚠️ `ios-version` NON è un branch di rilascio (confermato dal committente il 24/08/2026)
+Non esiste nessuna pipeline collegata a `ios-version`. Pushare lì **non pubblica niente**: serve
+solo a non perdere il lavoro. La build per l'App Store nasce da Xcode sulla cartella locale.
+Conseguenze pratiche, tutte controintuitive:
+- **Un push su `ios-version` non è un rilascio.** Il codice spedito ad Apple è quello archiviato da
+  Xcode in quel momento, che può essere più avanti o più indietro del branch (§9-ter: è già
+  successo con il build number).
+- **Un fix che deve andare in produzione web NON basta metterlo su `ios-version`.** Deve arrivare
+  su `main`, o non esiste per gli atleti che usano l'app oggi.
+- **Gli scheduled workflow di GitHub girano solo dal branch di default.** Un workflow corretto su
+  `ios-version` è un file inerte (§4 e §9 punto 9).
+- ⚠️ **Da verificare su Vercel**: se il progetto Vercel è collegato al repo GitHub, per impostazione
+  predefinita Vercel costruisce una **preview deployment per ogni branch pushato**, `ios-version`
+  incluso, su un URL pubblico. Controllare in Vercel → Settings → Git → *Ignored Build Step* /
+  *Production Branch* che le preview siano disattivate o protette da password.
 
 ### Rapporto tra i due: SONO DIVERGENTI
 Verificato il 24/08/2026 **dopo un `git fetch`**:
-`git rev-list --left-right --count origin/main...origin/ios-version` → **`41 21`**.
-`main` ha 41 commit che `ios-version` non ha, `ios-version` ne ha 21 che `main` non ha.
+`git rev-list --left-right --count origin/main...origin/ios-version` → **`41 22`**.
+`main` ha 41 commit che `ios-version` non ha, `ios-version` ne ha 22 che `main` non ha.
+Il divario **cresce a ogni sessione di lavoro su `ios-version`**: più si aspetta, più il merge costa.
 **Un merge non è un fast-forward**: è un merge vero.
 
 > ⚠️ Fino al 24/08/2026 questo documento affermava `0 18` e "non sono divergenti". Era **falso**:
@@ -272,6 +294,16 @@ paginazione a 1000 righe, validazione della risposta, fallimento esplicito se un
 (`athletes`, `workouts`, `athlete_workouts`) è vuota o mancante, manifest con i conteggi e riepilogo
 nella pagina del run. Le tabelle da salvare stanno in `env.TABLES`: **se aggiungi una tabella al DB,
 aggiungila anche lì.**
+- 🔴 **COSA SALVA DAVVERO IL BACKUP DI STANOTTE** (letto su `origin/main` il 24/08/2026, è il file
+  che il cron esegue): `TABLES=("athletes" "athlete_photos" "athlete_workouts" "workouts" "workout_logs")`.
+  **Mancano `personal_records`, `invitation_codes`, `notifications`, `push_subscriptions`,
+  `tv_sessions`.** In particolare **i PR degli atleti non sono mai stati salvati**, ed è il dato meno
+  ricostruibile del sistema — aggravato dal fatto che `personal_records` ha una policy RLS
+  `ALL/{authenticated}/true`, cioè è cancellabile da qualunque utente loggato (§4-bis).
+  ⚠️ Correzione del 24/08/2026: una versione precedente di questa nota affermava che
+  `athlete_photos` e `workout_logs` "non esistono". **È falso**: `pg_tables` le elenca entrambe nello
+  schema `public`. Sono tabelle **legacy mai referenziate dal client** (0 occorrenze in `src/` e
+  `supabase/`), quindi il backup attivo spende due delle cinque voci su tabelle morte.
 - ⚠️ Gli scheduled workflow girano **solo dal branch di default (`main`)**: finché il file corretto
   non è su `main`, il cron notturno usa ancora la versione rotta. Portare **solo quel file**, non
   l'intero branch (vedi §1.1): `git checkout main && git checkout ios-version -- .github/workflows/db-backup.yml`
@@ -280,6 +312,85 @@ aggiungila anche lì.**
 In-app: Settings ha export/import JSON completo e per singolo atleta.
 
 ---
+
+---
+
+## 4-bis. Stato reale della RLS (verificato sul DB il 24/08/2026)
+
+RLS **attiva su tutte e 10 le tabelle**. Ma le policy hanno buchi verificati, elencati per gravità.
+Fonte: `pg_policies` interrogata dal committente. ⚠️ Manca ancora l'ispezione di `with_check`
+(le policy INSERT mostrano `qual = null`): finché non è letta, non si conosce il controllo su
+`Admins can create invitation codes` né su `Permetti creazione workout autonomi`.
+
+### 🔴 `demo@fleofit.it` NON è nelle policy RLS — TERZA lista di admin
+Le policy di `athletes`, `athlete_workouts`, `workout_logs`, `invitation_codes`, `push_subscriptions`
+e `workouts` controllano l'admin contro un array di **4 email** che **non contiene
+`demo@fleofit.it`**, mentre il bundle spedito ad Apple e `send-reminders` la contengono.
+Conseguenza: **l'account del revisore ha `isAdmin = true` nel client e `admin = false` nel
+database** → rubrica atleti vuota, workout assegnati vuoti, codici invito vuoti, modifica workout
+negata. È di nuovo la condizione che ha prodotto il rifiuto **2.3.1(a)** di maggio.
+
+> ⚠️ **Correzione a §9 punto 7 e a §9-ter.** Le liste di admin hardcodate non sono due, sono **TRE**:
+> `src/App.jsx:35`, `supabase/functions/send-reminders/index.ts:261` e **le policy RLS**.
+> Il corollario di §9-ter ("conta solo l'elenco compilato dentro il bundle") è **incompleto**:
+> contano entrambi gli elenchi, e quello nel database è quello che decide cosa il revisore vede.
+
+Il fix è `ALTER POLICY` con l'email aggiunta all'array: **puramente additivo**, non toglie accesso a
+nessuno, non può rompere la web app. È l'unica eccezione raccomandata al congelamento (regola 0-bis).
+
+> ⚠️ **TRAPPOLA VERIFICATA IL 24/08/2026 — `USING` e `WITH CHECK` sono due clausole distinte.**
+> Su una policy `ALL`: `USING` governa SELECT/UPDATE/DELETE (cosa vedi e cosa tocchi),
+> `WITH CHECK` governa INSERT e le righe risultanti di UPDATE (cosa scrivi).
+> **`ALTER POLICY ... USING (...)` NON modifica `WITH CHECK`**: resta quello di prima, in silenzio.
+> È successo davvero: dopo il primo giro di `ALTER POLICY` sul solo `USING`, `demo@fleofit.it`
+> vedeva la rubrica atleti piena ma **non poteva creare un atleta né assegnare un workout**, perché
+> `athletes.with_check` e `athlete_workouts.with_check` contenevano ancora 4 email.
+> **Regola**: quando allinei una lista admin, scrivi sempre entrambe le clausole nella stessa
+> `ALTER POLICY`, e verifica con:
+> ```sql
+> select tablename, policyname, cmd,
+>        qual::text like '%demo@fleofit.it%'       as using_ok,
+>        with_check::text like '%demo@fleofit.it%' as check_ok
+> from pg_policies where schemaname = 'public'
+>   and (qual::text like '%federico.leo88%' or with_check::text like '%federico.leo88%');
+> ```
+> `check_ok = null` è accettabile: quella policy non ha `WITH CHECK` ed eredita `USING`
+> (è il caso di `workouts` → "Solo gli admin possono modificare i workout").
+>
+> **Il fix strutturale**, da fare dopo l'approvazione App Store: sostituire i 6 array copiati con
+> un'unica funzione `public.is_admin()` richiamata da tutte le policy, così la lista vive in un posto
+> solo invece che in tre (§9 punto 7). È un cambiamento di policy non additivo → soggetto al
+> congelamento (regola 0-bis).
+
+### 🔴 `personal_records`: `ALL | {authenticated} | true` — sia `qual` sia `with_check`
+Qualunque utente loggato legge, modifica, inserisce e **cancella i PR di tutti gli atleti**. Ed è la
+tabella che il backup non salva (§4). Combinazione peggiore del sistema: scrittura libera + nessuna
+copia di sicurezza.
+
+### 🔴 `invitation_codes`: la registrazione chiusa non è chiusa
+`Anonymous users can validate a code | SELECT | {anon} | (is_active AND used_by IS NULL)`:
+un anonimo con la anon key (in chiaro nel bundle) **enumera tutti i codici validi**, poi si registra.
+Il `signOut()` di `App.jsx:219` è cosmetico. Forma corretta: funzione `security definer` che
+risponde sì/no senza esporre la tabella. **Non additivo → dopo l'approvazione App Store.**
+
+### 🟠 `push_subscriptions`: `Enable all operations for authenticated users | ALL | true`
+Le policy si sommano in OR: questa annulla le due scritte correttamente accanto a lei. Qualunque
+atleta legge **tutti i token push**. Rimuoverla è restrittivo → dopo l'approvazione.
+
+### 🟠 `workouts`: `Permetti alla TV di leggere i workout | SELECT | {public} | true`
+Chiunque abbia la anon key scarica **l'intera programmazione**. Serve alla TV, ma dovrebbe essere
+limitata al workout referenziato da una `tv_sessions` attiva.
+
+### 🟡 `tv_sessions`: `ALL | {public} | true` — chiunque può sovrascrivere una sessione e dirottare un cast.
+### 🟡 `athlete_photos`: `ALL | {authenticated} | true` — tabella legacy non usata dal client.
+
+### ✅ Scritte bene
+`athletes`, `athlete_workouts`, `workout_logs` (`auth.uid()` + admin) e `notifications`
+(`auth.uid() = user_id`). Due `with_check` particolarmente ben fatte, da non toccare:
+`workouts → Permetti creazione workout autonomi` limita l'INSERT libero a
+`(sections->>'isAutonomous')::boolean = true` (un utente non può inserirsi programmazione
+arbitraria), e `invitation_codes → Admins can create invitation codes` lega `created_by = auth.uid()`
+(nessuno può falsificare l'autore di un codice).
 
 ## 5. Il formato `workouts.sections` (jsonb) — struttura chiave
 
@@ -339,6 +450,17 @@ Ritmi ammessi: `Libero`, `Camminata`, `Z1`–`Z5`, `All out`, `Gara`, oppure `m:
 `{ "category": "Custom", "isAutonomous": true }` — nessun blocco, il contenuto vive in
 `workouts.coach_notes` (creato dal coach) o in `athlete_workouts.notes` (allenamento libero
 inserito dall'atleta). L'atleta lo crea dal bottone "Aggiungi allenamento libero" in Home.
+
+### ⚠️ Titolo automatico (dal 24/08/2026, su ENTRAMBI i branch)
+`workouts.title` **non può mai essere vuoto**: è letto in 57 punti su `main` e 66 su `ios-version`
+(scheda, archivio, PDF, story IG, TV, testo delle push) e il DB è condiviso. Quando l'utente non
+scrive un titolo, `src/lib/workoutTitle.js` ne **genera e salva** uno nel formato
+`Allenamento libero · mar 25 ago`, con suffisso `(2)`, `(3)`… se quel giorno ne esiste già uno uguale.
+- Il campo Titolo è **facoltativo** solo nel flusso Custom/autonomo (modale "Allenamento Libero" in
+  Home/AthleteDetail/WorkoutDetail) e nel builder **quando `category === 'Custom'`**. Per Hyrox e
+  Running resta obbligatorio: un titolo generato dalla data non direbbe nulla di una programmazione.
+- Il placeholder del campo mostra in anticipo il titolo che verrà salvato, così l'utente sa cosa ottiene.
+- Nessuna modifica di schema: `title` resta una stringa normale, quindi le due app restano compatibili.
 
 ### Event (gara)
 `{ "category": "Event", "isEvent": true, "isAutonomous": true }` — creato dal Calendario.
@@ -533,6 +655,12 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
   era già bruciata: Xcode ha incrementato da solo a 3 in fase di distribuzione. Il progetto è stato
   riallineato a 3 in `5c02b81`. **Prima di archiviare, controllare il build number reale su ASC**,
   non fidarsi del pbxproj.
+
+> 🔴 **AGGIORNAMENTO 24/08/2026 — la causa del rifiuto NON è stata rimossa del tutto.**
+> `demo@fleofit.it` è stata aggiunta al bundle e a `send-reminders`, ma **non alle policy RLS**
+> (§4-bis). Nel database il revisore non è admin: vede l'interfaccia coach completamente vuota.
+> La build 1.1.0 (3) attualmente in revisione è quindi esposta a un **secondo rifiuto 2.3.1(a)**.
+> Il fix è un `ALTER POLICY` additivo su 5 policy, senza rischio per la web app.
 
 ### 2.3.1(a) — causa accertata: l'account admin dato ad Apple era inerte
 Il ruolo coach non viene dal DB ma da `ADMIN_EMAILS` **hardcoded nel JS compilato**; nel bundle

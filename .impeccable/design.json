@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-24T16:00:00Z",
+  "title": "Design System: FLEOFIT",
+  "extensions": {
+    "colorMeta": {
+      "brand": {
+        "role": "primary",
+        "displayName": "Gesso Ambra",
+        "canonical": "#f1ba17",
+        "tonalRamp": ["#473705", "#785C08", "#A8810B", "#D8A50E", "#F1BA17", "#F4CD57", "#F8DF95", "#FCF1CF"]
+      },
+      "running": {
+        "role": "secondary",
+        "displayName": "Blu Cianografia",
+        "canonical": "#0094C6",
+        "tonalRamp": ["#00394C", "#006080", "#007AA3", "#0094C6", "#00BFFF", "#4DD2FF", "#99E6FF", "#D6F5FF"]
+      },
+      "custom": {
+        "role": "tertiary",
+        "displayName": "Rosso Correzione",
+        "canonical": "#D11149",
+        "tonalRamp": ["#470619", "#760A2A", "#A50D3B", "#D1114A", "#EE2B65", "#F47198", "#F9B4C8", "#FDE3EA"]
+      },
+      "event": {
+        "role": "tertiary",
+        "displayName": "Bianco Evento",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#2a2a2a", "#444444", "#666666", "#888888", "#aaaaaa", "#cccccc", "#e5e5e5", "#ffffff"]
+      },
+      "ai": {
+        "role": "tertiary",
+        "displayName": "Viola IA",
+        "canonical": "#a855f7",
+        "tonalRamp": ["#2E1065", "#4C1D95", "#6D28D9", "#8B5CF6", "#A855F7", "#C084FC", "#D8B4FE", "#EDE9FE"]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Ardesia",
+        "canonical": "#0B0B0B",
+        "tonalRamp": ["#0B0B0B", "#111111", "#1e1e1e", "#222222", "#2a2a2a", "#333333", "#383838", "#444444"]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Superficie Card",
+        "canonical": "#1e1e1e",
+        "tonalRamp": ["#0B0B0B", "#111111", "#1e1e1e", "#222222", "#2a2a2a", "#333333", "#383838", "#444444"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Superficie Cromo",
+        "canonical": "#222222",
+        "tonalRamp": ["#0B0B0B", "#111111", "#1e1e1e", "#222222", "#2a2a2a", "#333333", "#383838", "#444444"]
+      },
+      "surface2": {
+        "role": "neutral",
+        "displayName": "Superficie in Rilievo",
+        "canonical": "#2a2a2a",
+        "tonalRamp": ["#0B0B0B", "#111111", "#1e1e1e", "#222222", "#2a2a2a", "#333333", "#383838", "#444444"]
+      },
+      "well": {
+        "role": "neutral",
+        "displayName": "Pozzetto",
+        "canonical": "#111111",
+        "tonalRamp": ["#000000", "#0B0B0B", "#111111", "#1a1a1a", "#222222", "#2a2a2a", "#333333", "#444444"]
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Verde Completato",
+        "canonical": "#22c55e",
+        "tonalRamp": ["#052E16", "#14532D", "#166534", "#15803D", "#22C55E", "#4ADE80", "#86EFAC", "#DCFCE7"]
+      },
+      "live": {
+        "role": "semantic",
+        "displayName": "Rosso Live",
+        "canonical": "#ef4444",
+        "tonalRamp": ["#450A0A", "#7F1D1D", "#991B1B", "#DC2626", "#EF4444", "#F87171", "#FCA5A5", "#FEE2E2"]
+      },
+      "offline": {
+        "role": "semantic",
+        "displayName": "Arancio Offline",
+        "canonical": "#f97316",
+        "tonalRamp": ["#431407", "#7C2D12", "#9A3412", "#EA580C", "#F97316", "#FB923C", "#FDBA74", "#FFEDD5"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Solo il logo nella schermata di benvenuto. Un uso soltanto." },
+      "headline": { "displayName": "Headline", "purpose": "Titolo di pagina, saluto in Home, logo in header. Apre ogni schermata." },
+      "title": { "displayName": "Title", "purpose": "Titolo di card, intestazione di modale, nome del blocco." },
+      "body": { "displayName": "Body", "purpose": "Il corpo reale dell'interfaccia; text-sm e text-xs dominano il progetto." },
+      "label": { "displayName": "Label", "purpose": "Etichette di campo, pillole di stato, intestazioni di sezione. Sempre MAIUSCOLO con tracking-wider." },
+      "numeral": { "displayName": "Numeral", "purpose": "Cronometro del timer guidato e numeri della TV Dashboard: la tipografia diventa contenuto." }
+    },
+    "shadows": [
+      { "name": "glow-di-stato", "value": "0 10px 15px -3px rgba(241,186,23,0.2)", "purpose": "Elemento attivo, primario o selezionato. Si declina nel colore della categoria. Mai su elementi a riposo." },
+      { "name": "alone-puntino", "value": "0 0 8px rgba(241,186,23,0.4)", "purpose": "Pallini del calendario settimanale: giorno completato, nel colore della sua categoria." },
+      { "name": "stacco-modale", "value": "0 25px 50px -12px rgba(0,0,0,0.25)", "purpose": "Solo dialoghi, bottom sheet e date picker, sopra overlay black/85." },
+      { "name": "sipario-tv", "value": "0 30px 80px rgba(0,0,0,0.9)", "purpose": "TV Dashboard: stacco massimo per la lettura a distanza." }
+    ],
+    "motion": [
+      { "name": "standard", "value": "300ms cubic-bezier(0, 0, 0.2, 1)", "purpose": "Durata e easing di default (duration-300 ease-out): 120 usi su 160 transizioni del progetto." },
+      { "name": "entrata-morbida", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Ingresso di pagina (.page-transition, 300ms, slide-up 15px + fade) e di modale (.modal-transition, 200ms, scala 0.95 to 1)." },
+      { "name": "toggle-slide", "value": "300ms cubic-bezier(0, 0, 0.2, 1)", "purpose": "Traslazione dell'indicatore nel toggle segmentato (translate-x-full)." },
+      { "name": "haptic-light", "value": "Haptics.impact({ style: ImpactStyle.Light })", "purpose": "Feedback fisico su scroll picker e slider; Heavy a fine round del timer. Fallback navigator.vibrate() sul web." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bottone Primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "L'azione conclusiva della schermata. Una sola per vista.",
+      "html": "<button class='ds-btn-primary'>Salva Workout</button>",
+      "css": ".ds-btn-primary { background: #f1ba17; color: #000; font-family: Inter, sans-serif; font-weight: 700; font-size: 0.875rem; padding: 14px 24px; border: none; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(241,186,23,0.2); cursor: pointer; transition: filter 300ms cubic-bezier(0,0,0.2,1), transform 300ms cubic-bezier(0,0,0.2,1); } .ds-btn-primary:hover { filter: brightness(1.1); } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: 2px solid #f1ba17; outline-offset: 3px; } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Bottone Secondario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Annulla e ogni azione non conclusiva. Non porta mai il glow.",
+      "html": "<button class='ds-btn-secondary'>Annulla</button>",
+      "css": ".ds-btn-secondary { background: #2a2a2a; color: #fff; font-family: Inter, sans-serif; font-weight: 600; font-size: 0.875rem; padding: 12px 24px; border: none; border-radius: 12px; cursor: pointer; transition: background 300ms cubic-bezier(0,0,0.2,1); } .ds-btn-secondary:hover { background: #333; } .ds-btn-secondary:focus-visible { outline: 2px solid #f1ba17; outline-offset: 3px; }"
+    },
+    {
+      "name": "Bottone Icona",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "Azione rappresentata da una sola icona: sempre un cerchio pieno da 44px.",
+      "html": "<button class='ds-btn-icon' aria-label='Aggiungi'><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><path d='M5 12h14'/><path d='M12 5v14'/></svg></button>",
+      "css": ".ds-btn-icon { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; background: #1e1e1e; color: #9ca3af; border: 1px solid #333; border-radius: 9999px; cursor: pointer; transition: color 300ms cubic-bezier(0,0,0.2,1), border-color 300ms cubic-bezier(0,0,0.2,1); } .ds-btn-icon:hover { color: #fff; border-color: #f1ba17; } .ds-btn-icon:focus-visible { outline: 2px solid #f1ba17; outline-offset: 3px; }"
+    },
+    {
+      "name": "Card Contenuto",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Il contenitore di primo livello, con l'icona in filigrana ruotata: la firma visiva del sistema.",
+      "html": "<article class='ds-card'><svg class='ds-card-watermark' width='72' height='72' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z'/></svg><span class='ds-card-chip'>HYROX</span><h3 class='ds-card-title'>Cash In + EMOM 20'</h3><p class='ds-card-body'>4 blocchi · intensità 8/10</p></article>",
+      "css": ".ds-card { position: relative; overflow: hidden; background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 24px; padding: 20px; font-family: Inter, sans-serif; transition: border-color 300ms cubic-bezier(0,0,0.2,1); } .ds-card:hover { border-color: #f1ba17; } .ds-card:hover .ds-card-watermark { opacity: 0.2; } .ds-card-watermark { position: absolute; top: 0; right: 0; margin: 20px; color: #f1ba17; opacity: 0.1; transform: rotate(-12deg); transition: opacity 300ms cubic-bezier(0,0,0.2,1); } .ds-card-chip { display: inline-block; background: rgba(241,186,23,0.1); color: #f1ba17; border: 1px solid rgba(241,186,23,0.3); border-radius: 9999px; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.05em; padding: 2px 8px; } .ds-card-title { color: #fff; font-size: 1.125rem; font-weight: 700; margin: 10px 0 4px; } .ds-card-body { color: #9ca3af; font-size: 0.875rem; margin: 0; }"
+    },
+    {
+      "name": "Campo di Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Pozzetto incassato; in focus il bordo prende il colore della categoria in cui si trova.",
+      "html": "<input class='ds-input' type='text' placeholder='Titolo del workout' />",
+      "css": ".ds-input { width: 100%; background: #111; color: #fff; font-family: Inter, sans-serif; font-size: 16px; padding: 12px 16px; border: 1px solid #333; border-radius: 12px; transition: border-color 300ms cubic-bezier(0,0,0.2,1); } .ds-input::placeholder { color: #4b5563; } .ds-input:focus { outline: none; border-color: #f1ba17; } .ds-input:disabled { opacity: 0.5; }"
+    },
+    {
+      "name": "Pillola di Categoria",
+      "kind": "chip",
+      "refersTo": "chip-category",
+      "description": "Identifica la corsia. Versione tenue (10% + bordo 30%) di default; versione piena solo per lo stato del workout di oggi.",
+      "html": "<span class='ds-chip ds-chip-hyrox'>HYROX</span> <span class='ds-chip ds-chip-running'>RUNNING</span> <span class='ds-chip ds-chip-custom'>LIBERO</span> <span class='ds-chip ds-chip-solid'>COMPLETATO</span>",
+      "css": ".ds-chip { display: inline-block; font-family: Inter, sans-serif; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.05em; padding: 3px 10px; border-radius: 9999px; border: 1px solid transparent; } .ds-chip-hyrox { background: rgba(241,186,23,0.1); color: #f1ba17; border-color: rgba(241,186,23,0.3); } .ds-chip-running { background: rgba(0,148,198,0.1); color: #0094C6; border-color: rgba(0,148,198,0.3); } .ds-chip-custom { background: rgba(209,17,73,0.1); color: #D11149; border-color: rgba(209,17,73,0.3); } .ds-chip-solid { background: #22c55e; color: #000; border-color: #22c55e; }"
+    },
+    {
+      "name": "Barra di Navigazione",
+      "kind": "nav",
+      "refersTo": "nav-bar",
+      "description": "Navbar inferiore fissa da 64px. Lo stato attivo è solo colore: nessun indicatore, nessuno sfondo.",
+      "html": "<nav class='ds-nav'><a class='ds-nav-item ds-nav-item-active' href='#'><svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/><path d='M9 22V12h6v10'/></svg><span>Home</span></a><a class='ds-nav-item' href='#'><svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4' width='18' height='18' rx='2'/><path d='M16 2v4M8 2v4M3 10h18'/></svg><span>Calendario</span></a><a class='ds-nav-item' href='#'><svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/><circle cx='12' cy='7' r='4'/></svg><span>Profilo</span></a></nav>",
+      "css": ".ds-nav { display: flex; justify-content: space-around; align-items: center; height: 64px; background: #222; border-top: 1px solid #333; font-family: Inter, sans-serif; } .ds-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.75rem; color: #9ca3af; text-decoration: none; transition: color 300ms cubic-bezier(0,0,0.2,1); } .ds-nav-item:hover { color: #d1d5db; } .ds-nav-item-active { color: #f1ba17; }"
+    },
+    {
+      "name": "Scroll Picker",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Componente firma: selettore in stile iOS per tempi, round, chili e metri. Pozzetto da 144px, righe da 40px, finestra di selezione a doppio bordo nel colore della categoria.",
+      "html": "<div class='ds-picker'><p class='ds-picker-label'>Durata</p><div class='ds-picker-well'><div class='ds-picker-list'><div class='ds-picker-opt'>2:00</div><div class='ds-picker-opt ds-picker-opt-active'>3:00</div><div class='ds-picker-opt'>4:00</div><div class='ds-picker-opt'>5:00</div></div><div class='ds-picker-window'></div></div></div>",
+      "css": ".ds-picker { font-family: Inter, sans-serif; width: 140px; } .ds-picker-label { color: #9ca3af; font-size: 0.75rem; margin: 0 0 4px; } .ds-picker-well { position: relative; height: 144px; overflow-y: scroll; scroll-snap-type: y mandatory; background: #0B0B0B; border: 1px solid #383838; border-radius: 12px; scrollbar-width: none; } .ds-picker-well::-webkit-scrollbar { display: none; } .ds-picker-list { padding: 52px 0; } .ds-picker-opt { height: 40px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-size: 0.875rem; color: #4b5563; cursor: pointer; user-select: none; transition: color 300ms cubic-bezier(0,0,0.2,1); } .ds-picker-opt:hover { color: #9ca3af; } .ds-picker-opt-active { color: #f1ba17; font-weight: 700; font-size: 1rem; } .ds-picker-window { pointer-events: none; position: absolute; left: 16px; right: 16px; top: 52px; height: 40px; border-top: 1px solid rgba(241,186,23,0.5); border-bottom: 1px solid rgba(241,186,23,0.5); border-radius: 4px; }"
+    },
+    {
+      "name": "Toggle Segmentato",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Componente firma: due modalità esclusive con indicatore che trasla in 300ms. Usato per lista/calendario, tempo/distanza, passo/velocità.",
+      "html": "<div class='ds-toggle'><div class='ds-toggle-thumb'></div><button class='ds-toggle-btn ds-toggle-btn-active'>Tempo</button><button class='ds-toggle-btn'>Distanza</button></div>",
+      "css": ".ds-toggle { position: relative; display: flex; background: #111; border: 1px solid #333; border-radius: 16px; padding: 6px; font-family: Inter, sans-serif; width: 260px; } .ds-toggle-thumb { position: absolute; top: 6px; bottom: 6px; left: 6px; width: calc(50% - 6px); background: #2a2a2a; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); transition: transform 300ms cubic-bezier(0,0,0.2,1); } .ds-toggle-btn { position: relative; z-index: 1; flex: 1; background: none; border: none; padding: 10px 0; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; cursor: pointer; transition: color 300ms cubic-bezier(0,0,0.2,1); } .ds-toggle-btn:hover { color: #d1d5db; } .ds-toggle-btn-active { color: #f1ba17; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La Lavagna del Coach",
+    "overview": "FLEOFIT è una superficie scura su cui una sola mano scrive. Il fondo quasi-nero non è un tema, è la lavagna: sta lì per sparire, per far esistere solo quello che il coach ha deciso che oggi conta. Il giallo brand è il gesso — compare poco, e ogni volta che compare significa 'questo'. Tutto il resto del sistema è grigio ordinato: quattro toni di superficie e quattro pesi di bordo che costruiscono la gerarchia senza mai alzare la voce.\n\nIl carattere dei componenti è tattile e sicuro di sé. Raggi ampi (24px sulle card, 12px su bottoni e input), superfici generose, feedback aptico su ogni picker e ogni slider, scala al tocco sugli elementi selezionati. Non è un documento da leggere: è un oggetto da usare con una mano sola, spesso di fretta, spesso appena prima o appena dopo un allenamento. La densità informativa è alta dove serve al coach (il builder), e bassissima dove serve all'atleta (la Home dice una cosa sola: cosa fai oggi).\n\nLa codifica per categoria è la seconda struttura portante, dopo la gerarchia tonale. Ogni disciplina ha la sua corsia cromatica — giallo Hyrox, blu Running, rosso Custom, bianco Evento — e quel colore attraversa coerentemente il puntino nel calendario settimanale, il bordo in hover, la pillola di categoria, l'icona in filigrana e il glow del bottone. Chi usa l'app impara il colore prima della parola.",
+    "keyCharacteristics": [
+      "Dark mode only, quattro toni di superficie, nessun tema chiaro previsto.",
+      "Un solo accento primario, usato con parsimonia; il colore aggiuntivo è sempre semantico.",
+      "Peso tipografico (900 / 700) come strumento di gerarchia, non corpo tipografico.",
+      "Colonna singola mobile-first: praticamente nessun breakpoint in 12.800 righe di UI.",
+      "Superfici piatte, profondità per tono e bordo; l'ombra è stato, non atmosfera.",
+      "Raggi ampi e forme piene: cerchi per le azioni-icona, pillole per gli stati."
+    ],
+    "rules": [
+      { "name": "La Regola del Tratto Unico", "body": "Il Gesso Ambra marca ciò che è attivo, primario o Hyrox. Mai come sfondo di una superficie grande, mai due CTA gialle piene nella stessa schermata. Test: se in una vista il giallo copre più del 10% dei pixel, non è più un tratto, è vernice.", "section": "colors" },
+      { "name": "La Regola della Corsia", "body": "Ogni categoria ha un colore e uno solo, e quel colore si propaga in modo coerente a puntino, bordo in hover, pillola, icona in filigrana e glow. Non si inventa un quinto colore-categoria e non si usa un colore-corsia per un elemento che non appartiene a quella categoria.", "section": "colors" },
+      { "name": "La Regola del Nero Sopra il Giallo", "body": "Su Gesso Ambra pieno il testo è nero (#000), mai bianco. Vale per CTA, pillole piene e giorno selezionato. Stesso principio sul Bianco Evento.", "section": "colors" },
+      { "name": "La Regola del Peso, non del Corpo", "body": "La gerarchia si costruisce con il peso (900 → 700 → 500 → 400) e con il colore del testo, non moltiplicando i corpi. Prima di introdurre una nuova taglia, verifica che il livello non esista già con un peso diverso.", "section": "typography" },
+      { "name": "La Regola del Maiuscolo Solo Etichetta", "body": "Il maiuscolo con tracking-wider appartiene alle etichette e alle pillole. Titoli, corpo e bottoni non vanno mai in maiuscolo.", "section": "typography" },
+      { "name": "La Regola del Logo", "body": "Il marchio è sempre FLEO bianco + FIT in Gesso Ambra, peso 900, tracking-tight, in un unico h1. Nessuna variante di colore, spaziatura o peso.", "section": "typography" },
+      { "name": "La Regola della Colonna Unica", "body": "Mobile-first non come compromesso ma come formato: ogni nuova schermata nasce come colonna singola. Un breakpoint si introduce solo per raffinare una micro-struttura, mai per riorganizzare la pagina.", "section": "layout" },
+      { "name": "La Regola del Doppio Margine iOS", "body": "Ogni pagina apre con la safe area (env(safe-area-inset-top) + 1rem) e chiude con pb-24. Una schermata che non rispetta entrambi i lati è rotta su iPhone, non 'quasi giusta'.", "section": "layout" },
+      { "name": "La Regola Piatto + Glow di Stato", "body": "Le superfici sono piatte e si distinguono per tono e bordo. L'ombra colorata è riservata a ciò che è attivo, primario o selezionato: è stato, non atmosfera. Un elemento a riposo non ha mai un glow.", "section": "elevation" },
+      { "name": "La Regola dei Gradini", "body": "Un elemento non salta un gradino della scala tonale: non si mette una superficie #2a2a2a direttamente sul fondo #0B0B0B senza la card intermedia, e non si annida un pozzetto dentro un pozzetto.", "section": "elevation" },
+      { "name": "La Regola dei Quattro Raggi", "body": "24 / 16 / 12 / cerchio. Un raggio nuovo (rounded-md, raggi arbitrari in rem) è un'eccezione da giustificare, non una scelta libera: le poche occorrenze esistenti sono residui, non precedenti.", "section": "shapes" },
+      { "name": "La Regola del Cerchio d'Azione", "body": "Un'azione rappresentata da una sola icona è sempre un cerchio pieno; un'azione con testo è sempre un rettangolo a 12px. Non si mescolano.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do trattare #0B0B0B → #1e1e1e → #2a2a2a (più il pozzetto #111) come l'unica fonte di profondità, e il bordo 1px come parte strutturale della forma.",
+      "Do far parlare il focus e l'hover la lingua della categoria in cui si trovano: giallo in Hyrox, #0094C6 in Running, #D11149 in Custom, bianco negli Eventi.",
+      "Do montare ogni modale con createPortal(…, document.body) e rispettare la scala di z-index (60 / 100 / 120 / 150).",
+      "Do usare CustomAlert e CustomConfirm per ogni messaggio o conferma.",
+      "Do accompagnare picker, slider e completamenti con feedback aptico (Haptics.impact), con fallback navigator.vibrate() sul web.",
+      "Do aprire ogni pagina con la safe area iOS e chiuderla con pb-24.",
+      "Do mantenere 300ms ease-out come tempo standard delle transizioni e cubic-bezier(0.16, 1, 0.3, 1) per gli ingressi di pagina e modale.",
+      "Do dare al testo su fondo Gesso Ambra o Bianco Evento il colore nero."
+    ],
+    "donts": [
+      "Don't usare alert() o confirm() nativi: rompono sia il tono sia il layer di modali.",
+      "Don't mettere due CTA gialle piene nella stessa schermata, né usare il Gesso Ambra come fondo di una superficie grande.",
+      "Don't introdurre un quinto colore-categoria, né riusare un colore-corsia fuori dalla sua categoria.",
+      "Don't aggiungere ombre a elementi a riposo: l'ombra è stato, non atmosfera.",
+      "Don't introdurre raggi fuori dalla scala 24 / 16 / 12 / cerchio.",
+      "Don't costruire layout multi-colonna o dashboard a griglia di widget: il sistema è una colonna sola e l'anti-riferimento 'dashboard SaaS' è esplicito.",
+      "Don't aggiungere gradienti saturi, illustrazioni allegre, badge, coriandoli o gamification: è l'anti-riferimento 'app fitness generalista'.",
+      "Don't progettare o proporre un tema chiaro: il sistema è dark-only per scelta.",
+      "Don't scendere sotto font-size: 16px su input/textarea/select su iOS.",
+      "Don't sostituire lo scroll picker con controlli HTML nativi (select, input type=time): è il componente che rende l'app credibile come app."
+    ]
+  }
+}
