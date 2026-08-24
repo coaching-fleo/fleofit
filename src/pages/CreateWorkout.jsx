@@ -1812,7 +1812,7 @@ export default function CreateWorkout() {
       <div className="flex flex-col gap-3 mb-6">
         <input
           className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] font-medium text-base"
-          placeholder="Nome workout (es. Hyrox Strength #1)"
+          placeholder={category === 'Custom' ? generaTitolo(date) : 'Nome workout (es. Hyrox Strength #1)'}
           value={title}
           onChange={e => setTitle(e.target.value)}
         />
