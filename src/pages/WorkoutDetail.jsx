@@ -10,6 +10,7 @@ import { toBlob } from 'html-to-image'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
+import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 
 const TYPE_COLORS = {
   'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
@@ -392,9 +393,14 @@ export default function WorkoutDetail() {
 
   const handleSaveAutonomous = async () => {
     setSavingAutonomous(true)
+    const titoloFinale = titoloOppureGenerato(
+      autonomousForm.title,
+      autonomousForm.date,
+      await titoliDelGiorno(supabase, autonomousForm.date)
+    )
     try {
       if (autonomousForm.id) {
-        const { error: wError } = await supabase.from('workouts').update({ title: autonomousForm.title, date: autonomousForm.date }).eq('id', autonomousForm.id)
+        const { error: wError } = await supabase.from('workouts').update({ title: titoloFinale, date: autonomousForm.date }).eq('id', autonomousForm.id)
         if (wError) throw wError
 
         if (autonomousForm.awId) {
@@ -1365,12 +1371,12 @@ export default function WorkoutDetail() {
             </div>
             <div className="flex flex-col gap-3">
               <div>
-                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo</label>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-gray-500 font-normal">(facoltativo)</span></label>
                 <input 
                   className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
                   value={autonomousForm.title}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
-                  placeholder="Es. Corsa 5km, Calcetto..."
+                  placeholder={generaTitolo(autonomousForm.date)}
                 />
               </div>
               <div>
@@ -1393,7 +1399,7 @@ export default function WorkoutDetail() {
               </div>
               <button 
                 onClick={handleSaveAutonomous}
-                disabled={!autonomousForm.title || savingAutonomous}
+                disabled={savingAutonomous}
                 className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
               >
                 {savingAutonomous ? 'Salvataggio...' : 'Conferma'}

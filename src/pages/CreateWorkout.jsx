@@ -7,6 +7,7 @@ import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useTouchDrag } from '../useTouchDrag'
 import { format } from 'date-fns'
+import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -1348,11 +1349,11 @@ export default function CreateWorkout() {
     }
   }
 
-  const isStep1Valid = title.trim() !== ''
+  const isStep1Valid = title.trim() !== '' || category === 'Custom'
 
 
   const handleSave = async () => {
-    if (!title) return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci il titolo del workout!', type: 'error' })
+    if (!title && category !== 'Custom') return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci il titolo del workout!', type: 'error' })
     if (category === 'Hyrox' && blocks.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno un blocco!', type: 'error' })
     if (category === 'Running' && runningSteps.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno una fase di corsa!', type: 'error' })
     if (category === 'Custom' && !coachNotes) return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci una descrizione per il workout!', type: 'error' })
@@ -1369,7 +1370,11 @@ export default function CreateWorkout() {
   const performSave = async (saveAsNew) => {
     setShowSaveModal(false)
     setSaving(true)
-    const finalTitle = saveAsNew ? newWorkoutName : title
+    const finalTitle = titoloOppureGenerato(
+      saveAsNew ? newWorkoutName : title,
+      date,
+      await titoliDelGiorno(supabase, date)
+    )
 
     const sections = {
       intensity: workoutIntensity,

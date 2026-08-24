@@ -8,6 +8,7 @@ import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
+import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 
 const InstagramIcon = ({ size = 24, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -202,16 +203,21 @@ export default function AthleteDetail() {
 
   const handleSaveAutonomous = async () => {
     setSavingAutonomous(true)
+    const titoloFinale = titoloOppureGenerato(
+      autonomousForm.title,
+      autonomousForm.date,
+      await titoliDelGiorno(supabase, autonomousForm.date)
+    )
     try {
       if (autonomousForm.id) {
-        const { error: wError } = await supabase.from('workouts').update({ title: autonomousForm.title, date: autonomousForm.date }).eq('id', autonomousForm.id)
+        const { error: wError } = await supabase.from('workouts').update({ title: titoloFinale, date: autonomousForm.date }).eq('id', autonomousForm.id)
         if (wError) throw wError
 
         const { error: awError } = await supabase.from('athlete_workouts').update({ completed_date: autonomousForm.date, notes: autonomousForm.notes }).eq('id', autonomousForm.awId)
         if (awError) throw awError
       } else {
         const { data: newW, error: wError } = await supabase.from('workouts').insert({
-          title: autonomousForm.title,
+          title: titoloFinale,
           date: autonomousForm.date,
           sections: { category: 'Custom', isAutonomous: true }
         }).select().single()
@@ -223,7 +229,7 @@ export default function AthleteDetail() {
       
       if (role === 'athlete' && !autonomousForm.id) {
          supabase.functions.invoke('send-reminders', {
-           body: { mode: 'coach_notification', action: 'custom_workout', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: autonomousForm.title }
+           body: { mode: 'coach_notification', action: 'custom_workout', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: titoloFinale }
          }).catch(console.error)
       }
       setAutonomousModalOpen(false)
@@ -776,12 +782,12 @@ export default function AthleteDetail() {
             </div>
             <div className="flex flex-col gap-3">
               <div>
-                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo</label>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-gray-500 font-normal">(facoltativo)</span></label>
                 <input 
                   className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
                   value={autonomousForm.title}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
-                  placeholder="Es. Corsa 5km, Calcetto..."
+                  placeholder={generaTitolo(autonomousForm.date)}
                 />
               </div>
               <div>
@@ -804,7 +810,7 @@ export default function AthleteDetail() {
               </div>
               <button 
                 onClick={handleSaveAutonomous}
-                disabled={!autonomousForm.title || savingAutonomous}
+                disabled={savingAutonomous}
                 className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
               >
                 {savingAutonomous ? 'Salvataggio...' : 'Conferma'}

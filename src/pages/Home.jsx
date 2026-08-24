@@ -9,6 +9,7 @@ import { getDailyMotivation } from './motivations'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { createPortal } from 'react-dom'
+import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -320,10 +321,15 @@ export default function Home() {
 
   const handleSaveAutonomous = async () => {
     setSavingAutonomous(true)
+    const titoloFinale = titoloOppureGenerato(
+      autonomousForm.title,
+      autonomousForm.date,
+      await titoliDelGiorno(supabase, autonomousForm.date)
+    )
     try {
       if (autonomousForm.id) {
         const { error: wError } = await supabase.from('workouts').update({
-          title: autonomousForm.title,
+          title: titoloFinale,
           date: autonomousForm.date
         }).eq('id', autonomousForm.id)
         if (wError) throw wError
@@ -335,7 +341,7 @@ export default function Home() {
         if (awError) throw awError
       } else {
         const { data: newW, error: wError } = await supabase.from('workouts').insert({
-          title: autonomousForm.title,
+          title: titoloFinale,
           date: autonomousForm.date,
           sections: { category: 'Custom', isAutonomous: true }
         }).select().single()
@@ -353,7 +359,7 @@ export default function Home() {
       
         if (role === 'athlete') {
           supabase.functions.invoke('send-reminders', {
-            body: { mode: 'coach_notification', action: 'custom_workout', athleteName: userName || 'Un atleta', workoutTitle: autonomousForm.title }
+            body: { mode: 'coach_notification', action: 'custom_workout', athleteName: userName || 'Un atleta', workoutTitle: titoloFinale }
           }).catch(console.error)
         }
       }
@@ -762,12 +768,12 @@ export default function Home() {
             </div>
             <div className="flex flex-col gap-3">
               <div>
-                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo</label>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-gray-500 font-normal">(facoltativo)</span></label>
                 <input 
                   className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
                   value={autonomousForm.title}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
-                  placeholder="Es. Corsa 5km, Calcetto..."
+                  placeholder={generaTitolo(autonomousForm.date)}
                 />
               </div>
               <div>
@@ -790,7 +796,7 @@ export default function Home() {
               </div>
               <button 
                 onClick={handleSaveAutonomous}
-                disabled={!autonomousForm.title || savingAutonomous}
+                disabled={savingAutonomous}
                 className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
               >
                 {savingAutonomous ? 'Salvataggio...' : 'Conferma'}
