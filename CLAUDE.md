@@ -303,6 +303,33 @@ Prima erano entrambe aperte. Ora:
 ⚠️ Il deploy di `send-reminders` colpisce **anche la web app in produzione**: è una sola
 funzione per due app.
 
+### 🔴 Le push NON funzionano su una build Debug lanciata da Xcode
+Accertato il 25/08/2026. Il progetto ha due bundle id:
+- **Debug** → `it.federicoleo.fleofit.dev` (serve a far convivere le due app sullo stesso telefono)
+- **Release/archive** → `it.federicoleo.fleofit`
+
+`GoogleService-Info.plist` è registrato su `it.federicoleo.fleofit`, e le credenziali APNs su
+Firebase valgono **per un bundle id specifico**. Quindi una build Debug produce un token APNs di
+un'app che Firebase non conosce, e FCM risponde:
+`401 "Invalid APNs credential." · THIRD_PARTY_AUTH_ERROR`.
+
+**Non è un bug: è la conseguenza del suffisso `.dev`.** Sintomo caratteristico: la notifica
+**in-app arriva** (è solo una riga in `notifications`) ma **la push no**.
+
+Per testare le push: o si toglie temporaneamente il `.dev` dal bundle id in Debug (disinstallando
+prima l'app dal telefono), o si registra su Firebase una seconda app iOS `…​.dev` con il proprio
+`GoogleService-Info.plist` usato solo in Debug.
+
+⚠️ **Da verificare comunque prima di pubblicare**: `THIRD_PARTY_AUTH_ERROR` nasce anche da una
+credenziale APNs mancante o scaduta. Su Firebase Console → Cloud Messaging deve esserci una
+**APNs Authentication Key `.p8`** (copre sandbox e produzione, non scade) e non un certificato
+`.p12`. Se manca, le push non funzionano **per nessuno**, neanche dall'App Store.
+
+⚠️ **Controllo pre-archive**: `App.entitlements` dichiara `aps-environment = development` ed è usato
+sia in Debug sia in Release. Xcode dovrebbe sostituirlo con `production` archiviando con un profilo
+App Store, ma va confermato sul binario esportato:
+`codesign -d --entitlements - --xml Payload/App.app | plutil -p - | grep aps-environment`
+
 ### Secrets attesi (Supabase)
 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
 `FIREBASE_SERVICE_ACCOUNT` (JSON), `GEMINI_API_KEY`.
