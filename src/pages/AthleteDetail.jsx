@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
@@ -434,15 +434,21 @@ export default function AthleteDetail() {
     }
   }
 
+  // Quattro scorrimenti della stessa lista a ogni render. Devono stare QUI, sopra
+  // i return anticipati: useMemo dopo un return condizionale violerebbe le Rules
+  // of Hooks, ed è il motivo per cui non erano memoizzate.
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
+  const { todayWorkoutsList, upcomingWorkoutsList, pastWorkoutsList, upcomingEvents } = useMemo(() => ({
+    todayWorkoutsList: workouts.filter(w => w.completed_date === todayStr),
+    upcomingWorkoutsList: workouts.filter(w => w.completed_date > todayStr && w.workouts?.sections?.category !== 'Event').reverse(),
+    pastWorkoutsList: workouts.filter(w => w.completed_date < todayStr),
+    upcomingEvents: workouts.filter(w => w.workouts?.sections?.category === 'Event' && w.completed_date >= todayStr)
+      .sort((a, b) => a.completed_date.localeCompare(b.completed_date)),
+  }), [workouts, todayStr])
+
   if (loading) return <div className="p-6 text-muted">Caricamento scheda atleta...</div>
   if (!athlete) return <div className="p-6 text-red-400">Atleta non trovato.</div>
 
-  const todayStr = format(new Date(), 'yyyy-MM-dd')
-  const todayWorkoutsList = workouts.filter(w => w.completed_date === todayStr)
-  const upcomingWorkoutsList = workouts.filter(w => w.completed_date > todayStr && w.workouts?.sections?.category !== 'Event').reverse()
-  const pastWorkoutsList = workouts.filter(w => w.completed_date < todayStr)
-
-  const upcomingEvents = workouts.filter(w => w.workouts?.sections?.category === 'Event' && w.completed_date >= todayStr).sort((a, b) => a.completed_date.localeCompare(b.completed_date))
   const nextEvent = upcomingEvents[0]
   let countdownDays = null
   if (nextEvent) {

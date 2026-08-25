@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square } from 'lucide-react'
@@ -585,9 +585,19 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   const [intensity, setIntensity] = useState(initialExercise?.intensity || '5')
   const [notes, setNotes] = useState(initialExercise?.notes || '')
 
-  const filtered = HYROX_EXERCISES.filter(ex =>
-    ex.toLowerCase().includes(search.toLowerCase()) && (!existingNames.includes(ex) || ex === initialExercise?.name)
-  )
+  // Rifiltrare 120 esercizi a ogni carattere non è il costo vero, ma renderizzarli
+  // sì: la lista non aveva alcun limite, quindi ogni tasto premuto ridisegnava
+  // fino a 120 bottoni. Il memo evita il ricalcolo, il limite evita il disegno.
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase()
+    return HYROX_EXERCISES.filter(ex =>
+      ex.toLowerCase().includes(q) && (!existingNames.includes(ex) || ex === initialExercise?.name)
+    )
+  }, [search, existingNames, initialExercise?.name])
+
+  const LIMITE_LISTA = 40
+  const visibili = filtered.slice(0, LIMITE_LISTA)
+  const nascosti = filtered.length - visibili.length
   const isCustom = search && !HYROX_EXERCISES.find(e => e.toLowerCase() === search.toLowerCase())
 
   const handleSelect = (name) => setSelected(name)
@@ -652,7 +662,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                   <Plus size={16} /> Aggiungi "{search}" (custom)
                 </button>
               )}
-              {filtered.map(ex => (
+              {visibili.map(ex => (
                 <button aria-label="Scegli questo esercizio" key={ex} onClick={() => handleSelect(ex)}
                   className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#2a2a2a] hover:bg-[#333] text-white text-sm transition">
                   <span>{ex}</span>
@@ -660,6 +670,11 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                   <ChevronRight size={16} className="text-muted" />
                 </button>
               ))}
+              {nascosti > 0 && (
+                <p className="text-muted text-xs text-center py-3">
+                  Altri {nascosti} esercizi. Continua a scrivere per restringere.
+                </p>
+              )}
             </div>
           ) : (
             <div className="flex flex-col gap-4">
