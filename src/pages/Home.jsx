@@ -11,6 +11,7 @@ import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { createPortal } from 'react-dom'
 import { App as CapacitorApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
 import { Badge } from '@capawesome/capacitor-badge'
 import { BluetoothService } from './bluetooth'
@@ -68,6 +69,39 @@ export default function Home() {
   const [showRpeModal, setShowRpeModal] = useState(false)
   // Rilancia il fetch dei dati senza ricaricare l'intera app (vedi confirmRemoveWorkout)
   const [refreshTick, setRefreshTick] = useState(0)
+  // Swipe verso destra sulla card di oggi per completare. È un ACCELERATORE:
+  // il bottone visibile resta la via principale, quindi nessuna funzione dipende
+  // da un gesto che non si vede. Serve anche a evitare la mira su un bersaglio
+  // piccolo quando si ha fretta.
+  // Lo stato porta l'id della card trascinata: oggi possono essercene più di una
+  // (todayWorkouts.map), e con un solo valore condiviso si sarebbero mosse tutte
+  // insieme.
+  const [swipe, setSwipe] = useState({ id: null, x: 0 })
+  const swipeRef = useRef({ x0: 0, y0: 0, attivo: false })
+  const SOGLIA_SWIPE = 96
+
+  const swipeInizio = (e) => {
+    const t = e.touches[0]
+    swipeRef.current = { x0: t.clientX, y0: t.clientY, attivo: false }
+  }
+  const swipeMuovi = (e, id) => {
+    const t = e.touches[0]
+    const dx = t.clientX - swipeRef.current.x0
+    const dy = t.clientY - swipeRef.current.y0
+    // Solo se il movimento è chiaramente orizzontale, altrimenti è uno scroll.
+    if (!swipeRef.current.attivo && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      swipeRef.current.attivo = true
+    }
+    if (swipeRef.current.attivo && dx > 0) setSwipe({ id, x: Math.min(dx, 140) })
+  }
+  const swipeFine = (workout) => {
+    const superata = swipe.id === workout.id && swipe.x >= SOGLIA_SWIPE
+    setSwipe({ id: null, x: 0 })
+    swipeRef.current.attivo = false
+    if (!superata) return
+    if (Capacitor.isNativePlatform()) Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {})
+    toggleTodayWorkout({ stopPropagation: () => {} }, workout)
+  }
   const [activeSlide, setActiveSlide] = useState(0)
   const [workoutToComplete, setWorkoutToComplete] = useState(null)
   const [rpeScore, setRpeScore] = useState('5')
@@ -1039,10 +1073,16 @@ setNotifications(prev => {
                 const todayIsRun = category === 'Running';
                 
                 return (
-                  <div 
+                  <div
                     key={todayWorkout.id}
-                    onClick={() => navigate(`/workout/${todayWorkout.workouts.id}?athlete_id=${user.id}`)}
-                    className={`rounded-3xl p-6 cursor-pointer transition border relative overflow-hidden group ${
+                    onTouchStart={swipeInizio}
+                    onTouchMove={(e) => swipeMuovi(e, todayWorkout.id)}
+                    onTouchEnd={() => swipeFine(todayWorkout)}
+                    style={{
+                      transform: `translateX(${swipe.id === todayWorkout.id ? swipe.x : 0}px)`,
+                      transition: swipe.id === todayWorkout.id && swipe.x ? 'none' : 'transform 0.25s cubic-bezier(0.16,1,0.3,1)'
+                    }}
+                    className={`rounded-3xl p-6 transition-colors border relative overflow-hidden group ${
                       todayWorkout.status === 'completed'
                         ? 'bg-green-500/10 border-green-500/30 hover:border-green-500'
                         : (todayIsEvent ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-white/50 hover:border-white' : todayIsRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50 hover:border-[#0094C6]' : todayIsCustom ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#D11149]/50 hover:border-[#D11149]' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50 hover:border-[#f1ba17]')
@@ -1057,7 +1097,12 @@ setNotifications(prev => {
                       }`}>
                         {todayWorkout.status === 'completed' ? <CheckCircle2 size={24} /> : (todayIsEvent ? <CalendarDays size={24} /> : todayIsRun ? <Timer size={24} /> : <Dumbbell size={24} />)}
                       </div>
-                      <h3 className="text-white font-bold text-xl mb-1 truncate pr-8">{todayWorkout.workouts.title}</h3>
+                      <button
+                        onClick={() => navigate(`/workout/${todayWorkout.workouts.id}?athlete_id=${user.id}`)}
+                        aria-label={`Apri ${todayWorkout.workouts.title}`}
+                        className="block w-full text-left min-h-11 rounded-xl -mx-1 px-1 hover:opacity-80 transition-opacity">
+                        <h3 className="text-white font-bold text-xl mb-1 truncate pr-8">{todayWorkout.workouts.title}</h3>
+                      </button>
                       <p className={`text-sm font-medium ${todayWorkout.status === 'completed' ? 'text-green-400' : (todayIsEvent ? 'text-gray-300' : todayIsRun ? 'text-[#0094C6]' : todayIsCustom ? 'text-[#D11149]' : 'text-[#f1ba17]')}`}>
                         {todayWorkout.status === 'completed' ? 'Ottimo lavoro, completato! 🎉' : (todayIsEvent ? 'Oggi è il grande giorno! 🏁' : 'Da completare oggi 🔥')}
                       </p>

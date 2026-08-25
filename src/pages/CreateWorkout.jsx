@@ -615,22 +615,34 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     onClose()
   }
 
+  // Sheet a schermo intero anziché card centrata: la lista mostrava tre esercizi
+  // su centotrenta, e con la tastiera aperta il bottone di conferma finiva fuori
+  // dallo schermo. Due passi con intestazione, come prescrive l'HIG per un
+  // sotto-compito immersivo.
   return createPortal(
-    <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
-        <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
-          <p className="text-white font-bold">Scegli esercizio</p>
-          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
-        </div>
+    <div className="fixed inset-0 z-[60] bg-[#0B0B0B] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
+      <div className="shrink-0 flex items-center gap-2 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] border-b border-[#2a2a2a]">
+        {selected && (
+          <button aria-label="Torna alla lista degli esercizi" onClick={() => setSelected(null)}
+            className="w-11 h-11 -ml-2 flex items-center justify-center text-muted hover:text-white shrink-0">
+            <ChevronLeft size={22} />
+          </button>
+        )}
+        <p className="text-white font-bold text-lg flex-1 truncate">{selected || 'Scegli esercizio'}</p>
+        <button aria-label="Chiudi" onClick={onClose}
+          className="w-11 h-11 -mr-2 flex items-center justify-center text-muted hover:text-white shrink-0">
+          <X size={22} />
+        </button>
+      </div>
 
-        <div className="p-4 flex flex-col gap-3 overflow-y-auto flex-1">
-          <input
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+          {!selected && <input
             className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base"
             placeholder="Cerca o scrivi esercizio custom..."
             value={search}
             onChange={e => { setSearch(e.target.value); setSelected(null) }}
             autoFocus={!initialExercise}
-          />
+          />}
 
           {!selected ? (
             <div className="flex flex-col gap-1">
@@ -651,11 +663,6 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <button onClick={() => setSelected(null)} className="text-muted hover:text-white text-sm">← Indietro</button>
-                <span className="text-white font-semibold">{selected}</span>
-              </div>
-
               {isHybrid(selected) && (
                 <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] mb-1">
                   <div 
@@ -789,14 +796,19 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                 onChange={e => setNotes(e.target.value)}
               />
 
-              <button onClick={handleConfirm}
-                className="w-full py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition">
-                {initialExercise ? '✅ Salva modifiche' : '✅ Aggiungi esercizio'}
-              </button>
             </div>
           )}
-        </div>
       </div>
+
+      {/* Piede fisso: la conferma resta raggiungibile anche con la tastiera aperta */}
+      {selected && (
+        <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-[#2a2a2a] bg-[#0B0B0B]">
+          <button onClick={handleConfirm}
+            className="w-full min-h-11 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition">
+            {initialExercise ? 'Salva modifiche' : 'Aggiungi esercizio'}
+          </button>
+        </div>
+      )}
     </div>,
     document.body
   )
