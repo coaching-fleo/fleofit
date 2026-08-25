@@ -38,6 +38,7 @@ export const ADMIN_EMAILS = ['coaching@federicoleo.it', 'alessandro.patrone@hotm
 import { User, Upload } from 'lucide-react'
 import { AlertHost } from './components/CustomModals'
 import { mostraErrore } from './lib/alert'
+import { rinfrescaTokenPush } from './lib/pushToken'
 
 function Onboarding({ user, onComplete }) {
   const [role, setRole] = useState('athlete')
@@ -339,6 +340,12 @@ function DeeplinkHandler() {
           navigate(`/login${url.search}${url.hash}`, { replace: true });
         }
       });
+
+      // 3-bis. Tiene fresco il token push: i token cambiano da soli e senza
+      // questo l'utente smetteva di ricevere le notifiche in silenzio.
+      supabase.auth.getSession().then(({ data }) => {
+        if (data?.session?.user?.id) rinfrescaTokenPush(data.session.user.id)
+      }).catch(() => {})
 
       // 4. Ascolta il "Tap" (tocco) dell'utente su una notifica push in entrata
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
