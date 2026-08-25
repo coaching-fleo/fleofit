@@ -185,9 +185,22 @@ serve(async (req) => {
     }
 
     if (modiCron.includes(mode)) {
-      const origine = chiamante.servizio ? 'token di servizio' : (chiamante.email ?? 'anonimo');
-      console.log(`send-reminders: '${mode}' invocata da ${origine} (admin=${chiamante.admin})`);
-      if (APPLICA_CONTROLLO_CRON && !chiamante.admin) {
+      // Terza via oltre all'admin e al token di servizio: un segreto condiviso.
+      // Serve quando il cron invoca con la anon key — in quel caso l'identità nel
+      // JWT non basta, perché quella chiave ce l'ha chiunque abbia il bundle JS.
+      // Si imposta con: supabase secrets set CRON_SECRET=<valore lungo e casuale>
+      // e si aggiunge alla chiamata del cron l'header x-cron-secret.
+      // Se CRON_SECRET non è impostato, questa via è semplicemente disattivata.
+      const segretoAtteso = Deno.env.get('CRON_SECRET');
+      const segretoRicevuto = req.headers.get('x-cron-secret');
+      const daCron = !!segretoAtteso && segretoRicevuto === segretoAtteso;
+
+      const origine = daCron ? 'segreto cron'
+        : chiamante.servizio ? 'token di servizio'
+        : (chiamante.email ?? 'anonimo');
+      console.log(`send-reminders: '${mode}' invocata da ${origine} (admin=${chiamante.admin}, segreto=${daCron})`);
+
+      if (APPLICA_CONTROLLO_CRON && !chiamante.admin && !daCron) {
         return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
