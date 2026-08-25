@@ -397,7 +397,7 @@ export default function Settings() {
             </div>
             <div className="text-left">
               <p className="text-white font-semibold">{notificationsEnabled ? 'Disabilita Notifiche' : 'Abilita Notifiche'}</p>
-              <p className="text-gray-500 text-xs">{notificationsEnabled ? 'Non riceverai più promemoria su questo dispositivo' : 'Attiva le notifiche su questo dispositivo'}</p>
+              <p className="text-muted text-xs">{notificationsEnabled ? 'Non riceverai più promemoria su questo dispositivo' : 'Attiva le notifiche su questo dispositivo'}</p>
             </div>
           </div>
         </button>
@@ -430,7 +430,7 @@ export default function Settings() {
               </div>
               <div className="text-left">
                 <p className={`font-semibold ${hrConnected ? 'text-red-500' : 'text-white'}`}>{hrConnected ? 'Cardiofrequenzimetro Connesso' : 'Connetti Fascia Cardio / Garmin'}</p>
-                <p className={`text-xs ${hrConnected ? 'text-red-400' : 'text-gray-500'}`}>
+                <p className={`text-xs ${hrConnected ? 'text-red-400' : 'text-muted'}`}>
                   {hrConnected ? (heartRate ? `${heartRate} BPM in tempo reale` : 'In attesa dei dati...') : 'Trasmetti via Bluetooth (BLE)'}
                 </p>
               </div>
@@ -450,7 +450,7 @@ export default function Settings() {
             </div>
             <div className="text-left">
               <p className="text-white font-semibold">Modifica Password</p>
-              <p className="text-gray-500 text-xs">Aggiorna la tua password di accesso</p>
+              <p className="text-muted text-xs">Aggiorna la tua password di accesso</p>
             </div>
           </div>
         </button>
@@ -463,7 +463,7 @@ export default function Settings() {
               </div>
               <div className="text-left">
                 <p className="text-white font-semibold">{isSimulatingAthlete ? 'Torna alla vista Coach' : 'Anteprima come atleta'}</p>
-                <p className="text-gray-500 text-xs">{isSimulatingAthlete ? 'Ripristina tutti i controlli da Coach' : 'Mostra la stessa app con la navigazione dell\'atleta. Non sblocca nulla.'}</p>
+                <p className="text-muted text-xs">{isSimulatingAthlete ? 'Ripristina tutti i controlli da Coach' : 'Mostra la stessa app con la navigazione dell\'atleta. Non sblocca nulla.'}</p>
               </div>
             </div>
           </button>
@@ -476,7 +476,7 @@ export default function Settings() {
             </div>
             <div className="text-left">
               <p className="text-white font-semibold">Esci dall'account</p>
-              <p className="text-gray-500 text-xs">Disconnettiti dall'app FLEOFIT</p>
+              <p className="text-muted text-xs">Disconnettiti dall'app FLEOFIT</p>
             </div>
           </div>
         </button>
@@ -494,7 +494,7 @@ export default function Settings() {
                 </div>
                 <div className="text-left">
                   <p className="text-white font-semibold">Esporta tutto il Database</p>
-                  <p className="text-gray-500 text-xs">Scarica un file .json con tutti gli atleti e i workout</p>
+                  <p className="text-muted text-xs">Scarica un file .json con tutti gli atleti e i workout</p>
                 </div>
               </div>
               <Download size={18} className="text-gray-400 group-hover:text-[#f1ba17]" />
@@ -507,7 +507,7 @@ export default function Settings() {
                 </div>
                 <div className="text-left">
                   <p className="text-white font-semibold">Ripristina Database Totale</p>
-                  <p className="text-gray-500 text-xs">Carica un file .json di backup totale</p>
+                  <p className="text-muted text-xs">Carica un file .json di backup totale</p>
                 </div>
               </div>
               <UploadCloud size={18} className="text-gray-400 group-hover:text-blue-500" />
@@ -523,7 +523,7 @@ export default function Settings() {
                 </div>
                 <div className="text-left">
                   <p className="text-white font-semibold">Importa Backup Atleta</p>
-                  <p className="text-gray-500 text-xs">L'esportazione si fa dal profilo del singolo atleta.</p>
+                  <p className="text-muted text-xs">L'esportazione si fa dal profilo del singolo atleta.</p>
                 </div>
               </div>
               <UploadCloud size={18} className="text-gray-400 group-hover:text-green-500" />
@@ -667,12 +667,12 @@ function InviteCodeManager() {
               <span className="text-white font-semibold text-sm">Codici Attivi</span>
               <span className="bg-[#f1ba17]/10 text-[#f1ba17] px-2 py-0.5 rounded-full text-xs font-bold">{activeCodes.length}</span>
             </div>
-            <ChevronDown size={18} className={`text-gray-500 transition-transform duration-300 ${showActive ? 'rotate-180' : ''}`} />
+            <ChevronDown size={18} className={`text-muted transition-transform duration-300 ${showActive ? 'rotate-180' : ''}`} />
           </button>
           
           <div className={`transition-all duration-300 ease-out overflow-hidden ${showActive ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
             <div className="p-4 pt-0 flex flex-col gap-2 overflow-y-auto hide-scrollbar" style={{ maxHeight: '400px' }}>
-              {loading ? <p className="text-gray-500 text-xs">Caricamento...</p> : activeCodes.length > 0 ? (
+              {loading ? <p className="text-muted text-xs">Caricamento...</p> : activeCodes.length > 0 ? (
                 activeCodes.map(code => (
                   <div key={code.id} className="bg-[#2a2a2a] p-3 rounded-xl flex items-center justify-between border border-[#383838]">
                     <span className="font-mono text-lg text-[#f1ba17] tracking-widest">{code.code}</span>
@@ -687,7 +687,7 @@ function InviteCodeManager() {
                     </div>
                   </div>
                 ))
-              ) : <p className="text-gray-500 text-xs">Nessun codice attivo. Generane uno nuovo.</p>}
+              ) : <p className="text-muted text-xs">Nessun codice attivo. Generane uno nuovo.</p>}
             </div>
           </div>
         </div>
@@ -699,23 +699,23 @@ function InviteCodeManager() {
               <span className="text-white font-semibold text-sm">Codici Utilizzati</span>
               <span className="bg-[#222] text-gray-400 border border-[#333] px-2 py-0.5 rounded-full text-xs font-bold">{usedCodes.length}</span>
             </div>
-            <ChevronDown size={18} className={`text-gray-500 transition-transform duration-300 ${showUsed ? 'rotate-180' : ''}`} />
+            <ChevronDown size={18} className={`text-muted transition-transform duration-300 ${showUsed ? 'rotate-180' : ''}`} />
           </button>
           
           <div className={`transition-all duration-300 ease-out overflow-hidden ${showUsed ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
             <div className="p-4 pt-0 flex flex-col gap-2 overflow-y-auto hide-scrollbar" style={{ maxHeight: '400px' }}>
-              {loading ? <p className="text-gray-500 text-xs">Caricamento...</p> : usedCodes.length > 0 ? (
+              {loading ? <p className="text-muted text-xs">Caricamento...</p> : usedCodes.length > 0 ? (
                 usedCodes.map(code => (
                   <div key={code.id} className="bg-[#222] p-3 rounded-xl flex items-center gap-3 text-sm border border-[#333]">
-                    <span className="font-mono text-gray-500 line-through shrink-0">{code.code}</span>
+                    <span className="font-mono text-muted line-through shrink-0">{code.code}</span>
                     <div className="flex-1 text-right text-gray-400 pr-3 border-r border-[#444] min-w-0">
                       <p className="font-semibold text-gray-300 truncate">{code.used_by_name || code.used_by_email || 'Utente Sconosciuto'}</p>
-                      <p className="text-[11px] text-gray-500 uppercase tracking-wider truncate">{format(parseISO(code.used_at), 'd MMM yyyy, HH:mm', { locale: it })}</p>
+                      <p className="text-[11px] text-muted uppercase tracking-wider truncate">{format(parseISO(code.used_at), 'd MMM yyyy, HH:mm', { locale: it })}</p>
                     </div>
-                    <button aria-label="Elimina il codice invito" onClick={() => deleteCode(code.id)} title="Elimina log" className="p-2 text-gray-500 hover:text-red-500 shrink-0 transition bg-[#111] rounded-lg border border-[#333]"><Trash2 size={16} /></button>
+                    <button aria-label="Elimina il codice invito" onClick={() => deleteCode(code.id)} title="Elimina log" className="p-2 text-muted hover:text-red-500 shrink-0 transition bg-[#111] rounded-lg border border-[#333]"><Trash2 size={16} /></button>
                   </div>
                 ))
-              ) : <p className="text-gray-500 text-xs">Nessun codice è stato ancora utilizzato.</p>}
+              ) : <p className="text-muted text-xs">Nessun codice è stato ancora utilizzato.</p>}
             </div>
           </div>
         </div>
@@ -764,7 +764,7 @@ function PasswordModal({ onClose, user, setAlertInfo }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Modifica Password</p>
-          <button aria-label="Chiudi" type="button" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" type="button" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
         </div>
         <div className="p-5 flex flex-col gap-4" onKeyDown={e => { if (e.key === 'Enter') handleUpdate(e) }}>
           <div>

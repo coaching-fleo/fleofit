@@ -40,8 +40,8 @@ export default function CustomDatePicker({ date, onChange, placeholder = "Selezi
         }}
         className={`flex items-center gap-3 w-full text-left transition ${className}`}
       >
-        <CalendarIcon size={18} className={displayDate ? "text-[#f1ba17]" : "text-gray-500"} />
-        <span className={`flex-1 truncate ${displayDate ? "text-white font-medium capitalize" : "text-gray-500"}`}>
+        <CalendarIcon size={18} className={displayDate ? "text-[#f1ba17]" : "text-muted"} />
+        <span className={`flex-1 truncate ${displayDate ? "text-white font-medium capitalize" : "text-muted"}`}>
           {displayDate || placeholder}
         </span>
       </button>
@@ -61,7 +61,7 @@ export default function CustomDatePicker({ date, onChange, placeholder = "Selezi
 
             <div className="grid grid-cols-7 mb-2">
               {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => (
-                <div key={i} className="text-center text-gray-500 text-xs font-bold py-1">{d}</div>
+                <div key={i} className="text-center text-muted text-xs font-bold py-1">{d}</div>
               ))}
             </div>
 

@@ -14,6 +14,7 @@ import { format } from 'date-fns'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { ERGOMETERS } from '../lib/constants'
 import { mostraErrore } from '../lib/alert'
+import { TYPE_COLORS } from '../lib/blockColors'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -129,7 +130,7 @@ const RUN_REPEAT_ROUNDS_OPTIONS = Array.from({ length: 30 }, (_, i) => `${i + 1}
 
 export const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
-  if (isNaN(num)) return 'text-gray-500';
+  if (isNaN(num)) return 'text-muted';
   if (num <= 4) return 'text-gray-400';
   if (num <= 7) return 'text-gray-300';
   if (num <= 9) return 'text-white';
@@ -150,19 +151,6 @@ const formatTime = (totalSeconds) => {
   return `${m}:${s.toString().padStart(2, '0')} min`
 }
 
-const TYPE_COLORS = {
-  'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
-  'Rest': { text: 'text-gray-500', bg: 'bg-[#1e1e1e]', border: 'border-[#2a2a2a]', hex: '#6b7280' },
-  'Cash In': { text: 'text-gray-300', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#d1d5db' },
-  'Cash Out': { text: 'text-gray-300', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#d1d5db' },
-  'ON/OFF': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
-  'EMOM': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
-  'AMRAP': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
-  'For Time': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
-    'Interval': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#e5e5e5' },
-
-  'Running': { text: 'text-[#0094C6]', bg: 'bg-[#0094C6]/10', border: 'border-[#0094C6]/30', hex: '#0094C6' }
-}
 
 // ─── HELPER REORDER ───────────────────────────────────────────
 const moveElement = (list, from, to) => {
@@ -244,13 +232,13 @@ function BlockPickerModal({ onAdd, onClose }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-5 border border-[#333] animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-white font-bold text-lg">Aggiungi Blocco</h3>
-          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20}/></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20}/></button>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {blockTypes.map(t => (
             <button key={t} onClick={() => onAdd(t)} className="bg-[#2a2a2a] border border-[#383838] text-white font-medium py-3 px-2 rounded-xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition text-sm flex flex-col items-center gap-0.5 group">
               <span>{t}</span>
-              <span className="text-[11px] font-normal text-gray-500 group-hover:text-[#f1ba17]/70 leading-tight text-center">{blockHint(t)}</span>
+              <span className="text-[11px] font-normal text-muted group-hover:text-[#f1ba17]/70 leading-tight text-center">{blockHint(t)}</span>
             </button>
           ))}
         </div>
@@ -518,7 +506,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
       <div className={`bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-6 border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isFocused ? '-translate-y-36' : ''}`}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-white font-bold text-lg flex items-center gap-2"><Wand2 size={20} className="text-[#a855f7]" /> Genera con IA</h3>
-          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20}/></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20}/></button>
         </div>
         
         {isListening ? (
@@ -632,7 +620,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold">Scegli esercizio</p>
-          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
         </div>
 
         <div className="p-4 flex flex-col gap-3 overflow-y-auto flex-1">
@@ -657,14 +645,14 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                   className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#2a2a2a] hover:bg-[#333] text-white text-sm transition">
                   <span>{ex}</span>
                   {isErgo(ex) && <span className="text-xs text-blue-400 bg-blue-900/40 px-2 py-0.5 rounded-full">ergometro</span>}
-                  <ChevronRight size={16} className="text-gray-500" />
+                  <ChevronRight size={16} className="text-muted" />
                 </button>
               ))}
             </div>
           ) : (
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2">
-                <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white text-sm">← Indietro</button>
+                <button onClick={() => setSelected(null)} className="text-muted hover:text-white text-sm">← Indietro</button>
                 <span className="text-white font-semibold">{selected}</span>
               </div>
 
@@ -678,14 +666,14 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                   <button 
                     type="button"
                     onClick={() => { setHybridMode('reps'); setMeters('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'reps' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'reps' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}
                   >
                     🔁 Reps
                   </button>
                   <button 
                     type="button"
                     onClick={() => { setHybridMode('distance'); setReps('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'distance' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'distance' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}
                   >
                     📏 Distanza
                   </button>
@@ -702,14 +690,14 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                   <button 
                     type="button"
                     onClick={() => { setRunPaceMode('pace'); setSpeed('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'pace' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'pace' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}
                   >
                     ⏱ Passo
                   </button>
                   <button 
                     type="button"
                     onClick={() => { setRunPaceMode('speed'); setErgoPace('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'speed' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'speed' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}
                   >
                     ⚡ Velocità
                   </button>
@@ -857,8 +845,8 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
       className="drag-item flex items-center gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 cursor-move hover:border-[#444] transition-all duration-200"
     >
       <div className="flex flex-col items-center justify-center shrink-0">
-        <button aria-label="Sposta l'esercizio su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
-        <button aria-label="Sposta l'esercizio giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-gray-500 hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
+        <button aria-label="Sposta l'esercizio su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-muted hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
+        <button aria-label="Sposta l'esercizio giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-muted hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
       </div>
 
       {showMinute && (
@@ -869,7 +857,7 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
 
       <div className="flex-1 cursor-pointer group self-stretch flex flex-col justify-center py-2 -my-2" onClick={() => onEdit && onEdit(ex)}>
         <p className="text-white text-sm font-medium group-hover:text-[#f1ba17] transition">{ex.name}</p>
-        <p className="text-gray-500 text-xs mt-0.5 group-hover:text-gray-400 transition">
+        <p className="text-muted text-xs mt-0.5 group-hover:text-gray-400 transition">
           {detail} {paceStr} {speedStr}
           {ex.kg ? ` · ${ex.kg}kg` : ''}
           {ex.notes ? ` · ${ex.notes}` : ''}
@@ -882,7 +870,7 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
         </div>
       )}
       <div className="flex items-center shrink-0">
-        <button aria-label="Duplica l'esercizio" type="button" onClick={() => onDuplicate && onDuplicate(ex)} className="text-gray-500 hover:text-[#f1ba17] transition shrink-0 p-2" title="Duplica esercizio">
+        <button aria-label="Duplica l'esercizio" type="button" onClick={() => onDuplicate && onDuplicate(ex)} className="text-muted hover:text-[#f1ba17] transition shrink-0 p-2" title="Duplica esercizio">
           <Copy size={15} />
         </button>
         <button aria-label="Rimuovi l'esercizio" type="button" onClick={() => onRemove(ex.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
@@ -975,15 +963,15 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
         <div className="flex items-center justify-between">
           <span className="flex items-baseline gap-2 min-w-0">
             <span className={`font-bold text-sm ${c.text}`}>{block.type}</span>
-            <span className="text-[11px] text-gray-500 font-normal truncate">{blockHint(block.type)}</span>
+            <span className="text-[11px] text-muted font-normal truncate">{blockHint(block.type)}</span>
           </span>
           <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-            <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate()} className="text-gray-500 hover:text-[#f1ba17] transition p-1" title="Duplica">
+            <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate()} className="text-muted hover:text-[#f1ba17] transition p-1" title="Duplica">
               <Copy size={16}/>
             </button>
-            <button aria-label="Sposta il blocco su" type="button" onClick={() => onMoveUp()} disabled={index===0} className="text-gray-500 hover:text-white disabled:opacity-30 p-1"><ChevronUp size={16}/></button>
-            <button aria-label="Sposta il blocco giù" type="button" onClick={() => onMoveDown()} disabled={index===total-1} className="text-gray-500 hover:text-white disabled:opacity-30 p-1"><ChevronDown size={16}/></button>
-            <button aria-label="Elimina il blocco" type="button" onClick={onRemove} className="text-gray-500 hover:text-red-400 ml-1 p-1"><Trash2 size={16}/></button>
+            <button aria-label="Sposta il blocco su" type="button" onClick={() => onMoveUp()} disabled={index===0} className="text-muted hover:text-white disabled:opacity-30 p-1"><ChevronUp size={16}/></button>
+            <button aria-label="Sposta il blocco giù" type="button" onClick={() => onMoveDown()} disabled={index===total-1} className="text-muted hover:text-white disabled:opacity-30 p-1"><ChevronDown size={16}/></button>
+            <button aria-label="Elimina il blocco" type="button" onClick={onRemove} className="text-muted hover:text-red-400 ml-1 p-1"><Trash2 size={16}/></button>
           </div>
         </div>
 
@@ -992,7 +980,7 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
             {getBlockRecap() && <span className="text-xs text-gray-400 font-medium">{getBlockRecap()}</span>}
             
             {['WarmUp', 'Rest'].includes(block.type) && block.notes && (
-              <span className="text-xs text-gray-500 truncate">{block.notes}</span>
+              <span className="text-xs text-muted truncate">{block.notes}</span>
             )}
             
             {!['WarmUp', 'Rest'].includes(block.type) && (
@@ -1007,7 +995,7 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
                     return (
                       <span key={i} className="text-xs bg-[#111] border border-[#333] text-gray-400 px-2 py-1.5 rounded-lg flex items-center gap-1">
                         <span className="text-gray-300 font-medium">{ex.name}</span>
-                        {specs && <span className="text-gray-500 ml-0.5">{specs}</span>}
+                        {specs && <span className="text-muted ml-0.5">{specs}</span>}
                       </span>
                     )
                   })}
@@ -1148,7 +1136,7 @@ function ModeToggle({ mode, onModeChange, value, onChange }) {
            onModeChange('time');
            if (!RUN_TIME_OPTIONS.includes(value)) onChange('1 min');
         }}
-        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'time' ? 'text-[#0094C6]' : 'text-gray-500 hover:text-gray-300'}`}
+        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'time' ? 'text-[#0094C6]' : 'text-muted hover:text-gray-300'}`}
       >
         ⏱ Tempo
       </button>
@@ -1158,7 +1146,7 @@ function ModeToggle({ mode, onModeChange, value, onChange }) {
            onModeChange('distance');
            if (!RUN_DISTANCE_OPTIONS.includes(value)) onChange('100m');
         }}
-        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'distance' ? 'text-[#0094C6]' : 'text-gray-500 hover:text-gray-300'}`}
+        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'distance' ? 'text-[#0094C6]' : 'text-muted hover:text-gray-300'}`}
       >
         📏 Distanza
       </button>
@@ -1224,7 +1212,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold">{initialStep ? 'Modifica Fase Corsa' : 'Aggiungi Fase Corsa'}</p>
-          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
         </div>
         <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
           <div className="flex flex-wrap gap-2 mb-1">
@@ -1330,7 +1318,7 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
     switch(t) {
       case 'warmup': return 'text-gray-400 bg-[#2a2a2a] border-[#383838]'
       case 'run': return 'text-[#0094C6] bg-[#0094C6]/10 border-[#0094C6]/30'
-      case 'recover': return 'text-gray-500 bg-[#1e1e1e] border-[#2a2a2a]'
+      case 'recover': return 'text-muted bg-[#1e1e1e] border-[#2a2a2a]'
       case 'cooldown': return 'text-gray-400 bg-[#111] border-[#222]'
       case 'repeat': return 'text-purple-400 bg-purple-400/10 border-purple-400/30'
       default: return 'text-white bg-[#222] border-[#333]'
@@ -1373,8 +1361,8 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
       className="drag-item flex items-start gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 hover:border-[#444] transition-all duration-200 cursor-move"
     >
       <div className="flex flex-col items-center justify-center shrink-0 mt-1">
-        <button aria-label="Sposta la fase su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-gray-500 hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
-        <button aria-label="Sposta la fase giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-gray-500 hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
+        <button aria-label="Sposta la fase su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-muted hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
+        <button aria-label="Sposta la fase giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-muted hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
       </div>
       <div className="flex-1 cursor-pointer group self-stretch flex flex-col justify-center py-2 -my-2" onClick={() => onEdit && onEdit(step)}>
         <div className="flex items-center gap-2 mb-1 group-hover:opacity-80 transition">
@@ -1387,29 +1375,29 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
           <div className="text-sm mt-2 flex flex-col gap-1.5 ml-1 border-l-2 border-[#333] pl-3">
             <div>
               <span className="text-gray-300 font-medium">Corsa:</span> <span className="text-white">{step.runDuration}</span>
-              {step.runPace && <span className="text-gray-500 text-xs ml-1">@{step.runPace}</span>}
+              {step.runPace && <span className="text-muted text-xs ml-1">@{step.runPace}</span>}
             </div>
             <div>
-              <span className="text-gray-500 font-medium">Recupero:</span> <span className="text-gray-400">{step.recDuration}</span>
-              {step.recPace && <span className="text-gray-500 text-xs ml-1">@{step.recPace}</span>}
+              <span className="text-muted font-medium">Recupero:</span> <span className="text-gray-400">{step.recDuration}</span>
+              {step.recPace && <span className="text-muted text-xs ml-1">@{step.recPace}</span>}
             </div>
             {step.intensity && (
               <div className="flex items-center gap-1">
                 <span className={`text-xs font-bold ${getIntensityColor(step.intensity)}`}>{step.intensity}/10</span><BicepsFlexed size={14} className={getIntensityColor(step.intensity)} />
               </div>
             )}
-            {step.notes && <p className="text-gray-500 text-xs mt-0.5">{step.notes}</p>}
+            {step.notes && <p className="text-muted text-xs mt-0.5">{step.notes}</p>}
           </div>
         ) : (
           <div className="text-sm mt-1 text-gray-300">
             {step.duration && <span className="font-semibold text-white">{step.duration}</span>}
-            {step.pace && <span className="ml-2 text-gray-500">@{step.pace}</span>}
-            {step.notes && <p className="text-gray-500 text-xs mt-0.5">{step.notes}</p>}
+            {step.pace && <span className="ml-2 text-muted">@{step.pace}</span>}
+            {step.notes && <p className="text-muted text-xs mt-0.5">{step.notes}</p>}
           </div>
         )}
       </div>
       <div className="flex items-center shrink-0 mt-1">
-        <button aria-label="Duplica la fase" type="button" onClick={() => onDuplicate && onDuplicate(step)} className="text-gray-500 hover:text-[#0094C6] transition shrink-0 p-2" title="Duplica fase">
+        <button aria-label="Duplica la fase" type="button" onClick={() => onDuplicate && onDuplicate(step)} className="text-muted hover:text-[#0094C6] transition shrink-0 p-2" title="Duplica fase">
           <Copy size={15} />
         </button>
         <button aria-label="Elimina la fase" type="button" onClick={() => onRemove(step.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
@@ -1839,17 +1827,17 @@ export default function CreateWorkout() {
             />
             <button 
               onClick={() => setCategory('Hyrox')} 
-              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Hyrox' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}>
+              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Hyrox' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}>
               <Dumbbell size={18} /> Hyrox
             </button>
             <button 
               onClick={() => setCategory('Running')} 
-              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Running' ? 'text-[#0094C6]' : 'text-gray-500 hover:text-gray-300'}`}>
+              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Running' ? 'text-[#0094C6]' : 'text-muted hover:text-gray-300'}`}>
               <Timer size={18} /> Running
             </button>
             <button 
               onClick={() => setCategory('Custom')} 
-              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Custom' ? 'text-[#D11149]' : 'text-gray-500 hover:text-gray-300'}`}>
+              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Custom' ? 'text-[#D11149]' : 'text-muted hover:text-gray-300'}`}>
               <Dumbbell size={18} /> Custom
             </button>
           </div>
@@ -2159,7 +2147,7 @@ export default function CreateWorkout() {
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">Salvataggio</h2>
-               <button aria-label="Chiudi" onClick={() => setShowSaveModal(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setShowSaveModal(false)} className="text-muted hover:text-white"><X size={20} /></button>
             </div>
             
             {!isSavingAsNew ? (

@@ -430,7 +430,7 @@ export default function AthleteDetail() {
     }
   }
 
-  if (loading) return <div className="p-6 text-gray-500">Caricamento scheda atleta...</div>
+  if (loading) return <div className="p-6 text-muted">Caricamento scheda atleta...</div>
   if (!athlete) return <div className="p-6 text-red-400">Atleta non trovato.</div>
 
   const todayStr = format(new Date(), 'yyyy-MM-dd')
@@ -475,14 +475,14 @@ export default function AthleteDetail() {
               <img src={athlete.photo_url} alt={`${athlete.name}`} className="w-24 h-24 rounded-full object-cover border-2 border-[#333] shrink-0" onError={() => setAthlete({ ...athlete, photo_url: null })} />
             ) : (
               <div className="w-24 h-24 rounded-full bg-[#2a2a2a] flex items-center justify-center border-2 border-[#333] shrink-0">
-                <User size={48} className="text-gray-500" />
+                <User size={48} className="text-muted" />
               </div>
             )}
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">{athlete.name} {athlete.surname}</h1>
             {athlete.username && <p className="text-gray-400">@{athlete.username}</p>}
-            {athlete.notes && <p className="text-gray-500 text-sm mt-1 max-w-sm whitespace-pre-wrap">{athlete.notes}</p>}
+            {athlete.notes && <p className="text-muted text-sm mt-1 max-w-sm whitespace-pre-wrap">{athlete.notes}</p>}
             <div className="flex items-center gap-2 mt-3 flex-wrap">
               {athlete.instagram_url ? (
                 <a href={athlete.instagram_url.startsWith('http') ? athlete.instagram_url : `https://instagram.com/${athlete.instagram_url.replace(/^@/, '')}`} target="_blank" rel="noopener noreferrer" title="Instagram" className="flex items-center justify-center w-8 h-8 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 text-white rounded-full hover:opacity-80 transition shadow-md shadow-pink-500/20"><InstagramIcon size={16} /></a>
@@ -548,29 +548,29 @@ export default function AthleteDetail() {
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
-            <p className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">Tempo</p>
-            <p className="text-white font-black text-2xl">{weeklyStats.time}<span className="text-sm font-medium text-gray-500 ml-0.5">m</span></p>
+            <p className="text-muted text-[11px] font-bold uppercase tracking-wider">Tempo</p>
+            <p className="text-white font-black text-2xl">{weeklyStats.time}<span className="text-sm font-medium text-muted ml-0.5">m</span></p>
           </div>
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
-            <p className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">Workout Completati</p>
+            <p className="text-muted text-[11px] font-bold uppercase tracking-wider">Workout Completati</p>
             <p className="text-[#f1ba17] font-black text-2xl">{weeklyStats.completed}</p>
           </div>
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
-            <p className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">RPE</p>
-            <p className="text-white font-black text-2xl">{weeklyStats.avgRpe}<span className="text-sm font-medium text-gray-500 ml-0.5">/10</span></p>
+            <p className="text-muted text-[11px] font-bold uppercase tracking-wider">RPE</p>
+            <p className="text-white font-black text-2xl">{weeklyStats.avgRpe}<span className="text-sm font-medium text-muted ml-0.5">/10</span></p>
           </div>
         </div>
       </div>
 
       {/* TABS */}
       <div className="flex gap-6 mb-6 border-b border-[#2a2a2a] overflow-x-auto hide-scrollbar">
-        <button onClick={() => { setTab('workouts'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'workouts' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-gray-500 hover:text-white'}`}>
+        <button onClick={() => { setTab('workouts'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'workouts' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-muted hover:text-white'}`}>
           Diario
         </button>
-        <button onClick={() => { setTab('prs'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'prs' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-gray-500 hover:text-white'}`}>
+        <button onClick={() => { setTab('prs'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'prs' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-muted hover:text-white'}`}>
           Personal Record
         </button>
-        <button onClick={() => { setTab('stats'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'stats' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-gray-500 hover:text-white'}`}>
+        <button onClick={() => { setTab('stats'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'stats' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-muted hover:text-white'}`}>
           Statistiche
         </button>
       </div>
@@ -638,13 +638,13 @@ export default function AthleteDetail() {
               />
               <button 
                 onClick={() => setWorkoutView('list')}
-                className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'list' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'list' ? 'text-white' : 'text-muted hover:text-gray-300'}`}
               >
                 <LayoutList size={18} /> Elenco
               </button>
               <button 
                 onClick={() => setWorkoutView('calendar')}
-                className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'calendar' ? 'text-[#f1ba17]' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'calendar' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}
               >
                 <CalendarDays size={18} /> Calendario
               </button>
@@ -790,10 +790,10 @@ export default function AthleteDetail() {
                     </div>
                     <div>
                       <h3 className="text-white font-bold text-lg">Storico allenamenti</h3>
-                      <p className="text-gray-500 text-sm mt-0.5">{pastWorkoutsList.length} workout completati o passati</p>
+                      <p className="text-muted text-sm mt-0.5">{pastWorkoutsList.length} workout completati o passati</p>
                     </div>
                   </div>
-                  <ChevronRight size={20} className="text-gray-500 group-hover:text-white transition" />
+                  <ChevronRight size={20} className="text-muted group-hover:text-white transition" />
                 </button>
               )}
             </div>
@@ -823,7 +823,7 @@ export default function AthleteDetail() {
                      <div>
                        <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-1">{pr.exercise}</p>
                        <p className="text-white font-bold text-2xl">{pr.value}</p>
-                       <p className="text-gray-500 text-xs mt-1">{format(parseISO(pr.date), 'd MMMM yyyy', { locale: it })}</p>
+                       <p className="text-muted text-xs mt-1">{format(parseISO(pr.date), 'd MMMM yyyy', { locale: it })}</p>
                      </div>
                   </div>
                ))}
@@ -831,7 +831,7 @@ export default function AthleteDetail() {
            ) : (
              <div className="bg-[#1e1e1e] border border-dashed border-[#2a2a2a] rounded-2xl p-6 text-center">
                <p className="text-gray-400 text-sm mb-2">Nessun Personal Record registrato.</p>
-               <p className="text-gray-500 text-xs">Aggiungi i tuoi massimali di forza o i tuoi migliori tempi di corsa per tenerne traccia nel tempo!</p>
+               <p className="text-muted text-xs">Aggiungi i tuoi massimali di forza o i tuoi migliori tempi di corsa per tenerne traccia nel tempo!</p>
              </div>
            )}
         </div>
@@ -943,11 +943,11 @@ export default function AthleteDetail() {
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">{autonomousForm.id ? 'Modifica Allenamento' : 'Allenamento Libero'}</h2>
-               <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-muted hover:text-white"><X size={20} /></button>
             </div>
             <div className="flex flex-col gap-3">
               <div>
-                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-gray-500 font-normal">(facoltativo)</span></label>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-muted font-normal">(facoltativo)</span></label>
                 <input 
                   className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
                   value={autonomousForm.title}
@@ -1136,7 +1136,7 @@ function AthleteStatsTab({ workouts }) {
            <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
              <Target size={20} className="text-[#f1ba17]" /> Completamento
            </h3>
-           <p className="text-gray-500 text-sm">Ultimi 30 giorni</p>
+           <p className="text-muted text-sm">Ultimi 30 giorni</p>
            <p className="text-gray-400 mt-2 text-sm">Workout completati: <strong className="text-white">{completion.done}</strong> su {completion.assigned}</p>
         </div>
         <div className="relative w-24 h-24 flex items-center justify-center">
@@ -1155,19 +1155,19 @@ function AthleteStatsTab({ workouts }) {
          <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
            <LineChart size={20} className="text-[#0094C6]" /> Volume di Allenamento
          </h3>
-         <p className="text-gray-500 text-sm mb-6">Minuti stimati (Ultime 4 settimane)</p>
+         <p className="text-muted text-sm mb-6">Minuti stimati (Ultime 4 settimane)</p>
          
          <div className="relative h-32 mt-8 mb-2 ml-8 mr-4">
            {/* Y Axis Grid */}
            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0">
              <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-gray-500">{maxTime}</span>
+               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">{maxTime}</span>
              </div>
              <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-gray-500">{Math.round(maxTime / 2)}</span>
+               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">{Math.round(maxTime / 2)}</span>
              </div>
              <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-gray-500">0</span>
+               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">0</span>
              </div>
            </div>
 
@@ -1228,7 +1228,7 @@ function AthleteStatsTab({ workouts }) {
            {weeks.map((wk, i) => {
              const leftPct = (i / (weeks.length - 1)) * 100
              return (
-               <div key={i} className="absolute text-[11px] text-gray-500 font-bold whitespace-nowrap text-center" style={{ left: `${leftPct}%`, transform: 'translateX(-50%)' }}>
+               <div key={i} className="absolute text-[11px] text-muted font-bold whitespace-nowrap text-center" style={{ left: `${leftPct}%`, transform: 'translateX(-50%)' }}>
                  {wk.label}
                </div>
              )
@@ -1241,19 +1241,19 @@ function AthleteStatsTab({ workouts }) {
          <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
            <BarChart2 size={20} className="text-green-500" /> Carico di Allenamento
          </h3>
-         <p className="text-gray-500 text-sm mb-6">Punteggio di stress (Minuti x RPE)</p>
+         <p className="text-muted text-sm mb-6">Punteggio di stress (Minuti x RPE)</p>
          
          <div className="relative mt-8 mb-2 ml-8 mr-2">
            {/* Y Axis Grid */}
            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0 pb-6 pt-5">
              <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-gray-500">{maxLoad}</span>
+               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">{maxLoad}</span>
              </div>
              <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-gray-500">{Math.round(maxLoad / 2)}</span>
+               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">{Math.round(maxLoad / 2)}</span>
              </div>
              <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-gray-500">0</span>
+               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">0</span>
              </div>
            </div>
 
@@ -1271,7 +1271,7 @@ function AthleteStatsTab({ workouts }) {
                       style={{ height: `${heightPct}%` }}
                     />
                  </div>
-                 <span className="text-[11px] text-gray-500 font-bold whitespace-nowrap">{wk.label}</span>
+                 <span className="text-[11px] text-muted font-bold whitespace-nowrap">{wk.label}</span>
                </div>
              )
            })}
@@ -1284,10 +1284,10 @@ function AthleteStatsTab({ workouts }) {
          <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
            <PieChart size={20} className="text-purple-500" /> Sforzo Percepito (RPE)
          </h3>
-         <p className="text-gray-500 text-sm mb-6">Distribuzione dell'intensità</p>
+         <p className="text-muted text-sm mb-6">Distribuzione dell'intensità</p>
          
          {rpeDist.total === 0 ? (
-           <p className="text-gray-500 text-sm text-center py-4">Nessun dato RPE disponibile.</p>
+           <p className="text-muted text-sm text-center py-4">Nessun dato RPE disponibile.</p>
          ) : (
            <div className="flex flex-col gap-4">
              <RpeBar label="Leggero (1-4)" color="bg-green-500" count={rpeDist.light} total={rpeDist.total} />
@@ -1370,7 +1370,7 @@ function SocialLinkModal({ athlete, type, onClose, onSaved }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Aggiungi {isInsta ? 'Instagram' : 'Strava'}</p>
-          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
         </div>
         <div className="p-5 flex flex-col gap-4">
           <div className="flex flex-col gap-1">
@@ -1379,7 +1379,7 @@ function SocialLinkModal({ athlete, type, onClose, onSaved }) {
             </label>
             {isInsta ? (
                <div className="flex items-center bg-[#111] border border-[#333] rounded-xl overflow-hidden focus-within:border-pink-500 transition">
-                  <div className="pl-4 pr-3 py-3 text-gray-500 flex items-center justify-center border-r border-[#333]">
+                  <div className="pl-4 pr-3 py-3 text-muted flex items-center justify-center border-r border-[#333]">
                      <InstagramIcon size={18} className="text-pink-500" />
                   </div>
                   <div className="pl-3 text-gray-400 text-sm font-semibold">@</div>
@@ -1387,7 +1387,7 @@ function SocialLinkModal({ athlete, type, onClose, onSaved }) {
                </div>
             ) : (
                <div className="flex items-center bg-[#111] border border-[#333] rounded-xl overflow-hidden focus-within:border-[#fc4c02] transition">
-                  <div className="pl-4 pr-3 py-3 text-gray-500 flex items-center justify-center border-r border-[#333]">
+                  <div className="pl-4 pr-3 py-3 text-muted flex items-center justify-center border-r border-[#333]">
                      <Activity size={18} className="text-[#fc4c02]" />
                   </div>
                   <input autoFocus className="w-full bg-transparent px-3 py-3 text-white placeholder-gray-500 focus:outline-none text-base" placeholder="Link profilo..." value={url} onChange={e => setUrl(e.target.value)} />
@@ -1481,7 +1481,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
                  {role === 'athlete' && isAuto && onEditAutonomous && (
                    <button aria-label="Modifica l'allenamento libero" 
                      onClick={(e) => { e.stopPropagation(); onEditAutonomous(entry); }}
-                     className="text-gray-500 hover:text-[#f1ba17] transition p-1"
+                     className="text-muted hover:text-[#f1ba17] transition p-1"
                      title="Modifica allenamento libero"
                    >
                      <Edit size={16} />
@@ -1489,7 +1489,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
                  )}
                  <button aria-label="Elimina l'allenamento" 
                    onClick={(e) => { e.stopPropagation(); onRemove(entry.id); }}
-                   className="text-gray-500 hover:text-red-500 transition p-1"
+                   className="text-muted hover:text-red-500 transition p-1"
                    title={isAuto ? "Elimina allenamento libero" : "Rimuovi assegnazione"}
                  >
                    <Trash2 size={16} />
@@ -1513,7 +1513,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
           ) : null}
           {parsed.rpe !== '5' && entry.status === 'completed' && (
             <div className="mb-2 inline-flex items-center gap-1.5 bg-[#111] px-2 py-1 rounded border border-[#333]">
-              <span className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">Sforzo:</span>
+              <span className="text-muted text-[11px] font-bold uppercase tracking-wider">Sforzo:</span>
               <span className={`text-xs font-bold ${getRpeColorText(parseInt(parsed.rpe))}`}>{parsed.rpe}/10</span>
             </div>
           )}
@@ -1571,7 +1571,7 @@ function PrModal({ athleteId, initialPr, onClose, onSaved, onDelete }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">{initialPr ? 'Modifica PR' : 'Aggiungi PR'}</p>
-          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
         </div>
         <div className="p-5 flex flex-col gap-4">
           <div>
@@ -1711,7 +1711,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Modifica Atleta</p>
-          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
         </div>
         <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-4">
           <div className="flex justify-center">
@@ -1719,7 +1719,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
               <div className="w-20 h-20 rounded-full bg-[#2a2a2a] border-2 border-dashed border-[#444] flex items-center justify-center overflow-hidden hover:border-[#f1ba17] transition">
                 {photoPreview
                   ? <img src={photoPreview} className="w-full h-full object-cover" onError={() => setPhotoPreview(null)} />
-                  : <User size={28} className="text-gray-500" />
+                  : <User size={28} className="text-muted" />
                 }
               </div>
               <div className="absolute bottom-0 right-0 bg-[#f1ba17] p-1.5 rounded-full cursor-pointer shadow-lg">
@@ -1757,7 +1757,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
           
           <div className="flex flex-col gap-3">
              <div className="flex items-center bg-[#2a2a2a] border border-[#383838] rounded-xl overflow-hidden focus-within:border-pink-500 transition">
-                <div className="pl-4 pr-3 py-3 text-gray-500 flex items-center justify-center bg-[#1e1e1e] border-r border-[#383838]">
+                <div className="pl-4 pr-3 py-3 text-muted flex items-center justify-center bg-[#1e1e1e] border-r border-[#383838]">
                    <InstagramIcon size={18} className="text-pink-500" />
                 </div>
                 <div className="pl-3 text-gray-400 text-sm font-semibold">@</div>
@@ -1770,7 +1770,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
                 }} />
              </div>
              <div className="flex items-center bg-[#2a2a2a] border border-[#383838] rounded-xl overflow-hidden focus-within:border-[#fc4c02] transition">
-                <div className="pl-4 pr-3 py-3 text-gray-500 flex items-center justify-center bg-[#1e1e1e] border-r border-[#383838]">
+                <div className="pl-4 pr-3 py-3 text-muted flex items-center justify-center bg-[#1e1e1e] border-r border-[#383838]">
                    <Activity size={18} className="text-[#fc4c02]" />
                 </div>
                 <input className="w-full bg-transparent px-3 py-3 text-white placeholder-gray-500 focus:outline-none text-base" placeholder="Link profilo Strava..." value={form.strava_url} onChange={e => setForm({ ...form, strava_url: e.target.value })} />
@@ -1863,7 +1863,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
               {isEvent ? 'Evento / Gara' : category}
             </span>
           </div>
-          <p className="text-xs text-gray-500 mt-1.5">
+          <p className="text-xs text-muted mt-1.5">
             {format(parseISO(entry.completed_date), 'EEEE d MMMM yyyy', { locale: it })}
           </p>
         </div>
@@ -1872,7 +1872,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             {role === 'athlete' && isAuto && onEditAutonomous && (
               <button aria-label="Modifica l'allenamento libero" 
                 onClick={(e) => { e.stopPropagation(); onEditAutonomous(entry); }}
-                className="text-gray-500 hover:text-[#f1ba17] transition p-1"
+                className="text-muted hover:text-[#f1ba17] transition p-1"
                 title="Modifica allenamento libero"
               >
                 <Edit size={18} />
@@ -1880,7 +1880,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             )}
             <button aria-label="Elimina l'allenamento" 
               onClick={(e) => { e.stopPropagation(); onRemove(entry.id); }}
-              className="text-gray-500 hover:text-red-500 transition p-1"
+              className="text-muted hover:text-red-500 transition p-1"
               title={isAuto ? "Elimina allenamento libero" : "Rimuovi assegnazione"}
             >
               <Trash2 size={18} />
@@ -1895,7 +1895,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           entry.status === 'completed' 
             ? 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500/20' 
             : isBefore(scheduledDate, today)
-              ? `bg-[#111] border-[#333] text-gray-500 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isCustom ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
+              ? `bg-[#111] border-[#333] text-muted ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isCustom ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
               : `bg-[#2a2a2a] border-[#383838] text-gray-300 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isCustom ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
         }`}
       >
@@ -1916,7 +1916,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
         ) : null}
         {parsed.rpe !== '5' && entry.status === 'completed' && (
           <div className="mb-2 inline-flex items-center gap-1.5 bg-[#111] px-2 py-1 rounded border border-[#333]">
-            <span className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">Sforzo:</span>
+            <span className="text-muted text-[11px] font-bold uppercase tracking-wider">Sforzo:</span>
             <span className={`text-xs font-bold ${getRpeColorText(parseInt(parsed.rpe))}`}>{parsed.rpe}/10</span>
           </div>
         )}
@@ -2010,12 +2010,12 @@ function CustomAudioPlayer({ src, onDelete, role }) {
             />
          </div>
          <div className="flex justify-between items-center mt-1">
-            <span className="text-[11px] text-gray-500 font-medium">{currentTime}</span>
-            <span className="text-[11px] text-gray-500 font-medium">{duration}</span>
+            <span className="text-[11px] text-muted font-medium">{currentTime}</span>
+            <span className="text-[11px] text-muted font-medium">{duration}</span>
          </div>
       </div>
       {role === 'admin' && onDelete && (
-        <button aria-label="Elimina la nota vocale" onClick={onDelete} className="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-red-500 transition shrink-0" title="Elimina vocale">
+        <button aria-label="Elimina la nota vocale" onClick={onDelete} className="w-11 h-11 flex items-center justify-center text-muted hover:text-red-500 transition shrink-0" title="Elimina vocale">
           <Trash2 size={18} />
         </button>
       )}
@@ -2343,21 +2343,21 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Assegna Workout</p>
-          <button aria-label="Chiudi" onClick={() => { onClose(); setSelectedWorkouts([]); setAssignStep(1); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" onClick={() => { onClose(); setSelectedWorkouts([]); setAssignStep(1); }} className="text-muted hover:text-white"><X size={20} /></button>
         </div>
         {assignStep === 1 ? (
           <div className="flex flex-col flex-1 overflow-hidden">
             <div className="p-4 border-b border-[#2a2a2a]">
               <div className="relative">
-                <Search size={16} className="absolute left-3 top-3.5 text-gray-500" />
+                <Search size={16} className="absolute left-3 top-3.5 text-muted" />
                 <input type="text" placeholder="Cerca workout..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-2.5 pl-9 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base" />
               </div>
             </div>
             <div className="overflow-y-auto flex-1 p-4 flex flex-col gap-2">
               {loading ? (
-                <p className="text-gray-500 text-sm text-center py-4">Caricamento...</p>
+                <p className="text-muted text-sm text-center py-4">Caricamento...</p>
               ) : filtered.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-4">Nessun workout trovato.</p>
+                <p className="text-muted text-sm text-center py-4">Nessun workout trovato.</p>
               ) : (
                 <>
                   <div className="flex justify-between items-center mb-1 px-1">
@@ -2384,7 +2384,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                       >
                         <div className="flex-1 min-w-0 pr-3 text-left">
                           <p className={`font-semibold text-sm truncate transition ${isSelected ? 'text-[#f1ba17]' : 'text-white group-hover:text-[#f1ba17]'}`}>{w.title}</p>
-                          <p className="text-gray-500 text-xs mt-0.5">{w.date && isValid(parseISO(w.date)) ? format(parseISO(w.date), 'dd/MM/yyyy') : 'Data sconosciuta'} • {w.sections?.category || 'Generico'}</p>
+                          <p className="text-muted text-xs mt-0.5">{w.date && isValid(parseISO(w.date)) ? format(parseISO(w.date), 'dd/MM/yyyy') : 'Data sconosciuta'} • {w.sections?.category || 'Generico'}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button aria-label="Duplica il workout" 
@@ -2454,7 +2454,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
           <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col border border-[#333] animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 40px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg truncate pr-4">{previewWorkout.title}</p>
-              <button aria-label="Chiudi l'anteprima" onClick={() => setPreviewWorkout(null)} className="text-gray-500 hover:text-white shrink-0"><X size={20} /></button>
+              <button aria-label="Chiudi l'anteprima" onClick={() => setPreviewWorkout(null)} className="text-muted hover:text-white shrink-0"><X size={20} /></button>
             </div>
             <div className="overflow-y-auto p-5 flex flex-col gap-3">
               {(() => {
@@ -2464,23 +2464,23 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                 const steps = s.steps || s.main?.steps || [];
                 
                 if (isRun) {
-                  if (steps.length === 0) return <p className="text-gray-500 text-sm">Nessun dettaglio disponibile.</p>;
+                  if (steps.length === 0) return <p className="text-muted text-sm">Nessun dettaglio disponibile.</p>;
                   return steps.map((step, i) => (
                     <div key={i} className="bg-[#2a2a2a] p-3 rounded-xl border border-[#383838]">
                       <p className="text-[#0094C6] font-bold text-xs uppercase mb-1">{step.type === 'repeat' ? `Ripetute (${step.rounds}x)` : step.type}</p>
                       {step.type === 'repeat' ? (
                         <div className="text-sm text-white flex flex-col gap-1">
-                          <p><span className="text-gray-400">Corsa:</span> {step.runDuration} {step.runPace ? <span className="text-gray-500 text-xs">@{step.runPace}</span> : ''}</p>
-                          <p><span className="text-gray-400">Recupero:</span> {step.recDuration} {step.recPace ? <span className="text-gray-500 text-xs">@{step.recPace}</span> : ''}</p>
+                          <p><span className="text-gray-400">Corsa:</span> {step.runDuration} {step.runPace ? <span className="text-muted text-xs">@{step.runPace}</span> : ''}</p>
+                          <p><span className="text-gray-400">Recupero:</span> {step.recDuration} {step.recPace ? <span className="text-muted text-xs">@{step.recPace}</span> : ''}</p>
                         </div>
                       ) : (
-                        <p className="text-sm text-white">{step.duration} {step.pace ? <span className="text-gray-500 text-xs ml-1">@{step.pace}</span> : ''}</p>
+                        <p className="text-sm text-white">{step.duration} {step.pace ? <span className="text-muted text-xs ml-1">@{step.pace}</span> : ''}</p>
                       )}
                       {step.notes && <p className="text-gray-400 text-xs mt-1.5 italic">"{step.notes}"</p>}
                     </div>
                   ));
                 } else {
-                  if (blocks.length === 0) return <p className="text-gray-500 text-sm">Nessun dettaglio disponibile.</p>;
+                  if (blocks.length === 0) return <p className="text-muted text-sm">Nessun dettaglio disponibile.</p>;
                   return blocks.map((b, i) => {
                     let shortTitle = b.type;
                     if (b.type === 'EMOM') shortTitle = `EMOM ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
@@ -2660,7 +2660,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
               )
             })}
           </div>
-          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-1">
+          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-muted mt-1">
             <span>Leggero</span>
             <span>Estremo</span>
           </div>
@@ -2705,7 +2705,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
 function StatCard({ label, value }) {
   return (
     <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-3">
-      <p className="text-xs text-gray-500">{label}</p>
+      <p className="text-xs text-muted">{label}</p>
       <p className="text-white font-bold text-lg">{value}</p>
     </div>
   )

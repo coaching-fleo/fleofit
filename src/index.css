@@ -5,6 +5,10 @@
   --color-bg: #0B0B0B;
   --color-surface: #222222;
   --color-surface2: #2a2a2a;
+  /* Testo secondario. Sostituisce gray-500 (#6b7280), che dava 3.45:1 sulla
+     card: sotto il minimo AA di 4.5:1. Questo dà 4.98:1 e resta un gradino
+     sotto gray-400, quindi la gerarchia a più livelli sopravvive. */
+  --color-muted: #848d9c;
 }
 
 * {
@@ -14,7 +18,12 @@
 body {
   background-color: #0B0B0B;
   color: white;
-  font-family: 'Inter', sans-serif;
+  /* Inter era dichiarato ma non caricato da nessuna parte: su iOS il fallback
+     'sans-serif' di WebKit è Helvetica, quindi l'app rendeva in Helvetica.
+     Adottiamo esplicitamente il font di sistema: su iPhone è San Francisco,
+     zero peso da scaricare, funziona offline ed è quello che la piattaforma
+     si aspetta. */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, system-ui, sans-serif;
   margin: 0;
 }
 

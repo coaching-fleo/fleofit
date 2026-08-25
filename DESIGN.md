@@ -12,6 +12,7 @@ colors:
   custom: "#D11149"
   event: "#ffffff"
   ai: "#a855f7"
+  muted: "#848d9c"
   border-default: "#333333"
   border-strong: "#383838"
   border-max: "#444444"
@@ -20,37 +21,37 @@ colors:
   offline: "#f97316"
 typography:
   display:
-    fontFamily: "Inter, sans-serif"
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif"
     fontSize: "3rem"
     fontWeight: 900
     lineHeight: 1
     letterSpacing: "-0.025em"
   headline:
-    fontFamily: "Inter, sans-serif"
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif"
     fontSize: "1.875rem"
     fontWeight: 900
     lineHeight: 1.1
     letterSpacing: "-0.025em"
   title:
-    fontFamily: "Inter, sans-serif"
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 700
     lineHeight: 1.3
     letterSpacing: "normal"
   body:
-    fontFamily: "Inter, sans-serif"
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: "normal"
   label:
-    fontFamily: "Inter, sans-serif"
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif"
     fontSize: "0.75rem"
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "0.05em"
   numeral:
-    fontFamily: "Inter, sans-serif"
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif"
     fontSize: "7.5rem"
     fontWeight: 900
     lineHeight: 1
@@ -194,12 +195,13 @@ esistono per identificare la disciplina, mai per decorare.
   celle di dato dentro una card. È l'unico tono che va "sotto" la card.
 - **Bordi** (`#333333` default · `#383838` marcato · `#444444` massimo): tre gradini di
   contrasto crescente; `#2a2a2a` fa da quarto gradino, il più tenue.
-- **Testo** (bianco → `gray-300` → `gray-400` → `gray-500`): gerarchia discendente rigida.
-  `gray-400` (#9ca3af, 6.57:1 sulla card) è il **pavimento del testo informativo**.
-  ⚠️ Aggiornato il 24/08/2026: `gray-600` (#4b5563) è stato **eliminato dal sistema** — su
-  pozzetto dava 2.50:1, sotto anche il minimo per il testo grande. Le sue 22 occorrenze sono
-  passate a `gray-400`. `gray-500` (3.45:1) sopravvive solo su elementi disattivati, mai su
-  testo che l'utente deve leggere.
+- **Testo** (bianco → `gray-300` → `gray-400` → **`muted`**): gerarchia discendente rigida.
+  **Ogni livello supera 4.5:1 sulla card**, quindi non esiste testo illeggibile nel sistema.
+  ⚠️ Aggiornato il 24-25/08/2026: `gray-600` (#4b5563, 2.50:1) e `gray-500` (#6b7280, 3.45:1)
+  sono stati **eliminati dal testo**. Il secondario è ora il token `--color-muted` (#848d9c,
+  **4.98:1**), definito in `@theme` e usato come `text-muted` in 211 punti: passa AA e resta
+  un gradino sotto `gray-400`, quindi la gerarchia sopravvive. I grigi Tailwind sotto il 4.5:1
+  restano ammessi **solo** su elementi disattivati.
 
 ### Semantic
 - **Verde Completato** (`#22c55e` / `green-500`): workout completato. Unico verde del sistema.
@@ -223,16 +225,19 @@ bianco. Vale per CTA, pillole piene e giorno selezionato. Stesso principio sul B
 
 ## Typography
 
-**Famiglia unica:** `Inter, sans-serif` (dichiarata in `src/index.css`).
+**Famiglia unica:** il **font di sistema** — su iPhone **San Francisco**
+(`-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif`).
 
-> ⚠️ **Stato reale, da sapere:** Inter non è caricato da nessuna parte — nessun `@font-face`,
-> nessun link a Google Fonts, nessun pacchetto npm. Sul dispositivo il fallback `sans-serif`
-> di WebKit iOS è **Helvetica**: l'app spedita oggi non rende in Inter. La scala qui sotto è
-> reale, la famiglia è un'intenzione non ancora realizzata. Va risolta scegliendo: caricare
-> Inter come asset locale, oppure adottare esplicitamente `-apple-system` e progettare su
-> San Francisco.
+> ⚠️ Risolto il 25/08/2026. Prima `index.css` dichiarava `Inter` senza caricarlo da nessuna
+> parte: niente `@font-face`, niente Google Fonts, niente pacchetto npm. Sul dispositivo il
+> fallback `sans-serif` di WebKit iOS è **Helvetica**, quindi l'app spediva in Helvetica.
+> Scelto San Francisco: zero peso da scaricare, funziona in Modalità Offline, ha il rendering
+> ottimizzato per gli schermi Apple, e `ios.md` lo indica come la voce che porta la UI.
+> **Non reintrodurre un font caricato dalla rete**: romperebbe l'uso offline.
 
-**Carattere:** neutro-geometrico, senza personalità propria, tutto affidato al peso.
+**Carattere:** neutro di sistema, senza personalità propria, tutto affidato al peso.
+San Francisco porta con sé il vantaggio di essere il carattere che l'utente iPhone legge
+tutto il giorno: si fa dimenticare, che su una superficie Operate è esattamente ciò che serve.
 Il sistema usa due pesi come strumento di gerarchia (900 e 700) e due come supporto
 (500 e 400), non una scala di corpi.
 
@@ -482,7 +487,10 @@ condiviso di "qui non c'è ancora niente, ma può esserci".
   gamification: è l'anti-riferimento "app fitness generalista".
 - **Don't** progettare o proporre un tema chiaro: il sistema è dark-only per scelta.
 - **Don't** scendere sotto `font-size: 16px` su input/textarea/select su iOS, né sotto
-  **11px** su qualunque testo, né usare `text-gray-600` (2.50:1: è stato rimosso dal sistema).
+  **11px** su qualunque testo, né usare `text-gray-600` o `text-gray-500` sul testo: sono
+  sotto il 4.5:1 e sono stati rimossi dal sistema. Il secondario è `text-muted`.
+- **Don't** caricare un font dalla rete: l'app deve funzionare in Modalità Offline, e il
+  carattere è quello di sistema per scelta.
 - **Don't** lasciare un bottone solo-icona senza `aria-label`: VoiceOver lo annuncia come
   "pulsante" e basta. Tutti e 92 quelli esistenti sono stati etichettati il 24/08/2026.
 - **Don't** reintrodurre `user-scalable=no` o `maximum-scale` nel viewport: il pinch-to-zoom è

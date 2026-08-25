@@ -45,7 +45,7 @@ export default function Athletes() {
       </div>
 
       <div className="relative mb-4">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
         <input
           className="w-full bg-[#222] border border-[#333] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base"
           placeholder="Cerca atleta..."
@@ -72,12 +72,12 @@ export default function Athletes() {
               <div className="w-12 h-12 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0">
                 {a.photo_url
                   ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" onError={() => setAthletes(athletes.map(ath => ath.id === a.id ? { ...ath, photo_url: null } : ath))} />
-                  : <User size={22} className="text-gray-500" />
+                  : <User size={22} className="text-muted" />
                 }
               </div>
               <div className="flex-1">
                 <p className="text-white font-semibold">{a.name} {a.surname}</p>
-                <p className="text-gray-500 text-xs mt-0.5">
+                <p className="text-muted text-xs mt-0.5">
                   {[a.weight && `${a.weight}kg`, a.height && `${a.height}cm`, a.birth_date && `${differenceInYears(new Date(), parseISO(a.birth_date))} anni`].filter(Boolean).join(' · ')}
                 </p>
               </div>
@@ -151,7 +151,7 @@ function NewAthleteModal({ onClose, onSaved }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Nuovo Atleta</p>
-          <button onClick={onClose} className="text-gray-500 hover:text-white">✕</button>
+          <button onClick={onClose} className="text-muted hover:text-white">✕</button>
         </div>
 
         <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-4">
@@ -161,7 +161,7 @@ function NewAthleteModal({ onClose, onSaved }) {
               <div className="w-20 h-20 rounded-full bg-[#2a2a2a] border-2 border-dashed border-[#444] flex items-center justify-center overflow-hidden hover:border-[#f1ba17] transition">
                 {photoPreview
                   ? <img src={photoPreview} className="w-full h-full object-cover" onError={() => setPhotoPreview(null)} />
-                  : <User size={28} className="text-gray-500" />
+                  : <User size={28} className="text-muted" />
                 }
               </div>
               <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />

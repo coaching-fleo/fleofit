@@ -284,11 +284,11 @@ export default function Login() {
           <div className="animate-in fade-in duration-300">
             <div className="text-center mb-6">
               <h2 className="text-xl font-bold text-white">Codice di Invito Richiesto</h2>
-              <p className="text-gray-500 text-sm mt-2">Per registrarti, inserisci il codice di invito che ti è stato fornito.</p>
+              <p className="text-muted text-sm mt-2">Per registrarti, inserisci il codice di invito che ti è stato fornito.</p>
             </div>
             <div className="flex flex-col gap-4" onKeyDown={e => { if (e.key === 'Enter') handleInviteSubmit(e) }}>
               <div className="relative">
-                <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
                 <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Il tuo codice di invito" className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-4 pl-11 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] transition uppercase text-base" disabled={inviteLoading} />
               </div>
               {inviteError && <p className="text-red-500 text-xs text-center">{inviteError}</p>}
@@ -303,7 +303,7 @@ export default function Login() {
         {view === 'recoveryForm' && (
           <div className="flex flex-col gap-4 animate-in fade-in duration-300" onKeyDown={e => { if (e.key === 'Enter') handleRecoveryUpdate(e) }}>
             <div className="relative">
-              <Lock size={18} className="absolute left-4 top-3.5 text-gray-500" />
+              <Lock size={18} className="absolute left-4 top-3.5 text-muted" />
               <input 
                 type="password" 
 
@@ -321,7 +321,7 @@ export default function Login() {
 
           {view === 'authForm' && <div className="flex flex-col gap-4 animate-in fade-in duration-300" onKeyDown={e => { if (e.key === 'Enter') handleEmailAuth(e) }}>
             <div className="relative">
-              <Mail size={18} className="absolute left-4 top-3.5 text-gray-500" />
+              <Mail size={18} className="absolute left-4 top-3.5 text-muted" />
               <input 
                 type="email" 
                 
@@ -334,7 +334,7 @@ export default function Login() {
 
             {!isResetPassword && (
               <div className="relative">
-                <Lock size={18} className="absolute left-4 top-3.5 text-gray-500" />
+                <Lock size={18} className="absolute left-4 top-3.5 text-muted" />
                 <input 
                   type="password" 
                   placeholder="La tua password" 
@@ -363,7 +363,7 @@ export default function Login() {
             <div className="animate-in fade-in duration-300">
               <div className="my-6 flex items-center gap-3">
                 <div className="flex-1 h-px bg-[#333]"></div>
-                <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Oppure</span>
+                <span className="text-muted text-xs font-medium uppercase tracking-wider">Oppure</span>
                 <div className="flex-1 h-px bg-[#333]"></div>
               </div>
 
@@ -377,7 +377,7 @@ export default function Login() {
                 Continua con Google
               </button>
 
-              <p className="mt-8 text-center text-sm text-gray-500">
+              <p className="mt-8 text-center text-sm text-muted">
                 {isSignUp ? 'Hai già un account?' : 'Non hai un account?'} <button type="button" onClick={() => isSignUp ? setIsSignUp(false) : setView('inviteForm')} className="text-[#f1ba17] font-semibold hover:underline">
                   {isSignUp ? 'Accedi' : 'Registrati con Invito'}
                 </button>

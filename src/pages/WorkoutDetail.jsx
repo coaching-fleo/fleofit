@@ -25,25 +25,11 @@ import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/work
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { ERGOMETERS, COACHING_ID } from '../lib/constants'
 import { mostraErrore } from '../lib/alert'
+import { TYPE_COLORS } from '../lib/blockColors'
 
-const TYPE_COLORS = {
-  'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
-  'Rest': { text: 'text-gray-500', bg: 'bg-[#1e1e1e]', border: 'border-[#2a2a2a]', hex: '#6b7280' },
-  'Cash In': { text: 'text-gray-300', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#d1d5db' },
-  'Cash Out': { text: 'text-gray-300', bg: 'bg-[#222]', border: 'border-[#444]', hex: '#d1d5db' },
-  'ON/OFF': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
-  EMOM: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
-  AMRAP: { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
-  'For Time': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
-    'Interval': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' },
-
-   'Running': { text: 'text-[#0094C6]', bg: 'bg-[#0094C6]/10', border: 'border-[#0094C6]/30', hex: '#0094C6' },
-  'Custom': { text: 'text-[#D11149]', bg: 'bg-[#D11149]/10', border: 'border-[#D11149]/30', hex: '#D11149' },
-  'Event': { text: 'text-white', bg: 'bg-white/10', border: 'border-white/30', hex: '#ffffff' }
-}
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
-  if (isNaN(num)) return 'text-gray-500';
+  if (isNaN(num)) return 'text-muted';
   if (num <= 3) return 'text-green-400';
   if (num <= 6) return 'text-yellow-400';
   if (num <= 8) return 'text-orange-500';
@@ -1199,7 +1185,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     }
   }
 
-  if (loading) return <div className="p-6 text-gray-500">Caricamento...</div>
+  if (loading) return <div className="p-6 text-muted">Caricamento...</div>
   if (!workout) return <div className="p-6 text-red-400">Workout non trovato</div>
 
   const s = workout.sections || {}
@@ -1249,7 +1235,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-bold text-white break-words">{workout.title}</h1>
-              <p className="text-gray-500 text-sm mt-1 capitalize truncate">
+              <p className="text-muted text-sm mt-1 capitalize truncate">
                 {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}
               </p>
             </div>
@@ -1470,7 +1456,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Note Atleta (${athleteNote.athleteName})`} color="border-[#3b82f6]/40">
           {athleteNote.rpe && athleteNote.rpe !== '5' && (
             <div className="mb-2 inline-flex items-center gap-1.5 bg-[#111] px-2 py-1 rounded border border-[#333]">
-              <span className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">Sforzo percepito:</span>
+              <span className="text-muted text-[11px] font-bold uppercase tracking-wider">Sforzo percepito:</span>
               <span className={`text-xs font-bold ${getRpeColorText(parseInt(athleteNote.rpe))}`}>{athleteNote.rpe}/10</span>
             </div>
           )}
@@ -1500,22 +1486,22 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                       {a.athletes?.photo_url ? (
                         <img src={a.athletes.photo_url} alt={a.athletes?.name} className="w-full h-full object-cover" onError={(e) => e.target.style.opacity = 0} />
                       ) : (
-                        <User size={18} className="text-gray-500" />
+                        <User size={18} className="text-muted" />
                       )}
                     </div>
                     <div>
                       <p className={`font-semibold text-sm transition ${isSelected ? 'text-[#f1ba17]' : 'text-white'}`}>{a.athletes?.name} {a.athletes?.surname}</p>
-                      <p className="text-gray-500 text-xs capitalize">{format(parseISO(a.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
+                      <p className="text-muted text-xs capitalize">{format(parseISO(a.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <div className={`px-2 py-1 rounded-lg border text-xs font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
+                    <div className={`px-2 py-1 rounded-lg border text-xs font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-muted border-[#333]'}`}>
                       {a.status === 'completed' ? 'Fatto' : 'Da fare'}
                     </div>
                     {role === 'admin' && (
                       <button aria-label="Rimuovi l'assegnazione" 
                         onClick={(e) => { e.stopPropagation(); handleRemoveAssignment(a.id); }}
-                        className="p-1.5 text-gray-500 hover:text-red-500 transition rounded-lg hover:bg-[#111]"
+                        className="p-1.5 text-muted hover:text-red-500 transition rounded-lg hover:bg-[#111]"
                         title="Rimuovi assegnazione"
                       >
                         <Trash2 size={16} />
@@ -1707,13 +1693,13 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg">Assegna Workout</p>
-              <button aria-label="Chiudi" onClick={() => { setAssignModalOpen(false); setSelectedAthletes([]); setAssignStep(1); }} className="text-gray-500 hover:text-white"><X size={20} /></button>
+              <button aria-label="Chiudi" onClick={() => { setAssignModalOpen(false); setSelectedAthletes([]); setAssignStep(1); }} className="text-muted hover:text-white"><X size={20} /></button>
              </div>
             
             {assignStep === 1 ? (
               <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-3">
                 {athletes.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4 text-sm">Nessun atleta trovato.</p>
+                  <p className="text-muted text-center py-4 text-sm">Nessun atleta trovato.</p>
                 ) : (
                   <>
                     <div className="flex justify-between items-center mb-2 px-1">
@@ -1740,7 +1726,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                             <div className="w-10 h-10 rounded-full bg-[#1e1e1e] border border-[#444] flex items-center justify-center overflow-hidden shrink-0">
                               {a.photo_url
                                 ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" onError={() => setAthletes(athletes.map(ath => ath.id === a.id ? { ...ath, photo_url: null } : ath))} />
-                                : <User size={18} className="text-gray-500" />
+                                : <User size={18} className="text-muted" />
                               }
                             </div>
                             <div>
@@ -1796,11 +1782,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">Modifica Allenamento Libero</h2>
-               <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-muted hover:text-white"><X size={20} /></button>
             </div>
             <div className="flex flex-col gap-3">
               <div>
-                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-gray-500 font-normal">(facoltativo)</span></label>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-muted font-normal">(facoltativo)</span></label>
                 <input 
                   className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
                   value={autonomousForm.title}
@@ -1899,7 +1885,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <div className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isTvInputFocused ? '-translate-y-32' : ''}`}>
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white flex items-center gap-2"><MonitorUp size={24} className="text-[#f1ba17]" /> Trasmetti in TV</h2>
-               <button aria-label="Chiudi" onClick={() => setTvModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setTvModalOpen(false)} className="text-muted hover:text-white"><X size={20} /></button>
             </div>
             <p className="text-gray-400 text-sm text-left">
               Apri il browser della tua Fire Stick o Smart TV, vai su <strong className="text-white">fleofit.vercel.app/tv</strong> e inserisci qui sotto il codice che vedi a schermo.
@@ -1974,7 +1960,7 @@ const SCHEMES = {
   rest:  { bg: 'bg-[#1e1e1e]', text: 'text-green-400', sub: 'text-green-500/80', card: 'bg-[#111] border-green-500/20 text-green-400', cardLabel: 'text-green-500/60', icon: 'text-gray-400', btnBg: 'bg-green-500 text-black' },
   hyrox: { bg: 'bg-[#D11149]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#D11149]' },
   emom:  { bg: 'bg-[#111]', text: 'text-[#f1ba17]', sub: 'text-[#f1ba17]/80', card: 'bg-[#1e1e1e] border-[#f1ba17]/20 text-[#f1ba17]', cardLabel: 'text-[#f1ba17]/60', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
-  base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-gray-500', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
+  base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-muted', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
   done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' },
   custom: { bg: 'bg-[#0B0B0B]', text: 'text-[#D11149]', sub: 'text-[#D11149]/80', card: 'bg-[#1e1e1e] border-[#D11149]/20 text-[#D11149]', cardLabel: 'text-[#D11149]/60', icon: 'text-gray-400', btnBg: 'bg-[#D11149] text-white' }
 }
@@ -2511,21 +2497,21 @@ function RunningList({ steps }) {
           {step.type === 'repeat' ? (
             <div className="text-sm flex flex-col gap-1 mt-1">
               <div className="flex items-center justify-between pr-2">
-                <div><span className="text-gray-400">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-gray-500 text-xs">@{step.runPace}</span>}</div>
+                <div><span className="text-gray-400">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-muted text-xs">@{step.runPace}</span>}</div>
                 {step.runIntensity && <div className="flex items-center gap-1"><span className={`text-xs font-bold ${getIntensityColor(step.runIntensity)}`}>{step.runIntensity}/10</span><BicepsFlexed size={12} className={getIntensityColor(step.runIntensity)} /></div>}
               </div>
               <div className="flex items-center justify-between pr-2">
-                <div><span className="text-gray-400">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-gray-500 text-xs">@{step.recPace}</span>}</div>
+                <div><span className="text-gray-400">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-muted text-xs">@{step.recPace}</span>}</div>
                 {step.recIntensity && <div className="flex items-center gap-1"><span className={`text-xs font-bold ${getIntensityColor(step.recIntensity)}`}>{step.recIntensity}/10</span><BicepsFlexed size={12} className={getIntensityColor(step.recIntensity)} /></div>}
               </div>
-              {step.notes && <p className="text-gray-500 text-xs mt-0.5">{step.notes}</p>}
+              {step.notes && <p className="text-muted text-xs mt-0.5">{step.notes}</p>}
             </div>
           ) : (
             <div className="text-sm flex items-center justify-between pr-2">
               <div>
                 {step.duration && <span className="font-semibold text-white">{step.duration}</span>}
                 {step.pace && <span className="ml-2 text-gray-400">@{step.pace}</span>}
-                {step.notes && <p className="text-gray-500 text-xs mt-1">{step.notes}</p>}
+                {step.notes && <p className="text-muted text-xs mt-1">{step.notes}</p>}
               </div>
               {step.intensity && <div className="flex items-center gap-1"><span className={`text-xs font-bold ${getIntensityColor(step.intensity)}`}>{step.intensity}/10</span><BicepsFlexed size={12} className={getIntensityColor(step.intensity)} /></div>}
             </div>
@@ -2543,7 +2529,7 @@ function Section({ icon, label, hint, color, children }) {
       <div className="flex items-baseline gap-2 mb-3">
         {icon}
         <span className="text-white font-semibold text-sm">{label}</span>
-        {hint && <span className="text-[11px] text-gray-500 font-normal">{hint}</span>}
+        {hint && <span className="text-[11px] text-muted font-normal">{hint}</span>}
       </div>
       {children}
     </div>
@@ -2566,7 +2552,7 @@ function ExList({ exercises, showMinute, typeColor }) {
           )}
           <div className="flex-1">
             <span className="text-white text-sm font-medium">{ex.name}</span>
-            <span className="text-gray-500 text-xs ml-2">
+            <span className="text-muted text-xs ml-2">
               {detail} {paceStr}
             </span>
             {ex.kg && <span className="text-gray-400 text-xs ml-2 font-bold">{ex.kg}kg</span>}
@@ -2650,12 +2636,12 @@ function CustomAudioPlayer({ src, onDelete, role }) {
             />
          </div>
          <div className="flex justify-between items-center mt-1">
-            <span className="text-[11px] text-gray-500 font-medium">{currentTime}</span>
-            <span className="text-[11px] text-gray-500 font-medium">{duration}</span>
+            <span className="text-[11px] text-muted font-medium">{currentTime}</span>
+            <span className="text-[11px] text-muted font-medium">{duration}</span>
          </div>
       </div>
       {role === 'admin' && onDelete && (
-        <button aria-label="Elimina la nota vocale" onClick={onDelete} className="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-red-500 transition shrink-0" title="Elimina vocale">
+        <button aria-label="Elimina la nota vocale" onClick={onDelete} className="w-11 h-11 flex items-center justify-center text-muted hover:text-red-500 transition shrink-0" title="Elimina vocale">
           <Trash2 size={18} />
         </button>
       )}
@@ -3021,7 +3007,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
               )
             })}
           </div>
-          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-1">
+          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-muted mt-1">
             <span>Leggero</span>
             <span>Estremo</span>
           </div>

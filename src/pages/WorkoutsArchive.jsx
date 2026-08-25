@@ -87,11 +87,11 @@ export default function WorkoutsArchive() {
           onChange={e => setSearchTerm(e.target.value)}
           className="w-full bg-[#1e1e1e] border border-[#333] text-white px-4 py-3 pl-10 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base"
         />
-        <Search size={18} className="absolute left-3 top-3.5 text-gray-500" />
+        <Search size={18} className="absolute left-3 top-3.5 text-muted" />
       </div>
 
       {loading ? (
-        <p className="text-gray-500">Caricamento in corso...</p>
+        <p className="text-muted">Caricamento in corso...</p>
       ) : filteredWorkouts.length === 0 ? (
         <div className="text-center p-6 bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl">
           <p className="text-gray-400">Nessun workout trovato.</p>
@@ -122,7 +122,7 @@ export default function WorkoutsArchive() {
                     {isEvent ? 'Evento' : category}
                   </span>
                   {role !== 'athlete' && w.athlete_workouts && (
-                    <span className="text-[11px] text-gray-500 font-medium">Assegnato: {w.athlete_workouts.length}</span>
+                    <span className="text-[11px] text-muted font-medium">Assegnato: {w.athlete_workouts.length}</span>
                   )}
                 </div>
               </div>

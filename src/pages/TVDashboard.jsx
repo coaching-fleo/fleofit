@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 import { blockHint } from '../lib/blockHints'
 import { ERGOMETERS } from '../lib/constants'
+import { TYPE_COLORS } from '../lib/blockColors'
 
 // --- AUDIO GENERATOR HELPER ---
 const writeString = (view, offset, string) => {
@@ -63,7 +64,7 @@ const SCHEMES = {
   rest:  { bg: 'bg-[#1e1e1e]', text: 'text-green-400', sub: 'text-green-500/80', card: 'bg-[#111] border-green-500/20 text-green-400', cardLabel: 'text-green-500/60', icon: 'text-gray-400', btnBg: 'bg-green-500 text-black' },
   hyrox: { bg: 'bg-[#D11149]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#D11149]' },
   emom:  { bg: 'bg-[#111]', text: 'text-[#f1ba17]', sub: 'text-[#f1ba17]/80', card: 'bg-[#1e1e1e] border-[#f1ba17]/20 text-[#f1ba17]', cardLabel: 'text-[#f1ba17]/60', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
-  base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-gray-500', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
+  base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-muted', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
   done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' },
   custom: { bg: 'bg-[#0B0B0B]', text: 'text-[#D11149]', sub: 'text-[#D11149]/80', card: 'bg-[#1e1e1e] border-[#D11149]/20 text-[#D11149]', cardLabel: 'text-[#D11149]/60', icon: 'text-gray-400', btnBg: 'bg-[#D11149] text-white' }
 }
@@ -117,24 +118,10 @@ const getBlockTitle = (block) => {
   return block.type
 }
 
-const TYPE_COLORS = {
-  'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]' },
-  'Rest': { text: 'text-gray-500', bg: 'bg-[#1e1e1e]', border: 'border-[#2a2a2a]' },
-  'Cash In': { text: 'text-gray-300', bg: 'bg-[#222]', border: 'border-[#444]' },
-  'Cash Out': { text: 'text-gray-300', bg: 'bg-[#222]', border: 'border-[#444]' },
-  'ON/OFF': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]' },
-  'EMOM': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]' },
-  'AMRAP': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]' },
-  'For Time': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]' },
-  'Interval': { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]' },
-  'Running': { text: 'text-[#0094C6]', bg: 'bg-[#0094C6]/10', border: 'border-[#0094C6]/30' },
-  'Custom': { text: 'text-[#D11149]', bg: 'bg-[#D11149]/10', border: 'border-[#D11149]/30' },
-  'Event': { text: 'text-white', bg: 'bg-white/10', border: 'border-white/30' }
-}
 
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
-  if (isNaN(num)) return 'text-gray-500';
+  if (isNaN(num)) return 'text-muted';
   if (num <= 3) return 'text-green-400';
   if (num <= 6) return 'text-yellow-400';
   if (num <= 8) return 'text-orange-500';
@@ -153,7 +140,7 @@ function Section({ icon, label, hint, color, stepNumber, className = "", isActiv
         <div className="mt-1 shrink-0">{icon}</div>
         <span className="flex-1 min-w-0">
           <span className="block text-white font-black text-3xl uppercase tracking-wider leading-tight break-words">{label}</span>
-          {hint && <span className="block text-gray-500 font-medium text-lg normal-case tracking-normal mt-1">{hint}</span>}
+          {hint && <span className="block text-muted font-medium text-lg normal-case tracking-normal mt-1">{hint}</span>}
         </span>
       </div>
       <div className="flex-1 flex flex-col justify-center gap-4">
@@ -181,7 +168,7 @@ function ExList({ exercises, showMinute, typeColor }) {
             <span className="text-white text-3xl font-black leading-tight break-words">{ex.name}</span>
             <span className="text-gray-400 text-2xl font-bold mt-1 break-words">
               {[detail, paceStr, ex.kg ? `${ex.kg}kg` : ''].filter(Boolean).join(' · ')}
-              {ex.notes && <span className="text-gray-500 font-medium ml-2">· {ex.notes}</span>}
+              {ex.notes && <span className="text-muted font-medium ml-2">· {ex.notes}</span>}
             </span>
           </div>
           {ex.intensity && (
@@ -232,21 +219,21 @@ function RunningList({ steps, activeIdx }) {
           {step.type === 'repeat' ? (
             <div className="text-3xl font-bold flex flex-col gap-4 mt-2">
               <div className="flex items-start justify-between bg-[#111] px-6 py-5 rounded-3xl border-2 border-[#333]">
-            <div className="flex-1 min-w-0 break-words pr-4"><span className="text-gray-500 mr-3">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-[#0094C6] ml-3 whitespace-nowrap">@{step.runPace}</span>}</div>
+            <div className="flex-1 min-w-0 break-words pr-4"><span className="text-muted mr-3">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-[#0094C6] ml-3 whitespace-nowrap">@{step.runPace}</span>}</div>
                 {step.runIntensity && <div className="flex items-center gap-2 shrink-0 mt-1"><span className={`text-3xl font-black ${getIntensityColor(step.runIntensity)}`}>{step.runIntensity}/10</span><BicepsFlexed size={36} className={getIntensityColor(step.runIntensity)} /></div>}
               </div>
               <div className="flex items-start justify-between bg-[#111] px-6 py-5 rounded-3xl border-2 border-[#333]">
-            <div className="flex-1 min-w-0 break-words pr-4"><span className="text-gray-500 mr-3">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-green-500 ml-3 whitespace-nowrap">@{step.recPace}</span>}</div>
+            <div className="flex-1 min-w-0 break-words pr-4"><span className="text-muted mr-3">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-green-500 ml-3 whitespace-nowrap">@{step.recPace}</span>}</div>
                 {step.recIntensity && <div className="flex items-center gap-2 shrink-0 mt-1"><span className={`text-3xl font-black ${getIntensityColor(step.recIntensity)}`}>{step.recIntensity}/10</span><BicepsFlexed size={36} className={getIntensityColor(step.recIntensity)} /></div>}
               </div>
-              {step.notes && <p className="text-gray-500 text-2xl font-medium mt-1 break-words">"{step.notes}"</p>}
+              {step.notes && <p className="text-muted text-2xl font-medium mt-1 break-words">"{step.notes}"</p>}
             </div>
           ) : (
             <div className="flex items-start justify-between text-4xl font-bold mt-2">
             <div className="flex-1 min-w-0 break-words pr-4">
                 {step.duration && <span className="font-semibold text-white">{step.duration}</span>}
                 {step.pace && <span className="ml-4 text-gray-400 whitespace-nowrap">@{step.pace}</span>}
-                {step.notes && <p className="text-gray-500 text-2xl font-medium mt-3 break-words">"{step.notes}"</p>}
+                {step.notes && <p className="text-muted text-2xl font-medium mt-3 break-words">"{step.notes}"</p>}
               </div>
               {step.intensity && <div className="flex items-center gap-2 shrink-0 bg-[#111] px-5 py-2.5 rounded-2xl border-2 border-[#333] mt-1"><span className={`text-3xl font-black ${getIntensityColor(step.intensity)}`}>{step.intensity}/10</span><BicepsFlexed size={36} className={getIntensityColor(step.intensity)} /></div>}
             </div>
@@ -519,7 +506,7 @@ export default function TVDashboard() {
           <div className="relative z-10 flex flex-col items-center justify-center flex-1 animate-in fade-in zoom-in duration-500 text-center">
             <h1 className="text-[120px] font-black tracking-tight mb-8 leading-none">FLEO<span className="text-[#f1ba17]">FIT</span> TV</h1>
             <p className="text-5xl text-gray-400 mb-6">Apri l'app sul tuo telefono e clicca sull'icona della TV.</p>
-            <p className="text-4xl text-gray-500 mb-12">Inserisci questo codice per avviare la trasmissione:</p>
+            <p className="text-4xl text-muted mb-12">Inserisci questo codice per avviare la trasmissione:</p>
             <div className="bg-[#1e1e1e] border-4 border-[#333] rounded-[3rem] px-32 py-16 shadow-2xl">
               <span className="text-[150px] font-black tracking-[0.3em] ml-[0.3em] text-[#f1ba17] drop-shadow-2xl leading-none">{code || '...'}</span>
             </div>
@@ -632,7 +619,7 @@ export default function TVDashboard() {
               </button>
               <h1 className="text-6xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span> TV</h1>
             </div>
-            <p className="text-3xl text-gray-500 font-bold">@FLEOFIT</p>
+            <p className="text-3xl text-muted font-bold">@FLEOFIT</p>
           </div>
         </div>
 
@@ -679,7 +666,7 @@ export default function TVDashboard() {
                 blocks.map((block, idx) => (
                   <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} hint={blockHint(block.type)} color={TYPE_COLORS[block.type]?.border} stepNumber={blocks.length > 1 ? idx + 1 : null} className={getSectionClass(block.type)} isActive={idx === activeIdx}>
                       {['WarmUp', 'Rest'].includes(block.type) ? (
-                        <p className="text-gray-300 text-4xl font-bold">{block.params?.duration} {block.notes ? <span className="text-gray-500 text-3xl block mt-4">· {block.notes}</span> : ''}</p>
+                        <p className="text-gray-300 text-4xl font-bold">{block.params?.duration} {block.notes ? <span className="text-muted text-3xl block mt-4">· {block.notes}</span> : ''}</p>
                       ) : (
                         <ExList exercises={block.exercises || []} showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'} typeColor={TYPE_COLORS[block.type]?.text} />
                       )}

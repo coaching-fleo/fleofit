@@ -67,7 +67,9 @@ export default function Calendar() {
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
 
-  const TYPE_COLORS = {
+  // Mappa piatta di hex per i pallini del calendario: forma diversa da
+  // lib/blockColors.js, che porta anche classi Tailwind. Non è una copia.
+  const COLORI_PALLINI = {
     'WarmUp': '#9ca3af',
     'Rest': '#6b7280',
     'Cash In': '#d1d5db',
@@ -86,7 +88,7 @@ export default function Calendar() {
 
   const getIntensityColor = (val, type) => {
     const num = parseInt(val, 10);
-    if (isNaN(num)) return 'text-gray-500';
+    if (isNaN(num)) return 'text-muted';
     return type === 'Event' ? 'text-white' : type === 'Running' ? 'text-[#0094C6]' : (type === 'Custom' ? 'text-[#D11149]' : 'text-[#f1ba17]');
   }
 
@@ -177,7 +179,7 @@ export default function Calendar() {
                 <div className="flex gap-0.5 mt-1">
                   {dayWorkoutList.slice(0, 3).map((w, i) => (
                     <div key={i} className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: selected ? '#000' : TYPE_COLORS[getWorkoutType(w)] || '#f1ba17' }} />
+                      style={{ backgroundColor: selected ? '#000' : COLORI_PALLINI[getWorkoutType(w)] || '#f1ba17' }} />
                   ))}
                 </div>
               )}
@@ -221,7 +223,7 @@ export default function Calendar() {
           <div className="flex flex-col gap-3">
             {dayWorkouts.map(w => {
               const type = getWorkoutType(w)
-              const color = TYPE_COLORS[type] || '#f1ba17'
+              const color = COLORI_PALLINI[type] || '#f1ba17'
               const exList = w.sections?.main?.exercises || []
               return (
                 <div key={w.id}
@@ -320,7 +322,7 @@ function EventModal({ athleteId, onClose, onSaved }) {
       <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Nuovo Evento / Gara</p>
-          <button aria-label="Chiudi" onClick={onClose} className="text-gray-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
         </div>
         <div className="p-5 flex flex-col gap-4">
           <div>

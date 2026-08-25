@@ -129,7 +129,7 @@ function Onboarding({ user, onComplete }) {
                 <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
               </label>
             </div>
-            <p className="text-gray-500 text-xs">Foto Profilo (opzionale)</p>
+            <p className="text-muted text-xs">Foto Profilo (opzionale)</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 animate-in fade-in">

@@ -833,7 +833,7 @@ setNotifications(prev => {
                         <span className={`text-[11px] font-bold ${day.isToday ? 'text-white' : 'text-gray-400'}`}>
                           {day.dayName.charAt(0)}
                         </span>
-                        <span className={`text-xs font-bold mb-1 ${day.isToday ? 'text-[#f1ba17]' : 'text-gray-500'}`}>
+                        <span className={`text-xs font-bold mb-1 ${day.isToday ? 'text-[#f1ba17]' : 'text-muted'}`}>
                           {format(day.date, 'd')}
                         </span>
                         
@@ -892,16 +892,16 @@ setNotifications(prev => {
                 </div>
                 <div className="flex-1 grid grid-cols-3 gap-3">
                   <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
-                    <p className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">Tempo</p>
-                    <p className="text-white font-black text-2xl">{weeklyStats.time}<span className="text-sm font-medium text-gray-500 ml-0.5">m</span></p>
+                    <p className="text-muted text-[11px] font-bold uppercase tracking-wider">Tempo</p>
+                    <p className="text-white font-black text-2xl">{weeklyStats.time}<span className="text-sm font-medium text-muted ml-0.5">m</span></p>
                   </div>
                   <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
-                    <p className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">Workout Completati</p>
+                    <p className="text-muted text-[11px] font-bold uppercase tracking-wider">Workout Completati</p>
                     <p className="text-[#f1ba17] font-black text-2xl">{weeklyStats.completed}</p>
                   </div>
                   <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
-                    <p className="text-gray-500 text-[11px] font-bold uppercase tracking-wider">RPE</p>
-                    <p className="text-white font-black text-2xl">{weeklyStats.avgRpe}<span className="text-sm font-medium text-gray-500 ml-0.5">/10</span></p>
+                    <p className="text-muted text-[11px] font-bold uppercase tracking-wider">RPE</p>
+                    <p className="text-white font-black text-2xl">{weeklyStats.avgRpe}<span className="text-sm font-medium text-muted ml-0.5">/10</span></p>
                   </div>
                 </div>
               </div>
@@ -989,7 +989,7 @@ setNotifications(prev => {
                         {a.athletes?.photo_url ? (
                           <img src={a.athletes.photo_url} alt={a.athletes?.name} className="w-full h-full object-cover" onError={(e) => e.target.style.opacity = 0} />
                         ) : (
-                          <User size={18} className="text-gray-500" />
+                          <User size={18} className="text-muted" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -998,15 +998,15 @@ setNotifications(prev => {
                           <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
                             {isEvent ? 'Evento' : category}
                           </span>
-                          <p className="text-gray-500 text-xs truncate">{a.workouts?.title}</p>
+                          <p className="text-muted text-xs truncate">{a.workouts?.title}</p>
                         </div>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">
+                      <p className="text-[11px] text-muted font-medium uppercase tracking-wider">
                         {a.completed_date === todayStrRender ? 'Oggi' : 'Ieri'}
                       </p>
-                      <div className={`px-2 py-1 rounded-lg border text-[11px] font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
+                      <div className={`px-2 py-1 rounded-lg border text-[11px] font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-muted border-[#333]'}`}>
                         {a.status === 'completed' ? 'Fatto' : 'Da fare'}
                       </div>
                     </div>
@@ -1016,7 +1016,7 @@ setNotifications(prev => {
             </div>
           ) : (
             <div className="bg-[#1e1e1e] border border-[#2a2a2a] border-dashed rounded-2xl p-6 text-center">
-              <p className="text-gray-500 text-sm">Nessuna attività registrata tra oggi e ieri.</p>
+              <p className="text-muted text-sm">Nessuna attività registrata tra oggi e ieri.</p>
             </div>
           )}
         </div>
@@ -1087,12 +1087,12 @@ setNotifications(prev => {
             </div>
           ) : (
             <div className="bg-[#1e1e1e] border border-[#2a2a2a] border-dashed rounded-3xl p-6 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-500 shrink-0">
+              <div className="w-12 h-12 rounded-full bg-[#2a2a2a] flex items-center justify-center text-muted shrink-0">
                 <CalendarX2 size={24} />
               </div>
               <div>
                 <h3 className="text-white font-bold">Giorno di rest</h3>
-                <p className="text-gray-500 text-sm">Recupera le energie per il prossimo allenamento. 🛋️</p>
+                <p className="text-muted text-sm">Recupera le energie per il prossimo allenamento. 🛋️</p>
               </div>
             </div>
           )}
@@ -1132,15 +1132,15 @@ setNotifications(prev => {
                   >
                     <div>
                       <p className="text-white font-semibold">{w.workouts.title}</p>
-                      <p className="text-gray-500 text-xs mt-0.5 capitalize font-medium">
+                      <p className="text-muted text-xs mt-0.5 capitalize font-medium">
                         {format(parseISO(w.completed_date), 'EEEE d MMMM', { locale: it })}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       {role === 'athlete' && isAuto && (
                         <>
-                          <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }} className="p-1.5 text-gray-500 hover:text-[#f1ba17] transition" title="Modifica"><Edit size={18}/></button>
-                          <button aria-label="Elimina l'allenamento" onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(w.id); }} className="p-1.5 text-gray-500 hover:text-red-500 transition" title="Elimina"><Trash2 size={18}/></button>
+                          <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }} className="p-1.5 text-muted hover:text-[#f1ba17] transition" title="Modifica"><Edit size={18}/></button>
+                          <button aria-label="Elimina l'allenamento" onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(w.id); }} className="p-1.5 text-muted hover:text-red-500 transition" title="Elimina"><Trash2 size={18}/></button>
                         </>
                       )}
                       <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-400 ml-1">
@@ -1161,7 +1161,7 @@ setNotifications(prev => {
           </div>
           <div>
             <h3 className="text-white font-bold text-lg">Calendario</h3>
-            <p className="text-gray-500 text-xs mt-1">{stats.workouts} workout {role === 'athlete' ? 'assegnati' : 'creati'}</p>
+            <p className="text-muted text-xs mt-1">{stats.workouts} workout {role === 'athlete' ? 'assegnati' : 'creati'}</p>
           </div>
         </div>
 
@@ -1172,7 +1172,7 @@ setNotifications(prev => {
             </div>
             <div>
               <h3 className="text-white font-bold text-lg">Atleti</h3>
-              <p className="text-gray-500 text-xs mt-1">{stats.athletes} atleti totali</p>
+              <p className="text-muted text-xs mt-1">{stats.athletes} atleti totali</p>
             </div>
           </div>
         )}
@@ -1183,7 +1183,7 @@ setNotifications(prev => {
             </div>
             <div>
               <h3 className="text-white font-bold text-lg">Profilo</h3>
-              <p className="text-gray-500 text-xs mt-1">Dati personali</p>
+              <p className="text-muted text-xs mt-1">Dati personali</p>
             </div>
           </div>
         )}
@@ -1234,7 +1234,7 @@ setNotifications(prev => {
                 )}
                            <div className="w-px h-4 bg-[#333] ml-1 mr-0.5"></div>
 
-                <button aria-label="Chiudi le notifiche" onClick={closeNotifications} className="text-gray-500 hover:text-white"><X size={20} /></button>
+                <button aria-label="Chiudi le notifiche" onClick={closeNotifications} className="text-muted hover:text-white"><X size={20} /></button>
               </div>
             </div>
             <div className="overflow-y-auto p-4 flex flex-col gap-2 flex-1 hide-scrollbar">
@@ -1263,7 +1263,7 @@ setNotifications(prev => {
                   }} className={`p-4 rounded-2xl cursor-pointer transition border ${notif.is_read ? 'bg-[#111] border-[#333] opacity-70' : 'bg-[#2a2a2a] border-[#f1ba17]/30 hover:border-[#f1ba17]'}`}>
                     <div className="flex justify-between items-start gap-2 mb-1">
                       <p className={`font-bold text-base ${notif.is_read ? 'text-gray-300' : 'text-white'}`}>{notif.title}</p>
-                      <p className="text-[11px] text-gray-500 whitespace-nowrap pt-1">{format(parseISO(notif.created_at), 'd MMM HH:mm', { locale: it })}</p>
+                      <p className="text-[11px] text-muted whitespace-nowrap pt-1">{format(parseISO(notif.created_at), 'd MMM HH:mm', { locale: it })}</p>
                     </div>
                     <p className={`text-sm leading-snug line-clamp-2 break-words ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>{notif.message}</p>
  </div>
@@ -1286,16 +1286,16 @@ setNotifications(prev => {
                           setConfirmInfo(null)
                         }
                       })
-                    }} className="text-xs font-semibold text-gray-500 hover:text-red-400 transition flex items-center gap-1.5 px-4 py-2 rounded-full border border-transparent hover:border-red-500/30 hover:bg-red-900/20">
+                    }} className="text-xs font-semibold text-muted hover:text-red-400 transition flex items-center gap-1.5 px-4 py-2 rounded-full border border-transparent hover:border-red-500/30 hover:bg-red-900/20">
                       <Trash2 size={14} /> Svuota cronologia
                     </button>
                   </div>
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center p-6 opacity-50">
-                  <BellRing size={48} className="text-gray-500 mb-4" />
+                  <BellRing size={48} className="text-muted mb-4" />
                   <p className="text-gray-400 font-medium">Nessuna notifica</p>
-                  <p className="text-gray-500 text-xs mt-1">Quando ci saranno novità, le vedrai qui.</p>
+                  <p className="text-muted text-xs mt-1">Quando ci saranno novità, le vedrai qui.</p>
                 </div>
               )}
             </div>
@@ -1310,11 +1310,11 @@ setNotifications(prev => {
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">{autonomousForm.id ? 'Modifica Allenamento' : 'Allenamento Libero'}</h2>
-               <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+               <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-muted hover:text-white"><X size={20} /></button>
             </div>
             <div className="flex flex-col gap-3">
               <div>
-                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-gray-500 font-normal">(facoltativo)</span></label>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-muted font-normal">(facoltativo)</span></label>
                 <input 
                   className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
                   value={autonomousForm.title}
@@ -1522,7 +1522,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
               )
             })}
           </div>
-          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-1">
+          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-muted mt-1">
             <span>Leggero</span>
             <span>Estremo</span>
           </div>
@@ -1604,16 +1604,16 @@ function LiveSpectatorModal({ athlete, onClose }) {
               <Heart size={14} className="animate-pulse" fill="currentColor" /> {timerState.heartRate} bpm
             </div>
           )}
-          {timerState ? (<><p className="text-red-400 font-bold text-sm uppercase tracking-widest mb-1 text-center">{timerState.step?.title || 'Workout'}</p><p className="text-white font-black text-[5rem] tabular-nums tracking-tighter mb-4 leading-none">{formatT(timerState.timeLeft)}</p><div className="bg-[#111] border border-[#333] px-4 py-3 rounded-xl text-center w-full"><p className="text-gray-400 text-xs mb-1 uppercase font-bold tracking-wider">In Esecuzione</p><p className="text-white font-semibold truncate text-lg">{timerState.step?.task || 'Workout libero'}</p></div></>) : (<p className="text-gray-500 font-medium animate-pulse text-center px-4">Connessione al telefono dell'atleta in corso...</p>)}
+          {timerState ? (<><p className="text-red-400 font-bold text-sm uppercase tracking-widest mb-1 text-center">{timerState.step?.title || 'Workout'}</p><p className="text-white font-black text-[5rem] tabular-nums tracking-tighter mb-4 leading-none">{formatT(timerState.timeLeft)}</p><div className="bg-[#111] border border-[#333] px-4 py-3 rounded-xl text-center w-full"><p className="text-gray-400 text-xs mb-1 uppercase font-bold tracking-wider">In Esecuzione</p><p className="text-white font-semibold truncate text-lg">{timerState.step?.task || 'Workout libero'}</p></div></>) : (<p className="text-muted font-medium animate-pulse text-center px-4">Connessione al telefono dell'atleta in corso...</p>)}
         </div>
         <div className="bg-[#111] p-5 border-t border-[#333]">
-          <p className="text-gray-500 text-xs font-bold text-center uppercase tracking-wider mb-4">Invia Reazione all'Atleta</p>
+          <p className="text-muted text-xs font-bold text-center uppercase tracking-wider mb-4">Invia Reazione all'Atleta</p>
           <div className="flex justify-center gap-5 mb-6">
             {['🔥', '💪', '🚀', '👏', '💀'].map(emoji => (
               <button key={emoji} onClick={() => sendReaction(emoji)} className="text-4xl hover:scale-125 active:scale-90 hover:-translate-y-2 transition-all">{emoji}</button>
             ))}
           </div>
-          <p className="text-gray-500 text-xs font-bold text-center uppercase tracking-wider mb-2">
+          <p className="text-muted text-xs font-bold text-center uppercase tracking-wider mb-2">
             {isSendingAudio ? 'Invio in corso...' : 'Walkie Talkie (Audio Live)'}
           </p>
           <VoiceRecorder onSave={async (blob, ext) => {
