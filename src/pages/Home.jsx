@@ -82,7 +82,7 @@ export default function Home() {
   //
   // Sotto la card c'è un pannello verde che si rivela man mano: senza, il
   // movimento non dice cosa sta per succedere.
-  const SOGLIA_SWIPE = 88
+  const SOGLIA_SWIPE = 120
   const swipeRef = useRef(null)
 
   const swipeInizio = (e) => {
@@ -118,7 +118,7 @@ export default function Home() {
 
     const avanzamento = Math.min(1, grezzo / SOGLIA_SWIPE)
     if (s.pannello) {
-      s.pannello.style.opacity = String(Math.min(1, avanzamento * 1.5))
+      s.pannello.style.opacity = String(Math.min(1, avanzamento * 1.6))
       const contenuto = s.pannello.firstElementChild
       if (contenuto) contenuto.style.transform = `scale(${0.72 + avanzamento * 0.28})`
     }
@@ -135,29 +135,43 @@ export default function Home() {
     const s = swipeRef.current
     swipeRef.current = null
     if (!s || !s.el) return
+    const el = s.el
+    const pannello = s.pannello
 
-    const conferma = s.oltre
-    // Ritorno con una curva che decelera a lungo: è quella che dà la sensazione
-    // di elastico invece di uno scatto meccanico.
-    s.el.style.transition = 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)'
-    s.el.style.transform = 'translate3d(0,0,0)'
-    if (s.pannello) {
-      s.pannello.style.transition = 'opacity 0.3s ease-out'
-      s.pannello.style.opacity = '0'
+    if (!s.oltre) {
+      // Sotto la soglia: ritorno elastico, non succede nulla.
+      el.style.transition = 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)'
+      el.style.transform = 'translate3d(0,0,0)'
+      if (pannello) {
+        pannello.style.transition = 'opacity 0.3s ease-out'
+        pannello.style.opacity = '0'
+      }
+      setTimeout(() => { el.style.transition = ''; el.style.transform = '' }, 500)
+      return
     }
 
-    // Ripulisce gli stili inline a fine animazione: senza, la transizione
-    // impostata qui resterebbe sul nodo e spegnerebbe quelle di colore della card.
-    const el = s.el
-    setTimeout(() => {
-      el.style.transition = ''
-      el.style.transform = ''
-      if (s.pannello) { s.pannello.style.transition = ''; s.pannello.style.opacity = '0' }
-    }, 500)
-
-    if (!conferma) return
+    // Oltre la soglia: l'animazione VA FINO IN FONDO. La card esce di scena e il
+    // pannello verde riempie tutto lo spazio; solo a movimento concluso si apre
+    // la richiesta dell'RPE. Aprirla subito interrompeva il gesto a metà.
     if (Capacitor.isNativePlatform()) Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {})
-    toggleTodayWorkout({ stopPropagation: () => {} }, workout)
+    if (pannello) { pannello.style.transition = 'opacity 0.12s ease-out'; pannello.style.opacity = '1' }
+    el.style.transition = 'transform 0.34s cubic-bezier(0.32, 0.72, 0, 1)'
+    el.style.transform = `translate3d(${el.offsetWidth}px,0,0)`
+
+    setTimeout(() => {
+      toggleTodayWorkout({ stopPropagation: () => {} }, workout)
+      // La card torna al suo posto senza animazione, nascosta dal pannello ancora
+      // pieno; poi il verde svanisce e la scopre nel suo nuovo stato.
+      el.style.transition = 'none'
+      el.style.transform = ''
+      requestAnimationFrame(() => {
+        el.style.transition = ''
+        if (pannello) {
+          pannello.style.transition = 'opacity 0.35s ease-out'
+          pannello.style.opacity = '0'
+        }
+      })
+    }, 340)
   }
   const [activeSlide, setActiveSlide] = useState(0)
   const [workoutToComplete, setWorkoutToComplete] = useState(null)
@@ -1131,7 +1145,7 @@ setNotifications(prev => {
                 
                 const scorrevole = todayWorkout.status !== 'completed'
                 return (
-                  <div key={todayWorkout.id} className="relative">
+                  <div key={todayWorkout.id} className="relative overflow-hidden rounded-3xl">
                     {/* Pannello rivelato sotto la card mentre si scorre. Senza,
                         il movimento non dice cosa sta per succedere. Nascosto ai
                         lettori di schermo: il bottone visibile è la via ufficiale. */}
