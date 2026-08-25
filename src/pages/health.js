@@ -11,7 +11,7 @@ export const HealthService = {
       const module = await import('@capgo/capacitor-health');
       Health = module.Health;
     } catch (e) {
-      throw new Error("Plugin Health non installato. Esegui 'npm install @capgo/capacitor-health'");
+      throw new Error("Plugin Health non installato. Esegui 'npm install @capgo/capacitor-health'", { cause: e });
     }
 
     try {
@@ -20,14 +20,14 @@ export const HealthService = {
         write: []
       });
     } catch (e) {
-      throw new Error("Autorizzazione negata da Apple Health: " + (e.message || String(e)));
+      throw new Error("Autorizzazione negata da Apple Health: " + (e.message || String(e)), { cause: e });
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const now = new Date();
 
-    let activities = [];
+    let activities;
     try {
       const res = await Health.queryWorkouts({
         startDate: today.toISOString(),
@@ -36,7 +36,7 @@ export const HealthService = {
       });
       activities = res.workouts; 
     } catch (e) {
-      throw new Error("Errore durante la lettura degli allenamenti: " + (e.message || String(e)));
+      throw new Error("Errore durante la lettura degli allenamenti: " + (e.message || String(e)), { cause: e });
     }
 
     if (!activities || !Array.isArray(activities) || activities.length === 0) {
@@ -60,7 +60,11 @@ export const HealthService = {
         const sum = samples.reduce((acc, val) => acc + (val.value || 0), 0);
         avgHr = Math.round(sum / samples.length);
       }
-    } catch (hrErr) {}
+    } catch (hrErr) {
+      // Senza permesso sui battiti avgHr resta null e la nota si salva lo stesso,
+      // solo senza frequenza media: degradare è corretto, sparire in silenzio no.
+      console.warn('Frequenza cardiaca non leggibile da Apple Health:', hrErr)
+    }
 
     let duration = null;
     if (latest.duration) {

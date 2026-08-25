@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, Download, Share2, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, Activity, Heart, WifiOff } from 'lucide-react'
+import { ChevronLeft, ChevronUp, Download, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Square, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, Activity, Heart, WifiOff } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -114,7 +114,7 @@ const getBlockTitle = (block) => {
 
 const parseDuration = (val) => {
   if (!val) return 0;
-  const str = String(val).toLowerCase().replace(/[^0-9:\.]/g, '').trim();
+  const str = String(val).toLowerCase().replace(/[^0-9:.]/g, '').trim();
   if (String(val).toLowerCase().includes('sec')) return parseInt(str, 10) || 0;
   const parts = str.split(':');
   if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
@@ -130,14 +130,6 @@ const getRpeColorText = (val) => {
 }
 
 const isErgo = (name) => ERGOMETERS.includes(name)
-
-const SLED_EXERCISES = ['Sled Push', 'Sled Pull', 'Prowler Push', 'Sled Drag']
-const isSled = (name) => SLED_EXERCISES.includes(name)
-const DISTANCE_EXERCISES = [
-  'Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', 
-  "Waiter's Walk", 'Handstand Walk', 'Run', 'Bear Crawl', 'Shuttle Run', 'Swim'
-]
-const isDistance = (name) => isErgo(name) || isSled(name) || DISTANCE_EXERCISES.includes(name)
 
 const buildTimerSequence = (workout) => {
   const seq = [];
@@ -245,7 +237,6 @@ const getEmojiDataURL = (emoji) => {
   ctx.fillText(emoji, 32, 36)
   return canvas.toDataURL('image/png')
 }
-
 
 
 // --- AUDIO GENERATOR HELPER ---
@@ -415,7 +406,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               }
             }
           }
-        } catch (e) {}
+        } catch (e) {
+          // Include la scrittura di badge_count su push_subscriptions, che
+          // send-reminders rilegge: se salta, il badge resta disallineato.
+          console.warn('Notifiche del workout non marcate come lette:', e)
+        }
       };
       clearNotif();
     }
@@ -903,7 +898,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       y += 6
       
       const steps = s?.steps || s?.main?.steps || []
-      steps.forEach((step, i) => {
+      steps.forEach((step) => {
         doc.setTextColor(180, 180, 180)
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(10)
@@ -1107,7 +1102,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         try {
           await Media.savePhoto({ path: result.uri })
           setAlertInfo({ title: 'Salvato!', message: 'La grafica IG è stata salvata direttamente nella tua galleria fotografica.', type: 'success' })
-        } catch (mediaErr) {
+        } catch {
           setAlertInfo({ title: 'Errore', message: 'Permesso negato o errore durante il salvataggio in galleria.', type: 'error' })
         }
       } else {
@@ -2042,7 +2037,8 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
       setReaction(payload.payload.emoji);
       setReactionType('emoji');
       setReactionVisible(true);
-      try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch(e) {}
+      // La vibrazione è un di più: se il browser non la espone si va avanti.
+      try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch { /* opzionale */ }
       reactionTimeoutRef.current = setTimeout(() => {
         setReactionVisible(false);
         reactionTimeoutRef.current = setTimeout(() => setReaction(null), 500);
@@ -2054,7 +2050,8 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
         setReaction('🎙️');
         setReactionType('voice');
         setReactionVisible(true);
-        try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch(e) {}
+        // La vibrazione è un di più: se il browser non la espone si va avanti.
+        try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch { /* opzionale */ }
         const audio = new Audio(audioUrl);
         const closeVoice = () => {
            setReactionVisible(false);
@@ -2122,7 +2119,7 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
       } else if (navigator.vibrate) {
         navigator.vibrate(isEnd ? 400 : 100);
       }
-    } catch (e) {}
+    } catch { /* aptica: se il dispositivo non vibra il beep basta da solo */ }
 
     try {
       let audio;
@@ -2134,7 +2131,7 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
         audio.currentTime = 0;
         audio.play().catch(() => {});
       }
-    } catch (e) {}
+    } catch { /* beep: WebAudio resta bloccato finché non c'è stato un tocco */ }
   }, [isMuted]);
 
   // Inizializza l'audio in modo sicuro al primo tocco
@@ -2174,11 +2171,11 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
       if (Capacitor.isNativePlatform()) {
         try {
           await KeepAwake.keepAwake();
-        } catch (e) {}
+        } catch { /* KeepAwake: se non riesce lo schermo si spegne, non è un errore bloccante */ }
       } else if ('wakeLock' in navigator) {
         try {
           wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) {}
+        } catch { /* Wake Lock API: se non riesce lo schermo si spegne, non è un errore bloccante */ }
       }
     };
 
@@ -2186,12 +2183,12 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
       if (Capacitor.isNativePlatform()) {
         try {
           await KeepAwake.allowSleep();
-        } catch (e) {}
+        } catch { /* KeepAwake.allowSleep: se non riesce lo schermo si spegne, non è un errore bloccante */ }
       } else if (wakeLock !== null) {
         try {
           await wakeLock.release();
           wakeLock = null;
-        } catch (err) {}
+        } catch { /* rilascio del wake lock: se non riesce lo schermo si spegne, non è un errore bloccante */ }
       }
     };
 
@@ -2684,7 +2681,8 @@ function AudioVisualizer({ stream }) {
         const y = (canvas.height - barHeight) / 2
         
         canvasCtx.beginPath()
-        canvasCtx.roundRect ? canvasCtx.roundRect(x, y, barWidth - 2, barHeight, 4) : canvasCtx.rect(x, y, barWidth - 2, barHeight)
+        if (canvasCtx.roundRect) canvasCtx.roundRect(x, y, barWidth - 2, barHeight, 4)
+        else canvasCtx.rect(x, y, barWidth - 2, barHeight)
         canvasCtx.fill()
         
         x += barWidth
@@ -2820,7 +2818,8 @@ function VoiceRecorder({ onSave, onCancel }) {
         mediaStream.getTracks().forEach(t => t.stop())
         setMediaStream(null)
       }
-      try { await NativeVoiceRecorder.stopRecording() } catch(e) {}
+      // Stiamo annullando: se lo stop fallisce l'audio va buttato comunque.
+      try { await NativeVoiceRecorder.stopRecording() } catch { /* esito irrilevante */ }
       if (onCancel) onCancel()
     }
   }
@@ -2850,7 +2849,11 @@ function VoiceRecorder({ onSave, onCancel }) {
           onSave(audioBlob, ext)
         } else if (onCancel) onCancel()
       } catch(e) {
-        console.error("Errore stop nativo:", e)
+        console.error('Errore stop nativo:', e)
+        // Senza queste due righe la registrazione spariva in silenzio: né onSave
+        // né onCancel, con la modale ferma ad aspettare un callback mai arrivato.
+        mostraErrore('Registrazione non salvata: riprova.')
+        if (onCancel) onCancel()
       }
     }
   }

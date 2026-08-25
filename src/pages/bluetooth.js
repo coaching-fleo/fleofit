@@ -48,7 +48,9 @@ export const BluetoothService = {
   },
   async disconnect() {
     if (hrDeviceId) {
-      try { await BleClient.disconnect(hrDeviceId) } catch(e) {}
+      // Stiamo comunque azzerando lo stato qui sotto: se la fascia è già
+      // fuori portata la disconnessione fallisce ed è esattamente ciò che serve.
+      try { await BleClient.disconnect(hrDeviceId) } catch { /* già disconnessa */ }
     }
     hrDeviceId = null
     currentHeartRate = null

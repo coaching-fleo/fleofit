@@ -20,7 +20,9 @@ export default function Login() {
   const [inviteError, setInviteError] = useState('')
   const [inviteLoading, setInviteLoading] = useState(false)
 
-  const [role, setRole] = useState('athlete')
+  // L'onboarding del ruolo coach è disattivato: qui il ruolo è sempre 'athlete'.
+  // Se un giorno torna, ridiventa uno useState.
+  const role = 'athlete'
   const [alertInfo, setAlertInfo] = useState(null)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()

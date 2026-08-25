@@ -58,16 +58,6 @@ if (typeof window !== 'undefined') {
 
 const isErgo = (name) => ERGOMETERS.includes(name)
 
-const SCHEMES = {
-  prep:  { bg: 'bg-[#f1ba17]', text: 'text-black', sub: 'text-black/70', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-[#f1ba17]' },
-  run:   { bg: 'bg-[#0094C6]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#0094C6]' },
-  rest:  { bg: 'bg-[#1e1e1e]', text: 'text-green-400', sub: 'text-green-500/80', card: 'bg-[#111] border-green-500/20 text-green-400', cardLabel: 'text-green-500/60', icon: 'text-gray-400', btnBg: 'bg-green-500 text-black' },
-  hyrox: { bg: 'bg-[#D11149]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#D11149]' },
-  emom:  { bg: 'bg-[#111]', text: 'text-[#f1ba17]', sub: 'text-[#f1ba17]/80', card: 'bg-[#1e1e1e] border-[#f1ba17]/20 text-[#f1ba17]', cardLabel: 'text-[#f1ba17]/60', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
-  base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-muted', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
-  done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' },
-  custom: { bg: 'bg-[#0B0B0B]', text: 'text-[#D11149]', sub: 'text-[#D11149]/80', card: 'bg-[#1e1e1e] border-[#D11149]/20 text-[#D11149]', cardLabel: 'text-[#D11149]/60', icon: 'text-gray-400', btnBg: 'bg-[#D11149] text-white' }
-}
 
 const timeToSeconds = (timeStr) => {
   if (!timeStr) return 0;
@@ -269,11 +259,11 @@ export default function TVDashboard() {
       if (Capacitor.isNativePlatform()) {
         try {
           await KeepAwake.keepAwake();
-        } catch (e) {}
+        } catch { /* KeepAwake: se non riesce lo schermo si spegne, non è un errore bloccante */ }
       } else if ('wakeLock' in navigator) {
         try {
           wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) {}
+        } catch { /* Wake Lock API: se non riesce lo schermo si spegne, non è un errore bloccante */ }
       }
     };
 
@@ -281,12 +271,12 @@ export default function TVDashboard() {
       if (Capacitor.isNativePlatform()) {
         try {
           await KeepAwake.allowSleep();
-        } catch (e) {}
+        } catch { /* KeepAwake.allowSleep: se non riesce lo schermo si spegne, non è un errore bloccante */ }
       } else if (wakeLock !== null) {
         try {
           await wakeLock.release();
           wakeLock = null;
-        } catch (err) {}
+        } catch { /* rilascio del wake lock: se non riesce lo schermo si spegne, non è un errore bloccante */ }
       }
     };
 
@@ -334,7 +324,7 @@ export default function TVDashboard() {
     }
   }, [unlockAudio]);
 
-  const playBeep = useCallback((freq, duration, isEnd) => {
+  const playBeep = useCallback((freq, duration) => {
     try {
       let audio;
       if (duration <= 0.2) audio = shortBeepAudio.current;
@@ -348,7 +338,7 @@ export default function TVDashboard() {
           playPromise.catch(() => {});
         }
       }
-    } catch (e) {}
+    } catch { /* beep: WebAudio resta bloccato finché non c'è stato un tocco */ }
   }, []);
 
   useEffect(() => {
@@ -362,12 +352,12 @@ export default function TVDashboard() {
         if (stepType !== 'stopwatch' && stepType !== 'done') {
           if (tl === 0) {
             if (currentStep?.nextTask === 'Workout terminato 🎉') {
-              playBeep(1200, 1.5, true);
+              playBeep(1200, 1.5);
             } else {
-              playBeep(1200, 1.0, true);
+              playBeep(1200, 1.0);
             }
           } else if (tl <= 3 && tl > 0) {
-            playBeep(600, 0.2, false);
+            playBeep(600, 0.2);
           }
         }
       }
@@ -571,7 +561,7 @@ export default function TVDashboard() {
       else { cols = Math.ceil(totalItems / 2); rows = 2; }
     }
 
-    const getSectionClass = (t) => {
+    const getSectionClass = () => {
       return "";
     }
 

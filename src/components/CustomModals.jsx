@@ -31,7 +31,7 @@ export function CustomConfirm({ info, onClose }) {
         <h2 className="text-xl font-bold text-white">{info.title}</h2>
         <p className="text-gray-400 text-sm whitespace-pre-wrap">{info.message}</p>
         <div className="flex gap-3 mt-4">
-          <button onClick={() => { info.onCancel && info.onCancel(); onClose(); }} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition">Annulla</button>
+          <button onClick={() => { if (info.onCancel) info.onCancel(); onClose(); }} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition">Annulla</button>
           <button onClick={() => { info.onConfirm(); onClose(); }} className="flex-1 py-3 bg-[#f1ba17] text-black font-semibold rounded-xl hover:brightness-110 transition">Conferma</button>
         </div>
       </div>

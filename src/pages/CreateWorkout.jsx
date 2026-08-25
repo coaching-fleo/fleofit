@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Trash2, Save, X, Check, ChevronRight, Timer, Dumbbell, Flag, FlagOff, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square } from 'lucide-react'
+import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
@@ -66,7 +66,6 @@ const HYBRID_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 50 }, (_, i) 
 const SLED_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 30 }, (_, i) => `${(i + 1) * 10}m`)]
 const CARRY_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 50 }, (_, i) => `${(i + 1) * 10}m`)]
 const REPS_OPTIONS = ['-', 'Max', ...Array.from({ length: 100 }, (_, i) => `${i + 1}`)]
-const MINUTES_OPTIONS = Array.from({ length: 60 }, (_, i) => `${i + 1} min`)
 const TIME_OPTIONS = [
   '-',
   ...Array.from({ length: 120 }, (_, i) => { // Fino a 10:00 in scatti da 5 sec
@@ -137,20 +136,6 @@ export const getIntensityColor = (val) => {
   return 'text-[#f1ba17]';
 }
 
-const timeToSeconds = (timeStr) => {
-  if (!timeStr) return 0;
-  if (timeStr.includes(' min')) return parseInt(timeStr) * 60;
-  const parts = timeStr.split(':')
-  if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
-  return 0
-}
-const formatTime = (totalSeconds) => {
-  const m = Math.floor(totalSeconds / 60)
-  const s = totalSeconds % 60
-  if (s === 0) return `${m} min`
-  return `${m}:${s.toString().padStart(2, '0')} min`
-}
-
 
 // ─── HELPER REORDER ───────────────────────────────────────────
 const moveElement = (list, from, to) => {
@@ -193,7 +178,7 @@ function ScrollPicker({ options = [], value, onChange, label, type, isRun }) {
         } else if (navigator.vibrate) {
           navigator.vibrate(10);
         }
-      } catch (e) {}
+      } catch { /* aptica: feedback opzionale, l'azione è già stata applicata */ }
     }
 
     scrollTimeout.current = setTimeout(() => {
@@ -272,7 +257,7 @@ function IntensityPicker({ value, onChange, activeColor = 'bg-[#f1ba17]' }) {
         } else if (navigator.vibrate) {
           navigator.vibrate(10);
         }
-      } catch (e) {}
+      } catch { /* aptica: feedback opzionale, l'azione è già stata applicata */ }
     }
   };
 
@@ -419,7 +404,9 @@ function AiGenerationModal({ onClose, onGenerate }) {
             if (error) {
               let errorMsg = error.message;
               if (error.context && typeof error.context.json === 'function') {
-                try { const errBody = await error.context.json(); if (errBody && errBody.error) errorMsg = errBody.error; } catch (_) {}
+                // Se il corpo dell'errore non è JSON leggibile resta errorMsg = error.message,
+                // che è già il messaggio giusto da mostrare: nessun altro rimedio possibile.
+                try { const errBody = await error.context.json(); if (errBody && errBody.error) errorMsg = errBody.error; } catch { /* si tiene error.message */ }
               }
               throw new Error(errorMsg);
             }
@@ -483,7 +470,9 @@ function AiGenerationModal({ onClose, onGenerate }) {
       if (error) {
         let errorMsg = error.message;
         if (error.context && typeof error.context.json === 'function') {
-          try { const errBody = await error.context.json(); if (errBody && errBody.error) errorMsg = errBody.error; } catch (_) {}
+          // Se il corpo dell'errore non è JSON leggibile resta errorMsg = error.message,
+          // che è già il messaggio giusto da mostrare: nessun altro rimedio possibile.
+          try { const errBody = await error.context.json(); if (errBody && errBody.error) errorMsg = errBody.error; } catch { /* si tiene error.message */ }
         }
         throw new Error(errorMsg);
       }
@@ -1567,7 +1556,7 @@ export default function CreateWorkout() {
         } else {
           localStorage.removeItem('fleofit_workout_draft')
         }
-      } catch (e) {
+      } catch {
         localStorage.removeItem('fleofit_workout_draft')
       }
     }

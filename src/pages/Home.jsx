@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Sun, Check, Timer, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Activity, Mic, Square, Heart, WifiOff, RefreshCw } from 'lucide-react'
+import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Timer, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Activity, Mic, Square, Heart, WifiOff, RefreshCw } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO, differenceInDays, startOfDay } from 'date-fns'
@@ -105,7 +105,12 @@ export default function Home() {
           if (unread === 0) await Badge.clear();
           else await Badge.set({ count: unread });
           await supabase.from('push_subscriptions').update({ badge_count: unread }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
-        } catch (e) {}
+        } catch (e) {
+          // Il badge in sé è cosmetico, ma badge_count su push_subscriptions no:
+          // send-reminders lo legge per incrementarlo. Se la scrittura fallisce il
+          // contatore resta disallineato per sempre, quindi almeno si vede nei log.
+          console.warn('Badge non aggiornato:', e)
+        }
       }
     }
   };
@@ -248,7 +253,7 @@ export default function Home() {
   // workout offline si accodavano due UPDATE che si sovrascrivevano al ritorno
   // della rete. L'ultima vince, che è l'intenzione dell'utente.
   const accodaOffline = (payload) => {
-    let coda = []
+    let coda
     try { coda = JSON.parse(localStorage.getItem('fleofit_offline_queue') || '[]') } catch { coda = [] }
     coda = coda.filter(a => !(a.type === 'UPDATE_WORKOUT' && a.payload?.id === payload.id))
     coda.push({ type: 'UPDATE_WORKOUT', payload, ts: Date.now() })
@@ -258,8 +263,16 @@ export default function Home() {
   const processOfflineQueue = async () => {
     const queueStr = localStorage.getItem('fleofit_offline_queue')
     if (!queueStr) return
-    let queue = []
-    try { queue = JSON.parse(queueStr) } catch (e) { return }
+    let queue
+    try {
+      queue = JSON.parse(queueStr)
+    } catch (e) {
+      // Una coda corrotta bloccava la sincronizzazione per sempre: si usciva
+      // subito e il valore illeggibile restava lì a far fallire ogni tentativo.
+      console.warn('Coda offline illeggibile, la scarto:', e)
+      localStorage.removeItem('fleofit_offline_queue')
+      return
+    }
     if (queue.length === 0) return
 
     setSyncingQueue(true)
@@ -360,7 +373,14 @@ export default function Home() {
             if (dataRes.error || !data) {
               const cached = localStorage.getItem(`fleofit_cache_workouts_${user.id}`)
               if (cached) {
-                try { data = JSON.parse(cached) } catch(e){}
+                try {
+                  data = JSON.parse(cached)
+                } catch (e) {
+                  // Cache corrotta: senza rimuoverla resterebbe illeggibile per
+                  // sempre e la modalità offline non ripartirebbe più.
+                  console.warn('Cache workout illeggibile, la rimuovo:', e)
+                  localStorage.removeItem(`fleofit_cache_workouts_${user.id}`)
+                }
               }
             } else {
               localStorage.setItem(`fleofit_cache_workouts_${user.id}`, JSON.stringify(data))
@@ -658,16 +678,6 @@ setNotifications(prev => {
     countdownDays = differenceInDays(parseISO(nextEventHome.completed_date), startOfDay(new Date()))
   }
 
-  const updateWorkoutNote = async (workoutId, notes, workoutTitle) => {
-    const { error } = await supabase.from('athlete_workouts').update({ notes }).eq('id', workoutId)
-    if (!error && role === 'athlete') {
-      supabase.functions.invoke('send-reminders', {
-        body: { mode: 'coach_notification', action: 'note', athleteName: userName, workoutTitle: workoutTitle || 'Workout', noteText: notes, route: `/workout/${workoutId}?athlete_id=${user.id}` }
-      }).catch(console.error)
-    }
-    return { error }
-  }
-
   // Riporta un allenamento a "da fare". Prima era un tap singolo, silenzioso e
   // irreversibile: un tocco storto lo scompletava senza chiedere niente. E il
   // ramo offline non esisteva, quindi senza rete falliva e faceva rollback senza
@@ -958,8 +968,8 @@ setNotifications(prev => {
                               const isRun = w.category === 'Running'
                               const isCustom = w.category === 'Custom' || w.category === 'Autonomo'
                               const isEvent = w.category === 'Event'
-                              let circleClass = ''
-                              let icon = null
+                              let circleClass
+                              let icon
                               
                               if (w.status === 'completed') {
                                  circleClass = 'bg-green-500 border-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
@@ -1365,7 +1375,10 @@ setNotifications(prev => {
                       try {
                         await Badge.clear();
                         await supabase.from('push_subscriptions').update({ badge_count: 0 }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
-                      } catch (e) {}
+                      } catch (e) {
+                        // badge_count è riletto da send-reminders (spiegazione in fetchNotifications).
+                        console.warn('Badge non aggiornato:', e)
+                      }
                     }
                   }} className="text-[11px] font-semibold text-[#f1ba17] hover:underline whitespace-nowrap">
                     Segna come lette
@@ -1394,7 +1407,10 @@ setNotifications(prev => {
                             await Badge.set({ count: newCount });
                           }
                           await supabase.from('push_subscriptions').update({ badge_count: newCount }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
-                        } catch (e) {}
+                        } catch (e) {
+                          // badge_count è riletto da send-reminders (spiegazione in fetchNotifications).
+                          console.warn('Badge non aggiornato:', e)
+                        }
                       }
                     }
                     closeNotifications()
@@ -1420,7 +1436,10 @@ setNotifications(prev => {
                             try {
                               await Badge.clear();
                               await supabase.from('push_subscriptions').update({ badge_count: 0 }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
-                            } catch (e) {}
+                            } catch (e) {
+                              // badge_count è riletto da send-reminders (spiegazione in fetchNotifications).
+                              console.warn('Badge non aggiornato:', e)
+                            }
                           }
                           setConfirmInfo(null)
                         }
@@ -1812,7 +1831,8 @@ function AudioVisualizer({ stream }) {
         const y = (canvas.height - barHeight) / 2
         
         canvasCtx.beginPath()
-        canvasCtx.roundRect ? canvasCtx.roundRect(x, y, barWidth - 2, barHeight, 4) : canvasCtx.rect(x, y, barWidth - 2, barHeight)
+        if (canvasCtx.roundRect) canvasCtx.roundRect(x, y, barWidth - 2, barHeight, 4)
+        else canvasCtx.rect(x, y, barWidth - 2, barHeight)
         canvasCtx.fill()
         
         x += barWidth
@@ -1877,7 +1897,12 @@ function VoiceRecorder({ onSave, onCancel }) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true })
         setMediaStream(stream)
-      } catch (err) {}
+      } catch (err) {
+        // Lo stream serve solo alla forma d'onda: su iOS nativo la registrazione
+        // la fa NativeVoiceRecorder, quindi qui si degrada senza visualizzatore.
+        // Sul web il ramo !stream più sotto mostra comunque l'errore all'utente.
+        console.warn('getUserMedia non disponibile, nessuna forma d\'onda:', err)
+      }
     }
     if (isNative) {
       try {
@@ -1886,7 +1911,7 @@ function VoiceRecorder({ onSave, onCancel }) {
         setIsRecording(true)
         setRecordingTime(0)
         timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
-      } catch (e) {
+      } catch {
         mostraErrore('Impossibile accedere al microfono.')
       }
     } else {
@@ -1920,7 +1945,12 @@ function VoiceRecorder({ onSave, onCancel }) {
         setIsRecording(true)
         setRecordingTime(0)
         timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
-      } catch (err) {}
+      } catch (err) {
+        // Senza questo l'utente premeva registra e non succedeva niente: nessun
+        // messaggio, setIsRecording mai true. Allineato a WorkoutDetail.
+        console.error('Errore avvio MediaRecorder:', err)
+        mostraErrore('Impossibile avviare la registrazione.')
+      }
     }
   }
 
@@ -1937,7 +1967,8 @@ function VoiceRecorder({ onSave, onCancel }) {
         mediaStream.getTracks().forEach(t => t.stop())
         setMediaStream(null)
       }
-      try { await NativeVoiceRecorder.stopRecording() } catch(e) {}
+      // Stiamo annullando: se lo stop fallisce l'audio va buttato comunque.
+      try { await NativeVoiceRecorder.stopRecording() } catch { /* esito irrilevante */ }
       if (onCancel) onCancel()
     }
   }
@@ -1964,7 +1995,13 @@ function VoiceRecorder({ onSave, onCancel }) {
           const audioBlob = await response.blob()
           onSave(audioBlob, ext)
         } else if (onCancel) onCancel()
-      } catch(e) {}
+      } catch (e) {
+        // Prima la registrazione spariva in silenzio: né onSave né onCancel,
+        // con la modale ferma in attesa di un callback che non arrivava mai.
+        console.error('Errore stop nativo:', e)
+        mostraErrore('Registrazione non salvata: riprova.')
+        if (onCancel) onCancel()
+      }
     }
   }
 

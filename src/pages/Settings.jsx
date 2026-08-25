@@ -220,6 +220,11 @@ export default function Settings() {
              const fcmRes = await FCM.getToken();
              if (fcmRes.token) deviceToken = fcmRes.token;
           } catch (e) {
+             // Senza token FCM si ripiega sul token APNs grezzo, che viene però
+             // salvato con auth: 'capacitor_ios' e quindi trattato da
+             // send-reminders come se fosse FCM: la push non arriverà mai.
+             // È il guasto silenzioso descritto in CLAUDE.md, va visto nei log.
+             console.error('FCM.getToken fallito, resta il token APNs grezzo:', e)
           }
 
           const { error } = await supabase.from('push_subscriptions').upsert({ 
@@ -274,7 +279,7 @@ export default function Settings() {
       
       const urlBase64ToUint8Array = (base64String) => {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
         const rawData = window.atob(base64);
         const outputArray = new Uint8Array(rawData.length);
         for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
@@ -626,7 +631,7 @@ function InviteCodeManager() {
       try {
         document.execCommand('copy');
         setAlertInfo({ title: 'Copiato!', message: `${type} copiato negli appunti.`, type: 'success' })
-      } catch (err) {
+      } catch {
         setAlertInfo({ title: 'Errore', message: 'Impossibile copiare il testo.', type: 'error' })
       }
       document.body.removeChild(textArea);

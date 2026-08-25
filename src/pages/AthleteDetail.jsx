@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Play, Pause, Send, Square, Check, Eye, LineChart, Target, PieChart, BarChart2 } from 'lucide-react'
-import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isToday, differenceInDays, startOfWeek } from 'date-fns'
+import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Play, Pause, Square, Check, Eye, LineChart, Target, PieChart, BarChart2 } from 'lucide-react'
+import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, differenceInDays, startOfWeek } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
@@ -898,7 +898,7 @@ export default function AthleteDetail() {
           athleteId={id} 
           initialPr={editingPr}
           onClose={() => { setPrModalOpen(false); setEditingPr(null); }} 
-          onSaved={(isNew) => { 
+          onSaved={() => { 
             setPrModalOpen(false); 
             setEditingPr(null);
             fetchAthleteData(true) 
@@ -1355,7 +1355,7 @@ function SocialLinkModal({ athlete, type, onClose, onSaved }) {
          if (!parsedUrl.hostname.includes('strava.com') && !parsedUrl.hostname.includes('strava.app.link')) {
            return setAlertInfo({ title: 'Errore', message: 'Inserisci un link valido a un profilo Strava (es. https://strava.app.link/...).', type: 'error' })
          }
-       } catch (e) {
+       } catch {
          return setAlertInfo({ title: 'Errore', message: 'Inserisci un URL Strava valido.', type: 'error' })
        }
     }
@@ -1658,7 +1658,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
          if (!parsedUrl.hostname.includes('strava.com') && !parsedUrl.hostname.includes('strava.app.link')) {
            return setAlertInfo({ title: 'Errore', message: 'Inserisci un link valido a un profilo Strava (es. https://strava.app.link/...).', type: 'error' })
          }
-      } catch (e) {
+      } catch {
          return setAlertInfo({ title: 'Errore', message: 'Inserisci un URL Strava valido.', type: 'error' })
       }
     }
@@ -2068,7 +2068,8 @@ function AudioVisualizer({ stream }) {
         const y = (canvas.height - barHeight) / 2
         
         canvasCtx.beginPath()
-        canvasCtx.roundRect ? canvasCtx.roundRect(x, y, barWidth - 2, barHeight, 4) : canvasCtx.rect(x, y, barWidth - 2, barHeight)
+        if (canvasCtx.roundRect) canvasCtx.roundRect(x, y, barWidth - 2, barHeight, 4)
+        else canvasCtx.rect(x, y, barWidth - 2, barHeight)
         canvasCtx.fill()
         
         x += barWidth
@@ -2204,7 +2205,8 @@ function VoiceRecorder({ onSave, onCancel }) {
         mediaStream.getTracks().forEach(t => t.stop())
         setMediaStream(null)
       }
-      try { await NativeVoiceRecorder.stopRecording() } catch(e) {}
+      // Stiamo annullando: se lo stop fallisce l'audio va buttato comunque.
+      try { await NativeVoiceRecorder.stopRecording() } catch { /* esito irrilevante */ }
       if (onCancel) onCancel()
     }
   }
@@ -2234,7 +2236,11 @@ function VoiceRecorder({ onSave, onCancel }) {
           onSave(audioBlob, ext)
         } else if (onCancel) onCancel()
       } catch(e) {
-        console.error("Errore stop nativo:", e)
+        console.error('Errore stop nativo:', e)
+        // Senza queste due righe la registrazione spariva in silenzio: né onSave
+        // né onCancel, con la modale ferma ad aspettare un callback mai arrivato.
+        mostraErrore('Registrazione non salvata: riprova.')
+        if (onCancel) onCancel()
       }
     }
   }

@@ -1,6 +1,6 @@
 # FLEOFIT — Cose da fare
 
-> Stato al **25 agosto 2026**. Aggiornare questo file quando una voce si chiude o
+> Stato al **25 agosto 2026** (secondo giro dello stesso giorno: lint). Aggiornare questo file quando una voce si chiude o
 > se ne apre una nuova. Ogni voce dice *cosa*, *perché conta* e *cosa la blocca*:
 > senza il perché, fra sei mesi nessuno saprà se vale ancora la pena.
 >
@@ -51,8 +51,8 @@ codesign -d --entitlements - --xml Payload/App.app 2>/dev/null | plutil -p - | g
 | # | Cosa | Dimensione | Note |
 |---|---|---|---|
 | 15 | `React.memo` su `HyroxBlock` e `RunningStepRow` | ~mezza giornata | **Il guadagno maggiore rimasto.** Ogni blocco contiene scroll picker da 102 opzioni: con 8 blocchi sono migliaia di nodi ridisegnati a ogni carattere nel titolo. Ma i nove gestori passati sono arrow inline che catturano `blocks` e `idx`: `React.memo` non farebbe nulla finché non si cambia il contratto padre-figlio (passare `block.id`, gestori funzionali stabilizzati con `useCallback`). **Da fare dopo la submission, con test sulle pagine** |
-| 16 | ~164 problemi di lint | 1-2 giorni | 67 `no-unused-vars`, 34 `no-empty` (catch vuoti che inghiottono errori), 15 `no-explicit-any`. Pulizia, non correttezza |
-| 17 | 26 segnalazioni `react-hooks` | grande | `set-state-in-effect`, `immutability`, `exhaustive-deps`. Sono le regole v7 orientate al React Compiler: segnalano il pattern "fetch nell'effetto che aggiorna lo stato" su cui è costruita tutta l'app. Un refactor vero, non una pulizia |
+| 16 | 47 problemi di lint (erano 164) | mezza giornata | Restano 15 `no-explicit-any` nelle due Edge Function (le uniche `.ts`: tipizzarle davvero richiede i tipi Deno) e 4 `react-refresh/only-export-components`, che chiedono di spezzare `App.jsx` e `CreateWorkout.jsx` per separare context e costanti dai componenti. Gli altri 28 sono la voce 17 |
+| 17 | 28 segnalazioni `react-hooks` | grande | `set-state-in-effect`, `immutability`, `exhaustive-deps`. Sono le regole v7 orientate al React Compiler: segnalano il pattern "fetch nell'effetto che aggiorna lo stato" su cui è costruita tutta l'app. Un refactor vero, non una pulizia |
 | 18 | **1.423 valori hex letterali** contro i token di `@theme` | 2-3 giorni | Il rebranding che PRODUCT.md indica come possibile sarebbe un find&replace su 1.423 punti |
 | 19 | Nessun test sulle **pagine** (12.800 righe di JSX) | grande | `src/lib` ha 18 test verificati per mutazione. Le pagine no |
 | 20 | I due branch divergono di **49 / 51** | cresce ogni giorno | Ogni correzione fatta su un branch e non sull'altro allarga il divario. Vedi CLAUDE.md §1.1 |
@@ -98,4 +98,8 @@ policy RLS · safe area · tastiera · navbar · `lang="it"` · pinch-to-zoom ·
 (1.312 → 548 kB) · titolo del workout facoltativo · notifiche mancanti su 3 dei 4
 punti di assegnazione · atleti che si auto-ripristinavano · cestino con ripristino ·
 **ESLint che non aveva mai analizzato l'app** e i 4 `ReferenceError` che nascondeva ·
-18 test verificati per mutazione · liste admin da 4 a 3
+18 test verificati per mutazione · liste admin da 4 a 3 · **i 34 catch vuoti**
+che inghiottivano errori, e i tre guasti silenziosi che nascondevano (cache e coda
+offline corrotte che non si riparavano più, registrazione vocale persa senza
+messaggio) · codice morto: `updateWorkoutNote`, `SCHEMES`, `isDistance`,
+`MINUTES_OPTIONS`, `timeToSeconds`/`formatTime` e 10 import inutilizzati

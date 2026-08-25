@@ -797,8 +797,41 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
     ⚠️ Vanno tenute le esclusioni: `ios/App/App/public` è la copia del bundle **minificato** che
     `npx cap sync ios` deposita nel progetto Xcode, e analizzarla produceva 4.600 falsi problemi
     che nascondevano quelli veri.
-    Restano ~170 problemi reali, in gran parte `no-unused-vars` (69) e `no-empty` (34): pulizia,
-    non correttezza.
+    ⚠️ Va tenuta anche l'esclusione di `.agents`, aggiunta il 25/08: le skill vendorizzate
+    portavano 5 problemi che non sono codice del progetto.
+    ✅ **Scesi da 164 a 47 il 25/08/2026.** Tutti i 34 `no-empty` sono chiusi, e con loro sono
+    spariti 34 binding `catch (e)` mai letti. Non era solo pulizia: ~19 erano davvero
+    deliberati (aptica, wake lock, beep, `stopRecording` durante un annullamento) e ora lo
+    **dicono** in un commento, ma tre nascondevano guasti reali, elencati al §9-quater.
+    I 47 rimasti sono 28 `react-hooks` (un refactor, non una pulizia), 15 `no-explicit-any`
+    nelle due Edge Function e 4 `react-refresh/only-export-components`.
+
+---
+
+## 9-quater. I tre guasti che i catch vuoti nascondevano (corretti il 25/08/2026)
+
+Erano tutti `catch {}` senza corpo, quindi invisibili sia all'utente sia nei log.
+
+1. **Cache e coda offline corrotte non si riparavano più.** `Home.jsx` faceva
+   `try { JSON.parse(cached) } catch {}` sulla cache dei workout e
+   `catch (e) { return }` su `fleofit_offline_queue`. Un valore illeggibile in
+   localStorage restava lì per sempre: la modalità offline non ripartiva e le azioni
+   accodate **non venivano più sincronizzate**, a ogni tentativo, senza un solo indizio.
+   Ora il valore corrotto viene rimosso e l'evento loggato.
+2. **La nota vocale poteva sparire senza dirlo.** In `stopRecordingAndSave`, se
+   `NativeVoiceRecorder.stopRecording()` falliva, non veniva chiamato né `onSave` né
+   `onCancel`: la registrazione era persa e la modale restava ad aspettare un callback
+   che non sarebbe mai arrivato. Stessa cosa all'avvio su web (`new MediaRecorder`):
+   l'utente premeva registra e non succedeva niente, senza messaggio. Corretto nelle tre
+   copie (Home, WorkoutDetail, AthleteDetail — §9 punto 1: sono ancora duplicate).
+3. **`FCM.getToken()` poteva fallire in silenzio** (`Settings.jsx`). Il codice ripiega sul
+   token APNs grezzo, che però viene salvato con `auth: 'capacitor_ios'` e quindi trattato da
+   `send-reminders` come se fosse FCM: **la push non arriva mai**. È lo stesso sintomo
+   descritto nella sezione sulle push in Debug, ma con una causa diversa. Ora si vede nei log.
+
+Loggate anche, senza cambiare comportamento, le scritture di `badge_count` su
+`push_subscriptions` (5 punti fra Home e WorkoutDetail): se falliscono, il contatore che
+`send-reminders` rilegge per incrementare il badge resta disallineato per sempre.
 
 ---
 

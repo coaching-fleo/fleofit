@@ -42,7 +42,9 @@ import { mostraErrore } from './lib/alert'
 import { rinfrescaTokenPush } from './lib/pushToken'
 
 function Onboarding({ user, onComplete }) {
-  const [role, setRole] = useState('athlete')
+  // L'onboarding del ruolo coach è disattivato: qui il ruolo è sempre 'athlete'.
+  // Se un giorno torna, ridiventa uno useState.
+  const role = 'athlete'
   const meta = user.user_metadata || {}
   const [name, setName] = useState(meta.first_name || meta.full_name?.split(' ')[0] || '')
   const [surname, setSurname] = useState(meta.last_name || meta.full_name?.split(' ').slice(1).join(' ') || '')

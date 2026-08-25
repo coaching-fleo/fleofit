@@ -15,7 +15,7 @@ export default function Athletes() {
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const navigate = useNavigate()
-  const { role, user } = useAuth()
+  const { role } = useAuth()
 
   useEffect(() => { 
     if (role === 'athlete') {

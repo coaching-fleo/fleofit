@@ -440,7 +440,7 @@ serve(async (req) => {
 
       let title = "Aggiornamento Atleta";
       let bodyMsg = "";
-      let route = body.route || "/";
+      const route = body.route || "/";
 
       if (body.action === 'note') {
         title = `📝 Nota da ${body.athleteName}`;
