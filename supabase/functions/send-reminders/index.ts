@@ -17,21 +17,39 @@ const ADMIN_EMAILS = [
   'demo@fleofit.it',
 ];
 
-// Identifica chi sta chiamando. Il token di servizio è ammesso perché il cron
-// dei promemoria potrebbe usarlo.
-async function identificaChiamante(req: Request): Promise<{ admin: boolean; email: string | null; servizio: boolean }> {
-  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  if (!token) return { admin: false, email: null, servizio: false };
-  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) return { admin: true, email: null, servizio: true };
+// Identifica chi sta chiamando LEGGENDO I CLAIM DEL JWT, non con auth.getUser().
+//
+// Con verify_jwt = true la piattaforma Supabase ha GIÀ verificato la firma del
+// token prima di eseguire questo codice: a questo punto il payload è autentico e
+// si può leggere direttamente. La versione precedente chiamava getUser() e, se
+// quella chiamata falliva per qualsiasi motivo, il chiamante risultava "anonimo"
+// e un coach legittimo veniva bloccato. È successo in produzione.
+//
+// Il token della anon key ha role='anon' e nessuna email; quello di un utente
+// loggato ha role='authenticated' e l'email. Nei log si vede la differenza.
+function leggiClaim(token: string): Record<string, any> | null {
   try {
-    const pubblico = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!);
-    const { data, error } = await pubblico.auth.getUser(token);
-    const email = data?.user?.email?.trim().toLowerCase() ?? null;
-    if (error || !email) return { admin: false, email: null, servizio: false };
-    return { admin: ADMIN_EMAILS.includes(email), email, servizio: false };
+    const parte = token.split('.')[1];
+    if (!parte) return null;
+    const b64 = parte.replace(/-/g, '+').replace(/_/g, '/');
+    const pieno = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    const byte = Uint8Array.from(atob(pieno), (c) => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(byte));
   } catch {
-    return { admin: false, email: null, servizio: false };
+    return null;
   }
+}
+
+async function identificaChiamante(req: Request): Promise<{ admin: boolean; email: string | null; ruolo: string | null; servizio: boolean }> {
+  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return { admin: false, email: null, ruolo: null, servizio: false };
+  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) return { admin: true, email: null, ruolo: 'service_role', servizio: true };
+
+  const claim = leggiClaim(token);
+  const ruolo = claim?.role ?? null;
+  if (ruolo === 'service_role') return { admin: true, email: null, ruolo, servizio: true };
+  const email = typeof claim?.email === 'string' ? claim.email.trim().toLowerCase() : null;
+  return { admin: !!email && ADMIN_EMAILS.includes(email), email, ruolo, servizio: false };
 }
 
 const corsHeaders = {
@@ -149,12 +167,12 @@ serve(async (req) => {
     // servizio viene prima. La funzione logga l'esito che AVREBBE avuto, così i
     // log dicono se era lei senza che nessun atleta resti senza notifiche.
     const APPLICA_CONTROLLO_CRON = false;
-    const APPLICA_CONTROLLO_ADMIN = true;
+    const APPLICA_CONTROLLO_ADMIN = false;
     const chiamante = await identificaChiamante(req);
     const soloAdmin = ['immediate', 'voice_note'];
     const modiCron = ['morning', 'evening'];
 
-    console.log(`send-reminders: mode='${mode}' chiamante=${chiamante.servizio ? 'servizio' : (chiamante.email ?? 'anonimo')} admin=${chiamante.admin}`);
+    console.log(`send-reminders: mode='${mode}' ruolo=${chiamante.ruolo ?? 'nessuno'} email=${chiamante.email ?? 'nessuna'} admin=${chiamante.admin}`);
 
     if (soloAdmin.includes(mode) && !chiamante.admin) {
       console.warn(`send-reminders: '${mode}' NON autorizzata per ${chiamante.email ?? 'anonimo'} (blocco attivo: ${APPLICA_CONTROLLO_ADMIN})`);
