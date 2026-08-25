@@ -282,6 +282,36 @@ Progetto Supabase: `riyqtcssllupakjtoehj`.
   Secret: `GEMINI_API_KEY`.
 - **`cloud-sync`** — invocata da `CloudSyncService` (Strava/Garmin), **non presente nel repo** → probabilmente non ancora implementata.
 
+### ⏰ I quattro cron di pg_cron (scoperti il 25/08/2026, prima non documentati)
+Il cron **non** è su GitHub: è `pg_cron` dentro Supabase, che chiama le funzioni via `net.http_post`.
+Si ispeziona con `select jobid, jobname, schedule, active, command from cron.job;`
+
+| jobname | schedule (UTC) | cosa fa |
+|---|---|---|
+| `reminder-mattina` | `0 6 * * *` | `send-reminders` con `{"mode":"morning"}` |
+| `reminder-sera` | `0 20 * * *` | `send-reminders` con `{"mode":"evening"}` |
+| `cleanup-voice-notes` | `0 * * * *` (ogni ora) | `delete_expired_voice_notes()` |
+| `cleanup-expired-athletes` | `0 0 * * *` | `delete_expired_athletes()` |
+
+I due `cleanup` chiamano funzioni SQL che **non sono nel repository** e che nessuno aveva
+registrato: `supabase/schema/` non le contiene perché la fotografia copre solo le policy RLS.
+⚠️ **Vanno lette e documentate**: `delete_expired_athletes()` **cancella righe**, e non sappiamo
+con quale criterio.
+
+### 🔴 Il backup gira DOPO la cancellazione degli atleti
+`cleanup-expired-athletes` gira alle **00:00 UTC**, il backup del database alle **02:00 UTC**.
+Un atleta cancellato definitivamente a mezzanotte **non è più nel backup di quella notte**, e
+neanche in quelli successivi: la cancellazione precede sempre la copia. Se il criterio di
+`delete_expired_athletes()` fosse sbagliato, non ci sarebbe modo di accorgersene né di rimediare.
+Il rimedio è banale — spostare il backup **prima** della pulizia, per esempio alle 23:00 UTC —
+ma il file del cron sta su `main` e va modificato lì.
+
+### ⚠️ La service role key è in chiaro dentro `cron.job`
+I due `reminder-*` portano la chiave `service_role` scritta a mano nell'header `Authorization`
+del comando. Non è esposta via API REST (lo schema `cron` non è fra quelli pubblicati), ma è un
+punto di duplicazione che nessuno pensa a ruotare. Se la chiave venisse rigenerata, va aggiornata
+in: `cron.job` (2 job), i secret GitHub del backup, e ovunque sia stata incollata.
+
 ### 🔐 Autorizzazione delle Edge Function (deployata il 25/08/2026)
 Prima erano entrambe aperte. Ora:
 - **`ai-workout`**: `verify_jwt = true` + controllo che il chiamante sia in `ADMIN_EMAILS`
@@ -292,7 +322,14 @@ Prima erano entrambe aperte. Ora:
   - `immediate`, `voice_note` → solo admin. Verificato: anon key → 403.
   - `coach_notification` → aperta agli autenticati: la invoca il client **dell'atleta**
     quando completa un workout o lascia una nota. Non stringere qui senza rifare il giro.
-  - `morning`, `evening` → **IN OSSERVAZIONE, non bloccate** (`APPLICA_CONTROLLO_CRON = false`).
+  - `morning`, `evening` → **PROTETTE dal 25/08/2026** (`APPLICA_CONTROLLO_CRON = true`).
+    Verificato che `pg_cron` invoca con un token `role: service_role`, che la funzione riconosce
+    per due vie indipendenti (confronto con `SUPABASE_SERVICE_ROLE_KEY` e claim `role`).
+    Esiste anche una terza via, il segreto condiviso `CRON_SECRET` più l'header `x-cron-secret`,
+    disattivata perché non serve: si attiva da sola se un giorno il secret viene impostato.
+    Verificato dopo il deploy: `morning`, `evening`, `immediate` e `voice_note` con la anon key
+    danno tutte 403.
+    ~~IN OSSERVAZIONE~~ (`APPLICA_CONTROLLO_CRON = false`).
     Il cron è configurato dentro Supabase, nessun workflow GitHub lo chiama, e il default
     della funzione senza body è `morning`: bloccarlo alla cieca spegnerebbe i promemoria di
     tutti gli atleti. La funzione ora **logga l'origine di ogni esecuzione**.

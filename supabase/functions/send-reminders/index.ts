@@ -166,7 +166,7 @@ serve(async (req) => {
     // ancora se la causa sia questo controllo o altro: fino a prova contraria il
     // servizio viene prima. La funzione logga l'esito che AVREBBE avuto, così i
     // log dicono se era lei senza che nessun atleta resti senza notifiche.
-    const APPLICA_CONTROLLO_CRON = false;
+    const APPLICA_CONTROLLO_CRON = true;
     const APPLICA_CONTROLLO_ADMIN = true;
     const chiamante = await identificaChiamante(req);
     const soloAdmin = ['immediate', 'voice_note'];
