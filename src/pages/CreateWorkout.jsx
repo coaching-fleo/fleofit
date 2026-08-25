@@ -13,6 +13,7 @@ import { blockHint } from '../lib/blockHints'
 import { format } from 'date-fns'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { ERGOMETERS } from '../lib/constants'
+import { mostraErrore } from '../lib/alert'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -443,7 +444,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
           }
         } catch (e) {
           console.error(e);
-          alert("Errore elaborazione audio: " + e.message);
+          mostraErrore("Errore elaborazione audio: " + e.message);
         } finally {
           setLoading(false);
         }
@@ -455,7 +456,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
         try {
           const perm = await VoiceRecorder.requestAudioRecordingPermission();
           if (!perm.value) {
-            alert("Devi concedere i permessi per il microfono nelle impostazioni di iOS.");
+            mostraErrore("Devi concedere i permessi per il microfono nelle impostazioni di iOS.");
             return;
           }
           await VoiceRecorder.startRecording();
@@ -464,7 +465,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
         } catch (e) {
           console.error(e);
           setIsListening(false);
-          alert("Errore nell'avvio della registrazione: " + e.message);
+          mostraErrore("Errore nell'avvio della registrazione: " + e.message);
         }
       } else {
         if (recognitionRef.current) {
@@ -474,7 +475,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
             console.error(e);
           }
         } else {
-          alert("Il riconoscimento vocale nativo non è supportato su questo dispositivo. Usa la dettatura integrata della tastiera.");
+          mostraErrore("Il riconoscimento vocale nativo non è supportato su questo dispositivo. Usa la dettatura integrata della tastiera.");
         }
       }
     }
@@ -506,7 +507,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
       if (msg.includes('503') || msg.toLowerCase().includes('high demand') || msg.toLowerCase().includes('overloaded')) {
         msg = "I server dell'Intelligenza Artificiale sono attualmente sovraccarichi. Riprova tra qualche istante.";
       }
-      alert('Errore generazione IA: ' + msg);
+      mostraErrore('Errore generazione IA: ' + msg);
     } finally {
       setLoading(false);
     }

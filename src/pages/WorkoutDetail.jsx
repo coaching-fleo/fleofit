@@ -24,6 +24,7 @@ import { blockHint } from '../lib/blockHints'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { ERGOMETERS, COACHING_ID } from '../lib/constants'
+import { mostraErrore } from '../lib/alert'
 
 const TYPE_COLORS = {
   'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
@@ -2747,7 +2748,7 @@ function VoiceRecorder({ onSave, onCancel }) {
         let hasPerm = await NativeVoiceRecorder.hasAudioRecordingPermission()
         if (!hasPerm.value) {
           hasPerm = await NativeVoiceRecorder.requestAudioRecordingPermission()
-          if (!hasPerm.value) return alert('Devi abilitare il microfono dalle impostazioni di iOS.')
+          if (!hasPerm.value) return mostraErrore('Devi abilitare il microfono dalle impostazioni di iOS.')
         }
       } catch (e) {
         console.error("Errore permessi nativi:", e)
@@ -2773,11 +2774,11 @@ function VoiceRecorder({ onSave, onCancel }) {
         timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
       } catch (e) {
         console.error("Errore avvio rec nativo:", e)
-        alert('Impossibile accedere al microfono.')
+        mostraErrore('Impossibile accedere al microfono.')
       }
     } else {
       if (!window.MediaRecorder || !stream) {
-        return alert('Il tuo browser non supporta la registrazione vocale.')
+        return mostraErrore('Il tuo browser non supporta la registrazione vocale.')
       }
       try {
         const recorder = new MediaRecorder(stream)
@@ -2921,7 +2922,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
       const textToAppend = `\n\n🍏 [Apple Health] Durata: ${data.duration || '--'} min | Calorie: ${data.calories || '--'} kcal | Battiti Medi: ${data.avgHeartRate || '--'} bpm`;
       onNotesChange(notes ? notes + textToAppend : textToAppend.trim());
     } catch (e) {
-      alert(e.message);
+      mostraErrore(e.message);
     } finally {
       setSyncingHealth(false);
     }

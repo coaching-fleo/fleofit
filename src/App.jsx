@@ -36,6 +36,8 @@ export const useAuth = () => useContext(AuthContext)
 // se aggiungi un indirizzo qui, aggiungilo anche lì e rideploya la function.
 export const ADMIN_EMAILS = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com', 'demo@fleofit.it']
 import { User, Upload } from 'lucide-react'
+import { AlertHost } from './components/CustomModals'
+import { mostraErrore } from './lib/alert'
 
 function Onboarding({ user, onComplete }) {
   const [role, setRole] = useState('athlete')
@@ -92,7 +94,7 @@ function Onboarding({ user, onComplete }) {
       }, { onConflict: 'id' })
 
       if (dbError) {
-        alert("Errore di salvataggio nel database: " + dbError.message)
+        mostraErrore("Errore di salvataggio nel database: " + dbError.message)
         setSaving(false)
         return
       }
@@ -436,6 +438,7 @@ function App() {
       `}</style>
       <DeeplinkHandler />
       <div className="min-h-screen bg-[#0B0B0B] text-white">
+        <AlertHost />
         <Suspense fallback={<div className="min-h-screen bg-[#0B0B0B]" />}>
         <Routes>
           <Route path="/login" element={<Login />} />

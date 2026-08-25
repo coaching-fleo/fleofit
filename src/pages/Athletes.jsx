@@ -6,6 +6,7 @@ import { Plus, User, ChevronRight, Search } from 'lucide-react'
 import { differenceInYears, parseISO } from 'date-fns'
 import { useAuth } from '../App'
 import { COACHING_ID } from '../lib/constants'
+import { mostraErrore } from '../lib/alert'
 
 export default function Athletes() {
   const [athletes, setAthletes] = useState([])
@@ -110,7 +111,7 @@ function NewAthleteModal({ onClose, onSaved }) {
   }
 
   const handleSave = async () => {
-    if (!form.name || !form.surname) return alert('Nome e cognome obbligatori!')
+    if (!form.name || !form.surname) return mostraErrore('Nome e cognome obbligatori!')
     setSaving(true)
 
     let photo_url = null
@@ -123,7 +124,7 @@ function NewAthleteModal({ onClose, onSaved }) {
 
       if (uploadError) {
         setSaving(false)
-        alert('Errore durante il caricamento della foto: ' + uploadError.message)
+        mostraErrore('Errore durante il caricamento della foto: ' + uploadError.message)
         return
       }
       const { data: urlData } = supabase.storage.from('athlete-photos').getPublicUrl(fileName)
@@ -141,7 +142,7 @@ function NewAthleteModal({ onClose, onSaved }) {
     })
 
     setSaving(false)
-    if (error) { alert('Errore: ' + error.message); return }
+    if (error) { mostraErrore('Errore: ' + error.message); return }
     onSaved()
   }
 

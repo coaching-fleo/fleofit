@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { AlertTriangle, Check } from 'lucide-react'
+import { registraAlertHost } from '../lib/alert'
 
 export function CustomAlert({ info, onClose }) {
   if (!info) return null
@@ -35,4 +37,11 @@ export function CustomConfirm({ info, onClose }) {
       </div>
     </div>
   )
+}
+
+/** Montato una sola volta in App.jsx: riceve gli alert da mostraAlert()/mostraErrore(). */
+export function AlertHost() {
+  const [info, setInfo] = useState(null)
+  useEffect(() => registraAlertHost(setInfo), [])
+  return <CustomAlert info={info} onClose={() => setInfo(null)} />
 }

@@ -17,6 +17,7 @@ import { BluetoothService } from './bluetooth'
 import { Network } from '@capacitor/network'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
+import { mostraErrore } from '../lib/alert'
 
 
 export default function Home() {
@@ -65,6 +66,8 @@ export default function Home() {
   const [currentY, setCurrentY] = useState(null)
   
   const [showRpeModal, setShowRpeModal] = useState(false)
+  // Rilancia il fetch dei dati senza ricaricare l'intera app (vedi confirmRemoveWorkout)
+  const [refreshTick, setRefreshTick] = useState(0)
   const [activeSlide, setActiveSlide] = useState(0)
   const [workoutToComplete, setWorkoutToComplete] = useState(null)
   const [rpeScore, setRpeScore] = useState('5')
@@ -470,7 +473,7 @@ setNotifications(prev => {
 
       if (presenceRoom) supabase.removeChannel(presenceRoom);
     }
-  }, [role, user])
+  }, [role, user, refreshTick])
 
   useEffect(() => {
     if (showNotifications) {
@@ -674,9 +677,9 @@ setNotifications(prev => {
 
       setAutonomousModalOpen(false)
       setAutonomousForm({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
-      window.location.reload()
+      setRefreshTick(t => t + 1)
     } catch (err) {
-      alert("Errore: " + err.message)
+      mostraErrore("Errore: " + err.message)
     }
     setSavingAutonomous(false)
   }
@@ -687,9 +690,9 @@ setNotifications(prev => {
       const { error } = await supabase.from('athlete_workouts').delete().eq('id', workoutToRemove)
       if (error) throw error
       setWorkoutToRemove(null)
-      window.location.reload()
+      setRefreshTick(t => t + 1)
     } catch (err) {
-      alert("Errore: " + err.message)
+      mostraErrore("Errore: " + err.message)
     }
   }
 
@@ -1397,7 +1400,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
       const textToAppend = `\n\n🍏 [Apple Health] Durata: ${data.duration || '--'} min | Calorie: ${data.calories || '--'} kcal | Battiti Medi: ${data.avgHeartRate || '--'} bpm`;
       onNotesChange(notes ? notes + textToAppend : textToAppend.trim());
     } catch (e) {
-      alert(e.message);
+      mostraErrore(e.message);
     } finally {
       setSyncingHealth(false);
     }
@@ -1696,7 +1699,7 @@ function VoiceRecorder({ onSave, onCancel }) {
         let hasPerm = await NativeVoiceRecorder.hasAudioRecordingPermission()
         if (!hasPerm.value) {
           hasPerm = await NativeVoiceRecorder.requestAudioRecordingPermission()
-          if (!hasPerm.value) return alert('Devi abilitare il microfono dalle impostazioni di iOS.')
+          if (!hasPerm.value) return mostraErrore('Devi abilitare il microfono dalle impostazioni di iOS.')
         }
       } catch (e) {
         console.error("Errore permessi nativi:", e)
@@ -1716,11 +1719,11 @@ function VoiceRecorder({ onSave, onCancel }) {
         setRecordingTime(0)
         timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
       } catch (e) {
-        alert('Impossibile accedere al microfono.')
+        mostraErrore('Impossibile accedere al microfono.')
       }
     } else {
       if (!window.MediaRecorder || !stream) {
-        return alert('Il tuo browser non supporta la registrazione vocale.')
+        return mostraErrore('Il tuo browser non supporta la registrazione vocale.')
       }
       try {
         const recorder = new MediaRecorder(stream)
