@@ -1409,13 +1409,19 @@ export default function CreateWorkout() {
         }).eq('id', awId)
         if (awError) console.error("Errore aggiornamento assegnazione:", awError)
       } else if (athleteId) {
-        const { error: awError } = await supabase.from('athlete_workouts').insert({
+        const { data: assegnazione, error: awError } = await supabase.from('athlete_workouts').insert({
           athlete_id: athleteId,
           workout_id: targetId,
           completed_date: date,
           status: 'pending'
-        })
+        }).select().single()
         if (awError) console.error("Errore assegnazione:", awError)
+        else if (assegnazione) {
+          // Anche salvando il workout direttamente per un atleta l'avviso deve partire.
+          supabase.functions.invoke('send-reminders', {
+            body: { mode: 'immediate', record_id: assegnazione.id }
+          }).catch(console.error)
+        }
       }
       setSaving(false)
     }

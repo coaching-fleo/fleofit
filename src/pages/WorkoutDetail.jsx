@@ -327,12 +327,19 @@ export default function WorkoutDetail() {
       status: 'pending'
     }))
 
-    const { error } = await supabase.from('athlete_workouts').insert(newAssignments)
-    
+    const { data: assegnazioni, error } = await supabase.from('athlete_workouts').insert(newAssignments).select()
+
     setAssigning(false)
     if (error) {
       setAlertInfo({ title: 'Errore', message: "Errore durante l'assegnazione: " + error.message, type: 'error' })
     } else {
+      // Assegnando da qui la notifica non partiva: era l'unico percorso di
+      // assegnazione della web app a non avvisare l'atleta.
+      ;(assegnazioni || []).forEach(a => {
+        supabase.functions.invoke('send-reminders', {
+          body: { mode: 'immediate', record_id: a.id }
+        }).catch(console.error)
+      })
       setAssignModalOpen(false)
       setSelectedAthletes([])
       setAssignStep(1)
