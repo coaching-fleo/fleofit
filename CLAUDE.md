@@ -293,7 +293,7 @@ Quindi cancellare un atleta **distrugge tutta la sua storia**, record personali 
 Fa eccezione `workouts_athlete_id_fkey`, che è `NO ACTION`: `workouts.athlete_id` è però una
 colonna legacy che il client non scrive mai, quindi in pratica non blocca nulla.
 
-🔴 **E il backup gira DOPO**: pulizia alle 00:00 UTC, backup alle 02:00. Un atleta cancellato a
+🔴 **E il backup gira DOPO**: backup alle 22:30 UTC, pulizia alle 00:00: la copia ora PRECEDE la cancellazione. Un atleta cancellato a
 mezzanotte non è nel backup di quella notte né in nessuno dei successivi. **Spostare il backup
 alle 23:00 UTC** risolve, ma il file sta su `main`.
 
@@ -342,12 +342,11 @@ registrato: `supabase/schema/` non le contiene perché la fotografia copre solo 
 con quale criterio.
 
 ### 🔴 Il backup gira DOPO la cancellazione degli atleti
-`cleanup-expired-athletes` gira alle **00:00 UTC**, il backup del database alle **02:00 UTC**.
+`cleanup-expired-athletes` gira alle **00:00 UTC**, il backup del database alle **22:30 UTC**.
 Un atleta cancellato definitivamente a mezzanotte **non è più nel backup di quella notte**, e
 neanche in quelli successivi: la cancellazione precede sempre la copia. Se il criterio di
 `delete_expired_athletes()` fosse sbagliato, non ci sarebbe modo di accorgersene né di rimediare.
-Il rimedio è banale — spostare il backup **prima** della pulizia, per esempio alle 23:00 UTC —
-ma il file del cron sta su `main` e va modificato lì.
+✅ **Risolto il 25/08/2026**: il backup è stato spostato a `30 22 * * *`, un'ora e mezza prima della pulizia.
 
 ### ⚠️ La service role key è in chiaro dentro `cron.job`
 I due `reminder-*` portano la chiave `service_role` scritta a mano nell'header `Authorization`
@@ -376,9 +375,8 @@ Prima erano entrambe aperte. Ora:
     Il cron è configurato dentro Supabase, nessun workflow GitHub lo chiama, e il default
     della funzione senza body è `morning`: bloccarlo alla cieca spegnerebbe i promemoria di
     tutti gli atleti. La funzione ora **logga l'origine di ogni esecuzione**.
-    ⏳ **DA FARE**: leggere i log dopo un paio di cicli notturni (02:00 UTC), vedere con quale
-    identità arriva il cron, poi mettere `APPLICA_CONTROLLO_CRON = true` e rideployare.
-    Finché è `false`, un atleta autenticato può ancora far partire una push a tutti.
+    ✅ **Fatto il 25/08/2026**: letto `cron.job`, il cron invoca con `role: service_role`.
+    `APPLICA_CONTROLLO_CRON = true` deployato e verificato.
 
 ⚠️ Il deploy di `send-reminders` colpisce **anche la web app in produzione**: è una sola
 funzione per due app.
@@ -416,7 +414,7 @@ App Store, ma va confermato sul binario esportato:
 VAPID public key duplicata client-side in `Settings.jsx:274`.
 
 ### Backup
-GitHub Action `.github/workflows/db-backup.yml` — cron `0 2 * * *` (02:00 UTC), export REST in zip
+GitHub Action `.github/workflows/db-backup.yml` — cron `30 22 * * *` (22:30 UTC, **prima** della pulizia di mezzanotte), export REST in zip
 caricato come artifact (retention 90 giorni). **Riscritto il 24/08/2026**: tabelle corrette,
 paginazione a 1000 righe, validazione della risposta, fallimento esplicito se una tabella critica
 (`athletes`, `workouts`, `athlete_workouts`) è vuota o mancante, manifest con i conteggi e riepilogo
