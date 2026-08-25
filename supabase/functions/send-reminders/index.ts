@@ -142,17 +142,28 @@ serve(async (req) => {
     // Bloccarle alla cieca spegnerebbe i promemoria di tutti gli atleti.
     // Controllare i log della funzione: se le esecuzioni pianificate risultano
     // 'servizio' o admin, mettere APPLICA_CONTROLLO_CRON = true.
+    // ⚠️ 25/08/2026 — TUTTO IN OSSERVAZIONE, NIENTE VIENE BLOCCATO.
+    // Subito dopo il primo deploy con il controllo attivo è stato segnalato che
+    // l'assegnazione di un workout non faceva più arrivare la push. Non sappiamo
+    // ancora se la causa sia questo controllo o altro: fino a prova contraria il
+    // servizio viene prima. La funzione logga l'esito che AVREBBE avuto, così i
+    // log dicono se era lei senza che nessun atleta resti senza notifiche.
     const APPLICA_CONTROLLO_CRON = false;
+    const APPLICA_CONTROLLO_ADMIN = false;
     const chiamante = await identificaChiamante(req);
     const soloAdmin = ['immediate', 'voice_note'];
     const modiCron = ['morning', 'evening'];
 
+    console.log(`send-reminders: mode='${mode}' chiamante=${chiamante.servizio ? 'servizio' : (chiamante.email ?? 'anonimo')} admin=${chiamante.admin}`);
+
     if (soloAdmin.includes(mode) && !chiamante.admin) {
-      console.warn(`send-reminders: '${mode}' rifiutata a ${chiamante.email ?? 'anonimo'}`);
-      return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      console.warn(`send-reminders: '${mode}' NON autorizzata per ${chiamante.email ?? 'anonimo'} (blocco attivo: ${APPLICA_CONTROLLO_ADMIN})`);
+      if (APPLICA_CONTROLLO_ADMIN) {
+        return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     if (modiCron.includes(mode)) {
