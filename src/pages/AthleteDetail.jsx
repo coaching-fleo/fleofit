@@ -13,20 +13,8 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
+import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 
-const parseNotesAndRpe = (fullNote) => {
-  if (!fullNote) return { rpe: '5', text: '' };
-  const match = fullNote.match(/^\[RPE:\s*(\d+)\/10\]\n?([\s\S]*)$/);
-  if (match) {
-    return { rpe: match[1], text: match[2] };
-  }
-  return { rpe: '5', text: fullNote };
-}
-const formatNotesWithRpe = (rpe, text) => {
-  const cleanText = text.trim();
-  if (!cleanText && rpe === '5') return '';
-  return `[RPE: ${rpe}/10]\n${cleanText}`;
-}
 const getRpeColorText = (val) => {
   if (val <= 3) return 'text-green-500';
   if (val <= 6) return 'text-yellow-400';

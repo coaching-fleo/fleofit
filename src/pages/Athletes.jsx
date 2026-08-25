@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient'
 import { Plus, User, ChevronRight, Search } from 'lucide-react'
 import { differenceInYears, parseISO } from 'date-fns'
 import { useAuth } from '../App'
+import { COACHING_ID } from '../lib/constants'
 
 export default function Athletes() {
   const [athletes, setAthletes] = useState([])
@@ -25,7 +26,6 @@ export default function Athletes() {
     const { data } = await supabase.from('athletes').select('*').is('deleted_at', null).order('name')
     
     // Nascondiamo il profilo di coaching@federicoleo.it a TUTTI gli admin usando il suo ID univoco
-    const COACHING_ID = '0118e43f-8791-4fd6-8032-bee028334c99'
     setAthletes((data || []).filter(a => a.id !== COACHING_ID))
   }
 

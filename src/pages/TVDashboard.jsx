@@ -4,6 +4,7 @@ import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw, Volu
 import { Capacitor } from '@capacitor/core'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 import { blockHint } from '../lib/blockHints'
+import { ERGOMETERS } from '../lib/constants'
 
 // --- AUDIO GENERATOR HELPER ---
 const writeString = (view, offset, string) => {
@@ -54,7 +55,6 @@ if (typeof window !== 'undefined') {
   longerBeepURI = createBeepURI(1200, 1500);
 }
 
-const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
 const isErgo = (name) => ERGOMETERS.includes(name)
 
 const SCHEMES = {

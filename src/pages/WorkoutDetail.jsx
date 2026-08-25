@@ -22,6 +22,8 @@ import { Network } from '@capacitor/network'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { blockHint } from '../lib/blockHints'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
+import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
+import { ERGOMETERS, COACHING_ID } from '../lib/constants'
 
 const TYPE_COLORS = {
   'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
@@ -133,19 +135,6 @@ const parseDuration = (val) => {
   return Math.round((parseFloat(str) || 0) * 60); 
 }
 
-const parseNotesAndRpe = (fullNote) => {
-  if (!fullNote) return { rpe: '5', text: '' };
-  const match = fullNote.match(/^\[RPE:\s*(\d+)\/10\]\n?([\s\S]*)$/);
-  if (match) {
-    return { rpe: match[1], text: match[2] };
-  }
-  return { rpe: '5', text: fullNote };
-}
-const formatNotesWithRpe = (rpe, text) => {
-  const cleanText = text.trim();
-  if (!cleanText && rpe === '5') return '';
-  return `[RPE: ${rpe}/10]\n${cleanText}`;
-}
 const getRpeColorText = (val) => {
   if (val <= 3) return 'text-green-500';
   if (val <= 6) return 'text-yellow-400';
@@ -153,7 +142,6 @@ const getRpeColorText = (val) => {
   return 'text-red-500';
 }
 
-const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
 const isErgo = (name) => ERGOMETERS.includes(name)
 
 const SLED_EXERCISES = ['Sled Push', 'Sled Pull', 'Prowler Push', 'Sled Drag']
@@ -619,7 +607,6 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
   const fetchAthletes = async () => {
     const { data } = await supabase.from('athletes').select('id, name, surname, photo_url').is('deleted_at', null).order('name')
-    const COACHING_ID = '0118e43f-8791-4fd6-8032-bee028334c99'
     setAthletes((data || []).filter(a => a.id !== COACHING_ID))
   }
 

@@ -12,10 +12,10 @@ import { useTouchDrag } from '../useTouchDrag'
 import { blockHint } from '../lib/blockHints'
 import { format } from 'date-fns'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
+import { ERGOMETERS } from '../lib/constants'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
-const ERGOMETERS = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill']
 const HYROX_EXERCISES = [
   'Assault Bike', 'Atlas Stone Load', 'Axle Bar Clean', 'Axle Bar Deadlift',
   'Back Lunge', 'Back Squat', 'Bar Muscle-up', 'Bar Pullover', 'Battle Ropes', 'Bear Crawl', 'Box Jump', 'Burpees', 'Burpees Broad Jumps', 'Burpees Jump',

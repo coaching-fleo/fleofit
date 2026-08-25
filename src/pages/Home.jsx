@@ -16,20 +16,8 @@ import { Badge } from '@capawesome/capacitor-badge'
 import { BluetoothService } from './bluetooth'
 import { Network } from '@capacitor/network'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
+import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 
-const parseNotesAndRpe = (fullNote) => {
-  if (!fullNote) return { rpe: '5', text: '' };
-  const match = fullNote.match(/^\[RPE:\s*(\d+)\/10\]\n?([\s\S]*)$/);
-  if (match) {
-    return { rpe: match[1], text: match[2] };
-  }
-  return { rpe: '5', text: fullNote };
-}
-const formatNotesWithRpe = (rpe, text) => {
-  const cleanText = text.trim();
-  if (!cleanText && rpe === '5') return '';
-  return `[RPE: ${rpe}/10]\n${cleanText}`;
-}
 
 export default function Home() {
   const navigate = useNavigate()
