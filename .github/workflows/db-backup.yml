@@ -42,6 +42,17 @@ jobs:
       # scarichiamo a pagine finché non arriva una pagina incompleta.
       PAGE_SIZE: '1000'
 
+      # ── Bucket Storage da salvare ─────────────────────────────────────────
+      # ⚠️ PRIVACY: le note vocali sono comunicazioni private fra coach e atleta,
+      # e le foto profilo sono dati personali. Finiscono in un artifact GitHub
+      # con la retention impostata sotto. Se il repository è pubblico, NON
+      # scaricare i file: lascia solo l'inventario mettendo STORAGE_SCARICA a 'no'.
+      BUCKETS: 'athlete-photos voice-notes'
+      STORAGE_SCARICA: 'si'
+      # Tetto complessivo: oltre questa soglia si smette di scaricare e si
+      # segnala, invece di far esplodere il job. L'inventario resta completo.
+      STORAGE_MAX_MB: '1024'
+
     steps:
       - name: Verifica i secret
         run: |
@@ -159,6 +170,75 @@ jobs:
                  missing:      [$r[] | select(.[2] == "missing")  | .[0]]
                }' < "$REPORT" > backup/_manifest.json
 
+          # ── Bucket Storage ─────────────────────────────────────────────
+          # Finora fuori dal backup: foto profilo e note vocali non avevano
+          # nessuna copia. L'inventario si salva sempre; i file solo se
+          # STORAGE_SCARICA = si e finché si resta sotto STORAGE_MAX_MB.
+          mkdir -p backup/storage
+          STORAGE_REPORT="$(mktemp)"
+          totale_byte=0
+          limite_byte=$(( STORAGE_MAX_MB * 1024 * 1024 ))
+          troncato='no'
+
+          for bucket in $BUCKETS; do
+            offset=0
+            n_oggetti=0
+            byte_bucket=0
+            : > "backup/storage/${bucket}.manifest.jsonl"
+
+            while : ; do
+              pagina="$(curl -sS -X POST \
+                -H "apikey: $SUPABASE_SERVICE_KEY" \
+                -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+                -H "Content-Type: application/json" \
+                -d "{\"prefix\":\"\",\"limit\":$PAGE_SIZE,\"offset\":$offset,\"sortBy\":{\"column\":\"name\",\"order\":\"asc\"}}" \
+                "$BASE_URL/storage/v1/object/list/$bucket" || echo 'null')"
+
+              if ! echo "$pagina" | jq -e 'type == "array"' >/dev/null 2>&1; then
+                echo "::warning::Bucket '$bucket' non leggibile o inesistente, salto."
+                break
+              fi
+
+              conta="$(echo "$pagina" | jq 'length')"
+              [ "$conta" -eq 0 ] && break
+
+              echo "$pagina" | jq -c '.[] | {name, size: (.metadata.size // 0), updated_at, mimetype: (.metadata.mimetype // null)}' \
+                >> "backup/storage/${bucket}.manifest.jsonl"
+
+              while IFS=$'\t' read -r nome dimensione; do
+                # Supabase crea segnaposto per le cartelle vuote: non sono file.
+                [ "$nome" = '.emptyFolderPlaceholder' ] && continue
+                n_oggetti=$(( n_oggetti + 1 ))
+                byte_bucket=$(( byte_bucket + dimensione ))
+
+                [ "$STORAGE_SCARICA" != 'si' ] && continue
+                if [ $(( totale_byte + dimensione )) -gt $limite_byte ]; then
+                  troncato='si'
+                  continue
+                fi
+
+                destinazione="backup/storage/$bucket/$nome"
+                mkdir -p "$(dirname "$destinazione")"
+                if curl -sS -f \
+                     -H "apikey: $SUPABASE_SERVICE_KEY" \
+                     -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+                     -o "$destinazione" \
+                     "$BASE_URL/storage/v1/object/$bucket/$nome"; then
+                  totale_byte=$(( totale_byte + dimensione ))
+                else
+                  echo "::warning::Download fallito: $bucket/$nome"
+                  rm -f "$destinazione"
+                fi
+              done < <(echo "$pagina" | jq -r '.[] | [.name, (.metadata.size // 0)] | @tsv')
+
+              [ "$conta" -lt "$PAGE_SIZE" ] && break
+              offset=$(( offset + PAGE_SIZE ))
+            done
+
+            printf '%s\t%s\t%s\n' "$bucket" "$n_oggetti" "$byte_bucket" >> "$STORAGE_REPORT"
+            echo "Bucket $bucket: $n_oggetti oggetti, $(( byte_bucket / 1024 )) KB"
+          done
+
           zip -qr "supabase_backup_$STAMP.zip" backup/
           echo "Archivio creato: supabase_backup_$STAMP.zip"
 
@@ -176,7 +256,19 @@ jobs:
               fi
             done < "$REPORT"
             echo ""
-            echo "_Nota: i file in Storage (\`athlete-photos\`, \`voice-notes\`) non sono inclusi._"
+            echo "| Bucket Storage | Oggetti | Dimensione |"
+            echo "|---|---:|---:|"
+            while IFS=$'\t' read -r b n by; do
+              echo "| \`$b\` | $n | $(( by / 1024 )) KB |"
+            done < "$STORAGE_REPORT"
+            echo ""
+            if [ "$STORAGE_SCARICA" != 'si' ]; then
+              echo "_Solo inventario: \`STORAGE_SCARICA\` non è 'si', i file non sono nell'archivio._"
+            elif [ "$troncato" = 'si' ]; then
+              echo "> ⚠️ Superato il tetto di ${STORAGE_MAX_MB} MB: alcuni file NON sono nell'archivio. L'inventario è completo. Alza \`STORAGE_MAX_MB\`."
+            else
+              echo "_File in Storage inclusi nell'archivio._"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Carica l'archivio come artifact

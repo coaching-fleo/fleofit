@@ -356,7 +356,12 @@ aggiungila anche lì.**
   non è su `main`, il cron notturno usa ancora la versione rotta. Portare **solo quel file**, non
   l'intero branch (vedi §1.1): `git checkout main && git checkout ios-version -- .github/workflows/db-backup.yml`
 - Il backup copre l'unico database, che è **condiviso** fra web app e app iOS (§1.1).
-- ⚠️ I bucket Storage (`athlete-photos`, `voice-notes`) **non** sono nel backup.
+- ✅ **I bucket Storage sono nel backup dal 25/08/2026** (`athlete-photos`, `voice-notes`):
+  inventario sempre, file scaricati se `STORAGE_SCARICA = si` e finché si resta sotto
+  `STORAGE_MAX_MB` (1 GB). ⚠️ **Privacy**: le note vocali sono comunicazioni private fra coach e
+  atleta e finiscono in un artifact GitHub. Se il repository diventa pubblico, mettere
+  `STORAGE_SCARICA` a `no` e conservare solo l'inventario.
+  ⚠️ Come per le tabelle, **vale solo quando il file è su `main`**: i cron girano dal branch di default.
 In-app: Settings ha export/import JSON completo e per singolo atleta.
 
 ---
@@ -364,6 +369,12 @@ In-app: Settings ha export/import JSON completo e per singolo atleta.
 ---
 
 ## 4-bis. Stato reale della RLS (verificato sul DB il 24/08/2026)
+
+> 📄 **Le policy sono ora sotto controllo di versione**: `supabase/schema/rls_snapshot_2026-08-25.sql`
+> (fotografia leggibile, **non** una migrazione: non applicarla). Prima il database non aveva
+> nessuna rappresentazione nel repository, quindi le policy non erano né revisionabili né
+> ricostruibili. Il `README.md` accanto spiega come sostituirla con un dump vero quando hai la
+> password del database. Aggiornala ogni volta che cambi una policy.
 
 RLS **attiva su tutte e 10 le tabelle**. Ma le policy hanno buchi verificati, elencati per gravità.
 Fonte: `pg_policies` interrogata dal committente. ⚠️ Manca ancora l'ispezione di `with_check`
