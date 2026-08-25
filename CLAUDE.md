@@ -13,6 +13,10 @@
 
 ## 0. Regole operative per Claude
 
+> 📋 **Le cose da fare stanno in [BACKLOG.md](BACKLOG.md)**, non qui. Questo file spiega
+> *com'è fatto* il progetto; il backlog elenca *cosa manca*, con il perché di ognuna e
+> cosa la blocca. Aggiornare il backlog quando una voce si chiude.
+
 0. **Esistono DUE branch vivi con due destinazioni diverse** (`main` = web app in produzione,
    `ios-version` = app per l'App Store). Prima di proporre un merge, un deploy o una modifica
    condivisa (DB, Edge Function), leggere il §1.1: non sono intercambiabili.
