@@ -536,7 +536,7 @@ export default function Settings() {
       
       {passwordModalOpen && createPortal(
         <PasswordModal 
-          onClose={() => { setPasswordModalOpen(false); setIsRecovery(false); }} 
+          onClose={() => setPasswordModalOpen(false)} 
           user={user} 
           setAlertInfo={setAlertInfo} 
         />,

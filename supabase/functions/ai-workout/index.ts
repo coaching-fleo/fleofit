@@ -1,20 +1,12 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
+import { ADMIN_EMAILS } from "../_shared/admin.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// ⚠️ Stessa lista di src/App.jsx e di send-reminders/index.ts. Se aggiungi un
-// admin va cambiata in tre posti (più le policy RLS). Vedi CLAUDE.md §4-bis.
-const ADMIN_EMAILS = [
-  'coaching@federicoleo.it',
-  'alessandro.patrone@hotmail.it',
-  'federico_leo@hotmail.it',
-  'federico.leo88@gmail.com',
-  'demo@fleofit.it',
-];
 
 // Senza questo controllo l'endpoint è un proxy Gemini aperto a Internet: l'URL
 // del progetto è in chiaro nel bundle JS pubblico, quindi chiunque potrebbe

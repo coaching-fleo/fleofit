@@ -338,6 +338,7 @@ export default function AthleteDetail() {
       await titoliDelGiorno(supabase, autonomousForm.date)
     )
     try {
+      let workoutCreato = null
       if (autonomousForm.id) {
         const { error: wError } = await supabase.from('workouts').update({ title: titoloFinale, date: autonomousForm.date }).eq('id', autonomousForm.id)
         if (wError) throw wError
@@ -345,20 +346,23 @@ export default function AthleteDetail() {
         const { error: awError } = await supabase.from('athlete_workouts').update({ completed_date: autonomousForm.date, notes: autonomousForm.notes }).eq('id', autonomousForm.awId)
         if (awError) throw awError
       } else {
-        const { data: newW, error: wError } = await supabase.from('workouts').insert({
+        // Dichiarato fuori dal blocco: la notifica al coach più sotto lo usa, e
+        // con const dentro l'else finiva fuori scope → ReferenceError.
+        const { data: nuovoWorkout, error: wError } = await supabase.from('workouts').insert({
           title: titoloFinale,
           date: autonomousForm.date,
           sections: { category: 'Custom', isAutonomous: true }
         }).select().single()
         if (wError) throw wError
+        workoutCreato = nuovoWorkout
 
-        const { error: awError } = await supabase.from('athlete_workouts').insert({ athlete_id: id, workout_id: newW.id, completed_date: autonomousForm.date, status: 'completed', notes: autonomousForm.notes })
+        const { error: awError } = await supabase.from('athlete_workouts').insert({ athlete_id: id, workout_id: workoutCreato.id, completed_date: autonomousForm.date, status: 'completed', notes: autonomousForm.notes })
         if (awError) throw awError
       }
       
       if (role === 'athlete' && !autonomousForm.id) {
          supabase.functions.invoke('send-reminders', {
-           body: { mode: 'coach_notification', action: 'custom_workout', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: titoloFinale, route: `/workout/${newW.id}?athlete_id=${id}` }
+           body: { mode: 'coach_notification', action: 'custom_workout', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: titoloFinale, route: `/workout/${workoutCreato.id}?athlete_id=${id}` }
          }).catch(console.error)
       }
       setAutonomousModalOpen(false)

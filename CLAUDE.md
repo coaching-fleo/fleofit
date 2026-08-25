@@ -779,6 +779,18 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
     non implementata (§10), ora senza codice morto a suggerire il contrario.
 11. Nessun test automatico, nessun TypeScript effettivo nel `src/` (tutto `.jsx`) anche se il build
     esegue `tsc -b`.
+12. 🔴 **ESLint non ha mai analizzato il codice dell'applicazione** (scoperto il 25/08/2026).
+    `eslint.config.js` aveva `files: ['**/*.{ts,tsx}']`, ma `src/` è tutto `.jsx`: i "15 problemi"
+    che `npm run lint` riportava erano **solo** nelle due Edge Function, gli unici `.ts` del
+    progetto. 12.800 righe di applicazione non sono mai state controllate.
+    Estendendo il pattern a `.js/.jsx` sono emersi **quattro `no-undef`**, cioè quattro
+    `ReferenceError` latenti già in produzione, ognuno dei quali rompeva una funzione in silenzio
+    (vedi il commit del 25/08). Sono stati corretti.
+    ⚠️ Vanno tenute le esclusioni: `ios/App/App/public` è la copia del bundle **minificato** che
+    `npx cap sync ios` deposita nel progetto Xcode, e analizzarla produceva 4.600 falsi problemi
+    che nascondevano quelli veri.
+    Restano ~170 problemi reali, in gran parte `no-unused-vars` (69) e `no-empty` (34): pulizia,
+    non correttezza.
 
 ---
 

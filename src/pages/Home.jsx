@@ -85,6 +85,31 @@ export default function Home() {
   const SOGLIA_SWIPE = 120
   const swipeRef = useRef(null)
 
+  // Definita a livello di componente: la usa sia il caricamento iniziale sia il
+  // listener appStateChange al ritorno in primo piano. Prima viveva dentro
+  // fetchData, quindi al risveglio dell'app lanciava ReferenceError e le
+  // notifiche non si aggiornavano mai.
+  const fetchNotifications = async () => {
+    if (!user?.id) return;
+    const { data } = await supabase.from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (data) {
+      setNotifications(data);
+      const unread = data.filter(n => !n.is_read).length;
+      setUnreadCount(unread);
+      if (Capacitor.isNativePlatform()) {
+        try {
+          if (unread === 0) await Badge.clear();
+          else await Badge.set({ count: unread });
+          await supabase.from('push_subscriptions').update({ badge_count: unread }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
+        } catch (e) {}
+      }
+    }
+  };
+
   const swipeInizio = (e) => {
     const el = e.currentTarget
     const t = e.touches[0]
@@ -281,26 +306,6 @@ export default function Home() {
 
       const promises = []
 
-      const fetchNotifications = async () => {
-        if (!user?.id) return;
-        const { data } = await supabase.from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(30);
-        if (data) {
-          setNotifications(data);
-          const unread = data.filter(n => !n.is_read).length;
-          setUnreadCount(unread);
-          if (Capacitor.isNativePlatform()) {
-            try {
-              if (unread === 0) await Badge.clear();
-              else await Badge.set({ count: unread });
-              await supabase.from('push_subscriptions').update({ badge_count: unread }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
-            } catch (e) {}
-          }
-        }
-      };
 
       if (user?.id) {
         promises.push(

@@ -2,20 +2,12 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
+import { ADMIN_EMAILS } from "../_shared/admin.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// ⚠️ Stessa lista di src/App.jsx e di ai-workout/index.ts. Se aggiungi un admin
-// va cambiata in tre posti (più le policy RLS). Vedi CLAUDE.md §4-bis.
-const ADMIN_EMAILS = [
-  'coaching@federicoleo.it',
-  'alessandro.patrone@hotmail.it',
-  'federico_leo@hotmail.it',
-  'federico.leo88@gmail.com',
-  'demo@fleofit.it',
-];
 
 // Identifica chi sta chiamando LEGGENDO I CLAIM DEL JWT, non con auth.getUser().
 //
