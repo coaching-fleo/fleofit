@@ -73,32 +73,89 @@ export default function Home() {
   // il bottone visibile resta la via principale, quindi nessuna funzione dipende
   // da un gesto che non si vede. Serve anche a evitare la mira su un bersaglio
   // piccolo quando si ha fretta.
-  // Lo stato porta l'id della card trascinata: oggi possono essercene più di una
-  // (todayWorkouts.map), e con un solo valore condiviso si sarebbero mosse tutte
-  // insieme.
-  const [swipe, setSwipe] = useState({ id: null, x: 0 })
-  const swipeRef = useRef({ x0: 0, y0: 0, attivo: false })
-  const SOGLIA_SWIPE = 96
+  // Swipe verso destra per completare, con il comportamento di iOS.
+  //
+  // Il gesto NON passa dallo stato React: la prima versione faceva setState a
+  // ogni touchmove e ridisegnava l'intera Home a ogni frame del dito — da lì
+  // lo scatto. Qui si scrive direttamente sul nodo, così il movimento resta
+  // sul compositor e il dito comanda i pixel a 1:1.
+  //
+  // Sotto la card c'è un pannello verde che si rivela man mano: senza, il
+  // movimento non dice cosa sta per succedere.
+  const SOGLIA_SWIPE = 88
+  const swipeRef = useRef(null)
 
   const swipeInizio = (e) => {
+    const el = e.currentTarget
     const t = e.touches[0]
-    swipeRef.current = { x0: t.clientX, y0: t.clientY, attivo: false }
-  }
-  const swipeMuovi = (e, id) => {
-    const t = e.touches[0]
-    const dx = t.clientX - swipeRef.current.x0
-    const dy = t.clientY - swipeRef.current.y0
-    // Solo se il movimento è chiaramente orizzontale, altrimenti è uno scroll.
-    if (!swipeRef.current.attivo && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      swipeRef.current.attivo = true
+    swipeRef.current = {
+      el,
+      pannello: el.parentElement?.querySelector('[data-swipe-panel]') || null,
+      x0: t.clientX, y0: t.clientY, attivo: false, oltre: false,
     }
-    if (swipeRef.current.attivo && dx > 0) setSwipe({ id, x: Math.min(dx, 140) })
+    el.style.transition = 'none'
   }
+
+  const swipeMuovi = (e) => {
+    const s = swipeRef.current
+    if (!s || !s.el) return
+    const t = e.touches[0]
+    const dx = t.clientX - s.x0
+    const dy = t.clientY - s.y0
+
+    if (!s.attivo) {
+      // Se il dito va in verticale è uno scroll di pagina: molliamo il gesto.
+      if (Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx)) { s.el = null; return }
+      if (dx > 12 && dx > Math.abs(dy) * 1.5) s.attivo = true
+      else return
+    }
+
+    // Oltre la soglia la card cede sempre meno: è la resistenza che fa capire
+    // al dito di aver superato il punto di conferma.
+    const grezzo = Math.max(0, dx)
+    const x = grezzo <= SOGLIA_SWIPE ? grezzo : SOGLIA_SWIPE + (grezzo - SOGLIA_SWIPE) * 0.28
+    s.el.style.transform = `translate3d(${x}px,0,0)`
+
+    const avanzamento = Math.min(1, grezzo / SOGLIA_SWIPE)
+    if (s.pannello) {
+      s.pannello.style.opacity = String(Math.min(1, avanzamento * 1.5))
+      const contenuto = s.pannello.firstElementChild
+      if (contenuto) contenuto.style.transform = `scale(${0.72 + avanzamento * 0.28})`
+    }
+
+    const oltre = grezzo >= SOGLIA_SWIPE
+    if (oltre !== s.oltre) {
+      s.oltre = oltre
+      // Un colpetto quando si attraversa la soglia: lo senti prima di lasciare.
+      if (oltre && Capacitor.isNativePlatform()) Haptics.impact({ style: ImpactStyle.Light }).catch(() => {})
+    }
+  }
+
   const swipeFine = (workout) => {
-    const superata = swipe.id === workout.id && swipe.x >= SOGLIA_SWIPE
-    setSwipe({ id: null, x: 0 })
-    swipeRef.current.attivo = false
-    if (!superata) return
+    const s = swipeRef.current
+    swipeRef.current = null
+    if (!s || !s.el) return
+
+    const conferma = s.oltre
+    // Ritorno con una curva che decelera a lungo: è quella che dà la sensazione
+    // di elastico invece di uno scatto meccanico.
+    s.el.style.transition = 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)'
+    s.el.style.transform = 'translate3d(0,0,0)'
+    if (s.pannello) {
+      s.pannello.style.transition = 'opacity 0.3s ease-out'
+      s.pannello.style.opacity = '0'
+    }
+
+    // Ripulisce gli stili inline a fine animazione: senza, la transizione
+    // impostata qui resterebbe sul nodo e spegnerebbe quelle di colore della card.
+    const el = s.el
+    setTimeout(() => {
+      el.style.transition = ''
+      el.style.transform = ''
+      if (s.pannello) { s.pannello.style.transition = ''; s.pannello.style.opacity = '0' }
+    }, 500)
+
+    if (!conferma) return
     if (Capacitor.isNativePlatform()) Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {})
     toggleTodayWorkout({ stopPropagation: () => {} }, workout)
   }
@@ -1072,16 +1129,28 @@ setNotifications(prev => {
                 const category = todayIsEvent ? 'Event' : todayIsCustom ? 'Custom' : rawCat;
                 const todayIsRun = category === 'Running';
                 
+                const scorrevole = todayWorkout.status !== 'completed'
                 return (
+                  <div key={todayWorkout.id} className="relative">
+                    {/* Pannello rivelato sotto la card mentre si scorre. Senza,
+                        il movimento non dice cosa sta per succedere. Nascosto ai
+                        lettori di schermo: il bottone visibile è la via ufficiale. */}
+                    {scorrevole && (
+                      <div data-swipe-panel aria-hidden="true" style={{ opacity: 0 }}
+                        className="absolute inset-0 rounded-3xl bg-green-500 flex items-center pl-7 pointer-events-none">
+                        <div className="flex items-center gap-2.5 text-black font-black origin-left"
+                          style={{ transform: 'scale(0.72)' }}>
+                          <CheckCircle2 size={30} />
+                          <span className="text-base">Completato</span>
+                        </div>
+                      </div>
+                    )}
                   <div
-                    key={todayWorkout.id}
-                    onTouchStart={swipeInizio}
-                    onTouchMove={(e) => swipeMuovi(e, todayWorkout.id)}
-                    onTouchEnd={() => swipeFine(todayWorkout)}
-                    style={{
-                      transform: `translateX(${swipe.id === todayWorkout.id ? swipe.x : 0}px)`,
-                      transition: swipe.id === todayWorkout.id && swipe.x ? 'none' : 'transform 0.25s cubic-bezier(0.16,1,0.3,1)'
-                    }}
+                    onTouchStart={scorrevole ? swipeInizio : undefined}
+                    onTouchMove={scorrevole ? swipeMuovi : undefined}
+                    onTouchEnd={scorrevole ? () => swipeFine(todayWorkout) : undefined}
+                    onTouchCancel={scorrevole ? () => swipeFine(todayWorkout) : undefined}
+                    style={{ willChange: scorrevole ? 'transform' : undefined }}
                     className={`rounded-3xl p-6 transition-colors border relative overflow-hidden group ${
                       todayWorkout.status === 'completed'
                         ? 'bg-green-500/10 border-green-500/30 hover:border-green-500'
@@ -1126,6 +1195,7 @@ setNotifications(prev => {
                         )}
                       </div>
                     </div>
+                  </div>
                   </div>
                 )
               })}
