@@ -282,6 +282,27 @@ Progetto Supabase: `riyqtcssllupakjtoehj`.
   Secret: `GEMINI_API_KEY`.
 - **`cloud-sync`** — invocata da `CloudSyncService` (Strava/Garmin), **non presente nel repo** → probabilmente non ancora implementata.
 
+### 🔐 Autorizzazione delle Edge Function (deployata il 25/08/2026)
+Prima erano entrambe aperte. Ora:
+- **`ai-workout`**: `verify_jwt = true` + controllo che il chiamante sia in `ADMIN_EMAILS`
+  (o il token di servizio). Verificato in produzione: senza auth → 401, con la anon key
+  del bundle pubblico → 401 `{"error":"Non autorizzato"}`. Prima entrambe le chiamate
+  bruciavano `GEMINI_API_KEY`.
+- **`send-reminders`**: controllo **per modalità**, perché i chiamanti sono diversi.
+  - `immediate`, `voice_note` → solo admin. Verificato: anon key → 403.
+  - `coach_notification` → aperta agli autenticati: la invoca il client **dell'atleta**
+    quando completa un workout o lascia una nota. Non stringere qui senza rifare il giro.
+  - `morning`, `evening` → **IN OSSERVAZIONE, non bloccate** (`APPLICA_CONTROLLO_CRON = false`).
+    Il cron è configurato dentro Supabase, nessun workflow GitHub lo chiama, e il default
+    della funzione senza body è `morning`: bloccarlo alla cieca spegnerebbe i promemoria di
+    tutti gli atleti. La funzione ora **logga l'origine di ogni esecuzione**.
+    ⏳ **DA FARE**: leggere i log dopo un paio di cicli notturni (02:00 UTC), vedere con quale
+    identità arriva il cron, poi mettere `APPLICA_CONTROLLO_CRON = true` e rideployare.
+    Finché è `false`, un atleta autenticato può ancora far partire una push a tutti.
+
+⚠️ Il deploy di `send-reminders` colpisce **anche la web app in produzione**: è una sola
+funzione per due app.
+
 ### Secrets attesi (Supabase)
 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
 `FIREBASE_SERVICE_ACCOUNT` (JSON), `GEMINI_API_KEY`.
