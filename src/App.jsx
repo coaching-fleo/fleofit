@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { App as CapacitorApp } from '@capacitor/app'
@@ -9,15 +9,17 @@ import { PushNotifications } from '@capacitor/push-notifications'
 import { Badge } from '@capawesome/capacitor-badge'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
-import Calendar from './pages/Calendar'
-import TVDashboard from './pages/TVDashboard'
-import CreateWorkout from './pages/CreateWorkout'
-import Athletes from './pages/Athletes'
-import AthleteDetail from './pages/AthleteDetail'
-import WorkoutDetail from './pages/WorkoutDetail'
-import WorkoutsArchive from './pages/WorkoutsArchive'
-import Settings from './pages/Settings'
-import Login from './pages/Login'
+
+// Caricate su richiesta: l'avvio non deve pagare PDF, IA, BLE, TV e Health.
+const Calendar = lazy(() => import('./pages/Calendar'))
+const TVDashboard = lazy(() => import('./pages/TVDashboard'))
+const CreateWorkout = lazy(() => import('./pages/CreateWorkout'))
+const Athletes = lazy(() => import('./pages/Athletes'))
+const AthleteDetail = lazy(() => import('./pages/AthleteDetail'))
+const WorkoutDetail = lazy(() => import('./pages/WorkoutDetail'))
+const WorkoutsArchive = lazy(() => import('./pages/WorkoutsArchive'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Login = lazy(() => import('./pages/Login'))
 
 
 
@@ -434,6 +436,7 @@ function App() {
       `}</style>
       <DeeplinkHandler />
       <div className="min-h-screen bg-[#0B0B0B] text-white">
+        <Suspense fallback={<div className="min-h-screen bg-[#0B0B0B]" />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/tv" element={<TVDashboard />} />
@@ -448,6 +451,7 @@ function App() {
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </div>
     </BrowserRouter>
   )
