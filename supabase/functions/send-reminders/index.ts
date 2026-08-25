@@ -7,6 +7,33 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// ⚠️ Stessa lista di src/App.jsx e di ai-workout/index.ts. Se aggiungi un admin
+// va cambiata in tre posti (più le policy RLS). Vedi CLAUDE.md §4-bis.
+const ADMIN_EMAILS = [
+  'coaching@federicoleo.it',
+  'alessandro.patrone@hotmail.it',
+  'federico_leo@hotmail.it',
+  'federico.leo88@gmail.com',
+  'demo@fleofit.it',
+];
+
+// Identifica chi sta chiamando. Il token di servizio è ammesso perché il cron
+// dei promemoria potrebbe usarlo.
+async function identificaChiamante(req: Request): Promise<{ admin: boolean; email: string | null; servizio: boolean }> {
+  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return { admin: false, email: null, servizio: false };
+  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) return { admin: true, email: null, servizio: true };
+  try {
+    const pubblico = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!);
+    const { data, error } = await pubblico.auth.getUser(token);
+    const email = data?.user?.email?.trim().toLowerCase() ?? null;
+    if (error || !email) return { admin: false, email: null, servizio: false };
+    return { admin: ADMIN_EMAILS.includes(email), email, servizio: false };
+  } catch {
+    return { admin: false, email: null, servizio: false };
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -100,6 +127,43 @@ serve(async (req) => {
     if (req.method === 'POST') {
       body = await req.json().catch(() => ({}));
       if (body.mode) mode = body.mode;
+    }
+
+    // ── Controllo di autorizzazione, per modalità ────────────────────────────
+    // Prima bastava un JWT valido qualsiasi: un atleta poteva far partire una
+    // push a TUTTI gli iscritti, o falsificare una notifica con un record_id
+    // altrui.
+    //
+    // 'coach_notification' resta aperta agli autenticati: è il client
+    // DELL'ATLETA a invocarla quando completa un workout o lascia una nota.
+    //
+    // 'morning' e 'evening' sono in OSSERVAZIONE, non bloccate: il cron è
+    // configurato dentro Supabase e non sappiamo con quale identità invochi.
+    // Bloccarle alla cieca spegnerebbe i promemoria di tutti gli atleti.
+    // Controllare i log della funzione: se le esecuzioni pianificate risultano
+    // 'servizio' o admin, mettere APPLICA_CONTROLLO_CRON = true.
+    const APPLICA_CONTROLLO_CRON = false;
+    const chiamante = await identificaChiamante(req);
+    const soloAdmin = ['immediate', 'voice_note'];
+    const modiCron = ['morning', 'evening'];
+
+    if (soloAdmin.includes(mode) && !chiamante.admin) {
+      console.warn(`send-reminders: '${mode}' rifiutata a ${chiamante.email ?? 'anonimo'}`);
+      return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (modiCron.includes(mode)) {
+      const origine = chiamante.servizio ? 'token di servizio' : (chiamante.email ?? 'anonimo');
+      console.log(`send-reminders: '${mode}' invocata da ${origine} (admin=${chiamante.admin})`);
+      if (APPLICA_CONTROLLO_CRON && !chiamante.admin) {
+        return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
 
@@ -258,7 +322,7 @@ serve(async (req) => {
       // Recupera gli ID degli admin scorrendo la lista utenti di Supabase in modo sicuro
       // Deve restare allineata a ADMIN_EMAILS in src/App.jsx.
       // 'demo@fleofit.it' è l'account fornito ad App Review.
-      const adminEmails = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com', 'demo@fleofit.it'];
+      const adminEmails = ADMIN_EMAILS;
       const adminUserIds: string[] = [];
       let page = 1;
       while (true) {

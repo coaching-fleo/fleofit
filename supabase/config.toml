@@ -420,7 +420,8 @@ entrypoint = "./functions/send-reminders/index.ts"
 
 [functions.ai-workout]
 enabled = true
-verify_jwt = false
+# Era false: chiunque poteva invocarla senza account e bruciare GEMINI_API_KEY.
+verify_jwt = true
 import_map = "./functions/ai-workout/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx

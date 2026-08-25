@@ -1,9 +1,41 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// ⚠️ Stessa lista di src/App.jsx e di send-reminders/index.ts. Se aggiungi un
+// admin va cambiata in tre posti (più le policy RLS). Vedi CLAUDE.md §4-bis.
+const ADMIN_EMAILS = [
+  'coaching@federicoleo.it',
+  'alessandro.patrone@hotmail.it',
+  'federico_leo@hotmail.it',
+  'federico.leo88@gmail.com',
+  'demo@fleofit.it',
+];
+
+// Senza questo controllo l'endpoint è un proxy Gemini aperto a Internet: l'URL
+// del progetto è in chiaro nel bundle JS pubblico, quindi chiunque potrebbe
+// bruciare GEMINI_API_KEY e usare la trascrizione audio gratis.
+async function chiamanteAdmin(req: Request): Promise<boolean> {
+  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return false;
+  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) return true;
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+    );
+    const { data, error } = await supabase.auth.getUser(token);
+    const email = data?.user?.email?.trim().toLowerCase();
+    if (error || !email) return false;
+    return ADMIN_EMAILS.includes(email);
+  } catch {
+    return false;
+  }
+}
 
 // Funzione helper per riprovare le chiamate API in caso di server sovraccarico (503) o rate limit (429)
 async function fetchWithRetry(url: string, options: any, maxRetries = 3) {
@@ -30,7 +62,15 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
-  
+
+  if (!(await chiamanteAdmin(req))) {
+    console.warn('ai-workout: chiamata non autorizzata rifiutata');
+    return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const body = await req.json();
 
