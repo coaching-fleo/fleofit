@@ -216,10 +216,21 @@ serve(async (req) => {
             );
             if (!res.ok) {
               const errorText = await res.text();
-              if (res.status === 404 || errorText.includes('UNREGISTERED') || errorText.includes('INVALID_ARGUMENT')) {
+              // Si cancella il token SOLO quando FCM dice che è morto.
+              // Prima si cancellava anche su INVALID_ARGUMENT, che invece
+              // significa quasi sempre richiesta malformata o token registrato
+              // in un ambiente APNs diverso da quello configurato su Firebase
+              // (tipico delle build lanciate da Xcode, che usano il sandbox).
+              // Così un problema di CONFIGURAZIONE disiscriveva l'utente dalle
+              // push per sempre, in silenzio.
+              const tokenMorto = res.status === 404
+                || errorText.includes('UNREGISTERED')
+                || errorText.includes('NOT_FOUND');
+              if (tokenMorto) {
+                console.warn(`FCM: token morto, rimosso (sub ${sub.id}): ${errorText}`);
                 await supabase.from('push_subscriptions').delete().eq('id', sub.id);
               } else {
-                throw new Error(`FCM Error: ${res.status} ${errorText}`);
+                console.error(`FCM ${res.status} per sub ${sub.id} — token CONSERVATO: ${errorText}`);
               }
             }
           } else console.error("Firebase Service Account mancante o non valido.");
