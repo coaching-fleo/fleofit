@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { Plus, User, ChevronRight, Search } from 'lucide-react'
+import { Plus, User, ChevronRight, Search, Trash2 } from 'lucide-react'
 import { differenceInYears, parseISO } from 'date-fns'
 import { useAuth } from '../App'
 import { COACHING_ID } from '../lib/constants'
-import { mostraErrore } from '../lib/alert'
+import { mostraErrore, mostraSuccesso } from '../lib/alert'
 
 export default function Athletes() {
   const [athletes, setAthletes] = useState([])
+  const [eliminati, setEliminati] = useState([])
+  const [mostraEliminati, setMostraEliminati] = useState(false)
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const navigate = useNavigate()
@@ -28,6 +30,28 @@ export default function Athletes() {
     
     // Nascondiamo il profilo di coaching@federicoleo.it a TUTTI gli admin usando il suo ID univoco
     setAthletes((data || []).filter(a => a.id !== COACHING_ID))
+
+    // Gli atleti eliminati restano recuperabili per 7 giorni, poi il cron
+    // delete_expired_athletes() li cancella DEFINITIVAMENTE — e con loro, in
+    // cascata, workout assegnati, record personali e log. Il backup gira due ore
+    // dopo, quindi da lì in poi non c'è più modo di recuperarli.
+    const { data: rimossi } = await supabase.from('athletes').select('*')
+      .not('deleted_at', 'is', null).order('deleted_at', { ascending: false })
+    setEliminati((rimossi || []).filter(a => a.id !== COACHING_ID))
+  }
+
+  const GIORNI_PRIMA_DELLA_CANCELLAZIONE = 7
+
+  const giorniRimasti = (deletedAt) => {
+    const trascorsi = (Date.now() - Number(deletedAt)) / 86400000
+    return Math.max(0, Math.ceil(GIORNI_PRIMA_DELLA_CANCELLAZIONE - trascorsi))
+  }
+
+  const ripristina = async (atleta) => {
+    const { error } = await supabase.from('athletes').update({ deleted_at: null }).eq('id', atleta.id)
+    if (error) return mostraErrore(error.message)
+    mostraSuccesso(`${atleta.name} ${atleta.surname} è tornato fra i tuoi atleti.`, 'Ripristinato')
+    fetchAthletes()
   }
 
   const filtered = athletes.filter(a =>
@@ -84,6 +108,47 @@ export default function Athletes() {
               <ChevronRight size={18} className="text-gray-400" />
             </button>
           ))}
+        </div>
+      )}
+
+      {eliminati.length > 0 && (
+        <div className="mt-8">
+          <button onClick={() => setMostraEliminati(v => !v)}
+            className="flex items-center gap-2 text-muted hover:text-white text-sm font-semibold min-h-11">
+            <Trash2 size={16} />
+            Eliminati di recente ({eliminati.length})
+            <ChevronRight size={16} className={`transition-transform ${mostraEliminati ? 'rotate-90' : ''}`} />
+          </button>
+
+          {mostraEliminati && (
+            <div className="flex flex-col gap-3 mt-3">
+              <p className="text-muted text-xs leading-relaxed">
+                Dopo {GIORNI_PRIMA_DELLA_CANCELLAZIONE} giorni vengono cancellati definitivamente,
+                insieme ai loro allenamenti e record personali. L'operazione non è reversibile.
+              </p>
+              {eliminati.map(a => {
+                const giorni = giorniRimasti(a.deleted_at)
+                return (
+                  <div key={a.id}
+                    className="flex items-center gap-4 bg-[#1e1e1e] border border-[#2a2a2a] border-dashed rounded-2xl p-4">
+                    <div className="w-12 h-12 rounded-full bg-[#2a2a2a] flex items-center justify-center shrink-0 opacity-60">
+                      <User size={22} className="text-muted" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-gray-300 font-semibold truncate">{a.name} {a.surname}</p>
+                      <p className={`text-xs mt-0.5 ${giorni <= 2 ? 'text-red-400' : 'text-muted'}`}>
+                        {giorni === 0 ? 'In cancellazione stanotte' : `Cancellazione fra ${giorni} ${giorni === 1 ? 'giorno' : 'giorni'}`}
+                      </p>
+                    </div>
+                    <button onClick={() => ripristina(a)}
+                      className="min-h-11 px-4 rounded-xl bg-[#2a2a2a] text-white text-sm font-bold hover:bg-[#333] transition shrink-0">
+                      Ripristina
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 

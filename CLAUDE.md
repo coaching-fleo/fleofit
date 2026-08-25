@@ -282,6 +282,49 @@ Progetto Supabase: `riyqtcssllupakjtoehj`.
   Secret: `GEMINI_API_KEY`.
 - **`cloud-sync`** — invocata da `CloudSyncService` (Strava/Garmin), **non presente nel repo** → probabilmente non ancora implementata.
 
+### 🔴 Cancellazione atleti: cosa distrugge davvero, e cosa era rotto
+`delete_expired_athletes()` (cron `0 0 * * *`) fa un **DELETE fisico** degli atleti con
+`deleted_at` più vecchio di 7 giorni. `deleted_at` è un **bigint in millisecondi** (il client
+scrive `Date.now()`), non un timestamp.
+
+**Le chiavi esterne verso `athletes` sono quasi tutte in CASCADE** (verificato il 25/08/2026):
+`athlete_workouts`, `personal_records`, `workout_logs`, `athlete_photos`, `tv_sessions`.
+Quindi cancellare un atleta **distrugge tutta la sua storia**, record personali inclusi.
+Fa eccezione `workouts_athlete_id_fkey`, che è `NO ACTION`: `workouts.athlete_id` è però una
+colonna legacy che il client non scrive mai, quindi in pratica non blocca nulla.
+
+🔴 **E il backup gira DOPO**: pulizia alle 00:00 UTC, backup alle 02:00. Un atleta cancellato a
+mezzanotte non è nel backup di quella notte né in nessuno dei successivi. **Spostare il backup
+alle 23:00 UTC** risolve, ma il file sta su `main`.
+
+> ⚠️ **Bug corretto il 25/08/2026.** `Home.jsx` eseguiva `update({ deleted_at: null })` sul
+> proprio id **a ogni caricamento**, senza condizioni. Un atleta eliminato dal coach si
+> ripristinava da solo aprendo l'app: tornava nella rubrica e i 7 giorni ripartivano da zero.
+> La cancellazione definitiva poteva avvenire solo per chi non apriva l'app per 7 giorni di fila.
+> Ora il ripristino è un gesto esplicito del coach: **Atleti → "Eliminati di recente"**, con i
+> giorni rimasti e un bottone Ripristina.
+> ⚠️ **La stessa riga è ancora su `main`** (`src/pages/Home.jsx`), quindi sulla web app gli
+> atleti continuano ad auto-ripristinarsi.
+
+### 🟠 Note vocali: i file non vengono cancellati davvero
+`delete_expired_voice_notes()` (cron ogni ora) fa `DELETE FROM storage.objects`. Questo rimuove
+**solo la riga di metadati**: l'URL pubblico smette di funzionare (404), ma i byte restano nello
+storage per sempre. Non compaiono in nessun elenco, non finiscono nel backup, e non sono
+cancellati — cosa che conta se un atleta chiede la cancellazione dei propri dati.
+Il modo corretto è l'API Storage (`supabase.storage.from('voice-notes').remove([...])`).
+
+⚠️ Il gestore `EXCEPTION WHEN OTHERS THEN` della funzione è **vuoto**: ogni errore su una riga
+viene inghiottito in silenzio, senza log né conteggio. Gira ogni ora da mesi e non esiste un
+indizio su quante righe abbia saltato.
+
+### 🟠 Entrambi i bucket Storage sono PUBBLICI
+Verificato il 25/08/2026: `athlete-photos` e `voice-notes` hanno `public = true`. Le note vocali
+sono comunicazioni private fra coach e atleta: chiunque abbia l'URL può scaricarle, per sempre,
+senza autenticazione. Gli URL non trapelano dall'API (la RLS su `athlete_workouts` è corretta), ma
+un bucket pubblico non ha alcuna autorizzazione sul file in sé. La forma giusta è un bucket
+privato con URL firmati a scadenza. Cambiarlo richiede di rigenerare gli URL già salvati in
+`athlete_workouts.voice_note_url` → **soggetto al congelamento**.
+
 ### ⏰ I quattro cron di pg_cron (scoperti il 25/08/2026, prima non documentati)
 Il cron **non** è su GitHub: è `pg_cron` dentro Supabase, che chiama le funzioni via `net.http_post`.
 Si ispeziona con `select jobid, jobname, schedule, active, command from cron.job;`
