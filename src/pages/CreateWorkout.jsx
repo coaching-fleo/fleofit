@@ -1378,7 +1378,7 @@ function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, on
       </div>
       <div className="flex-1 cursor-pointer group self-stretch flex flex-col justify-center py-2 -my-2" onClick={() => onEdit && onEdit(step)}>
         <div className="flex items-center gap-2 mb-1 group-hover:opacity-80 transition">
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-md border ${getTypeColor(step.type)}`}>
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border ${getTypeColor(step.type)}`}>
             {getTypeLabel(step.type)}
           </span>
           {step.type === 'repeat' && <span className="text-white text-sm font-bold bg-[#0B0B0B] px-2 py-0.5 rounded-full border border-[#333]">x{step.rounds}</span>}

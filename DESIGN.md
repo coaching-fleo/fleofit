@@ -355,9 +355,16 @@ dice quanto un elemento è importante senza cambiargli il fondo.
 
 ### Named Rules
 
-**La Regola dei Quattro Raggi.** 24 / 16 / 12 / cerchio. Un raggio nuovo (`rounded-md`,
-raggi arbitrari in `rem`) è un'eccezione da giustificare, non una scelta libera: le poche
-occorrenze esistenti sono residui, non precedenti.
+**La Regola dei Quattro Raggi.** 24 / 16 / 12 / cerchio, più 8px per i dettagli minuti.
+Un raggio fuori da questa scala è un'eccezione da giustificare, non una scelta libera.
+⚠️ Aggiornato il 25/08/2026: le 13 occorrenze di `rounded-md` (6px) sono rientrate su
+`rounded-lg` (8px).
+
+**La Regola della Distanza.** La scala dei raggi vale per la mano. Le superfici di **grande
+formato** — la TV Dashboard, letta a 3-5 metri, e gli overlay a schermo intero della Live
+Coach Cam — usano una scala proporzionata alla distanza (`2rem`, `2.5rem`, `3rem`, con bordi
+da 2-4px). Non sono deriva: un raggio da 24px su uno schermo da 55 pollici sparisce. Quando
+progetti per la TV, scala raggi e bordi con il resto, non copiarli dal telefono.
 
 **La Regola del Cerchio d'Azione.** Un'azione rappresentata da una sola icona è sempre un
 cerchio pieno; un'azione con testo è sempre un rettangolo a 12px. Non si mescolano.

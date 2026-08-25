@@ -1859,7 +1859,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             <p className={`font-semibold text-white transition underline underline-offset-4 leading-tight ${isEvent ? 'group-hover:text-white decoration-white/50' : isRun ? 'group-hover:text-[#0094C6] decoration-[#0094C6]/50' : isCustom ? 'group-hover:text-[#D11149] decoration-[#D11149]/50' : 'group-hover:text-[#f1ba17] decoration-[#f1ba17]/50'}`}>
               {entry.workouts.title}
             </p>
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
               {isEvent ? 'Evento / Gara' : category}
             </span>
           </div>
@@ -2635,7 +2635,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
         <div className="flex flex-col gap-2 mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-white font-bold">Sforzo: {score}/10</span>
-            <span className={`text-xs font-bold px-2 py-1 rounded-md text-black ${getRpeColor(parseInt(score))}`}>
+            <span className={`text-xs font-bold px-2 py-1 rounded-lg text-black ${getRpeColor(parseInt(score))}`}>
               {getRpeLabel(parseInt(score))}
             </span>
           </div>
@@ -2654,7 +2654,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
               return (
                 <div
                   key={s}
-                  className={`flex-1 h-10 rounded-md transition-all duration-75 ${color} ${isActive ? 'shadow-md scale-105' : ''}`}
+                  className={`flex-1 h-10 rounded-lg transition-all duration-75 ${color} ${isActive ? 'shadow-md scale-105' : ''}`}
                   style={{ pointerEvents: 'none' }}
                 />
               )
@@ -2671,7 +2671,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
             <button 
               onClick={handleHealthSync} 
               disabled={syncingHealth}
-              className="text-[11px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-md border border-[#444] transition disabled:opacity-50"
+              className="text-[11px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-lg border border-[#444] transition disabled:opacity-50"
             >
               {syncingHealth ? 'Sincro in corso...' : '🍏 Apple Health'}
             </button>

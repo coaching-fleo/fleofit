@@ -100,6 +100,10 @@ export default function Home() {
     }
     initNetwork()
 
+    // Anche all'avvio: se la rete è tornata mentre l'app era chiusa o l'utente era
+    // su un'altra schermata, la coda restava ferma fino al rientro in Home.
+    Network.getStatus().then(s => { if (s.connected) processOfflineQueue() }).catch(() => {})
+
     const listener = Network.addListener('networkStatusChange', status => {
       setIsOffline(!status.connected)
       if (status.connected) {
@@ -109,6 +113,17 @@ export default function Home() {
 
     return () => { listener.then(l => l.remove()) }
   }, [])
+
+  // Una sola azione in coda per allenamento: senza, toccando due volte lo stesso
+  // workout offline si accodavano due UPDATE che si sovrascrivevano al ritorno
+  // della rete. L'ultima vince, che è l'intenzione dell'utente.
+  const accodaOffline = (payload) => {
+    let coda = []
+    try { coda = JSON.parse(localStorage.getItem('fleofit_offline_queue') || '[]') } catch { coda = [] }
+    coda = coda.filter(a => !(a.type === 'UPDATE_WORKOUT' && a.payload?.id === payload.id))
+    coda.push({ type: 'UPDATE_WORKOUT', payload, ts: Date.now() })
+    localStorage.setItem('fleofit_offline_queue', JSON.stringify(coda))
+  }
 
   const processOfflineQueue = async () => {
     const queueStr = localStorage.getItem('fleofit_offline_queue')
@@ -553,9 +568,7 @@ setNotifications(prev => {
 
     const rete = await Network.getStatus()
     if (!rete.connected) {
-      const coda = JSON.parse(localStorage.getItem('fleofit_offline_queue') || '[]')
-      coda.push({ type: 'UPDATE_WORKOUT', payload: { id: workout.id, status: 'pending', notes: workout.notes } })
-      localStorage.setItem('fleofit_offline_queue', JSON.stringify(coda))
+      accodaOffline({ id: workout.id, status: 'pending', notes: workout.notes })
       const cache = JSON.parse(localStorage.getItem(`fleofit_cache_workouts_${user.id}`) || '[]')
       localStorage.setItem(`fleofit_cache_workouts_${user.id}`,
         JSON.stringify(cache.map(w => w.id === workout.id ? { ...w, status: 'pending' } : w)))
@@ -595,9 +608,7 @@ setNotifications(prev => {
     
     const status = await Network.getStatus()
     if (!status.connected) {
-      const queue = JSON.parse(localStorage.getItem('fleofit_offline_queue') || '[]')
-      queue.push({ type: 'UPDATE_WORKOUT', payload: { id: workoutToComplete.id, status: newStatus, notes: finalNote } })
-      localStorage.setItem('fleofit_offline_queue', JSON.stringify(queue))
+      accodaOffline({ id: workoutToComplete.id, status: newStatus, notes: finalNote })
       
       const cached = JSON.parse(localStorage.getItem(`fleofit_cache_workouts_${user.id}`) || '[]')
       const updatedCache = cached.map(w => w.id === workoutToComplete.id ? { ...w, status: newStatus, notes: finalNote } : w)
@@ -995,7 +1006,7 @@ setNotifications(prev => {
                       <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">
                         {a.completed_date === todayStrRender ? 'Oggi' : 'Ieri'}
                       </p>
-                      <div className={`px-2 py-1 rounded-md border text-[11px] font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
+                      <div className={`px-2 py-1 rounded-lg border text-[11px] font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
                         {a.status === 'completed' ? 'Fatto' : 'Da fare'}
                       </div>
                     </div>
@@ -1486,7 +1497,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
         <div className="flex flex-col gap-2 mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-white font-bold">Sforzo: {score}/10</span>
-            <span className={`text-xs font-bold px-2 py-1 rounded-md text-black ${getRpeColor(parseInt(score))}`}>
+            <span className={`text-xs font-bold px-2 py-1 rounded-lg text-black ${getRpeColor(parseInt(score))}`}>
               {getRpeLabel(parseInt(score))}
             </span>
           </div>
@@ -1505,7 +1516,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
               return (
                 <div
                   key={s}
-                  className={`flex-1 h-10 rounded-md transition-all duration-75 ${color} ${isActive ? 'shadow-md scale-105' : ''}`}
+                  className={`flex-1 h-10 rounded-lg transition-all duration-75 ${color} ${isActive ? 'shadow-md scale-105' : ''}`}
                   style={{ pointerEvents: 'none' }}
                 />
               )
@@ -1522,7 +1533,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
             <button 
               onClick={handleHealthSync} 
               disabled={syncingHealth}
-              className="text-[11px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-md border border-[#444] transition disabled:opacity-50"
+              className="text-[11px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-lg border border-[#444] transition disabled:opacity-50"
             >
               {syncingHealth ? 'Sincro in corso...' : '🍏 Apple Health'}
             </button>

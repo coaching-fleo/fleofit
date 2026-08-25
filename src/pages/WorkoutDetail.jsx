@@ -1509,7 +1509,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <div className={`px-2 py-1 rounded-md border text-xs font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
+                    <div className={`px-2 py-1 rounded-lg border text-xs font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-gray-500 border-[#333]'}`}>
                       {a.status === 'completed' ? 'Fatto' : 'Da fare'}
                     </div>
                     {role === 'admin' && (
@@ -2996,7 +2996,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
         <div className="flex flex-col gap-2 mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-white font-bold">Sforzo: {score}/10</span>
-            <span className={`text-xs font-bold px-2 py-1 rounded-md text-black ${getRpeColor(parseInt(score))}`}>
+            <span className={`text-xs font-bold px-2 py-1 rounded-lg text-black ${getRpeColor(parseInt(score))}`}>
               {getRpeLabel(parseInt(score))}
             </span>
           </div>
@@ -3015,7 +3015,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
               return (
                 <div
                   key={s}
-                  className={`flex-1 h-10 rounded-md transition-all duration-75 ${color} ${isActive ? 'shadow-md scale-105' : ''}`}
+                  className={`flex-1 h-10 rounded-lg transition-all duration-75 ${color} ${isActive ? 'shadow-md scale-105' : ''}`}
                   style={{ pointerEvents: 'none' }}
                 />
               )
@@ -3032,7 +3032,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
             <button 
               onClick={handleHealthSync} 
               disabled={syncingHealth}
-              className="text-[11px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-md border border-[#444] transition disabled:opacity-50"
+              className="text-[11px] flex items-center gap-1 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 px-2 py-1 rounded-lg border border-[#444] transition disabled:opacity-50"
             >
               {syncingHealth ? 'Sincro in corso...' : '🍏 Apple Health'}
             </button>
