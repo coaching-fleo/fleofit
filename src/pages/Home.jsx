@@ -99,7 +99,12 @@ export default function Home() {
       if (user?.id) {
         promises.push(
           (async () => {
-            await supabase.from('athletes').update({ deleted_at: null }).eq('id', user.id)
+            // ⚠️ Qui c'era un update({ deleted_at: null }) senza condizioni, eseguito
+            // a OGNI caricamento della Home. Effetto: un atleta eliminato dal coach
+            // si ripristinava da solo aprendo l'app, tornava nella rubrica e il
+            // conto alla rovescia dei 7 giorni ripartiva da zero.
+            // Il ripristino ora è un gesto esplicito del coach, in Atleti →
+            // "Eliminati di recente".
             const { data } = await supabase.from('athletes').select('name').eq('id', user.id).single()
             if (data?.name) {
               setDbName(data.name)
