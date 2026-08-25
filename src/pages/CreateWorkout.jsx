@@ -898,7 +898,7 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
 }
 
 // ─── BLOCCO HYROX ───────────────────────────────────────
-function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate, touchHandlers, onDuplicateExerciseRequest }) {
+export function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate, touchHandlers, onDuplicateExerciseRequest }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [editingExercise, setEditingExercise] = useState(null)
   const [draggedExIdx, setDraggedExIdx] = useState(null)
@@ -1318,7 +1318,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
   )
 }
 
-function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, touchHandlers, onEdit, onDuplicate }) {
+export function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, touchHandlers, onEdit, onDuplicate }) {
 
   const getTypeLabel = (t) => {
     switch(t) {

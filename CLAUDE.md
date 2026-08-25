@@ -180,8 +180,16 @@ vedi §9).
 npm run dev      # vite --host (porta 5173, host 0.0.0.0)
 npm run build    # tsc -b && vite build
 npm run lint     # eslint .
+npm test         # vitest run
 npx cap sync ios # dopo il build, per aggiornare il progetto Xcode
 ```
+
+### Due configurazioni, non una
+`vite.config.ts` costruisce l'app · `vitest.config.js` la testa (jsdom,
+`src/test/setup.js`, che finge `Capacitor.isNativePlatform() === false` così i test
+prendono sempre il ramo web). Tenerle separate evita che il build di produzione carichi jsdom.
+> ⚠️ **Non creare mai un `vite.config.js`**: Vite risolve `.js` prima di `.ts` e
+> maschererebbe `vite.config.ts` senza dire niente. È già successo il 25/08/2026.
 Per testare su iPhone in dev live: scommentare `server.url` in `capacitor.config.ts` con l'IP locale.
 
 ---
@@ -781,11 +789,19 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. ~~Nessun test automatico~~ → **18 test dal 25/08/2026** (`npm test`, vitest) sulla logica pura
-    di `src/lib/`: titolo automatico, RPE e coerenza della codifica colore.
-    Verificati per mutazione: rompendo di proposito `TYPE_COLORS`, il round-trip dell'RPE e il
-    titolo generato, i test falliscono. Non sono decorativi.
-    Coprono solo `src/lib/`: le pagine (12.800 righe di JSX) restano senza test.
+11. ~~Nessun test automatico~~ → **55 test dal 25/08/2026** (`npm test`, vitest), tutti
+    verificati per mutazione: se si rompe di proposito il codice che coprono, falliscono.
+    Non sono decorativi.
+    - **18 sulla logica pura di `src/lib/`**: titolo automatico, RPE, codifica colore.
+    - **37 su due componenti di pagina** (`HyroxBlock` e `RunningStepRow` di
+      `CreateWorkout.jsx`), che fissano il **contratto padre-figlio** — è quello che il
+      refactor di memoizzazione (BACKLOG #15) deve cambiare, quindi serviva pinnarlo prima.
+      ⚠️ I due contratti sono **asimmetrici e devono restarlo**: `HyroxBlock` chiama
+      `onMoveUp()` senza argomenti e riceve `onRemove` diretto; `RunningStepRow` chiama
+      `onMoveUp(index)`, `onRemove(step.id)`, `onDuplicate(step)`, `onEdit(step)`.
+      "Uniformare" i due componenti romperebbe il riordino delle fasi di corsa.
+    - Restano scoperte **le pagine intere**: non si montano senza finti `supabase`,
+      `react-router` e AuthContext (BACKLOG #19).
     Nessun TypeScript effettivo nel `src/` (tutto `.jsx`) anche se il build esegue `tsc -b`.
 12. 🔴 **ESLint non ha mai analizzato il codice dell'applicazione** (scoperto il 25/08/2026).
     `eslint.config.js` aveva `files: ['**/*.{ts,tsx}']`, ma `src/` è tutto `.jsx`: i "15 problemi"
