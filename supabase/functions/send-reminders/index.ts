@@ -149,7 +149,7 @@ serve(async (req) => {
     // servizio viene prima. La funzione logga l'esito che AVREBBE avuto, così i
     // log dicono se era lei senza che nessun atleta resti senza notifiche.
     const APPLICA_CONTROLLO_CRON = false;
-    const APPLICA_CONTROLLO_ADMIN = false;
+    const APPLICA_CONTROLLO_ADMIN = true;
     const chiamante = await identificaChiamante(req);
     const soloAdmin = ['immediate', 'voice_note'];
     const modiCron = ['morning', 'evening'];
@@ -244,11 +244,20 @@ serve(async (req) => {
       
       const { data: assignment, error: awError } = await supabase
         .from('athlete_workouts')
-        .select(`athlete_id, workout_id, workouts(title)`)
+        .select(`athlete_id, workout_id, workouts(title, sections)`)
         .eq('id', body.record_id)
-        .single();
+        .maybeSingle();
 
-      if (awError || !assignment) throw awError || new Error("Assegnazione non trovata");
+      // maybeSingle e non single: con single() una riga sparita (assegnazione
+      // eliminata fra la creazione e la notifica) fa lanciare la funzione e
+      // restituire 500. Qui non c'è niente da notificare, non c'è un errore.
+      if (awError) throw awError;
+      if (!assignment) {
+        console.warn(`Assegnazione ${body.record_id} non trovata: niente da notificare.`);
+        return new Response(JSON.stringify({ skipped: 'assegnazione non trovata' }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
       const { data: subscriptions, error: subError } = await supabase
         .from('push_subscriptions')
@@ -290,9 +299,15 @@ serve(async (req) => {
         .from('athlete_workouts')
         .select(`athlete_id, workout_id, workouts(title)`)
         .eq('id', body.record_id)
-        .single();
+        .maybeSingle();
 
-      if (awError || !assignment) throw awError || new Error("Assegnazione non trovata");
+      if (awError) throw awError;
+      if (!assignment) {
+        console.warn(`Nota vocale: assegnazione ${body.record_id} non trovata, niente da notificare.`);
+        return new Response(JSON.stringify({ skipped: 'assegnazione non trovata' }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
       const { data: subscriptions, error: subError } = await supabase
         .from('push_subscriptions')
@@ -301,8 +316,13 @@ serve(async (req) => {
 
       if (subError) throw subError;
 
-      const title = "Nuovo Allenamento! 🏋️‍♂️";
-      const bodyMsg = `Il coach ti ha appena assegnato: ${(assignment.workouts as any).title}. Dai un'occhiata!`;
+      // Una gara in calendario non è un allenamento assegnato: il testo lo dice.
+      const w = assignment.workouts as any;
+      const isEvento = w?.sections?.isEvent === true || w?.sections?.category === 'Event';
+      const title = isEvento ? "Nuovo Obiettivo in Calendario 🏁" : "Nuovo Allenamento! 🏋️‍♂️";
+      const bodyMsg = isEvento
+        ? `Il coach ha aggiunto al tuo calendario: ${w.title}. Preparati!`
+        : `Il coach ti ha appena assegnato: ${w.title}. Dai un'occhiata!`;
       const route = `/workout/${assignment.workout_id}?athlete_id=${assignment.athlete_id}`;
 
             const { data: dbNotifs, error: dbErr } = await supabase.from('notifications').insert({
@@ -371,6 +391,17 @@ serve(async (req) => {
       if (!adminSubscriptions || adminSubscriptions.length === 0) {
          console.log('Attenzione: Nessun dispositivo admin ha le notifiche attive nel database.');
          return new Response(JSON.stringify({ success: true, message: 'Nessun dispositivo admin iscritto' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Un'action non riconosciuta produceva una notifica con titolo generico e
+      // corpo VUOTO, spedita a tutti gli admin. Meglio rifiutare: una push senza
+      // testo non serve a nessuno e non deve poter nascere da un typo.
+      const azioniValide = ['note', 'completed', 'custom_workout'];
+      if (!azioniValide.includes(body.action)) {
+        console.warn(`coach_notification: action '${body.action}' non riconosciuta, ignorata.`);
+        return new Response(JSON.stringify({ error: `action non valida: ${body.action}` }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       let title = "Aggiornamento Atleta";
