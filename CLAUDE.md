@@ -777,8 +777,12 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. Nessun test automatico, nessun TypeScript effettivo nel `src/` (tutto `.jsx`) anche se il build
-    esegue `tsc -b`.
+11. ~~Nessun test automatico~~ → **18 test dal 25/08/2026** (`npm test`, vitest) sulla logica pura
+    di `src/lib/`: titolo automatico, RPE e coerenza della codifica colore.
+    Verificati per mutazione: rompendo di proposito `TYPE_COLORS`, il round-trip dell'RPE e il
+    titolo generato, i test falliscono. Non sono decorativi.
+    Coprono solo `src/lib/`: le pagine (12.800 righe di JSX) restano senza test.
+    Nessun TypeScript effettivo nel `src/` (tutto `.jsx`) anche se il build esegue `tsc -b`.
 12. 🔴 **ESLint non ha mai analizzato il codice dell'applicazione** (scoperto il 25/08/2026).
     `eslint.config.js` aveva `files: ['**/*.{ts,tsx}']`, ma `src/` è tutto `.jsx`: i "15 problemi"
     che `npm run lint` riportava erano **solo** nelle due Edge Function, gli unici `.ts` del
