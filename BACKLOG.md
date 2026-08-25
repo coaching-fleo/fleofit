@@ -1,6 +1,7 @@
 # FLEOFIT — Cose da fare
 
-> Stato al **25 agosto 2026** (secondo giro dello stesso giorno: lint). Aggiornare questo file quando una voce si chiude o
+> Stato al **25 agosto 2026**, fine giornata. `npm test` → 75 · `npm run lint` → 46.
+> Ultimo commit `6a28841` su `ios-version`. Aggiornare questo file quando una voce si chiude o
 > se ne apre una nuova. Ogni voce dice *cosa*, *perché conta* e *cosa la blocca*:
 > senza il perché, fra sei mesi nessuno saprà se vale ancora la pena.
 >
@@ -54,8 +55,8 @@ codesign -d --entitlements - --xml Payload/App.app 2>/dev/null | plutil -p - | g
 | 16 | 47 problemi di lint (erano 164) | mezza giornata | Restano 15 `no-explicit-any` nelle due Edge Function (le uniche `.ts`: tipizzarle davvero richiede i tipi Deno) e 4 `react-refresh/only-export-components`, che chiedono di spezzare `App.jsx` e `CreateWorkout.jsx` per separare context e costanti dai componenti. Gli altri 28 sono la voce 17 |
 | 17 | 28 segnalazioni `react-hooks` | grande | `set-state-in-effect`, `immutability`, `exhaustive-deps`. Sono le regole v7 orientate al React Compiler: segnalano il pattern "fetch nell'effetto che aggiorna lo stato" su cui è costruita tutta l'app. Un refactor vero, non una pulizia |
 | 18 | **1.423 valori hex letterali** contro i token di `@theme` | 2-3 giorni | Il rebranding che PRODUCT.md indica come possibile sarebbe un find&replace su 1.423 punti |
-| 19 | Test sulle pagine: 2 componenti su ~30 | grande | ✅ Infrastruttura montata il 25/08 (jsdom + testing-library, `vitest.config.js`), 37 test su `HyroxBlock` e `RunningStepRow` (i due che la voce 15 vuole toccare) e 20 sulla coda offline, estratta in `src/lib/offlineQueue.js`. **Restano scoperte le pagine intere**: Home, WorkoutDetail, AthleteDetail e CreateWorkout non si montano senza finti `supabase`, router e AuthContext. Candidato successivo: il timer guidato di WorkoutDetail (`buildTimerSequence`), che è logica pura dentro un file da 3.000 righe |
-| 20 | I due branch divergono di **49 / 51** | cresce ogni giorno | Ogni correzione fatta su un branch e non sull'altro allarga il divario. Vedi CLAUDE.md §1.1 |
+| 19 | Test sulle pagine: 2 componenti su ~30 (13.032 righe di JSX) | grande | ✅ Infrastruttura montata il 25/08 (jsdom + testing-library, `vitest.config.js`), 37 test su `HyroxBlock` e `RunningStepRow` (i due che la voce 15 vuole toccare) e 20 sulla coda offline, estratta in `src/lib/offlineQueue.js`. **Restano scoperte le pagine intere**: Home, WorkoutDetail, AthleteDetail e CreateWorkout non si montano senza finti `supabase`, router e AuthContext. Candidato successivo: il timer guidato di WorkoutDetail (`buildTimerSequence`), che è logica pura dentro un file da 3.000 righe |
+| 20 | I due branch divergono di **49 / 55** | cresce ogni giorno | Ogni correzione fatta su un branch e non sull'altro allarga il divario — ma il travaso **sta avvenendo**: `main` ha ricevuto 8 commit il 24-25/08. Vedi CLAUDE.md §1.1 |
 | 20-bis | **14 vulnerabilità npm high/critical**, tutte preesistenti | da valutare | Scoperte il 25/08 installando le librerie di test, che non ne hanno introdotta nessuna. Le porta `@capacitor/cli` (`tar`, critical), `@capacitor/assets` (`sharp`), `vite`, `postcss`, `ws`, `tmp`. **Una sola tocca l'app spedita**: `react-router`, che è una dipendenza di runtime; le altre stanno nella catena di build e non finiscono nel bundle. Da guardare prima di alzare le versioni, non durante una revisione App Store |
 | 21 | Badge iOS: **9 punti di scrittura** in `Home.jsx` | 2 ore | Funziona; il rischio è che una modifica futura ne aggiorni otto su nove. Da centralizzare in un unico effetto su `unreadCount`, **con una push reale per provarlo** |
 
@@ -63,15 +64,19 @@ codesign -d --entitlements - --xml Payload/App.app 2>/dev/null | plutil -p - | g
 
 ## 📋 Su `main` (web app in produzione)
 
-> Decisione del committente: `main` resta com'è. Queste voci sono registrate perché
-> esistono, non perché siano in programma.
+> ⚠️ **`main` NON è congelato**: fra il 24 e il 25 agosto ha ricevuto **8 commit**, cioè le
+> correzioni fatte qui e riportate lì a mano una a una (backup del database e dei bucket,
+> titolo facoltativo, accessibilità, notifiche di assegnazione, cestino degli atleti).
+> Le tre voci qui sotto sono quelle che **non** sono state riportate, verificate su
+> `origin/main` il 25/08. Prima di dire che qualcosa manca su `main`, fare `git fetch` e
+> controllare: questo documento ha già sbagliato due volte su questo punto (CLAUDE.md §1.1).
 
 | # | Cosa | Conseguenza |
 |---|---|---|
 | 21-bis | La coda offline è estratta e testata, ma **`processOfflineQueue` resta in `Home.jsx`** | 2 ore | Il ciclo che riprova gli UPDATE su Supabase non è coperto: serve un finto `supabase`. È anche il punto della voce 14 (last-write-wins) |
-| 22 | **Zero occorrenze di `parseNotesAndRpe`** | Se un atleta modifica una nota dalla web app, **l'RPE scritto dall'app iOS viene distrutto** e le statistiche ricadono in silenzio sul default 5. È l'unica voce di questo elenco che perde dati |
-| 23 | Inter dichiarato e mai caricato | La web app rende con un fallback di sistema arbitrario |
-| 24 | 172 `text-gray-500` a 3.45:1 | Sotto il minimo AA per il testo |
+| 22 | **Zero occorrenze di `parseNotesAndRpe`** (riverificato il 25/08) | Se un atleta modifica una nota dalla web app, **l'RPE scritto dall'app iOS viene distrutto** e le statistiche ricadono in silenzio sul default 5. È l'unica voce di questo elenco che perde dati, e l'unica che si potrebbe chiudere in mezz'ora: basta retroportare `src/lib/rpe.js`, anche solo in lettura |
+| 23 | Inter dichiarato e mai caricato (riverificato il 25/08: `src/index.css` di `main` dice ancora `font-family: 'Inter', sans-serif`) | La web app rende con un fallback di sistema arbitrario. Qui è già risolto: font di sistema espliciti |
+| 24 | 172 `text-gray-500` a 3.45:1 (riverificato il 25/08: 172 su `main`, **0** qui) | Sotto il minimo AA per il testo |
 
 ---
 

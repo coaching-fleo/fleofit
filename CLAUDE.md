@@ -2,10 +2,11 @@
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **24 agosto 2026**.
-> **Due branch attivi e DIVERGENTI**: `main` = web app in produzione · `ios-version` = app per
-> l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due branch).
-> Sessione corrente su `ios-version`, ultimo commit `5c02b81`, allineato con `origin/ios-version`.
+> Ultimo aggiornamento: **25 agosto 2026**.
+> **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
+> `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
+> Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
+> `npm test` → **75 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** caricata su App Store Connect il 24/08/2026 dopo un rifiuto: stato e
 > correzioni in §9-ter.
 
@@ -36,8 +37,12 @@
    non esplicitamente richiesto. La palette è definita al §6.
 4. Lingua dell'interfaccia e dei commenti: **italiano**. Nomi di variabili/funzioni: inglese misto
    a italiano (convenzione già esistente, mantenerla coerente per file).
-5. Prima di modificare un file grande (`WorkoutDetail.jsx` 3060 righe, `AthleteDetail.jsx` 2716,
-   `CreateWorkout.jsx` 2248, `Home.jsx` 1847) leggere le sezioni rilevanti: c'è molta logica
+5. ⚠️ **I numeri di riga scadono in fretta, i nomi no.** Quando citi un punto del codice —
+   qui, in un commit o parlando con il committente — nomina la funzione o la costante, non la
+   riga. Il 25/08/2026 tutti e cinque i riferimenti `file:riga` presenti in questo documento
+   puntavano a righe scorrelate.
+6. Prima di modificare un file grande (`WorkoutDetail.jsx` 3.052 righe, `AthleteDetail.jsx` 2.727,
+   `CreateWorkout.jsx` 2.263, `Home.jsx` 2.028 — contate il 25/08/2026) leggere le sezioni rilevanti: c'è molta logica
    duplicata tra i file (vedi §9 Debito tecnico).
 
 ---
@@ -63,8 +68,8 @@ Il progetto vive su **due branch con due prodotti diversi**, entrambi attivi:
 
 | Branch | Cos'è | Dove finisce | Ultimo commit |
 |---|---|---|---|
-| **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi | **collegato a Vercel** → `https://fleofit.vercel.app`. LIVE, non rompere | `8919bfd` — 8 giu 2026 |
-| **`ios-version`** | Versione nativa iOS/Capacitor, quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. L'app arriva sull'App Store da Xcode, non da un deploy | `848648f` — 24 ago 2026 |
+| **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi | **collegato a Vercel** → `https://fleofit.vercel.app`. LIVE, non rompere | `c2ed65d` — 25 ago 2026 |
+| **`ios-version`** | Versione nativa iOS/Capacitor, quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. L'app arriva sull'App Store da Xcode, non da un deploy | `6a28841` — 25 ago 2026 |
 
 ### ⚠️ `ios-version` NON è un branch di rilascio (confermato dal committente il 24/08/2026)
 Non esiste nessuna pipeline collegata a `ios-version`. Pushare lì **non pubblica niente**: serve
@@ -82,17 +87,21 @@ Conseguenze pratiche, tutte controintuitive:
   incluso, su un URL pubblico. Controllare in Vercel → Settings → Git → *Ignored Build Step* /
   *Production Branch* che le preview siano disattivate o protette da password.
 
-### Rapporto tra i due: SONO DIVERGENTI
-Verificato il 24/08/2026 **dopo un `git fetch`**:
-`git rev-list --left-right --count origin/main...origin/ios-version` → **`41 22`**.
-`main` ha 41 commit che `ios-version` non ha, `ios-version` ne ha 22 che `main` non ha.
+### Rapporto tra i due: SONO DIVERGENTI, ED ENTRAMBI SI MUOVONO
+Verificato il 25/08/2026 **dopo un `git fetch`**:
+`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 55`**.
 Il divario **cresce a ogni sessione di lavoro su `ios-version`**: più si aspetta, più il merge costa.
 **Un merge non è un fast-forward**: è un merge vero.
 
-> ⚠️ Fino al 24/08/2026 questo documento affermava `0 18` e "non sono divergenti". Era **falso**:
-> il riferimento locale a `origin/main` era fermo a maggio e nessuno aveva fatto fetch. `main` non
-> è affatto abbandonato, è arrivato all'**8 giugno 2026**.
-> **Regola**: fare `git fetch` prima di qualunque affermazione sul rapporto fra i due branch.
+> 🔴 **`main` NON è fermo, e questo documento ha già sbagliato due volte su questo punto.**
+> Prima diceva `0 18` e "non divergenti" (falso: nessuno aveva fatto fetch). Poi diceva
+> "`8919bfd` — 8 giu 2026" (falso al 25/08: **`main` ha ricevuto 8 commit fra il 24 e il 25
+> agosto**). Le correzioni fatte su `ios-version` vengono **riportate a mano su `main`**, una
+> a una: backup del database e dei bucket, titolo facoltativo, accessibilità, notifiche di
+> assegnazione, cestino degli atleti.
+> **Regola, senza eccezioni**: `git fetch` **prima** di qualunque affermazione sui due branch,
+> e prima di dire che qualcosa "manca su main" verificarlo con
+> `git show origin/main:<file>` o `git grep <cosa> origin/main -- src/`.
 
 Peggio del conteggio: i due branch hanno lavorato **in parallelo sugli stessi file**. Fra il 15 e
 il 21 maggio `main` ha ricevuto una propria linea di sviluppo su `TVDashboard.jsx`,
@@ -100,11 +109,16 @@ il 21 maggio `main` ha ricevuto una propria linea di sviluppo su `TVDashboard.js
 IG, beep del timer), cioè proprio i file più grandi del progetto, che `ios-version` ha modificato
 per conto suo. Un merge produrrà conflitti reali lì dentro, non banali da risolvere.
 
-### Cosa c'è davvero solo su `ios-version` (verificato su `origin/main` il 24/08/2026)
+### Cosa c'è davvero solo su `ios-version` (verificato su `origin/main` il 25/08/2026)
 Assenti da `main`: tutta la cartella `ios/`, `capacitor.config.ts`, `privacy-policy.html`,
 `src/pages/bluetooth.js` (fascia cardio BLE), `src/pages/health.js` (Apple Health),
 `supabase/functions/ai-workout/` (generazione IA), `src/lib/blockHints.js`, l'**RPE**, la
 **Live Coach Cam**, la **modalità Offline** (ex "Bunker"), push FCM native, centro notifiche + badge.
+Aggiunti il 25/08 e ancora solo qui: **tutta l'infrastruttura di test** (`vitest.config.js`,
+`src/test/`, i `__tests__`), `src/lib/offlineQueue.js`, `src/lib/rpe.js`, `src/lib/blockColors.js`,
+`src/lib/alert.js`, `src/lib/pushToken.js`, `src/lib/constants.js` e
+`supabase/functions/_shared/admin.ts`.
+⚠️ `src/lib/workoutTitle.js` invece **c'è anche su `main`**: è stato riportato lì il 24/08.
 
 Due correzioni rispetto a quanto scritto qui in passato:
 - ⚠️ **`TVDashboard.jsx` esiste anche su `main`.** La TV Dashboard non è esclusiva di `ios-version`:
@@ -116,12 +130,17 @@ Due correzioni rispetto a quanto scritto qui in passato:
 Entrambi i branch puntano allo **stesso progetto Supabase** (`riyqtcssllupakjtoehj`) e alle **stesse
 Edge Function deployate**. Non esiste un ambiente di staging. Conseguenze concrete:
 - Una **migrazione di schema** fatta per iOS colpisce subito la web app in produzione.
-- `send-reminders` è **una sola funzione deployata**: 443 righe su `ios-version` contro 247 su
-  `main`, cioè 196 in più (misurate il 24/08/2026). Qualunque versione sia deployata, serve
-  entrambe le app. La lista `adminEmails` al suo interno va tenuta allineata a `ADMIN_EMAILS`
-  di `src/App.jsx` (§9 punto 7).
-- Il fix del backup (`db-backup.yml`) deve stare su `main` perché i cron di GitHub girano solo dal
-  branch di default → **portare solo quel file**, non l'intero branch:
+- `send-reminders` è **una sola funzione deployata**: 583 righe su `ios-version` contro 247 su
+  `main`, cioè 336 in più (rimisurate il 25/08/2026). Qualunque versione sia deployata, serve
+  entrambe le app. La lista admin non è più duplicata al suo interno: dal 25/08 importa
+  `supabase/functions/_shared/admin.ts`, che va tenuta allineata a `ADMIN_EMAILS` di
+  `src/App.jsx` e alle policy RLS (§9 punto 7).
+- ✅ Il fix del backup (`db-backup.yml`) **è su `main` dal 25/08/2026** (`e5d11c5`, `30c597b`,
+  `c2ed65d`) ed è **byte-identico** a quello di `ios-version`: verificato con
+  `diff <(git show origin/main:.github/workflows/db-backup.yml) .github/workflows/db-backup.yml`.
+  Conta perché i cron di GitHub girano **solo dal branch di default**: finché il file non era lì,
+  il backup notturno era quello rotto. Ora non lo è più.
+  Se in futuro tocchi quel workflow, il modo di riportarlo è **solo quel file**, non l'intero branch:
   `git checkout main && git checkout ios-version -- .github/workflows/db-backup.yml`
 
 ### ⚠️ Incompatibilità dati nota: l'RPE
@@ -130,7 +149,8 @@ Edge Function deployate**. Non esiste un ambiente di staging. Conseguenze concre
 - Un workout completato da iOS scrive `[RPE: 7/10]\ntesto` in `athlete_workouts.notes`;
   sulla **web app quel prefisso appare come testo grezzo** dentro la nota.
 - Se l'atleta **modifica la nota dalla web app**, il valore viene riscritto verbatim
-  (`.update({ notes })`, `AthleteDetail.jsx:177`, `Home.jsx:199`, `WorkoutDetail.jsx:886`):
+  (`.update({ notes })` in `AthleteDetail.jsx` e `.update({ notes: finalNote })` in
+  `WorkoutDetail.jsx`; in `Home.jsx` il punto è sparito col codice morto rimosso il 25/08):
   se cancella il prefisso, **l'RPE è perso** e le statistiche iOS (RPE medio, carico settimanale)
   ricadono silenziosamente sul default 5.
 Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **retroportare
@@ -141,7 +161,7 @@ Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **re
 ## 1.2 Ruoli
 | Ruolo | Come si ottiene | Cosa vede |
 |---|---|---|
-| `admin` (coach) | email in `ADMIN_EMAILS` (`src/App.jsx:29`) | Tutto: crea workout, gestisce atleti, codici invito, backup, Live Coach Cam |
+| `admin` (coach) | email in `ADMIN_EMAILS` (`src/App.jsx`, in cima al file) | Tutto: crea workout, gestisce atleti, codici invito, backup, Live Coach Cam |
 | `athlete` | registrazione con codice invito valido | Home personale, calendario, profilo, archivio |
 | `coach` | ruolo previsto nel codice ma **onboarding disattivato** (commentato in `App.jsx:109-112`) | come admin |
 
@@ -201,41 +221,55 @@ Per testare su iPhone in dev live: scommentare `server.url` in `capacitor.config
 > ⚠️ `TVDashboard.jsx` **c'è anche su `main`**, in una versione diversa (§1.1).
 
 ```
+vite.config.ts                 # costruisce l'app
+vitest.config.js               # la testa (jsdom) — ⚠️ MAI creare un vite.config.js: Vite risolve
+                               #   .js prima di .ts e maschererebbe quello vero, in silenzio
 src/
 ├─ main.jsx                    # entry, importa index.css
 ├─ App.jsx                     # routing, AuthContext, Onboarding, ProtectedRoute, DeeplinkHandler
+│                              #   ⚠️ qui vive ADMIN_EMAILS (§9 punto 7)
 ├─ index.css                   # Tailwind @theme + animazioni globali (page-transition, modal-transition)
-├─ App.css                     # ⚠️ boilerplate Vite residuo, NON usato — eliminabile
 ├─ supabaseClient.js           # createClient con URL + anon key hardcodati
 ├─ useTouchDrag.js             # hook drag&drop touch nativo (usato da CreateWorkout)
-├─ lib/
-│  └─ blockHints.js            # BLOCK_HINT: didascalie in chiaro dei tipi di blocco (§9-ter)
+├─ lib/                        # logica pura, l'unica parte con test
+│  ├─ alert.js                 # mostraAlert/mostraErrore: alert applicativo senza passare props
+│  ├─ blockColors.js           # TYPE_COLORS, unificata dalle 5 copie sparse
+│  ├─ blockHints.js            # BLOCK_HINT: didascalie in chiaro dei tipi di blocco (§9-ter)
+│  ├─ constants.js             # ERGOMETERS e affini
+│  ├─ offlineQueue.js          # ⚠️ coda offline + leggiJson/scriviJson — vedi §9 regola 0-bis
+│  ├─ pushToken.js             # rinfresco del token FCM
+│  ├─ rpe.js                   # parseNotesAndRpe / formatNotesWithRpe
+│  ├─ workoutTitle.js          # titolo generato dalla data (c'è anche su main)
+│  └─ __tests__/               # 38 test: blockColors, offlineQueue, rpe, workoutTitle
+├─ test/
+│  └─ setup.js                 # jsdom + finto Capacitor.isNativePlatform() === false
 ├─ components/
 │  ├─ Navbar.jsx               # bottom nav fissa, voci variabili per ruolo
-│  ├─ CustomModals.jsx         # CustomAlert + CustomConfirm (sostituiscono alert/confirm nativi)
+│  ├─ CustomModals.jsx         # CustomAlert + CustomConfirm + AlertHost
 │  └─ CustomDatePicker.jsx     # date picker custom dark
 └─ pages/
-   ├─ Home.jsx                 # dashboard atleta + dashboard coach + centro notifiche + Live Coach Cam
+   ├─ Home.jsx                 # dashboard atleta + coach + centro notifiche + Live Coach Cam
    ├─ Login.jsx                # welcome / login / signup / codice invito / recupero password
    ├─ Calendar.jsx             # calendario mensile, creazione "Evento/Gara"
    ├─ CreateWorkout.jsx        # workout builder (Hyrox / Running / Custom) + generazione IA
    ├─ WorkoutDetail.jsx        # scheda workout, timer guidato, PDF, story IG, note vocali, TV
-   ├─ Athletes.jsx             # rubrica atleti (admin)
+   ├─ Athletes.jsx             # rubrica atleti + cestino "Eliminati di recente" (admin)
    ├─ AthleteDetail.jsx        # scheda atleta: workout, PR, statistiche (è anche /profile)
    ├─ WorkoutsArchive.jsx      # archivio storico workout
    ├─ Settings.jsx             # notifiche, backup/restore JSON, codici invito, BLE, password
    ├─ TVDashboard.jsx          # /tv — dashboard fullscreen per TV/Chromecast, codice a 4 cifre
-   ├─ Invite.jsx               # ⚠️ NON collegato a nessuna rotta: la validazione invito vive in Login.jsx
    ├─ bluetooth.js             # BluetoothService — singleton BLE fascia cardio
-   ├─ health.js                # HealthService (Apple Health) + CloudSyncService (Strava/Garmin, WIP)
+   ├─ health.js                # HealthService (Apple Health)
    ├─ motivations.js           # 15 frasi motivazionali + getDailyMotivation() con anti-ripetizione
-   ├─ patch.js                 # ⚠️ file morto: nessun import lo referenzia
-   └─ useTouchDrag.js          # ⚠️ DUPLICATO morto — l'unico import attivo è `../useTouchDrag` (src/)
-supabase/functions/
-   ├─ send-reminders/index.ts  # notifiche push (5 modalità)
-   └─ ai-workout/index.ts      # Gemini: trascrizione audio + generazione blocchi JSON
-index.ts (root)                # ⚠️ copia vecchia di send-reminders, non deployata
+   └─ __tests__/               # 37 test su HyroxBlock e RunningStepRow (estratti da CreateWorkout)
+supabase/
+   ├─ functions/_shared/admin.ts   # ADMIN_EMAILS condivisa dalle due Edge Function (§9 punto 7)
+   ├─ functions/send-reminders/    # notifiche push (5 modalità)
+   ├─ functions/ai-workout/        # Gemini: trascrizione audio + generazione blocchi JSON
+   └─ schema/                      # fotografia delle policy RLS — NON è una migrazione (§4-bis)
 ```
+> I file morti che questa sezione elencava (`App.css`, `pages/patch.js`, `pages/Invite.jsx`,
+> `pages/useTouchDrag.js`, `index.ts` in root) **non esistono più**: rimossi il 24-25/08/2026.
 
 ---
 
@@ -423,7 +457,7 @@ App Store, ma va confermato sul binario esportato:
 ### Secrets attesi (Supabase)
 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
 `FIREBASE_SERVICE_ACCOUNT` (JSON), `GEMINI_API_KEY`.
-VAPID public key duplicata client-side in `Settings.jsx:274`.
+VAPID public key duplicata client-side in `Settings.jsx` (costante `publicVapidKey`).
 
 ### Backup
 GitHub Action `.github/workflows/db-backup.yml` — cron `30 22 * * *` (22:30 UTC, **prima** della pulizia di mezzanotte), export REST in zip
@@ -432,19 +466,24 @@ paginazione a 1000 righe, validazione della risposta, fallimento esplicito se un
 (`athletes`, `workouts`, `athlete_workouts`) è vuota o mancante, manifest con i conteggi e riepilogo
 nella pagina del run. Le tabelle da salvare stanno in `env.TABLES`: **se aggiungi una tabella al DB,
 aggiungila anche lì.**
-- 🔴 **COSA SALVA DAVVERO IL BACKUP DI STANOTTE** (letto su `origin/main` il 24/08/2026, è il file
-  che il cron esegue): `TABLES=("athletes" "athlete_photos" "athlete_workouts" "workouts" "workout_logs")`.
-  **Mancano `personal_records`, `invitation_codes`, `notifications`, `push_subscriptions`,
-  `tv_sessions`.** In particolare **i PR degli atleti non sono mai stati salvati**, ed è il dato meno
-  ricostruibile del sistema — aggravato dal fatto che `personal_records` ha una policy RLS
-  `ALL/{authenticated}/true`, cioè è cancellabile da qualunque utente loggato (§4-bis).
+- ✅ **COSA SALVA DAVVERO IL BACKUP DI STANOTTE** (riletto su `origin/main` il 25/08/2026, è il
+  file che il cron esegue):
+  `TABLES='athletes workouts athlete_workouts personal_records invitation_codes notifications'`.
+  **`personal_records` è dentro**: era il dato meno ricostruibile del sistema e non era mai stato
+  salvato — aggravato dal fatto che ha una policy RLS `ALL/{authenticated}/true`, cioè è
+  cancellabile da qualunque utente loggato (§4-bis).
+  Restano fuori di proposito: `push_subscriptions` e `tv_sessions` (effimere, si rigenerano) e
+  `workout_logs`/`athlete_photos` (legacy, 0 occorrenze nel client).
+  `REQUIRED_TABLES='athletes workouts athlete_workouts'`: se una di queste è vuota, il job fallisce
+  invece di caricare un backup inutile.
   ⚠️ Correzione del 24/08/2026: una versione precedente di questa nota affermava che
   `athlete_photos` e `workout_logs` "non esistono". **È falso**: `pg_tables` le elenca entrambe nello
   schema `public`. Sono tabelle **legacy mai referenziate dal client** (0 occorrenze in `src/` e
   `supabase/`), quindi il backup attivo spende due delle cinque voci su tabelle morte.
-- ⚠️ Gli scheduled workflow girano **solo dal branch di default (`main`)**: finché il file corretto
-  non è su `main`, il cron notturno usa ancora la versione rotta. Portare **solo quel file**, non
-  l'intero branch (vedi §1.1): `git checkout main && git checkout ios-version -- .github/workflows/db-backup.yml`
+- ✅ **Il file corretto è su `main` dal 25/08/2026 ed è identico a questo** (verificato con
+  `diff`). Conta perché gli scheduled workflow girano **solo dal branch di default**: fino ad
+  allora il cron notturno eseguiva la versione rotta. Se rimetti mano al workflow, riporta
+  **solo quel file**: `git checkout main && git checkout ios-version -- .github/workflows/db-backup.yml`
 - Il backup copre l'unico database, che è **condiviso** fra web app e app iOS (§1.1).
 - ✅ **I bucket Storage sono nel backup dal 25/08/2026** (`athlete-photos`, `voice-notes`):
   inventario sempre, file scaricati se `STORAGE_SCARICA = si` e finché si resta sotto
@@ -480,7 +519,8 @@ database** → rubrica atleti vuota, workout assegnati vuoti, codici invito vuot
 negata. È di nuovo la condizione che ha prodotto il rifiuto **2.3.1(a)** di maggio.
 
 > ⚠️ **Correzione a §9 punto 7 e a §9-ter.** Le liste di admin hardcodate non sono due, sono **TRE**:
-> `src/App.jsx:35`, `supabase/functions/send-reminders/index.ts:261` e **le policy RLS**.
+> `src/App.jsx`, `supabase/functions/_shared/admin.ts` (condivisa dalle due Edge Function dal
+> 25/08, prima erano due copie separate) e **le policy RLS**.
 > Il corollario di §9-ter ("conta solo l'elenco compilato dentro il bundle") è **incompleto**:
 > contano entrambi gli elenchi, e quello nel database è quello che decide cosa il revisore vede.
 
@@ -519,7 +559,7 @@ copia di sicurezza.
 ### 🔴 `invitation_codes`: la registrazione chiusa non è chiusa
 `Anonymous users can validate a code | SELECT | {anon} | (is_active AND used_by IS NULL)`:
 un anonimo con la anon key (in chiaro nel bundle) **enumera tutti i codici validi**, poi si registra.
-Il `signOut()` di `App.jsx:219` è cosmetico. Forma corretta: funzione `security definer` che
+Il `signOut()` di `App.jsx` (ramo `/login?error=unauthorized`) è cosmetico. Forma corretta: funzione `security definer` che
 risponde sì/no senza esporre la tabella. **Non additivo → dopo l'approvazione App Store.**
 
 ### 🟠 `push_subscriptions`: `Enable all operations for authenticated users | ALL | true`
@@ -767,10 +807,12 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
    il calcolo del tempo/carico settimanale e i beep WAV sono **ricopiati** in Home, WorkoutDetail,
    AthleteDetail, CreateWorkout e TVDashboard. Candidati naturali a `src/lib/` + `src/components/`.
    `src/lib/` **esiste dal 24/08/2026** (`blockHints.js`): è il posto dove spostarli.
-2. **File morti verificati** (nessun import li referenzia): `src/pages/useTouchDrag.js`
-   (duplicato di `src/useTouchDrag.js`, che è quello vero), `src/pages/patch.js`,
-   `src/pages/Invite.jsx` (nessuna rotta), `src/App.css` (boilerplate Vite),
-   `index.ts` in root (copia vecchia di `send-reminders`).
+2. ~~File morti~~ → **rimossi tutti e cinque** (`src/pages/useTouchDrag.js`, `src/pages/patch.js`,
+   `src/pages/Invite.jsx`, `src/App.css`, `index.ts` in root). Verificato il 25/08: nessuno
+   esiste più sul disco. ⚠️ `src/pages/Invite.jsx` **esiste ancora su `main`**.
+   Il 25/08 ne è stato tolto altro: `updateWorkoutNote` (Home), `SCHEMES` (TVDashboard),
+   `isDistance` con la sua tassonomia e `MINUTES_OPTIONS`/`timeToSeconds`/`formatTime`
+   (CreateWorkout), più 10 import inutilizzati.
 3. **Due scale colore RPE/intensità** diverse (§6) per lo stesso range 1-10.
 4. **Due librerie di registrazione audio** installate insieme (`capacitor-voice-recorder` usata in
    CreateWorkout, `@independo/capacitor-voice-recorder` in Home/WorkoutDetail).
@@ -778,14 +820,16 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
 6. **Segreti nel repo**: `supabaseClient.js` contiene URL + anon key in chiaro (accettabile per una
    anon key **se** l'RLS è configurata correttamente — verificare le policy prima di aprire l'app);
    `Settings.jsx` contiene la VAPID public key hardcodata; `GoogleService-Info.plist` è versionato.
-7. **`ADMIN_EMAILS` hardcodata** in `App.jsx` **e** ri-hardcodata nell'Edge Function `send-reminders`:
-   se si aggiunge un admin va cambiata in **due** posti.
+7. **`ADMIN_EMAILS` hardcodata in due posti + le policy RLS.** Le Edge Function non hanno più
+   una copia propria: dal 25/08 importano entrambe `supabase/functions/_shared/admin.ts`.
+   Restano quindi **`src/App.jsx` + `_shared/admin.ts` + le policy RLS** = tre copie in tutto.
+   ✅ Verificate allineate il 25/08 (stesse 5 email, e `pg_policies` coincide con la fotografia
+   in `supabase/schema/`). **È il meccanismo che ha causato il rifiuto 2.3.1(a) di maggio:
+   ricontrollarlo prima di ogni submission**, vedi §9-ter.
 8. **`COACHING_ID` hardcodato** (`0118e43f-…`) in due file.
-9. ~~Backup GitHub Action con lista tabelle obsoleta~~ → **riscritto il 24/08/2026** (vedi §4),
-   committato in `79d146a` e pushato su `ios-version`.
-   **Resta aperto**: il file non è ancora su `main`, e gli scheduled workflow girano solo dal branch
-   di default → il cron notturno usa tuttora la versione rotta. Portare **solo quel file**:
-   `git checkout main && git checkout ios-version -- .github/workflows/db-backup.yml`
+9. ~~Backup GitHub Action con lista tabelle obsoleta~~ → **CHIUSO il 25/08/2026.** Riscritto il
+   24/08 (`79d146a`, vedi §4) e **portato su `main`** il 25/08, dove i cron girano davvero.
+   Verificato identico sui due branch con `diff`.
 9-bis. **Due app sullo stesso database senza staging** e la web app (`main`) che non capisce l'RPE:
    è il debito architetturale più serio del progetto. Dettagli e conseguenze in §1.1.
 10. ~~**`cloud-sync`** invocata dal client (`health.js`) ma assente dal repo~~ → `CloudSyncService`
@@ -813,7 +857,7 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
 12. 🔴 **ESLint non ha mai analizzato il codice dell'applicazione** (scoperto il 25/08/2026).
     `eslint.config.js` aveva `files: ['**/*.{ts,tsx}']`, ma `src/` è tutto `.jsx`: i "15 problemi"
     che `npm run lint` riportava erano **solo** nelle due Edge Function, gli unici `.ts` del
-    progetto. 12.800 righe di applicazione non sono mai state controllate.
+    progetto. 13.000 righe di applicazione non erano mai state controllate.
     Estendendo il pattern a `.js/.jsx` sono emersi **quattro `no-undef`**, cioè quattro
     `ReferenceError` latenti già in produzione, ognuno dei quali rompeva una funzione in silenzio
     (vedi il commit del 25/08). Sono stati corretti.
