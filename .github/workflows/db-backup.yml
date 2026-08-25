@@ -6,8 +6,17 @@ name: Backup giornaliero Supabase
 
 on:
   schedule:
-    # 02:00 UTC = 04:00 in Italia con l'ora legale, 03:00 con l'ora solare.
-    - cron: '0 2 * * *'
+    # 22:30 UTC = 00:30 in Italia con l'ora legale, 23:30 con l'ora solare.
+    #
+    # ⚠️ L'ORARIO NON È ARBITRARIO. Dentro Supabase gira pg_cron con
+    # `cleanup-expired-athletes` a mezzanotte UTC, che cancella FISICAMENTE gli
+    # atleti eliminati da più di 7 giorni — e in cascata i loro workout assegnati,
+    # record personali e log. Con il backup alle 02:00 la copia arrivava DOPO la
+    # cancellazione: un atleta cancellato a mezzanotte spariva da quel backup e da
+    # tutti i successivi, quindi non era più recuperabile in alcun modo.
+    # Ora la copia precede la pulizia di un'ora e mezza.
+    # I :30 evitano `cleanup-voice-notes`, che gira ogni ora allo scoccare.
+    - cron: '30 22 * * *'
   workflow_dispatch:
 
 permissions:
