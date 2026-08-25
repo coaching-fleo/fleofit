@@ -759,6 +759,9 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
 
 ## 9. Debito tecnico noto (contesto, non da sistemare senza richiesta)
 
+0-bis. ⚠️ **localStorage si legge SOLO con `leggiJson`/`scriviJson` di `src/lib/offlineQueue.js`.**
+   Un `JSON.parse(localStorage.getItem(...))` nudo ha già prodotto due guasti silenziosi
+   (§9-quater punti 1 e 4). Le chiavi sono elencate al §8.
 1. **Codice duplicato pesante** — `parseNotesAndRpe`/`formatNotesWithRpe`, `RpeModal`,
    `VoiceRecorder`, `AudioVisualizer`, `CustomAudioPlayer`, `TYPE_COLORS`, `ERGOMETERS`,
    il calcolo del tempo/carico settimanale e i beep WAV sono **ricopiati** in Home, WorkoutDetail,
@@ -800,8 +803,12 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
       `onMoveUp()` senza argomenti e riceve `onRemove` diretto; `RunningStepRow` chiama
       `onMoveUp(index)`, `onRemove(step.id)`, `onDuplicate(step)`, `onEdit(step)`.
       "Uniformare" i due componenti romperebbe il riordino delle fasi di corsa.
+    - **20 sulla coda offline** (`src/lib/offlineQueue.js`, estratta da `Home.jsx` il
+      25/08): deduplica per allenamento, tolleranza ai valori corrotti, quota piena,
+      localStorage negato da Safari in navigazione privata.
     - Restano scoperte **le pagine intere**: non si montano senza finti `supabase`,
-      `react-router` e AuthContext (BACKLOG #19).
+      `react-router` e AuthContext (BACKLOG #19). Anche `processOfflineQueue` resta
+      dentro Home e non è coperto: il ciclo di retry vuole un finto `supabase`.
     Nessun TypeScript effettivo nel `src/` (tutto `.jsx`) anche se il build esegue `tsc -b`.
 12. 🔴 **ESLint non ha mai analizzato il codice dell'applicazione** (scoperto il 25/08/2026).
     `eslint.config.js` aveva `files: ['**/*.{ts,tsx}']`, ma `src/` è tutto `.jsx`: i "15 problemi"
@@ -848,6 +855,20 @@ Erano tutti `catch {}` senza corpo, quindi invisibili sia all'utente sia nei log
 Loggate anche, senza cambiare comportamento, le scritture di `badge_count` su
 `push_subscriptions` (5 punti fra Home e WorkoutDetail): se falliscono, il contatore che
 `send-reminders` rilegge per incrementare il badge resta disallineato per sempre.
+
+### 4. La modale RPE poteva restare bloccata a girare (corretto il 25/08/2026)
+Trovato cercando gli altri chiamanti della coda. `handleRpeSubmitHome` e
+`annullaCompletamento` facevano `JSON.parse(localStorage.getItem(...) || '[]')` **nudo**,
+senza try/catch e senza `finally`. Con la cache corrotta l'eccezione partiva **dopo**
+`setSavingRpe(true)` e **prima** di `setSavingRpe(false)`: la modale restava a girare per
+sempre e il completamento con RPE appena inserito spariva. Sul ramo offline, cioè proprio
+quando l'atleta non ha modo di capire cos'è successo.
+
+**La regola che ne è uscita**, ora implementata in `src/lib/offlineQueue.js` e coperta da
+20 test: *una lettura di localStorage che fallisce si ripara da sola*. `leggiJson` non
+lancia mai, rimuove il valore illeggibile e torna un fallback; `scriviJson` torna `false`
+invece di lanciare su quota piena. Meglio ripartire da zero che restare bloccati per sempre
+su un valore rotto.
 
 ---
 

@@ -18,6 +18,7 @@ import { BluetoothService } from './bluetooth'
 import { Network } from '@capacitor/network'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
+import { leggiJson, scriviJson, leggiCoda, accodaSuStorage, chiaveCacheWorkout, CHIAVE_CODA } from '../lib/offlineQueue'
 import { mostraErrore } from '../lib/alert'
 
 
@@ -249,30 +250,15 @@ export default function Home() {
     return () => { listener.then(l => l.remove()) }
   }, [])
 
-  // Una sola azione in coda per allenamento: senza, toccando due volte lo stesso
-  // workout offline si accodavano due UPDATE che si sovrascrivevano al ritorno
-  // della rete. L'ultima vince, che è l'intenzione dell'utente.
-  const accodaOffline = (payload) => {
-    let coda
-    try { coda = JSON.parse(localStorage.getItem('fleofit_offline_queue') || '[]') } catch { coda = [] }
-    coda = coda.filter(a => !(a.type === 'UPDATE_WORKOUT' && a.payload?.id === payload.id))
-    coda.push({ type: 'UPDATE_WORKOUT', payload, ts: Date.now() })
-    localStorage.setItem('fleofit_offline_queue', JSON.stringify(coda))
-  }
+  // Deduplica e tolleranza ai valori corrotti stanno in src/lib/offlineQueue.js,
+  // dove sono coperte da test: qui è l'unico punto dell'app in cui un guasto
+  // costa dati veri (un workout completato senza rete vive solo in localStorage).
+  const accodaOffline = (payload) => accodaSuStorage(payload)
 
   const processOfflineQueue = async () => {
-    const queueStr = localStorage.getItem('fleofit_offline_queue')
-    if (!queueStr) return
-    let queue
-    try {
-      queue = JSON.parse(queueStr)
-    } catch (e) {
-      // Una coda corrotta bloccava la sincronizzazione per sempre: si usciva
-      // subito e il valore illeggibile restava lì a far fallire ogni tentativo.
-      console.warn('Coda offline illeggibile, la scarto:', e)
-      localStorage.removeItem('fleofit_offline_queue')
-      return
-    }
+    // leggiCoda si ripara da sola: un valore illeggibile viene rimosso invece di
+    // restare a far fallire ogni sincronizzazione successiva, per sempre.
+    const queue = leggiCoda()
     if (queue.length === 0) return
 
     setSyncingQueue(true)
@@ -284,7 +270,7 @@ export default function Home() {
         if (error) remaining.push(action)
       }
     }
-    localStorage.setItem('fleofit_offline_queue', JSON.stringify(remaining))
+    scriviJson(CHIAVE_CODA, remaining)
     setSyncingQueue(false)
   }
 
@@ -371,19 +357,9 @@ export default function Home() {
             wCountAthlete = wRes.count || 0
             let data = dataRes.data
             if (dataRes.error || !data) {
-              const cached = localStorage.getItem(`fleofit_cache_workouts_${user.id}`)
-              if (cached) {
-                try {
-                  data = JSON.parse(cached)
-                } catch (e) {
-                  // Cache corrotta: senza rimuoverla resterebbe illeggibile per
-                  // sempre e la modalità offline non ripartirebbe più.
-                  console.warn('Cache workout illeggibile, la rimuovo:', e)
-                  localStorage.removeItem(`fleofit_cache_workouts_${user.id}`)
-                }
-              }
+              data = leggiJson(chiaveCacheWorkout(user.id), data)
             } else {
-              localStorage.setItem(`fleofit_cache_workouts_${user.id}`, JSON.stringify(data))
+              scriviJson(chiaveCacheWorkout(user.id), data)
             }
 
             if (data) {
@@ -694,9 +670,9 @@ setNotifications(prev => {
     const rete = await Network.getStatus()
     if (!rete.connected) {
       accodaOffline({ id: workout.id, status: 'pending', notes: workout.notes })
-      const cache = JSON.parse(localStorage.getItem(`fleofit_cache_workouts_${user.id}`) || '[]')
-      localStorage.setItem(`fleofit_cache_workouts_${user.id}`,
-        JSON.stringify(cache.map(w => w.id === workout.id ? { ...w, status: 'pending' } : w)))
+      const cache = leggiJson(chiaveCacheWorkout(user.id), [])
+      scriviJson(chiaveCacheWorkout(user.id),
+        cache.map(w => w.id === workout.id ? { ...w, status: 'pending' } : w))
       return
     }
 
@@ -735,9 +711,12 @@ setNotifications(prev => {
     if (!status.connected) {
       accodaOffline({ id: workoutToComplete.id, status: newStatus, notes: finalNote })
       
-      const cached = JSON.parse(localStorage.getItem(`fleofit_cache_workouts_${user.id}`) || '[]')
-      const updatedCache = cached.map(w => w.id === workoutToComplete.id ? { ...w, status: newStatus, notes: finalNote } : w)
-      localStorage.setItem(`fleofit_cache_workouts_${user.id}`, JSON.stringify(updatedCache))
+      // ⚠️ Qui prima c'era un JSON.parse nudo. Con la cache corrotta lanciava
+      // DOPO setSavingRpe(true) e prima di setSavingRpe(false): la modale RPE
+      // restava a girare per sempre e il completamento appena inserito spariva.
+      const cached = leggiJson(chiaveCacheWorkout(user.id), [])
+      scriviJson(chiaveCacheWorkout(user.id),
+        cached.map(w => w.id === workoutToComplete.id ? { ...w, status: newStatus, notes: finalNote } : w))
     } else {
       const { error } = await supabase.from('athlete_workouts').update({ 
         status: newStatus,
