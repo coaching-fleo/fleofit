@@ -538,28 +538,46 @@ setNotifications(prev => {
     return { error }
   }
 
+  // Riporta un allenamento a "da fare". Prima era un tap singolo, silenzioso e
+  // irreversibile: un tocco storto lo scompletava senza chiedere niente. E il
+  // ramo offline non esisteva, quindi senza rete falliva e faceva rollback senza
+  // spiegazione — al contrario del completamento, che invece era già in coda.
+  const annullaCompletamento = async (workout) => {
+    const applica = (stato) => {
+      setTodayWorkouts(prev => prev.map(w => w.id === workout.id ? { ...w, status: stato } : w))
+      setWeeklyStatus(prev => prev.map(d => d.isToday
+        ? { ...d, workouts: d.workouts.map(dw => dw.id === workout.id ? { ...dw, status: stato } : dw) }
+        : d))
+    }
+    applica('pending')
+
+    const rete = await Network.getStatus()
+    if (!rete.connected) {
+      const coda = JSON.parse(localStorage.getItem('fleofit_offline_queue') || '[]')
+      coda.push({ type: 'UPDATE_WORKOUT', payload: { id: workout.id, status: 'pending', notes: workout.notes } })
+      localStorage.setItem('fleofit_offline_queue', JSON.stringify(coda))
+      const cache = JSON.parse(localStorage.getItem(`fleofit_cache_workouts_${user.id}`) || '[]')
+      localStorage.setItem(`fleofit_cache_workouts_${user.id}`,
+        JSON.stringify(cache.map(w => w.id === workout.id ? { ...w, status: 'pending' } : w)))
+      return
+    }
+
+    const { error } = await supabase.from('athlete_workouts').update({ status: 'pending' }).eq('id', workout.id)
+    if (error) {
+      applica(workout.status)
+      mostraErrore(error.message)
+    }
+  }
+
   const toggleTodayWorkout = async (e, workout) => {
     e.stopPropagation()
 
     if (workout.status === 'completed') {
-      const newStatus = 'pending'
-      setTodayWorkouts(prev => prev.map(w => w.id === workout.id ? { ...w, status: newStatus } : w))
-      setWeeklyStatus(prev => prev.map(d => {
-        if (d.isToday) {
-          return { ...d, workouts: d.workouts.map(dw => dw.id === workout.id ? { ...dw, status: newStatus } : dw) }
-        }
-        return d
-      }))
-      const { error } = await supabase.from('athlete_workouts').update({ status: newStatus }).eq('id', workout.id)
-      if (error) {
-         setTodayWorkouts(prev => prev.map(w => w.id === workout.id ? { ...w, status: workout.status } : w))
-         setWeeklyStatus(prev => prev.map(d => {
-           if (d.isToday) {
-             return { ...d, workouts: d.workouts.map(dw => dw.id === workout.id ? { ...dw, status: workout.status } : dw) }
-           }
-           return d
-         }))
-      }
+      setConfirmInfo({
+        title: 'Segnarlo come da fare?',
+        message: "L'allenamento torna fra quelli da completare. L'RPE e le note che hai scritto restano salvati.",
+        onConfirm: () => annullaCompletamento(workout)
+      })
       return
     }
 
@@ -1035,7 +1053,7 @@ setNotifications(prev => {
                       <div className="mt-4">
                         <button 
                           onClick={(e) => toggleTodayWorkout(e, todayWorkout)}
-                          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition border ${
+                          className={`inline-flex items-center justify-center gap-1.5 px-5 min-h-11 rounded-full text-sm font-bold transition border ${
                             todayWorkout.status === 'completed' 
                               ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30' 
                               : (todayIsEvent ? 'bg-[#111] border-[#333] text-white hover:border-white hover:text-white' : todayIsRun ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#0094C6] hover:text-[#0094C6]' : todayIsCustom ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#D11149] hover:text-[#D11149]' : 'bg-[#111] border-[#333] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]')
@@ -1833,7 +1851,7 @@ function VoiceRecorder({ onSave, onCancel }) {
               <button aria-label="Annulla la registrazione" onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
                 <Trash2 size={16} />
               </button>
-              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-9 h-9 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
+              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-11 h-11 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
                 <Square size={14} fill="currentColor" />
               </button>
             </div>

@@ -1224,7 +1224,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   return (
     <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
-        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
           <ChevronLeft size={22} className="-ml-0.5" />
         </button>
         <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
@@ -1987,6 +1987,9 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
   const [isClosing, setIsClosing] = useState(false);
   const [isOpening, setIsOpening] = useState(true);
   const timerRef = useRef(null);
+  // Rispecchia timeLeft senza entrare nelle dipendenze dell'effetto del timer.
+  const timeLeftRef = useRef(0);
+  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
   const shortBeepAudio = useRef(null);
   const longBeepAudio = useRef(null);
   const longerBeepAudio = useRef(null);
@@ -2220,63 +2223,66 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
     const currentStep = sequence[currentIdx];
     const isStopwatch = currentStep.type === 'stopwatch' || currentStep.type === 'done';
 
-    if (isStopwatch) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft(prev => prev + 1);
-      }, 1000);
-    } else {
-      let expected = performance.now() + 1000;
+    // Il tempo si deriva dall'OROLOGIO, non da un decremento per tick.
+    //
+    // Prima ogni tick faceva prev - 1: quando iOS sospende la webview (schermo
+    // bloccato, app in background, chiamata) i timer JS si fermano, e al ritorno
+    // il conteggio riprendeva da dov'era — sbagliato di tutto il tempo passato —
+    // oppure recuperava sparando decine di tick di fila, ognuno con il suo beep.
+    // Ancorando a Date.now() il valore è sempre corretto al risveglio, e il
+    // controllo sul salto impedisce la raffica di beep.
+    const partenza = Date.now();
+    const secondiIniziali = timeLeftRef.current;
+    let precedente = secondiIniziali;
 
-      const tick = () => {
-        const drift = performance.now() - expected;
-        
-        setTimeLeft(prev => {
-          if (isStopwatch) return prev + 1;
-          
-          const newTime = prev - 1;
+    const tick = () => {
+      const trascorsi = Math.floor((Date.now() - partenza) / 1000);
 
-          if (newTime < 0) {
-            // Transizione al prossimo step
-            if (currentIdx < sequence.length - 1) {
-              const nextStep = sequence[currentIdx + 1];
-              setCurrentIdx(currentIdx + 1);
-              
-              // Beep lungo di transizione o beep finale
-              if (nextStep.type === 'done') {
-                setIsRunning(false);
-                if (silentAudioRef.current) silentAudioRef.current.pause();
-              }
-             
-              return nextStep.duration || 0;
-            } else {
-              // Fine del workout
+      if (isStopwatch) {
+        setTimeLeft(secondiIniziali + trascorsi);
+      } else {
+        const restante = secondiIniziali - trascorsi;
+        const salto = precedente - restante;
+        precedente = restante;
+
+        if (restante < 0) {
+          if (currentIdx < sequence.length - 1) {
+            const nextStep = sequence[currentIdx + 1];
+            setCurrentIdx(currentIdx + 1);
+            setTimeLeft(nextStep.duration || 0);
+            if (nextStep.type === 'done') {
               setIsRunning(false);
               if (silentAudioRef.current) silentAudioRef.current.pause();
-              return 0;
             }
           } else {
-            // Beep del conto alla rovescia per 4, 3, 2, 1 secondi rimanenti
-            if (prev <= 4 && prev > 1) {
-              playBeep(600, 'sine', 0.2, false);
-            } else if (prev === 1) { // Beep di transizione quando manca 1 secondo (quindi a 0)
-              const nextStep = sequence[currentIdx + 1];
-              if (nextStep?.type === 'done') {
-                playBeep(1200, 'sine', 1.5, true);
-              } else {
-                playBeep(1200, 'sine', 1.0, true);
-              }
-            }
+            setIsRunning(false);
+            setTimeLeft(0);
+            if (silentAudioRef.current) silentAudioRef.current.pause();
           }
-          return newTime;
-        });
+          return;
+        }
 
-        expected += 1000;
-        timerRef.current = setTimeout(tick, Math.max(0, 1000 - drift));
-      };
-      timerRef.current = setTimeout(tick, 1000);
-    }
+        // I beep solo quando il tempo scorre normalmente (un secondo per tick).
+        // Dopo una sospensione il salto è grande: si aggiorna il numero, in
+        // silenzio, senza suonare i secondi che l'atleta non ha sentito.
+        if (salto === 1) {
+          if (restante >= 1 && restante <= 3) {
+            playBeep(600, 'sine', 0.2, false);
+          } else if (restante === 0) {
+            const nextStep = sequence[currentIdx + 1];
+            playBeep(1200, 'sine', nextStep?.type === 'done' ? 1.5 : 1.0, true);
+          }
+        }
+        setTimeLeft(restante);
+      }
 
-    return () => { if (timerRef.current) isStopwatch ? clearInterval(timerRef.current) : clearTimeout(timerRef.current) };
+      const prossimoConfine = partenza + (trascorsi + 1) * 1000 - Date.now();
+      timerRef.current = setTimeout(tick, Math.max(50, prossimoConfine));
+    };
+
+    timerRef.current = setTimeout(tick, Math.max(50, partenza + 1000 - Date.now()));
+
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [isRunning, currentIdx, sequence, playBeep]);
 
   const handleNext = () => {
@@ -2629,7 +2635,7 @@ function CustomAudioPlayer({ src, onDelete, role }) {
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={() => { setIsPlaying(false); setProgress(0); audioRef.current.currentTime = 0; setCurrentTime('0:00') }}
       />
-      <button aria-label={isPlaying ? 'Metti in pausa la nota vocale' : 'Riproduci la nota vocale'} onClick={togglePlay} className="w-10 h-10 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
+      <button aria-label={isPlaying ? 'Metti in pausa la nota vocale' : 'Riproduci la nota vocale'} onClick={togglePlay} className="w-11 h-11 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
         {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
       </button>
       <div className="flex-1 flex flex-col justify-center px-1">
@@ -2649,7 +2655,7 @@ function CustomAudioPlayer({ src, onDelete, role }) {
          </div>
       </div>
       {role === 'admin' && onDelete && (
-        <button aria-label="Elimina la nota vocale" onClick={onDelete} className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-500 transition shrink-0" title="Elimina vocale">
+        <button aria-label="Elimina la nota vocale" onClick={onDelete} className="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-red-500 transition shrink-0" title="Elimina vocale">
           <Trash2 size={18} />
         </button>
       )}
@@ -2896,7 +2902,7 @@ function VoiceRecorder({ onSave, onCancel }) {
               <button aria-label="Annulla la registrazione" onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
                 <Trash2 size={16} />
               </button>
-              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-9 h-9 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
+              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-11 h-11 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
                 <Square size={14} fill="currentColor" />
               </button>
             </div>

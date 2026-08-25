@@ -269,7 +269,7 @@ export default function Login() {
           }
           else if (isResetPassword) setIsResetPassword(false)
           else { setView('welcome'); setIsSignUp(false); }
-        }} className="absolute top-[calc(env(safe-area-inset-top)+1.25rem)] left-5 w-10 h-10 bg-[#2a2a2a] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white transition shadow-md z-10" aria-label="Torna indietro">
+        }} className="absolute top-[calc(env(safe-area-inset-top)+1.25rem)] left-5 w-11 h-11 bg-[#2a2a2a] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white transition shadow-md z-10" aria-label="Torna indietro">
           <ChevronLeft size={22} className="-ml-0.5" />
         </button>
         

@@ -458,7 +458,7 @@ export default function AthleteDetail() {
     <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       {role !== 'athlete' && !isOwnProfile ? (
         <div className="mb-6 mt-4 flex items-center gap-3">
-          <button aria-label="Torna alla lista atleti" onClick={() => navigate('/athletes')} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+          <button aria-label="Torna alla lista atleti" onClick={() => navigate('/athletes')} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
             <ChevronLeft size={22} className="-ml-0.5" />
           </button>
           <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
@@ -487,12 +487,12 @@ export default function AthleteDetail() {
               {athlete.instagram_url ? (
                 <a href={athlete.instagram_url.startsWith('http') ? athlete.instagram_url : `https://instagram.com/${athlete.instagram_url.replace(/^@/, '')}`} target="_blank" rel="noopener noreferrer" title="Instagram" className="flex items-center justify-center w-8 h-8 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 text-white rounded-full hover:opacity-80 transition shadow-md shadow-pink-500/20"><InstagramIcon size={16} /></a>
               ) : (
-                <button aria-label="Aggiungi il profilo Instagram" onClick={() => setSocialModalType('instagram')} title="Aggiungi Instagram" className="flex items-center justify-center w-8 h-8 bg-[#2a2a2a] text-gray-400 rounded-full hover:text-pink-500 hover:border-pink-500/50 transition border border-[#383838]"><InstagramIcon size={16} /></button>
+                <button aria-label="Aggiungi il profilo Instagram" onClick={() => setSocialModalType('instagram')} title="Aggiungi Instagram" className="flex items-center justify-center w-11 h-11 bg-[#2a2a2a] text-gray-400 rounded-full hover:text-pink-500 hover:border-pink-500/50 transition border border-[#383838]"><InstagramIcon size={16} /></button>
               )}
               {athlete.strava_url ? (
                 <a href={athlete.strava_url} target="_blank" rel="noopener noreferrer" title="Strava" className="flex items-center justify-center w-8 h-8 bg-[#fc4c02] text-white rounded-full hover:opacity-80 transition shadow-md shadow-[#fc4c02]/20"><Activity size={16} /></a>
               ) : (
-                <button aria-label="Aggiungi il profilo Strava" onClick={() => setSocialModalType('strava')} title="Aggiungi Strava" className="flex items-center justify-center w-8 h-8 bg-[#2a2a2a] text-gray-400 rounded-full hover:text-[#fc4c02] hover:border-[#fc4c02]/50 transition border border-[#383838]"><Activity size={16} /></button>
+                <button aria-label="Aggiungi il profilo Strava" onClick={() => setSocialModalType('strava')} title="Aggiungi Strava" className="flex items-center justify-center w-11 h-11 bg-[#2a2a2a] text-gray-400 rounded-full hover:text-[#fc4c02] hover:border-[#fc4c02]/50 transition border border-[#383838]"><Activity size={16} /></button>
               )}
             </div>
           </div>
@@ -1995,7 +1995,7 @@ function CustomAudioPlayer({ src, onDelete, role }) {
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={() => { setIsPlaying(false); setProgress(0); audioRef.current.currentTime = 0; setCurrentTime('0:00') }}
       />
-      <button aria-label={isPlaying ? 'Metti in pausa la nota vocale' : 'Riproduci la nota vocale'} onClick={togglePlay} className="w-10 h-10 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
+      <button aria-label={isPlaying ? 'Metti in pausa la nota vocale' : 'Riproduci la nota vocale'} onClick={togglePlay} className="w-11 h-11 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
         {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
       </button>
       <div className="flex-1 flex flex-col justify-center px-1">
@@ -2015,7 +2015,7 @@ function CustomAudioPlayer({ src, onDelete, role }) {
          </div>
       </div>
       {role === 'admin' && onDelete && (
-        <button aria-label="Elimina la nota vocale" onClick={onDelete} className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-500 transition shrink-0" title="Elimina vocale">
+        <button aria-label="Elimina la nota vocale" onClick={onDelete} className="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-red-500 transition shrink-0" title="Elimina vocale">
           <Trash2 size={18} />
         </button>
       )}
@@ -2262,7 +2262,7 @@ function VoiceRecorder({ onSave, onCancel }) {
               <button aria-label="Annulla la registrazione" onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
                 <Trash2 size={16} />
               </button>
-              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-9 h-9 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
+              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-11 h-11 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
                 <Square size={14} fill="currentColor" />
               </button>
             </div>

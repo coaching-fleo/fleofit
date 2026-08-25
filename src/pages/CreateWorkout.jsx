@@ -563,7 +563,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
               />
               <button aria-label="Avvia la dettatura" 
                 onClick={toggleListen}
-                className="absolute bottom-3 right-3 w-10 h-10 bg-[#2a2a2a] hover:bg-[#333] border border-[#444] rounded-full flex items-center justify-center text-[#a855f7] transition shadow-md"
+                className="absolute bottom-3 right-3 w-11 h-11 bg-[#2a2a2a] hover:bg-[#333] border border-[#444] rounded-full flex items-center justify-center text-[#a855f7] transition shadow-md"
                 title="Dettatura vocale"
               >
                 <Mic size={18} />
@@ -1805,7 +1805,7 @@ export default function CreateWorkout() {
           background: #0094C6;
         }
       `}</style>
-      <button aria-label="Torna indietro" onClick={handleBack} className="w-10 h-10 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0 mb-6">
+      <button aria-label="Torna indietro" onClick={handleBack} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0 mb-6">
         <X size={22} />
       </button>
       <h1 className="text-2xl font-bold text-[#f1ba17] mb-4">{editId ? 'Modifica Workout' : 'Crea Workout'}</h1>
