@@ -14,8 +14,18 @@ window.HTMLElement.prototype.scrollTo = vi.fn()
 
 // L'app decide fra ramo nativo e ramo web con Capacitor.isNativePlatform().
 // Nei test siamo sempre "web": è il ramo che jsdom sa eseguire.
+//
+// Serve anche registerPlugin: ogni plugin Capacitor lo invoca al caricamento del
+// modulo, quindi senza di lui nessuna pagina che ne importi uno si monta.
+// Restituisce un oggetto che risponde a qualunque metodo con una promise
+// risolta: nei test il ramo nativo non viene mai preso, ma i moduli devono
+// comunque caricarsi.
 vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => false, getPlatform: () => 'web' },
+  registerPlugin: () => new Proxy({}, {
+    get: () => vi.fn(() => Promise.resolve({ value: null })),
+  }),
+  WebPlugin: class {},
 }))
 
 // jsdom, in questa versione di Node, espone un localStorage inutilizzabile:

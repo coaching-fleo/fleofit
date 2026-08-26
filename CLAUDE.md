@@ -6,7 +6,7 @@
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **87 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **95 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -868,6 +868,9 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
     - **5 su `CreateWorkout` montato per intero** (26/08), che coprono la memoizzazione
       dal lato del *chiamante*: sono gli unici che si accorgono se qualcuno rimette
       un'arrow inline al call site. Vedi §9-quinquies.
+    - **8 su `Home` montata per intero** (26/08): il percorso offline completo —
+      completare e scompletare un workout senza rete, l'RPE dentro `notes`, la cache
+      che si ripara, la modale RPE che non resta bloccata. Vedi §9-sexies.
     - Restano scoperte **le pagine intere**: non si montano senza finti `supabase`,
       `react-router` e AuthContext (BACKLOG #19). Anche `processOfflineQueue` resta
       dentro Home e non è coperto: il ciclo di retry vuole un finto `supabase`.
@@ -931,6 +934,37 @@ quando l'atleta non ha modo di capire cos'è successo.
 lancia mai, rimuove il valore illeggibile e torna un fallback; `scriviJson` torna `false`
 invece di lanciare su quota piena. Meglio ripartire da zero che restare bloccati per sempre
 su un valore rotto.
+
+---
+
+## 9-sexies. Come si testa una pagina (26/08/2026)
+
+Per un anno "le pagine non si possono testare" è stata una convinzione, non un fatto.
+Quando finalmente ci si è provati, gli ostacoli erano **due righe di infrastruttura**:
+
+1. **jsdom espone un `localStorage` rotto** in questa versione di Node
+   (`getItem is not a function`, è l'origine del warning `--localstorage-file`). Ogni
+   pagina lo legge in un effetto, quindi nessuna si montava. Rimpiazzato con uno in
+   memoria in `src/test/setup.js`.
+2. **`registerPlugin` mancava** nel finto `@capacitor/core`: ogni plugin lo invoca al
+   caricamento del modulo, quindi bastava importarne uno per far fallire tutto.
+
+Gli strumenti che ne sono usciti, riutilizzabili per le pagine che mancano:
+- `src/test/fintoSupabase.js` — riproduce la catena fluente con un **Proxy**: qualunque
+  metodo torna la catena, e la catena è *thenable*, così `await` funziona ovunque la si
+  chiuda (`.limit()`, `.single()`, `await` diretto). Non serve conoscere l'API.
+  `risposte` e `erroreSu` accettano **funzioni**, valutate a ogni query: è l'unico modo
+  di far fallire il fetch a metà test.
+- `src/test/montaPagina.jsx` — router e **AuthContext veri**, non finti.
+
+> 🔴 **La lezione più importante, e vale per qualunque test futuro.**
+> I primi test su `Home` **passavano tutti, e non coprivano niente**: verificato per
+> mutazione, due dei più importanti non si accorgevano del bug che dicevano di
+> proteggere. Il motivo era nella preparazione dello scenario — se il fetch RIESCE,
+> `scriviJson` sovrascrive subito la cache corrotta con dati validi, quindi al momento
+> del clic il valore illeggibile non esiste più. Il test esercitava un percorso pulito
+> credendo di esercitarne uno rotto.
+> **Un test verde non dice niente finché non lo si è visto fallire.**
 
 ---
 
