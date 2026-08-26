@@ -449,10 +449,19 @@ credenziale APNs mancante o scaduta. Su Firebase Console → Cloud Messaging dev
 **APNs Authentication Key `.p8`** (copre sandbox e produzione, non scade) e non un certificato
 `.p12`. Se manca, le push non funzionano **per nessuno**, neanche dall'App Store.
 
-⚠️ **Controllo pre-archive**: `App.entitlements` dichiara `aps-environment = development` ed è usato
-sia in Debug sia in Release. Xcode dovrebbe sostituirlo con `production` archiviando con un profilo
-App Store, ma va confermato sul binario esportato:
-`codesign -d --entitlements - --xml Payload/App.app | plutil -p - | grep aps-environment`
+✅ **Verificato il 25/08/2026 sul binario spedito**: `aps-environment = production`.
+`App.entitlements` dichiara `development` ed è usato in entrambe le configurazioni, ma questo
+**non è un problema**: l'archivio è firmato col profilo di sviluppo del team
+("iOS Team Provisioning Profile", `get-task-allow = true`) ed è l'**export** che rifirma con il
+profilo di distribuzione sostituendo `production`. Quindi **ispezionare l'archivio non risponde
+alla domanda**: serve l'`.ipa` esportato.
+Si rifà così, senza caricare niente (`destination = export` nel plist):
+```bash
+xcodebuild -exportArchive -archivePath <archivio.xcarchive> \
+  -exportOptionsPlist tools/ExportOptions-AppStore.plist \
+  -exportPath /tmp/fleofit-export -allowProvisioningUpdates
+./tools/verifica-ipa.sh /tmp/fleofit-export
+```
 
 ### Secrets attesi (Supabase)
 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
@@ -922,10 +931,16 @@ su un valore rotto.
 - **22 mag 2026** — caricata `1.1.0 (2)`. **Respinta** con **2.3.1(a) Hidden features** e
   **3.2.1(viii) Financial Services**.
 - **24 ago 2026** — correzioni applicate nel commit `fc81404`, caricata `1.1.0 (3)`.
-  ⚠️ Il `pbxproj` era rimasto a `CURRENT_PROJECT_VERSION = 1` mentre su App Store Connect la (2)
-  era già bruciata: Xcode ha incrementato da solo a 3 in fase di distribuzione. Il progetto è stato
-  riallineato a 3 in `5c02b81`. **Prima di archiviare, controllare il build number reale su ASC**,
-  non fidarsi del pbxproj.
+- **25 ago 2026** — ✅ punti 1 e 2 del backlog **verificati sul binario vero** (vedi sopra e
+  `tools/verifica-ipa.sh`). Resta solo il punto 3: il gesto di assegnare un workout da
+  `demo@fleofit.it`, che richiede le credenziali e non è automatizzabile.
+
+> ℹ️ **Il build number del `pbxproj` NON è quello spedito, ed è normale.** Con
+> `method: app-store-connect`, `manageAppVersionAndBuildNumber` vale YES per impostazione
+> predefinita: Xcode alza da solo il numero oltre l'ultimo presente su App Store Connect.
+> Misurato il 25/08/2026 sullo stesso archivio: `pbxproj` = 3, archivio = **2**, ipa esportato
+> = **4**. È la spiegazione dell'incremento "misterioso" del 24/08, che questo documento
+> attribuiva a una svista. Non serve riallineare il pbxproj a mano.
 
 > 🔴 **AGGIORNAMENTO 24/08/2026 — la causa del rifiuto NON è stata rimossa del tutto.**
 > `demo@fleofit.it` è stata aggiunta al bundle e a `send-reminders`, ma **non alle policy RLS**

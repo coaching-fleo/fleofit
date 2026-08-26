@@ -36,14 +36,30 @@ esito "bundle id" "$BID" "it.federicoleo.fleofit"
 # 4. Build number: deve essere MAGGIORE di quelli già bruciati su ASC.
 VER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" 2>/dev/null)
 BLD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" 2>/dev/null)
-echo "ℹ️  versione: $VER ($BLD) — su ASC sono già usate la (2) e la (3): questa deve essere ≥ 4"
+echo "ℹ️  versione: $VER ($BLD)"
+echo "   Xcode rinumera da solo: con method app-store-connect,"
+echo "   manageAppVersionAndBuildNumber vale YES per impostazione predefinita e"
+echo "   il build number viene alzato oltre l'ultimo presente su App Store Connect."
+echo "   Quindi il numero nel pbxproj NON è quello spedito. Verificato il 25/08/2026:"
+echo "   pbxproj = 3, archivio = 2, ipa esportato = 4."
 
 # 5. BACKLOG punto 2 — è il controllo mancato a maggio, quello del rifiuto 2.3.1(a).
-if grep -lq "demo@fleofit.it" "$APP"/*.js "$APP"/assets/*.js 2>/dev/null; then
-  echo "✅ demo@fleofit.it presente nel bundle JS"
-else
-  echo "❌ demo@fleofit.it ASSENTE dal bundle: è la causa del rifiuto di maggio"
-fi
+#    ⚠️ In un'app Capacitor il bundle web sta in App.app/public/assets, NON nella
+#    radice del .app. La prima versione di questo script cercava nel posto
+#    sbagliato e dava un falso negativo (25/08/2026): cerca ricorsivamente.
+#    Si controllano TUTTE le email, non solo demo: se ADMIN_EMAILS non è finita
+#    nel bundle compilato, il ruolo coach è irraggiungibile per chiunque.
+MANCANTI=0
+for MAIL in coaching@federicoleo.it alessandro.patrone@hotmail.it \
+            federico_leo@hotmail.it federico.leo88@gmail.com demo@fleofit.it; do
+  if grep -rqs -- "$MAIL" "$APP"; then
+    echo "✅ $MAIL nel bundle"
+  else
+    echo "❌ $MAIL ASSENTE dal bundle"
+    MANCANTI=$((MANCANTI + 1))
+  fi
+done
+[[ $MANCANTI -gt 0 ]] && echo "   ⚠️ demo@fleofit.it assente = rifiuto 2.3.1(a), è successo a maggio"
 
 # 6. Residui che avevano insospettito lo scanner di Apple.
 for parola in cloud-sync "Modalità Bunker" cleartext; do

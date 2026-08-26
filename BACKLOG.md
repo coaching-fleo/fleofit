@@ -14,15 +14,22 @@
 
 | # | Cosa | Perché |
 |---|---|---|
-| 1 | `aps-environment` sul binario esportato deve dire `production` | Il file dichiara `development` ed è usato in **entrambe** le configurazioni. Xcode dovrebbe sostituirlo archiviando con un profilo App Store, ma se non lo facesse **nessun utente riceverebbe le push** e te ne accorgeresti solo dopo la pubblicazione |
-| 2 | `grep -l "demo@fleofit.it" dist/assets/*.js` deve stampare un file | È il controllo che è mancato a maggio e che ha causato il rifiuto 2.3.1(a) |
-| 3 | `demo@fleofit.it` deve riuscire ad **assegnare** un workout | Le policy sono verificate a livello di database (`check_ok = true`), ma il gesto non è mai stato provato da quell'account |
+| ~~1~~ | ✅ **CHIUSO il 25/08/2026.** `aps-environment = production`, `get-task-allow` assente, bundle id senza il suffisso `.dev`. Verificato sull'`.ipa` esportato con `tools/verifica-ipa.sh`, non sul sorgente | L'archivio dichiara `development` ed è **normale**: è firmato col profilo di sviluppo del team, ed è l'*export* che rifirma con quello di distribuzione. Guardare l'archivio non risponde alla domanda |
+| ~~2~~ | ✅ **CHIUSO il 25/08/2026.** Tutte e cinque le email di `ADMIN_EMAILS` sono nel binario spedito, `demo@fleofit.it` compresa | È il controllo che è mancato a maggio e che ha causato il rifiuto 2.3.1(a). ⚠️ In un'app Capacitor il bundle sta in `App.app/public/assets`, **non** nella radice del `.app`: cercare nel posto sbagliato dà un falso negativo, ed è successo |
+| 3 | `demo@fleofit.it` deve riuscire ad **assegnare** un workout — **è l'unico rimasto** | Le tre porte che l'assegnazione attraversa sono verificate sul database vivo il 25/08: INSERT su `athlete_workouts` (`with_check` ✅), il `.select('id')` sulle righe inserite (`qual` ✅) e `send-reminders` mode `immediate` (`_shared/admin.ts` ✅). Ma **il gesto non è mai stato provato**. Vedi `tools/verifica-revisore.sql` |
 | 4 | `npx cap sync ios` prima dell'archive | Altrimenti il progetto Xcode resta indietro rispetto a `dist/` |
 
-**Comando per il punto 1**, sull'`.ipa` esportato:
+**Come si rifà tutto**, quando ci sarà una build nuova. L'export scrive su disco e
+**non carica niente** (`destination = export`):
 ```bash
-codesign -d --entitlements - --xml Payload/App.app 2>/dev/null | plutil -p - | grep aps-environment
+xcodebuild -exportArchive -archivePath <archivio.xcarchive> -exportOptionsPlist tools/ExportOptions-AppStore.plist -exportPath /tmp/fleofit-export -allowProvisioningUpdates && ./tools/verifica-ipa.sh /tmp/fleofit-export
 ```
+
+> ℹ️ **Il build number nel `pbxproj` non è quello spedito, e va bene così.**
+> Con `method: app-store-connect`, `manageAppVersionAndBuildNumber` vale YES per
+> impostazione predefinita: Xcode alza da solo il numero oltre l'ultimo presente su
+> App Store Connect. Misurato il 25/08/2026: `pbxproj` = 3, archivio = 2, ipa = **4**.
+> È la spiegazione dell'incremento "misterioso" del 24/08 annotato in CLAUDE.md §9-ter.
 
 ---
 
