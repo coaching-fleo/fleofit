@@ -1,4 +1,14 @@
-@import "tailwindcss";
+/* 🔴 `source(none)` disattiva la scoperta automatica delle classi, e la sorgente
+   viene dichiarata esplicitamente qui sotto.
+   Senza, Tailwind scandaglia TUTTO il progetto — compresi i file .md. CLAUDE.md e
+   DESIGN.md contengono classi come `bg-[#f1ba17]` come esempi di documentazione,
+   e Tailwind ci generava sopra regole vere, finite nel CSS di produzione.
+   Scoperto il 26/08/2026 verificando che un rebranding fosse davvero una modifica
+   di una riga: quattro regole tenevano in vita il vecchio giallo, e venivano dagli
+   ESEMPI NELLA DOCUMENTAZIONE. */
+@import "tailwindcss" source(none);
+@source "../src";
+@source "../index.html";
 
 @theme {
   --color-brand: #f1ba17;
@@ -9,6 +19,19 @@
      card: sotto il minimo AA di 4.5:1. Questo dà 4.98:1 e resta un gradino
      sotto gray-400, quindi la gerarchia a più livelli sopravvive. */
   --color-muted: #848d9c;
+
+  /* ── Colori di categoria ────────────────────────────────────────────────
+     Erano ripetuti come valori arbitrari (`text-[#0094C6]`) in centinaia di
+     punti. I VALORI non cambiano — CLAUDE.md regola 3 — cambia solo il fatto
+     che ora esistano in un posto solo: è la condizione perché il rebranding
+     indicato in PRODUCT.md sia una modifica di questo file e non un
+     find&replace su 1.447 punti (BACKLOG #18).
+
+     ⚠️ Chi tocca questi valori cambia l'aspetto di TUTTA l'app. I colori
+     attuali sono quelli giusti: non proporne altri senza richiesta esplicita. */
+  --color-running: #0094C6;   /* categoria Running, picker corsa */
+  --color-custom: #D11149;    /* categoria Custom / allenamento autonomo */
+  --color-ia: #a855f7;        /* generazione con IA, note vocali */
 }
 
 * {

@@ -27,6 +27,7 @@ import { mostraErrore } from '../lib/alert'
 import { TYPE_COLORS } from '../lib/blockColors'
 import { sincronizzaBadge } from '../lib/badge'
 import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/timerSequence'
+import { BRAND, RUNNING, coloreCategoria, conVelo } from '../lib/colori'
 
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
@@ -1088,10 +1089,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   return (
     <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
-        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0">
           <ChevronLeft size={22} className="-ml-0.5" />
         </button>
-        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
       </div>
 
       {/* OFFLINE BANNER */}
@@ -1137,7 +1138,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 <MonitorUp size={14} /> Scollega
               </button>
             ) : (
-              <button onClick={() => setTvModalOpen(true)} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl" title="Trasmetti alla TV">
+              <button onClick={() => setTvModalOpen(true)} className="text-gray-400 hover:text-brand text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl" title="Trasmetti alla TV">
                 <MonitorUp size={14} /> TV
               </button>
             )}
@@ -1157,7 +1158,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               </button>
             )}
             {isAuto && (
-              <button onClick={openEditAutonomous} className="text-gray-400 hover:text-[#f1ba17] text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl">
+              <button onClick={openEditAutonomous} className="text-gray-400 hover:text-brand text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl">
                 <Edit size={14} /> Modifica
               </button>
             )}
@@ -1175,7 +1176,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             className={`w-full mt-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 text-base font-bold transition border shadow-lg ${
               workoutStatus === 'completed' 
                 ? 'bg-green-500 text-black border-green-500 hover:brightness-110 shadow-green-500/20' 
-                : 'bg-[#2a2a2a] border-[#383838] text-white hover:border-[#f1ba17] hover:text-[#f1ba17]'
+                : 'bg-[#2a2a2a] border-[#383838] text-white hover:border-brand hover:text-brand'
             }`}
           >
             {workoutStatus === 'completed' ? <CheckCircle2 size={20} /> : <Circle size={20} />} 
@@ -1206,10 +1207,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 : connectedTvCode 
                   ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-blue-500/20' 
                   : type === 'Custom' 
-                    ? 'bg-gradient-to-r from-[#D11149] to-red-600 text-white shadow-[#D11149]/20' 
+                    ? 'bg-gradient-to-r from-custom to-red-600 text-white shadow-custom/20' 
                     : type === 'Running' 
-                      ? 'bg-gradient-to-r from-[#0094C6] to-cyan-500 text-white shadow-[#0094C6]/20' 
-                      : 'bg-gradient-to-r from-[#f1ba17] to-yellow-500 text-black shadow-[#f1ba17]/20'
+                      ? 'bg-gradient-to-r from-running to-cyan-500 text-white shadow-running/20' 
+                      : 'bg-gradient-to-r from-brand to-yellow-500 text-black shadow-brand/20'
             }`}>
             {timerOpen && !timerMinimized ? (
               <><ChevronDown size={24} className="stroke-[2.5]" /> Minimizza {connectedTvCode ? 'Telecomando' : 'Timer'}</>
@@ -1249,12 +1250,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           </Section>
         ))
       ) : type === 'Event' ? (
-         <div className="bg-gradient-to-r from-[#2a2a2a] to-[#111] border border-[#f1ba17]/30 rounded-3xl p-8 text-center mb-6 shadow-lg shadow-[#f1ba17]/5">
-           <div className="w-20 h-20 bg-gradient-to-br from-[#f1ba17] to-yellow-600 text-black rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+         <div className="bg-gradient-to-r from-[#2a2a2a] to-[#111] border border-brand/30 rounded-3xl p-8 text-center mb-6 shadow-lg shadow-brand/5">
+           <div className="w-20 h-20 bg-gradient-to-br from-brand to-yellow-600 text-black rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
              <CalendarDays size={36} />
            </div>
            <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Evento / Gara</h2>
-           <p className="text-[#f1ba17] font-medium text-sm">Questo è il giorno dedicato al tuo obiettivo.</p>
+           <p className="text-brand font-medium text-sm">Questo è il giorno dedicato al tuo obiettivo.</p>
            <p className="text-gray-400 text-sm mt-1">Vai e spacca tutto! 🚀</p>
          </div>
       ) : type === 'Custom' ? (
@@ -1269,14 +1270,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
       {/* NOTE COACH */}
       {type !== 'Custom' && workout.coach_notes && (
-        <Section icon={<span className="text-[#f1ba17] text-sm">📋</span>} label="Note Coach" color="border-[#f1ba17]/40">
+        <Section icon={<span className="text-brand text-sm">📋</span>} label="Note Coach" color="border-brand/40">
           <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{workout.coach_notes}</p>
         </Section>
       )}
 
       {/* NOTE VOCALE COACH */}
       {athleteWorkoutId && (role === 'admin' || voiceNoteUrl) && (
-        <Section icon={<Mic size={16} className="text-[#f1ba17]" />} label={voiceNoteUrl ? `Messaggio dal Coach a ${currentAthleteName || 'Atleta'}` : `Invia vocale a ${currentAthleteName || 'Atleta'}`} color="border-[#f1ba17]/40">
+        <Section icon={<Mic size={16} className="text-brand" />} label={voiceNoteUrl ? `Messaggio dal Coach a ${currentAthleteName || 'Atleta'}` : `Invia vocale a ${currentAthleteName || 'Atleta'}`} color="border-brand/40">
            {voiceNoteUrl ? (
              <CustomAudioPlayer src={voiceNoteUrl} onDelete={deleteVoiceNote} role={role} />
            ) : role === 'admin' ? (
@@ -1349,18 +1350,18 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       {role !== 'athlete' && assignments.length > 0 && (
         <div className="mb-6 mt-2">
           <h2 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
-            <Users size={20} className="text-[#f1ba17]" />
+            <Users size={20} className="text-brand" />
             Assegnato a {assignments.length} atleti
           </h2>
           <div className="flex flex-col gap-3">
             {assignments.map(a => {
               const isSelected = queryAthleteId === a.athletes?.id;
               return (
-              <div key={a.id} onClick={() => navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`)} className={`bg-[#1e1e1e] border ${isSelected ? 'border-[#f1ba17]' : 'border-[#2a2a2a] hover:border-[#f1ba17]/50'} rounded-2xl p-4 cursor-pointer transition`}>
+              <div key={a.id} onClick={() => navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`)} className={`bg-[#1e1e1e] border ${isSelected ? 'border-brand' : 'border-[#2a2a2a] hover:border-brand/50'} rounded-2xl p-4 cursor-pointer transition`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div 
-                      className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333] hover:border-[#f1ba17] transition"
+                      className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333] hover:border-brand transition"
                       title="Vai al profilo dell'atleta"
                       onClick={(e) => { e.stopPropagation(); navigate(`/athletes/${a.athletes?.id}`); }}
                     >
@@ -1371,7 +1372,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                       )}
                     </div>
                     <div>
-                      <p className={`font-semibold text-sm transition ${isSelected ? 'text-[#f1ba17]' : 'text-white'}`}>{a.athletes?.name} {a.athletes?.surname}</p>
+                      <p className={`font-semibold text-sm transition ${isSelected ? 'text-brand' : 'text-white'}`}>{a.athletes?.name} {a.athletes?.surname}</p>
                       <p className="text-muted text-xs capitalize">{format(parseISO(a.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
                     </div>
                   </div>
@@ -1400,7 +1401,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       <div className="flex flex-col sm:flex-row gap-3 mt-6">
         {type !== 'Event' && (
           <button onClick={exportPDF}
-            className="flex-1 flex items-center justify-center gap-2 bg-[#222] border border-[#333] text-white font-semibold py-4 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition">
+            className="flex-1 flex items-center justify-center gap-2 bg-[#222] border border-[#333] text-white font-semibold py-4 rounded-2xl hover:border-brand hover:text-brand transition">
             <Download size={18} /> Esporta PDF
           </button>
         )}
@@ -1420,7 +1421,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       {role !== 'athlete' && (
         <div className="mt-3">
           <button onClick={() => { setAssignModalOpen(true); setSelectedAthletes([]); setAssignStep(1); }}
-            className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-4 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition">
+            className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-4 rounded-2xl hover:border-brand hover:text-brand transition">
             <Users size={18} /> Assegna ad Atleta
           </button>
         </div>
@@ -1446,14 +1447,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               <div>
                 <div style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '0.5px', lineHeight: 1 }}>
                   <span style={{ color: '#fff' }}>FLEO</span>
-                  <span style={{ color: '#f1ba17' }}>FIT</span>
+                  <span style={{ color: BRAND }}>FIT</span>
                 </div>
                 <div style={{ color: '#888', fontSize: '16px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '6px' }}>
                   {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'dd MMM yyyy', { locale: it }) : ''}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: type === 'Running' ? 'rgba(0, 148, 198, 0.2)' : (type === 'Event' ? '#fff' : (type === 'Custom' ? 'rgba(209, 17, 73, 0.2)' : 'rgba(241, 186, 23, 0.2)')), color: type === 'Running' ? '#0094C6' : (type === 'Event' ? '#000' : (type === 'Custom' ? '#D11149' : '#f1ba17')), padding: '6px 12px', borderRadius: '8px', fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: conVelo(coloreCategoria(type), 0.2), color: type === 'Event' ? '#000' : coloreCategoria(type), padding: '6px 12px', borderRadius: '8px', fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
                   {type}
                 </div>
                 {workout.sections?.intensity && (
@@ -1501,7 +1502,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
                 return (
                   <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', background: 'rgba(255,255,255,0.04)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                     <div style={{ fontSize: '15px', fontWeight: 900, color: '#f1ba17', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{shortTitle}</div>
+                     <div style={{ fontSize: '15px', fontWeight: 900, color: BRAND, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{shortTitle}</div>
                      {!['WarmUp', 'Rest'].includes(b.type) && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                            {(b.exercises || []).map((ex, j) => {
@@ -1535,7 +1536,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
                 return (
                   <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', background: 'rgba(0,148,198,0.05)', borderRadius: '16px', border: '1px solid rgba(0,148,198,0.1)' }}>
-                     <div style={{ fontSize: '15px', fontWeight: 900, color: '#0094C6', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</div>
+                     <div style={{ fontSize: '15px', fontWeight: 900, color: RUNNING, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</div>
                      {step.type === 'repeat' ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                            <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1587,7 +1588,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                       <span className="text-gray-400 text-sm">Seleziona atleti:</span>
                       <button 
                         onClick={() => setSelectedAthletes(selectedAthletes.length === athletes.length ? [] : [...athletes])}
-                        className="text-[#f1ba17] text-xs font-semibold hover:underline"
+                        className="text-brand text-xs font-semibold hover:underline"
                       >
                         {selectedAthletes.length === athletes.length ? 'Deseleziona tutti' : 'Seleziona tutti'}
                       </button>
@@ -1602,7 +1603,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                             setSelectedAthletes([...selectedAthletes, a]);
                           }
                         }}
-                          className={`flex items-center justify-between bg-[#2a2a2a] border rounded-2xl p-3 hover:border-[#f1ba17] transition text-left ${isSelected ? 'border-[#f1ba17]' : 'border-[#333]'}`}>
+                          className={`flex items-center justify-between bg-[#2a2a2a] border rounded-2xl p-3 hover:border-brand transition text-left ${isSelected ? 'border-brand' : 'border-[#333]'}`}>
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 rounded-full bg-[#1e1e1e] border border-[#444] flex items-center justify-center overflow-hidden shrink-0">
                               {a.photo_url
@@ -1614,7 +1615,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                               <p className="text-white font-semibold">{a.name} {a.surname}</p>
                             </div>
                           </div>
-                          <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${isSelected ? 'bg-[#f1ba17] border-[#f1ba17]' : 'border-[#555] bg-[#111]'}`}>
+                          <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${isSelected ? 'bg-brand border-brand' : 'border-[#555] bg-[#111]'}`}>
                             {isSelected && <Check size={14} className="text-black" />}
                           </div>
                         </button>
@@ -1623,7 +1624,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                   </>
                 )}
                 {selectedAthletes.length > 0 && (
-                  <button onClick={() => setAssignStep(2)} className="w-full mt-3 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition sticky bottom-0 shadow-lg">
+                  <button onClick={() => setAssignStep(2)} className="w-full mt-3 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition sticky bottom-0 shadow-lg">
                     Procedi ({selectedAthletes.length})
                   </button>
                 )}
@@ -1639,14 +1640,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                   <CustomDatePicker
                     date={assignDate}
                     onChange={setAssignDate}
-                    className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] text-base w-full"
+                    className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-brand text-base w-full"
                   />
                 </div>
                 <div className="flex gap-3 mt-2">
                   <button onClick={() => setAssignStep(1)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
                     Indietro
                   </button>
-                  <button onClick={handleAssignMultiple} disabled={assigning} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+                  <button onClick={handleAssignMultiple} disabled={assigning} className="flex-1 py-3 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
                     {assigning ? 'Assegno...' : 'Conferma'}
                   </button>
                 </div>
@@ -1669,7 +1670,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-muted font-normal">(facoltativo)</span></label>
                 <input 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand w-full text-base"
                   value={autonomousForm.title}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
                   placeholder={generaTitolo(autonomousForm.date)}
@@ -1680,13 +1681,13 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 <CustomDatePicker
                   date={autonomousForm.date}
                   onChange={(d) => setAutonomousForm({ ...autonomousForm, date: d })}
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full text-base"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-brand w-full text-base"
                 />
               </div>
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Descrizione / Note</label>
                 <textarea 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base resize-none"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand w-full text-base resize-none"
                   rows={3}
                   value={autonomousForm.notes}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, notes: e.target.value })}
@@ -1696,7 +1697,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               <button 
                 onClick={handleSaveAutonomous}
                 disabled={savingAutonomous}
-                className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
+                className="w-full mt-2 py-3 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
               >
                 {savingAutonomous ? 'Salvataggio...' : 'Conferma'}
               </button>
@@ -1765,7 +1766,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
           <div className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isTvInputFocused ? '-translate-y-32' : ''}`}>
             <div className="flex justify-between items-center mb-2">
-               <h2 className="text-xl font-bold text-white flex items-center gap-2"><MonitorUp size={24} className="text-[#f1ba17]" /> Trasmetti in TV</h2>
+               <h2 className="text-xl font-bold text-white flex items-center gap-2"><MonitorUp size={24} className="text-brand" /> Trasmetti in TV</h2>
                <button aria-label="Chiudi" onClick={() => setTvModalOpen(false)} className="text-muted hover:text-white"><X size={20} /></button>
             </div>
             <p className="text-gray-400 text-sm text-left">
@@ -1776,7 +1777,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={4}
-              className="bg-[#111] border border-[#333] rounded-xl px-4 py-4 text-white text-center text-3xl font-black tracking-[0.5em] focus:outline-none focus:border-[#f1ba17] w-full"
+              className="bg-[#111] border border-[#333] rounded-xl px-4 py-4 text-white text-center text-3xl font-black tracking-[0.5em] focus:outline-none focus:border-brand w-full"
               value={tvCode}
               onChange={(e) => setTvCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
               onFocus={() => setIsTvInputFocused(true)}
@@ -1786,7 +1787,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             <button 
               onClick={handleConnectTV}
               disabled={tvConnecting || tvCode.length !== 4}
-              className="w-full mt-2 py-4 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 text-lg"
+              className="w-full mt-2 py-4 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 text-lg"
             >
               {tvConnecting ? 'Connessione...' : 'Trasmetti ora'}
             </button>
@@ -1836,14 +1837,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 }
 
 const SCHEMES = {
-  prep:  { bg: 'bg-[#f1ba17]', text: 'text-black', sub: 'text-black/70', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-[#f1ba17]' },
-  run:   { bg: 'bg-[#0094C6]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#0094C6]' },
+  prep:  { bg: 'bg-brand', text: 'text-black', sub: 'text-black/70', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-brand' },
+  run:   { bg: 'bg-running', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-running' },
   rest:  { bg: 'bg-[#1e1e1e]', text: 'text-green-400', sub: 'text-green-500/80', card: 'bg-[#111] border-green-500/20 text-green-400', cardLabel: 'text-green-500/60', icon: 'text-gray-400', btnBg: 'bg-green-500 text-black' },
-  hyrox: { bg: 'bg-[#D11149]', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-[#D11149]' },
-  emom:  { bg: 'bg-[#111]', text: 'text-[#f1ba17]', sub: 'text-[#f1ba17]/80', card: 'bg-[#1e1e1e] border-[#f1ba17]/20 text-[#f1ba17]', cardLabel: 'text-[#f1ba17]/60', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
-  base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-muted', icon: 'text-gray-400', btnBg: 'bg-[#f1ba17] text-black' },
+  hyrox: { bg: 'bg-custom', text: 'text-white', sub: 'text-white/80', card: 'bg-black/20 border-white/10 text-white', cardLabel: 'text-white/60', icon: 'text-white', btnBg: 'bg-white text-custom' },
+  emom:  { bg: 'bg-[#111]', text: 'text-brand', sub: 'text-brand/80', card: 'bg-[#1e1e1e] border-brand/20 text-brand', cardLabel: 'text-brand/60', icon: 'text-gray-400', btnBg: 'bg-brand text-black' },
+  base:  { bg: 'bg-[#0B0B0B]', text: 'text-white', sub: 'text-gray-400', card: 'bg-[#1e1e1e] border-[#333] text-white', cardLabel: 'text-muted', icon: 'text-gray-400', btnBg: 'bg-brand text-black' },
   done:  { bg: 'bg-green-500', text: 'text-black', sub: 'text-black/80', card: 'bg-black/10 border-black/20 text-black', cardLabel: 'text-black/60', icon: 'text-black', btnBg: 'bg-black text-green-500' },
-  custom: { bg: 'bg-[#0B0B0B]', text: 'text-[#D11149]', sub: 'text-[#D11149]/80', card: 'bg-[#1e1e1e] border-[#D11149]/20 text-[#D11149]', cardLabel: 'text-[#D11149]/60', icon: 'text-gray-400', btnBg: 'bg-[#D11149] text-white' }
+  custom: { bg: 'bg-[#0B0B0B]', text: 'text-custom', sub: 'text-custom/80', card: 'bg-[#1e1e1e] border-custom/20 text-custom', cardLabel: 'text-custom/60', icon: 'text-gray-400', btnBg: 'bg-custom text-white' }
 }
 
 function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle, heartRate }) {
@@ -2322,17 +2323,17 @@ return createPortal(
           <span className="text-[200px] drop-shadow-[0_0_60px_rgba(255,255,255,0.4)] animate-bounce" style={{ animationDuration: '0.6s' }}>{reaction}</span>
         )}
         {reactionType === 'voice' && (
-          <div className="bg-[#111]/90 backdrop-blur-md border-2 border-[#f1ba17]/50 rounded-[2rem] px-8 py-6 flex items-center gap-5 shadow-[0_0_50px_rgba(241,186,23,0.3)]">
-            <div className="w-16 h-16 rounded-full bg-[#f1ba17] flex items-center justify-center animate-pulse shrink-0 shadow-lg shadow-[#f1ba17]/40">
+          <div className="bg-[#111]/90 backdrop-blur-md border-2 border-brand/50 rounded-[2rem] px-8 py-6 flex items-center gap-5 shadow-[0_0_50px] shadow-brand/30">
+            <div className="w-16 h-16 rounded-full bg-brand flex items-center justify-center animate-pulse shrink-0 shadow-lg shadow-brand/40">
                <Mic size={32} className="text-black" />
             </div>
             <div className="flex flex-col">
-              <span className="text-[#f1ba17] font-black text-xs uppercase tracking-widest mb-0.5">Walkie-Talkie</span>
+              <span className="text-brand font-black text-xs uppercase tracking-widest mb-0.5">Walkie-Talkie</span>
               <span className="text-white font-bold text-xl leading-tight">Messaggio dal Coach</span>
             </div>
             <div className="flex items-center gap-1.5 ml-4 h-8 shrink-0">
                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="w-1.5 bg-[#f1ba17] rounded-full animate-bounce" style={{ height: '100%', animationDelay: `${i * 0.15}s`, animationDuration: '0.8s' }}></div>
+                  <div key={i} className="w-1.5 bg-brand rounded-full animate-bounce" style={{ height: '100%', animationDelay: `${i * 0.15}s`, animationDuration: '0.8s' }}></div>
                ))}
             </div>
           </div>
@@ -2359,7 +2360,7 @@ function RunningList({ steps }) {
   const getTypeColor = (t) => {
     switch(t) {
       case 'warmup': return 'text-orange-400'
-      case 'run': return 'text-[#0094C6]'
+      case 'run': return 'text-running'
       case 'recover': return 'text-green-400'
       case 'cooldown': return 'text-gray-400'
       case 'repeat': return 'text-purple-400'
@@ -2504,7 +2505,7 @@ function CustomAudioPlayer({ src, onDelete, role }) {
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={() => { setIsPlaying(false); setProgress(0); audioRef.current.currentTime = 0; setCurrentTime('0:00') }}
       />
-      <button aria-label={isPlaying ? 'Metti in pausa la nota vocale' : 'Riproduci la nota vocale'} onClick={togglePlay} className="w-11 h-11 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
+      <button aria-label={isPlaying ? 'Metti in pausa la nota vocale' : 'Riproduci la nota vocale'} onClick={togglePlay} className="w-11 h-11 rounded-full bg-brand flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
         {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
       </button>
       <div className="flex-1 flex flex-col justify-center px-1">
@@ -2514,8 +2515,8 @@ function CustomAudioPlayer({ src, onDelete, role }) {
               min="0" max="100" 
               value={progress} 
               onChange={handleSeek}
-              className="w-full h-1.5 bg-[#333] rounded-lg appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-[#f1ba17] [&::-webkit-slider-thumb]:rounded-full cursor-pointer"
-              style={{ background: `linear-gradient(to right, #f1ba17 ${progress}%, #333 ${progress}%)` }}
+              className="w-full h-1.5 bg-[#333] rounded-lg appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-brand [&::-webkit-slider-thumb]:rounded-full cursor-pointer"
+              style={{ background: `linear-gradient(to right, ${BRAND} ${progress}%, #333 ${progress}%)` }}
             />
          </div>
          <div className="flex justify-between items-center mt-1">
@@ -2563,7 +2564,7 @@ function AudioVisualizer({ stream }) {
         let barHeight = dataArray[i] / 8
         if (barHeight < 2) barHeight = 2
         
-        canvasCtx.fillStyle = '#f1ba17'
+        canvasCtx.fillStyle = BRAND
         const y = (canvas.height - barHeight) / 2
         
         canvasCtx.beginPath()
@@ -2752,7 +2753,7 @@ function VoiceRecorder({ onSave, onCancel }) {
             onClick={toggleRecording}
             className="w-full h-full rounded-full flex items-center justify-center gap-2 text-gray-400 hover:text-white transition-all"
           >
-            <Mic size={18} className="text-[#f1ba17]" /> Tocca per registrare...
+            <Mic size={18} className="text-brand" /> Tocca per registrare...
           </button>
         ) : (
           <div className="flex items-center justify-between w-full px-2 gap-2">
@@ -2767,7 +2768,7 @@ function VoiceRecorder({ onSave, onCancel }) {
               ) : (
                 <div className="flex items-center gap-1 h-full py-1">
                   {[...Array(12)].map((_, i) => (
-                    <div key={i} className="w-1.5 bg-[#f1ba17] rounded-full animate-bounce" style={{ height: '100%', animationDelay: `${i * 0.1}s`, animationDuration: '0.8s' }}></div>
+                    <div key={i} className="w-1.5 bg-brand rounded-full animate-bounce" style={{ height: '100%', animationDelay: `${i * 0.1}s`, animationDuration: '0.8s' }}></div>
                   ))}
                 </div>
               )}
@@ -2777,7 +2778,7 @@ function VoiceRecorder({ onSave, onCancel }) {
               <button aria-label="Annulla la registrazione" onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
                 <Trash2 size={16} />
               </button>
-              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-11 h-11 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
+              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-11 h-11 flex items-center justify-center bg-brand text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
                 <Square size={14} fill="currentColor" />
               </button>
             </div>
@@ -2913,7 +2914,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
             </button>
           </div>
           <textarea
-            className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-base transition-colors"
+            className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-brand resize-none text-base transition-colors"
             rows={3}
             placeholder="Sensazioni, pesi usati, dolori..."
             value={notes}
@@ -2931,7 +2932,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
         </div>
         <div className="flex gap-3">
           <button onClick={onCancel} disabled={saving} className="flex-1 py-3.5 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">Annulla</button>
-          <button onClick={onSave} disabled={saving} className="flex-1 py-3.5 bg-[#f1ba17] text-black font-black rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-[#f1ba17]/20">{saving ? '...' : 'Fatto! 🎉'}</button>
+          <button onClick={onSave} disabled={saving} className="flex-1 py-3.5 bg-brand text-black font-black rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-brand/20">{saving ? '...' : 'Fatto! 🎉'}</button>
         </div>
       </div>
     </div>

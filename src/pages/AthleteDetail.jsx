@@ -16,6 +16,7 @@ import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/work
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { calcolaStatistiche, statisticheSettimana } from '../lib/statistiche'
 import { mostraErrore } from '../lib/alert'
+import { BRAND, RUNNING, coloreCategoria } from '../lib/colori'
 
 const getRpeColorText = (val) => {
   if (val <= 3) return 'text-green-500';
@@ -394,13 +395,13 @@ export default function AthleteDetail() {
     <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       {role !== 'athlete' && !isOwnProfile ? (
         <div className="mb-6 mt-4 flex items-center gap-3">
-          <button aria-label="Torna alla lista atleti" onClick={() => navigate('/athletes')} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+          <button aria-label="Torna alla lista atleti" onClick={() => navigate('/athletes')} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0">
             <ChevronLeft size={22} className="-ml-0.5" />
           </button>
-          <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+          <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
         </div>
       ) : (
-        <div className="mb-6 mt-4 flex items-center gap-3"><h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1></div>
+        <div className="mb-6 mt-4 flex items-center gap-3"><h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1></div>
       )}
 
       {/* Header Atleta */}
@@ -435,11 +436,11 @@ export default function AthleteDetail() {
         </div>
         <div className="flex items-center gap-2">
           {role !== 'athlete' && (
-            <button aria-label="Esporta i dati dell'atleta" onClick={handleExportData} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-[#f1ba17] transition" title="Esporta Backup Atleta">
+            <button aria-label="Esporta i dati dell'atleta" onClick={handleExportData} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-brand transition" title="Esporta Backup Atleta">
               <Download size={20} />
             </button>
           )}
-          <button aria-label="Modifica la scheda atleta" onClick={() => setShowEditModal(true)} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-[#f1ba17] transition" title="Modifica profilo atleta">
+          <button aria-label="Modifica la scheda atleta" onClick={() => setShowEditModal(true)} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-brand transition" title="Modifica profilo atleta">
             <Edit size={20} />
           </button>
         </div>
@@ -449,19 +450,19 @@ export default function AthleteDetail() {
       {nextEvent && (
         <div 
           onClick={() => navigate(`/workout/${nextEvent.workouts.id}?athlete_id=${id}`)}
-          className="bg-gradient-to-r from-[#2a2a2a] to-[#111] border border-[#f1ba17]/30 rounded-3xl p-5 mb-6 flex items-center justify-between shadow-lg shadow-[#f1ba17]/10 cursor-pointer hover:border-[#f1ba17]/60 transition group"
+          className="bg-gradient-to-r from-[#2a2a2a] to-[#111] border border-brand/30 rounded-3xl p-5 mb-6 flex items-center justify-between shadow-lg shadow-brand/10 cursor-pointer hover:border-brand/60 transition group"
         >
            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#f1ba17]/10 rounded-full flex items-center justify-center text-[#f1ba17] shrink-0 shadow-inner group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-brand/10 rounded-full flex items-center justify-center text-brand shrink-0 shadow-inner group-hover:scale-110 transition-transform">
                  <CalendarDays size={24} />
               </div>
               <div>
                  <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-0.5">Prossimo Obiettivo</p>
-                 <p className="text-white font-black text-xl leading-tight group-hover:text-[#f1ba17] transition-colors">{nextEvent.workouts.title}</p>
-                 <p className="text-[#f1ba17]/80 text-sm mt-0.5 font-medium">{format(parseISO(nextEvent.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
+                 <p className="text-white font-black text-xl leading-tight group-hover:text-brand transition-colors">{nextEvent.workouts.title}</p>
+                 <p className="text-brand/80 text-sm mt-0.5 font-medium">{format(parseISO(nextEvent.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
               </div>
            </div>
-           <div className="flex flex-col items-center justify-center bg-gradient-to-br from-[#f1ba17] to-yellow-600 rounded-2xl px-5 py-2.5 shadow-xl min-w-[80px]">
+           <div className="flex flex-col items-center justify-center bg-gradient-to-br from-brand to-yellow-600 rounded-2xl px-5 py-2.5 shadow-xl min-w-[80px]">
               <span className="text-3xl font-black text-black leading-none">{countdownDays}</span>
               <span className="text-black/80 text-[11px] font-bold uppercase tracking-wider mt-1">{countdownDays === 1 ? 'giorno' : 'giorni'}</span>
            </div>
@@ -480,7 +481,7 @@ export default function AthleteDetail() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-white font-bold text-sm">Statistiche della settimana</h3>
-          <Activity size={16} className="text-[#f1ba17]" />
+          <Activity size={16} className="text-brand" />
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
@@ -489,7 +490,7 @@ export default function AthleteDetail() {
           </div>
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
             <p className="text-muted text-[11px] font-bold uppercase tracking-wider">Workout Completati</p>
-            <p className="text-[#f1ba17] font-black text-2xl">{weeklyStats.completed}</p>
+            <p className="text-brand font-black text-2xl">{weeklyStats.completed}</p>
           </div>
           <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
             <p className="text-muted text-[11px] font-bold uppercase tracking-wider">RPE</p>
@@ -500,13 +501,13 @@ export default function AthleteDetail() {
 
       {/* TABS */}
       <div className="flex gap-6 mb-6 border-b border-[#2a2a2a] overflow-x-auto hide-scrollbar">
-        <button onClick={() => { setTab('workouts'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'workouts' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-muted hover:text-white'}`}>
+        <button onClick={() => { setTab('workouts'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'workouts' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-white'}`}>
           Diario
         </button>
-        <button onClick={() => { setTab('prs'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'prs' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-muted hover:text-white'}`}>
+        <button onClick={() => { setTab('prs'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'prs' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-white'}`}>
           Personal Record
         </button>
-        <button onClick={() => { setTab('stats'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'stats' ? 'border-[#f1ba17] text-[#f1ba17]' : 'border-transparent text-muted hover:text-white'}`}>
+        <button onClick={() => { setTab('stats'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'stats' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-white'}`}>
           Statistiche
         </button>
       </div>
@@ -515,7 +516,7 @@ export default function AthleteDetail() {
         showHistory ? (
           <div className="flex flex-col gap-6 animate-in slide-in-from-right-4 duration-300">
             <div>
-              <button onClick={() => setShowHistory(false)} className="flex items-center gap-1 text-[#f1ba17] hover:brightness-110 transition-all font-semibold text-sm mb-6 w-fit">
+              <button onClick={() => setShowHistory(false)} className="flex items-center gap-1 text-brand hover:brightness-110 transition-all font-semibold text-sm mb-6 w-fit">
                 <ChevronLeft size={20} className="-ml-1" /> Torna al Diario
               </button>
               <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
@@ -544,20 +545,20 @@ export default function AthleteDetail() {
         <div className="flex flex-col gap-6 animate-in fade-in duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <BookOpen size={22} className="text-[#f1ba17]" />
+              <BookOpen size={22} className="text-brand" />
               Diario Workout
             </h2>
             {role !== 'athlete' && (
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setAssignModalOpen(true)}
-                  className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 text-black text-sm font-bold bg-[#f1ba17] px-4 py-2.5 rounded-xl transition hover:brightness-110 shadow-lg shadow-[#f1ba17]/20"
+                  className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 text-black text-sm font-bold bg-brand px-4 py-2.5 rounded-xl transition hover:brightness-110 shadow-lg shadow-brand/20"
                 >
                   <Dumbbell size={16} /> Assegna
                 </button>
                 <button 
                   onClick={() => navigate(`/create?athlete_id=${id}`)}
-                  className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 text-[#f1ba17] text-sm font-bold bg-[#f1ba17]/10 border border-[#f1ba17]/30 px-4 py-2.5 rounded-xl transition hover:brightness-110"
+                  className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 text-brand text-sm font-bold bg-brand/10 border border-brand/30 px-4 py-2.5 rounded-xl transition hover:brightness-110"
                 >
                   <Plus size={16} /> Crea
                 </button>
@@ -580,7 +581,7 @@ export default function AthleteDetail() {
               </button>
               <button 
                 onClick={() => setWorkoutView('calendar')}
-                className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'calendar' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}
+                className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'calendar' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
               >
                 <CalendarDays size={18} /> Calendario
               </button>
@@ -626,9 +627,9 @@ export default function AthleteDetail() {
                     <button
                       key={day.toISOString()}
                       onClick={() => setSelectedDay(day)}
-                      className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 rounded-xl aspect-square transition ${selected ? 'bg-[#f1ba17]' : today ? 'bg-[#2a2a2a]' : 'bg-[#111] hover:bg-[#2a2a2a] border border-[#222]'}`}
+                      className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 rounded-xl aspect-square transition ${selected ? 'bg-brand' : today ? 'bg-[#2a2a2a]' : 'bg-[#111] hover:bg-[#2a2a2a] border border-[#222]'}`}
                     >
-                      <span className={`text-sm font-medium leading-none ${selected ? 'text-black' : today ? 'text-[#f1ba17]' : 'text-white'}`}>
+                      <span className={`text-sm font-medium leading-none ${selected ? 'text-black' : today ? 'text-brand' : 'text-white'}`}>
                         {format(day, 'd')}
                       </span>
                       {hasWorkout && (
@@ -637,7 +638,7 @@ export default function AthleteDetail() {
                             const cat = w.workouts?.sections?.category || 'Hyrox'
                             const isCustom = cat === 'Custom' || cat === 'Autonomo' || w.workouts?.sections?.isAutonomous === true
                             const isEvent = cat === 'Event' || w.workouts?.sections?.isEvent === true
-                            const color = isEvent ? '#ffffff' : (cat === 'Running' ? '#0094C6' : (isCustom ? '#D11149' : '#f1ba17'))
+                            const color = coloreCategoria(isEvent ? 'Event' : (cat === 'Running' ? 'Running' : (isCustom ? 'Custom' : 'Hyrox')))
                             return <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selected ? '#000' : color }} />
                           })}
                         </div>
@@ -669,7 +670,7 @@ export default function AthleteDetail() {
               {todayWorkoutsList.length > 0 && (
                 <div>
                   <h3 className="text-white font-bold mb-3 flex items-center gap-2">
-                     <span className="w-2 h-2 rounded-full bg-[#f1ba17]"></span> Oggi
+                     <span className="w-2 h-2 rounded-full bg-brand"></span> Oggi
                   </h3>
                   <div className="flex flex-col gap-3">
                     {todayWorkoutsList.map(entry => (
@@ -745,17 +746,17 @@ export default function AthleteDetail() {
         <div className="flex flex-col gap-4 animate-in fade-in duration-300">
            <div className="flex items-center justify-between">
              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-               <Trophy size={20} className="text-[#f1ba17]" />
+               <Trophy size={20} className="text-brand" />
                Traguardi e PR
              </h2>
-             <button onClick={() => { setEditingPr(null); setPrModalOpen(true); }} className="flex items-center gap-1 text-black text-sm font-semibold bg-[#f1ba17] px-3 py-1.5 rounded-full transition hover:brightness-110 shadow-lg shadow-[#f1ba17]/20">
+             <button onClick={() => { setEditingPr(null); setPrModalOpen(true); }} className="flex items-center gap-1 text-black text-sm font-semibold bg-brand px-3 py-1.5 rounded-full transition hover:brightness-110 shadow-lg shadow-brand/20">
                <Plus size={16} /> Aggiungi PR
              </button>
            </div>
            {prs.length > 0 ? (
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                {prs.map(pr => (
-                  <div key={pr.id} onClick={() => { setEditingPr(pr); setPrModalOpen(true); }} className="bg-[#1e1e1e] border border-[#2a2a2a] p-4 rounded-2xl flex items-center justify-between group hover:border-[#f1ba17] transition cursor-pointer">
+                  <div key={pr.id} onClick={() => { setEditingPr(pr); setPrModalOpen(true); }} className="bg-[#1e1e1e] border border-[#2a2a2a] p-4 rounded-2xl flex items-center justify-between group hover:border-brand transition cursor-pointer">
                      <div>
                        <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-1">{pr.exercise}</p>
                        <p className="text-white font-bold text-2xl">{pr.value}</p>
@@ -885,7 +886,7 @@ export default function AthleteDetail() {
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-muted font-normal">(facoltativo)</span></label>
                 <input 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand w-full text-base"
                   value={autonomousForm.title}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
                   placeholder={generaTitolo(autonomousForm.date)}
@@ -896,13 +897,13 @@ export default function AthleteDetail() {
                 <CustomDatePicker
                   date={autonomousForm.date}
                   onChange={(d) => setAutonomousForm({ ...autonomousForm, date: d })}
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full text-base"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-brand w-full text-base"
                 />
               </div>
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Descrizione / Note</label>
                 <textarea 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base resize-none"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand w-full text-base resize-none"
                   rows={3}
                   value={autonomousForm.notes}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, notes: e.target.value })}
@@ -912,7 +913,7 @@ export default function AthleteDetail() {
               <button 
                 onClick={handleSaveAutonomous}
                 disabled={savingAutonomous}
-                className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
+                className="w-full mt-2 py-3 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
               >
                 {savingAutonomous ? 'Salvataggio...' : 'Conferma'}
               </button>
@@ -970,7 +971,7 @@ function AthleteStatsTab({ workouts }) {
       <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg flex items-center justify-between">
         <div>
            <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
-             <Target size={20} className="text-[#f1ba17]" /> Completamento
+             <Target size={20} className="text-brand" /> Completamento
            </h3>
            <p className="text-muted text-sm">Ultimi 30 giorni</p>
            <p className="text-gray-400 mt-2 text-sm">Workout completati: <strong className="text-white">{completion.done}</strong> su {completion.assigned}</p>
@@ -978,7 +979,7 @@ function AthleteStatsTab({ workouts }) {
         <div className="relative w-24 h-24 flex items-center justify-center">
           <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="40" fill="none" stroke="#333" strokeWidth="8" />
-            <circle cx="50" cy="50" r="40" fill="none" stroke="#f1ba17" strokeWidth="8" strokeDasharray={`${completionRate * 2.51} 251`} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
+            <circle cx="50" cy="50" r="40" fill="none" stroke={BRAND} strokeWidth="8" strokeDasharray={`${completionRate * 2.51} 251`} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center flex-col">
             <span className="text-xl font-black text-white">{completionRate}%</span>
@@ -989,7 +990,7 @@ function AthleteStatsTab({ workouts }) {
       {/* LINE CHART VOLUME */}
       <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg">
          <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
-           <LineChart size={20} className="text-[#0094C6]" /> Volume di Allenamento
+           <LineChart size={20} className="text-running" /> Volume di Allenamento
          </h3>
          <p className="text-muted text-sm mb-6">Minuti stimati (Ultime 4 settimane)</p>
          
@@ -1022,7 +1023,7 @@ function AthleteStatsTab({ workouts }) {
              <polyline 
                points={weeks.map((wk, i) => `${(i / (weeks.length - 1)) * 100},${100 - Math.max((wk.time / maxTime) * 100, 2)}`).join(' ')}
                fill="none" 
-               stroke="#0094C6" 
+               stroke={RUNNING} 
                strokeWidth="3" 
                vectorEffect="non-scaling-stroke"
                strokeLinecap="round"
@@ -1043,7 +1044,7 @@ function AthleteStatsTab({ workouts }) {
                  >
                    {/* Point */}
                    <div 
-                     className="absolute w-3.5 h-3.5 bg-[#1e1e1e] rounded-full border-[3px] border-[#0094C6] transition-transform group-hover:scale-[1.5] z-10" 
+                     className="absolute w-3.5 h-3.5 bg-[#1e1e1e] rounded-full border-[3px] border-running transition-transform group-hover:scale-[1.5] z-10" 
                      style={{ bottom: `calc(${heightPct}% - 7px)` }}
                    />
                    {/* Tooltip */}
@@ -1230,7 +1231,7 @@ function SocialLinkModal({ athlete, type, onClose, onSaved }) {
                </div>
             )}
           </div>
-          <button onClick={handleSave} disabled={saving || !url.trim()} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+          <button onClick={handleSave} disabled={saving || !url.trim()} className="w-full mt-2 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
             {saving ? 'Salvataggio...' : 'Conferma'}
           </button>
         </div>
@@ -1278,23 +1279,23 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
       className={`rounded-3xl p-5 transition border relative overflow-hidden group ${
         entry.status === 'completed'
           ? 'bg-green-500/10 border-green-500/30'
-          : (isEvent ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-white/50' : isRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50' : isCustom ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#D11149]/50' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50')
+          : (isEvent ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-white/50' : isRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-running/50' : isCustom ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-custom/50' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-brand/50')
       }`}
     >
       <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-        {entry.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (isEvent ? <CalendarDays size={80} className="text-white/30 -rotate-12" /> : isRun ? <Timer size={80} className="text-[#0094C6] -rotate-12" /> : isCustom ? <Dumbbell size={80} className="text-[#D11149] -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />)}
+        {entry.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (isEvent ? <CalendarDays size={80} className="text-white/30 -rotate-12" /> : isRun ? <Timer size={80} className="text-running -rotate-12" /> : isCustom ? <Dumbbell size={80} className="text-custom -rotate-12" /> : <Flame size={80} className="text-brand -rotate-12" />)}
       </div>
       <div className="relative z-10 flex flex-col gap-4">
         <div className="flex justify-between items-start gap-2">
            <div className="flex items-center gap-4 cursor-pointer flex-1 min-w-0" onClick={() => navigate(`/workout/${entry.workouts.id}?athlete_id=${athleteId}`)}>
              <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg shrink-0 ${
-               entry.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (isEvent ? 'bg-white text-black shadow-white/20' : isRun ? 'bg-[#0094C6] text-white shadow-[#0094C6]/20' : isCustom ? 'bg-[#D11149] text-white shadow-[#D11149]/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20')
+               entry.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (isEvent ? 'bg-white text-black shadow-white/20' : isRun ? 'bg-running text-white shadow-running/20' : isCustom ? 'bg-custom text-white shadow-custom/20' : 'bg-brand text-black shadow-brand/20')
              }`}>
                {entry.status === 'completed' ? <CheckCircle2 size={24} /> : (isEvent ? <CalendarDays size={24} /> : isRun ? <Timer size={24} /> : <Dumbbell size={24} />)}
              </div>
              <div className="min-w-0">
                <h3 className="text-white font-bold text-xl leading-tight group-hover:underline underline-offset-4 truncate">{entry.workouts.title}</h3>
-               <p className={`text-sm font-medium mt-1 ${entry.status === 'completed' ? 'text-green-400' : (isEvent ? 'text-gray-300' : isRun ? 'text-[#0094C6]' : isCustom ? 'text-[#D11149]' : 'text-[#f1ba17]')}`}>
+               <p className={`text-sm font-medium mt-1 ${entry.status === 'completed' ? 'text-green-400' : (isEvent ? 'text-gray-300' : isRun ? 'text-running' : isCustom ? 'text-custom' : 'text-brand')}`}>
                  {entry.status === 'completed' ? 'Completato! 🎉' : (isEvent ? 'In programma oggi 🏁' : 'Da fare oggi 🔥')}
                </p>
              </div>
@@ -1306,7 +1307,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition border bg-[#111]/50 backdrop-blur-md ${
                  entry.status === 'completed' 
                    ? 'border-green-500 text-green-500 hover:bg-green-500/20' 
-                     : `border-[#333] text-gray-300 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isCustom ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
+                     : `border-[#333] text-gray-300 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-running hover:text-running' : isCustom ? 'hover:border-custom hover:text-custom' : 'hover:border-brand hover:text-brand'}`
                }`}
              >
                {entry.status === 'completed' ? <CheckCircle2 size={14} /> : <Circle size={14} />} {entry.status === 'completed' ? 'Fatto' : 'Segna fatto'}
@@ -1317,7 +1318,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
                  {role === 'athlete' && isAuto && onEditAutonomous && (
                    <button aria-label="Modifica l'allenamento libero" 
                      onClick={(e) => { e.stopPropagation(); onEditAutonomous(entry); }}
-                     className="text-muted hover:text-[#f1ba17] transition p-1"
+                     className="text-muted hover:text-brand transition p-1"
                      title="Modifica allenamento libero"
                    >
                      <Edit size={16} />
@@ -1338,12 +1339,12 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
         <div className="pt-2 border-t border-white/5">
           {entry.voice_note_url ? (
             <div className="mb-3">
-              <p className="text-[#f1ba17] text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Nota Vocale del Coach</p>
+              <p className="text-brand text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Nota Vocale del Coach</p>
               <CustomAudioPlayer src={entry.voice_note_url} onDelete={() => onDeleteVoiceNote(entry.id)} role={role} />
             </div>
           ) : role === 'admin' ? (
             <div className="mb-3">
-              <p className="text-[#f1ba17] text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Invia Nota Vocale</p>
+              <p className="text-brand text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Invia Nota Vocale</p>
               <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />
             </div>
           ) : null}
@@ -1355,7 +1356,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
           )}
           <textarea
           ref={noteRef}
-          className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isCustom ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
+          className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-running' : isCustom ? 'focus:border-custom' : 'focus:border-brand'}`}
             rows={2}
             placeholder="Note dell'atleta su questo workout..."
             value={note}
@@ -1366,7 +1367,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
               <button
                 onClick={handleSaveNote}
                 disabled={saving}
-                className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-[#0094C6] text-white' : isCustom ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
+                className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-running text-white' : isCustom ? 'bg-custom text-white' : 'bg-brand text-black'}`}
               >
                 {saving ? 'Salvataggio...' : 'Conferma note'}
               </button>
@@ -1412,18 +1413,18 @@ function PrModal({ athleteId, initialPr, onClose, onSaved, onDelete }) {
         <div className="p-5 flex flex-col gap-4">
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Esercizio o Distanza *</label>
-            <input type="text" placeholder="Es. Back Squat, 5km Run" value={exercise} onChange={e => setExercise(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base" />
+            <input type="text" placeholder="Es. Back Squat, 5km Run" value={exercise} onChange={e => setExercise(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand text-base" />
           </div>
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Risultato / Record *</label>
-            <input type="text" placeholder="Es. 120 kg, 22:30 min" value={value} onChange={e => setValue(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base" />
+            <input type="text" placeholder="Es. 120 kg, 22:30 min" value={value} onChange={e => setValue(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand text-base" />
           </div>
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Data del record *</label>
-            <CustomDatePicker date={date} onChange={setDate} className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17]" />
+            <CustomDatePicker date={date} onChange={setDate} className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-brand" />
           </div>
           <div className="flex flex-col gap-2 mt-2">
-            <button onClick={handleSave} disabled={saving} className="w-full py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving} className="w-full py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
               {saving ? 'Salvataggio...' : (initialPr ? 'Salva Modifiche' : 'Salva Record')}
             </button>
             {initialPr && (
@@ -1552,13 +1553,13 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
         <div className="overflow-y-auto flex-1 p-5 flex flex-col gap-4">
           <div className="flex justify-center">
             <label className="cursor-pointer relative">
-              <div className="w-20 h-20 rounded-full bg-[#2a2a2a] border-2 border-dashed border-[#444] flex items-center justify-center overflow-hidden hover:border-[#f1ba17] transition">
+              <div className="w-20 h-20 rounded-full bg-[#2a2a2a] border-2 border-dashed border-[#444] flex items-center justify-center overflow-hidden hover:border-brand transition">
                 {photoPreview
                   ? <img src={photoPreview} className="w-full h-full object-cover" onError={() => setPhotoPreview(null)} />
                   : <User size={28} className="text-muted" />
                 }
               </div>
-              <div className="absolute bottom-0 right-0 bg-[#f1ba17] p-1.5 rounded-full cursor-pointer shadow-lg">
+              <div className="absolute bottom-0 right-0 bg-brand p-1.5 rounded-full cursor-pointer shadow-lg">
                 <Upload size={12} className="text-black" />
               </div>
               <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
@@ -1568,28 +1569,28 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Nome *</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base" placeholder="Mario" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand text-base" placeholder="Mario" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Cognome *</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base" placeholder="Rossi" value={form.surname} onChange={e => setForm({ ...form, surname: e.target.value })} />
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand text-base" placeholder="Rossi" value={form.surname} onChange={e => setForm({ ...form, surname: e.target.value })} />
             </div>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-gray-400 text-xs pl-1">Data di nascita</label>
-            <input type="date" className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] text-base" value={form.birth_date} onChange={e => setForm({ ...form, birth_date: e.target.value })} />
+            <input type="date" className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand text-base" value={form.birth_date} onChange={e => setForm({ ...form, birth_date: e.target.value })} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Peso (kg)</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base" placeholder="Es. 75" type="number" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand text-base" placeholder="Es. 75" type="number" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-gray-400 text-xs pl-1">Altezza (cm)</label>
-              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base" placeholder="Es. 180" type="number" value={form.height} onChange={e => setForm({ ...form, height: e.target.value })} />
+              <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand text-base" placeholder="Es. 180" type="number" value={form.height} onChange={e => setForm({ ...form, height: e.target.value })} />
             </div>
           </div>
-          <textarea className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none text-base" rows={3} placeholder="Note biografiche (facoltativo)" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
+          <textarea className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand resize-none text-base" rows={3} placeholder="Note biografiche (facoltativo)" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
           
           <div className="flex flex-col gap-3">
              <div className="flex items-center bg-[#2a2a2a] border border-[#383838] rounded-xl overflow-hidden focus-within:border-pink-500 transition">
@@ -1614,7 +1615,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
           </div>
         </div>
         <div className="p-5 border-t border-[#2a2a2a] flex flex-col gap-4">
-          <button onClick={handleSave} disabled={saving} className="w-full bg-[#f1ba17] text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">{saving ? 'Salvataggio...' : 'Salva Modifiche'}</button>
+          <button onClick={handleSave} disabled={saving} className="w-full bg-brand text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">{saving ? 'Salvataggio...' : 'Salva Modifiche'}</button>
           
           <div className="flex justify-center">
             {!showDeleteConfirm ? (
@@ -1692,10 +1693,10 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           onClick={() => navigate(`/workout/${entry.workouts.id}?athlete_id=${athleteId}`)}
         >
           <div className="flex items-center gap-2 flex-wrap">
-            <p className={`font-semibold text-white transition underline underline-offset-4 leading-tight ${isEvent ? 'group-hover:text-white decoration-white/50' : isRun ? 'group-hover:text-[#0094C6] decoration-[#0094C6]/50' : isCustom ? 'group-hover:text-[#D11149] decoration-[#D11149]/50' : 'group-hover:text-[#f1ba17] decoration-[#f1ba17]/50'}`}>
+            <p className={`font-semibold text-white transition underline underline-offset-4 leading-tight ${isEvent ? 'group-hover:text-white decoration-white/50' : isRun ? 'group-hover:text-running decoration-running/50' : isCustom ? 'group-hover:text-custom decoration-custom/50' : 'group-hover:text-brand decoration-brand/50'}`}>
               {entry.workouts.title}
             </p>
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-running/10 text-running border-running/30' : isCustom ? 'bg-custom/10 text-custom border-custom/30' : 'bg-brand/10 text-brand border-brand/30'}`}>
               {isEvent ? 'Evento / Gara' : category}
             </span>
           </div>
@@ -1708,7 +1709,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             {role === 'athlete' && isAuto && onEditAutonomous && (
               <button aria-label="Modifica l'allenamento libero" 
                 onClick={(e) => { e.stopPropagation(); onEditAutonomous(entry); }}
-                className="text-muted hover:text-[#f1ba17] transition p-1"
+                className="text-muted hover:text-brand transition p-1"
                 title="Modifica allenamento libero"
               >
                 <Edit size={18} />
@@ -1731,8 +1732,8 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
           entry.status === 'completed' 
             ? 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500/20' 
             : isBefore(scheduledDate, today)
-              ? `bg-[#111] border-[#333] text-muted ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isCustom ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
-              : `bg-[#2a2a2a] border-[#383838] text-gray-300 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-[#0094C6] hover:text-[#0094C6]' : isCustom ? 'hover:border-[#D11149] hover:text-[#D11149]' : 'hover:border-[#f1ba17] hover:text-[#f1ba17]'}`
+              ? `bg-[#111] border-[#333] text-muted ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-running hover:text-running' : isCustom ? 'hover:border-custom hover:text-custom' : 'hover:border-brand hover:text-brand'}`
+              : `bg-[#2a2a2a] border-[#383838] text-gray-300 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-running hover:text-running' : isCustom ? 'hover:border-custom hover:text-custom' : 'hover:border-brand hover:text-brand'}`
         }`}
       >
         <Icon size={18} /> {statusText}
@@ -1741,12 +1742,12 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
       <div className="mt-3 pt-3 border-t border-[#2a2a2a]">
         {entry.voice_note_url ? (
           <div className="mb-3">
-            <p className="text-[#f1ba17] text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Nota Vocale del Coach</p>
+            <p className="text-brand text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Nota Vocale del Coach</p>
             <CustomAudioPlayer src={entry.voice_note_url} onDelete={() => onDeleteVoiceNote(entry.id)} role={role} />
           </div>
         ) : role === 'admin' ? (
           <div className="mb-3">
-            <p className="text-[#f1ba17] text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Invia Nota Vocale</p>
+            <p className="text-brand text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Invia Nota Vocale</p>
             <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />
           </div>
         ) : null}
@@ -1758,7 +1759,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
         )}
         <textarea
           ref={noteRef}
-          className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-[#0094C6]' : isAuto ? 'focus:border-[#D11149]' : 'focus:border-[#f1ba17]'}`}
+          className={`w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-running' : isAuto ? 'focus:border-custom' : 'focus:border-brand'}`}
           rows={3}
           placeholder="Inserisci o modifica le note dell'atleta su questo workout..."
           value={note}
@@ -1769,7 +1770,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             <button
               onClick={handleSaveNote}
               disabled={saving}
-              className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-[#0094C6] text-white' : isCustom ? 'bg-[#D11149] text-white' : 'bg-[#f1ba17] text-black'}`}
+              className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-running text-white' : isCustom ? 'bg-custom text-white' : 'bg-brand text-black'}`}
             >
               {saving ? 'Salvataggio...' : 'Conferma'}
             </button>
@@ -1831,7 +1832,7 @@ function CustomAudioPlayer({ src, onDelete, role }) {
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={() => { setIsPlaying(false); setProgress(0); audioRef.current.currentTime = 0; setCurrentTime('0:00') }}
       />
-      <button aria-label={isPlaying ? 'Metti in pausa la nota vocale' : 'Riproduci la nota vocale'} onClick={togglePlay} className="w-11 h-11 rounded-full bg-[#f1ba17] flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
+      <button aria-label={isPlaying ? 'Metti in pausa la nota vocale' : 'Riproduci la nota vocale'} onClick={togglePlay} className="w-11 h-11 rounded-full bg-brand flex items-center justify-center text-black shrink-0 hover:brightness-110 transition">
         {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
       </button>
       <div className="flex-1 flex flex-col justify-center px-1">
@@ -1841,8 +1842,8 @@ function CustomAudioPlayer({ src, onDelete, role }) {
               min="0" max="100" 
               value={progress} 
               onChange={handleSeek}
-              className="w-full h-1.5 bg-[#333] rounded-lg appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-[#f1ba17] [&::-webkit-slider-thumb]:rounded-full cursor-pointer"
-              style={{ background: `linear-gradient(to right, #f1ba17 ${progress}%, #333 ${progress}%)` }}
+              className="w-full h-1.5 bg-[#333] rounded-lg appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-brand [&::-webkit-slider-thumb]:rounded-full cursor-pointer"
+              style={{ background: `linear-gradient(to right, ${BRAND} ${progress}%, #333 ${progress}%)` }}
             />
          </div>
          <div className="flex justify-between items-center mt-1">
@@ -1890,7 +1891,7 @@ function AudioVisualizer({ stream }) {
         let barHeight = dataArray[i] / 8
         if (barHeight < 2) barHeight = 2
         
-        canvasCtx.fillStyle = '#f1ba17'
+        canvasCtx.fillStyle = BRAND
         const y = (canvas.height - barHeight) / 2
         
         canvasCtx.beginPath()
@@ -2079,7 +2080,7 @@ function VoiceRecorder({ onSave, onCancel }) {
             onClick={toggleRecording}
             className="w-full h-full rounded-full flex items-center justify-center gap-2 text-gray-400 hover:text-white transition-all"
           >
-            <Mic size={18} className="text-[#f1ba17]" /> Tocca per registrare...
+            <Mic size={18} className="text-brand" /> Tocca per registrare...
           </button>
         ) : (
           <div className="flex items-center justify-between w-full px-2 gap-2">
@@ -2094,7 +2095,7 @@ function VoiceRecorder({ onSave, onCancel }) {
               ) : (
                 <div className="flex items-center gap-1 h-full py-1">
                   {[...Array(12)].map((_, i) => (
-                    <div key={i} className="w-1.5 bg-[#f1ba17] rounded-full animate-bounce" style={{ height: '100%', animationDelay: `${i * 0.1}s`, animationDuration: '0.8s' }}></div>
+                    <div key={i} className="w-1.5 bg-brand rounded-full animate-bounce" style={{ height: '100%', animationDelay: `${i * 0.1}s`, animationDuration: '0.8s' }}></div>
                   ))}
                 </div>
               )}
@@ -2104,7 +2105,7 @@ function VoiceRecorder({ onSave, onCancel }) {
               <button aria-label="Annulla la registrazione" onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
                 <Trash2 size={16} />
               </button>
-              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-11 h-11 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
+              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-11 h-11 flex items-center justify-center bg-brand text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
                 <Square size={14} fill="currentColor" />
               </button>
             </div>
@@ -2192,7 +2193,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
             <div className="p-4 border-b border-[#2a2a2a]">
               <div className="relative">
                 <Search size={16} className="absolute left-3 top-3.5 text-muted" />
-                <input type="text" placeholder="Cerca workout..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-2.5 pl-9 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base" />
+                <input type="text" placeholder="Cerca workout..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-2.5 pl-9 rounded-xl focus:outline-none focus:border-brand text-base" />
               </div>
             </div>
             <div className="overflow-y-auto flex-1 p-4 flex flex-col gap-2">
@@ -2206,7 +2207,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                     <span className="text-gray-400 text-sm">Seleziona workout:</span>
                     <button 
                       onClick={() => setSelectedWorkouts(selectedWorkouts.length === filtered.length ? [] : [...filtered])}
-                      className="text-[#f1ba17] text-xs font-semibold hover:underline"
+                      className="text-brand text-xs font-semibold hover:underline"
                     >
                       {selectedWorkouts.length === filtered.length ? 'Deseleziona tutti' : 'Seleziona tutti'}
                     </button>
@@ -2222,28 +2223,28 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                             setSelectedWorkouts([...selectedWorkouts, w]);
                           }
                         }}
-                        className={`flex items-center justify-between bg-[#2a2a2a] border p-3 rounded-xl hover:border-[#f1ba17] transition cursor-pointer group ${isSelected ? 'border-[#f1ba17]' : 'border-[#333]'}`}
+                        className={`flex items-center justify-between bg-[#2a2a2a] border p-3 rounded-xl hover:border-brand transition cursor-pointer group ${isSelected ? 'border-brand' : 'border-[#333]'}`}
                       >
                         <div className="flex-1 min-w-0 pr-3 text-left">
-                          <p className={`font-semibold text-sm truncate transition ${isSelected ? 'text-[#f1ba17]' : 'text-white group-hover:text-[#f1ba17]'}`}>{w.title}</p>
+                          <p className={`font-semibold text-sm truncate transition ${isSelected ? 'text-brand' : 'text-white group-hover:text-brand'}`}>{w.title}</p>
                           <p className="text-muted text-xs mt-0.5">{w.date && isValid(parseISO(w.date)) ? format(parseISO(w.date), 'dd/MM/yyyy') : 'Data sconosciuta'} • {w.sections?.category || 'Generico'}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button aria-label="Duplica il workout" 
                         onClick={(e) => { e.stopPropagation(); navigate(`/create?duplicate=${w.id}&athlete_id=${athleteId}`); }} 
-                        className="p-1.5 bg-[#111] border border-[#333] rounded-lg text-gray-400 hover:text-white hover:border-[#f1ba17] transition"
+                        className="p-1.5 bg-[#111] border border-[#333] rounded-lg text-gray-400 hover:text-white hover:border-brand transition"
                         title="Duplica e Modifica"
                       >
                         <Copy size={16} />
                       </button>
                       <button aria-label="Anteprima del workout" 
                             onClick={(e) => { e.stopPropagation(); setPreviewWorkout(w); }} 
-                            className="p-1.5 bg-[#111] border border-[#333] rounded-lg text-gray-400 hover:text-white hover:border-[#f1ba17] transition"
+                            className="p-1.5 bg-[#111] border border-[#333] rounded-lg text-gray-400 hover:text-white hover:border-brand transition"
                             title="Anteprima"
                           >
                             <Eye size={16} />
                       </button>
-                      <div className={`w-6 h-6 rounded-full border flex items-center justify-center ml-1 ${isSelected ? 'bg-[#f1ba17] border-[#f1ba17]' : 'border-[#555] bg-[#111]'}`}>
+                      <div className={`w-6 h-6 rounded-full border flex items-center justify-center ml-1 ${isSelected ? 'bg-brand border-brand' : 'border-[#555] bg-[#111]'}`}>
                             {isSelected && <Check size={14} className="text-black" />}
                         </div>
                     </div>
@@ -2255,7 +2256,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
             </div>
             {selectedWorkouts.length > 0 && (
               <div className="p-4 border-t border-[#2a2a2a]">
-                <button onClick={() => setAssignStep(2)} className="w-full py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition shadow-lg">
+                <button onClick={() => setAssignStep(2)} className="w-full py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition shadow-lg">
                   Procedi ({selectedWorkouts.length})
                 </button>
               
@@ -2275,14 +2276,14 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
               <CustomDatePicker
                 date={assignDate}
                 onChange={setAssignDate}
-                className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full text-base"
+                className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-brand w-full text-base"
               />
             </div>
             <div className="flex gap-3 mt-2">
               <button onClick={() => setAssignStep(1)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
                 Indietro
               </button>
-                       <button onClick={handleAssign} disabled={assigning} className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+                       <button onClick={handleAssign} disabled={assigning} className="flex-1 py-3 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
                 {assigning ? 'Assegno...' : 'Conferma'}
               </button>
             </div>
@@ -2309,7 +2310,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                   if (steps.length === 0) return <p className="text-muted text-sm">Nessun dettaglio disponibile.</p>;
                   return steps.map((step, i) => (
                     <div key={i} className="bg-[#2a2a2a] p-3 rounded-xl border border-[#383838]">
-                      <p className="text-[#0094C6] font-bold text-xs uppercase mb-1">{step.type === 'repeat' ? `Ripetute (${step.rounds}x)` : step.type}</p>
+                      <p className="text-running font-bold text-xs uppercase mb-1">{step.type === 'repeat' ? `Ripetute (${step.rounds}x)` : step.type}</p>
                       {step.type === 'repeat' ? (
                         <div className="text-sm text-white flex flex-col gap-1">
                           <p><span className="text-gray-400">Corsa:</span> {step.runDuration} {step.runPace ? <span className="text-muted text-xs">@{step.runPace}</span> : ''}</p>
@@ -2337,7 +2338,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
 
                     return (
                       <div key={i} className="bg-[#2a2a2a] p-3 rounded-xl border border-[#383838]">
-                        <p className="text-[#f1ba17] font-bold text-xs uppercase mb-1.5">{shortTitle}</p>
+                        <p className="text-brand font-bold text-xs uppercase mb-1.5">{shortTitle}</p>
                         {['WarmUp', 'Rest'].includes(b.type) ? (
                           b.notes && <p className="text-sm text-gray-300">{b.notes}</p>
                         ) : (
@@ -2371,7 +2372,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                   if (!isAlreadySelected) setSelectedWorkouts([...selectedWorkouts, previewWorkout]);
                   setPreviewWorkout(null);
                 }}
-                className="w-full py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition shadow-lg shadow-[#f1ba17]/20"
+                className="w-full py-3 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition shadow-lg shadow-brand/20"
               >
                 Seleziona questo Workout
               </button>
@@ -2380,7 +2381,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                   navigate(`/create?duplicate=${previewWorkout.id}&athlete_id=${athleteId}`);
                   setPreviewWorkout(null);
                 }}
-                className="w-full py-3 bg-[#2a2a2a] border border-[#383838] text-white font-bold rounded-xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#2a2a2a] border border-[#383838] text-white font-bold rounded-xl hover:border-brand hover:text-brand transition flex items-center justify-center gap-2"
               >
                 <Copy size={18} /> Duplica e Modifica
               </button>
@@ -2519,7 +2520,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
             </button>
           </div>
           <textarea
-            className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-base transition-colors"
+            className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-brand resize-none text-base transition-colors"
             rows={3}
             placeholder="Sensazioni, pesi usati, dolori..."
             value={notes}
@@ -2537,7 +2538,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
         </div>
         <div className="flex gap-3">
           <button onClick={onCancel} disabled={saving} className="flex-1 py-3.5 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">Annulla</button>
-          <button onClick={onSave} disabled={saving} className="flex-1 py-3.5 bg-[#f1ba17] text-black font-black rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-[#f1ba17]/20">{saving ? '...' : 'Fatto! 🎉'}</button>
+          <button onClick={onSave} disabled={saving} className="flex-1 py-3.5 bg-brand text-black font-black rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-brand/20">{saving ? '...' : 'Fatto! 🎉'}</button>
         </div>
       </div>
     </div>

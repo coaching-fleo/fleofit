@@ -69,10 +69,10 @@ export default function WorkoutsArchive() {
   return (
     <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
-        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0">
           <ChevronLeft size={22} className="-ml-0.5" />
         </button>
-        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
       </div>
 
       <div className="mb-6 flex items-center justify-between">
@@ -88,7 +88,7 @@ export default function WorkoutsArchive() {
           placeholder="Cerca per nome o categoria..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="w-full bg-[#1e1e1e] border border-[#333] text-white px-4 py-3 pl-10 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base"
+          className="w-full bg-[#1e1e1e] border border-[#333] text-white px-4 py-3 pl-10 rounded-xl focus:outline-none focus:border-brand text-base"
         />
         <Search size={18} className="absolute left-3 top-3.5 text-muted" />
       </div>
@@ -111,7 +111,7 @@ export default function WorkoutsArchive() {
               <div 
                 key={w.aw_id || w.id} 
                 onClick={() => navigate(`/workout/${w.id}`)}
-                className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer hover:border-[#f1ba17]/50 transition flex items-center justify-between"
+                className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer hover:border-brand/50 transition flex items-center justify-between"
               >
                 <div>
                   <h3 className="text-white font-bold text-base mb-1">{w.title}</h3>
@@ -121,7 +121,7 @@ export default function WorkoutsArchive() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  <span className={`text-xs font-bold px-3 py-1.5 rounded-xl ${isEvent ? 'bg-white text-black border-white' : category === 'Running' ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : (category === 'Custom' ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30')}`}>
+                  <span className={`text-xs font-bold px-3 py-1.5 rounded-xl ${isEvent ? 'bg-white text-black border-white' : category === 'Running' ? 'bg-running/10 text-running border-running/30' : (category === 'Custom' ? 'bg-custom/10 text-custom border-custom/30' : 'bg-brand/10 text-brand border-brand/30')}`}>
                     {isEvent ? 'Evento' : category}
                   </span>
                   {role !== 'athlete' && w.athlete_workouts && (

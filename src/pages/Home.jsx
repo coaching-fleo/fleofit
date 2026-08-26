@@ -20,6 +20,7 @@ import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { leggiJson, scriviJson, leggiCoda, accodaSuStorage, chiaveCacheWorkout, CHIAVE_CODA } from '../lib/offlineQueue'
 import { mostraErrore } from '../lib/alert'
 import { sincronizzaBadge } from '../lib/badge'
+import { BRAND } from '../lib/colori'
 
 
 export default function Home() {
@@ -861,12 +862,12 @@ setNotifications(prev => {
       <div className="mb-6 mt-4 flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+            <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
           </div>
           {role === 'athlete' || role === 'admin' ? (
              <div className="mt-2">
                <p className="text-white font-bold text-xl">{getGreeting()}, {userName}!</p>
-               <p className="text-[#f1ba17] text-sm mt-0.5 font-medium">{randomMotiv}</p>
+               <p className="text-brand text-sm mt-0.5 font-medium">{randomMotiv}</p>
              </div>
           ) : (
             <p className="text-gray-400 mt-1">Dashboard Coach Federico Leo</p>
@@ -878,11 +879,11 @@ setNotifications(prev => {
               <Heart size={14} className={heartRate ? "animate-pulse" : ""} fill="currentColor" /> {heartRate ? `${heartRate} bpm` : 'BLE'}
             </div>
           )}
-          <button aria-label="Apri il centro notifiche" onClick={openNotifications} className="relative w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0" title="Centro Notifiche">
+          <button aria-label="Apri il centro notifiche" onClick={openNotifications} className="relative w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0" title="Centro Notifiche">
             <Bell size={20} />
             {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[11px] font-bold rounded-full border-2 border-[#1e1e1e]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
           </button>
-          <button aria-label="Apri le impostazioni" onClick={() => navigate('/settings')} className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+          <button aria-label="Apri le impostazioni" onClick={() => navigate('/settings')} className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0">
             <Settings size={22} />
           </button>
         </div>
@@ -911,19 +912,19 @@ setNotifications(prev => {
       {(role === 'athlete' || role === 'admin') && nextEventHome && (
         <div 
           onClick={() => navigate(`/workout/${nextEventHome.workouts.id}?athlete_id=${user.id}`)}
-          className="bg-gradient-to-r from-[#2a2a2a] to-[#111] border border-[#f1ba17]/30 rounded-3xl p-5 mb-6 flex items-center justify-between shadow-lg shadow-[#f1ba17]/10 cursor-pointer hover:border-[#f1ba17]/60 transition group"
+          className="bg-gradient-to-r from-[#2a2a2a] to-[#111] border border-brand/30 rounded-3xl p-5 mb-6 flex items-center justify-between shadow-lg shadow-brand/10 cursor-pointer hover:border-brand/60 transition group"
         >
            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#f1ba17]/10 rounded-full flex items-center justify-center text-[#f1ba17] shrink-0 shadow-inner group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-brand/10 rounded-full flex items-center justify-center text-brand shrink-0 shadow-inner group-hover:scale-110 transition-transform">
                  <CalendarDays size={24} />
               </div>
               <div>
                  <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-0.5">Prossimo Obiettivo</p>
-                 <p className="text-white font-black text-xl leading-tight group-hover:text-[#f1ba17] transition-colors">{nextEventHome.workouts.title}</p>
-                 <p className="text-[#f1ba17]/80 text-sm mt-0.5 font-medium">{format(parseISO(nextEventHome.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
+                 <p className="text-white font-black text-xl leading-tight group-hover:text-brand transition-colors">{nextEventHome.workouts.title}</p>
+                 <p className="text-brand/80 text-sm mt-0.5 font-medium">{format(parseISO(nextEventHome.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
               </div>
            </div>
-           <div className="flex flex-col items-center justify-center bg-gradient-to-br from-[#f1ba17] to-yellow-600 rounded-2xl px-5 py-2.5 shadow-xl min-w-[80px]">
+           <div className="flex flex-col items-center justify-center bg-gradient-to-br from-brand to-yellow-600 rounded-2xl px-5 py-2.5 shadow-xl min-w-[80px]">
               <span className="text-3xl font-black text-black leading-none">{countdownDays}</span>
               <span className="text-black/80 text-[11px] font-bold uppercase tracking-wider mt-1">{countdownDays === 1 ? 'giorno' : 'giorni'}</span>
            </div>
@@ -943,7 +944,7 @@ setNotifications(prev => {
               <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 h-full flex flex-col">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-white font-bold text-sm">La tua settimana</h3>
-                  <span className="text-xs text-[#f1ba17] bg-[#f1ba17]/10 border border-[#f1ba17]/20 px-3 py-1 rounded-full font-bold">
+                  <span className="text-xs text-brand bg-brand/10 border border-brand/20 px-3 py-1 rounded-full font-bold">
                     {weeklyStatus.reduce((acc, d) => acc + d.workouts.filter(w => w.status === 'completed').length, 0)} / {weeklyStatus.reduce((acc, d) => acc + d.workouts.length, 0)} completati
                   </span>
                 </div>
@@ -954,7 +955,7 @@ setNotifications(prev => {
                         <span className={`text-[11px] font-bold ${day.isToday ? 'text-white' : 'text-gray-400'}`}>
                           {day.dayName.charAt(0)}
                         </span>
-                        <span className={`text-xs font-bold mb-1 ${day.isToday ? 'text-[#f1ba17]' : 'text-muted'}`}>
+                        <span className={`text-xs font-bold mb-1 ${day.isToday ? 'text-brand' : 'text-muted'}`}>
                           {format(day.date, 'd')}
                         </span>
                         
@@ -972,11 +973,11 @@ setNotifications(prev => {
                                  icon = <CheckCircle2 size={14} className="text-black" />
                               } else {
                                  if (day.isToday) {
-                                   circleClass = isEvent ? 'bg-white border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : isRun ? 'bg-[#0094C6] border-[#0094C6] shadow-[0_0_8px_rgba(0,148,198,0.4)]' : isCustom ? 'bg-[#D11149] border-[#D11149] shadow-[0_0_8px_rgba(209,17,73,0.4)]' : 'bg-[#f1ba17] border-[#f1ba17] shadow-[0_0_8px_rgba(241,186,23,0.4)]'
+                                   circleClass = isEvent ? 'bg-white border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : isRun ? 'bg-running border-running shadow-[0_0_8px] shadow-running/40' : isCustom ? 'bg-custom border-custom shadow-[0_0_8px] shadow-custom/40' : 'bg-brand border-brand shadow-[0_0_8px] shadow-brand/40'
                                    icon = isEvent ? <CalendarDays size={14} className="text-black" /> : isRun ? <Timer size={14} className="text-white" /> : isCustom ? <Dumbbell size={14} className="text-white" /> : <Dumbbell size={14} className="text-black" />
                                  } else {
-                                   circleClass = isEvent ? 'bg-transparent border-white' : isRun ? 'bg-transparent border-[#0094C6]' : isCustom ? 'bg-transparent border-[#D11149]' : 'bg-transparent border-[#f1ba17]'
-                                   icon = isEvent ? <CalendarDays size={14} className="text-white" /> : isRun ? <Timer size={14} className="text-[#0094C6]" /> : isCustom ? <Dumbbell size={14} className="text-[#D11149]" /> : <Dumbbell size={14} className="text-[#f1ba17]" />
+                                   circleClass = isEvent ? 'bg-transparent border-white' : isRun ? 'bg-transparent border-running' : isCustom ? 'bg-transparent border-custom' : 'bg-transparent border-brand'
+                                   icon = isEvent ? <CalendarDays size={14} className="text-white" /> : isRun ? <Timer size={14} className="text-running" /> : isCustom ? <Dumbbell size={14} className="text-custom" /> : <Dumbbell size={14} className="text-brand" />
                                  }
                               }
 
@@ -1009,7 +1010,7 @@ setNotifications(prev => {
               <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-white font-bold text-sm">Statistiche della settimana</h3>
-                  <Activity size={16} className="text-[#f1ba17]" />
+                  <Activity size={16} className="text-brand" />
                 </div>
                 <div className="flex-1 grid grid-cols-3 gap-3">
                   <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
@@ -1018,7 +1019,7 @@ setNotifications(prev => {
                   </div>
                   <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
                     <p className="text-muted text-[11px] font-bold uppercase tracking-wider">Workout Completati</p>
-                    <p className="text-[#f1ba17] font-black text-2xl">{weeklyStats.completed}</p>
+                    <p className="text-brand font-black text-2xl">{weeklyStats.completed}</p>
                   </div>
                   <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
                     <p className="text-muted text-[11px] font-bold uppercase tracking-wider">RPE</p>
@@ -1031,8 +1032,8 @@ setNotifications(prev => {
           
           {/* Paginazione */}
           <div className="flex justify-center items-center gap-2 mt-4">
-            <div className={`h-1.5 rounded-full transition-all duration-300 ${activeSlide === 0 ? 'bg-[#f1ba17] w-5' : 'bg-[#444] w-1.5'}`}></div>
-            <div className={`h-1.5 rounded-full transition-all duration-300 ${activeSlide === 1 ? 'bg-[#f1ba17] w-5' : 'bg-[#444] w-1.5'}`}></div>
+            <div className={`h-1.5 rounded-full transition-all duration-300 ${activeSlide === 0 ? 'bg-brand w-5' : 'bg-[#444] w-1.5'}`}></div>
+            <div className={`h-1.5 rounded-full transition-all duration-300 ${activeSlide === 1 ? 'bg-brand w-5' : 'bg-[#444] w-1.5'}`}></div>
           </div>
         </div>
       )}
@@ -1071,12 +1072,12 @@ setNotifications(prev => {
 
       {/* Main CTA */}
       {role !== 'athlete' && (
-        <div onClick={() => navigate('/create')} className="bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border border-[#f1ba17]/50 rounded-3xl p-6 cursor-pointer hover:border-[#f1ba17] transition relative overflow-hidden group mb-6">
+        <div onClick={() => navigate('/create')} className="bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border border-brand/50 rounded-3xl p-6 cursor-pointer hover:border-brand transition relative overflow-hidden group mb-6">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition">
-            <Dumbbell size={64} className="text-[#f1ba17] -rotate-12" />
+            <Dumbbell size={64} className="text-brand -rotate-12" />
           </div>
           <div className="relative z-10">
-            <div className="w-12 h-12 rounded-full bg-[#f1ba17] flex items-center justify-center text-black mb-4 shadow-lg shadow-[#f1ba17]/20 shrink-0">
+            <div className="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-black mb-4 shadow-lg shadow-brand/20 shrink-0">
               <Plus size={24} />
             </div>
             <h2 className="text-white font-bold text-xl mb-1">Crea Workout</h2>
@@ -1103,7 +1104,7 @@ setNotifications(prev => {
                 const category = isEvent ? 'Event' : isCustom ? 'Custom' : rawCat;
                 const isRun = category === 'Running';
                 return (
-                <div key={a.id} onClick={() => navigate(`/athletes/${a.athletes?.id}`)} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer transition ${isEvent ? 'hover:border-white' : isRun ? 'hover:border-[#0094C6]' : isCustom ? 'hover:border-[#D11149]' : 'hover:border-[#f1ba17]'}`}>
+                <div key={a.id} onClick={() => navigate(`/athletes/${a.athletes?.id}`)} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer transition ${isEvent ? 'hover:border-white' : isRun ? 'hover:border-running' : isCustom ? 'hover:border-custom' : 'hover:border-brand'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 min-w-0 pr-2">
                       <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333]">
@@ -1116,7 +1117,7 @@ setNotifications(prev => {
                       <div className="min-w-0 flex-1">
                         <p className="text-white font-semibold text-sm truncate">{a.athletes?.name} {a.athletes?.surname}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-[#0094C6]/10 text-[#0094C6] border-[#0094C6]/30' : isCustom ? 'bg-[#D11149]/10 text-[#D11149] border-[#D11149]/30' : 'bg-[#f1ba17]/10 text-[#f1ba17] border-[#f1ba17]/30'}`}>
+                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-running/10 text-running border-running/30' : isCustom ? 'bg-custom/10 text-custom border-custom/30' : 'bg-brand/10 text-brand border-brand/30'}`}>
                             {isEvent ? 'Evento' : category}
                           </span>
                           <p className="text-muted text-xs truncate">{a.workouts?.title}</p>
@@ -1184,15 +1185,15 @@ setNotifications(prev => {
                     className={`rounded-3xl p-6 transition-colors border relative overflow-hidden group ${
                       todayWorkout.status === 'completed'
                         ? 'bg-green-500/10 border-green-500/30 hover:border-green-500'
-                        : (todayIsEvent ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-white/50 hover:border-white' : todayIsRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#0094C6]/50 hover:border-[#0094C6]' : todayIsCustom ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#D11149]/50 hover:border-[#D11149]' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-[#f1ba17]/50 hover:border-[#f1ba17]')
+                        : (todayIsEvent ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-white/50 hover:border-white' : todayIsRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-running/50 hover:border-running' : todayIsCustom ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-custom/50 hover:border-custom' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-brand/50 hover:border-brand')
                     }`}
                   >
                     <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition">
-                      {todayWorkout.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (todayIsEvent ? <CalendarDays size={80} className="text-white/30 -rotate-12" /> : todayIsRun ? <Timer size={80} className="text-[#0094C6] -rotate-12" /> : todayIsCustom ? <Dumbbell size={80} className="text-[#D11149] -rotate-12" /> : <Flame size={80} className="text-[#f1ba17] -rotate-12" />)}
+                      {todayWorkout.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (todayIsEvent ? <CalendarDays size={80} className="text-white/30 -rotate-12" /> : todayIsRun ? <Timer size={80} className="text-running -rotate-12" /> : todayIsCustom ? <Dumbbell size={80} className="text-custom -rotate-12" /> : <Flame size={80} className="text-brand -rotate-12" />)}
                     </div>
                     <div className="relative z-10">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 shadow-lg shrink-0 ${
-                        todayWorkout.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (todayIsEvent ? 'bg-white text-black shadow-white/20' : todayIsRun ? 'bg-[#0094C6] text-white shadow-[#0094C6]/20' : todayIsCustom ? 'bg-[#D11149] text-white shadow-[#D11149]/20' : 'bg-[#f1ba17] text-black shadow-[#f1ba17]/20')
+                        todayWorkout.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (todayIsEvent ? 'bg-white text-black shadow-white/20' : todayIsRun ? 'bg-running text-white shadow-running/20' : todayIsCustom ? 'bg-custom text-white shadow-custom/20' : 'bg-brand text-black shadow-brand/20')
                       }`}>
                         {todayWorkout.status === 'completed' ? <CheckCircle2 size={24} /> : (todayIsEvent ? <CalendarDays size={24} /> : todayIsRun ? <Timer size={24} /> : <Dumbbell size={24} />)}
                       </div>
@@ -1202,7 +1203,7 @@ setNotifications(prev => {
                         className="block w-full text-left min-h-11 rounded-xl -mx-1 px-1 hover:opacity-80 transition-opacity">
                         <h3 className="text-white font-bold text-xl mb-1 truncate pr-8">{todayWorkout.workouts.title}</h3>
                       </button>
-                      <p className={`text-sm font-medium ${todayWorkout.status === 'completed' ? 'text-green-400' : (todayIsEvent ? 'text-gray-300' : todayIsRun ? 'text-[#0094C6]' : todayIsCustom ? 'text-[#D11149]' : 'text-[#f1ba17]')}`}>
+                      <p className={`text-sm font-medium ${todayWorkout.status === 'completed' ? 'text-green-400' : (todayIsEvent ? 'text-gray-300' : todayIsRun ? 'text-running' : todayIsCustom ? 'text-custom' : 'text-brand')}`}>
                         {todayWorkout.status === 'completed' ? 'Ottimo lavoro, completato! 🎉' : (todayIsEvent ? 'Oggi è il grande giorno! 🏁' : 'Da completare oggi 🔥')}
                       </p>
                       <div className="mt-4">
@@ -1211,7 +1212,7 @@ setNotifications(prev => {
                           className={`inline-flex items-center justify-center gap-1.5 px-5 min-h-11 rounded-full text-sm font-bold transition border ${
                             todayWorkout.status === 'completed' 
                               ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30' 
-                              : (todayIsEvent ? 'bg-[#111] border-[#333] text-white hover:border-white hover:text-white' : todayIsRun ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#0094C6] hover:text-[#0094C6]' : todayIsCustom ? 'bg-[#111] border-[#333] text-gray-300 hover:border-[#D11149] hover:text-[#D11149]' : 'bg-[#111] border-[#333] text-gray-300 hover:border-[#f1ba17] hover:text-[#f1ba17]')
+                              : (todayIsEvent ? 'bg-[#111] border-[#333] text-white hover:border-white hover:text-white' : todayIsRun ? 'bg-[#111] border-[#333] text-gray-300 hover:border-running hover:text-running' : todayIsCustom ? 'bg-[#111] border-[#333] text-gray-300 hover:border-custom hover:text-custom' : 'bg-[#111] border-[#333] text-gray-300 hover:border-brand hover:text-brand')
                           }`}
                         >
                           {todayWorkout.status === 'completed' ? <CheckCircle2 size={16} /> : <Circle size={16} />} 
@@ -1219,7 +1220,7 @@ setNotifications(prev => {
                         </button>
                         {todayIsAuto && role === 'athlete' && (
                           <div className="flex items-center gap-2">
-                             <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(todayWorkout); }} className="p-2 text-gray-400 hover:text-[#f1ba17] transition bg-[#111] rounded-full border border-[#333]" title="Modifica"><Edit size={16}/></button>
+                             <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(todayWorkout); }} className="p-2 text-gray-400 hover:text-brand transition bg-[#111] rounded-full border border-[#333]" title="Modifica"><Edit size={16}/></button>
                              <button aria-label="Elimina l'allenamento" onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(todayWorkout.id); }} className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-full border border-[#333]" title="Elimina"><Trash2 size={16}/></button>
                           </div>
                         )}
@@ -1249,9 +1250,9 @@ setNotifications(prev => {
         <div className="mb-6">
           <button 
             onClick={() => setAutonomousModalOpen(true)} 
-            className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-3 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition shadow-sm"
+            className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-3 rounded-2xl hover:border-brand hover:text-brand transition shadow-sm"
           >
-            <Plus size={18} className="text-[#f1ba17]" /> Aggiungi allenamento libero
+            <Plus size={18} className="text-brand" /> Aggiungi allenamento libero
           </button>
         </div>
       )}
@@ -1284,7 +1285,7 @@ setNotifications(prev => {
                     <div className="flex items-center gap-2">
                       {role === 'athlete' && isAuto && (
                         <>
-                          <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }} className="p-1.5 text-muted hover:text-[#f1ba17] transition" title="Modifica"><Edit size={18}/></button>
+                          <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }} className="p-1.5 text-muted hover:text-brand transition" title="Modifica"><Edit size={18}/></button>
                           <button aria-label="Elimina l'allenamento" onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(w.id); }} className="p-1.5 text-muted hover:text-red-500 transition" title="Elimina"><Trash2 size={18}/></button>
                         </>
                       )}
@@ -1300,7 +1301,7 @@ setNotifications(prev => {
       )}
 
       <div className="grid grid-cols-2 gap-4 mb-4">
-        <div onClick={() => navigate('/calendar')} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-[#f1ba17] transition flex flex-col gap-3">
+        <div onClick={() => navigate('/calendar')} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-brand transition flex flex-col gap-3">
           <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300 shrink-0">
             <CalendarDays size={20} />
           </div>
@@ -1311,7 +1312,7 @@ setNotifications(prev => {
         </div>
 
         {role !== 'athlete' && (
-          <div onClick={() => navigate('/athletes')} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-[#f1ba17] transition flex flex-col gap-3">
+          <div onClick={() => navigate('/athletes')} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-brand transition flex flex-col gap-3">
             <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300 shrink-0">
               <Users size={20} />
             </div>
@@ -1322,7 +1323,7 @@ setNotifications(prev => {
           </div>
         )}
         {(role === 'athlete' || role === 'admin') && (
-          <div onClick={() => navigate('/profile')} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-[#f1ba17] transition flex flex-col gap-3 ${role === 'admin' ? 'col-span-2' : ''}`}>
+          <div onClick={() => navigate('/profile')} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-brand transition flex flex-col gap-3 ${role === 'admin' ? 'col-span-2' : ''}`}>
             <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300 shrink-0">
               <User size={20} />
             </div>
@@ -1336,7 +1337,7 @@ setNotifications(prev => {
 
       <button 
         onClick={() => navigate('/archive')}
-        className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-4 rounded-2xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition"
+        className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-4 rounded-2xl hover:border-brand hover:text-brand transition"
       >
         <FolderArchive size={20} />
         Archivio Workout
@@ -1359,14 +1360,14 @@ setNotifications(prev => {
             <div className="flex items-center justify-between px-5 pb-4 sm:pt-5 border-b border-[#2a2a2a]">
               <div className="flex items-center gap-2">
                 <p className="text-white font-bold text-lg">Notifiche</p>
-                {unreadCount > 0 && <span className="bg-[#f1ba17] text-black text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount} nuove</span>}
+                {unreadCount > 0 && <span className="bg-brand text-black text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount} nuove</span>}
               </div>
               <div className="flex items-center gap-3">
                 {unreadCount > 0 && (
                   <button onClick={async () => {
                     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
                     await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false)
-                  }} className="text-[11px] font-semibold text-[#f1ba17] hover:underline whitespace-nowrap">
+                  }} className="text-[11px] font-semibold text-brand hover:underline whitespace-nowrap">
                     Segna come lette
                   </button>
                 )}
@@ -1386,7 +1387,7 @@ setNotifications(prev => {
                     }
                     closeNotifications()
                     if (notif.route) setTimeout(() => navigate(notif.route), 300)
-                  }} className={`p-4 rounded-2xl cursor-pointer transition border ${notif.is_read ? 'bg-[#111] border-[#333] opacity-70' : 'bg-[#2a2a2a] border-[#f1ba17]/30 hover:border-[#f1ba17]'}`}>
+                  }} className={`p-4 rounded-2xl cursor-pointer transition border ${notif.is_read ? 'bg-[#111] border-[#333] opacity-70' : 'bg-[#2a2a2a] border-brand/30 hover:border-brand'}`}>
                     <div className="flex justify-between items-start gap-2 mb-1">
                       <p className={`font-bold text-base ${notif.is_read ? 'text-gray-300' : 'text-white'}`}>{notif.title}</p>
                       <p className="text-[11px] text-muted whitespace-nowrap pt-1">{format(parseISO(notif.created_at), 'd MMM HH:mm', { locale: it })}</p>
@@ -1435,7 +1436,7 @@ setNotifications(prev => {
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Titolo <span className="text-muted font-normal">(facoltativo)</span></label>
                 <input 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand w-full text-base"
                   value={autonomousForm.title}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, title: e.target.value })}
                   placeholder={generaTitolo(autonomousForm.date)}
@@ -1446,13 +1447,13 @@ setNotifications(prev => {
                 <CustomDatePicker
                   date={autonomousForm.date}
                   onChange={(d) => setAutonomousForm({ ...autonomousForm, date: d })}
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-[#f1ba17] w-full text-base"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-brand w-full text-base"
                 />
               </div>
               <div>
                 <label className="text-gray-400 text-xs pl-1 mb-1 block">Descrizione / Note</label>
                 <textarea 
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f1ba17] w-full text-base resize-none"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand w-full text-base resize-none"
                   rows={3}
                   value={autonomousForm.notes}
                   onChange={(e) => setAutonomousForm({ ...autonomousForm, notes: e.target.value })}
@@ -1462,7 +1463,7 @@ setNotifications(prev => {
               <button 
                 onClick={handleSaveAutonomous}
                 disabled={savingAutonomous}
-                className="w-full mt-2 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
+                className="w-full mt-2 py-3 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50"
               >
                 {savingAutonomous ? 'Salvataggio...' : 'Conferma'}
               </button>
@@ -1658,7 +1659,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
             </button>
           </div>
           <textarea
-            className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#f1ba17] resize-none text-base transition-colors"
+            className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-brand resize-none text-base transition-colors"
             rows={3}
             placeholder="Sensazioni, pesi usati, dolori..."
             value={notes}
@@ -1676,7 +1677,7 @@ function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel
         </div>
         <div className="flex gap-3">
           <button onClick={onCancel} disabled={saving} className="flex-1 py-3.5 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">Annulla</button>
-          <button onClick={onSave} disabled={saving} className="flex-1 py-3.5 bg-[#f1ba17] text-black font-black rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-[#f1ba17]/20">{saving ? '...' : 'Fatto! 🎉'}</button>
+          <button onClick={onSave} disabled={saving} className="flex-1 py-3.5 bg-brand text-black font-black rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-brand/20">{saving ? '...' : 'Fatto! 🎉'}</button>
         </div>
       </div>
     </div>
@@ -1788,7 +1789,7 @@ function AudioVisualizer({ stream }) {
         let barHeight = dataArray[i] / 8
         if (barHeight < 2) barHeight = 2
         
-        canvasCtx.fillStyle = '#f1ba17'
+        canvasCtx.fillStyle = BRAND
         const y = (canvas.height - barHeight) / 2
         
         canvasCtx.beginPath()
@@ -1974,7 +1975,7 @@ function VoiceRecorder({ onSave, onCancel }) {
             onClick={toggleRecording}
             className="w-full h-full rounded-full flex items-center justify-center gap-2 text-gray-400 hover:text-white transition-all"
           >
-            <Mic size={18} className="text-[#f1ba17]" /> Tocca per registrare...
+            <Mic size={18} className="text-brand" /> Tocca per registrare...
           </button>
         ) : (
           <div className="flex items-center justify-between w-full px-2 gap-2">
@@ -1989,7 +1990,7 @@ function VoiceRecorder({ onSave, onCancel }) {
               ) : (
                 <div className="flex items-center gap-1 h-full py-1">
                   {[...Array(12)].map((_, i) => (
-                    <div key={i} className="w-1.5 bg-[#f1ba17] rounded-full animate-bounce" style={{ height: '100%', animationDelay: `${i * 0.1}s`, animationDuration: '0.8s' }}></div>
+                    <div key={i} className="w-1.5 bg-brand rounded-full animate-bounce" style={{ height: '100%', animationDelay: `${i * 0.1}s`, animationDuration: '0.8s' }}></div>
                   ))}
                 </div>
               )}
@@ -1999,7 +2000,7 @@ function VoiceRecorder({ onSave, onCancel }) {
               <button aria-label="Annulla la registrazione" onClick={cancelRecording} className="text-gray-400 hover:text-red-500 transition p-1" title="Annulla">
                 <Trash2 size={16} />
               </button>
-              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-11 h-11 flex items-center justify-center bg-[#f1ba17] text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
+              <button aria-label="Ferma e salva la registrazione" onClick={stopRecordingAndSave} className="w-11 h-11 flex items-center justify-center bg-brand text-black rounded-full hover:brightness-110 transition" title="Interrompi e Salva">
                 <Square size={14} fill="currentColor" />
               </button>
             </div>

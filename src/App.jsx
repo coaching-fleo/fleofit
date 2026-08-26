@@ -113,7 +113,7 @@ function Onboarding({ user, onComplete }) {
     <div className="min-h-screen bg-[#0B0B0B] flex flex-col items-center justify-center px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="w-full max-w-md bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 shadow-2xl">
         <div className="flex flex-col items-center mb-6">
-          <h1 className="text-4xl font-black text-white tracking-tight mb-3">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+          <h1 className="text-4xl font-black text-white tracking-tight mb-3">FLEO<span className="text-brand">FIT</span></h1>
           <h2 className="text-2xl font-bold text-white text-center">Completiamo il profilo!</h2>
           <p className="text-gray-400 text-sm mt-1 text-center">Abbiamo bisogno di qualche informazione in più per iniziare.</p>
         </div>
@@ -128,7 +128,7 @@ function Onboarding({ user, onComplete }) {
                   <User size={48} className="text-gray-400" />
                 )}
               </div>
-              <label className="absolute bottom-0 right-0 bg-[#f1ba17] p-1.5 rounded-full cursor-pointer hover:brightness-110 shadow-lg">
+              <label className="absolute bottom-0 right-0 bg-brand p-1.5 rounded-full cursor-pointer hover:brightness-110 shadow-lg">
                 <Upload size={14} className="text-black" />
                 <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
               </label>
@@ -137,24 +137,24 @@ function Onboarding({ user, onComplete }) {
           </div>
 
           <div className="grid grid-cols-2 gap-3 animate-in fade-in">
-            <input required placeholder="Nome *" value={name} onChange={e => setName(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17]" />
-            <input required placeholder="Cognome *" value={surname} onChange={e => setSurname(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17]" />
+            <input required placeholder="Nome *" value={name} onChange={e => setName(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand" />
+            <input required placeholder="Cognome *" value={surname} onChange={e => setSurname(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand" />
           </div>
 
           {role === 'athlete' && (
             <div className="flex flex-col gap-4 animate-in fade-in">
               <div className="flex flex-col gap-1">
                 <label className="text-gray-400 text-xs pl-1">Data di Nascita *</label>
-                <input type="date" required value={dob} onChange={e => setDob(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-sm" />
+                <input type="date" required value={dob} onChange={e => setDob(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand text-sm" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <input type="number" placeholder="Peso (kg)" value={weight} onChange={e => setWeight(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17]" />
-                <input type="number" placeholder="Altezza (cm)" value={height} onChange={e => setHeight(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17]" />
+                <input type="number" placeholder="Peso (kg)" value={weight} onChange={e => setWeight(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand" />
+                <input type="number" placeholder="Altezza (cm)" value={height} onChange={e => setHeight(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand" />
               </div>
             </div>
           )}
 
-          <button type="submit" disabled={saving} className="w-full mt-4 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg flex justify-center items-center">
+          <button type="submit" disabled={saving} className="w-full mt-4 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg flex justify-center items-center">
             {saving ? 'Salvataggio...' : 'Inizia ad usare l\'app!'}
           </button>
         </form>
@@ -278,11 +278,11 @@ function ProtectedRoute({ children }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0B0B0B] flex flex-col items-center justify-center text-center p-4">
-        <h1 className="text-5xl font-black text-white tracking-tight mb-6 animate-pulse">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+        <h1 className="text-5xl font-black text-white tracking-tight mb-6 animate-pulse">FLEO<span className="text-brand">FIT</span></h1>
         {userName ? (
           <>
             <h1 className="text-3xl font-bold text-white mb-2">Ciao!</h1>
-            <p className="text-[#f1ba17] text-sm font-medium">Stiamo preparando la tua app...</p>
+            <p className="text-brand text-sm font-medium">Stiamo preparando la tua app...</p>
           </>
         ) : (
           <h1 className="text-xl font-bold text-white">Caricamento...</h1>

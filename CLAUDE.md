@@ -6,7 +6,7 @@
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `ce5ebe3` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **169 test**, `npm run lint` → **42 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **192 test**, `npm run lint` → **42 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -730,9 +730,25 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 | **Offline** | `orange-500` | banner "Modalità Offline" |
 | Testi | `white` → `gray-300` → `gray-400` → `gray-500` → `gray-600` | gerarchia discendente |
 
-> ⚠️ In `src/index.css` sono definiti i token `--color-brand`, `--color-bg`, `--color-surface`,
-> `--color-surface2`, ma **nel codice si usano quasi ovunque i valori arbitrari** (`bg-[#f1ba17]`).
-> Se si fa refactor, migrare verso i token; i valori **non** devono cambiare.
+> ✅ **Dal 26/08/2026 i colori di marchio passano dai token.** `bg-[#f1ba17]` è diventato
+> `bg-brand`, e così azzurro (`running`), magenta (`custom`) e viola (`ia`): 584 occorrenze
+> ridotte a 8 righe, i token di `src/index.css` più le costanti di `src/lib/colori.js`.
+> **I VALORI NON SONO CAMBIATI** — la regola 3 vale sempre.
+>
+> Perché due elenchi e non uno: classi Tailwind e valori JS vivono in due mondi, e dove il
+> colore finisce in un canvas, in un SVG o in uno `style` inline rasterizzato da
+> html-to-image, una variabile CSS non viene risolta. `src/lib/__tests__/colori.test.js`
+> verifica che i due elenchi coincidano — è l'unica ragione per cui averne due è accettabile.
+>
+> ⚠️ I grigi delle superfici sono ancora valori arbitrari (~870 occorrenze). Non è una
+> dimenticanza: in un rebranding non cambiano (BACKLOG #18-bis).
+>
+> 🔴 **Trappola trovata il 26/08**: Tailwind cerca le classi in TUTTO il progetto, file `.md`
+> compresi. `CLAUDE.md` e `DESIGN.md` contengono `bg-[#f1ba17]` come esempi, e Tailwind ci
+> generava sopra regole vere che finivano nel CSS di produzione — tenendo in vita il vecchio
+> giallo anche dopo la migrazione. Per questo `src/index.css` ora usa
+> `@import "tailwindcss" source(none)` e dichiara `@source "../src"`: senza, la
+> documentazione influenza il prodotto.
 
 ### Codifica colore per intensità/RPE
 - Slider **intensità** in CreateWorkout (`getIntensityColor`): grigi → bianco → giallo brand a 10.

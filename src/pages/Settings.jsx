@@ -367,22 +367,22 @@ export default function Settings() {
   return (
     <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="mb-6 mt-4 flex items-center gap-3">
-        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0">
+        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0">
           <ChevronLeft size={22} className="-ml-0.5" />
         </button>
-        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
       </div>
 
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Database size={24} className="text-[#f1ba17]" />
+          <Database size={24} className="text-brand" />
           Impostazioni
         </h1>
         <p className="text-gray-400 text-sm mt-1">Gestisci la tua app</p>
       </div>
 
       {loading && (
-        <div className="mb-6 p-4 bg-[#f1ba17]/20 border border-[#f1ba17]/50 rounded-xl text-[#f1ba17] text-sm text-center animate-pulse font-medium">
+        <div className="mb-6 p-4 bg-brand/20 border border-brand/50 rounded-xl text-brand text-sm text-center animate-pulse font-medium">
           Operazione in corso, attendere prego...
         </div>
       )}
@@ -395,9 +395,9 @@ export default function Settings() {
         <h2 className="text-lg font-bold text-white mb-4">Notifiche Push</h2>
         <p className="text-gray-400 text-sm mb-4">Ricevi promemoria per i tuoi allenamenti e avvisi quando il coach aggiorna la tua programmazione.</p>
         
-        <button onClick={notificationsEnabled ? handleDisableNotifications : handleEnableNotifications} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition disabled:opacity-50 group">
+        <button onClick={notificationsEnabled ? handleDisableNotifications : handleEnableNotifications} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-brand transition disabled:opacity-50 group">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition shrink-0 ${notificationsEnabled ? 'bg-[#f1ba17]/10 text-[#f1ba17]' : 'bg-[#111] text-gray-400 group-hover:text-[#f1ba17]'}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition shrink-0 ${notificationsEnabled ? 'bg-brand/10 text-brand' : 'bg-[#111] text-gray-400 group-hover:text-brand'}`}>
               {notificationsEnabled ? <BellRing size={20} /> : <Bell size={20} />}
             </div>
             <div className="text-left">
@@ -409,10 +409,10 @@ export default function Settings() {
 
         {role === 'admin' && (
           <div className="flex gap-3 mt-3">
-            <button onClick={testMorningReminder} disabled={loading} className="flex-1 p-3 rounded-xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition text-sm text-white font-semibold">
+            <button onClick={testMorningReminder} disabled={loading} className="flex-1 p-3 rounded-xl bg-[#2a2a2a] border border-[#383838] hover:border-brand transition text-sm text-white font-semibold">
               Test Mattina
             </button>
-            <button onClick={testEveningReminder} disabled={loading} className="flex-1 p-3 rounded-xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition text-sm text-white font-semibold">
+            <button onClick={testEveningReminder} disabled={loading} className="flex-1 p-3 rounded-xl bg-[#2a2a2a] border border-[#383838] hover:border-brand transition text-sm text-white font-semibold">
               Test Sera
             </button>
           </div>
@@ -448,9 +448,9 @@ export default function Settings() {
       <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">
         <h2 className="text-lg font-bold text-white mb-4">Account</h2>
         
-        <button onClick={() => setPasswordModalOpen(true)} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition group mb-3">
+        <button onClick={() => setPasswordModalOpen(true)} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-brand transition group mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-[#f1ba17] transition text-gray-400 shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-brand transition text-gray-400 shrink-0">
               <KeyRound size={20} />
             </div>
             <div className="text-left">
@@ -492,9 +492,9 @@ export default function Settings() {
         <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mt-6">
           <h2 className="text-lg font-bold text-white mb-4">Backup e Ripristino</h2>
           <div className="flex flex-col gap-3">
-            <button onClick={handleExportFull} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-[#f1ba17] transition disabled:opacity-50 group">
+            <button onClick={handleExportFull} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-brand transition disabled:opacity-50 group">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-[#f1ba17] transition text-gray-400 shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center group-hover:text-brand transition text-gray-400 shrink-0">
                   <HardDriveDownload size={20} />
                 </div>
                 <div className="text-left">
@@ -502,7 +502,7 @@ export default function Settings() {
                   <p className="text-muted text-xs">Scarica un file .json con tutti gli atleti e i workout</p>
                 </div>
               </div>
-              <Download size={18} className="text-gray-400 group-hover:text-[#f1ba17]" />
+              <Download size={18} className="text-gray-400 group-hover:text-brand" />
             </button>
 
             <button onClick={() => fullImportRef.current?.click()} disabled={loading} className="w-full flex items-center justify-between p-4 rounded-2xl bg-[#2a2a2a] border border-[#383838] hover:border-blue-500 transition disabled:opacity-50 group">
@@ -659,7 +659,7 @@ function InviteCodeManager() {
     <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 mb-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-bold text-white">Gestione Codici Invito</h2>
-        <button onClick={generateCode} className="flex items-center gap-1.5 bg-[#f1ba17] text-black text-sm font-semibold px-3 py-1.5 rounded-full hover:brightness-110 transition">
+        <button onClick={generateCode} className="flex items-center gap-1.5 bg-brand text-black text-sm font-semibold px-3 py-1.5 rounded-full hover:brightness-110 transition">
           <Plus size={16} /> Genera Nuovo
         </button>
       </div>
@@ -670,7 +670,7 @@ function InviteCodeManager() {
           <button onClick={() => setShowActive(!showActive)} className="w-full flex items-center justify-between p-4 hover:bg-[#222] transition">
             <div className="flex items-center gap-2">
               <span className="text-white font-semibold text-sm">Codici Attivi</span>
-              <span className="bg-[#f1ba17]/10 text-[#f1ba17] px-2 py-0.5 rounded-full text-xs font-bold">{activeCodes.length}</span>
+              <span className="bg-brand/10 text-brand px-2 py-0.5 rounded-full text-xs font-bold">{activeCodes.length}</span>
             </div>
             <ChevronDown size={18} className={`text-muted transition-transform duration-300 ${showActive ? 'rotate-180' : ''}`} />
           </button>
@@ -680,7 +680,7 @@ function InviteCodeManager() {
               {loading ? <p className="text-muted text-xs">Caricamento...</p> : activeCodes.length > 0 ? (
                 activeCodes.map(code => (
                   <div key={code.id} className="bg-[#2a2a2a] p-3 rounded-xl flex items-center justify-between border border-[#383838]">
-                    <span className="font-mono text-lg text-[#f1ba17] tracking-widest">{code.code}</span>
+                    <span className="font-mono text-lg text-brand tracking-widest">{code.code}</span>
                     <div className="flex items-center gap-1">
                       <button aria-label="Copia il codice invito" onClick={() => copyToClipboard(code.code, 'Codice')} title="Copia codice" className="p-2 text-gray-400 hover:text-white transition bg-[#111] rounded-lg border border-[#333]"><Copy size={16} /></button>
                       <button aria-label="Copia il link di invito" onClick={() => {
@@ -774,13 +774,13 @@ function PasswordModal({ onClose, user, setAlertInfo }) {
         <div className="p-5 flex flex-col gap-4" onKeyDown={e => { if (e.key === 'Enter') handleUpdate(e) }}>
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Password attuale</label>
-            <input type="password" placeholder="La tua password attuale" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base" />
+            <input type="password" placeholder="La tua password attuale" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand text-base" />
           </div>
           <div>
             <label className="text-gray-400 text-xs pl-1 mb-1 block">Nuova password</label>
-            <input type="password" placeholder="Scegli una nuova password sicura" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#f1ba17] text-base" />
+            <input type="password" placeholder="Scegli una nuova password sicura" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand text-base" />
           </div>
-          <button type="button" onClick={handleUpdate} disabled={saving || !currentPassword || !newPassword} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+          <button type="button" onClick={handleUpdate} disabled={saving || !currentPassword || !newPassword} className="w-full mt-2 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
             {saving ? 'Salvataggio...' : 'Aggiorna Password'}
           </button>
         </div>

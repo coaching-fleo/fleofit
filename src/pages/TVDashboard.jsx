@@ -120,9 +120,9 @@ const getIntensityColor = (val) => {
 
 function Section({ icon, label, hint, color, stepNumber, className = "", isActive, children }) {
   return (
-    <div className={`bg-[#1e1e1e] border-4 ${isActive ? 'border-[#f1ba17] shadow-[0_0_40px_rgba(241,186,23,0.3)] scale-[1.02]' : color} rounded-[2rem] p-6 flex flex-col gap-4 shadow-2xl relative transition-all duration-500 ${className}`}>
+    <div className={`bg-[#1e1e1e] border-4 ${isActive ? 'border-brand shadow-[0_0_40px] shadow-brand/30 scale-[1.02]' : color} rounded-[2rem] p-6 flex flex-col gap-4 shadow-2xl relative transition-all duration-500 ${className}`}>
       {stepNumber && (
-        <div className="absolute top-4 right-6 w-14 h-14 bg-[#111] border-4 border-[#333] text-[#f1ba17] font-black text-2xl flex items-center justify-center rounded-full z-10 shadow-lg">
+        <div className="absolute top-4 right-6 w-14 h-14 bg-[#111] border-4 border-[#333] text-brand font-black text-2xl flex items-center justify-center rounded-full z-10 shadow-lg">
           {stepNumber}
         </div>
       )}
@@ -188,7 +188,7 @@ function RunningList({ steps, activeIdx }) {
   const getTypeColor = (t) => {
     switch(t) {
       case 'warmup': return 'text-orange-400'
-      case 'run': return 'text-[#0094C6]'
+      case 'run': return 'text-running'
       case 'recover': return 'text-green-400'
       case 'cooldown': return 'text-gray-400'
       case 'repeat': return 'text-purple-400'
@@ -199,7 +199,7 @@ function RunningList({ steps, activeIdx }) {
   return (
     <div className="flex flex-col w-full gap-4">
       {steps.map((step, i) => (
-        <div key={step.id || i} className={`flex flex-col justify-center border-l-[8px] ${i === activeIdx ? 'border-[#0094C6] bg-[#0094C6]/10 shadow-[inset_0_0_20px_rgba(0,148,198,0.2)] rounded-r-2xl py-4' : 'border-[#333] py-2'} pl-6 transition-all duration-500`}>
+        <div key={step.id || i} className={`flex flex-col justify-center border-l-[8px] ${i === activeIdx ? 'border-running bg-running/10 shadow-[inset_0_0_20px] shadow-running/20 rounded-r-2xl py-4' : 'border-[#333] py-2'} pl-6 transition-all duration-500`}>
           <div className="flex items-center gap-4 mb-2">
             <span className={`text-3xl font-black uppercase tracking-wider ${getTypeColor(step.type)}`}>
               {getTypeLabel(step.type)}
@@ -209,7 +209,7 @@ function RunningList({ steps, activeIdx }) {
           {step.type === 'repeat' ? (
             <div className="text-3xl font-bold flex flex-col gap-4 mt-2">
               <div className="flex items-start justify-between bg-[#111] px-6 py-5 rounded-3xl border-2 border-[#333]">
-            <div className="flex-1 min-w-0 break-words pr-4"><span className="text-muted mr-3">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-[#0094C6] ml-3 whitespace-nowrap">@{step.runPace}</span>}</div>
+            <div className="flex-1 min-w-0 break-words pr-4"><span className="text-muted mr-3">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-running ml-3 whitespace-nowrap">@{step.runPace}</span>}</div>
                 {step.runIntensity && <div className="flex items-center gap-2 shrink-0 mt-1"><span className={`text-3xl font-black ${getIntensityColor(step.runIntensity)}`}>{step.runIntensity}/10</span><BicepsFlexed size={36} className={getIntensityColor(step.runIntensity)} /></div>}
               </div>
               <div className="flex items-start justify-between bg-[#111] px-6 py-5 rounded-3xl border-2 border-[#333]">
@@ -483,10 +483,10 @@ export default function TVDashboard() {
       return (
         <div className="flex flex-col items-center justify-center flex-1 h-full text-white p-10 relative w-full">
           <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-            <MonitorUp size={rotated ? 800 : 600} className="text-[#f1ba17]" />
+            <MonitorUp size={rotated ? 800 : 600} className="text-brand" />
           </div>
           <div className="absolute top-8 right-8 z-50 flex items-center gap-4">
-            <div className={`p-4 bg-[#111] border-2 border-[#333] rounded-full transition shadow-2xl ${audioUnlocked ? 'text-[#f1ba17]' : 'text-red-500 animate-pulse'}`} title="Suoni TV">
+            <div className={`p-4 bg-[#111] border-2 border-[#333] rounded-full transition shadow-2xl ${audioUnlocked ? 'text-brand' : 'text-red-500 animate-pulse'}`} title="Suoni TV">
               {audioUnlocked ? <Volume2 size={32} /> : <VolumeX size={32} />}
             </div>
             <button aria-label="Ruota lo schermo" onClick={() => setRotated(!rotated)} className="p-4 bg-[#111] border-2 border-[#333] rounded-full text-gray-400 hover:text-white transition shadow-2xl">
@@ -494,11 +494,11 @@ export default function TVDashboard() {
             </button>
           </div>
           <div className="relative z-10 flex flex-col items-center justify-center flex-1 animate-in fade-in zoom-in duration-500 text-center">
-            <h1 className="text-[120px] font-black tracking-tight mb-8 leading-none">FLEO<span className="text-[#f1ba17]">FIT</span> TV</h1>
+            <h1 className="text-[120px] font-black tracking-tight mb-8 leading-none">FLEO<span className="text-brand">FIT</span> TV</h1>
             <p className="text-5xl text-gray-400 mb-6">Apri l'app sul tuo telefono e clicca sull'icona della TV.</p>
             <p className="text-4xl text-muted mb-12">Inserisci questo codice per avviare la trasmissione:</p>
             <div className="bg-[#1e1e1e] border-4 border-[#333] rounded-[3rem] px-32 py-16 shadow-2xl">
-              <span className="text-[150px] font-black tracking-[0.3em] ml-[0.3em] text-[#f1ba17] drop-shadow-2xl leading-none">{code || '...'}</span>
+              <span className="text-[150px] font-black tracking-[0.3em] ml-[0.3em] text-brand drop-shadow-2xl leading-none">{code || '...'}</span>
             </div>
             {!audioUnlocked && (
               <p className="text-red-400 mt-12 animate-pulse font-bold text-3xl">Premi "OK" sul telecomando per attivare l'audio</p>
@@ -509,7 +509,7 @@ export default function TVDashboard() {
     }
 
     if (status === 'loading') {
-      return <div className="flex h-full items-center justify-center text-[#f1ba17] text-6xl font-bold animate-pulse">Trasmissione in corso...</div>
+      return <div className="flex h-full items-center justify-center text-brand text-6xl font-bold animate-pulse">Trasmissione in corso...</div>
     }
 
     const s = workout?.sections || {}
@@ -601,13 +601,13 @@ export default function TVDashboard() {
           </div>
           <div className="flex flex-col items-end shrink-0">
             <div className="flex flex-wrap items-center justify-end gap-4 mb-2">
-              <div className={`p-4 bg-[#111] border-2 border-[#333] rounded-full transition shadow-2xl ${audioUnlocked ? 'text-[#f1ba17]' : 'text-red-500 animate-pulse'}`} title="Suoni TV">
+              <div className={`p-4 bg-[#111] border-2 border-[#333] rounded-full transition shadow-2xl ${audioUnlocked ? 'text-brand' : 'text-red-500 animate-pulse'}`} title="Suoni TV">
                 {audioUnlocked ? <Volume2 size={36} /> : <VolumeX size={36} />}
               </div>
               <button aria-label="Ruota lo schermo" onClick={() => setRotated(!rotated)} className="p-4 bg-[#111] border-2 border-[#333] rounded-full text-gray-400 hover:text-white transition" title="Ruota Orientamento">
                 <RotateCw size={36} />
               </button>
-              <h1 className="text-6xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span> TV</h1>
+              <h1 className="text-6xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span> TV</h1>
             </div>
             <p className="text-3xl text-muted font-bold">@FLEOFIT</p>
           </div>
@@ -617,7 +617,7 @@ export default function TVDashboard() {
           <div className="overflow-hidden">
               <div className={`bg-[#111] border-4 border-[#333] rounded-[3rem] px-12 py-6 flex items-center justify-between min-w-[1000px] shadow-[0_30px_80px_rgba(0,0,0,0.9)] transition-all duration-500 mb-8 ${timerState ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8'}`}>
                  <div className="flex flex-col flex-1 pr-8 min-w-0">
-                   <span className="text-[#f1ba17] font-bold text-3xl uppercase tracking-widest">{lastTimerState?.step?.title}</span>
+                   <span className="text-brand font-bold text-3xl uppercase tracking-widest">{lastTimerState?.step?.title}</span>
                    <span className="text-white font-bold text-5xl truncate mt-2">{lastTimerState?.step?.task}</span>
                  </div>
                  <div className="w-1 h-24 bg-[#333] rounded-full mx-8"></div>
@@ -670,7 +670,7 @@ export default function TVDashboard() {
 
               {/* Note Coach */}
               {workout.coach_notes && (
-                <Section icon={<span className="text-[#f1ba17] text-5xl">📋</span>} label="Note Coach" color="border-[#f1ba17]/40">
+                <Section icon={<span className="text-brand text-5xl">📋</span>} label="Note Coach" color="border-brand/40">
                   <p className="text-gray-300 text-4xl leading-relaxed font-semibold italic">"{workout.coach_notes}"</p>
                 </Section>
               )}

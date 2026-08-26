@@ -22,4 +22,13 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // I test girano in Node, non nel browser: senza questo `process` e affini
+    // risultano non definiti (successo il 26/08/2026 leggendo src/index.css da
+    // un test per verificare che i token colore combacino con src/lib/colori.js).
+    files: ['src/**/__tests__/**', 'src/test/**', '*.config.js'],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+    },
+  },
 ])

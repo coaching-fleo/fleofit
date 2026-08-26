@@ -8,6 +8,7 @@ import { it } from 'date-fns/locale'
 import { useAuth } from '../App'
 import { CustomAlert } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
+import { BRAND, RUNNING, CUSTOM, EVENTO } from '../lib/colori'
 
 export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -76,22 +77,22 @@ export default function Calendar() {
     'Rest': '#6b7280',
     'Cash In': '#d1d5db',
     'Cash Out': '#d1d5db',
-    'ON/OFF': '#f1ba17',
-    'EMOM': '#f1ba17',
-    'AMRAP': '#f1ba17',
-    'For Time': '#f1ba17',
-        'Interval': '#f1ba17',
+    'ON/OFF': BRAND,
+    'EMOM': BRAND,
+    'AMRAP': BRAND,
+    'For Time': BRAND,
+        'Interval': BRAND,
 
-    Hyrox: '#f1ba17',
-    Running: '#0094C6',
-    Custom: '#D11149',
-    Event: '#ffffff'
+    Hyrox: BRAND,
+    Running: RUNNING,
+    Custom: CUSTOM,
+    Event: EVENTO
   }
 
   const getIntensityColor = (val, type) => {
     const num = parseInt(val, 10);
     if (isNaN(num)) return 'text-muted';
-    return type === 'Event' ? 'text-white' : type === 'Running' ? 'text-[#0094C6]' : (type === 'Custom' ? 'text-[#D11149]' : 'text-[#f1ba17]');
+    return type === 'Event' ? 'text-white' : type === 'Running' ? 'text-running' : (type === 'Custom' ? 'text-custom' : 'text-brand');
   }
 
   const getWorkoutType = (w) => {
@@ -112,7 +113,7 @@ export default function Calendar() {
     <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       {/* BRAND HEADER */}
       <div className="mb-6 mt-4">
-        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
       </div>
 
       {/* HEADER */}
@@ -142,7 +143,7 @@ export default function Calendar() {
           </button>
           <button aria-label="Aggiungi un evento o una gara" 
             onClick={() => setEventModalOpen(true)}
-            className="p-2 rounded-xl bg-[#f1ba17] text-black hover:brightness-110 transition shadow-sm"
+            className="p-2 rounded-xl bg-brand text-black hover:brightness-110 transition shadow-sm"
             title="Aggiungi Evento"
           >
             <Plus size={18} strokeWidth={2.5} />
@@ -171,17 +172,17 @@ export default function Calendar() {
               key={day.toISOString()}
               onClick={() => setSelectedDay(day)}
               className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 rounded-xl aspect-square transition
-                ${selected ? 'bg-[#f1ba17]' : today ? 'bg-[#2a2a2a]' : 'hover:bg-[#1e1e1e]'}`}
+                ${selected ? 'bg-brand' : today ? 'bg-[#2a2a2a]' : 'hover:bg-[#1e1e1e]'}`}
             >
               <span className={`text-sm font-medium leading-none
-                ${selected ? 'text-black' : today ? 'text-[#f1ba17]' : 'text-white'}`}>
+                ${selected ? 'text-black' : today ? 'text-brand' : 'text-white'}`}>
                 {format(day, 'd')}
               </span>
               {hasWorkout && (
                 <div className="flex gap-0.5 mt-1">
                   {dayWorkoutList.slice(0, 3).map((w, i) => (
                     <div key={i} className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: selected ? '#000' : COLORI_PALLINI[getWorkoutType(w)] || '#f1ba17' }} />
+                      style={{ backgroundColor: selected ? '#000' : COLORI_PALLINI[getWorkoutType(w)] || BRAND }} />
                   ))}
                 </div>
               )}
@@ -199,7 +200,7 @@ export default function Calendar() {
           {role !== 'athlete' && (
             <button
               onClick={() => navigate(`/create?date=${format(selectedDay, 'yyyy-MM-dd')}`)}
-              className="flex items-center gap-1 text-[#f1ba17] text-sm font-medium hover:brightness-110"
+              className="flex items-center gap-1 text-brand text-sm font-medium hover:brightness-110"
             >
               <Plus size={16} /> Nuovo
             </button>
@@ -216,7 +217,7 @@ export default function Calendar() {
             <p className="text-gray-400 text-sm">Nessun workout programmato</p>
             {role !== 'athlete' && (
               <button onClick={() => navigate(`/create?date=${format(selectedDay, 'yyyy-MM-dd')}`)}
-                className="mt-3 text-[#f1ba17] text-sm font-medium hover:brightness-110">
+                className="mt-3 text-brand text-sm font-medium hover:brightness-110">
                 + Crea workout per questo giorno
               </button>
             )}
@@ -225,7 +226,7 @@ export default function Calendar() {
           <div className="flex flex-col gap-3">
             {dayWorkouts.map(w => {
               const type = getWorkoutType(w)
-              const color = COLORI_PALLINI[type] || '#f1ba17'
+              const color = COLORI_PALLINI[type] || BRAND
               const exList = w.sections?.main?.exercises || []
               return (
                 <div key={w.id}

@@ -240,14 +240,14 @@ export default function Login() {
         }}
       >
         <div className="flex-1 flex flex-col items-center justify-center">
-          <h1 className="text-5xl font-black text-white tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+          <h1 className="text-5xl font-black text-white tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">FLEO<span className="text-brand">FIT</span></h1>
         </div>
         
         <div className="w-full max-w-md flex gap-4 pb-8 animate-in fade-in slide-in-from-bottom-8 duration-500 delay-300">
           <button onClick={() => { setIsSignUp(false); setView('authForm'); }} className="flex-1 py-4 bg-[#2a2a2a] text-white border border-[#383838] font-bold text-lg rounded-2xl hover:bg-[#333] transition">
             Accedi
           </button>
-          <button onClick={() => setView('inviteForm')} className="flex-1 py-4 bg-[#f1ba17] text-black font-bold text-lg rounded-2xl hover:brightness-110 transition shadow-lg shadow-[#f1ba17]/20">
+          <button onClick={() => setView('inviteForm')} className="flex-1 py-4 bg-brand text-black font-bold text-lg rounded-2xl hover:brightness-110 transition shadow-lg shadow-brand/20">
             Nuovo Utente
           </button>
         </div>
@@ -276,7 +276,7 @@ export default function Login() {
         </button>
         
         <div className="flex flex-col items-center justify-center mb-8 mt-4">
-          <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-[#f1ba17]">FIT</span></h1>
+          <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
           <p className="text-gray-400 text-sm mt-1">
             {view === 'recoveryForm' ? 'Scegli la tua nuova password' : (isResetPassword ? 'Recupera la tua password' : (isSignUp ? 'Crea il tuo account' : 'Accedi alla tua dashboard'))}
           </p>
@@ -291,10 +291,10 @@ export default function Login() {
             <div className="flex flex-col gap-4" onKeyDown={e => { if (e.key === 'Enter') handleInviteSubmit(e) }}>
               <div className="relative">
                 <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Il tuo codice di invito" className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-4 pl-11 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] transition uppercase text-base" disabled={inviteLoading} />
+                <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Il tuo codice di invito" className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-4 pl-11 text-white placeholder-gray-500 focus:outline-none focus:border-brand transition uppercase text-base" disabled={inviteLoading} />
               </div>
               {inviteError && <p className="text-red-500 text-xs text-center">{inviteError}</p>}
-              <button type="button" onClick={handleInviteSubmit} disabled={inviteLoading || !inviteCode} className="w-full flex items-center justify-center gap-2 bg-[#f1ba17] text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">
+              <button type="button" onClick={handleInviteSubmit} disabled={inviteLoading || !inviteCode} className="w-full flex items-center justify-center gap-2 bg-brand text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">
                 {inviteLoading ? 'Verifica...' : 'Prosegui'}
                 {!inviteLoading && <ArrowRight size={18} />}
               </button>
@@ -312,10 +312,10 @@ export default function Login() {
                 placeholder="La tua nuova password" 
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-[#f1ba17] transition text-base"
+                className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-brand transition text-base"
               />
             </div>
-            <button type="button" onClick={handleRecoveryUpdate} disabled={loading || !password} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2">
+            <button type="button" onClick={handleRecoveryUpdate} disabled={loading || !password} className="w-full mt-2 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2">
               {loading ? 'Attendere...' : 'Aggiorna Password'}
             </button>
           </div>
@@ -330,7 +330,7 @@ export default function Login() {
                 placeholder="La tua email" 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-[#f1ba17] transition text-base"
+                className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-brand transition text-base"
               />
             </div>
 
@@ -342,20 +342,20 @@ export default function Login() {
                   placeholder="La tua password" 
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-[#f1ba17] transition text-base"
+                  className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-brand transition text-base"
                 />
               </div>
             )}
 
             {!isResetPassword && !isSignUp && (
               <div className="flex justify-end -mt-2">
-                <button type="button" onClick={() => setIsResetPassword(true)} className="text-xs text-[#f1ba17] hover:underline">
+                <button type="button" onClick={() => setIsResetPassword(true)} className="text-xs text-brand hover:underline">
                   Password dimenticata?
                 </button>
               </div>
             )}
 
-            <button type="button" onClick={handleEmailAuth} disabled={loading} className="w-full mt-2 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2">
+            <button type="button" onClick={handleEmailAuth} disabled={loading} className="w-full mt-2 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2">
               {loading ? 'Attendere...' : (isResetPassword ? 'Invia link' : (isSignUp ? 'Registrati' : 'Accedi'))}
               {!loading && !isResetPassword && <LogIn size={18} />}
             </button>
@@ -380,7 +380,7 @@ export default function Login() {
               </button>
 
               <p className="mt-8 text-center text-sm text-muted">
-                {isSignUp ? 'Hai già un account?' : 'Non hai un account?'} <button type="button" onClick={() => isSignUp ? setIsSignUp(false) : setView('inviteForm')} className="text-[#f1ba17] font-semibold hover:underline">
+                {isSignUp ? 'Hai già un account?' : 'Non hai un account?'} <button type="button" onClick={() => isSignUp ? setIsSignUp(false) : setView('inviteForm')} className="text-brand font-semibold hover:underline">
                   {isSignUp ? 'Accedi' : 'Registrati con Invito'}
                 </button>
               </p>

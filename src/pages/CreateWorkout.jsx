@@ -15,6 +15,7 @@ import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/work
 import { ERGOMETERS } from '../lib/constants'
 import { mostraErrore } from '../lib/alert'
 import { TYPE_COLORS } from '../lib/blockColors'
+import { conVelo, coloreDaClasse } from '../lib/colori'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -133,7 +134,7 @@ export const getIntensityColor = (val) => {
   if (num <= 4) return 'text-gray-400';
   if (num <= 7) return 'text-gray-300';
   if (num <= 9) return 'text-white';
-  return 'text-[#f1ba17]';
+  return 'text-brand';
 }
 
 
@@ -152,8 +153,8 @@ function ScrollPicker({ options = [], value, onChange, label, type, isRun }) {
   const containerRef = useRef(null)
   const [isScrolling, setIsScrolling] = useState(false)
   const scrollTimeout = useRef(null)
-  const activeTextColor = isRun ? 'text-[#0094C6]' : 'text-[#f1ba17]'
-  const activeBorderColor = isRun ? 'border-[#0094C6]/25' : 'border-[#f1ba17]/25'
+  const activeTextColor = isRun ? 'text-running' : 'text-brand'
+  const activeBorderColor = isRun ? 'border-running/25' : 'border-brand/25'
 
   useEffect(() => {
     const index = displayOptions.findIndex(opt => String(opt) === String(value))
@@ -221,9 +222,9 @@ function BlockPickerModal({ onAdd, onClose }) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           {blockTypes.map(t => (
-            <button key={t} onClick={() => onAdd(t)} className="bg-[#2a2a2a] border border-[#383838] text-white font-medium py-3 px-2 rounded-xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition text-sm flex flex-col items-center gap-0.5 group">
+            <button key={t} onClick={() => onAdd(t)} className="bg-[#2a2a2a] border border-[#383838] text-white font-medium py-3 px-2 rounded-xl hover:border-brand hover:text-brand transition text-sm flex flex-col items-center gap-0.5 group">
               <span>{t}</span>
-              <span className="text-[11px] font-normal text-muted group-hover:text-[#f1ba17]/70 leading-tight text-center">{blockHint(t)}</span>
+              <span className="text-[11px] font-normal text-muted group-hover:text-brand/70 leading-tight text-center">{blockHint(t)}</span>
             </button>
           ))}
         </div>
@@ -233,7 +234,7 @@ function BlockPickerModal({ onAdd, onClose }) {
   )
 }
 
-function IntensityPicker({ value, onChange, activeColor = 'bg-[#f1ba17]' }) {
+function IntensityPicker({ value, onChange, activeColor = 'bg-brand' }) {
   const segments = Array.from({ length: 10 }, (_, i) => i + 1);
   const containerRef = useRef(null);
   const isDragging = useRef(false);
@@ -301,7 +302,7 @@ function IntensityPicker({ value, onChange, activeColor = 'bg-[#f1ba17]' }) {
               : 'bg-[#333]'
           }`}
           style={{
-            boxShadow: s <= parseInt(value) ? `0 4px 15px ${activeColor.includes('f1ba17') ? 'rgba(241,186,23,0.3)' : activeColor.includes('0094C6') ? 'rgba(0,148,198,0.3)' : 'rgba(209,17,73,0.3)'}` : 'none',
+            boxShadow: s <= parseInt(value) ? `0 4px 15px ${conVelo(coloreDaClasse(activeColor), 0.3)}` : 'none',
             pointerEvents: 'none'
           }}
         />
@@ -494,7 +495,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
     <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
       <div className={`bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-6 border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isFocused ? '-translate-y-36' : ''}`}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-white font-bold text-lg flex items-center gap-2"><Wand2 size={20} className="text-[#a855f7]" /> Genera con IA</h3>
+          <h3 className="text-white font-bold text-lg flex items-center gap-2"><Wand2 size={20} className="text-ia" /> Genera con IA</h3>
           <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20}/></button>
         </div>
         
@@ -502,14 +503,14 @@ function AiGenerationModal({ onClose, onGenerate }) {
           <div className="flex flex-col items-center justify-center py-6">
             <div className="relative flex items-center justify-center w-32 h-32 mb-6">
               <div 
-                className="absolute inset-0 bg-[#a855f7] rounded-full opacity-20 transition-transform duration-150 ease-out"
+                className="absolute inset-0 bg-ia rounded-full opacity-20 transition-transform duration-150 ease-out"
                 style={{ transform: `scale(${audioLevel + 0.2})` }}
               ></div>
               <div 
-                className="absolute inset-0 bg-[#a855f7] rounded-full opacity-40 transition-transform duration-150 ease-out"
+                className="absolute inset-0 bg-ia rounded-full opacity-40 transition-transform duration-150 ease-out"
                 style={{ transform: `scale(${audioLevel})` }}
               ></div>
-              <button aria-label="Ferma la dettatura" onClick={toggleListen} className="relative z-10 w-16 h-16 bg-[#a855f7] rounded-full flex items-center justify-center text-white shadow-lg shadow-[#a855f7]/50 hover:brightness-110 transition">
+              <button aria-label="Ferma la dettatura" onClick={toggleListen} className="relative z-10 w-16 h-16 bg-ia rounded-full flex items-center justify-center text-white shadow-lg shadow-ia/50 hover:brightness-110 transition">
                 <Square size={24} fill="currentColor" />
               </button>
             </div>
@@ -523,7 +524,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
             <div className="relative">
               <textarea 
                 autoFocus 
-                className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 pb-12 text-white placeholder-gray-600 focus:outline-none focus:border-[#a855f7] resize-none text-base transition-colors" 
+                className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 pb-12 text-white placeholder-gray-600 focus:outline-none focus:border-ia resize-none text-base transition-colors" 
                 rows={4} 
                 placeholder="Ditta o scrivi qui..." 
                 value={text} 
@@ -540,7 +541,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
               />
               <button aria-label="Avvia la dettatura" 
                 onClick={toggleListen}
-                className="absolute bottom-3 right-3 w-11 h-11 bg-[#2a2a2a] hover:bg-[#333] border border-[#444] rounded-full flex items-center justify-center text-[#a855f7] transition shadow-md"
+                className="absolute bottom-3 right-3 w-11 h-11 bg-[#2a2a2a] hover:bg-[#333] border border-[#444] rounded-full flex items-center justify-center text-ia transition shadow-md"
                 title="Dettatura vocale"
               >
                 <Mic size={18} />
@@ -549,7 +550,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
           </>
         )}
 
-        <button onClick={handleGenerate} disabled={loading || !text.trim()} className="w-full mt-4 py-3.5 bg-[#a855f7] text-white font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-[#a855f7]/20">
+        <button onClick={handleGenerate} disabled={loading || !text.trim()} className="w-full mt-4 py-3.5 bg-ia text-white font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-ia/20">
           {loading ? 'Elaborazione in corso...' : 'Genera Workout'}
         </button>
       </div>
@@ -636,7 +637,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
           {!selected && <input
-            className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base"
+            className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand text-base"
             placeholder="Cerca o scrivi esercizio custom..."
             value={search}
             onChange={e => { setSearch(e.target.value); setSelected(null) }}
@@ -647,7 +648,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
             <div className="flex flex-col gap-1">
               {isCustom && (
                 <button onClick={() => handleSelect(search)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#f1ba17]/10 border border-[#f1ba17]/30 text-[#f1ba17] text-sm font-medium">
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-brand/10 border border-brand/30 text-brand text-sm font-medium">
                   <Plus size={16} /> Aggiungi "{search}" (custom)
                 </button>
               )}
@@ -677,14 +678,14 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                   <button 
                     type="button"
                     onClick={() => { setHybridMode('reps'); setMeters('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'reps' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'reps' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
                   >
                     🔁 Reps
                   </button>
                   <button 
                     type="button"
                     onClick={() => { setHybridMode('distance'); setReps('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'distance' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'distance' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
                   >
                     📏 Distanza
                   </button>
@@ -701,14 +702,14 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                   <button 
                     type="button"
                     onClick={() => { setRunPaceMode('pace'); setSpeed('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'pace' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'pace' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
                   >
                     ⏱ Passo
                   </button>
                   <button 
                     type="button"
                     onClick={() => { setRunPaceMode('speed'); setErgoPace('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'speed' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}
+                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'speed' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
                   >
                     ⚡ Velocità
                   </button>
@@ -794,7 +795,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
               )}
 
               <input
-                className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] text-base"
+                className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand text-base"
                 placeholder="Note (es. vai a cedimento, body weight...)"
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -808,7 +809,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
       {selected && (
         <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-[#2a2a2a] bg-[#0B0B0B]">
           <button onClick={handleConfirm}
-            className="w-full min-h-11 py-3.5 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition">
+            className="w-full min-h-11 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition">
             {initialExercise ? 'Salva modifiche' : 'Aggiungi esercizio'}
           </button>
         </div>
@@ -861,18 +862,18 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
       className="drag-item flex items-center gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 cursor-move hover:border-[#444] transition-all duration-200"
     >
       <div className="flex flex-col items-center justify-center shrink-0">
-        <button aria-label="Sposta l'esercizio su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-muted hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
-        <button aria-label="Sposta l'esercizio giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-muted hover:text-[#f1ba17] disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
+        <button aria-label="Sposta l'esercizio su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-muted hover:text-brand disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
+        <button aria-label="Sposta l'esercizio giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-muted hover:text-brand disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
       </div>
 
       {showMinute && (
-        <div className="w-8 h-8 rounded-full bg-[#f1ba17]/10 border border-[#f1ba17]/30 flex items-center justify-center shrink-0">
-          <span className="text-[#f1ba17] text-xs font-bold">{index + 1}</span>
+        <div className="w-8 h-8 rounded-full bg-brand/10 border border-brand/30 flex items-center justify-center shrink-0">
+          <span className="text-brand text-xs font-bold">{index + 1}</span>
         </div>
       )}
 
       <div className="flex-1 cursor-pointer group self-stretch flex flex-col justify-center py-2 -my-2" onClick={() => onEdit && onEdit(ex)}>
-        <p className="text-white text-sm font-medium group-hover:text-[#f1ba17] transition">{ex.name}</p>
+        <p className="text-white text-sm font-medium group-hover:text-brand transition">{ex.name}</p>
         <p className="text-muted text-xs mt-0.5 group-hover:text-gray-400 transition">
           {detail} {paceStr} {speedStr}
           {ex.kg ? ` · ${ex.kg}kg` : ''}
@@ -886,7 +887,7 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
         </div>
       )}
       <div className="flex items-center shrink-0">
-        <button aria-label="Duplica l'esercizio" type="button" onClick={() => onDuplicate && onDuplicate(ex)} className="text-muted hover:text-[#f1ba17] transition shrink-0 p-2" title="Duplica esercizio">
+        <button aria-label="Duplica l'esercizio" type="button" onClick={() => onDuplicate && onDuplicate(ex)} className="text-muted hover:text-brand transition shrink-0 p-2" title="Duplica esercizio">
           <Copy size={15} />
         </button>
         <button aria-label="Rimuovi l'esercizio" type="button" onClick={() => onRemove(ex.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
@@ -993,7 +994,7 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
             <span className="text-[11px] text-muted font-normal truncate">{blockHint(block.type)}</span>
           </span>
           <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-            <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate(block.id)} className="text-muted hover:text-[#f1ba17] transition p-1" title="Duplica">
+            <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate(block.id)} className="text-muted hover:text-brand transition p-1" title="Duplica">
               <Copy size={16}/>
             </button>
             <button aria-label="Sposta il blocco su" type="button" onClick={() => onMoveUp(block.id)} disabled={index===0} className="text-muted hover:text-white disabled:opacity-30 p-1"><ChevronUp size={16}/></button>
@@ -1042,7 +1043,7 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
               <ScrollPicker type="time" value={block.params?.duration} onChange={v => updateParam('duration', v)} label="Durata" />
               <div className="flex flex-col gap-1">
                 <label className="text-gray-400 text-xs pl-1">Note</label>
-                <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-3 text-base text-white focus:border-[#f1ba17] focus:outline-none" value={block.notes || ''} onChange={e => updateNotes(e.target.value)} placeholder="Opzionale..." />
+                <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-3 text-base text-white focus:border-brand focus:outline-none" value={block.notes || ''} onChange={e => updateNotes(e.target.value)} placeholder="Opzionale..." />
               </div>
             </div>
           )}
@@ -1121,7 +1122,7 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
                   />
                 ))}
               </div>
-              <button onClick={() => setPickerOpen(true)} className="py-3 border border-dashed border-[#383838] rounded-xl text-[#f1ba17] text-sm hover:bg-[#f1ba17]/10 transition mt-1">
+              <button onClick={() => setPickerOpen(true)} className="py-3 border border-dashed border-[#383838] rounded-xl text-brand text-sm hover:bg-brand/10 transition mt-1">
                 + Aggiungi Esercizio
               </button>
             </>
@@ -1163,7 +1164,7 @@ function ModeToggle({ mode, onModeChange, value, onChange }) {
            onModeChange('time');
            if (!RUN_TIME_OPTIONS.includes(value)) onChange('1 min');
         }}
-        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'time' ? 'text-[#0094C6]' : 'text-muted hover:text-gray-300'}`}
+        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'time' ? 'text-running' : 'text-muted hover:text-gray-300'}`}
       >
         ⏱ Tempo
       </button>
@@ -1173,7 +1174,7 @@ function ModeToggle({ mode, onModeChange, value, onChange }) {
            onModeChange('distance');
            if (!RUN_DISTANCE_OPTIONS.includes(value)) onChange('100m');
         }}
-        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'distance' ? 'text-[#0094C6]' : 'text-muted hover:text-gray-300'}`}
+        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'distance' ? 'text-running' : 'text-muted hover:text-gray-300'}`}
       >
         📏 Distanza
       </button>
@@ -1246,7 +1247,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
             {['warmup', 'run', 'recover', 'cooldown', 'repeat'].map(t => (
               <button key={t} onClick={() => setType(t)}
                 className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition ${
-                  type === t ? 'bg-[#0094C6]/20 border-[#0094C6] text-[#0094C6]' : 'bg-[#2a2a2a] border-[#383838] text-gray-400 hover:text-white'
+                  type === t ? 'bg-running/20 border-running text-running' : 'bg-[#2a2a2a] border-[#383838] text-gray-400 hover:text-white'
                 }`}>
                 {getTypeLabel(t)}
               </button>
@@ -1259,7 +1260,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
               <ScrollPicker isRun options={RUN_REPEAT_ROUNDS_OPTIONS} value={rounds} onChange={setRounds} label="Numero di ripetizioni" />
               <div className="p-3 bg-[#222] border border-[#333] rounded-xl flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-[#0094C6] text-sm font-semibold">Fase Attiva (Corsa)</p>
+                  <p className="text-running text-sm font-semibold">Fase Attiva (Corsa)</p>
                   <div className="flex items-center gap-1">
                     <span className={`text-xs font-bold ${getIntensityColor(runIntensity)}`}>{runIntensity}/10</span>
                     <BicepsFlexed size={14} className={getIntensityColor(runIntensity)} />
@@ -1271,7 +1272,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
                   <ScrollPicker isRun options={RUN_PACE_OPTIONS} value={runPace} onChange={setRunPace} label="Da" />
                   <ScrollPicker isRun options={MAX_PACE_OPTIONS} value={runPaceMax} onChange={setRunPaceMax} label="A (Opz.)" />
                 </div>
-                <IntensityPicker value={runIntensity} onChange={setRunIntensity} activeColor="bg-[#0094C6]" />
+                <IntensityPicker value={runIntensity} onChange={setRunIntensity} activeColor="bg-running" />
               </div>
               <div className="p-3 bg-[#222] border border-[#333] rounded-xl flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -1287,11 +1288,11 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
                   <ScrollPicker isRun options={RUN_PACE_OPTIONS} value={recPace} onChange={setRecPace} label="Da" />
                   <ScrollPicker isRun options={MAX_PACE_OPTIONS} value={recPaceMax} onChange={setRecPaceMax} label="A (Opz.)" />
                 </div>
-                <IntensityPicker value={recIntensity} onChange={setRecIntensity} activeColor="bg-[#0094C6]" />
+                <IntensityPicker value={recIntensity} onChange={setRecIntensity} activeColor="bg-running" />
               </div>
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Note</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0094C6] text-base" placeholder="Es: mantieni la zona 2 costante..." />
+                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-running text-base" placeholder="Es: mantieni la zona 2 costante..." />
               </div>
               </>
             ) : (
@@ -1310,16 +1311,16 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
                     <BicepsFlexed size={16} className={getIntensityColor(intensity)} />
                   </div>
                 </div>
-                <IntensityPicker value={intensity} onChange={setIntensity} activeColor="bg-[#0094C6]" />
+                <IntensityPicker value={intensity} onChange={setIntensity} activeColor="bg-running" />
               </div>
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Note</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0094C6] text-base" placeholder="Es: corsa leggera, focus tecnica..." />
+                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-running text-base" placeholder="Es: corsa leggera, focus tecnica..." />
               </div>
               </>
             )}
           </div>
-          <button onClick={handleAdd} className="w-full mt-2 py-3 bg-[#0094C6] text-white font-bold rounded-xl hover:brightness-110 transition">
+          <button onClick={handleAdd} className="w-full mt-2 py-3 bg-running text-white font-bold rounded-xl hover:brightness-110 transition">
             {initialStep ? 'Salva Modifiche' : 'Aggiungi Fase'}
           </button>
         </div>
@@ -1353,7 +1354,7 @@ export const RunningStepRow = memo(function RunningStepRow({ step, index, total,
   const getTypeColor = (t) => {
     switch(t) {
       case 'warmup': return 'text-gray-400 bg-[#2a2a2a] border-[#383838]'
-      case 'run': return 'text-[#0094C6] bg-[#0094C6]/10 border-[#0094C6]/30'
+      case 'run': return 'text-running bg-running/10 border-running/30'
       case 'recover': return 'text-muted bg-[#1e1e1e] border-[#2a2a2a]'
       case 'cooldown': return 'text-gray-400 bg-[#111] border-[#222]'
       case 'repeat': return 'text-purple-400 bg-purple-400/10 border-purple-400/30'
@@ -1397,8 +1398,8 @@ export const RunningStepRow = memo(function RunningStepRow({ step, index, total,
       className="drag-item flex items-start gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 hover:border-[#444] transition-all duration-200 cursor-move"
     >
       <div className="flex flex-col items-center justify-center shrink-0 mt-1">
-        <button aria-label="Sposta la fase su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-muted hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
-        <button aria-label="Sposta la fase giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-muted hover:text-[#0094C6] disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
+        <button aria-label="Sposta la fase su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-muted hover:text-running disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
+        <button aria-label="Sposta la fase giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-muted hover:text-running disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
       </div>
       <div className="flex-1 cursor-pointer group self-stretch flex flex-col justify-center py-2 -my-2" onClick={() => onEdit && onEdit(step)}>
         <div className="flex items-center gap-2 mb-1 group-hover:opacity-80 transition">
@@ -1433,7 +1434,7 @@ export const RunningStepRow = memo(function RunningStepRow({ step, index, total,
         )}
       </div>
       <div className="flex items-center shrink-0 mt-1">
-        <button aria-label="Duplica la fase" type="button" onClick={() => onDuplicate && onDuplicate(step)} className="text-muted hover:text-[#0094C6] transition shrink-0 p-2" title="Duplica fase">
+        <button aria-label="Duplica la fase" type="button" onClick={() => onDuplicate && onDuplicate(step)} className="text-muted hover:text-running transition shrink-0 p-2" title="Duplica fase">
           <Copy size={15} />
         </button>
         <button aria-label="Elimina la fase" type="button" onClick={() => onRemove(step.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
@@ -1909,32 +1910,32 @@ export default function CreateWorkout() {
           position: relative;
         }
         .custom-slider.slider-yellow {
-          background: linear-gradient(to right, #f1ba17 var(--progress), #383838 var(--progress));
+          background: linear-gradient(to right, var(--color-brand) var(--progress), #383838 var(--progress));
           background-size: 100% 10px;
           background-position: center;
           background-repeat: no-repeat;
         }
         .custom-slider.slider-yellow::-webkit-slider-thumb {
-          background: #f1ba17;
+          background: var(--color-brand);
         }
         .custom-slider.slider-blue {
-          background: linear-gradient(to right, #0094C6 var(--progress), #383838 var(--progress));
+          background: linear-gradient(to right, var(--color-running) var(--progress), #383838 var(--progress));
           background-size: 100% 10px;
           background-position: center;
           background-repeat: no-repeat;
         }
         .custom-slider.slider-blue::-webkit-slider-thumb {
-          background: #0094C6;
+          background: var(--color-running);
         }
       `}</style>
-      <button aria-label="Torna indietro" onClick={handleBack} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0 mb-6">
+      <button aria-label="Torna indietro" onClick={handleBack} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0 mb-6">
         <X size={22} />
       </button>
-      <h1 className="text-2xl font-bold text-[#f1ba17] mb-4">{editId ? 'Modifica Workout' : 'Crea Workout'}</h1>
+      <h1 className="text-2xl font-bold text-brand mb-4">{editId ? 'Modifica Workout' : 'Crea Workout'}</h1>
 
       <div className="flex flex-col gap-3 mb-6">
         <input
-          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] font-medium text-base"
+          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand font-medium text-base"
           placeholder={category === 'Custom' ? generaTitolo(date) : 'Nome workout (es. Hyrox Strength #1)'}
           value={title}
           onChange={e => setTitle(e.target.value)}
@@ -1943,7 +1944,7 @@ export default function CreateWorkout() {
           date={date}
           onChange={setDate}
           placeholder="Data dell'allenamento"
-          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-base hover:border-[#f1ba17] w-full"
+          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-base hover:border-brand w-full"
         />
       </div>
 
@@ -1954,24 +1955,24 @@ export default function CreateWorkout() {
           <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] mb-2">
             <div 
               className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(33.333%-0.25rem)] rounded-xl shadow-md transition-all duration-300 ease-out ${
-                category === 'Hyrox' ? 'translate-x-0 bg-[#f1ba17]/10 border border-[#f1ba17]/50' : 
-                category === 'Running' ? 'translate-x-full bg-[#0094C6]/10 border border-[#0094C6]/50' : 
-                'translate-x-[200%] bg-[#D11149]/10 border border-[#D11149]/50'
+                category === 'Hyrox' ? 'translate-x-0 bg-brand/10 border border-brand/50' : 
+                category === 'Running' ? 'translate-x-full bg-running/10 border border-running/50' : 
+                'translate-x-[200%] bg-custom/10 border border-custom/50'
               }`}
             />
             <button 
               onClick={() => setCategory('Hyrox')} 
-              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Hyrox' ? 'text-[#f1ba17]' : 'text-muted hover:text-gray-300'}`}>
+              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Hyrox' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}>
               <Dumbbell size={18} /> Hyrox
             </button>
             <button 
               onClick={() => setCategory('Running')} 
-              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Running' ? 'text-[#0094C6]' : 'text-muted hover:text-gray-300'}`}>
+              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Running' ? 'text-running' : 'text-muted hover:text-gray-300'}`}>
               <Timer size={18} /> Running
             </button>
             <button 
               onClick={() => setCategory('Custom')} 
-              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Custom' ? 'text-[#D11149]' : 'text-muted hover:text-gray-300'}`}>
+              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Custom' ? 'text-custom' : 'text-muted hover:text-gray-300'}`}>
               <Dumbbell size={18} /> Custom
             </button>
           </div>
@@ -1987,7 +1988,7 @@ export default function CreateWorkout() {
               <button 
                 onClick={() => setStep(2)} 
                 disabled={!isStep1Valid}
-                className={`w-full py-4 mt-2 rounded-2xl border border-[#f1ba17]/50 bg-[#f1ba17]/10 text-[#f1ba17] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
+                className={`w-full py-4 mt-2 rounded-2xl border border-brand/50 bg-brand/10 text-brand font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
               >
                 Crea Allenamento Hyrox →
               </button>
@@ -1995,7 +1996,7 @@ export default function CreateWorkout() {
               <button 
                 onClick={() => setStep(2)} 
                 disabled={!isStep1Valid}
-                className={`w-full py-4 mt-2 rounded-2xl border border-[#0094C6]/50 bg-[#0094C6]/10 text-[#0094C6] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
+                className={`w-full py-4 mt-2 rounded-2xl border border-running/50 bg-running/10 text-running font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
               >
                 Crea Allenamento Corsa →
               </button>
@@ -2003,7 +2004,7 @@ export default function CreateWorkout() {
               <button 
                 onClick={() => setStep(2)} 
                 disabled={!isStep1Valid}
-                className={`w-full py-4 mt-2 rounded-2xl border border-[#D11149]/50 bg-[#D11149]/10 text-[#D11149] font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
+                className={`w-full py-4 mt-2 rounded-2xl border border-custom/50 bg-custom/10 text-custom font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
               >
                 Crea Allenamento Custom →
               </button>
@@ -2020,8 +2021,8 @@ export default function CreateWorkout() {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Dumbbell size={18} className="text-[#f1ba17]" />
-                <span className="font-bold text-[#f1ba17]">Allenamento Hyrox</span>
+                <Dumbbell size={18} className="text-brand" />
+                <span className="font-bold text-brand">Allenamento Hyrox</span>
               </div>
               <div className="flex items-center gap-1">
                  <span className={`text-sm font-bold ${getIntensityColor(workoutIntensity)}`}>{workoutIntensity}/10</span>
@@ -2052,10 +2053,10 @@ export default function CreateWorkout() {
           </div>
 
           <div className="flex gap-3">
-            <button onClick={() => setBlockPickerOpen(true)} className="flex-1 py-4 border border-dashed border-[#383838] rounded-xl text-gray-400 text-sm hover:border-[#f1ba17] hover:text-[#f1ba17] transition font-medium">
+            <button onClick={() => setBlockPickerOpen(true)} className="flex-1 py-4 border border-dashed border-[#383838] rounded-xl text-gray-400 text-sm hover:border-brand hover:text-brand transition font-medium">
               + Aggiungi Blocco
             </button>
-            <button onClick={() => setAiModalOpen(true)} className="flex-1 py-4 border border-dashed border-[#a855f7]/30 bg-[#a855f7]/10 rounded-xl text-[#a855f7] text-sm hover:border-[#a855f7] hover:bg-[#a855f7]/20 transition font-medium flex items-center justify-center gap-2">
+            <button onClick={() => setAiModalOpen(true)} className="flex-1 py-4 border border-dashed border-ia/30 bg-ia/10 rounded-xl text-ia text-sm hover:border-ia hover:bg-ia/20 transition font-medium flex items-center justify-center gap-2">
               <Wand2 size={18} /> Genera con IA
             </button>
           </div>
@@ -2064,7 +2065,7 @@ export default function CreateWorkout() {
           <div className="mt-4">
             <label className="text-gray-400 text-sm mb-2 block">Note coach (appariranno nel PDF)</label>
             <textarea
-              className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] resize-none text-base"
+              className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand resize-none text-base"
               rows={3}
               placeholder="Es: vai a cedimento sull'ultimo esercizio, mantieni il ritmo..."
               value={coachNotes}
@@ -2076,7 +2077,7 @@ export default function CreateWorkout() {
           {/* BOTTONI */}
           <div className="flex gap-3">
             <button onClick={handleSave} disabled={saving}
-              className="w-full justify-center px-6 py-3 rounded-xl bg-[#f1ba17] text-black font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
+              className="w-full justify-center px-6 py-3 rounded-xl bg-brand text-black font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
               <Save size={18} />
               {saving ? 'Salvo...' : saved ? '✅ Salvato!' : 'Salva Workout'}
             </button>
@@ -2128,28 +2129,28 @@ export default function CreateWorkout() {
           <div className="px-4 py-4 rounded-2xl border border-[#444] bg-[#222] flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Timer size={18} className="text-[#0094C6]" />
-                <span className="font-bold text-[#0094C6]">Allenamento Corsa</span>
+                <Timer size={18} className="text-running" />
+                <span className="font-bold text-running">Allenamento Corsa</span>
               </div>
               <div className="flex items-center gap-1">
                  <span className={`text-sm font-bold ${getIntensityColor(workoutIntensity)}`}>{workoutIntensity}/10</span>
                  <BicepsFlexed size={18} className={getIntensityColor(workoutIntensity)} />
               </div>
             </div>
-            <input type="range" min="1" max="10" value={workoutIntensity} onChange={e => setWorkoutIntensity(e.target.value)} className="w-full accent-[#0094C6]" />
+            <input type="range" min="1" max="10" value={workoutIntensity} onChange={e => setWorkoutIntensity(e.target.value)} className="w-full accent-running" />
           </div>
 
           <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-white font-semibold text-sm">Fasi dell'allenamento</span>
-              <button aria-label="Aggiungi una fase di corsa" onClick={() => setRunningPickerOpen(true)} className="text-[#0094C6] hover:brightness-110">
+              <button aria-label="Aggiungi una fase di corsa" onClick={() => setRunningPickerOpen(true)} className="text-running hover:brightness-110">
                 <Plus size={18} />
               </button>
             </div>
 
             {runningSteps.length === 0 ? (
               <button onClick={() => setRunningPickerOpen(true)}
-                className="w-full py-4 border border-dashed border-[#383838] rounded-xl text-gray-400 text-sm hover:border-[#0094C6] hover:text-[#0094C6] transition">
+                className="w-full py-4 border border-dashed border-[#383838] rounded-xl text-gray-400 text-sm hover:border-running hover:text-running transition">
                 + Aggiungi prima fase (es. Riscaldamento)
               </button>
             ) : (
@@ -2172,7 +2173,7 @@ export default function CreateWorkout() {
                   />
                 ))}
                 <button onClick={() => setRunningPickerOpen(true)}
-                  className="flex items-center justify-center gap-2 border border-dashed border-[#383838] rounded-xl py-3 text-[#0094C6] text-sm font-medium mt-1 hover:border-[#0094C6] transition">
+                  className="flex items-center justify-center gap-2 border border-dashed border-[#383838] rounded-xl py-3 text-running text-sm font-medium mt-1 hover:border-running transition">
                   <Plus size={16} /> Aggiungi fase
                 </button>
               </div>
@@ -2181,7 +2182,7 @@ export default function CreateWorkout() {
 
           <div className="flex gap-3">
             <button onClick={handleSave} disabled={saving}
-              className="w-full justify-center px-6 py-3 rounded-xl bg-[#f1ba17] text-black font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
+              className="w-full justify-center px-6 py-3 rounded-xl bg-brand text-black font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
               <Save size={18} />
               {saving ? 'Salvo...' : saved ? '✅ Salvato!' : 'Salva Workout'}
             </button>
@@ -2195,21 +2196,21 @@ export default function CreateWorkout() {
           <div className="px-4 py-4 rounded-2xl border border-[#444] bg-[#222] flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Dumbbell size={18} className="text-[#D11149]" />
-                <span className="font-bold text-[#D11149]">Allenamento Custom</span>
+                <Dumbbell size={18} className="text-custom" />
+                <span className="font-bold text-custom">Allenamento Custom</span>
               </div>
               <div className="flex items-center gap-1">
                  <span className={`text-sm font-bold ${getIntensityColor(workoutIntensity)}`}>{workoutIntensity}/10</span>
                  <BicepsFlexed size={18} className={getIntensityColor(workoutIntensity)} />
               </div>
             </div>
-            <IntensityPicker value={workoutIntensity} onChange={setWorkoutIntensity} activeColor="bg-[#D11149]" />
+            <IntensityPicker value={workoutIntensity} onChange={setWorkoutIntensity} activeColor="bg-custom" />
           </div>
 
           <div className="mt-2">
             <label className="text-gray-400 text-sm mb-2 block">Descrizione / Note per l'atleta</label>
             <textarea
-              className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D11149] resize-none text-base"
+              className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-custom resize-none text-base"
               rows={8}
               placeholder="Descrivi l'allenamento in dettaglio. Questa descrizione apparirà a tutti gli atleti a cui assegnerai questo workout."
               value={coachNotes}
@@ -2219,7 +2220,7 @@ export default function CreateWorkout() {
 
           <div className="flex gap-3 mt-4">
             <button onClick={handleSave} disabled={saving}
-              className="w-full justify-center px-6 py-3 rounded-xl bg-[#D11149] text-white font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
+              className="w-full justify-center px-6 py-3 rounded-xl bg-custom text-white font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
               <Save size={18} />
               {saving ? 'Salvo...' : saved ? '✅ Salvato!' : 'Salva Workout'}
             </button>
@@ -2257,13 +2258,13 @@ export default function CreateWorkout() {
                 <div className="flex flex-col gap-3 mt-2">
                   <button 
                     onClick={() => performSave(false)}
-                    className="w-full py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition"
+                    className="w-full py-3 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition"
                   >
                     Sovrascrivi esistente
                   </button>
                   <button 
                     onClick={() => setIsSavingAsNew(true)}
-                    className="w-full py-3 bg-[#2a2a2a] border border-[#383838] text-white font-bold rounded-xl hover:border-[#f1ba17] hover:text-[#f1ba17] transition"
+                    className="w-full py-3 bg-[#2a2a2a] border border-[#383838] text-white font-bold rounded-xl hover:border-brand hover:text-brand transition"
                   >
                     Salva come nuovo
                   </button>
@@ -2274,7 +2275,7 @@ export default function CreateWorkout() {
                 <p className="text-gray-400 text-sm">Inserisci il nome per il nuovo allenamento:</p>
                 <input 
                   autoFocus
-                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f1ba17] w-full mt-1 text-base"
+                  className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand w-full mt-1 text-base"
                   value={newWorkoutName}
                   onChange={(e) => setNewWorkoutName(e.target.value)}
                   placeholder="Nome del workout..."
@@ -2289,7 +2290,7 @@ export default function CreateWorkout() {
                   <button 
                     onClick={() => performSave(true)}
                     disabled={!newWorkoutName.trim() || saving}
-                    className="flex-1 py-3 bg-[#f1ba17] text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 text-sm"
+                    className="flex-1 py-3 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 text-sm"
                   >
                     {saving ? 'Salvataggio...' : 'Conferma'}
                   </button>
