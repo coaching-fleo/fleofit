@@ -872,11 +872,18 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 0-bis. ⚠️ **localStorage si legge SOLO con `leggiJson`/`scriviJson` di `src/lib/offlineQueue.js`.**
    Un `JSON.parse(localStorage.getItem(...))` nudo ha già prodotto due guasti silenziosi
    (§9-quater punti 1 e 4). Le chiavi sono elencate al §8.
-1. **Codice duplicato pesante** — `parseNotesAndRpe`/`formatNotesWithRpe`, `RpeModal`,
-   `VoiceRecorder`, `AudioVisualizer`, `CustomAudioPlayer`, `TYPE_COLORS`, `ERGOMETERS`,
-   il calcolo del tempo/carico settimanale e i beep WAV sono **ricopiati** in Home, WorkoutDetail,
-   AthleteDetail, CreateWorkout e TVDashboard. Candidati naturali a `src/lib/` + `src/components/`.
-   `src/lib/` **esiste dal 24/08/2026** (`blockHints.js`): è il posto dove spostarli.
+1. ~~Codice duplicato pesante~~ → **in gran parte chiuso il 25-26/08/2026.**
+   In `src/lib/`: `rpe`, `blockColors`, `constants`, `offlineQueue`, `timerSequence`,
+   `statistiche`, `badge`, `colori`. In `src/components/`: `VoiceRecorder`,
+   `AudioVisualizer`, `RpeModal`, `CustomAudioPlayer`.
+   > 🔴 **Perché contava, detto dai fatti.** `VoiceRecorder` era in TRE copie, e il
+   > 25/08 un guasto è stato corretto in **due su tre**. Confrontandole il 26/08 erano
+   > già diverse: Home aveva il messaggio all'utente quando il MediaRecorder fallisce,
+   > WorkoutDetail il log dell'errore nativo, e **nessuna delle due aveva entrambe**.
+   > Il componente unico prende il meglio delle due linee separate.
+   > Le tre pagine perdono 1.360 righe, i componenti condivisi ne aggiungono 537.
+   **Restano duplicati** i beep WAV (WorkoutDetail e TVDashboard) e le cinque funzioni
+   di colore per intensità/RPE sparse in quattro file (§9 punto 3, BACKLOG #16-bis).
 2. ~~File morti~~ → **rimossi tutti e cinque** (`src/pages/useTouchDrag.js`, `src/pages/patch.js`,
    `src/pages/Invite.jsx`, `src/App.css`, `index.ts` in root). Verificato il 25/08: nessuno
    esiste più sul disco. ⚠️ `src/pages/Invite.jsx` **esiste ancora su `main`**.
