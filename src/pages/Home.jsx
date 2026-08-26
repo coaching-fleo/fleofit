@@ -263,15 +263,36 @@ export default function Home() {
 
     setSyncingQueue(true)
     const remaining = []
-    for (const action of queue) {
-      if (action.type === 'UPDATE_WORKOUT') {
+    try {
+      for (const action of queue) {
+        // Una voce malformata è JSON valido, quindi leggiCoda la lascia passare:
+        // bastava un `null` nell'array perché `action.type` lanciasse. E siccome
+        // niente lo intercettava, il ciclo moriva lì — la coda non si svuotava
+        // più, il workout valido che seguiva non partiva mai, e il banner
+        // "Sincronizzazione in corso..." restava a girare per sempre.
+        // Una voce irrecuperabile si SCARTA (riprovarla fallirebbe uguale);
+        // una voce valida che il server rifiuta si TIENE, per riprovare dopo.
+        if (action?.type !== 'UPDATE_WORKOUT' || !action.payload?.id) {
+          console.warn('Azione offline illeggibile, la scarto:', action)
+          continue
+        }
         const { id, status, notes } = action.payload
-        const { error } = await supabase.from('athlete_workouts').update({ status, notes }).eq('id', id)
-        if (error) remaining.push(action)
+        try {
+          const { error } = await supabase.from('athlete_workouts').update({ status, notes }).eq('id', id)
+          if (error) remaining.push(action)
+        } catch (e) {
+          // Errore inatteso su un'azione valida: si conserva. Perderla
+          // significherebbe perdere un allenamento completato.
+          console.warn('Sincronizzazione fallita, riproverò:', e)
+          remaining.push(action)
+        }
       }
+    } finally {
+      // Nel finally perché il banner deve spegnersi comunque: se resta acceso
+      // l'atleta vede "Sincronizzazione in corso..." all'infinito.
+      scriviJson(CHIAVE_CODA, remaining)
+      setSyncingQueue(false)
     }
-    scriviJson(CHIAVE_CODA, remaining)
-    setSyncingQueue(false)
   }
 
   useEffect(() => {

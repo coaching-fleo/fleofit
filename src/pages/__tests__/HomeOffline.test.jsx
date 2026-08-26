@@ -185,3 +185,51 @@ describe('scompletare un workout senza rete', () => {
     expect(coda()[0].payload.status).toBe('pending')
   })
 })
+
+describe('la sincronizzazione al ritorno della rete', () => {
+  // processOfflineQueue è l'ultimo pezzo del percorso offline che non aveva
+  // test, ed è quello che manda DAVVERO i dati al server: se si ferma, i
+  // workout completati senza rete non arrivano mai al coach.
+  const azione = (id, status = 'completed') => ({
+    type: 'UPDATE_WORKOUT', payload: { id, status, notes: '[RPE: 6/10]\n' }, ts: 1,
+  })
+
+  it('svuota la coda mandando le azioni a Supabase', async () => {
+    window.localStorage.setItem(CHIAVE_CODA, JSON.stringify([azione('aw1')]))
+    montaPagina(<Home />)
+    await attendiCaricamento()
+
+    await waitFor(() => expect(finto.chiamateA('athlete_workouts', 'update').length).toBeGreaterThan(0))
+    await waitFor(() => expect(coda()).toEqual([]))
+  })
+
+  it('tiene in coda quello che il server rifiuta, invece di perderlo', async () => {
+    ctrl.fetchFallisce.valore = true
+    window.localStorage.setItem(CHIAVE_CODA, JSON.stringify([azione('aw1')]))
+    montaPagina(<Home />)
+
+    // ⚠️ Aspettare che la coda abbia un elemento non proverebbe NIENTE: ce l'ha
+    // già in partenza, quindi l'asserzione passerebbe prima ancora che la
+    // sincronizzazione parta. (Errore commesso il 26/08/2026 e trovato per
+    // mutazione.) Si aspetta che il tentativo sia AVVENUTO, poi si guarda la coda.
+    await waitFor(() => expect(finto.chiamateA('athlete_workouts', 'update').length).toBeGreaterThan(0))
+    await waitFor(() => expect(window.localStorage.getItem(CHIAVE_CODA)).not.toBeNull())
+    expect(coda()).toHaveLength(1)
+    expect(coda()[0].payload.id).toBe('aw1')
+  })
+
+  it('🔴 una voce malformata non deve bloccare tutta la coda', async () => {
+    // Basta un null dentro l'array — JSON valido, quindi leggiCoda lo lascia
+    // passare — perché `action.type` lanci. E siccome setSyncingQueue(false)
+    // non sta in un finally, il banner "Sincronizzazione in corso..." resta a
+    // girare per sempre e il workout valido che segue non parte mai.
+    window.localStorage.setItem(CHIAVE_CODA, JSON.stringify([null, azione('aw1')]))
+    montaPagina(<Home />)
+    await attendiCaricamento()
+
+    await waitFor(() => expect(finto.chiamateA('athlete_workouts', 'update').length).toBeGreaterThan(0))
+    await waitFor(() => expect(coda()).toEqual([]))
+    expect(screen.queryByText(/Sincronizzazione in corso/i)).not.toBeInTheDocument()
+  })
+})
+

@@ -6,7 +6,7 @@
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **130 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **133 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -945,6 +945,18 @@ Erano tutti `catch {}` senza corpo, quindi invisibili sia all'utente sia nei log
 Loggate anche, senza cambiare comportamento, le scritture di `badge_count` su
 `push_subscriptions` (5 punti fra Home e WorkoutDetail): se falliscono, il contatore che
 `send-reminders` rilegge per incrementare il badge resta disallineato per sempre.
+
+### 5. La coda offline si bloccava su una voce malformata (corretto il 26/08/2026)
+Trovato scrivendo i test su `processOfflineQueue`, l'ultimo pezzo scoperto del percorso.
+`leggiCoda` garantisce che la coda sia un **array**, non che le voci dentro siano sane:
+bastava un `null` — JSON perfettamente valido — perché `action.type` lanciasse. Il ciclo
+moriva lì, e con lui tre cose: la coda non si svuotava più, **il workout valido che seguiva
+non arrivava mai al server**, e `setSyncingQueue(false)` non veniva eseguito, quindi il banner
+«Sincronizzazione in corso…» restava a girare per sempre.
+
+La correzione distingue due casi che prima erano uno solo: una voce **irrecuperabile** si
+scarta (riprovarla fallirebbe uguale), una voce **valida rifiutata dal server** si tiene per
+riprovare. Lo spegnimento del banner e la riscrittura della coda stanno in un `finally`.
 
 ### 4. La modale RPE poteva restare bloccata a girare (corretto il 25/08/2026)
 Trovato cercando gli altri chiamanti della coda. `handleRpeSubmitHome` e

@@ -86,7 +86,7 @@ xcodebuild -exportArchive -archivePath <archivio.xcarchive> -exportOptionsPlist 
 
 | # | Cosa | Conseguenza |
 |---|---|---|
-| 21-bis | La coda offline è estratta e testata, ma **`processOfflineQueue` resta in `Home.jsx`** | 2 ore | Il ciclo che riprova gli UPDATE su Supabase non è coperto: serve un finto `supabase`. È anche il punto della voce 14 (last-write-wins) |
+| ~~21-bis~~ | ✅ **`processOfflineQueue` coperta il 26/08/2026**, e la copertura ha trovato un guasto: bastava un `null` nella coda — JSON valido, quindi `leggiCoda` lo lasciava passare — perché `action.type` lanciasse. Il ciclo moriva lì: la coda non si svuotava più, il workout valido che seguiva non partiva mai, e il banner «Sincronizzazione in corso…» restava a girare per sempre. Corretto: una voce irrecuperabile si scarta, una valida rifiutata dal server si tiene, e lo spegnimento del banner sta in un `finally` | Resta aperta la voce 14 (last-write-wins), che è congelata |
 | 22 | **Zero occorrenze di `parseNotesAndRpe`** (riverificato il 25/08) | Se un atleta modifica una nota dalla web app, **l'RPE scritto dall'app iOS viene distrutto** e le statistiche ricadono in silenzio sul default 5. È l'unica voce di questo elenco che perde dati, e l'unica che si potrebbe chiudere in mezz'ora: basta retroportare `src/lib/rpe.js`, anche solo in lettura |
 | 23 | Inter dichiarato e mai caricato (riverificato il 25/08: `src/index.css` di `main` dice ancora `font-family: 'Inter', sans-serif`) | La web app rende con un fallback di sistema arbitrario. Qui è già risolto: font di sistema espliciti |
 | 24 | 172 `text-gray-500` a 3.45:1 (riverificato il 25/08: 172 su `main`, **0** qui) | Sotto il minimo AA per il testo |
