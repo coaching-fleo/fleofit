@@ -93,6 +93,14 @@ xcodebuild -exportArchive -archivePath <archivio.xcarchive> -exportOptionsPlist 
 
 ---
 
+## 🔴 Difetti trovati e non ancora corretti
+
+| # | Cosa | Perché non l'ho corretto da solo |
+|---|---|---|
+| 29 | **Il timer guidato sbaglia le fasi di corsa definite a distanza.** `parseDuration` toglie le lettere e legge il numero rimasto come minuti: `400m` → **24.000 secondi, 6h40m**; `800m` → 13h20m; `1000m` → 16h40m. Una sessione di 6×400m — l'allenamento di ripetute più comune che esista — produce un timer che non avanza mai. E `5 km` fa il danno opposto: 300 secondi, cioè chiude la fase dopo 5 minuti. Il picker delle fasi ha un'opzione **📏 Distanza** esplicita, quindi il percorso è normale, non un caso limite. Trovato il 26/08/2026 scrivendo i test, che ora **fissano il comportamento sbagliato** per far fallire la suite quando verrà corretto | Perché la correzione giusta è una **decisione di prodotto**, non tecnica. Due strade: (a) trattare la fase a distanza come **cronometro** — l'atleta corre i 400m e tocca avanti; il tipo `stopwatch` esiste già ed è usato da Custom e For Time; (b) **stimare la durata dal passo** — 400m a 3:45/km = 90 secondi, più comodo ma è una supposizione, e se l'atleta va più piano il timer lo abbandona a metà ripetuta. La (a) è sicura, la (b) è più bella. Serve la scelta del committente |
+
+---
+
 ## 💡 Idee di prodotto
 
 > Dettagli e motivazioni nel report di analisi del 24/08/2026.

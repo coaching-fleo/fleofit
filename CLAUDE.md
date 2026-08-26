@@ -6,7 +6,7 @@
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **95 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **125 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -245,6 +245,7 @@ src/
 │  ├─ offlineQueue.js          # ⚠️ coda offline + leggiJson/scriviJson — vedi §9 regola 0-bis
 │  ├─ pushToken.js             # rinfresco del token FCM
 │  ├─ rpe.js                   # parseNotesAndRpe / formatNotesWithRpe
+│  ├─ timerSequence.js         # buildTimerSequence + getNormalizedBlocks (§5 legacy)
 │  ├─ workoutTitle.js          # titolo generato dalla data (c'è anche su main)
 │  └─ __tests__/               # 38 test: blockColors, offlineQueue, rpe, workoutTitle
 ├─ test/
@@ -672,8 +673,10 @@ Genera il banner countdown "Prossimo Obiettivo" in Home e in AthleteDetail.
 
 ### ⚠️ Formato legacy
 Esistono workout vecchi con `sections.warmup / cashIn / main / cashOut` invece di `blocks`.
-La migrazione **runtime** avviene in `getNormalizedBlocks()` (WorkoutDetail) e nel `useEffect` di
-edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
+La migrazione **runtime** avviene in `getNormalizedBlocks()` (ora in `src/lib/timerSequence.js`)
+e nel `useEffect` di edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
+✅ Dal 26/08/2026 è coperta da test, inclusa la conversione storica «EMOM con parametro `on`
+era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a schermo.
 
 ---
 
@@ -871,6 +874,10 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
     - **8 su `Home` montata per intero** (26/08): il percorso offline completo —
       completare e scompletare un workout senza rete, l'RPE dentro `notes`, la cache
       che si ripara, la modale RPE che non resta bloccata. Vedi §9-sexies.
+    - **30 sul timer guidato** (`src/lib/timerSequence.js`, estratto da `WorkoutDetail`
+      il 26/08): espansione dei round, rotazione degli esercizi, `nextTask`, e la
+      migrazione del formato legacy che §5 vieta di rimuovere. Scriverli ha fatto
+      emergere il difetto delle distanze (BACKLOG #29).
     - Restano scoperte **le pagine intere**: non si montano senza finti `supabase`,
       `react-router` e AuthContext (BACKLOG #19). Anche `processOfflineQueue` resta
       dentro Home e non è coperto: il ciclo di retry vuole un finto `supabase`.
