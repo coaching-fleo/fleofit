@@ -6,7 +6,7 @@
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **125 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **130 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -780,7 +780,11 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 ### Workout Detail (il file più denso)
 - Rendering della scheda per categoria, note atleta con RPE, note vocali bidirezionali
   (registrazione nativa iOS + web MediaRecorder, player custom con waveform).
-- **Timer guidato**: `buildTimerSequence()` linearizza il workout in una sequenza di step
+- **Timer guidato** (⚠️ **non per gli allenamenti di corsa**, dal 26/08/2026 — decisione del
+  committente: le fasi si seguono con l'orologio. La regola sta in `haTimerGuidato()`, un punto
+  solo, e vale anche per gli Eventi/gare. Conseguenze volute: la Live Coach Cam non vede gli
+  atleti che corrono, perché la presenza è tracciata dentro `WorkoutTimer`; il cast su TV mostra
+  il piano statico): `buildTimerSequence()` linearizza il workout in una sequenza di step
   (`prep` → step → `done`) con beep WAV generati in-memory (600Hz corto / 1200Hz lungo),
   vibrazione, mute, minimizzabile, `KeepAwake`.
 - **Export PDF** (jsPDF, sfondo scuro, logo, intensità colorata con emoji 💪).

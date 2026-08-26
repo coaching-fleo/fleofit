@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { buildTimerSequence, getNormalizedBlocks, parseDuration } from '../timerSequence'
+import { buildTimerSequence, getNormalizedBlocks, parseDuration, haTimerGuidato } from '../timerSequence'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -122,46 +122,54 @@ describe('blocchi senza durata diventano cronometro', () => {
   })
 })
 
-describe('Running', () => {
-  it('le ripetute si espandono in corsa e recupero alternati', () => {
-    const seq = buildTimerSequence({ title: 'R', sections: { category: 'Running', steps: [
-      { id: 1, type: 'repeat', rounds: '3', runDuration: '2:00', recDuration: '1 min' },
-    ] } })
-    expect(seq.filter(s => s.title === 'Corsa')).toHaveLength(3)
-    expect(seq.filter(s => s.title === 'Recupero')).toHaveLength(3)
-    expect(seq.filter(s => s.title === 'Corsa')[0].duration).toBe(120)
-    expect(seq.filter(s => s.title === 'Recupero')[0].duration).toBe(60)
-  })
-
-  // 🔴 BUG REGISTRATO, NON APPROVATO — BACKLOG #29.
-  // Le fasi di corsa si possono definire a DISTANZA (il picker ha "📏 Distanza"),
-  // ma parseDuration toglie le lettere e interpreta il numero rimasto come
-  // minuti. Conseguenza: una sessione di 6×400m produce ripetute da SEI ORE E
-  // QUARANTA l'una — il timer non avanza mai. E "5 km" fa il danno opposto,
-  // diventa 5 minuti e chiude la fase troppo presto.
+describe('gli allenamenti di corsa NON hanno il timer', () => {
+  // Decisione del committente, 26/08/2026: le fasi di corsa si seguono con
+  // l'orologio o a sensazione, non con un conto alla rovescia sul telefono.
   //
-  // Questi due test fissano il comportamento ATTUALE, che è sbagliato. Servono
-  // a far fallire la suite quando qualcuno lo corregge, così la correzione è
-  // una scelta esplicita e non un effetto collaterale.
-  it('🔴 una distanza in metri viene letta come minuti (difetto noto)', () => {
-    expect(parseDuration('400m')).toBe(24000)   // 6h 40m, dovrebbe essere ~90s
-    expect(parseDuration('800m')).toBe(48000)   // 13h 20m
+  // La scelta ha anche chiuso il difetto delle distanze (era BACKLOG #29):
+  // parseDuration legge "400m" come 400 MINUTI — toglie le lettere e interpreta
+  // il numero rimasto come tempo — quindi una sessione di 6×400m produceva
+  // ripetute da 6 ore e 40, e il timer non avanzava mai.
+  const corsa = { title: 'Ripetute', sections: { category: 'Running', steps: [
+    { id: 1, type: 'repeat', rounds: '6', runDuration: '400m', recDuration: '90 sec' },
+  ] } }
+
+  it('haTimerGuidato dice di no', () => {
+    expect(haTimerGuidato(corsa)).toBe(false)
   })
 
-  it('🔴 una distanza in chilometri viene letta come minuti (difetto noto)', () => {
-    expect(parseDuration('5 km')).toBe(300)     // 5 minuti per 5 km
-    expect(parseDuration('2km')).toBe(120)
+  it('e la sequenza è VUOTA, non una sequenza sbagliata', () => {
+    // ⚠️ È la parte che conta. Senza la guardia dentro buildTimerSequence, un
+    // workout di corsa cadrebbe nel ramo Hyrox e produrrebbe passi senza senso
+    // invece di niente.
+    expect(buildTimerSequence(corsa)).toEqual([])
   })
 
-  it('i tipi di passo diventano titoli in italiano', () => {
-    const seq = buildTimerSequence({ title: 'R', sections: { category: 'Running', steps: [
-      { id: 1, type: 'warmup', duration: '10 min' },
-      { id: 2, type: 'run', duration: '5:00', pace: '5:00 /km' },
-      { id: 3, type: 'cooldown', duration: '5 min' },
-    ] } })
-    expect(seq.map(s => s.title)).toEqual(
-      ['Preparazione', 'Riscaldamento', 'Corsa', 'Defaticamento', 'Completato!'])
-    expect(seq[2].task).toBe('Corsa @ 5:00 /km')
+  it('vale anche per un Running riconosciuto dalla forma, non dalla categoria', () => {
+    // I workout vecchi non hanno sections.category: si riconoscono perché hanno
+    // `steps` o un main di tipo Running (CLAUDE.md §5, formato legacy).
+    expect(haTimerGuidato({ sections: { steps: [{ id: 1, type: 'run' }] } })).toBe(false)
+    expect(haTimerGuidato({ sections: { main: { type: 'Running', steps: [] } } })).toBe(false)
+  })
+
+  it('gli Eventi non hanno il timer: non sono allenamenti da eseguire', () => {
+    expect(haTimerGuidato({ sections: { category: 'Event', isEvent: true } })).toBe(false)
+    expect(buildTimerSequence({ sections: { category: 'Event' } })).toEqual([])
+  })
+
+  it('ma Hyrox e Custom continuano ad averlo', () => {
+    // Il contraltare: senza, la guardia potrebbe spegnere il timer per tutti e
+    // i test qui sopra passerebbero lo stesso.
+    expect(haTimerGuidato(hyrox([{ id: 1, type: 'AMRAP', params: {} }]))).toBe(true)
+    expect(haTimerGuidato({ sections: { category: 'Custom', isAutonomous: true } })).toBe(true)
+    expect(buildTimerSequence(hyrox([{ id: 1, type: 'AMRAP', params: {} }])).length).toBeGreaterThan(2)
+  })
+
+  it('parseDuration resta un lettore di TEMPI: le distanze non ci arrivano più', () => {
+    // Documenta il limite invece di nasconderlo: chi un giorno volesse
+    // reintrodurre un timer per la corsa deve sistemare questo prima.
+    expect(parseDuration('400m')).toBe(24000)   // 400 minuti, non 400 metri
+    expect(parseDuration('5 km')).toBe(300)     // 5 minuti, non 5 chilometri
   })
 })
 

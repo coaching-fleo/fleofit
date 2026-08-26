@@ -26,7 +26,7 @@ import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { ERGOMETERS, COACHING_ID } from '../lib/constants'
 import { mostraErrore } from '../lib/alert'
 import { TYPE_COLORS } from '../lib/blockColors'
-import { buildTimerSequence, getNormalizedBlocks } from '../lib/timerSequence'
+import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/timerSequence'
 
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
@@ -1188,8 +1188,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         )}
       </div>
 
-      {/* TIMER BUTTON SPOSTATO IN CIMA */}
-      {type !== 'Event' && (
+      {/* Il timer non c'è per gli allenamenti di corsa (decisione del
+          committente, 26/08/2026): le fasi si seguono con l'orologio, non con un
+          conto alla rovescia sul telefono. La regola sta in haTimerGuidato, così
+          il bottone e la costruzione della sequenza non possono divergere. */}
+      {haTimerGuidato(workout) && (
         <div className="mb-8">
           <button onClick={() => { 
           if (timerOpen && !timerMinimized) {

@@ -51,7 +51,34 @@ export const parseDuration = (val) => {
 
 // Cuore del timer guidato: linearizza un workout in una sequenza di step
 // (prep → … → done), espandendo round e ripetute.
+/**
+ * Quali workout hanno il timer guidato.
+ *
+ * Il **Running ne è escluso** per decisione del committente (26/08/2026): le
+ * fasi di corsa si seguono con l'orologio o a sensazione, non con un conto alla
+ * rovescia sul telefono. La scelta chiude anche il difetto delle distanze
+ * (BACKLOG #29), che riguardava solo quelle fasi: `400m` finiva interpretato
+ * come 400 minuti, cioè 6 ore e 40.
+ *
+ * Anche gli Eventi/gare ne sono esclusi: non sono allenamenti da eseguire.
+ *
+ * ⚠️ Sta qui e non in WorkoutDetail perché la stessa domanda serve in due punti
+ * — se mostrare il bottone e cosa costruire — e due copie della regola
+ * finirebbero per divergere.
+ */
+export const haTimerGuidato = (workout) => {
+  const s = workout?.sections || {}
+  const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
+  if (rawCat === 'Event' || s?.isEvent === true) return false
+  return rawCat !== 'Running'
+}
+
 export const buildTimerSequence = (workout) => {
+  // Senza questa guardia un workout di corsa cadrebbe nel ramo Hyrox e
+  // produrrebbe una sequenza senza senso. Il chiamante controlla già
+  // haTimerGuidato, ma la funzione non deve dipendere dalla sua correttezza.
+  if (!haTimerGuidato(workout)) return [];
+
   const seq = [];
   seq.push({ id: 'prep', title: 'Preparazione', subtitle: 'Il workout sta per iniziare', duration: 10, theme: 'prep', type: 'prep', task: 'Preparati!' });
 
@@ -59,30 +86,9 @@ export const buildTimerSequence = (workout) => {
   const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox');
   const isAuto = s?.isAutonomous === true || rawCat === 'Autonomo';
   const isCustom = rawCat === 'Custom' || isAuto;
-  const isRunning = rawCat === 'Running';
 
   if (isCustom) {
     seq.push({ id: 'custom-blk', title: 'ALLENAMENTO', subtitle: 'Cronometro libero', duration: 0, theme: 'custom', type: 'stopwatch', task: workout.title || 'Workout Custom' });
-  } else if (isRunning) {
-    const steps = s?.steps || s?.main?.steps || [];
-    steps.forEach((step, i) => {
-      if (step.type === 'repeat') {
-        const rounds = parseInt(step.rounds, 10) || 1;
-        const runSec = parseDuration(step.runDuration);
-        const recSec = parseDuration(step.recDuration);
-        for(let r=1; r<=rounds; r++) {
-          if (runSec > 0) seq.push({ id: `run-${i}-${r}-work`, title: 'Corsa', subtitle: `Ripetuta ${r}/${rounds}`, duration: runSec, theme: 'run', type: 'work', task: `Corsa ${step.runPace ? '@ '+step.runPace : ''}`.trim() });
-          if (recSec > 0) seq.push({ id: `run-${i}-${r}-rest`, title: 'Recupero', subtitle: `Ripetuta ${r}/${rounds}`, duration: recSec, theme: 'rest', type: 'rest', task: `Recupero ${step.recPace ? '@ '+step.recPace : ''}`.trim() });
-        }
-      } else {
-        const sec = parseDuration(step.duration);
-        let title = 'Corsa'; let theme = 'run';
-        if (step.type === 'warmup') { title = 'Riscaldamento'; theme = 'base'; }
-        if (step.type === 'recover') { title = 'Recupero'; theme = 'rest'; }
-        if (step.type === 'cooldown') { title = 'Defaticamento'; theme = 'base'; }
-        seq.push({ id: `step-${i}`, title, subtitle: step.notes || '', duration: sec, theme, type: step.type === 'recover' ? 'rest' : 'work', task: `${title} ${step.pace ? '@ '+step.pace : ''}`.trim() });
-      }
-    });
   } else {
     const blocks = getNormalizedBlocks(workout);
     blocks.forEach((b, i) => {

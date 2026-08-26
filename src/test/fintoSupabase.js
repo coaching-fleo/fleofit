@@ -30,10 +30,26 @@ export function fintoSupabase(risposte = {}, { erroreSu = [] } = {}) {
       ? { data: null, error: { message: 'rete assente' }, count: null }
       : { data: righe, error: null, count: righe.length }
 
+    // .single() e .maybeSingle() cambiano la FORMA della risposta: un oggetto
+    // invece di un array. Senza questa distinzione una pagina che carica un
+    // singolo record riceve un array, `workout.sections` è undefined e la
+    // pagina ricade sui default senza segnalare niente — sembra funzionare ma
+    // sta mostrando un'altra cosa (successo il 26/08/2026 con WorkoutDetail).
+    let singolo = false
+
     const proxy = new Proxy({}, {
       get(_, prop) {
-        if (prop === 'then') return (ok, ko) => Promise.resolve(risultato).then(ok, ko)
-        return (...args) => { chiamate.push({ tabella, metodo: String(prop), args }); return proxy }
+        if (prop === 'then') {
+          const finale = singolo
+            ? { ...risultato, data: risultato.data ? (risultato.data[0] ?? null) : null }
+            : risultato
+          return (ok, ko) => Promise.resolve(finale).then(ok, ko)
+        }
+        return (...args) => {
+          if (prop === 'single' || prop === 'maybeSingle') singolo = true
+          chiamate.push({ tabella, metodo: String(prop), args })
+          return proxy
+        }
       },
     })
     return proxy
