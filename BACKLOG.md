@@ -95,6 +95,14 @@ xcodebuild -exportArchive -archivePath <archivio.xcarchive> -exportOptionsPlist 
 
 ---
 
+## 🔴 Difetti aperti
+
+| # | Cosa | Stato |
+|---|---|---|
+| 31 | **Le note vocali registrate dall'app escono VUOTE.** Un contenitore MP4 di 557 byte: intestazione e nessun campione audio. L'utente vede la forma d'onda muoversi e alla riproduzione il timer resta a `0:00`. Misurato sul bucket il 26/08/2026: le note del 15/06 e 15/07 pesano 1-1,9 MB, quelle di oggi 557 byte. ⚠️ **Intermittente e preesistente**: il 22/08 c'erano un file da 619 KB e uno da 0 byte a un secondo di distanza | **Aperto.** La prima ipotesi era il microfono aperto due volte sul nativo (`getUserMedia` per l'onda + `NativeVoiceRecorder` per registrare). **Provata e SBAGLIATA**: togliendo `getUserMedia` dal ramo nativo l'app non registra più affatto — `startRecording` lancia e compare «Impossibile accedere al microfono». Quindi quella chiamata serve anche a mettere in piedi qualcosa di cui il plugin ha bisogno. Ripristinata. **Serve l'errore vero dal dispositivo**: `console.error('Errore avvio registrazione nativa:', e)` è già nel codice, si legge da Safari → Sviluppo → iPhone, o dalla console di Xcode |
+
+---
+
 ## ✅ Difetti chiusi
 
 | # | Cosa | Come |
