@@ -40,13 +40,13 @@ echo "ℹ️  versione: $VER ($BLD)"
 echo "   Xcode rinumera da solo: con method app-store-connect,"
 echo "   manageAppVersionAndBuildNumber vale YES per impostazione predefinita e"
 echo "   il build number viene alzato oltre l'ultimo presente su App Store Connect."
-echo "   Quindi il numero nel pbxproj NON è quello spedito. Verificato il 25/08/2026:"
+echo "   Quindi il numero nel pbxproj NON è quello spedito. Verificato il 26/08/2026:"
 echo "   pbxproj = 3, archivio = 2, ipa esportato = 4."
 
 # 5. BACKLOG punto 2 — è il controllo mancato a maggio, quello del rifiuto 2.3.1(a).
 #    ⚠️ In un'app Capacitor il bundle web sta in App.app/public/assets, NON nella
 #    radice del .app. La prima versione di questo script cercava nel posto
-#    sbagliato e dava un falso negativo (25/08/2026): cerca ricorsivamente.
+#    sbagliato e dava un falso negativo (26/08/2026): cerca ricorsivamente.
 #    Si controllano TUTTE le email, non solo demo: se ADMIN_EMAILS non è finita
 #    nel bundle compilato, il ruolo coach è irraggiungibile per chiunque.
 MANCANTI=0

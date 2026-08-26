@@ -1,6 +1,6 @@
 # FLEOFIT — Cose da fare
 
-> Stato al **25 agosto 2026**, fine giornata. `npm test` → 75 · `npm run lint` → 46.
+> Stato al **26 agosto 2026**, mattina. `npm test` → 75 · `npm run lint` → 46.
 > Ultimo commit `6a28841` su `ios-version`. Aggiornare questo file quando una voce si chiude o
 > se ne apre una nuova. Ogni voce dice *cosa*, *perché conta* e *cosa la blocca*:
 > senza il perché, fra sei mesi nessuno saprà se vale ancora la pena.
@@ -14,8 +14,8 @@
 
 | # | Cosa | Perché |
 |---|---|---|
-| ~~1~~ | ✅ **CHIUSO il 25/08/2026.** `aps-environment = production`, `get-task-allow` assente, bundle id senza il suffisso `.dev`. Verificato sull'`.ipa` esportato con `tools/verifica-ipa.sh`, non sul sorgente | L'archivio dichiara `development` ed è **normale**: è firmato col profilo di sviluppo del team, ed è l'*export* che rifirma con quello di distribuzione. Guardare l'archivio non risponde alla domanda |
-| ~~2~~ | ✅ **CHIUSO il 25/08/2026.** Tutte e cinque le email di `ADMIN_EMAILS` sono nel binario spedito, `demo@fleofit.it` compresa | È il controllo che è mancato a maggio e che ha causato il rifiuto 2.3.1(a). ⚠️ In un'app Capacitor il bundle sta in `App.app/public/assets`, **non** nella radice del `.app`: cercare nel posto sbagliato dà un falso negativo, ed è successo |
+| ~~1~~ | ✅ **CHIUSO il 26/08/2026.** `aps-environment = production`, `get-task-allow` assente, bundle id senza il suffisso `.dev`. Verificato sull'`.ipa` esportato con `tools/verifica-ipa.sh`, non sul sorgente | L'archivio dichiara `development` ed è **normale**: è firmato col profilo di sviluppo del team, ed è l'*export* che rifirma con quello di distribuzione. Guardare l'archivio non risponde alla domanda |
+| ~~2~~ | ✅ **CHIUSO il 26/08/2026.** Tutte e cinque le email di `ADMIN_EMAILS` sono nel binario spedito, `demo@fleofit.it` compresa | È il controllo che è mancato a maggio e che ha causato il rifiuto 2.3.1(a). ⚠️ In un'app Capacitor il bundle sta in `App.app/public/assets`, **non** nella radice del `.app`: cercare nel posto sbagliato dà un falso negativo, ed è successo |
 | 3 | `demo@fleofit.it` deve riuscire ad **assegnare** un workout — **è l'unico rimasto** | Le tre porte che l'assegnazione attraversa sono verificate sul database vivo il 25/08: INSERT su `athlete_workouts` (`with_check` ✅), il `.select('id')` sulle righe inserite (`qual` ✅) e `send-reminders` mode `immediate` (`_shared/admin.ts` ✅). Ma **il gesto non è mai stato provato**. Vedi `tools/verifica-revisore.sql` |
 | 4 | `npx cap sync ios` prima dell'archive | Altrimenti il progetto Xcode resta indietro rispetto a `dist/` |
 
@@ -28,7 +28,7 @@ xcodebuild -exportArchive -archivePath <archivio.xcarchive> -exportOptionsPlist 
 > ℹ️ **Il build number nel `pbxproj` non è quello spedito, e va bene così.**
 > Con `method: app-store-connect`, `manageAppVersionAndBuildNumber` vale YES per
 > impostazione predefinita: Xcode alza da solo il numero oltre l'ultimo presente su
-> App Store Connect. Misurato il 25/08/2026: `pbxproj` = 3, archivio = 2, ipa = **4**.
+> App Store Connect. Misurato il 26/08/2026: `pbxproj` = 3, archivio = 2, ipa = **4**.
 > È la spiegazione dell'incremento "misterioso" del 24/08 annotato in CLAUDE.md §9-ter.
 
 ---

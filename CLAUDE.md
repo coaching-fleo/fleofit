@@ -2,7 +2,7 @@
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **25 agosto 2026**.
+> Ultimo aggiornamento: **26 agosto 2026**.
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
@@ -449,7 +449,7 @@ credenziale APNs mancante o scaduta. Su Firebase Console → Cloud Messaging dev
 **APNs Authentication Key `.p8`** (copre sandbox e produzione, non scade) e non un certificato
 `.p12`. Se manca, le push non funzionano **per nessuno**, neanche dall'App Store.
 
-✅ **Verificato il 25/08/2026 sul binario spedito**: `aps-environment = production`.
+✅ **Verificato il 26/08/2026 sul binario spedito**: `aps-environment = production`.
 `App.entitlements` dichiara `development` ed è usato in entrambe le configurazioni, ma questo
 **non è un problema**: l'archivio è firmato col profilo di sviluppo del team
 ("iOS Team Provisioning Profile", `get-task-allow = true`) ed è l'**export** che rifirma con il
@@ -931,14 +931,14 @@ su un valore rotto.
 - **22 mag 2026** — caricata `1.1.0 (2)`. **Respinta** con **2.3.1(a) Hidden features** e
   **3.2.1(viii) Financial Services**.
 - **24 ago 2026** — correzioni applicate nel commit `fc81404`, caricata `1.1.0 (3)`.
-- **25 ago 2026** — ✅ punti 1 e 2 del backlog **verificati sul binario vero** (vedi sopra e
+- **26 ago 2026** — ✅ punti 1 e 2 del backlog **verificati sul binario vero** (vedi sopra e
   `tools/verifica-ipa.sh`). Resta solo il punto 3: il gesto di assegnare un workout da
   `demo@fleofit.it`, che richiede le credenziali e non è automatizzabile.
 
 > ℹ️ **Il build number del `pbxproj` NON è quello spedito, ed è normale.** Con
 > `method: app-store-connect`, `manageAppVersionAndBuildNumber` vale YES per impostazione
 > predefinita: Xcode alza da solo il numero oltre l'ultimo presente su App Store Connect.
-> Misurato il 25/08/2026 sullo stesso archivio: `pbxproj` = 3, archivio = **2**, ipa esportato
+> Misurato il 26/08/2026 sullo stesso archivio: `pbxproj` = 3, archivio = **2**, ipa esportato
 > = **4**. È la spiegazione dell'incremento "misterioso" del 24/08, che questo documento
 > attribuiva a una svista. Non serve riallineare il pbxproj a mano.
 

@@ -29,14 +29,27 @@ select
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- C. DOPO aver provato ad assegnare dall'app: l'assegnazione è arrivata?
---    Deve comparire una riga creata negli ultimi minuti.
+--
+--    ⚠️ NON si può ordinare per "più recente": `athlete_workouts` non ha una
+--    colonna created_at, e `id` è un UUID casuale — ordinarci sopra restituisce
+--    righe di mesi diversi mescolate. (La prima versione di questa query faceva
+--    esattamente questo errore, il 26/08/2026.)
+--
+--    Due modi affidabili. Il primo: contare prima e dopo.
+--    Esegui la query B PRIMA di assegnare, segna `assegnazioni`, poi riesegui
+--    questa dopo: deve essere esattamente uno in più.
 -- ─────────────────────────────────────────────────────────────────────────
-select aw.id, aw.athlete_id, aw.workout_id, aw.completed_date, aw.status,
-       w.title
+select count(*) as assegnazioni_ora from public.athlete_workouts;
+
+--    Il secondo, più preciso: cerca la riga per atleta e data scelti nell'app.
+--    Sostituisci i due valori con quelli che hai usato.
+select aw.id, aw.status, aw.completed_date, w.title,
+       a.name || ' ' || coalesce(a.surname, '') as atleta
 from public.athlete_workouts aw
-left join public.workouts w on w.id = aw.workout_id
-order by aw.id desc
-limit 5;
+left join public.workouts  w on w.id = aw.workout_id
+left join public.athletes  a on a.id = aw.athlete_id
+where aw.completed_date = '2026-08-26'          -- ← la data scelta nell'app
+order by w.title;
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- D. Le tre porte che l'assegnazione attraversa, con demo@fleofit.it.
@@ -52,3 +65,21 @@ from pg_policies
 where schemaname = 'public'
   and tablename in ('athletes', 'athlete_workouts', 'workouts')
 order by tablename, policyname;
+
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- E. Codici invito attivi. Rilevato 0 il 26/08/2026.
+--
+--    La registrazione è chiusa per scelta: senza un `invitation_code` valido il
+--    ProtectedRoute fa signOut e rimanda a /login?error=unauthorized. Con ZERO
+--    codici attivi, un revisore che provasse a registrarsi come atleta verrebbe
+--    espulso senza spiegazione — e "flusso che non funziona" è esattamente il
+--    tipo di osservazione che ha prodotto il 2.3.1(a) di maggio.
+--
+--    L'admin può generarne uno da Impostazioni → Codici invito. Farlo prima
+--    della revisione costa un minuto e toglie un'incognita.
+-- ─────────────────────────────────────────────────────────────────────────
+select code, is_active, used_by_email, used_at, created_at
+from public.invitation_codes
+order by created_at desc
+limit 10;
