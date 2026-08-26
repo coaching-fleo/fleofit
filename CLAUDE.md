@@ -462,6 +462,39 @@ Prima erano entrambe aperte. Ora:
 ⚠️ Il deploy di `send-reminders` colpisce **anche la web app in produzione**: è una sola
 funzione per due app.
 
+### 🔴 Su iOS le note vocali si registrano con `MediaRecorder`, non col plugin nativo
+Accertato il 26/08/2026, con i log dal dispositivo. Il plugin
+`@independo/capacitor-voice-recorder` dichiarava successo e restituiva il nulla:
+
+```
+hasAudioRecordingPermission → {"value":true}
+startRecording              → {"value":true}
+stopRecording               → {"msDuration":0,"uri":"", ...}
+```
+
+Il file caricato era un contenitore M4A di **557 byte** — intestazione e zero campioni —
+contro gli 1-1,9 MB delle note di giugno e luglio. L'atleta vedeva la forma d'onda muoversi
+e non sentiva niente.
+
+**Causa**: WebView e recorder nativo si contendono `AVAudioSession`. Non esiste un ordine che
+vada bene a entrambi — togliendo `getUserMedia` dal ramo nativo il plugin **non parte affatto**
+(«Impossibile accedere al microfono»), tenendolo registra vuoto.
+
+**Soluzione**: `getUserMedia` funziona, e `MediaRecorder` è disponibile nel WKWebView da
+iOS 14.5. Su iOS si registra con quello; il plugin nativo resta come ripiego per WebView
+vecchi. La scelta è ricordata in un `ref`, perché allo stop non si può rifare guardando
+`isNative`: dipende anche da `MediaRecorder` e dallo stream, che a quel punto potrebbero
+non esserci più.
+
+> ⚠️ **La lezione generale**: un plugin nativo che risponde `{"value":true}` non sta dicendo
+> che ha funzionato. Qui il difetto è sopravvissuto due mesi perché non c'era nessun errore
+> da nessuna parte — solo un file muto. Da qui la guardia su `msDuration === 0`, che rifiuta
+> di caricare invece di tacere.
+
+> ℹ️ Restano installate **due** librerie audio (§9 punto 4). Ora però non sono equivalenti:
+> `@independo/capacitor-voice-recorder` è solo il ripiego, `capacitor-voice-recorder` serve
+> alla dettatura IA in CreateWorkout.
+
 ### 🔴 Le push NON funzionano su una build Debug lanciata da Xcode
 Accertato il 25/08/2026. Il progetto ha due bundle id:
 - **Debug** → `it.federicoleo.fleofit.dev` (serve a far convivere le due app sullo stesso telefono)

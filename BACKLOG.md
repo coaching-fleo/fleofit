@@ -95,18 +95,11 @@ xcodebuild -exportArchive -archivePath <archivio.xcarchive> -exportOptionsPlist 
 
 ---
 
-## 🔴 Difetti aperti
-
-| # | Cosa | Stato |
-|---|---|---|
-| 31 | **Le note vocali registrate dall'app uscivano VUOTE** (contenitore M4A da 557 byte, zero campioni) | 🟡 **Correzione applicata il 26/08/2026, da confermare sul dispositivo.** I log hanno chiuso la diagnosi: il plugin nativo riceveva il permesso, `startRecording` riusciva, e `stopRecording` restituiva `{msDuration: 0, uri: ""}` — diceva che era andato tutto bene e tornava il nulla. WebView e recorder nativo si contendono `AVAudioSession`: togliendo `getUserMedia` il plugin non parte affatto, tenendolo registra vuoto. **Su iOS ora si registra con `MediaRecorder`**, che dimostrabilmente funziona (la forma d'onda si muove, e nel bucket c'è un `.webm` da 30 KB registrato dal web); il plugin nativo resta come ripiego per WebView vecchi. Aggiunta anche una guardia: `msDuration === 0` non viene più caricato in silenzio |
-
----
-
 ## ✅ Difetti chiusi
 
 | # | Cosa | Come |
 |---|---|---|
+| ~~31~~ | **Le note vocali registrate dall'app uscivano VUOTE** — un contenitore M4A di 557 byte, zero campioni. L'atleta vedeva la forma d'onda muoversi e alla riproduzione non sentiva niente. Preesistente e intermittente: nel bucket, note da 1-1,9 MB a giugno e luglio, e già il 22/08 un file pieno e uno da zero byte a un secondo di distanza | ✅ **Chiuso il 26/08/2026, confermato sul dispositivo.** I log hanno mostrato che il plugin nativo dichiarava successo e restituiva `{msDuration: 0, uri: ""}`. WebView e recorder nativo si contendono `AVAudioSession`: **su iOS ora si registra con `MediaRecorder`**, e il plugin resta come ripiego. Aggiunta una guardia: un file con `msDuration === 0` non viene più caricato in silenzio |
 | ~~30~~ | **Il carico settimanale contava le distanze come minuti.** `parseTime` in `AthleteStatsTab` leggeva `400m` come **400 minuti**: una sessione di 6×400m valeva **40 ore** di allenamento e un carico di 19.272 contro un realistico ~250, schiacciando ogni altra barra del grafico. `5 km` faceva l'opposto, 5 minuti invece di 30. La stima corretta **esisteva già** nel codice, ma era irraggiungibile: veniva provata solo se `parseTime` tornava 0 | ✅ **Corretto il 26/08/2026.** Le distanze si riconoscono prima, così la stima viene usata davvero. È il gemello del #29, ma su un percorso diverso: rimuovere il timer dalla corsa non lo toccava. Trovato scrivendo i test sulle statistiche |
 | ~~29~~ | **Il timer guidato sbagliava le fasi di corsa definite a distanza.** `parseDuration` toglie le lettere e legge il numero rimasto come minuti: `400m` → 24.000 secondi, cioè **6h40m**; una sessione di 6×400m produceva un timer che non avanzava mai. `5 km` faceva il danno opposto, 5 minuti | ✅ **Chiuso il 26/08/2026 rimuovendo il timer dagli allenamenti di corsa** (decisione del committente): le fasi si seguono con l'orologio, non con un conto alla rovescia. La regola sta in `haTimerGuidato()` — un punto solo, usato sia dal bottone sia dalla costruzione della sequenza. ⚠️ Due conseguenze volute: la **Live Coach Cam non vede più gli atleti che corrono** (la presenza è tracciata dentro `WorkoutTimer`), e il **cast su TV mostra il piano statico**, senza passo evidenziato |
 
