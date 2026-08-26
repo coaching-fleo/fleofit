@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Serve SOLO a esportare un .ipa in locale per ispezionarlo, non a caricarlo.
+  `destination = export` scrive il file su disco e NON contatta App Store Connect.
+  Perché esiste: l'archivio Xcode è firmato con il profilo di sviluppo, quindi
+  dichiara aps-environment = development. È l'EXPORT che rifirma con il profilo
+  di distribuzione e sostituisce production. L'unico modo di verificarlo è
+  guardare l'ipa esportato. Vedi BACKLOG.md punto 1.
+-->
+<plist version="1.0">
+<dict>
+  <key>method</key>
+  <string>app-store-connect</string>
+  <key>destination</key>
+  <string>export</string>
+  <key>teamID</key>
+  <string>584SHG94SM</string>
+  <key>signingStyle</key>
+  <string>automatic</string>
+  <key>uploadSymbols</key>
+  <true/>
+</dict>
+</plist>
