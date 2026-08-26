@@ -5,7 +5,7 @@
 > Ultimo aggiornamento: **26 agosto 2026**.
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
-> Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
+> Ultimo commit `ce5ebe3` su `ios-version`, allineato con `origin/ios-version`.
 > `npm test` → **169 test**, `npm run lint` → **42 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
@@ -43,9 +43,13 @@
    qui, in un commit o parlando con il committente — nomina la funzione o la costante, non la
    riga. Il 25/08/2026 tutti e cinque i riferimenti `file:riga` presenti in questo documento
    puntavano a righe scorrelate.
-6. Prima di modificare un file grande (`WorkoutDetail.jsx` 3.052 righe, `AthleteDetail.jsx` 2.727,
-   `CreateWorkout.jsx` 2.263, `Home.jsx` 2.028 — contate il 25/08/2026) leggere le sezioni rilevanti: c'è molta logica
-   duplicata tra i file (vedi §9 Debito tecnico).
+6. Prima di modificare un file grande (`WorkoutDetail.jsx` 2.938 righe, `AthleteDetail.jsx` 2.553,
+   `CreateWorkout.jsx` 2.348, `Home.jsx` 2.010 — contate il 26/08/2026) leggere le sezioni
+   rilevanti: c'è molta logica duplicata tra i file (vedi §9 Debito tecnico).
+   > I primi tre si sono alleggeriti fra il 25 e il 26/08 estraendo la logica pura in
+   > `src/lib/` (`offlineQueue`, `timerSequence`, `statistiche`, `badge`): è la direzione,
+   > non un'eccezione. `CreateWorkout` invece è **cresciuto**, per i `useCallback` che la
+   > memoizzazione richiede (§9-quinquies).
 
 ---
 
@@ -91,7 +95,8 @@ Conseguenze pratiche, tutte controintuitive:
 
 ### Rapporto tra i due: SONO DIVERGENTI, ED ENTRAMBI SI MUOVONO
 Verificato il 25/08/2026 **dopo un `git fetch`**:
-`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 55`**.
+`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 70`**
+(misurata il 26/08/2026: 15 commit in più su `ios-version` solo in quella giornata).
 Il divario **cresce a ogni sessione di lavoro su `ios-version`**: più si aspetta, più il merge costa.
 **Un merge non è un fast-forward**: è un merge vero.
 
@@ -116,10 +121,11 @@ Assenti da `main`: tutta la cartella `ios/`, `capacitor.config.ts`, `privacy-pol
 `src/pages/bluetooth.js` (fascia cardio BLE), `src/pages/health.js` (Apple Health),
 `supabase/functions/ai-workout/` (generazione IA), `src/lib/blockHints.js`, l'**RPE**, la
 **Live Coach Cam**, la **modalità Offline** (ex "Bunker"), push FCM native, centro notifiche + badge.
-Aggiunti il 25/08 e ancora solo qui: **tutta l'infrastruttura di test** (`vitest.config.js`,
-`src/test/`, i `__tests__`), `src/lib/offlineQueue.js`, `src/lib/rpe.js`, `src/lib/blockColors.js`,
-`src/lib/alert.js`, `src/lib/pushToken.js`, `src/lib/constants.js` e
-`supabase/functions/_shared/admin.ts`.
+Aggiunti il 25-26/08 e ancora solo qui: **tutta l'infrastruttura di test**
+(`vitest.config.js`, `src/test/`, i `__tests__`), e quasi tutto `src/lib/` —
+`offlineQueue.js`, `rpe.js`, `blockColors.js`, `alert.js`, `pushToken.js`,
+`constants.js`, `timerSequence.js`, `statistiche.js`, `badge.js` — più
+`supabase/functions/_shared/admin.ts` e `tools/` (verifica dell'ipa e query sul revisore).
 ⚠️ `src/lib/workoutTitle.js` invece **c'è anche su `main`**: è stato riportato lì il 24/08.
 
 Due correzioni rispetto a quanto scritto qui in passato:
@@ -253,6 +259,7 @@ src/
 ├─ useTouchDrag.js             # hook drag&drop touch nativo (usato da CreateWorkout)
 ├─ lib/                        # logica pura, l'unica parte con test
 │  ├─ alert.js                 # mostraAlert/mostraErrore: alert applicativo senza passare props
+│  ├─ badge.js                 # ⚠️ l'UNICO punto che scrive il badge iOS (§8)
 │  ├─ blockColors.js           # TYPE_COLORS, unificata dalle 5 copie sparse
 │  ├─ blockHints.js            # BLOCK_HINT: didascalie in chiaro dei tipi di blocco (§9-ter)
 │  ├─ constants.js             # ERGOMETERS e affini
@@ -262,9 +269,11 @@ src/
 │  ├─ statistiche.js           # carico settimanale, completamento, distribuzione RPE
 │  ├─ timerSequence.js         # buildTimerSequence + getNormalizedBlocks (§5 legacy)
 │  ├─ workoutTitle.js          # titolo generato dalla data (c'è anche su main)
-│  └─ __tests__/               # 38 test: blockColors, offlineQueue, rpe, workoutTitle
+│  └─ __tests__/               # 103 test — il grosso della copertura (§9 punto 11)
 ├─ test/
-│  └─ setup.js                 # jsdom + finto Capacitor.isNativePlatform() === false
+│  ├─ setup.js                 # jsdom, localStorage in memoria, finto Capacitor (§9-sexies)
+│  ├─ fintoSupabase.js         # catena fluente via Proxy — riutilizzabile per ogni pagina
+│  └─ montaPagina.jsx          # router e AuthContext VERI, non finti
 ├─ components/
 │  ├─ Navbar.jsx               # bottom nav fissa, voci variabili per ruolo
 │  ├─ CustomModals.jsx         # CustomAlert + CustomConfirm + AlertHost
@@ -283,7 +292,11 @@ src/
    ├─ bluetooth.js             # BluetoothService — singleton BLE fascia cardio
    ├─ health.js                # HealthService (Apple Health)
    ├─ motivations.js           # 15 frasi motivazionali + getDailyMotivation() con anti-ripetizione
-   └─ __tests__/               # 37 test su HyroxBlock e RunningStepRow (estratti da CreateWorkout)
+   └─ __tests__/               # 66 test su componenti e pagine montate (§9 punto 11)
+tools/                            # non entra nell'app: serve alle verifiche pre-submission
+   ├─ ExportOptions-AppStore.plist # esporta un .ipa in locale, NON carica niente
+   ├─ verifica-ipa.sh              # 6 controlli sul binario vero (§9-ter)
+   └─ verifica-revisore.sql        # solo letture: account demo, dati, policy (§9-ter)
 supabase/
    ├─ functions/_shared/admin.ts   # ADMIN_EMAILS condivisa dalle due Edge Function (§9 punto 7)
    ├─ functions/send-reminders/    # notifiche push (5 modalità)
@@ -877,38 +890,44 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. ~~Nessun test automatico~~ → **55 test dal 25/08/2026** (`npm test`, vitest), tutti
+11. ~~Nessun test automatico~~ → **169 test al 26/08/2026** (`npm test`, vitest), tutti
     verificati per mutazione: se si rompe di proposito il codice che coprono, falliscono.
-    Non sono decorativi.
-    - **18 sulla logica pura di `src/lib/`**: titolo automatico, RPE, codifica colore.
-    - **37 su due componenti di pagina** (`HyroxBlock` e `RunningStepRow` di
-      `CreateWorkout.jsx`), che fissano il **contratto padre-figlio** — è quello che il
-      refactor di memoizzazione (BACKLOG #15) deve cambiare, quindi serviva pinnarlo prima.
-      ⚠️ I due contratti sono **asimmetrici e devono restarlo**: `HyroxBlock` chiama
-      `onMoveUp()` senza argomenti e riceve `onRemove` diretto; `RunningStepRow` chiama
-      `onMoveUp(index)`, `onRemove(step.id)`, `onDuplicate(step)`, `onEdit(step)`.
-      "Uniformare" i due componenti romperebbe il riordino delle fasi di corsa.
-    - **20 sulla coda offline** (`src/lib/offlineQueue.js`, estratta da `Home.jsx` il
-      25/08): deduplica per allenamento, tolleranza ai valori corrotti, quota piena,
-      localStorage negato da Safari in navigazione privata.
-    - **5 su `CreateWorkout` montato per intero** (26/08), che coprono la memoizzazione
-      dal lato del *chiamante*: sono gli unici che si accorgono se qualcuno rimette
-      un'arrow inline al call site. Vedi §9-quinquies.
-    - **8 su `Home` montata per intero** (26/08): il percorso offline completo —
-      completare e scompletare un workout senza rete, l'RPE dentro `notes`, la cache
-      che si ripara, la modale RPE che non resta bloccata. Vedi §9-sexies.
-    - **30 sul timer guidato** (`src/lib/timerSequence.js`, estratto da `WorkoutDetail`
-      il 26/08): espansione dei round, rotazione degli esercizi, `nextTask`, e la
-      migrazione del formato legacy che §5 vieta di rimuovere. Scriverli ha fatto
-      emergere il difetto delle distanze (BACKLOG #29).
-    - Restano scoperte **le pagine intere**: non si montano senza finti `supabase`,
-      `react-router` e AuthContext (BACKLOG #19). Anche `processOfflineQueue` resta
-      dentro Home e non è coperto: il ciclo di retry vuole un finto `supabase`.
+    Non sono decorativi, ed è l'unico criterio che conta — vedi §9-sexies.
+
+    **103 sulla logica pura di `src/lib/`**
+
+    | file | test | cosa protegge |
+    |---|---|---|
+    | `timerSequence` | 32 | espansione dei round, rotazione degli esercizi, `nextTask`, formato legacy (§5), e il fatto che la corsa NON abbia il timer |
+    | `statistiche` | 25 | carico settimanale, completamento a 30 giorni, distribuzione RPE, riepilogo della settimana |
+    | `offlineQueue` | 20 | deduplica per allenamento, valori corrotti, quota piena, localStorage negato da Safari |
+    | `badge` | 8 | badge nativo e `badge_count` aggiornati **insieme**, e mai in modo che possano lanciare |
+    | `blockColors` · `rpe` · `workoutTitle` | 6+6+6 | codifica colore, round-trip dell'RPE, titolo generato dalla data |
+
+    **66 su componenti e pagine**
+
+    | file | test | cosa protegge |
+    |---|---|---|
+    | `HyroxBlock` | 22 | il **contratto padre-figlio**, riepiloghi dei blocchi, didascalie (rilievo 3.2.1viii) |
+    | `RunningStepRow` | 16 | idem per le fasi di corsa |
+    | `HomeOffline` | 14 | il percorso offline completo su `Home` montata: completare, scompletare, coda, cache che si ripara, modale RPE che non si blocca |
+    | `CreateWorkoutMemo` | 5 | la memoizzazione **dal lato del chiamante** (§9-quinquies) |
+    | `RunningStepRowMemo` · `HyroxBlockMemo` | 4+2 | che `React.memo` serva ancora a qualcosa |
+    | `WorkoutDetailTimer` | 3 | che il bottone del timer non compaia sugli allenamenti di corsa |
+
+    ⚠️ **I due contratti sono asimmetrici e devono restarlo**: `HyroxBlock` passa `block.id`,
+    `RunningStepRow` passa l'**indice**. "Uniformarli" romperebbe il riordino delle fasi di
+    corsa (§9-quinquies).
+
+    **Cosa resta scoperto**: l'**interfaccia** di `WorkoutDetail` e `AthleteDetail` — PDF,
+    story IG, note vocali, Live Coach Cam, cast su TV, gestione PR. La loro *logica* è
+    coperta, perché estratta in `src/lib/`.
     Nessun TypeScript effettivo nel `src/` (tutto `.jsx`) anche se il build esegue `tsc -b`.
 12. 🔴 **ESLint non ha mai analizzato il codice dell'applicazione** (scoperto il 25/08/2026).
     `eslint.config.js` aveva `files: ['**/*.{ts,tsx}']`, ma `src/` è tutto `.jsx`: i "15 problemi"
     che `npm run lint` riportava erano **solo** nelle due Edge Function, gli unici `.ts` del
-    progetto. 13.000 righe di applicazione non erano mai state controllate.
+    progetto. Circa 13.000 righe di applicazione non erano mai state controllate
+    (12.527 al 26/08, dopo le estrazioni in `src/lib/`).
     Estendendo il pattern a `.js/.jsx` sono emersi **quattro `no-undef`**, cioè quattro
     `ReferenceError` latenti già in produzione, ognuno dei quali rompeva una funzione in silenzio
     (vedi il commit del 25/08). Sono stati corretti.
