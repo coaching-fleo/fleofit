@@ -203,8 +203,22 @@ npm run dev      # vite --host (porta 5173, host 0.0.0.0)
 npm run build    # tsc -b && vite build
 npm run lint     # eslint .
 npm test         # vitest run
-npx cap sync ios # dopo il build, per aggiornare il progetto Xcode
+npm run ios      # build + cap sync — USARE QUESTO prima di compilare da Xcode
+npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 ```
+
+> 🔴 **`npm run build` NON basta per vedere una modifica in Xcode.**
+> Xcode compila `ios/App/App/public`, che è una **copia** del bundle depositata da
+> `npx cap sync ios`. Senza sync, Xcode costruisce con il codice della sincronizzazione
+> precedente e la modifica sembra non aver funzionato.
+> Successo il 26/08/2026: la copia in Xcode era ferma al giorno prima, e una funzione
+> appena rimossa continuava a comparire nell'app. Non è un passo solo pre-archive:
+> serve **a ogni** compilazione da Xcode. Per questo esiste `npm run ios`.
+>
+> Come si verifica se la copia è vecchia:
+> ```bash
+> diff -q dist/assets/index-*.js ios/App/App/public/assets/index-*.js
+> ```
 
 ### Due configurazioni, non una
 `vite.config.ts` costruisce l'app · `vitest.config.js` la testa (jsdom,
