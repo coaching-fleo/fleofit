@@ -10,14 +10,19 @@
 
 ---
 
-## 🔴 Prima della submission App Store
+## ✅ Prima della submission App Store — i tre controlli sono chiusi
+
+> Chiusi il 26/08/2026. Restano qui, barrati, perché **vanno rifatti a ogni build
+> nuova**: sono controlli sul binario, non sul sorgente, e il sorgente giusto non
+> garantisce il binario giusto. Il comando per rifarli tutti è più sotto.
 
 | # | Cosa | Perché |
 |---|---|---|
 | ~~1~~ | ✅ **CHIUSO il 26/08/2026.** `aps-environment = production`, `get-task-allow` assente, bundle id senza il suffisso `.dev`. Verificato sull'`.ipa` esportato con `tools/verifica-ipa.sh`, non sul sorgente | L'archivio dichiara `development` ed è **normale**: è firmato col profilo di sviluppo del team, ed è l'*export* che rifirma con quello di distribuzione. Guardare l'archivio non risponde alla domanda |
 | ~~2~~ | ✅ **CHIUSO il 26/08/2026.** Tutte e cinque le email di `ADMIN_EMAILS` sono nel binario spedito, `demo@fleofit.it` compresa | È il controllo che è mancato a maggio e che ha causato il rifiuto 2.3.1(a). ⚠️ In un'app Capacitor il bundle sta in `App.app/public/assets`, **non** nella radice del `.app`: cercare nel posto sbagliato dà un falso negativo, ed è successo |
-| 3 | `demo@fleofit.it` deve riuscire ad **assegnare** un workout — **è l'unico rimasto** | Le tre porte che l'assegnazione attraversa sono verificate sul database vivo il 25/08: INSERT su `athlete_workouts` (`with_check` ✅), il `.select('id')` sulle righe inserite (`qual` ✅) e `send-reminders` mode `immediate` (`_shared/admin.ts` ✅). Ma **il gesto non è mai stato provato**. Vedi `tools/verifica-revisore.sql` |
-| 4 | `npx cap sync ios` prima dell'archive | Altrimenti il progetto Xcode resta indietro rispetto a `dist/` |
+| ~~3~~ | ✅ **CHIUSO il 26/08/2026.** `demo@fleofit.it` assegna un workout, provato dall'app. È il rilievo che ha causato il rifiuto **2.3.1(a)** di maggio: l'account dato ad Apple era inerte | Il gesto attraversa **tre porte distinte**, tutte verificate anche sul database vivo: INSERT su `athlete_workouts` (`with_check`), il `.select('id')` sulle righe inserite (`qual`) e `send-reminders` mode `immediate` (`_shared/admin.ts`). Falliscono in modi diversi: errore a schermo → l'INSERT; workout assegnato ma nessuna push → `send-reminders`; nessun errore ma niente in tabella → il `.select`. Query in `tools/verifica-revisore.sql` |
+| 4 | `npx cap sync ios` prima dell'archive | Non è una verifica ma un passo di procedura: senza, il progetto Xcode resta indietro rispetto a `dist/` e si archivia il bundle vecchio |
+| 5 | ⚠️ **Generare un codice invito attivo** (Impostazioni → Codici invito) | Rilevato `codici_attivi = 0` il 26/08. La registrazione è chiusa per scelta: senza codice valido il `ProtectedRoute` fa signOut verso `/login?error=unauthorized`. Un revisore che provasse a registrarsi come atleta verrebbe espulso senza spiegazione, e "flusso che non funziona" è il genere di rilievo che ha prodotto il 2.3.1(a). Costa un minuto |
 
 **Come si rifà tutto**, quando ci sarà una build nuova. L'export scrive su disco e
 **non carica niente** (`destination = export`):

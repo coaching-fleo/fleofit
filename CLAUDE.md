@@ -7,8 +7,10 @@
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
 > `npm test` → **75 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
-> Build **1.1.0 (3)** caricata su App Store Connect il 24/08/2026 dopo un rifiuto: stato e
-> correzioni in §9-ter.
+> Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
+> maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
+> `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
+> che assegna davvero un workout dall'app. Dettagli in §9-ter.
 
 ---
 
@@ -931,9 +933,10 @@ su un valore rotto.
 - **22 mag 2026** — caricata `1.1.0 (2)`. **Respinta** con **2.3.1(a) Hidden features** e
   **3.2.1(viii) Financial Services**.
 - **24 ago 2026** — correzioni applicate nel commit `fc81404`, caricata `1.1.0 (3)`.
-- **26 ago 2026** — ✅ punti 1 e 2 del backlog **verificati sul binario vero** (vedi sopra e
-  `tools/verifica-ipa.sh`). Resta solo il punto 3: il gesto di assegnare un workout da
-  `demo@fleofit.it`, che richiede le credenziali e non è automatizzabile.
+- **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
+  Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
+  `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non
+  funzionava, e che nessuno aveva provato.
 
 > ℹ️ **Il build number del `pbxproj` NON è quello spedito, ed è normale.** Con
 > `method: app-store-connect`, `manageAppVersionAndBuildNumber` vale YES per impostazione
@@ -956,8 +959,15 @@ o vedeva solo il lato atleta, o veniva espulso da `signOut()` a `/login?error=un
 leciti, devono solo essere raggiungibili.
 
 > ⚠️ Corollario da ricordare: **che l'account esista su Supabase non significa nulla.** Può avere
-> tutti i permessi del mondo sul DB ed essere comunque `isAdmin = false`. Conta solo l'elenco
-> compilato dentro il bundle.
+> tutti i permessi del mondo sul DB ed essere comunque `isAdmin = false`. E vale anche il
+> contrario: può essere `isAdmin = true` nel bundle e non poter fare niente, perché le policy
+> RLS hanno una **terza** lista di admin (§4-bis). Servono tutti e tre gli allineamenti.
+>
+> ✅ **Verificati tutti e tre il 26/08/2026**, e non per lettura ma per prova:
+> `src/App.jsx` e `_shared/admin.ts` hanno le stesse 5 email; `pg_policies` sul database vivo
+> coincide riga per riga con `supabase/schema/`; le 5 email sono nell'`.ipa` esportato; e
+> `demo@fleofit.it` **ha davvero assegnato un workout dall'app**.
+> È il primo giro in cui il percorso del revisore è stato percorso invece che dedotto.
 
 ### 3.2.1(viii) — falso positivo su "Cash In" / "Cash Out"
 46 occorrenze letterali nel bundle. Sono termini Hyrox (blocco di apertura e di chiusura), ma per
@@ -995,6 +1005,16 @@ della configurazione Debug).
 Account `demo@fleofit.it` su Supabase Auth **con riga `athletes` pre-creata** (senza, il revisore
 finisce in onboarding), dati demo perché la dashboard coach non si apra vuota, secondo account
 atleta, redeploy di `send-reminders`, note per il revisore, risposta nel **Resolution Center**.
+
+✅ **Stato al 26/08/2026** (query in `tools/verifica-revisore.sql`): l'account esiste, ha l'email
+confermata e la riga `athletes`; la dashboard coach non è vuota (12 atleti, 171 workout, 180
+assegnazioni).
+⚠️ **Aperto**: `codici_attivi = 0`. La registrazione è chiusa per scelta, ma con zero codici un
+revisore che provasse a registrarsi come atleta verrebbe espulso senza spiegazione. Generarne uno
+da Impostazioni → Codici invito.
+⚠️ Nota sulle verifiche: `athlete_workouts` **non ha `created_at`** e `id` è un UUID casuale,
+quindi non esiste modo di ordinarla per "più recente". Per controllare che un'assegnazione sia
+arrivata: contare le righe prima e dopo, oppure cercare per atleta e `completed_date`.
 
 ### Verificato non problematico
 `hidden`/`unlock` sono classi Tailwind e `unlockAudio`; i file morti non vengono bundlati (Vite li
