@@ -6,7 +6,7 @@
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **75 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **83 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -210,6 +210,10 @@ npx cap sync ios # dopo il build, per aggiornare il progetto Xcode
 `vite.config.ts` costruisce l'app · `vitest.config.js` la testa (jsdom,
 `src/test/setup.js`, che finge `Capacitor.isNativePlatform() === false` così i test
 prendono sempre il ramo web). Tenerle separate evita che il build di produzione carichi jsdom.
+> ⚠️ `src/test/setup.js` sostituisce anche `localStorage` con uno in memoria: **jsdom, in
+> questa versione di Node, ne espone uno rotto** (`getItem is not a function`, è l'origine del
+> warning `--localstorage-file`). Senza quel rimpiazzo nessuna pagina si monta, perché quasi
+> tutte leggono localStorage in un effetto. Era il vero ostacolo ai test sulle pagine.
 > ⚠️ **Non creare mai un `vite.config.js`**: Vite risolve `.js` prima di `.ts` e
 > maschererebbe `vite.config.ts` senza dire niente. È già successo il 25/08/2026.
 Per testare su iPhone in dev live: scommentare `server.url` in `capacitor.config.ts` con l'IP locale.
@@ -861,6 +865,9 @@ edit di CreateWorkout. **Non rimuovere questa logica di fallback.**
     - **20 sulla coda offline** (`src/lib/offlineQueue.js`, estratta da `Home.jsx` il
       25/08): deduplica per allenamento, tolleranza ai valori corrotti, quota piena,
       localStorage negato da Safari in navigazione privata.
+    - **5 su `CreateWorkout` montato per intero** (26/08), che coprono la memoizzazione
+      dal lato del *chiamante*: sono gli unici che si accorgono se qualcuno rimette
+      un'arrow inline al call site. Vedi §9-quinquies.
     - Restano scoperte **le pagine intere**: non si montano senza finti `supabase`,
       `react-router` e AuthContext (BACKLOG #19). Anche `processOfflineQueue` resta
       dentro Home e non è coperto: il ciclo di retry vuole un finto `supabase`.
@@ -924,6 +931,41 @@ quando l'atleta non ha modo di capire cos'è successo.
 lancia mai, rimuove il valore illeggibile e torna un fallback; `scriviJson` torna `false`
 invece di lanciare su quota piena. Meglio ripartire da zero che restare bloccati per sempre
 su un valore rotto.
+
+---
+
+## 9-quinquies. Memoizzazione di HyroxBlock (26/08/2026) — come non disfarla
+
+`HyroxBlock` è avvolto in `React.memo`. Il guadagno misurato: digitare 8 caratteri nel titolo
+faceva **8 render sprecati per ogni blocco**, e ogni blocco aperto contiene scroll picker da
+102 opzioni. Ora sono zero.
+
+`memo` confronta le props **per riferimento**, quindi il beneficio sparisce in silenzio se il
+padre torna a passare qualcosa di instabile. Le regole che lo tengono in piedi:
+
+1. **I gestori del call site devono restare riferimenti stabili** (`bloccoToggle`,
+   `bloccoUpdate`, `bloccoRemove`, `bloccoMoveUp`, `bloccoMoveDown`, `bloccoDuplicate`,
+   `bloccoDuplicaEsercizio`, `bloccoDragStart`, `bloccoDragEnter`, `bloccoDragEnd`).
+   Nessuna arrow inline dentro `<HyroxBlock .../>`.
+2. **Nessun `useCallback` deve dipendere da `blocks`.** Con `[blocks]` l'identità cambia
+   appena si modifica un blocco, e si ridisegnano tutti. Si lavora per `block.id` dentro un
+   aggiornamento funzionale `setBlocks(prev => ...)`.
+3. **`draggedBlockIdx` è un `useRef`, non uno stato.** Non è mai letto durante il render, e
+   come stato entrerebbe nelle dipendenze dei gestori del drag.
+4. ⚠️ **Il decimo gestore che nessuno conta**: `onReorder` passato a `useTouchDrag`.
+   `getTouchHandlers` è memoizzato su di lui, quindi un'arrow inline lì rende instabile la
+   prop `touchHandlers` e annulla tutto. Sta in `riordinaBlocchi`.
+
+⚠️ **Il contratto è cambiato**: `onToggle`, `onRemove`, `onMoveUp`, `onMoveDown` e
+`onDuplicate` ricevono `block.id`; `onDuplicateExerciseRequest` riceve `(block.id, esercizio)`.
+Fa eccezione `onUpdate`, che riceve il blocco intero perché l'id è già dentro.
+**Resta asimmetrico rispetto a `RunningStepRow`, che passa l'INDICE**: uniformarli romperebbe
+il riordino delle fasi di corsa (§9 punto 11).
+
+I test che se ne accorgono sono **due file diversi, e servono entrambi**:
+- `HyroxBlockMemo.test.jsx` — prende la rimozione di `memo` dal figlio.
+- `CreateWorkoutMemo.test.jsx` — monta `CreateWorkout` **vero** e prende le regressioni del
+  *chiamante*. Verificato il 26/08: con un padre finto quelle mutazioni **non venivano rilevate**.
 
 ---
 

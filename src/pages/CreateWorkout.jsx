@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square } from 'lucide-react'
@@ -898,7 +898,18 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
 }
 
 // ─── BLOCCO HYROX ───────────────────────────────────────
-export function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate, touchHandlers, onDuplicateExerciseRequest }) {
+// ⚠️ Memoizzato (BACKLOG #15). Ogni blocco aperto contiene scroll picker da 102
+// opzioni: senza memo, un carattere digitato nel titolo ne ridisegna migliaia.
+//
+// memo confronta le props per RIFERIMENTO, quindi funziona solo finché il padre
+// passa gestori stabili. Per questo il contratto è cambiato: i gestori ricevono
+// `block.id` e non si appoggiano più alla posizione, così il padre può
+// dichiararli con useCallback([]) senza catturare `blocks` né `idx`.
+// Se rimetti un'arrow inline al call site, memo smette di servire in silenzio:
+// lo cattura src/pages/__tests__/HyroxBlockMemo.test.jsx.
+//
+// `onUpdate` fa eccezione e riceve il blocco intero: l'id è già lì dentro.
+export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate, touchHandlers, onDuplicateExerciseRequest }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [editingExercise, setEditingExercise] = useState(null)
   const [draggedExIdx, setDraggedExIdx] = useState(null)
@@ -974,7 +985,7 @@ export function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, on
     >
       <div 
         className={`flex flex-col cursor-pointer ${isOpen ? 'border-b border-[#333] pb-2' : ''}`}
-        onClick={onToggle}
+        onClick={() => onToggle(block.id)}
       >
         <div className="flex items-center justify-between">
           <span className="flex items-baseline gap-2 min-w-0">
@@ -982,12 +993,12 @@ export function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, on
             <span className="text-[11px] text-muted font-normal truncate">{blockHint(block.type)}</span>
           </span>
           <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-            <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate()} className="text-muted hover:text-[#f1ba17] transition p-1" title="Duplica">
+            <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate(block.id)} className="text-muted hover:text-[#f1ba17] transition p-1" title="Duplica">
               <Copy size={16}/>
             </button>
-            <button aria-label="Sposta il blocco su" type="button" onClick={() => onMoveUp()} disabled={index===0} className="text-muted hover:text-white disabled:opacity-30 p-1"><ChevronUp size={16}/></button>
-            <button aria-label="Sposta il blocco giù" type="button" onClick={() => onMoveDown()} disabled={index===total-1} className="text-muted hover:text-white disabled:opacity-30 p-1"><ChevronDown size={16}/></button>
-            <button aria-label="Elimina il blocco" type="button" onClick={onRemove} className="text-muted hover:text-red-400 ml-1 p-1"><Trash2 size={16}/></button>
+            <button aria-label="Sposta il blocco su" type="button" onClick={() => onMoveUp(block.id)} disabled={index===0} className="text-muted hover:text-white disabled:opacity-30 p-1"><ChevronUp size={16}/></button>
+            <button aria-label="Sposta il blocco giù" type="button" onClick={() => onMoveDown(block.id)} disabled={index===total-1} className="text-muted hover:text-white disabled:opacity-30 p-1"><ChevronDown size={16}/></button>
+            <button aria-label="Elimina il blocco" type="button" onClick={() => onRemove(block.id)} className="text-muted hover:text-red-400 ml-1 p-1"><Trash2 size={16}/></button>
           </div>
         </div>
 
@@ -1105,7 +1116,7 @@ export function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, on
                       setEditingExercise(exToEdit)
                       setPickerOpen(true)
                     }}
-                    onDuplicate={onDuplicateExerciseRequest}
+                    onDuplicate={(ex) => onDuplicateExerciseRequest(block.id, ex)}
                     touchHandlers={getExTouchHandlers}
                   />
                 ))}
@@ -1135,7 +1146,7 @@ export function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, on
       )}
     </div>
   )
-}
+})
 
 // ─── COMPONENTI RUNNING BUILDER ────────────────────────────────
 function ModeToggle({ mode, onModeChange, value, onChange }) {
@@ -1443,7 +1454,7 @@ export default function CreateWorkout() {
   const [blockPickerOpen, setBlockPickerOpen] = useState(false)
   const [aiModalOpen, setAiModalOpen] = useState(false)
   const [openBlockId, setOpenBlockId] = useState(null)
-  const [draggedBlockIdx, setDraggedBlockIdx] = useState(null)
+  const draggedBlockIdx = useRef(null)
   
   // Running
   const [runningSteps, setRunningSteps] = useState([])
@@ -1462,9 +1473,70 @@ export default function CreateWorkout() {
   const navigate = useNavigate()
 
   // Hook touch per riordinare i BLOCCHI HYROX
-  const { getTouchHandlers: getBlockTouchHandlers } = useTouchDrag({
-    onReorder: (from, to) => setBlocks(prev => moveElement(prev, from, to))
-  })
+  // ⚠️ useTouchDrag memoizza getTouchHandlers su onReorder: con un'arrow inline
+  // qui, touchHandlers cambierebbe identità a ogni render e annullerebbe memo.
+  const riordinaBlocchi = useCallback((from, to) => setBlocks(prev => moveElement(prev, from, to)), [])
+  const { getTouchHandlers: getBlockTouchHandlers } = useTouchDrag({ onReorder: riordinaBlocchi })
+
+  // ── Gestori di HyroxBlock, tutti stabili (BACKLOG #15) ──────────────────
+  // Nessuno cattura `blocks` o `idx`: lavorano per id dentro un aggiornamento
+  // funzionale. Se qui torna un'arrow inline, React.memo sul figlio smette di
+  // servire senza che niente lo segnali — tranne HyroxBlockMemo.test.jsx.
+  const bloccoToggle = useCallback((id) => {
+    setOpenBlockId(prev => (prev === id ? null : id))
+  }, [])
+
+  // onUpdate riceve il blocco intero: l'id è già dentro, niente da passare.
+  const bloccoUpdate = useCallback((nuovo) => {
+    setBlocks(prev => prev.map(b => (b.id === nuovo.id ? nuovo : b)))
+  }, [])
+
+  const bloccoRemove = useCallback((id) => {
+    setBlocks(prev => prev.filter(b => b.id !== id))
+  }, [])
+
+  const bloccoMoveUp = useCallback((id) => {
+    setBlocks(prev => {
+      const i = prev.findIndex(b => b.id === id)
+      return i > 0 ? moveElement(prev, i, i - 1) : prev
+    })
+  }, [])
+
+  const bloccoMoveDown = useCallback((id) => {
+    setBlocks(prev => {
+      const i = prev.findIndex(b => b.id === id)
+      return i >= 0 && i < prev.length - 1 ? moveElement(prev, i, i + 1) : prev
+    })
+  }, [])
+
+  const bloccoDuplicate = useCallback((id) => {
+    setBlocks(prev => {
+      const i = prev.findIndex(b => b.id === id)
+      if (i === -1) return prev
+      const copia = JSON.parse(JSON.stringify(prev[i]))
+      copia.id = Math.random()
+      if (copia.exercises) copia.exercises = copia.exercises.map(ex => ({ ...ex, id: Math.random() }))
+      const nuovi = [...prev]
+      nuovi.splice(i + 1, 0, copia)
+      return nuovi
+    })
+  }, [])
+
+  const bloccoDuplicaEsercizio = useCallback((id, esercizio) => {
+    setBlocks(prev => prev.map(b => (b.id === id
+      ? { ...b, exercises: [...(b.exercises || []), { ...esercizio, id: Math.random() }] }
+      : b)))
+  }, [])
+
+  const bloccoDragStart = useCallback((i) => { draggedBlockIdx.current = i }, [])
+  const bloccoDragEnter = useCallback((i) => {
+    const da = draggedBlockIdx.current
+    if (da !== null && da !== i) {
+      setBlocks(prev => moveElement(prev, da, i))
+      draggedBlockIdx.current = i
+    }
+  }, [])
+  const bloccoDragEnd = useCallback(() => { draggedBlockIdx.current = null }, [])
 
   // Hook touch per riordinare le FASI RUNNING
   const { getTouchHandlers: getStepTouchHandlers } = useTouchDrag({
@@ -1915,42 +1987,19 @@ export default function CreateWorkout() {
 
           <div className="flex flex-col gap-4" data-drag-container>
             {blocks.map((block, idx) => (
-              <HyroxBlock 
+              <HyroxBlock
                 key={block.id} block={block} index={idx} total={blocks.length}
                 isOpen={openBlockId === block.id}
-                onToggle={() => setOpenBlockId(openBlockId === block.id ? null : block.id)}
-                onUpdate={newB => {
-                  const nb = [...blocks]
-                  nb[idx] = newB
-                  setBlocks(nb)
-                }}
-                onRemove={() => setBlocks(blocks.filter(b => b.id !== block.id))}
-                onMoveUp={() => setBlocks(moveElement(blocks, idx, idx - 1))}
-                onMoveDown={() => setBlocks(moveElement(blocks, idx, idx + 1))}
-                onDragStartIndex={(index) => setDraggedBlockIdx(index)}
-                onDragEnterIndex={(index) => {
-                  if (draggedBlockIdx !== null && draggedBlockIdx !== index) {
-                    setBlocks(prev => moveElement(prev, draggedBlockIdx, index))
-                    setDraggedBlockIdx(index)
-                  }
-                }}
-                onDragEndIndex={() => setDraggedBlockIdx(null)}
-                onDuplicate={() => {
-                  const duplicatedBlock = JSON.parse(JSON.stringify(block))
-                  duplicatedBlock.id = Math.random()
-                  if (duplicatedBlock.exercises) {
-                    duplicatedBlock.exercises = duplicatedBlock.exercises.map(ex => ({ ...ex, id: Math.random() }))
-                  }
-                  const newBlocks = [...blocks]
-                  newBlocks.splice(idx + 1, 0, duplicatedBlock)
-                  setBlocks(newBlocks)
-                }}
-                onDuplicateExerciseRequest={(exToDuplicate) => {
-                  const nb = [...blocks]
-                  const currentExercises = nb[idx].exercises || []
-                  nb[idx] = { ...nb[idx], exercises: [...currentExercises, { ...exToDuplicate, id: Math.random() }] }
-                  setBlocks(nb)
-                }}
+                onToggle={bloccoToggle}
+                onUpdate={bloccoUpdate}
+                onRemove={bloccoRemove}
+                onMoveUp={bloccoMoveUp}
+                onMoveDown={bloccoMoveDown}
+                onDragStartIndex={bloccoDragStart}
+                onDragEnterIndex={bloccoDragEnter}
+                onDragEndIndex={bloccoDragEnd}
+                onDuplicate={bloccoDuplicate}
+                onDuplicateExerciseRequest={bloccoDuplicaEsercizio}
                 touchHandlers={getBlockTouchHandlers}
               />
             ))}

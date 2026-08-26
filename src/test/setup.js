@@ -17,3 +17,25 @@ window.HTMLElement.prototype.scrollTo = vi.fn()
 vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => false, getPlatform: () => 'web' },
 }))
+
+// jsdom, in questa versione di Node, espone un localStorage inutilizzabile:
+// `localStorage.getItem is not a function` (è l'origine del warning
+// `--localstorage-file` a ogni run). Senza questo rimpiazzo NESSUNA pagina si
+// monta, perché quasi tutte leggono localStorage in un effetto — ed era il vero
+// ostacolo ai test sulle pagine, non i finti supabase e router (BACKLOG #19).
+// Scoperto il 26/08/2026.
+function localStorageInMemoria() {
+  let dati = new Map()
+  return {
+    get length() { return dati.size },
+    key: (i) => [...dati.keys()][i] ?? null,
+    getItem: (k) => (dati.has(String(k)) ? dati.get(String(k)) : null),
+    setItem: (k, v) => { dati.set(String(k), String(v)) },
+    removeItem: (k) => { dati.delete(String(k)) },
+    clear: () => { dati = new Map() },
+  }
+}
+for (const nome of ['localStorage', 'sessionStorage']) {
+  Object.defineProperty(window, nome, { value: localStorageInMemoria(), writable: true, configurable: true })
+}
+afterEach(() => { window.localStorage.clear(); window.sessionStorage.clear() })

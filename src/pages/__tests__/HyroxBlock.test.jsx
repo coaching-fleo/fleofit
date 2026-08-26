@@ -100,14 +100,35 @@ describe('Cash In / Cash Out', () => {
 })
 
 describe('contratto verso il padre', () => {
-  // Questi sono i test che il refactor #15 deve continuare a far passare.
-  it('onMoveUp e onMoveDown si chiamano SENZA argomenti', async () => {
-    const p = props()
+  // ⚠️ CAMBIATO il 26/08/2026 dal refactor di memoizzazione (BACKLOG #15).
+  // Prima i gestori non ricevevano niente e il padre li richiudeva su `idx`,
+  // il che rendeva impossibile stabilizzarli con useCallback([]) — e senza
+  // gestori stabili React.memo non salta mai un render.
+  // Ora il blocco si identifica: passa `block.id`, il padre lavora per id
+  // dentro un aggiornamento funzionale e non cattura più né `blocks` né `idx`.
+  //
+  // ⚠️ Resta ASIMMETRICO rispetto a RunningStepRow, che passa l'INDICE
+  // (`onMoveUp(index)`). Uniformarli romperebbe il riordino delle fasi di corsa:
+  // vedi RunningStepRow.test.jsx.
+  it('onMoveUp e onMoveDown ricevono block.id, non l indice', async () => {
+    const p = props({ index: 1, total: 3 })
     render(<HyroxBlock {...p} />)
     await userEvent.click(screen.getByLabelText('Sposta il blocco su'))
     await userEvent.click(screen.getByLabelText('Sposta il blocco giù'))
-    expect(p.onMoveUp).toHaveBeenCalledWith()
-    expect(p.onMoveDown).toHaveBeenCalledWith()
+    // 0.123 è l'id del blocco di prova, 1 sarebbe l'indice: devono arrivare l'id.
+    expect(p.onMoveUp).toHaveBeenCalledWith(0.123)
+    expect(p.onMoveDown).toHaveBeenCalledWith(0.123)
+  })
+
+  it('anche onRemove, onDuplicate e onToggle ricevono block.id', async () => {
+    const p = props()
+    render(<HyroxBlock {...p} />)
+    await userEvent.click(screen.getByLabelText('Elimina il blocco'))
+    expect(p.onRemove).toHaveBeenCalledWith(0.123)
+    await userEvent.click(screen.getByLabelText('Duplica il blocco'))
+    expect(p.onDuplicate).toHaveBeenCalledWith(0.123)
+    await userEvent.click(screen.getByText('WarmUp'))
+    expect(p.onToggle).toHaveBeenCalledWith(0.123)
   })
 
   it('il primo blocco non può salire e l ultimo non può scendere', () => {
@@ -121,7 +142,7 @@ describe('contratto verso il padre', () => {
     expect(screen.getByLabelText('Sposta il blocco giù')).toBeDisabled()
   })
 
-  it('duplica ed elimina arrivano al padre', async () => {
+  it('duplica ed elimina arrivano al padre una volta sola', async () => {
     const p = props()
     render(<HyroxBlock {...p} />)
     await userEvent.click(screen.getByLabelText('Duplica il blocco'))
