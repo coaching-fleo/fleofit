@@ -153,3 +153,40 @@ export function calcolaStatistiche(workouts = [], oggi = new Date()) {
     percentualeCompletamento: assegnati > 0 ? Math.round((completati / assegnati) * 100) : 0,
   }
 }
+
+/**
+ * Il riepilogo della settimana corrente, mostrato in cima alla scheda atleta:
+ * minuti totali, allenamenti completati, RPE medio.
+ *
+ * ⚠️ Era una TERZA copia del calcolo della durata, dentro un useEffect in
+ * AthleteDetail — e quindi portava con sé lo stesso difetto delle distanze
+ * (BACKLOG #30): `400m` contato come 400 minuti. Riusando durataWorkout il
+ * difetto sparisce anche da qui.
+ */
+export function statisticheSettimana(workouts = [], oggi = new Date()) {
+  const inizio = startOfWeek(oggi, { weekStartsOn: 1 })
+  const fine = new Date(inizio)
+  fine.setDate(inizio.getDate() + 6)
+  const dal = format(inizio, 'yyyy-MM-dd')
+  const al = format(fine, 'yyyy-MM-dd')
+
+  let minuti = 0, completati = 0, sommaRpe = 0, conRpe = 0
+
+  for (const w of workouts) {
+    if (w.completed_date < dal || w.completed_date > al) continue
+    if (w.status !== 'completed') continue
+
+    completati++
+    const { rpe } = parseNotesAndRpe(w.notes)
+    if (Number.isFinite(rpe)) { sommaRpe += rpe; conRpe++ }
+    minuti += durataWorkout(w.workouts?.sections)
+  }
+
+  return {
+    time: Math.round(minuti),
+    completed: completati,
+    // '-' e non 0: zero direbbe "fatica nulla", il trattino dice "non lo sappiamo".
+    avgRpe: conRpe > 0 ? (sommaRpe / conRpe).toFixed(1) : '-',
+  }
+}
+

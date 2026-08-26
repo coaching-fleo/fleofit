@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calcolaStatistiche, durataWorkout, parseTime } from '../statistiche'
+import { calcolaStatistiche, durataWorkout, parseTime, statisticheSettimana } from '../statistiche'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -182,3 +182,44 @@ describe('distribuzione degli RPE', () => {
     expect(distribuzioneRpe.moderate).toBe(1)
   })
 })
+
+describe('riepilogo della settimana corrente', () => {
+  // È la riga di tre numeri in cima alla scheda atleta. Era una TERZA copia del
+  // calcolo della durata, dentro un useEffect — quindi portava lo stesso difetto
+  // delle distanze del carico settimanale.
+  const dellaSettimana = () => {
+    // OGGI è mercoledì: lunedì è due giorni prima, e cade nella stessa settimana.
+    return [
+      fatto(giorno(-2), 8, { category: 'Hyrox', blocks: [{ type: 'AMRAP', params: { duration: '30 min' } }] }),
+      fatto(giorno(0), 6, { category: 'Hyrox', blocks: [{ type: 'AMRAP', params: { duration: '20 min' } }] }),
+    ]
+  }
+
+  it('somma i minuti e conta i completati', () => {
+    const s = statisticheSettimana(dellaSettimana(), OGGI)
+    expect(s.time).toBe(50)
+    expect(s.completed).toBe(2)
+  })
+
+  it('fa la media degli RPE con un decimale', () => {
+    expect(statisticheSettimana(dellaSettimana(), OGGI).avgRpe).toBe('7.0')
+  })
+
+  it('senza RPE mostra un trattino, non zero', () => {
+    // Zero direbbe "fatica nulla"; il trattino dice "non lo sappiamo".
+    const s = statisticheSettimana([{ completed_date: giorno(0), status: 'pending', notes: null, workouts: { sections: {} } }], OGGI)
+    expect(s.avgRpe).toBe('-')
+    expect(s.completed).toBe(0)
+  })
+
+  it('ignora le settimane precedenti', () => {
+    expect(statisticheSettimana([fatto(giorno(-10), 9, {})], OGGI).completed).toBe(0)
+  })
+
+  it('e conta le distanze come stima, non come minuti', () => {
+    const s = statisticheSettimana([fatto(giorno(0), 8, { category: 'Running', steps: [
+      { type: 'repeat', rounds: '6', runDuration: '400m', recDuration: '90 sec' } ] })], OGGI)
+    expect(s.time).toBeLessThan(30)      // prima erano 2409 minuti
+  })
+})
+

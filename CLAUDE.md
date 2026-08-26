@@ -6,7 +6,7 @@
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **164 test**, `npm run lint` → **45 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **169 test**, `npm run lint` → **42 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -976,6 +976,38 @@ quando l'atleta non ha modo di capire cos'è successo.
 lancia mai, rimuove il valore illeggibile e torna un fallback; `scriviJson` torna `false`
 invece di lanciare su quota piena. Meglio ripartire da zero che restare bloccati per sempre
 su un valore rotto.
+
+---
+
+## 9-septies. Le segnalazioni `react-hooks`: cosa vale e cosa no (26/08/2026)
+
+Erano 26 e il backlog le chiamava «un refactor vero». **Esaminandole una a una, 3 erano
+difetti e 23 sono il pattern voluto.** Questa sezione esiste perché non vengano riaperte
+come se fossero 26 cose da fare.
+
+### Le tre corrette
+| dove | cos'era |
+|---|---|
+| `Calendar.jsx` | `dayWorkouts` era uno **stato** riscritto da un effetto a ogni cambio di giorno: un render in più e uno stato che poteva restare indietro. Ora è un `useMemo`. |
+| `AthleteDetail.jsx` | `weeklyStats` idem — e dentro l'effetto c'era una **terza copia** del calcolo della durata, con il difetto delle distanze (§BACKLOG #30). Ora usa `src/lib/statistiche.js`. |
+| `Athletes.jsx` | `Date.now()` chiamato **durante il render** per il conto alla rovescia del cestino: due render consecutivi davano numeri diversi. Ora l'istante si fissa quando i dati arrivano — che è anche più corretto nel merito. |
+
+### Perché le altre restano
+- **`immutability` (9)** — il messaggio dice «Cannot access variable before it is declared»,
+  ma vuol dire solo che un effetto chiama una funzione dichiarata più sotto. In JS funziona;
+  è il linter che non può verificarlo.
+- **`exhaustive-deps` (9)** — quasi tutte sono `useEffect(() => { fetchX() }, [])`, cioè
+  «carica una volta al montaggio», che **è l'intenzione**. Provato su `WorkoutsArchive`:
+  aggiungere la dipendenza richiede un `useCallback`, e il `setLoading(true)` dentro il fetch
+  fa **comparire un `set-state-in-effect`** al suo posto. Si scambia un avviso con un altro,
+  con in più il rischio di un ciclo infinito se una dipendenza è instabile.
+- **`set-state-in-effect` (5)** — sono casi difendibili: stato inizializzato da una prop e poi
+  modificabile dall'utente (le note, in due copie), lettura dell'hash dell'URL al montaggio
+  (`Login`), reset di un'animazione, memoria dell'ultimo stato non nullo ricevuto dalla TV.
+
+> **La regola che ne esce**: queste segnalazioni si leggono, non si azzerano. Un conteggio che
+> scende non è di per sé un miglioramento, e in due casi su tre qui il conteggio sarebbe sceso
+> spostando il problema.
 
 ---
 

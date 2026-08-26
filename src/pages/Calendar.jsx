@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
@@ -13,7 +13,6 @@ export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [workouts, setWorkouts] = useState([])
   const [selectedDay, setSelectedDay] = useState(new Date())
-  const [dayWorkouts, setDayWorkouts] = useState([])
   const [loading, setLoading] = useState(true)
   const [eventModalOpen, setEventModalOpen] = useState(false)
   const navigate = useNavigate()
@@ -23,10 +22,13 @@ export default function Calendar() {
     fetchWorkouts()
   }, [currentMonth])
 
-  useEffect(() => {
-    const filtered = workouts.filter(w => isSameDay(parseISO(w.date), selectedDay))
-    setDayWorkouts(filtered)
-  }, [selectedDay, workouts])
+  // I workout del giorno selezionato sono un valore DERIVATO, non uno stato:
+  // erano tenuti in useState e riscritti da un effetto a ogni cambio di giorno,
+  // il che significava un render in più e uno stato che poteva restare indietro.
+  const dayWorkouts = useMemo(
+    () => workouts.filter(w => isSameDay(parseISO(w.date), selectedDay)),
+    [workouts, selectedDay]
+  )
 
   const fetchWorkouts = async () => {
     setLoading(true)

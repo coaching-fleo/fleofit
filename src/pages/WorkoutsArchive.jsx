@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { ChevronLeft, Calendar as CalendarIcon, Search } from 'lucide-react'
@@ -13,6 +13,10 @@ export default function WorkoutsArchive() {
   const navigate = useNavigate()
   const { role, user } = useAuth()
 
+  // Caricamento una volta sola, di proposito: `role` e `user` non cambiano
+  // senza un rimontaggio della pagina. Aggiungere fetchWorkouts alle dipendenze
+  // (e quindi un useCallback) non correggerebbe niente qui, e sposterebbe solo
+  // segnalazione su setLoading(true) dentro il fetch. Vedi BACKLOG #17.
   useEffect(() => {
     fetchWorkouts()
   }, [])
@@ -30,7 +34,6 @@ export default function WorkoutsArchive() {
            if (!aw.workouts) return false
            const s = aw.workouts.sections || {}
            const cat = s.category
-           if (cat === 'Event' || s.isEvent || s.isAutonomous) return false
            if (cat === 'Event' || s.isEvent || s.isAutonomous) return false
            return true
          }).map(aw => ({
@@ -58,10 +61,10 @@ export default function WorkoutsArchive() {
     setLoading(false)
   }
 
-  const filteredWorkouts = workouts.filter(w => 
+  const filteredWorkouts = useMemo(() => workouts.filter(w =>
     w.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (w.sections?.category || '').toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  ), [workouts, searchTerm])
 
   return (
     <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">

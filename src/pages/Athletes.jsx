@@ -11,6 +11,7 @@ import { mostraErrore, mostraSuccesso } from '../lib/alert'
 export default function Athletes() {
   const [athletes, setAthletes] = useState([])
   const [eliminati, setEliminati] = useState([])
+  const [caricatoIl, setCaricatoIl] = useState(() => Date.now())
   const [mostraEliminati, setMostraEliminati] = useState(false)
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -38,12 +39,18 @@ export default function Athletes() {
     const { data: rimossi } = await supabase.from('athletes').select('*')
       .not('deleted_at', 'is', null).order('deleted_at', { ascending: false })
     setEliminati((rimossi || []).filter(a => a.id !== COACHING_ID))
+    // ⚠️ L'istante si fissa QUI, quando i dati arrivano, non durante il render.
+    // Date.now() chiamato nel render è impuro: due render consecutivi darebbero
+    // conteggi diversi e il React Compiler non può memoizzare il componente.
+    // È anche più corretto nel merito: il conto alla rovescia è relativo al
+    // momento in cui la lista è stata caricata.
+    setCaricatoIl(Date.now())
   }
 
   const GIORNI_PRIMA_DELLA_CANCELLAZIONE = 7
 
   const giorniRimasti = (deletedAt) => {
-    const trascorsi = (Date.now() - Number(deletedAt)) / 86400000
+    const trascorsi = (caricatoIl - Number(deletedAt)) / 86400000
     return Math.max(0, Math.ceil(GIORNI_PRIMA_DELLA_CANCELLAZIONE - trascorsi))
   }
 

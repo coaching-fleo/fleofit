@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Play, Pause, Square, Check, Eye, LineChart, Target, PieChart, BarChart2 } from 'lucide-react'
-import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, differenceInDays, startOfWeek } from 'date-fns'
+import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
@@ -14,7 +14,7 @@ import { Share } from '@capacitor/share'
 import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
-import { calcolaStatistiche } from '../lib/statistiche'
+import { calcolaStatistiche, statisticheSettimana } from '../lib/statistiche'
 import { mostraErrore } from '../lib/alert'
 
 const getRpeColorText = (val) => {
@@ -75,7 +75,6 @@ export default function AthleteDetail() {
   const [rpeScore, setRpeScore] = useState('5')
   const [rpeNotes, setRpeNotes] = useState('')
   const [savingRpe, setSavingRpe] = useState(false)
-  const [weeklyStats, setWeeklyStats] = useState({ time: 0, completed: 0, avgRpe: '-' })
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(new Date())
@@ -122,86 +121,12 @@ export default function AthleteDetail() {
     if (!silent) setLoading(false)
   }
 
-  useEffect(() => {
-    if (!workouts || workouts.length === 0) return;
-    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-    const weekStartStr = format(weekStart, 'yyyy-MM-dd')
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekStart.getDate() + 6)
-    const weekEndStr = format(weekEnd, 'yyyy-MM-dd')
-
-    const weekData = workouts.filter(w => w.completed_date >= weekStartStr && w.completed_date <= weekEndStr)
-
-    let time = 0
-    let completed = 0
-    let rpeSum = 0
-    let rpeCount = 0
-
-    const parseTime = (val) => {
-      if (!val || val === '-') return 0
-      const s = String(val).toLowerCase()
-      if (s.includes('sec')) return (parseInt(s) || 0) / 60
-      if (s.includes('min')) {
-        const parts = s.replace('min', '').trim().split(':')
-        if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
-        return parseInt(s) || 0
-      }
-      const parts = s.split(':')
-      if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
-      return parseInt(s) || 0
-    }
-
-    weekData.forEach(w => {
-      if (w.status === 'completed') {
-        completed++
-        const parsed = parseNotesAndRpe(w.notes)
-        const rpeVal = parseInt(parsed.rpe)
-        if (!isNaN(rpeVal)) { rpeSum += rpeVal; rpeCount++ }
-
-        const s = w.workouts?.sections || {}
-        const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
-        let workoutTime = 0
-        if (cat === 'Running') {
-          const steps = s.steps || s.main?.steps || []
-          steps.forEach(step => {
-            if (step.type === 'repeat') {
-              const rounds = parseInt(step.rounds) || 1
-              workoutTime += parseTime(step.runDuration) * rounds
-              workoutTime += parseTime(step.recDuration) * rounds
-            } else {
-              let stepTime = parseTime(step.duration)
-              if (stepTime === 0 && step.duration) {
-                const ds = String(step.duration).toLowerCase()
-                if (ds.includes('km')) stepTime = parseFloat(ds) * 6
-                else if (ds.includes('m')) stepTime = (parseInt(ds) || 0) / 1000 * 6
-              }
-              workoutTime += stepTime
-            }
-          })
-        } else {
-          let blocks = s.blocks || []
-          if (blocks.length === 0) {
-            if (s.warmup) blocks.push({type: 'WarmUp', params: { duration: s.warmup.duration }})
-            if (s.cashIn && s.cashIn.length > 0) blocks.push({type: 'Cash In', exercises: s.cashIn})
-            if (s.main) blocks.push({type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type, params: s.main.params || {}, exercises: s.main.exercises || []})
-            if (s.cashOut && s.cashOut.length > 0) blocks.push({type: 'Cash Out', exercises: s.cashOut})
-          }
-          blocks.forEach(b => {
-            let blockRounds = parseInt(b.params?.rounds) || 1
-            if (b.type === 'ON/OFF') workoutTime += (parseTime(b.params?.on) + parseTime(b.params?.off)) * blockRounds
-            else if (b.type === 'EMOM') workoutTime += parseTime(b.params?.interval) * blockRounds
-            else if (b.type === 'AMRAP' || b.type === 'WarmUp' || b.type === 'Rest') workoutTime += parseTime(b.params?.duration)
-            else if (b.type === 'For Time') workoutTime += 15 * blockRounds
-            else if (b.type === 'Cash In' || b.type === 'Cash Out') workoutTime += 5 * blockRounds
-            ;(b.exercises || []).forEach(ex => { if (b.type === 'Interval') workoutTime += parseTime(ex.exTime) * blockRounds })
-          })
-        }
-        if (workoutTime === 0) workoutTime = 45;
-        time += workoutTime
-      }
-    })
-    setWeeklyStats({ time: Math.round(time), completed, avgRpe: rpeCount > 0 ? (rpeSum / rpeCount).toFixed(1) : '-' })
-  }, [workouts])
+  // Riepilogo della settimana: valore DERIVATO, non stato.
+  // Qui c'era un useEffect con setWeeklyStats e, dentro, una TERZA copia del
+  // calcolo della durata — che portava con sé il difetto delle distanze
+  // (BACKLOG #30): 400m contati come 400 minuti. Ora usa src/lib/statistiche.js,
+  // dov'è corretto e coperto da test.
+  const weeklyStats = useMemo(() => statisticheSettimana(workouts), [workouts])
 
   const uploadVoiceNote = async (athleteWorkoutId, audioBlob, ext) => {
     const fileName = `voice_${athleteWorkoutId}_${Date.now()}.${ext}`
