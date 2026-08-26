@@ -24,6 +24,10 @@ export default function VoiceRecorder({ onSave, onCancel }) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [mediaStream, setMediaStream] = useState(null)
+  // Quale dei due registratori è in uso ADESSO. Non si può decidere di nuovo
+  // allo stop guardando isNative: la scelta dipende anche da MediaRecorder e
+  // dallo stream, che allo stop potrebbero non esserci più.
+  const registraConPluginNativo = useRef(false)
   const isNative = Capacitor.isNativePlatform()
   
   const mediaRecorder = useRef(null)
@@ -64,15 +68,8 @@ export default function VoiceRecorder({ onSave, onCancel }) {
         console.error("Errore permessi nativi:", e)
       }
     }
-    // ⚠️ Su iOS questa chiamata apre il microfono nel WebView, mentre a
-    // registrare è NativeVoiceRecorder. Il 26/08/2026 ho provato a NON aprirla
-    // sul nativo, pensando che le due cose si contendessero la sessione audio —
-    // e l'app ha smesso di poter registrare del tutto ("Impossibile accedere al
-    // microfono"): startRecording lanciava. Quindi getUserMedia qui NON è solo
-    // per la forma d'onda, serve anche a mettere in piedi qualcosa di cui il
-    // plugin nativo ha bisogno. Ripristinata.
-    // ⚠️ Il difetto delle registrazioni vuote (BACKLOG #31) resta aperto: non
-    // era questa la causa, o non era solo questa.
+    // Il microfono si apre SEMPRE da qui, anche su iOS: serve alla forma d'onda,
+    // e da qui in poi anche a registrare (vedi sotto).
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -84,7 +81,22 @@ export default function VoiceRecorder({ onSave, onCancel }) {
         console.warn('getUserMedia non disponibile, nessuna forma d\'onda:', err)
       }
     }
-    if (isNative) {
+    // 🔴 Su iOS si registra con MediaRecorder, non col plugin nativo.
+    //
+    // Perché, dai log del dispositivo (26/08/2026): il plugin riceveva il
+    // permesso (`value:true`), startRecording riusciva (`value:true`), e
+    // stopRecording restituiva `{ msDuration: 0, uri: "" }` con un contenitore
+    // M4A di 557 byte — intestazione e zero campioni. WebView e recorder nativo
+    // si contendono AVAudioSession, e non esiste un ordine che vada bene a
+    // entrambi: togliendo getUserMedia il plugin non parte proprio.
+    //
+    // Ma getUserMedia funziona (l'onda si muove), e MediaRecorder è disponibile
+    // nel WKWebView da iOS 14.5. Quindi si usa quello, che è anche l'unico
+    // percorso già coperto da test.
+    // Il plugin nativo resta come RIPIEGO, per un WebView troppo vecchio.
+    registraConPluginNativo.current = isNative && !(window.MediaRecorder && stream)
+
+    if (registraConPluginNativo.current) {
       try {
         await NativeVoiceRecorder.startRecording()
         isCancelledRef.current = false
@@ -99,7 +111,7 @@ export default function VoiceRecorder({ onSave, onCancel }) {
       }
     } else {
       if (!window.MediaRecorder || !stream) {
-        return mostraErrore('Il tuo browser non supporta la registrazione vocale.')
+        return mostraErrore('Impossibile accedere al microfono per registrare.')
       }
       try {
         const recorder = new MediaRecorder(stream)
@@ -141,11 +153,11 @@ export default function VoiceRecorder({ onSave, onCancel }) {
     isCancelledRef.current = true
     setIsRecording(false)
     clearInterval(timerRef.current)
-    if (!isNative && mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
+    if (!registraConPluginNativo.current && mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
       mediaRecorder.current.stop()
       return
     }
-    if (isNative) {
+    if (registraConPluginNativo.current) {
       if (mediaStream) {
         mediaStream.getTracks().forEach(t => t.stop())
         setMediaStream(null)
@@ -160,17 +172,26 @@ export default function VoiceRecorder({ onSave, onCancel }) {
     isCancelledRef.current = false
     setIsRecording(false)
     clearInterval(timerRef.current)
-    if (!isNative && mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
+    if (!registraConPluginNativo.current && mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
       mediaRecorder.current.stop()
       return
     }
-    if (isNative) {
+    if (registraConPluginNativo.current) {
       if (mediaStream) {
         mediaStream.getTracks().forEach(t => t.stop())
         setMediaStream(null)
       }
       try {
         const result = await NativeVoiceRecorder.stopRecording()
+        // ⚠️ Il plugin può tornare un file VUOTO dicendo che è andato tutto bene:
+        // msDuration 0 e un contenitore M4A di sola intestazione. Caricarlo
+        // significa dare all'atleta una nota che non si sente, senza dirglielo.
+        if (result.value && result.value.msDuration === 0) {
+          console.error('Registrazione nativa vuota:', result.value)
+          mostraErrore('La registrazione è risultata vuota: riprova.')
+          if (onCancel) onCancel()
+          return
+        }
         if (result.value && result.value.recordDataBase64) {
           const mimeType = result.value.mimeType || 'audio/aac'
           const ext = mimeType.includes('mp4') ? 'mp4' : 'aac'
