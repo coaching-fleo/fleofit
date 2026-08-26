@@ -1329,7 +1329,16 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
   )
 }
 
-export function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, touchHandlers, onEdit, onDuplicate }) {
+// ⚠️ Memoizzato (BACKLOG #15-bis). Guadagno minore di HyroxBlock — le fasi non
+// hanno scroll picker da 102 opzioni — ma la dinamica è identica: senza memo,
+// ogni carattere digitato nel titolo le ridisegna tutte.
+//
+// ⚠️ A differenza di HyroxBlock, qui il CONTRATTO NON È CAMBIATO: passava già
+// tutto ciò che serve al padre (l'indice a onMoveUp/onMoveDown, step.id a
+// onRemove, lo step intero a onEdit/onDuplicate), quindi bastava stabilizzare
+// i gestori. L'asimmetria fra i due componenti è quindi VOLUTA e va mantenuta:
+// uniformarli romperebbe il riordino delle fasi. Vedi CLAUDE.md §9-quinquies.
+export const RunningStepRow = memo(function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, touchHandlers, onEdit, onDuplicate }) {
 
   const getTypeLabel = (t) => {
     switch(t) {
@@ -1433,7 +1442,7 @@ export function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveD
       </div>
     </div>
   )
-}
+})
 
 // ─── MAIN ─────────────────────────────────────────────────────
 export default function CreateWorkout() {
@@ -1460,7 +1469,7 @@ export default function CreateWorkout() {
   const [runningSteps, setRunningSteps] = useState([])
   const [runningPickerOpen, setRunningPickerOpen] = useState(false)
   const [editingStep, setEditingStep] = useState(null)
-  const [draggedStepIdx, setDraggedStepIdx] = useState(null)
+  const draggedStepIdx = useRef(null)
 
   // Note + pause
   const [coachNotes, setCoachNotes] = useState('')
@@ -1539,9 +1548,46 @@ export default function CreateWorkout() {
   const bloccoDragEnd = useCallback(() => { draggedBlockIdx.current = null }, [])
 
   // Hook touch per riordinare le FASI RUNNING
-  const { getTouchHandlers: getStepTouchHandlers } = useTouchDrag({
-    onReorder: (from, to) => setRunningSteps(prev => moveElement(prev, from, to))
-  })
+  // Come per i blocchi: getTouchHandlers è memoizzato su onReorder, quindi
+  // un'arrow inline qui renderebbe instabile la prop touchHandlers.
+  const riordinaFasi = useCallback((from, to) => setRunningSteps(prev => moveElement(prev, from, to)), [])
+  const { getTouchHandlers: getStepTouchHandlers } = useTouchDrag({ onReorder: riordinaFasi })
+
+  // ── Gestori di RunningStepRow, tutti stabili (BACKLOG #15-bis) ─────────
+  // Il contratto era già adatto: ricevono indice o id, quindi non serviva
+  // cambiarlo. Bastava non richiudersi su `runningSteps`.
+  const faseRemove = useCallback((id) => {
+    setRunningSteps(prev => prev.filter(s => s.id !== id))
+  }, [])
+
+  // moveElement ignora già gli indici fuori intervallo: nessun controllo qui,
+  // o sarebbe una protezione che non protegge (verificato il 26/08/2026).
+  const faseMoveUp = useCallback((i) => {
+    setRunningSteps(prev => moveElement(prev, i, i - 1))
+  }, [])
+
+  const faseMoveDown = useCallback((i) => {
+    setRunningSteps(prev => moveElement(prev, i, i + 1))
+  }, [])
+
+  const faseEdit = useCallback((fase) => {
+    setEditingStep(fase)
+    setRunningPickerOpen(true)
+  }, [])
+
+  const faseDuplicate = useCallback((fase) => {
+    setRunningSteps(prev => [...prev, { ...fase, id: Math.random() }])
+  }, [])
+
+  const faseDragStart = useCallback((i) => { draggedStepIdx.current = i }, [])
+  const faseDragEnter = useCallback((i) => {
+    const da = draggedStepIdx.current
+    if (da !== null && da !== i) {
+      setRunningSteps(prev => moveElement(prev, da, i))
+      draggedStepIdx.current = i
+    }
+  }, [])
+  const faseDragEnd = useCallback(() => { draggedStepIdx.current = null }, [])
 
 
   // Se editId o duplicateId sono presenti, carichiamo i dati del workout
@@ -2114,24 +2160,14 @@ export default function CreateWorkout() {
                     step={step}
                     index={i}
                     total={runningSteps.length}
-                    onRemove={id => setRunningSteps(runningSteps.filter(s => s.id !== id))}
-                    onMoveUp={idx => setRunningSteps(moveElement(runningSteps, idx, idx - 1))}
-                    onMoveDown={idx => setRunningSteps(moveElement(runningSteps, idx, idx + 1))}
-                    onDragStartIndex={(idx) => setDraggedStepIdx(idx)}
-                    onDragEnterIndex={(idx) => {
-                      if (draggedStepIdx !== null && draggedStepIdx !== idx) {
-                        setRunningSteps(prev => moveElement(prev, draggedStepIdx, idx))
-                        setDraggedStepIdx(idx)
-                      }
-                    }}
-                    onDragEndIndex={() => setDraggedStepIdx(null)}
-                    onEdit={stepToEdit => {
-                      setEditingStep(stepToEdit)
-                      setRunningPickerOpen(true)
-                    }}
-                    onDuplicate={(stepToDuplicate) => {
-                      setRunningSteps(prev => [...prev, { ...stepToDuplicate, id: Math.random() }])
-                    }}
+                    onRemove={faseRemove}
+                    onMoveUp={faseMoveUp}
+                    onMoveDown={faseMoveDown}
+                    onDragStartIndex={faseDragStart}
+                    onDragEnterIndex={faseDragEnter}
+                    onDragEndIndex={faseDragEnd}
+                    onEdit={faseEdit}
+                    onDuplicate={faseDuplicate}
                     touchHandlers={getStepTouchHandlers}
                   />
                 ))}

@@ -6,7 +6,7 @@
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **83 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **87 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -966,6 +966,26 @@ I test che se ne accorgono sono **due file diversi, e servono entrambi**:
 - `HyroxBlockMemo.test.jsx` — prende la rimozione di `memo` dal figlio.
 - `CreateWorkoutMemo.test.jsx` — monta `CreateWorkout` **vero** e prende le regressioni del
   *chiamante*. Verificato il 26/08: con un padre finto quelle mutazioni **non venivano rilevate**.
+
+### `RunningStepRow` — stesso trattamento, contratto invariato
+Memoizzato lo stesso giorno. Guadagno misurato: 7 caratteri nel titolo = 7 render sprecati per
+fase, ora 0. Valgono le stesse quattro regole, con `riordinaFasi` al posto di `riordinaBlocchi`
+e `draggedStepIdx` come ref.
+
+⚠️ **Qui il contratto NON è cambiato**, e la differenza è istruttiva: `RunningStepRow` passava
+già l'indice a `onMoveUp`/`onMoveDown` e `step.id` a `onRemove`, cioè tutto ciò che serve al
+padre. Bastava non richiudere i gestori su `runningSteps`. I 16 test sul contratto sono
+rimasti verdi senza una riga di modifica — la prova che **l'asimmetria fra i due componenti è
+voluta e va mantenuta**.
+
+Il contatore dei render è `RunningStepRowMemo.test.jsx`, che conta l'icona `Copy`: nel flusso
+Running è renderizzata solo da `RunningStepRow`. Ogni componente ha bisogno di un contatore
+interno diverso — un componente-spia esterno non funziona (non è memoizzato, quindi conta
+anche i render che il figlio ha saltato).
+
+> ℹ️ Una mutazione non viene rilevata di proposito: togliere il controllo di bordo da
+> `faseMoveUp`. Non è un buco nei test — **`moveElement` ignora già gli indici fuori
+> intervallo**, quindi quel controllo era ridondante ed è stato rimosso.
 
 ---
 
