@@ -64,7 +64,20 @@ export default function VoiceRecorder({ onSave, onCancel }) {
         console.error("Errore permessi nativi:", e)
       }
     }
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    // 🔴 NON su iOS. La forma d'onda vera richiede getUserMedia, che nel WebView
+    // APRE IL MICROFONO — e NativeVoiceRecorder lo vuole in esclusiva. Con due
+    // consumatori la registrazione nativa esce VUOTA: un contenitore MP4 di 557
+    // byte, solo intestazione e nessun campione audio. L'utente vede l'onda
+    // muoversi (quella funziona: è getUserMedia) e poi non sente niente.
+    //
+    // Misurato sul database il 26/08/2026: le note del 15/06 e del 15/07 pesano
+    // 1-1,9 MB, quelle di oggi 557 byte. Il 22/08 c'erano già un file pieno e uno
+    // da zero byte a un secondo di distanza — il difetto era intermittente, come
+    // ci si aspetta da una corsa fra due consumatori dello stesso microfono.
+    //
+    // Sul ramo nativo si usa l'animazione di ripiego più sotto, che non tocca il
+    // microfono. Un'onda vera che costa la registrazione non è un buon affare.
+    if (!isNative && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true })
         setMediaStream(stream)
