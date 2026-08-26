@@ -6,7 +6,7 @@
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **144 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **164 test**, `npm run lint` → **45 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -259,6 +259,7 @@ src/
 │  ├─ offlineQueue.js          # ⚠️ coda offline + leggiJson/scriviJson — vedi §9 regola 0-bis
 │  ├─ pushToken.js             # rinfresco del token FCM
 │  ├─ rpe.js                   # parseNotesAndRpe / formatNotesWithRpe
+│  ├─ statistiche.js           # carico settimanale, completamento, distribuzione RPE
 │  ├─ timerSequence.js         # buildTimerSequence + getNormalizedBlocks (§5 legacy)
 │  ├─ workoutTitle.js          # titolo generato dalla data (c'è anche su main)
 │  └─ __tests__/               # 38 test: blockColors, offlineQueue, rpe, workoutTitle

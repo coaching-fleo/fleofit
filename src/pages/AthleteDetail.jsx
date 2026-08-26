@@ -14,6 +14,7 @@ import { Share } from '@capacitor/share'
 import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
+import { calcolaStatistiche } from '../lib/statistiche'
 import { mostraErrore } from '../lib/alert'
 
 const getRpeColorText = (val) => {
@@ -1020,122 +1021,22 @@ export default function AthleteDetail() {
 }
 
 function AthleteStatsTab({ workouts }) {
-  const [weeks, setWeeks] = useState([])
-  const [completion, setCompletion] = useState({ assigned: 0, done: 0 })
-  const [rpeDist, setRpeDist] = useState({ light: 0, moderate: 0, hard: 0, extreme: 0, total: 0 })
-
-  useEffect(() => {
-    const parseTime = (val) => {
-      if (!val || val === '-') return 0
-      const s = String(val).toLowerCase()
-      if (s.includes('sec')) return (parseInt(s) || 0) / 60
-      if (s.includes('min')) {
-        const parts = s.replace('min', '').trim().split(':')
-        if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
-        return parseInt(s) || 0
-      }
-      const parts = s.split(':')
-      if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
-      return parseInt(s) || 0
-    }
-
-    const today = new Date()
-    const wks = []
-    for (let i = 3; i >= 0; i--) {
-       const start = startOfWeek(new Date(today.getTime() - i * 7 * 24 * 60 * 60 * 1000), { weekStartsOn: 1 })
-       const end = new Date(start)
-       end.setDate(start.getDate() + 6)
-       wks.push({
-         label: i === 0 ? 'Questa sett.' : `${format(start, 'd MMM')} - ${format(end, 'd MMM')}`,
-         startStr: format(start, 'yyyy-MM-dd'),
-         endStr: format(end, 'yyyy-MM-dd'),
-         time: 0,
-         load: 0
-       })
-    }
-
-    let assigned30 = 0
-    let done30 = 0
-    let rpeLight = 0, rpeMod = 0, rpeHard = 0, rpeExt = 0, rpeTot = 0
-    const thirtyDaysAgoStr = format(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')
-
-    workouts.forEach(w => {
-      if (w.completed_date >= thirtyDaysAgoStr && w.completed_date <= format(today, 'yyyy-MM-dd')) {
-        assigned30++
-        if (w.status === 'completed') done30++
-      }
-
-      if (w.status === 'completed') {
-        const parsed = parseNotesAndRpe(w.notes)
-        
-        const wk = wks.find(k => w.completed_date >= k.startStr && w.completed_date <= k.endStr)
-        if (wk) {
-          const s = w.workouts?.sections || {}
-          let workoutTime = 0;
-          const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
-          if (cat === 'Running') {
-            const steps = s.steps || s.main?.steps || []
-            steps.forEach(step => {
-              if (step.type === 'repeat') {
-                const rounds = parseInt(step.rounds) || 1
-                workoutTime += parseTime(step.runDuration) * rounds
-                workoutTime += parseTime(step.recDuration) * rounds
-              } else {
-                let stepTime = parseTime(step.duration)
-                if (stepTime === 0 && step.duration) {
-                  const ds = String(step.duration).toLowerCase()
-                  if (ds.includes('km')) stepTime = parseFloat(ds) * 6
-                  else if (ds.includes('m')) stepTime = (parseInt(ds) || 0) / 1000 * 6
-                }
-                workoutTime += stepTime
-              }
-            })
-          } else {
-            let blocks = s.blocks || []
-            if (blocks.length === 0) {
-              if (s.warmup) blocks.push({type: 'WarmUp', params: { duration: s.warmup.duration }})
-              if (s.cashIn && s.cashIn.length > 0) blocks.push({type: 'Cash In', exercises: s.cashIn})
-              if (s.main) blocks.push({type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type, params: s.main.params || {}, exercises: s.main.exercises || []})
-              if (s.cashOut && s.cashOut.length > 0) blocks.push({type: 'Cash Out', exercises: s.cashOut})
-            }
-            blocks.forEach(b => {
-              let blockRounds = parseInt(b.params?.rounds) || 1
-              if (b.type === 'ON/OFF') workoutTime += (parseTime(b.params?.on) + parseTime(b.params?.off)) * blockRounds
-              else if (b.type === 'EMOM') workoutTime += parseTime(b.params?.interval) * blockRounds
-              else if (b.type === 'AMRAP' || b.type === 'WarmUp' || b.type === 'Rest') workoutTime += parseTime(b.params?.duration)
-              else if (b.type === 'For Time') workoutTime += 15 * blockRounds
-              else if (b.type === 'Cash In' || b.type === 'Cash Out') workoutTime += 5 * blockRounds
-              ;(b.exercises || []).forEach(ex => { if (b.type === 'Interval') workoutTime += parseTime(ex.exTime) * blockRounds })
-            })
-          }
-          if (workoutTime === 0) workoutTime = 45;
-          wk.time += Math.round(workoutTime)
-
-          let loadRpe = parseInt(parsed.rpe)
-          if (isNaN(loadRpe)) loadRpe = 5;
-          wk.load += Math.round(workoutTime) * loadRpe
-        }
-
-        const rpeVal = parseInt(parsed.rpe)
-        if (!isNaN(rpeVal)) {
-          rpeTot++
-          if (rpeVal <= 4) rpeLight++
-          else if (rpeVal <= 6) rpeMod++
-          else if (rpeVal <= 8) rpeHard++
-          else rpeExt++
-        }
-      }
-    })
-
-    setWeeks(wks)
-    setCompletion({ assigned: assigned30, done: done30 })
-    setRpeDist({ light: rpeLight, moderate: rpeMod, hard: rpeHard, extreme: rpeExt, total: rpeTot })
-
-  }, [workouts])
+  // Il calcolo sta in src/lib/statistiche.js, dove è coperto da test: sono i
+  // numeri su cui il coach decide se caricare o scaricare la settimana dopo, e
+  // se sbagliano non danno errore — cambiano solo le decisioni.
+  //
+  // ⚠️ Qui prima c'era un useEffect con TRE setState. Oltre a non essere
+  // testabile, era il pattern che ESLint segnala (set-state-in-effect): un
+  // valore derivato dalle props non è uno stato, è un useMemo.
+  const {
+    settimane: weeks,
+    completamento: completion,
+    distribuzioneRpe: rpeDist,
+    percentualeCompletamento: completionRate,
+  } = useMemo(() => calcolaStatistiche(workouts), [workouts])
 
   const maxTime = Math.max(...weeks.map(w => w.time), 60)
   const maxLoad = Math.max(...weeks.map(w => w.load), 100)
-  const completionRate = completion.assigned > 0 ? Math.round((completion.done / completion.assigned) * 100) : 0
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">
