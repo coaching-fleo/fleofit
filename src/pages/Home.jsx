@@ -13,13 +13,13 @@ import { App as CapacitorApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
-import { Badge } from '@capawesome/capacitor-badge'
 import { BluetoothService } from './bluetooth'
 import { Network } from '@capacitor/network'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { leggiJson, scriviJson, leggiCoda, accodaSuStorage, chiaveCacheWorkout, CHIAVE_CODA } from '../lib/offlineQueue'
 import { mostraErrore } from '../lib/alert'
+import { sincronizzaBadge } from '../lib/badge'
 
 
 export default function Home() {
@@ -60,7 +60,29 @@ export default function Home() {
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
   const [notifications, setNotifications] = useState([])
-  const [unreadCount, setUnreadCount] = useState(0)
+  // ⚠️ unreadCount NON è uno stato: è derivato da `notifications`.
+  //
+  // Prima era uno stato separato tenuto allineato a mano in sei punti, e
+  // bastava dimenticarne uno perché il numero mostrato e le notifiche divergessero.
+  // Un caso lo faceva già: l'INSERT realtime deduplicava le notifiche ma
+  // incrementava comunque il contatore, quindi un evento consegnato due volte
+  // gonfiava il badge.
+  const unreadCount = useMemo(
+    () => notifications.filter(n => !n.is_read).length,
+    [notifications]
+  )
+  // Segna che le notifiche sono state caricate almeno una volta: senza, l'effetto
+  // sul badge scriverebbe badge_count = 0 al montaggio, prima di sapere quante ce
+  // ne sono davvero.
+  const notificheCaricate = useRef(false)
+
+  // L'UNICO punto in cui si scrive il badge. Prima erano cinque in questo file,
+  // sette contando App.jsx e WorkoutDetail.jsx, tutti da tenere allineati a mano.
+  // Ora chi cambia le notifiche cambia solo `notifications`: il badge segue.
+  useEffect(() => {
+    if (!notificheCaricate.current) return
+    sincronizzaBadge(unreadCount, user?.id, supabase)
+  }, [unreadCount, user?.id])
   const [showNotifications, setShowNotifications] = useState(false)
   const [isClosingNotifications, setIsClosingNotifications] = useState(false)
   const [isOpeningNotifications, setIsOpeningNotifications] = useState(false)
@@ -99,20 +121,8 @@ export default function Home() {
       .limit(30);
     if (data) {
       setNotifications(data);
-      const unread = data.filter(n => !n.is_read).length;
-      setUnreadCount(unread);
-      if (Capacitor.isNativePlatform()) {
-        try {
-          if (unread === 0) await Badge.clear();
-          else await Badge.set({ count: unread });
-          await supabase.from('push_subscriptions').update({ badge_count: unread }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
-        } catch (e) {
-          // Il badge in sé è cosmetico, ma badge_count su push_subscriptions no:
-          // send-reminders lo legge per incrementarlo. Se la scrittura fallisce il
-          // contatore resta disallineato per sempre, quindi almeno si vede nei log.
-          console.warn('Badge non aggiornato:', e)
-        }
-      }
+      notificheCaricate.current = true;
+      // Il badge lo allinea l'effetto su unreadCount, più sotto: un punto solo.
     }
   };
 
@@ -563,27 +573,13 @@ setNotifications(prev => {
             if (prev.find(n => n.id === payload.new.id)) return prev;
             return [payload.new, ...prev].slice(0, 30);
           });
-          setUnreadCount(prev => {
-            const newCount = prev + 1;
-            if (Capacitor.isNativePlatform()) {
-              Badge.set({ count: newCount }).catch(()=>{});
-              supabase.from('push_subscriptions').update({ badge_count: newCount }).eq('user_id', user.id).eq('auth', 'capacitor_ios').then();
-            }
-            return newCount;
-          });
+
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
-          setNotifications(prev => {
-            const updated = prev.map(n => n.id === payload.new.id ? payload.new : n);
-            const unread = updated.filter(n => !n.is_read).length;
-            setUnreadCount(unread);
-            if (Capacitor.isNativePlatform()) {
-              if (unread === 0) Badge.clear().catch(()=>{});
-              else Badge.set({ count: unread }).catch(()=>{});
-              supabase.from('push_subscriptions').update({ badge_count: unread }).eq('user_id', user.id).eq('auth', 'capacitor_ios').then();
-            }
-            return updated;
-          });
+          // ⚠️ Qui dentro c'erano setUnreadCount e due scritture di rete: effetti
+          // collaterali dentro un updater di stato, che React può rieseguire.
+          // Ora l'updater calcola e basta.
+          setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
         })
         .subscribe();
         if (Capacitor.isNativePlatform()) {
@@ -882,7 +878,7 @@ setNotifications(prev => {
               <Heart size={14} className={heartRate ? "animate-pulse" : ""} fill="currentColor" /> {heartRate ? `${heartRate} bpm` : 'BLE'}
             </div>
           )}
-          <button onClick={openNotifications} className="relative w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0" title="Centro Notifiche">
+          <button aria-label="Apri il centro notifiche" onClick={openNotifications} className="relative w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-[#f1ba17] transition shadow-sm shrink-0" title="Centro Notifiche">
             <Bell size={20} />
             {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[11px] font-bold rounded-full border-2 border-[#1e1e1e]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
           </button>
@@ -1369,17 +1365,7 @@ setNotifications(prev => {
                 {unreadCount > 0 && (
                   <button onClick={async () => {
                     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
-                    setUnreadCount(0)
                     await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false)
-                    if (Capacitor.isNativePlatform()) {
-                      try {
-                        await Badge.clear();
-                        await supabase.from('push_subscriptions').update({ badge_count: 0 }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
-                      } catch (e) {
-                        // badge_count è riletto da send-reminders (spiegazione in fetchNotifications).
-                        console.warn('Badge non aggiornato:', e)
-                      }
-                    }
                   }} className="text-[11px] font-semibold text-[#f1ba17] hover:underline whitespace-nowrap">
                     Segna come lette
                   </button>
@@ -1396,22 +1382,7 @@ setNotifications(prev => {
                     <div key={notif.id} onClick={async () => {
                       if (!notif.is_read) {
                         setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n))
-                      const newCount = Math.max(0, unreadCount - 1)
-                      setUnreadCount(newCount)
                       await supabase.from('notifications').update({ is_read: true }).eq('id', notif.id)
-                      if (Capacitor.isNativePlatform()) {
-                        try {
-                          if (newCount === 0) {
-                            await Badge.clear();
-                          } else {
-                            await Badge.set({ count: newCount });
-                          }
-                          await supabase.from('push_subscriptions').update({ badge_count: newCount }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
-                        } catch (e) {
-                          // badge_count è riletto da send-reminders (spiegazione in fetchNotifications).
-                          console.warn('Badge non aggiornato:', e)
-                        }
-                      }
                     }
                     closeNotifications()
                     if (notif.route) setTimeout(() => navigate(notif.route), 300)
@@ -1430,17 +1401,7 @@ setNotifications(prev => {
                         message: "Vuoi eliminare definitivamente tutto lo storico delle notifiche?",
                         onConfirm: async () => {
                           setNotifications([])
-                          setUnreadCount(0)
                           await supabase.from('notifications').delete().eq('user_id', user.id)
-                          if (Capacitor.isNativePlatform()) {
-                            try {
-                              await Badge.clear();
-                              await supabase.from('push_subscriptions').update({ badge_count: 0 }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
-                            } catch (e) {
-                              // badge_count è riletto da send-reminders (spiegazione in fetchNotifications).
-                              console.warn('Badge non aggiornato:', e)
-                            }
-                          }
                           setConfirmInfo(null)
                         }
                       })

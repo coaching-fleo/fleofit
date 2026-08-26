@@ -6,7 +6,7 @@
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `6a28841` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **133 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **144 test**, `npm run lint` → **46 problemi** (erano 164 la mattina del 25/08).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -827,9 +827,13 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   in caso di errore (pattern in `toggleTodayWorkout`, `toggleStatus`).
 - **Native check**: sempre `Capacitor.isNativePlatform()` prima di usare un plugin, con
   `.catch(() => {})` sui plugin non critici.
-- **Badge iOS**: ogni volta che cambia il numero di notifiche non lette bisogna aggiornare
-  `Badge.set/clear` **e** `push_subscriptions.badge_count` (l'Edge Function legge quel campo per
-  incrementarlo).
+- **Badge iOS**: si scrive **solo** con `sincronizzaBadge()` di `src/lib/badge.js`. Aggiorna
+  insieme il badge nativo e `push_subscriptions.badge_count`, che non sono equivalenti: il primo
+  è cosmetico, il secondo viene **riletto da `send-reminders`** per calcolare il badge della push
+  successiva, quindi se salta ogni notifica futura porta il numero sbagliato.
+  In `Home` non si chiama nemmeno a mano: c'è **un solo effetto** su `unreadCount`, che a sua
+  volta è **derivato** da `notifications` con `useMemo`. Chi cambia le notifiche non deve pensare
+  al badge — ed è il motivo per cui non possono più divergere (erano 7 punti da allineare a mano).
 
 ---
 

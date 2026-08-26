@@ -11,7 +11,6 @@ import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 import { Capacitor } from '@capacitor/core'
-import { Badge } from '@capawesome/capacitor-badge'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { Media } from '@capacitor-community/media'
@@ -26,6 +25,7 @@ import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { ERGOMETERS, COACHING_ID } from '../lib/constants'
 import { mostraErrore } from '../lib/alert'
 import { TYPE_COLORS } from '../lib/blockColors'
+import { sincronizzaBadge } from '../lib/badge'
 import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/timerSequence'
 
 const getIntensityColor = (val) => {
@@ -286,11 +286,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             await supabase.from('notifications').update({ is_read: true }).in('id', notifs.map(n => n.id));
             if (Capacitor.isNativePlatform()) {
               const { count } = await supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false);
-              if (count !== null) {
-                if (count === 0) await Badge.clear().catch(()=>{});
-                else await Badge.set({ count }).catch(()=>{});
-                await supabase.from('push_subscriptions').update({ badge_count: count }).eq('user_id', user.id).eq('auth', 'capacitor_ios');
-              }
+              if (count !== null) await sincronizzaBadge(count, user.id, supabase);
             }
           }
         } catch (e) {

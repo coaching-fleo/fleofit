@@ -17,7 +17,7 @@ import { CHIAVE_CODA, chiaveCacheWorkout } from '../../lib/offlineQueue'
 // il blocco non erano i finti supabase e router ma un localStorage rotto in
 // jsdom, e che serviva anche registerPlugin nel finto @capacitor/core.
 
-const ctrl = await vi.hoisted(async () => ({ connesso: { valore: true }, fetchFallisce: { valore: false }, stato: { valore: 'pending' } }))
+const ctrl = await vi.hoisted(async () => ({ connesso: { valore: true }, fetchFallisce: { valore: false }, stato: { valore: 'pending' }, notifiche: { valore: [] } }))
 const rete = ctrl
 
 const finto = await vi.hoisted(async () => {
@@ -30,6 +30,7 @@ const finto = await vi.hoisted(async () => {
         notes: ctrl.stato.valore === 'completed' ? '[RPE: 7/10]\nGambe pesanti' : null,
         workouts: { id: 'w1', title: 'Hyrox Forza', sections: { category: 'Hyrox', blocks: [] } },
       }],
+      notifications: ctrl.notifiche.valore,
     }),
     { erroreSu: () => (ctrl.fetchFallisce.valore ? ['athlete_workouts'] : []) },
   )
@@ -52,6 +53,7 @@ beforeEach(() => {
   rete.connesso.valore = true
   ctrl.fetchFallisce.valore = false
   ctrl.stato.valore = 'pending'
+  ctrl.notifiche.valore = []
   vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
@@ -230,6 +232,41 @@ describe('la sincronizzazione al ritorno della rete', () => {
     await waitFor(() => expect(finto.chiamateA('athlete_workouts', 'update').length).toBeGreaterThan(0))
     await waitFor(() => expect(coda()).toEqual([]))
     expect(screen.queryByText(/Sincronizzazione in corso/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('il conteggio delle notifiche non lette è DERIVATO, non tenuto a mano', () => {
+  // BACKLOG #21. Prima unreadCount era uno stato separato, allineato a mano in
+  // sei punti insieme al badge: bastava dimenticarne uno perché il numero
+  // mostrato e le notifiche divergessero. Ora si calcola da `notifications`,
+  // quindi la divergenza è impossibile per costruzione.
+  const notifica = (id, letta) => ({
+    id, user_id: 'u1', title: 'T' + id, message: 'm', route: null,
+    is_read: letta, created_at: '2026-08-26T08:00:00Z',
+  })
+
+  it('mostra quante ne restano da leggere', async () => {
+    ctrl.notifiche.valore = [notifica('n1', false), notifica('n2', false), notifica('n3', true)]
+    montaPagina(<Home />)
+    await waitFor(() => expect(screen.getByText('2')).toBeInTheDocument())
+  })
+
+  it('a zero non lette non mostra nessun contatore', async () => {
+    ctrl.notifiche.valore = [notifica('n1', true)]
+    montaPagina(<Home />)
+    await attendiCaricamento()
+    expect(screen.queryByText('1 nuove')).not.toBeInTheDocument()
+  })
+
+  it('segnando tutte come lette il contatore va a zero', async () => {
+    ctrl.notifiche.valore = [notifica('n1', false), notifica('n2', false)]
+    montaPagina(<Home />)
+    await attendiCaricamento()
+
+    await userEvent.click(screen.getByLabelText('Apri il centro notifiche'))
+    await userEvent.click(await screen.findByRole('button', { name: /Segna come lette/i }))
+
+    await waitFor(() => expect(screen.queryByText('2 nuove')).not.toBeInTheDocument())
   })
 })
 

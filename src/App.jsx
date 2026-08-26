@@ -7,7 +7,6 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { Capacitor } from '@capacitor/core'
 import { Keyboard } from '@capacitor/keyboard'
 import { PushNotifications } from '@capacitor/push-notifications'
-import { Badge } from '@capawesome/capacitor-badge'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
 
@@ -40,6 +39,7 @@ import { User, Upload } from 'lucide-react'
 import { AlertHost } from './components/CustomModals'
 import { mostraErrore } from './lib/alert'
 import { rinfrescaTokenPush } from './lib/pushToken'
+import { sincronizzaBadge } from './lib/badge'
 
 function Onboarding({ user, onComplete }) {
   // L'onboarding del ruolo coach è disattivato: qui il ruolo è sempre 'athlete'.
@@ -369,11 +369,7 @@ function DeeplinkHandler() {
                           }
 
               const { count } = await supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('is_read', false);
-            if (count !== null) {
-              if (count === 0) await Badge.clear().catch(()=>{});
-              else await Badge.set({ count }).catch(()=>{});
-              await supabase.from('push_subscriptions').update({ badge_count: count }).eq('user_id', session.user.id).eq('auth', 'capacitor_ios');
-            }
+            if (count !== null) await sincronizzaBadge(count, session.user.id, supabase);
           } catch (e) { console.error(e); }
         };
         markAsRead();
