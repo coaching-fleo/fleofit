@@ -95,3 +95,37 @@ body {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Anello di progresso della settimana: si disegna al montaggio della Home.
+   339 è la circonferenza del cerchio di raggio 54 usato da AnelloSettimana
+   (2π×54 = 339,29): partire da lì significa partire da anello vuoto. */
+@keyframes ringIn {
+  from { stroke-dashoffset: 339; }
+}
+/* Sta qui e non in una classe arbitraria Tailwind (`animate-[ringIn_...]`)
+   perché il valore contiene una cubic-bezier con virgole, che in un valore
+   arbitrario è una trappola: il glow lo accompagna nella stessa regola. */
+.anello-progresso {
+  animation: ringIn 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+  filter: drop-shadow(0 0 8px rgba(241, 186, 23, 0.45));
+}
+
+/* Entrata dell'eroe di oggi: sale di 8px mentre appare.
+   ⚠️ Perché un keyframe e non `animate-in fade-in slide-in-from-bottom-2`:
+   quelle classi vengono da tw-animate-css, che NON è installato — nel progetto
+   compaiono già in tre punti e generano zero CSS (verificato sul bundle:
+   `grep -c "animate-in" dist/assets/*.css` → 0). Erano animazioni che nessuno
+   ha mai visto. Qui serve un'entrata vera e nessuna dipendenza nuova. */
+@keyframes heroIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hero-transition {
+  animation: heroIn 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Nessuna delle due si esegue per chi ha chiesto meno movimento. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-transition { animation: none; }
+  .anello-progresso { animation: none !important; }
+}

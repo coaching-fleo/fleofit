@@ -6,6 +6,7 @@ import { Plus, User, ChevronRight, Search, Trash2 } from 'lucide-react'
 import { differenceInYears, parseISO } from 'date-fns'
 import { useAuth } from '../App'
 import { COACHING_ID } from '../lib/constants'
+import { parseNotePausa } from '../lib/pausa'
 import { mostraErrore, mostraSuccesso } from '../lib/alert'
 
 export default function Athletes() {
@@ -106,8 +107,14 @@ export default function Athletes() {
                   : <User size={22} className="text-muted" />
                 }
               </div>
-              <div className="flex-1">
-                <p className="text-white font-semibold">{a.name} {a.surname}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-white font-semibold">{a.name} {a.surname}</p>
+                  {parseNotePausa(a.notes).inPausa && (
+                    <span className="px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/30
+                                     text-orange-400 text-[10.5px] font-bold uppercase tracking-[.06em]">In pausa</span>
+                  )}
+                </div>
                 <p className="text-muted text-xs mt-0.5">
                   {[a.weight && `${a.weight}kg`, a.height && `${a.height}cm`, a.birth_date && `${differenceInYears(new Date(), parseISO(a.birth_date))} anni`].filter(Boolean).join(' · ')}
                 </p>

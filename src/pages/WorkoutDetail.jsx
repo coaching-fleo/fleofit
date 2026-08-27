@@ -24,6 +24,7 @@ import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { ERGOMETERS, COACHING_ID } from '../lib/constants'
 import { TYPE_COLORS } from '../lib/blockColors'
 import { sincronizzaBadge } from '../lib/badge'
+import { isVoiceNoteValid } from '../lib/notaVocale'
 import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/timerSequence'
 import { BRAND, RUNNING, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
@@ -107,12 +108,6 @@ const getRpeColorText = (val) => {
 
 const isErgo = (name) => ERGOMETERS.includes(name)
 
-
-const isVoiceNoteValid = (url) => {
-  if (!url) return false
-  if (url.includes('#deleted=')) return false
-  return true
-}
 
 const getEmojiDataURL = (emoji) => {
   const canvas = document.createElement('canvas')

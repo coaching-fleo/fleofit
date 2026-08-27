@@ -61,8 +61,8 @@ describe('Home mostra il workout di oggi', () => {
   it('lo elenca e lo conta come da fare', async () => {
     montaPagina(<Home />)
     await attendiCaricamento()
-    expect(screen.getByText('0 / 1 completati')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Segna come completato/ })).toBeInTheDocument()
+    expect(screen.getByLabelText(/0 allenamenti completati su 1/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Completa$/ })).toBeInTheDocument()
   })
 
   it('senza rete avvisa che si può comunque salvare', async () => {
@@ -78,7 +78,7 @@ describe('completare un workout senza rete', () => {
     montaPagina(<Home />)
     await attendiCaricamento()
 
-    await userEvent.click(screen.getByRole('button', { name: /Segna come completato/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Completa$/ }))
     await userEvent.click(await screen.findByRole('button', { name: /Fatto!/ }))
 
     await waitFor(() => expect(coda()).toHaveLength(1))
@@ -100,7 +100,7 @@ describe('completare un workout senza rete', () => {
     montaPagina(<Home />)
     await attendiCaricamento()
 
-    await userEvent.click(screen.getByRole('button', { name: /Segna come completato/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Completa$/ }))
     await userEvent.click(await screen.findByRole('button', { name: /Fatto!/ }))
 
     await waitFor(() => {
@@ -131,7 +131,7 @@ describe('la cache corrotta non blocca più niente', () => {
     window.localStorage.setItem(chiaveCacheWorkout('u1'), 'non-è-json{{{')
     rete.connesso.valore = false
 
-    await userEvent.click(screen.getByRole('button', { name: /Segna come completato/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Completa$/ }))
     await userEvent.click(await screen.findByRole('button', { name: /Fatto!/ }))
 
     // Prima della correzione l'eccezione partiva DOPO setSavingRpe(true) e
@@ -146,7 +146,7 @@ describe('la cache corrotta non blocca più niente', () => {
     window.localStorage.setItem(chiaveCacheWorkout('u1'), 'non-è-json{{{')
     rete.connesso.valore = false
 
-    await userEvent.click(screen.getByRole('button', { name: /Segna come completato/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Completa$/ }))
     await userEvent.click(await screen.findByRole('button', { name: /Fatto!/ }))
 
     await waitFor(() => expect(coda()).toHaveLength(1))
@@ -248,14 +248,18 @@ describe('il conteggio delle notifiche non lette è DERIVATO, non tenuto a mano'
   it('mostra quante ne restano da leggere', async () => {
     ctrl.notifiche.valore = [notifica('n1', false), notifica('n2', false), notifica('n3', true)]
     montaPagina(<Home />)
-    await waitFor(() => expect(screen.getByText('2')).toBeInTheDocument())
+    // Il badge a schermo è un pallino senza numero: il conteggio vive
+    // nell'aria-label, che è l'unico posto da cui un lettore di schermo può
+    // saperlo. Se sparisce di lì, l'informazione è persa per chi non vede.
+    await waitFor(() => expect(screen.getByLabelText(/centro notifiche, 2 da leggere/i)).toBeInTheDocument())
   })
 
   it('a zero non lette non mostra nessun contatore', async () => {
     ctrl.notifiche.valore = [notifica('n1', true)]
     montaPagina(<Home />)
     await attendiCaricamento()
-    expect(screen.queryByText('1 nuove')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/da leggere/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/Apri il centro notifiche/i)).toBeInTheDocument()
   })
 
   it('segnando tutte come lette il contatore va a zero', async () => {
@@ -263,10 +267,10 @@ describe('il conteggio delle notifiche non lette è DERIVATO, non tenuto a mano'
     montaPagina(<Home />)
     await attendiCaricamento()
 
-    await userEvent.click(screen.getByLabelText('Apri il centro notifiche'))
+    await userEvent.click(screen.getByLabelText(/Apri il centro notifiche/i))
     await userEvent.click(await screen.findByRole('button', { name: /Segna come lette/i }))
 
-    await waitFor(() => expect(screen.queryByText('2 nuove')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByLabelText(/da leggere/i)).not.toBeInTheDocument())
   })
 })
 

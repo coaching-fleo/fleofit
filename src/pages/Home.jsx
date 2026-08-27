@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Users, Dumbbell, Plus, FolderArchive, Settings, CheckCircle2, Flame, CalendarX2, ChevronRight, User, Circle, Timer, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Activity, Heart, WifiOff, RefreshCw } from 'lucide-react'
+import { Settings, CheckCircle2, User, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Heart, WifiOff, RefreshCw } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
-import { startOfWeek, format, parseISO, differenceInDays, startOfDay } from 'date-fns'
+import { startOfWeek, format, parseISO, differenceInDays, startOfDay, getISOWeek } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { getDailyMotivation } from './motivations'
 import CustomDatePicker from '../components/CustomDatePicker'
@@ -21,7 +21,62 @@ import { mostraErrore } from '../lib/alert'
 import { sincronizzaBadge } from '../lib/badge'
 import RpeModal from '../components/RpeModal'
 import VoiceRecorder from '../components/VoiceRecorder'
+import { durataWorkout, numeroBlocchi, rpeAtteso, mediaRpeCategoria, serieGiorni, barreUltimiGiorni } from '../lib/statistiche'
+import { HeaderHome, BottoneVetro, HeroOggi, HeroRest, AnelloSettimana, CellaSerie, CellaVolume, BannerObiettivo, ListaInArrivo } from '../components/HomeAtletaUI'
+import { HeaderCoach, BannerLive, HeroFeedback, HeroNessunFeedback, SquadraOggi, SezioneAttenzione,
+         TuttiAttivi, BarraCopertura, CtaCreaWorkout, RigaDestinazione, TitoloSezione, RigaAttivita,
+         AzioneApri } from '../components/HomeCoachUI'
+import { atletiFermi, allenamentiScaduti, copertura, feedbackNuovi, squadraDelGiorno,
+         atletiSeguiti, contaInPausa, FINESTRA_STORICO, FINESTRA_FEEDBACK,
+         GIORNI_COPERTURA, GIORNI_FERMO } from '../lib/statisticheCoach'
+import { COACHING_ID } from '../lib/constants'
 
+/**
+ * Quanti giorni di storico la Home carica insieme alla settimana corrente.
+ *
+ * 60 è il compromesso fra due esigenze opposte: l'RPE medio di categoria vuole
+ * abbastanza precedenti per dire qualcosa (serve almeno una manciata di
+ * allenamenti per categoria), la Home vuole aprirsi in fretta. Una riga di
+ * athlete_workouts è piccola — è il join su `workouts.sections` a pesare — e a
+ * 60 giorni restiamo sotto il centinaio di righe per un atleta normale.
+ */
+const GIORNI_STORICO = 60
+/** Quante barre ha lo sparkline della cella "Serie". */
+const BARRE_SPARKLINE = 6
+
+/**
+ * Le assegnazioni che il coach ha già lette.
+ *
+ * ⚠️ Sta in localStorage e non nel database perché lo schema è congelato fino
+ * all'approvazione su App Store (CLAUDE.md regola 0-bis) e `athlete_workouts`
+ * non ha nemmeno un `created_at` su cui appoggiarsi. Conseguenza da conoscere:
+ * il "letto" è per dispositivo, non per account.
+ */
+const chiaveFeedbackVisti = (uid) => `fleofit_feedback_visti_${uid}`
+
+/**
+ * Quanti atleti fermi entrano nell'eroe.
+ *
+ * Non è un limite estetico: oltre quattro nomi l'eroe smette di essere una
+ * chiamata all'azione e diventa una lista, e una lista di persone da chiamare
+ * non si chiama. Chi ne ha di più li trova tutti in Atleti.
+ */
+const MASSIMO_FERMI_IN_HOME = 4
+/**
+ * Quante citazioni di feedback stanno nell'eroe prima del «+N altri».
+ *
+ * Tre è il punto in cui la card resta leggibile in un colpo d'occhio: alla
+ * quarta l'eroe supera la piega e smette di essere un eroe.
+ */
+const FEEDBACK_IN_HOME = 3
+
+/**
+ * «scaduto mercoledì» finché il giorno della settimana è ancora univoco, poi
+ * la data. Oltre la settimana il nome del giorno indica sette date diverse.
+ */
+const quandoScaduto = (s) => s.giorni <= 6
+  ? format(parseISO(s.data), 'EEEE', { locale: it })
+  : format(parseISO(s.data), 'd MMMM', { locale: it })
 
 export default function Home() {
   const navigate = useNavigate()
@@ -50,8 +105,22 @@ export default function Home() {
     }
     return week
   })
-  const [recentAssignments, setRecentAssignments] = useState([])
+  // Le righe grezze su cui la Home coach calcola TUTTO: atleti fermi,
+  // allenamenti scaduti, copertura, feedback e attività recente. Una query
+  // sola invece di cinque — la tabella intera sono poche centinaia di righe, e
+  // cinque `select` sullo stesso intervallo sarebbero cinque round trip per
+  // gli stessi dati.
+  const [assegnazioniCoach, setAssegnazioniCoach] = useState([])
+  const [atletiCoach, setAtletiCoach] = useState([])
+  // Quanti feedback l'eroe mostra prima di chiedere «+N altri».
+  const [feedbackEspanso, setFeedbackEspanso] = useState(false)
+  // La card della squadra guarda oggi (0) o ieri (-1). Ieri è consultazione:
+  // la domanda della mattina è su oggi, e il valore torna lì a ogni ricarica.
+  const [scartoSquadra, setScartoSquadra] = useState(0)
   const [weeklyStats, setWeeklyStats] = useState({ distance: '0 m', time: 0, reps: 0, completed: 0, avgRpe: '-' })
+  // Le stesse righe che alimentano la settimana, tenute intere: la serie di
+  // giorni, lo sparkline e l'RPE medio guardano indietro, non solo alla settimana.
+  const [storicoAtleta, setStoricoAtleta] = useState([])
 
   const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
   const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
@@ -215,7 +284,6 @@ export default function Home() {
       })
     }, 340)
   }
-  const [activeSlide, setActiveSlide] = useState(0)
   const [workoutToComplete, setWorkoutToComplete] = useState(null)
   const [rpeScore, setRpeScore] = useState('5')
   const [rpeNotes, setRpeNotes] = useState('')
@@ -329,11 +397,13 @@ export default function Home() {
       let wCountAthlete = 0
 
       const todayStr = format(new Date(), 'yyyy-MM-dd')
-      const yesterday = new Date()
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = format(yesterday, 'yyyy-MM-dd')
       const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
       const weekStartStr = format(weekStart, 'yyyy-MM-dd')
+      // ⚠️ La query dell'atleta partiva dal lunedì di questa settimana, e per la
+      // Home vecchia bastava. La serie di giorni, lo sparkline e l'RPE medio di
+      // categoria guardano invece INDIETRO: con la vecchia finestra la serie
+      // avrebbe letto zero ogni lunedì mattina, che si legge come un guasto.
+      const storicoStr = format(new Date(Date.now() - GIORNI_STORICO * 86400000), 'yyyy-MM-dd')
 
       const promises = []
 
@@ -356,18 +426,34 @@ export default function Home() {
       }
 
       if (role === 'admin' || role === 'coach') {
+        // La finestra della Home coach: indietro fino a FINESTRA_STORICO per
+        // sapere da quanto un atleta è fermo, avanti di GIORNI_COPERTURA per
+        // sapere chi è già programmato. Attività di oggi e ieri, allenamenti
+        // scaduti e feedback stanno tutti dentro questo intervallo.
+        const coachDaStr = format(new Date(Date.now() - FINESTRA_STORICO * 86400000), 'yyyy-MM-dd')
+        const coachAStr = format(new Date(Date.now() + (GIORNI_COPERTURA - 1) * 86400000), 'yyyy-MM-dd')
         promises.push(
           Promise.all([
             supabase.from('workouts').select('*', { count: 'exact', head: true }),
-            supabase.from('athletes').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+            // `notes` serve alla pausa: lo stato «in pausa» vive dentro la nota che
+            // il coach scrive per l'atleta, perché lo schema è congelato (§9-decies).
+            supabase.from('athletes').select('id, name, surname, photo_url, notes').is('deleted_at', null),
             supabase.from('athlete_workouts')
-              .select('id, completed_date, status, athletes(id, name, surname, photo_url), workouts(id, title, sections)')
-              .in('completed_date', [todayStr, yesterdayStr])
+              .select('id, athlete_id, completed_date, status, notes, voice_note_url, athletes(id, name, surname, photo_url), workouts(id, title, sections)')
+              .gte('completed_date', coachDaStr)
+              .lte('completed_date', coachAStr)
               .order('completed_date', { ascending: false })
-          ]).then(([wRes, aRes, recentAwRes]) => {
+              .limit(1000)
+          ]).then(([wRes, aRes, awRes]) => {
             wCountCoach = wRes.count || 0
-            aCountCoach = aRes.count || 0
-            if (recentAwRes.data) setRecentAssignments(recentAwRes.data)
+            // ⚠️ L'account del coach è una riga di `athletes` come le altre, ma
+            // non è un atleta che si segue: se resta dentro, compare fra
+            // "richiedono attenzione" ogni volta che il coach non si allena, e
+            // falsa sia il totale sia la copertura. Stesso filtro di Athletes.jsx.
+            const atleti = (aRes.data || []).filter(a => a.id !== COACHING_ID)
+            aCountCoach = atleti.length
+            setAtletiCoach(atleti)
+            setAssegnazioniCoach(awRes.data || [])
             setLoadingRecent(false)
           })
         )
@@ -382,9 +468,9 @@ export default function Home() {
             supabase.from('athlete_workouts')
               .select('id, completed_date, status, notes, workouts (id, title, sections)')
               .eq('athlete_id', user.id)
-              .gte('completed_date', weekStartStr)
+              .gte('completed_date', storicoStr)
               .order('completed_date', { ascending: true })
-              .limit(30)
+              .limit(400)
           ]).then(([wRes, dataRes]) => {
             wCountAthlete = wRes.count || 0
             let data = dataRes.data
@@ -395,6 +481,8 @@ export default function Home() {
             }
 
             if (data) {
+              setStoricoAtleta(data)
+
               const todayWs = data.filter(w => w.completed_date === todayStr)
               setTodayWorkouts(todayWs)
 
@@ -672,6 +760,94 @@ setNotifications(prev => {
     countdownDays = differenceInDays(parseISO(nextEventHome.completed_date), startOfDay(new Date()))
   }
 
+  // Le due celle piccole del bento. Sono derivate, non stato: un useEffect che
+  // le ricalcolasse con setState aggiungerebbe un render e potrebbe restare
+  // indietro rispetto ai dati — è il difetto corretto in Calendar e
+  // AthleteDetail il 26/08 (CLAUDE.md §9-septies).
+  const serie = useMemo(() => serieGiorni(storicoAtleta), [storicoAtleta])
+  const sparkline = useMemo(() => barreUltimiGiorni(storicoAtleta, BARRE_SPARKLINE), [storicoAtleta])
+
+  // ── I numeri della Home coach ───────────────────────────────────────────
+  // Tutti derivati dalle stesse due liste con useMemo, per la stessa ragione
+  // di sopra: uno stato ricalcolato da un effetto è un render in più e un dato
+  // che può restare indietro.
+  // Chi il coach sta davvero seguendo: la rubrica meno chi è in pausa. È il
+  // denominatore onesto dell'eroe — «2 di 7» quando due dei nove si sono fermati.
+  const seguiti = useMemo(() => atletiSeguiti(atletiCoach), [atletiCoach])
+  const inPausa = useMemo(() => contaInPausa(atletiCoach), [atletiCoach])
+  const fermi = useMemo(() => atletiFermi(atletiCoach, assegnazioniCoach), [atletiCoach, assegnazioniCoach])
+  const scaduti = useMemo(() => allenamentiScaduti(atletiCoach, assegnazioniCoach), [atletiCoach, assegnazioniCoach])
+  const coperturaTre = useMemo(() => copertura(atletiCoach, assegnazioniCoach), [atletiCoach, assegnazioniCoach])
+  // ⚠️ L'elenco dei già letti si legge QUI e non in un useEffect con setState.
+  // Non è pigrizia: un effetto che scrive stato al montaggio è un render in più
+  // (`react-hooks/set-state-in-effect`), e soprattutto avrebbe l'effetto
+  // collaterale sbagliato — scrivendo i letti la lista aperta sparirebbe sotto
+  // le dita del coach. Così il valore si rilegge solo quando cambiano i dati,
+  // cioè al prossimo caricamento della Home, che è quando il contatore deve
+  // scendere. `leggiJson` non lancia mai e ripara da sé un valore corrotto (§9-quater).
+  const uid = user?.id
+  const feedback = useMemo(
+    () => feedbackNuovi(assegnazioniCoach, uid ? (leggiJson(chiaveFeedbackVisti(uid), []) || []) : []),
+    [assegnazioniCoach, uid]
+  )
+  /**
+   * Chi si sta allenando ADESSO, in `athlete_id`.
+   *
+   * La presenza Realtime della Live Coach Cam è indicizzata per
+   * `athleteWorkoutId` (è la chiave con cui WorkoutDetail fa `track`), quindi
+   * l'atleta si ricava dall'assegnazione già caricata. È l'unica fonte che
+   * distingua «non ha ancora finito» da «lo sta facendo in questo momento»:
+   * senza, i due casi collassano su «da fare».
+   */
+  const inCorsoOra = useMemo(() => {
+    const perId = new Map(assegnazioniCoach.map(a => [a.id, a.athlete_id]))
+    return liveAthletes.map(la => perId.get(la.athleteWorkoutId)).filter(Boolean)
+  }, [liveAthletes, assegnazioniCoach])
+
+  const squadra = useMemo(
+    () => squadraDelGiorno(atletiCoach, assegnazioniCoach, { scarto: scartoSquadra, inCorso: inCorsoOra }),
+    [atletiCoach, assegnazioniCoach, scartoSquadra, inCorsoOra]
+  )
+
+  /**
+   * Apre UN feedback, e nello stesso gesto lo segna come letto.
+   *
+   * Un contatore che non scende non è un'inbox, è un ornamento. Prima il gesto
+   * era «apro la lista, li leggo tutti», perché la lista era chiusa e il
+   * numero era l'unica cosa visibile. Ora le citazioni sono in pagina e la
+   * lettura vera è aprire la scheda: segnare tutto letto al primo tocco
+   * cancellerebbe tre feedback che il coach non ha ancora guardato.
+   */
+  const apriFeedback = (f) => {
+    if (user?.id) {
+      // Si tengono solo gli id ancora dentro la finestra caricata: gli altri non
+      // verranno mai più contati, e senza questa potatura la lista cresce per sempre.
+      const nellaFinestra = new Set(assegnazioniCoach.map(a => a.id))
+      const precedenti = (leggiJson(chiaveFeedbackVisti(user.id), []) || []).filter(id => nellaFinestra.has(id))
+      scriviJson(chiaveFeedbackVisti(user.id), Array.from(new Set([...precedenti, f.id])))
+    }
+    navigate(`/workout/${f.workoutId}?athlete_id=${f.atletaId}`)
+  }
+
+  /**
+   * I tre metadati dell'eroe: durata, blocchi, RPE atteso.
+   *
+   * L'RPE ha due fonti in ordine di onestà: la media che QUESTO atleta ha
+   * davvero segnato su questa categoria, e solo se i precedenti non bastano la
+   * stima ricavata dall'intensità dichiarata dal coach o dai tipi di blocco.
+   * Se non c'è nulla su cui basarsi la voce sparisce: meglio due riquadri che
+   * un numero inventato.
+   */
+  const metaEroe = (sections, categoria) => {
+    const voci = [
+      { etichetta: 'Durata', valore: durataWorkout(sections), unita: '′' },
+      { etichetta: 'Blocchi', valore: numeroBlocchi(sections) },
+    ]
+    const rpe = mediaRpeCategoria(storicoAtleta, categoria) ?? rpeAtteso(sections)
+    if (rpe != null) voci.push({ etichetta: 'RPE', valore: rpe, evidenza: true })
+    return voci
+  }
+
   // Riporta un allenamento a "da fare". Prima era un tap singolo, silenzioso e
   // irreversibile: un tocco storto lo scompletava senza chiedere niente. E il
   // ramo offline non esisteva, quindi senza rete falliva e faceva rollback senza
@@ -768,7 +944,6 @@ setNotifications(prev => {
     setWorkoutToComplete(null)
   }
 
-  const todayStrRender = format(new Date(), 'yyyy-MM-dd')
 
   const openEditAutonomous = (aw) => {
     setAutonomousForm({
@@ -847,47 +1022,56 @@ setNotifications(prev => {
     }
   }
 
-  const handleSliderScroll = (e) => {
-    const scrollLeft = e.target.scrollLeft;
-    const width = e.target.clientWidth;
-    const index = Math.round(scrollLeft / width);
-    if (activeSlide !== index) {
-      setActiveSlide(index);
-    }
-  };
-
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition
+                    min-h-screen bg-[radial-gradient(120%_60%_at_50%_0%,#17160f_0%,#0B0B0B_58%)]">
       {/* Header */}
-      <div className="mb-6 mt-4 flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
-          </div>
-          {role === 'athlete' || role === 'admin' ? (
-             <div className="mt-2">
-               <p className="text-white font-bold text-xl">{getGreeting()}, {userName}!</p>
-               <p className="text-brand text-sm mt-0.5 font-medium">{randomMotiv}</p>
-             </div>
-          ) : (
-            <p className="text-gray-400 mt-1">Dashboard Coach Federico Leo</p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {hrConnected && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 border border-red-500/30 text-red-500 rounded-full text-xs font-bold shrink-0">
-              <Heart size={14} className={heartRate ? "animate-pulse" : ""} fill="currentColor" /> {heartRate ? `${heartRate} bpm` : 'BLE'}
+      {(() => {
+        // Le due azioni sono identiche nei due rami: si scrivono una volta.
+        // Il conteggio delle non lette vive nell'aria-label perché il badge è
+        // un pallino: senza, chi usa VoiceOver non saprebbe che ce ne sono.
+        const azioni = (
+          <>
+            {hrConnected && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 border border-red-500/30 text-red-500 rounded-full text-xs font-bold shrink-0">
+                <Heart size={14} className={heartRate ? "animate-pulse" : ""} fill="currentColor" /> {heartRate ? `${heartRate} bpm` : 'BLE'}
+              </div>
+            )}
+            <BottoneVetro
+              label={unreadCount > 0 ? `Apri il centro notifiche, ${unreadCount} da leggere` : 'Apri il centro notifiche'}
+              title="Centro Notifiche" onClick={openNotifications} badge={unreadCount > 0}>
+              <Bell size={18} />
+            </BottoneVetro>
+            <BottoneVetro label="Apri le impostazioni" onClick={() => navigate('/settings')}>
+              <Settings size={18} />
+            </BottoneVetro>
+          </>
+        )
+
+        if (role === 'athlete' || role === 'admin') {
+          return (
+            <div className="mb-3.5">
+              <HeaderHome
+                saluto={getGreeting()} nome={userName} motivazione={randomMotiv}
+                dataOggi={format(new Date(), 'EEE d MMMM', { locale: it })}
+                settimana={getISOWeek(new Date())}
+                azioni={azioni}
+              />
             </div>
-          )}
-          <button aria-label="Apri il centro notifiche" onClick={openNotifications} className="relative w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0" title="Centro Notifiche">
-            <Bell size={20} />
-            {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[11px] font-bold rounded-full border-2 border-[#1e1e1e]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
-          </button>
-          <button aria-label="Apri le impostazioni" onClick={() => navigate('/settings')} className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0">
-            <Settings size={22} />
-          </button>
-        </div>
-      </div>
+          )
+        }
+
+        return (
+          <div className="mb-3.5">
+            <HeaderCoach
+              dataOggi={format(new Date(), 'EEE d MMMM', { locale: it })}
+              atleti={atletiCoach.length}
+              inPausa={inPausa}
+              azioni={azioni}
+            />
+          </div>
+        )
+      })()}
 
       {/* OFFLINE BANNER */}
       {isOffline && (
@@ -908,440 +1092,222 @@ setNotifications(prev => {
          </div>
       )}
 
-      {/* BANNER PROSSIMO EVENTO */}
-      {(role === 'athlete' || role === 'admin') && nextEventHome && (
-        <div 
-          onClick={() => navigate(`/workout/${nextEventHome.workouts.id}?athlete_id=${user.id}`)}
-          className="bg-gradient-to-r from-[#2a2a2a] to-[#111] border border-brand/30 rounded-3xl p-5 mb-6 flex items-center justify-between shadow-lg shadow-brand/10 cursor-pointer hover:border-brand/60 transition group"
-        >
-           <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-brand/10 rounded-full flex items-center justify-center text-brand shrink-0 shadow-inner group-hover:scale-110 transition-transform">
-                 <CalendarDays size={24} />
-              </div>
-              <div>
-                 <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-0.5">Prossimo Obiettivo</p>
-                 <p className="text-white font-black text-xl leading-tight group-hover:text-brand transition-colors">{nextEventHome.workouts.title}</p>
-                 <p className="text-brand/80 text-sm mt-0.5 font-medium">{format(parseISO(nextEventHome.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
-              </div>
-           </div>
-           <div className="flex flex-col items-center justify-center bg-gradient-to-br from-brand to-yellow-600 rounded-2xl px-5 py-2.5 shadow-xl min-w-[80px]">
-              <span className="text-3xl font-black text-black leading-none">{countdownDays}</span>
-              <span className="text-black/80 text-[11px] font-bold uppercase tracking-wider mt-1">{countdownDays === 1 ? 'giorno' : 'giorni'}</span>
-           </div>
-        </div>
-      )}
-
-      {/* SLIDER: SETTIMANA E STATISTICHE */}
-      {(role === 'athlete' || role === 'admin') && weeklyStatus.length > 0 && (
-        <div className="mb-6 -mx-4">
-          <div 
-            className="flex w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar" 
-            style={{ scrollbarWidth: 'none' }}
-            onScroll={handleSliderScroll}
-          >
-            {/* SLIDE 1: CALENDARIO SETTIMANALE */}
-            <div className="w-full shrink-0 snap-center px-4">
-              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 h-full flex flex-col">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-white font-bold text-sm">La tua settimana</h3>
-                  <span className="text-xs text-brand bg-brand/10 border border-brand/20 px-3 py-1 rounded-full font-bold">
-                    {weeklyStatus.reduce((acc, d) => acc + d.workouts.filter(w => w.status === 'completed').length, 0)} / {weeklyStatus.reduce((acc, d) => acc + d.workouts.length, 0)} completati
-                  </span>
-                </div>
-                <div className="flex justify-between items-start w-full">
-                  {weeklyStatus.map((day, i) => {
-                    return (
-                      <div key={i} className="flex flex-col items-center gap-1.5 flex-1">
-                        <span className={`text-[11px] font-bold ${day.isToday ? 'text-white' : 'text-gray-400'}`}>
-                          {day.dayName.charAt(0)}
-                        </span>
-                        <span className={`text-xs font-bold mb-1 ${day.isToday ? 'text-brand' : 'text-muted'}`}>
-                          {format(day.date, 'd')}
-                        </span>
-                        
-                        {day.workouts.length > 0 ? (
-                          <div className="flex flex-col gap-1.5">
-                            {day.workouts.map((w, wIdx) => {
-                              const isRun = w.category === 'Running'
-                              const isCustom = w.category === 'Custom' || w.category === 'Autonomo'
-                              const isEvent = w.category === 'Event'
-                              let circleClass
-                              let icon
-                              
-                              if (w.status === 'completed') {
-                                 circleClass = 'bg-green-500 border-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
-                                 icon = <CheckCircle2 size={14} className="text-black" />
-                              } else {
-                                 if (day.isToday) {
-                                   circleClass = isEvent ? 'bg-white border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : isRun ? 'bg-running border-running shadow-[0_0_8px] shadow-running/40' : isCustom ? 'bg-custom border-custom shadow-[0_0_8px] shadow-custom/40' : 'bg-brand border-brand shadow-[0_0_8px] shadow-brand/40'
-                                   icon = isEvent ? <CalendarDays size={14} className="text-black" /> : isRun ? <Timer size={14} className="text-white" /> : isCustom ? <Dumbbell size={14} className="text-white" /> : <Dumbbell size={14} className="text-black" />
-                                 } else {
-                                   circleClass = isEvent ? 'bg-transparent border-white' : isRun ? 'bg-transparent border-running' : isCustom ? 'bg-transparent border-custom' : 'bg-transparent border-brand'
-                                   icon = isEvent ? <CalendarDays size={14} className="text-white" /> : isRun ? <Timer size={14} className="text-running" /> : isCustom ? <Dumbbell size={14} className="text-custom" /> : <Dumbbell size={14} className="text-brand" />
-                                 }
-                              }
-
-                              return (
-                                <div 
-                                  key={wIdx}
-                                  className={`w-7 h-7 rounded-full border-[2px] flex items-center justify-center cursor-pointer hover:scale-110 transition-transform ${circleClass}`}
-                                  onClick={() => navigate(`/workout/${w.workoutId}?athlete_id=${user.id}`)}
-                                  title={w.title}
-                                >
-                                  {icon}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <div className={`w-7 h-7 rounded-full border-[2px] flex items-center justify-center ${day.isToday ? 'bg-[#333] border-[#333]' : 'bg-transparent border-[#333]'}`}>
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#444]"></span>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* SLIDE 2: STATISTICHE DELLA SETTIMANA */}
-            <div className="w-full shrink-0 snap-center px-4">
-              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 h-full flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-white font-bold text-sm">Statistiche della settimana</h3>
-                  <Activity size={16} className="text-brand" />
-                </div>
-                <div className="flex-1 grid grid-cols-3 gap-3">
-                  <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
-                    <p className="text-muted text-[11px] font-bold uppercase tracking-wider">Tempo</p>
-                    <p className="text-white font-black text-2xl">{weeklyStats.time}<span className="text-sm font-medium text-muted ml-0.5">m</span></p>
-                  </div>
-                  <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
-                    <p className="text-muted text-[11px] font-bold uppercase tracking-wider">Workout Completati</p>
-                    <p className="text-brand font-black text-2xl">{weeklyStats.completed}</p>
-                  </div>
-                  <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center h-full">
-                    <p className="text-muted text-[11px] font-bold uppercase tracking-wider">RPE</p>
-                    <p className="text-white font-black text-2xl">{weeklyStats.avgRpe}<span className="text-sm font-medium text-muted ml-0.5">/10</span></p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Paginazione */}
-          <div className="flex justify-center items-center gap-2 mt-4">
-            <div className={`h-1.5 rounded-full transition-all duration-300 ${activeSlide === 0 ? 'bg-brand w-5' : 'bg-[#444] w-1.5'}`}></div>
-            <div className={`h-1.5 rounded-full transition-all duration-300 ${activeSlide === 1 ? 'bg-brand w-5' : 'bg-[#444] w-1.5'}`}></div>
-          </div>
-        </div>
-      )}
-
-      {/* LIVE COACH CAM */}
+      {/* ── HOME COACH ─────────────────────────────────────────────────
+          L'eroe è chi richiede attenzione: gli atleti che stanno sparendo.
+          Prima questa pagina non conteneva un solo dato — era un menù (logo,
+          CTA, lista di ieri, due card verso destinazioni già in navbar), e
+          l'unica informazione presente, chi ha fatto cosa ieri, è la meno utile
+          la mattina perché guarda indietro. */}
       {role !== 'athlete' && (
-        <div 
-          className={`transition-all duration-700 ease-in-out overflow-hidden ${liveAthletes.length > 0 ? 'max-h-[1000px] opacity-100 mb-6' : 'max-h-0 opacity-0 mb-0'}`}
-        >
-          <div className="pt-2 pb-1">
-            <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
-              Live Coach Cam
-            </h2>
-            <div className="flex flex-col gap-3">
-              {liveAthletes.map(la => (
-                <div key={la.athleteWorkoutId} onClick={() => setSpectatingAthlete(la)} className="bg-gradient-to-r from-red-600/20 to-red-900/10 border border-red-500/30 rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:border-red-500/60 transition-all duration-300 shadow-lg shadow-red-500/5 group animate-in fade-in zoom-in-[0.95] slide-in-from-top-2">
-                  <div className="flex items-center gap-3 flex-1 min-w-0 pr-3">
-                    <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 shrink-0 group-hover:scale-110 transition-transform">
-                      <Activity size={24} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-white font-bold text-base truncate drop-shadow-md">{la.athleteName} è in allenamento!</p>
-                      <p className="text-red-400 text-xs font-medium truncate">{la.workoutTitle}</p>
-                    </div>
-                  </div>
-                  <button className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-xl hover:bg-red-500 shadow-md shrink-0">
-                    Guarda
-                  </button>
-                </div>
+        <div className="flex flex-col gap-3.5 mb-6">
+
+          {/* La Live Coach Cam dura quanto un allenamento: è una barra, non una
+              sezione con un titolo che per 23 ore al giorno sta sopra il vuoto. */}
+          {liveAthletes.map(la => (
+            <BannerLive key={la.athleteWorkoutId}
+              nome={la.athleteName} dettaglio={la.workoutTitle}
+              onGuarda={() => setSpectatingAthlete(la)} />
+          ))}
+
+          {/* L'eroe: l'unica voce IN ENTRATA della pagina. Se resta lì,
+              l'atleta ha parlato e nessuno ha risposto. */}
+          {loadingRecent ? (
+            <div className="rounded-[26px] border border-white/[.07] bg-[#1a1a1c] h-52 animate-pulse" />
+          ) : (
+            <div className="hero-transition">
+              {feedback.elementi.length > 0
+                ? <HeroFeedback righe={feedback.elementi} mostrate={FEEDBACK_IN_HOME}
+                    espanso={feedbackEspanso} onEspandi={() => setFeedbackEspanso(true)}
+                    finestraGiorni={FINESTRA_FEEDBACK} onApri={apriFeedback} />
+                : <HeroNessunFeedback />}
+            </div>
+          )}
+
+          {/* La squadra della giornata: cinque su sette, e quali due mancano.
+              Prima era una lista di eventi «oggi e ieri», che elencava senza
+              far vedere l'insieme. */}
+          {loadingRecent ? (
+            <div className="rounded-[22px] border border-white/[.07] bg-[#1a1a1c] h-44 animate-pulse" />
+          ) : (
+            <SquadraOggi righe={squadra.righe} completati={squadra.completati} assegnati={squadra.assegnati}
+              inCorso={squadra.inCorso} rpeMedio={squadra.rpeMedio}
+              giorno={scartoSquadra === 0 ? 'oggi' : 'ieri'}
+              onCambiaGiorno={() => setScartoSquadra(g => (g === 0 ? -1 : 0))}
+              onApriAtleta={(a) => navigate(`/athletes/${a.id}`)} />
+          )}
+
+          {/* L'unica superficie gialla piena della pagina: Regola del Tratto Unico. */}
+          <CtaCreaWorkout onClick={() => navigate('/create')} />
+
+          <RigaDestinazione titolo="Archivio workout"
+            sottotitolo={`${stats.workouts} allenamenti · riusa e duplica`}
+            label="Apri l'archivio dei workout"
+            onClick={() => navigate('/archive')} />
+
+          {/* Il Profilo resta solo per l'admin, che non ha quella voce in navbar
+              (l'atleta sì, il coach non ne ha bisogno). */}
+          {role === 'admin' && (
+            <RigaDestinazione icona={User} titolo="Profilo" sottotitolo="I tuoi dati personali"
+              onClick={() => navigate('/profile')} />
+          )}
+
+          {/* Chi sta sparendo. Non è più l'eroe: chi è fermo da nove giorni lo è
+              ancora fra un'ora, un feedback non letto no. Ma resta in pagina,
+              con lo stesso dato — i giorni di fermo e l'azione a un tocco. */}
+          {!loadingRecent && (
+            fermi.length > 0
+              ? <SezioneAttenzione righe={fermi.slice(0, MASSIMO_FERMI_IN_HOME)} soglia={GIORNI_FERMO}
+                  onApriAtleta={(a) => navigate(`/athletes/${a.id}`)} />
+              : <TuttiAttivi totale={seguiti.length} />
+          )}
+
+          {/* L'unico numero della Home che dice «devi programmare adesso». */}
+          <BarraCopertura coperti={coperturaTre.coperti} totale={coperturaTre.totale}
+            senza={coperturaTre.senza} giorni={GIORNI_COPERTURA} />
+
+          {/* Lavoro da smaltire, non un allarme: in fondo e in forma di lista.
+              Accanto all'atleta fermo si mescolerebbero due problemi di segno
+              diverso — una persona che si allontana e una casella da chiudere. */}
+          {scaduti.length > 0 && (<>
+            <TitoloSezione meta={`${scaduti.length} apert${scaduti.length === 1 ? 'o' : 'i'}`}>Allenamenti scaduti</TitoloSezione>
+            <div className="flex flex-col gap-2.5">
+              {scaduti.map(s => (
+                <RigaAttivita key={s.id} categoria={s.categoria} titolo={s.nome}
+                  sottotitolo={`${s.titolo} · scaduto ${quandoScaduto(s)}`}
+                  coda={<AzioneApri />}
+                  ariaLabel={`Apri l'allenamento scaduto di ${s.nome}`}
+                  onClick={() => navigate(`/workout/${s.workoutId}?athlete_id=${s.atletaId}`)} />
               ))}
             </div>
-          </div>
+          </>)}
         </div>
       )}
 
-      {/* Main CTA */}
-      {role !== 'athlete' && (
-        <div onClick={() => navigate('/create')} className="bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border border-brand/50 rounded-3xl p-6 cursor-pointer hover:border-brand transition relative overflow-hidden group mb-6">
-          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition">
-            <Dumbbell size={64} className="text-brand -rotate-12" />
-          </div>
-          <div className="relative z-10">
-            <div className="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-black mb-4 shadow-lg shadow-brand/20 shrink-0">
-              <Plus size={24} />
-            </div>
-            <h2 className="text-white font-bold text-xl mb-1">Crea Workout</h2>
-            <p className="text-gray-400 text-sm w-3/4">Componi un nuovo allenamento e assegnalo ai tuoi atleti.</p>
-          </div>
-        </div>
-      )}
-
-      {/* RECENT ASSIGNMENTS FOR COACH */}
-      {role !== 'athlete' && (
-        <div className="mb-6">
-          <h2 className="text-lg font-bold text-white mb-3">Attività Atleti (Oggi e Ieri)</h2>
-          {loadingRecent ? (
-            <div className="flex flex-col gap-3">
-              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-20 animate-pulse"></div>
-              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-20 animate-pulse"></div>
-            </div>
-          ) : recentAssignments.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              {recentAssignments.map(a => {
-                const rawCat = a.workouts?.sections?.category || (a.workouts?.sections?.steps ? 'Running' : 'Hyrox');
-                const isCustom = rawCat === 'Custom' || rawCat === 'Autonomo';
-                const isEvent = rawCat === 'Event';
-                const category = isEvent ? 'Event' : isCustom ? 'Custom' : rawCat;
-                const isRun = category === 'Running';
-                return (
-                <div key={a.id} onClick={() => navigate(`/athletes/${a.athletes?.id}`)} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer transition ${isEvent ? 'hover:border-white' : isRun ? 'hover:border-running' : isCustom ? 'hover:border-custom' : 'hover:border-brand'}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0 pr-2">
-                      <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333]">
-                        {a.athletes?.photo_url ? (
-                          <img src={a.athletes.photo_url} alt={a.athletes?.name} className="w-full h-full object-cover" onError={(e) => e.target.style.opacity = 0} />
-                        ) : (
-                          <User size={18} className="text-muted" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-white font-semibold text-sm truncate">{a.athletes?.name} {a.athletes?.surname}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${isEvent ? 'bg-white text-black border-white' : isRun ? 'bg-running/10 text-running border-running/30' : isCustom ? 'bg-custom/10 text-custom border-custom/30' : 'bg-brand/10 text-brand border-brand/30'}`}>
-                            {isEvent ? 'Evento' : category}
-                          </span>
-                          <p className="text-muted text-xs truncate">{a.workouts?.title}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <p className="text-[11px] text-muted font-medium uppercase tracking-wider">
-                        {a.completed_date === todayStrRender ? 'Oggi' : 'Ieri'}
-                      </p>
-                      <div className={`px-2 py-1 rounded-lg border text-[11px] font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-muted border-[#333]'}`}>
-                        {a.status === 'completed' ? 'Fatto' : 'Da fare'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )})}
-            </div>
-          ) : (
-            <div className="bg-[#1e1e1e] border border-[#2a2a2a] border-dashed rounded-2xl p-6 text-center">
-              <p className="text-muted text-sm">Nessuna attività registrata tra oggi e ieri.</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Today's Workout for Athlete */}
+      {/* ── HOME ATLETA ───────────────────────────────────────────────────
+          Un solo eroe sopra la piega, poi una griglia bento dove la dimensione
+          della cella dichiara l'importanza. L'ordine risponde alle tre domande
+          nell'ordine in cui l'atleta se le fa: cosa devo fare oggi, come sta
+          andando la settimana, cosa arriva dopo.
+          Prima erano otto sezioni dello stesso peso e l'allenamento di oggi —
+          l'unica ragione per cui l'app si apre — arrivava dopo due schermate. */}
       {(role === 'athlete' || role === 'admin') && (
-        <div className="mb-6">
-          <h2 className="text-lg font-bold text-white mb-3">Oggi</h2>
+        <div className="flex flex-col gap-3.5">
+
           {loading ? (
-             <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 h-32 animate-pulse"></div>
+            <div className="rounded-[26px] border border-white/[.07] bg-[#1a1a1c] h-60 animate-pulse" />
           ) : todayWorkouts.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              {todayWorkouts.map((todayWorkout) => {
-                const rawCat = todayWorkout.workouts?.sections?.category || (todayWorkout.workouts?.sections?.steps ? 'Running' : 'Hyrox');
-                const todayIsEvent = rawCat === 'Event';
-                const todayIsAuto = todayWorkout.workouts?.sections?.isAutonomous === true || rawCat === 'Autonomo';
-                const todayIsCustom = rawCat === 'Custom' || todayIsAuto;
-                const category = todayIsEvent ? 'Event' : todayIsCustom ? 'Custom' : rawCat;
-                const todayIsRun = category === 'Running';
-                
-                const scorrevole = todayWorkout.status !== 'completed'
-                return (
-                  <div key={todayWorkout.id} className="relative overflow-hidden rounded-3xl">
-                    {/* Pannello rivelato sotto la card mentre si scorre. Senza,
-                        il movimento non dice cosa sta per succedere. Nascosto ai
-                        lettori di schermo: il bottone visibile è la via ufficiale. */}
-                    {scorrevole && (
-                      <div data-swipe-panel aria-hidden="true" style={{ opacity: 0 }}
-                        className="absolute inset-0 rounded-3xl bg-green-500 flex items-center pl-7 pointer-events-none">
-                        <div className="flex items-center gap-2.5 text-black font-black origin-left"
-                          style={{ transform: 'scale(0.72)' }}>
-                          <CheckCircle2 size={30} />
-                          <span className="text-base">Completato</span>
-                        </div>
-                      </div>
-                    )}
-                  <div
-                    onTouchStart={scorrevole ? swipeInizio : undefined}
-                    onTouchMove={scorrevole ? swipeMuovi : undefined}
-                    onTouchEnd={scorrevole ? () => swipeFine(todayWorkout) : undefined}
-                    onTouchCancel={scorrevole ? () => swipeFine(todayWorkout) : undefined}
-                    style={{ willChange: scorrevole ? 'transform' : undefined }}
-                    className={`rounded-3xl p-6 transition-colors border relative overflow-hidden group ${
-                      todayWorkout.status === 'completed'
-                        ? 'bg-green-500/10 border-green-500/30 hover:border-green-500'
-                        : (todayIsEvent ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-white/50 hover:border-white' : todayIsRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-running/50 hover:border-running' : todayIsCustom ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-custom/50 hover:border-custom' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-brand/50 hover:border-brand')
-                    }`}
-                  >
-                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition">
-                      {todayWorkout.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (todayIsEvent ? <CalendarDays size={80} className="text-white/30 -rotate-12" /> : todayIsRun ? <Timer size={80} className="text-running -rotate-12" /> : todayIsCustom ? <Dumbbell size={80} className="text-custom -rotate-12" /> : <Flame size={80} className="text-brand -rotate-12" />)}
-                    </div>
-                    <div className="relative z-10">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 shadow-lg shrink-0 ${
-                        todayWorkout.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (todayIsEvent ? 'bg-white text-black shadow-white/20' : todayIsRun ? 'bg-running text-white shadow-running/20' : todayIsCustom ? 'bg-custom text-white shadow-custom/20' : 'bg-brand text-black shadow-brand/20')
-                      }`}>
-                        {todayWorkout.status === 'completed' ? <CheckCircle2 size={24} /> : (todayIsEvent ? <CalendarDays size={24} /> : todayIsRun ? <Timer size={24} /> : <Dumbbell size={24} />)}
-                      </div>
-                      <button
-                        onClick={() => navigate(`/workout/${todayWorkout.workouts.id}?athlete_id=${user.id}`)}
-                        aria-label={`Apri ${todayWorkout.workouts.title}`}
-                        className="block w-full text-left min-h-11 rounded-xl -mx-1 px-1 hover:opacity-80 transition-opacity">
-                        <h3 className="text-white font-bold text-xl mb-1 truncate pr-8">{todayWorkout.workouts.title}</h3>
-                      </button>
-                      <p className={`text-sm font-medium ${todayWorkout.status === 'completed' ? 'text-green-400' : (todayIsEvent ? 'text-gray-300' : todayIsRun ? 'text-running' : todayIsCustom ? 'text-custom' : 'text-brand')}`}>
-                        {todayWorkout.status === 'completed' ? 'Ottimo lavoro, completato! 🎉' : (todayIsEvent ? 'Oggi è il grande giorno! 🏁' : 'Da completare oggi 🔥')}
-                      </p>
-                      <div className="mt-4">
-                        <button 
-                          onClick={(e) => toggleTodayWorkout(e, todayWorkout)}
-                          className={`inline-flex items-center justify-center gap-1.5 px-5 min-h-11 rounded-full text-sm font-bold transition border ${
-                            todayWorkout.status === 'completed' 
-                              ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30' 
-                              : (todayIsEvent ? 'bg-[#111] border-[#333] text-white hover:border-white hover:text-white' : todayIsRun ? 'bg-[#111] border-[#333] text-gray-300 hover:border-running hover:text-running' : todayIsCustom ? 'bg-[#111] border-[#333] text-gray-300 hover:border-custom hover:text-custom' : 'bg-[#111] border-[#333] text-gray-300 hover:border-brand hover:text-brand')
-                          }`}
-                        >
-                          {todayWorkout.status === 'completed' ? <CheckCircle2 size={16} /> : <Circle size={16} />} 
-                          {todayWorkout.status === 'completed' ? 'Fatto' : 'Segna come completato'}
-                        </button>
-                        {todayIsAuto && role === 'athlete' && (
-                          <div className="flex items-center gap-2">
-                             <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(todayWorkout); }} className="p-2 text-gray-400 hover:text-brand transition bg-[#111] rounded-full border border-[#333]" title="Modifica"><Edit size={16}/></button>
-                             <button aria-label="Elimina l'allenamento" onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(todayWorkout.id); }} className="p-2 text-gray-400 hover:text-red-500 transition bg-[#111] rounded-full border border-[#333]" title="Elimina"><Trash2 size={16}/></button>
-                          </div>
-                        )}
+            todayWorkouts.map((todayWorkout) => {
+              const sections = todayWorkout.workouts?.sections
+              const rawCat = sections?.category || (sections?.steps ? 'Running' : 'Hyrox')
+              const todayIsAuto = sections?.isAutonomous === true || rawCat === 'Autonomo'
+              const category = rawCat === 'Event' ? 'Event' : (rawCat === 'Custom' || todayIsAuto) ? 'Custom' : rawCat
+              const completato = todayWorkout.status === 'completed'
+              const scorrevole = !completato
+
+              return (
+                <div key={todayWorkout.id} className="relative overflow-hidden rounded-[26px] hero-transition">
+                  {/* Pannello rivelato sotto la card mentre si scorre. Senza,
+                      il movimento non dice cosa sta per succedere. Nascosto ai
+                      lettori di schermo: il bottone visibile è la via ufficiale. */}
+                  {scorrevole && (
+                    <div data-swipe-panel aria-hidden="true" style={{ opacity: 0 }}
+                      className="absolute inset-0 rounded-[26px] bg-green-500 flex items-center pl-7 pointer-events-none">
+                      <div className="flex items-center gap-2.5 text-black font-black origin-left"
+                        style={{ transform: 'scale(0.72)' }}>
+                        <CheckCircle2 size={30} />
+                        <span className="text-base">Completato</span>
                       </div>
                     </div>
-                  </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )}
+                  <HeroOggi
+                    titolo={todayWorkout.workouts.title}
+                    categoria={category}
+                    completato={completato}
+                    stato={completato ? 'Completato oggi' : category === 'Event' ? 'Oggi è il grande giorno' : 'Allenamento di oggi'}
+                    meta={metaEroe(sections, category)}
+                    onOpen={() => navigate(`/workout/${todayWorkout.workouts.id}?athlete_id=${user.id}`)}
+                    onToggle={(e) => toggleTodayWorkout(e, todayWorkout)}
+                    azioni={todayIsAuto && role === 'athlete' ? (
+                      <>
+                        <button aria-label="Modifica l'allenamento libero" title="Modifica"
+                          onClick={(e) => { e.stopPropagation(); openEditAutonomous(todayWorkout); }}
+                          className="p-2.5 text-gray-400 hover:text-brand transition bg-black/40 rounded-full border border-white/[.07]"><Edit size={16} /></button>
+                        <button aria-label="Elimina l'allenamento" title="Elimina"
+                          onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(todayWorkout.id); }}
+                          className="p-2.5 text-gray-400 hover:text-red-500 transition bg-black/40 rounded-full border border-white/[.07]"><Trash2 size={16} /></button>
+                      </>
+                    ) : null}
+                    swipe={scorrevole ? {
+                      onTouchStart: swipeInizio,
+                      onTouchMove: swipeMuovi,
+                      onTouchEnd: () => swipeFine(todayWorkout),
+                      onTouchCancel: () => swipeFine(todayWorkout),
+                      style: { willChange: 'transform' },
+                    } : {}}
+                  />
+                </div>
+              )
+            })
           ) : (
-            <div className="bg-[#1e1e1e] border border-[#2a2a2a] border-dashed rounded-3xl p-6 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#2a2a2a] flex items-center justify-center text-muted shrink-0">
-                <CalendarX2 size={24} />
-              </div>
-              <div>
-                <h3 className="text-white font-bold">Giorno di rest</h3>
-                <p className="text-muted text-sm">Recupera le energie per il prossimo allenamento. 🛋️</p>
+            <HeroRest />
+          )}
+
+          {/* Il bento. La settimana non è più nascosta dietro uno swipe non
+              segnalato: l'anello dice quanto manca, i sette punti sotto sono
+              la traccia, non il contenuto. */}
+          {weeklyStatus.length > 0 && (
+            <div className="grid grid-cols-[1.05fr_1fr] gap-3.5">
+              <AnelloSettimana weeklyStatus={weeklyStatus}
+                onGiorno={(w) => navigate(`/workout/${w.workoutId}?athlete_id=${user.id}`)} />
+              <div className="flex flex-col gap-3.5">
+                <CellaSerie giorni={serie} ultime={sparkline} />
+                <CellaVolume minuti={weeklyStats.time} rpe={weeklyStats.avgRpe} />
               </div>
             </div>
           )}
-        </div>
-      )}
 
-      {/* Bottone Aggiungi Allenamento Libero */}
-      {role === 'athlete' && (
-        <div className="mb-6">
-          <button 
-            onClick={() => setAutonomousModalOpen(true)} 
-            className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-3 rounded-2xl hover:border-brand hover:text-brand transition shadow-sm"
-          >
-            <Plus size={18} className="text-brand" /> Aggiungi allenamento libero
-          </button>
-        </div>
-      )}
+          {/* Scende sotto il bento: è importante, non urgente. L'urgente è oggi. */}
+          {nextEventHome && (
+            <BannerObiettivo evento={nextEventHome} giorni={countdownDays}
+              onOpen={() => navigate(`/workout/${nextEventHome.workouts.id}?athlete_id=${user.id}`)} />
+          )}
 
-      {/* Upcoming Workouts for Athlete */}
-      {(role === 'athlete' || role === 'admin') && (loading || upcomingWorkouts.length > 0) && (
-        <div className="mb-8">
-          <h2 className="text-lg font-bold text-white mb-3">I prossimi allenamenti</h2>
           {loading ? (
-            <div className="flex flex-col gap-3">
-              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-16 animate-pulse"></div>
-              <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-16 animate-pulse"></div>
+            <div className="flex flex-col gap-2.5">
+              <div className="rounded-[18px] bg-white/[.035] border border-white/[.06] h-16 animate-pulse" />
+              <div className="rounded-[18px] bg-white/[.035] border border-white/[.06] h-16 animate-pulse" />
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              {upcomingWorkouts.map(w => {
-                const isAuto = w.workouts?.sections?.isAutonomous === true || w.workouts?.sections?.category === 'Autonomo';
+            <ListaInArrivo
+              items={upcomingWorkouts}
+              onOpen={(w) => navigate(`/workout/${w.workouts.id}?athlete_id=${user.id}`)}
+              onAggiungiLibero={role === 'athlete' ? () => setAutonomousModalOpen(true) : null}
+              azioniRiga={(w) => {
+                const isAuto = w.workouts?.sections?.isAutonomous === true || w.workouts?.sections?.category === 'Autonomo'
+                if (!isAuto || role !== 'athlete') return null
                 return (
-                  <div 
-                    key={w.id}
-                    onClick={() => navigate(`/workout/${w.workouts.id}?athlete_id=${user.id}`)}
-                    className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-[#383838] transition"
-                  >
-                    <div>
-                      <p className="text-white font-semibold">{w.workouts.title}</p>
-                      <p className="text-muted text-xs mt-0.5 capitalize font-medium">
-                        {format(parseISO(w.completed_date), 'EEEE d MMMM', { locale: it })}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {role === 'athlete' && isAuto && (
-                        <>
-                          <button aria-label="Modifica l'allenamento libero" onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }} className="p-1.5 text-muted hover:text-brand transition" title="Modifica"><Edit size={18}/></button>
-                          <button aria-label="Elimina l'allenamento" onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(w.id); }} className="p-1.5 text-muted hover:text-red-500 transition" title="Elimina"><Trash2 size={18}/></button>
-                        </>
-                      )}
-                      <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-400 ml-1">
-                        <ChevronRight size={18} className="ml-0.5" />
-                      </div>
-                    </div>
-                  </div>
-              )})}
-            </div>
+                  <>
+                    <button aria-label="Modifica l'allenamento libero" title="Modifica"
+                      onClick={(e) => { e.stopPropagation(); openEditAutonomous(w); }}
+                      className="p-1.5 text-muted hover:text-brand transition"><Edit size={18} /></button>
+                    <button aria-label="Elimina l'allenamento" title="Elimina"
+                      onClick={(e) => { e.stopPropagation(); setWorkoutToRemove(w.id); }}
+                      className="p-1.5 text-muted hover:text-red-500 transition"><Trash2 size={18} /></button>
+                  </>
+                )
+              }}
+            />
           )}
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div onClick={() => navigate('/calendar')} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-brand transition flex flex-col gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300 shrink-0">
-            <CalendarDays size={20} />
-          </div>
-          <div>
-            <h3 className="text-white font-bold text-lg">Calendario</h3>
-            <p className="text-muted text-xs mt-1">{stats.workouts} workout {role === 'athlete' ? 'assegnati' : 'creati'}</p>
-          </div>
-        </div>
-
-        {role !== 'athlete' && (
-          <div onClick={() => navigate('/athletes')} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-brand transition flex flex-col gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300 shrink-0">
-              <Users size={20} />
-            </div>
-            <div>
-              <h3 className="text-white font-bold text-lg">Atleti</h3>
-              <p className="text-muted text-xs mt-1">{stats.athletes} atleti totali</p>
-            </div>
-          </div>
-        )}
-        {(role === 'athlete' || role === 'admin') && (
-          <div onClick={() => navigate('/profile')} className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 cursor-pointer hover:border-brand transition flex flex-col gap-3 ${role === 'admin' ? 'col-span-2' : ''}`}>
-            <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300 shrink-0">
-              <User size={20} />
-            </div>
-            <div>
-              <h3 className="text-white font-bold text-lg">Profilo</h3>
-              <p className="text-muted text-xs mt-1">Dati personali</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <button 
-        onClick={() => navigate('/archive')}
-        className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-4 rounded-2xl hover:border-brand hover:text-brand transition"
-      >
-        <FolderArchive size={20} />
-        Archivio Workout
-      </button>
+      {/* ⚠️ Qui c'erano le card «Calendario» e «Atleti» più la barra «Archivio
+          Workout». Le prime due sono uscite il 27/08/2026: erano già due voci
+          della navbar coach, e il corollario della Regola dell'Eroe Unico dice
+          che a una destinazione già in navbar non si dedica anche una card.
+          L'archivio non è sparito — è la riga sotto la CTA, dove è materiale di
+          lavoro invece che una destinazione. Per l'atleta erano state nascoste
+          il 26/08 per la stessa ragione. */}
 
       {/* MODAL CENTRO NOTIFICHE */}
       {showNotifications && createPortal(

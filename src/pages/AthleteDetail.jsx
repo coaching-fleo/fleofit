@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Check, Eye, LineChart, Target, PieChart, BarChart2 } from 'lucide-react'
+import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Check, Eye, LineChart, Target, PieChart, BarChart2, PauseCircle, PlayCircle } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -13,6 +13,8 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
+import { isVoiceNoteValid } from '../lib/notaVocale'
+import { parseNotePausa, formatNotePausa } from '../lib/pausa'
 import { calcolaStatistiche, statisticheSettimana } from '../lib/statistiche'
 import { BRAND, RUNNING, coloreCategoria } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
@@ -33,12 +35,6 @@ const InstagramIcon = ({ size = 24, className = "" }) => (
     <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line>
   </svg>
 )
-
-const isVoiceNoteValid = (url) => {
-  if (!url) return false
-  if (url.includes('#deleted=')) return false
-  return true
-}
 
 // Helper per calcolare l'età
 const calculateAge = (dob) => {
@@ -229,6 +225,51 @@ export default function AthleteDetail() {
     }
   }
 
+  // Lo stato di pausa, letto dalla nota per l'atleta (src/lib/pausa.js).
+  // `athlete` è null durante il caricamento: parseNotePausa regge il null.
+  const pausaAtleta = parseNotePausa(athlete?.notes)
+
+  /**
+   * Mette o toglie la pausa a questo atleta.
+   *
+   * La pausa lo toglie dagli allarmi della Home coach senza toglierlo dalla
+   * rubrica: è la richiesta del committente («mi hanno detto che vogliono
+   * essere messi in pausa, ma voglio continuare a tenerli nella lista»).
+   *
+   * ⚠️ Si CHIEDE conferma solo per mettere in pausa, non per toglierla. Non è
+   * simmetria mancata: mettere in pausa spegne un allarme, e uno spegnimento
+   * per errore non si nota — è il difetto che il 26/08 ha reso il
+   * "completa/scompleta" un gesto confermato invece che un tap silenzioso.
+   * Toglierla riaccende, e un allarme di troppo si vede da solo.
+   */
+  const impostaPausa = async (attiva) => {
+    const { testo } = parseNotePausa(athlete.notes)
+    const nuoveNote = attiva ? formatNotePausa(format(new Date(), 'yyyy-MM-dd'), testo) : (testo || null)
+    const precedenti = athlete.notes
+    setAthlete(prev => ({ ...prev, notes: nuoveNote }))   // ottimistico, come toggleStatus
+    const { error } = await supabase.from('athletes').update({ notes: nuoveNote }).eq('id', id)
+    if (error) {
+      setAthlete(prev => ({ ...prev, notes: precedenti }))
+      return setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
+    }
+    setAlertInfo({
+      title: attiva ? 'Atleta in pausa' : 'Pausa terminata',
+      message: attiva
+        ? `${athlete.name} resta nella tua lista atleti, ma non comparirà più fra quelli che richiedono attenzione in Home.`
+        : `${athlete.name} torna fra gli atleti che la Home tiene d'occhio.`,
+      type: 'success',
+    })
+  }
+
+  const chiediPausa = () => {
+    if (pausaAtleta.inPausa) return impostaPausa(false)
+    setConfirmInfo({
+      title: 'Mettere in pausa?',
+      message: `${athlete.name} ${athlete.surname} resta fra i tuoi atleti e mantiene tutto lo storico, ma smetterà di comparire fra quelli che richiedono attenzione in Home. Puoi riattivarlo quando vuoi da qui.`,
+      onConfirm: () => impostaPausa(true),
+    })
+  }
+
   const updateWorkoutNote = async (workoutId, notes, workoutTitle) => {
     const { error } = await supabase
       .from('athlete_workouts')
@@ -406,8 +447,8 @@ export default function AthleteDetail() {
       )}
 
       {/* Header Atleta */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-5">
+      <div className="flex items-start justify-between gap-3 mb-6">
+        <div className="flex items-center gap-4 min-w-0">
           <div className="relative shrink-0">
             {athlete.photo_url ? (
               <img src={athlete.photo_url} alt={`${athlete.name}`} className="w-24 h-24 rounded-full object-cover border-2 border-[#333] shrink-0" onError={() => setAthlete({ ...athlete, photo_url: null })} />
@@ -417,10 +458,28 @@ export default function AthleteDetail() {
               </div>
             )}
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">{athlete.name} {athlete.surname}</h1>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-white text-balance">{athlete.name} {athlete.surname}</h1>
             {athlete.username && <p className="text-gray-400">@{athlete.username}</p>}
-            {athlete.notes && <p className="text-muted text-sm mt-1 max-w-sm whitespace-pre-wrap">{athlete.notes}</p>}
+            {/* La pausa si vede, e si vede da quando: un allarme spento in
+                silenzio è il modo in cui un atleta smette di essere seguito
+                senza che nessuno l'abbia deciso.
+                🔴 Ma SOLO al coach. Questa pagina è anche `/profile`, cioè la
+                scheda che l'atleta vede di sé: la pausa è uno stato interno
+                della programmazione del coach, e mostrarla qui vorrebbe dire
+                comunicare all'atleta «ti ho messo in disparte» tramite una
+                pillola, invece che parlandoci. */}
+            {pausaAtleta.inPausa && role !== 'athlete' && (
+              <p className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-full whitespace-nowrap
+                            bg-orange-500/10 border border-orange-500/30 text-orange-400 text-[11px] font-bold uppercase tracking-[.06em]">
+                <PauseCircle size={13} aria-hidden="true" />
+                In pausa{pausaAtleta.dal ? ` dal ${format(parseISO(pausaAtleta.dal), parseISO(pausaAtleta.dal).getFullYear() === new Date().getFullYear() ? 'd MMM' : 'd MMM yyyy', { locale: it })}` : ''}
+              </p>
+            )}
+            {/* ⚠️ `pausaAtleta.testo` e non `athlete.notes`: il marcatore è uno
+                stato, non una nota, e mostrarlo grezzo lo farebbe leggere come
+                testo scritto dal coach. */}
+            {pausaAtleta.testo && <p className="text-muted text-sm mt-1 max-w-sm whitespace-pre-wrap">{pausaAtleta.testo}</p>}
             <div className="flex items-center gap-2 mt-3 flex-wrap">
               {athlete.instagram_url ? (
                 <a href={athlete.instagram_url.startsWith('http') ? athlete.instagram_url : `https://instagram.com/${athlete.instagram_url.replace(/^@/, '')}`} target="_blank" rel="noopener noreferrer" title="Instagram" className="flex items-center justify-center w-8 h-8 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 text-white rounded-full hover:opacity-80 transition shadow-md shadow-pink-500/20"><InstagramIcon size={16} /></a>
@@ -435,10 +494,21 @@ export default function AthleteDetail() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {role !== 'athlete' && (
             <button aria-label="Esporta i dati dell'atleta" onClick={handleExportData} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-brand transition" title="Esporta Backup Atleta">
               <Download size={20} />
+            </button>
+          )}
+          {role !== 'athlete' && (
+            <button
+              aria-label={pausaAtleta.inPausa ? `Riattiva ${athlete.name}: tornerà fra gli atleti che richiedono attenzione` : `Metti ${athlete.name} in pausa: non comparirà più fra gli atleti che richiedono attenzione`}
+              title={pausaAtleta.inPausa ? 'Riattiva atleta' : 'Metti in pausa'}
+              onClick={chiediPausa}
+              className={`p-2 rounded-xl border transition ${pausaAtleta.inPausa
+                ? 'bg-orange-500/10 border-orange-500/40 text-orange-400 hover:border-orange-500'
+                : 'bg-[#2a2a2a] border-[#383838] text-gray-400 hover:text-white hover:border-brand'}`}>
+              {pausaAtleta.inPausa ? <PlayCircle size={20} /> : <PauseCircle size={20} />}
             </button>
           )}
           <button aria-label="Modifica la scheda atleta" onClick={() => setShowEditModal(true)} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-brand transition" title="Modifica profilo atleta">
@@ -1448,10 +1518,20 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
     birth_date: athlete.birth_date || '', 
     weight: athlete.weight || '', 
     height: athlete.height || '', 
-    notes: athlete.notes || '',
+    // ⚠️ Il TESTO della nota, senza il marcatore di pausa: qui c'era
+    // `athlete.notes` grezzo, e il salvataggio più sotto lo riscriveva
+    // verbatim — cioè ogni «Salva» avrebbe cancellato la pausa, o mostrato
+    // `[PAUSA: …]` come testo dentro il campo. Vedi src/lib/pausa.js.
+    notes: parseNotePausa(athlete.notes).testo,
     instagram_url: athlete.instagram_url || '',
     strava_url: athlete.strava_url || ''
   })
+  // Lo stato di pausa non si modifica da qui (si tocca con il bottone nella
+  // scheda), ma va CONSERVATO: il salvataggio ricompone la nota intorno a lui.
+  // ⚠️ Vale per ENTRAMBI i ruoli: questa modale si apre anche dall'atleta sul
+  // proprio /profile, e senza il round-trip il suo «Salva» annullerebbe la
+  // pausa decisa dal coach.
+  const pausa = parseNotePausa(athlete.notes)
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(athlete.photo_url || null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -1516,7 +1596,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
       birth_date: form.birth_date || null,
       weight: form.weight ? parseFloat(form.weight) : null,
       height: form.height ? parseFloat(form.height) : null,
-      notes: form.notes,
+      notes: pausa.inPausa ? formatNotePausa(pausa.dal, form.notes) : form.notes,
       instagram_url: finalInstagram,
       strava_url: finalStrava,
       photo_url

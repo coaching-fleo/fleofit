@@ -265,6 +265,11 @@ nuova taglia, verifica che il livello non esista già con un peso diverso.
 
 **La Regola del Maiuscolo Solo Etichetta.** Il maiuscolo con `tracking-wider` appartiene alle
 etichette e alle pillole. Titoli, corpo e bottoni non vanno mai in maiuscolo.
+Dal 26/08/2026 esiste un livello dichiarato per questo: **l'etichetta di cella**,
+`text-[11px] font-bold uppercase tracking-[.1em] text-muted` (la costante `LABEL` in
+`src/components/HomeAtletaUI.jsx`). È sopra il pavimento degli 11px, quindi in regola.
+⚠️ Non usarla dentro un anello o un contenitore stretto senza ridurre il `tracking`: a
+`.1em` «COMPLETATI» è più largo dell'anello da 112px e ne tocca il tratto.
 
 **La Regola del Logo.** Il marchio è sempre `FLEO` bianco + `FIT` in Gesso Ambra, peso 900,
 `tracking-tight`, in un unico `<h1>`. Nessuna variante di colore, spaziatura o peso.
@@ -295,6 +300,25 @@ Sono deliberatamente due regimi diversi dello stesso sistema.
 **La Regola della Colonna Unica.** Mobile-first non come compromesso ma come formato: ogni
 nuova schermata nasce come colonna singola. Un breakpoint si introduce solo per raffinare
 una micro-struttura, mai per riorganizzare la pagina.
+⚠️ Precisata il 26/08/2026: la regola vale per la **pagina**, non per le celle. La Home
+atleta ha una micro-griglia bento a due colonne (`grid-cols-[1.05fr_1fr]`) sotto l'eroe, e la
+Home coach una a colonne uguali (`grid-cols-2`, feedback e copertura), dove
+è la **dimensione della cella a dichiarare l'importanza** del dato. Resta vietato affiancare
+due sezioni di pari rango per riempire la larghezza: il bento è una gerarchia, non un
+riempimento.
+
+**La Regola dell'Eroe Unico.** Aggiunta il 26/08/2026. Una schermata ha una sola cosa che
+conta, e quella occupa il primo schermo da sola. Prima la Home impilava otto sezioni dello
+stesso peso e l'allenamento di oggi — l'unica ragione per cui l'app si apre — arrivava dopo
+due schermate di scroll, con lo stesso peso visivo della card «Calendario». Corollario: se una
+destinazione è già nella navbar, non le si dedica anche una card in pagina.
+⚠️ Applicata alla **Home coach** il 27/08/2026, e lì ha risposto a una domanda diversa: la
+pagina non aveva un eroe *sbagliato*, non aveva **nessun dato** — era un menù. L'eroe è
+diventato «chi richiede attenzione», gli atleti senza un allenamento completato da 5+ giorni.
+Il corollario ha fatto uscire le card «Calendario» e «Atleti» (già in navbar); l'archivio è
+rimasto, ma come **riga**, perché è materiale di lavoro e non una destinazione da promuovere.
+Un livello sotto l'eroe la regola non impedisce due celle di pari rango — feedback e copertura
+sono entrambe subordinate all'eroe, e il bento è esattamente questo (vedi la Colonna Unica).
 
 **La Regola del Doppio Margine iOS.** Ogni pagina apre con la safe area
 (`pt-[calc(env(safe-area-inset-top)+1rem)]`) e chiude con
@@ -331,8 +355,22 @@ staccare il dialogo dall'overlay `bg-black/85`.
 ### Named Rules
 
 **La Regola Piatto + Glow di Stato.** Le superfici sono piatte e si distinguono per tono e
-bordo. L'ombra colorata è riservata a ciò che è attivo, primario o selezionato: è stato, non
-atmosfera. Un elemento a riposo non ha mai un glow.
+bordo. L'ombra **colorata** è riservata a ciò che è attivo, primario o selezionato: è stato,
+non atmosfera. Un elemento a riposo non ha mai un glow.
+
+**La Regola della Carta Sollevata.** ⚠️ Aggiunta il 26/08/2026 con il rework della Home
+atleta, e limita quella sopra: una card di **primo livello** porta un'ombra proiettata
+morbida *neutra* più una hairline chiara sul bordo alto
+(`shadow-[0_18px_34px_-18px_rgba(0,0,0,.85),inset_0_1px_0_rgba(255,255,255,.06)]`), e la card
+eroe una versione più profonda (`0_24px_48px_-20px_rgba(0,0,0,.9)`). Non è decorazione: era
+questa assenza a far leggere l'app come «piatta» nel senso sbagliato — non un sistema tonale
+voluto, ma una schermata senza gerarchia di distanza. Il glow **colorato** resta stato: qui
+l'ombra è nera e la luce interna è bianca, quindi le due regole non si toccano.
+Le card annidate (le voci di una lista dentro una sezione) restano piatte: la carta sollevata
+è un livello, non un effetto da ripetere.
+📄 Le tre classi vivono in `src/lib/stiliCard.js` (`CARD`, `LABEL`, `RIGA`) e le usano sia
+`HomeAtletaUI.jsx` sia `HomeCoachUI.jsx`: una regola scritta in due posti smette di essere
+una regola alla prima modifica.
 
 **La Regola dei Gradini.** Un elemento non salta un gradino della scala tonale: non si mette
 una superficie `#2a2a2a` direttamente sul fondo `#0B0B0B` senza la card intermedia, e non si

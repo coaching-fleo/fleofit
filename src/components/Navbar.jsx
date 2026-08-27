@@ -28,45 +28,52 @@ export default function Navbar() {
   if (tastieraAperta) return null
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#222222] border-t border-[#333] flex justify-around items-center z-50 h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center
+                    h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)]
+                    bg-[#0f0f11]/70 backdrop-blur-xl border-t border-white/[.07]">
       <NavLink to="/" className={({ isActive }) =>
-        `flex flex-col items-center gap-1 text-xs ${isActive ? 'text-brand' : 'text-gray-400'}`
+        `flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-2xl transition text-[10.5px]
+         ${isActive ? 'bg-brand/[.12] text-brand font-extrabold' : 'text-[#7b8090] font-bold'}`
       }>
-        <Home size={22} />
+        <Home size={21} />
         <span>Home</span>
       </NavLink>
 
       {role !== 'athlete' && (
         <NavLink to="/create" className={({ isActive }) =>
-          `flex flex-col items-center gap-1 text-xs ${isActive ? 'text-brand' : 'text-gray-400'}`
+          `flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-2xl transition text-[10.5px]
+           ${isActive ? 'bg-brand/[.12] text-brand font-extrabold' : 'text-[#7b8090] font-bold'}`
         }>
-          <Plus size={22} />
+          <Plus size={21} />
           <span>Workout</span>
         </NavLink>
       )}
 
 
       <NavLink to="/calendar" className={({ isActive }) =>
-        `flex flex-col items-center gap-1 text-xs ${isActive ? 'text-brand' : 'text-gray-400'}`
+        `flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-2xl transition text-[10.5px]
+         ${isActive ? 'bg-brand/[.12] text-brand font-extrabold' : 'text-[#7b8090] font-bold'}`
       }>
-        <Calendar size={22} />
+        <Calendar size={21} />
         <span>Calendario</span>
       </NavLink>
 
       {role !== 'athlete' && (
         <NavLink to="/athletes" className={({ isActive }) =>
-          `flex flex-col items-center gap-1 text-xs ${isActive ? 'text-brand' : 'text-gray-400'}`
+          `flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-2xl transition text-[10.5px]
+           ${isActive ? 'bg-brand/[.12] text-brand font-extrabold' : 'text-[#7b8090] font-bold'}`
         }>
-          <Users size={22} />
+          <Users size={21} />
           <span>Atleti</span>
         </NavLink>
       )}
 
       {role === 'athlete' && (
         <NavLink to="/profile" className={({ isActive }) =>
-          `flex flex-col items-center gap-1 text-xs ${isActive ? 'text-brand' : 'text-gray-400'}`
+          `flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-2xl transition text-[10.5px]
+           ${isActive ? 'bg-brand/[.12] text-brand font-extrabold' : 'text-[#7b8090] font-bold'}`
         }>
-          <User size={22} />
+          <User size={21} />
           <span>Profilo</span>
         </NavLink>
       )}

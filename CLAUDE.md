@@ -2,11 +2,13 @@
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **26 agosto 2026**.
+> Ultimo aggiornamento: **27 agosto 2026**.
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit `ce5ebe3` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **195 test**, `npm run lint` → **42 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **305 test**, `npm run lint` → **42 problemi** (erano 164 la mattina del 25/08).
+> Le due Home sono state rifatte su design di Claude Design: **atleta** il 26/08 (§9-octies),
+> **coach** il 27/08 (§9-nonies), con la **pausa atleta** (§9-decies).
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -262,11 +264,16 @@ src/
 │  ├─ badge.js                 # ⚠️ l'UNICO punto che scrive il badge iOS (§8)
 │  ├─ blockColors.js           # TYPE_COLORS, unificata dalle 5 copie sparse
 │  ├─ blockHints.js            # BLOCK_HINT: didascalie in chiaro dei tipi di blocco (§9-ter)
+│  ├─ categorie.js             # CORSIA/corsia/categoriaDi: la Regola della Corsia in un punto solo
+│  ├─ notaVocale.js            # isVoiceNoteValid: il soft delete `#deleted=` si filtra sempre
+│  ├─ pausa.js                 # ⚠️ «atleta in pausa» dentro athletes.notes — NON è una colonna (§9-decies)
+│  ├─ stiliCard.js             # CARD/LABEL/RIGA — costanti, NON componenti (§9-octies punto 3)
 │  ├─ constants.js             # ERGOMETERS e affini
 │  ├─ offlineQueue.js          # ⚠️ coda offline + leggiJson/scriviJson — vedi §9 regola 0-bis
 │  ├─ pushToken.js             # rinfresco del token FCM
 │  ├─ rpe.js                   # parseNotesAndRpe / formatNotesWithRpe
 │  ├─ statistiche.js           # carico settimanale, completamento, distribuzione RPE
+│  ├─ statisticheCoach.js      # i numeri della Home coach: feedback, squadra del giorno, fermi, scaduti, copertura
 │  ├─ timerSequence.js         # buildTimerSequence + getNormalizedBlocks (§5 legacy)
 │  ├─ workoutTitle.js          # titolo generato dalla data (c'è anche su main)
 │  └─ __tests__/               # 103 test — il grosso della copertura (§9 punto 11)
@@ -275,7 +282,9 @@ src/
 │  ├─ fintoSupabase.js         # catena fluente via Proxy — riutilizzabile per ogni pagina
 │  └─ montaPagina.jsx          # router e AuthContext VERI, non finti
 ├─ components/
-│  ├─ Navbar.jsx               # bottom nav fissa, voci variabili per ruolo
+│  ├─ HomeAtletaUI.jsx         # i pezzi visivi della Home atleta (§9-octies) — sola presentazione
+│  ├─ HomeCoachUI.jsx          # i pezzi visivi della Home coach (§9-nonies) — sola presentazione
+│  ├─ Navbar.jsx               # bottom nav in vetro, voce attiva in pillola, voci variabili per ruolo
 │  ├─ CustomModals.jsx         # CustomAlert + CustomConfirm + AlertHost
 │  └─ CustomDatePicker.jsx     # date picker custom dark
 └─ pages/
@@ -317,7 +326,15 @@ Progetto Supabase: `riyqtcssllupakjtoehj`.
 **`athletes`** — profilo atleta, `id` = `auth.users.id`
 `id, name, surname, birth_date, weight, height, photo_url, notes, instagram_url, strava_url, deleted_at`
 - Soft delete via `deleted_at` (le query filtrano `.is('deleted_at', null)`).
-- `notes` = note private del coach sull'atleta.
+- `notes` = la nota che il coach scrive **per** l'atleta.
+  ⚠️ **NON è privata, ed è voluto** (confermato dal committente il 27/08/2026): `AthleteDetail`
+  è anche `/profile` e la rende senza guardia di ruolo, quindi l'atleta la legge — e la può
+  modificare — sulla propria scheda. Versioni precedenti di questo documento la chiamavano
+  "nota privata del coach": era sbagliato, non è un difetto da correggere.
+  ⚠️ **Dal 27/08/2026 codifica anche lo stato «in pausa»** nel prefisso `[PAUSA: yyyy-MM-dd]`,
+  con lo stesso meccanismo dell'RPE dentro `athlete_workouts.notes`: chi legge o scrive questo
+  campo passa da `src/lib/pausa.js` (`parseNotePausa` / `formatNotePausa`), mai dal valore
+  grezzo. Un `.update({ notes })` diretto **cancella la pausa in silenzio** (§9-decies).
 - `instagram_url` contiene solo lo **username** (validato `^[a-zA-Z0-9._]{1,30}$`), `strava_url` una URL completa.
 
 **`workouts`** — il "template" del workout
@@ -844,7 +861,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   - **Autosalvataggio bozza** in `localStorage.fleofit_workout_draft` + intercettazione
     dell'uscita di pagina (beforeunload, click sui link, blocco pull-to-refresh).
   - Salvando un workout esistente si può scegliere "sovrascrivi" o "salva come nuovo".
-- **Gestione atleti**: rubrica, scheda con storico, note private, PR, statistiche (carico
+- **Gestione atleti**: rubrica, scheda con storico, nota per l'atleta, PR, statistiche (carico
   settimanale = tempo × RPE su 4 settimane, tasso di completamento a 30 giorni, distribuzione RPE).
 - **Assegnazione**: multi-atleta con data, dall'archivio o dalla scheda workout → notifica push immediata.
 - **Live Coach Cam**: Supabase **Presence** sul canale `global_live_workouts`; quando un atleta
@@ -907,8 +924,14 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
    (§9-quater punti 1 e 4). Le chiavi sono elencate al §8.
 1. ~~Codice duplicato pesante~~ → **in gran parte chiuso il 25-26/08/2026.**
    In `src/lib/`: `rpe`, `blockColors`, `constants`, `offlineQueue`, `timerSequence`,
-   `statistiche`, `badge`, `colori`. In `src/components/`: `VoiceRecorder`,
-   `AudioVisualizer`, `RpeModal`, `CustomAudioPlayer`.
+   `statistiche`, `badge`, `colori`, e dal 27/08 `notaVocale`, `categorie`, `stiliCard`.
+   In `src/components/`: `VoiceRecorder`, `AudioVisualizer`, `RpeModal`, `CustomAudioPlayer`.
+   > `isVoiceNoteValid` era in due copie e la Home coach ne sarebbe stata la **terza**:
+   > il soft delete `#deleted=` è una regola di dominio, e una terza copia è il modo in
+   > cui una correzione ne raggiunge due su tre. Stessa ragione per `CARD`/`LABEL` e per
+   > la tabella delle corsie, che erano dentro `HomeAtletaUI.jsx`: stanno in `lib/` e non
+   > esportate da un file di componenti perché un modulo che esporta anche una costante
+   > perde il Fast Refresh per intero (§9-octies punto 3).
    > 🔴 **Perché contava, detto dai fatti.** `VoiceRecorder` era in TRE copie, e il
    > 25/08 un guasto è stato corretto in **due su tre**. Confrontandole il 26/08 erano
    > già diverse: Home aveva il messaggio all'utente quando il MediaRecorder fallisce,
@@ -946,21 +969,25 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. ~~Nessun test automatico~~ → **169 test al 26/08/2026** (`npm test`, vitest), tutti
+11. ~~Nessun test automatico~~ → **305 test al 27/08/2026** (`npm test`, vitest), tutti
     verificati per mutazione: se si rompe di proposito il codice che coprono, falliscono.
     Non sono decorativi, ed è l'unico criterio che conta — vedi §9-sexies.
 
-    **103 sulla logica pura di `src/lib/`**
+    **194 sulla logica pura di `src/lib/`**
 
     | file | test | cosa protegge |
     |---|---|---|
     | `timerSequence` | 32 | espansione dei round, rotazione degli esercizi, `nextTask`, formato legacy (§5), e il fatto che la corsa NON abbia il timer |
     | `statistiche` | 25 | carico settimanale, completamento a 30 giorni, distribuzione RPE, riepilogo della settimana |
+    | `statistiche-home` | 24 | i numeri della Home atleta: serie di giorni, sparkline, blocchi, RPE atteso, RPE medio di categoria |
+    | `colori` | 23 | che i token CSS e le costanti JS dei colori di marchio non divergano |
     | `offlineQueue` | 20 | deduplica per allenamento, valori corrotti, quota piena, localStorage negato da Safari |
     | `badge` | 8 | badge nativo e `badge_count` aggiornati **insieme**, e mai in modo che possano lanciare |
+    | `statisticheCoach` | 42 | i numeri della Home coach: atleti fermi (compreso «mai, in tutta la finestra»), scaduti, copertura, feedback non letto, squadra della giornata |
+    | `pausa` | 12 | il marcatore `[PAUSA]` dentro la nota: vale solo in testa, non si duplica al secondo salvataggio, non si mangia il testo |
     | `blockColors` · `rpe` · `workoutTitle` | 6+6+6 | codifica colore, round-trip dell'RPE, titolo generato dalla data |
 
-    **66 su componenti e pagine**
+    **95 su componenti e pagine**
 
     | file | test | cosa protegge |
     |---|---|---|
@@ -969,6 +996,9 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     | `HomeOffline` | 14 | il percorso offline completo su `Home` montata: completare, scompletare, coda, cache che si ripara, modale RPE che non si blocca |
     | `CreateWorkoutMemo` | 5 | la memoizzazione **dal lato del chiamante** (§9-quinquies) |
     | `RunningStepRowMemo` · `HyroxBlockMemo` | 4+2 | che `React.memo` serva ancora a qualcosa |
+    | `HomeCoach` | 21 | il cablaggio del ramo coach su `Home` montata: l'eroe porta le citazioni e il numero dell'arretrato (non delle righe stampate), aprire un feedback segna letto **solo quello**, la squadra cambia giorno, l'account del coach resta fuori, e le card «Calendario»/«Atleti» restano fuori dalla pagina |
+    | `AthleteDetailPausa` | 7 | il bottone di pausa: conferma solo per spegnere l'allarme, marcatore mai visibile come testo, pillola invisibile all'atleta, e la modale di modifica che non cancella la pausa — **da nessuno dei due ruoli** |
+    | `VoiceRecorder` · `VoiceRecorderNativo` | 3+4 | che la registrazione non sparisca in silenzio quando il plugin nativo fallisce (§9-quater punto 2) |
     | `WorkoutDetailTimer` | 3 | che il bottone del timer non compaia sugli allenamenti di corsa |
 
     ⚠️ **I due contratti sono asimmetrici e devono restarlo**: `HyroxBlock` passa `block.id`,
@@ -1169,6 +1199,250 @@ anche i render che il figlio ha saltato).
 > ℹ️ Una mutazione non viene rilevata di proposito: togliere il controllo di bordo da
 > `faseMoveUp`. Non è un buco nei test — **`moveElement` ignora già gli indici fuori
 > intervallo**, quindi quel controllo era ridondante ed è stato rimosso.
+
+---
+
+## 9-octies. Il rework della Home atleta (26/08/2026)
+
+Nasce da un design di **Claude Design** (progetto `4a238081-a3ee-4f59-ae34-100f29d55601`,
+artboard `Home Atleta.dc.html`, opzione **1b**). La logica di `Home.jsx` — fetch, swipe di
+completamento, modale RPE, coda offline, notifiche realtime — **non è stata toccata**: è
+cambiato il JSX del ramo atleta e il modo in cui i dati vengono presentati.
+
+### Cosa cambia, e perché
+- **Un solo eroe.** L'allenamento di oggi occupa il primo schermo da solo: titolo a 29px, tre
+  metadati, CTA piena. Prima arrivava dopo due schermate, con lo stesso peso visivo della card
+  «Calendario» — ed è l'unica informazione per cui l'atleta apre l'app.
+- **Lo slider a due slide è sparito.** Nascondeva le statistiche settimanali dietro un gesto
+  che niente segnalava. Ora sono celle del bento: anello 3/5 + serie di giorni + volume/RPE.
+- **Profondità vera.** Ombra proiettata neutra + hairline interna chiara. Vedi *La Regola
+  della Carta Sollevata* in DESIGN.md: limita, senza contraddirla, la regola «piatto + glow».
+- **Tre destinazioni tolte dalla Home dell'atleta** (Calendario, Profilo, Archivio): le prime
+  due sono voci della navbar, la terza si apre dal Calendario. **Per il coach restano**: sono
+  la sua unica via verso Atleti e archivio.
+- **Il badge delle notifiche è un pallino, non un numero.** Il conteggio esatto lo dà il
+  centro notifiche — ma vive anche nell'`aria-label` del bottone, altrimenti sparirebbe per
+  chi usa VoiceOver. Il test lo verifica lì.
+- **La frase motivazionale è rimasta**, come terza riga piccola dell'header: il design non la
+  prevedeva, ma `getDailyMotivation` con anti-ripetizione è una funzione vera e cancellarla
+  non era nello scopo del rework. Se si vuole toglierla, è una decisione di prodotto.
+
+### ⚠️ Le tre trappole di questo codice
+1. **`HeroOggi` non può avere animazioni CSS sul nodo radice.** È l'elemento su cui lo swipe
+   scrive `style.transform` a ogni movimento del dito, e un'animazione con `fill: both`
+   **vince sullo stile inline**: la card resterebbe ferma sotto il dito. L'entrata
+   `hero-transition` sta sul contenitore, che non viene mai trasformato.
+2. **La struttura del wrapper dello swipe è un contratto.** `swipeInizio` cerca il pannello
+   verde con `el.parentElement.querySelector('[data-swipe-panel]')`: il pannello e la card
+   devono restare fratelli dentro lo stesso `relative overflow-hidden`.
+3. **`CARD`, `LABEL` e `corsia` NON sono esportate** da `HomeAtletaUI.jsx`, di proposito:
+   esportare qualcosa che non è un componente fa perdere il Fast Refresh all'intero file
+   (`react-refresh/only-export-components`).
+
+### La query dell'atleta è stata allargata a 60 giorni
+Partiva dal lunedì di questa settimana (`gte weekStartStr`, `limit 30`). Serie di giorni,
+sparkline e RPE medio guardano **indietro**: con la vecchia finestra la serie avrebbe letto
+zero ogni lunedì mattina. Ora `GIORNI_STORICO = 60` e `limit(400)`. I filtri esistenti
+(oggi, prossimi, evento, settimana) sono tutti per data, quindi non cambiano.
+
+### 🔴 Due difetti trovati SCRIVENDO i test, non leggendo il codice
+Gli helper di `src/lib/statistiche.js` esistevano già ma non erano coperti. Entrambi
+producevano un numero plausibile e sbagliato, cioè il caso peggiore.
+
+1. **La serie non si spezzava mai.** La regola «un giorno di rest programmato non spezza la
+   serie» era senza tetto: un atleta che si è allenato **una volta quaranta giorni fa** e mai
+   più leggeva «Serie: 1 giorno», perché i trentanove giorni vuoti erano tutti rest
+   programmato. Ora si attraversano al massimo `MASSIMO_REST_CONSECUTIVI = 3` giorni di fila.
+2. **`mediaRpeCategoria` contava un 5 inventato.** `parseNotesAndRpe` torna `{ rpe: 5 }`
+   quando il marcatore `[RPE: n/10]` non c'è — è il valore giusto per il cursore della
+   modale, ma è un ripiego travestito da misura. Il guardiano `Number.isFinite(rpe)` non
+   proteggeva da niente: 5 è finito. Chi non compila mai l'RPE vedeva «5» presentato come la
+   propria media storica. Ora esiste **`rpeDichiarato()`** in `src/lib/rpe.js`, che torna
+   `null` quando il dato non c'è.
+   ⚠️ **`calcolaStatistiche` ha ancora lo stesso guardiano inerte** (`load` e
+   `distribuzioneRpe`): non è stato toccato perché cambierebbe i numeri che il coach vede
+   oggi, ed è una decisione di prodotto, non una correzione. Vedi BACKLOG.
+
+## 9-nonies. Il rework della Home coach (27/08/2026)
+
+Nasce dallo stesso progetto Claude Design della Home atleta
+(`4a238081-a3ee-4f59-ae34-100f29d55601`), artboard `Home Coach.dc.html`, opzione **2b**.
+Come per l'atleta, la logica di `Home.jsx` non è stata riscritta: sono cambiati il JSX del
+ramo coach, la query che lo alimenta, e i numeri che quel ramo mostra.
+
+### Il problema, in una riga
+La Home coach non conteneva **un solo dato**: era un menù. Logo, CTA «Crea Workout», lista
+delle attività di oggi e ieri, due card verso destinazioni che sono **già nella navbar**,
+bottone archivio. L'unica informazione presente — chi ha fatto cosa ieri — è la meno utile
+la mattina, perché guarda indietro. Quello che il coach non vedeva è **chi sta per sparire**.
+
+### ⚠️ L'eroe è cambiato in corsa, ed è la cosa da sapere prima di tutto
+La prima stesura del 27/08 metteva in cima **«richiedono attenzione»**. La revisione dello
+stesso giorno dell'artboard `2b` lo ha sostituito con i **feedback**, e la ragione non è
+estetica: chi è fermo da nove giorni **lo è ancora fra un'ora**, mentre una nota non letta è
+l'unica cosa in pagina che ha già **un mittente in attesa**. Chi è fermo non è sparito — è
+sceso sotto la CTA, con lo stesso dato di prima. Se questo documento e il codice dovessero mai
+contraddirsi su quale sia l'eroe, la fonte è `src/pages/Home.jsx`, ramo `role !== 'athlete'`.
+
+### Cosa c'è ora, nell'ordine in cui sta in pagina
+1. **L'eroe: «feedback nuovi»** — le note (con RPE) e le note vocali che il coach non ha
+   ancora aperto. Ogni riga porta **la citazione**, non solo il nome: un contatore senza il
+   testo obbliga ad aprire quattro schermate per sapere se una delle quattro era urgente.
+   Tre citazioni in pagina (`FEEDBACK_IN_HOME`), il resto dietro un «+N altri».
+   ⚠️ Il numero grande è `elementi.length` (le cose da leggere), **non** `totale`
+   (che somma vocali e note, e per una riga con entrambe vale due).
+2. **La squadra della giornata** — «5/7 completati», la barra a segmenti, i volti con
+   l'anello colorato e l'RPE sotto. Sostituisce la lista «Attività oggi e ieri», che
+   elencava gli eventi uno per uno senza mai far vedere l'insieme. Il giorno si cambia in
+   fondo alla card: ieri è consultazione, la domanda della mattina è su oggi.
+3. **La CTA «Crea workout»**, unica superficie gialla piena della pagina.
+4. **Archivio** (e **Profilo** solo per `admin`), in forma di riga.
+5. **«Richiedono attenzione»** — nessun allenamento *completato* da 5 giorni o più. Una
+   condizione sola, di proposito: è l'unica a cui la risposta è sempre la stessa, una
+   telefonata. Massimo quattro nomi (`MASSIMO_FERMI_IN_HOME`): oltre, smette di essere una
+   chiamata all'azione e diventa una lista, e una lista non si chiama.
+6. **Copertura 3 giorni** — quanti atleti hanno almeno un allenamento assegnato da oggi a
+   fra due giorni. Non è vanità: è l'unico numero della Home che dice «devi programmare adesso».
+7. **Allenamenti scaduti** — in fondo, in forma di lista: è lavoro da smaltire, non un
+   allarme. Accanto all'atleta fermo si mescolavano due problemi di segno opposto.
+
+**La Live Coach Cam** resta una barra sopra l'eroe, non una sezione con un titolo: dura
+quanto un allenamento, e per 23 ore al giorno quel titolo stava sopra il vuoto.
+
+### 🔴 «Manda promemoria» NON è stato implementato, ed è una scelta obbligata
+L'artboard mette un bottone «Manda promemoria» nella card degli atleti fermi. **Non c'è
+nessun modo di farlo funzionare dal client**, e vale la pena scriverlo perché sembra una
+dimenticanza:
+- la policy RLS di `notifications` è `auth.uid() = user_id`, quindi il coach **non può
+  inserire una notifica per un altro utente** (§4-bis: è una delle policy scritte bene);
+- `send-reminders` non ha una modalità «promemoria a QUESTO atleta»: `immediate` manda
+  «Nuovo Allenamento!», che è un altro messaggio. Aggiungerla è un **deploy** di una
+  funzione **condivisa con la web app in produzione** (§1.1), non una modifica di UI.
+
+Al suo posto la **riga intera è il bersaglio** e apre la scheda dell'atleta. È anche più
+corretto del design: con più nomi elencati, un «Apri» in fondo alla card non dice quale
+atleta apre. La voce sta in BACKLOG.
+
+### Cosa è uscito
+Le card **«Calendario»** e **«Atleti»**: sono già due voci della navbar coach (verificato in
+`Navbar.jsx`), e vale il corollario della Regola dell'Eroe Unico applicato all'atleta il 26/08.
+L'**archivio resta**, come riga sotto la CTA: è materiale di lavoro del coach, non una
+destinazione duplicata. Il **Profilo** resta anch'esso come riga, ma **solo per `admin`**:
+è l'unico ruolo che non ha quella voce in navbar. Resta una sola superficie gialla piena in
+pagina, «Crea workout», come da Regola del Tratto Unico.
+
+### Una query sola al posto di cinque
+`Home.jsx` carica ora `athletes` (righe, non solo il conteggio) e **un unico** `athlete_workouts`
+sulla finestra `[oggi − 45 giorni, oggi + 2]`, con i join su `athletes` e `workouts`. Fermi,
+scaduti, copertura, feedback e squadra della giornata sono tutti `useMemo` su quelle due liste:
+cinque `select` sullo stesso intervallo sarebbero stati cinque round trip per gli stessi dati.
+
+### ⚠️ Le cinque trappole di questo codice
+1. **`athlete_workouts` non ha `created_at`.** Quindi «feedback nuovo» **non può** voler dire
+   «arrivato dopo il tuo ultimo accesso»: vuol dire «che non hai ancora aperto», e l'elenco
+   degli id già letti sta in `localStorage.fleofit_feedback_visti_<uid>`. Conseguenza da
+   conoscere prima di dire che è un bug: **il "letto" è per dispositivo, non per account**.
+   L'alternativa richiederebbe una colonna, e lo schema è congelato (regola 0-bis).
+2. **L'elenco dei già letti si legge in un `useMemo`, non in un `useEffect` con `setState`.**
+   Non è stile: con l'effetto, scrivere i letti farebbe sparire la lista **sotto le dita del
+   coach** nello stesso istante in cui la apre. Così il valore si rilegge solo quando cambiano
+   i dati, cioè al prossimo caricamento — che è quando il contatore deve scendere.
+3. **`voice_note_url` è UNA colonna per una comunicazione bidirezionale** (CLAUDE.md §4): non
+   esiste modo di sapere se l'ha registrata l'atleta o il coach. Si contano perciò solo le
+   assegnazioni **completate**, dove la nota accompagna il completamento. È un'approssimazione
+   voluta, non una svista.
+4. **Aprire un feedback segna letto SOLO quello.** Fino alla revisione il gesto era «apro la
+   lista, li leggo tutti», perché la lista era chiusa e il numero era l'unica cosa visibile.
+   Ora le citazioni sono in pagina: azzerare l'arretrato al primo tocco cancellerebbe tre
+   feedback che il coach non ha ancora guardato. C'è un test che lo prende.
+5. **«In corso» viene dalla presenza Realtime, non dal database.** `athlete_workouts` non ha
+   uno stato «iniziato»: l'unica fonte che distingua «non ha ancora finito» da «lo sta facendo
+   adesso» è il canale `global_live_workouts` della Live Coach Cam. La presenza è indicizzata
+   per `athleteWorkoutId` (è la chiave con cui `WorkoutDetail` fa `track`), quindi l'`athlete_id`
+   si ricava dall'assegnazione già caricata — nessuna query in più, nessuna modifica a
+   `WorkoutDetail`. Conseguenza voluta: **gli atleti che corrono non compaiono mai «in corso»**,
+   perché la corsa non ha il timer guidato e quindi non traccia presenza (§7).
+
+### 🔴 Il difetto che il filtro dell'account coach nascondeva
+`stats.athletes` contava `athletes` **senza escludere `COACHING_ID`**, mentre `Athletes.jsx` lo
+esclude da sempre: la vecchia card «Atleti» diceva quindi un numero diverso da quello della
+rubrica. Innocuo finché era solo un'etichetta; con l'eroe non lo è più — il coach sarebbe
+comparso **fra i propri atleti fermi** ogni volta che non si allena, e avrebbe falsato anche la
+copertura. Ora il filtro è nella Home, ed è coperto da un test.
+
+### Il codice morto che il rework ha lasciato indietro, e che è stato rimosso
+`attivitaRecente` (in `statisticheCoach.js`) e i componenti `CellaFeedback`, `CellaCopertura`,
+`EsitoAttivita`, `VuotoSezione` (in `HomeCoachUI.jsx`) non avevano più chiamanti dopo la
+revisione: sono stati cancellati insieme ai loro test, invece di restare come terza copia di
+qualcosa che nessuno chiama (§9 punto 2). `HeroAttenzione`/`HeroTuttiAttivi` sono diventati
+`SezioneAttenzione`/`TuttiAttivi`: **il nome dice il rango**, e chiamare «Hero» qualcosa che
+sta sotto la CTA è il modo in cui il prossimo lettore rimette l'ordine sbagliato.
+
+---
+
+## 9-decies. «Atleta in pausa» (27/08/2026)
+
+Richiesta del committente: un atleta che avvisa di volersi fermare non deve più comparire fra
+quelli che **richiedono attenzione** nella Home coach, ma deve restare nella rubrica con tutto
+il suo storico.
+
+### 🔴 Perché NON è una colonna, e cosa comporta
+`athletes.is_paused` sarebbe una migrazione, e **lo schema è congelato** fino all'approvazione
+su App Store (regola 0-bis): il database è uno solo e serve anche la web app in produzione,
+senza staging. Lo stato vive quindi dentro `athletes.notes` — la nota che il coach scrive
+per l'atleta — nel
+prefisso `[PAUSA: yyyy-MM-dd]`, con **lo stesso meccanismo già usato per l'RPE** dentro
+`athlete_workouts.notes` (§4). Tutto passa da `src/lib/pausa.js`.
+
+Le tre conseguenze da conoscere **prima** di dire che è un bug:
+1. **La web app su `main` non conosce il marcatore.** Se il coach modifica la nota da
+   lì, il prefisso può sparire e l'atleta torna fra quelli da chiamare. È lo stesso rischio
+   dell'RPE (§1.1), ma si comporta meglio: il guasto è **visibile** — l'atleta ricompare — e si
+   ripara con un tocco. Non perde dati.
+2. **Chiunque scriva `athletes.notes` deve passare da `formatNotePausa`.** La modale «Modifica
+   profilo» faceva `.update({ notes: form.notes })` con il testo grezzo: senza il round-trip,
+   ogni «Salva» avrebbe cancellato la pausa **in silenzio**. C'è un test che lo prende.
+3. **Il marcatore vale SOLO in testa alla nota.** Altrimenti bastava che il coach scrivesse
+   «ne parliamo, magari [PAUSA] a settembre» perché un atleta sparisse dagli allarmi senza che
+   nessuno l'avesse deciso.
+
+### Dove la pausa ha effetto, e dove no
+| Superficie | Effetto | Perché |
+|---|---|---|
+| Home → **Richiedono attenzione** | esce | è la richiesta |
+| Home → **denominatore dell'eroe** e **Copertura 3 gg** | esce dal totale | «2 di 7» quando due dei nove si sono fermati. Contarlo fra i «senza allenamento» vorrebbe dire chiedere al coach di programmare per chi ha chiesto di fermarsi |
+| Home → **Allenamenti scaduti** | esce | uno scaduto di chi è in pausa non è lavoro da smaltire: è la conseguenza attesa. Resta visibile nella sua scheda |
+| Home → **header** | «9 atleti · 2 in pausa» | senza, i numeri sotto contraddicono la rubrica e sembrano sbagliati |
+| Home → **Attività oggi e ieri** | **resta** | è consultazione di ciò che è successo davvero. Se un atleta in pausa si allena, il coach deve vederlo — ed è il segnale per riattivarlo |
+| **Atleti** (rubrica) | resta, con la pillola «In pausa» | è la lista in cui deve restare, ed è l'unico posto dove il coach si accorge di averne messo in pausa uno e dimenticato |
+
+`atletiFermi`, `allenamentiScaduti` e `copertura` applicano il filtro **da sé** invece di
+aspettarsi una lista già ripulita dal chiamante: sono le funzioni che producono un allarme e un
+totale, e chi si dimentica il filtro non ottiene un errore — ottiene una telefonata a chi aveva
+chiesto di non essere chiamato.
+
+### ⚠️ Due dettagli di interfaccia che non sono estetica
+- **La conferma c'è solo per METTERE in pausa, non per toglierla.** Mettere in pausa spegne un
+  allarme, e uno spegnimento per errore non si nota. Toglierla riaccende, e un allarme di troppo
+  si vede da solo.
+- **La pillola «In pausa» è nascosta all'atleta.** `AthleteDetail` è anche `/profile`, cioè la
+  scheda che l'atleta vede di sé: la pausa è uno stato interno della programmazione del coach, e
+  mostrarla lì vorrebbe dire comunicare «ti ho messo in disparte» con una pillola arancione
+  invece che parlandoci.
+
+> ⚠️ **`athletes.notes` è VISIBILE all'atleta, ed è giusto così.** Confermato dal committente il
+> 27/08/2026: è una nota che il coach scrive *per* l'atleta, non su di lui, e `AthleteDetail` la
+> rende senza guardia di ruolo di proposito. Chi legge «note private» in una vecchia versione di
+> questo documento non lo prenda per un difetto da correggere.
+> Due conseguenze per la pausa, entrambe già gestite:
+> - il marcatore **non si vede mai** — né nella scheda né nel campo della modale di modifica —
+>   perché ovunque si mostra `parseNotePausa(...).testo` e mai il valore grezzo;
+> - **anche l'atleta può salvare quella nota** (il bottone «Modifica» su `/profile` non è
+>   riservato al coach), e il round-trip di `formatNotePausa` nella modale vale per entrambi i
+>   ruoli: salvare il proprio profilo **non** annulla la pausa. C'è un test.
+>
+> Resta vero che il valore grezzo è raggiungibile dall'atleta per altre vie (l'export JSON, una
+> chiamata all'API): il marcatore nasconde lo stato dall'interfaccia, non lo cifra.
 
 ---
 

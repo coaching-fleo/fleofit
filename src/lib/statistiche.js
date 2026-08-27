@@ -1,5 +1,6 @@
 import { startOfWeek, format } from 'date-fns'
-import { parseNotesAndRpe } from './rpe'
+import { parseNotesAndRpe, rpeDichiarato } from './rpe'
+import { categoriaDi } from './categorie'
 
 // Statistiche della scheda atleta, estratte da AthleteDetail.jsx il 26/08/2026.
 //
@@ -190,3 +191,191 @@ export function statisticheSettimana(workouts = [], oggi = new Date()) {
   }
 }
 
+
+// ─── Helper della Home atleta (26/08/2026) ────────────────────────────────
+//
+// Alimentano l'eroe di oggi e le due celle del bento. Sono qui e non nella
+// pagina per la stessa ragione delle funzioni sopra: sono numeri che, se
+// sbagliano, non danno errore — cambiano solo quello che l'atleta legge.
+// Riusano `durataWorkout` e `blocchiDi`, così il calcolo della durata resta
+// in un punto solo (era già stato duplicato tre volte, BACKLOG #30).
+
+/** Quanti blocchi ha un allenamento; per la corsa, quante fasi. */
+export const numeroBlocchi = (sections) => {
+  const s = sections || {}
+  const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
+  if (cat === 'Running') return (s.steps || s.main?.steps || []).length
+  return blocchiDi(s).length
+}
+
+/** Quanto pesa, sulla scala 1-10, un blocco di un certo tipo. */
+const SFORZO_BLOCCO = {
+  'WarmUp': 3,
+  'Rest': 1,
+  'Cash In': 6,
+  'Cash Out': 7,
+  'ON/OFF': 7,
+  'EMOM': 7,
+  'AMRAP': 8,
+  'For Time': 9,
+  'Interval': 8,
+}
+
+/**
+ * L'RPE che ci si aspetta da un allenamento, prima di farlo.
+ *
+ * Due fonti, in ordine: l'intensità dichiarata dal coach in `sections.intensity`
+ * (CLAUDE.md §5 — è un dato vero, non una stima) e, se manca, la media dei tipi
+ * di blocco. Il riscaldamento e il rest sono esclusi dalla media: un allenamento
+ * duro con due minuti di rest in fondo non diventa facile per quello.
+ *
+ * Torna `null` quando non c'è niente su cui basarsi: la voce sparisce dalla
+ * riga invece di mostrare un numero inventato.
+ */
+export const rpeAtteso = (sections) => {
+  const s = sections || {}
+
+  const dichiarata = parseFloat(s.intensity)
+  if (Number.isFinite(dichiarata) && dichiarata >= 1 && dichiarata <= 10) return Math.round(dichiarata)
+
+  const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
+  if (cat === 'Running') {
+    const fasi = (s.steps || s.main?.steps || [])
+      .map(p => parseFloat(p.type === 'repeat' ? p.runIntensity : p.intensity))
+      .filter(v => Number.isFinite(v) && v >= 1 && v <= 10)
+    if (fasi.length === 0) return null
+    return Math.round(fasi.reduce((a, b) => a + b, 0) / fasi.length)
+  }
+
+  const pesi = blocchiDi(s)
+    .filter(b => b.type !== 'WarmUp' && b.type !== 'Rest')
+    .map(b => SFORZO_BLOCCO[b.type])
+    .filter(Number.isFinite)
+  if (pesi.length === 0) return null
+  return Math.round(pesi.reduce((a, b) => a + b, 0) / pesi.length)
+}
+
+/** Sotto questo numero di precedenti, una media non dice ancora niente. */
+const MINIMO_PRECEDENTI = 3
+
+/**
+ * L'RPE medio che questo atleta ha davvero segnato su questa categoria.
+ *
+ * È più onesto di qualunque stima — ma solo con abbastanza precedenti: sotto
+ * MINIMO_PRECEDENTI torna `null` e il chiamante ripiega su `rpeAtteso`. Con un
+ * solo precedente la "media" sarebbe quell'unico giorno, buono o storto che sia.
+ */
+export const mediaRpeCategoria = (workouts = [], categoria) => {
+  let somma = 0, quanti = 0
+  for (const w of workouts) {
+    if (w?.status !== 'completed') continue
+    if (categoriaDi(w.workouts?.sections) !== categoria) continue
+    // ⚠️ `rpeDichiarato` e non `parseNotesAndRpe`: il secondo torna 5 quando
+    // l'atleta non ha segnato niente, e quel 5 entrerebbe nella media come se
+    // fosse una misura. Chi non compila mai l'RPE vedrebbe "5" presentato come
+    // la propria media storica — un numero inventato, esattamente ciò che
+    // questa funzione esiste per evitare.
+    const rpe = rpeDichiarato(w.notes)
+    if (rpe == null) continue
+    somma += rpe
+    quanti++
+  }
+  if (quanti < MINIMO_PRECEDENTI) return null
+  return Math.round((somma / quanti) * 10) / 10
+}
+
+/** Quante volte una data compare come giorno di allenamento, per stato. */
+const perGiorno = (workouts) => {
+  const mappa = new Map()
+  for (const w of workouts) {
+    const data = w?.completed_date
+    if (!data) continue
+    const riga = mappa.get(data) || { assegnati: 0, completati: 0, minuti: 0 }
+    riga.assegnati++
+    if (w.status === 'completed') {
+      riga.completati++
+      riga.minuti += durataWorkout(w.workouts?.sections)
+    }
+    mappa.set(data, riga)
+  }
+  return mappa
+}
+
+/** Il muro oltre cui non si cammina all'indietro, per non ciclare all'infinito. */
+const MASSIMO_GIORNI_SERIE = 365
+
+/**
+ * Quanti giorni di rest programmato di fila la serie riesce ad attraversare.
+ *
+ * Senza questo tetto la regola "il rest non spezza" non spezza MAI: un atleta
+ * che si è allenato una volta quaranta giorni fa e mai più leggeva «Serie:
+ * 1 giorno», perché i trentanove giorni vuoti in mezzo erano tutti rest
+ * programmato. Tre è la lunghezza oltre la quale una pausa non è più un
+ * micro-ciclo di scarico: è aver smesso.
+ */
+const MASSIMO_REST_CONSECUTIVI = 3
+
+/**
+ * I giorni consecutivi di allenamento, camminando all'indietro da oggi.
+ *
+ * ⚠️ Le due regole che rendono questo numero onesto invece di un premio
+ * regalato, e che sono l'unica ragione per cui la funzione non è una riga:
+ *
+ * 1. Un giorno di **rest programmato** (nessun workout assegnato) NON spezza la
+ *    serie, ma non la allunga: si attraversa. La programmazione prevede i giorni
+ *    di scarico, e una serie che si azzera il lunedì di scarico misurerebbe la
+ *    disponibilità del calendario, non la costanza dell'atleta.
+ *    Si attraversano però al massimo MASSIMO_REST_CONSECUTIVI giorni di fila:
+ *    oltre, non è più uno scarico.
+ * 2. Un **assegnato non completato** la spezza. È il caso che il numero deve
+ *    saper dire, altrimenti non sta misurando niente.
+ *
+ * Unica eccezione: **oggi**, se assegnato e non ancora completato, non spezza
+ * niente — la giornata non è finita. Senza questa eccezione la serie leggerebbe
+ * zero ogni mattina fino all'allenamento, che si legge come un guasto.
+ */
+export const serieGiorni = (workouts = [], oggi = new Date()) => {
+  const giorni = perGiorno(workouts)
+  let serie = 0
+  let restDiFila = 0
+
+  for (let i = 0; i < MASSIMO_GIORNI_SERIE; i++) {
+    const data = format(new Date(oggi.getTime() - i * 86400000), 'yyyy-MM-dd')
+    const riga = giorni.get(data)
+
+    if (riga?.completati > 0) { serie++; restDiFila = 0; continue }
+    if (!riga) {
+      // Rest programmato: si attraversa, ma non all'infinito.
+      if (++restDiFila > MASSIMO_REST_CONSECUTIVI) break
+      continue
+    }
+    if (i === 0) continue               // oggi non è ancora finito
+    break                               // assegnato e saltato: la serie finisce qui
+  }
+
+  return serie
+}
+
+/**
+ * I minuti degli ultimi `quanti` giorni, normalizzati a 0-100 per lo sparkline.
+ *
+ * Il valore più alto del periodo vale 100 e gli altri stanno in proporzione: la
+ * barra racconta l'andamento, non una quantità assoluta. Con nessun dato torna
+ * tutti zero invece di dividere per zero — è il caso del primo giorno di un
+ * atleta nuovo, e sbagliarlo qui riempiva la Home di NaN.
+ *
+ * L'array è in ordine cronologico: l'ultimo elemento è oggi.
+ */
+export const barreUltimiGiorni = (workouts = [], quanti = 6, oggi = new Date()) => {
+  const giorni = perGiorno(workouts)
+  const minuti = []
+
+  for (let i = quanti - 1; i >= 0; i--) {
+    const data = format(new Date(oggi.getTime() - i * 86400000), 'yyyy-MM-dd')
+    minuti.push(giorni.get(data)?.minuti || 0)
+  }
+
+  const massimo = Math.max(...minuti)
+  if (massimo <= 0) return minuti.map(() => 0)
+  return minuti.map(m => Math.round((m / massimo) * 100))
+}
