@@ -5,7 +5,7 @@
 > Ultimo aggiornamento: **27 agosto 2026**.
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
-> Ultimo commit `ce5ebe3` su `ios-version`, allineato con `origin/ios-version`.
+> Ultimo commit `adfa5d3` su `ios-version`, allineato con `origin/ios-version`.
 > `npm test` → **305 test**, `npm run lint` → **42 problemi** (erano 164 la mattina del 25/08).
 > Le due Home sono state rifatte su design di Claude Design: **atleta** il 26/08 (§9-octies),
 > **coach** il 27/08 (§9-nonies), con la **pausa atleta** (§9-decies).
@@ -77,7 +77,7 @@ Il progetto vive su **due branch con due prodotti diversi**, entrambi attivi:
 | Branch | Cos'è | Dove finisce | Ultimo commit |
 |---|---|---|---|
 | **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi | **collegato a Vercel** → `https://fleofit.vercel.app`. LIVE, non rompere | `c2ed65d` — 25 ago 2026 |
-| **`ios-version`** | Versione nativa iOS/Capacitor, quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. L'app arriva sull'App Store da Xcode, non da un deploy | `6a28841` — 25 ago 2026 |
+| **`ios-version`** | Versione nativa iOS/Capacitor, quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. L'app arriva sull'App Store da Xcode, non da un deploy | `adfa5d3` — 27 ago 2026 |
 
 ### ⚠️ `ios-version` NON è un branch di rilascio (confermato dal committente il 24/08/2026)
 Non esiste nessuna pipeline collegata a `ios-version`. Pushare lì **non pubblica niente**: serve
@@ -97,8 +97,8 @@ Conseguenze pratiche, tutte controintuitive:
 
 ### Rapporto tra i due: SONO DIVERGENTI, ED ENTRAMBI SI MUOVONO
 Verificato il 25/08/2026 **dopo un `git fetch`**:
-`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 70`**
-(misurata il 26/08/2026: 15 commit in più su `ios-version` solo in quella giornata).
+`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 80`**
+(rimisurata il 27/08/2026: `main` è fermo al 25/08, `ios-version` continua a muoversi).
 Il divario **cresce a ogni sessione di lavoro su `ios-version`**: più si aspetta, più il merge costa.
 **Un merge non è un fast-forward**: è un merge vero.
 

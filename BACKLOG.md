@@ -2,7 +2,7 @@
 
 > Stato al **27 agosto 2026**. `npm test` → **305** · `npm run lint` → **42**.
 > Le due Home sono rifatte: atleta il 26/08, coach il 27/08 (CLAUDE.md §9-octies e §9-nonies).
-> Ultimo commit `ce5ebe3` su `ios-version`. Aggiornare questo file quando una voce si chiude o
+> Ultimo commit `adfa5d3` su `ios-version`. Aggiornare questo file quando una voce si chiude o
 > se ne apre una nuova. Ogni voce dice *cosa*, *perché conta* e *cosa la blocca*:
 > senza il perché, fra sei mesi nessuno saprà se vale ancora la pena.
 >
