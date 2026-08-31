@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 
 // Perché questo test esiste
@@ -66,11 +67,21 @@ describe('la scheda di un allenamento di corsa', () => {
   it('ma conserva tutto il resto', async () => {
     // Il contraltare: senza, il test sopra passerebbe anche se la pagina non
     // rendesse più niente.
+    //
+    // ⚠️ Dal redesign del 28/08/2026 «Esporta PDF» non è più un bottone in
+    // fondo alla pagina: sta nel menu delle tre puntine, insieme agli altri
+    // comandi che si usano una volta. Va quindi aperto — ed è proprio la parte
+    // che va verificata, perché un menu che non si apre è indistinguibile da
+    // una funzione sparita.
     apriScheda()
     await attendi()
     expect(screen.getByRole('button', { name: /Segna come completato/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^TV$/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Esporta PDF/i })).toBeInTheDocument()
+
+    expect(screen.queryByRole('menuitem', { name: /Esporta PDF/i })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Altre azioni/i }))
+    expect(await screen.findByRole('menuitem', { name: /Esporta PDF/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Condividi/i })).toBeInTheDocument()
   })
 })
 

@@ -1,17 +1,24 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, Calendar as CalendarIcon, Search } from 'lucide-react'
-import { format, parseISO, isValid } from 'date-fns'
-import { it } from 'date-fns/locale'
 import { useAuth } from '../App'
+import { categoriaDi } from '../lib/categorie'
+import {
+  metaWorkout, testoCercabile, raggruppaPerMese, conteggiPerCorsia,
+} from '../lib/rigaArchivio'
+import {
+  TestataArchivio, CampoRicerca, FiltriCorsia, IntestazioneSezione,
+  RigaWorkout, ScheletroArchivio, VuotoArchivio,
+} from '../components/ArchivioUI'
 
 export default function WorkoutsArchive() {
   const [workouts, setWorkouts] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [corsiaAttiva, setCorsiaAttiva] = useState(null)
   const navigate = useNavigate()
   const { role, user } = useAuth()
+  const isCoach = role !== 'athlete'
 
   // Caricamento una volta sola, di proposito: `role` e `user` non cambiano
   // senza un rimontaggio della pagina. Aggiungere fetchWorkouts alle dipendenze
@@ -39,6 +46,10 @@ export default function WorkoutsArchive() {
          }).map(aw => ({
            ...aw.workouts,
            aw_id: aw.id,
+           // ⚠️ `created_at` è quello dell'ASSEGNAZIONE, non del workout: è
+           // l'unico che l'atleta veda, ed è lo spareggio giusto per lui.
+           created_at: aw.created_at,
+           status: aw.status,
            date: aw.completed_date
          }))
          setWorkouts(mapped)
@@ -61,77 +72,71 @@ export default function WorkoutsArchive() {
     setLoading(false)
   }
 
-  const filteredWorkouts = useMemo(() => workouts.filter(w =>
-    w.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (w.sections?.category || '').toLowerCase().includes(searchTerm.toLowerCase())
-  ), [workouts, searchTerm])
+  // Il testo cercabile si costruisce UNA volta per lista, non a ogni tasto
+  // premuto: scandaglia i blocchi e gli esercizi di ogni workout, e in
+  // produzione i workout sono 171.
+  const indice = useMemo(
+    () => workouts.map(w => ({ w, testo: testoCercabile(w), categoria: categoriaDi(w.sections) })),
+    [workouts]
+  )
+
+  const corsie = useMemo(() => conteggiPerCorsia(workouts), [workouts])
+
+  const filtrati = useMemo(() => {
+    const termine = searchTerm.trim().toLowerCase()
+    return indice
+      .filter(v => (corsiaAttiva === null || v.categoria === corsiaAttiva)
+                && (!termine || v.testo.includes(termine)))
+      .map(v => v.w)
+  }, [indice, searchTerm, corsiaAttiva])
+
+  const gruppi = useMemo(() => raggruppaPerMese(filtrati), [filtrati])
+
+  const conFiltri = searchTerm.trim() !== '' || corsiaAttiva !== null
+  const azzera = () => { setSearchTerm(''); setCorsiaAttiva(null) }
+
+  // Il dettaglio della testata dice la scala: quanti sono e su quante corsie.
+  // Sotto filtro dice quanti se ne stanno vedendo, che è l'unica domanda che
+  // resta aperta quando la lista si è accorciata sotto le dita.
+  const dettaglio = loading
+    ? null
+    : conFiltri
+      ? `${filtrati.length} di ${workouts.length} workout`
+      : `${workouts.length} workout · ${corsie.length} ${corsie.length === 1 ? 'corsia' : 'corsie'}`
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
-      <div className="mb-6 mt-4 flex items-center gap-3">
-        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0">
-          <ChevronLeft size={22} className="-ml-0.5" />
-        </button>
-        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
-      </div>
-
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Archivio Workout</h1>
-          <p className="text-gray-400 text-sm mt-1">Tutti i tuoi allenamenti creati</p>
-        </div>
-      </div>
-
-      <div className="mb-6 relative">
-        <input 
-          type="text"
-          placeholder="Cerca per nome o categoria..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="w-full bg-[#1e1e1e] border border-[#333] text-white px-4 py-3 pl-10 rounded-xl focus:outline-none focus:border-brand text-base"
-        />
-        <Search size={18} className="absolute left-3 top-3.5 text-muted" />
-      </div>
+    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] page-transition">
+      <TestataArchivio onIndietro={() => navigate(-1)} dettaglio={dettaglio}>
+        <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
+        {corsie.length > 1 && (
+          <FiltriCorsia corsie={corsie} attiva={corsiaAttiva} totale={workouts.length}
+            onCambia={setCorsiaAttiva} />
+        )}
+      </TestataArchivio>
 
       {loading ? (
-        <p className="text-muted">Caricamento in corso...</p>
-      ) : filteredWorkouts.length === 0 ? (
-        <div className="text-center p-6 bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl">
-          <p className="text-gray-400">Nessun workout trovato.</p>
-        </div>
+        <ScheletroArchivio />
+      ) : gruppi.length === 0 ? (
+        <VuotoArchivio conFiltri={conFiltri} onAzzera={azzera} />
       ) : (
-        <div className="flex flex-col gap-3">
-          {filteredWorkouts.map(w => {
-            const rawCat = w.sections?.category || (w.sections?.steps ? 'Running' : 'Hyrox')
-            const isEvent = rawCat === 'Event' || w.sections?.isEvent === true
-            const isAuto = w.sections?.isAutonomous === true || rawCat === 'Autonomo'
-            const isCustom = rawCat === 'Custom' || isAuto
-            const category = isEvent ? 'Event' : (isCustom ? 'Custom' : rawCat)
-            return (
-              <div 
-                key={w.aw_id || w.id} 
-                onClick={() => navigate(`/workout/${w.id}`)}
-                className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer hover:border-brand/50 transition flex items-center justify-between"
-              >
-                <div>
-                  <h3 className="text-white font-bold text-base mb-1">{w.title}</h3>
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <CalendarIcon size={14} />
-                    <span>{w.date && isValid(parseISO(w.date)) ? format(parseISO(w.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}</span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <span className={`text-xs font-bold px-3 py-1.5 rounded-xl ${isEvent ? 'bg-white text-black border-white' : category === 'Running' ? 'bg-running/10 text-running border-running/30' : (category === 'Custom' ? 'bg-custom/10 text-custom border-custom/30' : 'bg-brand/10 text-brand border-brand/30')}`}>
-                    {isEvent ? 'Evento' : category}
-                  </span>
-                  {role !== 'athlete' && w.athlete_workouts && (
-                    <span className="text-[11px] text-muted font-medium">Assegnato: {w.athlete_workouts.length}</span>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        gruppi.map(gruppo => (
+          <div key={gruppo.chiave}>
+            <IntestazioneSezione etichetta={gruppo.etichetta} conteggio={gruppo.workouts.length} />
+            <div className="flex flex-col gap-2">
+              {gruppo.workouts.map(w => (
+                <RigaWorkout
+                  key={w.aw_id || w.id}
+                  categoria={categoriaDi(w.sections)}
+                  titolo={w.title || 'Senza titolo'}
+                  meta={metaWorkout(w)}
+                  assegnati={isCoach ? (w.athlete_workouts?.length ?? 0) : undefined}
+                  completato={!isCoach && w.status === 'completed'}
+                  onApri={() => navigate(`/workout/${w.id}`)}
+                />
+              ))}
+            </div>
+          </div>
+        ))
       )}
     </div>
   )

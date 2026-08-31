@@ -1,21 +1,32 @@
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square } from 'lucide-react'
+import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
-import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { VoiceRecorder } from 'capacitor-voice-recorder'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useTouchDrag } from '../useTouchDrag'
 import { blockHint } from '../lib/blockHints'
-import { format } from 'date-fns'
+import { format, parseISO, isValid } from 'date-fns'
+import { it } from 'date-fns/locale'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { ERGOMETERS } from '../lib/constants'
 import { mostraErrore } from '../lib/alert'
+import { battito } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
-import { conVelo, coloreDaClasse } from '../lib/colori'
+import { conVelo, coloreDaClasse, BRAND, RUNNING, CUSTOM, IA } from '../lib/colori'
+import { CARD, LABEL, VETRO } from '../lib/stiliCard'
+import { riepilogoWorkout, durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
+import {
+  TestataCrea, CardCategoria, RigaCampo, RiepilogoWorkout, SpinaBlocco, DurataBlocco,
+  NumeroEsercizio, CardIA, BottoneGhost, BarraAzioni, CtaPrimaria, BottoneQuadrato,
+  Stepper, RigaUltimaVolta, RuotaValori, RigaTesto,
+} from '../components/CreaWorkoutUI'
+import { chiudiTastieraSuInvio } from '../useTastiera'
+import { useBottomSheet } from '../useBottomSheet'
+import AudioVisualizer from '../components/AudioVisualizer'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -128,6 +139,108 @@ const MAX_PACE_OPTIONS = ['-', ...RUN_PACE_OPTIONS]
 
 const RUN_REPEAT_ROUNDS_OPTIONS = Array.from({ length: 30 }, (_, i) => `${i + 1}`)
 
+// ─── VALORI A PORTATA DI POLLICE ──────────────────────────────────────────
+// I «quick value» degli Stepper (§3d del redesign): non sono un sottoinsieme
+// casuale delle liste complete, sono i valori che il coach usa davvero. Le liste
+// intere restano — servono al passo del meno/più e alla digitazione — ma non si
+// scorrono più alla cieca.
+const RAPIDI_REPS = ['10', '15', '20', '30', '50']
+const RAPIDI_KG = ['-', '6 kg', '9 kg', '14 kg', '20 kg']
+const RAPIDI_METRI = ['-', '100m', '250m', '500m', '1000m']
+const RAPIDI_DURATA = ['1:00', '2:00', '3:00', '5:00', '10:00']
+const RAPIDI_REST = ['0:30', '1:00', '1:30', '2:00', '3:00']
+const RAPIDI_LAVORO = ['0:20', '0:30', '0:40', '1:00', '1:30']
+const RAPIDI_INTERVALLO = ['0:30', '1:00', '1:30', '2:00', '3:00']
+const RAPIDI_AMRAP = ['5:00', '8:00', '10:00', '12:00', '20:00']
+const RAPIDI_ROUNDS = ['3', '5', '8', '10', '20']
+
+// ─── I GENERI DEL PASSO ───────────────────────────────────────────────────
+// La scelta del passo ha DUE domande, non una: di che tipo di passo si parla, e
+// poi quale valore. Il primo è un elenco corto da vedere tutto insieme, il
+// secondo una scala fitta su cui si aggiusta per gradi — e sono due controlli
+// diversi (vedi la nota lunga su `RuotaValori`).
+//
+// ⚠️ I generi sono DERIVATI dalle costanti con dei `filter`, non ricopiati:
+// i valori ammessi restano quelli delle liste, e aggiungerne uno lo fa comparire
+// qui da solo. L'etichetta perde il suffisso perché lo dice già l'intestazione
+// del genere, ma il valore scelto resta INTERO: è quello che finisce in
+// `workouts.sections`, su un database condiviso con la web app.
+const voce = (v, etichetta) => ({ valore: v, etichetta: etichetta ?? v })
+const senza = (suffisso) => (v) => voce(v, v.replace(suffisso, '').trim())
+const NIENTE = voce('-', '—')
+
+const GENERI_PASSO_ERGO = [
+  { id: 'sensazione', titolo: 'A sensazione', opzioni: [NIENTE, ...ERGO_PACE_OPTIONS.filter(v => v !== '-' && !v.includes('/500m') && !v.endsWith('RPM')).map(v => voce(v))] },
+  { id: 'ritmo', titolo: 'Ritmo', unita: '/500m', opzioni: [NIENTE, ...ERGO_PACE_OPTIONS.filter(v => v.includes('/500m')).map(senza('/500m'))] },
+  { id: 'cadenza', titolo: 'Cadenza', unita: 'RPM', opzioni: [NIENTE, ...ERGO_PACE_OPTIONS.filter(v => v.endsWith('RPM')).map(senza('RPM'))] },
+]
+
+const GENERI_PASSO_CORSA = [
+  { id: 'sensazione', titolo: 'A sensazione', opzioni: [NIENTE, ...RUN_PACE_OPTIONS.filter(v => !v.includes('/km')).map(v => voce(v))] },
+  { id: 'ritmo', titolo: 'Ritmo', unita: '/km', opzioni: [NIENTE, ...RUN_PACE_OPTIONS.filter(v => v.includes('/km')).map(senza('/km'))] },
+]
+
+const GENERI_VELOCITA = [
+  { id: 'velocita', titolo: 'Velocità', unita: 'km/h', opzioni: [NIENTE, ...SPEED_OPTIONS.filter(v => v !== '-').map(senza('km/h'))] },
+]
+
+const RAPIDI_METRI_CORTI = ['-', '20m', '50m', '100m', '200m']
+
+/** Quanti workout recenti si scandagliano per la riga «ultima volta». */
+const STORICO_WORKOUT = 40
+
+// ─── LE TRE CATEGORIE ─────────────────────────────────────────────────────
+// Erano tre segmenti dentro un toggle, cioè una scelta presentata come un
+// dettaglio di configurazione. È invece LA domanda del primo schermo, e ognuna
+// porta una riga che dice cosa aspettarsi: chi non conosce il gergo non deve
+// scegliere alla cieca fra «Hyrox» e «Custom».
+//
+// ⚠️ `id` è il valore salvato in `workouts.sections.category` e NON si tocca:
+// il database è condiviso con la web app in produzione. L'etichetta è un'altra
+// cosa — «Running» si legge «Corsa».
+const CATEGORIE = [
+  { id: 'Hyrox',   nome: 'Hyrox',  descrizione: 'Blocchi, esercizi, EMOM e AMRAP', colore: BRAND,   testoSuColore: '#000' },
+  { id: 'Running', nome: 'Corsa',  descrizione: 'Fasi, passo e ripetute',          colore: RUNNING, testoSuColore: '#fff' },
+  { id: 'Custom',  nome: 'Custom', descrizione: 'Solo una descrizione scritta',    colore: CUSTOM,  testoSuColore: '#fff' },
+]
+const ICONA_CATEGORIA = { Hyrox: Dumbbell, Running: Timer, Custom: FileText }
+const categoriaCorrente = (id) => CATEGORIE.find(c => c.id === id) || CATEGORIE[0]
+
+/**
+ * Il meno e il più si muovono DENTRO la lista completa, non su un numero.
+ *
+ * È la ragione per cui un solo componente basta a reps, kg, tempi e passi:
+ * i passi ("2:00" → "2:05", "9 kg" → "10 kg", "Z2" → "Z3") sono già codificati
+ * nell'ordine delle liste esistenti, che restano la fonte dei valori ammessi.
+ * Un `value + 1` avrebbe funzionato solo sui numeri interi.
+ */
+const passoInLista = (lista, valore, direzione) => {
+  if (!lista || lista.length === 0) return valore
+  const i = lista.findIndex(o => String(o) === String(valore))
+  if (i === -1) return lista[0]
+  const prossimo = i + direzione
+  if (prossimo < 0 || prossimo >= lista.length) return valore
+  return lista[prossimo]
+}
+
+/**
+ * Il dettaglio di un esercizio in una riga ("500m @ 1:52 · 9kg").
+ *
+ * Era ricalcolato in tre punti di questo file con tre varianti leggermente
+ * diverse (CLAUDE.md §9 punto 1). Una sola copia, e la riga «ultima volta» la
+ * riusa senza inventarsi un quarto formato.
+ */
+const dettaglioEsercizio = (ex) => {
+  if (!ex) return ''
+  const misura = ex.exTime && ex.exTime !== '-'
+    ? ex.exTime
+    : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
+  const passo = (isErgo(ex.name) || ex.name === 'Run') && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
+  const velocita = ex.name === 'Run' && ex.speed && ex.speed !== '-' ? `@ ${ex.speed}` : ''
+  const peso = ex.kg ? `${ex.kg}kg` : ''
+  return [misura, passo, velocita, peso].filter(Boolean).join(' ')
+}
+
 export const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
   if (isNaN(num)) return 'text-muted';
@@ -173,13 +286,7 @@ function ScrollPicker({ options = [], value, onChange, label, type, isRun }) {
     const index = Math.round(el.scrollTop / 40)
     if (displayOptions[index] !== undefined && String(displayOptions[index]) !== String(value)) {
       onChange(displayOptions[index])
-      try {
-        if (Capacitor.isNativePlatform()) {
-          Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-        } else if (navigator.vibrate) {
-          navigator.vibrate(10);
-        }
-      } catch { /* aptica: feedback opzionale, l'azione è già stata applicata */ }
+      battito()
     }
 
     scrollTimeout.current = setTimeout(() => {
@@ -252,13 +359,7 @@ function IntensityPicker({ value, onChange, activeColor = 'bg-brand' }) {
     
     if (String(newValue) !== String(value)) {
       onChange(String(newValue));
-      try {
-        if (Capacitor.isNativePlatform()) {
-          Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-        } else if (navigator.vibrate) {
-          navigator.vibrate(10);
-        }
-      } catch { /* aptica: feedback opzionale, l'azione è già stata applicata */ }
+      battito()
     }
   };
 
@@ -311,248 +412,592 @@ function IntensityPicker({ value, onChange, activeColor = 'bg-brand' }) {
   );
 }
 
+// ─── «GENERA CON IA» ──────────────────────────────────────────
+//
+// Rifatta il 28/08/2026 sulla cornice del builder. Era l'ultima superficie
+// della pagina rimasta al vocabolario di prima — card centrata, bordo #333,
+// bottone pieno in fondo — in uno schermo dove tutto il resto è carta
+// sollevata, vetro e foglio che sale dal basso.
+//
+// Le tre cose che NON sono estetica:
+//
+// 1. 🔴 **L'entrata non esisteva.** La classe era `animate-in fade-in
+//    zoom-in-[0.96]`, cioè tw-animate-css, che NON è installato: genera zero
+//    CSS (CLAUDE.md §9-duodecies punto 1, la stessa trappola del menu della
+//    scheda). La modale compariva di scatto. Ora è un bottom sheet vero, con
+//    `useBottomSheet`: entrata, maniglia che si trascina, pagina sotto ferma.
+// 2. **La tastiera non sale più da sola.** L'`autoFocus` sul textarea la
+//    apriva su una superficie il cui gesto principale è il MICROFONO: si
+//    arrivava qui per dettare e si trovava mezzo schermo occupato. Con
+//    l'autoFocus se n'è andato anche `-translate-y-36`, che era il rimedio a
+//    un problema che non esiste più: il foglio è ancorato in basso, e con
+//    `Keyboard.resize: 'native'` la webview si rimpicciolisce, quindi resta
+//    sopra la tastiera da sé.
+// 3. **La forma d'onda è VERA.** Prima l'alone pulsava su
+//    `1 + Math.random() * 0.4` ogni 150ms: si muoveva identico a microfono
+//    muto, permesso negato o telefono in tasca — cioè diceva «ti sento»
+//    proprio quando non era vero. Ora i livelli arrivano dal microfono
+//    (`AudioVisualizer`, lo stesso delle note vocali), quindi il silenzio si
+//    vede.
+
+/**
+ * I formati che `ai-workout` può girare a Gemini come `inlineData`.
+ *
+ * ⚠️ `audio/webm` NON è fra questi, ed è la ragione per cui sul web si
+ * continua a usare il riconoscimento del browser invece di spedire l'audio:
+ * su desktop MediaRecorder produce webm/opus, che Gemini rifiuta. Su iOS
+ * `audio/mp4` è supportato, ed è quello che si usa.
+ */
+const FORMATI_AUDIO = ['audio/mp4', 'audio/aac', 'audio/mpeg', 'audio/wav']
+
+const formatoRegistrabile = () => {
+  if (!window.MediaRecorder || !window.MediaRecorder.isTypeSupported) return null
+  return FORMATI_AUDIO.find(t => window.MediaRecorder.isTypeSupported(t)) || null
+}
+
+/**
+ * Le due soglie sul livello del microfono, e sono DUE di proposito.
+ *
+ * `AudioVisualizer` riporta il **picco** della finestra, non la media (vedi la
+ * nota lì dentro: la media su 24 bande resta bassa anche mentre si parla).
+ *
+ * - `SOGLIA_VOCE` accende «Ti sento»: è un'etichetta, deve seguire il parlato.
+ * - `SOGLIA_SEGNALE` è molto più bassa, e serve SOLO a decidere se il microfono
+ *   è vivo. 🔴 Le due erano una sola, ed è il motivo per cui «non arriva nessun
+ *   suono» compariva mentre il suono arrivava eccome: un avviso che accusa il
+ *   microfono deve avere l'asticella dove la mette un guasto vero, non dove la
+ *   mette una voce tranquilla.
+ */
+const SOGLIA_VOCE = 0.22
+const SOGLIA_SEGNALE = 0.07
+
+/**
+ * Dopo quanti secondi senza MAI un segnale si avvisa.
+ *
+ * ⚠️ È l'unica cosa in pagina che distingue «funziona» da «morto». Una forma
+ * d'onda piatta la si legge come «sto zitto io», non come «il microfono non
+ * riceve». Ma un falso allarme costa più del silenzio che previene — chi legge
+ * «non ti sento» mentre lo si sente smette di credere all'avviso — quindi la
+ * finestra è lunga e l'asticella è bassa.
+ */
+const SECONDI_MUTO = 6
+
+/** Dopo quanto la generazione smette di essere «pochi secondi». */
+const MS_ATTESA_LUNGA = 9000
+
+const mmssSecondi = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
 function AiGenerationModal({ onClose, onGenerate }) {
+  const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onClose)
+
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isFocused, setIsFocused] = useState(false);
-  const blurTimeoutRef = useRef(null);
 
-  const [isListening, setIsListening] = useState(false);
-  const [interimResult, setInterimResult] = useState('');
-  const recognitionRef = useRef(null);
-  const [audioLevel, setAudioLevel] = useState(1);
+  const [isListening, setIsListening] = useState(false)
+  const [interimResult, setInterimResult] = useState('')
+  const [mediaStream, setMediaStream] = useState(null)
+  const [livello, setLivello] = useState(0)
+  const [secondi, setSecondi] = useState(0)
+  // Se il microfono ha prodotto ALMENO una volta un suono. Non si azzera
+  // durante la dettatura: serve a distinguere «ora sto zitto» da «non ha mai
+  // funzionato», che a forma d'onda ferma sono la stessa immagine.
+  const [haSentito, setHaSentito] = useState(false)
+  const [attesaLunga, setAttesaLunga] = useState(false)
+  // Da dove arriva l'attesa: dalla voce o dal testo scritto. Sono due lavori
+  // diversi — nel primo Gemini deve prima ASCOLTARE — e dirlo storto è il modo
+  // di far sembrare rotta un'attesa che sta andando bene.
+  const [attesaDaVoce, setAttesaDaVoce] = useState(false)
 
+  const recognitionRef = useRef(null)
+  const recorderRef = useRef(null)
+  const chunksRef = useRef([])
+  const streamRef = useRef(null)
+  const orologio = useRef(null)
+  const orologioAttesa = useRef(null)
+  // Quale dei due registratori è in uso ADESSO. Non si può ridecidere allo stop
+  // guardando `isNativePlatform`: dipende anche da MediaRecorder e dallo stream,
+  // che a quel punto potrebbero non esserci più (stessa nota di VoiceRecorder).
+  const conPluginNativo = useRef(false)
+  // Il foglio si è chiuso mentre il microfono era acceso: `onstop` arriva dopo,
+  // e non deve generare niente.
+  const annullato = useRef(false)
+  // Il testo al momento dello stop, non quello catturato all'avvio: `onstop`
+  // nasce quando la registrazione parte, e lì il campo poteva essere vuoto.
+  const testoRef = useRef('')
+  useEffect(() => { testoRef.current = text })
+
+  const isNative = Capacitor.isNativePlatform()
+
+  // ── Il riconoscimento del browser, per quando si prova l'app dal PC ──────
   useEffect(() => {
-    // Manteniamo il fallback Web per quando testi l'app dal browser su PC
-    if (!Capacitor.isNativePlatform()) {
-      const WebSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (WebSpeechRecognition) {
-        const recognition = new WebSpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'it-IT';
+    if (isNative) return
+    const WebSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!WebSpeechRecognition) return
 
-        recognition.onstart = () => setIsListening(true);
-        
-        recognition.onresult = (event) => {
-          let finalTrans = '';
-          let interimTrans = '';
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              finalTrans += transcript + ' ';
-            } else {
-              interimTrans += transcript;
-            }
-          }
-          if (finalTrans) {
-            setText(prev => (prev + ' ' + finalTrans).trim());
-          }
-          setInterimResult(interimTrans);
-        };
+    const recognition = new WebSpeechRecognition()
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.lang = 'it-IT'
 
-        recognition.onerror = (event) => {
-          console.error('Speech recognition error', event.error);
-          setIsListening(false);
-        };
-        
-        recognition.onend = () => {
-          setIsListening(false);
-          setInterimResult('');
-        };
-
-        recognitionRef.current = recognition;
+    recognition.onresult = (event) => {
+      let finalTrans = ''
+      let interimTrans = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript
+        if (event.results[i].isFinal) finalTrans += transcript + ' '
+        else interimTrans += transcript
       }
+      if (finalTrans) setText(prev => (prev + ' ' + finalTrans).trim())
+      setInterimResult(interimTrans)
     }
-
-    return () => {
-      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-      if (recognitionRef.current) recognitionRef.current.stop();
-      if (Capacitor.isNativePlatform()) {
-        VoiceRecorder.stopRecording().catch(() => {});
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    let interval;
-    if (isListening) {
-      interval = setInterval(() => {
-        setAudioLevel(1 + Math.random() * 0.4); // animazione tra 1 e 1.4
-      }, 150);
-    } else {
-      setAudioLevel(1);
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error', event.error)
+      setIsListening(false)
     }
-    return () => clearInterval(interval);
-  }, [isListening]);
-
-  const toggleListen = async () => {
-    if (isListening) {
-      if (Capacitor.isNativePlatform()) {
-        setIsListening(false);
-        try {
-          const result = await VoiceRecorder.stopRecording();
-          if (result.value && result.value.recordDataBase64) {
-            setLoading(true);
-            const { data, error } = await supabase.functions.invoke('ai-workout', { 
-              body: { 
-                prompt: text,
-                audioBase64: result.value.recordDataBase64,
-                mimeType: result.value.mimeType || 'audio/aac' // Includiamo il mimeType, con un fallback
-              } 
-            });
-            
-            if (error) {
-              let errorMsg = error.message;
-              if (error.context && typeof error.context.json === 'function') {
-                // Se il corpo dell'errore non è JSON leggibile resta errorMsg = error.message,
-                // che è già il messaggio giusto da mostrare: nessun altro rimedio possibile.
-                try { const errBody = await error.context.json(); if (errBody && errBody.error) errorMsg = errBody.error; } catch { /* si tiene error.message */ }
-              }
-              throw new Error(errorMsg);
-            }
-            if (data?.error) throw new Error(data.error);
-            
-            if (data.blocks) {
-              onGenerate(data.blocks);
-              onClose();
-            }
-          }
-        } catch (e) {
-          console.error(e);
-          mostraErrore("Errore elaborazione audio: " + e.message);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        recognitionRef.current?.stop();
-      }
-    } else {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          const perm = await VoiceRecorder.requestAudioRecordingPermission();
-          if (!perm.value) {
-            mostraErrore("Devi concedere i permessi per il microfono nelle impostazioni di iOS.");
-            return;
-          }
-          await VoiceRecorder.startRecording();
-          setIsListening(true);
-          setInterimResult('Sto ascoltando... 🎙️');
-        } catch (e) {
-          console.error(e);
-          setIsListening(false);
-          mostraErrore("Errore nell'avvio della registrazione: " + e.message);
-        }
-      } else {
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.start();
-          } catch (e) {
-            console.error(e);
-          }
-        } else {
-          mostraErrore("Il riconoscimento vocale nativo non è supportato su questo dispositivo. Usa la dettatura integrata della tastiera.");
-        }
-      }
+    recognition.onend = () => {
+      setIsListening(false)
+      setInterimResult('')
     }
-  };
+    recognitionRef.current = recognition
+  }, [isNative])
 
-  const handleGenerate = async () => {
-    if (!text.trim()) return;
-    const finalPrompt = text.trim();
-    setLoading(true);
-    if (isListening) {
-      if (Capacitor.isNativePlatform()) VoiceRecorder.stopRecording().catch(()=>{});
-      else recognitionRef.current?.stop();
-      setIsListening(false);
+  // ── L'attesa ────────────────────────────────────────────────────────────
+  // Fermata la registrazione, Gemini deve prima ASCOLTARE e poi scrivere: sono
+  // secondi in cui non succede niente a schermo. Prima il foglio tornava al
+  // campo di testo — vuoto, perché sul nativo la trascrizione non c'è ancora —
+  // e l'unico segnale era la CTA disabilitata al 40%: si leggeva come «non ha
+  // funzionato», e il gesto naturale era premere di nuovo il microfono.
+  const iniziaAttesa = useCallback((daVoce = false) => {
+    setLoading(true)
+    setAttesaDaVoce(daVoce)
+    setAttesaLunga(false)
+    clearTimeout(orologioAttesa.current)
+    orologioAttesa.current = setTimeout(() => setAttesaLunga(true), MS_ATTESA_LUNGA)
+  }, [])
+
+  const fineAttesa = useCallback(() => {
+    clearTimeout(orologioAttesa.current)
+    setLoading(false)
+    setAttesaLunga(false)
+  }, [])
+
+  /** Il livello del microfono, da `AudioVisualizer`. Stabile: entra in un ref. */
+  const suLivello = useCallback((v) => {
+    setLivello(v)
+    if (v > SOGLIA_SEGNALE) setHaSentito(true)
+  }, [])
+
+  /** Spegne tutto quello che tiene aperto il microfono. */
+  const spegniMicrofono = useCallback(() => {
+    clearInterval(orologio.current)
+    setLivello(0)
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop())
+      streamRef.current = null
     }
+    setMediaStream(null)
+  }, [])
+
+  useEffect(() => () => {
+    // Si sta chiudendo: qualunque cosa il microfono avesse in canna va buttata.
+    annullato.current = true
+    clearInterval(orologio.current)
+    clearTimeout(orologioAttesa.current)
+    try { recognitionRef.current?.stop() } catch { /* già ferma */ }
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+      try { recorderRef.current.stop() } catch { /* già ferma */ }
+    }
+    if (conPluginNativo.current) VoiceRecorder.stopRecording().catch(() => {})
+    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
+  }, [])
+
+  // ── La chiamata a Gemini, una sola per i due percorsi ────────────────────
+  const chiamaIA = useCallback(async (body) => {
+    iniziaAttesa(!!body.audioBase64)
     try {
-      const { data, error } = await supabase.functions.invoke('ai-workout', { body: { prompt: finalPrompt } });
+      const { data, error } = await supabase.functions.invoke('ai-workout', { body })
       if (error) {
-        let errorMsg = error.message;
+        let errorMsg = error.message
         if (error.context && typeof error.context.json === 'function') {
           // Se il corpo dell'errore non è JSON leggibile resta errorMsg = error.message,
           // che è già il messaggio giusto da mostrare: nessun altro rimedio possibile.
-          try { const errBody = await error.context.json(); if (errBody && errBody.error) errorMsg = errBody.error; } catch { /* si tiene error.message */ }
+          try { const errBody = await error.context.json(); if (errBody && errBody.error) errorMsg = errBody.error } catch { /* si tiene error.message */ }
         }
-        throw new Error(errorMsg);
+        throw new Error(errorMsg)
       }
-      if (data?.error) throw new Error(data.error);
-      onGenerate(data.blocks || []);
-      onClose();
+      if (data?.error) throw new Error(data.error)
+      onGenerate(data?.blocks || [])
+      chiudi()
     } catch (e) {
-      let msg = e.message;
+      let msg = e.message
       if (msg.includes('503') || msg.toLowerCase().includes('high demand') || msg.toLowerCase().includes('overloaded')) {
-        msg = "I server dell'Intelligenza Artificiale sono attualmente sovraccarichi. Riprova tra qualche istante.";
+        msg = "I server dell'Intelligenza Artificiale sono attualmente sovraccarichi. Riprova tra qualche istante."
       }
-      mostraErrore('Errore generazione IA: ' + msg);
+      mostraErrore('Errore generazione IA: ' + msg)
     } finally {
-      setLoading(false);
+      fineAttesa()
+    }
+  }, [onGenerate, chiudi, iniziaAttesa, fineAttesa])
+
+  const inviaAudio = useCallback(async (blob, mimeType) => {
+    try {
+      const base64 = await new Promise((risolvi, rifiuta) => {
+        const lettore = new FileReader()
+        lettore.onerror = () => rifiuta(new Error('Audio illeggibile'))
+        lettore.onload = () => risolvi(String(lettore.result).split(',')[1] || '')
+        lettore.readAsDataURL(blob)
+      })
+      if (!base64) throw new Error('Registrazione vuota')
+      await chiamaIA({ prompt: testoRef.current.trim(), audioBase64: base64, mimeType })
+    } catch (e) {
+      console.error('Errore elaborazione audio:', e)
+      mostraErrore('Errore elaborazione audio: ' + e.message)
+      fineAttesa()
+    }
+  }, [chiamaIA, fineAttesa])
+
+  // ── Avvio ────────────────────────────────────────────────────────────────
+  const avviaAscolto = async () => {
+    if (isNative) {
+      try {
+        const perm = await VoiceRecorder.requestAudioRecordingPermission()
+        if (!perm.value) {
+          return mostraErrore('Devi concedere i permessi per il microfono nelle impostazioni di iOS.')
+        }
+      } catch (e) {
+        // Il permesso vero lo richiede comunque getUserMedia qui sotto: se il
+        // plugin non risponde non è una ragione per non provare.
+        console.error('Errore permessi microfono:', e)
+      }
+    }
+
+    // Il microfono si apre SEMPRE da qui: senza stream non c'è forma d'onda, e
+    // senza forma d'onda non si distingue «ti sento» da «non ti sento».
+    let stream = null
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      }
+    } catch (err) {
+      console.warn('Microfono non accessibile, nessuna forma d\'onda:', err)
+    }
+
+    const formato = stream ? formatoRegistrabile() : null
+
+    if (isNative) {
+      // 🔴 Su iOS si registra con MediaRecorder, non col plugin nativo: è la
+      // stessa lezione delle note vocali (CLAUDE.md §4). Il plugin dichiarava
+      // successo e restituiva un M4A di sola intestazione, perché WebView e
+      // recorder nativo si contendono AVAudioSession.
+      conPluginNativo.current = !(formato && stream)
+
+      if (!conPluginNativo.current) {
+        try {
+          const recorder = new MediaRecorder(stream, { mimeType: formato })
+          chunksRef.current = []
+          recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+          recorder.onstop = () => {
+            const tipo = (recorder.mimeType || formato).split(';')[0]
+            const blob = new Blob(chunksRef.current, { type: tipo })
+            // Prima il controllo, poi lo stato: se il foglio si è già chiuso,
+            // `spegniMicrofono` scriverebbe su un componente smontato — e il
+            // microfono l'ha già spento la pulizia dell'effetto.
+            if (annullato.current) return
+            spegniMicrofono()
+            if (blob.size === 0) {
+              // Un contenitore senza campioni: caricarlo vorrebbe dire far
+              // aspettare il coach per una trascrizione di niente.
+              console.error('Registrazione vuota:', tipo)
+              return mostraErrore('La registrazione è risultata vuota: riprova.')
+            }
+            inviaAudio(blob, tipo)
+          }
+          recorder.start()
+          recorderRef.current = recorder
+        } catch (e) {
+          console.error('Errore avvio MediaRecorder:', e)
+          spegniMicrofono()
+          return mostraErrore('Impossibile avviare la registrazione.')
+        }
+      } else {
+        // Ripiego. ⚠️ Lo stream si CHIUDE prima: tenerlo aperto mentre parte il
+        // plugin è esattamente la condizione che produce il file vuoto.
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null }
+        try {
+          await VoiceRecorder.startRecording()
+        } catch (e) {
+          console.error('Errore avvio registrazione nativa:', e)
+          return mostraErrore("Errore nell'avvio della registrazione: " + e.message)
+        }
+      }
+    } else {
+      if (!recognitionRef.current) {
+        if (stream) stream.getTracks().forEach(t => t.stop())
+        return mostraErrore('Il riconoscimento vocale non è supportato su questo browser. Usa la dettatura della tastiera.')
+      }
+      try {
+        recognitionRef.current.start()
+      } catch (e) {
+        console.error('Errore avvio riconoscimento vocale:', e)
+      }
+    }
+
+    streamRef.current = stream
+    setMediaStream(stream)
+    setInterimResult('')
+    setSecondi(0)
+    setLivello(0)
+    setHaSentito(false)
+    setIsListening(true)
+    // Il cronometro sta qui e non in un effetto su `isListening`: un effetto che
+    // azzera lo stato al primo render è un giro di render in più per un numero
+    // che si sa già (react-hooks/set-state-in-effect).
+    clearInterval(orologio.current)
+    orologio.current = setInterval(() => setSecondi(s => s + 1), 1000)
+    battito()
+  }
+
+  // ── Stop ─────────────────────────────────────────────────────────────────
+  const fermaAscolto = async () => {
+    setIsListening(false)
+    clearInterval(orologio.current)
+    battito()
+
+    if (!isNative) {
+      // Sul web la dettatura ha già riempito il campo: si torna a scrivere, e
+      // «Genera» resta un gesto separato.
+      try { recognitionRef.current?.stop() } catch { /* già ferma */ }
+      spegniMicrofono()
+      return
+    }
+
+    if (!conPluginNativo.current) {
+      // L'attesa parte SUBITO, non quando il blob è pronto: fra lo stop e
+      // `onstop` c'è un vuoto in cui il foglio non direbbe niente.
+      iniziaAttesa(true)
+      if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+        try {
+          recorderRef.current.stop()
+        } catch (e) {
+          console.error('Errore stop MediaRecorder:', e)
+          fineAttesa()
+          spegniMicrofono()
+          mostraErrore('Registrazione non salvata: riprova.')
+        }
+      } else {
+        fineAttesa()
+        spegniMicrofono()
+      }
+      return
+    }
+
+    spegniMicrofono()
+    iniziaAttesa(true)
+    try {
+      const result = await VoiceRecorder.stopRecording()
+      // ⚠️ Il plugin può tornare un file VUOTO dicendo che è andato tutto bene.
+      if (result.value && result.value.msDuration === 0) {
+        console.error('Registrazione nativa vuota:', result.value)
+        fineAttesa()
+        return mostraErrore('La registrazione è risultata vuota: riprova.')
+      }
+      if (result.value && result.value.recordDataBase64) {
+        await chiamaIA({
+          prompt: testoRef.current.trim(),
+          audioBase64: result.value.recordDataBase64,
+          mimeType: result.value.mimeType || 'audio/aac',
+        })
+      } else {
+        fineAttesa()
+      }
+    } catch (e) {
+      console.error('Errore stop nativo:', e)
+      fineAttesa()
+      mostraErrore('Errore elaborazione audio: ' + e.message)
     }
   }
 
+  const handleGenerate = () => {
+    if (!text.trim() || loading) return
+    chiamaIA({ prompt: text.trim() })
+  }
+
+  const parla = livello > SOGLIA_VOCE
+
   return createPortal(
-    <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
-      <div className={`bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-6 border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isFocused ? '-translate-y-36' : ''}`}>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-white font-bold text-lg flex items-center gap-2"><Wand2 size={20} className="text-ia" /> Genera con IA</h3>
-          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20}/></button>
+    // ⚠️ `touch-action: none` sta sul velo e non sul foglio: impedisce che il
+    // dito, muovendosi sullo sfondo, faccia scorrere la pagina sotto.
+    // ⚠️ Durante la generazione il velo NON chiude: chiudere qui butterebbe
+    // via una registrazione già spedita, senza dire niente a nessuno.
+    <div className={`fixed inset-0 z-[60] flex flex-col justify-end bg-black/85 touch-none ${classeVelo}`}
+      style={stileVelo} onClick={loading ? undefined : chiudi}>
+      <div role="dialog" aria-label="Genera con IA" onClick={(e) => e.stopPropagation()}
+        style={stileFoglio}
+        className={`bg-[#141416] border-t border-ia/20 rounded-t-3xl px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]
+                    flex flex-col max-h-[88dvh] overflow-y-auto overscroll-contain
+                    shadow-[0_-20px_50px_-12px_rgba(0,0,0,.85)] ${classeFoglio}`}>
+
+        <button type="button" aria-label={loading ? 'Generazione in corso' : 'Chiudi'}
+          {...(loading ? {} : maniglia)} disabled={loading}
+          className="w-full pt-3 pb-2.5 -mx-4 px-4 flex justify-center shrink-0 touch-none
+                     cursor-grab active:cursor-grabbing disabled:cursor-default group">
+          <span aria-hidden="true"
+            className={`w-10 h-1 rounded-full transition-colors ${loading
+              ? 'bg-white/10'
+              : 'bg-white/20 group-hover:bg-white/35 group-active:bg-white/45'}`} />
+        </button>
+
+        {/* La testata è la stessa della card viola che ha aperto il foglio:
+            chi tocca «Genera con IA» ritrova l'icona e la riga che ha letto. */}
+        <div className="flex items-center gap-3 pb-4 shrink-0">
+          <span aria-hidden="true"
+            className="w-11 h-11 rounded-[14px] bg-ia text-white flex items-center justify-center shrink-0
+                       shadow-[0_10px_20px_-8px_rgba(168,85,247,.6)]">
+            <Wand2 size={21} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[16px] font-extrabold tracking-[-.015em] text-white">Genera con IA</p>
+            <p className="mt-[2px] text-[12.5px] font-medium text-[#c4a6e8]">Descrivi l'obiettivo, ti scrivo i blocchi</p>
+          </div>
         </div>
-        
-        {isListening ? (
-          <div className="flex flex-col items-center justify-center py-6">
-            <div className="relative flex items-center justify-center w-32 h-32 mb-6">
-              <div 
-                className="absolute inset-0 bg-ia rounded-full opacity-20 transition-transform duration-150 ease-out"
-                style={{ transform: `scale(${audioLevel + 0.2})` }}
-              ></div>
-              <div 
-                className="absolute inset-0 bg-ia rounded-full opacity-40 transition-transform duration-150 ease-out"
-                style={{ transform: `scale(${audioLevel})` }}
-              ></div>
-              <button aria-label="Ferma la dettatura" onClick={toggleListen} className="relative z-10 w-16 h-16 bg-ia rounded-full flex items-center justify-center text-white shadow-lg shadow-ia/50 hover:brightness-110 transition">
-                <Square size={24} fill="currentColor" />
-              </button>
+
+        {loading ? (
+          // ── L'attesa ────────────────────────────────────────────────────
+          // 🔴 Prima qui non c'era NIENTE: fermata la registrazione il foglio
+          // tornava al campo di testo, vuoto (sul nativo la trascrizione non
+          // esiste ancora), e l'unico segnale era la CTA disabilitata al 40%.
+          // Si leggeva come «non ha funzionato», e il gesto che ne seguiva era
+          // premere di nuovo il microfono — cioè buttare la registrazione
+          // appena spedita. La generazione occupa il foglio INTERO finché non
+          // ha finito.
+          <div className={`${CARD} px-4 py-7 flex flex-col items-center text-center gap-3.5 shrink-0`}>
+            <span aria-hidden="true"
+              className="w-12 h-12 rounded-full border-[3px] border-ia/25 border-t-ia animate-spin" />
+            <div>
+              <p className="text-white text-[16px] font-extrabold tracking-[-.015em]" role="status">
+                {attesaLunga ? 'Ci sta mettendo più del solito…' : 'Sto scrivendo l\'allenamento'}
+              </p>
+              <p className="mt-1.5 text-[13px] text-muted leading-snug max-w-[16rem] mx-auto">
+                {attesaLunga
+                  ? 'Ancora un momento: se non arriva, il messaggio di errore te lo dice.'
+                  : attesaDaVoce
+                    ? 'Ascolto la registrazione e la traduco in blocchi. Ci vogliono pochi secondi.'
+                    : 'Leggo la descrizione e scrivo i blocchi. Ci vogliono pochi secondi.'}
+              </p>
             </div>
-            <p className="text-white font-medium text-center min-h-[48px] px-4">
-              {interimResult}
-            </p>
+            <p className={`${LABEL} pt-1`}>Non chiudere</p>
+          </div>
+        ) : isListening ? (
+          // ── In ascolto ──────────────────────────────────────────────────
+          <div className={`${CARD} px-4 py-4 flex flex-col gap-3.5 shrink-0`}>
+            <div className="flex items-center gap-4">
+              {/* L'alone segue il livello VERO del microfono: fermo, vuol dire
+                  che il microfono non sta ricevendo niente. */}
+              <div className="relative w-[72px] h-[72px] flex items-center justify-center shrink-0">
+                <span aria-hidden="true"
+                  className="absolute inset-0 rounded-full bg-ia/25"
+                  style={{ transform: `scale(${1 + Math.min(livello, 1) * 0.3})`, transition: 'transform 140ms ease-out' }} />
+                <span aria-hidden="true"
+                  className="relative w-14 h-14 rounded-full bg-ia flex items-center justify-center text-white
+                             shadow-[0_10px_24px_-8px_rgba(168,85,247,.75)]">
+                  <Mic size={24} />
+                </span>
+              </div>
+
+              <div className="flex-1 min-w-0 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className={`${LABEL} ${parla ? 'text-ia' : ''}`}>
+                    {parla ? 'Ti sento' : 'Parla pure…'}
+                  </span>
+                  <span className="font-mono text-[12px] font-extrabold text-gray-300 ml-auto">
+                    {mmssSecondi(secondi)}
+                  </span>
+                </div>
+
+                <div className="h-11 flex items-center">
+                  {mediaStream ? (
+                    <AudioVisualizer stream={mediaStream} colore={IA} altezza={44} classe="w-full h-11"
+                      onLivello={suLivello} />
+                  ) : (
+                    // ⚠️ Senza analizzatore NON si finge un livello: queste barre
+                    // pulsano da sole e non dicono «ti sento», lo dice il
+                    // cronometro qui sopra, che è l'unica cosa vera che resta.
+                    <div className="flex items-end gap-[3px] h-full w-full" aria-hidden="true">
+                      {[...Array(18)].map((_, i) => (
+                        <span key={i} className="flex-1 bg-ia/45 rounded-full animate-pulse"
+                          style={{ height: `${30 + (i % 5) * 16}%`, animationDelay: `${i * 70}ms` }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 🔴 Una forma d'onda piatta si legge come «sto zitto io», mai come
+                «il microfono non riceve»: senza questa riga si parlerebbe a un
+                microfono spento fino a leggere il workout generato a caso. */}
+            {!haSentito && secondi >= SECONDI_MUTO && (
+              <p className="text-[13px] text-orange-400 leading-snug border-t border-white/[.07] pt-3">
+                Non arriva nessun suono. Parla più vicino al microfono, o controlla che
+                l'app abbia il permesso nelle impostazioni di iOS.
+              </p>
+            )}
+
+            {interimResult && (
+              <p className="text-white text-[14.5px] leading-snug border-t border-white/[.07] pt-3">{interimResult}</p>
+            )}
+
+            <button type="button" onClick={fermaAscolto}
+              className="min-h-[52px] rounded-2xl bg-ia text-white text-[15.5px] font-black tracking-[-.01em]
+                         flex items-center justify-center gap-2.5 transition hover:brightness-110 active:scale-[.99]
+                         shadow-[0_14px_26px_-10px_rgba(168,85,247,.6)]">
+              <Square size={17} fill="currentColor" aria-hidden="true" />
+              {isNative ? 'Ho finito, genera' : 'Ferma la dettatura'}
+            </button>
           </div>
         ) : (
+          // ── A riposo ────────────────────────────────────────────────────
           <>
-            <p className="text-gray-400 text-sm mb-4">Puoi usare il <strong className="text-white">microfono</strong> per dettare il tuo allenamento (es. "Fammi un EMOM di 12 minuti con 15 burpees e 10 box jump").</p>
-            <div className="relative">
-              <textarea 
-                autoFocus 
-                className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 pb-12 text-white placeholder-gray-600 focus:outline-none focus:border-ia resize-none text-base transition-colors" 
-                rows={4} 
-                placeholder="Ditta o scrivi qui..." 
-                value={text} 
-                onChange={e => setText(e.target.value)} 
-                onFocus={() => {
-                  if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-                  setIsFocused(true);
-                }}
-                onBlur={() => {
-                  blurTimeoutRef.current = setTimeout(() => {
-                    setIsFocused(false);
-                  }, 250);
-                }}
+            <div className={`${CARD} p-3.5 flex flex-col gap-3 shrink-0`}>
+              <textarea
+                className="w-full bg-transparent text-white placeholder-gray-600 focus:outline-none resize-none
+                           text-[15px] leading-relaxed min-h-[104px]"
+                rows={4}
+                placeholder="Es: EMOM da 12 minuti, 15 burpees e 10 box jump a minuti alterni…"
+                value={text}
+                onChange={e => setText(e.target.value)}
               />
-              <button aria-label="Avvia la dettatura" 
-                onClick={toggleListen}
-                className="absolute bottom-3 right-3 w-11 h-11 bg-[#2a2a2a] hover:bg-[#333] border border-[#444] rounded-full flex items-center justify-center text-ia transition shadow-md"
-                title="Dettatura vocale"
-              >
-                <Mic size={18} />
+
+              {/* Il microfono è il gesto principale di questa superficie, non
+                  un'icona dentro l'angolo del campo: è la ragione per cui la
+                  tastiera non si apre più da sola all'ingresso. */}
+              <button type="button" onClick={avviaAscolto}
+                className={`min-h-12 rounded-2xl ${VETRO} flex items-center justify-center gap-2.5 text-white
+                            text-[14.5px] font-extrabold hover:border-ia/50 transition active:scale-[.995]`}>
+                <Mic size={18} className="text-ia" aria-hidden="true" />
+                {isNative ? 'Detta l\'allenamento' : 'Detta con la voce'}
               </button>
             </div>
+
+            <p className="text-[12px] text-muted leading-snug px-1 pt-3 shrink-0">
+              I blocchi generati si aggiungono a quelli che hai già: puoi correggerli uno per uno.
+            </p>
           </>
         )}
 
-        <button onClick={handleGenerate} disabled={loading || !text.trim()} className="w-full mt-4 py-3.5 bg-ia text-white font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-ia/20">
-          {loading ? 'Elaborazione in corso...' : 'Genera Workout'}
-        </button>
+        {/* La CTA sparisce durante la generazione: il foglio dice già cosa sta
+            succedendo, e un bottone spento accanto a un'attesa è il modo in cui
+            l'attesa sembra un errore. */}
+        {!loading && (
+          <div className="pt-3.5 shrink-0">
+            <button type="button" onClick={handleGenerate} disabled={!text.trim() || isListening}
+              className="w-full min-h-[52px] rounded-2xl bg-ia text-white text-[16.5px] font-black tracking-[-.01em]
+                         flex items-center justify-center gap-2.5 transition hover:brightness-110 active:scale-[.99]
+                         disabled:opacity-40 shadow-[0_14px_26px_-10px_rgba(168,85,247,.5)]">
+              Genera workout <ArrowRight size={19} aria-hidden="true" />
+            </button>
+          </div>
+        )}
       </div>
     </div>,
     document.body
@@ -574,6 +1019,89 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   const [kg, setKg] = useState(initialExercise?.kg ? `${initialExercise.kg} kg` : '-')
   const [intensity, setIntensity] = useState(initialExercise?.intensity || '5')
   const [notes, setNotes] = useState(initialExercise?.notes || '')
+
+  // Quale parametro è aperto sulla tastiera. Uno solo alla volta: due campi in
+  // digitazione insieme vorrebbero dire due autoFocus che si contendono il fuoco.
+  const [digitando, setDigitando] = useState(null)
+
+  // ── «Ultima volta» ────────────────────────────────────────────────────────
+  // I valori dell'ultima volta che questo esercizio è stato programmato. È il
+  // dato che il coach andava a cercare in un'altra scheda prima di scegliere un
+  // peso — e la ragione per cui una rotella da 300 opzioni sembrava necessaria:
+  // senza un riferimento, ogni numero è cieco.
+  //
+  // Una lettura sola al montaggio, sugli ultimi workout per data: lo schema è
+  // congelato (CLAUDE.md regola 0-bis), quindi niente colonna e niente indice —
+  // la scansione del jsonb si fa qui, su un numero di righe deliberatamente
+  // piccolo. Se fallisce non succede niente: la riga semplicemente non compare.
+  const [ultimi, setUltimi] = useState({})
+  useEffect(() => {
+    let vivo = true
+    const carica = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('workouts')
+          .select('date, sections')
+          .order('date', { ascending: false })
+          .limit(STORICO_WORKOUT)
+        if (!vivo || error || !Array.isArray(data)) return
+        const mappa = {}
+        for (const w of data) {
+          for (const b of (w?.sections?.blocks || [])) {
+            for (const ex of (b?.exercises || [])) {
+              if (ex?.name && !mappa[ex.name]) mappa[ex.name] = ex
+            }
+          }
+        }
+        setUltimi(mappa)
+      } catch (e) {
+        // Un catch muto qui ha già prodotto due guasti invisibili in questo
+        // progetto (CLAUDE.md §9-quater): la riga è facoltativa, il log no.
+        console.warn('Storico esercizi non disponibile:', e)
+      }
+    }
+    carica()
+    return () => { vivo = false }
+  }, [])
+
+  const ultimaVolta = selected ? ultimi[selected] : null
+  const testoUltimaVolta = dettaglioEsercizio(ultimaVolta)
+  const riusaUltimaVolta = () => {
+    if (!ultimaVolta) return
+    if (ultimaVolta.reps) setReps(ultimaVolta.reps)
+    if (ultimaVolta.meters) setMeters(ultimaVolta.meters)
+    if (ultimaVolta.exTime) setExTime(ultimaVolta.exTime)
+    if (ultimaVolta.ergoPace) setErgoPace(ultimaVolta.ergoPace)
+    if (ultimaVolta.speed) setSpeed(ultimaVolta.speed)
+    setKg(ultimaVolta.kg ? `${ultimaVolta.kg} kg` : '-')
+    if (ultimaVolta.intensity) setIntensity(ultimaVolta.intensity)
+  }
+
+  /**
+   * Un parametro che è una TASSONOMIA e non una scala — passo, velocità.
+   * La riga mostra il valore, il tocco apre l'elenco intero raggruppato.
+   */
+  const scelta = (chiave, { etichetta, generi, valore, set }) => (
+    <RuotaValori key={chiave} etichetta={etichetta} valore={valore} generi={generi} onChange={set} />
+  )
+
+  /**
+   * Un parametro. Non è un componente ma una funzione che compone JSX: definire
+   * un componente dentro un altro lo rimonterebbe a ogni render, e con lui il
+   * campo di testo aperto sulla tastiera.
+   */
+  const campo = (chiave, { etichetta, lista, rapidi, valore, set, unita }) => (
+    <Stepper
+      etichetta={etichetta}
+      valore={valore}
+      unitaPredefinita={unita}
+      opzioni={rapidi}
+      onChange={set}
+      onPasso={(direzione) => set(passoInLista(lista, valore, direzione))}
+      inDigitazione={digitando === chiave}
+      onDigita={() => setDigitando(digitando === chiave ? null : chiave)}
+    />
+  )
 
   // Rifiltrare 120 esercizi a ogni carattere non è il costo vero, ma renderizzarli
   // sì: la lista non aveva alcun limite, quindi ogni tasto premuto ridisegnava
@@ -641,7 +1169,8 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
             placeholder="Cerca o scrivi esercizio custom..."
             value={search}
             onChange={e => { setSearch(e.target.value); setSelected(null) }}
-            autoFocus={!initialExercise}
+            enterKeyHint="search"
+            onKeyDown={chiudiTastieraSuInvio}
           />}
 
           {!selected ? (
@@ -653,7 +1182,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                 </button>
               )}
               {visibili.map(ex => (
-                <button aria-label="Scegli questo esercizio" key={ex} onClick={() => handleSelect(ex)}
+                <button aria-label={`Scegli ${ex}`} key={ex} onClick={() => handleSelect(ex)}
                   className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#2a2a2a] hover:bg-[#333] text-white text-sm transition">
                   <span>{ex}</span>
                   {isErgo(ex) && <span className="text-xs text-blue-400 bg-blue-900/40 px-2 py-0.5 rounded-full">ergometro</span>}
@@ -716,89 +1245,85 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300" key={`${selected}-${hybridMode}-${runPaceMode}`}>
- {workoutType === 'Interval' ? (
+              {testoUltimaVolta && (
+                <RigaUltimaVolta testo={testoUltimaVolta} onRiusa={riusaUltimaVolta} />
+              )}
+
+              <div className="flex flex-col gap-3 animate-in fade-in duration-300" key={`${selected}-${hybridMode}-${runPaceMode}`}>
+                {workoutType === 'Interval' ? (
                   <>
-                    <ScrollPicker options={TIME_OPTIONS} value={exTime} onChange={setExTime} label="⏱ Durata" />
-                    {isErgo(selected) ? (
-                      <ScrollPicker options={ERGO_PACE_OPTIONS} value={ergoPace} onChange={setErgoPace} label="⏱ Passo (Opz.)" />
-                    ) : selected === 'Run' ? (
-                      runPaceMode === 'pace' ? (
-                        <ScrollPicker options={['-'].concat(RUN_PACE_OPTIONS)} value={ergoPace} onChange={setErgoPace} label="⏱ Passo (Opz.)" />
-                      ) : (
-                        <ScrollPicker options={SPEED_OPTIONS} value={speed} onChange={setSpeed} label="⚡ Velocità" />
-                      )
-                    ) : (
-                      <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
-                    )}
+                    {campo('exTime', { etichetta: 'Durata', lista: TIME_OPTIONS, rapidi: RAPIDI_DURATA, valore: exTime, set: setExTime })}
+                    {isErgo(selected)
+                      ? scelta('ergoPace', { etichetta: 'Passo (opzionale)', generi: GENERI_PASSO_ERGO, valore: ergoPace, set: setErgoPace })
+                      : selected === 'Run'
+                        ? (runPaceMode === 'pace'
+                            ? scelta('ergoPace', { etichetta: 'Passo (opzionale)', generi: GENERI_PASSO_CORSA, valore: ergoPace, set: setErgoPace })
+                            : scelta('speed', { etichetta: 'Velocità', generi: GENERI_VELOCITA, valore: speed, set: setSpeed }))
+                        : campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
                   </>
-                ) : isErgo(selected) ? (                  <>
-                    <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza / Cal" />
-                    <ScrollPicker options={ERGO_PACE_OPTIONS} value={ergoPace} onChange={setErgoPace} label="⏱ Passo (Opz.)" />
+                ) : isErgo(selected) ? (
+                  <>
+                    {campo('meters', { etichetta: 'Distanza / Cal', lista: METERS_OPTIONS, rapidi: RAPIDI_METRI, valore: meters, set: setMeters })}
+                    {scelta('ergoPace', { etichetta: 'Passo (opzionale)', generi: GENERI_PASSO_ERGO, valore: ergoPace, set: setErgoPace })}
                   </>
                 ) : selected === 'Run' ? (
                   <>
-                    <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
-                    {runPaceMode === 'pace' ? (
-                      <ScrollPicker options={['-'].concat(RUN_PACE_OPTIONS)} value={ergoPace} onChange={setErgoPace} label="⏱ Passo (Opz.)" />
-                    ) : (
-                      <ScrollPicker options={SPEED_OPTIONS} value={speed} onChange={setSpeed} label="⚡ Velocità" />
-                    )}
+                    {campo('meters', { etichetta: 'Distanza', lista: METERS_OPTIONS, rapidi: RAPIDI_METRI, valore: meters, set: setMeters })}
+                    {runPaceMode === 'pace'
+                      ? scelta('ergoPace', { etichetta: 'Passo (opzionale)', generi: GENERI_PASSO_CORSA, valore: ergoPace, set: setErgoPace })
+                      : scelta('speed', { etichetta: 'Velocità', generi: GENERI_VELOCITA, valore: speed, set: setSpeed })}
                   </>
                 ) : selected === 'Rest' ? (
-                  <div className="col-span-2">
-                    <ScrollPicker options={REST_TIME_OPTIONS} value={meters} onChange={setMeters} label="⏱ Durata" />
-                  </div>
+                  campo('meters', { etichetta: 'Durata', lista: REST_TIME_OPTIONS, rapidi: RAPIDI_REST, valore: meters, set: setMeters })
                 ) : isHybrid(selected) ? (
                   <>
-                    {hybridMode === 'distance' ? (
-                       <ScrollPicker options={HYBRID_METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
-                    ) : (
-                       <ScrollPicker options={REPS_OPTIONS} value={reps} onChange={setReps} label="🔁 Reps" />
-                    )}
-                    <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                    {hybridMode === 'distance'
+                      ? campo('meters', { etichetta: 'Distanza', lista: HYBRID_METERS_OPTIONS, rapidi: RAPIDI_METRI_CORTI, valore: meters, set: setMeters })
+                      : campo('reps', { etichetta: 'Ripetizioni', lista: REPS_OPTIONS, rapidi: RAPIDI_REPS, valore: reps, set: setReps, unita: 'reps' })}
+                    {campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
                   </>
                 ) : isSled(selected) ? (
                   <>
-                    <ScrollPicker options={SLED_METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
-                    <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                    {campo('meters', { etichetta: 'Distanza', lista: SLED_METERS_OPTIONS, rapidi: RAPIDI_METRI_CORTI, valore: meters, set: setMeters })}
+                    {campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
                   </>
                 ) : isCarry(selected) ? (
                   <>
-                    <ScrollPicker options={CARRY_METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
-                    <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                    {campo('meters', { etichetta: 'Distanza', lista: CARRY_METERS_OPTIONS, rapidi: RAPIDI_METRI_CORTI, valore: meters, set: setMeters })}
+                    {campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
                   </>
                 ) : isDistance(selected) ? (
                   <>
-                    <ScrollPicker options={METERS_OPTIONS} value={meters} onChange={setMeters} label="📏 Distanza" />
-                    <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                    {campo('meters', { etichetta: 'Distanza', lista: METERS_OPTIONS, rapidi: RAPIDI_METRI, valore: meters, set: setMeters })}
+                    {campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
                   </>
                 ) : (
                   <>
-                    <ScrollPicker options={REPS_OPTIONS} value={reps} onChange={setReps} label="🔁 Reps" />
-                    <ScrollPicker options={KG_OPTIONS} value={kg} onChange={setKg} label="⚖️ Peso" />
+                    {campo('reps', { etichetta: 'Ripetizioni', lista: REPS_OPTIONS, rapidi: RAPIDI_REPS, valore: reps, set: setReps, unita: 'reps' })}
+                    {campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
                   </>
                 )}
               </div>
 
               {selected !== 'Rest' && (
-                <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400 text-xs">💪 Intensità</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-bold ${getIntensityColor(intensity)}`}>{intensity}/10</span>
-                    <BicepsFlexed size={16} className={getIntensityColor(intensity)} />
+                <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
+                  <div className="flex items-center justify-between">
+                    <span className={LABEL}>Intensità</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`font-mono text-sm font-extrabold ${getIntensityColor(intensity)}`}>{intensity}/10</span>
+                      <BicepsFlexed size={17} className={getIntensityColor(intensity)} />
+                    </div>
                   </div>
+                  <IntensityPicker value={intensity} onChange={setIntensity} />
                 </div>
-                <IntensityPicker value={intensity} onChange={setIntensity} />
-              </div>
               )}
 
-              <input
-                className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand text-base"
-                placeholder="Note (es. vai a cedimento, body weight...)"
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
+              <RigaTesto
+                icona={FileText}
+                etichetta="Note dell'esercizio"
+                placeholder="Note (es. vai a cedimento…)"
+                valore={notes}
+                onChange={setNotes}
               />
 
             </div>
@@ -807,11 +1332,10 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 
       {/* Piede fisso: la conferma resta raggiungibile anche con la tastiera aperta */}
       {selected && (
-        <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-[#2a2a2a] bg-[#0B0B0B]">
-          <button onClick={handleConfirm}
-            className="w-full min-h-11 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition">
+        <div className="shrink-0 px-4 pt-3 pb-[calc(13px+env(safe-area-inset-bottom))] border-t border-white/[.07] bg-[#0B0B0B]/[.9] backdrop-blur-xl flex">
+          <CtaPrimaria onClick={handleConfirm} icona={initialExercise ? Save : Plus}>
             {initialExercise ? 'Salva modifiche' : 'Aggiungi esercizio'}
-          </button>
+          </CtaPrimaria>
         </div>
       )}
     </div>,
@@ -820,11 +1344,11 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 }
 
 // ─── BLOCCO ESERCIZIO ─────────────────────────────────────────
-function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, showMinute, onEdit, touchHandlers, onDuplicate }) {
+function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onEdit, touchHandlers, onDuplicate }) {
 
-  const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
-  const paceStr = (isErgo(ex.name) || ex.name === 'Run') && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
-  const speedStr = ex.name === 'Run' && ex.speed && ex.speed !== '-' ? `@ ${ex.speed}` : ''
+  // Il numero c'è sempre, non solo su EMOM e ON/OFF: lì è il minuto, altrove è
+  // l'ordine — e l'ordine di un blocco è un'informazione, non un dettaglio.
+  const dettaglio = dettaglioEsercizio(ex)
 
   return (
     <div
@@ -859,38 +1383,30 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
         onDragEndIndex?.()
       }}
       data-drag-item
-      className="drag-item flex items-center gap-3 bg-[#222] border border-[#2e2e2e] rounded-2xl px-4 py-3 cursor-move hover:border-[#444] transition-all duration-200"
+      className="drag-item flex items-center gap-[11px] rounded-[14px] px-[11px] py-[9px] bg-black/40 border border-white/[.06]
+                 cursor-move hover:border-white/15 transition-all duration-200"
     >
-      <div className="flex flex-col items-center justify-center shrink-0">
-        <button aria-label="Sposta l'esercizio su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className={`text-muted hover:text-brand disabled:opacity-0 p-0.5`}><ChevronUp size={16}/></button>
-        <button aria-label="Sposta l'esercizio giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className={`text-muted hover:text-brand disabled:opacity-0 p-0.5`}><ChevronDown size={16}/></button>
-      </div>
+      <NumeroEsercizio n={index + 1} />
 
-      {showMinute && (
-        <div className="w-8 h-8 rounded-full bg-brand/10 border border-brand/30 flex items-center justify-center shrink-0">
-          <span className="text-brand text-xs font-bold">{index + 1}</span>
-        </div>
-      )}
-
-      <div className="flex-1 cursor-pointer group self-stretch flex flex-col justify-center py-2 -my-2" onClick={() => onEdit && onEdit(ex)}>
-        <p className="text-white text-sm font-medium group-hover:text-brand transition">{ex.name}</p>
-        <p className="text-muted text-xs mt-0.5 group-hover:text-gray-400 transition">
-          {detail} {paceStr} {speedStr}
-          {ex.kg ? ` · ${ex.kg}kg` : ''}
-          {ex.notes ? ` · ${ex.notes}` : ''}
+      <div className="flex-1 min-w-0 cursor-pointer group self-stretch flex flex-col justify-center" onClick={() => onEdit && onEdit(ex)}>
+        <p className="text-sm font-bold text-white truncate group-hover:text-brand transition">{ex.name}</p>
+        <p className="mt-0.5 font-mono text-[11.5px] font-semibold tracking-[.02em] text-muted truncate">
+          {[dettaglio, ex.notes].filter(Boolean).join(' · ') || '—'}
         </p>
       </div>
+
       {ex.intensity && (
-        <div className="flex items-center gap-1 pr-2 shrink-0 cursor-pointer hover:opacity-80 transition" onClick={() => onEdit && onEdit(ex)}>
-           <span className={`text-xs font-bold ${getIntensityColor(ex.intensity)}`}>{ex.intensity}/10</span>
-           <BicepsFlexed size={16} className={getIntensityColor(ex.intensity)} />
-        </div>
+        <span className={`shrink-0 font-mono text-xs font-extrabold ${getIntensityColor(ex.intensity)}`}
+          onClick={() => onEdit && onEdit(ex)}>{ex.intensity}/10</span>
       )}
-      <div className="flex items-center shrink-0">
-        <button aria-label="Duplica l'esercizio" type="button" onClick={() => onDuplicate && onDuplicate(ex)} className="text-muted hover:text-brand transition shrink-0 p-2" title="Duplica esercizio">
+
+      <div className="flex items-center shrink-0 -mr-1.5">
+        <button aria-label="Sposta l'esercizio su" type="button" onClick={() => onMoveUp && onMoveUp(index)} disabled={index === 0} className="text-[#4a4f5c] hover:text-brand disabled:opacity-0 p-1"><ChevronUp size={15}/></button>
+        <button aria-label="Sposta l'esercizio giù" type="button" onClick={() => onMoveDown && onMoveDown(index)} disabled={index === (total || 1) - 1} className="text-[#4a4f5c] hover:text-brand disabled:opacity-0 p-1"><ChevronDown size={15}/></button>
+        <button aria-label="Duplica l'esercizio" type="button" onClick={() => onDuplicate && onDuplicate(ex)} className="text-[#4a4f5c] hover:text-brand transition p-1" title="Duplica esercizio">
           <Copy size={15} />
         </button>
-        <button aria-label="Rimuovi l'esercizio" type="button" onClick={() => onRemove(ex.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
+        <button aria-label="Rimuovi l'esercizio" type="button" onClick={() => onRemove(ex.id)} className="text-[#4a4f5c] hover:text-red-400 transition p-1">
           <Trash2 size={15} />
         </button>
       </div>
@@ -926,7 +1442,34 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
   const updateParam = (k, v) => onUpdate({ ...block, params: { ...block.params, [k]: v } })
   const updateNotes = (notes) => onUpdate({ ...block, notes })
 
+  // Quale parametro è aperto sulla tastiera, come in ExercisePicker.
+  const [digitando, setDigitando] = useState(null)
+
+  /** Un parametro del blocco. Vedi la nota gemella in ExercisePicker. */
+  const parametro = (chiave, { etichetta, lista, rapidi, ripiego }) => {
+    const valore = block.params?.[chiave] ?? ripiego
+    return (
+      <Stepper
+        etichetta={etichetta}
+        valore={valore}
+        opzioni={rapidi}
+        onChange={(v) => updateParam(chiave, v)}
+        onPasso={(direzione) => updateParam(chiave, passoInLista(lista, valore, direzione))}
+        inDigitazione={digitando === chiave}
+        onDigita={() => setDigitando(digitando === chiave ? null : chiave)}
+      />
+    )
+  }
+
   const c = TYPE_COLORS[block.type] || { text: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]' }
+  const lavoro = BLOCCHI_DI_LAVORO.has(block.type)
+  const conEsercizi = !['WarmUp', 'Rest'].includes(block.type)
+  const quantiEsercizi = (block.exercises || []).length
+
+  // ⚠️ Per WarmUp, Rest e AMRAP il riepilogo È la durata, e la durata sta già
+  // in testa alla riga: ripeterla a sinistra vorrebbe dire scrivere due volte
+  // lo stesso numero a otto centimetri di distanza.
+  const riepilogoRipeteLaDurata = ['WarmUp', 'Rest', 'AMRAP'].includes(block.type)
 
   const getBlockRecap = () => {
     if (['WarmUp', 'Rest'].includes(block.type)) {
@@ -982,126 +1525,104 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
         onDragEndIndex?.()
       }}
       data-drag-item
-      className={`drag-item bg-[#1e1e1e] border ${isOpen ? c.border : 'border-[#333] hover:border-[#444]'} rounded-2xl p-4 flex flex-col gap-3 relative cursor-move transition-all duration-200`}
+      data-blocco-id={block.id}
+      className={`drag-item scroll-mt-4 relative overflow-hidden rounded-[20px] border cursor-move transition-all duration-200
+        shadow-[0_16px_30px_-18px_rgba(0,0,0,.85),inset_0_1px_0_rgba(255,255,255,.05)] ${
+        isOpen
+          ? 'border-brand/[.26] bg-gradient-to-b from-[#211f18] to-[#191919]'
+          : 'border-white/[.07] bg-gradient-to-b from-[#1c1c1f] to-[#171719] hover:border-white/15'
+      }`}
     >
-      <div 
-        className={`flex flex-col cursor-pointer ${isOpen ? 'border-b border-[#333] pb-2' : ''}`}
-        onClick={() => onToggle(block.id)}
-      >
-        <div className="flex items-center justify-between">
-          <span className="flex items-baseline gap-2 min-w-0">
-            <span className={`font-bold text-sm ${c.text}`}>{block.type}</span>
-            <span className="text-[11px] text-muted font-normal truncate">{blockHint(block.type)}</span>
+      <SpinaBlocco tipo={block.type} aperto={isOpen} lavoro={lavoro} />
+
+      {/* Due righe e non una: la didascalia in chiaro («Blocco di apertura») è la
+          risposta al rilievo 3.2.1(viii) di Apple, e su 393px accanto al nome,
+          alla durata e a quattro azioni finiva troncata a «Blocco di apert…».
+          Sulla seconda riga, che occupa tutta la card, ci sta intera — ed è la
+          prima cosa scritta, quindi è l'ultima a cedere se la riga trabocca. */}
+      <div className="pl-4 pr-2.5 py-3 cursor-pointer" onClick={() => onToggle(block.id)}>
+        <div className="flex items-center gap-2.5">
+          <span data-tipo-blocco className={`flex-1 min-w-0 truncate text-[15.5px] font-extrabold tracking-[-.015em] ${isOpen ? 'text-white' : c.text}`}>
+            {block.type}
           </span>
-          <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-            <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate(block.id)} className="text-muted hover:text-brand transition p-1" title="Duplica">
-              <Copy size={16}/>
+
+          <DurataBlocco testo={mmss(durataBlocco(block))} acceso={isOpen} />
+
+          <div className="flex items-center shrink-0 -mr-1" onClick={e => e.stopPropagation()}>
+            <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate(block.id)} className="text-[#5b6070] hover:text-brand transition p-1" title="Duplica">
+              <Copy size={15}/>
             </button>
-            <button aria-label="Sposta il blocco su" type="button" onClick={() => onMoveUp(block.id)} disabled={index===0} className="text-muted hover:text-white disabled:opacity-30 p-1"><ChevronUp size={16}/></button>
-            <button aria-label="Sposta il blocco giù" type="button" onClick={() => onMoveDown(block.id)} disabled={index===total-1} className="text-muted hover:text-white disabled:opacity-30 p-1"><ChevronDown size={16}/></button>
-            <button aria-label="Elimina il blocco" type="button" onClick={() => onRemove(block.id)} className="text-muted hover:text-red-400 ml-1 p-1"><Trash2 size={16}/></button>
+            <button aria-label="Sposta il blocco su" type="button" onClick={() => onMoveUp(block.id)} disabled={index===0} className="text-[#5b6070] hover:text-white disabled:opacity-25 p-1"><ChevronUp size={15}/></button>
+            <button aria-label="Sposta il blocco giù" type="button" onClick={() => onMoveDown(block.id)} disabled={index===total-1} className="text-[#5b6070] hover:text-white disabled:opacity-25 p-1"><ChevronDown size={15}/></button>
+            <button aria-label="Elimina il blocco" type="button" onClick={() => onRemove(block.id)} className="text-[#5b6070] hover:text-red-400 transition p-1"><Trash2 size={15}/></button>
           </div>
         </div>
 
-        {!isOpen && (
-          <div className="mt-2 flex flex-col gap-2">
-            {getBlockRecap() && <span className="text-xs text-gray-400 font-medium">{getBlockRecap()}</span>}
-            
-            {['WarmUp', 'Rest'].includes(block.type) && block.notes && (
-              <span className="text-xs text-muted truncate">{block.notes}</span>
-            )}
-            
-            {!['WarmUp', 'Rest'].includes(block.type) && (
-              block.exercises && block.exercises.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {block.exercises.map((ex, i) => {
-                    const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
-                    const paceStr = (isErgo(ex.name) || ex.name === 'Run') && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
-                    const speedStr = ex.name === 'Run' && ex.speed && ex.speed !== '-' ? `@ ${ex.speed}` : ''
-                    const kgStr = ex.kg ? `${ex.kg}kg` : ''
-                    const specs = [detail, paceStr, speedStr, kgStr].filter(Boolean).join(' ')
-                    return (
-                      <span key={i} className="text-xs bg-[#111] border border-[#333] text-gray-400 px-2 py-1.5 rounded-lg flex items-center gap-1">
-                        <span className="text-gray-300 font-medium">{ex.name}</span>
-                        {specs && <span className="text-muted ml-0.5">{specs}</span>}
-                      </span>
-                    )
-                  })}
-                </div>
-              ) : (
-                <span className="text-xs text-gray-400 italic">Nessun esercizio aggiunto</span>
-              )
-            )}
-          </div>
-        )}
+        <p className="mt-[3px] font-mono text-[11.5px] font-bold tracking-[.03em] text-muted truncate">
+          {[
+            blockHint(block.type),
+            conEsercizi ? `${quantiEsercizi} eserciz${quantiEsercizi === 1 ? 'io' : 'i'}` : null,
+            riepilogoRipeteLaDurata ? null : getBlockRecap(),
+            !conEsercizi ? block.notes : null,
+          ].filter(Boolean).map((pezzo, i, tutti) => (
+            <span key={i}>{pezzo}{i < tutti.length - 1 ? ' · ' : ''}</span>
+          ))}
+        </p>
       </div>
 
       {isOpen && (
-        <div className="flex flex-col gap-3 animate-in fade-in duration-200">
+        <div className="px-3.5 pb-[13px] flex flex-col gap-3 animate-in fade-in duration-200">
           {['WarmUp', 'Rest'].includes(block.type) && (
-            <div className="grid grid-cols-2 gap-3">
-              <ScrollPicker type="time" value={block.params?.duration} onChange={v => updateParam('duration', v)} label="Durata" />
-              <div className="flex flex-col gap-1">
-                <label className="text-gray-400 text-xs pl-1">Note</label>
-                <input className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-3 py-3 text-base text-white focus:border-brand focus:outline-none" value={block.notes || ''} onChange={e => updateNotes(e.target.value)} placeholder="Opzionale..." />
-              </div>
-            </div>
+            <>
+              {parametro('duration', { etichetta: 'Durata', lista: TIME_OPTIONS, rapidi: RAPIDI_DURATA, ripiego: '3:00' })}
+              <RigaTesto
+                icona={FileText}
+                etichetta="Note del blocco"
+                placeholder="Note (opzionale)…"
+                valore={block.notes || ''}
+                onChange={updateNotes}
+              />
+            </>
           )}
 
           {block.type === 'ON/OFF' && (
-            <div className="grid grid-cols-3 gap-2">
-              <ScrollPicker type="time" value={block.params?.on} onChange={v => updateParam('on', v)} label="ON" />
-              <ScrollPicker type="time" value={block.params?.off} onChange={v => updateParam('off', v)} label="OFF" />
-              <ScrollPicker options={ROUNDS_OPTIONS} value={block.params?.rounds} onChange={v => updateParam('rounds', v)} label="Rounds" />
-            </div>
+            <>
+              {parametro('on', { etichetta: 'ON — lavoro', lista: TIME_OPTIONS, rapidi: RAPIDI_LAVORO, ripiego: '1:00' })}
+              {parametro('off', { etichetta: 'OFF — recupero', lista: TIME_OPTIONS, rapidi: RAPIDI_LAVORO, ripiego: '1:00' })}
+              {parametro('rounds', { etichetta: 'Rounds', lista: ROUNDS_OPTIONS, rapidi: RAPIDI_ROUNDS, ripiego: '10' })}
+            </>
           )}
 
           {block.type === 'EMOM' && (
-            <div className="grid grid-cols-2 gap-2">
-              <ScrollPicker type="time" value={block.params?.interval} onChange={v => updateParam('interval', v)} label="Intervallo" />
-              <ScrollPicker options={ROUNDS_OPTIONS} value={block.params?.rounds} onChange={v => updateParam('rounds', v)} label="Rounds" />
-            </div>
+            <>
+              {parametro('interval', { etichetta: 'Intervallo', lista: TIME_OPTIONS, rapidi: RAPIDI_INTERVALLO, ripiego: '1:00' })}
+              {parametro('rounds', { etichetta: 'Rounds', lista: ROUNDS_OPTIONS, rapidi: RAPIDI_ROUNDS, ripiego: '10' })}
+            </>
           )}
 
-          {block.type === 'AMRAP' && (
-            <ScrollPicker type="time" value={block.params?.duration} onChange={v => updateParam('duration', v)} label="Durata" />
-          )}
+          {block.type === 'AMRAP' &&
+            parametro('duration', { etichetta: 'Durata', lista: TIME_OPTIONS, rapidi: RAPIDI_AMRAP, ripiego: '10:00' })}
 
-          {['For Time', 'Interval'].includes(block.type) && (
-            <ScrollPicker options={ROUNDS_OPTIONS} value={block.params?.rounds} onChange={v => updateParam('rounds', v)} label="Rounds" />
-          )}
+          {['For Time', 'Interval'].includes(block.type) &&
+            parametro('rounds', { etichetta: 'Rounds', lista: ROUNDS_OPTIONS, rapidi: RAPIDI_ROUNDS, ripiego: block.type === 'For Time' ? '3' : '1' })}
 
           {['Cash In', 'Cash Out'].includes(block.type) && (
-            <div className="flex w-full">
-              <div 
-                className="transition-all duration-400 ease-out" 
-                style={{ 
-                  width: parseInt(block.params?.rounds, 10) > 1 ? '50%' : '100%', 
-                  paddingRight: parseInt(block.params?.rounds, 10) > 1 ? '6px' : '0px' 
-                }}
-              >
-                <ScrollPicker options={ROUNDS_OPTIONS} value={block.params?.rounds || '1'} onChange={v => updateParam('rounds', v)} label="Rounds" />
-              </div>
-              <div 
-                className={`transition-all duration-400 ease-out overflow-hidden ${
-                  parseInt(block.params?.rounds, 10) > 1 ? 'w-1/2 opacity-100 pl-[6px]' : 'w-0 opacity-0 pl-0'
-                }`}
-              >
-                <div className="w-full min-w-[130px]">
-                  <ScrollPicker type="time" value={block.params?.rest} onChange={v => updateParam('rest', v)} label="Rest tra i rounds" />
-                </div>
-              </div>
-            </div>
+            <>
+              {parametro('rounds', { etichetta: 'Rounds', lista: ROUNDS_OPTIONS, rapidi: RAPIDI_ROUNDS, ripiego: '1' })}
+              {/* Il rest esiste solo fra i round: con un round solo, il campo non
+                  ha nulla da dire e sparisce invece di restare a zero. */}
+              {parseInt(block.params?.rounds, 10) > 1 &&
+                parametro('rest', { etichetta: 'Rest fra i rounds', lista: REST_TIME_OPTIONS, rapidi: RAPIDI_REST, ripiego: '1:00' })}
+            </>
           )}
 
           {/* Exercises */}
           {!['WarmUp', 'Rest'].includes(block.type) && (
             <>
-              <div className="flex flex-col gap-2 mt-2" data-drag-container>
+              <div className="flex flex-col gap-2" data-drag-container>
                 {(block.exercises || []).map((ex, i) => (
                   <ExerciseRow 
                     key={ex.id} ex={ex} index={i} total={block.exercises.length}
-                    showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'}
                     onRemove={(id) => onUpdate({ ...block, exercises: block.exercises.filter(e => e.id !== id) })}
                     onMoveUp={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx - 1) })}
                     onMoveDown={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx + 1) })}
@@ -1122,8 +1643,10 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
                   />
                 ))}
               </div>
-              <button onClick={() => setPickerOpen(true)} className="py-3 border border-dashed border-[#383838] rounded-xl text-brand text-sm hover:bg-brand/10 transition mt-1">
-                + Aggiungi Esercizio
+              <button type="button" onClick={() => setPickerOpen(true)}
+                className="min-h-11 rounded-[14px] border border-dashed border-brand/[.34] text-brand text-[13.5px] font-extrabold
+                           flex items-center justify-center gap-2 hover:bg-brand/10 transition">
+                <Plus size={16} aria-hidden="true" /> Esercizio
               </button>
             </>
           )}
@@ -1446,6 +1969,56 @@ export const RunningStepRow = memo(function RunningStepRow({ step, index, total,
 })
 
 // ─── MAIN ─────────────────────────────────────────────────────
+// ─── DUE CARD CONDIVISE DAI TRE PASSI 2 ───────────────────────────────────
+// Stanno qui e non in CreaWorkoutUI.jsx perché hanno bisogno di IntensityPicker
+// e getIntensityColor, che vivono in questo file: importarle di là creerebbe un
+// ciclo fra i due moduli per risparmiare venti righe.
+
+/**
+ * L'intensità dichiarata dal coach.
+ *
+ * ⚠️ NON è il «RPE atteso» del riepilogo, che è calcolato dagli esercizi e ha i
+ * decimali. Questa è una dichiarazione, finisce in `workouts.sections.intensity`
+ * e viene riletta dalla scheda, dal PDF e dalla story: l'artboard non la mostra,
+ * ma toglierla vorrebbe dire perdere un campo che il coach controlla e che tre
+ * altre superfici leggono.
+ */
+function CardIntensita({ valore, onChange, classeColore }) {
+  return (
+    <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
+      <div className="flex items-center justify-between">
+        <span className={LABEL}>Intensità dichiarata</span>
+        <div className="flex items-center gap-1.5">
+          <span className={`font-mono text-sm font-extrabold ${getIntensityColor(valore)}`}>{valore}/10</span>
+          <BicepsFlexed size={17} className={getIntensityColor(valore)} />
+        </div>
+      </div>
+      <IntensityPicker value={valore} onChange={onChange} activeColor={classeColore} />
+    </div>
+  )
+}
+
+/** Le note del coach, nello stesso linguaggio delle altre card. */
+function NoteCoach({ valore, onChange, etichetta, nota, placeholder, righe = 3 }) {
+  return (
+    <div className={`${CARD} px-4 py-[14px]`}>
+      <div className="flex items-center justify-between gap-2.5">
+        <span className={LABEL}>{etichetta}</span>
+        {nota && <span className="text-[11px] font-bold text-[#5b6070]">{nota}</span>}
+      </div>
+      <textarea
+        aria-label={etichetta}
+        rows={righe}
+        className="w-full mt-2 bg-transparent text-sm font-medium leading-relaxed text-white
+                   placeholder-[#5b6070] focus:outline-none resize-none"
+        placeholder={placeholder}
+        value={valore}
+        onChange={e => onChange(e.target.value)}
+      />
+    </div>
+  )
+}
+
 export default function CreateWorkout() {
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
@@ -1465,6 +2038,14 @@ export default function CreateWorkout() {
   const [aiModalOpen, setAiModalOpen] = useState(false)
   const [openBlockId, setOpenBlockId] = useState(null)
   const draggedBlockIdx = useRef(null)
+
+  // ⚠️ Aggiungere un blocco CHIUDE quello aperto prima, quindi la pagina si
+  // accorcia di colpo e il blocco nuovo — che sta in fondo alla lista — finisce
+  // fuori schermo: il coach lo crea e non lo vede. Qui si segna quale mostrare,
+  // e un effetto lo porta sotto gli occhi dopo che il layout si è assestato.
+  // Un ref e non uno stato: non è mai letto durante il render, ed evita il giro
+  // in più (stessa ragione di `draggedBlockIdx`).
+  const bloccoDaMostrare = useRef(null)
   
   // Running
   const [runningSteps, setRunningSteps] = useState([])
@@ -1547,6 +2128,21 @@ export default function CreateWorkout() {
     }
   }, [])
   const bloccoDragEnd = useCallback(() => { draggedBlockIdx.current = null }, [])
+
+  useEffect(() => {
+    const id = bloccoDaMostrare.current
+    if (id === null) return
+    bloccoDaMostrare.current = null
+    // Un frame di attesa: il blocco appena aperto sta ancora montando il suo
+    // corpo, e senza questo si scorre verso una posizione che cambia subito dopo.
+    requestAnimationFrame(() => {
+      // La chiamata è opzionale anche sul metodo: un TypeError dentro un rAF
+      // non fa fallire niente, sparisce e basta — che è il modo peggiore di
+      // scoprire che un ambiente non implementa scrollIntoView.
+      document.querySelector(`[data-blocco-id="${id}"]`)
+        ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+    })
+  }, [blocks])
 
   // Hook touch per riordinare le FASI RUNNING
   // Come per i blocchi: getTouchHandlers è memoizzato su onReorder, quindi
@@ -1785,6 +2381,16 @@ export default function CreateWorkout() {
 
   const isStep1Valid = title.trim() !== '' || category === 'Custom'
 
+  // I tre numeri in cima allo step 2 e i segmenti della barra. Un useMemo e non
+  // uno stato aggiornato da un effetto: sono una funzione dei blocchi, e uno
+  // stato derivato può restare indietro di un render (CLAUDE.md §9-septies).
+  const riepilogo = useMemo(() => riepilogoWorkout(blocks), [blocks])
+
+  const sottotitoloWorkout = useMemo(() => {
+    const d = date && isValid(parseISO(date)) ? format(parseISO(date), 'EEE d MMM', { locale: it }) : ''
+    return [d, categoriaCorrente(category).nome].filter(Boolean).join(' · ')
+  }, [date, category])
+
 
   const handleSave = async () => {
     if (!title && category !== 'Custom') return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci il titolo del workout!', type: 'error' })
@@ -1865,7 +2471,8 @@ export default function CreateWorkout() {
   }
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
+    <div className="px-4 max-w-2xl mx-auto min-h-[100dvh] flex flex-col gap-[18px]
+                    pt-[calc(env(safe-area-inset-top)+1rem)] pb-[var(--altezza-navbar)] page-transition">
       <style>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .drag-item {
@@ -1879,160 +2486,98 @@ export default function CreateWorkout() {
           user-select: auto;
           -webkit-user-drag: auto;
         }
-        .custom-slider {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 100%;
-          height: 60px;
-          margin: 0;
-          background: transparent;
-          touch-action: none;
-        }
-        .custom-slider:focus {
-          outline: none;
-        }
-        .custom-slider::-webkit-slider-runnable-track {
-          width: 100%;
-          height: 100%;
-          cursor: pointer;
-          border-radius: 30px;
-          background: transparent;
-        }
-        .custom-slider::-webkit-slider-thumb {
-          height: 44px;
-          width: 44px;
-          border-radius: 50%;
-          cursor: pointer;
-          -webkit-appearance: none;
-          appearance: none;
-          margin-top: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-          position: relative;
-        }
-        .custom-slider.slider-yellow {
-          background: linear-gradient(to right, var(--color-brand) var(--progress), #383838 var(--progress));
-          background-size: 100% 10px;
-          background-position: center;
-          background-repeat: no-repeat;
-        }
-        .custom-slider.slider-yellow::-webkit-slider-thumb {
-          background: var(--color-brand);
-        }
-        .custom-slider.slider-blue {
-          background: linear-gradient(to right, var(--color-running) var(--progress), #383838 var(--progress));
-          background-size: 100% 10px;
-          background-position: center;
-          background-repeat: no-repeat;
-        }
-        .custom-slider.slider-blue::-webkit-slider-thumb {
-          background: var(--color-running);
-        }
       `}</style>
-      <button aria-label="Torna indietro" onClick={handleBack} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0 mb-6">
-        <X size={22} />
-      </button>
-      <h1 className="text-2xl font-bold text-brand mb-4">{editId ? 'Modifica Workout' : 'Crea Workout'}</h1>
+      <TestataCrea
+        passo={step}
+        onIndietro={handleBack}
+        titolo={step === 2 ? (title.trim() || generaTitolo(date)) : null}
+        sottotitolo={step === 2 ? sottotitoloWorkout : null}
+        onTitolo={step === 2 ? () => setStep(1) : null}
+      />
 
-      <div className="flex flex-col gap-3 mb-6">
-        <input
-          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand font-medium text-base"
-          placeholder={category === 'Custom' ? generaTitolo(date) : 'Nome workout (es. Hyrox Strength #1)'}
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-        />
-        <CustomDatePicker
-          date={date}
-          onChange={setDate}
-          placeholder="Data dell'allenamento"
-          className="bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-base hover:border-brand w-full"
-        />
-      </div>
-
-      {/* ── STEP 1: TIPO ─────────────────────────────────── */}
+      {/* ── STEP 1: LA CATEGORIA COME DOMANDA ────────────────────── */}
       {step === 1 && (
-        <div className="flex flex-col gap-4">
-          <p className="text-gray-400 text-sm font-medium">Seleziona Categoria:</p>
-          <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] mb-2">
-            <div 
-              className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(33.333%-0.25rem)] rounded-xl shadow-md transition-all duration-300 ease-out ${
-                category === 'Hyrox' ? 'translate-x-0 bg-brand/10 border border-brand/50' : 
-                category === 'Running' ? 'translate-x-full bg-running/10 border border-running/50' : 
-                'translate-x-[200%] bg-custom/10 border border-custom/50'
-              }`}
-            />
-            <button 
-              onClick={() => setCategory('Hyrox')} 
-              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Hyrox' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}>
-              <Dumbbell size={18} /> Hyrox
-            </button>
-            <button 
-              onClick={() => setCategory('Running')} 
-              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Running' ? 'text-running' : 'text-muted hover:text-gray-300'}`}>
-              <Timer size={18} /> Running
-            </button>
-            <button 
-              onClick={() => setCategory('Custom')} 
-              className={`relative z-10 flex-1 py-3.5 rounded-xl font-bold transition-colors duration-300 flex items-center justify-center gap-1.5 ${category === 'Custom' ? 'text-custom' : 'text-muted hover:text-gray-300'}`}>
-              <Dumbbell size={18} /> Custom
-            </button>
+        <div className="flex flex-col gap-[18px]">
+          <div>
+            <p className={`${LABEL} text-brand mb-[5px] tracking-[.11em]`}>{editId ? 'Modifica workout' : 'Nuovo workout'}</p>
+            <h1 className="text-[29px] font-black tracking-[-.035em] leading-[1.1] text-white">
+              Che tipo di<br />allenamento è?
+            </h1>
+          </div>
+
+          <div className="flex flex-col gap-[11px]">
+            {CATEGORIE.map(c => (
+              <CardCategoria
+                key={c.id}
+                attiva={category === c.id}
+                colore={c.colore}
+                testoSuColore={c.testoSuColore}
+                icona={ICONA_CATEGORIA[c.id]}
+                nome={c.nome}
+                descrizione={c.descrizione}
+                onClick={() => setCategory(c.id)}
+              />
+            ))}
+          </div>
+
+          <div className="h-px bg-white/[.07]" />
+
+          {/* Nome e data scendono SOTTO la scelta: si compilano una volta e si
+              dimenticano, e in cima resta la domanda che conta. */}
+          <div className="flex flex-col gap-2.5">
+            <RigaCampo etichetta="Nome">
+              <input
+                aria-label="Nome del workout"
+                enterKeyHint="done"
+                onKeyDown={chiudiTastieraSuInvio}
+                className="w-full bg-transparent text-[15.5px] font-bold text-white placeholder-[#5b6070] focus:outline-none"
+                placeholder={category === 'Custom' ? generaTitolo(date) : 'Es. Hyrox Strength #1'}
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+              />
+            </RigaCampo>
+            <RigaCampo etichetta="Data">
+              <CustomDatePicker
+                date={date}
+                onChange={setDate}
+                placeholder="Scegli la data"
+                className="text-[15.5px] font-bold"
+              />
+            </RigaCampo>
           </div>
 
           {!isStep1Valid && (
-            <p className="text-yellow-500 text-xs text-center mb-2 animate-in fade-in duration-300">
-              ↑ Completa nome e data per proseguire
+            <p className="text-center text-xs font-semibold text-muted animate-in fade-in duration-300">
+              Serve un nome per proseguire.
             </p>
           )}
-
-          <div key={category} className="animate-in fade-in zoom-in-[0.98] duration-300 ease-out">
-            {category === 'Hyrox' ? (
-              <button 
-                onClick={() => setStep(2)} 
-                disabled={!isStep1Valid}
-                className={`w-full py-4 mt-2 rounded-2xl border border-brand/50 bg-brand/10 text-brand font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
-              >
-                Crea Allenamento Hyrox →
-              </button>
-            ) : category === 'Running' ? (
-              <button 
-                onClick={() => setStep(2)} 
-                disabled={!isStep1Valid}
-                className={`w-full py-4 mt-2 rounded-2xl border border-running/50 bg-running/10 text-running font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
-              >
-                Crea Allenamento Corsa →
-              </button>
-            ) : (
-              <button 
-                onClick={() => setStep(2)} 
-                disabled={!isStep1Valid}
-                className={`w-full py-4 mt-2 rounded-2xl border border-custom/50 bg-custom/10 text-custom font-bold text-lg transition ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-125'}`}
-              >
-                Crea Allenamento Custom →
-              </button>
-            )}
-          </div>
         </div>
       )}
 
-      {/* ── STEP 2: BUILD WORKOUT (HYROX) ────────────────────────── */}
+      {/* ── STEP 2: IL BUILDER CON IL RIEPILOGO ──────────────────── */}
       {step === 2 && category === 'Hyrox' && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3.5">
 
-          <div className="px-4 py-4 rounded-2xl border border-[#444] bg-[#222] flex flex-col gap-3">
+          {/* Il builder era cieco: si aggiungevano blocchi senza sapere quanto
+              dura la seduta. La barra sotto i tre numeri dice COME la durata è
+              distribuita — un riscaldamento che si mangia metà seduta si vede a
+              occhio, senza leggere un solo tempo. */}
+          <RiepilogoWorkout {...riepilogo} />
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Dumbbell size={18} className="text-brand" />
-                <span className="font-bold text-brand">Allenamento Hyrox</span>
-              </div>
-              <div className="flex items-center gap-1">
-                 <span className={`text-sm font-bold ${getIntensityColor(workoutIntensity)}`}>{workoutIntensity}/10</span>
-                 <BicepsFlexed size={18} className={getIntensityColor(workoutIntensity)} />
-              </div>
-            </div>
-            <IntensityPicker value={workoutIntensity} onChange={setWorkoutIntensity} />
-          </div>
+          <CardIntensita
+            valore={workoutIntensity}
+            onChange={setWorkoutIntensity}
+            classeColore="bg-brand"
+          />
 
-          <div className="flex flex-col gap-4" data-drag-container>
+          {/* ⚠️ Sta QUI, sopra i blocchi, e non sotto: è il modo di PARTIRE da
+              zero, quindi deve essere visibile quando la lista è vuota o corta —
+              non scendere in fondo insieme alla lista man mano che cresce.
+              L'artboard la disegnava sotto; alla prova sul dispositivo, con
+              cinque blocchi aperti, non la trovava più nessuno. */}
+          <CardIA onClick={() => setAiModalOpen(true)} />
+
+          <div className="flex flex-col gap-[11px]" data-drag-container>
             {blocks.map((block, idx) => (
               <HyroxBlock
                 key={block.id} block={block} index={idx} total={blocks.length}
@@ -2052,36 +2597,15 @@ export default function CreateWorkout() {
             ))}
           </div>
 
-          <div className="flex gap-3">
-            <button onClick={() => setBlockPickerOpen(true)} className="flex-1 py-4 border border-dashed border-[#383838] rounded-xl text-gray-400 text-sm hover:border-brand hover:text-brand transition font-medium">
-              + Aggiungi Blocco
-            </button>
-            <button onClick={() => setAiModalOpen(true)} className="flex-1 py-4 border border-dashed border-ia/30 bg-ia/10 rounded-xl text-ia text-sm hover:border-ia hover:bg-ia/20 transition font-medium flex items-center justify-center gap-2">
-              <Wand2 size={18} /> Genera con IA
-            </button>
-          </div>
+          <BottoneGhost onClick={() => setBlockPickerOpen(true)}>Aggiungi blocco</BottoneGhost>
 
-          {/* NOTE COACH */}
-          <div className="mt-4">
-            <label className="text-gray-400 text-sm mb-2 block">Note coach (appariranno nel PDF)</label>
-            <textarea
-              className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand resize-none text-base"
-              rows={3}
-              placeholder="Es: vai a cedimento sull'ultimo esercizio, mantieni il ritmo..."
-              value={coachNotes}
-              onChange={e => setCoachNotes(e.target.value)}
-            />
-          </div>
-
-
-          {/* BOTTONI */}
-          <div className="flex gap-3">
-            <button onClick={handleSave} disabled={saving}
-              className="w-full justify-center px-6 py-3 rounded-xl bg-brand text-black font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
-              <Save size={18} />
-              {saving ? 'Salvo...' : saved ? '✅ Salvato!' : 'Salva Workout'}
-            </button>
-          </div>
+          <NoteCoach
+            valore={coachNotes}
+            onChange={setCoachNotes}
+            etichetta="Note coach"
+            nota="Nel PDF"
+            placeholder="Es: vai a cedimento sull'ultimo esercizio, tieni il ritmo sul row…"
+          />
         </div>
       )}
 
@@ -2100,6 +2624,7 @@ export default function CreateWorkout() {
             if (type === 'Cash In' || type === 'Cash Out') { newBlock.params.rounds = '1' }
             setBlocks([...blocks, newBlock])
             setOpenBlockId(newBlock.id)
+            bloccoDaMostrare.current = newBlock.id
             setBlockPickerOpen(false)
           }}
         />
@@ -2118,40 +2643,43 @@ export default function CreateWorkout() {
               }))
             }))
             setBlocks([...blocks, ...formattedBlocks])
-            if (formattedBlocks.length > 0) setOpenBlockId(formattedBlocks[formattedBlocks.length - 1].id)
+            if (formattedBlocks.length > 0) {
+              setOpenBlockId(formattedBlocks[formattedBlocks.length - 1].id)
+              // Il primo dei blocchi generati, non l'ultimo: l'IA ne scrive
+              // parecchi in un colpo, e il coach deve vedere da dove comincia.
+              bloccoDaMostrare.current = formattedBlocks[0].id
+            }
           }}
         />
       )}
 
-      {/* ── STEP 2: BUILD RUNNING WORKOUT ────────────────── */}
+      {/* ── STEP 2: LE FASI DI CORSA ─────────────────────────────── */}
+      {/* ⚠️ Il corpo di questa schermata NON è stato ridisegnato: l'artboard
+          «Crea Workout» copre lo step 1 (tutte e tre le categorie) e lo step 2
+          Hyrox. Qui cambiano la cornice condivisa — testata, card, barra fissa —
+          e non il modo di comporre le fasi, che resta quello di prima. */}
       {step === 2 && category === 'Running' && (
-        <div className="flex flex-col gap-4">
-          <div className="px-4 py-4 rounded-2xl border border-[#444] bg-[#222] flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Timer size={18} className="text-running" />
-                <span className="font-bold text-running">Allenamento Corsa</span>
-              </div>
-              <div className="flex items-center gap-1">
-                 <span className={`text-sm font-bold ${getIntensityColor(workoutIntensity)}`}>{workoutIntensity}/10</span>
-                 <BicepsFlexed size={18} className={getIntensityColor(workoutIntensity)} />
-              </div>
-            </div>
-            <input type="range" min="1" max="10" value={workoutIntensity} onChange={e => setWorkoutIntensity(e.target.value)} className="w-full accent-running" />
-          </div>
+        <div className="flex flex-col gap-3.5">
+          <CardIntensita
+            valore={workoutIntensity}
+            onChange={setWorkoutIntensity}
+            classeColore="bg-running"
+          />
 
-          <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-white font-semibold text-sm">Fasi dell'allenamento</span>
-              <button aria-label="Aggiungi una fase di corsa" onClick={() => setRunningPickerOpen(true)} className="text-running hover:brightness-110">
+          <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
+            <div className="flex items-center justify-between">
+              <span className={LABEL}>Fasi dell'allenamento</span>
+              <button aria-label="Aggiungi una fase di corsa" type="button" onClick={() => { setEditingStep(null); setRunningPickerOpen(true) }}
+                className="text-running hover:brightness-125 transition p-1 -m-1">
                 <Plus size={18} />
               </button>
             </div>
 
             {runningSteps.length === 0 ? (
-              <button onClick={() => setRunningPickerOpen(true)}
-                className="w-full py-4 border border-dashed border-[#383838] rounded-xl text-gray-400 text-sm hover:border-running hover:text-running transition">
-                + Aggiungi prima fase (es. Riscaldamento)
+              <button type="button" onClick={() => { setEditingStep(null); setRunningPickerOpen(true) }}
+                className="min-h-12 rounded-[14px] border border-dashed border-running/40 text-running text-[13.5px] font-extrabold
+                           flex items-center justify-center gap-2 hover:bg-running/10 transition">
+                <Plus size={16} aria-hidden="true" /> Aggiungi la prima fase
               </button>
             ) : (
               <div className="flex flex-col gap-2" data-drag-container>
@@ -2172,61 +2700,68 @@ export default function CreateWorkout() {
                     touchHandlers={getStepTouchHandlers}
                   />
                 ))}
-                <button onClick={() => setRunningPickerOpen(true)}
-                  className="flex items-center justify-center gap-2 border border-dashed border-[#383838] rounded-xl py-3 text-running text-sm font-medium mt-1 hover:border-running transition">
-                  <Plus size={16} /> Aggiungi fase
+                <button type="button" onClick={() => { setEditingStep(null); setRunningPickerOpen(true) }}
+                  className="min-h-11 rounded-[14px] border border-dashed border-running/40 text-running text-[13.5px] font-extrabold
+                             flex items-center justify-center gap-2 hover:bg-running/10 transition mt-1">
+                  <Plus size={16} aria-hidden="true" /> Aggiungi fase
                 </button>
               </div>
             )}
           </div>
 
-          <div className="flex gap-3">
-            <button onClick={handleSave} disabled={saving}
-              className="w-full justify-center px-6 py-3 rounded-xl bg-brand text-black font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
-              <Save size={18} />
-              {saving ? 'Salvo...' : saved ? '✅ Salvato!' : 'Salva Workout'}
-            </button>
-          </div>
+          <NoteCoach
+            valore={coachNotes}
+            onChange={setCoachNotes}
+            etichetta="Note coach"
+            nota="Nel PDF"
+            placeholder="Es: parti tranquillo, chiudi progressivo…"
+          />
         </div>
       )}
 
-      {/* ── STEP 2: BUILD CUSTOM WORKOUT ────────────────── */}
+      {/* ── STEP 2: L'ALLENAMENTO DESCRITTO A PAROLE ─────────────── */}
       {step === 2 && category === 'Custom' && (
-        <div className="flex flex-col gap-4">
-          <div className="px-4 py-4 rounded-2xl border border-[#444] bg-[#222] flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Dumbbell size={18} className="text-custom" />
-                <span className="font-bold text-custom">Allenamento Custom</span>
-              </div>
-              <div className="flex items-center gap-1">
-                 <span className={`text-sm font-bold ${getIntensityColor(workoutIntensity)}`}>{workoutIntensity}/10</span>
-                 <BicepsFlexed size={18} className={getIntensityColor(workoutIntensity)} />
-              </div>
-            </div>
-            <IntensityPicker value={workoutIntensity} onChange={setWorkoutIntensity} activeColor="bg-custom" />
-          </div>
+        <div className="flex flex-col gap-3.5">
+          <CardIntensita
+            valore={workoutIntensity}
+            onChange={setWorkoutIntensity}
+            classeColore="bg-custom"
+          />
 
-          <div className="mt-2">
-            <label className="text-gray-400 text-sm mb-2 block">Descrizione / Note per l'atleta</label>
-            <textarea
-              className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-custom resize-none text-base"
-              rows={8}
-              placeholder="Descrivi l'allenamento in dettaglio. Questa descrizione apparirà a tutti gli atleti a cui assegnerai questo workout."
-              value={coachNotes}
-              onChange={e => setCoachNotes(e.target.value)}
-            />
-          </div>
-
-          <div className="flex gap-3 mt-4">
-            <button onClick={handleSave} disabled={saving}
-              className="w-full justify-center px-6 py-3 rounded-xl bg-custom text-white font-bold hover:brightness-110 transition disabled:opacity-50 flex items-center gap-2">
-              <Save size={18} />
-              {saving ? 'Salvo...' : saved ? '✅ Salvato!' : 'Salva Workout'}
-            </button>
-          </div>
+          <NoteCoach
+            valore={coachNotes}
+            onChange={setCoachNotes}
+            etichetta="Descrizione per l'atleta"
+            nota="Obbligatoria"
+            righe={10}
+            placeholder="Descrivi l'allenamento in dettaglio. Questa descrizione apparirà a tutti gli atleti a cui assegnerai questo workout."
+          />
         </div>
       )}
+
+      {/* Salva stava in fondo a uno scroll che cresce con il workout: più il
+          coach costruiva, più il salvataggio si allontanava. Ora è ancorato, e
+          la stessa barra serve i tre passi 2 e il passo 1. */}
+      <div className="mt-auto" />
+      <BarraAzioni>
+        {step === 1 ? (
+          <CtaPrimaria onClick={() => setStep(2)} disabled={!isStep1Valid} iconaCoda={ArrowRight}>
+            Costruisci l'allenamento
+          </CtaPrimaria>
+        ) : (
+          <>
+            {editId && (
+              <BottoneQuadrato
+                etichetta="Salva come nuovo allenamento"
+                onClick={() => { setNewWorkoutName(title); setIsSavingAsNew(true); setShowSaveModal(true) }}
+              />
+            )}
+            <CtaPrimaria onClick={handleSave} disabled={saving} icona={Save}>
+              {saving ? 'Salvo…' : saved ? 'Salvato!' : 'Salva workout'}
+            </CtaPrimaria>
+          </>
+        )}
+      </BarraAzioni>
 
       {/* RUNNING STEP PICKER MODAL */}
       {runningPickerOpen && (

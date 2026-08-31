@@ -2,13 +2,26 @@ import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronRight, Plus, BicepsFlexed, X, Search } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, parseISO } from 'date-fns'
+import { X } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, isSameDay, isToday } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useAuth } from '../App'
 import { CustomAlert } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
-import { BRAND, RUNNING, CUSTOM, EVENTO } from '../lib/colori'
+import { categoriaDi, corsia } from '../lib/categorie'
+import { coloreCategoria } from '../lib/colori'
+import { metaWorkout, conteggiPerCorsia } from '../lib/rigaArchivio'
+import { rpeDichiarato } from '../lib/rpe'
+import {
+  griglia, indicizzaPerGiorno, chiaveGiorno, segnoGiorno, riepilogoMese,
+  riepilogoGiorno, formattaVolume, etichettaSessione, etichettaGiorno,
+  etichettaMese, eMeseCorrente,
+} from '../lib/rigaCalendario'
+import {
+  TestataCalendario, CardMese, NavMese, LegendaCorsie, GrigliaMese, CellaGiorno,
+  StrisciaMese, IntestazioneGiorno, RigaSessione, AggiungiGiorno, VuotoGiorno,
+  ScheletroGiorno,
+} from '../components/CalendarioUI'
 
 export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -18,34 +31,34 @@ export default function Calendar() {
   const [eventModalOpen, setEventModalOpen] = useState(false)
   const navigate = useNavigate()
   const { role, user } = useAuth()
+  const isAtleta = role === 'athlete'
 
   useEffect(() => {
     fetchWorkouts()
   }, [currentMonth])
 
-  // I workout del giorno selezionato sono un valore DERIVATO, non uno stato:
-  // erano tenuti in useState e riscritti da un effetto a ogni cambio di giorno,
-  // il che significava un render in più e uno stato che poteva restare indietro.
-  const dayWorkouts = useMemo(
-    () => workouts.filter(w => isSameDay(parseISO(w.date), selectedDay)),
-    [workouts, selectedDay]
-  )
-
   const fetchWorkouts = async () => {
     setLoading(true)
     const from = format(startOfMonth(currentMonth), 'yyyy-MM-dd')
     const to = format(endOfMonth(currentMonth), 'yyyy-MM-dd')
-    
+
     if (role === 'athlete') {
+      // ⚠️ `notes` serve all'RPE della riga, e arriva dall'ASSEGNAZIONE: è lì
+      // che sta il marcatore `[RPE: n/10]`, non sul workout. Senza, la riga di
+      // un allenamento chiuso non può dire com'è andato — che è l'unica cosa
+      // per cui si riapre il calendario di ieri.
       const { data } = await supabase
         .from('athlete_workouts')
-        .select('id, completed_date, status, workouts (id, title, date, sections)')
+        .select('id, completed_date, status, notes, workouts (id, title, date, sections)')
         .eq('athlete_id', user.id)
         .gte('completed_date', from)
         .lte('completed_date', to)
       const mapped = (data || []).filter(aw => aw.workouts).map(aw => ({
-         ...aw.workouts,
-         date: aw.completed_date
+        ...aw.workouts,
+        aw_id: aw.id,
+        status: aw.status,
+        notes: aw.notes,
+        date: aw.completed_date
       }))
       setWorkouts(mapped)
     } else {
@@ -59,237 +72,157 @@ export default function Calendar() {
     setLoading(false)
   }
 
-  const days = eachDayOfInterval({
-    start: startOfMonth(currentMonth),
-    end: endOfMonth(currentMonth)
-  })
+  const { giorni, vuote } = useMemo(() => griglia(currentMonth), [currentMonth])
+  const perGiorno = useMemo(() => indicizzaPerGiorno(workouts), [workouts])
 
-  const firstDayOfMonth = startOfMonth(currentMonth).getDay()
-  const offset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1
+  // I workout del giorno selezionato sono un valore DERIVATO, non uno stato:
+  // erano tenuti in useState e riscritti da un effetto a ogni cambio di giorno,
+  // il che significava un render in più e uno stato che poteva restare indietro.
+  const dayWorkouts = useMemo(
+    () => perGiorno.get(chiaveGiorno(selectedDay)) || [],
+    [perGiorno, selectedDay]
+  )
+
+  // 🔴 `soloCompletati` tiene le prime due celle sullo STESSO orizzonte: per
+  // l'atleta «14 di 18 fatti» e le ore di quei 14, per il coach «18
+  // programmati» e le ore di quei 18. La sua query legge `workouts`, che non
+  // ha nessuna colonna di stato: un «completati» per lui sarebbe sempre zero.
+  const sintesi = useMemo(
+    () => riepilogoMese(workouts, { soloCompletati: isAtleta }),
+    [workouts, isAtleta]
+  )
+
+  const corsie = useMemo(() => conteggiPerCorsia(workouts), [workouts])
+
+  // La legenda esiste solo per i colori che sono davvero nel mese, «Fatto»
+  // compreso.
+  //
+  // ⚠️ La regola è sui DATI, non sul ruolo: la voce compare se qualcosa è
+  // chiuso davvero. Un `isAtleta &&` in più qui sarebbe ridondante — la query
+  // del coach legge `workouts`, che non ha nessuna colonna di stato, quindi
+  // per lui il conteggio è zero comunque — e un guardiano che nessun caso può
+  // giustificare è il modo in cui la regola vera smette di essere leggibile
+  // (§9-quinquies, sul controllo di bordo tolto da `faseMoveUp`).
+  const vociLegenda = useMemo(() => {
+    const voci = corsie.map(({ categoria }) => ({
+      chiave: categoria,
+      etichetta: corsia(categoria).etichetta,
+      colore: coloreCategoria(categoria),
+    }))
+    if (sintesi.completati > 0) {
+      voci.push({ chiave: 'fatto', etichetta: 'Fatto', colore: '#22c55e' })
+    }
+    return voci
+  }, [corsie, sintesi.completati])
+
+  const volume = formattaVolume(sintesi.minuti, sintesi.ignote, sintesi.misurate)
+
+  const celleSintesi = [
+    isAtleta
+      ? { etichetta: 'Completati', valore: String(sintesi.completati), suffisso: `/${sintesi.totale}` }
+      : { etichetta: 'Programmati', valore: String(sintesi.totale) },
+    { etichetta: 'Volume', valore: volume.valore, suffisso: volume.unita },
+    sintesi.gara
+      ? { etichetta: 'Gara', valore: sintesi.gara.giorno, evidenzia: true }
+      : { etichetta: 'Gara', valore: '—' },
+  ]
 
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
+  const vaiAOggi = () => { const o = new Date(); setCurrentMonth(o); setSelectedDay(o) }
 
-  // Mappa piatta di hex per i pallini del calendario: forma diversa da
-  // lib/blockColors.js, che porta anche classi Tailwind. Non è una copia.
-  const COLORI_PALLINI = {
-    'WarmUp': '#9ca3af',
-    'Rest': '#6b7280',
-    'Cash In': '#d1d5db',
-    'Cash Out': '#d1d5db',
-    'ON/OFF': BRAND,
-    'EMOM': BRAND,
-    'AMRAP': BRAND,
-    'For Time': BRAND,
-        'Interval': BRAND,
-
-    Hyrox: BRAND,
-    Running: RUNNING,
-    Custom: CUSTOM,
-    Event: EVENTO
-  }
-
-  const getIntensityColor = (val, type) => {
-    const num = parseInt(val, 10);
-    if (isNaN(num)) return 'text-muted';
-    return type === 'Event' ? 'text-white' : type === 'Running' ? 'text-running' : (type === 'Custom' ? 'text-custom' : 'text-brand');
-  }
-
-  const getWorkoutType = (w) => {
-    const s = w.sections || {}
-    if (s.category === 'Event') return 'Event'
-    if (s.category === 'Custom' || s.category === 'Autonomo') return 'Custom'
-    if (s.category === 'Running' || s.main?.type === 'Running' || s.steps) return 'Running'
-    if (s.blocks) {
-      const mainBlock = s.blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time', 'Interval'].includes(b.type))
-      return mainBlock ? mainBlock.type : 'Hyrox'
-    }
-    const oldT = s.main?.type || ''
-    if (oldT === 'EMOM' && s.main?.params?.on) return 'ON/OFF'
-    return oldT || 'Hyrox'
-  }
+  const dataSelezionata = format(selectedDay, 'yyyy-MM-dd')
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
-      {/* BRAND HEADER */}
-      <div className="mb-6 mt-4">
-        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
-      </div>
+    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
+      <TestataCalendario
+        mese={etichettaMese(currentMonth)}
+        anno={format(currentMonth, 'yyyy')}
+        onCerca={() => navigate('/archive')}
+        onNuovo={() => setEventModalOpen(true)}
+      />
 
-      {/* HEADER */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white capitalize">
-          {format(currentMonth, 'MMMM yyyy', { locale: it })}
-        </h1>
-        <div className="flex items-center gap-2">
-          <button aria-label="Mese precedente" onClick={prevMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
-            <ChevronLeft size={18} />
-          </button>
-          <button onClick={() => setCurrentMonth(new Date())} className="px-3 py-1.5 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white text-sm transition">
-            Oggi
-          </button>
-          <button aria-label="Mese successivo" onClick={nextMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
-            <ChevronRight size={18} />
-          </button>
-          
-          <div className="w-px h-6 bg-[#333] mx-1"></div>
-
-          <button aria-label="Cerca nell'archivio workout" 
-            onClick={() => navigate('/archive')}
-            className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition"
-            title="Cerca nel calendario"
-          >
-            <Search size={18} />
-          </button>
-          <button aria-label="Aggiungi un evento o una gara" 
-            onClick={() => setEventModalOpen(true)}
-            className="p-2 rounded-xl bg-brand text-black hover:brightness-110 transition shadow-sm"
-            title="Aggiungi Evento"
-          >
-            <Plus size={18} strokeWidth={2.5} />
-          </button>
-        </div>
-      </div>
-
-      {/* GIORNI SETTIMANA */}
-      <div className="grid grid-cols-7 mb-2">
-        {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => (
-          <div key={i} className="text-center text-gray-400 text-xs font-medium py-1">{d}</div>
-        ))}
-      </div>
-
-      {/* GRIGLIA CALENDARIO */}
-      <div className="grid grid-cols-7 gap-1 mb-6">
-        {Array.from({ length: offset }).map((_, i) => <div key={`empty-${i}`} />)}
-        {days.map(day => {
-          const dayWorkoutList = workouts.filter(w => isSameDay(parseISO(w.date), day))
-          const hasWorkout = dayWorkoutList.length > 0
-          const selected = isSameDay(day, selectedDay)
-          const today = isToday(day)
-
-          return (
-            <button
-              key={day.toISOString()}
-              onClick={() => setSelectedDay(day)}
-              className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 rounded-xl aspect-square transition
-                ${selected ? 'bg-brand' : today ? 'bg-[#2a2a2a]' : 'hover:bg-[#1e1e1e]'}`}
-            >
-              <span className={`text-sm font-medium leading-none
-                ${selected ? 'text-black' : today ? 'text-brand' : 'text-white'}`}>
-                {format(day, 'd')}
-              </span>
-              {hasWorkout && (
-                <div className="flex gap-0.5 mt-1">
-                  {dayWorkoutList.slice(0, 3).map((w, i) => (
-                    <div key={i} className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: selected ? '#000' : COLORI_PALLINI[getWorkoutType(w)] || BRAND }} />
-                  ))}
-                </div>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* WORKOUT DEL GIORNO */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-white font-semibold">
-            {format(selectedDay, 'EEEE d MMMM', { locale: it })}
-          </h2>
-          {role !== 'athlete' && (
-            <button
-              onClick={() => navigate(`/create?date=${format(selectedDay, 'yyyy-MM-dd')}`)}
-              className="flex items-center gap-1 text-brand text-sm font-medium hover:brightness-110"
-            >
-              <Plus size={16} /> Nuovo
-            </button>
-          )}
-        </div>
-
-        {loading ? (
-          <div className="flex flex-col gap-3">
-             <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-24 animate-pulse"></div>
-             <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 h-24 animate-pulse opacity-50"></div>
-          </div>
-        ) : dayWorkouts.length === 0 ? (
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-6 text-center">
-            <p className="text-gray-400 text-sm">Nessun workout programmato</p>
-            {role !== 'athlete' && (
-              <button onClick={() => navigate(`/create?date=${format(selectedDay, 'yyyy-MM-dd')}`)}
-                className="mt-3 text-brand text-sm font-medium hover:brightness-110">
-                + Crea workout per questo giorno
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {dayWorkouts.map(w => {
-              const type = getWorkoutType(w)
-              const color = COLORI_PALLINI[type] || BRAND
-              const exList = w.sections?.main?.exercises || []
+      <div className="mt-3.5">
+        <CardMese>
+          <NavMese
+            onPrecedente={prevMonth}
+            onSuccessivo={nextMonth}
+            onOggi={vaiAOggi}
+            mostraOggi={!eMeseCorrente(currentMonth)}
+          />
+          <LegendaCorsie voci={vociLegenda} />
+          <GrigliaMese
+            vuote={vuote}
+            celle={giorni.map(giorno => {
+              const lista = perGiorno.get(chiaveGiorno(giorno)) || []
+              const segno = segnoGiorno(lista)
               return (
-                <div key={w.id}
-                  onClick={() => navigate(`/workout/${w.id}`)}
-                  className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 cursor-pointer hover:border-[#383838] transition">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-10 rounded-full" style={{ backgroundColor: color }} />
-                      <div>
-                        <p className="text-white font-semibold">{w.title}</p>
-                        <p className="text-xs mt-0.5" style={{ color }}>{type}</p>
-                      </div>
-                    </div>
-                    {w.sections?.intensity && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className={`text-xs font-bold ${getIntensityColor(w.sections.intensity, type)}`}>{w.sections.intensity}/10</span>
-                        <BicepsFlexed size={16} className={getIntensityColor(w.sections.intensity, type)} />
-                      </div>
-                    )}
-                  </div>
-                  {w.sections?.blocks ? (
-                    <div className="flex flex-wrap gap-1 mt-2 ml-4">
-                      <span className="text-xs bg-[#2a2a2a] text-gray-400 px-2 py-0.5 rounded-full">
-                        {w.sections.blocks.length} blocchi
-                      </span>
-                    </div>
-                  ) : (
-                    exList && exList.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2 ml-4">
-                        {exList.slice(0, 4).map((ex, i) => (
-                          <span key={i} className="text-xs bg-[#2a2a2a] text-gray-400 px-2 py-0.5 rounded-full">
-                            {ex.name}
-                          </span>
-                        ))}
-                        {exList.length > 4 && (
-                          <span className="text-xs text-gray-400">+{exList.length - 4}</span>
-                        )}
-                      </div>
-                    )
-                  )}
-                  {type === 'Running' && (w.sections?.main?.steps?.length > 0 || w.sections?.steps?.length > 0) && (
-                    <div className="flex flex-wrap gap-1 mt-2 ml-4">
-                      <span className="text-xs bg-[#2a2a2a] text-gray-400 px-2 py-0.5 rounded-full">
-                        {w.sections?.steps?.length || w.sections?.main?.steps?.length || 0} fasi di corsa
-                      </span>
-                    </div>
-                  )}
-                </div>
+                <CellaGiorno
+                  key={giorno.toISOString()}
+                  numero={format(giorno, 'd')}
+                  segno={segno}
+                  selezionato={isSameDay(giorno, selectedDay)}
+                  oggi={isToday(giorno)}
+                  etichetta={etichettaCella(giorno, segno, lista)}
+                  onClick={() => setSelectedDay(giorno)}
+                />
               )
             })}
-          </div>
-        )}
+          />
+          <StrisciaMese celle={celleSintesi} />
+        </CardMese>
       </div>
+
+      <IntestazioneGiorno
+        data={etichettaGiorno(selectedDay)}
+        riepilogo={loading ? '' : riepilogoGiorno(dayWorkouts)}
+      />
+
+      {loading ? (
+        <ScheletroGiorno />
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {dayWorkouts.length === 0 && <VuotoGiorno atleta={isAtleta} />}
+          {dayWorkouts.map(w => {
+            const categoria = categoriaDi(w.sections)
+            // 🔴 L'RPE si legge con `rpeDichiarato`, non con `parseNotesAndRpe`:
+            // il secondo torna 5 quando il marcatore non c'è, ed è il valore
+            // giusto per il cursore della modale ma un numero inventato per
+            // chiunque lo mostri come un dato (§9-octies).
+            const rpe = w.status === 'completed' ? rpeDichiarato(w.notes) : null
+            const meta = [metaWorkout(w, { giorno: false }), rpe !== null ? `RPE ${rpe}` : null]
+              .filter(Boolean).join(' · ')
+            return (
+              <RigaSessione
+                key={w.aw_id || w.id}
+                categoria={categoria}
+                etichetta={etichettaSessione(w)}
+                titolo={w.title || 'Senza titolo'}
+                meta={meta}
+                stato={isAtleta ? (w.status === 'completed' ? 'fatto' : 'da fare') : null}
+                onApri={() => navigate(`/workout/${w.id}`)}
+              />
+            )
+          })}
+          {!isAtleta && (
+            <AggiungiGiorno
+              etichetta={`Aggiungi al ${format(selectedDay, 'd MMMM', { locale: it })}`}
+              onClick={() => navigate(`/create?date=${dataSelezionata}`)}
+            />
+          )}
+        </div>
+      )}
 
       {/* MODAL NUOVO EVENTO */}
       {eventModalOpen && createPortal(
-        <EventModal 
-          athleteId={user.id} 
-          onClose={() => setEventModalOpen(false)} 
-          onSaved={() => { 
-            setEventModalOpen(false); 
-            fetchWorkouts() 
-          }} 
+        <EventModal
+          athleteId={user.id}
+          dataIniziale={dataSelezionata}
+          onClose={() => setEventModalOpen(false)}
+          onSaved={() => {
+            setEventModalOpen(false);
+            fetchWorkouts()
+          }}
         />,
         document.body
       )}
@@ -297,9 +230,29 @@ export default function Calendar() {
   )
 }
 
-function EventModal({ athleteId, onClose, onSaved }) {
+/**
+ * Cosa dice una cella a chi la legge con VoiceOver.
+ *
+ * ⚠️ Porta il numero VERO delle sessioni, non quello dei segmenti disegnati:
+ * la barra si ferma a `MASSIMO_SEGMENTI`, e senza questa riga un giorno con
+ * cinque allenamenti e uno con tre sarebbero indistinguibili anche a chi la
+ * barra non la vede affatto.
+ */
+function etichettaCella(giorno, segno, lista) {
+  const data = format(giorno, 'd MMMM', { locale: it })
+  if (segno.n === 0) return `${data}, nessun allenamento`
+  const fatti = lista.filter(w => w.status === 'completed').length
+  const parti = [`${segno.n} ${segno.n === 1 ? 'allenamento' : 'allenamenti'}`]
+  if (fatti > 0) parti.push(`${fatti} ${fatti === 1 ? 'completato' : 'completati'}`)
+  return `${data}, ${parti.join(', ')}`
+}
+
+function EventModal({ athleteId, dataIniziale, onClose, onSaved }) {
   const [title, setTitle] = useState('')
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  // La data parte da quella SELEZIONATA nel calendario, non da oggi: si apre
+  // questa modale dopo aver scelto un giorno, e ripartire da oggi obbligava a
+  // rifare la scelta appena fatta.
+  const [date, setDate] = useState(dataIniziale || format(new Date(), 'yyyy-MM-dd'))
   const [saving, setSaving] = useState(false)
   const [alertInfo, setAlertInfo] = useState(null)
 
@@ -322,7 +275,7 @@ function EventModal({ athleteId, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl modal-transition">
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Nuovo Evento / Gara</p>
           <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>

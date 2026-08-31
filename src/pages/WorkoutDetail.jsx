@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, ChevronUp, Download, Timer, Flag, FlagOff, Dumbbell, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, Circle, CalendarDays, Mic, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, Activity, Heart, WifiOff } from 'lucide-react'
+import { ChevronUp, Download, Timer, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, CalendarDays, Mic, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, Heart, WifiOff, ClipboardList, Undo2, Image as ImmagineIcona } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -22,7 +22,6 @@ import { blockHint } from '../lib/blockHints'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { ERGOMETERS, COACHING_ID } from '../lib/constants'
-import { TYPE_COLORS } from '../lib/blockColors'
 import { sincronizzaBadge } from '../lib/badge'
 import { isVoiceNoteValid } from '../lib/notaVocale'
 import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/timerSequence'
@@ -30,6 +29,21 @@ import { BRAND, RUNNING, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
 import VoiceRecorder from '../components/VoiceRecorder'
+import { CARD } from '../lib/stiliCard'
+import { corsia } from '../lib/categorie'
+import { accodaSuStorage } from '../lib/offlineQueue'
+import { rpeDichiarato } from '../lib/rpe'
+import { riepilogoWorkout, durataBlocco, mmss, minutiStimati, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
+import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
+// Il riepilogo, la barra fissa e la spina dei blocchi sono LO STESSO codice
+// dello step 2 del builder: il coach deve ritrovare in lettura ciò che ha
+// visto in scrittura, e due copie divergerebbero al primo ritocco.
+import { RiepilogoWorkout, BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
+import {
+  TestataScheda, IconaStato, MenuScheda, TitoloScheda, AvvisoRiscaldamento,
+  BloccoScheda, RigaEsercizio, IntestazioneSezione, CardNota, EsitoCompletato,
+  RigaAssegnazione, ElencoAssegnazioni, CtaVetro,
+} from '../components/WorkoutDetailUI'
 
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
@@ -227,6 +241,16 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [rpeScore, setRpeScore] = useState('5')
   const [rpeNotes, setRpeNotes] = useState('')
 
+  // Il menu delle tre puntine, e i blocchi che il lettore ha richiuso.
+  // ⚠️ Si tiene l'elenco dei CHIUSI, non degli aperti: un blocco appena
+  // caricato deve mostrare i propri esercizi senza un tocco — la scheda si
+  // legge mentre ci si allena.
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [blocchiChiusi, setBlocchiChiusi] = useState([])
+  const toggleBlocco = useCallback((chiave) => {
+    setBlocchiChiusi(prec => prec.includes(chiave) ? prec.filter(k => k !== chiave) : [...prec, chiave])
+  }, [])
+
   // Timer
   const [timerOpen, setTimerOpen] = useState(false)
   const [timerMinimized, setTimerMinimized] = useState(false)
@@ -357,7 +381,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         setCurrentAthleteName(`${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim())
         if (awData[0].notes) {
           const parsed = parseNotesAndRpe(awData[0].notes);
-          setAthleteNote({ text: parsed.text, rpe: parsed.rpe, athleteName: `${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim() })
+          setAthleteNote({ text: parsed.text, rpe: parsed.rpe, dichiarato: rpeDichiarato(awData[0].notes), athleteName: `${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim() })
           setEditingNote(parsed.text)
           setRpeScore(parsed.rpe)
         } else {
@@ -438,9 +462,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     let errorMessage = '';
 
     if (!status.connected) {
-      const queue = JSON.parse(localStorage.getItem('fleofit_offline_queue') || '[]')
-      queue.push({ type: 'UPDATE_WORKOUT', payload: { id: athleteWorkoutId, status: newStatus, notes: finalNote } })
-      localStorage.setItem('fleofit_offline_queue', JSON.stringify(queue))
+      accodaSuStorage({ id: athleteWorkoutId, status: newStatus, notes: finalNote })
     } else {
       const { error } = await supabase.from('athlete_workouts').update({ status: newStatus, notes: finalNote }).eq('id', athleteWorkoutId)
       if (error) {
@@ -456,7 +478,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     } else {
       setWorkoutStatus(newStatus)
       setEditingNote(rpeNotes)
-      setAthleteNote({ text: rpeNotes, rpe: rpeScore, athleteName: athleteNote?.athleteName || '' })
+      setAthleteNote({ text: rpeNotes, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), athleteName: athleteNote?.athleteName || '' })
       setShowRpeModal(false)
 
       if (role === 'athlete' && status.connected) {
@@ -1073,255 +1095,304 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const blocks = getNormalizedBlocks(workout)
   const mainBlock = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type)) || blocks[0] || { type: 'Hyrox' }
   const type = isEvent ? 'Event' : (isCustom ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
-  const c = TYPE_COLORS[type] || TYPE_COLORS['Hyrox'] || { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' }
+  const corsiaWorkout = corsia(category)
 
-  const getIconForType = (t) => {
-    if (t === 'WarmUp' || t === 'Rest') return <Timer size={16} className={TYPE_COLORS[t]?.text} />
-    if (t === 'Cash In') return <Flag size={16} className={TYPE_COLORS[t]?.text} />
-    if (t === 'Cash Out') return <FlagOff size={16} className={TYPE_COLORS[t]?.text} />
-    return <Dumbbell size={16} className={TYPE_COLORS[t]?.text} />
+  // Il riepilogo vale solo dove ci sono blocchi da stimare. Corsa, Custom ed
+  // Evento non ne hanno: mostrare «0 min · 0 blocchi» sarebbe una bugia con
+  // l'aria di un dato, che è la stessa ragione per cui `DurataBlocco` scrive
+  // «—» invece di «0:00».
+  const haBlocchi = !isRunning && type !== 'Custom' && type !== 'Event' && blocks.length > 0
+  const riepilogo = haBlocchi ? riepilogoWorkout(blocks) : null
+
+  const eAtleta = (role === 'athlete' || isOwnProfile) && !!athleteWorkoutId
+  const completato = workoutStatus === 'completed'
+  const rpeAtletaDichiarato = athleteNote?.dichiarato ?? null
+  // ⚠️ Su un allenamento chiuso la terza colonna del riepilogo NON è più l'RPE
+  // atteso — che è la stima del coach — ma quello che l'atleta ha dichiarato.
+  // Sono due misure diverse, e vanno sotto due etichette diverse.
+  const mostraRpeAtleta = eAtleta && completato
+  const timerDisponibile = haTimerGuidato(workout)
+  const puoAssegnare = role !== 'athlete'
+
+  const apriTimer = () => {
+    if (timerOpen && !timerMinimized) { setTimerMinimized(true); return }
+    if (timerOpen && timerMinimized) { setTimerMinimized(false); return }
+    setTimerSequence(buildTimerSequence(workout))
+    setTimerOpen(true)
+    setTimerMinimized(false)
+  }
+  const apriAssegna = () => { setAssignModalOpen(true); setSelectedAthletes([]); setAssignStep(1) }
+
+  const comandoTv = connectedTvCode ? 'telecomando' : 'timer'
+  const IconaTimer = timerOpen && !timerMinimized ? ChevronDown
+    : timerOpen ? ChevronUp
+    : connectedTvCode ? MonitorUp
+    : Timer
+  const etichettaTimer = timerOpen && !timerMinimized ? `Minimizza ${comandoTv}`
+    : timerOpen ? `Apri ${comandoTv}`
+    : connectedTvCode ? 'Avvia telecomando TV'
+    : 'Avvia allenamento'
+
+  // La barra fissa in basso. Una sola CTA piena per schermo (La Regola del
+  // Tratto Unico): quando l'allenamento è già chiuso, il giallo non ha più
+  // niente da segnare e la CTA passa al vetro.
+  let azionePrimaria = null
+  let azioneSecondaria = null
+  if (eAtleta && completato) {
+    azionePrimaria = timerDisponibile
+      ? <CtaVetro onClick={apriTimer} icona={IconaTimer}>{timerOpen ? etichettaTimer : 'Rifallo'}</CtaVetro>
+      : <CtaVetro onClick={toggleStatus} icona={Undo2}>Segna come da fare</CtaVetro>
+    azioneSecondaria = <BottoneQuadrato etichetta="Condividi" icona={Send} onClick={shareWorkoutFiles} />
+  } else if (eAtleta) {
+    azionePrimaria = timerDisponibile
+      ? <CtaPrimaria onClick={apriTimer} icona={IconaTimer}>{etichettaTimer}</CtaPrimaria>
+      : <CtaPrimaria onClick={toggleStatus} icona={CheckCircle2}>Segna come completato</CtaPrimaria>
+    azioneSecondaria = timerDisponibile
+      ? <BottoneQuadrato etichetta="Segna come completato" icona={CheckCircle2} onClick={toggleStatus} />
+      : null
+  } else if (timerDisponibile) {
+    azionePrimaria = <CtaPrimaria onClick={apriTimer} icona={IconaTimer}>{etichettaTimer}</CtaPrimaria>
+    azioneSecondaria = puoAssegnare
+      ? <BottoneQuadrato etichetta="Assegna ad atleta" icona={Users} onClick={apriAssegna} />
+      : null
+  } else if (puoAssegnare) {
+    azionePrimaria = <CtaPrimaria onClick={apriAssegna} icona={Users}>Assegna ad atleta</CtaPrimaria>
   }
 
+  // Il menu delle tre puntine: i cinque bottoncini che stavano sotto il titolo
+  // più i quattro export che stavano in fondo alla pagina, tutti dello stesso
+  // peso l'uno dell'altro. Sono comandi che si usano una volta.
+  const vociMenu = [
+    puoAssegnare && { etichetta: 'Duplica', icona: Copy, onClick: () => navigate(`/create?duplicate=${id}`) },
+    puoAssegnare && !isAuto && { etichetta: 'Modifica', icona: Edit, onClick: () => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`) },
+    isAuto && { etichetta: 'Modifica', icona: Edit, onClick: openEditAutonomous },
+    eAtleta && completato && { etichetta: 'Segna come da fare', icona: Undo2, onClick: toggleStatus },
+    type !== 'Event' && { etichetta: 'Esporta PDF', icona: Download, onClick: exportPDF },
+    { etichetta: 'Salva grafica IG', icona: ImmagineIcona, onClick: exportShare2 },
+    { etichetta: type !== 'Event' ? 'Condividi (PDF + social)' : 'Condividi grafica', icona: Send, onClick: shareWorkoutFiles },
+    (puoAssegnare || isAuto) && { etichetta: 'Elimina', icona: Trash2, onClick: () => setShowDeleteConfirm(true), pericolo: true },
+  ]
+
+  /**
+   * Cosa l'atleta ha lasciato su questa assegnazione, in una riga sola.
+   *
+   * ⚠️ La data compare SOLO se diversa da quella del workout. Non è per
+   * brevità: un'assegnazione sulla stessa data non aggiunge niente, e su 393px
+   * — accanto al nome, alla pillola di stato e al cestino — rubava lo spazio a
+   * «RPE 8 · nota», che è l'unica cosa per cui il coach guarda questa lista.
+   * Quando invece l'atleta è programmato in un altro giorno, quello è il dato
+   * che conta.
+   */
+  const dettaglioAssegnazione = (a) => {
+    const rpe = rpeDichiarato(a.notes)
+    const testo = a.notes ? parseNotesAndRpe(a.notes).text.trim() : ''
+    const pezzi = []
+    if (a.completed_date && a.completed_date !== workout.date && isValid(parseISO(a.completed_date))) {
+      pezzi.push(format(parseISO(a.completed_date), 'EEE d MMM', { locale: it }))
+    }
+    if (rpe !== null) pezzi.push(`RPE ${rpe}`)
+    if (testo) pezzi.push('nota')
+    if (a.voice_note_url) pezzi.push('vocale')
+    return pezzi.length > 0 ? pezzi.join(' · ') : 'nessun riscontro'
+  }
+
+  const salvaNoteAtleta = async () => {
+    setSavingNote(true)
+    const finalNote = formatNotesWithRpe(rpeScore, editingNote)
+
+    const status = await Network.getStatus()
+    let success = true
+
+    if (!status.connected) {
+      accodaSuStorage({ id: athleteWorkoutId, status: workoutStatus, notes: finalNote })
+    } else {
+      const { error } = await supabase.from('athlete_workouts').update({ notes: finalNote }).eq('id', athleteWorkoutId)
+      if (error) { success = false; setAlertInfo({ title: 'Errore', message: error.message, type: 'error' }) }
+    }
+
+    setSavingNote(false)
+    if (!success) return
+
+    setAthleteNote({ text: editingNote, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), athleteName: athleteNote?.athleteName || '' })
+    if (role === 'athlete' && status.connected) {
+      supabase.functions.invoke('send-reminders', {
+        body: {
+          mode: 'coach_notification', action: 'note',
+          athleteName: athleteNote?.athleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta',
+          workoutTitle: workout.title, noteText: editingNote,
+          route: `/workout/${id}?athlete_id=${queryAthleteId || user.id}`,
+        },
+      }).catch(console.error)
+    }
+  }
+
+
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
-      <div className="mb-6 mt-4 flex items-center gap-3">
-        <button aria-label="Torna indietro" onClick={() => navigate(-1)} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0">
-          <ChevronLeft size={22} className="-ml-0.5" />
-        </button>
-        <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
-      </div>
+    <div className="px-4 max-w-2xl mx-auto min-h-[100dvh] flex flex-col gap-[15px]
+                    pt-[calc(env(safe-area-inset-top)+1rem)] pb-[var(--altezza-navbar)] page-transition">
 
-      {/* OFFLINE BANNER */}
-      {isOffline && (
-        <div className="mb-4 bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 flex items-center justify-between animate-pulse">
-          <div className="flex items-center gap-3">
-            <WifiOff size={24} className="text-orange-500" />
-            <div>
-              <p className="text-orange-500 text-xs font-bold uppercase tracking-wider">Modalità Offline</p>
-              <p className="text-orange-500/80 text-[11px] font-medium leading-tight">Puoi allenarti e salvare. Sincronizzeremo tutto appena torna la linea.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* HEADER */}
-      <div className="mb-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-bold text-white break-words">{workout.title}</h1>
-              <p className="text-muted text-sm mt-1 capitalize truncate">
-                {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEEE d MMMM yyyy', { locale: it }) : 'Data sconosciuta'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-              {workout.sections?.intensity && (
-                <div className="flex items-center gap-1 bg-[#2a2a2a] border border-[#383838] px-2 py-1.5 rounded-lg shrink-0">
-                  <span className={`text-xs font-bold ${getIntensityColor(workout.sections.intensity)}`}>
-                    {workout.sections.intensity}/10
-                  </span>
-                  <BicepsFlexed size={14} className={getIntensityColor(workout.sections.intensity)} />
-                </div>
-              )}
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${type === 'Event' ? 'bg-white text-black border-white' : `${c.bg} ${c.text} border ${c.border}`}`}>
-                {type}
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {connectedTvCode ? (
-              <button onClick={handleDisconnectTV} disabled={tvConnecting} className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-red-900/50 px-3 py-2 rounded-xl" title="Scollega TV">
-                <MonitorUp size={14} /> Scollega
-              </button>
-            ) : (
-              <button onClick={() => setTvModalOpen(true)} className="text-gray-400 hover:text-brand text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl" title="Trasmetti alla TV">
-                <MonitorUp size={14} /> TV
-              </button>
-            )}
-            {(role === 'athlete' || isOwnProfile) && (
-              <button onClick={toggleHeartRate} className={`text-xs flex items-center gap-1.5 transition border px-3 py-2 rounded-xl ${hrConnected ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-[#2a2a2a] border-[#383838] text-gray-400 hover:text-red-400'}`} title="Connetti Fascia Cardio">
-                <Heart size={14} className={hrConnected && heartRate ? 'animate-pulse' : ''} /> {hrConnected ? (heartRate ? `${heartRate} bpm` : 'Connesso') : 'Cardio'}
-              </button>
-            )}
-            {role !== 'athlete' && (
-              <button onClick={() => navigate(`/create?duplicate=${id}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl" title="Duplica Workout">
-                <Copy size={14} /> Duplica
-              </button>
-            )}
-            {role !== 'athlete' && !isAuto && (
-              <button onClick={() => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`)} className="text-gray-400 hover:text-white text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl">
-                <Edit size={14} /> Modifica
-              </button>
-            )}
-            {isAuto && (
-              <button onClick={openEditAutonomous} className="text-gray-400 hover:text-brand text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl">
-                <Edit size={14} /> Modifica
-              </button>
-            )}
-            {(role !== 'athlete' || isAuto) && (
-              <button aria-label="Elimina il workout" onClick={() => setShowDeleteConfirm(true)} className="text-gray-400 hover:text-red-400 text-xs flex items-center gap-1.5 transition bg-[#2a2a2a] border border-[#383838] px-3 py-2 rounded-xl" title="Elimina">
-                <Trash2 size={14} />
-              </button>
-            )}
-          </div>
-        </div>
-        {(role === 'athlete' || isOwnProfile) && athleteWorkoutId && (
-      
-          <button
-            onClick={toggleStatus}
-            className={`w-full mt-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 text-base font-bold transition border shadow-lg ${
-              workoutStatus === 'completed' 
-                ? 'bg-green-500 text-black border-green-500 hover:brightness-110 shadow-green-500/20' 
-                : 'bg-[#2a2a2a] border-[#383838] text-white hover:border-brand hover:text-brand'
-            }`}
-          >
-            {workoutStatus === 'completed' ? <CheckCircle2 size={20} /> : <Circle size={20} />} 
-            {workoutStatus === 'completed' ? 'Allenamento Completato!' : 'Segna come completato'}
-          </button>
+      {/* La testata porta due sole icone, e sono due STATI: si accendono e si
+          spengono durante l'allenamento. Duplica, Modifica, gli export e
+          Elimina — che sono comandi, e si usano una volta — stanno nel menu. */}
+      <TestataScheda onIndietro={() => navigate(-1)} onMenu={() => setMenuOpen(true)}>
+        {connectedTvCode ? (
+          <IconaStato etichetta="Scollega TV" icona={MonitorUp} accesa colore="#ef4444"
+            onClick={handleDisconnectTV} />
+        ) : (
+          <IconaStato etichetta="TV" icona={MonitorUp} onClick={() => setTvModalOpen(true)} />
         )}
-      </div>
+        {(role === 'athlete' || isOwnProfile) && (
+          <IconaStato etichetta="Cardio" icona={Heart} accesa={hrConnected} colore="#ef4444"
+            valore={hrConnected && heartRate ? String(heartRate) : null}
+            pulsa={hrConnected && !!heartRate} onClick={toggleHeartRate} />
+        )}
+      </TestataScheda>
 
-      {/* Il timer non c'è per gli allenamenti di corsa (decisione del
-          committente, 26/08/2026): le fasi si seguono con l'orologio, non con un
-          conto alla rovescia sul telefono. La regola sta in haTimerGuidato, così
-          il bottone e la costruzione della sequenza non possono divergere. */}
-      {haTimerGuidato(workout) && (
-        <div className="mb-8">
-          <button onClick={() => { 
-          if (timerOpen && !timerMinimized) {
-                setTimerMinimized(true);
-              } else if (timerOpen && timerMinimized) {                setTimerMinimized(false);
-              } else {
-                setTimerSequence(buildTimerSequence(workout)); 
-                setTimerOpen(true); 
-                setTimerMinimized(false);
-              }
-            }}
-            className={`w-full flex items-center justify-center gap-2 font-black py-4 rounded-3xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl text-lg uppercase tracking-wide ${
-              timerOpen && !timerMinimized 
-                ? 'bg-gradient-to-r from-gray-600 to-gray-500 text-white shadow-gray-500/20' 
-                : connectedTvCode 
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-blue-500/20' 
-                  : type === 'Custom' 
-                    ? 'bg-gradient-to-r from-custom to-red-600 text-white shadow-custom/20' 
-                    : type === 'Running' 
-                      ? 'bg-gradient-to-r from-running to-cyan-500 text-white shadow-running/20' 
-                      : 'bg-gradient-to-r from-brand to-yellow-500 text-black shadow-brand/20'
-            }`}>
-            {timerOpen && !timerMinimized ? (
-              <><ChevronDown size={24} className="stroke-[2.5]" /> Minimizza {connectedTvCode ? 'Telecomando' : 'Timer'}</>
-            ) : timerOpen && timerMinimized ? (
-              <><ChevronUp size={24} className="stroke-[2.5]" /> Apri {connectedTvCode ? 'Telecomando' : 'Timer'}</>
-            ) : connectedTvCode ? (
-              <><MonitorUp size={24} className="stroke-[2.5]" /> Avvia Telecomando TV</>
-            ) : (
-              <><Timer size={24} className="stroke-[2.5]" /> Avvia Allenamento</>
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* AVVISO SICUREZZA E RISCALDAMENTO AUTOMATICO */}
-      {type !== 'Event' && type !== 'Custom' && (
-        <div className="mb-4 bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 flex items-start gap-3 animate-in fade-in duration-500">
-          <div className="text-orange-400 mt-0.5"><Activity size={20} /></div>
-          <div>
-            <h3 className="text-orange-400 font-bold text-sm mb-1">Prima di iniziare</h3>
-            <p className="text-gray-300 text-xs leading-relaxed">
-              Esegui sempre 5-10 minuti di mobilità articolare. Approccia l'allenamento in modo graduale per preparare il corpo allo sforzo e prevenire infortuni. Non partire mai a freddo!
+      {isOffline && (
+        <div className="rounded-[18px] px-3.5 py-3 bg-orange-500/10 border border-orange-500/30 flex items-center gap-3">
+          <WifiOff size={18} className="shrink-0 text-orange-500" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[.1em] text-orange-500">Modalità Offline</p>
+            <p className="mt-0.5 text-[11.5px] leading-tight text-orange-500/80">
+              Puoi allenarti e salvare. Sincronizziamo appena torna la linea.
             </p>
           </div>
         </div>
       )}
 
-      {/* BLOCKS */}
+      <TitoloScheda
+        dot={corsiaWorkout.dot}
+        etichettaCategoria={corsiaWorkout.etichetta}
+        testoCategoria={corsiaWorkout.txt}
+        data={workout.date && isValid(parseISO(workout.date))
+          ? format(parseISO(workout.date), 'EEE d MMM', { locale: it })
+          : null}
+        titolo={workout.title}
+        intensita={s?.intensity}
+        classeIntensita={getIntensityColor(s?.intensity)}
+      />
+
+      {/* L'esito prima del contenuto: la domanda per cui si riapre la scheda di
+          ieri è «l'ho fatto?», e la risposta era un bottone verde — cioè uno
+          stato travestito da comando. */}
+      {(role === 'athlete' || isOwnProfile) && athleteWorkoutId && workoutStatus === 'completed' && (
+        <EsitoCompletato dettaglio={
+          [riepilogo && `${minutiStimati(riepilogo.secondi)} min`,
+           rpeAtletaDichiarato === null ? 'RPE non indicato' : `RPE ${rpeAtletaDichiarato}`]
+            .filter(Boolean).join(' · ')
+        } />
+      )}
+
+      {/* Gli stessi tre numeri e la stessa barra dello step 2 del builder: il
+          coach ritrova in lettura ciò che ha visto in scrittura. È una STIMA,
+          e vale solo dove esistono dei blocchi da stimare. */}
+      {riepilogo && (
+        <RiepilogoWorkout
+          {...riepilogo}
+          terzaCella={mostraRpeAtleta ? {
+            etichetta: 'Il tuo RPE',
+            valore: rpeAtletaDichiarato === null ? '—' : rpeAtletaDichiarato,
+            unita: rpeAtletaDichiarato === null ? null : '/10',
+            classeValore: rpeAtletaDichiarato === null ? 'text-[#4a4f5c]' : getRpeColorText(rpeAtletaDichiarato),
+          } : undefined}
+        />
+      )}
+
+      {type !== 'Event' && type !== 'Custom' && <AvvisoRiscaldamento />}
+
+      {/* BLOCCHI */}
       {!isRunning && type !== 'Custom' && type !== 'Event' ? (
-        blocks.map((block, idx) => (
-          <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} hint={blockHint(block.type)} color={TYPE_COLORS[block.type]?.border}>
-             {['WarmUp', 'Rest'].includes(block.type) ? (
-               <p className="text-gray-300 text-sm">{block.params?.duration} {block.notes ? ` · ${block.notes}` : ''}</p>
-             ) : (
-               <ExList exercises={block.exercises || []} showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'} typeColor={TYPE_COLORS[block.type]?.text} />
-             )}
-          </Section>
-        ))
+        <div className="flex flex-col gap-[9px]" data-blocchi>
+          {blocks.map((block, idx) => {
+            const esercizi = block.exercises || []
+            const apribile = esercizi.length > 0 && !['WarmUp', 'Rest'].includes(block.type)
+            const numerato = block.type === 'EMOM' || block.type === 'ON/OFF'
+            return (
+              <BloccoScheda
+                key={block.id || idx}
+                tipo={block.type}
+                hint={blockHint(block.type)}
+                sottotitolo={sottotitoloBlocco(block) || (
+                  ['WarmUp', 'Rest'].includes(block.type) ? (block.notes || '') : ''
+                )}
+                durata={mmss(durataBlocco(block))}
+                lavoro={BLOCCHI_DI_LAVORO.has(block.type)}
+                apribile={apribile}
+                aperto={!blocchiChiusi.includes(block.id ?? idx)}
+                onToggle={() => toggleBlocco(block.id ?? idx)}
+              >
+                {esercizi.map((ex, i) => (
+                  <RigaEsercizio
+                    key={ex.id || i}
+                    numero={numerato ? i + 1 : null}
+                    nome={ex.name}
+                    specifiche={specificheEsercizio(ex, isErgo)}
+                    note={ex.notes}
+                    intensita={ex.intensity}
+                    classeIntensita={getIntensityColor(ex.intensity)}
+                  />
+                ))}
+              </BloccoScheda>
+            )
+          })}
+        </div>
       ) : type === 'Event' ? (
-         <div className="bg-gradient-to-r from-[#2a2a2a] to-[#111] border border-brand/30 rounded-3xl p-8 text-center mb-6 shadow-lg shadow-brand/5">
-           <div className="w-20 h-20 bg-gradient-to-br from-brand to-yellow-600 text-black rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
-             <CalendarDays size={36} />
-           </div>
-           <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Evento / Gara</h2>
-           <p className="text-brand font-medium text-sm">Questo è il giorno dedicato al tuo obiettivo.</p>
-           <p className="text-gray-400 text-sm mt-1">Vai e spacca tutto! 🚀</p>
-         </div>
+        <div className={`${CARD} p-8 text-center`}>
+          <div className="w-20 h-20 bg-gradient-to-br from-brand to-yellow-600 text-black rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+            <CalendarDays size={36} />
+          </div>
+          <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Evento / Gara</h2>
+          <p className="text-brand font-medium text-sm">Questo è il giorno dedicato al tuo obiettivo.</p>
+          <p className="text-gray-400 text-sm mt-1">Vai e spacca tutto! 🚀</p>
+        </div>
       ) : type === 'Custom' ? (
-         <Section icon={<Dumbbell size={16} className={c.text} />} label="Allenamento Custom" color={c.border}>
-           <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{workout.coach_notes || athleteNote?.text || 'Dettagli non specificati.'}</p>
-         </Section>
+        <div className={`${CARD} px-4 py-[15px]`}>
+          <p className="text-[13.5px] leading-[1.55] text-gray-300 whitespace-pre-wrap text-pretty">
+            {workout.coach_notes || athleteNote?.text || 'Dettagli non specificati.'}
+          </p>
+        </div>
       ) : isRunning ? (
-         <Section icon={<Timer size={16} className={c.text} />} label="Allenamento Corsa" color={c.border}>
-           <RunningList steps={s?.steps || s?.main?.steps || []} />
-         </Section>
+        <div className={`${CARD} px-4 py-[15px]`}>
+          <RunningList steps={s?.steps || s?.main?.steps || []} />
+        </div>
       ) : null}
 
       {/* NOTE COACH */}
       {type !== 'Custom' && workout.coach_notes && (
-        <Section icon={<span className="text-brand text-sm">📋</span>} label="Note Coach" color="border-brand/40">
-          <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{workout.coach_notes}</p>
-        </Section>
+        <CardNota etichetta="Note del coach" icona={ClipboardList} colore={BRAND}>
+          <p className="text-[13.5px] leading-[1.55] text-gray-300 whitespace-pre-wrap text-pretty">{workout.coach_notes}</p>
+        </CardNota>
       )}
 
-      {/* NOTE VOCALE COACH */}
+      {/* NOTA VOCALE */}
       {athleteWorkoutId && (role === 'admin' || voiceNoteUrl) && (
-        <Section icon={<Mic size={16} className="text-brand" />} label={voiceNoteUrl ? `Messaggio dal Coach a ${currentAthleteName || 'Atleta'}` : `Invia vocale a ${currentAthleteName || 'Atleta'}`} color="border-brand/40">
-           {voiceNoteUrl ? (
-             <CustomAudioPlayer src={voiceNoteUrl} onDelete={deleteVoiceNote} role={role} />
-           ) : role === 'admin' ? (
-             <VoiceRecorder onSave={uploadVoiceNote} />
-           ) : null}
-        </Section>
+        <CardNota
+          etichetta={role === 'admin' ? `Vocale per ${currentAthleteName || 'l’atleta'}` : 'Vocale del coach'}
+          icona={Mic} colore={BRAND}>
+          {voiceNoteUrl ? (
+            <CustomAudioPlayer src={voiceNoteUrl} onDelete={deleteVoiceNote} role={role} />
+          ) : role === 'admin' ? (
+            <VoiceRecorder onSave={uploadVoiceNote} />
+          ) : null}
+        </CardNota>
       )}
 
       {/* NOTE ATLETA */}
       {(role === 'athlete' || isOwnProfile) && athleteWorkoutId ? (
-        <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Le tue note su questo ${type === 'Event' ? 'evento' : 'allenamento'}`} color="border-[#3b82f6]/40">
+        <CardNota etichetta={`Le tue note su questo ${type === 'Event' ? 'evento' : 'allenamento'}`} icona={User} colore="#3b82f6">
           <textarea
             ref={noteRef}
-            className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden focus:border-[#3b82f6]"
+            aria-label="Le tue note"
+            className="w-full bg-black/25 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden focus:border-[#3b82f6]"
             rows={3}
             placeholder="Com'è andata? Segna qui i tuoi pesi, i tempi o come ti sei sentito..."
             value={editingNote}
             onChange={(e) => setEditingNote(e.target.value)}
           />
-          <div className={`transition-all duration-300 ease-out overflow-hidden ${editingNote !== (athleteNote?.text || '') ? 'max-h-16 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}`}>
+          <div className={`transition-all duration-300 ease-out overflow-hidden ${editingNote !== (athleteNote?.text || '') ? 'max-h-16 opacity-100' : 'max-h-0 opacity-0'}`}>
             <div className="flex justify-end">
               <button
-                onClick={async () => {
-                  setSavingNote(true)
-                  const finalNote = formatNotesWithRpe(rpeScore, editingNote)
-                  
-                  const status = await Network.getStatus()
-                  let success = true;
-                  
-                  if (!status.connected) {
-                    const queue = JSON.parse(localStorage.getItem('fleofit_offline_queue') || '[]')
-                    queue.push({ type: 'UPDATE_WORKOUT', payload: { id: athleteWorkoutId, status: workoutStatus, notes: finalNote } })
-                    localStorage.setItem('fleofit_offline_queue', JSON.stringify(queue))
-                  } else {
-                    const { error } = await supabase.from('athlete_workouts').update({ notes: finalNote }).eq('id', athleteWorkoutId)
-                    if (error) { success = false; setAlertInfo({ title: 'Errore', message: error.message, type: 'error' }) }
-                  }
-                  
-                  setSavingNote(false)
-                  if (success) {
-                     setAthleteNote({ text: editingNote, rpe: rpeScore, athleteName: athleteNote?.athleteName || '' })
-                 if (role === 'athlete' && status.connected) {
-                   supabase.functions.invoke('send-reminders', {
-                     body: { mode: 'coach_notification', action: 'note', athleteName: athleteNote?.athleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || 'Un atleta', workoutTitle: workout.title, noteText: editingNote, route: `/workout/${id}?athlete_id=${queryAthleteId || user.id}` }
-                   }).catch(console.error)
-                 }
-                  }
-                }}
+                onClick={salvaNoteAtleta}
                 disabled={savingNote}
                 className="font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 bg-[#3b82f6] text-white"
               >
@@ -1329,104 +1400,67 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               </button>
             </div>
           </div>
-        </Section>
+        </CardNota>
       ) : athleteNote ? (
-        <Section icon={<User size={16} className="text-[#3b82f6]" />} label={`Note Atleta (${athleteNote.athleteName})`} color="border-[#3b82f6]/40">
+        <CardNota etichetta={`Note di ${athleteNote.athleteName || 'atleta'}`} icona={User} colore="#3b82f6">
           {athleteNote.rpe && athleteNote.rpe !== '5' && (
-            <div className="mb-2 inline-flex items-center gap-1.5 bg-[#111] px-2 py-1 rounded border border-[#333]">
-              <span className="text-muted text-[11px] font-bold uppercase tracking-wider">Sforzo percepito:</span>
-              <span className={`text-xs font-bold ${getRpeColorText(parseInt(athleteNote.rpe))}`}>{athleteNote.rpe}/10</span>
-            </div>
+            <span className={`self-start font-mono text-[11px] font-extrabold tracking-[.05em] ${getRpeColorText(parseInt(athleteNote.rpe, 10))}`}>
+              RPE {athleteNote.rpe}/10
+            </span>
           )}
-          <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{athleteNote.text}</p>
-        </Section>
+          <p className="text-[13.5px] leading-[1.55] text-gray-300 whitespace-pre-wrap text-pretty">{athleteNote.text}</p>
+        </CardNota>
       ) : null}
 
-      {/* ASSEGNAZIONI ATLETI (SOLO COACH) */}
+      {/* ASSEGNAZIONI (SOLO COACH) — un elenco, non N card con N ombre */}
       {role !== 'athlete' && assignments.length > 0 && (
-        <div className="mb-6 mt-2">
-          <h2 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
-            <Users size={20} className="text-brand" />
-            Assegnato a {assignments.length} atleti
-          </h2>
-          <div className="flex flex-col gap-3">
-            {assignments.map(a => {
-              const isSelected = queryAthleteId === a.athletes?.id;
-              return (
-              <div key={a.id} onClick={() => navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`)} className={`bg-[#1e1e1e] border ${isSelected ? 'border-brand' : 'border-[#2a2a2a] hover:border-brand/50'} rounded-2xl p-4 cursor-pointer transition`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0 border border-[#333] hover:border-brand transition"
-                      title="Vai al profilo dell'atleta"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/athletes/${a.athletes?.id}`); }}
-                    >
-                      {a.athletes?.photo_url ? (
-                        <img src={a.athletes.photo_url} alt={a.athletes?.name} className="w-full h-full object-cover" onError={(e) => e.target.style.opacity = 0} />
-                      ) : (
-                        <User size={18} className="text-muted" />
-                      )}
-                    </div>
-                    <div>
-                      <p className={`font-semibold text-sm transition ${isSelected ? 'text-brand' : 'text-white'}`}>{a.athletes?.name} {a.athletes?.surname}</p>
-                      <p className="text-muted text-xs capitalize">{format(parseISO(a.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className={`px-2 py-1 rounded-lg border text-xs font-bold ${a.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-[#111] text-muted border-[#333]'}`}>
-                      {a.status === 'completed' ? 'Fatto' : 'Da fare'}
-                    </div>
-                    {role === 'admin' && (
-                      <button aria-label="Rimuovi l'assegnazione" 
-                        onClick={(e) => { e.stopPropagation(); handleRemoveAssignment(a.id); }}
-                        className="p-1.5 text-muted hover:text-red-500 transition rounded-lg hover:bg-[#111]"
-                        title="Rimuovi assegnazione"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )})}
-          </div>
+        <div className="flex flex-col gap-[9px]">
+          <IntestazioneSezione etichetta="Assegnato a"
+            dettaglio={assignments.length === 1 ? '1 atleta' : `${assignments.length} atleti`} />
+          <ElencoAssegnazioni>
+            {assignments.map(a => (
+              <RigaAssegnazione
+                key={a.id}
+                nome={`${a.athletes?.name || ''} ${a.athletes?.surname || ''}`.trim() || 'Atleta'}
+                foto={a.athletes?.photo_url}
+                dettaglio={dettaglioAssegnazione(a)}
+                fatto={a.status === 'completed'}
+                selezionata={queryAthleteId === a.athletes?.id}
+                onApri={() => navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`)}
+                azione={role === 'admin' ? (
+                  <button aria-label={`Rimuovi l'assegnazione di ${a.athletes?.name || 'atleta'}`}
+                    onClick={() => handleRemoveAssignment(a.id)}
+                    className="shrink-0 p-1.5 text-[#5b6070] hover:text-red-500 transition rounded-lg hover:bg-white/[.06]">
+                    <Trash2 size={16} />
+                  </button>
+                ) : null}
+              />
+            ))}
+          </ElencoAssegnazioni>
         </div>
       )}
 
-      {/* EXPORT BUTTONS */}
-      <div className="flex flex-col sm:flex-row gap-3 mt-6">
-        {type !== 'Event' && (
-          <button onClick={exportPDF}
-            className="flex-1 flex items-center justify-center gap-2 bg-[#222] border border-[#333] text-white font-semibold py-4 rounded-2xl hover:border-brand hover:text-brand transition">
-            <Download size={18} /> Esporta PDF
-          </button>
-        )}
-        <button onClick={exportShare2}
-          className="flex-1 flex items-center justify-center gap-2 bg-[#222] border border-[#333] text-white font-semibold py-4 rounded-2xl hover:border-pink-500 hover:text-pink-400 transition">
-          <Download size={18} /> Salva Grafica IG
-        </button>
-      </div>
+      {/* La barra fissa: «Avvia» non dipende più da quanto è lunga la lista dei
+          blocchi. Prima stava sopra i blocchi per la stessa ragione, ma lì il
+          completamento e l'assegnazione restavano in fondo allo scroll. */}
+      <div className="mt-auto" />
+      <BarraAzioni>
+        {azionePrimaria}
+        {azioneSecondaria}
+      </BarraAzioni>
 
-      <div className="mt-3">
-        <button onClick={shareWorkoutFiles}
-          className="w-full flex items-center justify-center gap-2 bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] font-semibold py-4 rounded-2xl hover:bg-[#25D366]/20 transition">
-          <Send size={18} /> Condividi {type !== 'Event' ? '(PDF + Social)' : 'Grafica'}
-        </button>
-      </div>
+      {menuOpen && <MenuScheda onChiudi={() => setMenuOpen(false)} voci={vociMenu} />}
 
-      {role !== 'athlete' && (
-        <div className="mt-3">
-          <button onClick={() => { setAssignModalOpen(true); setSelectedAthletes([]); setAssignStep(1); }}
-            className="w-full flex items-center justify-center gap-2 bg-[#2a2a2a] border border-[#383838] text-white font-semibold py-4 rounded-2xl hover:border-brand hover:text-brand transition">
-            <Users size={18} /> Assegna ad Atleta
-          </button>
-        </div>
-      )}
-
-      {/* Share2 CARD (nascosta, usata per screenshot) */}
-      <div className="mt-12">
-        <p className="text-gray-400 text-xs mb-4 font-medium text-center uppercase tracking-wider">Anteprima Sticker per Instagram</p>
-        <div className="flex justify-center pb-8">
+      {/* La grafica Instagram: sorgente dello screenshot, non contenuto della
+          pagina. Stava in fondo alla scheda sotto il titolo «Anteprima Sticker
+          per Instagram», cioè uno schermo intero di qualcosa che si guarda una
+          volta l'anno; ora si raggiunge da «Salva grafica IG» nel menu.
+          ⚠️ Deve restare RENDERIZZATA — html-to-image clona un nodo vero, e con
+          `display:none` o `opacity:0` produce un'immagine vuota. Si porta fuori
+          schermo, che è l'unico modo di nasconderla senza spegnerla. */}
+      <div aria-hidden="true" data-grafica-ig
+        style={{ position: 'fixed', top: 0, left: '-10000px', pointerEvents: 'none' }}>
+        <div>
           <div ref={igRef} style={{
             width: '420px',
             background: 'linear-gradient(145deg, #0B0B0B 0%, #171717 100%)',
@@ -2401,54 +2435,3 @@ function RunningList({ steps }) {
     </div>
   )
 }
-
-// ── HELPERS ─────────────────────────────────────────────────
-function Section({ icon, label, hint, color, children }) {
-  return (
-    <div className={`bg-[#1e1e1e] border ${color} rounded-2xl p-4 mb-3`}>
-      <div className="flex items-baseline gap-2 mb-3">
-        {icon}
-        <span className="text-white font-semibold text-sm">{label}</span>
-        {hint && <span className="text-[11px] text-muted font-normal">{hint}</span>}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function ExList({ exercises, showMinute, typeColor }) {
-  return (
-    <div className="flex flex-col gap-2 mt-1">
-      {exercises.map((ex, i) => {
-        const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
-        const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
-
-        return (
-        <div key={ex.id || i} className="flex items-center gap-3">
-          {showMinute && (
-            <div className="w-7 h-7 rounded-full bg-[#222] border border-[#333] flex items-center justify-center shrink-0">
-              <span className={`text-xs font-bold ${typeColor}`}>{i + 1}</span>
-            </div>
-          )}
-          <div className="flex-1">
-            <span className="text-white text-sm font-medium">{ex.name}</span>
-            <span className="text-muted text-xs ml-2">
-              {detail} {paceStr}
-            </span>
-            {ex.kg && <span className="text-gray-400 text-xs ml-2 font-bold">{ex.kg}kg</span>}
-            {ex.notes && <span className="text-gray-400 text-xs ml-2">· {ex.notes}</span>}
-          </div>
-          {ex.intensity && (
-            <div className="flex items-center gap-1 pr-2 shrink-0">
-               <span className={`text-xs font-bold ${getIntensityColor(ex.intensity)}`}>{ex.intensity}/10</span>
-               <BicepsFlexed size={14} className={getIntensityColor(ex.intensity)} />
-            </div>
-          )}
-        </div>
-      )})}
-    </div>
-  )
-}
-
-
-

@@ -36,10 +36,10 @@ const CreateWorkout = (await import('../CreateWorkout')).default
 // Porta il builder Running al passo 2 con una fase già inserita.
 async function builderConUnaFase(tipo = 'Corsa') {
   render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
-  await userEvent.type(screen.getByPlaceholderText(/Nome workout/), 'Corsa')
-  await userEvent.click(screen.getByRole('button', { name: 'Running' }))
-  await userEvent.click(screen.getByRole('button', { name: /Crea Allenamento/ }))
-  await userEvent.click(screen.getByRole('button', { name: /Aggiungi prima fase/ }))
+  await userEvent.type(screen.getByLabelText('Nome del workout'), 'Corsa')
+  await userEvent.click(screen.getByRole('button', { name: /Corsa/ }))
+  await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+  await userEvent.click(screen.getByRole('button', { name: /Aggiungi la prima fase/ }))
   await userEvent.click(screen.getByRole('button', { name: tipo }))
   await userEvent.click(screen.getByRole('button', { name: 'Aggiungi Fase' }))
   expect(screen.getAllByLabelText('Elimina la fase')).toHaveLength(1)
@@ -53,12 +53,14 @@ async function aggiungiFase(tipo) {
 
 beforeEach(() => { spiaCopy.mockClear() })
 
-describe('CreateWorkout non ridisegna le fasi mentre si scrive il titolo', () => {
-  it('otto caratteri nel titolo, zero render delle fasi', async () => {
+// ⚠️ Come nel gemello sui blocchi: dal redesign del 27/08/2026 il titolo sta
+// solo nel passo 1, e la garanzia si verifica sulle note del coach.
+describe('CreateWorkout non ridisegna le fasi mentre si scrive nelle note', () => {
+  it('sette caratteri nelle note del coach, zero render delle fasi', async () => {
     await builderConUnaFase()
     spiaCopy.mockClear()
 
-    await userEvent.type(screen.getByPlaceholderText(/Nome workout/), 'Lunghi!')
+    await userEvent.type(screen.getByLabelText('Note coach'), 'Lunghi!')
 
     expect(spiaCopy).not.toHaveBeenCalled()
   })

@@ -1,4 +1,4 @@
-import { startOfWeek, format } from 'date-fns'
+import { startOfWeek, format, getISOWeek } from 'date-fns'
 import { parseNotesAndRpe, rpeDichiarato } from './rpe'
 import { categoriaDi } from './categorie'
 
@@ -95,6 +95,21 @@ export const durataWorkout = (sections) => {
 }
 
 /**
+ * In quale fascia cade un RPE.
+ *
+ * È esportata perché la stessa scala serve in due punti — qui e in
+ * `src/lib/andamento.js`, che la ricalcola sulla finestra di 30 giorni della
+ * scheda atleta. Due copie di questi confini vorrebbero dire due grafici che
+ * dicono cose diverse dello stesso allenamento, senza dare nessun errore.
+ */
+export const fasciaRpe = (valore) => {
+  if (valore <= 4) return 'light'
+  if (valore <= 6) return 'moderate'
+  if (valore <= 8) return 'hard'
+  return 'extreme'
+}
+
+/**
  * Le quattro settimane, il tasso di completamento a 30 giorni e la
  * distribuzione degli RPE.
  *
@@ -109,6 +124,9 @@ export function calcolaStatistiche(workouts = [], oggi = new Date()) {
     fine.setDate(inizio.getDate() + 6)
     settimane.push({
       label: i === 0 ? 'Questa sett.' : `${format(inizio, 'd MMM')} - ${format(fine, 'd MMM')}`,
+      // L'etichetta corta per il grafico a barre della scheda atleta: su 393px,
+      // accanto all'anello, «11 ago - 17 ago» non ci sta in nessun modo.
+      breve: `S${getISOWeek(inizio)}`,
       startStr: format(inizio, 'yyyy-MM-dd'),
       endStr: format(fine, 'yyyy-MM-dd'),
       time: 0,
@@ -140,10 +158,7 @@ export function calcolaStatistiche(workouts = [], oggi = new Date()) {
 
     if (Number.isFinite(valore)) {
       rpe.total++
-      if (valore <= 4) rpe.light++
-      else if (valore <= 6) rpe.moderate++
-      else if (valore <= 8) rpe.hard++
-      else rpe.extreme++
+      rpe[fasciaRpe(valore)]++
     }
   }
 
@@ -154,43 +169,6 @@ export function calcolaStatistiche(workouts = [], oggi = new Date()) {
     percentualeCompletamento: assegnati > 0 ? Math.round((completati / assegnati) * 100) : 0,
   }
 }
-
-/**
- * Il riepilogo della settimana corrente, mostrato in cima alla scheda atleta:
- * minuti totali, allenamenti completati, RPE medio.
- *
- * ⚠️ Era una TERZA copia del calcolo della durata, dentro un useEffect in
- * AthleteDetail — e quindi portava con sé lo stesso difetto delle distanze
- * (BACKLOG #30): `400m` contato come 400 minuti. Riusando durataWorkout il
- * difetto sparisce anche da qui.
- */
-export function statisticheSettimana(workouts = [], oggi = new Date()) {
-  const inizio = startOfWeek(oggi, { weekStartsOn: 1 })
-  const fine = new Date(inizio)
-  fine.setDate(inizio.getDate() + 6)
-  const dal = format(inizio, 'yyyy-MM-dd')
-  const al = format(fine, 'yyyy-MM-dd')
-
-  let minuti = 0, completati = 0, sommaRpe = 0, conRpe = 0
-
-  for (const w of workouts) {
-    if (w.completed_date < dal || w.completed_date > al) continue
-    if (w.status !== 'completed') continue
-
-    completati++
-    const { rpe } = parseNotesAndRpe(w.notes)
-    if (Number.isFinite(rpe)) { sommaRpe += rpe; conRpe++ }
-    minuti += durataWorkout(w.workouts?.sections)
-  }
-
-  return {
-    time: Math.round(minuti),
-    completed: completati,
-    // '-' e non 0: zero direbbe "fatica nulla", il trattino dice "non lo sappiamo".
-    avgRpe: conRpe > 0 ? (sommaRpe / conRpe).toFixed(1) : '-',
-  }
-}
-
 
 // ─── Helper della Home atleta (26/08/2026) ────────────────────────────────
 //

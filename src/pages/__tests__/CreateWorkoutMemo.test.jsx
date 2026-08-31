@@ -42,21 +42,27 @@ const CreateWorkout = (await import('../CreateWorkout')).default
 // Porta il builder al passo 2 con un blocco WarmUp già inserito.
 async function builderConUnBlocco() {
   render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
-  await userEvent.type(screen.getByPlaceholderText(/Nome workout/), 'Prova')
-  await userEvent.click(screen.getByRole('button', { name: /Crea Allenamento Hyrox/ }))
-  await userEvent.click(screen.getByRole('button', { name: /Aggiungi Blocco/ }))
+  await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
+  await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+  await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
   await userEvent.click(screen.getByText('WarmUp'))
   expect(screen.getAllByLabelText('Elimina il blocco')).toHaveLength(1)
 }
 
 beforeEach(() => { blockHint.mockClear() })
 
-describe('CreateWorkout non ridisegna i blocchi mentre si scrive il titolo', () => {
-  it('otto caratteri nel titolo, zero render dei blocchi', async () => {
+// ⚠️ Il campo su cui si digita è cambiato il 27/08/2026 con il redesign del
+// builder: nome e data vivono ora SOLO nel passo 1, quindi al passo 2 non
+// esiste più un titolo in cui scrivere. Le note del coach fanno la stessa
+// domanda — uno stato del padre che cambia mentre i blocchi restano fermi — e
+// prendono la stessa mutazione: verificato rimettendo un'arrow inline al call
+// site di HyroxBlock, il test fallisce.
+describe('CreateWorkout non ridisegna i blocchi mentre si scrive nelle note', () => {
+  it('otto caratteri nelle note del coach, zero render dei blocchi', async () => {
     await builderConUnBlocco()
     blockHint.mockClear()
 
-    await userEvent.type(screen.getByPlaceholderText(/Nome workout/), 'Strength')
+    await userEvent.type(screen.getByLabelText('Note coach'), 'Strength')
 
     // Prima della memoizzazione: 8 render sprecati per blocco, e ogni blocco
     // aperto contiene scroll picker da 102 opzioni.
@@ -69,7 +75,7 @@ describe('CreateWorkout non ridisegna i blocchi mentre si scrive il titolo', () 
     await builderConUnBlocco()
     blockHint.mockClear()
 
-    await userEvent.click(screen.getByRole('button', { name: /Aggiungi Blocco/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
     await userEvent.click(screen.getByText('AMRAP'))
 
     expect(blockHint).toHaveBeenCalled()
@@ -90,14 +96,14 @@ describe('modificare un blocco non ridisegna gli altri', () => {
     // blockHint riceve block.type, quindi due blocchi dello stesso tipo
     // sarebbero indistinguibili.
     render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
-    await userEvent.type(screen.getByPlaceholderText(/Nome workout/), 'Prova')
-    await userEvent.click(screen.getByRole('button', { name: /Crea Allenamento Hyrox/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Aggiungi Blocco/ }))
+    await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
+    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
     await userEvent.click(screen.getByText('AMRAP'))
-    await userEvent.click(screen.getByRole('button', { name: /Aggiungi Blocco/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
     await userEvent.click(screen.getByText('WarmUp'))
 
-    const note = screen.getByPlaceholderText('Opzionale...')
+    const note = screen.getByLabelText('Note del blocco')
     blockHint.mockClear()
 
     await userEvent.type(note, 'test')
@@ -114,11 +120,11 @@ describe('il riordino per id continua a funzionare dopo il refactor', () => {
   // riordino sposterebbe il blocco sbagliato — ed è invisibile a occhio.
   it('sposta il blocco giusto, non quello all indice giusto', async () => {
     await builderConUnBlocco()
-    await userEvent.click(screen.getByRole('button', { name: /Aggiungi Blocco/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
     await userEvent.click(screen.getByText('AMRAP'))
 
     const tipi = () => screen.getAllByLabelText('Elimina il blocco')
-      .map(b => b.closest('[data-drag-item]').querySelector('span span').textContent)
+      .map(b => b.closest('[data-drag-item]').querySelector('[data-tipo-blocco]').textContent)
     expect(tipi()).toEqual(['WarmUp', 'AMRAP'])
 
     // Sposta su il SECONDO blocco: deve diventare il primo.
@@ -128,12 +134,12 @@ describe('il riordino per id continua a funzionare dopo il refactor', () => {
 
   it('elimina il blocco giusto', async () => {
     await builderConUnBlocco()
-    await userEvent.click(screen.getByRole('button', { name: /Aggiungi Blocco/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
     await userEvent.click(screen.getByText('AMRAP'))
 
     await userEvent.click(screen.getAllByLabelText('Elimina il blocco')[0])
     const rimasti = screen.getAllByLabelText('Elimina il blocco')
     expect(rimasti).toHaveLength(1)
-    expect(rimasti[0].closest('[data-drag-item]').querySelector('span span').textContent).toBe('AMRAP')
+    expect(rimasti[0].closest('[data-drag-item]').querySelector('[data-tipo-blocco]').textContent).toBe('AMRAP')
   })
 })

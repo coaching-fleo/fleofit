@@ -34,6 +34,31 @@
   --color-ia: #a855f7;        /* generazione con IA, note vocali */
 }
 
+/* ── Quanto spazio occupa la tab bar ──────────────────────────────────────
+   🔴 UN SOLO POSTO, ed è il motivo per cui questa variabile esiste.
+   Prima l'altezza della navbar era scritta a mano in SETTE punti: il wrapper
+   di App.jsx (`pb-16`), il `pb-[calc(6rem+…)]` di cinque pagine, e l'offset
+   di `BarraAzioni`. Finché la barra è stata alta 4rem hanno coinciso per
+   caso; il giorno in cui è diventata la pillola galleggiante dell'artboard
+   2b — più alta, e staccata dal fondo — sarebbero servite sette modifiche
+   coordinate, e la prima dimenticata avrebbe nascosto del contenuto sotto la
+   barra senza dare nessun errore.
+
+   99px = 10 (padding sopra) + 73 (la capsula: 8 + cerchio 36 + 3 + etichetta
+   + 8) + 16 (padding sotto). La safe area si somma perché la barra è ancorata
+   al bordo inferiore dello schermo.
+
+   ⚠️ Il numero è MISURATO, non calcolato a mano: il primo tentativo diceva 94
+   perché contava l'etichetta 13px invece della sua riga di testo. Si rimisura
+   così, con la navbar a schermo:
+     document.querySelector('nav').parentElement.getBoundingClientRect().height
+   ⚠️ Chi cambia la forma della navbar cambia QUESTO numero, non i chiamanti. */
+:root {
+  --altezza-navbar: calc(99px + env(safe-area-inset-bottom));
+  /* Il respiro fra l'ultimo contenuto di una pagina e la barra. */
+  --fondo-pagina: calc(var(--altezza-navbar) + 0.5rem);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -124,8 +149,35 @@ body {
   animation: heroIn 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Nessuna delle due si esegue per chi ha chiesto meno movimento. */
+/* Bottom sheet: il foglio sale dal basso, il velo si accende dietro di lui.
+   ⚠️ Stessa ragione del keyframe qui sopra: `animate-in slide-in-from-bottom`
+   viene da tw-animate-css, che NON è installato — nel menu della scheda
+   workout generava zero CSS, e l'animazione di apertura non c'è mai stata.
+
+   🔴 NESSUNA DELLE DUE HA `fill`, ed è deliberato. Un'animazione con
+   `fill: both` vince sullo stile inline: il foglio resterebbe fermo sotto il
+   dito mentre lo si trascina giù (è il difetto documentato in CLAUDE.md
+   §9-octies punto 1, sullo swipe della Home atleta). Senza `fill`, a fine
+   animazione l'elemento torna da sé allo stile di base — che è già la
+   posizione aperta — e il trascinamento può prendere il comando. */
+@keyframes sheetIn {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.sheet-in {
+  animation: sheetIn 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes veloIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.velo-in {
+  animation: veloIn 0.3s ease-out;
+}
+
+/* Nessuna si esegue per chi ha chiesto meno movimento. */
 @media (prefers-reduced-motion: reduce) {
   .hero-transition { animation: none; }
   .anello-progresso { animation: none !important; }
+  .sheet-in, .velo-in { animation: none; }
 }

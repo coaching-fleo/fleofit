@@ -44,6 +44,32 @@ async function identificaChiamante(req: Request): Promise<{ admin: boolean; emai
   return { admin: !!email && ADMIN_EMAILS.includes(email), email, ruolo, servizio: false };
 }
 
+// Gli id degli utenti admin, ricavati scorrendo la lista di Supabase Auth.
+// Serve a due scopi opposti: mandare le notifiche AL coach (coach_notification)
+// e NON mandargliele (i promemoria mattina/sera, che sono roba da atleti).
+// Deve restare allineata a ADMIN_EMAILS in src/App.jsx e alle policy RLS.
+async function trovaIdAdmin(): Promise<string[]> {
+  const ids: string[] = [];
+  let page = 1;
+  while (true) {
+    const { data: authData, error: authErr } = await supabase.auth.admin.listUsers({ page, perPage: 50 });
+    if (authErr) {
+      console.error('Errore in listUsers:', authErr);
+      throw authErr;
+    }
+    const users = authData?.users || [];
+    if (users.length === 0) break;
+    ids.push(
+      ...users
+        .filter((u: any) => u.email && ADMIN_EMAILS.includes(u.email.trim().toLowerCase()))
+        .map((u: any) => u.id),
+    );
+    if (users.length < 50) break;
+    page++;
+  }
+  return ids;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -384,27 +410,8 @@ serve(async (req) => {
     if (mode === 'coach_notification') {
       console.log(`Notifica al coach da ${body.athleteName} per ${body.action}`);
       
-      // Recupera gli ID degli admin scorrendo la lista utenti di Supabase in modo sicuro
-      // Deve restare allineata a ADMIN_EMAILS in src/App.jsx.
-      // 'demo@fleofit.it' è l'account fornito ad App Review.
-      const adminEmails = ADMIN_EMAILS;
-      const adminUserIds: string[] = [];
-      let page = 1;
-      while (true) {
-        const { data: authData, error: authErr } = await supabase.auth.admin.listUsers({ page, perPage: 50 });
-        if (authErr) {
-          console.error('Errore in listUsers:', authErr);
-          throw authErr;
-        }
-        const users = authData?.users || [];
-        if (users.length === 0) break;
-        const foundIds = users
-          .filter((u: any) => u.email && adminEmails.includes(u.email.trim().toLowerCase()))
-          .map((u: any) => u.id);
-        adminUserIds.push(...foundIds);
-        if (users.length < 50) break;
-        page++;
-      }
+      // 'demo@fleofit.it' è l'account fornito ad App Review: è dentro ADMIN_EMAILS.
+      const adminUserIds = await trovaIdAdmin();
 
       console.log('Trovati ID Admin:', adminUserIds);
       
@@ -506,8 +513,33 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: 'Nessun dispositivo a cui inviare notifiche.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // 1-bis. Il coach non è un atleta: fuori dai promemoria.
+    //
+    // Questa modalità parla al singolare a chi si allena — «Oggi ti aspetta: …»,
+    // «Giorno di Rest» — e la spediva a TUTTI i dispositivi iscritti, coach
+    // compresi. Il coach riceveva così due push al giorno su allenamenti suoi
+    // che non esistono. Le notifiche che lo riguardano davvero (un atleta che
+    // completa, che lascia una nota, che aggiunge un allenamento libero) sono
+    // mode = 'coach_notification' e non passano di qui: restano intatte.
+    //
+    // ⚠️ Se listUsers fallisce si prosegue SENZA filtro invece di fermarsi: il
+    // guasto peggiore qui è lasciare tutti gli atleti senza promemoria, non una
+    // push di troppo al coach. L'errore finisce nei log, non è silenzioso.
+    let idAdmin: string[] = [];
+    try {
+      idAdmin = await trovaIdAdmin();
+    } catch (e) {
+      console.error('Promemoria: lista admin non leggibile, invio SENZA escludere i coach.', e);
+    }
+    const destinatari = subscriptions.filter(s => !idAdmin.includes(s.user_id));
+    console.log(`Promemoria: ${destinatari.length} dispositivi destinatari, ${subscriptions.length - destinatari.length} esclusi perché coach.`);
+
+    if (destinatari.length === 0) {
+      return new Response(JSON.stringify({ message: 'Nessun destinatario: solo dispositivi coach.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     // 2. Trova tutti i workout assegnati per la data target non ancora completati
-    const userIds = [...new Set(subscriptions.map(s => s.user_id))];
+    const userIds = [...new Set(destinatari.map(s => s.user_id))];
     const { data: assignments, error: awError } = await supabase
       .from('athlete_workouts')
       .select(`athlete_id, workouts(title)`)
@@ -530,7 +562,7 @@ serve(async (req) => {
         const pushTasksData = [];
 
 
-    for (const sub of subscriptions) {
+    for (const sub of destinatari) {
       const assignment = assignments?.find(a => a.athlete_id === sub.user_id);
       const athleteName = athletes?.find(a => a.id === sub.user_id)?.name || 'Campione';
       

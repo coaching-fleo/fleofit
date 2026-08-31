@@ -1,169 +1,237 @@
-import { useState, useEffect } from 'react'
+// La rubrica atleti — rework del 31/08/2026, artboard `Atleti.dc.html` 1b.
+//
+// Il problema in una riga: era una rubrica, non uno strumento di lavoro. Ogni
+// riga mostrava nome, peso, altezza ed età — dati anagrafici, che si
+// consultano una volta al mese — mentre il coach apre questa schermata per
+// sapere chi sta seguendo il piano e chi si è fermato, e quella informazione
+// non c'era: bisognava entrare in ogni scheda, una per una.
+//
+// Come per gli altri sei schermi ridisegnati: NESSUN campo di Supabase cambia
+// forma. Cambia il JSX, cambia l'ordine, e la pagina fa una seconda lettura —
+// una sola query in più — per poter dire un numero.
+
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { format, startOfDay, subDays } from 'date-fns'
 import { supabase } from '../supabaseClient'
-import { Plus, User, ChevronRight, Search, Trash2 } from 'lucide-react'
-import { differenceInYears, parseISO } from 'date-fns'
+import { User } from 'lucide-react'
 import { useAuth } from '../App'
 import { COACHING_ID } from '../lib/constants'
-import { parseNotePausa } from '../lib/pausa'
+import { inPausa } from '../lib/pausa'
 import { mostraErrore, mostraSuccesso } from '../lib/alert'
+import { atletiFermi, GIORNI_FERMO, FINESTRA_STORICO } from '../lib/statisticheCoach'
+import {
+  settimanaDi, aderenzaSettimana, NESSUNA_ADERENZA, metaAtleta, nomeAtleta,
+  iniziali, etichettaPausa, giorniRimastiCestino, conteggiStato, filtraPerNome,
+  GIORNI_CESTINO,
+} from '../lib/rigaAtleta'
+import { CampoRicerca, IntestazioneSezione } from '../components/ArchivioUI'
+import {
+  TestataAtleti, FiltriStato, FasciaRichiamo, RigaAtleta, RigaPausa,
+  RigaEliminato, ScheletroAtleti, VuotoAtleti,
+} from '../components/AtletiUI'
 
 export default function Athletes() {
   const [athletes, setAthletes] = useState([])
   const [eliminati, setEliminati] = useState([])
+  const [assegnazioni, setAssegnazioni] = useState([])
+  const [loading, setLoading] = useState(true)
   const [caricatoIl, setCaricatoIl] = useState(() => Date.now())
-  const [mostraEliminati, setMostraEliminati] = useState(false)
+  const [vista, setVista] = useState('attivi')
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const navigate = useNavigate()
   const { role } = useAuth()
 
-  useEffect(() => { 
+  useEffect(() => {
     if (role === 'athlete') {
       navigate('/')
       return
     }
-    fetchAthletes() 
+    fetchAthletes()
   }, [role, navigate])
 
   const fetchAthletes = async () => {
-    const { data } = await supabase.from('athletes').select('*').is('deleted_at', null).order('name')
-    
-    // Nascondiamo il profilo di coaching@federicoleo.it a TUTTI gli admin usando il suo ID univoco
-    setAthletes((data || []).filter(a => a.id !== COACHING_ID))
+    setLoading(true)
+    const adesso = new Date()
 
+    // Una sola finestra per due domande. `atletiFermi` guarda indietro fino a
+    // FINESTRA_STORICO, l'aderenza guarda la settimana in corso (che finisce
+    // nel futuro): due `select` sullo stesso intervallo sarebbero due round
+    // trip per gli stessi dati. Niente join sui `workouts`: qui non serve
+    // nemmeno un titolo, e `sections` è la colonna più pesante del database.
+    const da = format(subDays(startOfDay(adesso), FINESTRA_STORICO), 'yyyy-MM-dd')
+    const a = settimanaDi(adesso).a
+
+    // ⚠️ UNA lettura di `athletes`, non due. Erano due query sulla stessa
+    // tabella con due filtri complementari su `deleted_at`, cioè due round trip
+    // per una lista di dodici righe che si divide in due con un `filter`. Il
+    // cestino resta ordinato per data di eliminazione: quello è un ordine suo,
+    // e la query principale ordina per nome.
+    const [atletiRes, assRes] = await Promise.all([
+      supabase.from('athletes').select('*').order('name'),
+      supabase.from('athlete_workouts').select('id, athlete_id, status, completed_date')
+        .gte('completed_date', da).lte('completed_date', a),
+    ])
+
+    // Nascondiamo il profilo di coaching@federicoleo.it a TUTTI gli admin
+    // usando il suo ID univoco.
+    const tutti = (atletiRes.data || []).filter(x => x?.id && x.id !== COACHING_ID)
+
+    setAthletes(tutti.filter(x => x.deleted_at == null))
     // Gli atleti eliminati restano recuperabili per 7 giorni, poi il cron
     // delete_expired_athletes() li cancella DEFINITIVAMENTE — e con loro, in
-    // cascata, workout assegnati, record personali e log. Il backup gira due ore
-    // dopo, quindi da lì in poi non c'è più modo di recuperarli.
-    const { data: rimossi } = await supabase.from('athletes').select('*')
-      .not('deleted_at', 'is', null).order('deleted_at', { ascending: false })
-    setEliminati((rimossi || []).filter(a => a.id !== COACHING_ID))
+    // cascata, workout assegnati, record personali e log. Il backup di quella
+    // notte gira PRIMA, quindi da lì in poi non c'è più modo di recuperarli.
+    setEliminati(
+      tutti.filter(x => x.deleted_at != null)
+        .sort((p, q) => Number(q.deleted_at) - Number(p.deleted_at))
+    )
+    setAssegnazioni(assRes.data || [])
     // ⚠️ L'istante si fissa QUI, quando i dati arrivano, non durante il render.
     // Date.now() chiamato nel render è impuro: due render consecutivi darebbero
-    // conteggi diversi e il React Compiler non può memoizzare il componente.
-    // È anche più corretto nel merito: il conto alla rovescia è relativo al
-    // momento in cui la lista è stata caricata.
+    // conteggi diversi — e da qui dipendono l'età, la settimana in corso, chi è
+    // fermo e il conto alla rovescia del cestino, cioè quasi tutta la pagina.
     setCaricatoIl(Date.now())
-  }
-
-  const GIORNI_PRIMA_DELLA_CANCELLAZIONE = 7
-
-  const giorniRimasti = (deletedAt) => {
-    const trascorsi = (caricatoIl - Number(deletedAt)) / 86400000
-    return Math.max(0, Math.ceil(GIORNI_PRIMA_DELLA_CANCELLAZIONE - trascorsi))
+    setLoading(false)
   }
 
   const ripristina = async (atleta) => {
     const { error } = await supabase.from('athletes').update({ deleted_at: null }).eq('id', atleta.id)
     if (error) return mostraErrore(error.message)
-    mostraSuccesso(`${atleta.name} ${atleta.surname} è tornato fra i tuoi atleti.`, 'Ripristinato')
+    mostraSuccesso(`${nomeAtleta(atleta)} è tornato fra i tuoi atleti.`, 'Ripristinato')
     fetchAthletes()
   }
 
-  const filtered = athletes.filter(a =>
-    `${a.name} ${a.surname}`.toLowerCase().includes(search.toLowerCase())
+  const oggi = useMemo(() => new Date(caricatoIl), [caricatoIl])
+
+  const attivi = useMemo(() => athletes.filter(x => !inPausa(x)), [athletes])
+  const inSosta = useMemo(() => athletes.filter(x => inPausa(x)), [athletes])
+  const conteggi = useMemo(() => conteggiStato(athletes, eliminati), [athletes, eliminati])
+
+  const aderenze = useMemo(() => aderenzaSettimana(assegnazioni, { oggi }), [assegnazioni, oggi])
+
+  // ⚠️ Gli atleti fermi arrivano da `statisticheCoach`, la stessa funzione con
+  // la stessa soglia che alimenta «Richiedono attenzione» nella Home coach. Un
+  // secondo calcolo qui darebbe due numeri diversi per lo stesso concetto in
+  // due schermate della stessa app, e nessuno dei due sarebbe sbagliato da
+  // solo — cioè il difetto impossibile da notare.
+  const fermi = useMemo(
+    () => atletiFermi(athletes, assegnazioni, { oggi }),
+    [athletes, assegnazioni, oggi]
+  )
+  const idFermi = useMemo(() => new Set(fermi.map(f => f.id)), [fermi])
+
+  const apriAtleta = useCallback((id) => navigate(`/athletes/${id}`), [navigate])
+
+  const cambiaVista = (nuova) => { setVista(nuova); setSearch('') }
+
+  const conRicerca = search.trim() !== ''
+
+  const lista = useMemo(() => {
+    const base = vista === 'pausa' ? inSosta
+      : vista === 'eliminati' ? eliminati
+      : vista === 'fermi' ? attivi.filter(x => idFermi.has(x.id))
+      : attivi
+    return filtraPerNome(base, search)
+  }, [vista, attivi, inSosta, eliminati, idFermi, search])
+
+  // La lista degli in pausa che accompagna la vista principale. Restano
+  // visibili di proposito (CLAUDE.md §9-decies): la rubrica è l'unico posto in
+  // cui il coach si accorge di averne messo in pausa uno e dimenticato.
+  const sostaVisibili = useMemo(
+    () => (vista === 'attivi' ? filtraPerNome(inSosta, search) : []),
+    [vista, inSosta, search]
   )
 
+  const dettaglio = loading ? null
+    : conRicerca ? `${lista.length + sostaVisibili.length} ${lista.length + sostaVisibili.length === 1 ? 'atleta' : 'atleti'}`
+    : conteggi.pausa > 0
+      ? `${conteggi.attivi} attivi · ${conteggi.pausa} in pausa`
+      : `${conteggi.attivi} ${conteggi.attivi === 1 ? 'atleta' : 'atleti'}`
+
+  const titoloSezione = vista === 'eliminati' ? 'Eliminati di recente'
+    : vista === 'pausa' ? 'In pausa'
+    : vista === 'fermi' ? 'Da richiamare'
+    : 'Settimana in corso'
+
+  const dettaglioSezione = vista === 'eliminati' ? 'Giorni rimasti'
+    : vista === 'pausa' ? `${lista.length}`
+    : 'Completati / assegnati'
+
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Atleti</h1>
-        <button onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 bg-brand text-black font-bold px-4 py-2 rounded-xl hover:brightness-110 transition">
-          <Plus size={18} /> Nuovo
-        </button>
-      </div>
+    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] page-transition">
+      <TestataAtleti dettaglio={dettaglio} onNuovo={() => setModalOpen(true)}>
+        <CampoRicerca valore={search} onCambia={setSearch}
+          etichetta="Cerca un atleta" placeholder="Cerca nome o cognome" />
+        <FiltriStato conteggi={conteggi} vista={vista} onCambia={cambiaVista} />
+      </TestataAtleti>
 
-      <div className="relative mb-4">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-        <input
-          className="w-full bg-[#222] border border-[#333] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand text-base"
-          placeholder="Cerca atleta..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 rounded-full bg-[#222] flex items-center justify-center mx-auto mb-4">
-            <User size={28} className="text-gray-400" />
-          </div>
-          <p className="text-gray-400">Nessun atleta ancora</p>
-          <button onClick={() => setModalOpen(true)} className="mt-3 text-brand text-sm font-medium">
-            + Aggiungi il primo atleta
-          </button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {filtered.map(a => (
-            <button key={a.id} onClick={() => navigate(`/athletes/${a.id}`)}
-              className="flex items-center gap-4 bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 hover:border-[#383838] transition text-left">
-              <div className="w-12 h-12 rounded-full bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0">
-                {a.photo_url
-                  ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" onError={() => setAthletes(athletes.map(ath => ath.id === a.id ? { ...ath, photo_url: null } : ath))} />
-                  : <User size={22} className="text-muted" />
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-white font-semibold">{a.name} {a.surname}</p>
-                  {parseNotePausa(a.notes).inPausa && (
-                    <span className="px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/30
-                                     text-orange-400 text-[10.5px] font-bold uppercase tracking-[.06em]">In pausa</span>
-                  )}
-                </div>
-                <p className="text-muted text-xs mt-0.5">
-                  {[a.weight && `${a.weight}kg`, a.height && `${a.height}cm`, a.birth_date && `${differenceInYears(new Date(), parseISO(a.birth_date))} anni`].filter(Boolean).join(' · ')}
-                </p>
-              </div>
-              <ChevronRight size={18} className="text-gray-400" />
-            </button>
-          ))}
-        </div>
-      )}
-
-      {eliminati.length > 0 && (
-        <div className="mt-8">
-          <button onClick={() => setMostraEliminati(v => !v)}
-            className="flex items-center gap-2 text-muted hover:text-white text-sm font-semibold min-h-11">
-            <Trash2 size={16} />
-            Eliminati di recente ({eliminati.length})
-            <ChevronRight size={16} className={`transition-transform ${mostraEliminati ? 'rotate-90' : ''}`} />
-          </button>
-
-          {mostraEliminati && (
-            <div className="flex flex-col gap-3 mt-3">
-              <p className="text-muted text-xs leading-relaxed">
-                Dopo {GIORNI_PRIMA_DELLA_CANCELLAZIONE} giorni vengono cancellati definitivamente,
-                insieme ai loro allenamenti e record personali. L'operazione non è reversibile.
-              </p>
-              {eliminati.map(a => {
-                const giorni = giorniRimasti(a.deleted_at)
-                return (
-                  <div key={a.id}
-                    className="flex items-center gap-4 bg-[#1e1e1e] border border-[#2a2a2a] border-dashed rounded-2xl p-4">
-                    <div className="w-12 h-12 rounded-full bg-[#2a2a2a] flex items-center justify-center shrink-0 opacity-60">
-                      <User size={22} className="text-muted" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-gray-300 font-semibold truncate">{a.name} {a.surname}</p>
-                      <p className={`text-xs mt-0.5 ${giorni <= 2 ? 'text-red-400' : 'text-muted'}`}>
-                        {giorni === 0 ? 'In cancellazione stanotte' : `Cancellazione fra ${giorni} ${giorni === 1 ? 'giorno' : 'giorni'}`}
-                      </p>
-                    </div>
-                    <button onClick={() => ripristina(a)}
-                      className="min-h-11 px-4 rounded-xl bg-[#2a2a2a] text-white text-sm font-bold hover:bg-[#333] transition shrink-0">
-                      Ripristina
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
+      {loading ? <ScheletroAtleti /> : (
+        <>
+          {fermi.length > 0 && (vista === 'attivi' || vista === 'fermi') && (
+            <FasciaRichiamo
+              attiva={vista === 'fermi'}
+              onApri={() => cambiaVista(vista === 'fermi' ? 'attivi' : 'fermi')}
+              testo={`${fermi.length} ${fermi.length === 1 ? 'atleta fermo' : 'atleti fermi'} da ${GIORNI_FERMO} giorni o più`}
+            />
           )}
-        </div>
+
+          {athletes.length === 0 && eliminati.length === 0 ? (
+            <VuotoAtleti titolo="Nessun atleta ancora"
+              dettaglio="Gli atleti che aggiungi compaiono qui, con l'aderenza della loro settimana. 🏃"
+              azione="Aggiungi il primo atleta" onAzione={() => setModalOpen(true)} />
+          ) : lista.length === 0 && sostaVisibili.length === 0 ? (
+            <VuotoAtleti
+              titolo={conRicerca ? 'Nessun atleta con questo nome' : `Nessun atleta in «${titoloSezione}»`}
+              dettaglio={conRicerca ? 'Prova con il cognome, o azzera la ricerca.' : null}
+              azione={conRicerca ? 'Azzera la ricerca' : null}
+              onAzione={() => setSearch('')} />
+          ) : (
+            <>
+              {lista.length > 0 && (
+                <>
+                  <IntestazioneSezione etichetta={titoloSezione} conteggio={dettaglioSezione} />
+                  <div className="flex flex-col gap-2">
+                    {lista.map(x => vista === 'eliminati' ? (
+                      <RigaEliminato key={x.id} nome={nomeAtleta(x)} foto={x.photo_url} sigla={iniziali(x)}
+                        giorni={giorniRimastiCestino(x.deleted_at, caricatoIl)}
+                        onRipristina={() => ripristina(x)} />
+                    ) : vista === 'pausa' ? (
+                      <RigaPausa key={x.id} nome={nomeAtleta(x)} dettaglio={etichettaPausa(x)}
+                        foto={x.photo_url} sigla={iniziali(x)} onApri={() => apriAtleta(x.id)} />
+                    ) : (
+                      <RigaAtleta key={x.id} nome={nomeAtleta(x)} meta={metaAtleta(x, oggi)}
+                        foto={x.photo_url} sigla={iniziali(x)}
+                        aderenza={aderenze.get(x.id) || NESSUNA_ADERENZA}
+                        fermo={idFermi.has(x.id)} onApri={() => apriAtleta(x.id)} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {sostaVisibili.length > 0 && (
+                <>
+                  <IntestazioneSezione etichetta="In pausa" conteggio={`${sostaVisibili.length}`} />
+                  <div className="flex flex-col gap-2">
+                    {sostaVisibili.map(x => (
+                      <RigaPausa key={x.id} nome={nomeAtleta(x)} dettaglio={etichettaPausa(x)}
+                        foto={x.photo_url} sigla={iniziali(x)} onApri={() => apriAtleta(x.id)} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {vista === 'eliminati' && lista.length > 0 && (
+            <p className="mt-4 px-0.5 text-xs leading-relaxed text-muted">
+              Dopo {GIORNI_CESTINO} giorni vengono cancellati definitivamente, insieme ai loro
+              allenamenti e record personali. L'operazione non è reversibile.
+            </p>
+          )}
+        </>
       )}
 
       {modalOpen && (

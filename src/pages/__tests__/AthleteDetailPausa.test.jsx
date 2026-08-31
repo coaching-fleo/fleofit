@@ -35,6 +35,19 @@ const AthleteDetail = (await import('../AthleteDetail')).default
 const BASE = { id: 'a5', name: 'Andrea', surname: 'Vitali', photo_url: null, weight: 74, height: 181, birth_date: '1992-04-03', instagram_url: null, strava_url: null, notes: null }
 const montaComeCoach = () => montaPagina(<AthleteDetail />, { role: 'coach', user: { id: 'coach', email: 'c@f.it' } })
 const attendiScheda = () => waitFor(() => expect(screen.getByRole('heading', { name: /Andrea Vitali/ })).toBeInTheDocument())
+
+// ⚠️ Dal rework del 28/08 pausa, modifica ed esportazione NON sono più tre
+// bottoni in testata: sono voci del menu delle tre puntine (§9-terdecies).
+// Ogni test che agisce su una di quelle deve aprirlo, ed è la ragione per cui
+// questo helper esiste invece di una `getByLabelText` diretta.
+const vociDelMenu = async () => {
+  await userEvent.click(screen.getByLabelText('Altre azioni'))
+  return screen.findAllByRole('menuitem')
+}
+const scegliDalMenu = async (nome) => {
+  await vociDelMenu()
+  await userEvent.click(await screen.findByRole('menuitem', { name: nome }))
+}
 const noteScritte = () => finto.chiamateA('athletes', 'update').map(c => c.args[0]).filter(a => 'notes' in a)
 
 beforeEach(() => {
@@ -48,7 +61,7 @@ describe('Il bottone «metti in pausa»', () => {
     dati.atleta = { ...BASE, notes: 'Preferisce allenarsi la sera' }
     montaComeCoach()
     await attendiScheda()
-    await userEvent.click(screen.getByLabelText(/Metti Andrea in pausa/))
+    await scegliDalMenu(/Metti Andrea in pausa/)
     // Spegnere un allarme per errore non si nota: qui la conferma serve.
     await waitFor(() => expect(screen.getByText(/Mettere in pausa\?/)).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /Conferma/ }))
@@ -63,7 +76,7 @@ describe('Il bottone «metti in pausa»', () => {
     dati.atleta = { ...BASE, notes: formatNotePausa('2026-08-20', 'Infortunio') }
     montaComeCoach()
     await attendiScheda()
-    await userEvent.click(screen.getByLabelText(/Riattiva Andrea/))
+    await scegliDalMenu(/Riattiva Andrea/)
     await waitFor(() => expect(noteScritte()).toHaveLength(1))
     expect(noteScritte()[0].notes).toBe('Infortunio')
   })
@@ -92,7 +105,11 @@ describe('Quello che l\'atleta NON deve vedere', () => {
     montaPagina(<AthleteDetail />, { role: 'athlete', user: { id: 'a5', email: 'a@f.it' } })
     await attendiScheda()
     expect(screen.queryByText(/In pausa dal/i)).not.toBeInTheDocument()
-    expect(screen.queryByLabelText(/in pausa/i)).not.toBeInTheDocument()
+    // E nemmeno il comando: nel menu dell'atleta la pausa non esiste proprio.
+    // Prima bastava che la pillola non ci fosse — ma un comando raggiungibile
+    // avrebbe raccontato lo stesso la stessa cosa, con un tocco in più.
+    const voci = (await vociDelMenu()).map(v => v.textContent)
+    expect(voci.some(t => /pausa|Riattiva/i.test(t))).toBe(false)
   })
 })
 
@@ -101,7 +118,7 @@ describe('La modale «Modifica profilo»', () => {
     dati.atleta = { ...BASE, notes: formatNotePausa('2026-08-20', 'Infortunio') }
     montaPagina(<AthleteDetail />, { role: ruolo, user: utente })
     await attendiScheda()
-    await userEvent.click(screen.getByLabelText(/Modifica la scheda atleta/))
+    await scegliDalMenu(/Modifica scheda/)
     const campo = await screen.findByPlaceholderText(/Note biografiche/)
     expect(campo).toHaveValue('Infortunio')          // niente marcatore nel campo
     await userEvent.click(screen.getByRole('button', { name: /^Salva/ }))
@@ -123,7 +140,7 @@ describe('La modale «Modifica profilo»', () => {
     dati.atleta = { ...BASE, notes: formatNotePausa('2026-08-20', 'Infortunio') }
     montaComeCoach()
     await attendiScheda()
-    await userEvent.click(screen.getByLabelText(/Modifica la scheda atleta/))
+    await scegliDalMenu(/Modifica scheda/)
     const campo = await screen.findByPlaceholderText(/Note biografiche/)
     expect(campo).toHaveValue('Infortunio')          // niente marcatore nel campo
     await userEvent.click(screen.getByRole('button', { name: /^Salva/ }))

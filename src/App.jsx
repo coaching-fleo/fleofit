@@ -305,7 +305,10 @@ function ProtectedRoute({ children }) {
 
   return (
     <AuthContext.Provider value={{ user: session.user, role }}>
-      <div className="pb-16">
+      {/* Lo spazio per la tab bar viene da --altezza-navbar (src/index.css),
+          non da un `pb-16` scritto qui: la barra è alta quanto è alta, e
+          questo numero deve seguirla da solo. */}
+      <div className="pb-[var(--altezza-navbar)]">
         {children}
         <Navbar />
       </div>

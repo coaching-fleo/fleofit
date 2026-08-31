@@ -2,13 +2,18 @@
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **27 agosto 2026**.
+> Ultimo aggiornamento: **31 agosto 2026**.
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
-> Ultimo commit `adfa5d3` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **305 test**, `npm run lint` → **42 problemi** (erano 164 la mattina del 25/08).
-> Le due Home sono state rifatte su design di Claude Design: **atleta** il 26/08 (§9-octies),
-> **coach** il 27/08 (§9-nonies), con la **pausa atleta** (§9-decies).
+> Ultimo commit `c93635b` su `ios-version`, allineato con `origin/ios-version`.
+> `npm test` → **617 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> Nove schermate rifatte su design di Claude Design: **Home atleta** il 26/08 (§9-octies),
+> **Home coach** il 27/08 (§9-nonies) con la **pausa atleta** (§9-decies), **Crea Workout**
+> il 27/08 (§9-undecies), la **scheda del workout** (§9-duodecies) e la **scheda atleta**
+> (§9-terdecies) il 28/08, l'**archivio** (§9-sedecies), la **rubrica atleti**
+> (§9-septdecies) e il **calendario** (§9-octodecies) il 31/08. Il 28/08 anche il
+> foglio **«Genera con IA»** (§9-quindecies),
+> che è dove l'entrata mancante di BACKLOG #34 si è vista per la seconda volta.
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -259,24 +264,44 @@ src/
 ├─ index.css                   # Tailwind @theme + animazioni globali (page-transition, modal-transition)
 ├─ supabaseClient.js           # createClient con URL + anon key hardcodati
 ├─ useTouchDrag.js             # hook drag&drop touch nativo (usato da CreateWorkout)
+├─ useTastiera.js              # la tastiera di sistema è aperta? (barre ancorate in basso)
+├─ useBottomSheet.js           # ⚠️ l'UNICO bottom sheet fatto bene: entrata, maniglia, scroll bloccato (§9-duodecies)
 ├─ lib/                        # logica pura, l'unica parte con test
 │  ├─ alert.js                 # mostraAlert/mostraErrore: alert applicativo senza passare props
+│  ├─ andamento.js             # aderenza, carico, volume e sforzo della scheda atleta — TUTTI
+│  │                           #   sulla stessa finestra di 30 giorni (§9-terdecies)
+│  ├─ aptica.js                # battito(): il colpetto dei picker, era in due copie
 │  ├─ badge.js                 # ⚠️ l'UNICO punto che scrive il badge iOS (§8)
 │  ├─ blockColors.js           # TYPE_COLORS, unificata dalle 5 copie sparse
 │  ├─ blockHints.js            # BLOCK_HINT: didascalie in chiaro dei tipi di blocco (§9-ter)
 │  ├─ categorie.js             # CORSIA/corsia/categoriaDi: la Regola della Corsia in un punto solo
 │  ├─ notaVocale.js            # isVoiceNoteValid: il soft delete `#deleted=` si filtra sempre
 │  ├─ pausa.js                 # ⚠️ «atleta in pausa» dentro athletes.notes — NON è una colonna (§9-decies)
-│  ├─ stiliCard.js             # CARD/LABEL/RIGA — costanti, NON componenti (§9-octies punto 3)
+│  ├─ rigaAtleta.js            # ⚠️ l'aderenza settimanale della rubrica — la settimana comincia di
+│  │                           #   LUNEDÌ, e chi non ha niente in programma NON è a zero (§9-septdecies)
+│  ├─ rigaArchivio.js          # ⚠️ meta, gruppi per mese e chip dell'archivio — l'ordine è per DATA, non
+│  │                           #   per creazione, o lo stesso mese ricompare nello scroll (§9-sedecies)
+│  ├─ rigaBlocco.js            # le didascalie del blocco nella scheda: parametri e specifiche (§9-duodecies)
+│  ├─ rigaCalendario.js       # ⚠️ griglia, segno del giorno e i tre numeri del mese — il volume
+│  │                           #   dice «≈» quando ha dovuto lasciare fuori qualcosa (§9-octodecies)
+│  ├─ stiliCard.js             # CARD/LABEL/RIGA/VETRO/CARTA_RIGA(_BASE) — costanti, NON componenti
+│  │                           #   (§9-octies punto 3). ⚠️ Il bordo si DICHIARA, non si sovrascrive (§9-octodecies)
 │  ├─ constants.js             # ERGOMETERS e affini
 │  ├─ offlineQueue.js          # ⚠️ coda offline + leggiJson/scriviJson — vedi §9 regola 0-bis
 │  ├─ pushToken.js             # rinfresco del token FCM
 │  ├─ rpe.js                   # parseNotesAndRpe / formatNotesWithRpe
 │  ├─ statistiche.js           # carico settimanale, completamento, distribuzione RPE
 │  ├─ statisticheCoach.js      # i numeri della Home coach: feedback, squadra del giorno, fermi, scaduti, copertura
+│  ├─ stimaWorkout.js         # ⚠️ durata STIMATA e RPE atteso del builder — non è un dato vero
+│  │                           #   (§9-undecies). L'RPE è una media di POTENZA, non aritmetica.
+│  │                           #   ⚠️ Esiste un SECONDO `rpeAtteso` in statistiche.js, che è un
+│  │                           #   calcolo diverso per le stesse parole: la Home parte da
+│  │                           #   `sections.intensity` e ripiega su una tabella per tipo di
+│  │                           #   blocco. Lo stesso workout può quindi dire due numeri diversi
+│  │                           #   in due schermate — non è stato unificato, sta in BACKLOG
 │  ├─ timerSequence.js         # buildTimerSequence + getNormalizedBlocks (§5 legacy)
 │  ├─ workoutTitle.js          # titolo generato dalla data (c'è anche su main)
-│  └─ __tests__/               # 103 test — il grosso della copertura (§9 punto 11)
+│  └─ __tests__/               # 230 test — il grosso della copertura (§9 punto 11)
 ├─ test/
 │  ├─ setup.js                 # jsdom, localStorage in memoria, finto Capacitor (§9-sexies)
 │  ├─ fintoSupabase.js         # catena fluente via Proxy — riutilizzabile per ogni pagina
@@ -284,6 +309,15 @@ src/
 ├─ components/
 │  ├─ HomeAtletaUI.jsx         # i pezzi visivi della Home atleta (§9-octies) — sola presentazione
 │  ├─ HomeCoachUI.jsx          # i pezzi visivi della Home coach (§9-nonies) — sola presentazione
+│  ├─ CreaWorkoutUI.jsx        # i pezzi visivi del builder (§9-undecies) — RiepilogoWorkout e BarraAzioni
+│  │                           #   servono ANCHE la scheda: stesso codice in scrittura e in lettura
+│  ├─ AudioVisualizer.jsx      # ⚠️ l'UNICA forma d'onda: note vocali E dettatura IA (§9-quindecies)
+│  ├─ WorkoutDetailUI.jsx      # i pezzi visivi della scheda workout (§9-duodecies) — sola presentazione
+│  ├─ SchedaAtletaUI.jsx       # i pezzi visivi della scheda atleta (§9-terdecies) — sola presentazione
+│  ├─ ArchivioUI.jsx           # i pezzi visivi dell'archivio (§9-sedecies) — sola presentazione.
+│  │                           #   ⚠️ CampoRicerca e IntestazioneSezione servono ANCHE la rubrica atleti
+│  ├─ AtletiUI.jsx             # i pezzi visivi della rubrica atleti (§9-septdecies) — sola presentazione
+│  ├─ CalendarioUI.jsx         # i pezzi visivi del calendario (§9-octodecies) — sola presentazione
 │  ├─ Navbar.jsx               # bottom nav in vetro, voce attiva in pillola, voci variabili per ruolo
 │  ├─ CustomModals.jsx         # CustomAlert + CustomConfirm + AlertHost
 │  └─ CustomDatePicker.jsx     # date picker custom dark
@@ -301,7 +335,7 @@ src/
    ├─ bluetooth.js             # BluetoothService — singleton BLE fascia cardio
    ├─ health.js                # HealthService (Apple Health)
    ├─ motivations.js           # 15 frasi motivazionali + getDailyMotivation() con anti-ripetizione
-   └─ __tests__/               # 66 test su componenti e pagine montate (§9 punto 11)
+   └─ __tests__/               # 138 test su componenti e pagine montate (§9 punto 11)
 tools/                            # non entra nell'app: serve alle verifiche pre-submission
    ├─ ExportOptions-AppStore.plist # esporta un .ipa in locale, NON carica niente
    ├─ verifica-ipa.sh              # 6 controlli sul binario vero (§9-ter)
@@ -368,7 +402,12 @@ Progetto Supabase: `riyqtcssllupakjtoehj`.
 
 ### Edge Functions
 - **`send-reminders`** — 5 modalità via `body.mode`:
-  - `morning` / `evening` (cron): promemoria a tutti gli iscritti, personalizzato per nome, con fallback "Giorno di Rest"
+  - `morning` / `evening` (cron): promemoria agli **atleti**, personalizzato per nome, con fallback "Giorno di Rest".
+    ⚠️ **Gli account in `ADMIN_EMAILS` sono esclusi** (28/08/2026): questa modalità parla a chi si
+    allena («Oggi ti aspetta…»), e il coach riceveva due push al giorno su allenamenti suoi che non
+    esistono. L'esclusione toglie anche la riga in `notifications` e il badge, non solo la push.
+    Se `listUsers` fallisce si invia **senza** filtro (con un `console.error`): meglio una push di
+    troppo al coach che tutti gli atleti senza promemoria. `coach_notification` non è toccata.
   - `immediate` (`record_id`): "Nuovo Allenamento!" all'atleta appena assegnato
   - `voice_note` (`record_id`): "Nuova Nota Vocale!" all'atleta
   - `coach_notification` (`action: 'note' | 'completed' | 'custom_workout'`): notifica agli **admin**
@@ -825,11 +864,25 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 - **Modali**: overlay `bg-black/85`, contenuto via `createPortal(…, document.body)`,
   z-index `[60]` builder · `[100]` Home · `[150]` alert/RPE. Animazione
   `animate-in fade-in zoom-in-[0.96] duration-300 ease-out` (o la classe `.modal-transition`).
-- **Bottom sheet** (centro notifiche): `rounded-t-3xl h-[80vh]`, maniglia grigia, **swipe-down > 100px per chiudere**.
+- **Bottom sheet**: `rounded-t-3xl`, maniglia grigia, **swipe-down > 100px per chiudere**.
+  Il meccanismo sta in `src/useBottomSheet.js` (entrata, trascinamento, uscita, blocco dello
+  scorrimento sotto) e lo usa il menu della scheda workout. ⚠️ Il centro notifiche in `Home`
+  ha ancora la **propria copia**, scritta a mano: BACKLOG #33.
 - **Transizione pagina**: classe `.page-transition` — slide-up 15px + fade, 0.3s `cubic-bezier(0.16,1,0.3,1)`.
 - **Scrollbar sempre nascoste** (regola globale in `index.css` + classe `.hide-scrollbar`).
 - **Safe area iOS**: ogni pagina apre con `pt-[calc(env(safe-area-inset-top)+1rem)]` e
-  `pb-24` per non finire sotto la navbar (`h-16` fissa in basso).
+  chiude con `pb-[var(--fondo-pagina)]` (o `pb-[var(--altezza-navbar)]` dove finisce
+  con una barra fissa) per non finire sotto la tab bar.
+  🔴 **L'altezza della navbar si scrive in UN posto solo**: `--altezza-navbar` in
+  `src/index.css`. Era `pb-16` in `App.jsx` più `pb-[calc(6rem+…)]` in cinque pagine
+  più l'offset di `BarraAzioni` — **sette copie a mano**, che hanno coinciso per caso
+  finché la barra è stata alta 4rem. Il 28/08, diventata la capsula galleggiante
+  dell'artboard 2b (99px + safe area), sarebbero servite sette modifiche coordinate e
+  la prima dimenticata avrebbe nascosto contenuto sotto la barra **senza dare errore**.
+- **Tab bar**: non è una barra piena attaccata al fondo, è una **capsula galleggiante**
+  (`rounded-full`, `rgba(30,30,34,.88)`, blur 22 + saturate 170%, ombra proiettata) con
+  10px d'aria sopra e 16px sotto. La voce attiva prende un **cerchio** da 36px dietro la
+  sola icona, non una pillola dietro icona ed etichetta (§9-quaterdecies).
 - **Feedback aptico**: `Haptics.impact({ style: ImpactStyle.Light })` sugli scroll-picker e sugli
   slider, `Heavy` a fine round del timer; fallback `navigator.vibrate()` su web.
 - **Testo non selezionabile** globalmente tranne input/textarea (regola inline in `App.jsx`).
@@ -926,6 +979,12 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
    In `src/lib/`: `rpe`, `blockColors`, `constants`, `offlineQueue`, `timerSequence`,
    `statistiche`, `badge`, `colori`, e dal 27/08 `notaVocale`, `categorie`, `stiliCard`.
    In `src/components/`: `VoiceRecorder`, `AudioVisualizer`, `RpeModal`, `CustomAudioPlayer`.
+   Dal 28/08 `RiepilogoWorkout`, `BarraAzioni`, `CtaPrimaria`, `BottoneQuadrato`,
+   `SpinaBlocco` e `DurataBlocco` di `CreaWorkoutUI` servono **anche la scheda**: il
+   coach ritrova in lettura la stessa cosa che ha visto in scrittura, e due copie
+   divergerebbero al primo ritocco (§9-duodecies). `VETRO` è salito in
+   `lib/stiliCard.js` per la stessa ragione. Nella scheda sono spariti `Section` ed
+   `ExList`, sostituiti da `BloccoScheda` e `RigaEsercizio`.
    > `isVoiceNoteValid` era in due copie e la Home coach ne sarebbe stata la **terza**:
    > il soft delete `#deleted=` è una regola di dominio, e una terza copia è il modo in
    > cui una correzione ne raggiunge due su tre. Stessa ragione per `CARD`/`LABEL` e per
@@ -969,25 +1028,31 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. ~~Nessun test automatico~~ → **305 test al 27/08/2026** (`npm test`, vitest), tutti
+11. ~~Nessun test automatico~~ → **617 test al 31/08/2026** (`npm test`, vitest), tutti
     verificati per mutazione: se si rompe di proposito il codice che coprono, falliscono.
     Non sono decorativi, ed è l'unico criterio che conta — vedi §9-sexies.
 
-    **194 sulla logica pura di `src/lib/`**
+    **367 sulla logica pura di `src/lib/`**
 
     | file | test | cosa protegge |
     |---|---|---|
     | `timerSequence` | 32 | espansione dei round, rotazione degli esercizi, `nextTask`, formato legacy (§5), e il fatto che la corsa NON abbia il timer |
-    | `statistiche` | 25 | carico settimanale, completamento a 30 giorni, distribuzione RPE, riepilogo della settimana |
+    | `statistiche` | 23 | carico settimanale, completamento a 30 giorni, distribuzione RPE, e le distanze contate come stima invece che come minuti |
+    | `andamento` | 20 | i numeri dell'eroe della scheda atleta: l'RPE **non** dichiarato che resta fuori dalla media invece di entrarci come 5, la finestra dei 30 giorni che è davvero 30, e lo scarto che torna `null` invece di `Infinity` |
     | `statistiche-home` | 24 | i numeri della Home atleta: serie di giorni, sparkline, blocchi, RPE atteso, RPE medio di categoria |
     | `colori` | 23 | che i token CSS e le costanti JS dei colori di marchio non divergano |
     | `offlineQueue` | 20 | deduplica per allenamento, valori corrotti, quota piena, localStorage negato da Safari |
     | `badge` | 8 | badge nativo e `badge_count` aggiornati **insieme**, e mai in modo che possano lanciare |
     | `statisticheCoach` | 42 | i numeri della Home coach: atleti fermi (compreso «mai, in tutta la finestra»), scaduti, copertura, feedback non letto, squadra della giornata |
     | `pausa` | 12 | il marcatore `[PAUSA]` dentro la nota: vale solo in testa, non si duplica al secondo salvataggio, non si mangia il testo |
-    | `blockColors` · `rpe` · `workoutTitle` | 6+6+6 | codifica colore, round-trip dell'RPE, titolo generato dalla data |
+    | `stimaWorkout` | 32 | la durata stimata del builder: il Rest che tiene la durata in `meters`, il rest di Cash In contato round − 1 volte, e l'RPE atteso che torna `null` invece di 5. **Sei** tengono in piedi la media di potenza (§9-undecies punto 3): che su un workout uniforme torni *esattamente* quel valore, che un Cash In leggero non spenga la seduta, che trenta secondi a 10 non la rendano massimale, che il peso segua la durata **anche dentro** il blocco, e che un blocco stimato a zero non sparisca. ⚠️ I due test sui limiti hanno **due** asserzioni ciascuno — la cifra e il contratto (sopra la media aritmetica, sotto il massimo dichiarato): la cifra da sola cadrebbe a ogni ritocco dell'esponente senza dire quale delle due proprietà si è persa |
+    | `rigaBlocco` | 15 | le didascalie del blocco nella scheda: i ripieghi identici a quelli del builder, il rest di Cash In che su un round solo non si nomina, e le specifiche che saltano i «-» invece di stamparli |
+    | `rigaArchivio` | 30 | l'archivio: l'ordine per DATA con `created_at` come spareggio, il mese che non ricompare due volte, la corsa mista che NON dichiara un totale, e i chip che non nascono su una corsia vuota |
+    | `rigaAtleta` | 33 | la rubrica: la settimana che comincia di LUNEDÌ anche quando la si chiede di domenica, chi non ha niente in programma che scrive `—` invece di `0/0`, le tacche che oltre la soglia diventano una barra, la pausa che dice da quando e mai un rientro che nei dati non c'è, e la ricerca che trova «rossi marco» |
+    | `rigaCalendario` | 35 | il mese: la settimana che comincia di LUNEDÌ anche quando il mese apre di domenica, il velo verde che pretende `every` e non `some`, la corsa a DISTANZA che torna `null` invece di 0 minuti — o il volume la conterebbe come un'ora di niente — e il `≈` che compare solo quando la somma ha lasciato fuori qualcosa |
+| `blockColors` · `rpe` · `workoutTitle` | 6+6+6 | codifica colore, round-trip dell'RPE, titolo generato dalla data |
 
-    **95 su componenti e pagine**
+    **250 su componenti, pagine e hook**
 
     | file | test | cosa protegge |
     |---|---|---|
@@ -996,10 +1061,19 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     | `HomeOffline` | 14 | il percorso offline completo su `Home` montata: completare, scompletare, coda, cache che si ripara, modale RPE che non si blocca |
     | `CreateWorkoutMemo` | 5 | la memoizzazione **dal lato del chiamante** (§9-quinquies) |
     | `RunningStepRowMemo` · `HyroxBlockMemo` | 4+2 | che `React.memo` serva ancora a qualcosa |
-    | `HomeCoach` | 21 | il cablaggio del ramo coach su `Home` montata: l'eroe porta le citazioni e il numero dell'arretrato (non delle righe stampate), aprire un feedback segna letto **solo quello**, la squadra cambia giorno, l'account del coach resta fuori, e le card «Calendario»/«Atleti» restano fuori dalla pagina |
+    | `HomeCoach` | 28 | il cablaggio del ramo coach su `Home` montata: l'eroe porta le citazioni e il numero dell'arretrato (non delle righe stampate), aprire un feedback segna letto **solo quello**, la squadra cambia giorno, l'account del coach resta fuori, e le card «Calendario»/«Atleti» restano fuori dalla pagina. ⚠️ Gli ultimi quattro montano con `role: 'admin'`, non `'coach'`: è il ruolo che esiste davvero, ed è l'unico a cui la Home mostrava anche il ramo atleta (§9-nonies, 28/08) |
+    | `CreaWorkoutBuilder` | 20 | il builder ridisegnato su `CreateWorkout` montata: il riepilogo che segue i blocchi, il ritorno al passo 1 (unico posto dove nome e data si modificano), gli Stepper che scrivono il vocabolario di prima, «ultima volta», la ricerca esercizi che NON ruba il fuoco, lo scorrimento al blocco nuovo, e la ruota del passo (generi separati, valore intero, `—` in ogni genere) |
+    | `CreaWorkoutIA` | 10 | il foglio «Genera con IA»: l'entrata che **esiste** (`sheet-in`, non `animate-in`, che genera zero CSS), il campo che NON prende il fuoco, la maniglia che è un bottone, la forma d'onda alimentata da `getUserMedia` — che senza microfono **non si finge** ma non lascia lo schermo muto — l'attesa che occupa il foglio con la CTA che sparisce, e il foglio che durante la generazione **non si chiude**. E **tre** test sull'avviso «non arriva nessun suono», che sono tre perché il difetto stava nel confine: microfono morto → l'avviso c'è; voce normale → non c'è; **voce piana** → non c'è lo stesso, ed è quello che prende la soglia unica (§9-quindecies). ⚠️ Il finto analizzatore suona su **quattro bande su ventiquattro**, come una voce vera: uno che riempie lo spettro ha la media alta e passa anche con la logica sbagliata |
+| `ArchivioWorkout` | 21 | l'archivio ridisegnato su `WorkoutsArchive` montata: i gruppi per mese che restano nell'ordine giusto anche se la query torna per creazione, i chip derivati dai dati (mai «Libero», che la query del coach non fa arrivare), la ricerca che trova un ESERCIZIO e non solo il titolo, il titolo `null` che non porta via la pagina, e il contatore degli assegnati che all'atleta non si mostra — perché la sua query non lo carica nemmeno |
+| `AtletiLista` | 21 | la rubrica ridisegnata su `Athletes` montata: la frazione che viene dalla settimana e non dai workout in pagina, l'atleta in pausa che RESTA nella lista (è l'unico posto in cui il coach si accorge di averne dimenticato uno), il marcatore `[PAUSA]` che non si vede mai come testo, il cestino che non è più un accordion, e una sola `select` su `athlete_workouts` per venti atleti. ⚠️ Il test che conta di più è quello sull'allarme della riga, e ci sono voluti due tentativi: «zero questa settimana» e «fermo da cinque giorni» quasi sempre coincidono, e un atleta qualsiasi passa con entrambe le logiche — serve chi ha chiuso **sabato**, cioè quattro giorni fa ma nella settimana scorsa |
+| `CalendarioMese` | 21 | il calendario ridisegnato su `Calendar` montata: la coppia della fascia che misura lo STESSO insieme (le ore dei completati, non di tutto il programmato), il «Completati» che al coach non si mostra — la sua query non ha nessuno stato da leggere — l'RPE che c'è solo se dichiarato davvero, la cella che nell'`aria-label` dice il numero VERO oltre il tetto dei segmenti, e «Oggi» che compare solo fuori dal mese corrente. ⚠️ La fascia e la legenda sono due `role="group"` nominati apposta: dicono le stesse parole delle righe («Gara», «Running», «Fatto») e i loro numeri coincidono con i giorni della griglia, quindi un `getByText('2')` non scoped prende il 2 agosto e il test verifica un'altra cosa |
+| `useTastiera` | 3 | il ramo **nativo**, che il resto della suite non tocca: la barra che sparisce quando la tastiera sale, e l'invio che toglie il fuoco |
+    | `useBottomSheet` | 12 | il foglio del menu scheda: che l'entrata sia un'animazione **che esiste**, che il keyframe lasci il comando al dito, la maniglia trascinata oltre soglia (e sotto soglia, che NON deve chiudere), lo scorrimento della pagina bloccato con `position: fixed` e **ripristinato dov'era** |
     | `AthleteDetailPausa` | 7 | il bottone di pausa: conferma solo per spegnere l'allarme, marcatore mai visibile come testo, pillola invisibile all'atleta, e la modale di modifica che non cancella la pausa — **da nessuno dei due ruoli** |
     | `VoiceRecorder` · `VoiceRecorderNativo` | 3+4 | che la registrazione non sparisca in silenzio quando il plugin nativo fallisce (§9-quater punto 2) |
     | `WorkoutDetailTimer` | 3 | che il bottone del timer non compaia sugli allenamenti di corsa |
+    | `SchedaAtleta` | 14 | la scheda atleta ridisegnata su `AthleteDetail` montata: il denominatore dell'anello (gli assegnati dei 30 giorni, non i workout in pagina), le tre tab che non ci sono più, lo storico che nasce chiuso dicendo quanti ne contiene, il menu che tiene Esporta/Modifica/Pausa fuori dalla pagina, la barra fissa che NON esiste sul proprio profilo, e «Prossimi allenamenti» che il redesign non toglie. ⚠️ Il coach si monta sulla rotta `/athletes/:id`: senza il parametro la pagina si crede sul proprio profilo e il test verifica un'altra pagina |
+    | `WorkoutDetailScheda` | 20 | la scheda ridisegnata su `WorkoutDetail` montata: la terza cella del riepilogo, che su un allenamento chiuso è l'RPE **dichiarato** e non quello atteso — e scrive `—`, non 5; la didascalia di BLOCK_HINT (rilievo 3.2.1viii); i blocchi aperti senza toccare niente; il menu che tiene i comandi fuori dalla pagina; la barra che non fa due gialli; l'elenco delle assegnazioni; la grafica IG che resta **renderizzata** fuori schermo, e il testo INTERO dell'avviso sul riscaldamento |
 
     ⚠️ **I due contratti sono asimmetrici e devono restarlo**: `HyroxBlock` passa `block.id`,
     `RunningStepRow` passa l'**indice**. "Uniformarli" romperebbe il riordino delle fasi di
@@ -1323,6 +1397,35 @@ Al suo posto la **riga intera è il bersaglio** e apre la scheda dell'atleta. È
 corretto del design: con più nomi elencati, un «Apri» in fondo alla card non dice quale
 atleta apre. La voce sta in BACKLOG.
 
+### ⚠️ Il ramo atleta NON si vede più dalla Home coach (28/08/2026)
+Fino al 28/08 il ramo atleta era renderizzato per `role === 'athlete' || role === 'admin'`:
+in fondo alla Home coach comparivano quindi l'**allenamento di oggi** (o «Giorno di rest»),
+l'**anello della settimana**, **Serie** e **Volume · RPE**. Erano i numeri di *una* persona
+in una pagina che parla di dodici, e per il coach dicevano sempre rest — il suo account è
+escluso da chi si segue (`COACHING_ID`), quindi non ha allenamenti propri. Il bento
+compariva **sempre**, anche senza un dato: `weeklyStatus` nasce già con sette giorni, quindi
+`weeklyStatus.length > 0` era vero al primo render.
+Ora il ramo atleta è `role === 'athlete'` e basta, **e con esso non parte più la query sullo
+storico personale** (due `select` in meno a ogni apertura della Home coach). Chi vuole quella
+vista passa da **Impostazioni → «Anteprima come atleta»**, che mette `adminRoleOverride` e
+rende la Home atleta intera.
+Insieme è uscita la riga **«Profilo»**: era l'unico collegamento a `/profile` per l'admin, e
+resta raggiungibile dalla stessa anteprima, dove la navbar ne ha la voce.
+✅ **E dal 28/08/2026 nemmeno la testata** (chiuso il giorno stesso). Il corpo era stato
+separato, il ramo della **testata** no: guardava anch'esso `role === 'athlete' || role ===
+'admin'`, quindi sopra una pagina che parla di dodici persone il coach leggeva il saluto
+dell'atleta — «Buongiorno, Federico», la settimana ISO e la frase motivazionale del giorno.
+`HeaderCoach` («ven 28 agosto · 9 atleti · 2 in pausa» + «FLEOFIT Coach») **esisteva già ed
+era codice irraggiungibile**: l'unico ruolo che lo apriva era `'coach'`, che l'onboarding non
+assegna (`App.jsx`). Ora la regola della testata è la stessa del corpo — `role === 'athlete'`
+di qua, tutti gli altri di là — ed è la testata dell'artboard `Home Coach.dc.html` 2b.
+⚠️ È anche la ragione per cui i **test storici** di questa sezione montano `'coach'` e non si
+erano accorti di niente: i tre test nuovi montano `'admin'`, l'unico ruolo che esiste davvero.
+Il numero di atleti è `atletiCoach.length`, che **esclude già `COACHING_ID`** (il filtro sta
+nel fetch): è quello della rubrica, non uno più grande. Chi è in pausa **resta nel totale** e
+si dichiara a parte, altrimenti i numeri delle sezioni sotto — che la pausa la escludono —
+sembrerebbero sbagliati.
+
 ### Cosa è uscito
 Le card **«Calendario»** e **«Atleti»**: sono già due voci della navbar coach (verificato in
 `Navbar.jsx`), e vale il corollario della Regola dell'Eroe Unico applicato all'atleta il 26/08.
@@ -1546,6 +1649,1098 @@ chiamata con App Review.
 
 Documento operativo completo (reperti, note revisore, checklist):
 artifact "Riammissione FLEOFIT" — https://claude.ai/code/artifact/b2b8e586-a617-4172-98dc-f06e2b34ce6a
+
+---
+
+## 9-undecies. Il rework di «Crea Workout» (27/08/2026)
+
+Nasce dallo stesso progetto Claude Design delle due Home
+(`4a238081-a3ee-4f59-ae34-100f29d55601`), artboard `Crea Workout.dc.html`.
+Come per le Home, la logica di `CreateWorkout.jsx` non è stata riscritta: sono
+cambiati il JSX dei due passi, il modo di inserire i numeri, e i dati che il
+builder mostra di sé.
+
+### Il problema, in una riga
+Il builder funzionava ma era **cieco**: si aggiungevano blocchi senza sapere
+quanto dura l'allenamento, quanti blocchi sono, quanto pesano. La lista era
+piatta — riscaldamento, lavoro centrale e chiusura avevano lo stesso peso visivo
+— e «Salva» stava in fondo a uno scroll che **cresce con il workout**, quindi si
+allontanava man mano che il coach lavorava.
+
+### Cosa c'è ora
+1. **Lo step 1 fa una domanda sola.** La categoria è tre card con nome, colore di
+   corsia e una riga che dice cosa aspettarsi, non tre segmenti stretti. Nome e
+   data scendono **sotto** la scelta: si compilano una volta e si dimenticano.
+2. **Il riepilogo in cima allo step 2** — durata stimata, numero di blocchi, RPE
+   atteso — e sotto una barra proporzionale che mostra come la durata è
+   distribuita, con il blocco di lavoro in ambra.
+3. **I blocchi** prendono una spina verticale a sinistra (colori di `TYPE_COLORS`,
+   gerarchia fatta dallo spessore) e la durata in testa alla riga. Il blocco
+   aperto è l'unico con bordo e spina in ambra.
+4. **«Salva» è una barra fissa in basso**, la stessa per i due passi e per le tre
+   categorie. Sopra, **«Genera con IA»** è una card piena a tutta larghezza e
+   «Aggiungi blocco» il gesto tranquillo sotto di essa.
+5. **Le rotelle dei numeri sono sparite** dal flusso Hyrox: al loro posto il
+   valore grande, meno e più ai lati, i valori d'uso comune a portata di pollice
+   e «Digita» per il valore esatto. In più la riga **«ultima volta»**, che
+   ripropone i valori dell'ultima assegnazione dello stesso esercizio.
+
+### ⚠️ Le sette trappole di questo codice
+1. **La durata è una STIMA, e deve dirlo.** `src/lib/stimaWorkout.js` sa
+   esattamente quanto dura un EMOM o un ON/OFF, ma «For Time», «Interval»,
+   «Cash In» e «Cash Out» **non hanno una durata**: sono cronometri liberi, il
+   tempo lo fa l'atleta. Lì si stima dagli esercizi con tre costanti dichiarate
+   in cima al file. Nessun'altra superficie deve trattare quel numero come un
+   dato vero.
+2. **Un blocco stimabile a zero mostra «—», non «0:00».** Un Cash In senza
+   esercizi non dura zero: semplicemente non si può ancora stimare, e «0:00» è
+   una bugia con l'aria di un dato.
+3. **`rpeAtteso` torna `null`, non 5.** È la stessa lezione di `rpeDichiarato()`
+   in `src/lib/rpe.js` (§9-octies): un ripiego travestito da misura è peggio di
+   un trattino, perché il coach lo legge come un dato. Ed è **pesato sulla
+   durata**, non sul numero di esercizi — venti minuti a 9 e due a 3 non fanno 6.
+   Il peso vale su **due livelli**: la durata stimata del blocco, distribuita fra
+   i suoi esercizi in proporzione a quanto durano. Mille metri di ski sono quattro
+   minuti e dieci burpees mezzo: con il peso piatto quel blocco leggerebbe 7,5,
+   che è il valore di un lavoro che lì dentro nessuno fa.
+   🔴 **E NON è una media aritmetica, dal 31/08/2026.** Segnalato dal committente
+   guardando la scheda: una media sottostima *sempre* uno sforzo variabile, e
+   quasi ogni workout apre con un Cash In a bassa intensità. Quindici minuti a 3
+   davanti a dieci minuti a 10 davano **5,8** — e in quel workout non esiste un
+   solo minuto a 5,8. La scheda dichiarava un allenamento più leggero di quello
+   che sarebbe stato, che è il difetto peggiore possibile per un numero che il
+   coach usa per dosare il carico.
+   Ora è una **media di potenza** di ordine `ESPONENTE_SFORZO = 3`:
+
+       RPE = ( Σ dᵢ·rᵢ³ / Σ dᵢ ) ^ (1/3)
+
+   cioè lo stesso rimedio per cui nel ciclismo esiste la *Normalized Power* al
+   posto della potenza media. Sul caso sopra torna 7,5.
+   **Le tre proprietà da non perdere** se un giorno la si tocca, ognuna con il
+   suo test:
+   - **non è mai sotto la media aritmetica né sopra il massimo dichiarato**, e su
+     un workout a intensità uniforme torna *esattamente* quel valore — i workout
+     già corretti non cambiano di un decimo, e trenta secondi a 10 in fondo a un
+     quarto d'ora tranquillo alzano il numero da 3,2 a 3,9, non a 10 (è la
+     ragione per cui non si usa il massimo);
+   - **non richiede di sapere quali tipi di blocco «contano»**. Escludere Cash In
+     per etichetta era l'altra strada, ed è sbagliata: in Hyrox un Cash In fatto
+     duro esiste, e a decidere dev'essere l'intensità che il coach ha dichiarato.
+     WarmUp e Rest, del resto, *già* non pesano — non hanno esercizi con
+     un'intensità dichiarata, e il ciclo li salta;
+   - **è continua e monotona**: nessuna soglia che fa saltare il numero quando si
+     sposta un round.
+   ⚠️ **3 e non il 4 di Coggan**: quello è calibrato sui **watt**, una grandezza
+   fisica. L'RPE è già una scala percettiva compressa, quindi 4 sovracorregge —
+   una seduta con metà lavoro davvero facile si leggerebbe quasi massimale.
+   ⚠️ Resta vero che è una **stima** (punto 1), e che l'etichetta «RPE atteso»
+   non ha mai promesso una media: non serve cambiarla.
+4. **L'«Intensità dichiarata» NON è l'«RPE atteso»**, e l'artboard non la mostra.
+   È rimasta lo stesso: finisce in `workouts.sections.intensity`, e la scheda, il
+   PDF e la story la leggono. Toglierla dall'interfaccia vorrebbe dire perdere un
+   campo che il coach controlla e che tre superfici mostrano.
+5. **Nome e data vivono SOLO nello step 1.** Il ritorno è la testata dello step 2,
+   che è un bottone (`aria-label="Modifica nome e data"`). Senza quel ritorno un
+   workout aperto in modifica — che parte già al passo 2 — non sarebbe più
+   rinominabile. C'è un test che lo prende.
+6. **La didascalia del blocco sta sulla SECONDA riga.** Su 393px, accanto al nome,
+   alla durata e a quattro azioni, «Blocco di apertura» finiva troncata a «Blocco
+   di apert…» — ed è la risposta al rilievo **3.2.1(viii)** di Apple (§9-ter), non
+   un ornamento. Sulla seconda riga ci sta intera, ed è la prima cosa scritta,
+   quindi l'ultima a cedere se la riga trabocca.
+7. **La barra fissa ha un offset, non `bottom-0`.** La navbar è `fixed` a z-50: con
+   `bottom-0` la barra finirebbe **sotto** di essa. ⚠️ Dal 28/08 l'offset non è più un
+   numero scritto lì: è `bottom-[var(--altezza-navbar)]`, e il numero vive in
+   `src/index.css` (§6). Chi cambia la forma della navbar cambia quello, non i
+   chiamanti.
+8. **La barra sparisce mentre si scrive**, e non è una scelta estetica.
+   `Keyboard.resize` vale `'native'` (capacitor.config.ts), quindi con la
+   tastiera aperta **la webview si rimpicciolisce**: qualunque cosa ancorata in
+   basso si ritrova incollata sopra la tastiera, e a schermo sembra «salita in
+   cima» — è il fondo che si è alzato. Non c'è modo di tenerla ferma dov'era,
+   quel punto dello schermo mentre si digita non esiste. La navbar fa lo stesso
+   da sempre, e dal 27/08 le due condividono `src/useTastiera.js`.
+9. **Aggiungere un blocco CHIUDE quello aperto prima**, quindi la pagina si
+   accorcia di colpo e il blocco nuovo — che sta in fondo alla lista — esce
+   dallo schermo: il coach lo crea e non lo vede. Lo risolve `bloccoDaMostrare`,
+   un **ref** (non uno stato: non è mai letto durante il render) letto da un
+   effetto su `blocks`. ⚠️ Lo scorrimento passa da `requestAnimationFrame`, che
+   **non scatta in una scheda non visibile**: nei test va atteso con due frame,
+   o un `expect(...).not.toHaveBeenCalled()` passa senza verificare niente.
+10. **«Genera con IA» sta SOPRA la lista dei blocchi**, non sotto come
+   nell'artboard. Alla prova sul dispositivo, con cinque blocchi aperti, non la
+   trovava più nessuno: è il modo di *partire* da zero, quindi cresce di
+   distanza proprio mentre diventa inutile. «Aggiungi blocco» resta sotto.
+11. **Il campo di ricerca degli esercizi NON prende il fuoco all'apertura.**
+   L'`autoFocus` faceva salire la tastiera su una lista di centotrenta voci,
+   coprendo proprio quello che si era venuti a guardare. Chi vuole scrivere
+   tocca il campo.
+
+### ⚠️ Il passo NON usa lo Stepper, e ci sono voluti tre tentativi
+Lo Stepper funziona su ripetizioni, chili, metri e tempi perché lì il «più uno»
+vuol dire qualcosa. Sul **passo** no. I due tentativi caduti, con la loro ragione:
+
+1. **Stepper con cinque valori rapidi.** `ERGO_PACE_OPTIONS` mette in fila `Z3`,
+   `All out` e `2:05 /500m`, che non stanno sulla stessa retta: cinque valori su
+   ottantacinque nascondevano gli altri ottanta, e il più/meno attraversava
+   categorie senza rapporto fra loro.
+2. **Un elenco intero a schermo pieno.** Mostrava tutto, ma per spostare un passo
+   di cinque secondi chiedeva di aprire una schermata, cercare in una griglia di
+   sessantuno pillole e tornare indietro. Corretto e faticoso.
+
+**La lezione**: la scelta ha **due** domande, non una. Prima *di che tipo* di
+passo si parla — a sensazione, ritmo, cadenza — e lì le voci sono poche e vanno
+viste tutte insieme. Poi *quale valore*, e lì è una scala fitta e ordinata su cui
+si aggiusta per gradi rispetto a quello che c'è già.
+
+Quindi (27/08/2026, su indicazione del committente): un **segmento** per il
+genere, e per il valore una **ruota orizzontale** — precedente a sinistra,
+successivo a destra, scelto grande al centro. Dentro un genere la rotella è lo
+strumento giusto; è quando le si chiede di attraversare una tassonomia che
+diventa cieca, ed è tutta la differenza con lo `ScrollPicker` che ha sostituito.
+
+Dettagli di `RuotaValori` che non sono rifinitura:
+- **Ogni voce è anche un bottone.** Senza, il valore sarebbe raggiungibile solo
+  trascinando: né da tastiera né da VoiceOver. `role="option"` +
+  `aria-selected` dicono qual è la scelta a chi non vede la dimensione.
+- **La misura viene dal genere, non dalla voce.** «2:15» sta in settantotto punti
+  a venticinque, «Gara Singola» no. Se la dimensione la decidesse la singola
+  voce, le voci ballerebbero mentre si scorre.
+- **La sfumatura ai bordi.** Le voci a distanza 2 sono tagliate a metà cifra, e
+  una cifra tranciata si legge come un difetto invece che come «la scala
+  continua».
+- **`—` sta in testa a OGNI genere.** Il passo è facoltativo: se il modo di non
+  indicarlo vivesse in un genere solo, chi guarda «Ritmo» dovrebbe cambiare
+  scheda per cancellarlo.
+- ⚠️ **La barra di posizione non è decorativa** su una ruota da sessantuno voci:
+  senza, non si sa se si è all'inizio o alla fine della scala.
+- ⚠️ I generi sono **derivati** dalle costanti con dei `filter`, non ricopiati.
+  L'etichetta perde il suffisso perché lo dice l'intestazione del genere, ma il
+  valore scelto resta **intero** (`2:00 /500m`). C'è un test che lo prende:
+  scrivere l'etichetta accorciata in `workouts.sections` non darebbe **nessun**
+  errore, darebbe una scheda che la web app legge storta.
+
+### Il vocabolario dei dati NON è cambiato
+Gli Stepper scrivono le stesse identiche stringhe delle rotelle — `"20"`,
+`"9 kg"`, `"500m"`, `"1:00"`, `"Z2"` — perché il meno e il più si muovono
+**dentro le liste esistenti** (`REPS_OPTIONS`, `KG_OPTIONS`, `TIME_OPTIONS`…),
+non su un numero. È `passoInLista()`, e la ragione è che quei valori finiscono
+in `workouts.sections` su un database **condiviso con la web app in produzione**
+(§1.1): un formato nuovo lì dentro non darebbe alcun errore, darebbe una scheda
+che l'altra app legge storta. C'è un test che monta il builder vero e verifica la
+stringa che finisce nel blocco.
+
+### Cosa NON è stato ridisegnato, e perché
+L'artboard copre lo **step 1** (tutte e tre le categorie) e lo **step 2 Hyrox**.
+Il corpo dello step 2 **Corsa** e quello **Custom** hanno preso la cornice
+condivisa — testata, card, barra fissa — ma non il modo di comporre le fasi:
+`RunningStepPicker` usa ancora `ScrollPicker`, e quello schermo è esplicitamente
+il prossimo pezzo di design («fammi vedere lo step 2 della corsa», in fondo
+all'artboard). `ScrollPicker` resta quindi vivo e usato, non è codice morto.
+
+### «Ultima volta»: una lettura, e nessuna colonna
+`athlete_workouts` e `workouts` non hanno un indice per esercizio, e **lo schema è
+congelato** (regola 0-bis). La riga si costruisce con una sola `select` sugli
+ultimi `STORICO_WORKOUT = 40` workout per data, scandagliando il jsonb lato
+client al montaggio di `ExercisePicker`. Se fallisce non succede niente: la riga
+non compare, e l'errore finisce nei log invece che in un `catch` muto (§9-quater).
+
+---
+
+## 9-duodecies. Il rework della scheda del workout (28/08/2026)
+
+Stesso progetto Claude Design delle Home e del builder
+(`4a238081-a3ee-4f59-ae34-100f29d55601`), artboard `Workout Detail.dc.html`,
+opzioni **4b** (coach) e **4c** (atleta, allenamento fatto). Come per gli altri
+tre schermi la logica di `WorkoutDetail.jsx` non è stata riscritta: sono
+cambiati il JSX della pagina, l'ordine in cui le cose stanno, e ciò che la
+scheda dice di sé. Nessun campo di Supabase cambia forma.
+
+### Il problema, in una riga
+La pagina apriva con il logo FLEOFIT, poi il titolo, poi **cinque bottoncini in
+fila** (TV, Cardio, Duplica, Modifica, Elimina) e un avviso arancione alto
+quanto una card: l'azione che conta — avviare l'allenamento — arrivava dopo
+tutto questo. Non si è mai saputo quanto dura un workout né quanti blocchi
+sono. In fondo, quattro bottoni dello stesso peso e uno **schermo intero** di
+anteprima dello sticker Instagram.
+
+### Cosa c'è ora, nell'ordine in cui sta in pagina
+1. **La testata** con due sole icone, e sono due **stati**: TV e cardio si
+   accendono e si spengono *durante* l'allenamento. Tutto il resto — Duplica,
+   Modifica, i tre export, Elimina — è nel menu delle tre puntine, che è un
+   bottom sheet come il centro notifiche.
+2. **Il titolo**, con la corsia di categoria, la data e l'intensità dichiarata
+   come sovrascritta. Il logo è sparito: in una pagina di dettaglio non dice niente.
+3. **L'esito**, solo per l'atleta che ha già finito. È la risposta alla domanda
+   per cui si riapre la scheda di ieri, e prima era un bottone verde — cioè uno
+   stato travestito da comando.
+4. **Il riepilogo**: durata, blocchi, RPE. È **lo stesso componente** dello step 2
+   del builder (`RiepilogoWorkout` di `CreaWorkoutUI`), barra proporzionale compresa.
+5. **L'avviso sul riscaldamento**, con il testo **intero** (vedi sotto).
+6. **I blocchi**, con la spina verticale di `TYPE_COLORS` e la durata in testa alla
+   riga, come nel builder. Gli esercizi sono righe con nome, specifiche in
+   monospazio e intensità in coda, non più testo che scorre.
+7. Note del coach, vocale, note dell'atleta.
+8. **L'elenco delle assegnazioni** (coach), che erano N card con N ombre.
+9. **La barra fissa in basso**, che non dipende più da quanto è lunga la lista.
+
+### ⚠️ Le sette cose da sapere prima di rimetterci mano
+1. **La grafica Instagram deve restare RENDERIZZATA.** Esce dalla pagina, ma non
+   si spegne: `html-to-image` clona un nodo vero, e con `display:none` o
+   `opacity:0` l'export produce un'immagine **vuota**, senza un errore da nessuna
+   parte. Si porta fuori schermo (`position:fixed; left:-10000px`), che è l'unico
+   modo di nasconderla senza spegnerla. C'è un test che usa `toBeVisible`, ed è
+   l'unica asserzione che cade su quella mutazione.
+2. **La terza cella del riepilogo cambia significato.** Nel builder è l'**RPE
+   atteso** — la stima del coach. Su un allenamento chiuso è l'**RPE dichiarato**
+   dall'atleta. Sono due misure diverse, e sotto la stessa etichetta sarebbero la
+   bugia peggiore della pagina: per questo `RiepilogoWorkout` ha `terzaCella`, che
+   non è un'opzione di stile.
+3. **Quel valore viene da `rpeDichiarato`, non da `parseNotesAndRpe`.**
+   `parseNotesAndRpe` torna **5** quando il marcatore manca: è il valore giusto per
+   il cursore della modale ed è un numero inventato per chiunque lo mostri come un
+   dato. `athleteNote.dichiarato` porta il valore vero, o `null` → «—».
+   È la stessa lezione di §9-octies.
+4. **Il riepilogo non compare su Corsa, Custom ed Evento**, che non hanno blocchi
+   da stimare: «0 min · 0 blocchi» sarebbe una bugia con l'aria di un dato — la
+   stessa ragione per cui `DurataBlocco` scrive «—» invece di «0:00».
+5. **I blocchi nascono APERTI**, e si tiene l'elenco dei *chiusi*. La scheda si
+   legge mentre ci si allena: un esercizio dietro un tocco è un esercizio che si
+   salta. WarmUp e Rest non si aprono affatto — non hanno niente dentro.
+6. **La barra fissa ha l'offset della navbar**, non `bottom-0`: è `BarraAzioni` di
+   `CreaWorkoutUI`, quindi vale la stessa nota di §9-undecies punto 7, e sparisce
+   con la tastiera aperta per la stessa ragione (punto 8).
+7. **`voice_note_url` è UNA colonna per una comunicazione bidirezionale**
+   (§9-nonies punto 3): il verso lo dà il **ruolo di chi guarda**, non il dato.
+   Il coach legge «Vocale per Marco», l'atleta «Vocale del coach».
+
+### La riga sotto il nome del blocco è cambiata di forma, non di contenuto
+`getBlockTitle` impacchettava nome, parametri e durata in una stringa sola
+(«EMOM · 1:00 min x 24 rounds · 24 min») che a 393px andava a capo due volte.
+Ora: il nome in testa, la didascalia di `BLOCK_HINT` accanto, la **durata a
+destra** (da `durataBlocco` di `stimaWorkout`, la stessa del builder) e i soli
+parametri nella seconda riga, in `src/lib/rigaBlocco.js`.
+⚠️ I ripieghi di `sottotitoloBlocco` sono **gli stessi** di `durataBlocco` e di
+`BlockPickerModal`: se qui si scrivesse «10 round» dove il timer ne conta 3, la
+scheda mentirebbe senza dare nessun errore. C'è un test per ognuno.
+`getBlockTitle` **resta**: la usano ancora il PDF e la story Instagram.
+
+### 🔴 L'avviso sul riscaldamento: il TESTO non si tocca, la forma sì
+La prima stesura del redesign lo aveva ridotto a una riga — «5-10 min di
+mobilità prima di partire. Mai a freddo.» — con la logica che una card si salta
+e una riga si legge. **Il committente lo ha rimesso per intero lo stesso
+giorno**, e ha ragione: è l'unico avviso di sicurezza dell'app, e il riassunto
+buttava via proprio la parte che spiega il *perché* (la gradualità, la
+prevenzione degli infortuni). Il testo è quello, parola per parola, e c'è un
+test che lo verifica intero.
+
+Quello che è cambiato è la forma. Non più un rettangolo arancione piatto largo
+quanto un blocco di lavoro, ma una carta sollevata con la sua luce, il titolo in
+ambra calda e il corpo in grigio: il peso visivo di una **nota**, non di un
+allarme. Un avviso che urla quanto il contenuto è un avviso che si impara a
+saltare — ed era il difetto vero, non la lunghezza.
+
+⚠️ Resta nascosto su **Evento** e **Custom**, com'era prima del redesign: la
+regola è `type !== 'Event' && type !== 'Custom'` in `WorkoutDetail`, non dentro
+il componente. Se un giorno lo si vuole ovunque, si cambia lì.
+
+### 🔴 Il menu delle tre puntine: tre difetti che nessun errore segnalava
+Segnalati dal committente il 28/08 provandolo sul telefono. Valgono per
+**qualunque** bottom sheet futuro, e per questo il meccanismo sta in
+`src/useBottomSheet.js` invece che dentro il componente.
+
+1. **Non si apriva con un'animazione**, perché la classe che avrebbe dovuto
+   farlo — `animate-in slide-in-from-bottom` — viene da **tw-animate-css, che
+   non è installato**: genera zero CSS. È la trappola già annotata in
+   `src/index.css` per l'eroe della Home, e si era ripresentata identica.
+   Ora è il keyframe `.sheet-in`.
+   ⚠️ **Non è un caso isolato**: quelle classi compaiono in **54 punti su 14
+   file**, cioè quasi ogni modale del progetto crede di avere un'entrata e non
+   ce l'ha. Verifica: `grep -c "animate-in" dist/assets/*.css` → **0**.
+   Vedi BACKLOG #34 per le due strade possibili.
+2. **La maniglia non faceva niente.** Era uno `span` decorativo. È il gesto che
+   chiunque prova per primo su un foglio iOS. Ora è un `<button>` che si
+   trascina (oltre `SOGLIA_CHIUSURA = 100` px chiude, sotto torna su) e che
+   chiude anche a tocco secco.
+3. **La pagina sotto continuava a scorrere.** ⚠️ Il blocco è
+   `position: fixed` sul body, **non** `overflow: hidden`: su iOS il secondo
+   non ferma il WKWebView. Il prezzo è che `position: fixed` azzera lo
+   scorrimento, quindi la posizione va memorizzata e rimessa alla chiusura — o
+   chiudendo il menu si torna in cima alla scheda. C'è un test per quello.
+
+> ⚠️ **`.sheet-in` non ha `fill`, ed è deliberato.** Un'animazione con
+> `fill: both` **vince sullo stile inline**: il foglio resterebbe fermo sotto il
+> dito mentre lo si trascina — è lo stesso difetto documentato in §9-octies
+> punto 1 sullo swipe della Home. E la classe va **tolta al primo contatto**:
+> l'hook tiene uno stato `toccato` apposta. Senza, un trascinamento annullato
+> riportava l'offset a 0, la classe tornava sull'elemento e **il foglio rifaceva
+> l'animazione di apertura** invece di risalire al suo posto. Trovato scrivendo
+> il test, non leggendo il codice.
+
+### La data nell'elenco delle assegnazioni si stampa solo se diversa
+Non è brevità. Su 393px, accanto al nome, alla pillola di stato e al cestino,
+una data che ripete il titolo della pagina troncava proprio «RPE 8 · nota», che
+è l'unica cosa per cui il coach guarda quella lista. Quando invece l'atleta è
+programmato in un altro giorno, quello è il dato che conta — e non c'è nessun
+altro posto che lo dica.
+
+### Il codice morto che il rework ha lasciato indietro, ed è stato rimosso
+`Section` ed `ExList` (in `WorkoutDetail.jsx`) non avevano più chiamanti:
+cancellati invece di restare come la terza copia di qualcosa che nessuno chiama
+(§9 punto 2). Nella stessa passata i due punti che scrivevano la coda offline con
+un `JSON.parse(localStorage.getItem(...))` nudo sono passati ad
+`accodaSuStorage`, che si ripara da sola e deduplica per allenamento (regola 0-bis).
+
+### ⚠️ Un test che era verde per il motivo sbagliato
+«L'elenco delle assegnazioni non si vede per l'atleta» **non falliva** rompendo
+il codice: la guardia sul ruolo esiste in **due** punti — il fetch e il render —
+e toglierne uno solo non cambia niente a schermo. Riscritto per verificare il
+fetch (`chiamateA('athlete_workouts', 'select')` deve essere **una** sola),
+che è anche la cosa che conta davvero: la scheda dell'atleta non deve scaricare
+le assegnazioni di tutti gli altri. §9-sexies, di nuovo.
+
+### Cosa NON è stato ridisegnato
+Il corpo **Corsa** (`RunningList`), **Custom** ed **Evento** hanno preso la
+cornice condivisa — testata, riepilogo saltato, barra fissa — ma non un nuovo
+modo di elencare le fasi: l'artboard non li copre, e il `dv-next` dell'artboard
+li dà per il prossimo pezzo di design. Non sono stati toccati nemmeno il
+**timer** (`WorkoutTimer`), le modali di assegnazione, TV, eliminazione e RPE,
+il **PDF** e la **story Instagram**: la scheda è la cornice, quelli sono i
+contenuti, e cambiarli era un'altra decisione.
+
+---
+
+## 9-terdecies. Il rework della scheda atleta (28/08/2026)
+
+Stesso progetto Claude Design degli altri quattro schermi
+(`4a238081-a3ee-4f59-ae34-100f29d55601`), artboard `Scheda Atleta.dc.html`,
+opzioni **5b** (coach) e **5c** (atleta, storico aperto). Come per gli altri
+la logica non è stata riscritta: **nessun campo di Supabase cambia forma**,
+gli stessi calcoli, le stesse note, lo stesso completamento con RPE. Cambia il
+JSX e cambia l'ordine.
+
+### Il problema, in una riga
+La pagina apriva con il logo, poi una foto da 96px con quattro celle di
+anagrafica, poi tre celle di settimana, poi tre tab — e il dato per cui il
+coach entra qui, *sta seguendo il programma e con quanto carico*, era nella
+**terza** tab, dietro due tocchi e quattro grafici che non si parlavano.
+
+### Cosa c'è ora, nell'ordine in cui sta in pagina
+1. **La testata**, con il solo menu delle tre puntine. ⚠️ Niente «indietro» sul
+   proprio profilo: `/profile` è una voce della navbar, non una pagina in cui
+   si è entrati da qualche parte. `TestataScheda` accetta perciò un
+   `onIndietro` mancante — non è una svista del chiamante.
+2. **L'identità**: foto a 56px, nome, i due social come icone da 15px accanto
+   al nome, e l'anagrafica in **una riga** («29 anni · 178 cm · 74 kg · 96
+   workout»). I campi vuoti spariscono invece di stampare «N/A»: una cella che
+   dice «non lo so» occupava lo stesso spazio di una che dice qualcosa.
+3. **L'eroe «come sta andando · 30 giorni»**: aderenza nell'anello, carico
+   delle ultime quattro settimane accanto, e sotto **una frase** che dice a
+   parole cosa dicono i due numeri insieme. È la frase su cui si decide se
+   caricare o scaricare, ed è l'unica ragione per cui i due grafici stanno
+   nella stessa card invece che uno sotto l'altro.
+4. **Il bento**: Volume (minuti della settimana, scarto sulla precedente,
+   sparkline a 4 settimane) e Sforzo (RPE medio, distribuzione sulle quattro
+   fasce, quanti da 7 in su).
+5. **Prossimo obiettivo**, che era un banner alto quanto una card, in una riga.
+6. **Oggi**, **Prossimi allenamenti**, poi **Storico** e **Personal record**
+   come righe che si aprono in pagina.
+7. **La barra fissa** con Assegna e Crea — solo per il coach.
+
+### ⚠️ Le sei cose da sapere prima di rimetterci mano
+
+1. 🔴 **La finestra è la ragione per cui `src/lib/andamento.js` esiste.**
+   `calcolaStatistiche` misura le settimane sulle ultime quattro e la
+   distribuzione RPE su **tutto lo storico**: due orizzonti diversi sotto
+   un'intestazione sola («30 giorni») sarebbero la bugia peggiore della pagina,
+   perché **nessuno dei due numeri è sbagliato preso da solo**. `andamento.js`
+   ricalcola lo sforzo sulla finestra dichiarata, e c'è un test che lo prende.
+2. 🔴 **L'RPE medio viene da `rpeDichiarato`, non da `parseNotesAndRpe`.**
+   Il secondo torna **5** quando il marcatore manca — giusto per il cursore
+   della modale, un numero inventato per chiunque lo mostri come un dato. Un
+   atleta che non compila mai l'RPE leggerebbe «5,0» come la propria media. È
+   la stessa lezione di §9-octies e di §9-undecies punto 3.
+3. **Il denominatore dell'anello sono gli ASSEGNATI dei 30 giorni**, non i
+   workout in pagina. Contare anche quello programmato per dopodomani farebbe
+   scendere l'aderenza di ogni atleta ogni volta che il coach gli programma
+   qualcosa: un numero che peggiora quando si lavora meglio.
+4. **Lo scarto del carico torna `null` quando la settimana prima è vuota.**
+   `(5-0)/0` è la strada più breve per stampare «+Infinity%» in pagina, e una
+   card che dice Infinity si legge come un guasto dell'app.
+5. **«Prossimi allenamenti» NON è nell'artboard, e resta lo stesso.**
+   L'artboard disegna una giornata e si ferma a «Oggi». Toglierli vorrebbe dire
+   che il coach non vede più cos'ha assegnato senza aprire il calendario, e che
+   l'atleta non sa cosa lo aspetta domani. C'è un test.
+6. **La pillola «In pausa» resta nascosta all'atleta**, e il marcatore non si
+   vede mai come testo: valgono parola per parola le regole di §9-decies. La
+   pagina è ancora `/profile`.
+
+### Cosa è uscito, e cosa NON è stato ridisegnato
+Le **tre tab** («Diario», «Personal Record», «Statistiche») e le quattro celle
+di anagrafica. Nessun dato è andato perso: i quattro grafici della tab
+Statistiche sono l'anello, le barre del carico, lo sparkline del volume e la
+barra delle fasce RPE. Il **calendario** (solo coach) è dentro «Storico
+allenamenti», con il toggle Elenco/Calendario dov'era.
+
+**Non** sono stati ridisegnati `WorkoutEntryCard` e `TodayAthleteWorkoutCard`:
+l'artboard disegna righe compatte, ma quelle card portano la modifica della
+nota, la nota vocale, l'eliminazione e il completamento con RPE. Sono il
+prossimo pezzo di design, non un dettaglio di questo. Idem per le modali
+(assegnazione, PR, modifica profilo, allenamento libero).
+
+### Il codice morto che il rework ha lasciato indietro, ed è stato rimosso
+`AthleteStatsTab`, `RpeBar` e `StatCard` in `AthleteDetail.jsx`, e
+**`statisticheSettimana` in `src/lib/statistiche.js`** con i suoi test: la riga
+di tre numeri che alimentava non esiste più, e `settimane.at(-1).time` è
+esattamente lo stesso calcolo. Due sorgenti per un numero solo sono il modo in
+cui i due si mettono a divergere (§9 punto 1). Il caso che valeva davvero — le
+distanze contate come stima e non come minuti — è stato riscritto contro
+`calcolaStatistiche`, non buttato.
+
+### ⚠️ `montaPagina` ora accetta una rotta, e serviva
+`montaPagina(elemento, { percorso, rotta })`. Senza, `useParams()` torna vuoto,
+`AthleteDetail` ricade sull'id dell'utente loggato e **si crede sul proprio
+profilo anche montata come coach**: niente barra fissa, niente «Come sta
+andando» in terza persona. Un test così passa lo stesso, e verifica un'altra
+pagina — §9-sexies, per l'ennesima volta.
+
+---
+
+## 9-quaterdecies. La tab bar dell'artboard 2b (28/08/2026)
+
+### 🔴 I due artboard si contraddicono, e il navbar giusto è quello di 2b
+`Home Coach.dc.html` (opzione **2b**) disegna una **capsula galleggiante**.
+`Scheda Atleta.dc.html` (5b e 5c) disegna ancora la **barra piena** attaccata al
+fondo, perché quell'artboard riusa il navbar precedente come sfondo di scena.
+**Vale 2b**: è quello che il committente ha indicato, ed è l'unico dei due
+disegnato *come* navbar invece che *sotto* una pagina.
+
+⚠️ Chi apre `Scheda Atleta.dc.html` e confronta il codice con quel navbar
+conclude che «corrisponde» ed è già successo: è il motivo per cui questa
+sezione dice quale dei due comanda.
+
+| | prima (fino al 28/08) | ora, artboard 2b |
+|---|---|---|
+| forma | barra piena a `bottom-0`, tutta larghezza | capsula `rounded-full`, `10px 12px 16px` d'aria intorno |
+| fondo | `#0f0f11/70`, blur | `rgba(30,30,34,.88)`, blur **22** + saturate **170%**, ombra proiettata |
+| voce attiva | pillola dietro icona **ed** etichetta | **cerchio** da 36px dietro la **sola** icona |
+| «Workout» | icona `+` | **manubrio** |
+| altezza | 64px + safe area | **99px** + safe area |
+
+### 🔴 L'altezza della navbar era in SETTE punti scritti a mano
+Ed è la vera conseguenza del cambio di forma, non la forma stessa. Erano:
+`pb-16` in `App.jsx`, `pb-[calc(6rem+…)]` in `Home`, `Calendar`, `Athletes`,
+`WorkoutsArchive`, `Settings`, e `bottom-[calc(4rem+…)]` in `BarraAzioni`.
+Hanno coinciso **per caso** finché la barra è stata alta 4rem. Passando a 99px
+sarebbero servite sette modifiche coordinate, e la prima dimenticata avrebbe
+nascosto del contenuto sotto la barra **senza dare nessun errore a schermo** —
+il difetto che si nota solo quando un utente non riesce a premere l'ultimo
+bottone di una pagina.
+
+Ora c'è `--altezza-navbar` in `src/index.css`, più `--fondo-pagina` che le
+aggiunge il respiro. **Chi cambia la forma della navbar cambia quel numero, e
+basta.** Le tre pagine con la barra fissa (`CreateWorkout`, `WorkoutDetail`,
+`AthleteDetail`) usano `pb-[var(--altezza-navbar)]`, le altre cinque
+`pb-[var(--fondo-pagina)]`.
+
+⚠️ **Il numero è misurato, non calcolato.** Il primo tentativo diceva 94px
+contando l'etichetta come 13px invece della sua riga di testo; misurata, la
+barra è 98,75px. Si rimisura con la navbar a schermo:
+```js
+document.querySelector('nav').parentElement.getBoundingClientRect().height
+```
+
+### ⚠️ Tre dettagli che non sono rifinitura
+1. **`pointer-events-none` sul contenitore, `auto` sulla capsula.** Il
+   contenitore è largo quanto lo schermo, la capsula no: senza, i pixel ai lati
+   intercetterebbero i tocchi diretti alla pagina sotto.
+2. **Il cerchio dietro l'icona esiste sempre, anche spento.** Se comparisse solo
+   sull'attiva, le voci si sposterebbero di 36px a ogni cambio di scheda.
+3. **Il manubrio è un SVG locale, non `Dumbbell` di lucide.** Quello di lucide è
+   diagonale con i dischi esagonali, e accanto a `Home`, `Calendar` e `Users` —
+   tutte forme diritte e sottili — è l'unica icona che non sta sull'orizzontale.
+   È la stessa eccezione già fatta per `InstagramIcon`: lucide è la convenzione,
+   non un vincolo.
+
+### Cosa NON è stato implementato, e perché
+Il **badge numerico** sulla voce «Atleti» (nell'artboard: un `3` giallo). Il
+numero non esiste: `Navbar` è renderizzata da `App.jsx` fuori da ogni pagina e
+non ha accesso ai dati, e l'unico candidato sensato — gli atleti che richiedono
+attenzione — richiederebbe una query su **ogni** pagina dell'app per una
+decorazione. Metterci un numero che non significa niente è peggio che non
+metterlo: è la stessa regola del `rpeAtteso` che torna `null` invece di 5.
+Voce in BACKLOG.
+
+---
+
+## 9-quindecies. Il foglio «Genera con IA» (28/08/2026)
+
+Richiesta del committente, provando il builder sul telefono: la modale dell'IA
+era rimasta l'unica superficie di «Crea Workout» con il vocabolario di prima —
+card centrata, bordo `#333`, bottone pieno in fondo — in una pagina dove tutto
+il resto è carta sollevata, vetro e barra ancorata. Con la grafica sono venuti
+fuori altri due difetti, ed **entrambi erano già documentati altrove**.
+
+### Cosa c'è ora
+Un **bottom sheet**, lo stesso di `MenuScheda` e del centro notifiche: sale dal
+basso, si trascina per la maniglia, e la pagina sotto non scorre. Dentro, la
+testata ripete l'icona e la riga della `CardIA` che ha aperto il foglio, poi il
+campo di testo, il microfono come **riga intera** e la CTA viola.
+
+### ⚠️ Le tre cose che non sono estetica
+1. 🔴 **L'entrata non esisteva.** La classe era `animate-in fade-in
+   zoom-in-[0.96] duration-300`, cioè `tw-animate-css`, che **non è
+   installato**: zero CSS generato. È la seconda volta che lo stesso difetto si
+   presenta — la prima era il menu della scheda (§9-duodecies) — ed è la ragione
+   per cui BACKLOG #34 non è una voce cosmetica: ogni modale del progetto crede
+   di avere un'entrata e non ce l'ha. Ora è `useBottomSheet`, quindi il keyframe
+   `.sheet-in` di `src/index.css`.
+2. **La tastiera non sale più da sola.** L'`autoFocus` sul textarea la apriva su
+   una superficie il cui gesto principale è il **microfono**: si arrivava qui
+   per dettare e si trovava mezzo schermo occupato. Con l'autoFocus se n'è
+   andato anche `-translate-y-36`, che era il rimedio a un problema che non
+   esiste più: il foglio è ancorato in basso e con `Keyboard.resize: 'native'`
+   la webview si rimpicciolisce, quindi resta sopra la tastiera da sé.
+3. 🔴 **L'alone del microfono era `Math.random()`.** `1 + Math.random() * 0.4`
+   ogni 150ms: pulsava identico a microfono muto, permesso negato o telefono in
+   tasca — cioè diceva «ti sento» **proprio quando non era vero**. Ora i livelli
+   arrivano dal microfono, con lo stesso `AudioVisualizer` delle note vocali.
+
+### 🔴 La forma d'onda si muoveva in un angolo, e nessuno l'aveva mai misurato
+Segnalato dal committente il 28/08 («voglio il waveform o qualcosa che mi faccia
+capire che la voce viene letta»), e la causa era in `AudioVisualizer`, cioè
+**anche nelle note vocali**, da sempre. Due difetti sovrapposti:
+
+1. **Un terzo delle bande finiva fuori dal canvas.** Il passo era
+   `(larghezza / bande) * 1.5`: con 32 bande su 200px la `x` arrivava a 300, e
+   le ultime undici non si vedevano. Nessun errore: l'onda sembrava corta.
+2. **La voce occupava il primo sesto dello spettro.** L'analizzatore copre metà
+   della frequenza di campionamento — con 48 kHz sono **24 kHz** — divisi in
+   parti uguali fra le bande. Con `fftSize 64` ogni banda vale 750 Hz, e il
+   parlato (80 Hz – 4 kHz) stava tutto nelle **prime quattro barre**: le altre
+   ventotto erano piatte comunque si parlasse. Ora `fftSize 256` (bande da
+   ~187 Hz) e si disegnano le prime `BANDE_VOCE = 24`, distribuite su **tutta**
+   la larghezza. La media per `onLivello` si calcola sulle stesse: mediata su
+   24 kHz di silenzio non si sarebbe mossa nemmeno gridando.
+
+3. **Era disegnata a un terzo della densità dello schermo.** Il canvas aveva
+   `width` fisso a 200 e veniva stirato dal CSS: su un iPhone 3x è un upscale
+   da 200 a oltre 1000 pixel fisici. Ora la risoluzione segue la misura reale
+   del box per `devicePixelRatio`, e si rimisura al `resize`.
+
+⚠️ Tutte e tre valgono anche per la forma d'onda **gialla** delle note vocali,
+che aveva esattamente lo stesso comportamento. Non è un effetto collaterale: è
+lo stesso componente, ed è la ragione per cui è uno solo (§9 punto 1).
+
+### La forma: speculare dal centro, non da sinistra a destra
+Terzo giro di rifiniture, sempre del 28/08 («il waveform possiamo farlo
+graficamente più carino»). Il punto non era la palette: **l'energia di una voce
+decresce con la frequenza, sempre**, quindi disegnata in ordine dà una scala
+discendente identica a ogni parola — informativa, ma sembra un grafico. Ora le
+prime `BANDE_DISEGNO = 13` bande sono **rispecchiate** attorno alla più bassa
+(25 barre), che è la sagoma che si legge come «qualcuno sta parlando» e che si
+gonfia e sgonfia con le sillabe. Con lei: barre a pillola con i capi tondi e
+minimo un pallino invece di una scheggia da 2px, `smoothingTimeConstant` per
+togliere il tremolio, una curva sotto 1 sull'ampiezza (l'orecchio sente in
+logaritmico), e un gradiente pieno al centro e sfumato ai bordi.
+
+⚠️ `COMPENSO` alza le bande alte, che sono naturalmente più deboli: senza, le
+barre esterne non si muovono mai e la sagoma è una gobba immobile. **Va tenuto
+basso**: al primo tentativo era `0.16` e saturava tutto — venticinque barre
+tutte al massimo, cioè di nuovo nessuna informazione.
+
+### 🔴 «Non arriva nessun suono»: la riga che distingue funziona da morto
+Un'onda ferma si legge come «sto zitto io», **mai** come «il microfono non
+riceve». Dopo `SECONDI_MUTO` senza che il livello abbia mai superato la soglia,
+il foglio lo dice e indica dove guardare (vicinanza al microfono, permesso iOS).
+Senza, ci si accorge del microfono spento **dal workout generato a caso**.
+`haSentito` non si azzera durante la dettatura, di proposito: serve a separare
+«ora sto zitto» da «non ha mai funzionato», che a schermo sono la stessa
+immagine.
+
+#### 🔴 E alla prima prova accusava il microfono mentre lo sentiva
+Segnalato dal committente lo stesso giorno. Due cause che si sommavano, ed
+**entrambe stanno in come si misura il livello**, non nella soglia:
+
+1. **Era la MEDIA su 24 bande.** Una voce non riempie lo spettro: sta nelle
+   prime bande e lascia a zero tutte le altre, che trascinano giù la media.
+   Con 70 su 4 bande — una voce normale — la media vale 0,046, cioè **sotto**
+   la soglia di 0,05, mentre il picco vale 0,27. Ora si riporta il **picco**.
+2. **Era il campione dell'ISTANTE**, preso ogni 100ms: poteva cadere fra due
+   sillabe. Ora è il picco **della finestra**, azzerato a ogni avviso.
+
+E le soglie sono diventate **due**, che è la parte che conta di più:
+`SOGLIA_VOCE` accende l'etichetta «Ti sento» e deve seguire il parlato;
+`SOGLIA_SEGNALE`, molto più bassa, decide soltanto se il microfono è vivo. Un
+avviso che **accusa** il microfono deve avere l'asticella dove la mette un
+guasto vero, non dove la mette chi parla piano — ed è esattamente il caso che
+il terzo test copre. `SECONDI_MUTO` è salito a 6 per la stessa ragione: un
+falso allarme costa più del silenzio che previene, perché chi legge «non ti
+sento» mentre lo si sente smette di credere all'avviso.
+
+⚠️ E quando l'analizzatore non c'è affatto, la forma d'onda **non si finge** —
+ma il foglio non resta muto: barre che pulsano da sole (che non dichiarano un
+livello) più il **cronometro**, che è l'unica cosa vera rimasta. La prima
+stesura scriveva solo «senza forma d'onda», che è un vicolo cieco.
+
+### 🔴 Fermata la registrazione, non si capiva di dover aspettare
+Secondo rilievo del committente, lo stesso giorno. Fermato il microfono, Gemini
+deve prima **ascoltare** e poi scrivere: sono secondi in cui a schermo non
+succede niente. Il foglio tornava al campo di testo — **vuoto**, perché sul
+nativo la trascrizione non esiste ancora — e l'unico segnale era la CTA
+disabilitata al 40%. Si leggeva come «non ha funzionato», e il gesto che ne
+seguiva era premere di nuovo il microfono, cioè buttare la registrazione appena
+spedita.
+
+Ora la generazione **occupa il foglio intero**: rotella, «Sto scrivendo
+l'allenamento», una riga che dice cosa sta succedendo e «Non chiudere».
+Tre dettagli che non sono decorazione:
+- **La CTA sparisce, non si spegne.** Un bottone spento accanto a un'attesa è il
+  modo in cui l'attesa sembra un errore.
+- **Il foglio non si chiude**: velo inerte e maniglia disabilitata. Chiudere lì
+  butterebbe via una registrazione già spedita, in silenzio.
+- **Dopo `MS_ATTESA_LUNGA` (9s) il testo cambia** in «Ci sta mettendo più del
+  solito…». Toglie l'unica domanda che resta, cioè se si sia bloccato.
+- ⚠️ **La riga sotto il titolo dipende da dove arriva l'attesa**: dalla voce
+  («ascolto la registrazione») o dal testo («leggo la descrizione»). Sono due
+  lavori diversi, e dirlo storto fa sembrare rotta un'attesa che sta andando
+  bene.
+
+### 🔴 Su iOS l'audio della dettatura lo registra MediaRecorder, non il plugin
+È la stessa lezione delle note vocali (§4), applicata a un percorso che era
+rimasto indietro: `capacitor-voice-recorder` è un plugin diverso da
+`@independo/…`, ma la contesa su `AVAudioSession` è la stessa — e la forma
+d'onda ha bisogno di `getUserMedia`, che è esattamente ciò che il plugin non
+sopporta. Quindi: si apre sempre lo stream, e se `MediaRecorder` sa produrre un
+formato che Gemini legge, registra lui.
+
+⚠️ **`FORMATI_AUDIO` non è un elenco di preferenze, è un vincolo.**
+`ai-workout` gira l'audio a Gemini come `inlineData`, e Gemini **non legge
+`audio/webm`** — che è ciò che MediaRecorder produce su Chrome desktop. Su iOS
+`audio/mp4` è supportato ed è quello che si usa; sul web si continua a passare
+per il riconoscimento del browser, che riempie il campo di testo. Se un giorno
+si volesse spedire l'audio anche dal web, il pezzo che manca è una conversione,
+non una riga in più in quell'elenco.
+
+⚠️ **Nel ripiego col plugin lo stream si CHIUDE prima di partire.** Tenerlo
+aperto è la condizione precisa che nel 2026 ha prodotto per due mesi un M4A di
+557 byte senza un errore da nessuna parte (§4).
+
+### I dieci test, e i tre che erano verdi per il motivo sbagliato
+`src/pages/__tests__/CreaWorkoutIA.test.jsx` monta `CreateWorkout` **vera**.
+Tutti e dieci verificati per mutazione, e **tre** sono stati riscritti o aggiunti
+perché la mutazione li superava:
+- «il foglio non si chiude durante la generazione» passava anche con la maniglia
+  attiva: l'uscita è un'animazione, e il test guardava se il foglio fosse
+  sparito all'**istante zero** — cioè niente. Ora aspetta 450ms.
+- «se non arriva nessun suono lo dice» passava anche rompendo del tutto il
+  riconoscimento del livello: quel test è già in silenzio, quindi non poteva
+  accorgersene. Serviva il **complemento** — con un analizzatore finto SONORO
+  (`mockVolume`), l'avviso non deve comparire e si deve leggere «Ti sento».
+- e nemmeno quello bastava: con un finto microfono **forte**, anche una soglia
+  sola passa. Serviva il terzo caso, la **voce piana** — sopra `SOGLIA_SEGNALE`
+  e sotto `SOGLIA_VOCE` — che è il difetto vero e l'unico che prende la
+  mutazione «una soglia sola».
+
+È la terza volta che succede in questo progetto (§9-sexies): un test verde non
+dice niente finché non lo si è visto fallire.
+
+⚠️ In jsdom `AudioContext` e il contesto 2D del canvas non esistono, e il
+disegno gira dentro un `requestAnimationFrame`: senza i due finti in testa al
+file, l'errore esce **fuori** dallo stack del test e sembra un guasto d'altro.
+
+### AudioVisualizer ha quattro parametri nuovi, e nessuna copia in più
+`colore`, `altezza`, `larghezza` e `onLivello`, tutti facoltativi:
+la dettatura è viola e più alta delle note vocali, e l'alone ha bisogno del
+livello **in React**, non solo sul canvas. Una seconda copia viola sarebbe stata
+il modo in cui le due si mettono a divergere (§9 punto 1).
+⚠️ `onLivello` avvisa al massimo ogni 100ms: a 60fps sarebbe un render ogni
+16ms per un alone.
+⚠️ `larghezza` è la **risoluzione** del canvas, non la sua misura a schermo —
+quella la decide la classe. Era fissa a 200 e su una card larga il disegno
+veniva stirato, visibile appena la forma d'onda supera i 32px d'altezza.
+
+---
+
+## 9-sedecies. Il rework dell'archivio (31/08/2026)
+
+Stesso progetto Claude Design degli altri cinque schermi
+(`4a238081-a3ee-4f59-ae34-100f29d55601`), artboard `Archivio Workout.dc.html`,
+opzione **1b**. Come per gli altri: **nessun campo di Supabase cambia forma**,
+le due query restano quelle di prima. Cambia il JSX, cambia l'ordine, e per la
+prima volta la pagina dice dei numeri.
+
+### Il problema, in una riga
+Era una lista piatta di card identiche ordinate per data di **creazione**, senza
+raggruppamenti e senza scala: con dieci workout funziona, con i 171 in
+produzione è uno scroll cieco. L'unico strumento di riduzione era un campo di
+testo — se non ricordavi il titolo esatto, non avevi una strada.
+
+### Cosa c'è ora
+1. **Una testata sola.** Erano due `h1` (il logo FLEOFIT e «Archivio Workout»)
+   più un sottotitolo che ripeteva il titolo: tre righe prima di vedere un
+   workout, su una schermata che si raggiunge da un link chiamato «Archivio».
+   Ora è «Archivio» più una riga in monospazio che dice la scala — «128 workout
+   · 3 corsie» — e che **sotto filtro cambia domanda**: «12 di 128 workout», che
+   è l'unica cosa che resta da sapere quando la lista si accorcia sotto le dita.
+2. **La ricerca è diventata un filtro.** Una fila di chip per corsia con il
+   conteggio dentro: si riduce con un tocco, senza digitare.
+3. **Il tempo dà la struttura.** I workout si raggruppano per mese, con
+   l'intestazione in monospazio e il conteggio a destra.
+4. **Righe dense.** 60px: spina di corsia, titolo, meta compresso e a destra il
+   numero degli assegnati come **cifra**. La categoria è la spina, non un chip.
+
+### ⚠️ Le sette cose da sapere prima di rimetterci mano
+
+1. 🔴 **L'ordine è cambiato, ed è il raggruppamento a pretenderlo.** La query
+   torna per `created_at`, ma la data **mostrata** è un'altra (`workouts.date`
+   per il coach, `completed_date` per l'atleta). Finché la lista era piatta la
+   differenza non si vedeva; i gruppi per mese pretendono che le date siano
+   monotone, o lo stesso mese ricompare in tre punti dello scroll. `ordinaPerData`
+   ordina per la data mostrata e tiene `created_at` come **spareggio**.
+   ⚠️ La `Map` di `raggruppaPerMese` deduplica le chiavi da sé, quindi un test
+   scritto con l'elemento più recente in testa **passa anche senza ordinare**:
+   il caso che prende la mutazione ha il workout di luglio per primo (§9-sexies,
+   di nuovo — è successo scrivendo questi test).
+2. 🔴 **I chip si DERIVANO dai dati, non si scrivono a mano.** La query del
+   coach esclude Custom ed Evento (`fetchWorkouts`), quindi un chip «Libero»
+   fisso sarebbe sempre a zero — un filtro che non filtra niente e che, premuto,
+   svuota la pagina. `conteggiPerCorsia` produce solo le corsie che hanno
+   qualcosa dietro, e sotto le due corsie i chip non compaiono affatto.
+3. 🔴 **Su una corsa mista non si dichiara nessun totale.** «400m di corsa e
+   1 min di recupero» ha **due** totali veri e nessuno dei due è la lunghezza
+   dell'allenamento: sommarli darebbe un numero plausibile e inventato, che è il
+   caso peggiore. Lì la riga dice solo «8 fasi». Il totale compare quando tutte
+   le fasi parlano la stessa unità.
+   ⚠️ E `riepilogoCorsa` **non usa `parseDuration`**: quella toglie le lettere e
+   legge il numero come minuti, quindi «400m» diventa 6h40m (BACKLOG #29). Su
+   una scheda si nota; in una riga larga 200px diventa un «400′» che nessuno
+   mette in dubbio.
+4. **Le durate vengono da `stimaWorkout`**, la stessa funzione del riepilogo del
+   builder e di quello della scheda. Se l'archivio dicesse «52′» dove la scheda
+   dice «48′», nessuno dei due numeri sarebbe sbagliato da solo e non ci sarebbe
+   modo di accorgersene.
+5. **Custom ed Evento dicono solo il giorno.** Non hanno blocchi da contare né
+   una durata da stimare, e «0 blocchi · 0′» sarebbe una bugia con l'aria di un
+   dato — la stessa regola di `DurataBlocco` (§9-undecies punto 2).
+6. **La colonna di destra è la stessa e le domande sono due.** Il coach vede a
+   quante persone ha dato quel workout, l'atleta se l'ha fatto: a decidere è il
+   ruolo di chi guarda, come il verso della nota vocale (§9-duodecies punto 7).
+   ⚠️ Non è solo nascosto: la query dell'atleta **non carica** `athlete_workouts(id)`,
+   quindi mostrare il contatore vorrebbe dire stampare `0` a tutti.
+7. **L'intestazione del mese NON è appiccicata**, e non è una dimenticanza.
+   Sarebbe dovuta stare a `top-<altezza della testata>`, ma quell'altezza cambia
+   — il sottotitolo può mancare, i chip essere due o cinque — e un `top`
+   sbagliato non dà errore: incolla l'intestazione a metà dei filtri. La testata
+   **sì**, perché su una schermata di sola lista i filtri sono l'unico comando
+   che c'è: se scorrono via, per cambiare corsia si deve risalire tutto lo
+   scroll appena fatto, cioè proprio quando la lista è lunga.
+   ⚠️ La safe area la porta la testata, non la pagina: un `pt` sul contenitore
+   lascerebbe scorrere il contenuto sotto la barra di stato.
+
+### 🔴 Il difetto latente che il rework ha chiuso
+Il filtro faceva `w.title.toLowerCase()` **nudo**. `workouts.title` può essere
+`null` sui workout anteriori al titolo automatico del 24/08/2026 (§5), e un
+`null` lì dentro non svuotava la ricerca: si portava via la pagina intera.
+Ora il testo cercabile si costruisce con `filter(Boolean)`, e la riga senza
+titolo si chiama «Senza titolo».
+
+### La ricerca ora mantiene quello che il placeholder promette
+Il campo diceva «Cerca per nome o categoria» e cercava esattamente quelli. Il
+placeholder dell'artboard dice «Cerca titolo, blocco, esercizio», e
+`testoCercabile` è la ragione per cui non è una promessa a vuoto: scandaglia
+tipi di blocco, nomi degli esercizi, note e ritmi.
+⚠️ L'indice si costruisce **una volta per lista** in un `useMemo`, non a ogni
+tasto premuto: sono 171 workout da scandagliare nel jsonb.
+
+### Cosa NON è stato implementato, e perché
+- **Il pannello «filtri avanzati»** dell'icona in alto a destra. L'artboard la
+  disegna e il suo stesso `dv-next` la dà per il prossimo pezzo di design: il
+  pannello non esiste. Un bottone che non fa niente **accanto a filtri che
+  funzionano** è peggio che non averlo — è la stessa regola del badge numerico
+  sulla navbar (§9-quaterdecies) e del `rpeAtteso` che torna `null` invece di 5.
+- **La voce «Archivio» nella tab bar.** L'artboard 1b la disegna, ma è lo stesso
+  caso di `Scheda Atleta.dc.html`: il navbar dell'artboard è **sfondo di scena**,
+  non un pezzo di design. La navbar vera non ha quella voce (§9-quaterdecies),
+  e l'archivio si raggiunge dalla Home.
+
+### I file nuovi
+`src/lib/rigaArchivio.js` (logica pura, 30 test) e
+`src/components/ArchivioUI.jsx` (sola presentazione), più `CARTA_RIGA` in
+`lib/stiliCard.js`: la carta sollevata in formato riga, raggio e ombra
+proporzionati a 60px invece che a una card intera.
+⚠️ È una **costante nuova** e non `CARD` con il raggio sovrascritto:
+`rounded-2xl` e `rounded-[22px]` hanno la stessa specificità, e a decidere è
+l'ordine nel foglio di stile, non l'ordine nella stringa di classi.
+
+---
+
+## 9-septdecies. Il rework della rubrica atleti (31/08/2026)
+
+Stesso progetto Claude Design degli altri sei schermi
+(`4a238081-a3ee-4f59-ae34-100f29d55601`), artboard `Atleti.dc.html`, opzione
+**1b**. Come per gli altri: **nessun campo di Supabase cambia forma**. Cambia il
+JSX, cambia l'ordine, e la pagina fa **una lettura in più** — una sola — per
+poter dire un numero.
+
+### Il problema, in una riga
+Era una rubrica, non uno strumento di lavoro. Ogni riga mostrava nome, peso,
+altezza ed età: dati anagrafici, che si consultano una volta al mese. Il coach
+apre questa schermata per sapere **chi sta seguendo il piano e chi si è
+fermato**, e quella informazione non c'era — bisognava entrare in ogni scheda,
+una per una. Chi era in pausa restava mescolato agli attivi, distinto da un chip
+arancione, e la lista non era divisibile: con venti atleti si scorreva tutto per
+trovare i tre fermi. Il cestino era un accordion in fondo alla pagina, con il
+conteggio fra parentesi nel testo del bottone.
+
+### Cosa c'è ora, nell'ordine in cui sta in pagina
+1. **La testata appiccicata**, con «Atleti», la scala in monospazio
+   («14 attivi · 2 in pausa») e la CTA «Nuovo». Sotto di essa la ricerca e i
+   **chip di stato** — Attivi · In pausa · Eliminati, con il conteggio dentro —
+   che restano fermi mentre la lista scorre. Niente «indietro»: è una voce
+   della navbar, non una pagina in cui si è entrati.
+2. **La fascia «Da richiamare»**, l'unico blocco con bordo colorato della
+   pagina. Porta alla lista già filtrata, e un secondo tocco la richiude.
+3. **«Settimana in corso»**, con le righe degli attivi: avatar, nome, meta
+   anagrafico compresso in monospazio, e a destra **completati / assegnati**
+   della settimana più una tacca per allenamento previsto — piena se fatto,
+   vuota se manca.
+4. **«In pausa»**, in fondo e senza peso visivo.
+
+### ⚠️ Le sette cose da sapere prima di rimetterci mano
+
+1. 🔴 **Gli atleti fermi NON si calcolano qui.** Li dà `atletiFermi` di
+   `statisticheCoach.js`, la stessa funzione con la stessa `GIORNI_FERMO` che
+   alimenta «Richiedono attenzione» nella Home coach — e anche il testo della
+   fascia si compone da quella costante, invece di scrivere «7 giorni» a mano
+   come faceva l'artboard. Due soglie darebbero due numeri diversi per lo stesso
+   concetto in due schermate della stessa app, e **nessuno dei due sarebbe
+   sbagliato da solo**: è il difetto impossibile da notare.
+2. 🔴 **L'allarme della riga viene da `atletiFermi`, non dalla frazione.** Gli
+   assegnati comprendono i giorni **ancora da venire** della settimana — il
+   martedì, il workout di venerdì è già programmato e fa parte del piano —
+   quindi il lunedì mattina sono tutti a 0/N. Legare il colore alla frazione
+   dipingerebbe di arancione l'intera rubrica ogni lunedì: un allarme che si
+   accende quando non è successo ancora niente.
+   ⚠️ L'allarme sta anche nell'`aria-label` («· da richiamare»), non solo nel
+   colore: chi legge con VoiceOver non ha modo di sapere che la frazione è
+   arancione, ed è l'unica informazione della riga che chiede un'azione.
+3. 🔴 **Chi non ha niente in programma scrive «—», non «0/0».** Un atleta senza
+   assegnazioni non è a zero di aderenza: non c'è ancora niente da misurare, e
+   «0/0» con la barra vuota si legge come un fallimento — cioè un allarme per
+   qualcuno a cui il coach semplicemente non ha ancora dato niente. È la stessa
+   regola di `DurataBlocco` («—» invece di «0:00») e di `rpeAtteso` (`null`
+   invece di 5).
+4. 🔴 **La settimana comincia di LUNEDÌ** (`weekStartsOn: 1`). Con il default di
+   `date-fns` la **domenica** cadrebbe nella settimana successiva, e l'atleta si
+   vedrebbe azzerare la frazione la sera della domenica — l'unico momento in cui
+   il piano della settimana è finalmente completo. È anche la settimana con cui
+   il coach programma e quella su cui la Home atleta disegna l'anello: due
+   settimane diverse darebbero due «3 su 5» che non coincidono.
+5. **Gli atleti in pausa RESTANO nella lista principale**, in una sezione loro
+   sotto gli attivi. Non è una svista dei chip: CLAUDE.md §9-decies dice che la
+   rubrica è **l'unico posto** in cui il coach si accorge di averne messo in
+   pausa uno e dimenticato. Sparisce dagli allarmi, non dalla lista. Il chip
+   «In pausa» serve a vedere solo loro.
+6. **La riga in pausa dice DA QUANDO, mai «rientro previsto».** `[PAUSA: …]`
+   registra il giorno in cui la pausa è cominciata; una data di rientro non
+   esiste da nessuna parte nei dati, e l'artboard la disegna. Stamparla sarebbe
+   un dato plausibile e inventato. Quando la data manca, `etichettaPausa` torna
+   `null` e la seconda riga sparisce: la pillola accanto dice già «Pausa».
+7. **Il conto alla rovescia del cestino è corto di proposito.** «Cancellazione
+   fra 5 giorni», accanto al bottone Ripristina su 393px, finiva troncato in
+   «Cancellazione fra 5…» — e il numero tagliato è l'unica cosa per cui si apre
+   quella vista: «fra 1…» e «fra 10…» diventavano la stessa riga. Ora è
+   «Fra 5 giorni» / «Stanotte», e cosa sia il conto lo dice l'intestazione
+   della sezione. **Trovato guardando la pagina a 393px, non leggendo il
+   codice**: nessun test lo avrebbe preso.
+
+### Una query in meno, non una in più
+La pagina faceva **due** `select` su `athletes` — una con `deleted_at is null`,
+una con il filtro complementare — cioè due round trip per una lista di dodici
+righe che si divide in due con un `filter`. Ora è una sola, più **una** su
+`athlete_workouts` sulla finestra `[oggi − 45, fine settimana]`, senza join sui
+`workouts`: qui non serve nemmeno un titolo, e `sections` è la colonna più
+pesante del database. Quella finestra serve due domande insieme — chi è fermo
+guarda indietro, l'aderenza guarda la settimana in corso, che finisce nel futuro.
+
+⚠️ `caricatoIl` si fissa **quando i dati arrivano**, e da lì dipendono l'età,
+la settimana in corso, chi è fermo e il conto alla rovescia del cestino: cioè
+quasi tutta la pagina. `Date.now()` durante il render darebbe conteggi diversi a
+due render consecutivi. Era già la correzione fatta il 26/08 sul solo cestino
+(§9-septies); ora vale per tutto.
+
+### Cosa NON è stato ridisegnato, e perché
+La modale **«Nuovo Atleta»** è rimasta com'era: l'artboard non la copre, e il
+suo `dv-next` la dà fra i prossimi pezzi di design. Vale la stessa scelta fatta
+per le modali della scheda atleta e della scheda workout — la pagina è la
+cornice, quelle sono i contenuti.
+Non è stato implementato il **pannello dei filtri avanzati** né alcun bottone
+che non faccia niente: stessa regola del badge numerico sulla navbar
+(§9-quaterdecies).
+
+### I file nuovi, e i due riusati
+`src/lib/rigaAtleta.js` (logica pura, 33 test) e `src/components/AtletiUI.jsx`
+(sola presentazione). Da `ArchivioUI` arrivano **`CampoRicerca`** — reso
+parametrico su placeholder ed etichetta, con i default dell'archivio, così il
+suo chiamante non cambia — e **`IntestazioneSezione`**, che si chiamava
+`IntestazioneMese`: nell'archivio raggruppa per mese, nella rubrica per stato,
+ed è la stessa riga in entrambi i casi. Una seconda copia sarebbe stata il modo
+in cui le due cominciano a divergere di un raggio (§9 punto 1).
+
+---
+
+## 9-octodecies. Il rework del calendario (31/08/2026)
+
+Stesso progetto Claude Design degli altri sette schermi
+(`4a238081-a3ee-4f59-ae34-100f29d55601`), artboard `Calendario.dc.html`,
+opzione **1b**. Come per gli altri: **nessun campo di Supabase cambia forma**.
+Cambia il JSX, cambia l'ordine, e per la prima volta la pagina dice dei numeri
+— con la cautela che quei numeri richiedono.
+
+### Il problema, in una riga
+La griglia occupava metà schermo e trasmetteva **un solo bit per giorno**: ci
+sono pallini o non ce ne sono. Non distingueva il fatto dal programmato, non
+diceva il carico, e i tre pallini da 6px si perdevano. Sopra di essa c'erano
+due titoli (il logo `FLEOFIT` e il mese) e **cinque bottoni tutti uguali** —
+precedente, Oggi, successivo, cerca, aggiungi — di cui l'unico irreversibile
+era l'unico giallo, ma in fila con gli altri come se pesasse uguale. E le card
+del giorno riempivano lo spazio con i **nomi degli esercizi** («Air Squat»,
+«4 blocchi»), cioè con il contenuto — che è la ragione per cui si apre una
+scheda, non quella per cui si decide di aprirla.
+
+### Cosa c'è ora, nell'ordine in cui sta in pagina
+1. **La testata**: l'anno nell'occhiello in mono, il mese in grande, e due soli
+   comandi — cerca e aggiungi. Il logo è sparito: in una pagina raggiunta da
+   una voce di navbar chiamata «Calendario» non dice niente.
+2. **La carta del mese**, che tiene insieme navigazione, legenda, griglia e
+   sintesi: prima erano quattro blocchi slegati sulla pagina nuda.
+3. **Celle a due livelli**: il numero e, sotto, una barra-corsia colorata per
+   categoria e verde se l'allenamento è chiuso. Il mese si legge come un
+   pattern di carico invece che come puntini.
+4. **La fascia di sintesi**: tre numeri che dicono com'è andato il mese prima
+   di doverlo leggere giorno per giorno.
+5. **Il giorno scelto**: la data, quante sessioni e quanti minuti, e le righe —
+   con i dati della decisione (durata, blocchi, stato, RPE) invece dei nomi
+   degli esercizi.
+
+### ⚠️ Le sette cose da sapere prima di rimetterci mano
+
+1. 🔴 **Le prime due celle della fascia misurano lo STESSO insieme.** Per
+   l'atleta la coppia dice «14 di 18 fatti, 11 ore di lavoro» — e le ore sono
+   quelle dei 14. Per il coach **non esiste nessun «fatto» nei suoi dati**: la
+   sua query legge `workouts`, che non ha una colonna di stato, quindi un
+   «Completati» per lui leggerebbe 0 su 18 per sempre. La sua coppia dice
+   «18 programmati» e le ore di quei 18. `soloCompletati` è il parametro che
+   tiene i due orizzonti allineati: due orizzonti sotto un'intestazione sola
+   sarebbero la bugia peggiore della fascia, perché **nessuno dei due numeri
+   sarebbe sbagliato preso da solo** (è la lezione di `andamento.js`,
+   §9-terdecies punto 1).
+2. 🔴 **Il volume dice `≈` quando ha dovuto lasciare fuori qualcosa, e `—`
+   quando non c'è niente da misurare.** `minutiWorkout` torna **`null`, non
+   zero**, su Custom, Evento e sulle corse misurate in **distanza**: «18 km»
+   non ha minuti finché non si assume un passo, e assumerlo vorrebbe dire
+   inventarlo. Se tornasse zero, quella corsa sparirebbe dentro un «11 h» che
+   ha tutta l'aria di essere completo. Il `≈` è un glifo solo, ed è l'unico
+   modo di dire «questo totale è parziale» in una cella larga quanto un numero.
+3. 🔴 **«Oggi» e «selezionato» sono due stati distinti e devono restarlo.** Nel
+   calendario di prima erano quasi lo stesso — un riempimento pieno contro un
+   grigio appena più chiaro — e all'apertura il giorno corrente spariva sotto
+   la selezione. Ora oggi è un **anello**, il selezionato il riempimento giallo
+   con l'ombra: coesistono sulla stessa cella senza annullarsi.
+   ⚠️ L'anello non è un colore di categoria, ed è deliberato: il **bianco è già
+   la corsia «Gara»**, e usarlo come riempimento della barra renderebbe
+   indistinguibili «oggi» e «oggi c'è una gara».
+4. 🔴 **Il bordo ambra di una riga vuol dire «DA FARE», non «riga».** Legato al
+   semplice «non è chiuso», la lista del coach diventava tutta ambra — un
+   allenamento di corsa incorniciato di giallo, contro la Regola della Corsia —
+   e con essa spariva l'unica cosa che quel bordo doveva distinguere. Dove
+   nessuno stato esiste, nessuna riga si distingue: è la risposta giusta, non
+   l'assenza di una risposta.
+5. **La barra si ferma a `MASSIMO_SEGMENTI = 3`, il conteggio no.** Tre
+   segmenti in una cella da 43px sono già schegge, ma il numero vero finisce
+   nell'`aria-label`: senza, un giorno da cinque e uno da tre sarebbero la
+   stessa cella anche per chi la barra non la vede affatto.
+6. **Il velo verde vale per il giorno intero, quindi pretende `every`.** Con
+   una sessione su due chiusa il giorno **non** è andato, e tingerlo di verde
+   direbbe il contrario. Il singolo segmento resta verde da sé.
+7. **La legenda si deriva dai dati**, come i chip dell'archivio (§9-sedecies
+   punto 2): una voce «Gara» in un mese senza gare è la chiave di lettura di un
+   colore che non compare in nessuna cella. Sotto le due voci non compare
+   affatto — con un colore solo non c'è niente da distinguere. La regola è sui
+   **dati e non sul ruolo**: un `isAtleta &&` in più sulla voce «Fatto» sarebbe
+   ridondante, e un guardiano che nessun caso può giustificare è il modo in cui
+   la regola vera smette di essere leggibile (§9-quinquies, sul controllo di
+   bordo tolto da `faseMoveUp`).
+
+### 🔴 `border-brand/20` accanto a `CARTA_RIGA` NON fa niente — e vale ovunque
+Il difetto peggiore della sessione, e **lo screenshot non lo mostrava**.
+`CARTA_RIGA` porta già `border border-white/[.07]`; affiancargli
+`border-brand/20` non sovrascrive nulla, perché sono **due utility della stessa
+specificità** e a decidere è l'ordine nel foglio di stile. La riga «da fare»
+credeva di avere il contorno ambra e aveva quello neutro.
+
+È esattamente la trappola che `stiliCard.js` annotava già **per il raggio**
+(`rounded-2xl` contro `rounded-[22px]`, §9-sedecies), ripresentata identica su
+un'altra proprietà. Da qui **`CARTA_RIGA_BASE`**: l'impasto — gradiente,
+hairline chiara, ombra — **senza** il bordo, così il contorno lo dichiara il
+chiamante una volta sola invece di provare a sovrascriverlo.
+`CARTA_RIGA = CARTA_RIGA_BASE + border-white/[.07]`, quindi nessun chiamante
+esistente cambia.
+
+> ⚠️ **E il primo test era verde per il motivo sbagliato**, per la terza volta
+> in questo progetto (§9-sexies). Verificava `toHaveClass('border-brand/25')`,
+> che era vero — la classe c'era, semplicemente non vinceva. Il caso che prende
+> il difetto è l'**assenza** del bordo neutro, non la presenza di quello ambra.
+> Trovato leggendo lo stile **calcolato** nel browser, non il DOM e non il
+> codice.
+
+### Una lettura in più, e nessuna colonna
+La query dell'atleta aggiunge **`notes`**: è lì che sta il marcatore
+`[RPE: n/10]`, sull'assegnazione e non sul workout. Senza, la riga di un
+allenamento chiuso non può dire com'è andato — e non lo direbbe nessun errore,
+si limiterebbe a non mostrarlo mai.
+⚠️ L'RPE si legge con **`rpeDichiarato`**, non con `parseNotesAndRpe`: il
+secondo torna **5** quando il marcatore manca, ed è il valore giusto per il
+cursore della modale ma un numero inventato per chiunque lo mostri come un
+dato. È la stessa lezione di §9-octies, §9-undecies punto 3 e §9-terdecies
+punto 2.
+
+### `metaWorkout` ha un'opzione, e non una seconda copia
+`metaWorkout(w, { giorno: false })`. Ogni riga del calendario sta già sotto
+l'intestazione della propria data: ripeterla lì dentro toglierebbe larghezza —
+su 393px — proprio ai blocchi e ai minuti, che sono l'unica cosa per cui si
+guarda quella riga. È un'opzione e non una funzione nuova perché «come un
+workout descrive sé stesso» deve restare un punto solo (§9 punto 1).
+
+### Cosa NON è stato implementato, e perché
+- **Il foglio del giorno come bottom sheet trascinabile.** L'analisi
+  dell'artboard lo descrive come «un pannello che sale dal bordo inferiore», ma
+  il render di 1b lo disegna come una sezione sotto la carta, e il `dv-next`
+  dello stesso artboard lo dà fra i **prossimi** pezzi di design. Implementato
+  com'è disegnato, non com'è raccontato.
+- **La vista settimana con le ore**, per la stessa ragione: è il primo
+  suggerimento del `dv-next`.
+- La modale **«Nuovo Evento / Gara»** è rimasta com'era, come le modali della
+  scheda atleta e della scheda workout: la pagina è la cornice, quelle sono i
+  contenuti. ⚠️ Una cosa è cambiata: la data parte da quella **selezionata** e
+  non da oggi — si apre quella modale dopo aver scelto un giorno, e ripartire
+  da oggi obbligava a rifare la scelta appena fatta.
+
+### Cosa è tornato, contro l'artboard
+Il bottone **«Oggi»**, che l'artboard toglie insieme agli altri quattro.
+Toglierlo del tutto è una regressione: da tre mesi avanti si torna al giorno
+corrente in tre tocchi invece che in uno. Qui compare **solo quando il mese
+mostrato non è quello corrente** — cioè esattamente quando serve, e senza
+occupare posto nell'unico caso in cui non servirebbe a niente.
+
+### I file nuovi
+`src/lib/rigaCalendario.js` (logica pura, 35 test) e
+`src/components/CalendarioUI.jsx` (sola presentazione), più `CARTA_RIGA_BASE`
+in `lib/stiliCard.js`. Il vecchio `COLORI_PALLINI` — una tabella di colori
+locale a `Calendar.jsx` che mescolava tipi di blocco e categorie — è sparito:
+il colore di una sessione è quello della sua **corsia**, e viene da
+`coloreCategoria` come ovunque (§9 punto 1).
 
 ---
 

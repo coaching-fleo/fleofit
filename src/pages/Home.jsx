@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Settings, CheckCircle2, User, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Heart, WifiOff, RefreshCw } from 'lucide-react'
+import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Heart, WifiOff, RefreshCw } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO, differenceInDays, startOfDay, getISOWeek } from 'date-fns'
@@ -461,7 +461,9 @@ export default function Home() {
         setLoadingRecent(false)
       }
 
-      if (role === 'athlete' || role === 'admin') {
+      // Solo l'atleta: dal 28/08/2026 la Home coach non mostra più il proprio
+      // storico (§9-nonies), quindi queste due query non alimentano niente.
+      if (role === 'athlete') {
         promises.push(
           Promise.all([
             supabase.from('athlete_workouts').select('*', { count: 'exact', head: true }).eq('athlete_id', user.id),
@@ -1023,7 +1025,7 @@ setNotifications(prev => {
   }
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition
+    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition
                     min-h-screen bg-[radial-gradient(120%_60%_at_50%_0%,#17160f_0%,#0B0B0B_58%)]">
       {/* Header */}
       {(() => {
@@ -1048,7 +1050,18 @@ setNotifications(prev => {
           </>
         )
 
-        if (role === 'athlete' || role === 'admin') {
+        // ⚠️ Il ruolo che esiste davvero è `admin`: l'onboarding di `coach` è
+        // disattivato in App.jsx. Fino al 28/08/2026 questo ramo guardava
+        // `role === 'athlete' || role === 'admin'`, quindi il coach vedeva la
+        // TESTATA DELL'ATLETA — «Buongiorno, Federico», la settimana ISO e la
+        // frase motivazionale del giorno — sopra una pagina che parla di
+        // dodici persone. `HeaderCoach` esisteva già, ed era codice
+        // irraggiungibile. Ora la regola è una sola, la stessa del corpo
+        // (§9-nonies): atleta di qua, tutti gli altri di là.
+        // Chi vuole la vista dell'atleta passa da Impostazioni → «Anteprima
+        // come atleta», che mette `adminRoleOverride` e rende `role` 'athlete'
+        // per l'intera pagina, testata compresa.
+        if (role === 'athlete') {
           return (
             <div className="mb-3.5">
               <HeaderHome
@@ -1063,6 +1076,11 @@ setNotifications(prev => {
 
         return (
           <div className="mb-3.5">
+            {/* `atletiCoach` è già senza COACHING_ID (il filtro sta nel fetch):
+                il totale qui è quello della rubrica, non uno più grande. Gli
+                atleti in pausa restano nel totale e si dichiarano a parte —
+                «9 atleti · 2 in pausa» — altrimenti i numeri delle sezioni
+                sotto, che la pausa la escludono, sembrerebbero sbagliati. */}
             <HeaderCoach
               dataOggi={format(new Date(), 'EEE d MMMM', { locale: it })}
               atleti={atletiCoach.length}
@@ -1144,13 +1162,6 @@ setNotifications(prev => {
             label="Apri l'archivio dei workout"
             onClick={() => navigate('/archive')} />
 
-          {/* Il Profilo resta solo per l'admin, che non ha quella voce in navbar
-              (l'atleta sì, il coach non ne ha bisogno). */}
-          {role === 'admin' && (
-            <RigaDestinazione icona={User} titolo="Profilo" sottotitolo="I tuoi dati personali"
-              onClick={() => navigate('/profile')} />
-          )}
-
           {/* Chi sta sparendo. Non è più l'eroe: chi è fermo da nove giorni lo è
               ancora fra un'ora, un feedback non letto no. Ma resta in pagina,
               con lo stesso dato — i giorni di fermo e l'azione a un tocco. */}
@@ -1190,7 +1201,7 @@ setNotifications(prev => {
           andando la settimana, cosa arriva dopo.
           Prima erano otto sezioni dello stesso peso e l'allenamento di oggi —
           l'unica ragione per cui l'app si apre — arrivava dopo due schermate. */}
-      {(role === 'athlete' || role === 'admin') && (
+      {role === 'athlete' && (
         <div className="flex flex-col gap-3.5">
 
           {loading ? (
@@ -1307,7 +1318,17 @@ setNotifications(prev => {
           che a una destinazione già in navbar non si dedica anche una card.
           L'archivio non è sparito — è la riga sotto la CTA, dove è materiale di
           lavoro invece che una destinazione. Per l'atleta erano state nascoste
-          il 26/08 per la stessa ragione. */}
+          il 26/08 per la stessa ragione.
+          ⚠️ 28/08/2026 — e qui NON deve tornare il ramo atleta. L'admin lo
+          vedeva in fondo alla propria Home (`role === 'athlete' || role ===
+          'admin'`): allenamento di oggi o «Giorno di Rest», l'anello della
+          settimana, serie e volume/RPE. Sono i numeri di UNA persona in una
+          pagina che parla di dodici, e per il coach dicevano sempre rest,
+          perché il suo account è escluso da chi si segue (COACHING_ID). Chi
+          vuole quella vista passa da Impostazioni → «Anteprima come atleta»,
+          che mette `adminRoleOverride` e rende la Home atleta intera.
+          Insieme è uscita la riga «Profilo»: /profile resta raggiungibile
+          dalla stessa anteprima, dove la navbar ne ha la voce. */}
 
       {/* MODAL CENTRO NOTIFICHE */}
       {showNotifications && createPortal(

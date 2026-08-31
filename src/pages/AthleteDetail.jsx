@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, User, Upload, BookOpen, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Check, Eye, LineChart, Target, PieChart, BarChart2, PauseCircle, PlayCircle } from 'lucide-react'
+import { ChevronLeft, User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Check, Eye, PauseCircle, PlayCircle } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -15,8 +15,15 @@ import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/work
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { isVoiceNoteValid } from '../lib/notaVocale'
 import { parseNotePausa, formatNotePausa } from '../lib/pausa'
-import { calcolaStatistiche, statisticheSettimana } from '../lib/statistiche'
-import { BRAND, RUNNING, coloreCategoria } from '../lib/colori'
+import { andamentoAtleta, GIORNI_ADERENZA } from '../lib/andamento'
+import { coloreCategoria } from '../lib/colori'
+import { CARD, RIGA } from '../lib/stiliCard'
+import { TestataScheda, MenuScheda, IntestazioneSezione } from '../components/WorkoutDetailUI'
+import { BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
+import {
+  IdentitaAtleta, IconaSocial, CardAndamento, CellaBento, Sparkline,
+  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa,
+} from '../components/SchedaAtletaUI'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
 import VoiceRecorder from '../components/VoiceRecorder'
@@ -51,9 +58,12 @@ export default function AthleteDetail() {
   const [athlete, setAthlete] = useState(null)
   const [workouts, setWorkouts] = useState([])
   const [prs, setPrs] = useState([])
-  const [tab, setTab] = useState('workouts') // 'workouts' | 'prs' | 'stats'
   const [workoutView, setWorkoutView] = useState('list') // 'list' | 'calendar'
-  const [showHistory, setShowHistory] = useState(false)
+  // Le tre tab sono diventate due sezioni che si aprono in pagina, più un menu
+  // per i comandi che erano tre bottoni in testata (CLAUDE.md §9-terdecies).
+  const [menuAperto, setMenuAperto] = useState(false)
+  const [storicoAperto, setStoricoAperto] = useState(false)
+  const [prAperti, setPrAperti] = useState(false)
   const [loading, setLoading] = useState(true)
   const [workoutToRemove, setWorkoutToRemove] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -119,12 +129,12 @@ export default function AthleteDetail() {
     if (!silent) setLoading(false)
   }
 
-  // Riepilogo della settimana: valore DERIVATO, non stato.
-  // Qui c'era un useEffect con setWeeklyStats e, dentro, una TERZA copia del
-  // calcolo della durata — che portava con sé il difetto delle distanze
-  // (BACKLOG #30): 400m contati come 400 minuti. Ora usa src/lib/statistiche.js,
-  // dov'è corretto e coperto da test.
-  const weeklyStats = useMemo(() => statisticheSettimana(workouts), [workouts])
+  // I numeri dell'eroe: aderenza, carico, volume, sforzo — tutti sulla stessa
+  // finestra, che è l'unica ragione per cui si possono leggere insieme.
+  // Valore DERIVATO, non stato: qui c'era un useEffect con setWeeklyStats e,
+  // dentro, una TERZA copia del calcolo della durata, con il difetto delle
+  // distanze (BACKLOG #30) — 400m contati come 400 minuti.
+  const andamento = useMemo(() => andamentoAtleta(workouts), [workouts])
 
   const uploadVoiceNote = async (athleteWorkoutId, audioBlob, ext) => {
     const fileName = `voice_${athleteWorkoutId}_${Date.now()}.${ext}`
@@ -433,419 +443,352 @@ export default function AthleteDetail() {
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
 
+  // L'anagrafica erano quattro celle da 22px — mezzo schermo per dati che si
+  // inseriscono una volta e non si consultano. I campi vuoti spariscono invece
+  // di stampare «N/A»: una cella che dice «non lo so» occupa lo stesso spazio
+  // di una che dice qualcosa.
+  const anagrafica = [
+    athlete.birth_date && `${calculateAge(athlete.birth_date)} anni`,
+    athlete.height && `${athlete.height} cm`,
+    athlete.weight && `${athlete.weight} kg`,
+    `${workouts.length} workout`,
+  ].filter(Boolean).join(' · ')
+
+  // Lo scarto del volume si dice in MINUTI e non in percentuale: «+50 min» si
+  // confronta con la propria settimana, «+24%» va prima ritradotto in minuti.
+  const delta = andamento.volume.delta
+  const testoDelta = delta === 0 ? 'come la settimana prima'
+    : `${delta > 0 ? '+' : '−'}${Math.abs(delta)} sulla settimana prima`
+  const coloreDelta = delta === 0 ? 'text-muted' : delta > 0 ? 'text-green-500' : 'text-orange-400'
+
+  // I tre bottoni che stavano in testata. Il nome dell'atleta è nell'etichetta
+  // perché «Metti in pausa» da solo non dice chi si sta fermando, e questa è
+  // l'unica azione della pagina che si nota solo quando è sbagliata.
+  const vociMenu = [
+    { etichetta: 'Modifica scheda', icona: Edit, onClick: () => setShowEditModal(true) },
+    role !== 'athlete' && { etichetta: 'Esporta dati', icona: Download, onClick: handleExportData },
+    role !== 'athlete' && {
+      etichetta: pausaAtleta.inPausa ? `Riattiva ${athlete.name}` : `Metti ${athlete.name} in pausa`,
+      icona: pausaAtleta.inPausa ? PlayCircle : PauseCircle,
+      onClick: chiediPausa,
+    },
+  ]
+
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
-      {role !== 'athlete' && !isOwnProfile ? (
-        <div className="mb-6 mt-4 flex items-center gap-3">
-          <button aria-label="Torna alla lista atleti" onClick={() => navigate('/athletes')} className="w-11 h-11 bg-[#1e1e1e] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-brand transition shadow-sm shrink-0">
-            <ChevronLeft size={22} className="-ml-0.5" />
-          </button>
-          <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
-        </div>
-      ) : (
-        <div className="mb-6 mt-4 flex items-center gap-3"><h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1></div>
+    <div className="px-4 max-w-2xl mx-auto min-h-[100dvh] flex flex-col gap-[14px] page-transition
+                    pt-[calc(env(safe-area-inset-top)+1rem)] pb-[var(--altezza-navbar)]
+                    bg-[radial-gradient(120%_46%_at_50%_0%,#17160f_0%,#0B0B0B_54%)]">
+
+      {/* La testata porta un menu e basta. Esporta, Modifica e Pausa erano tre
+          bottoni dello stesso peso in cima alla pagina: tre comandi che si
+          usano una volta, messi sopra il contenuto che si legge ogni volta.
+          ⚠️ Nessun «indietro» sul proprio profilo: `/profile` è una voce della
+          navbar, non una pagina in cui si è entrati da qualche parte. */}
+      <TestataScheda
+        onIndietro={role !== 'athlete' && !isOwnProfile ? () => navigate('/athletes') : null}
+        onMenu={() => setMenuAperto(true)} />
+
+      {/* 🔴 La pillola «In pausa» è nascosta all'atleta, e non è pudore: questa
+          pagina è anche `/profile`. La pausa è uno stato interno della
+          programmazione del coach, e dirla con una pillola arancione invece
+          che parlandoci è il modo sbagliato (CLAUDE.md §9-decies). */}
+      <IdentitaAtleta
+        foto={athlete.photo_url}
+        nome={`${athlete.name} ${athlete.surname || ''}`.trim()}
+        onErroreFoto={() => setAthlete({ ...athlete, photo_url: null })}
+        anagrafica={anagrafica}
+        social={<>
+          <IconaSocial
+            etichetta={athlete.instagram_url ? 'Apri Instagram' : 'Aggiungi il profilo Instagram'}
+            icona={InstagramIcon} colore={athlete.instagram_url ? '#e1306c' : null}
+            href={athlete.instagram_url
+              ? (athlete.instagram_url.startsWith('http') ? athlete.instagram_url : `https://instagram.com/${athlete.instagram_url.replace(/^@/, '')}`)
+              : null}
+            onClick={() => setSocialModalType('instagram')} />
+          <IconaSocial
+            etichetta={athlete.strava_url ? 'Apri Strava' : 'Aggiungi il profilo Strava'}
+            icona={Activity} colore={athlete.strava_url ? '#fc4c02' : null}
+            href={athlete.strava_url || null}
+            onClick={() => setSocialModalType('strava')} />
+        </>}
+        pillola={pausaAtleta.inPausa && role !== 'athlete' ? (
+          <PillolaPausa dal={pausaAtleta.dal
+            ? format(parseISO(pausaAtleta.dal), parseISO(pausaAtleta.dal).getFullYear() === new Date().getFullYear() ? 'd MMM' : 'd MMM yyyy', { locale: it })
+            : null} />
+        ) : null}
+        nota={pausaAtleta.testo} />
+
+      {/* L'EROE — «come sta andando».
+          Era la terza tab, dietro due tocchi, spezzata in quattro grafici che
+          non si parlavano: aderenza, volume, carico, RPE. Sono la stessa
+          domanda, e la risposta si legge solo mettendoli sulla stessa riga. */}
+      <CardAndamento
+        titolo={`${isOwnProfile ? 'Come stai andando' : 'Come sta andando'} · ${GIORNI_ADERENZA} giorni`}
+        percentuale={andamento.aderenza.percentuale}
+        fatti={andamento.aderenza.fatti}
+        assegnati={andamento.aderenza.assegnati}
+        settimane={andamento.settimane}
+        delta={andamento.carico.delta}
+        frase={andamento.frase.testo}
+        dettaglio={andamento.frase.dettaglio} />
+
+      <div className="grid grid-cols-[1.05fr_1fr] gap-3">
+        <CellaBento
+          etichetta="Volume" valore={andamento.volume.minuti} unita="min"
+          nota={testoDelta} notaColore={coloreDelta} coda="4 settimane">
+          <Sparkline valori={andamento.volume.barre} />
+        </CellaBento>
+        <CellaBento
+          etichetta="Sforzo"
+          valore={andamento.sforzo.medio != null ? String(andamento.sforzo.medio).replace('.', ',') : '—'}
+          unita={andamento.sforzo.medio != null ? 'RPE' : null}
+          nota={andamento.sforzo.medio != null
+            ? `medio · ${andamento.sforzo.quanti} workout`
+            : 'nessun RPE dichiarato'}
+          coda={andamento.sforzo.quanti > 0
+            ? `${andamento.sforzo.duri} su ${andamento.sforzo.quanti} da 7 in su`
+            : null}>
+          <BarraFasce distribuzione={andamento.sforzo.distribuzione} />
+        </CellaBento>
+      </div>
+
+      {/* Il banner del prossimo obiettivo era alto quanto una card, con un
+          numero da 30px: teneva il peso di un eroe per un dato che cambia una
+          volta al giorno. È una riga, e resta cliccabile com'era. */}
+      {nextEvent && (
+        <RigaObiettivo
+          titolo={`${nextEvent.workouts.title} · ${format(parseISO(nextEvent.completed_date), 'd MMM', { locale: it })}`}
+          giorni={countdownDays}
+          onClick={() => navigate(`/workout/${nextEvent.workouts.id}?athlete_id=${id}`)} />
       )}
 
-      {/* Header Atleta */}
-      <div className="flex items-start justify-between gap-3 mb-6">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="relative shrink-0">
-            {athlete.photo_url ? (
-              <img src={athlete.photo_url} alt={`${athlete.name}`} className="w-24 h-24 rounded-full object-cover border-2 border-[#333] shrink-0" onError={() => setAthlete({ ...athlete, photo_url: null })} />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-[#2a2a2a] flex items-center justify-center border-2 border-[#333] shrink-0">
-                <User size={48} className="text-muted" />
+      {todayWorkoutsList.length > 0 && (
+        <div className="flex flex-col gap-2.5">
+          <IntestazioneSezione etichetta="Oggi" />
+          {todayWorkoutsList.map(entry => (
+            <TodayAthleteWorkoutCard
+              key={entry.id}
+              entry={entry}
+              onToggleStatus={toggleWorkoutStatus}
+              onUpdateNote={updateWorkoutNote}
+              onRemove={requestRemoveWorkout}
+              navigate={navigate}
+              athleteId={id}
+              role={role}
+              onUploadVoiceNote={uploadVoiceNote}
+              onDeleteVoiceNote={deleteVoiceNote}
+              onEditAutonomous={openEditAutonomous}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ⚠️ «Prossimi» NON è nell'artboard, e resta lo stesso. L'artboard
+          disegna una giornata; togliere gli allenamenti già programmati
+          vorrebbe dire che il coach non può più vedere cos'ha assegnato senza
+          aprire il calendario, e l'atleta non sa cosa lo aspetta domani. */}
+      {upcomingWorkoutsList.length > 0 && (
+        <div className="flex flex-col gap-2.5">
+          <IntestazioneSezione etichetta="Prossimi allenamenti" dettaglio={`${upcomingWorkoutsList.length}`} />
+          {upcomingWorkoutsList.map(entry => (
+            <WorkoutEntryCard
+              key={entry.id}
+              entry={entry}
+              onToggleStatus={toggleWorkoutStatus}
+              onUpdateNote={updateWorkoutNote}
+              onRemove={requestRemoveWorkout}
+              navigate={navigate}
+              athleteId={id}
+              onUploadVoiceNote={uploadVoiceNote}
+              onDeleteVoiceNote={deleteVoiceNote}
+              role={role}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Le due tab che restavano diventano due righe che si aprono in pagina.
+          La differenza che conta non è estetica: una tab nasconde il contenuto
+          E la sua esistenza, una riga dice quanto c'è dentro prima di aprirla. */}
+      <div className="flex flex-col gap-2.5">
+        <RigaApribile
+          icona={FolderArchive} titolo="Storico allenamenti" conteggio={pastWorkoutsList.length}
+          aperta={storicoAperto} onToggle={() => setStoricoAperto(v => !v)} />
+
+        {storicoAperto && (
+          <div className="flex flex-col gap-3 pb-1">
+            {role !== 'athlete' && (
+              <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333]">
+                <div
+                  className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
+                    workoutView === 'list' ? 'translate-x-0' : 'translate-x-full'
+                  }`}
+                />
+                <button
+                  onClick={() => setWorkoutView('list')}
+                  className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'list' ? 'text-white' : 'text-muted hover:text-gray-300'}`}
+                >
+                  <LayoutList size={18} /> Elenco
+                </button>
+                <button
+                  onClick={() => setWorkoutView('calendar')}
+                  className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'calendar' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
+                >
+                  <CalendarDays size={18} /> Calendario
+                </button>
               </div>
             )}
+
+            {role !== 'athlete' && workoutView === 'calendar' ? (
+              <div className={`${CARD} flex flex-col p-5`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-white capitalize">
+                    {format(currentMonth, 'MMMM yyyy', { locale: it })}
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <button aria-label="Mese precedente" onClick={prevMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button onClick={() => { setCurrentMonth(new Date()); setSelectedDay(new Date()); }} className="px-3 py-1.5 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white text-sm transition">
+                      Oggi
+                    </button>
+                    <button aria-label="Mese successivo" onClick={nextMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-7 mb-2">
+                  {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => (
+                    <div key={i} className="text-center text-gray-400 text-xs font-medium py-1">{d}</div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 mb-6">
+                  {Array.from({ length: offset }).map((_, i) => <div key={`empty-${i}`} />)}
+                  {days.map(day => {
+                    const dayStr = format(day, 'yyyy-MM-dd')
+                    const dayWorkoutsList = workouts.filter(w => w.completed_date === dayStr)
+                    const hasWorkout = dayWorkoutsList.length > 0
+                    const selected = format(selectedDay, 'yyyy-MM-dd') === dayStr
+                    const today = format(new Date(), 'yyyy-MM-dd') === dayStr
+
+                    return (
+                      <button
+                        key={day.toISOString()}
+                        onClick={() => setSelectedDay(day)}
+                        className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 rounded-xl aspect-square transition ${selected ? 'bg-brand' : today ? 'bg-[#2a2a2a]' : 'bg-[#111] hover:bg-[#2a2a2a] border border-[#222]'}`}
+                      >
+                        <span className={`text-sm font-medium leading-none ${selected ? 'text-black' : today ? 'text-brand' : 'text-white'}`}>
+                          {format(day, 'd')}
+                        </span>
+                        {hasWorkout && (
+                          <div className="flex gap-0.5 mt-1">
+                            {dayWorkoutsList.slice(0, 3).map((w, i) => {
+                              const cat = w.workouts?.sections?.category || 'Hyrox'
+                              const isCustom = cat === 'Custom' || cat === 'Autonomo' || w.workouts?.sections?.isAutonomous === true
+                              const isEvent = cat === 'Event' || w.workouts?.sections?.isEvent === true
+                              const color = coloreCategoria(isEvent ? 'Event' : (cat === 'Running' ? 'Running' : (isCustom ? 'Custom' : 'Hyrox')))
+                              return <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selected ? '#000' : color }} />
+                            })}
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="pt-4 border-t border-[#2a2a2a]">
+                  <h3 className="text-white font-semibold mb-3">
+                    {format(selectedDay, 'EEEE d MMMM', { locale: it })}
+                  </h3>
+                  {workouts.filter(w => w.completed_date === format(selectedDay, 'yyyy-MM-dd')).length === 0 ? (
+                    <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-6 text-center">
+                      <p className="text-gray-400 text-sm">Nessun workout in questa data.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {workouts.filter(w => w.completed_date === format(selectedDay, 'yyyy-MM-dd')).map(w => (
+                        <WorkoutEntryCard key={w.id} entry={w} onToggleStatus={toggleWorkoutStatus} onUpdateNote={updateWorkoutNote} onRemove={requestRemoveWorkout} navigate={navigate} athleteId={id} role={role} onEditAutonomous={openEditAutonomous} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : pastWorkoutsList.length > 0 ? (
+              pastWorkoutsList.map(entry => (
+                <WorkoutEntryCard
+                  key={entry.id}
+                  entry={entry}
+                  onToggleStatus={toggleWorkoutStatus}
+                  onUpdateNote={updateWorkoutNote}
+                  onRemove={requestRemoveWorkout}
+                  navigate={navigate}
+                  athleteId={id}
+                  role={role}
+                  onEditAutonomous={openEditAutonomous}
+                  onUploadVoiceNote={uploadVoiceNote}
+                  onDeleteVoiceNote={deleteVoiceNote}
+                />
+              ))
+            ) : (
+              <p className="px-1 text-sm text-muted">Nessun allenamento passato.</p>
+            )}
           </div>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-white text-balance">{athlete.name} {athlete.surname}</h1>
-            {athlete.username && <p className="text-gray-400">@{athlete.username}</p>}
-            {/* La pausa si vede, e si vede da quando: un allarme spento in
-                silenzio è il modo in cui un atleta smette di essere seguito
-                senza che nessuno l'abbia deciso.
-                🔴 Ma SOLO al coach. Questa pagina è anche `/profile`, cioè la
-                scheda che l'atleta vede di sé: la pausa è uno stato interno
-                della programmazione del coach, e mostrarla qui vorrebbe dire
-                comunicare all'atleta «ti ho messo in disparte» tramite una
-                pillola, invece che parlandoci. */}
-            {pausaAtleta.inPausa && role !== 'athlete' && (
-              <p className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-full whitespace-nowrap
-                            bg-orange-500/10 border border-orange-500/30 text-orange-400 text-[11px] font-bold uppercase tracking-[.06em]">
-                <PauseCircle size={13} aria-hidden="true" />
-                In pausa{pausaAtleta.dal ? ` dal ${format(parseISO(pausaAtleta.dal), parseISO(pausaAtleta.dal).getFullYear() === new Date().getFullYear() ? 'd MMM' : 'd MMM yyyy', { locale: it })}` : ''}
+        )}
+
+        <RigaApribile
+          icona={Trophy} titolo="Personal record" conteggio={prs.length}
+          aperta={prAperti} onToggle={() => setPrAperti(v => !v)} />
+
+        {prAperti && (
+          <div className="flex flex-col gap-3 pb-1">
+            {prs.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {prs.map(pr => (
+                  <button key={pr.id} type="button" onClick={() => { setEditingPr(pr); setPrModalOpen(true); }}
+                    className={`${CARD} p-4 text-left hover:border-brand/40 transition`}>
+                    <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-1">{pr.exercise}</p>
+                    <p className="text-white font-bold text-2xl">{pr.value}</p>
+                    <p className="text-muted text-xs mt-1">{format(parseISO(pr.date), 'd MMMM yyyy', { locale: it })}</p>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="px-1 text-sm text-muted text-pretty">
+                Nessun record personale. Massimali di forza e migliori tempi di corsa si tengono qui.
               </p>
             )}
-            {/* ⚠️ `pausaAtleta.testo` e non `athlete.notes`: il marcatore è uno
-                stato, non una nota, e mostrarlo grezzo lo farebbe leggere come
-                testo scritto dal coach. */}
-            {pausaAtleta.testo && <p className="text-muted text-sm mt-1 max-w-sm whitespace-pre-wrap">{pausaAtleta.testo}</p>}
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              {athlete.instagram_url ? (
-                <a href={athlete.instagram_url.startsWith('http') ? athlete.instagram_url : `https://instagram.com/${athlete.instagram_url.replace(/^@/, '')}`} target="_blank" rel="noopener noreferrer" title="Instagram" className="flex items-center justify-center w-8 h-8 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 text-white rounded-full hover:opacity-80 transition shadow-md shadow-pink-500/20"><InstagramIcon size={16} /></a>
-              ) : (
-                <button aria-label="Aggiungi il profilo Instagram" onClick={() => setSocialModalType('instagram')} title="Aggiungi Instagram" className="flex items-center justify-center w-11 h-11 bg-[#2a2a2a] text-gray-400 rounded-full hover:text-pink-500 hover:border-pink-500/50 transition border border-[#383838]"><InstagramIcon size={16} /></button>
-              )}
-              {athlete.strava_url ? (
-                <a href={athlete.strava_url} target="_blank" rel="noopener noreferrer" title="Strava" className="flex items-center justify-center w-8 h-8 bg-[#fc4c02] text-white rounded-full hover:opacity-80 transition shadow-md shadow-[#fc4c02]/20"><Activity size={16} /></a>
-              ) : (
-                <button aria-label="Aggiungi il profilo Strava" onClick={() => setSocialModalType('strava')} title="Aggiungi Strava" className="flex items-center justify-center w-11 h-11 bg-[#2a2a2a] text-gray-400 rounded-full hover:text-[#fc4c02] hover:border-[#fc4c02]/50 transition border border-[#383838]"><Activity size={16} /></button>
-              )}
-            </div>
+            <button onClick={() => { setEditingPr(null); setPrModalOpen(true); }}
+              className={`${RIGA} w-full px-[15px] py-[13px] flex items-center gap-3 text-sm font-bold text-white hover:bg-white/[.055] transition`}>
+              <Plus size={18} className="shrink-0 text-muted" aria-hidden="true" /> Aggiungi personal record
+            </button>
           </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {role !== 'athlete' && (
-            <button aria-label="Esporta i dati dell'atleta" onClick={handleExportData} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-brand transition" title="Esporta Backup Atleta">
-              <Download size={20} />
-            </button>
-          )}
-          {role !== 'athlete' && (
-            <button
-              aria-label={pausaAtleta.inPausa ? `Riattiva ${athlete.name}: tornerà fra gli atleti che richiedono attenzione` : `Metti ${athlete.name} in pausa: non comparirà più fra gli atleti che richiedono attenzione`}
-              title={pausaAtleta.inPausa ? 'Riattiva atleta' : 'Metti in pausa'}
-              onClick={chiediPausa}
-              className={`p-2 rounded-xl border transition ${pausaAtleta.inPausa
-                ? 'bg-orange-500/10 border-orange-500/40 text-orange-400 hover:border-orange-500'
-                : 'bg-[#2a2a2a] border-[#383838] text-gray-400 hover:text-white hover:border-brand'}`}>
-              {pausaAtleta.inPausa ? <PlayCircle size={20} /> : <PauseCircle size={20} />}
-            </button>
-          )}
-          <button aria-label="Modifica la scheda atleta" onClick={() => setShowEditModal(true)} className="p-2 bg-[#2a2a2a] border border-[#383838] rounded-xl text-gray-400 hover:text-white hover:border-brand transition" title="Modifica profilo atleta">
-            <Edit size={20} />
-          </button>
-        </div>
+        )}
+
+        {/* L'allenamento libero lo inserisce l'atleta: per il coach esiste il
+            builder, che è nella barra qui sotto. */}
+        {isOwnProfile && (
+          <RigaAzione icona={Plus} titolo="Aggiungi allenamento libero"
+            onClick={() => { setAutonomousForm({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null }); setAutonomousModalOpen(true); }} />
+        )}
       </div>
 
-      {/* BANNER PROSSIMO EVENTO/GARA */}
-      {nextEvent && (
-        <div 
-          onClick={() => navigate(`/workout/${nextEvent.workouts.id}?athlete_id=${id}`)}
-          className="bg-gradient-to-r from-[#2a2a2a] to-[#111] border border-brand/30 rounded-3xl p-5 mb-6 flex items-center justify-between shadow-lg shadow-brand/10 cursor-pointer hover:border-brand/60 transition group"
-        >
-           <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-brand/10 rounded-full flex items-center justify-center text-brand shrink-0 shadow-inner group-hover:scale-110 transition-transform">
-                 <CalendarDays size={24} />
-              </div>
-              <div>
-                 <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-0.5">Prossimo Obiettivo</p>
-                 <p className="text-white font-black text-xl leading-tight group-hover:text-brand transition-colors">{nextEvent.workouts.title}</p>
-                 <p className="text-brand/80 text-sm mt-0.5 font-medium">{format(parseISO(nextEvent.completed_date), 'EEEE d MMMM yyyy', { locale: it })}</p>
-              </div>
-           </div>
-           <div className="flex flex-col items-center justify-center bg-gradient-to-br from-brand to-yellow-600 rounded-2xl px-5 py-2.5 shadow-xl min-w-[80px]">
-              <span className="text-3xl font-black text-black leading-none">{countdownDays}</span>
-              <span className="text-black/80 text-[11px] font-bold uppercase tracking-wider mt-1">{countdownDays === 1 ? 'giorno' : 'giorni'}</span>
-           </div>
-        </div>
+      {/* Assegna e Crea erano due bottoncini accanto al titolo «Diario
+          Workout», cioè a metà pagina: sono le due azioni per cui il coach
+          apre la scheda di un atleta, e non devono dipendere da quanto è
+          lungo lo scroll. Nella vista atleta la barra non c'è. */}
+      <div className="mt-auto" />
+      {role !== 'athlete' && !isOwnProfile && (
+        <BarraAzioni>
+          <CtaPrimaria icona={Dumbbell} onClick={() => setAssignModalOpen(true)}>Assegna</CtaPrimaria>
+          <BottoneQuadrato icona={Plus} etichetta="Crea un workout per questo atleta"
+            onClick={() => navigate(`/create?athlete_id=${id}`)} />
+        </BarraAzioni>
       )}
 
-      {/* Statistiche */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-        <StatCard label="Età" value={calculateAge(athlete.birth_date)} />
-        <StatCard label="Altezza" value={athlete.height ? `${athlete.height} cm` : 'N/A'} />
-        <StatCard label="Peso" value={athlete.weight ? `${athlete.weight} kg` : 'N/A'} />
-        <StatCard label="Workouts" value={workouts.length} />
-      </div>
+      {menuAperto && <MenuScheda etichetta="Azioni sull'atleta" onChiudi={() => setMenuAperto(false)} voci={vociMenu} />}
 
-      {/* Statistiche della Settimana */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-white font-bold text-sm">Statistiche della settimana</h3>
-          <Activity size={16} className="text-brand" />
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
-            <p className="text-muted text-[11px] font-bold uppercase tracking-wider">Tempo</p>
-            <p className="text-white font-black text-2xl">{weeklyStats.time}<span className="text-sm font-medium text-muted ml-0.5">m</span></p>
-          </div>
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
-            <p className="text-muted text-[11px] font-bold uppercase tracking-wider">Workout Completati</p>
-            <p className="text-brand font-black text-2xl">{weeklyStats.completed}</p>
-          </div>
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl p-4 flex flex-col gap-1 justify-center items-center text-center">
-            <p className="text-muted text-[11px] font-bold uppercase tracking-wider">RPE</p>
-            <p className="text-white font-black text-2xl">{weeklyStats.avgRpe}<span className="text-sm font-medium text-muted ml-0.5">/10</span></p>
-          </div>
-        </div>
-      </div>
-
-      {/* TABS */}
-      <div className="flex gap-6 mb-6 border-b border-[#2a2a2a] overflow-x-auto hide-scrollbar">
-        <button onClick={() => { setTab('workouts'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'workouts' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-white'}`}>
-          Diario
-        </button>
-        <button onClick={() => { setTab('prs'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'prs' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-white'}`}>
-          Personal Record
-        </button>
-        <button onClick={() => { setTab('stats'); setShowHistory(false); }} className={`pb-3 border-b-2 font-semibold text-sm transition whitespace-nowrap ${tab === 'stats' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-white'}`}>
-          Statistiche
-        </button>
-      </div>
-
-      {tab === 'workouts' ? (
-        showHistory ? (
-          <div className="flex flex-col gap-6 animate-in slide-in-from-right-4 duration-300">
-            <div>
-              <button onClick={() => setShowHistory(false)} className="flex items-center gap-1 text-brand hover:brightness-110 transition-all font-semibold text-sm mb-6 w-fit">
-                <ChevronLeft size={20} className="-ml-1" /> Torna al Diario
-              </button>
-              <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
-                <FolderArchive size={22} className="text-gray-400" />
-                Storico Allenamenti
-              </h2>
-              <div className="flex flex-col gap-3">
-                {pastWorkoutsList.map(entry => (
-                  <WorkoutEntryCard 
-                    key={entry.id} 
-                    entry={entry} 
-                    onToggleStatus={toggleWorkoutStatus} 
-                    onUpdateNote={updateWorkoutNote} 
-                    onRemove={requestRemoveWorkout}
-                    navigate={navigate}
-                    athleteId={id}
-                    role={role}
-                    onUploadVoiceNote={uploadVoiceNote}
-                    onDeleteVoiceNote={deleteVoiceNote}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-        <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <BookOpen size={22} className="text-brand" />
-              Diario Workout
-            </h2>
-            {role !== 'athlete' && (
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setAssignModalOpen(true)}
-                  className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 text-black text-sm font-bold bg-brand px-4 py-2.5 rounded-xl transition hover:brightness-110 shadow-lg shadow-brand/20"
-                >
-                  <Dumbbell size={16} /> Assegna
-                </button>
-                <button 
-                  onClick={() => navigate(`/create?athlete_id=${id}`)}
-                  className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 text-brand text-sm font-bold bg-brand/10 border border-brand/30 px-4 py-2.5 rounded-xl transition hover:brightness-110"
-                >
-                  <Plus size={16} /> Crea
-                </button>
-              </div>
-            )}
-          </div>
-          
-          {role !== 'athlete' && (
-            <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333]">
-              <div 
-                className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
-                  workoutView === 'list' ? 'translate-x-0' : 'translate-x-full'
-                }`}
-              />
-              <button 
-                onClick={() => setWorkoutView('list')}
-                className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'list' ? 'text-white' : 'text-muted hover:text-gray-300'}`}
-              >
-                <LayoutList size={18} /> Elenco
-              </button>
-              <button 
-                onClick={() => setWorkoutView('calendar')}
-                className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'calendar' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
-              >
-                <CalendarDays size={18} /> Calendario
-              </button>
-            </div>
-          )}
-          
-          <div key={workoutView} className={`animate-in fade-in zoom-in-[0.98] duration-300 ease-out fill-mode-both ${workoutView === 'list' ? 'slide-in-from-left-4' : 'slide-in-from-right-4'}`}>
-            {role !== 'athlete' && workoutView === 'calendar' ? (
-              <div className="flex flex-col bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-white capitalize">
-                  {format(currentMonth, 'MMMM yyyy', { locale: it })}
-                </h2>
-                <div className="flex items-center gap-2">
-                  <button aria-label="Mese precedente" onClick={prevMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button onClick={() => { setCurrentMonth(new Date()); setSelectedDay(new Date()); }} className="px-3 py-1.5 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white text-sm transition">
-                    Oggi
-                  </button>
-                  <button aria-label="Mese successivo" onClick={nextMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-7 mb-2">
-                {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => (
-                  <div key={i} className="text-center text-gray-400 text-xs font-medium py-1">{d}</div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 mb-6">
-                {Array.from({ length: offset }).map((_, i) => <div key={`empty-${i}`} />)}
-                {days.map(day => {
-                  const dayStr = format(day, 'yyyy-MM-dd')
-                  const dayWorkoutsList = workouts.filter(w => w.completed_date === dayStr)
-                  const hasWorkout = dayWorkoutsList.length > 0
-                  const selected = format(selectedDay, 'yyyy-MM-dd') === dayStr
-                  const today = format(new Date(), 'yyyy-MM-dd') === dayStr
-
-                  return (
-                    <button
-                      key={day.toISOString()}
-                      onClick={() => setSelectedDay(day)}
-                      className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 rounded-xl aspect-square transition ${selected ? 'bg-brand' : today ? 'bg-[#2a2a2a]' : 'bg-[#111] hover:bg-[#2a2a2a] border border-[#222]'}`}
-                    >
-                      <span className={`text-sm font-medium leading-none ${selected ? 'text-black' : today ? 'text-brand' : 'text-white'}`}>
-                        {format(day, 'd')}
-                      </span>
-                      {hasWorkout && (
-                        <div className="flex gap-0.5 mt-1">
-                          {dayWorkoutsList.slice(0, 3).map((w, i) => {
-                            const cat = w.workouts?.sections?.category || 'Hyrox'
-                            const isCustom = cat === 'Custom' || cat === 'Autonomo' || w.workouts?.sections?.isAutonomous === true
-                            const isEvent = cat === 'Event' || w.workouts?.sections?.isEvent === true
-                            const color = coloreCategoria(isEvent ? 'Event' : (cat === 'Running' ? 'Running' : (isCustom ? 'Custom' : 'Hyrox')))
-                            return <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selected ? '#000' : color }} />
-                          })}
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div className="pt-4 border-t border-[#2a2a2a]">
-                <h3 className="text-white font-semibold mb-3">
-                  {format(selectedDay, 'EEEE d MMMM', { locale: it })}
-                </h3>
-                {workouts.filter(w => w.completed_date === format(selectedDay, 'yyyy-MM-dd')).length === 0 ? (
-                    <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-6 text-center">
-                     <p className="text-gray-400 text-sm">Nessun workout in questa data.</p>
-                   </div>
-                ) : (
-                    <div className="flex flex-col gap-3">
-                     {workouts.filter(w => w.completed_date === format(selectedDay, 'yyyy-MM-dd')).map(w => (
-                       <WorkoutEntryCard key={w.id} entry={w} onToggleStatus={toggleWorkoutStatus} onUpdateNote={updateWorkoutNote} onRemove={requestRemoveWorkout} navigate={navigate} athleteId={id} role={role} onEditAutonomous={openEditAutonomous} />
-                     ))}
-                   </div>
-                )}
-              </div>
-            </div>
-          ) : workouts.length > 0 ? (
-              <div className="flex flex-col gap-8">
-              {todayWorkoutsList.length > 0 && (
-                <div>
-                  <h3 className="text-white font-bold mb-3 flex items-center gap-2">
-                     <span className="w-2 h-2 rounded-full bg-brand"></span> Oggi
-                  </h3>
-                  <div className="flex flex-col gap-3">
-                    {todayWorkoutsList.map(entry => (
-                      <TodayAthleteWorkoutCard 
-                        key={entry.id} 
-                        entry={entry} 
-                        onToggleStatus={toggleWorkoutStatus} 
-                        onUpdateNote={updateWorkoutNote}
-                        onRemove={requestRemoveWorkout}
-                        navigate={navigate}
-                        athleteId={id}
-                        role={role}
-                        onUploadVoiceNote={uploadVoiceNote}
-                        onDeleteVoiceNote={deleteVoiceNote}
-                        onEditAutonomous={openEditAutonomous}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {upcomingWorkoutsList.length > 0 && (
-                <div>
-                  <h3 className="text-white font-bold mb-3 flex items-center gap-2">
-                     <span className="w-2 h-2 rounded-full bg-blue-500"></span> Prossimi allenamenti
-                  </h3>
-                  <div className="flex flex-col gap-3">
-                    {upcomingWorkoutsList.map(entry => (
-                      <WorkoutEntryCard 
-                        key={entry.id} 
-                        entry={entry} 
-                        onToggleStatus={toggleWorkoutStatus} 
-                        onUpdateNote={updateWorkoutNote} 
-                        onRemove={requestRemoveWorkout}
-                        navigate={navigate}
-                        athleteId={id}
-                        onUploadVoiceNote={uploadVoiceNote}
-                        onDeleteVoiceNote={deleteVoiceNote}
-                        role={role}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {pastWorkoutsList.length > 0 && (
-                <button 
-                  onClick={() => setShowHistory(true)}
-                  className="w-full flex items-center justify-between p-4 bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl hover:border-[#444] transition group mt-2"
-                >
-                  <div className="flex items-center gap-3 text-left">
-                    <div className="w-12 h-12 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-400 group-hover:text-white transition shrink-0">
-                      <FolderArchive size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-white font-bold text-lg">Storico allenamenti</h3>
-                      <p className="text-muted text-sm mt-0.5">{pastWorkoutsList.length} workout completati o passati</p>
-                    </div>
-                  </div>
-                  <ChevronRight size={20} className="text-muted group-hover:text-white transition" />
-                </button>
-              )}
-            </div>
-          ) : (
-              <div className="bg-[#1e1e1e] border border-dashed border-[#2a2a2a] rounded-2xl p-6 text-center">
-              <p className="text-gray-400 text-sm">Nessun workout registrato per questo atleta.</p>
-            </div>
-          )}
-          </div>
-        </div>
-        )
-      ) : tab === 'prs' ? (
-        <div className="flex flex-col gap-4 animate-in fade-in duration-300">
-           <div className="flex items-center justify-between">
-             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-               <Trophy size={20} className="text-brand" />
-               Traguardi e PR
-             </h2>
-             <button onClick={() => { setEditingPr(null); setPrModalOpen(true); }} className="flex items-center gap-1 text-black text-sm font-semibold bg-brand px-3 py-1.5 rounded-full transition hover:brightness-110 shadow-lg shadow-brand/20">
-               <Plus size={16} /> Aggiungi PR
-             </button>
-           </div>
-           {prs.length > 0 ? (
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-               {prs.map(pr => (
-                  <div key={pr.id} onClick={() => { setEditingPr(pr); setPrModalOpen(true); }} className="bg-[#1e1e1e] border border-[#2a2a2a] p-4 rounded-2xl flex items-center justify-between group hover:border-brand transition cursor-pointer">
-                     <div>
-                       <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-1">{pr.exercise}</p>
-                       <p className="text-white font-bold text-2xl">{pr.value}</p>
-                       <p className="text-muted text-xs mt-1">{format(parseISO(pr.date), 'd MMMM yyyy', { locale: it })}</p>
-                     </div>
-                  </div>
-               ))}
-             </div>
-           ) : (
-             <div className="bg-[#1e1e1e] border border-dashed border-[#2a2a2a] rounded-2xl p-6 text-center">
-               <p className="text-gray-400 text-sm mb-2">Nessun Personal Record registrato.</p>
-               <p className="text-muted text-xs">Aggiungi i tuoi massimali di forza o i tuoi migliori tempi di corsa per tenerne traccia nel tempo!</p>
-             </div>
-           )}
-        </div>
-      ) : tab === 'stats' ? (
-        <AthleteStatsTab workouts={workouts} />
-      ) : null}
 
       {/* MODAL CONFERMA RIMOZIONE WORKOUT */}
       {workoutToRemove && createPortal(
@@ -1013,214 +956,6 @@ export default function AthleteDetail() {
         </>,
         document.body
       )}
-    </div>
-  )
-}
-
-function AthleteStatsTab({ workouts }) {
-  // Il calcolo sta in src/lib/statistiche.js, dove è coperto da test: sono i
-  // numeri su cui il coach decide se caricare o scaricare la settimana dopo, e
-  // se sbagliano non danno errore — cambiano solo le decisioni.
-  //
-  // ⚠️ Qui prima c'era un useEffect con TRE setState. Oltre a non essere
-  // testabile, era il pattern che ESLint segnala (set-state-in-effect): un
-  // valore derivato dalle props non è uno stato, è un useMemo.
-  const {
-    settimane: weeks,
-    completamento: completion,
-    distribuzioneRpe: rpeDist,
-    percentualeCompletamento: completionRate,
-  } = useMemo(() => calcolaStatistiche(workouts), [workouts])
-
-  const maxTime = Math.max(...weeks.map(w => w.time), 60)
-  const maxLoad = Math.max(...weeks.map(w => w.load), 100)
-
-  return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-      
-      {/* COMPLETION RATE */}
-      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg flex items-center justify-between">
-        <div>
-           <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
-             <Target size={20} className="text-brand" /> Completamento
-           </h3>
-           <p className="text-muted text-sm">Ultimi 30 giorni</p>
-           <p className="text-gray-400 mt-2 text-sm">Workout completati: <strong className="text-white">{completion.done}</strong> su {completion.assigned}</p>
-        </div>
-        <div className="relative w-24 h-24 flex items-center justify-center">
-          <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="#333" strokeWidth="8" />
-            <circle cx="50" cy="50" r="40" fill="none" stroke={BRAND} strokeWidth="8" strokeDasharray={`${completionRate * 2.51} 251`} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center flex-col">
-            <span className="text-xl font-black text-white">{completionRate}%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* LINE CHART VOLUME */}
-      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg">
-         <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
-           <LineChart size={20} className="text-running" /> Volume di Allenamento
-         </h3>
-         <p className="text-muted text-sm mb-6">Minuti stimati (Ultime 4 settimane)</p>
-         
-         <div className="relative h-32 mt-8 mb-2 ml-8 mr-4">
-           {/* Y Axis Grid */}
-           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0">
-             <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">{maxTime}</span>
-             </div>
-             <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">{Math.round(maxTime / 2)}</span>
-             </div>
-             <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">0</span>
-             </div>
-           </div>
-
-           {/* Area fill */}
-           <svg className="absolute inset-0 w-full h-full overflow-visible z-10" preserveAspectRatio="none" viewBox="0 0 100 100">
-             <defs>
-               <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-                 <stop offset="0%" stopColor="rgba(0, 148, 198, 0.4)" />
-                 <stop offset="100%" stopColor="rgba(0, 148, 198, 0)" />
-               </linearGradient>
-             </defs>
-             <polygon 
-               points={`0,100 ${weeks.map((wk, i) => `${(i / (weeks.length - 1)) * 100},${100 - Math.max((wk.time / maxTime) * 100, 2)}`).join(' ')} 100,100`}
-               fill="url(#lineGrad)"
-             />
-             <polyline 
-               points={weeks.map((wk, i) => `${(i / (weeks.length - 1)) * 100},${100 - Math.max((wk.time / maxTime) * 100, 2)}`).join(' ')}
-               fill="none" 
-               stroke={RUNNING} 
-               strokeWidth="3" 
-               vectorEffect="non-scaling-stroke"
-               strokeLinecap="round"
-               strokeLinejoin="round"
-             />
-           </svg>
-
-           {/* Points and Hover zones */}
-           <div className="absolute inset-0 z-20">
-             {weeks.map((wk, i) => {
-               const heightPct = Math.max((wk.time / maxTime) * 100, 2)
-               const leftPct = (i / (weeks.length - 1)) * 100
-               return (
-                 <div 
-                   key={i} 
-                   className="absolute h-full flex flex-col items-center group cursor-pointer"
-                   style={{ left: `${leftPct}%`, width: '40px', transform: 'translateX(-50%)' }}
-                 >
-                   {/* Point */}
-                   <div 
-                     className="absolute w-3.5 h-3.5 bg-[#1e1e1e] rounded-full border-[3px] border-running transition-transform group-hover:scale-[1.5] z-10" 
-                     style={{ bottom: `calc(${heightPct}% - 7px)` }}
-                   />
-                   {/* Tooltip */}
-                   <div 
-                     className="absolute text-white font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] border border-[#333] px-2 py-1 rounded-lg z-20 pointer-events-none whitespace-nowrap shadow-lg" 
-                     style={{ bottom: `calc(${heightPct}% + 12px)` }}
-                   >
-                     {wk.time} min
-                   </div>
-                 </div>
-               )
-             })}
-           </div>
-         </div>
-         
-         {/* X Axis Labels */}
-         <div className="relative h-6 mt-2 ml-8 mr-4">
-           {weeks.map((wk, i) => {
-             const leftPct = (i / (weeks.length - 1)) * 100
-             return (
-               <div key={i} className="absolute text-[11px] text-muted font-bold whitespace-nowrap text-center" style={{ left: `${leftPct}%`, transform: 'translateX(-50%)' }}>
-                 {wk.label}
-               </div>
-             )
-           })}
-         </div>
-      </div>
-
-      {/* BAR CHART TRAINING LOAD */}
-      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg">
-         <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
-           <BarChart2 size={20} className="text-green-500" /> Carico di Allenamento
-         </h3>
-         <p className="text-muted text-sm mb-6">Punteggio di stress (Minuti x RPE)</p>
-         
-         <div className="relative mt-8 mb-2 ml-8 mr-2">
-           {/* Y Axis Grid */}
-           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0 pb-6 pt-5">
-             <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">{maxLoad}</span>
-             </div>
-             <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">{Math.round(maxLoad / 2)}</span>
-             </div>
-             <div className="relative w-full border-t border-[#333]/50">
-               <span className="absolute -left-8 -top-2 text-[11px] font-bold text-muted">0</span>
-             </div>
-           </div>
-
-           <div className="relative flex items-end justify-between h-40 gap-2 z-10">
-           {weeks.map((wk, i) => {
-             const heightPct = Math.max((wk.load / maxLoad) * 100, 2)
-             return (
-               <div key={i} className="flex flex-col items-center flex-1 gap-2 group h-full">
-                 <div className="text-gray-300 font-bold text-[11px] opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] px-2 py-0.5 rounded border border-[#333] shadow-lg whitespace-nowrap">
-                   {wk.load} pt
-                 </div>
-                 <div className="w-full bg-[#111] rounded-t-lg relative flex items-end justify-center flex-1">
-                    <div 
-                      className="w-full bg-green-500 rounded-t-lg transition-all duration-1000 ease-out" 
-                      style={{ height: `${heightPct}%` }}
-                    />
-                 </div>
-                 <span className="text-[11px] text-muted font-bold whitespace-nowrap">{wk.label}</span>
-               </div>
-             )
-           })}
-           </div>
-         </div>
-      </div>
-
-      {/* RPE DISTRIBUTION */}
-      <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 shadow-lg">
-         <h3 className="text-white font-bold text-lg flex items-center gap-2 mb-1">
-           <PieChart size={20} className="text-purple-500" /> Sforzo Percepito (RPE)
-         </h3>
-         <p className="text-muted text-sm mb-6">Distribuzione dell'intensità</p>
-         
-         {rpeDist.total === 0 ? (
-           <p className="text-muted text-sm text-center py-4">Nessun dato RPE disponibile.</p>
-         ) : (
-           <div className="flex flex-col gap-4">
-             <RpeBar label="Leggero (1-4)" color="bg-green-500" count={rpeDist.light} total={rpeDist.total} />
-             <RpeBar label="Moderato (5-6)" color="bg-yellow-400" count={rpeDist.moderate} total={rpeDist.total} />
-             <RpeBar label="Impegnativo (7-8)" color="bg-orange-500" count={rpeDist.hard} total={rpeDist.total} />
-             <RpeBar label="Massimale (9-10)" color="bg-red-500" count={rpeDist.extreme} total={rpeDist.total} />
-           </div>
-         )}
-      </div>
-
-    </div>
-  )
-}
-
-function RpeBar({ label, color, count, total }) {
-  const pct = total > 0 ? (count / total) * 100 : 0
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex justify-between text-xs font-bold text-gray-400">
-        <span>{label}</span>
-        <span>{count} workout ({Math.round(pct)}%)</span>
-      </div>
-      <div className="w-full h-2.5 bg-[#111] rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full transition-all duration-1000 ease-out`} style={{ width: `${pct}%` }} />
-      </div>
     </div>
   )
 }
@@ -2140,16 +1875,6 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
       )}
 
       {alertInfo && <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />}
-    </div>
-  )
-}
-
-
-function StatCard({ label, value }) {
-  return (
-    <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-3">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="text-white font-bold text-lg">{value}</p>
     </div>
   )
 }

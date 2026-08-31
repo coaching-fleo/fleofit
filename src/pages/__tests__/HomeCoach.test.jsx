@@ -285,3 +285,77 @@ describe('Cosa è uscito dalla Home coach', () => {
     expect(screen.getByText(/2 allenamenti · riusa e duplica/)).toBeInTheDocument()
   })
 })
+
+// ⚠️ Questi montano con role 'admin', non 'coach'. Non è un dettaglio: il
+// ruolo che esiste davvero nell'app è `admin` (l'onboarding di `coach` è
+// disattivato in App.jsx), e fino al 28/08/2026 era l'unico che vedeva in
+// fondo alla Home coach anche il proprio ramo atleta — allenamento di oggi,
+// anello della settimana, serie e volume/RPE. I test qui sopra, tutti su
+// 'coach', non potevano accorgersene.
+describe('La Home dell\'admin non è anche la Home di un atleta', () => {
+  const montaAdmin = () => montaPagina(<Home />, { role: 'admin' })
+
+  it('non mostra il proprio allenamento di oggi né il «Giorno di rest»', async () => {
+    montaAdmin()
+    await attendi('Crea workout')
+    expect(screen.queryByText('Giorno di rest')).not.toBeInTheDocument()
+  })
+
+  it('non mostra le celle settimana, serie e volume/RPE', async () => {
+    // Il bento compariva SEMPRE: weeklyStatus nasce già con sette giorni,
+    // quindi la condizione `weeklyStatus.length > 0` era vera anche senza dati.
+    montaAdmin()
+    await attendi('Crea workout')
+    expect(screen.queryByLabelText(/allenamenti completati su/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Serie')).not.toBeInTheDocument()
+    expect(screen.queryByText('Volume · RPE')).not.toBeInTheDocument()
+  })
+
+  it('non ha più la riga «Profilo»', async () => {
+    montaAdmin()
+    await attendi('Crea workout')
+    expect(screen.queryByText('Profilo')).not.toBeInTheDocument()
+  })
+
+  it('il ramo coach c\'è tutto, ed è l\'unico', async () => {
+    ctrl.assegnazioni.valore = [fatta('f1', 'a1', -1, { notes: '[RPE: 9/10]\nGambe pesanti' })]
+    montaAdmin()
+    await attendi('«Gambe pesanti»')
+    expect(await screen.findByLabelText("Apri l'archivio dei workout")).toBeInTheDocument()
+    expect(screen.getByText('Copertura 3 gg')).toBeInTheDocument()
+  })
+
+  // ⚠️ La testata era l'ultimo pezzo di Home atleta rimasto sopra la Home
+  // coach: il corpo è stato separato il 28/08/2026, il ramo della testata no.
+  // `HeaderCoach` esisteva già e non lo raggiungeva nessuno, perché l'unico
+  // ruolo che lo apriva era 'coach', che l'onboarding non assegna.
+  it('la testata è quella del coach, non il saluto dell\'atleta', async () => {
+    montaAdmin()
+    await attendi('Crea workout')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('FLEOFIT Coach')
+  })
+
+  it('la testata dice quanti atleti segue, e la settimana ISO non c\'è più', async () => {
+    // Il numero è quello della rubrica: `atletiCoach` esclude già COACHING_ID.
+    // La settimana ISO e la frase motivazionale sono dati dell'atleta — in una
+    // pagina che parla di dodici persone non dicono niente di nessuna.
+    montaAdmin()
+    await attendi('Crea workout')
+    expect(screen.getByText(/· 3 atleti/)).toBeInTheDocument()
+    expect(screen.queryByText(/Settimana \d+/)).not.toBeInTheDocument()
+  })
+
+  it('gli atleti in pausa restano nel totale e si dichiarano a parte', async () => {
+    // «3 atleti · 1 in pausa», non «2 atleti»: le sezioni sotto la pausa la
+    // escludono, e senza questa riga i loro numeri sembrano sbagliati.
+    ctrl.atleti.valore = [
+      atleta('a1', 'Luca'),
+      atleta('a2', 'Giulia'),
+      { ...atleta('a3', 'Marco'), notes: formatNotePausa('2026-08-20', 'Ha chiesto una sosta') },
+    ]
+    montaAdmin()
+    await attendi('Crea workout')
+    expect(screen.getByText(/· 3 atleti/)).toBeInTheDocument()
+    expect(screen.getByText(/· 1 in pausa/)).toBeInTheDocument()
+  })
+})
