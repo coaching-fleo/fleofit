@@ -156,10 +156,12 @@ Conseguenze pratiche, tutte controintuitive:
 
 ### Rapporto tra i due: SONO DIVERGENTI, ED ENTRAMBI SI MUOVONO
 Verificato il 25/08/2026 **dopo un `git fetch`**:
-`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 82`**
-(rimisurata il 09/09/2026 dopo un `git fetch`: `main` è fermo al 25/08, `ios-version`
-continua a muoversi — il divario cresce di uno a ogni commit di qui. Il commit del 09/09
-è locale finché non lo si pusha, quindi lì diventerà `49 83`).
+`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 84`**
+(misurata il 09/09/2026 subito dopo il push: `main` è fermo al 25/08, `ios-version`
+continua a muoversi). ⚠️ **Questo numero invecchia di uno a ogni commit, questa riga
+compresa**: vale come ordine di grandezza — il divario è grande e cresce — non come
+cifra da fidarsi. Per il valore vero si rilancia il comando dopo un `git fetch`, che è
+la regola di questa sezione.
 Il divario **cresce a ogni sessione di lavoro su `ios-version`**: più si aspetta, più il merge costa.
 **Un merge non è un fast-forward**: è un merge vero.
 
