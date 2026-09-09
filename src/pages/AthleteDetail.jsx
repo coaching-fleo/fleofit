@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Check, Eye, PauseCircle, PlayCircle } from 'lucide-react'
+import { ChevronLeft, User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -16,6 +17,8 @@ import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { isVoiceNoteValid } from '../lib/notaVocale'
 import { parseNotePausa, formatNotePausa } from '../lib/pausa'
 import { andamentoAtleta, GIORNI_ADERENZA } from '../lib/andamento'
+import { previsioneWorkout } from '../lib/previsione'
+import { RigaAvviso, AvvisoEsteso } from '../components/PrevisioneUI'
 import { coloreCategoria } from '../lib/colori'
 import { CARD, RIGA } from '../lib/stiliCard'
 import { TestataScheda, MenuScheda, IntestazioneSezione } from '../components/WorkoutDetailUI'
@@ -54,6 +57,7 @@ export default function AthleteDetail() {
   const { role, user } = useAuth()
   const id = paramId || user?.id
   const navigate = useNavigate()
+  const indietro = useIndietro('/athletes')
   const isOwnProfile = id === user?.id
   const [athlete, setAthlete] = useState(null)
   const [workouts, setWorkouts] = useState([])
@@ -465,6 +469,13 @@ export default function AthleteDetail() {
   // perché «Metti in pausa» da solo non dice chi si sta fermando, e questa è
   // l'unica azione della pagina che si nota solo quando è sbagliata.
   const vociMenu = [
+    // In cima perché è la voce che si usa ogni settimana, mentre le altre tre
+    // si usano una volta. ⚠️ Solo per il coach: /profile è questa stessa
+    // pagina, e il report è materiale suo (CLAUDE.md §9-vicies-bis).
+    role !== 'athlete' && {
+      etichetta: 'Report settimanale', icona: ChartNoAxesColumn,
+      onClick: () => navigate(`/report/${id}`),
+    },
     { etichetta: 'Modifica scheda', icona: Edit, onClick: () => setShowEditModal(true) },
     role !== 'athlete' && { etichetta: 'Esporta dati', icona: Download, onClick: handleExportData },
     role !== 'athlete' && {
@@ -485,7 +496,7 @@ export default function AthleteDetail() {
           ⚠️ Nessun «indietro» sul proprio profilo: `/profile` è una voce della
           navbar, non una pagina in cui si è entrati da qualche parte. */}
       <TestataScheda
-        onIndietro={role !== 'athlete' && !isOwnProfile ? () => navigate('/athletes') : null}
+        onIndietro={role !== 'athlete' && !isOwnProfile ? indietro : null}
         onMenu={() => setMenuAperto(true)} />
 
       {/* 🔴 La pillola «In pausa» è nascosta all'atleta, e non è pudore: questa
@@ -824,6 +835,8 @@ export default function AthleteDetail() {
       {assignModalOpen && createPortal(
         <AssignWorkoutModal 
           athleteId={id}
+          atleta={athlete}
+          storico={workouts}
           onClose={() => setAssignModalOpen(false)}
           onAssigned={() => {
             setAssignModalOpen(false)
@@ -857,6 +870,7 @@ export default function AthleteDetail() {
       {showEditModal && createPortal(
         <EditAthleteModal 
           athlete={athlete}
+          proprioProfilo={isOwnProfile}
           onClose={() => setShowEditModal(false)}
           onSaved={() => {
             setShowEditModal(false)
@@ -1246,7 +1260,7 @@ function PrModal({ athleteId, initialPr, onClose, onSaved, onDelete }) {
   )
 }
 
-function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
+function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role, proprioProfilo = false }) {
   const [form, setForm] = useState({ 
     name: athlete.name || '', 
     surname: athlete.surname || '', 
@@ -1433,10 +1447,17 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
         <div className="p-5 border-t border-[#2a2a2a] flex flex-col gap-4">
           <button onClick={handleSave} disabled={saving} className="w-full bg-brand text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">{saving ? 'Salvataggio...' : 'Salva Modifiche'}</button>
           
+          {/* 🔴 Qui resta SOLO il coach che elimina un atleta. La cancellazione
+              del PROPRIO account è salita in Impostazioni il 09/09/2026: la
+              5.1.1(v) di App Store la vuole «easy to find», e dentro la modale
+              di modifica del proprio profilo non la trovava nessuno. Due
+              porte per lo stesso gesto sarebbero state peggio di una sola
+              nascosta — la seconda smette di essere aggiornata. */}
+          {!proprioProfilo && (
           <div className="flex justify-center">
             {!showDeleteConfirm ? (
               <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 text-red-500 text-sm font-medium hover:underline">
-                <Trash2 size={16} /> Elimina profilo{role !== 'athlete' ? ' atleta' : ''}
+                <Trash2 size={16} /> Elimina profilo atleta
               </button>
             ) : (
               <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-4 text-center w-full">
@@ -1448,6 +1469,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role }) {
               </div>
             )}
           </div>
+          )}
           <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />
         </div>
       </div>
@@ -1600,7 +1622,12 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
 
 
 
-function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
+/**
+ * ⚠️ `atleta` e `storico` arrivano come PROPS e non da una lettura propria: la
+ * scheda li ha già caricati per l'eroe «come sta andando», e una `select` qui
+ * dentro sarebbe la seconda copia degli stessi dati a due secondi di distanza.
+ */
+function AssignWorkoutModal({ athleteId, atleta, storico, onClose, onAssigned }) {
   const [workouts, setWorkouts] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -1661,9 +1688,17 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
   }
 
   const filtered = workouts.filter(w => 
-    w.title.toLowerCase().includes(search.toLowerCase()) || 
+    (w.title || '').toLowerCase().includes(search.toLowerCase()) || 
     (w.sections?.category || '').toLowerCase().includes(search.toLowerCase())
   )
+
+  // ⚠️ Qui le righe sono WORKOUT e l'atleta è uno solo: lo stato si calcola una
+  // volta sola e il carico previsto una volta per workout. È il verso opposto
+  // della scheda del workout, dove l'atleta cambia a ogni riga — ed è la ragione
+  // per cui `statoAtleta` è separato da `avvisoAssegnazione`.
+  const previsione = useMemo(
+    () => (atleta ? previsioneWorkout(atleta, storico || [], filtered, { data: assignDate }) : null),
+    [atleta, storico, filtered, assignDate])
 
   return (
     <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
@@ -1712,6 +1747,7 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                         <div className="flex-1 min-w-0 pr-3 text-left">
                           <p className={`font-semibold text-sm truncate transition ${isSelected ? 'text-brand' : 'text-white group-hover:text-brand'}`}>{w.title}</p>
                           <p className="text-muted text-xs mt-0.5">{w.date && isValid(parseISO(w.date)) ? format(parseISO(w.date), 'dd/MM/yyyy') : 'Data sconosciuta'} • {w.sections?.category || 'Generico'}</p>
+                          <RigaAvviso avviso={previsione?.avvisi.get(w.id)} />
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button aria-label="Duplica il workout" 
@@ -1763,6 +1799,18 @@ function AssignWorkoutModal({ athleteId, onClose, onAssigned }) {
                 className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-brand w-full text-base"
               />
             </div>
+
+            {/* ⚠️ L'avviso NON blocca: «Conferma» resta com'era. Un avviso che
+                impedisce un gesto è un avviso che si impara a disattivare, e
+                questo è costruito su una stima. */}
+            {selectedWorkouts
+              .map(w => ({ w, avviso: previsione?.avvisi.get(w.id) }))
+              .filter(({ avviso }) => avviso)
+              .map(({ w, avviso }) => (
+                <AvvisoEsteso key={w.id} avviso={avviso}
+                  nome={selectedWorkouts.length > 1 ? w.title : null} />
+              ))}
+
             <div className="flex gap-3 mt-2">
               <button onClick={() => setAssignStep(1)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
                 Indietro

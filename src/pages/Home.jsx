@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Heart, WifiOff, RefreshCw } from 'lucide-react'
+import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Heart, WifiOff, RefreshCw, ChartNoAxesColumn } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO, differenceInDays, startOfDay, getISOWeek } from 'date-fns'
@@ -81,7 +81,7 @@ const quandoScaduto = (s) => s.giorni <= 6
 export default function Home() {
   const navigate = useNavigate()
   const [stats, setStats] = useState({ workouts: 0, athletes: 0 })
-  const { role, user } = useAuth()
+  const { role, user, nome } = useAuth()
   const [loading, setLoading] = useState(true)
   const [loadingRecent, setLoadingRecent] = useState(true)
   
@@ -126,7 +126,6 @@ export default function Home() {
   const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
   const [savingAutonomous, setSavingAutonomous] = useState(false)
   const [workoutToRemove, setWorkoutToRemove] = useState(null)
-  const [dbName, setDbName] = useState('')
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
   const [notifications, setNotifications] = useState([])
@@ -298,7 +297,10 @@ export default function Home() {
 
   const meta = user?.user_metadata || {}
   const fallbackName = localStorage.getItem(`fleofit_name_${user?.id}`) || meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
-  const userName = dbName || fallbackName
+  // ⚠️ `nome` arriva dall'AuthContext, che l'ha già letto all'avvio: qui c'era
+  // una TERZA `select` su `athletes` per lo stesso dato (§9-noviesdecies).
+  // Il ripiego resta perché i test montano la pagina senza contesto completo.
+  const userName = nome || fallbackName
 
   const getGreeting = () => {
     const hour = new Date().getHours()
@@ -385,20 +387,208 @@ export default function Home() {
     return getDailyMotivation()
   }, [])
 
+  // Riempie la Home partendo dallo storico dell'atleta: allenamento di oggi,
+  // prossimi, evento, settimana e statistiche settimanali.
+  //
+  // 🔴 Vive FUORI dal fetch perché la chiamano in due momenti diversi: subito,
+  // con quello che c'è in cache, e di nuovo quando la risposta del server
+  // arriva. Finché era dentro il `.then`, l'unico modo di avere i riquadri
+  // pieni era aspettare la rete — e i riquadri vuoti in attesa sono la ragione
+  // per cui l'app non sembrava pronta (§9-noviesdecies).
+  const applicaStoricoAtleta = useCallback((data) => {
+    if (!data) return
+    // ⚠️ Le tre date si ricalcolano qui: prima venivano dallo scope del fetch,
+    // e una Home lasciata aperta oltre la mezzanotte le avrebbe usate vecchie.
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd')
+
+    setStoricoAtleta(data)
+
+    const todayWs = data.filter(w => w.completed_date === todayStr)
+    setTodayWorkouts(todayWs)
+
+    const upcoming = data.filter(w => w.completed_date > todayStr && w.status !== 'completed').slice(0, 3)
+    setUpcomingWorkouts(upcoming)
+
+    const events = data.filter(w => (w.workouts?.sections?.category === 'Event') && w.completed_date >= todayStr).sort((a, b) => a.completed_date.localeCompare(b.completed_date))
+    setNextEventHome(events[0] || null)
+
+    const week = []
+    for(let i=0; i<7; i++) {
+      const d = new Date(weekStart)
+      d.setDate(d.getDate() + i)
+      const dStr = format(d, 'yyyy-MM-dd')
+      
+      const dayWorkouts = data.filter(w => w.completed_date === dStr)
+      
+      week.push({
+        date: d,
+        dayName: format(d, 'EEEEE', { locale: it }).toUpperCase(),
+        fullDayName: format(d, 'EEEE', { locale: it }),
+        isToday: dStr === todayStr,
+        workouts: dayWorkouts.map(w => ({
+          id: w.id,
+          workoutId: w.workouts?.id,
+          title: w.workouts?.title,
+          status: w.status,
+          category: w.workouts?.sections?.category || (w.workouts?.sections?.steps ? 'Running' : 'Hyrox')
+        }))
+      })
+    }
+    setWeeklyStatus(week)
+
+    // Calcolo Statistiche Settimanali
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekStart.getDate() + 6)
+    const weekEndStr = format(weekEnd, 'yyyy-MM-dd')
+
+    const weekData = data.filter(w => w.completed_date >= weekStartStr && w.completed_date <= weekEndStr)
+
+    let distance = 0
+    let time = 0
+    let reps = 0
+    let completed = 0
+    let rpeSum = 0
+    let rpeCount = 0
+
+    const parseTime = (val) => {
+       if (!val || val === '-') return 0
+       const s = String(val).toLowerCase()
+       if (s.includes('sec')) return (parseInt(s) || 0) / 60
+       if (s.includes('min')) {
+          const parts = s.replace('min', '').trim().split(':')
+          if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
+          return parseInt(s) || 0
+       }
+       const parts = s.split(':')
+       if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
+       return parseInt(s) || 0
+    }
+
+    const parseDist = (val) => {
+       if (!val || val === '-') return 0
+       const s = String(val).toLowerCase()
+       if (s.includes('km')) return parseFloat(s) * 1000
+       if (s.includes('m') && !s.includes('min')) return parseInt(s) || 0
+       return 0
+    }
+
+    weekData.forEach(w => {
+      if (w.status === 'completed') {
+        completed++
+        
+        const parsed = parseNotesAndRpe(w.notes)
+        const rpeVal = parseInt(parsed.rpe)
+        if (!isNaN(rpeVal)) {
+            rpeSum += rpeVal
+            rpeCount++
+        }
+
+        const s = w.workouts?.sections || {}
+        const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
+        let workoutTime = 0;
+
+        if (cat === 'Running') {
+          const steps = s.steps || s.main?.steps || []
+          steps.forEach(step => {
+            if (step.type === 'repeat') {
+               const rounds = parseInt(step.rounds) || 1
+               distance += parseDist(step.runDuration) * rounds
+               distance += parseDist(step.recDuration) * rounds
+               workoutTime += parseTime(step.runDuration) * rounds
+               workoutTime += parseTime(step.recDuration) * rounds
+            } else {
+               distance += parseDist(step.duration)
+               let stepTime = parseTime(step.duration)
+               if (stepTime === 0 && step.duration) {
+                 const ds = String(step.duration).toLowerCase()
+                 if (ds.includes('km')) stepTime = parseFloat(ds) * 6
+                 else if (ds.includes('m')) stepTime = (parseInt(ds) || 0) / 1000 * 6
+               }
+               workoutTime += stepTime
+            }
+          })
+        } else {
+          let blocks = s.blocks || []
+          if (blocks.length === 0) {
+            if (s.warmup) blocks.push({type: 'WarmUp', params: { duration: s.warmup.duration }})
+            if (s.cashIn && s.cashIn.length > 0) blocks.push({type: 'Cash In', exercises: s.cashIn})
+            if (s.main) blocks.push({type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type, params: s.main.params || {}, exercises: s.main.exercises || []})
+            if (s.cashOut && s.cashOut.length > 0) blocks.push({type: 'Cash Out', exercises: s.cashOut})
+          }
+
+          blocks.forEach(b => {
+             let blockRounds = parseInt(b.params?.rounds) || 1
+             if (b.type === 'ON/OFF') {
+                 workoutTime += (parseTime(b.params?.on) + parseTime(b.params?.off)) * blockRounds
+             } else if (b.type === 'EMOM') {
+                 workoutTime += parseTime(b.params?.interval) * blockRounds
+             } else if (b.type === 'AMRAP' || b.type === 'WarmUp' || b.type === 'Rest') {
+                 workoutTime += parseTime(b.params?.duration)
+             } else if (b.type === 'For Time') {
+                 workoutTime += 15 * blockRounds
+             } else if (b.type === 'Cash In' || b.type === 'Cash Out') {
+                 workoutTime += 5 * blockRounds
+             }
+
+             (b.exercises || []).forEach(ex => {
+                distance += parseDist(ex.meters) * blockRounds
+                const r = ex.reps || ''
+                if (r && r !== '-' && r.toLowerCase() !== 'max') {
+                   reps += (parseInt(r) || 0) * blockRounds
+                }
+                if (b.type === 'Interval') {
+                    workoutTime += parseTime(ex.exTime) * blockRounds
+                }
+             })
+          })
+        }
+        if (workoutTime === 0) workoutTime = 45;
+        time += workoutTime;
+      }
+    })
+    
+    setWeeklyStats({ 
+       distance: distance >= 1000 ? (distance / 1000).toFixed(2).replace(/\.00$/, '') + ' km' : distance + ' m', 
+       time: Math.round(time), 
+       reps, 
+       completed,
+       avgRpe: rpeCount > 0 ? (rpeSum / rpeCount).toFixed(1) : '-'
+    })
+  }, [])
+
   useEffect(() => {
     if (!role || !user) return
 
     const fetchData = async () => {
-      setLoading(true)
+      // 🔴 La pagina si dipinge PRIMA di chiedere qualcosa alla rete, con lo
+      // storico dell'ultima volta. La cache era già scritta a ogni fetch
+      // riuscito, ma si rileggeva SOLO se la rete falliva: online i riquadri
+      // restavano vuoti ad aspettare, ed è quello che si vedeva all'apertura.
+      // La risposta del server, quando arriva, riscrive tutto.
+      //
+      // ⚠️ La chiave porta l'uid (`chiaveCacheWorkout`), quindi non può mai
+      // mostrare i dati di un altro atleta: cambiando account cambia chiave.
+      // C'è un test che lo prende.
+      // ⚠️ Solo l'atleta: la Home coach non ha una cache propria, e `loading`
+      // lì governa altre celle.
+      const daCache = role === 'athlete' && user?.id
+        ? leggiJson(chiaveCacheWorkout(user.id), null)
+        : null
+      const cacheUtile = Array.isArray(daCache) && daCache.length > 0
+      if (cacheUtile) applicaStoricoAtleta(daCache)
+
+      // ⚠️ Con la cache in pagina NON si torna allo scheletro: rimetterlo
+      // sarebbe un passo indietro visibile a ogni apertura, e i dati che si
+      // stanno guardando sono già quelli giusti a meno di un aggiornamento.
+      setLoading(!cacheUtile)
       setLoadingRecent(true)
 
       let wCountCoach = 0
       let aCountCoach = 0
       let wCountAthlete = 0
 
-      const todayStr = format(new Date(), 'yyyy-MM-dd')
-      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-      const weekStartStr = format(weekStart, 'yyyy-MM-dd')
       // ⚠️ La query dell'atleta partiva dal lunedì di questa settimana, e per la
       // Home vecchia bastava. La serie di giorni, lo sparkline e l'RPE medio di
       // categoria guardano invece INDIETRO: con la vecchia finestra la serie
@@ -408,21 +598,13 @@ export default function Home() {
       const promises = []
 
 
+      // ⚠️ Qui c'erano DUE cose che non ci sono più. Un `update({ deleted_at:
+      // null })` senza condizioni a ogni caricamento — un atleta eliminato dal
+      // coach si ripristinava da solo aprendo l'app — e una `select('name')`
+      // su `athletes`, la terza lettura della stessa riga in un solo avvio: il
+      // nome ora arriva dall'AuthContext (§9-noviesdecies).
       if (user?.id) {
-        promises.push(
-          (async () => {
-            // ⚠️ Qui c'era un update({ deleted_at: null }) senza condizioni, eseguito
-            // a OGNI caricamento della Home. Effetto: un atleta eliminato dal coach
-            // si ripristinava da solo semplicemente aprendo l'app, tornava nella
-            // rubrica e il conto alla rovescia dei 7 giorni ripartiva da zero.
-            // Il ripristino ora è un gesto esplicito del coach, in Atleti →
-            // "Eliminati di recente".
-            const { data } = await supabase.from('athletes').select('name').eq('id', user.id).single()
-            if (data?.name) setDbName(data.name)
-          })()
-        )
         promises.push(fetchNotifications())
-
       }
 
       if (role === 'admin' || role === 'coach') {
@@ -482,161 +664,7 @@ export default function Home() {
               scriviJson(chiaveCacheWorkout(user.id), data)
             }
 
-            if (data) {
-              setStoricoAtleta(data)
-
-              const todayWs = data.filter(w => w.completed_date === todayStr)
-              setTodayWorkouts(todayWs)
-
-              const upcoming = data.filter(w => w.completed_date > todayStr && w.status !== 'completed').slice(0, 3)
-              setUpcomingWorkouts(upcoming)
-
-              const events = data.filter(w => (w.workouts?.sections?.category === 'Event') && w.completed_date >= todayStr).sort((a, b) => a.completed_date.localeCompare(b.completed_date))
-              setNextEventHome(events[0] || null)
-
-              const week = []
-              for(let i=0; i<7; i++) {
-                const d = new Date(weekStart)
-                d.setDate(d.getDate() + i)
-                const dStr = format(d, 'yyyy-MM-dd')
-                
-                const dayWorkouts = data.filter(w => w.completed_date === dStr)
-                
-                week.push({
-                  date: d,
-                  dayName: format(d, 'EEEEE', { locale: it }).toUpperCase(),
-                  fullDayName: format(d, 'EEEE', { locale: it }),
-                  isToday: dStr === todayStr,
-                  workouts: dayWorkouts.map(w => ({
-                    id: w.id,
-                    workoutId: w.workouts?.id,
-                    title: w.workouts?.title,
-                    status: w.status,
-                    category: w.workouts?.sections?.category || (w.workouts?.sections?.steps ? 'Running' : 'Hyrox')
-                  }))
-                })
-              }
-              setWeeklyStatus(week)
-
-              // Calcolo Statistiche Settimanali
-              const weekEnd = new Date(weekStart)
-              weekEnd.setDate(weekStart.getDate() + 6)
-              const weekEndStr = format(weekEnd, 'yyyy-MM-dd')
-
-              const weekData = data.filter(w => w.completed_date >= weekStartStr && w.completed_date <= weekEndStr)
-
-              let distance = 0
-              let time = 0
-              let reps = 0
-              let completed = 0
-              let rpeSum = 0
-              let rpeCount = 0
-
-              const parseTime = (val) => {
-                 if (!val || val === '-') return 0
-                 const s = String(val).toLowerCase()
-                 if (s.includes('sec')) return (parseInt(s) || 0) / 60
-                 if (s.includes('min')) {
-                    const parts = s.replace('min', '').trim().split(':')
-                    if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
-                    return parseInt(s) || 0
-                 }
-                 const parts = s.split(':')
-                 if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
-                 return parseInt(s) || 0
-              }
-
-              const parseDist = (val) => {
-                 if (!val || val === '-') return 0
-                 const s = String(val).toLowerCase()
-                 if (s.includes('km')) return parseFloat(s) * 1000
-                 if (s.includes('m') && !s.includes('min')) return parseInt(s) || 0
-                 return 0
-              }
-
-              weekData.forEach(w => {
-                if (w.status === 'completed') {
-                  completed++
-                  
-                  const parsed = parseNotesAndRpe(w.notes)
-                  const rpeVal = parseInt(parsed.rpe)
-                  if (!isNaN(rpeVal)) {
-                      rpeSum += rpeVal
-                      rpeCount++
-                  }
-
-                  const s = w.workouts?.sections || {}
-                  const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
-                  let workoutTime = 0;
-
-                  if (cat === 'Running') {
-                    const steps = s.steps || s.main?.steps || []
-                    steps.forEach(step => {
-                      if (step.type === 'repeat') {
-                         const rounds = parseInt(step.rounds) || 1
-                         distance += parseDist(step.runDuration) * rounds
-                         distance += parseDist(step.recDuration) * rounds
-                         workoutTime += parseTime(step.runDuration) * rounds
-                         workoutTime += parseTime(step.recDuration) * rounds
-                      } else {
-                         distance += parseDist(step.duration)
-                         let stepTime = parseTime(step.duration)
-                         if (stepTime === 0 && step.duration) {
-                           const ds = String(step.duration).toLowerCase()
-                           if (ds.includes('km')) stepTime = parseFloat(ds) * 6
-                           else if (ds.includes('m')) stepTime = (parseInt(ds) || 0) / 1000 * 6
-                         }
-                         workoutTime += stepTime
-                      }
-                    })
-                  } else {
-                    let blocks = s.blocks || []
-                    if (blocks.length === 0) {
-                      if (s.warmup) blocks.push({type: 'WarmUp', params: { duration: s.warmup.duration }})
-                      if (s.cashIn && s.cashIn.length > 0) blocks.push({type: 'Cash In', exercises: s.cashIn})
-                      if (s.main) blocks.push({type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type, params: s.main.params || {}, exercises: s.main.exercises || []})
-                      if (s.cashOut && s.cashOut.length > 0) blocks.push({type: 'Cash Out', exercises: s.cashOut})
-                    }
-
-                    blocks.forEach(b => {
-                       let blockRounds = parseInt(b.params?.rounds) || 1
-                       if (b.type === 'ON/OFF') {
-                           workoutTime += (parseTime(b.params?.on) + parseTime(b.params?.off)) * blockRounds
-                       } else if (b.type === 'EMOM') {
-                           workoutTime += parseTime(b.params?.interval) * blockRounds
-                       } else if (b.type === 'AMRAP' || b.type === 'WarmUp' || b.type === 'Rest') {
-                           workoutTime += parseTime(b.params?.duration)
-                       } else if (b.type === 'For Time') {
-                           workoutTime += 15 * blockRounds
-                       } else if (b.type === 'Cash In' || b.type === 'Cash Out') {
-                           workoutTime += 5 * blockRounds
-                       }
-
-                       (b.exercises || []).forEach(ex => {
-                          distance += parseDist(ex.meters) * blockRounds
-                          const r = ex.reps || ''
-                          if (r && r !== '-' && r.toLowerCase() !== 'max') {
-                             reps += (parseInt(r) || 0) * blockRounds
-                          }
-                          if (b.type === 'Interval') {
-                              workoutTime += parseTime(ex.exTime) * blockRounds
-                          }
-                       })
-                    })
-                  }
-                  if (workoutTime === 0) workoutTime = 45;
-                  time += workoutTime;
-                }
-              })
-              
-              setWeeklyStats({ 
-                 distance: distance >= 1000 ? (distance / 1000).toFixed(2).replace(/\.00$/, '') + ' km' : distance + ' m', 
-                 time: Math.round(time), 
-                 reps, 
-                 completed,
-                 avgRpe: rpeCount > 0 ? (rpeSum / rpeCount).toFixed(1) : '-'
-              })
-            }
+            if (data) applicaStoricoAtleta(data)
           })
         )
       }
@@ -1156,6 +1184,14 @@ setNotifications(prev => {
 
           {/* L'unica superficie gialla piena della pagina: Regola del Tratto Unico. */}
           <CtaCreaWorkout onClick={() => navigate('/create')} />
+
+          {/* Il report della settimana. Sta SOPRA l'archivio perché è materiale
+              di decisione — chi caricare, chi richiamare — e l'archivio è
+              materiale di lavoro: si apre sapendo già cosa si cerca. */}
+          <RigaDestinazione icona={ChartNoAxesColumn} titolo="Report settimanale"
+            sottotitolo="Aderenza, carico e chi richiede un'azione"
+            label="Apri il report settimanale"
+            onClick={() => navigate('/report')} />
 
           <RigaDestinazione titolo="Archivio workout"
             sottotitolo={`${stats.workouts} allenamenti · riusa e duplica`}

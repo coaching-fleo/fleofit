@@ -67,4 +67,26 @@ for parola in cloud-sync "Modalità Bunker" cleartext; do
   else echo "✅ nessun residuo: $parola"; fi
 done
 
+# 7. Sign in with Apple — il rilievo 4.8 del 02/09/2026 (CLAUDE.md §9-sexvicies).
+#    Va verificato QUI e non nel sorgente: `App.entitlements` è lo stesso file per
+#    Debug e Release, ma la capability va abilitata sull'App ID su Apple Developer,
+#    e se è stata messa solo su `it.federicoleo.fleofit.dev` l'entitlement non
+#    sopravvive alla rifirma di distribuzione. Il bottone resterebbe in pagina e
+#    il login fallirebbe SOLO in produzione — cioè al revisore, e a nessun altro.
+if print -r -- "$ENT" | grep -q "com.apple.developer.applesignin"; then
+  echo "✅ Sign in with Apple: entitlement presente"
+else
+  echo "❌ Sign in with Apple: entitlement ASSENTE = di nuovo il rilievo 4.8"
+fi
+
+# 8. Il ponte JS del plugin sta nel bundle anche quando il nativo NON è compilato
+#    (§9-sexvicies): il conflitto SPM lo lascia passare in silenzio. Qui si guarda
+#    il binario, che è l'unico posto dove la differenza si vede.
+BIN="$APP/$(defaults read "$APP/Info.plist" CFBundleExecutable 2>/dev/null || basename "$APP" .app)"
+if strings "$BIN" 2>/dev/null | grep -q "SignInWithApple"; then
+  echo "✅ Sign in with Apple: codice nativo dentro il binario"
+else
+  echo "❌ Sign in with Apple: il plugin nativo NON è compilato (serve Clean Build Folder)"
+fi
+
 rm -rf "$TMP"

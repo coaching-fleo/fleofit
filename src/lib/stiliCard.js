@@ -64,3 +64,24 @@ export const CARTA_RIGA_BASE = 'rounded-2xl bg-gradient-to-b from-[#1c1c1f] to-[
   'shadow-[0_14px_28px_-18px_rgba(0,0,0,.85),inset_0_1px_0_rgba(255,255,255,.06)]'
 
 export const CARTA_RIGA = `${CARTA_RIGA_BASE} border border-white/[.07]`
+
+/**
+ * I quattro toni con cui il report marca un verdetto o una proposta.
+ *
+ * Solo l'arancione chiede un'azione e solo il verde dichiara un margine: tutto
+ * il resto è quieto. Un report in cui ogni riga è colorata non ha più una riga
+ * che spicca, che è l'unica cosa per cui lo si apre il lunedì.
+ *
+ * ⚠️ Stanno qui e non dentro `ReportUI.jsx` perché li usano DUE file di
+ * componenti — il report squadra e quello del singolo — e un modulo di
+ * componenti che esporta anche una costante perde il Fast Refresh per intero
+ * (`react-refresh/only-export-components`, §9-octies punto 3). Una seconda
+ * copia sarebbe il modo in cui le due pagine cominciano a colorare lo stesso
+ * verdetto in due modi diversi.
+ */
+export const TONO_VERDETTO = {
+  allarme: 'bg-orange-500/[.13] border-orange-500/[.32] text-orange-400',
+  attenzione: 'bg-white/[.07] border-white/[.14] text-gray-200',
+  buono: 'bg-green-500/[.13] border-green-500/[.3] text-green-400',
+  neutro: 'bg-transparent border-white/[.08] text-[#5b6070]',
+}

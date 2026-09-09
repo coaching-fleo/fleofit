@@ -30,7 +30,21 @@ vi.mock('../../lib/blockHints', async (originale) => {
 // interroga niente, ma il client deve comunque esistere.
 vi.mock('../../supabaseClient', () => ({
   supabase: {
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) }) }),
+    // ⚠️ La catena deve reggere anche `select().order().limit()`: dal 02/09
+    // `CreateWorkout` legge le sedute passate per collocare il carico previsto
+    // (CLAUDE.md §9-quatervicies). È *thenable*, così `await` funziona ovunque
+    // la si chiuda — come in `src/test/fintoSupabase.js`.
+    from: () => {
+      const catena = {
+        select: () => catena,
+        eq: () => catena,
+        order: () => catena,
+        limit: () => catena,
+        maybeSingle: () => Promise.resolve({ data: null }),
+        then: (risolvi) => Promise.resolve({ data: [], error: null }).then(risolvi),
+      }
+      return catena
+    },
     auth: { getUser: () => Promise.resolve({ data: { user: { id: 'u1' } } }) },
     functions: { invoke: () => Promise.resolve({ data: null, error: null }) },
   },

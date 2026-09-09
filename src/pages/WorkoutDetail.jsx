@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
-import { ChevronUp, Download, Timer, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, CalendarDays, Mic, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, Heart, WifiOff, ClipboardList, Undo2, Image as ImmagineIcona } from 'lucide-react'
+import { ChevronUp, Download, Timer, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, CalendarDays, Mic, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, Heart, WifiOff, ClipboardList, Undo2, Image as ImmagineIcona, Share2 } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
-import jsPDF from 'jspdf'
-import { toBlob, toPng } from 'html-to-image'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
@@ -18,6 +17,24 @@ import { KeepAwake } from '@capacitor-community/keep-awake'
 import { BluetoothService } from './bluetooth'
 import { Network } from '@capacitor/network'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
+
+// 🔴 jspdf e html-to-image si caricano SOLO quando si esporta, e non è una
+// rifinitura: importati in testa finivano nel chunk della scheda, che pesava
+// 480 KB più le loro dipendenze (html2canvas 200 KB, index.es 151 KB). Erano
+// ~830 KB da scaricare e soprattutto da PARSARE, su un WKWebView, per aprire
+// una pagina che nella stragrande maggioranza dei casi si limita a leggere i
+// blocchi — mentre PDF e story Instagram sono due voci del menu che quasi
+// nessuna apertura tocca. È il grosso dell'attesa muta fra una pagina e
+// l'altra: `BrowserRouter` avvolge la navigazione in `startTransition`, quindi
+// finché il chunk non è pronto resta a schermo la pagina PRECEDENTE, immobile
+// e senza alcun segnale (CLAUDE.md §9-noviesdecies).
+//
+// ⚠️ L'import dinamico va tenuto dentro le funzioni di export: riportarlo in
+// testa non dà nessun errore, rimette solo mezzo megabyte davanti a ogni
+// apertura di scheda. Il modulo resta poi in cache, quindi il secondo export
+// non paga niente.
+const caricaPdf = () => import('jspdf').then(m => m.default)
+const caricaGrafica = () => import('html-to-image')
 import { blockHint } from '../lib/blockHints'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
@@ -33,8 +50,14 @@ import { CARD } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 import { accodaSuStorage } from '../lib/offlineQueue'
 import { rpeDichiarato } from '../lib/rpe'
-import { riepilogoWorkout, durataBlocco, mmss, minutiStimati, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
+import { durataBlocco, mmss, minutiStimati, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
+import { caricoPrevisto, previsioneSquadra, finestraPrevisione, testoAvviso } from '../lib/previsione'
+import { RigaAvviso, AvvisoEsteso, PrevisioneNonDisponibile } from '../components/PrevisioneUI'
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
+import { recapStoria } from '../lib/recapStoria'
+import {
+  GraficaStoria, FoglioStoria, LARGHEZZA_STORIA, ALTEZZA_STORIA, FATTORE_STORIA,
+} from '../components/StoriaUI'
 // Il riepilogo, la barra fissa e la spina dei blocchi sono LO STESSO codice
 // dello step 2 del builder: il coach deve ritrovare in lettura ciò che ha
 // visto in scrittura, e due copie divergerebbero al primo ritocco.
@@ -189,6 +212,7 @@ if (typeof window !== 'undefined') {
 export default function WorkoutDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const indietro = useIndietro('/')
   const [searchParams] = useSearchParams()
   const queryAthleteId = searchParams.get('athlete_id')
   const { role, user } = useAuth()
@@ -246,6 +270,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // caricato deve mostrare i propri esercizi senza un tocco — la scheda si
   // legge mentre ci si allena.
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // La grafica da mettere sopra una storia. `storiaSfondo` parte a false —
+  // cioè sullo sticker TRASPARENTE — perché è quello il gesto richiesto: la
+  // grafica si appoggia sopra la foto dell'atleta, non la sostituisce.
+  const [storiaAperta, setStoriaAperta] = useState(false)
+  const [storiaSfondo, setStoriaSfondo] = useState(false)
+  const [storiaOccupata, setStoriaOccupata] = useState(false)
+  const storiaRef = useRef(null)
   const [blocchiChiusi, setBlocchiChiusi] = useState([])
   const toggleBlocco = useCallback((chiave) => {
     setBlocchiChiusi(prec => prec.includes(chiave) ? prec.filter(k => k !== chiave) : [...prec, chiave])
@@ -333,6 +365,50 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       fetchAthletes()
     }
   }, [assignModalOpen])
+
+  // Lo storico su cui si costruiscono i semafori del foglio di assegnazione.
+  //
+  // ⚠️ UNA lettura sola, e parte all'APERTURA DEL FOGLIO, non al caricamento
+  // della pagina: la scheda è la pagina più aperta dell'app e questi dati
+  // servono a un gesto che quasi sempre non si fa.
+  // ⚠️ Niente join su `workouts.sections` per le righe che non lo richiedono?
+  // Qui serve: il carico storico si misura sulle sezioni. È però limitata alla
+  // finestra del cronico, non a tutto lo storico.
+  // ⚠️ Se fallisce, i semafori NON compaiono e l'assegnazione continua a
+  // funzionare esattamente come prima: un di più non deve poter togliere il
+  // gesto che c'era.
+  const [storicoSquadra, setStoricoSquadra] = useState(null)
+  const [storicoFallito, setStoricoFallito] = useState(false)
+  useEffect(() => {
+    if (!assignModalOpen || role === 'athlete' || storicoSquadra || storicoFallito) return
+    let vivo = true
+    const finestra = finestraPrevisione(new Date())
+    supabase.from('athlete_workouts')
+      .select('id, athlete_id, completed_date, status, notes, workouts (id, title, sections)')
+      .gte('completed_date', finestra.da)
+      .lte('completed_date', finestra.a)
+      .then(({ data, error }) => {
+        if (!vivo) return
+        if (error || !Array.isArray(data)) {
+          console.error('Storico per la previsione del carico non disponibile:', error)
+          setStoricoFallito(true)
+          return
+        }
+        setStoricoSquadra(data)
+      })
+    return () => { vivo = false }
+  }, [assignModalOpen, role, storicoSquadra, storicoFallito])
+
+  // ⚠️ `sezioniWorkout` estratta fuori dal useMemo, e non è stile: con un
+  // `workout?.sections` dentro l'elenco delle dipendenze il compilatore React
+  // non riesce a conservare la memoizzazione e la ricalcola a ogni render —
+  // qui vorrebbe dire rifare i conti di dodici atleti a ogni battuta.
+  const sezioniWorkout = workout ? workout.sections : null
+  const previsione = useMemo(() => {
+    if (!storicoSquadra || !sezioniWorkout) return null
+    return previsioneSquadra(athletes, storicoSquadra,
+      { sections: sezioniWorkout, data: assignDate })
+  }, [storicoSquadra, athletes, sezioniWorkout, assignDate])
 
   const fetchWorkout = async () => {
     const status = await Network.getStatus()
@@ -490,7 +566,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   }
 
   const fetchAthletes = async () => {
-    const { data } = await supabase.from('athletes').select('id, name, surname, photo_url').is('deleted_at', null).order('name')
+    // ⚠️ `notes` serve alla PAUSA: lo stato «in pausa» vive dentro quella
+    // colonna (CLAUDE.md §9-decies), non in una colonna sua. Senza, il foglio
+    // di assegnazione non ha modo di sapere chi ha chiesto di fermarsi — e
+    // non darebbe nessun errore, si limiterebbe a non dirlo mai.
+    const { data } = await supabase.from('athletes').select('id, name, surname, photo_url, notes').is('deleted_at', null).order('name')
     setAthletes((data || []).filter(a => a.id !== COACHING_ID))
   }
 
@@ -559,7 +639,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
         } else {
           if (queryAthleteId && assignmentId === athleteWorkoutId) {
-             navigate(`/workout/${id}`)
+             // `replace`: si smette di guardare quell'atleta, non si entra
+             // in una pagina nuova. Vedi la nota su `onApri` più sotto.
+             navigate(`/workout/${id}`, { replace: true })
           } else {
              fetchWorkout()
           }
@@ -704,6 +786,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   }
 
   const buildPDFDoc = async () => {
+    const jsPDF = await caricaPdf()
     const doc = new jsPDF({ unit: 'mm', format: 'a4' })
     const s = workout.sections
     const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
@@ -990,6 +1073,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
   const exportShare2 = async () => {
     if (!igRef.current) return
+    const { toPng, toBlob } = await caricaGrafica()
     try {
       const fileName = `${workout.title.replace(/ /g, '_')}_IG.png`
       if (Capacitor.isNativePlatform()) {
@@ -1023,8 +1107,91 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     }
   }
 
+  /**
+   * La grafica del recap, salvata in galleria o passata al foglio di
+   * condivisione.
+   *
+   * 🔴 **Non si passa nessun `backgroundColor`**, ed è l'intera ragione per cui
+   * questa esportazione esiste separata da quella della scheda: html-to-image
+   * lascia trasparente ciò che il nodo non dipinge, e su Instagram è la
+   * trasparenza a permettere di appoggiare la grafica SOPRA la propria foto,
+   * dallo sticker «foto». Un colore di sfondo «di sicurezza» qui — anche nero —
+   * la renderebbe un rettangolo, cioè inutile per quello che serve.
+   *
+   * ⚠️ `width` e `height` sono dichiarati invece di lasciarli dedurre dal
+   * rettangolo del nodo: quello dipende dal layout in cui il nodo si trova, e
+   * un giorno che lo si mettesse dentro un contenitore riscalato l'immagine
+   * uscirebbe della misura sbagliata senza dare alcun errore.
+   */
+  const esportaStoria = async (modo) => {
+    if (!storiaRef.current || storiaOccupata) return
+    setStoriaOccupata(true)
+    try {
+      const { toPng, toBlob } = await caricaGrafica()
+      // 🔴 L'altezza si LEGGE dal nodo, non si dà per scontata: lo sticker
+      // trasparente si ritaglia sul contenuto e quindi cambia altezza da un
+      // allenamento all'altro (solo la storia con lo sfondo è 9:16). Scrivere
+      // qui 640 rimetterebbe sotto e sopra la grafica il margine trasparente
+      // che Instagram conta quando la scala — cioè si appoggia lo sticker
+      // grande e il testo resta piccolo, che è il difetto per cui il ritaglio
+      // esiste. `offsetHeight` è una misura di layout: un antenato riscalato
+      // non la tocca.
+      const misurata = Math.round(storiaRef.current.offsetHeight)
+      const opzioni = {
+        pixelRatio: FATTORE_STORIA, cacheBust: true,
+        width: LARGHEZZA_STORIA,
+        // Un nodo che si misura zero non esporta niente: meglio il riquadro
+        // intero di un file vuoto.
+        height: misurata > 0 ? misurata : ALTEZZA_STORIA,
+      }
+      const nomeFile = `${(workout.title || 'allenamento').replace(/[^\w-]+/g, '_')}_storia.png`
+
+      if (Capacitor.isNativePlatform()) {
+        const dataUrl = await toPng(storiaRef.current, opzioni)
+        const file = await Filesystem.writeFile({
+          path: nomeFile, data: dataUrl.split(',')[1], directory: Directory.Cache,
+        })
+        if (modo === 'galleria') {
+          await Media.savePhoto({ path: file.uri })
+          setAlertInfo({
+            title: 'Salvata',
+            message: storiaSfondo
+              ? 'La grafica è nella tua galleria, pronta da pubblicare.'
+              : 'La grafica è nella tua galleria. Su Instagram aggiungila alla storia con lo sticker «foto»: essendo trasparente si appoggia sopra il tuo video.',
+            type: 'success',
+          })
+        } else {
+          await Share.share({ title: workout.title, files: [file.uri] })
+        }
+      } else {
+        const blob = await toBlob(storiaRef.current, opzioni)
+        if (!blob) throw new Error('grafica vuota')
+        const fileWeb = new File([blob], nomeFile, { type: 'image/png' })
+        if (modo === 'condividi' && navigator.canShare && navigator.canShare({ files: [fileWeb] })) {
+          await navigator.share({ files: [fileWeb], title: workout.title })
+        } else {
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.download = nomeFile
+          link.href = url
+          link.click()
+          URL.revokeObjectURL(url)
+        }
+      }
+    } catch (e) {
+      // Chi chiude il foglio di condivisione non ha sbagliato niente: un alert
+      // di errore su un annullamento è il modo in cui si smette di crederci.
+      if (e?.name === 'AbortError' || /cancel/i.test(e?.message || '')) return
+      console.error('Errore generando la grafica della storia', e)
+      setAlertInfo({ title: 'Errore', message: 'Non è stato possibile generare la grafica.', type: 'error' })
+    } finally {
+      setStoriaOccupata(false)
+    }
+  }
+
   const shareWorkoutFiles = async () => {
     if (!igRef.current) return
+    const { toPng, toBlob } = await caricaGrafica()
     try {
       const safeTitle = workout.title.replace(/ /g, '_')
       const isEventWorkout = workout?.sections?.category === 'Event' || workout?.sections?.isEvent
@@ -1102,7 +1269,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // l'aria di un dato, che è la stessa ragione per cui `DurataBlocco` scrive
   // «—» invece di «0:00».
   const haBlocchi = !isRunning && type !== 'Custom' && type !== 'Event' && blocks.length > 0
-  const riepilogo = haBlocchi ? riepilogoWorkout(blocks) : null
+  const riepilogo = haBlocchi ? caricoPrevisto(blocks) : null
 
   const eAtleta = (role === 'athlete' || isOwnProfile) && !!athleteWorkoutId
   const completato = workoutStatus === 'completed'
@@ -1111,6 +1278,18 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // atteso — che è la stima del coach — ma quello che l'atleta ha dichiarato.
   // Sono due misure diverse, e vanno sotto due etichette diverse.
   const mostraRpeAtleta = eAtleta && completato
+  // Il recap da condividere: la forma della sessione e i suoi numeri, con
+  // l'RPE **dichiarato** dall'atleta — non quello atteso, e mai il 5 di
+  // ripiego. Chi guarda la scheda senza un'assegnazione (il coach) non ha un
+  // RPE da mostrare, e il modello ripiega sull'intensità che il coach stesso
+  // ha scritto, sotto un'altra etichetta.
+  // ⚠️ Si calcola solo a foglio aperto. Non è micro-ottimizzazione: scandaglia
+  // i blocchi giro per giro, e la scheda è la pagina più aperta dell'app —
+  // farlo a ogni render per una grafica che quasi nessuna apertura guarda è la
+  // stessa spesa muta dei 480 KB di jspdf in testa al file (§9-noviesdecies).
+  const recap = storiaAperta ? recapStoria(workout, { rpe: rpeAtletaDichiarato, fatto: completato }) : null
+  const apriStoria = () => setStoriaAperta(true)
+
   const timerDisponibile = haTimerGuidato(workout)
   const puoAssegnare = role !== 'athlete'
 
@@ -1142,7 +1321,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     azionePrimaria = timerDisponibile
       ? <CtaVetro onClick={apriTimer} icona={IconaTimer}>{timerOpen ? etichettaTimer : 'Rifallo'}</CtaVetro>
       : <CtaVetro onClick={toggleStatus} icona={Undo2}>Segna come da fare</CtaVetro>
-    azioneSecondaria = <BottoneQuadrato etichetta="Condividi" icona={Send} onClick={shareWorkoutFiles} />
+    // ⚠️ Il quadrato di «Condividi» apre la STORIA, non più l'export PDF +
+    // scheda. È il momento in cui la condivisione ha senso — l'allenamento è
+    // appena finito — e la scheda con il programma è la cosa che serve prima,
+    // non dopo. Quella resta nel menu, per il coach che la manda a un atleta.
+    azioneSecondaria = <BottoneQuadrato etichetta="Condividi come storia" icona={Share2} onClick={apriStoria} />
   } else if (eAtleta) {
     azionePrimaria = timerDisponibile
       ? <CtaPrimaria onClick={apriTimer} icona={IconaTimer}>{etichettaTimer}</CtaPrimaria>
@@ -1168,8 +1351,13 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     isAuto && { etichetta: 'Modifica', icona: Edit, onClick: openEditAutonomous },
     eAtleta && completato && { etichetta: 'Segna come da fare', icona: Undo2, onClick: toggleStatus },
     type !== 'Event' && { etichetta: 'Esporta PDF', icona: Download, onClick: exportPDF },
-    { etichetta: 'Salva grafica IG', icona: ImmagineIcona, onClick: exportShare2 },
-    { etichetta: type !== 'Event' ? 'Condividi (PDF + social)' : 'Condividi grafica', icona: Send, onClick: shareWorkoutFiles },
+    { etichetta: 'Condividi come storia', icona: Share2, onClick: apriStoria },
+    // ⚠️ Le due voci qui sotto esportano la SCHEDA (il programma, blocco per
+    // blocco), non il recap: sono due cose diverse e l'etichetta lo deve dire,
+    // o si finisce per premerle a caso. «Salva grafica IG» diceva solo dove
+    // sarebbe finita, non che cosa contiene.
+    { etichetta: 'Salva la scheda (PNG)', icona: ImmagineIcona, onClick: exportShare2 },
+    { etichetta: type !== 'Event' ? 'Invia la scheda (PDF + PNG)' : 'Invia la scheda', icona: Send, onClick: shareWorkoutFiles },
     (puoAssegnare || isAuto) && { etichetta: 'Elimina', icona: Trash2, onClick: () => setShowDeleteConfirm(true), pericolo: true },
   ]
 
@@ -1234,7 +1422,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       {/* La testata porta due sole icone, e sono due STATI: si accendono e si
           spengono durante l'allenamento. Duplica, Modifica, gli export e
           Elimina — che sono comandi, e si usano una volta — stanno nel menu. */}
-      <TestataScheda onIndietro={() => navigate(-1)} onMenu={() => setMenuOpen(true)}>
+      <TestataScheda onIndietro={indietro} onMenu={() => setMenuOpen(true)}>
         {connectedTvCode ? (
           <IconaStato etichetta="Scollega TV" icona={MonitorUp} accesa colore="#ef4444"
             onClick={handleDisconnectTV} />
@@ -1415,6 +1603,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       {/* ASSEGNAZIONI (SOLO COACH) — un elenco, non N card con N ombre */}
       {role !== 'athlete' && assignments.length > 0 && (
         <div className="flex flex-col gap-[9px]">
+          {/* ⚠️ Aprire un altro atleta è un `replace`, e la ragione si vede
+              solo provandolo: la rotta non cambia — è la stessa scheda con un
+              `athlete_id` diverso — quindi con la push il tasto indietro
+              riporta a una schermata che sembra identica a quella da cui si
+              viene, e si legge come un tocco che non ha funzionato. Cinque
+              atleti guardati erano cinque «indietro» per uscire. */}
           <IntestazioneSezione etichetta="Assegnato a"
             dettaglio={assignments.length === 1 ? '1 atleta' : `${assignments.length} atleti`} />
           <ElencoAssegnazioni>
@@ -1426,7 +1620,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 dettaglio={dettaglioAssegnazione(a)}
                 fatto={a.status === 'completed'}
                 selezionata={queryAthleteId === a.athletes?.id}
-                onApri={() => navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`)}
+                onApri={() => navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`, { replace: true })}
                 azione={role === 'admin' ? (
                   <button aria-label={`Rimuovi l'assegnazione di ${a.athletes?.name || 'atleta'}`}
                     onClick={() => handleRemoveAssignment(a.id)}
@@ -1450,6 +1644,27 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       </BarraAzioni>
 
       {menuOpen && <MenuScheda onChiudi={() => setMenuOpen(false)} voci={vociMenu} />}
+
+      {/* La grafica del recap. Il foglio ne mostra una copia RISCALATA; il nodo
+          che html-to-image rasterizza è quello qui sotto, a misura vera e fuori
+          schermo — `transform: scale` su un antenato cambierebbe il rettangolo
+          che il rasterizzatore misura, e l'immagine uscirebbe più piccola.
+          ⚠️ Vale anche qui la regola della grafica IG: fuori schermo sì,
+          `display:none` o `opacity:0` no, o l'export è un'immagine vuota. */}
+      {storiaAperta && (
+        <>
+          <FoglioStoria
+            recap={recap} sfondo={storiaSfondo} onSfondo={setStoriaSfondo}
+            occupato={storiaOccupata}
+            onChiudi={() => setStoriaAperta(false)}
+            onSalva={() => esportaStoria('galleria')}
+            onCondividi={() => esportaStoria('condividi')} />
+          <div aria-hidden="true" data-grafica-storia
+            style={{ position: 'fixed', top: 0, left: '-10000px', pointerEvents: 'none' }}>
+            <GraficaStoria recap={recap} sfondo={storiaSfondo} nodoRef={storiaRef} />
+          </div>
+        </>
+      )}
 
       {/* La grafica Instagram: sorgente dello screenshot, non contenuto della
           pagina. Stava in fondo alla scheda sotto il titolo «Anteprima Sticker
@@ -1623,6 +1838,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                         {selectedAthletes.length === athletes.length ? 'Deseleziona tutti' : 'Seleziona tutti'}
                       </button>
                     </div>
+                    {storicoFallito && <PrevisioneNonDisponibile />}
                     {athletes.map(a => {
                       const isSelected = selectedAthletes.some(sa => sa.id === a.id);
                       return (
@@ -1633,16 +1849,18 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                             setSelectedAthletes([...selectedAthletes, a]);
                           }
                         }}
+                          aria-label={`${a.name} ${a.surname}${testoAvviso(previsione?.avvisi.get(a.id))}`}
                           className={`flex items-center justify-between bg-[#2a2a2a] border rounded-2xl p-3 hover:border-brand transition text-left ${isSelected ? 'border-brand' : 'border-[#333]'}`}>
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-4 min-w-0">
                             <div className="w-10 h-10 rounded-full bg-[#1e1e1e] border border-[#444] flex items-center justify-center overflow-hidden shrink-0">
                               {a.photo_url
-                                ? <img src={a.photo_url} alt={a.name} className="w-full h-full object-cover" onError={() => setAthletes(athletes.map(ath => ath.id === a.id ? { ...ath, photo_url: null } : ath))} />
+                                ? <img src={a.photo_url} alt="" className="w-full h-full object-cover" onError={() => setAthletes(athletes.map(ath => ath.id === a.id ? { ...ath, photo_url: null } : ath))} />
                                 : <User size={18} className="text-muted" />
                               }
                             </div>
-                            <div>
+                            <div className="min-w-0">
                               <p className="text-white font-semibold">{a.name} {a.surname}</p>
+                              <RigaAvviso avviso={previsione?.avvisi.get(a.id)} />
                             </div>
                           </div>
                           <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${isSelected ? 'bg-brand border-brand' : 'border-[#555] bg-[#111]'}`}>
@@ -1673,6 +1891,19 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                     className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-brand text-base w-full"
                   />
                 </div>
+
+                {/* ⚠️ Qui gli avvisi si aprono nella frase intera: gli atleti
+                    scelti sono pochi e c'è lo spazio per dire il perché. E
+                    l'avviso NON blocca: il bottone «Conferma» resta com'era.
+                    Un avviso che impedisce un gesto è un avviso che si impara a
+                    disattivare — e questo è costruito su una stima. */}
+                {selectedAthletes
+                  .map(a => ({ a, avviso: previsione?.avvisi.get(a.id) }))
+                  .filter(({ avviso }) => avviso)
+                  .map(({ a, avviso }) => (
+                    <AvvisoEsteso key={a.id} avviso={avviso}
+                      nome={selectedAthletes.length > 1 ? a.name : null} />
+                  ))}
                 <div className="flex gap-3 mt-2">
                   <button onClick={() => setAssignStep(1)} className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">
                     Indietro

@@ -2,18 +2,72 @@
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **31 agosto 2026**.
+> Ultimo aggiornamento: **9 settembre 2026**.
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
-> Ultimo commit `098a59e` su `ios-version`, allineato con `origin/ios-version`.
-> `npm test` → **617 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
-> Nove schermate rifatte su design di Claude Design: **Home atleta** il 26/08 (§9-octies),
+> Ultimo commit su `ios-version`: **9 set 2026**, che porta tutto il lavoro dal 01/09 in poi
+> (§9-vicies → §9-septvicies, cancellazione account compresa). ⚠️ **L'hash non si scrive più qui dentro**: era
+> autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
+> sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
+> `git log -1`, che non può mentire.
+> `npm test` → **892 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> 🔴 **Il 02/09 App Store ha respinto la 1.1.0 (3) sulla linea guida 4.8 — Login Services**,
+> e il 03/09 è nato **Sign in with Apple** (§9-sexvicies). Non è il rifiuto di maggio che
+> torna: quello (2.3.1(a)) resta chiuso. La 4.8 **non vieta Google**, che infatti resta
+> dov'era — chiede che accanto ci sia un accesso che permetta di **tenere nascosta la
+> propria email**, cosa che né Google né email+password fanno. ⚠️ Sul **nativo** non
+> servono né Services ID né chiave `.p8`, quindi nemmeno il client secret che scade ogni
+> 6 mesi: è la mezza giornata che quasi tutte le guide fanno perdere.
+> ⭐ **Il 01/09 la scheda ha guadagnato la GRAFICA DA STORIA** (§9-unetvicies): un PNG
+> **trasparente** con l'elenco degli esercizi e tre numeri grandi, da appoggiare sopra
+> la propria storia come fa Strava con il percorso. È la prima cosa dell'app che finisce
+> sotto gli occhi di chi non ce l'ha — e la prima stesura ci aveva messo un grafico,
+> tolto dal committente lo stesso giorno perché era carino e non si leggeva.
+> ⭐ **Il 01/09 è nato il primo schermo riservato al coach: il REPORT SETTIMANALE**
+> (§9-vicies, BACKLOG #27), e lo stesso giorno il **report del SINGOLO ATLETA**
+> (`/report/:id`, §9-vicies-bis), che è quello su cui si scrive l'allenamento
+> successivo: le sedute una per una, i **movimenti con i carichi usati** — che
+> nell'app non esistevano da nessuna parte — e indicazioni su cosa fare, ognuna
+> con accanto il numero da cui esce. Tutto su tabelle esistenti, senza una
+> colonna nuova.
+> ⭐ **Il 02/09 è nato anche l'AMBIENTE DI PROVA** (§9-quinvicies): `npm run demo`
+> fa girare l'app intera su un Supabase finto in memoria. È la prima volta che si
+> può usare FLEOFIT senza toccare il database di produzione.
+> ⭐ **Il 02/09 è nato il MODELLO PREDITTIVO DEL CARICO** (§9-quatervicies,
+> `src/lib/previsione.js`): il builder dice quanto **pesa** la seduta che si sta
+> scrivendo, e il foglio di assegnazione dice — atleta per atleta — cosa succede al
+> suo carico se gliela si dà. 🔴 Ci convivono **due scale**, ed è la prima cosa da
+> leggere: i due stimatori di durata del progetto differiscono dell'**89%** su un
+> «For Time», quindi ogni carico va confrontato solo con un paragone misurato allo
+> stesso modo.
+> ⭐ **Il 02/09 il tasto «indietro» è diventato uno solo** (§9-tervicies, `src/useIndietro.js`):
+> tre pagine avevano una **destinazione fissa** che ignorava da dove si veniva — si apriva un
+> atleta dai feedback della Home coach e si finiva nella rubrica — e i `navigate(-1)` non
+> facevano niente quando la pagina era la prima della sessione (notifica push, deep link).
+> Insieme: la **tab bar non impila più** (`replace`) e la scheda che navigava a sé stessa
+> cambiando `athlete_id` non lascia più una voce di history a ogni atleta guardato.
+> ⭐ **Il 01/09 anche le IMPOSTAZIONI sono state rifatte** (§9-duoetvicies): l'eroe è
+> l'account con lo stato del dispositivo, gli acceso/spento sono interruttori con
+> `aria-checked`, i codici invito scendono a una riga con il numero, e il banner giallo
+> «Operazione in corso» lascia il posto allo stato dentro la riga che l'ha causato.
+> ⭐ **Il 04/09 è stato rifatto l'ACCESSO** (§9-septvicies, artboard `Login.dc.html` 1b): il
+> bivio «Accedi / Nuovo Utente» è sparito — chiedeva all'utente una cosa che l'utente non sa —
+> e al suo posto c'è una colonna sola di modi per entrare. Il codice invito non è più una porta
+> davanti alla casa: è la domanda del passo 2, e la si fa solo a chi serve. 🔴 Il vicolo cieco
+> vero stava in `App.jsx`: chi entrava con Apple o Google senza profilo — il caso NORMALE di un
+> nuovo invitato — riceveva «Accesso Negato» e il codice non gli veniva mai chiesto.
+> > Dieci schermate rifatte su design di Claude Design: **Home atleta** il 26/08 (§9-octies),
 > **Home coach** il 27/08 (§9-nonies) con la **pausa atleta** (§9-decies), **Crea Workout**
 > il 27/08 (§9-undecies), la **scheda del workout** (§9-duodecies) e la **scheda atleta**
 > (§9-terdecies) il 28/08, l'**archivio** (§9-sedecies), la **rubrica atleti**
-> (§9-septdecies) e il **calendario** (§9-octodecies) il 31/08. Il 28/08 anche il
+> (§9-septdecies) e il **calendario** (§9-octodecies) il 31/08, le **impostazioni**
+> (§9-duoetvicies) il 01/09. Il 28/08 anche il
 > foglio **«Genera con IA»** (§9-quindecies),
 > che è dove l'entrata mancante di BACKLOG #34 si è vista per la seconda volta.
+> Il 31/08 anche l'**attesa fra una pagina e l'altra** (§9-noviesdecies): la scheda
+> workout scende da 480 a **68 KB** (**82 KB** dal 01/09 con la grafica da storia), e lì
+> sta la spiegazione del perché fra due pagine NON lampeggia niente — la pagina vecchia
+> resta immobile — che leggendo il codice si sbaglia in due modi diversi.
 > Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
 > maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
 > `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
@@ -82,7 +136,7 @@ Il progetto vive su **due branch con due prodotti diversi**, entrambi attivi:
 | Branch | Cos'è | Dove finisce | Ultimo commit |
 |---|---|---|---|
 | **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi | **collegato a Vercel** → `https://fleofit.vercel.app`. LIVE, non rompere | `c2ed65d` — 25 ago 2026 |
-| **`ios-version`** | Versione nativa iOS/Capacitor, quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. L'app arriva sull'App Store da Xcode, non da un deploy | `098a59e` — 31 ago 2026 |
+| **`ios-version`** | Versione nativa iOS/Capacitor, quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. L'app arriva sull'App Store da Xcode, non da un deploy | **9 set 2026** (`git log -1`) |
 
 ### ⚠️ `ios-version` NON è un branch di rilascio (confermato dal committente il 24/08/2026)
 Non esiste nessuna pipeline collegata a `ios-version`. Pushare lì **non pubblica niente**: serve
@@ -102,9 +156,10 @@ Conseguenze pratiche, tutte controintuitive:
 
 ### Rapporto tra i due: SONO DIVERGENTI, ED ENTRAMBI SI MUOVONO
 Verificato il 25/08/2026 **dopo un `git fetch`**:
-`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 81`**
-(rimisurata il 31/08/2026 dopo un `git fetch`: `main` è fermo al 25/08, `ios-version`
-continua a muoversi — il divario cresce di uno a ogni commit di qui).
+`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 82`**
+(rimisurata il 09/09/2026 dopo un `git fetch`: `main` è fermo al 25/08, `ios-version`
+continua a muoversi — il divario cresce di uno a ogni commit di qui. Il commit del 09/09
+è locale finché non lo si pusha, quindi lì diventerà `49 83`).
 Il divario **cresce a ogni sessione di lavoro su `ios-version`**: più si aspetta, più il merge costa.
 **Un merge non è un fast-forward**: è un merge vero.
 
@@ -207,6 +262,7 @@ Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **re
 `@capacitor/app`, `browser`, `filesystem`, `haptics`, `keyboard`, `network`,
 `push-notifications`, `screen-orientation`, `share`, `status-bar`,
 `@capacitor-community/bluetooth-le` (fascia cardio), `keep-awake` (TV), `media` (salva in galleria),
+`apple-sign-in` (Sign in with Apple, §9-sexvicies),
 `fcm`, `@capawesome/capacitor-badge` (badge icona), `@capgo/capacitor-health` (Apple Health),
 `@independo/capacitor-voice-recorder` + `capacitor-voice-recorder` (⚠️ **due librerie audio diverse**,
 vedi §9).
@@ -217,6 +273,7 @@ npm run dev      # vite --host (porta 5173, host 0.0.0.0)
 npm run build    # tsc -b && vite build
 npm run lint     # eslint .
 npm test         # vitest run
+npm run demo     # AMBIENTE DI PROVA: l'app su dati finti in memoria (§9-quinvicies)
 npm run ios      # build + cap sync — USARE QUESTO prima di compilare da Xcode
 npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 ```
@@ -228,6 +285,11 @@ npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 > Successo il 26/08/2026: la copia in Xcode era ferma al giorno prima, e una funzione
 > appena rimossa continuava a comparire nell'app. Non è un passo solo pre-archive:
 > serve **a ogni** compilazione da Xcode. Per questo esiste `npm run ios`.
+>
+> ⚠️ Il build stampa anche il peso dei chunk: `WorkoutDetail` deve restare intorno
+> agli **84 KB** (erano 68 fino al 01/09, poi 82 con `StoriaUI` + `recapStoria`
+> §9-unetvicies, e 84 dal 02/09 con `previsione` + `PrevisioneUI` §9-quatervicies). Se risale sopra i 400, qualcuno ha rimesso `jspdf` o `html-to-image`
+> fra gli import in testa (§9-noviesdecies).
 >
 > Come si verifica se la copia è vecchia:
 > ```bash
@@ -260,29 +322,63 @@ vitest.config.js               # la testa (jsdom) — ⚠️ MAI creare un vite.
                                #   .js prima di .ts e maschererebbe quello vero, in silenzio
 src/
 ├─ main.jsx                    # entry, importa index.css
+├─ supabaseDemo.js            # ⚠️ Supabase finto in memoria — `npm run demo` (§9-quinvicies).
+│                              #   NON entra nel bundle: il flag è sostituito a build time
+├─ demoSemi.js                # i dati di prova: date RELATIVE, un atleta per ogni ramo
+├─ DemoBadge.jsx              # il nastro «ambiente di prova», solo con VITE_DEMO=1
 ├─ App.jsx                     # routing, AuthContext, Onboarding, ProtectedRoute, DeeplinkHandler
 │                              #   ⚠️ qui vive ADMIN_EMAILS (§9 punto 7)
+│                              #   ⚠️ ProtectedRoute è UNA route di layout, non un involucro
+│                              #   per rotta: non riavvolgere le pagine (§9-noviesdecies)
+├─ __tests__/                  # 2 test su App.jsx montata: navigazione e tab bar (§9-noviesdecies)
 ├─ index.css                   # Tailwind @theme + animazioni globali (page-transition, modal-transition)
 ├─ supabaseClient.js           # createClient con URL + anon key hardcodati
 ├─ useTouchDrag.js             # hook drag&drop touch nativo (usato da CreateWorkout)
 ├─ useTastiera.js              # la tastiera di sistema è aperta? (barre ancorate in basso)
 ├─ useBottomSheet.js           # ⚠️ l'UNICO bottom sheet fatto bene: entrata, maniglia, scroll bloccato (§9-duodecies)
+├─ useIndietro.js              # ⚠️ il tasto «indietro», uno per tutta l'app: NON è `navigate(-1)`
+│                              #   e NON è una destinazione fissa — sono i due modi sbagliati (§9-tervicies)
 ├─ lib/                        # logica pura, l'unica parte con test
 │  ├─ alert.js                 # mostraAlert/mostraErrore: alert applicativo senza passare props
 │  ├─ andamento.js             # aderenza, carico, volume e sforzo della scheda atleta — TUTTI
 │  │                           #   sulla stessa finestra di 30 giorni (§9-terdecies)
+│  ├─ appleLogin.js            # ⚠️ Sign in with Apple: il nonce va HASHATO per il plugin e
+│  │                           #   in chiaro per Supabase, e il nome di Apple arriva UNA
+│  │                           #   volta sola (§9-sexvicies)
 │  ├─ aptica.js                # battito(): il colpetto dei picker, era in due copie
 │  ├─ badge.js                 # ⚠️ l'UNICO punto che scrive il badge iOS (§8)
 │  ├─ blockColors.js           # TYPE_COLORS, unificata dalle 5 copie sparse
 │  ├─ blockHints.js            # BLOCK_HINT: didascalie in chiaro dei tipi di blocco (§9-ter)
 │  ├─ categorie.js             # CORSIA/corsia/categoriaDi: la Regola della Corsia in un punto solo
+│  ├─ codiceInvito.js          # ⚠️ il codice invito: normalizza anche il LINK del coach, e
+│  │                           #   dice perché «non esiste» e «già usato» sono lo stesso
+│  │                           #   messaggio — la RLS non li distingue (§9-septvicies)
 │  ├─ notaVocale.js            # isVoiceNoteValid: il soft delete `#deleted=` si filtra sempre
 │  ├─ pausa.js                 # ⚠️ «atleta in pausa» dentro athletes.notes — NON è una colonna (§9-decies)
 │  ├─ rigaAtleta.js            # ⚠️ l'aderenza settimanale della rubrica — la settimana comincia di
 │  │                           #   LUNEDÌ, e chi non ha niente in programma NON è a zero (§9-septdecies)
 │  ├─ rigaArchivio.js          # ⚠️ meta, gruppi per mese e chip dell'archivio — l'ordine è per DATA, non
 │  │                           #   per creazione, o lo stesso mese ricompare nello scroll (§9-sedecies)
-│  ├─ rigaBlocco.js            # le didascalie del blocco nella scheda: parametri e specifiche (§9-duodecies)
+│  ├─ rigaBlocco.js            # le didascalie del blocco: parametri e specifiche (§9-duodecies).
+│  │                           #   ⚠️ `parametriBlocco` è dove vivono i RIPIEGHI dei giri e degli
+│  │                           #   intervalli, gli stessi di `durataBlocco` (§9-unetvicies)
+│  ├─ rigaImpostazioni.js     # ⚠️ i numeri delle righe di Impostazioni: `null` finché i codici
+│  │                           #   non sono arrivati, e un conteggio mancante SPARISCE invece di
+│  │                           #   diventare 0 (§9-duoetvicies)
+│  ├─ previsione.js           # ⚠️ il modello predittivo del carico (§9-quatervicies).
+│  │                           #   🔴 DUE SCALE: `caricoPrevisto` parla la lingua del
+│  │                           #   builder, `caricoAssegnazione` quella dello STORICO —
+│  │                           #   e non sono intercambiabili
+│  ├─ reportAtleta.js          # ⚠️ il report del singolo: diario, movimenti con i carichi
+│  │                           #   (giri del blocco compresi), cinque settimane e le
+│  │                           #   PROPOSTE per la successiva (§9-vicies-bis)
+│  ├─ reportSettimanale.js     # ⚠️ i numeri del report coach: aderenza sulla parte TRASCORSA
+│  │                           #   della settimana, carico che esclude chi non ha segnato l'RPE,
+│  │                           #   rapporto acuto/cronico e verdetti (§9-vicies)
+│  ├─ recapStoria.js           # ⚠️ l'elenco e i numeri della grafica da storia — la durata
+│  │                           #   è una STIMA e lo deve dire, l'RPE è quello DICHIARATO o
+│  │                           #   la cella non esiste, e su un libero si legge la nota del
+│  │                           #   COACH mai quella dell'atleta (§9-unetvicies)
 │  ├─ rigaCalendario.js       # ⚠️ griglia, segno del giorno e i tre numeri del mese — il volume
 │  │                           #   dice «≈» quando ha dovuto lasciare fuori qualcosa (§9-octodecies)
 │  ├─ stiliCard.js             # CARD/LABEL/RIGA/VETRO/CARTA_RIGA(_BASE) — costanti, NON componenti
@@ -314,23 +410,39 @@ src/
 │  │                           #   servono ANCHE la scheda: stesso codice in scrittura e in lettura
 │  ├─ AudioVisualizer.jsx      # ⚠️ l'UNICA forma d'onda: note vocali E dettatura IA (§9-quindecies)
 │  ├─ WorkoutDetailUI.jsx      # i pezzi visivi della scheda workout (§9-duodecies) — sola presentazione
+│  ├─ StoriaUI.jsx             # ⚠️ la grafica da mettere SOPRA una storia + il foglio da cui
+│  │                           #   si esporta. Sfondo `transparent` di proposito (§9-unetvicies)
 │  ├─ SchedaAtletaUI.jsx       # i pezzi visivi della scheda atleta (§9-terdecies) — sola presentazione
 │  ├─ ArchivioUI.jsx           # i pezzi visivi dell'archivio (§9-sedecies) — sola presentazione.
 │  │                           #   ⚠️ CampoRicerca e IntestazioneSezione servono ANCHE la rubrica atleti
 │  ├─ AtletiUI.jsx             # i pezzi visivi della rubrica atleti (§9-septdecies) — sola presentazione
 │  ├─ CalendarioUI.jsx         # i pezzi visivi del calendario (§9-octodecies) — sola presentazione
+│  ├─ ImpostazioniUI.jsx       # i pezzi visivi delle impostazioni (§9-duoetvicies) — sola
+│  │                           #   presentazione. ⚠️ `FoglioCodici` sta qui, non in una rotta nuova
+│  ├─ LoginUI.jsx              # i pezzi visivi dell'accesso (§9-septvicies) — sola presentazione.
+│  │                           #   ⚠️ Le otto caselle sono UN campo solo disegnato in otto
+│  ├─ PrevisioneUI.jsx         # il semaforo del foglio di assegnazione (§9-quatervicies) —
+│  │                           #   ⚠️ NON ha il verde: chi non ha niente da dire non ha riga
+│  ├─ ReportAtletaUI.jsx       # i pezzi visivi del report del singolo (§9-vicies-bis)
+│  ├─ ReportUI.jsx             # i pezzi visivi del report settimanale (§9-vicies) — sola presentazione.
+│  │                           #   ⚠️ UNA sola cornice colorata in pagina: la fascia «Da fare adesso»
 │  ├─ Navbar.jsx               # bottom nav in vetro, voce attiva in pillola, voci variabili per ruolo
 │  ├─ CustomModals.jsx         # CustomAlert + CustomConfirm + AlertHost
 │  └─ CustomDatePicker.jsx     # date picker custom dark
 └─ pages/
    ├─ Home.jsx                 # dashboard atleta + coach + centro notifiche + Live Coach Cam
-   ├─ Login.jsx                # welcome / login / signup / codice invito / recupero password
+   ├─ Login.jsx                # benvenuto → email (passo 1) → codice invito (passo 2) → recupero.
+   │                           #   ⚠️ Il vicolo cieco che chiudeva era in App.jsx, non qui (§9-septvicies)
    ├─ Calendar.jsx             # calendario mensile, creazione "Evento/Gara"
    ├─ CreateWorkout.jsx        # workout builder (Hyrox / Running / Custom) + generazione IA
    ├─ WorkoutDetail.jsx        # scheda workout, timer guidato, PDF, story IG, note vocali, TV
    ├─ Athletes.jsx             # rubrica atleti + cestino "Eliminati di recente" (admin)
    ├─ AthleteDetail.jsx        # scheda atleta: workout, PR, statistiche (è anche /profile)
    ├─ WorkoutsArchive.jsx      # archivio storico workout
+   ├─ AthleteReport.jsx        # /report/:id — il report del singolo atleta (§9-vicies-bis).
+   │                           #   🔒 Solo coach, come /report
+   ├─ WeeklyReport.jsx         # /report — il report settimanale del coach (§9-vicies).
+   │                           #   🔒 L'UNICA pagina senza una versione atleta: rimanda alla Home
    ├─ Settings.jsx             # notifiche, backup/restore JSON, codici invito, BLE, password
    ├─ TVDashboard.jsx          # /tv — dashboard fullscreen per TV/Chromecast, codice a 4 cifre
    ├─ bluetooth.js             # BluetoothService — singleton BLE fascia cardio
@@ -949,13 +1061,22 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_name_<uid>`, `fleofit_invite_code`, `fleofit_motivation`, `fleofit_workout_draft`,
   `fleofit_offline_queue`, `fleofit_cache_workouts_<uid>`, `fleofit_cache_w_<id>`,
   `fleofit_cache_aw_<id>_<athleteId>`, `fleofit_cache_all_aw_<id>`, `fleofit_tv_code`,
-  `adminRoleOverride`.
+  `fleofit_ultimo_export`, `fleofit_invito_atteso`, `adminRoleOverride`.
+  ⚠️ `fleofit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
+  dice «l'hai esportato da qui», e su un telefono nuovo semplicemente non c'è (§9-duoetvicies).
+  ⚠️ `fleofit_invito_atteso` è un passaggio di consegne fra due caricamenti della pagina —
+  `ProtectedRoute` lo scrive prima del `signOut()`, il passo 2 del login lo legge e lo
+  **cancella subito** (§9-septvicies). Non è una preferenza: lasciarlo lì vorrebbe dire
+  mostrare l'indirizzo di qualcun altro in testa alla schermata dell'invito.
 - **Mai `alert()` / `confirm()` nativi** nella UI: usare `CustomAlert` / `CustomConfirm` via
   `setAlertInfo({ title, message, type: 'error'|'success' })` / `setConfirmInfo({ title, message, onConfirm })`.
   (Restano alcune `alert()` legacy in Home e CreateWorkout — quando le tocchi, convertile.)
 - **Ogni modale** va renderizzata con `createPortal(…, document.body)`.
+- **Parametri di `/login`**: `?invite=<codice>` (il link del coach, salta le caselle),
+  `?serve=invito` (ci manda `ProtectedRoute` a chi è autenticato senza profilo) e
+  `?error=unauthorized` (la vecchia uscita, che nessuno produce più — §9-septvicies).
 - **Rotte**: `/`, `/login`, `/tv` (pubblica), `/calendar`, `/create`, `/athletes`, `/athletes/:id`,
-  `/profile`, `/workout/:id`, `/archive`, `/settings`. Deep link workout:
+  `/profile`, `/workout/:id`, `/archive`, `/report` e `/report/:id` (**solo coach**, §9-vicies e §9-vicies-bis), `/settings`. Deep link workout:
   `/workout/<workoutId>?athlete_id=<uid>` — è il formato usato anche in `notifications.route`.
 - **Aggiornamenti ottimistici**: si aggiorna lo state prima della chiamata Supabase e si fa rollback
   in caso di errore (pattern in `toggleTodayWorkout`, `toggleStatus`).
@@ -1029,11 +1150,11 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. ~~Nessun test automatico~~ → **617 test al 31/08/2026** (`npm test`, vitest), tutti
+11. ~~Nessun test automatico~~ → **892 test al 09/09/2026** (`npm test`, vitest), tutti
     verificati per mutazione: se si rompe di proposito il codice che coprono, falliscono.
     Non sono decorativi, ed è l'unico criterio che conta — vedi §9-sexies.
 
-    **367 sulla logica pura di `src/lib/`**
+    **528 sulla logica pura di `src/lib/`**
 
     | file | test | cosa protegge |
     |---|---|---|
@@ -1050,10 +1171,17 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     | `rigaBlocco` | 15 | le didascalie del blocco nella scheda: i ripieghi identici a quelli del builder, il rest di Cash In che su un round solo non si nomina, e le specifiche che saltano i «-» invece di stamparli |
     | `rigaArchivio` | 30 | l'archivio: l'ordine per DATA con `created_at` come spareggio, il mese che non ricompare due volte, la corsa mista che NON dichiara un totale, e i chip che non nascono su una corsia vuota |
     | `rigaAtleta` | 33 | la rubrica: la settimana che comincia di LUNEDÌ anche quando la si chiede di domenica, chi non ha niente in programma che scrive `—` invece di `0/0`, le tacche che oltre la soglia diventano una barra, la pausa che dice da quando e mai un rientro che nei dati non c'è, e la ricerca che trova «rossi marco» |
+    | `recapStoria` | 20 | la grafica da condividere: l'elenco che si ferma a `MASSIMO_RIGHE` dicendo quanti esercizi restano fuori, l'intestazione che non chiude mai l'elenco da orfana, il «+N» che conta gli **esercizi** e non le righe, le note del **coach** e mai quelle dell'atleta, e l'RPE che senza dichiarazione non diventa 5. ⚠️ Il test sull'orfana asserisce `MASSIMO_RIGHE % 2 === 0`: con blocchi tutti uguali il taglio cade sempre su un esercizio e la potatura non viene esercitata — verificato, la mutazione non cadeva |
     | `rigaCalendario` | 35 | il mese: la settimana che comincia di LUNEDÌ anche quando il mese apre di domenica, il velo verde che pretende `every` e non `some`, la corsa a DISTANZA che torna `null` invece di 0 minuti — o il volume la conterebbe come un'ora di niente — e il `≈` che compare solo quando la somma ha lasciato fuori qualcosa |
+| `reportAtleta` | 40 | il report del singolo: i giri del blocco moltiplicati sui movimenti (dieci burpees in un For Time da cinque round sono cinquanta, e contarli dieci fa sembrare leggera la seduta più dura), «Rest» che non è un movimento ed è l'unico a tenere la durata dentro `meters`, «saltato» contro «da fare» — che nei dati sono la stessa riga — il tetto all'aumento di volume (senza, a chi ha scaricato si propone +245%), e «fermo» che su una settimana passata è la fotografia di allora. ⚠️ Sette mutazioni provate, tutte prese |
+| `reportSettimanale` | 40 | i numeri del report coach: la settimana che comincia di LUNEDÌ anche la domenica sera, l'aderenza misurata sulla parte TRASCORSA (senza, il lunedì mattina è tutta la squadra in allarme), il carico che NON conta il 5 di ripiego, il rapporto acuto/cronico che torna `null` sotto quattro sessioni misurate invece di un 1,0 che si legge come «tutto a posto», e «Da iniziare» che non è «Senza programma». ⚠️ Cinque mutazioni provate, tutte prese |
+| `previsione` | 39 | il modello predittivo: il carico che è `null` e non 0 senza intensità dichiarata, il rapporto acuto/cronico che NON si calcola sotto lo storico minimo — nemmeno proiettando un carico enorme — il bias saturato a `BIAS_MASSIMO`, e l'ordine degli avvisi, dove la **pausa precede il carico**. ⚠️ Tre test valgono più degli altri e sono nati sbagliati: quello sulle corsie chiedeva un intruso **con blocchi** (una corsa non ne ha, quindi la mutazione era invisibile), quello sul giorno adiacente un allenamento **morbido** accanto a uno duro, e quello sul cancello dello storico quattro sedute in **una sola** settimana — l'unico caso in cui `rapportoCarico` da solo non basta |
+| `codiceInvito` | 8 | il codice invito: che `normalizzaCodice` riconosca il **LINK** del coach e non ne legga l'indirizzo — senza, chi incolla `https://…/?invite=7KQ2M4XB` ottiene `HTTPSFLE`, otto caratteri come quelli giusti e un errore che non spiega niente — e che a codice pieno nessuna casella resti «attiva», o la nona (che non esiste) si prenderebbe il cursore mentre la verifica sta già partendo |
+| `rigaImpostazioni` | 12 | le tre righe di Impostazioni che sono diventate numeri: i codici che tornano `null` finché non sono arrivati invece di «0 attivi», il conteggio mancante che SPARISCE invece di diventare zero — «0 atleti» accanto a «Esporta database» si legge come «non c'è niente da salvare» — e la pillola che in anteprima non dice «Atleta», che sarebbe vero e fuorviante |
+| `appleLogin` | 8 | Sign in with Apple: che il nonce dato al plugin sia lo **SHA-256** di quello dato a Supabase e non lo stesso valore — uno scambio lì non rompe nient'altro e in produzione dà un 400 che sembra un problema di configurazione su Apple — che senza `crypto.subtle` si torni `null` invece di lanciare (o su quella WebView non entra più nessuno), che il nome vuoto degli accessi successivi NON si scriva sopra quello salvato la prima volta, e che l'annullamento del foglio di sistema (1001) non passi per un guasto mentre 1004 sì |
 | `blockColors` · `rpe` · `workoutTitle` | 6+6+6 | codifica colore, round-trip dell'RPE, titolo generato dalla data |
 
-    **250 su componenti, pagine e hook**
+    **364 su componenti, pagine e hook**
 
     | file | test | cosa protegge |
     |---|---|---|
@@ -1068,13 +1196,24 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 | `ArchivioWorkout` | 21 | l'archivio ridisegnato su `WorkoutsArchive` montata: i gruppi per mese che restano nell'ordine giusto anche se la query torna per creazione, i chip derivati dai dati (mai «Libero», che la query del coach non fa arrivare), la ricerca che trova un ESERCIZIO e non solo il titolo, il titolo `null` che non porta via la pagina, e il contatore degli assegnati che all'atleta non si mostra — perché la sua query non lo carica nemmeno |
 | `AtletiLista` | 21 | la rubrica ridisegnata su `Athletes` montata: la frazione che viene dalla settimana e non dai workout in pagina, l'atleta in pausa che RESTA nella lista (è l'unico posto in cui il coach si accorge di averne dimenticato uno), il marcatore `[PAUSA]` che non si vede mai come testo, il cestino che non è più un accordion, e una sola `select` su `athlete_workouts` per venti atleti. ⚠️ Il test che conta di più è quello sull'allarme della riga, e ci sono voluti due tentativi: «zero questa settimana» e «fermo da cinque giorni» quasi sempre coincidono, e un atleta qualsiasi passa con entrambe le logiche — serve chi ha chiuso **sabato**, cioè quattro giorni fa ma nella settimana scorsa |
 | `CalendarioMese` | 21 | il calendario ridisegnato su `Calendar` montata: la coppia della fascia che misura lo STESSO insieme (le ore dei completati, non di tutto il programmato), il «Completati» che al coach non si mostra — la sua query non ha nessuno stato da leggere — l'RPE che c'è solo se dichiarato davvero, la cella che nell'`aria-label` dice il numero VERO oltre il tetto dei segmenti, e «Oggi» che compare solo fuori dal mese corrente. ⚠️ La fascia e la legenda sono due `role="group"` nominati apposta: dicono le stesse parole delle righe («Gara», «Running», «Fatto») e i loro numeri coincidono con i giorni della griglia, quindi un `getByText('2')` non scoped prende il 2 agosto e il test verifica un'altra cosa |
+| `useIndietro` | 3 | il tasto indietro: che senza una pagina dietro vada al ripiego invece di non fare niente (è il caso della notifica push, l'unico in cui quel tasto è indispensabile), che **con** una pagina dietro torni a QUELLA e non al ripiego, e che il ripiego non lasci nella pila la pagina da cui si è usciti — o un secondo «indietro» ci riporta dentro. ⚠️ Sono tre e non uno perché le due forme sbagliate (destinazione fissa, `navigate(-1)` nudo) falliscono ognuna nel caso che l'altra copre |
+| `LoginInvito` | 14 | l'accesso rifatto su `Login` montata: il bivio «Accedi / Nuovo Utente» che NON c'è più, la verifica che parte da sola all'ottavo carattere (senza bottone da cercare), il link del coach che salta le caselle, il codice rifiutato che non apre il profilo e non finisce in localStorage, e — quello che conta di più — la **rete caduta che non accusa il codice**: sono due rimedi opposti, ed è la ragione per cui la query usa `maybeSingle()`. ⚠️ Sette mutazioni provate, sette prese; quella sulla verifica automatica ne fa cadere sei |
+| `LoginApple` | 8 | Sign in with Apple su `Login` montata: l'hash al plugin e il chiaro a Supabase (**il test di tutta l'integrazione**), il token che arriva come identità `apple`, il nome della prima autorizzazione salvato subito, l'annullamento che non mostra un allarme rosso a chi ha appena scelto di non entrare, il bottone **sopra** quello Google — la 4.8 chiede che non sia «meno in vista» — e il bottone che sul web non esiste. ⚠️ Il ramo nativo lo tocca solo questo file e `useTastiera`: `src/test/setup.js` finge sempre «web», quindi va acceso a mano con `window.Capacitor` |
 | `useTastiera` | 3 | il ramo **nativo**, che il resto della suite non tocca: la barra che sparisce quando la tastiera sale, e l'invio che toglie il fuoco |
     | `useBottomSheet` | 12 | il foglio del menu scheda: che l'entrata sia un'animazione **che esiste**, che il keyframe lasci il comando al dito, la maniglia trascinata oltre soglia (e sotto soglia, che NON deve chiudere), lo scorrimento della pagina bloccato con `position: fixed` e **ripristinato dov'era** |
     | `AthleteDetailPausa` | 7 | il bottone di pausa: conferma solo per spegnere l'allarme, marcatore mai visibile come testo, pillola invisibile all'atleta, e la modale di modifica che non cancella la pausa — **da nessuno dei due ruoli** |
     | `VoiceRecorder` · `VoiceRecorderNativo` | 3+4 | che la registrazione non sparisca in silenzio quando il plugin nativo fallisce (§9-quater punto 2) |
     | `WorkoutDetailTimer` | 3 | che il bottone del timer non compaia sugli allenamenti di corsa |
-    | `SchedaAtleta` | 14 | la scheda atleta ridisegnata su `AthleteDetail` montata: il denominatore dell'anello (gli assegnati dei 30 giorni, non i workout in pagina), le tre tab che non ci sono più, lo storico che nasce chiuso dicendo quanti ne contiene, il menu che tiene Esporta/Modifica/Pausa fuori dalla pagina, la barra fissa che NON esiste sul proprio profilo, e «Prossimi allenamenti» che il redesign non toglie. ⚠️ Il coach si monta sulla rotta `/athletes/:id`: senza il parametro la pagina si crede sul proprio profilo e il test verifica un'altra pagina |
-    | `WorkoutDetailScheda` | 20 | la scheda ridisegnata su `WorkoutDetail` montata: la terza cella del riepilogo, che su un allenamento chiuso è l'RPE **dichiarato** e non quello atteso — e scrive `—`, non 5; la didascalia di BLOCK_HINT (rilievo 3.2.1viii); i blocchi aperti senza toccare niente; il menu che tiene i comandi fuori dalla pagina; la barra che non fa due gialli; l'elenco delle assegnazioni; la grafica IG che resta **renderizzata** fuori schermo, e il testo INTERO dell'avviso sul riscaldamento |
+    | `SchedaAtleta` | 16 | la scheda atleta ridisegnata su `AthleteDetail` montata: il denominatore dell'anello (gli assegnati dei 30 giorni, non i workout in pagina), le tre tab che non ci sono più, lo storico che nasce chiuso dicendo quanti ne contiene, il menu che tiene Esporta/Modifica/Pausa fuori dalla pagina, la barra fissa che NON esiste sul proprio profilo, e «Prossimi allenamenti» che il redesign non toglie. ⚠️ Il coach si monta sulla rotta `/athletes/:id`: senza il parametro la pagina si crede sul proprio profilo e il test verifica un'altra pagina |
+    | `NavigazioneApp` | 6 | il primo test che monta **`App.jsx` vera**: la sessione risolta UNA volta per tutta l'app, la pagina precedente che resta **visibile** mentre arriva il chunk della nuova, la riga di `athletes` letta **una volta sola** in tutto l'avvio (era tre, due delle quali in fila), e dal 01/09 che ogni pagina nuova si apra **dall'inizio** — ma non tornando indietro, dove la posizione va conservata. ⚠️ I primi due sono nati verdi con il codice di prima, ed è così che è saltata fuori la diagnosi sbagliata (§9-noviesdecies) |
+| `HomeCache` | 3 | che la Home si dipinga dalla **cache** prima della rete, che la cache di un **altro** atleta non si veda mai, e che senza cache si parta dallo scheletro come prima. ⚠️ Il primo non aspetta niente di proposito: la cache si legge prima del primo `await`, e sulla mutazione il titolo non compare *affatto* |
+| `WorkoutDetailChunk` | 1 | che aprire la scheda non carichi `jspdf` e `html-to-image`: rimetterli in testa non dà nessun errore e non fa cadere nessun altro test, cambia solo ~700 KB davanti a ogni apertura |
+| `ReportAtleta` | 16 | il report del singolo su `AthleteReport` montata: 🔒 l'atleta rimandato alla Home che non legge niente, la `select` filtrata su QUEL solo atleta (senza, i numeri di dodici persone sotto il nome di una), le indicazioni che portano il numero da cui escono, il carico dell'ULTIMA volta e non il massimo storico — ⚠️ il primo tentativo di quel test usava 9 e 6 in quest'ordine e passava anche mostrando il massimo, serve l'ultimo più basso del massimo — e la lettura fallita, che qui non mostra solo il vuoto: proporrebbe di telefonare a chi si allena regolarmente |
+| `ReportSettimanale` | 14 | il report su `WeeklyReport` montata: 🔒 l'atleta rimandato alla Home che **non legge nemmeno** le assegnazioni della squadra (la guardia sta in due punti, e verificarne uno solo lascia passare una versione che scarica tutto e poi nasconde), il lunedì che non accusa nessuno di aderenza bassa, il `≈` del carico parziale, l'RPE medio che scrive `—` e non «5,0», la fascia che filtra la lista, e la lettura fallita che NON si legge come una settimana vuota |
+| `WorkoutDetailStoria` | 14 | la grafica da mettere sopra una storia: gli **esercizi** che ci sono davvero (è la sostanza, e una regressione lascerebbe una grafica impaginata benissimo che non dice più niente), l'RPE dichiarato, il `≈` sulla durata, il nodo rasterizzato che è la copia a misura vera e non l'anteprima riscalata, l'altezza **misurata sul nodo** invece di un 9:16 dato per scontato, la carta che resta semitrasparente e con gli angoli tondi, e — l'unico che conta più di tutti — **nessun `backgroundColor` passato a html-to-image**, che è ciò che tiene il PNG trasparente |
+| `PrevisioneBuilder` · `PrevisioneAssegnazione` | 4+6 | il modello nelle due pagine vere: la quarta cella che è il **prodotto** delle due accanto, la cella che sparisce (e non mostra zero) senza intensità dichiarata, il semaforo che porta la percentuale, l'atleta senza niente da segnalare che **non** riceve un «tutto ok», la pausa che resta in lista, l'avviso che NON blocca «Conferma», e la lettura fallita che spegne i semafori lasciando l'assegnazione intatta. ⚠️ L'ultimo è quello che conta di più: un di più non deve poter togliere il gesto che c'era. ⚠️ E la pausa si verifica **sulle colonne chieste** (`notes` nella `select`), perché il finto Supabase non filtra le colonne e l'asserzione a schermo passerebbe anche togliendola |
+| `Impostazioni` | 23 | la pagina ridisegnata su `Settings` montata: l'interruttore con `aria-checked` al posto del bottone che diceva dove sarebbe andato, il banner giallo «Operazione in corso» che non esiste più — ⚠️ con l'attesa tenuta aperta a mano, o il test passa anche rimettendolo — le 90 parole sul Garmin che ci sono TUTTE ma sotto una riga che si apre, i codici invito che l'atleta **non legge nemmeno**, e i test mattina/sera chiusi in fondo invece che fra le impostazioni. Dal 09/09 anche **«Elimina il mio account»**: che ci sia (e sopra «Esci»), che si mostri **anche al coach** — nasconderla a chi è in `ADMIN_EMAILS` vorrebbe dire nasconderla a `demo@fleofit.it`, cioè al revisore — che chieda conferma prima di toccare qualunque cosa, che marchi il **proprio** id e non quello di un altro, e che il messaggio **non** prometta che riaccedendo si annulla, perché è falso |
+| `WorkoutDetailScheda` | 20 | la scheda ridisegnata su `WorkoutDetail` montata: la terza cella del riepilogo, che su un allenamento chiuso è l'RPE **dichiarato** e non quello atteso — e scrive `—`, non 5; la didascalia di BLOCK_HINT (rilievo 3.2.1viii); i blocchi aperti senza toccare niente; il menu che tiene i comandi fuori dalla pagina; la barra che non fa due gialli; l'elenco delle assegnazioni; la grafica IG che resta **renderizzata** fuori schermo, e il testo INTERO dell'avviso sul riscaldamento |
 
     ⚠️ **I due contratti sono asimmetrici e devono restarlo**: `HyroxBlock` passa `block.id`,
     `RunningStepRow` passa l'**indice**. "Uniformarli" romperebbe il riordino delle fasi di
@@ -1556,6 +1695,10 @@ chiesto di non essere chiamato.
 - **22 mag 2026** — caricata `1.1.0 (2)`. **Respinta** con **2.3.1(a) Hidden features** e
   **3.2.1(viii) Financial Services**.
 - **24 ago 2026** — correzioni applicate nel commit `fc81404`, caricata `1.1.0 (3)`.
+- **02 set 2026** — 🔴 **respinta di nuovo, ma per un'altra cosa**: linea guida **4.8
+  Login Services**, cioè Google senza un'alternativa che permetta di nascondere la
+  propria email. Non è una ricaduta del 2.3.1(a). Chiuso il 03/09 con Sign in with
+  Apple (§9-sexvicies), **senza togliere Google**.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non
@@ -2742,6 +2885,1168 @@ in `lib/stiliCard.js`. Il vecchio `COLORI_PALLINI` — una tabella di colori
 locale a `Calendar.jsx` che mescolava tipi di blocco e categorie — è sparito:
 il colore di una sessione è quello della sua **corsia**, e viene da
 `coloreCategoria` come ovunque (§9 punto 1).
+
+---
+
+## 9-noviesdecies. L'attesa fra una pagina e l'altra (31/08/2026)
+
+Segnalazione del committente: «passando da una pagina all'altra c'è una breve
+fase di caricamento che non fa sembrare premium l'applicazione». Questa sezione
+esiste soprattutto per la **diagnosi sbagliata** che c'è stata prima di quella
+giusta: leggendo il codice si arriva a due conclusioni che sembrano ovvie e sono
+entrambe false, e senza provarle non c'è modo di accorgersene.
+
+### 🔴 Le due cose che il codice suggerisce e che NON succedono
+1. **Lo splash di avvio NON ricompariva fra le pagine.** `ProtectedRoute` era
+   ripetuto su tutte e nove le `<Route>` private, e sembra evidente che cambiare
+   pagina lo rimonti — rifacendo `getSession()`, la `select` su `athletes` e la
+   schermata «FLEOFIT · Caricamento…». **Non accade**: React conserva lo stato di
+   un componente dello **stesso tipo nella stessa posizione** dell'albero, e
+   React Router rende l'elemento della rotta sempre in quella posizione. Misurato
+   con il codice di prima: `getSession` resta a **uno** attraverso la
+   navigazione, e il nodo `<nav>` è lo stesso oggetto di prima.
+2. **Il fallback del `Suspense` NON si vede.** `BrowserRouter` avvolge ogni
+   cambio di rotta in `React.startTransition` (`useTransitions` va passato a
+   `false` per disattivarlo, e nessuno lo fa). Durante una transizione React
+   **non scopre il fallback**: tiene a schermo l'albero precedente finché il
+   nuovo non è pronto. Quindi il `<div className="min-h-screen bg-[#0B0B0B]" />`
+   non lampeggia mai fra due pagine — si vede solo al primo caricamento di
+   `/login` o `/tv`.
+
+### Cosa succede davvero, ed è peggio di un lampeggio
+La pagina **precedente resta a schermo immobile**, senza rotella, senza
+scheletro, senza un segnale qualsiasi, per tutto il tempo che serve a scaricare
+e soprattutto a **parsare** il chunk della pagina nuova. Poi la pagina nuova si
+monta e mostra il *suo* scheletro mentre parte il *suo* fetch. Un lampeggio si
+legge come «sta caricando»; un'interfaccia che non risponde al tocco si legge
+come «l'app è bloccata», ed è la ragione per cui non sembra premium.
+
+### Le due correzioni fatte
+1. **`ProtectedRoute` è una route di LAYOUT** (`<Route element={<ProtectedRoute />}>`
+   con `<Outlet />`), non più un involucro ripetuto nove volte. ⚠️ Non è un
+   guadagno di velocità — vedi sopra, il rimontaggio non c'era: toglie una
+   ripetizione e mette al riparo dal caso in cui avverrebbe davvero, cioè un
+   secondo cancello annidato. Il `<Suspense>` sta **anche** dentro, attorno al
+   solo `<Outlet />`: a sospendere è il confine più vicino, e con il solo
+   confine esterno finirebbero sotto il fallback pure la tab bar e l'AuthContext.
+2. **`jspdf` e `html-to-image` si caricano solo quando si esporta.** Erano
+   `import` in testa a `WorkoutDetail`, quindi nel chunk della scheda: **480 KB**
+   più html2canvas (200) e index.es (151). Aprire una scheda — il gesto più
+   frequente dell'app — costava ~830 KB di parsing per due voci di menu che
+   quasi nessuno tocca. Ora la scheda è **68 KB** (117 con i suoi chunk
+   condivisi), e il resto arriva al primo export.
+
+### 🔴 Il secondo giro: «i riquadri ci sono ma sono vuoti» (31/08/2026)
+Segnalazione successiva del committente, sulla **Home all'apertura**. La domanda
+era se fosse il database a essere lento. **Non lo è**: le letture erano in fila,
+e la stessa riga di `athletes` veniva letta **tre volte** in un solo avvio.
+Misurato mettendo 100 ms di latenza finta su ogni query e cronometrando fino al
+primo dato in pagina:
+
+```
+PRIMA                                     DOPO (a freddo)        DOPO (con cache)
+  120 ms  auth.getSession                   119  auth.getSession    103  auth.getSession
+  222 ms  athletes.select(id)          ┐    221  athletes.select(   204  athletes.select(
+  323 ms  athletes.select(id,name,sur) ┘ in fila     id,name,surname)     id,name,surname)
+  469 ms  athletes.select(name)     ┐      358  notifications      → CONTENUTO A 241 ms
+  469 ms  notifications             │ in   358  athlete_workouts×2    (la rete arriva dopo
+  469 ms  athlete_workouts × 2      ┘ par. → CONTENUTO A 368 ms       e riscrive)
+  → CONTENUTO A 474 ms
+```
+
+Le tre correzioni, in ordine di resa:
+1. **Le due `select` di `ProtectedRoute` sono una sola.** Chiedevano la stessa
+   riga per due domande — «esiste?» e «come si chiama?» — e la seconda partiva
+   solo quando la prima era tornata. `select('id, name, surname')` risponde a
+   entrambe: **un giro di rete in meno dalla catena**.
+2. **Il nome passa dall'`AuthContext`**, che ce l'ha già. `Home` faceva una
+   **terza** `select` su quella riga. Non accorciava la catena (era in
+   parallelo) ma era una query per un dato già in mano.
+3. **La Home si dipinge dalla cache PRIMA di chiedere alla rete.**
+   `fleofit_cache_workouts_<uid>` era scritta a ogni fetch riuscito e riletta
+   **solo se la rete falliva**: online i riquadri restavano vuoti ad aspettare
+   anche avendo i dati dell'ultima volta sul telefono. È la correzione che si
+   vede: dalla seconda apertura in poi la pagina nasce piena.
+
+⚠️ **`applicaStoricoAtleta` esiste per questo.** Il calcolo che riempie la Home
+— oggi, prossimi, evento, settimana, statistiche — era **dentro** il `.then` del
+fetch, quindi l'unico modo di avere i riquadri pieni era aspettare la rete. Ora
+è un `useCallback` chiamato **due volte**: con la cache e con la risposta.
+⚠️ Ricalcola le tre date da sé invece di riceverle: venivano dallo scope del
+fetch, e una Home lasciata aperta oltre la mezzanotte le avrebbe usate vecchie.
+⚠️ **Con la cache in pagina `loading` NON torna a `true`**: rimettere lo
+scheletro sopra dati già buoni è un passo indietro visibile a ogni apertura.
+
+### ⚠️ Cosa resta aperto
+L'attesa residua è **quasi tutta il cancello di autenticazione**: `getSession()`
+più la lettura della riga atleta, che devono finire prima che una qualsiasi
+pagina si monti. Restano da fare il prefetch del chunk su `touchstart` delle
+voci di navbar e uno scheletro al posto delle due righe di testo di
+`WorkoutDetail` e `AthleteDetail` (`if (loading) return <div>Caricamento...</div>`),
+che sono le due pagine più aperte e le uniche due senza. La cache **c'è anche
+per la scheda** (`fleofit_cache_w_<id>`) e lì si usa ancora solo offline: stesso
+trattamento della Home. Voci in BACKLOG.
+
+### I tre test, e perché due sono nati verdi per il motivo sbagliato
+`src/__tests__/NavigazioneApp.test.jsx` è il primo test che monta **`App.jsx`
+vera**: i 617 precedenti montano le pagine da sole con un AuthContext proprio
+(`src/test/montaPagina.jsx`), quindi il cancello, il router e la tab bar — tutto
+ciò che sta *fra* una pagina e l'altra — non erano coperti da niente.
+
+I due test iniziali passavano **anche con il codice di prima**, ed è così che la
+diagnosi sbagliata è venuta fuori: sono stati riscritti sulle proprietà vere —
+la sessione risolta una volta sola (cade annidando un secondo `ProtectedRoute`)
+e la pagina precedente che resta **visibile** durante il caricamento (cade con
+`useTransitions={false}`).
+⚠️ Il secondo usa **`toBeVisible`, non `toBeInTheDocument`**: quando un confine
+Suspense scopre il fallback React **non smonta** ciò che era già montato — lo
+nasconde con `display: none` e ne conserva lo stato. Sulla presenza la mutazione
+non cade, sulla visibilità sì. È la stessa asimmetria della grafica Instagram
+(§9-duodecies punto 1).
+⚠️ E `BrowserRouter` legge la history **vera** del documento, che i test si
+passano l'un l'altro: senza un `pushState('/')` in `beforeEach`, il secondo test
+parte dalla rotta su cui l'ha lasciato il primo e verifica un'altra pagina.
+
+`src/pages/__tests__/WorkoutDetailChunk.test.jsx` protegge la seconda
+correzione, che altrimenti si perde al primo «ottimizziamo gli import»:
+rimettere `jspdf` in testa **non dà nessun errore** e non fa cadere nessun altro
+test — cambia solo mezzo megabyte davanti a ogni apertura. Il test sfrutta il
+fatto che la factory di `vi.mock` scatta alla prima importazione del modulo.
+
+`src/pages/__tests__/HomeCache.test.jsx` (3 test) protegge la pittura dalla
+cache. ⚠️ Il primo **non aspetta niente**: la cache si legge prima del primo
+`await` del fetch, quindi il titolo è già in pagina quando `render` torna — ed è
+quella riga a cadere se la cache torna a leggersi solo sul ramo d'errore, perché
+lì il titolo non compare *affatto*, non compare «dopo». Il secondo verifica che
+la cache di un altro atleta non si veda **prima** che la rete risponda: dopo, il
+server sovrascrive comunque e il test passerebbe anche leggendo la chiave
+sbagliata.
+⚠️ In `NavigazioneApp` il test sulla lettura unica azzera `finto.chiamate` in
+`beforeEach`: è un registro di **modulo**, che `vi.clearAllMocks()` non tocca, e
+senza azzerarlo conta anche gli avvii dei test precedenti.
+
+### 🔴 Il terzo giro: la pagina nuova non si apriva dall'inizio (01/09/2026)
+
+Segnalazione del committente sul report appena fatto («quando clicco su report
+settimanale non mi riporta in cima la pagina»). **Non era un difetto delle
+pagine nuove: mancava da sempre in tutta l'app.**
+
+`BrowserRouter` non tocca lo scorrimento, e dal 31/08 le pagine sono figlie di
+una route di **layout**: cambia soltanto ciò che sta dentro `<Outlet />`, mentre
+la finestra resta esattamente dov'era. Finché le pagine di partenza erano corte
+non si notava. Con la Home coach lunga si nota subito: si scorre fino in fondo,
+si tocca «Report settimanale», e il report si apre a metà — e a schermo non
+sembra una pagina aperta male, sembra **che il tocco non abbia funzionato**.
+
+La correzione è `ScrollInCima` in `App.jsx`, dentro `BrowserRouter`.
+
+⚠️ **Solo sulle navigazioni nuove (`PUSH`/`REPLACE`), mai su `POP`.** È la metà
+della regola che si perde riscrivendola: il ritorno indietro deve riportare la
+pagina **dov'era**. Chi scorre la Home fino agli allenamenti scaduti, ne apre
+uno e torna, deve ritrovarsi lì. Azzerare anche lì scambia un difetto con uno
+più fastidioso, perché indietro è il gesto che si ripete di più. Ci sono due
+test, e cadono su due mutazioni diverse.
+
+⚠️ Con `startTransition` l'effetto scatta al **commit** della pagina nuova, non
+al tocco: la pagina precedente resta ferma finché il chunk arriva, invece di
+fare un salto in cima prima di sparire. È lo stesso meccanismo descritto in
+questa sezione, ed è la ragione per cui la correzione non introduce un lampeggio.
+
+⚠️ **Cosa resta scoperto, e va detto perché sembra coperto**: la dipendenza è
+`location.key` e non `pathname`, così che due deep link allo stesso workout con
+`athlete_id` diversi contino come due pagine (§8). Quel caso **non è provocabile
+montando `App`** — non esistono due comandi che portino allo stesso percorso con
+query diverse senza una pagina in mezzo — e il test sul doppio tocco della voce
+già attiva **passerebbe anche con `pathname`**, perché lì cambia il *tipo* di
+navigazione (`PUSH` → `REPLACE`). Verificato per mutazione. Chi semplifica quella
+dipendenza non romperà nessun test.
+
+---
+
+## 9-vicies. Il report settimanale del coach (01/09/2026)
+
+Richiesta del committente: «favorire il più possibile la figura del coach», con un
+report settimanale **visionabile unicamente dal coach**. È BACKLOG #27 («Coach
+Copilot»), che l'analisi del 24/08 dava come l'unica delle tre idee di prodotto
+senza blocchi — e infatti non richiede nessuna migrazione: **tutto il report esce
+da due letture su tabelle esistenti**.
+
+### Il problema, in una riga
+L'app diceva al coach cosa succede **oggi** (la Home) e com'è andato **un** atleta
+(la scheda). Non diceva mai com'è andata **la settimana della squadra**, che è la
+domanda su cui si programma quella dopo: chi richiamare, chi scaricare, chi
+caricare si ricavavano aprendo una scheda alla volta e tenendo a mente i numeri.
+
+### Cosa c'è, nell'ordine in cui sta in pagina
+1. **La testata** con il navigatore di settimana (indietro senza limiti, avanti
+   fino a quella corrente e non oltre). ⚠️ La riga «Settimana 36 · 31 ago – 6 set»
+   sta **sotto** i bottoni e non in mezzo: vedi le due trappole qui sotto.
+2. **L'eroe**: l'aderenza della squadra, la barra, e **una frase** che dice cosa
+   farne («Aderenza 63%, carico in salita. · 2 da richiamare · 2 da scaricare ·
+   3 senza programma la prossima settimana»). È la sola cosa che si legge da
+   lontano — Regola dell'Eroe Unico.
+3. **Il bento dei tre numeri**: Volume, Carico, RPE medio, ognuno con lo scarto
+   sulla settimana precedente **solo quando è confrontabile**.
+4. **La fascia «Da fare adesso»**, l'unica cornice colorata della pagina, che
+   filtra la lista con un tocco.
+5. **Atleta per atleta**: verdetto, il perché, e i numeri su cui verificarlo.
+6. **Mix della settimana** per corsia, derivato dai dati.
+7. **Settimana prossima**: chi non ha ancora niente, con «Assegna» per riga e
+   «Crea workout» — è l'unica sezione che guarda avanti.
+8. **Cosa ti hanno detto** (note e vocali della settimana) e **In pausa**.
+
+### 🔴 LE TRE REGOLE CHE TENGONO ONESTI QUESTI NUMERI
+Sono in testa a `src/lib/reportSettimanale.js` e sono la ragione per cui quel file
+esiste invece di essere quattro righe dentro la pagina.
+
+1. **L'aderenza si misura sulla parte TRASCORSA della settimana.** È la trappola
+   già documentata in `rigaAtleta.js`: gli assegnati comprendono i giorni ancora
+   da venire, quindi **il lunedì mattina sono tutti a 0/5**. Un verdetto «aderenza
+   bassa» legato alla frazione piena accenderebbe un allarme su tutta la squadra
+   ogni lunedì, cioè quando non è successo ancora niente — e un allarme che si
+   accende sempre smette di essere letto. Ciò che resta in programma si dichiara
+   a parte (`daVenire`), e il verdetto di quel caso è **«Da iniziare»**, non
+   «Senza programma»: quattro allenamenti da giovedì *sono* un programma.
+2. **Il carico esclude le sessioni senza RPE dichiarato, e lo DICE.**
+   `parseNotesAndRpe` torna 5 dove il marcatore manca, e quel 5 entrerebbe nel
+   prodotto minuti × RPE come se fosse una misura (§9-octies). Si somma solo ciò
+   che l'atleta ha davvero segnato, e il totale porta il **`≈`** — lo stesso
+   glifo del volume nel calendario (§9-octodecies), per la stessa ragione.
+3. **Nessun numero si inventa per riempire una cella.** Rapporto di carico e
+   scarto RPE tornano `null` quando i dati sotto non bastano, ed è la pagina a
+   scrivere «—». Stessa lezione di `rpeAtteso` e `rpeDichiarato`.
+
+### I due numeri che l'app non aveva mai detto
+- **Il rapporto acuto/cronico** (`carico 3,03×`): il carico della settimana
+  diviso la media delle ultime quattro. Sopra 1,5 è un salto, sotto 0,8 uno
+  scarico. ⚠️ Torna `null` sotto `MINIMO_SESSIONI_CARICO` sessioni **misurate** o
+  con meno di due settimane attive: con due sole sessioni saltarne una dimezza il
+  riferimento e raddoppia il numero, e un «2,1» costruito così manda a scaricare
+  un atleta che sta benissimo. Un atleta appena arrivato ricadeva esattamente lì.
+- **Lo scarto fra RPE atteso e dichiarato**: `sections.intensity` — l'intensità
+  che il coach ha scritto — contro l'RPE che l'atleta ha segnato dopo. **Nessuna
+  altra schermata mette i due numeri uno accanto all'altro**, ed è l'unico
+  segnale che dica se la programmazione sta chiedendo più di quanto voleva.
+
+### ⚠️ Le cose da sapere prima di rimetterci mano
+1. 🔒 **La guardia sul ruolo sta in DUE punti**: il redirect e il `return` prima
+   del fetch. Toglierne uno solo non cambia niente a schermo — e lascia passare
+   una versione che rimanda alla Home **dopo** aver scaricato le assegnazioni di
+   tutta la squadra sul dispositivo dell'atleta. C'è un test che conta le query.
+   ⚠️ È una guardia **di interfaccia**, non di sicurezza: i dati sono già protetti
+   dalle policy RLS, e un atleta che chiamasse l'API riceverebbe le sue righe.
+2. **Le soglie NON si riscrivono qui.** `GIORNI_FERMO` viene da
+   `statisticheCoach.js` (la stessa che alimenta «Richiedono attenzione» nella
+   Home) e `SOGLIA_STABILE` da `andamento.js`. Due soglie per lo stesso concetto
+   darebbero due numeri diversi in due schermate, e **nessuno dei due sarebbe
+   sbagliato da solo**.
+3. **Il confronto con la settimana precedente si mostra solo a settimana finita**
+   (`delta.confrontabile`): su una in corso confronta tre giorni con sette, e un
+   «−58%» al mercoledì è aritmetica giusta e informazione falsa.
+4. **«Senza programma» non entra nella fascia delle azioni.** A quella condizione
+   risponde la sezione «Settimana prossima», che dice anche come rimediare: due
+   allarmi per lo stesso atleta con due risposte diverse sono il modo in cui un
+   allarme smette di significare qualcosa.
+5. **Una lettura fallita ha uno stato suo.** Senza, zero righe si leggono come
+   «questa settimana non si è allenato nessuno»: un guasto travestito da dato, il
+   difetto peggiore possibile per una pagina su cui si programma (§9-quater).
+6. **Chi è in pausa esce da ogni numero e resta nell'elenco in fondo**, come
+   nella rubrica: è l'unico posto in cui il coach si accorge di averne messo in
+   pausa uno e dimenticato (§9-decies).
+
+### 🔴 I due difetti che solo la pagina a 375px ha mostrato
+Nessun test li avrebbe presi, ed è la stessa lezione del conto alla rovescia del
+cestino (§9-septdecies punto 7).
+1. **La riga della settimana era troncata**: fra quattro bottoni tondi le
+   restavano centoquaranta pixel, e «31 ago – 6 set» diventava «31 ago – …» —
+   spariva cioè la data, l'unica cosa che dice quale settimana si sta guardando.
+   Ora sta su una riga sua, a tutta larghezza.
+2. **La meta della riga troncava il moltiplicatore di carico**: «5/5 · 6h 15 ·
+   RPE 9 · carico…», e quel numero è la ragione stessa per cui quella riga porta
+   «Da scaricare» ed è in cima alla pagina. Ora va a capo invece di troncare.
+
+### Cosa NON è stato fatto, e perché
+- **Nessuna notifica push «è pronto il report»**: sarebbe una modalità nuova di
+  `send-reminders`, cioè il **deploy di una Edge Function condivisa con la web
+  app in produzione** (§1.1). Stessa ragione per cui «Manda promemoria» non
+  esiste (§9-nonies). Voce in BACKLOG.
+- **Nessun export PDF del report**: `jspdf` è appena uscito dal chunk della
+  scheda (§9-noviesdecies) e rimetterlo qui in testa rifarebbe lo stesso danno su
+  un'altra pagina. Se servirà, va importato su richiesta come là.
+- **Nessuna generazione automatica della settimana successiva.** La sezione
+  «Settimana prossima» dice **chi** e porta dove si assegna, ma non compone
+  niente da sé: farlo richiede di sapere cosa un atleta ha già fatto in termini
+  di *risultato*, non solo di *fatto/non fatto* — cioè BACKLOG #25, che è
+  congelato perché serve una tabella. Un generatore che non guarda i risultati
+  produrrebbe programmazione plausibile e cieca, che è esattamente ciò che questa
+  pagina esiste per evitare.
+
+---
+
+## 9-unetvicies. La grafica da mettere sopra una storia (01/09/2026)
+
+Richiesta del committente: «un tasto di condivisione che esporti una grafica con
+il recap del workout eseguito, un po' come fa Strava — uno fa una storia e ci
+mette sopra quest'immagine, come Strava fa vedere il percorso e i chilometri in
+basso».
+
+### 🔴 Lo sticker si RITAGLIA sul contenuto, la storia con sfondo no
+Sono due misure diverse, non due sfondi dello stesso file, e la ragione è
+misurabile: **Instagram scala l'immagine intera** per farla entrare dove la si
+appoggia, quindi ogni pixel trasparente di margine rimpicciolisce il testo due
+volte — una nel file e una nella storia. La prima stesura esportava sempre
+9:16 con il contenuto in fondo, e su un allenamento corto metà sticker era
+vuoto: il committente l'ha visto subito («sopra la data e sotto FLEOFIT c'è
+tutto il riquadro che non è utilizzato»).
+
+Conseguenze pratiche:
+- lo **sticker** ha `width: 360` e altezza automatica. Chi esporta deve
+  **leggere l'altezza dal nodo** (`offsetHeight`), non darla per scontata: un
+  640 scritto a mano rimette esattamente il margine che il ritaglio esiste per
+  togliere, e il file sembrerebbe corretto a chiunque lo aprisse.
+- la **storia con lo sfondo** resta 360×640, perché si pubblica così com'è, e
+  con essa restano `FONDO_SICURO` (la barra della risposta di Instagram) e
+  l'alone della corsia.
+- il ritaglio ha permesso di **ingrandire tutto il testo**, che era l'altra
+  metà della richiesta.
+
+### 🔴 Lo sticker è una CARTA, e ci sono voluti due tentativi
+Il primo era un **alone ellittico** che si spegneva dentro il margine, per non
+avere l'aria di una scatola. Non funziona su un ritaglio, e **si vede solo
+guardandolo**: il testo arriva quasi ai bordi, quindi o l'ellisse smetteva di
+coprirlo ai lati, oppure — allargandola — tagliava di netto sui fianchi,
+disegnando sulla foto una fascia scura con due spigoli. Le due cose non possono
+stare insieme: o si stringe il testo, o si dichiara la carta.
+
+Ora è una carta semitrasparente con angoli tondi e una hairline chiara, cioè
+la **Regola della Carta Sollevata** di DESIGN.md — lo sticker somiglia alla
+schermata da cui esce. ⚠️ Il fondo **deve restare semitrasparente**: la foto
+sotto si intravede, ed è ciò che lo fa leggere come appoggiato invece che
+incollato. Un fondo opaco è lo stesso difetto del `backgroundColor` all'export,
+commesso un livello più su. C'è un test per l'alfa e uno per il raggio.
+
+### 🔴 La storia 9:16 si ADATTA invece di tagliare
+Il riquadro è fisso e il contenuto no: un Hyrox da dodici righe supera i 640px,
+e con il contenuto ancorato in basso a uscire dalla **cima** sono il titolo e
+l'occhiello — le uniche due righe che dicono di che allenamento si tratta. È
+successo appena il testo è stato ingrandito. `StoriaConSfondo` misura lo
+`scrollHeight` del contenuto **non scalato** (il `transform` non tocca il
+layout, quindi niente ciclo «scalo → rimisuro → riscalo») e lo rimpicciolisce
+quanto basta, con l'origine in basso per non mangiare `FONDO_SICURO`.
+
+### 🔴 Il punto è la TRASPARENZA, non la grafica
+È la cosa che si perde per prima leggendo il codice. Questa immagine non si
+pubblica *al posto* della propria foto: si appoggia *sopra*, con lo sticker
+«foto» di Instagram, che conserva il canale alfa. Quindi:
+
+- lo sfondo del nodo è `transparent`, e la modalità «con sfondo» è la **seconda**
+  opzione, non la prima;
+- **all'esportazione non si passa nessun `backgroundColor`**. html-to-image
+  lascia trasparente ciò che il nodo non dipinge; un colore lì dentro — anche
+  nero, anche «per sicurezza» — produrrebbe un file perfetto all'apparenza e
+  inutile allo scopo, perché sopra la storia coprirebbe il video. C'è un test
+  che cade **solo** su quella riga.
+
+Non è la grafica IG che esisteva già: quella è la **scheda**, cioè il programma
+blocco per blocco, e serve al coach per mandarla a un atleta *prima*. Questa è
+il **recap**, e serve all'atleta *dopo*. Restano tutte e due, e dal 01/09 le
+voci di menu lo dicono («Salva la scheda (PNG)», «Invia la scheda»).
+
+### 🔴 Il contenuto sono gli ESERCIZI, e la prima versione sbagliava
+La prima stesura, lo stesso giorno, disegnava al posto dell'elenco un **profilo
+di sforzo**: un tratto per esercizio, largo quanto durava e alto quanto era
+duro, in giallo, con l'idea che fosse l'equivalente del percorso GPS di Strava.
+Era gradevole, era corretto, ed era **illeggibile**. Il committente l'ha tolto
+guardandolo: «il grafico è carino, però sono più importanti gli esercizi».
+
+La ragione, per chi fosse tentato di rimetterlo: una sagoma racconta
+*l'andamento* di una seduta, cioè una cosa che interessa a chi l'ha fatta e che
+chi l'ha fatta già sa. L'elenco dice *che cosa* si è fatto, ed è la sola cosa
+che qualcuno voglia sapere guardando la storia di qualcun altro. Il profilo era
+un grafico su una superficie che non è un cruscotto.
+
+⚠️ **Il vincolo che governa ogni misura di questa grafica**: verrà guardata
+**piccola**. Quindi poche righe in corpo grande, mai tutte le righe in corpo
+piccolo. Da qui `MASSIMO_RIGHE` e il «+N esercizi» che chiude l'elenco quando
+non ci sta: una lista troncata che lo dichiara si legge, una lista intera in
+corpo 9 no.
+
+### Com'è fatto l'elenco
+Un'intestazione per blocco — il tipo come lo scrive la scheda («Cash In»,
+«EMOM») più i suoi parametri — e sotto una riga per esercizio: il nome a
+sinistra in corpo grande, le specifiche a destra in colonna. Per la corsa, ogni
+fase è una riga; solo le ripetute sono un gruppo, perché sono l'unico punto in
+cui c'è davvero una gerarchia.
+
+⚠️ **I parametri dell'intestazione vengono da `parametriBlocco`**, estratta il
+01/09 da `sottotitoloBlocco` in `src/lib/rigaBlocco.js`. È lì che vivono i
+ripieghi di un blocco mai aperto (10 giri per un EMOM, 3 per un For Time), gli
+stessi con cui `durataBlocco` stima la durata che finisce nella cella accanto:
+un secondo elenco darebbe un'intestazione che contraddice quel numero, senza
+alcun errore. `sottotitoloBlocco` ci aggiunge il conteggio degli esercizi, che
+qui non serve perché gli esercizi sono elencati subito sotto.
+⚠️ `parametriBlocco` torna **`null`** su un tipo sconosciuto e **`''`** su un
+tipo noto senza parametri: chi chiama deve poter distinguere «non ha parametri»
+da «non so che blocco sia», e le due cose portano a due righe diverse.
+
+⚠️ **Le specifiche vengono da `specificheEsercizio`**, la stessa funzione della
+scheda: l'atleta deve ritrovare sulla storia le parole che ha letto nell'app.
+
+⚠️ **Su un allenamento libero si legge `coach_notes`, MAI la nota dell'atleta.**
+La prima è il contenuto dell'allenamento; la seconda è il riscontro lasciato al
+coach e può contenere qualunque cosa — e la grafica può essere esportata **dal
+coach, dalla scheda di qualcun altro**. C'è un test.
+
+### I numeri: tre celle, e mai una inventata
+È l'ultimo posto dell'app in cui un ripiego travestito da misura può passare
+inosservato, perché l'immagine **esce dall'app** e finisce sotto gli occhi di
+gente che non ha modo di verificare niente. Perciò:
+
+- **`≈` davanti alla durata.** È la stessa stima del builder e della scheda: il
+  timer sa quanto dura un EMOM, ma «For Time» e «Cash In» sono cronometri liberi
+  e lì il tempo lo fa l'atleta. Su una storia quel numero si legge come un
+  cronometro, e il segno che dice «circa» è l'unica cosa che lo separa da una
+  bugia.
+- **L'RPE è quello DICHIARATO** (`rpeDichiarato`, mai `parseNotesAndRpe`, che
+  torna 5 quando il marcatore manca). Se l'atleta non l'ha indicato, la cella
+  **non ripiega su 5 né sull'RPE atteso**: passa all'**intensità** scritta dal
+  coach, sotto la sua etichetta. Se manca anche quella, le celle diventano due.
+  È la stessa lezione di §9-octies, §9-undecies punto 3 e §9-terdecies punto 2,
+  alla sua quinta comparsa.
+- **La corsa mista non dichiara nessun totale** (§9-sedecies punto 3). Custom ed
+  Evento non hanno né durata né blocchi, e lì la grafica dice il titolo, il
+  giorno e — sul libero — le note.
+
+### ⚠️ Le sei cose da sapere prima di rimetterci mano
+1. **Il nodo rasterizzato è una copia a misura vera, fuori schermo**, non
+   l'anteprima. L'anteprima vive dentro un `transform: scale`, e `scale` su un
+   antenato cambia il rettangolo che html-to-image misura: l'immagine uscirebbe
+   della dimensione sbagliata senza dare alcun errore. `width` e `height` sono
+   dichiarati nelle opzioni per la stessa ragione. C'è un test.
+2. **Fuori schermo sì, `display:none` no.** Vale parola per parola la regola
+   della grafica IG (§9-duodecies punto 1): html-to-image clona un nodo vero, e
+   spento produce un'immagine vuota senza errori.
+3. **Ogni formato ha UN meccanismo per stare dentro, e sono diversi**: lo
+   sticker cresce (si ritaglia), la storia con sfondo si rimpicciolisce (si
+   adatta). Non c'è più un tetto d'altezza sull'elenco: era la rete di quando
+   entrambi erano incorniciati in 640px, e teneva in vita due meccanismi per lo
+   stesso problema.
+4. **Il testo ha un'ombra anche sopra la carta.** La carta è semitrasparente di
+   proposito, e sotto una riga può capitare il punto più chiaro dello scatto.
+   È l'unica difesa che non dipende da quanto è alto il contenuto.
+5. **Il titolo si rimpicciolisce quando sotto c'è un elenco e cresce quando non
+   c'è.** Su una gara il titolo è tutto il contenuto; su un Hyrox è l'etichetta
+   di quello che si legge sotto. Sono due pagine diverse, non due gusti.
+6. **`FONDO_SICURO` vale solo per la storia con sfondo**: Instagram copre la
+   fascia bassa con la barra della risposta, e un numero che finisce lì sotto
+   non si legge — cosa di cui ci si accorge dopo aver pubblicato. Sullo sticker
+   non si applica, perché è l'atleta a decidere dove appoggiarlo.
+
+### 🔴 html-to-image non si può provare da un browser incorporato
+Verificato il 01/09: nella preview integrata `toPng` **resta appeso** anche su un
+`div` da 40px — il suo `<img src="data:image/svg+xml…">` interno non emette mai
+`load`, e la libreria non ha timeout. Non è un difetto del nostro codice (la
+grafica IG usa lo stesso percorso da mesi), ma vuol dire che **la trasparenza
+del file non è dimostrabile lì**: la composizione si verifica a schermo, la
+proprietà del PNG si blocca con il test sulle opzioni. Chi vorrà una prova sul
+file vero deve esportarlo dal dispositivo.
+
+### I file nuovi
+`src/lib/recapStoria.js` (logica pura, 20 test) e `src/components/StoriaUI.jsx`
+(grafica + foglio di anteprima), più `parametriBlocco` estratta da
+`rigaBlocco.js`. `src/pages/__tests__/WorkoutDetailStoria.test.jsx` porta 14
+test, tutti verificati per mutazione.
+
+⚠️ `recapStoria` si calcola **solo a foglio aperto**: scandaglia i blocchi
+esercizio per esercizio, e la scheda è la pagina più aperta dell'app.
+
+---
+
+## 9-duoetvicies. Il rework delle Impostazioni (01/09/2026)
+
+Stesso progetto Claude Design degli altri otto schermi
+(`4a238081-a3ee-4f59-ae34-100f29d55601`), artboard `Impostazioni.dc.html`,
+opzione **1b**. Come per gli altri: **nessun campo di Supabase cambia forma**,
+e nessun percorso di quelli che funzionavano è stato riscritto — permessi
+push, BLE, export/import, cambio password sono gli stessi. Cambia il JSX,
+cambia l'ordine, e per la prima volta la pagina dice con quale account sei
+dentro.
+
+### Il problema, in una riga
+Cinque card dello stesso peso in un ordine che non è quello dell'uso: la prima
+schermata era occupata dai **codici invito**, cioè la cosa che il coach fa una
+volta al mese. Ogni voce — anche un semplice acceso/spento — era un bottone
+alto 76px con titolo e sottotitolo, quindi niente si leggeva come più
+importante di altro. E la pagina non diceva mai la cosa che una schermata
+Impostazioni deve dire per prima: **chi sei, e cosa è attivo su questo
+telefono**.
+
+### Cosa c'è ora, nell'ordine in cui sta in pagina
+1. **L'eroe: account e stato del dispositivo.** Nome, email, la pillola del
+   ruolo, e sotto «Su questo iPhone» i due interruttori che valgono solo qui —
+   notifiche e fascia cardio. È l'unica parte della pagina che contiene
+   **informazione** e non destinazioni.
+2. **Account**: modifica password e anteprima come atleta.
+3. **Solo coach**: codici invito, esporta database, importa backup atleta.
+4. **Ripristina database totale**, fuori dal gruppo e rosso.
+5. **Strumenti sviluppo**, chiuso.
+6. **Esci dall'account**, e il piede con versione e email.
+
+### ⚠️ Le sette cose da sapere prima di rimetterci mano
+
+1. 🔴 **Un interruttore è un interruttore, e ha `aria-checked`.** Prima il
+   testo del bottone cambiava da «Abilita Notifiche» a «Disabilita Notifiche»
+   per dire dov'era: un comando travestito da stato, che si legge al contrario
+   la metà delle volte. Senza `role="switch"` + `aria-checked`, chi usa
+   VoiceOver sente «Notifiche push, pulsante» e non ha modo di sapere se le
+   notifiche arrivano — che è **tutta** l'informazione della riga.
+2. 🔴 **Il banner giallo «Operazione in corso, attendere prego...» è
+   sparito, e non è pulizia.** Lo stato di caricamento vive nella riga che
+   l'ha causato (`operazione` è una stringa, non un booleano): con nove
+   comandi in pagina, una rotella in cima costringe a ricordarsi cosa si è
+   appena premuto. ⚠️ Il test che lo protegge deve **tenere aperta l'attesa a
+   mano** — con il finto Supabase l'export finisce dentro la stessa
+   `userEvent.click`, e un `waitFor` dopo il clic troverebbe la riga già
+   tornata a riposo, cioè passerebbe anche rimettendo il banner (§9-sexies,
+   ancora).
+3. 🔴 **Il testo sul Garmin è quello di prima, parola per parola.** È l'unica
+   spiegazione dell'app su come si collega un orologio, e riassumerlo
+   butterebbe via proprio la parte che dice cosa fare — è la stessa lezione
+   dell'avviso sul riscaldamento (§9-duodecies). Quello che cambia è che non
+   lo si rilegga a ogni apertura: sta sotto «Come si collega». Esce solo
+   l'emoji 💡, che DESIGN.md dichiara anti-riferimento.
+4. 🔴 **I numeri delle righe non si inventano mai.** `riassuntoCodici` torna
+   `null` finché i codici non sono arrivati — «0 attivi · 0 usati» durante il
+   caricamento è un dato, ed è falso — e `riassuntoBackup` fa **sparire** un
+   conteggio mancante invece di scriverlo `0`: «0 atleti · 0 workout» accanto
+   a «Esporta database» si legge come «non c'è niente da salvare», che è il
+   messaggio peggiore possibile sulla riga di un backup. Quinta comparsa della
+   regola di `rpeAtteso` (§9-octies, §9-undecies, §9-terdecies,
+   §9-unetvicies).
+   ⚠️ E i due conteggi sono quelli **grezzi** delle tabelle, non quelli della
+   rubrica: descrivono il **file**, non la squadra. La rubrica filtra
+   `deleted_at` e l'account del coach; prendere il suo numero farebbe
+   promettere all'export un contenuto che non ha.
+5. 🔴 **«Ultimo export» è una memoria LOCALE, non un registro dei backup.**
+   `fleofit_ultimo_export` dice «l'hai esportato da questo iPhone», che è
+   l'unica cosa che si possa sapere senza una colonna nuova (regola 0-bis).
+   Chi cambia telefono non vede la data, e la riga non gli promette niente di
+   falso — ma se un giorno si vuole «esiste un backup del 28 ago», quello è
+   un'altra affermazione e richiede il database.
+6. **La versione arriva da `App.getInfo()` di Capacitor, e sul web non
+   compare.** `package.json` dice `0.0.0` e il numero vero vive nel `pbxproj`,
+   che Xcode incrementa **da solo** a ogni archive (§9-ter): una costante
+   scritta a mano qui sarebbe la quarta copia di un numero destinato a essere
+   sbagliato.
+7. **La fascia cardio resta di chi si allena.** L'artboard la disegna anche
+   nella vista coach, ma il gate `role === 'athlete' || isSimulatingAthlete`
+   è quello di prima ed è rimasto: il coach non ha allenamenti propri (il suo
+   account è escluso da chi si segue), e un interruttore che non serve a
+   niente è comunque un interruttore da leggere. Cambiarlo è una decisione di
+   prodotto, non di design.
+
+### I codici invito: una riga, e un foglio
+Erano una card con **due accordion dentro** — un pozzetto dentro un pozzetto,
+contro la Regola dei Gradini. Ora la pagina porta solo il numero («3 attivi ·
+11 usati») e la lista si apre in un bottom sheet, con `src/useBottomSheet.js`
+come il menu della scheda.
+
+⚠️ **Un foglio e non una rotta nuova**: l'artboard descrive una schermata
+dedicata, ma il suo `dv-next` la dà fra i **prossimi** pezzi di design. Vale la
+stessa scelta del pannello filtri dell'archivio (§9-sedecies) e del foglio del
+giorno del calendario (§9-octodecies): si implementa ciò che è disegnato, non
+ciò che è annunciato.
+
+⚠️ **I codici si leggono all'apertura della PAGINA, non del foglio**: il numero
+della riga deve esserci prima che qualcuno la tocchi, o la riga non dice niente
+più di quanto dicesse la card. La lettura è una sola per apertura, e per
+l'atleta **non parte affatto** — c'è un test che conta le query, perché la
+guardia sul ruolo sta in due punti e verificarne uno solo lascia passare una
+versione che scarica gli inviti sul telefono di chi non deve vederli
+(§9-vicies, stessa lezione).
+
+⚠️ **`riassuntoCodici` dice «Nessun codice generato» solo sulla tabella
+VUOTA**, non quando attivi e usati sono entrambi zero: un codice spento che
+nessuno ha riscattato esiste, non compare in nessuna delle due liste del
+foglio, e invitare a generarne uno nuovo sarebbe l'unica frase della riga che
+si può smentire aprendola.
+
+### Il codice morto che il rework ha lasciato indietro, ed è stato rimosso
+`InviteCodeManager` (in `Settings.jsx`) è sparito: la sua metà visiva è
+`FoglioCodici` in `ImpostazioniUI.jsx`, la sua metà di dati è salita in
+`Settings` — dove serviva comunque, per il numero della riga. Nella stessa
+passata i due `JSON.parse(localStorage.getItem(...))` non c'erano già più, ma
+la scrittura di `fleofit_ultimo_export` passa da un `try/catch` che **non**
+fa fallire l'export: il file a quel punto è già stato scritto.
+
+### 🔴 La cancellazione dell'account è salita qui (09/09/2026)
+
+Linea guida **5.1.1(v)**: un'app che permette di creare un account deve offrire
+la cancellazione **dentro l'app**, e Apple chiede che sia «easy to find».
+Esisteva già, funzionava, e nessuno l'avrebbe trovata: stava dentro la modale
+«Modifica profilo» della scheda atleta, cioè dietro un menu, dentro un foglio di
+modifica, in fondo a un modulo. Ora è una `RigaPericolo` **sopra «Esci
+dall'account»**, che è dove la si cerca.
+
+⚠️ **Si mostra a TUTTI i ruoli, coach compreso.** Non è una svista: nasconderla a
+chi è in `ADMIN_EMAILS` vorrebbe dire nasconderla a `demo@fleofit.it`, cioè
+esattamente all'account con cui entra il revisore di Apple. C'è un test.
+
+⚠️ **Nella scheda atleta è rimasto SOLO il coach che elimina un atleta**
+(`proprioProfilo` in `EditAthleteModal`), che è un gesto diverso e ha il suo
+cestino in «Eliminati di recente». Due porte per lo stesso gesto sarebbero state
+peggio di una sola nascosta: la seconda smette di essere aggiornata (§9 punto 1).
+
+🔴 **Il messaggio NON promette che riaccedendo si annulla, perché è falso.**
+`ProtectedRoute` non filtra `deleted_at`: si rientra e la riga resta comunque
+marcata, e dopo 7 giorni `delete_expired_athletes()` la elimina in cascata con
+tutto lo storico (§4). L'unica via indietro è **Atleti → «Eliminati di recente»**,
+che ce l'ha il coach — ed è quello che il testo dichiara. C'è un test che cade se
+qualcuno ci rimette la promessa comoda.
+
+### ⚠️ Cosa questa cancellazione NON fa ancora
+Due limiti da conoscere prima di dire che è chiusa del tutto:
+1. **La riga in `auth.users` sopravvive.** Dal client non si può togliere: serve
+   `supabase.auth.admin.deleteUser`, quindi la service role key, quindi una Edge
+   Function nuova. Non è bloccata dalla regola 0-bis (non è schema) ma è un
+   deploy, e va fatta con la stessa cautela di `send-reminders` (§1.1). Finché
+   non c'è, l'identità con cui si accedeva resta viva: chi ha cancellato il
+   profilo e rientra con Apple o Google finisce sul passo del codice invito.
+   ⚠️ E `delete_expired_athletes()` **non è nel repository** (§4), quindi non è
+   verificabile da qui se tocchi anche `auth.users`: si legge con
+   `select prosrc from pg_proc where proname = 'delete_expired_athletes';`
+2. **Per un indirizzo in `ADMIN_EMAILS` non cancella davvero l'accesso.** Il
+   ruolo coach viene dall'elenco hardcodato, non dal database (§9-ter): un admin
+   che si cancella viene disconnesso, ma rientrando è ancora coach perché
+   `ProtectedRoute` per lui salta del tutto il controllo sulla riga `athletes`.
+   È una proprietà dell'elenco hardcodato, non di questo gesto.
+
+### I file nuovi
+`src/lib/rigaImpostazioni.js` (logica pura, 12 test) e
+`src/components/ImpostazioniUI.jsx` (sola presentazione).
+`src/pages/__tests__/Impostazioni.test.jsx` porta 17 test, tutti verificati per
+mutazione.
+
+---
+
+## 9-tervicies. Il tasto «indietro» (02/09/2026)
+
+Segnalazione del committente: «spesso in tutta l'app quando premo il tasto per tornare
+indietro mi riporta non alla schermata precedente ma un po' dove vuole lui».
+Non era un difetto di una pagina: erano **quattro cause diverse** che producevano lo
+stesso sintomo, e due di esse si annullavano a vicenda nei casi facili — che è la
+ragione per cui il difetto sembrava capriccioso invece che sistematico.
+
+### Le quattro cause, in ordine di quanto mordevano
+
+1. 🔴 **Tre pagine avevano una destinazione FISSA che ignorava da dove si veniva.**
+   `AthleteDetail` tornava sempre a `/athletes`, `AthleteReport` sempre a `/report`,
+   `WeeklyReport` sempre a `/`. Ma alla scheda di un atleta si arriva dai **feedback**
+   della Home coach, dagli **atleti fermi**, dalla **squadra della giornata**, dal
+   **report settimanale** e dal **report del singolo**: in tutti quei casi il tasto
+   portava nella rubrica, cioè in una schermata in cui non si era mai stati. È
+   letteralmente «dove vuole lui», ed era il caso più frequente.
+2. 🔴 **La scheda del workout navigava a SÉ STESSA.** Toccare un atleta nell'elenco
+   «Assegnato a» va su `/workout/:id?athlete_id=X`, cioè la **stessa rotta** con una
+   query diversa. Con la push, il tasto indietro riportava a una schermata che sembra
+   identica a quella da cui si viene — si legge come un tocco che non ha funzionato — e
+   cinque atleti guardati erano **cinque «indietro» per uscire**. Ora è un `replace`:
+   si sta cambiando quale atleta si guarda, non si sta entrando in una pagina nuova.
+3. 🔴 **La tab bar impilava.** `NavLink` senza `replace`: la history diventava il
+   percorso di tutta la sessione — Home, Calendario, Atleti, Home, Calendario — e il
+   tasto indietro di una pagina di dettaglio la ripercorreva a ritroso, portando in
+   schermate che l'utente non ha mai «aperto» ma solo attraversato. Le voci della barra
+   sono destinazioni di pari grado, non passi di un cammino: si sostituiscono, come su iOS.
+4. 🔴 **`navigate(-1)` non fa NIENTE quando la pagina è la prima della sessione.**
+   Aperta da una notifica push (`notifications.route`), da un deep link `fleofit://` o
+   dopo una ricarica della webview, dietro non c'è nessuna pagina dell'app: sul web si
+   esce dal sito, nella webview il tocco non produce niente. Ed è l'unico caso in cui
+   quel tasto è **indispensabile**, perché non esiste nessun altro modo di uscire da lì.
+
+### La forma: `src/useIndietro.js`, e vale per le sette pagine che hanno il tasto
+Si torna alla pagina precedente **quando esiste**, e al ripiego dichiarato dalla pagina
+quando non esiste — `useIndietro('/athletes')`, `useIndietro('/report')`, `useIndietro('/')`.
+Il ripiego non è la destinazione: è la rete sotto il caso 4.
+
+⚠️ **`location.key === 'default'` è il modo di sapere se c'è qualcosa dietro, e non ce
+n'è un altro.** React Router marca così la prima voce della propria history, quella con
+cui l'app si è avviata. `window.history.length` **non serve**: conta anche le pagine di
+altri siti visitate prima nella stessa scheda, quindi direbbe «c'è qualcosa dietro»
+proprio quando quel qualcosa non è nostro.
+
+⚠️ **Il ripiego usa `replace`**, e senza il difetto è sottile: la pagina da cui si è
+usciti resterebbe nella pila, quindi un secondo «indietro» ci riporterebbe **dentro**
+invece che fuori — un tasto indietro che va avanti. C'è un test che cade solo su quello.
+
+⚠️ In `CreateWorkout` la conferma «Sì, esci» serve **due** uscite diverse: `pendingPath`
+porta o la rotta di un link intercettato (una stringa) o la sentinella `INDIETRO`, che
+non è una rotta — passarla a `navigate` porterebbe su `/-1`.
+
+### I test, e le tre mutazioni che prendono
+`src/__tests__/useIndietro.test.jsx` ha tre test **perché le due forme sbagliate
+falliscono ognuna nel caso che l'altra copre**: la destinazione fissa passa il test sul
+ripiego e cade sul secondo, `navigate(-1)` nudo passa il secondo e cade sul primo.
+Verificato per mutazione: ogni mutazione fa cadere esattamente un test.
+
+⚠️ **Un test storico è caduto, ed è caduto per il motivo giusto.** «Tornando indietro
+NON riporta in cima» (§9-noviesdecies) si appoggiava alla push della tab bar per creare
+la voce di history su cui tornare: col `replace` quella voce non esiste più. È stato
+riscritto su una navigazione **dentro** una pagina, che è anche il caso che descrive.
+
+### Cosa NON è stato toccato
+I `navigate(-1)` che seguono un'**eliminazione** (`handleDeleteWorkout`): lì non è un
+tasto indietro, è «questa pagina non esiste più», e la pila è quella giusta.
+
+---
+
+## 9-quatervicies. Il modello predittivo del carico (02/09/2026)
+
+Richiesta del committente: sapere **quanto pesa un allenamento** prima di darlo a
+qualcuno. Il vincolo che dà forma a tutto: il workout **si crea prima e si assegna
+dopo**, quindi mentre lo si compone non si sa a chi andrà. Il modello è perciò
+diviso in due metà — `src/lib/previsione.js`, funzioni pure, 38 test.
+
+### Il problema, in una riga
+Il coach assegnava a memoria. La scheda diceva quanto dura un allenamento e con
+che RPE, mai **quanto costa a quella persona in quella settimana**: chi stava
+reggendo il carico e chi no si ricavava aprendo una scheda alla volta.
+
+### Cosa c'è ora
+1. **DURANTE** — nel builder, una quarta cella «Carico ≈269» e sotto una riga che
+   la colloca: «Sopra la media delle tue sedute Hyrox (≈120)».
+2. **ALL'ASSEGNAZIONE** — ogni riga del foglio può portare **un** avviso con il
+   numero da cui esce («Carico +81% sulla sua media»), e al passo 2 la frase
+   intera. Vale nei due fogli, che sono l'uno il rovescio dell'altro: la scheda
+   del workout ha un workout e dodici atleti, la scheda dell'atleta ha un atleta
+   e cento workout.
+
+### 🔴 LE DUE SCALE DI CARICO — la cosa da sapere prima di tutto
+Nel progetto convivono **due stimatori di durata**, e non è un dettaglio: su un
+blocco «For Time» da 5 round differiscono dell'**89%** (misurato il 02/09/2026 —
+`durataWorkout` addebita 15 minuti fissi a round, `durataBlocco` somma gli
+esercizi: 75 minuti contro 8). Quindi il carico si misura in due modi, e ognuno
+va confrontato **solo** con un termine di paragone costruito allo stesso modo:
+
+- **`caricoPrevisto`** (il builder) misura con `stimaWorkout`, cioè con gli stessi
+  strumenti delle due celle che gli stanno accanto: la quarta cella è il
+  **prodotto** delle prime due, e un coach che moltiplica a mente ritrova il
+  numero. Anche la media delle sue sedute passate è misurata così.
+- **`caricoAssegnazione`** (il warning) misura con `durataWorkout` e con
+  l'`rpeAtteso` di `statistiche.js`, cioè con gli **stessi due strumenti con cui
+  `caricoDi` ha misurato lo storico** e con cui `scartoRpeDi` misura lo scarto.
+  Un numeratore e un denominatore costruiti con stimatori diversi darebbero un
+  rapporto sbagliato, e sbagliato **nella direzione pericolosa**: un workout
+  pieno di For Time si proietterebbe quasi senza peso contro uno storico gonfiato
+  dallo stesso tipo di blocco — direbbe «tranquillo» proprio dove non lo è.
+
+⚠️ Le due scale **non compaiono mai accanto**: il builder mostra un carico
+assoluto e nessun rapporto, il foglio di assegnazione un rapporto e nessun carico
+assoluto. Unificare i due stimatori è la correzione vera ed è in BACKLOG (#40):
+tocca numeri già visibili nel report e nel calendario.
+
+### ⚠️ Le sette cose da sapere prima di rimetterci mano
+
+1. 🔴 **L'ordine degli avvisi È la regola, e la PAUSA viene prima di tutto.**
+   Chi ha chiesto di fermarsi ha la settimana vuota per definizione, quindi
+   qualunque allenamento gli produce un salto di carico enorme: con il carico
+   davanti gli si rimetterebbe addosso proprio l'allarme che la pausa esiste per
+   togliere (§9-decies). **Trovato da un test, non leggendo il codice**: la prima
+   stesura mostrava «Carico +112%» a un atleta in pausa. Poi il carico, il
+   rientro, l'aderenza, l'accumulo sul giorno, il bias, l'occasione.
+2. 🔴 **Il verde non si dichiara.** Chi non ha niente da segnalare non riceve
+   nessuna riga: con dodici nomi in elenco, un «tutto ok» accanto a undici rende
+   invisibile l'unico ambra. E **un solo motivo per riga**, il più grave
+   (§9-vicies punto 4).
+3. 🔴 **Dati insufficienti ≠ tutto bene.** Un atleta nuovo e un workout senza
+   intensità dichiarata producono una riga **grigia** che dice *perché* il
+   modello tace, mai un silenzio — che si leggerebbe come verde. È la sesta
+   comparsa della regola di `rpeAtteso` (`null`, non 5).
+4. 🔴 **Il cancello sta sullo storico VERO.** `acwrProiettato` non calcola niente
+   se `stato.carico.acwr` è `null`. Non è ridondante rispetto a
+   `rapportoCarico`: il carico proiettato renderebbe «attiva» anche la settimana
+   bersaglio, e un atleta con quattro sedute in **una sola** settimana si
+   vedrebbe assegnare un rapporto nato da un allenamento non ancora fatto. C'è un
+   test che è l'unico a prenderlo.
+5. **L'avviso NON blocca mai.** «Conferma» resta premibile. Un avviso che
+   impedisce un gesto è un avviso che si impara a disattivare — e questo è
+   costruito su una stima.
+6. **La lettura in più è UNA e parte all'APERTURA DEL FOGLIO**, non della pagina:
+   la scheda è la pagina più aperta dell'app e questi dati servono a un gesto che
+   quasi sempre non si fa. Se fallisce, i semafori **non compaiono** e
+   l'assegnazione funziona esattamente come prima — con una riga che lo dice.
+   ⚠️ In `AthleteDetail` **non c'è nessuna lettura in più**: la pagina ha già lo
+   storico per l'eroe «come sta andando», e lo passa al foglio come prop.
+7. ⚠️ **`fetchAthletes` ora chiede anche `notes`**, che è dove vive la pausa
+   (§9-decies). Toglierlo non darebbe nessun errore: la pausa smetterebbe
+   semplicemente di vedersi. Il test lo verifica sulle **colonne chieste**,
+   perché il finto Supabase non filtra le colonne e l'asserzione a schermo
+   passerebbe lo stesso.
+
+### 🔴 Le frasi degli avvisi NON hanno genere
+Trovato guardando la pagina di anteprima, non leggendo il codice: la prima
+stesura scriveva «**Fermo** da 10 giorni» e «**Per lui** un 9 vale ≈10» — e sul
+dispositivo quelle righe stavano accanto ad Arianna e a Giulia. Metà degli
+atleti sono donne, e questi avvisi compaiono sempre affiancati a un nome. Ora si
+dice **che cosa è successo** e non chi l'ha fatto: «Nessun allenamento da 10
+giorni», «Un 9 previsto vale ≈10», «Assegnare un allenamento è legittimo».
+⚠️ Il test `nessun avviso è declinato al maschile` scandaglia **ogni ramo** con
+una sola espressione regolare. Ci sono voluti due giri: la prima versione non
+comprendeva il caso del **bias** nell'elenco, ed è proprio lì che era rimasto un
+«lui lo sentirà intorno a 10».
+
+### 🔴 Il difetto che solo la pagina a 393px ha mostrato
+Con **quattro** celle ogni colonna scende a ~74px e «RPE ATTESO» va a capo,
+mentre «DURATA» e «CARICO» no: i quattro numeri finiscono su due basi diverse e
+la carta si legge come rotta. ⚠️ Accorciare l'etichetta a «RPE» è la soluzione
+sbagliata — è proprio «atteso» a distinguerla da «Il tuo RPE» dichiarato
+dall'atleta (§9-duodecies punto 2). Si riserva lo spazio di **due righe** a tutte
+le etichette, e solo quando le celle sono quattro. È lo stesso genere di difetto
+del conto alla rovescia del cestino (§9-septdecies punto 7): nessun test lo
+avrebbe preso.
+
+### Le mutazioni, che è il modo in cui questi test sono stati scritti
+**24 mutazioni provate, 24 prese** — ma non al primo giro: cinque erano sfuggite,
+e tutte e cinque per lo stesso motivo di sempre (§9-sexies). Le due che vale la
+pena ricordare: «la collocazione confronta tutte le corsie» era invisibile perché
+l'intruso era una **corsa**, che non ha blocchi e quindi nessun carico da
+scartare; e «il giorno accanto si segnala sempre» chiedeva un allenamento
+**morbido** accanto a uno duro, perché la guardia sta sul workout in arrivo e non
+sul vicino.
+
+### Cosa NON è stato fatto
+Le **fasi 3 e 4** (previsto contro realizzato nel report, e il brief in cima al
+builder) sono il pezzo successivo. Il **generatore dei blocchi** resta bloccato
+dal #25: senza il *risultato* di una seduta produrrebbe programmazione plausibile
+e cieca, che è ciò che il report esiste per evitare. I due fogli di assegnazione
+**non sono stati ridisegnati**: il semaforo si innesta nelle righe che ci sono.
+
+---
+
+## 9-quinvicies. L'ambiente di prova (02/09/2026)
+
+Nasce da un problema che il progetto ha da sempre e che si è visto solo quando
+c'è stato qualcosa da far provare: **non c'è modo di usare l'app senza usare i
+dati veri**. `ios-version` parla con il database di **produzione**, condiviso
+con la web app, e non esiste staging (§1.1). Provare il modello del carico
+voleva dire o guardare una vetrina, o assegnare allenamenti ad atleti veri — e
+un'assegnazione fa partire anche una push a una persona.
+
+### Cosa c'è
+`npm run demo` (cioè `VITE_DEMO=1 vite`). L'app **intera** gira su
+`src/supabaseDemo.js`, un Supabase finto in memoria seminato da
+`src/demoSemi.js`. Si clicca tutto: si crea un workout, lo si assegna, si
+completa con l'RPE, si naviga il report. Niente esce dal browser.
+
+### ⚠️ Le sei cose da sapere prima di rimetterci mano
+
+1. 🔴 **Non entra nel bundle di produzione, ed è la condizione che lo rende
+   accettabile.** `import.meta.env.VITE_DEMO` viene sostituito da Vite in fase
+   di build, quindi in una build normale il ternario di `supabaseClient.js`
+   diventa `false` e Rollup butta via il modulo. Verifica dopo `npm run build`:
+   `grep -l "AMBIENTE DI PROVA" dist/assets/*.js` → **nessun file**. Se un
+   giorno quel controllo diventasse una variabile a runtime, il finto client
+   finirebbe nell'`.ipa` spedito ad Apple.
+2. 🔴 **NON è un clone di Postgres.** Implementa i metodi che l'app usa davvero,
+   censiti il 02/09/2026: 16 metodi di catena, 8 tabelle, **due sole relazioni**
+   (`athlete_workouts → workouts` e `→ athletes`). Se una pagina comincia a
+   usare `.or()` o una relazione nuova, il sintomo è **una lista vuota, non un
+   errore**: va aggiunta qui.
+3. **Le date del seme sono RELATIVE a oggi.** Un seme con date scritte a mano
+   invecchia, e dopo una settimana «questa settimana» è vuota e metà delle
+   schermate non ha più niente da mostrare.
+4. **Ogni atleta finto esiste per far scattare UN ramo** del modello (§9-quatervicies),
+   e il commento accanto al nome dice quale. Se un ramo smette di comparire, si
+   parte da lì. ⚠️ Andrea Conti ha una seduta chiusa **domenica scorsa** apposta:
+   senza, risulterebbe «fermo», e il rientro precede l'aderenza nell'ordine degli
+   avvisi — la riga direbbe un'altra cosa.
+5. **I feedback più vecchi di tre giorni nascono «già letti».** Non è cosmesi:
+   una nota che contiene solo il marcatore RPE conta come feedback
+   (`feedbackNuovi`), quindi quattro settimane di sedute misurate aprivano la
+   Home con «35 da leggere» — comportamento corretto dell'app, ma non somiglia a
+   nessun coach vero.
+6. **Il nastro giallo si ritira dopo quattro secondi.** A schermo intero copre la
+   prima riga dell'intestazione — data e conteggio atleti — e questo ambiente
+   serve anche a *guardare* le schermate. Un nastro che nasconde ciò che si è
+   venuti a vedere è un nastro che si finisce per togliere.
+
+### Cosa NON copre
+Le cose che non sono database: le **Edge Function** (`invoke` logga e basta,
+quindi nessuna push parte), lo **storage** (le note vocali si caricano ma l'URL
+è finto), il **Realtime** (la Live Coach Cam non vede nessuno). Sono
+esattamente i pezzi che in prova non si possono provare — ed è bene che
+falliscano in silenzio invece di rompere la pagina.
+
+---
+
+## 9-sexvicies. Sign in with Apple (03/09/2026)
+
+Rifiuto di App Store del **02/09/2026** sulla build 1.1.0 (3), **linea guida 4.8 —
+Design: Login Services**. ⚠️ Non è il rifiuto di maggio che torna: il 2.3.1(a)
+resta chiuso (§9-ter). Questo è nuovo, e riguarda un pezzo che c'era da sempre.
+
+### Il rilievo si capisce al contrario di come sembra
+La 4.8 **non vieta i login di terze parti**. Dice che se ne offri uno devi offrire
+*anche* un'alternativa che rispetti tre condizioni, di cui una sola morde: deve
+permettere di **tenere nascosta la propria email a tutti**, te compreso. Google
+non lo fa. E non lo fa nemmeno **email+password**, che è la ragione per cui «ma
+c'è già l'accesso con email» non è una risposta valida: un account creato con il
+proprio indirizzo non tiene quell'indirizzo privato da nessuno.
+
+Quindi il lavoro è **additivo**. Google resta esattamente dov'era (decisione del
+committente, 03/09/2026), e accanto è nato Sign in with Apple.
+
+### 🔴 SUL NATIVO NON SERVONO NÉ UN SERVICES ID NÉ UNA CHIAVE `.p8`
+È il contrario di quello che dicono quasi tutte le guide, e vale mezza giornata
+più un carico di manutenzione permanente. Il Services ID e la chiave servono al
+flusso **OAuth via browser**, cioè al web, dove Supabase scambia un authorization
+code. Il flusso nativo non passa di lì: l'app riceve l'ID token **direttamente da
+Apple** e lo consegna a Supabase, che ne verifica la firma con le chiavi pubbliche
+di Apple e controlla che l'`aud` sia un bundle id autorizzato.
+Con loro sparisce anche il **client secret che scade ogni 6 mesi** — che sarebbe
+stato il costo peggiore dell'operazione, perché alla scadenza il login smette di
+funzionare senza preavviso e senza un errore in app.
+
+Resta quindi soltanto:
+- Apple Developer → App ID → capability **Sign In with Apple**, ⚠️ su
+  `it.federicoleo.fleofit` **e su `it.federicoleo.fleofit.dev`**: in Debug da
+  Xcode l'app gira col secondo. È la stessa trappola dei due bundle id delle push
+  (§4), ripresentata identica su un'altra funzione.
+- Supabase → Authentication → Providers → Apple → **Client IDs** con **entrambi**
+  i bundle id separati da virgola, e **Secret Key vuoto**. 🔴 Con il solo Services
+  ID il login web funzionerebbe e quello sull'iPhone no: sul nativo il
+  destinatario del token è il **bundle id**.
+- `com.apple.developer.applesignin` in `ios/App/App/App.entitlements`, più la
+  capability aggiunta in Xcode su Debug **e** Release (serve a rigenerare il
+  provisioning profile).
+
+### 🔴 IL PLUGIN È FERMO A CAPACITOR 7, E IL SINTOMO NON DICE NIENTE
+Successo il 03/09/2026, sul dispositivo: **«SignInWithApple plugin is not
+implemented on ios»**. Quel messaggio si legge come «manca il plugin» e porta a
+reinstallarlo, a rifare `cap sync`, a ripulire Xcode. Non è niente di tutto ciò.
+
+`@capacitor-community/apple-sign-in@7.1.0` — che è **l'ultima versione
+pubblicata**, non una vecchia — dichiara `capacitor-swift-pm` con
+`from: "7.0.0"`, che in SPM vuol dire `>= 7.0.0 < 8.0.0`. Ogni altro plugin del
+progetto dichiara `from: "8.0.0"` e l'app blocca la versione a `exact: "8.3.4"`.
+Il grafo dei pacchetti quindi **non si risolve affatto**:
+
+```
+xcodebuild: error: Could not resolve package dependencies:
+  'apple-sign-in' depends on 'capacitor-swift-pm' 7.0.0..<8.0.0 and
+  'capacitor-voice-recorder' depends on 'capacitor-swift-pm' 8.0.0..<9.0.0.
+```
+
+E qui sta la parte che inganna: **Xcode compila lo stesso**, riusando il grafo
+precedente, e il build **riesce**. Il ponte JS del plugin arriva comunque, perché
+lo porta `npx cap sync ios` insieme al bundle. Quindi in mano si ha un'app che
+sembra costruita bene, con il bottone al suo posto, e un'implementazione nativa
+che non è mai stata compilata.
+
+Come si verifica, invece di dedurlo:
+```bash
+cd ios/App && xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
+```
+
+**La correzione** è una riga, ed è bloccata nel repo: `patches/` +
+`patch-package` chiamato dal `postinstall` di `package.json`. Non è stata scelta
+per pigrizia rispetto a vendorizzare i 60 righi di Swift dentro `ios/App/App/`:
+quel progetto Xcode **non usa i gruppi sincronizzati col filesystem**, quindi un
+file nuovo va aggiunto al target a mano — e sbagliare quel passo produce
+**esattamente questo stesso errore**, in silenzio. La patch invece fallisce
+rumorosamente: senza, il build non risolve e lo dice.
+⚠️ Se un giorno esce una `7.1.1`, `patch-package` avvisa che la patch non si
+applica più. È il comportamento giusto: quel controllo non va disattivato.
+
+### 🔴 E UN BUILD NORMALE NON BASTA: SERVE IL CLEAN
+Corretto il vincolo, `-resolvePackageDependencies` riesce e `Package.resolved`
+elenca il pacchetto — ma **il build incrementale continua a non compilarlo**,
+perché il grafo dei bersagli in `DerivedData/.../XCBuildData` è ancora quello di
+prima. Il build riesce, e l'app dà lo stesso errore di runtime. Verificato: la
+cartella `Build/Intermediates.noindex/CapacitorCommunityAppleSignIn.build` non
+esisteva, mentre c'erano tutti gli altri diciotto plugin.
+Serve **Product → Clean Build Folder** (o `xcodebuild clean build`). Dopo, si
+controlla sul prodotto e non sul log:
+```bash
+strings <App.app>/App.debug.dylib | grep -c SignInWithApple   # 0 = non c'è
+```
+
+### 🔴 IL NONCE VA HASHATO DA UN LATO SOLO
+È il punto in cui questa integrazione fallisce senza dire perché, ed è
+verificabile leggendo le due metà:
+- il plugin fa `request.nonce = call.getString("nonce")`: scrive nel token **la
+  stringa che gli diamo**, non il suo hash;
+- `@supabase/auth-js` documenta l'opposto — «If the ID token contains a `nonce`
+  claim, then **the hash of this value** is compared to the value in the ID
+  token».
+
+Quindi **hash al plugin, valore in chiaro a Supabase**. Lo stesso valore ai due
+lati dà un 400 che sembra un problema di configurazione su Apple Developer, e ci
+si perdono ore a rifare una configurazione che era già giusta. Sta in
+`src/lib/appleLogin.js`, e c'è un test che monta la pagina e verifica che uno sia
+lo SHA-256 dell'altro.
+
+⚠️ `generaNonce` torna **`null`** quando la WebView non espone `crypto.subtle`, e
+non lancia: senza nonce il token non porta il claim, Supabase non ha niente da
+confrontare, e il login entra lo stesso. Si perde la protezione dal riutilizzo di
+un token già speso — il compromesso che accettano gli esempi nativi di Supabase —
+e si guadagna che un contesto non sicuro non chiuda fuori tutti.
+
+### 🔴 IL NOME ARRIVA UNA VOLTA SOLA, E POI MAI PIÙ
+Apple manda `givenName`/`familyName` **solo alla primissima autorizzazione**, e
+non sono nel token: da lì in poi tornano `null`. Se non si scrivono subito in
+`user_metadata` sono persi per sempre, e il sintomo non è un errore — è
+l'onboarding coi campi vuoti e la Home che saluta `email.split('@')[0]`, che con
+«Nascondi la mia email» è una stringa di caratteri casuali.
+⚠️ Per la stessa ragione `nomeDaApple` torna `null` invece di un oggetto con due
+stringhe vuote: scriverlo cancellerebbe il nome salvato la prima volta.
+
+### ⚠️ Le quattro conseguenze da conoscere prima di dire che è un bug
+1. 🔴 **Chi si allena già NON deve entrare con Apple.** Supabase unisce due
+   identità solo se l'email combacia, e con «Nascondi la mia email» l'indirizzo è
+   un `@privaterelay.appleid.com` che non combacia mai. Quell'atleta ottiene un
+   utente **nuovo**, senza riga `athletes` e senza codice invito, e
+   `ProtectedRoute` lo caccia su `/login?error=unauthorized`. Sign in with Apple è
+   di fatto la porta dei **nuovi inviti**, non un secondo ingresso per chi c'è già.
+2. 🔴 **Un account con email nascosta non può essere coach.** Le tre liste admin
+   sono per indirizzo (§4-bis), e un relay non è in nessuna delle tre. Il coach
+   continua a entrare con `coaching@federicoleo.it` e password.
+3. ⚠️ **Il recupero password non arriva a un indirizzo relay** se il dominio
+   mittente non è registrato nel servizio di inoltro di Apple. Non blocca niente —
+   chi entra con Apple non usa la password — ma non è un percorso da promettere.
+4. **Il bottone è bianco e sta SOPRA quello Google**, e non è gusto: la 4.8 chiede
+   che l'alternativa non sia «meno in vista» delle altre, ed è la prima cosa che
+   il revisore guarda dopo un rilievo su quella linea guida. Su fondo scuro le
+   linee guida di Apple prescrivono il bottone bianco, quindi un bottone nero su
+   `#1e1e1e` sarebbe conforme al marchio e fuori norma rispetto alla 4.8.
+
+### Il bottone si mostra solo sul NATIVO
+Sul web servirebbe il Services ID che il progetto non ha — la web app è fuori da
+questo lavoro, per decisione del committente. Un bottone che non può funzionare è
+peggio che non averlo: stessa regola del badge sulla navbar (§9-quaterdecies) e
+del pannello filtri dell'archivio (§9-sedecies). C'è un test che lo verifica dai
+due lati. ⚠️ Quel ramo lo toccano **solo** questo file e `useTastiera`:
+`src/test/setup.js` finge sempre «web», quindi va acceso a mano con
+`window.Capacitor` — e `Login.jsx` legge il **globale**, non il modulo
+`@capacitor/core`.
+
+### I file nuovi
+`src/lib/appleLogin.js` (logica pura, 8 test) e
+`src/pages/__tests__/LoginApple.test.jsx` (8 test su `Login` montata). Sei
+mutazioni provate sulla pagina, sei prese. Plugin
+`@capacitor-community/apple-sign-in@7.1.0` (dichiara `@capacitor/core >= 7`, ed è
+compatibile con SPM: `npx cap sync ios` lo elenca fra i 19).
+
+---
+
+## 9-septvicies. Il rework dell'accesso (04/09/2026)
+
+Stesso progetto Claude Design degli altri nove schermi
+(`4a238081-a3ee-4f59-ae34-100f29d55601`), artboard `Login.dc.html`, opzione
+**1b**. È l'unico dei dieci che cambia anche il **flusso**, non solo il JSX:
+la schermata di accesso è l'unico posto in cui la forma *è* il flusso.
+
+### Il problema, in una riga
+Il benvenuto chiedeva «Accedi» o «Nuovo Utente», cioè una cosa **che l'utente
+non sa**: chi sbagliava il bivio finiva contro il muro del codice invito, che
+non spiegava né cos'era il codice, né chi lo dà, né cosa fare senza. E la CTA
+gialla — l'unico tratto forte della pagina — stava sul percorso che riguarda
+una persona al mese, mentre chi torna ogni giorno prendeva il bottone grigio.
+
+### Cosa c'è ora
+1. **Il benvenuto** è una colonna sola di modi per entrare — Apple, Google,
+   email — identica per chi ha un profilo e per chi non ce l'ha. Sotto, la nota
+   ambra che dice **cos'è** il codice e **quando** verrà chiesto.
+2. **Il passo 2** chiede il codice a chi serve: otto caselle, maiuscolo
+   automatico, «Incolla dagli appunti», e la verifica che parte da sola
+   all'ottavo carattere.
+3. **L'invito accettato** è una card verde che resta a schermo finché il
+   profilo non esiste, con dentro il codice: prima veniva messo da parte e non
+   si vedeva più in nessuna schermata.
+4. **«Non ho un codice»** è un foglio con tre risposte, dove prima c'era un
+   vicolo cieco.
+
+### 🔴 IL VICOLO CIECO ERA IN `App.jsx`, NON NEL LOGIN
+È la parte che si perde leggendo solo la pagina. Chi entra con Apple o Google
+**prima** di avere un profilo — cioè il caso normale di un nuovo invitato —
+non passava mai dal login: passava da `ProtectedRoute`, che faceva `signOut()`
+e mandava a `/login?error=unauthorized`, cioè a un alert «Accesso Negato»
+senza nessuna via d'uscita se non chiudere l'app. Il codice non gli veniva
+**mai** chiesto.
+
+Ora quel ramo scrive `fleofit_invito_atteso` (email + provider) ed esce su
+`/login?serve=invito`, che è il passo 2. Il `signOut()` resta: senza un
+profilo non si entra, e quello è ancora il punto che lo decide — la RLS e il
+riscatto del codice non sono stati toccati di una riga.
+
+⚠️ Conseguenza voluta: dopo il codice, chi è entrato con Apple o Google deve
+**ritoccare lo stesso bottone** (la card verde glielo ripropone). Non è un
+passaggio dimenticato: il codice si riscatta con una sessione, e la sessione
+l'abbiamo appena chiusa. Un tocco su un provider che ha già autorizzato è un
+Face ID, contro un'app da chiudere e riaprire senza sapere perché.
+
+### ⚠️ Le sei cose da sapere prima di rimetterci mano
+
+1. 🔴 **Il nome del coach NON si può leggere, e l'artboard lo mette.**
+   `invitation_codes.created_by` è un id di `auth.users`, e chi non è ancora
+   dentro non ha nessuna query che lo risolva in un nome: `athletes` si legge
+   solo per la propria riga o da admin. Servirebbe una policy nuova o una
+   funzione `security definer`, cioè una migrazione, e lo schema è congelato
+   (regola 0-bis). La card dice quindi «Il tuo coach ti ha invitato» e mostra
+   **il codice**, che è vero — scrivere un nome a mano sarebbe un dato
+   inventato sulla schermata che deve dimostrare di sapere chi sei.
+2. 🔴 **«Non esiste» e «già usato» non sono distinguibili**, e nemmeno questo
+   è una scelta di copy: la policy che serve chi non è dentro filtra
+   `is_active = true and used_by is null`, quindi un codice riscattato torna
+   come risposta **vuota** esattamente come uno mai esistito. Il messaggio
+   porta perciò entrambi i rimedi in una frase sola. Indovinarne uno manda
+   metà delle persone a rifare una cosa già fatta.
+3. 🔴 **`maybeSingle()` e non `single()`.** Con `single()` «nessuna riga»
+   arriva come **errore**, indistinguibile da un guasto di rete — e i due
+   rimedi sono opposti («chiedine uno nuovo» contro «riprova fra un momento»).
+   C'è un test che cade solo su quella confusione.
+4. 🔴 **`normalizzaCodice` riconosce anche il LINK**, ed è il caso più
+   frequente: Impostazioni offre «Copia codice» **e** «Copia link», e il link è
+   quello che si manda su WhatsApp. Senza quel ramo, chi lo incolla ottiene
+   otto caratteri presi dall'indirizzo — un codice sbagliato lungo come quello
+   giusto, e un errore che non spiega niente.
+5. **Le otto caselle sono UN campo solo**, disegnato in otto. Con otto input
+   l'incolla riempirebbe la prima e basta, la correzione diventa un labirinto,
+   e VoiceOver leggerebbe otto campi senza nome invece di uno chiamato «Codice
+   invito».
+6. **Il passo 1 email non indovina il ramo, e non può.** Supabase non dice se
+   un account esiste (è la difesa contro l'enumerazione degli indirizzi):
+   password sbagliata e profilo inesistente tornano lo stesso «Invalid login
+   credentials». Quindi lì si offrono **le due uscite** — «Password
+   dimenticata» e «Ho un codice invito» — invece di sceglierne una a caso. Con
+   Apple e Google il ramo si sa davvero, ed è il motivo per cui quei due
+   percorsi sono più corti.
+
+### 🔴 Il difetto che solo la pagina a 393px ha mostrato
+La riga «Non ho un codice» era ancorata in fondo, e a tastiera chiusa lasciava
+**mezzo schermo di vuoto** fra sé e le caselle. L'artboard la disegna subito
+sotto il bottone «Incolla», con la tastiera aperta a occupare il resto — che è
+lo stato in cui questa schermata si guarda davvero. Nessun test lo avrebbe
+preso: è lo stesso genere di difetto del conto alla rovescia del cestino
+(§9-septdecies punto 7) e delle quattro celle del builder (§9-quatervicies).
+
+### Cosa NON è stato fatto, e perché
+- **Il passo 1 email non è ridisegnato.** L'artboard copre il benvenuto e il
+  codice, e il suo `dv-next` dà il form email fra i prossimi pezzi di design:
+  prende la cornice condivisa e niente di più. Stessa scelta dello step 2 della
+  corsa nel builder (§9-undecies) e del pannello filtri dell'archivio.
+- **«Termini» e «Privacy» sono testo, non collegamenti.** `privacy-policy.html`
+  sta in radice, fuori da `public/`, e la riscrittura di `vercel.json` non lo
+  serve: non esiste una URL che funzioni. Un link a un 404 sulla schermata di
+  accesso è peggio di una riga che non promette una destinazione — voce in
+  BACKLOG.
+- **L'onboarding non è toccato.** Dopo il codice il percorso è quello di
+  sempre: sessione → `ProtectedRoute` riscatta il codice → `Onboarding`.
+
+### I file nuovi
+`src/lib/codiceInvito.js` (logica pura, 8 test) e
+`src/components/LoginUI.jsx` (sola presentazione).
+`src/pages/__tests__/LoginInvito.test.jsx` porta 14 test, tutti verificati per
+mutazione: sette mutazioni provate, sette prese.
 
 ---
 

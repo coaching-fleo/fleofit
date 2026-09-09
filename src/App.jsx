@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { App as CapacitorApp } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
@@ -18,6 +18,8 @@ const Athletes = lazy(() => import('./pages/Athletes'))
 const AthleteDetail = lazy(() => import('./pages/AthleteDetail'))
 const WorkoutDetail = lazy(() => import('./pages/WorkoutDetail'))
 const WorkoutsArchive = lazy(() => import('./pages/WorkoutsArchive'))
+const WeeklyReport = lazy(() => import('./pages/WeeklyReport'))
+const AthleteReport = lazy(() => import('./pages/AthleteReport'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Login = lazy(() => import('./pages/Login'))
 
@@ -39,6 +41,7 @@ import { User, Upload } from 'lucide-react'
 import { AlertHost } from './components/CustomModals'
 import { mostraErrore } from './lib/alert'
 import { rinfrescaTokenPush } from './lib/pushToken'
+import { scriviJson } from './lib/offlineQueue'
 import { sincronizzaBadge } from './lib/badge'
 
 function Onboarding({ user, onComplete }) {
@@ -163,7 +166,21 @@ function Onboarding({ user, onComplete }) {
   )
 }
 
-function ProtectedRoute({ children }) {
+/**
+ * Cancello unico di tutte le pagine private, ed è una route di LAYOUT.
+ *
+ * 🔴 Fino al 31/08/2026 ogni <Route> aveva il PROPRIO <ProtectedRoute>: cambiare
+ * pagina lo smontava e ne montava un altro, che ripartiva da `loading = true` e
+ * rifaceva `getSession()` più una `select` su `athletes`. A ogni tocco, prima
+ * della pagina, ricompariva la schermata di avvio dell'app — logo e
+ * «Caricamento…» — e con essa sparivano Navbar e AuthContext, che stanno qui
+ * dentro. Ora il montaggio è UNO solo: la sessione si risolve all'avvio, e da lì
+ * in poi cambia soltanto ciò che sta in <Outlet />.
+ *
+ * ⚠️ Chi aggiunge una pagina privata la mette DENTRO questa route, senza
+ * riavvolgerla: un secondo <ProtectedRoute> rimette lo splash sulla sua rotta.
+ */
+function ProtectedRoute() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState(null)
@@ -191,10 +208,19 @@ function ProtectedRoute({ children }) {
     setSession(session)
     if (session?.user) {
       const isAdmin = ADMIN_EMAILS.includes(session.user.email?.toLowerCase())
-      
+
+      // 🔴 UNA lettura sola della riga atleta, e sta in testa apposta.
+      // Erano due `select` sulla STESSA riga, per due domande diverse —
+      // «esiste?» e «come si chiama?» — e per giunta in FILA: la seconda
+      // partiva solo quando la prima era tornata. Misurato con una latenza di
+      // 100 ms per query, l'avvio spendeva ~5 giri di rete di cui 4 in serie
+      // prima che la Home cominciasse a chiedere i suoi dati
+      // (§9-noviesdecies). `select('id, name, surname')` risponde a entrambe.
+      const { data: rigaAtleta } = await supabase.from('athletes')
+        .select('id, name, surname').eq('id', session.user.id).maybeSingle()
+
       if (!isAdmin) {
-        const { data: athleteData } = await supabase.from('athletes').select('id').eq('id', session.user.id).maybeSingle()
-        if (!athleteData) {
+        if (!rigaAtleta) {
           const urlParams = new URLSearchParams(window.location.search)
           const inviteCode = localStorage.getItem('fleofit_invite_code') || urlParams.get('inviteCode')
           let isAuthorized = false;
@@ -224,9 +250,32 @@ function ProtectedRoute({ children }) {
           }
 
           if (!isAuthorized) {
+            // 🔴 Non è più un vicolo cieco (04/09/2026, rework del login).
+            //
+            // Fin qui questo ramo faceva `signOut()` e mandava a
+            // `/login?error=unauthorized`, che apriva un alert «Accesso
+            // Negato: nessun account trovato o codice di invito mancante».
+            // Chi ci finiva — cioè chiunque entri con Apple o Google prima di
+            // avere un profilo, il caso NORMALE di un nuovo invitato — non
+            // aveva nessuna via d'uscita se non chiudere l'app: il codice non
+            // gli veniva mai chiesto, e l'alert non diceva né cosa fosse né
+            // chi lo dà.
+            //
+            // Ora si esce sul passo 2 del login, che il codice lo chiede — e
+            // lo chiede sapendo per chi, perché l'email e il provider passano
+            // di qui. Il signOut resta: senza un profilo non si entra, e
+            // questo è ancora il punto che lo decide.
+            //
+            // ⚠️ `scriviJson` e non `setItem` diretto: regola 0-bis di
+            // CLAUDE.md §9. Se fallisce non cambia niente di essenziale — il
+            // passo 2 si apre lo stesso, solo senza l'email in testa.
             localStorage.removeItem('fleofit_invite_code')
+            scriviJson('fleofit_invito_atteso', {
+              email: session.user.email || '',
+              provider: session.user.app_metadata?.provider || '',
+            })
             await supabase.auth.signOut()
-            window.location.href = '/login?error=unauthorized'
+            window.location.href = '/login?serve=invito'
             return;
           }
         } else {
@@ -258,16 +307,19 @@ function ProtectedRoute({ children }) {
       }
 
       if (r === 'athlete' || r === 'admin') {
-        const { data } = await supabase.from('athletes').select('id, name, surname').eq('id', session.user.id).maybeSingle()
-        if (!data || !data.name) {
+        // ⚠️ Nessuna seconda lettura: è la riga presa in testa. Resta `null`
+        // anche dopo il riscatto di un codice invito — la riga `athletes` in
+        // quel momento non esiste ancora — ed è ciò che manda all'onboarding,
+        // esattamente come prima.
+        if (!rigaAtleta || !rigaAtleta.name) {
           setNeedsOnboarding(true)
           setLoading(false)
           return
         }
-        setUserName(data.name)
-        localStorage.setItem(`fleofit_name_${session.user.id}`, data.name)
-        if (data.name !== meta.first_name) {
-          supabase.auth.updateUser({ data: { first_name: data.name, last_name: data.surname } }).catch(()=>{})
+        setUserName(rigaAtleta.name)
+        localStorage.setItem(`fleofit_name_${session.user.id}`, rigaAtleta.name)
+        if (rigaAtleta.name !== meta.first_name) {
+          supabase.auth.updateUser({ data: { first_name: rigaAtleta.name, last_name: rigaAtleta.surname } }).catch(()=>{})
         }
       }
     }
@@ -304,16 +356,73 @@ function ProtectedRoute({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user: session.user, role }}>
+    // ⚠️ `nome` sta qui perché la Home lo rileggeva dal database una TERZA
+    // volta (`athletes.select('name')`), per un dato che questo componente ha
+    // già in mano. Chi consuma il contesto deve reggere `nome` mancante: i
+    // test montano le pagine da sole e non lo passano (montaPagina.jsx).
+    <AuthContext.Provider value={{ user: session.user, role, nome: userName }}>
       {/* Lo spazio per la tab bar viene da --altezza-navbar (src/index.css),
           non da un `pb-16` scritto qui: la barra è alta quanto è alta, e
           questo numero deve seguirla da solo. */}
       <div className="pb-[var(--altezza-navbar)]">
-        {children}
+        {/* ⚠️ Il Suspense sta ANCHE qui, non solo intorno a <Routes>: a
+            sospendere è il confine più vicino, e con il solo confine esterno
+            finivano sotto il fallback pure questo componente e la Navbar — la
+            tab bar spariva a ogni pagina caricata su richiesta. Così il chunk
+            sospende soltanto <Outlet />. */}
+        <Suspense fallback={<div className="min-h-[60vh]" />}>
+          <Outlet />
+        </Suspense>
         <Navbar />
       </div>
     </AuthContext.Provider>
   )
+}
+
+/**
+ * Ogni pagina nuova si apre dall'inizio.
+ *
+ * 🔴 Non c'era, e non è un difetto delle ultime pagine: mancava da sempre in
+ * tutta l'app. `BrowserRouter` non tocca lo scorrimento, e le pagine sono
+ * figlie di una route di LAYOUT — cioè cambia solo ciò che sta dentro
+ * `<Outlet />`, mentre la finestra resta esattamente dov'era. Si nota quando la
+ * pagina di partenza è lunga: si scorre la Home fino in fondo, si tocca «Report
+ * settimanale», e il report si apre a metà. A schermo non sembra una pagina
+ * nuova aperta male — sembra che il tocco non abbia funzionato.
+ *
+ * ⚠️ **Solo sulle navigazioni nuove (`PUSH`/`REPLACE`), mai su `POP`.** Il
+ * ritorno indietro deve riportare la pagina dov'era: chi scorre la Home fino
+ * agli allenamenti scaduti, ne apre uno e torna, deve ritrovarsi lì e non in
+ * cima. Azzerare anche lì trasforma un difetto in un altro, e più fastidioso —
+ * perché è il gesto che si ripete di più.
+ *
+ * ⚠️ La dipendenza è `key` e non `pathname`: due navigazioni allo stesso
+ * percorso con query diverse — `/workout/1?athlete_id=a` e `?athlete_id=b`, che
+ * è il formato dei deep link (§8) — sono due pagine diverse, e il pathname non
+ * cambia. `key` cambia a ogni navigazione, quale che sia.
+ * ⚠️ Quel caso specifico NON è coperto dai test: nell'app non esistono due
+ * comandi che portino allo stesso percorso con query diverse senza passare da
+ * una pagina in mezzo, quindi non c'è modo di provocarlo montando `App`. Il
+ * test sul doppio tocco della voce già attiva copre il caso «stesso percorso»
+ * ma passerebbe anche con `pathname`, perché lì cambia il TIPO di navigazione
+ * (`PUSH` → `REPLACE`). Chi semplifica questa dipendenza non romperà nessun
+ * test.
+ *
+ * ⚠️ Con `startTransition` (che `BrowserRouter` applica a ogni cambio di rotta)
+ * l'effetto scatta al COMMIT della pagina nuova, non al tocco: la pagina
+ * precedente resta ferma dov'è finché il chunk arriva, e non fa un salto in
+ * cima prima di sparire (§9-noviesdecies).
+ */
+function ScrollInCima() {
+  const { key } = useLocation()
+  const tipo = useNavigationType()
+
+  useEffect(() => {
+    if (tipo === 'POP') return
+    window.scrollTo(0, 0)
+  }, [key, tipo])
+
+  return null
 }
 
 function DeeplinkHandler() {
@@ -446,21 +555,31 @@ function App() {
         }
       `}</style>
       <DeeplinkHandler />
+      <ScrollInCima />
       <div className="min-h-screen bg-[#0B0B0B] text-white">
         <AlertHost />
         <Suspense fallback={<div className="min-h-screen bg-[#0B0B0B]" />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/tv" element={<TVDashboard />} />
-          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-          <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
-          <Route path="/create" element={<ProtectedRoute><CreateWorkout /></ProtectedRoute>} />
-          <Route path="/athletes" element={<ProtectedRoute><Athletes /></ProtectedRoute>} />
-          <Route path="/athletes/:id" element={<ProtectedRoute><AthleteDetail /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><AthleteDetail /></ProtectedRoute>} />
-          <Route path="/workout/:id" element={<ProtectedRoute><WorkoutDetail /></ProtectedRoute>} />
-          <Route path="/archive" element={<ProtectedRoute><WorkoutsArchive /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          {/* Un solo <ProtectedRoute> per tutte le pagine private: è la route
+              di layout, e le pagine sono sue figlie. Non riavvolgerne nessuna. */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/create" element={<CreateWorkout />} />
+            <Route path="/athletes" element={<Athletes />} />
+            <Route path="/athletes/:id" element={<AthleteDetail />} />
+            <Route path="/profile" element={<AthleteDetail />} />
+            <Route path="/workout/:id" element={<WorkoutDetail />} />
+            <Route path="/archive" element={<WorkoutsArchive />} />
+            {/* Riservata al coach: la pagina rimanda l'atleta alla Home da sé,
+                come fa /athletes. Non è una guardia di sicurezza — quella la
+                fanno le policy RLS — ma di interfaccia. */}
+            <Route path="/report" element={<WeeklyReport />} />
+            <Route path="/report/:id" element={<AthleteReport />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>

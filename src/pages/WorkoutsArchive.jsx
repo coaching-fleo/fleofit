@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { categoriaDi } from '../lib/categorie'
@@ -17,6 +18,7 @@ export default function WorkoutsArchive() {
   const [searchTerm, setSearchTerm] = useState('')
   const [corsiaAttiva, setCorsiaAttiva] = useState(null)
   const navigate = useNavigate()
+  const indietro = useIndietro('/')
   const { role, user } = useAuth()
   const isCoach = role !== 'athlete'
 
@@ -106,7 +108,7 @@ export default function WorkoutsArchive() {
 
   return (
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] page-transition">
-      <TestataArchivio onIndietro={() => navigate(-1)} dettaglio={dettaglio}>
+      <TestataArchivio onIndietro={indietro} dettaglio={dettaglio}>
         <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
         {corsie.length > 1 && (
           <FiltriCorsia corsie={corsie} attiva={corsiaAttiva} totale={workouts.length}

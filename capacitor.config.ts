@@ -29,10 +29,11 @@ const config: CapacitorConfig = {
   //      ipconfig getifaddr en0
   //    e dopo averlo cambiato serve `npx cap sync ios` — il valore finisce in
   //    ios/App/App/capacitor.config.json, che è la copia che Xcode compila.
-  server: {
-    url: 'http://192.168.1.166:5173',
-    cleartext: true
-  },
+  
+  // server: {
+  //   url: 'http://192.168.1.166:5173',
+  //   cleartext: true
+  // },
   // ────────────────────  FINE BLOCCO DA CANCELLARE  ────────────────────────
 
   plugins: {

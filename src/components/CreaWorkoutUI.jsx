@@ -128,10 +128,22 @@ const TONO_SEGMENTO = {
 const tonoSegmento = (tipo, lavoro) =>
   lavoro ? 'var(--color-brand)' : (TONO_SEGMENTO[tipo] || 'rgba(255,255,255,.28)')
 
-function Cella({ etichetta, valore, unita, ambra, classeValore }) {
+/**
+ * ⚠️ `etichettaDueRighe` non è un vezzo tipografico: con QUATTRO celle su 393px
+ * ogni colonna scende a ~74px e «RPE ATTESO» va a capo, mentre «DURATA» e
+ * «CARICO» no — i quattro numeri finiscono su due basi diverse e la carta si
+ * legge come rotta. Accorciare l'etichetta a «RPE» sarebbe la soluzione
+ * sbagliata: è proprio la parola «atteso» a distinguerla dall'«Il tuo RPE»
+ * dichiarato dall'atleta, e perderla è la bugia peggiore della carta
+ * (CLAUDE.md §9-duodecies punto 2). Si riserva quindi lo spazio di due righe a
+ * tutte, e i valori tornano allineati.
+ * ⚠️ Solo con quattro celle: con tre l'etichetta sta su una riga e riservarne
+ * due lascerebbe un buco.
+ */
+function Cella({ etichetta, valore, unita, ambra, classeValore, etichettaDueRighe }) {
   return (
     <div className="flex-1 min-w-0 flex flex-col gap-[5px]">
-      <span className={LABEL}>{etichetta}</span>
+      <span className={`${LABEL} leading-[1.15] ${etichettaDueRighe ? 'min-h-[2.3em]' : ''}`}>{etichetta}</span>
       <span className={`text-[23px] font-black tracking-[-.01em] leading-none ${
         classeValore || (ambra ? 'text-brand' : 'text-white')}`}>
         {valore}
@@ -153,18 +165,34 @@ function Cella({ etichetta, valore, unita, ambra, classeValore }) {
  * ATTESO ma quello che l'atleta ha DICHIARATO. Sono due misure diverse — una
  * la fa il coach a tavolino, l'altra chi si è allenato — e mostrarle sotto la
  * stessa etichetta sarebbe la bugia peggiore della pagina.
+ *
+ * ⚠️ `carico` (minuti × RPE atteso) si mostra SOLO quando la terza cella è
+ * ancora l'RPE atteso, ed è la stessa ragione di sopra portata a quattro
+ * colonne: accanto a un RPE dichiarato dall'atleta, un carico calcolato su
+ * quello previsto metterebbe nella stessa riga due misure che parlano di due
+ * momenti diversi. O tutte e tre dicono «previsto», o la quarta non c'è.
+ *
+ * ⚠️ E `carico` è `null`, non 0, su un workout che non dichiara intensità: la
+ * cella sparisce invece di dire che la seduta non pesa niente.
  */
-export function RiepilogoWorkout({ secondi, blocchi, rpe, segmenti, terzaCella }) {
+export function RiepilogoWorkout({ secondi, blocchi, rpe, segmenti, terzaCella, carico, collocazione }) {
   const conDurata = segmenti.filter(s => s.secondi > 0)
+  const mostraCarico = !terzaCella && carico != null
   return (
     <div data-riepilogo className={`${CARD} px-[17px] py-[15px] flex flex-col gap-3.5`}>
       <div className="flex gap-2.5">
-        <Cella etichetta="Durata" valore={minutiStimati(secondi)} unita="min" />
-        <Cella etichetta="Blocchi" valore={blocchi} />
+        <Cella etichetta="Durata" valore={minutiStimati(secondi)} unita="min" etichettaDueRighe={mostraCarico} />
+        <Cella etichetta="Blocchi" valore={blocchi} etichettaDueRighe={mostraCarico} />
         {terzaCella
           ? <Cella {...terzaCella} />
-          : <Cella etichetta="RPE atteso" valore={rpe === null ? '—' : decimale(rpe)} ambra={rpe !== null} />}
+          : <Cella etichetta="RPE atteso" valore={rpe === null ? '—' : decimale(rpe)} ambra={rpe !== null}
+              etichettaDueRighe={mostraCarico} />}
+        {mostraCarico && <Cella etichetta="Carico" valore={`≈${carico}`} etichettaDueRighe />}
       </div>
+
+      {mostraCarico && collocazione && (
+        <p className="text-[12px] leading-[1.45] text-gray-400 -mt-1">{collocazione.testo}</p>
+      )}
 
       {conDurata.length > 0 && (
         <div className="flex gap-[3px] h-[7px]" aria-hidden="true">

@@ -26,7 +26,58 @@ const intero = (v, ripiego) => {
 const pieno = (v) => v != null && v !== '' && v !== '-'
 
 /**
- * I parametri di un blocco in una riga, o stringa vuota se non ne ha.
+ * I soli parametri di un blocco: «ogni 1:00 × 24», «3 round · 1:30 rest».
+ *
+ * Torna **`null`** — e non stringa vuota — su un tipo di blocco che non
+ * conosciamo: chi chiama deve poter distinguere «questo blocco non ha
+ * parametri da dire» da «non so nemmeno che blocco sia», e le due cose
+ * portano a due righe diverse.
+ *
+ * ⚠️ È qui che vivono i **ripieghi** — 1:00 per l'intervallo, 10:00 per
+ * l'AMRAP, 10 / 3 / 1 giri — e devono restare gli stessi che `durataBlocco`
+ * usa per stimare, o un blocco appena creato peserebbe una cosa e ne
+ * dichiarerebbe un'altra. `sottotitoloBlocco` ci aggiunge il conteggio degli
+ * esercizi; la grafica da condividere (src/lib/recapStoria.js) NON lo vuole,
+ * perché gli esercizi li elenca subito sotto — ed è la ragione per cui questa
+ * funzione è separata invece di essere il corpo di quella.
+ */
+export const parametriBlocco = (block) => {
+  if (!block) return null
+  const p = block.params || {}
+
+  switch (block.type) {
+    // ⚠️ Per WarmUp e Rest la durata è l'unico parametro, e `sottotitoloBlocco`
+    // non arriva mai fin qui: nella scheda quel numero sta già a destra del
+    // nome. Sulla grafica invece è tutto ciò che c'è da dire.
+    case 'WarmUp':
+    case 'Rest':
+      return pieno(p.duration) ? p.duration : ''
+    case 'EMOM':
+      return `ogni ${p.interval || '1:00'} × ${intero(p.rounds, 10)}`
+    case 'ON/OFF':
+      return `${p.on || '1:00'} on / ${p.off || '1:00'} off × ${intero(p.rounds, 10)}`
+    case 'AMRAP':
+      return `in ${p.duration || '10:00'}`
+    case 'For Time':
+      return round(intero(p.rounds, 3))
+    case 'Interval':
+      return round(intero(p.rounds, 1))
+    case 'Cash In':
+    case 'Cash Out': {
+      const r = intero(p.rounds, 1)
+      // Il rest esiste solo FRA i round: su un round solo non si nomina, che è
+      // anche la regola con cui `durataBlocco` lo conta (round − 1 volte).
+      const rest = r > 1 && pieno(p.rest) ? `${p.rest} rest` : ''
+      return [r > 1 ? round(r) : '', rest].filter(Boolean).join(' · ')
+    }
+    default:
+      return null
+  }
+}
+
+/**
+ * I parametri di un blocco preceduti dal conteggio degli esercizi, o stringa
+ * vuota se non c'è niente da dire.
  *
  * WarmUp e Rest tornano '' di proposito: la loro unica informazione è la
  * durata, che nella scheda sta già a destra del nome. Ripeterla qui darebbe
@@ -34,35 +85,14 @@ const pieno = (v) => v != null && v !== '' && v !== '-'
  */
 export const sottotitoloBlocco = (block) => {
   if (!block) return ''
-  const p = block.params || {}
-  const n = (block.exercises || []).length
-  const conEsercizi = (...pezzi) => [esercizi(n), ...pezzi.filter(Boolean)].join(' · ')
+  if (block.type === 'WarmUp' || block.type === 'Rest') return ''
 
-  switch (block.type) {
-    case 'WarmUp':
-    case 'Rest':
-      return ''
-    case 'EMOM':
-      return conEsercizi(`ogni ${p.interval || '1:00'} × ${intero(p.rounds, 10)}`)
-    case 'ON/OFF':
-      return conEsercizi(`${p.on || '1:00'} on / ${p.off || '1:00'} off × ${intero(p.rounds, 10)}`)
-    case 'AMRAP':
-      return conEsercizi(`in ${p.duration || '10:00'}`)
-    case 'For Time':
-      return conEsercizi(round(intero(p.rounds, 3)))
-    case 'Interval':
-      return conEsercizi(round(intero(p.rounds, 1)))
-    case 'Cash In':
-    case 'Cash Out': {
-      const r = intero(p.rounds, 1)
-      // Il rest esiste solo FRA i round: su un round solo non si nomina, che è
-      // anche la regola con cui `durataBlocco` lo conta (round − 1 volte).
-      const rest = r > 1 && pieno(p.rest) ? `${p.rest} rest` : ''
-      return conEsercizi(r > 1 ? round(r) : '', rest)
-    }
-    default:
-      return n > 0 ? esercizi(n) : ''
-  }
+  const n = (block.exercises || []).length
+  const parametri = parametriBlocco(block)
+  // Di un blocco che non conosciamo resta il solo conteggio — e su zero non si
+  // scrive niente, perché un blocco vuoto e sconosciuto non ha una riga.
+  if (parametri === null) return n > 0 ? esercizi(n) : ''
+  return [esercizi(n), parametri].filter(Boolean).join(' · ')
 }
 
 /**

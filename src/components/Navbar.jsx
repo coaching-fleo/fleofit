@@ -54,9 +54,18 @@ const Etichetta = ({ attiva, children }) => (
   <span className={`text-[10.5px] ${attiva ? 'font-extrabold' : 'font-bold'}`}>{children}</span>
 )
 
+/**
+ * ⚠️ `replace` non è un dettaglio: una tab bar NON impila.
+ *
+ * Con la push, la history diventa il percorso di tutta la sessione — Home,
+ * Calendario, Atleti, Home, Calendario — e il tasto indietro di una pagina di
+ * dettaglio la ripercorre a ritroso, portando in schermate che l'utente non ha
+ * mai «aperto» ma solo attraversato. Le voci della barra sono destinazioni di
+ * pari grado, non passi di un cammino: si sostituiscono, come su iOS.
+ */
 function Voce({ a, icona, children }) {
   return (
-    <NavLink to={a} className={voce}>
+    <NavLink to={a} replace className={voce}>
       {({ isActive }) => (
         <>
           <Cerchio attiva={isActive} icona={icona} />

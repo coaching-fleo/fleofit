@@ -219,3 +219,35 @@ describe('L\'anagrafica', () => {
     expect(screen.queryByText(/N\/A/)).not.toBeInTheDocument()
   })
 })
+
+describe('La cancellazione del proprio account è salita in Impostazioni', () => {
+  // 🔴 Il 09/09/2026 questo gesto si è spostato per la 5.1.1(v) di App Store,
+  // che vuole la cancellazione «easy to find»: dentro la modale di modifica del
+  // proprio profilo non la trovava nessuno. Qui resta SOLO il coach che elimina
+  // un atleta, che è un'altra cosa e ha il suo cestino in «Eliminati di recente».
+  //
+  // Sono due test e servono entrambi: chi toglie il gesto per tutti passa il
+  // primo e cade sul secondo, chi non lo toglie affatto fa il contrario.
+
+  const apriModifica = async () => {
+    const menu = await apriMenu()
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Modifica scheda' }))
+  }
+
+  it('🔴 sul PROPRIO profilo non c’è più: ora sta in Impostazioni', async () => {
+    comeAtleta()
+    await attendi()
+    await apriModifica()
+
+    expect(await screen.findByText('Salva Modifiche')).toBeInTheDocument()
+    expect(screen.queryByText(/Elimina profilo/i)).not.toBeInTheDocument()
+  })
+
+  it('il coach invece elimina ancora un atleta da qui', async () => {
+    comeCoach()
+    await attendi()
+    await apriModifica()
+
+    expect(await screen.findByText('Elimina profilo atleta')).toBeInTheDocument()
+  })
+})

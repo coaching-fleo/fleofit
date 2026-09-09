@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useIndietro } from '../useIndietro'
 import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -18,7 +19,8 @@ import { battito } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
 import { conVelo, coloreDaClasse, BRAND, RUNNING, CUSTOM, IA } from '../lib/colori'
 import { CARD, LABEL, VETRO } from '../lib/stiliCard'
-import { riepilogoWorkout, durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
+import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
+import { caricoPrevisto, collocazioneCarico } from '../lib/previsione'
 import {
   TestataCrea, CardCategoria, RigaCampo, RiepilogoWorkout, SpinaBlocco, DurataBlocco,
   NumeroEsercizio, CardIA, BottoneGhost, BarraAzioni, CtaPrimaria, BottoneQuadrato,
@@ -2019,6 +2021,13 @@ function NoteCoach({ valore, onChange, etichetta, nota, placeholder, righe = 3 }
   )
 }
 
+/**
+ * L'uscita chiesta dal tasto indietro, che non è una rotta: `pendingPath` porta
+ * altrimenti il percorso di un link intercettato. Sono due uscite diverse e la
+ * conferma «Sì, esci» le serve entrambe.
+ */
+const INDIETRO = Symbol('indietro')
+
 export default function CreateWorkout() {
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
@@ -2062,6 +2071,7 @@ export default function CreateWorkout() {
   const [newWorkoutName, setNewWorkoutName] = useState('')
 
   const navigate = useNavigate()
+  const indietro = useIndietro('/')
 
   // Hook touch per riordinare i BLOCCHI HYROX
   // ⚠️ useTouchDrag memoizza getTouchHandlers su onReorder: con un'arrow inline
@@ -2370,11 +2380,11 @@ export default function CreateWorkout() {
       setStep(1)
     } else {
       if (hasUnsavedChanges && !saved) {
-        setPendingPath(-1)
+        setPendingPath(INDIETRO)
         setShowExitConfirm(true)
       } else {
         localStorage.removeItem('fleofit_workout_draft')
-        navigate(-1)
+        indietro()
       }
     }
   }
@@ -2384,7 +2394,30 @@ export default function CreateWorkout() {
   // I tre numeri in cima allo step 2 e i segmenti della barra. Un useMemo e non
   // uno stato aggiornato da un effetto: sono una funzione dei blocchi, e uno
   // stato derivato può restare indietro di un render (CLAUDE.md §9-septies).
-  const riepilogo = useMemo(() => riepilogoWorkout(blocks), [blocks])
+  const riepilogo = useMemo(() => caricoPrevisto(blocks), [blocks])
+
+  // Dove sta questa seduta rispetto a quelle che il coach scrive di solito.
+  // ⚠️ Il termine di paragone si legge UNA volta all'apertura della pagina, e
+  // se la lettura fallisce la riga semplicemente non compare: un confronto è
+  // un di più, e non deve poter togliere il riepilogo a chi sta lavorando.
+  const [sedutePassate, setSedutePassate] = useState([])
+  useEffect(() => {
+    let vivo = true
+    supabase.from('workouts').select('sections').order('date', { ascending: false })
+      .limit(STORICO_WORKOUT)
+      .then(({ data, error }) => {
+        if (!vivo || error || !Array.isArray(data)) {
+          if (error) console.error('Storico carichi non disponibile:', error)
+          return
+        }
+        setSedutePassate(data)
+      })
+    return () => { vivo = false }
+  }, [])
+
+  const collocazione = useMemo(
+    () => collocazioneCarico(riepilogo.carico, sedutePassate, category),
+    [riepilogo.carico, sedutePassate, category])
 
   const sottotitoloWorkout = useMemo(() => {
     const d = date && isValid(parseISO(date)) ? format(parseISO(date), 'EEE d MMM', { locale: it }) : ''
@@ -2562,7 +2595,7 @@ export default function CreateWorkout() {
               dura la seduta. La barra sotto i tre numeri dice COME la durata è
               distribuita — un riscaldamento che si mangia metà seduta si vede a
               occhio, senza leggere un solo tempo. */}
-          <RiepilogoWorkout {...riepilogo} />
+          <RiepilogoWorkout {...riepilogo} collocazione={collocazione} />
 
           <CardIntensita
             valore={workoutIntensity}
@@ -2858,7 +2891,11 @@ export default function CreateWorkout() {
               <button 
                 onClick={() => {
                   localStorage.removeItem('fleofit_workout_draft')
-                  navigate(pendingPath)
+                  // ⚠️ `pendingPath` è o una rotta intercettata (una stringa)
+                  // o la sentinella del tasto indietro, che NON è una rotta:
+                  // passarla a `navigate` porterebbe su `/-1`.
+                  if (pendingPath === INDIETRO) indietro()
+                  else navigate(pendingPath)
                 }}
                 className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-500 transition"
               >

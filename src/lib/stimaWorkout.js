@@ -33,8 +33,15 @@ const interoPositivo = (v, ripiego) => {
   return Number.isFinite(n) && n > 0 ? n : ripiego
 }
 
-/** I metri di un valore come "500m". "Max" e "-" non sono una distanza. */
-const metriDi = (v) => {
+/**
+ * I metri di un valore come "500m". "Max" e "-" non sono una distanza.
+ *
+ * ⚠️ Esportata il 01/09/2026 per `src/lib/reportAtleta.js`, che somma i metri
+ * per movimento: una seconda copia di questa espressione regolare vorrebbe dire
+ * che «500 m» con lo spazio conta in una schermata e non nell'altra, senza
+ * nessun errore da nessuna parte.
+ */
+export const metriDi = (v) => {
   const m = String(v ?? '').trim().match(/^(\d+(?:[.,]\d+)?)\s*m$/i)
   return m ? parseFloat(m[1].replace(',', '.')) : null
 }
@@ -64,6 +71,35 @@ const sommaEsercizi = (esercizi = []) =>
   esercizi.reduce((totale, ex) => totale + durataEsercizio(ex), 0)
 
 /**
+ * Quante volte il blocco ripete i propri esercizi.
+ *
+ * ⚠️ I ripieghi (10 per EMOM e ON/OFF, 3 per For Time, 1 per gli altri) sono
+ * quelli che BlockPickerModal assegna alla creazione e che la riga di riepilogo
+ * del blocco chiuso dichiara: un blocco appena aggiunto e mai aperto deve
+ * pesare quanto la riga sotto di esso dice. Sono esportati e non ricopiati
+ * perché `src/lib/reportAtleta.js` conta i movimenti giro per giro e deve
+ * contarne quanti `durataBlocco` ne ha stimati: due elenchi di ripieghi
+ * darebbero due numeri diversi per lo stesso allenamento in due schermate, e
+ * nessuno dei due sarebbe sbagliato preso da solo.
+ */
+export const giriBlocco = (block) => {
+  const p = block?.params || {}
+  switch (block?.type) {
+    case 'EMOM':
+    case 'ON/OFF':
+      return interoPositivo(p.rounds, 10)
+    case 'For Time':
+      return interoPositivo(p.rounds, 3)
+    case 'Interval':
+    case 'Cash In':
+    case 'Cash Out':
+      return interoPositivo(p.rounds, 1)
+    default:
+      return 1
+  }
+}
+
+/**
  * I secondi stimati di un blocco.
  *
  * I default coincidono con quelli che BlockPickerModal assegna alla creazione e
@@ -74,6 +110,7 @@ export const durataBlocco = (block) => {
   if (!block) return 0
   const p = block.params || {}
   const esercizi = block.exercises || []
+  const giri = giriBlocco(block)
 
   switch (block.type) {
     case 'WarmUp':
@@ -82,20 +119,18 @@ export const durataBlocco = (block) => {
     case 'AMRAP':
       return parseDuration(p.duration || '10:00')
     case 'EMOM':
-      return parseDuration(p.interval || '1:00') * interoPositivo(p.rounds, 10)
+      return parseDuration(p.interval || '1:00') * giri
     case 'ON/OFF':
-      return (parseDuration(p.on || '1:00') + parseDuration(p.off || '1:00')) * interoPositivo(p.rounds, 10)
+      return (parseDuration(p.on || '1:00') + parseDuration(p.off || '1:00')) * giri
     case 'For Time':
-      return sommaEsercizi(esercizi) * interoPositivo(p.rounds, 3)
     case 'Interval':
-      return sommaEsercizi(esercizi) * interoPositivo(p.rounds, 1)
+      return sommaEsercizi(esercizi) * giri
     case 'Cash In':
     case 'Cash Out': {
-      const round = interoPositivo(p.rounds, 1)
       // Il rest esiste solo FRA i round, quindi se ne contano round − 1: la
       // stessa regola che governa la riga di riepilogo del blocco chiuso.
-      const rest = round > 1 ? parseDuration(p.rest) * (round - 1) : 0
-      return sommaEsercizi(esercizi) * round + rest
+      const rest = giri > 1 ? parseDuration(p.rest) * (giri - 1) : 0
+      return sommaEsercizi(esercizi) * giri + rest
     }
     default:
       return sommaEsercizi(esercizi)

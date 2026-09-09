@@ -109,6 +109,9 @@ describe('il riepilogo in cima alla scheda', () => {
     expect(cella('Durata')).toBe('34min')
     expect(cella('Blocchi')).toBe('3')
     expect(cella('RPE atteso')).toBeTruthy()
+    // Dal 02/09 c'è anche il carico previsto, che è il prodotto delle altre due
+    // celle (CLAUDE.md §9-quatervicies).
+    expect(cella('Carico')).toBe('≈269')
   })
 
   it('su un allenamento chiuso mostra l’RPE DELL’ATLETA, non quello atteso', async () => {
@@ -119,6 +122,12 @@ describe('il riepilogo in cima alla scheda', () => {
     await attendi()
     await waitFor(() => expect(cella('Il tuo RPE')).toBe('9/10'))
     expect(screen.queryByText('RPE atteso')).not.toBeInTheDocument()
+
+    // ⚠️ E con esso sparisce il CARICO PREVISTO, per la stessa ragione portata a
+    // quattro colonne: è calcolato sull'RPE atteso, e accanto a un RPE
+    // dichiarato dall'atleta metterebbe nella stessa riga due misure che parlano
+    // di due momenti diversi. O tutte e tre dicono «previsto», o la quarta non c'è.
+    expect(screen.queryByText('Carico')).not.toBeInTheDocument()
   })
 
   it('e scrive «—» quando l’atleta non l’ha indicato, non «5»', async () => {
@@ -229,7 +238,8 @@ describe('la testata e il menu', () => {
     expect(within(menu).getByRole('menuitem', { name: /Duplica/ })).toBeInTheDocument()
     expect(within(menu).getByRole('menuitem', { name: /Modifica/ })).toBeInTheDocument()
     expect(within(menu).getByRole('menuitem', { name: /Elimina/ })).toBeInTheDocument()
-    expect(within(menu).getByRole('menuitem', { name: /Salva grafica IG/ })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: /Salva la scheda/ })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: /Condividi come storia/ })).toBeInTheDocument()
   })
 
   it('non offrono all’atleta i comandi del coach', async () => {

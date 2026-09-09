@@ -1,42 +1,128 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { Mail, Lock, LogIn, ChevronLeft, KeyRound, ArrowRight } from 'lucide-react'
+import { Mail, Lock } from 'lucide-react'
 import { CustomAlert } from '../components/CustomModals'
 import { Browser } from '@capacitor/browser'
+import { SignInWithApple } from '@capacitor-community/apple-sign-in'
+import { generaNonce, nomeDaApple, annullatoDallUtente } from '../lib/appleLogin'
+import { leggiJson } from '../lib/offlineQueue'
+import {
+  normalizzaCodice, codiceCompleto, LUNGHEZZA_CODICE,
+  AVVISO_CODICE_RIFIUTATO, AVVISO_CODICE_OFFLINE,
+} from '../lib/codiceInvito'
+import {
+  Guscio, Marchio, BottoneIdentita, IconaApple, IconaGoogle, NotaInvito,
+  TestataPasso, CaselleCodice, BottoneIncolla, AvvisoCodice, RigaAiuto,
+  CardInvitoValido, CardProfilo, CtaGialla, FoglioAiuto, CampoTesto,
+} from '../components/LoginUI'
 
+/**
+ * L'accesso, rifatto sull'artboard `Login.dc.html` opzione 1b (04/09/2026).
+ *
+ * 🔴 **Il bivio è sparito, ed è tutta la sostanza del rework.** La schermata
+ * di benvenuto chiedeva «Accedi» o «Nuovo Utente», cioè una cosa che l'utente
+ * non sa: chi sbagliava finiva contro il muro del codice invito, che non
+ * spiegava né cos'era il codice né chi lo dà né cosa fare senza. E la CTA
+ * gialla — l'unico tratto forte della pagina — stava sul percorso che riguarda
+ * una persona al mese, mentre chi torna ogni giorno prendeva il bottone grigio.
+ *
+ * Ora c'è **una colonna sola di modi per entrare**, identica per chi ha un
+ * profilo e per chi non ce l'ha. Il codice non è più una porta davanti alla
+ * casa: è la domanda che l'app fa quando scopre di non conoscerti — cioè al
+ * passo 2, e solo a chi serve.
+ *
+ * ⚠️ Il passo 2 si raggiunge anche da FUORI questa pagina: `ProtectedRoute`
+ * manda qui con `?serve=invito` chi si è autenticato ma non ha un profilo, che
+ * fino al 04/09/2026 era un `signOut()` e un alert «Accesso Negato» senza
+ * nessuna via d'uscita se non chiudere l'app.
+ */
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const [view, setView] = useState('welcome') // welcome, authForm, inviteForm, recoveryForm
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [isResetPassword, setIsResetPassword] = useState(false)
-  const showForm = view !== 'welcome'
+  // benvenuto · email (passo 1) · codice (passo 2) · recupero (dal link di reset)
+  const [vista, setVista] = useState('benvenuto')
+  const [recuperoPassword, setRecuperoPassword] = useState(false)
+  const [nonRiconosciuto, setNonRiconosciuto] = useState(false)
 
-  const [inviteCode, setInviteCode] = useState('')
-  const [inviteError, setInviteError] = useState('')
-  const [inviteLoading, setInviteLoading] = useState(false)
+  const [codice, setCodice] = useState('')
+  const [invito, setInvito] = useState(null)      // il codice VERIFICATO, non quello scritto
+  const [avviso, setAvviso] = useState(null)
+  const [verificando, setVerificando] = useState(false)
+  const [aiutoAperto, setAiutoAperto] = useState(false)
+  const campoCodice = useRef(null)
+
+  // Chi è, e come rientra: lo sa `ProtectedRoute` quando ci manda qui, e lo
+  // sappiamo noi quando l'email l'ha appena scritta l'utente. Se non lo sa
+  // nessuno — è il caso di chi arriva dal link del coach — resta `null`, e la
+  // schermata del codice offre di nuovo i tre modi di entrare invece di
+  // inventarsi un indirizzo.
+  const [emailNota, setEmailNota] = useState('')
+  const [ripresa, setRipresa] = useState(null)    // 'apple' | 'google' | 'email' | null
 
   // L'onboarding del ruolo coach è disattivato: qui il ruolo è sempre 'athlete'.
-  // Se un giorno torna, ridiventa uno useState.
   const role = 'athlete'
   const [alertInfo, setAlertInfo] = useState(null)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
+  // Il bottone Apple si mostra SOLO sul nativo. Il flusso web richiederebbe un
+  // Services ID e una chiave .p8 su Apple Developer, che questo progetto non ha
+  // (decisione del committente, 03/09/2026: la web app resta fuori dal lavoro
+  // su Sign in with Apple). Un bottone che non può funzionare è peggio che non
+  // averlo: è la stessa regola del badge sulla navbar (CLAUDE.md §9-quaterdecies)
+  // e del pannello filtri dell'archivio (§9-sedecies).
+  const isNativo = typeof window !== 'undefined' && !!window?.Capacitor?.isNativePlatform?.()
+
+  // Gli appunti si LEGGONO solo dove il browser lo permette: senza `readText`
+  // il bottone «Incolla» non potrebbe fare niente, e sotto le caselle c'è
+  // comunque un campo vero su cui funziona l'incolla di sistema.
+  const puoIncollare = typeof navigator !== 'undefined' && !!navigator.clipboard?.readText
+
+  const baseUrl = isNativo ? 'fleofit://login-callback' : (typeof window !== 'undefined' ? window.location.origin : '')
+
+  /**
+   * Verifica un codice contro il database.
+   *
+   * ⚠️ `maybeSingle()` e non `single()`: con `single()` «nessuna riga» torna
+   * come **errore**, indistinguibile da un guasto di rete — e le due cose
+   * hanno due risposte opposte da dare all'utente («chiedi un codice nuovo»
+   * contro «riprova fra un momento»). Con `maybeSingle()` il codice assente è
+   * `data: null` con `error: null`, e la distinzione esiste.
+   */
+  const verificaCodice = useCallback(async (daVerificare) => {
+    setVerificando(true)
+    setAvviso(null)
+    const { data, error } = await supabase
+      .from('invitation_codes')
+      .select('code')
+      .eq('code', daVerificare)
+      .eq('is_active', true)
+      .is('used_by', null)
+      .maybeSingle()
+    setVerificando(false)
+
+    if (error) return setAvviso(AVVISO_CODICE_OFFLINE)
+    if (!data) return setAvviso(AVVISO_CODICE_RIFIUTATO)
+
+    // Da qui in poi il codice vive in localStorage: è `ProtectedRoute` a
+    // riscattarlo (UPDATE con `used_by`), perché quella scrittura richiede una
+    // sessione e a questo punto la sessione non c'è ancora.
+    localStorage.setItem('fleofit_invite_code', data.code)
+    setInvito(data.code)
+  }, [])
+
   useEffect(() => {
     let isRecovery = window.location.hash.includes('type=recovery')
-    if (isRecovery) {
-      setView('recoveryForm')
-    }
+    if (isRecovery) setVista('recupero')
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         isRecovery = true
-        setView('recoveryForm')
+        setVista('recupero')
       } else if (session && !isRecovery) {
         navigate('/')
       }
@@ -48,128 +134,155 @@ export default function Login() {
       })
     }
 
-    const codeFromUrl = searchParams.get('invite')
-    if (codeFromUrl && !isRecovery) {
-      setInviteCode(codeFromUrl)
-      setView('inviteForm')
-
-      const autoValidate = async () => {
-        setInviteLoading(true)
-        const { data, error } = await supabase
-          .from('invitation_codes')
-          .select('code')
-          .eq('code', codeFromUrl.toUpperCase())
-          .eq('is_active', true)
-          .is('used_by', null)
-          .single()
-          
-        setInviteLoading(false)
-        if (error || !data) {
-          setInviteError('Codice di invito non valido o già utilizzato.')
-        } else {
-          localStorage.setItem('fleofit_invite_code', data.code)
-          setIsSignUp(true)
-          setView('authForm')
-          setInviteCode('')
-          navigate('/login', { replace: true })
-        }
-      }
-      autoValidate()
+    // 🔴 Il link del coach salta le caselle. Chi apre `?invite=CODICE` non deve
+    // vederle mai: arriva direttamente sulla card verde con il codice dentro.
+    // Prima finiva sul form del codice con uno spinner, cioè sulla schermata
+    // che il link esiste per evitare.
+    const dallUrl = searchParams.get('invite')
+    if (dallUrl && !isRecovery) {
+      const pulito = normalizzaCodice(dallUrl)
+      setCodice(pulito)
+      setVista('codice')
+      navigate('/login', { replace: true })
+      if (codiceCompleto(pulito)) verificaCodice(pulito)
+      else setAvviso(AVVISO_CODICE_RIFIUTATO)
     }
 
-    const err = searchParams.get('error')
-    if (err === 'unauthorized') {
-      setAlertInfo({ title: 'Accesso Negato', message: 'Nessun account trovato o codice di invito mancante.', type: 'error' })
+    // Arriva da `ProtectedRoute`: autenticato, ma senza un profilo. Il codice
+    // è l'unica cosa che manca, e adesso sappiamo per chi.
+    if (searchParams.get('serve') === 'invito') {
+      const atteso = leggiJson('fleofit_invito_atteso', null)
+      if (atteso?.email) setEmailNota(atteso.email)
+      if (atteso?.provider) setRipresa(atteso.provider === 'email' ? 'email' : atteso.provider)
+      // ⚠️ Si consuma subito: è un passaggio di consegne fra due caricamenti
+      // della pagina, non una preferenza. Lasciandolo lì, il prossimo che apre
+      // il passo 2 su questo telefono si vedrebbe in testa l'indirizzo di
+      // qualcun altro — e la schermata dell'invito è l'ultima in cui si può
+      // scrivere il nome sbagliato.
+      localStorage.removeItem('fleofit_invito_atteso')
+      setVista('codice')
+      navigate('/login', { replace: true })
+    }
+
+    // La vecchia uscita di sicurezza: non la produce più nessuno, ma un deep
+    // link salvato o una vecchia copia dell'app possono ancora portarla.
+    if (searchParams.get('error') === 'unauthorized') {
+      setVista('codice')
       navigate('/login', { replace: true })
     }
 
     return () => subscription.unsubscribe()
-  }, [navigate, searchParams])
+  }, [navigate, searchParams, verificaCodice])
 
-  const handleEmailAuth = async (e) => {
-    if (e && e.preventDefault) e.preventDefault()
-    if (!email || (!isResetPassword && !password)) {
-      setAlertInfo({ title: 'Errore', message: 'Compila tutti i campi richiesti.', type: 'error' })
-      return
-    }
-    setLoading(true)
-    
-    // Usa il custom scheme per iOS nativo, altrimenti l'origin web
-    const isNative = typeof window !== 'undefined' && !!window?.Capacitor?.isNativePlatform?.()
-    const baseUrl = isNative ? 'fleofit://login-callback' : window.location.origin
+  // ── Le caselle ────────────────────────────────────────────────────────────
 
+  /**
+   * ⚠️ La verifica parte **da sola** all'ottavo carattere: niente bottone
+   * «Prosegui» da cercare. Il codice ha una lunghezza fissa e la si vede, e
+   * chiedere un tocco in più su un campo che è manifestamente completo è il
+   * genere di attrito che fa credere che qualcosa non abbia funzionato.
+   */
+  const scriviCodice = (grezzo) => {
+    const pulito = normalizzaCodice(grezzo)
+    setCodice(pulito)
+    setAvviso(null)
+    if (codiceCompleto(pulito)) verificaCodice(pulito)
+  }
+
+  const incollaCodice = async () => {
     try {
-      if (isResetPassword) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: baseUrl,
-        })
-        if (error) throw error
-        setAlertInfo({ title: 'Email inviata', message: 'Se l\'indirizzo è corretto, riceverai un link per reimpostare la password.', type: 'success' })
-        setIsResetPassword(false)
-        setView('welcome')
-      } else if (isSignUp) {
-        const storedInviteCode = localStorage.getItem('fleofit_invite_code')
-        if (!storedInviteCode) {
-           setAlertInfo({ title: 'Accesso Negato', message: 'Per registrarti è necessario un codice di invito valido.', type: 'error' })
-           setLoading(false)
-           return
-        }
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { role },
-            emailRedirectTo: `${baseUrl}?inviteCode=${storedInviteCode}`
-          }
-        })
-        if (error) throw error
-        setAlertInfo({ title: 'Controlla la mail', message: 'Ti abbiamo inviato un link per confermare la registrazione.', type: 'success' })
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
-        navigate('/')
+      scriviCodice(await navigator.clipboard.readText())
+    } catch {
+      setAvviso({
+        titolo: 'Non riusciamo a leggere gli appunti.',
+        corpo: 'Tocca le caselle e usa l\'«Incolla» della tastiera: il codice entra lo stesso.',
+      })
+    }
+  }
+
+  const riprovaCodice = () => {
+    setCodice('')
+    setAvviso(null)
+    campoCodice.current?.focus()
+  }
+
+  // ── I tre modi di entrare ─────────────────────────────────────────────────
+
+  /**
+   * Sign in with Apple. Sta ACCANTO a Google, non al suo posto.
+   *
+   * La linea guida 4.8 di App Store non vieta i login di terze parti: chiede
+   * che accanto ce ne sia uno che permetta di tenere nascosta la propria email
+   * a tutti, cosa che né Google né email+password fanno. È il rilievo del
+   * 02/09/2026 sulla build 1.1.0 (3).
+   *
+   * ⚠️ Dal 04/09/2026 **non c'è più il controllo del codice invito qui davanti**.
+   * Era il muro che il rework toglie: chi non ha un profilo lo scopre dopo, da
+   * `ProtectedRoute`, e torna qui al passo 2 con la propria email in testa. Il
+   * codice continua a essere obbligatorio — a farlo rispettare sono la RLS e
+   * `ProtectedRoute`, che è dove è sempre stato deciso davvero.
+   */
+  const entraConApple = async () => {
+    setLoading(true)
+    try {
+      const nonce = await generaNonce()
+
+      const { response } = await SignInWithApple.authorize({
+        // Sul nativo Apple riconosce l'app dal bundle id del binario:
+        // ASAuthorization ignora questi due campi, che il plugin però esige.
+        clientId: 'it.federicoleo.fleofit',
+        redirectURI: 'fleofit://login-callback',
+        scopes: 'email name',
+        // Al plugin l'HASH, a Supabase il valore in chiaro: vedi lib/appleLogin.js.
+        ...(nonce ? { nonce: nonce.hash } : {}),
+      })
+
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: response.identityToken,
+        ...(nonce ? { nonce: nonce.chiaro } : {}),
+      })
+      if (error) throw error
+
+      // Il nome arriva SOLO adesso, e mai più: va scritto prima di lasciare la
+      // pagina. Se fallisce non si blocca l'accesso — al massimo l'onboarding
+      // parte con i campi vuoti — ma l'errore si logga invece di sparire
+      // (CLAUDE.md §9-quater: i catch muti hanno già nascosto tre guasti).
+      const nome = nomeDaApple(response)
+      if (nome) {
+        const { error: erroreNome } = await supabase.auth.updateUser({ data: nome })
+        if (erroreNome) console.error('Nome da Apple non salvato:', erroreNome.message)
       }
+
+      navigate('/')
     } catch (error) {
-      setAlertInfo({ title: 'Errore di autenticazione', message: error.message, type: 'error' })
+      if (annullatoDallUtente(error?.message)) return
+      setAlertInfo({ title: 'Errore Sign in with Apple', message: error?.message || 'Accesso non riuscito.', type: 'error' })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleGoogleLogin = async () => {
-    const inviteCode = localStorage.getItem('fleofit_invite_code')
-    if (view === 'authForm' && isSignUp && !inviteCode) {
-       setAlertInfo({ title: 'Accesso Negato', message: 'Per registrarti è necessario un codice di invito valido.', type: 'error' })
-       return
-    }
-    
-    // Verifica se l'app è eseguita in un contesto nativo (es. Capacitor)
-    const isNative = typeof window !== 'undefined' && !!window?.Capacitor?.isNativePlatform?.()
-    const baseUrl = isNative ? 'fleofit://login-callback' : window.location.origin
-
-    const redirectUrl = inviteCode 
-      ? `${baseUrl}?inviteCode=${inviteCode}`
-      : baseUrl
+  const entraConGoogle = async () => {
+    const codiceInvito = localStorage.getItem('fleofit_invite_code')
+    const redirectUrl = codiceInvito ? `${baseUrl}?inviteCode=${codiceInvito}` : baseUrl
 
     try {
-      if (isNative) {
+      if (isNativo) {
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
             redirectTo: redirectUrl,
             skipBrowserRedirect: true,
-            queryParams: { prompt: 'select_account' }
-          }
+            queryParams: { prompt: 'select_account' },
+          },
         })
         if (error) throw error
         if (data?.url) await Browser.open({ url: data.url })
       } else {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
-          options: {
-            redirectTo: redirectUrl,
-            queryParams: { prompt: 'select_account' }
-          }
+          options: { redirectTo: redirectUrl, queryParams: { prompt: 'select_account' } },
         })
         if (error) throw error
       }
@@ -178,40 +291,77 @@ export default function Login() {
     }
   }
 
-  const handleInviteSubmit = async (e) => {
-    if (e && e.preventDefault) e.preventDefault()
-    const code = inviteCode.trim().toUpperCase()
-    if (!code) {
-      setInviteError('Inserisci un codice di invito.')
+  /**
+   * Passo 1, percorso email.
+   *
+   * 🔴 **Supabase non dice se un account esiste, ed è voluto** (impedisce di
+   * enumerare gli indirizzi): password sbagliata e profilo inesistente
+   * tornano lo stesso `Invalid login credentials`. Quindi qui il ramo non si
+   * indovina — si offrono le due uscite, una per ciascuno dei due casi. È il
+   * limite di questo percorso rispetto a Apple e Google, dove è il provider a
+   * dirci chi sei prima che si arrivi a chiederlo.
+   */
+  const entraConEmail = async () => {
+    if (!email || (!recuperoPassword && !password)) {
+      setAlertInfo({ title: 'Errore', message: 'Compila tutti i campi richiesti.', type: 'error' })
       return
     }
-    setInviteLoading(true)
-    setInviteError('')
+    setLoading(true)
+    setNonRiconosciuto(false)
 
-    const { data, error: dbError } = await supabase
-      .from('invitation_codes')
-      .select('code')
-      .eq('code', code)
-      .eq('is_active', true)
-      .is('used_by', null)
-      .single()
+    try {
+      if (recuperoPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: baseUrl })
+        if (error) throw error
+        setAlertInfo({ title: 'Email inviata', message: 'Se l\'indirizzo è corretto, riceverai un link per reimpostare la password.', type: 'success' })
+        setRecuperoPassword(false)
+        return
+      }
 
-    setInviteLoading(false)
-
-    if (dbError || !data) {
-      setInviteError('Codice di invito non valido o già utilizzato.')
-    } else {
-      localStorage.setItem('fleofit_invite_code', data.code)
-      // Transition to signup form
-      setIsSignUp(true)
-      setView('authForm')
-      setInviteCode('')
-      setInviteError('')
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        if (/invalid login credentials/i.test(error.message || '')) {
+          setNonRiconosciuto(true)
+          return
+        }
+        throw error
+      }
+      navigate('/')
+    } catch (error) {
+      setAlertInfo({ title: 'Errore di autenticazione', message: error.message, type: 'error' })
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleRecoveryUpdate = async (e) => {
-    if (e && e.preventDefault) e.preventDefault()
+  /** Passo 2, percorso email: il codice è valido, manca solo la password. */
+  const creaProfilo = async () => {
+    const codiceInvito = localStorage.getItem('fleofit_invite_code')
+    if (!codiceInvito) {
+      setAlertInfo({ title: 'Accesso Negato', message: 'Per registrarti è necessario un codice di invito valido.', type: 'error' })
+      return
+    }
+    if (!password || password.length < 6) {
+      setAlertInfo({ title: 'Errore', message: 'La password deve avere almeno 6 caratteri.', type: 'error' })
+      return
+    }
+    setLoading(true)
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: emailNota || email,
+        password,
+        options: { data: { role }, emailRedirectTo: `${baseUrl}?inviteCode=${codiceInvito}` },
+      })
+      if (error) throw error
+      setAlertInfo({ title: 'Controlla la mail', message: 'Ti abbiamo inviato un link per confermare la registrazione.', type: 'success' })
+    } catch (error) {
+      setAlertInfo({ title: 'Errore di autenticazione', message: error.message, type: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const aggiornaPassword = async () => {
     if (!password || password.length < 6) {
       return setAlertInfo({ title: 'Errore', message: 'La password deve avere almeno 6 caratteri.', type: 'error' })
     }
@@ -227,170 +377,249 @@ export default function Login() {
     }
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition relative overflow-hidden">
-      
-      {/* SCHERMATA WELCOME */}
-      <div 
-        className={`absolute inset-0 flex flex-col items-center justify-between px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1.5rem)] ${showForm ? 'pointer-events-none' : ''}`}
-        style={{
-          transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-          transform: showForm ? 'translateY(-50px)' : 'translateY(0)',
-          opacity: showForm ? 0 : 1
-        }}
-      >
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <h1 className="text-5xl font-black text-white tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">FLEO<span className="text-brand">FIT</span></h1>
-        </div>
-        
-        <div className="w-full max-w-md flex gap-4 pb-8 animate-in fade-in slide-in-from-bottom-8 duration-500 delay-300">
-          <button onClick={() => { setIsSignUp(false); setView('authForm'); }} className="flex-1 py-4 bg-[#2a2a2a] text-white border border-[#383838] font-bold text-lg rounded-2xl hover:bg-[#333] transition">
-            Accedi
-          </button>
-          <button onClick={() => setView('inviteForm')} className="flex-1 py-4 bg-brand text-black font-bold text-lg rounded-2xl hover:brightness-110 transition shadow-lg shadow-brand/20">
-            Nuovo Utente
-          </button>
-        </div>
+  const tornaIndietro = () => {
+    if (vista === 'recupero') {
+      window.history.replaceState(null, document.title, window.location.pathname + window.location.search)
+      return setVista('benvenuto')
+    }
+    if (recuperoPassword) return setRecuperoPassword(false)
+    if (vista === 'codice' && invito) {
+      // Tornare dalla card verde vuol dire rimettere in discussione il codice,
+      // non uscire dal passo: le caselle tornano, il codice resta scritto.
+      setInvito(null)
+      return
+    }
+    setNonRiconosciuto(false)
+    setVista('benvenuto')
+  }
+
+  // ── Le tre schermate ──────────────────────────────────────────────────────
+
+  const modiPerEntrare = (dentroIlPasso2 = false) => (
+    <div className="flex flex-col gap-2.5">
+      {isNativo && (
+        <BottoneIdentita
+          icona={<IconaApple />} etichetta="Continua con Apple"
+          onClick={entraConApple} disabled={loading}
+        />
+      )}
+      <BottoneIdentita
+        icona={<IconaGoogle />} etichetta="Continua con Google"
+        onClick={entraConGoogle} disabled={loading}
+      />
+      {!dentroIlPasso2 && (
+        <BottoneIdentita
+          variante="scuro" icona={<Mail size={19} className="text-gray-400" />}
+          etichetta="Continua con email" onClick={() => setVista('email')} disabled={loading}
+        />
+      )}
+    </div>
+  )
+
+  const benvenuto = (
+    <>
+      <div className="flex-1 flex items-center justify-center"><Marchio /></div>
+      <div className="flex flex-col gap-2.5">
+        {modiPerEntrare()}
+        <div className="mt-4"><NotaInvito /></div>
+        {/* ⚠️ Termini e Privacy sono TESTO, non collegamenti: il progetto non
+            ha una URL pubblica che li serva (privacy-policy.html sta in radice,
+            fuori da `public/`, e su Vercel non è raggiungibile). Un link che
+            porta a un 404 sulla schermata di accesso è peggio di una riga che
+            non promette una destinazione — voce in BACKLOG. */}
+        <p className="mt-3 text-center text-[11px] leading-[1.5] font-medium text-muted">
+          Continuando accetti i <span className="text-gray-300 font-semibold">Termini</span> e la <span className="text-gray-300 font-semibold">Privacy</span> di FLEOFIT
+        </p>
+      </div>
+    </>
+  )
+
+  const passoEmail = (
+    <>
+      <TestataPasso passo={1} onIndietro={tornaIndietro} />
+      <h1 className="text-[28px] font-black tracking-[-.03em] leading-[1.1] text-white mb-2">
+        {recuperoPassword ? <>Reimposta la<br />tua password</> : <>Entra con la<br />tua email</>}
+      </h1>
+      <p className="text-sm leading-[1.5] font-medium text-muted mb-6">
+        {recuperoPassword
+          ? 'Ti mandiamo un link per sceglierne una nuova.'
+          : 'Se non hai ancora un profilo te ne accorgi qui: al passo 2 ti chiediamo il codice del tuo coach.'}
+      </p>
+
+      <div className="flex flex-col gap-2.5" onKeyDown={(e) => { if (e.key === 'Enter') entraConEmail() }}>
+        <CampoTesto
+          icona={<Mail size={18} />} type="email" inputMode="email" autoCapitalize="none" autoCorrect="off"
+          aria-label="Email" placeholder="La tua email" value={email} onChange={(e) => setEmail(e.target.value)}
+        />
+        {!recuperoPassword && (
+          <CampoTesto
+            icona={<Lock size={18} />} type="password" autoComplete="current-password"
+            aria-label="Password" placeholder="La tua password" value={password} onChange={(e) => setPassword(e.target.value)}
+          />
+        )}
       </div>
 
-      {/* SCHERMATA FORM (LOGIN/REGISTRAZIONE) */}
-      <div 
-        className={`w-full max-w-md bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 shadow-2xl relative ${!showForm ? 'pointer-events-none' : ''}`}
-        style={{
-          transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-          transform: showForm ? 'translateY(0) scale(1)' : 'translateY(50px) scale(0.95)',
-          opacity: showForm ? 1 : 0
-        }}
-      >
-        
-        {/* TASTO INDIETRO (Ben visibile) */}
-        <button type="button" onClick={() => {
-          if (view === 'recoveryForm') {
-            setView('welcome')
-            window.history.replaceState(null, document.title, window.location.pathname + window.location.search)
-          }
-          else if (isResetPassword) setIsResetPassword(false)
-          else { setView('welcome'); setIsSignUp(false); }
-        }} className="absolute top-[calc(env(safe-area-inset-top)+1.25rem)] left-5 w-11 h-11 bg-[#2a2a2a] border border-[#333] rounded-full flex items-center justify-center text-gray-400 hover:text-white transition shadow-md z-10" aria-label="Torna indietro">
-          <ChevronLeft size={22} className="-ml-0.5" />
+      {nonRiconosciuto && (
+        <div className="mt-3">
+          <AvvisoCodice
+            titolo="Non riusciamo a farti entrare."
+            corpo="O la password non è quella giusta, oppure non hai ancora un profilo: in quel caso serve il codice invito del tuo coach."
+          />
+          <div className="flex gap-2.5 mt-2.5">
+            <button type="button" onClick={() => { setNonRiconosciuto(false); setRecuperoPassword(true) }}
+              className="flex-1 bg-surface2 border border-[#383838] rounded-2xl p-3.5 text-[15px] font-bold text-white hover:bg-[#333] transition">
+              Password dimenticata
+            </button>
+            <button type="button" onClick={() => { setEmailNota(email); setRipresa('email'); setNonRiconosciuto(false); setVista('codice') }}
+              className="flex-1 bg-surface2 border border-[#383838] rounded-2xl p-3.5 text-[15px] font-bold text-white hover:bg-[#333] transition">
+              Ho un codice invito
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!recuperoPassword && !nonRiconosciuto && (
+        <button type="button" onClick={() => setRecuperoPassword(true)}
+          className="self-end mt-3 text-xs font-semibold text-brand hover:underline">
+          Password dimenticata?
         </button>
-        
-        <div className="flex flex-col items-center justify-center mb-8 mt-4">
-          <h1 className="text-3xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span></h1>
-          <p className="text-gray-400 text-sm mt-1">
-            {view === 'recoveryForm' ? 'Scegli la tua nuova password' : (isResetPassword ? 'Recupera la tua password' : (isSignUp ? 'Crea il tuo account' : 'Accedi alla tua dashboard'))}
-          </p>
-        </div>
+      )}
 
-        {view === 'inviteForm' && (
-          <div className="animate-in fade-in duration-300">
-            <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-white">Codice di Invito Richiesto</h2>
-              <p className="text-muted text-sm mt-2">Per registrarti, inserisci il codice di invito che ti è stato fornito.</p>
-            </div>
-            <div className="flex flex-col gap-4" onKeyDown={e => { if (e.key === 'Enter') handleInviteSubmit(e) }}>
-              <div className="relative">
-                <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                <input type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Il tuo codice di invito" className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-4 pl-11 text-white placeholder-gray-500 focus:outline-none focus:border-brand transition uppercase text-base" disabled={inviteLoading} />
-              </div>
-              {inviteError && <p className="text-red-500 text-xs text-center">{inviteError}</p>}
-              <button type="button" onClick={handleInviteSubmit} disabled={inviteLoading || !inviteCode} className="w-full flex items-center justify-center gap-2 bg-brand text-black font-bold py-4 rounded-xl hover:brightness-110 transition disabled:opacity-50">
-                {inviteLoading ? 'Verifica...' : 'Prosegui'}
-                {!inviteLoading && <ArrowRight size={18} />}
-              </button>
-            </div>
-          </div>
-        )}
+      <div className="flex-1 min-h-5" />
+      <CtaGialla
+        etichetta={loading ? 'Attendere...' : (recuperoPassword ? 'Invia il link' : 'Continua')}
+        onClick={entraConEmail} disabled={loading}
+      />
+    </>
+  )
 
-        {view === 'recoveryForm' && (
-          <div className="flex flex-col gap-4 animate-in fade-in duration-300" onKeyDown={e => { if (e.key === 'Enter') handleRecoveryUpdate(e) }}>
-            <div className="relative">
-              <Lock size={18} className="absolute left-4 top-3.5 text-muted" />
-              <input 
-                type="password" 
+  const passoCodice = (
+    <>
+      <TestataPasso passo={2} onIndietro={tornaIndietro} />
 
-                placeholder="La tua nuova password" 
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-brand transition text-base"
-              />
-            </div>
-            <button type="button" onClick={handleRecoveryUpdate} disabled={loading || !password} className="w-full mt-2 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2">
-              {loading ? 'Attendere...' : 'Aggiorna Password'}
-            </button>
-          </div>
-        )}
-
-          {view === 'authForm' && <div className="flex flex-col gap-4 animate-in fade-in duration-300" onKeyDown={e => { if (e.key === 'Enter') handleEmailAuth(e) }}>
-            <div className="relative">
-              <Mail size={18} className="absolute left-4 top-3.5 text-muted" />
-              <input 
-                type="email" 
-                
-                placeholder="La tua email" 
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-brand transition text-base"
-              />
-            </div>
-
-            {!isResetPassword && (
-              <div className="relative">
-                <Lock size={18} className="absolute left-4 top-3.5 text-muted" />
-                <input 
-                  type="password" 
-                  placeholder="La tua password" 
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:border-brand transition text-base"
+      {invito ? (
+        <>
+          <CardInvitoValido codice={invito} />
+          {emailNota
+            ? (
+              <>
+                <CardProfilo
+                  email={emailNota} password={password} onPassword={setPassword}
+                  chiediPassword={ripresa === 'email'} onInvio={creaProfilo}
                 />
-              </div>
+                <div className="flex-1 min-h-5" />
+                {ripresa === 'email'
+                  ? <CtaGialla etichetta={loading ? 'Attendere...' : 'Crea il profilo'} onClick={creaProfilo} disabled={loading} />
+                  : (
+                    <>
+                      <p className="text-sm font-medium text-muted mb-3 text-center">Rientra con lo stesso accesso di prima: il codice è già collegato.</p>
+                      {modiPerEntrare(true)}
+                    </>
+                  )}
+              </>
+            )
+            : (
+              // Nessuna email nota: è chi arriva dal link del coach senza aver
+              // ancora detto chi è. Non si inventa un indirizzo — si torna a
+              // chiedere come vuole entrare, con il codice ormai al sicuro.
+              <>
+                <div className="flex-1 min-h-6" />
+                <p className="text-sm font-medium text-muted mb-3 text-center">Scegli come entrare: il codice resta collegato al profilo che stai creando.</p>
+                {modiPerEntrare()}
+              </>
             )}
+        </>
+      ) : (
+        <>
+          <h1 className="text-[28px] font-black tracking-[-.03em] leading-[1.1] text-white mb-2">
+            Il codice del<br />tuo coach
+          </h1>
+          <p className="text-sm leading-[1.5] font-medium text-muted mb-6">
+            {emailNota
+              ? <>Non c'è ancora un profilo per <b className="text-gray-300 font-bold">{emailNota}</b>. Il tuo coach ti ha mandato un codice di {LUNGHEZZA_CODICE} caratteri: incollalo qui e sei dentro.</>
+              : <>Il tuo coach ti manda un codice di {LUNGHEZZA_CODICE} caratteri su WhatsApp, oppure come link. Incollalo qui e sei dentro.</>}
+          </p>
 
-            {!isResetPassword && !isSignUp && (
-              <div className="flex justify-end -mt-2">
-                <button type="button" onClick={() => setIsResetPassword(true)} className="text-xs text-brand hover:underline">
-                  Password dimenticata?
-                </button>
-              </div>
-            )}
+          <CaselleCodice
+            valore={codice} onChange={scriviCodice} errore={!!avviso}
+            disabled={verificando} campoRef={campoCodice} descrittoDa={avviso ? 'avviso-codice' : undefined}
+          />
 
-            <button type="button" onClick={handleEmailAuth} disabled={loading} className="w-full mt-2 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2">
-              {loading ? 'Attendere...' : (isResetPassword ? 'Invia link' : (isSignUp ? 'Registrati' : 'Accedi'))}
-              {!loading && !isResetPassword && <LogIn size={18} />}
-            </button>
-          </div>}
+          <div className="mt-3.5">
+            {avviso
+              ? (
+                <>
+                  <AvvisoCodice id="avviso-codice" titolo={avviso.titolo} corpo={avviso.corpo} />
+                  <div className="flex gap-2.5 mt-3.5">
+                    <button type="button" onClick={riprovaCodice}
+                      className="flex-1 bg-surface2 border border-[#383838] rounded-2xl p-3.5 text-[15px] font-bold text-white hover:bg-[#333] transition">
+                      Riprova
+                    </button>
+                    <button type="button" onClick={() => setAiutoAperto(true)}
+                      className="flex-1 bg-surface2 border border-[#383838] rounded-2xl p-3.5 text-[15px] font-bold text-white hover:bg-[#333] transition">
+                      Aiuto
+                    </button>
+                  </div>
+                </>
+              )
+              : puoIncollare && <BottoneIncolla onClick={incollaCodice} disabled={verificando} />}
+          </div>
 
-          {view === 'authForm' && !isResetPassword && (
-            <div className="animate-in fade-in duration-300">
-              <div className="my-6 flex items-center gap-3">
-                <div className="flex-1 h-px bg-[#333]"></div>
-                <span className="text-muted text-xs font-medium uppercase tracking-wider">Oppure</span>
-                <div className="flex-1 h-px bg-[#333]"></div>
-              </div>
+          {/* ⚠️ La riga d'aiuto segue le caselle, non è ancorata in fondo. Sul
+              telefono questa schermata si guarda con la tastiera aperta — è lo
+              stato che l'artboard disegna — e una riga ancorata al fondo ci
+              finisce sotto, mentre a tastiera chiusa lascia mezzo schermo di
+              vuoto in mezzo. Vista a 393px, non leggendo il codice. */}
+          <div className="mt-6">
+            {!avviso && <RigaAiuto onClick={() => setAiutoAperto(true)} />}
+          </div>
+        </>
+      )}
+    </>
+  )
 
-              <button type="button" onClick={handleGoogleLogin} className="w-full py-3.5 bg-white text-black font-bold rounded-xl hover:bg-gray-100 transition flex items-center justify-center gap-2">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-                Continua con Google
-              </button>
+  const passoRecupero = (
+    <>
+      <TestataPasso passo={1} onIndietro={tornaIndietro} />
+      <h1 className="text-[28px] font-black tracking-[-.03em] leading-[1.1] text-white mb-2">
+        Scegli la tua<br />nuova password
+      </h1>
+      <p className="text-sm leading-[1.5] font-medium text-muted mb-6">Almeno 6 caratteri. Poi si entra subito.</p>
+      <div onKeyDown={(e) => { if (e.key === 'Enter') aggiornaPassword() }}>
+        <CampoTesto
+          icona={<Lock size={18} />} type="password" autoComplete="new-password"
+          aria-label="Nuova password" placeholder="La tua nuova password"
+          value={password} onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
+      <div className="flex-1 min-h-5" />
+      <CtaGialla etichetta={loading ? 'Attendere...' : 'Aggiorna la password'} onClick={aggiornaPassword} disabled={loading || !password} />
+    </>
+  )
 
-              <p className="mt-8 text-center text-sm text-muted">
-                {isSignUp ? 'Hai già un account?' : 'Non hai un account?'} <button type="button" onClick={() => isSignUp ? setIsSignUp(false) : setView('inviteForm')} className="text-brand font-semibold hover:underline">
-                  {isSignUp ? 'Accedi' : 'Registrati con Invito'}
-                </button>
-              </p>
-            </div>
-          )}
-        </div>
+  return (
+    <Guscio tinta={vista === 'codice' && invito ? 'verde' : 'ambra'}>
+      {vista === 'benvenuto' && benvenuto}
+      {vista === 'email' && passoEmail}
+      {vista === 'codice' && passoCodice}
+      {vista === 'recupero' && passoRecupero}
+
+      {aiutoAperto && (
+        <FoglioAiuto
+          onChiudi={() => setAiutoAperto(false)}
+          onScrivi={() => {
+            // Non c'è nessun canale di assistenza nel prodotto: l'unico
+            // indirizzo che l'app conosce è quello del coach, ed è anche
+            // l'unica risposta sensata a «non ho un codice».
+            window.location.href = 'mailto:coaching@federicoleo.it?subject=' + encodeURIComponent('FLEOFIT — non ho un codice invito')
+          }}
+        />
+      )}
+
       {createPortal(
         <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />,
         document.body
       )}
-    </div>
+    </Guscio>
   )
 }
