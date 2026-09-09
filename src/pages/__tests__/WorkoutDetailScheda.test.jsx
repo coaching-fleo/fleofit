@@ -105,13 +105,20 @@ describe('il riepilogo in cima alla scheda', () => {
   it('dice durata, blocchi e RPE atteso — gli stessi tre numeri del builder', async () => {
     apri()
     await attendi()
-    // 8:00 di WarmUp + i 550 m del Cash In + 24 × 1:00 di EMOM = 2.058 secondi.
-    expect(cella('Durata')).toBe('34min')
+    // 8:00 di WarmUp + il forfait del Cash In (5 min) + 24 × 1:00 di EMOM.
+    // ⚠️ Era 34 min fino al 09/09/2026, quando il Cash In valeva i 550 m dei
+    // suoi esercizi: dalla chiusura di BACKLOG #40 i blocchi a cronometro
+    // libero si stimano a forfait per giro, ed è la ragione per cui questo
+    // numero coincide finalmente con quello della Home.
+    expect(cella('Durata')).toBe('37min')
     expect(cella('Blocchi')).toBe('3')
     expect(cella('RPE atteso')).toBeTruthy()
     // Dal 02/09 c'è anche il carico previsto, che è il prodotto delle altre due
     // celle (CLAUDE.md §9-quatervicies).
-    expect(cella('Carico')).toBe('≈269')
+    // ⚠️ 292 e non più 269 perché la durata è salita a 37: il carico resta il
+    // PRODOTTO delle due celle accanto (37 × 7,9), che è l'invariante che
+    // questo numero protegge — non la cifra in sé.
+    expect(cella('Carico')).toBe('≈292')
   })
 
   it('su un allenamento chiuso mostra l’RPE DELL’ATLETA, non quello atteso', async () => {

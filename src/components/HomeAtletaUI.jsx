@@ -14,7 +14,7 @@
 // Token: brand / running / custom / muted arrivano da @theme in index.css.
 // I VALORI dei colori non cambiano (CLAUDE.md regola 3).
 
-import { CalendarDays, CheckCircle2, ChevronRight, Plus, Activity } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Plus, Activity } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 // CARD, LABEL e la tabella delle corsie vivono in lib/ perché HomeCoachUI.jsx
@@ -139,20 +139,13 @@ export function HeroOggi({ titolo, categoria, stato, meta = [], completato, onOp
   )
 }
 
-/** Giorno di rest: stessa gerarchia dell'eroe, tratteggio invariato. */
-export function HeroRest() {
-  return (
-    <div className="rounded-[26px] border border-dashed border-white/[.13] p-6 flex items-center gap-4 hero-transition">
-      <div className="w-12 h-12 rounded-full bg-white/[.06] border border-white/10 flex items-center justify-center text-muted shrink-0">
-        <CalendarDays size={22} />
-      </div>
-      <div>
-        <h3 className="text-white font-bold">Giorno di rest</h3>
-        <p className="text-muted text-sm">Recupera le energie per il prossimo allenamento.</p>
-      </div>
-    </div>
-  )
-}
+// ⚠️ Qui c'era `HeroRest`: il tratteggio con «Giorno di rest · Recupera le
+// energie per il prossimo allenamento». È uscito il 09/09/2026 con il rework
+// degli stati senza storico — il riposo ora è `HeroRiposo` in
+// `HomeAtletaVuotiUI.jsx`, cioè una schermata con la corsia Running, il carico
+// della settimana e cosa arriva dopo. Cancellato invece di restare esportato
+// senza chiamanti: un componente che nessuno usa è il modo in cui una
+// correzione ne raggiunge due su tre (CLAUDE.md §9 punto 2).
 
 // ── L'anello della settimana ──────────────────────────────────────────────
 //
@@ -160,7 +153,14 @@ export function HeroRest() {
 // dietro un gesto che niente segnalava: chi non scorreva non sapeva che
 // esistessero. I sette giorni restano, ma come traccia sotto il dato, non
 // come contenuto principale.
-export function AnelloSettimana({ weeklyStatus = [], onGiorno }) {
+/**
+ * ⚠️ `etichetta` e `stato` esistono per la PRIMA settimana, e non sono un
+ * vezzo: un anello a 1/4 letto sotto «Settimana · completati» si legge come un
+ * ritardo, quando è solo un atleta che ha appena cominciato. «Settimana 1 ·
+ * iniziata» dice la stessa cifra senza accusare nessuno. I valori numerici non
+ * cambiano: cambia solo come si chiamano.
+ */
+export function AnelloSettimana({ weeklyStatus = [], onGiorno, etichetta = 'Settimana', stato = 'completati' }) {
   const totale = weeklyStatus.reduce((a, d) => a + d.workouts.length, 0)
   const fatti = weeklyStatus.reduce((a, d) => a + d.workouts.filter(w => w.status === 'completed').length, 0)
   const CIRCONFERENZA = 2 * Math.PI * 54          // 339.29 — vedi ringIn in index.css
@@ -168,7 +168,7 @@ export function AnelloSettimana({ weeklyStatus = [], onGiorno }) {
 
   return (
     <div className={`${CARD} p-[18px] flex flex-col gap-3.5`}>
-      <p className={LABEL}>Settimana</p>
+      <p className={LABEL}>{etichetta}</p>
       <div className="relative w-28 h-28 mx-auto">
         <svg viewBox="0 0 120 120" className="w-28 h-28 -rotate-90" role="img"
           aria-label={`${fatti} allenamenti completati su ${totale} questa settimana`}>
@@ -181,7 +181,7 @@ export function AnelloSettimana({ weeklyStatus = [], onGiorno }) {
           <span className="text-3xl font-black tracking-[-.04em] text-white leading-none">
             {fatti}<span className="text-lg text-muted">/{totale}</span>
           </span>
-          <span className="text-[11px] font-bold uppercase tracking-[.02em] text-muted mt-1">completati</span>
+          <span className="text-[11px] font-bold uppercase tracking-[.02em] text-muted mt-1">{stato}</span>
         </div>
       </div>
       <div className="flex justify-between items-center">

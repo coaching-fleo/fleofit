@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   durataEsercizio, durataBlocco, rpeAtteso, riepilogoWorkout,
   minutiStimati, mmss, decimale, SECONDI_ESERCIZIO_IGNOTO,
+  MINUTI_GIRO_FOR_TIME, MINUTI_GIRO_CASH,
 } from '../stimaWorkout'
 
 // Perché questi test esistono
@@ -62,25 +63,40 @@ describe('la durata di un blocco', () => {
     expect(durataBlocco(block)).toBe(atteso)
   })
 
-  it('For Time moltiplica gli esercizi per i round', () => {
-    const b = { type: 'For Time', params: { rounds: '3' }, exercises: [{ reps: '10' }, { reps: '20' }] }
-    expect(durataBlocco(b)).toBe((30 + 60) * 3)
+  // 🔴 Riscritto il 09/09/2026 con la chiusura di BACKLOG #40. Prima diceva
+  // «moltiplica gli ESERCIZI per i round»: ora un «For Time» è un forfait per
+  // giro, perché sommare gli esercizi misura il tempo in cui l'atleta si sta
+  // muovendo e non quello che passa nel box (stimaWorkout.js, MINUTI_GIRO_*).
+  // ⚠️ Le due asserzioni servono entrambe: la cifra, e il fatto che il
+  // contenuto del blocco NON la cambi — che è tutta la differenza fra le due
+  // formule, e l'unica cosa che una mutazione «rimetti la somma» fa cadere.
+  it('For Time è un forfait per giro, qualunque cosa contenga', () => {
+    const tre = { type: 'For Time', params: { rounds: '3' }, exercises: [{ reps: '10' }, { reps: '20' }] }
+    expect(durataBlocco(tre)).toBe(MINUTI_GIRO_FOR_TIME * 60 * 3)
+
+    const stessiGiriPiuLavoro = { ...tre, exercises: [...tre.exercises, { meters: '2000m' }] }
+    expect(durataBlocco(stessiGiriPiuLavoro)).toBe(durataBlocco(tre))
   })
 
   it('Cash In conta il rest FRA i round, quindi round − 1 volte', () => {
     // Con tre round i riposi sono due. Contarne tre gonfia ogni Cash In del
     // progetto, ed è la stessa regola della riga di riepilogo del blocco.
     const b = { type: 'Cash In', params: { rounds: '3', rest: '1:00' }, exercises: [{ reps: '10' }] }
-    expect(durataBlocco(b)).toBe(30 * 3 + 60 * 2)
+    expect(durataBlocco(b)).toBe(MINUTI_GIRO_CASH * 60 * 3 + 60 * 2)
   })
 
   it('con un round solo il rest non esiste, anche se è scritto', () => {
     const b = { type: 'Cash In', params: { rounds: '1', rest: '5:00' }, exercises: [{ reps: '10' }] }
-    expect(durataBlocco(b)).toBe(30)
+    expect(durataBlocco(b)).toBe(MINUTI_GIRO_CASH * 60)
   })
 
-  it('un blocco senza esercizi non inventa una durata', () => {
+  // 🔴 Questo test ha preso una svista vera il 09/09/2026: introducendo il
+  // forfait per giro, un Cash Out vuoto da due giri dichiarava 10 minuti. Il
+  // blocco ancora vuoto non è «lungo zero», è **non stimabile**, e la scheda
+  // deve poterci scrivere «—» invece di «0:00» (§9-undecies punto 2).
+  it('un blocco senza esercizi non inventa una durata, nemmeno col forfait', () => {
     expect(durataBlocco({ type: 'Cash Out', params: { rounds: '2' }, exercises: [] })).toBe(0)
+    expect(durataBlocco({ type: 'For Time', params: { rounds: '5' }, exercises: [] })).toBe(0)
   })
 })
 
@@ -188,7 +204,7 @@ describe('il riepilogo dello step 2', () => {
   it('somma le durate e conta i blocchi', () => {
     const r = riepilogoWorkout(blocchi)
     expect(r.blocchi).toBe(3)
-    expect(r.secondi).toBe(480 + 1440 + 120)
+    expect(r.secondi).toBe(480 + 1440 + MINUTI_GIRO_CASH * 60)
   })
 
   it('marca come «lavoro» solo i blocchi centrali: è la barra a dover distinguere', () => {

@@ -1,5 +1,17 @@
 // I dati dell'ambiente di prova (src/supabaseDemo.js).
 //
+// 🔴 I tre elenchi sono FUNZIONI, non array, e non è uno stile: come costanti
+// venivano costruiti a livello di modulo chiamando `A()`, `W()` e `AW()`, e
+// Rollup non può dimostrare che una chiamata sia pura — quindi li teneva, e
+// **gli atleti finti finivano nel bundle spedito ad Apple**. Verificato il
+// 09/09/2026 sull'`.ipa` in preparazione: `Sara Villa`, `Andrea Conti` e i
+// titoli dei workout di prova erano lì dentro, mentre `invitation_codes` e
+// `personal_records` — scritti come letterali puri — erano già stati buttati.
+// È la stessa metà di verità del controllo documentato in §9-quinvicies, che
+// cerca «AMBIENTE DI PROVA» e quindi vedeva solo `supabaseDemo.js`.
+// Dentro una funzione non resta nessuna chiamata a livello di modulo, e
+// l'albero intero sparisce quando `semi` non ha chiamanti.
+//
 // ⚠️ Le date sono RELATIVE a oggi, non fisse: un seme con date scritte a mano
 // invecchia, e dopo una settimana «questa settimana» è vuota e metà delle
 // schermate non ha più niente da mostrare.
@@ -73,7 +85,7 @@ const W = (id, title, giorniFa, sections) => ({
   created_at: new Date(Date.now() - giorniFa * 86400000).toISOString(),
 })
 
-const workouts = [
+const workouts = () => [
   W('w-scarico', 'Scarico rigenerante', 1, emom(15, 3)),
   W('w-leggero', 'Hyrox leggero · richiamo', 3, emom(20, 4)),
   W('w-medio', 'Hyrox medio · soglia', 5, emom(30, 6)),
@@ -96,7 +108,7 @@ const A = (id, name, surname, extra = {}) => ({
   ...extra,
 })
 
-const atleti = [
+const atleti = () => [
   A(COACH, 'Federico', 'Leo'),                               // il coach, nascosto dalla rubrica
   A('at-marco', 'Marco', 'Rossi'),                           // → salto di carico su un workout pesante
   A('at-luca', 'Luca', 'Bianchi'),                           // → seduta dura il giorno prima/dopo
@@ -132,7 +144,7 @@ const regolare = (atleta, workout, rpe, quante = 3, settimane = [-4, -3, -2, -1]
   return fuori
 }
 
-const assegnazioni = [
+const assegnazioni = () => [
   // Marco: leggero e costante. Un workout massimale gli fa saltare il carico.
   ...regolare('at-marco', 'w-leggero', 4),
   AW('at-marco', 'w-leggero', nellaSettimana(0, 0), 'completed', 4, 'Tutto liscio'),
@@ -221,9 +233,9 @@ const personal_records = [
 export function semi() {
   return {
     __versione: VERSIONE_SEME,
-    athletes: atleti.map(a => ({ ...a })),
-    workouts: workouts.map(w => ({ ...w })),
-    athlete_workouts: assegnazioni.map(a => ({ ...a })),
+    athletes: atleti().map(a => ({ ...a })),
+    workouts: workouts().map(w => ({ ...w })),
+    athlete_workouts: assegnazioni().map(a => ({ ...a })),
     notifications: notifications.map(n => ({ ...n })),
     invitation_codes: invitation_codes.map(c => ({ ...c })),
     personal_records: personal_records.map(p => ({ ...p })),

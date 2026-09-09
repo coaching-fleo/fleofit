@@ -1,6 +1,9 @@
 import { startOfWeek, format, getISOWeek } from 'date-fns'
 import { parseNotesAndRpe, rpeDichiarato } from './rpe'
 import { categoriaDi } from './categorie'
+// 🔴 UNO stimatore solo per i blocchi Hyrox (BACKLOG #40, chiuso il 09/09/2026).
+// Prima ce n'erano due e dicevano 58 e 24 minuti sullo stesso allenamento.
+import { durataBlocco } from './stimaWorkout'
 
 // Statistiche della scheda atleta, estratte da AthleteDetail.jsx il 26/08/2026.
 //
@@ -61,7 +64,25 @@ const blocchiDi = (s) => {
   return blocks
 }
 
-/** Durata stimata di un allenamento, in minuti. */
+/**
+ * Durata stimata di un allenamento, in minuti.
+ *
+ * 🔴 **Dal 09/09/2026 la parte Hyrox NON ha più una formula propria: chiama
+ * `durataBlocco`.** È la chiusura di BACKLOG #40, ed è la cosa da sapere prima
+ * di rimetterci mano. Fino a quel giorno esistevano due stimatori — questo e
+ * quello di `stimaWorkout.js` — che sullo stesso allenamento dicevano **58** e
+ * **24** minuti: la Home leggeva il primo, la scheda, l'archivio, il calendario
+ * e la grafica da storia il secondo. Nessuno dei due era sbagliato preso da
+ * solo, ed è per questo che il difetto è sopravvissuto: si vedeva solo mettendo
+ * due schermate una accanto all'altra.
+ *
+ * Ora il totale è **la somma dei blocchi che la scheda stampa uno per uno**,
+ * quindi un coach che li somma a mente ritrova il numero in cima. Era la
+ * proprietà che mancava, e non c'è modo di riottenerla con due formule.
+ *
+ * ⚠️ La corsa resta qui: `stimaWorkout.js` conosce solo i blocchi Hyrox, e le
+ * fasi di corsa hanno un formato tutto loro (`sections.steps`).
+ */
 export const durataWorkout = (sections) => {
   const s = sections || {}
   const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
@@ -77,17 +98,7 @@ export const durataWorkout = (sections) => {
       }
     }
   } else {
-    for (const b of blocchiDi(s)) {
-      const rounds = parseInt(b.params?.rounds) || 1
-      if (b.type === 'ON/OFF') minuti += (parseTime(b.params?.on) + parseTime(b.params?.off)) * rounds
-      else if (b.type === 'EMOM') minuti += parseTime(b.params?.interval) * rounds
-      else if (['AMRAP', 'WarmUp', 'Rest'].includes(b.type)) minuti += parseTime(b.params?.duration)
-      else if (b.type === 'For Time') minuti += 15 * rounds
-      else if (b.type === 'Cash In' || b.type === 'Cash Out') minuti += 5 * rounds
-      else if (b.type === 'Interval') {
-        for (const ex of b.exercises || []) minuti += parseTime(ex.exTime) * rounds
-      }
-    }
+    for (const b of blocchiDi(s)) minuti += durataBlocco(b) / 60
   }
 
   // Un allenamento senza tempo dichiarato non vale zero: falserebbe le medie.
@@ -233,8 +244,16 @@ export const rpeAtteso = (sections) => {
   return Math.round(pesi.reduce((a, b) => a + b, 0) / pesi.length)
 }
 
-/** Sotto questo numero di precedenti, una media non dice ancora niente. */
-const MINIMO_PRECEDENTI = 3
+/**
+ * Sotto questo numero di precedenti, una media non dice ancora niente.
+ *
+ * ⚠️ Esportata dal 09/09/2026: è la stessa soglia con cui la Home decide se
+ * mostrare «Media RPE» o la cella che dichiara quanto manca per accenderla
+ * (`CellaBloccata`). Due numeri scritti a mano in due punti direbbero all'atleta
+ * «si accende dopo 3 allenamenti» e poi la accenderebbero al quarto, senza dare
+ * nessun errore.
+ */
+export const MINIMO_PRECEDENTI = 3
 
 /**
  * L'RPE medio che questo atleta ha davvero segnato su questa categoria.
@@ -356,4 +375,79 @@ export const barreUltimiGiorni = (workouts = [], quanti = 6, oggi = new Date()) 
   const massimo = Math.max(...minuti)
   if (massimo <= 0) return minuti.map(() => 0)
   return minuti.map(m => Math.round((m / massimo) * 100))
+}
+
+// ─── Gli stati senza storico (09/09/2026) ─────────────────────────────────
+//
+// Alimentano i tre stati della Home atleta quando i numeri non ci sono ancora:
+// giorno 1, prima settimana, giorno di riposo. La regola del rework è una sola
+// — *nessuna cella mostra uno zero: al posto di un dato che non esiste va la
+// cosa che lo farà esistere* — e queste funzioni sono il modo di sapere QUANDO
+// un dato non esiste, invece di stamparlo a zero e sperare.
+//
+// ⚠️ Usano `durataWorkout`, la stessa che alimenta `weeklyStats.time` in
+// `Home.jsx`. NON `durataBlocco` di `stimaWorkout.js`: i due stimatori
+// divergono fino all'89% su un «For Time» (CLAUDE.md §9-quatervicies, BACKLOG
+// #40), e qui i due numeri finiscono sullo STESSO schermo — i minuti della
+// settimana e lo scarto sulla precedente. Misurarli in due modi darebbe una
+// differenza costruita fra due scale diverse, che è aritmetica giusta e
+// informazione falsa.
+
+/**
+ * Vero quando l'atleta non ha NIENTE: nessun completato, nessun assegnato in
+ * settimana, niente nei prossimi giorni. È la condizione del giorno 1.
+ *
+ * ⚠️ Guarda tutte e tre le fonti anche se oggi derivano tutte dallo stesso
+ * `storicoAtleta`: un atleta con la settimana vuota ma un assegnato fra dieci
+ * giorni **non** è al giorno 1, e mandargli la schermata di benvenuto vorrebbe
+ * dire nascondergli il programma che il coach gli ha già scritto. Il giorno in
+ * cui una delle tre arriva da un'altra query, questa funzione regge lo stesso.
+ */
+export function senzaStorico({ storico = [], weeklyStatus = [], upcoming = [] } = {}) {
+  const assegnatiInSettimana = weeklyStatus.reduce((a, g) => a + (g?.workouts?.length || 0), 0)
+  return storico.length === 0 && assegnatiInSettimana === 0 && upcoming.length === 0
+}
+
+/**
+ * I minuti completati nella settimana di CALENDARIO che contiene `giorno`.
+ *
+ * 🔴 Settimana lunedì-domenica, non una finestra mobile di sette giorni. È la
+ * correzione che questa funzione ha ricevuto rispetto al disegno: il numero
+ * accanto a cui vive — `weeklyStats.time` — è calcolato su `startOfWeek(...,
+ * { weekStartsOn: 1 })`, e una finestra mobile avrebbe prodotto uno scarto che
+ * non corrisponde al totale sopra di esso. È la stessa regola del LUNEDÌ che
+ * tiene allineati la rubrica, l'anello della Home e il report (CLAUDE.md
+ * §9-septdecies punto 4): due settimane diverse danno due numeri che non
+ * coincidono, e nessuno dei due è sbagliato preso da solo.
+ *
+ * Conta solo i `completed`: un assegnato non fatto non è volume.
+ */
+export function minutiSettimana(workouts = [], giorno = new Date()) {
+  const inizio = startOfWeek(giorno, { weekStartsOn: 1 })
+  const fine = new Date(inizio)
+  fine.setDate(inizio.getDate() + 6)
+  const inizioStr = format(inizio, 'yyyy-MM-dd')
+  const fineStr = format(fine, 'yyyy-MM-dd')
+
+  return workouts.reduce((tot, w) => {
+    if (w?.status !== 'completed' || !w.completed_date) return tot
+    if (w.completed_date < inizioStr || w.completed_date > fineStr) return tot
+    return tot + (durataWorkout(w.workouts?.sections) || 0)
+  }, 0)
+}
+
+/**
+ * Differenza in minuti fra la settimana corrente e quella precedente.
+ *
+ * Torna `null` — non `0`, non `+214` — quando la settimana precedente è vuota:
+ * «+214 min sulla scorsa» su una settimana in cui non esistevi è un dato finto,
+ * ed è la sesta comparsa della regola di `rpeAtteso` (CLAUDE.md §9-octies). La
+ * card lo omette da sé.
+ */
+export function scartoMinutiSettimana(workouts = [], oggi = new Date()) {
+  const settimanaScorsa = new Date(oggi)
+  settimanaScorsa.setDate(settimanaScorsa.getDate() - 7)
+  const prima = minutiSettimana(workouts, settimanaScorsa)
+  if (prima === 0) return null
+  return minutiSettimana(workouts, oggi) - prima
 }

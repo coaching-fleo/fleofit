@@ -89,4 +89,21 @@ else
   echo "❌ Sign in with Apple: il plugin nativo NON è compilato (serve Clean Build Folder)"
 fi
 
+# 9. L'ambiente di prova (CLAUDE.md §9-quinvicies). Aggiunto il 09/09/2026,
+#    dopo che il SEME è arrivato fino a una build in preparazione senza che
+#    niente lo segnalasse: il controllo che esisteva cercava «AMBIENTE DI PROVA»,
+#    che sta solo in supabaseDemo.js, e quel giorno passava — mentre demoSemi.js
+#    era dentro, con gli atleti finti e i loro allenamenti.
+#    ⚠️ Si cercano TUTTE E TRE le tracce, non una: il finto client, il seme e la
+#    chiave di localStorage escono dal bundle in momenti diversi, e ognuna da
+#    sola è una mezza verità.
+RESIDUI=0
+for traccia in "AMBIENTE DI PROVA" "at-sara" "fleofit_demo_db"; do
+  if grep -rqs -- "$traccia" "$APP" 2>/dev/null; then
+    echo "❌ ambiente di prova nel binario: «$traccia»"
+    RESIDUI=$((RESIDUI + 1))
+  fi
+done
+[[ $RESIDUI -eq 0 ]] && echo "✅ nessuna traccia dell'ambiente di prova"
+
 rm -rf "$TMP"

@@ -295,10 +295,17 @@ describe('Cosa è uscito dalla Home coach', () => {
 describe('La Home dell\'admin non è anche la Home di un atleta', () => {
   const montaAdmin = () => montaPagina(<Home />, { role: 'admin' })
 
-  it('non mostra il proprio allenamento di oggi né il «Giorno di rest»', async () => {
+  it('non mostra il proprio allenamento di oggi né lo stato «senza storico»', async () => {
     montaAdmin()
     await attendi('Crea workout')
-    expect(screen.queryByText('Giorno di rest')).not.toBeInTheDocument()
+    // ⚠️ Dal 09/09/2026 il marcatore è «ti segue da oggi», non più «Giorno di
+    // rest»: il coach non ha allenamenti propri (il suo account è escluso da
+    // chi si segue, COACHING_ID), quindi rimettendo `role === 'admin'` accanto
+    // a `role === 'athlete'` la sua Home non mostrerebbe il tratteggio del
+    // riposo — mostrerebbe il **benvenuto del giorno 1**, che è la schermata
+    // per chi non ha niente. È quella la stringa che prende la mutazione.
+    expect(screen.queryByText(/ti segue da oggi/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Oggi non ti alleni/i)).not.toBeInTheDocument()
   })
 
   it('non mostra le celle settimana, serie e volume/RPE', async () => {

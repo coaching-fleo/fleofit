@@ -25,6 +25,31 @@ export const SECONDI_PER_100M = 25
 /** Un esercizio senza reps né metri ("Max", "-"): non è zero, ma non è misurabile. */
 export const SECONDI_ESERCIZIO_IGNOTO = 60
 
+/**
+ * Quanto dura UN GIRO di un blocco a cronometro libero.
+ *
+ * 🔴 Sono i due numeri che il 09/09/2026 hanno chiuso BACKLOG #40, e vanno
+ * letti sapendo cosa sostituiscono. Fino a quel giorno «For Time» e «Cash In»
+ * erano stimati sommando gli esercizi — a ritmo di gara e con zero transizioni
+ * — e lo stesso allenamento leggeva **24 minuti** nella scheda e **58** nella
+ * Home, che aveva una formula tutta sua. Non era un arrotondamento: erano due
+ * formule diverse, e nessuna delle due era sbagliata presa da sola.
+ *
+ * A decidere quale fosse quella giusta è stato il committente, che è la sola
+ * persona che sa quanto durano davvero le sue sedute: **58**. La somma degli
+ * esercizi misura il tempo in cui l'atleta si sta muovendo, non quello che
+ * passa nel box — mancano le transizioni, il carico dello sled, il fiato fra
+ * un giro e l'altro. Su un «For Time» quel divario è di tre volte.
+ *
+ * ⚠️ Il prezzo, ed è visibile in scheda: un «For Time» dichiara 15 minuti a
+ * giro **qualunque cosa contenga**. Tre burpees e tre giri completi di Hyrox
+ * pesano uguale. È il compromesso di una stima a forfait, ed è la ragione per
+ * cui l'interfaccia continua a scrivere «≈» davanti a questi numeri.
+ */
+export const MINUTI_GIRO_FOR_TIME = 15
+/** Cash In e Cash Out: blocchi di apertura e chiusura, più corti. */
+export const MINUTI_GIRO_CASH = 5
+
 /** I blocchi che portano il lavoro centrale — quelli che meritano il tratto pieno. */
 export const BLOCCHI_DI_LAVORO = new Set(['ON/OFF', 'EMOM', 'AMRAP', 'For Time', 'Interval'])
 
@@ -122,15 +147,25 @@ export const durataBlocco = (block) => {
       return parseDuration(p.interval || '1:00') * giri
     case 'ON/OFF':
       return (parseDuration(p.on || '1:00') + parseDuration(p.off || '1:00')) * giri
+    // ⚠️ «For Time» e «Cash In/Out» sono cronometri liberi: il tempo lo fa
+    // l'atleta, e si stimano a forfait per giro (vedi MINUTI_GIRO_FOR_TIME).
+    // «Interval» no — lì ogni esercizio dichiara il proprio `exTime`, quindi
+    // la somma è un dato e non una stima.
     case 'For Time':
+      // ⚠️ Il forfait vale solo su un blocco che contiene qualcosa. Un «For
+      // Time» ancora vuoto NON dura 45 minuti: non è stimabile, e la scheda
+      // deve poter scrivere «—» invece di «0:00» (CLAUDE.md §9-undecies
+      // punto 2). C'è un test, ed è quello che ha preso questa svista.
+      return esercizi.length === 0 ? 0 : MINUTI_GIRO_FOR_TIME * 60 * giri
     case 'Interval':
       return sommaEsercizi(esercizi) * giri
     case 'Cash In':
     case 'Cash Out': {
+      if (esercizi.length === 0) return 0
       // Il rest esiste solo FRA i round, quindi se ne contano round − 1: la
       // stessa regola che governa la riga di riepilogo del blocco chiuso.
       const rest = giri > 1 ? parseDuration(p.rest) * (giri - 1) : 0
-      return sommaEsercizi(esercizi) * giri + rest
+      return MINUTI_GIRO_CASH * 60 * giri + rest
     }
     default:
       return sommaEsercizi(esercizi)

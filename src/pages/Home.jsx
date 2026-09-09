@@ -15,14 +15,19 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { BluetoothService } from './bluetooth'
 import { Network } from '@capacitor/network'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
-import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { leggiJson, scriviJson, leggiCoda, accodaSuStorage, chiaveCacheWorkout, CHIAVE_CODA } from '../lib/offlineQueue'
 import { mostraErrore } from '../lib/alert'
 import { sincronizzaBadge } from '../lib/badge'
 import RpeModal from '../components/RpeModal'
 import VoiceRecorder from '../components/VoiceRecorder'
-import { durataWorkout, numeroBlocchi, rpeAtteso, mediaRpeCategoria, serieGiorni, barreUltimiGiorni } from '../lib/statistiche'
-import { HeaderHome, BottoneVetro, HeroOggi, HeroRest, AnelloSettimana, CellaSerie, CellaVolume, BannerObiettivo, ListaInArrivo } from '../components/HomeAtletaUI'
+import { durataWorkout, numeroBlocchi, rpeAtteso, mediaRpeCategoria, serieGiorni, barreUltimiGiorni,
+         senzaStorico, scartoMinutiSettimana, MINIMO_PRECEDENTI } from '../lib/statistiche'
+import { parseNotesAndRpe, formatNotesWithRpe, rpeDichiarato } from '../lib/rpe'
+import { HeaderHome, BottoneVetro, HeroOggi, AnelloSettimana, CellaSerie, CellaVolume, BannerObiettivo, ListaInArrivo } from '../components/HomeAtletaUI'
+import { BenvenutoCoach, CampoObiettivo, CardPrimoLibero, ComeFunziona,
+         CellaPrimoDato, CellaBloccata, BannerObiettivoVuoto,
+         HeroRiposo, CardSettimanaChiusa, CardDomani, RigaFattoComunque } from '../components/HomeAtletaVuotiUI'
+import { COACH } from '../lib/coach'
 import { HeaderCoach, BannerLive, HeroFeedback, HeroNessunFeedback, SquadraOggi, SezioneAttenzione,
          TuttiAttivi, BarraCopertura, CtaCreaWorkout, RigaDestinazione, TitoloSezione, RigaAttivita,
          AzioneApri } from '../components/HomeCoachUI'
@@ -797,6 +802,51 @@ setNotifications(prev => {
   const serie = useMemo(() => serieGiorni(storicoAtleta), [storicoAtleta])
   const sparkline = useMemo(() => barreUltimiGiorni(storicoAtleta, BARRE_SPARKLINE), [storicoAtleta])
 
+  // ── I tre stati senza storico (09/09/2026) ──────────────────────────────
+  //
+  // 🔴 La regola che li tiene insieme: *nessuna cella mostra uno zero. Al posto
+  // di un dato che non esiste ancora va la cosa che lo farà esistere.* Prima,
+  // un atleta al primo giorno apriva l'app su un anello 0/0, una serie a «0
+  // giorni» e un volume a «0 min» — tre numeri veri che gli dicevano di essere
+  // già indietro. E il `weeklyStatus.length > 0` che avvolge il bento non
+  // proteggeva da niente: `weeklyStatus` nasce con sette giorni, quindi quella
+  // condizione è SEMPRE vera (è lo stesso difetto trovato sulla Home coach il
+  // 28/08, CLAUDE.md §9-nonies).
+
+  /** Giorno 1: niente di fatto, niente in settimana, niente in arrivo. */
+  const vuoto = useMemo(
+    () => senzaStorico({ storico: storicoAtleta, weeklyStatus, upcoming: upcomingWorkouts }),
+    [storicoAtleta, weeklyStatus, upcomingWorkouts]
+  )
+
+  // ⚠️ Si contano i COMPLETATI, non le righe di `storicoAtleta`: quelle
+  // comprendono gli assegnati ancora da fare. Un atleta con cinque allenamenti
+  // in programma e nessuno completato ha `storicoAtleta.length === 5` — non è
+  // al giorno 1, ma i suoi numeri sono tutti zero, ed è esattamente il caso che
+  // questo ramo deve prendere.
+  const completati = useMemo(
+    () => storicoAtleta.filter(w => w?.status === 'completed'),
+    [storicoAtleta]
+  )
+  const primaSettimana = !vuoto && completati.length < MINIMO_PRECEDENTI
+
+  // ⚠️ Ordine ASCENDENTE (`.order('completed_date', { ascending: true })` nel
+  // fetch): `[0]` è il più VECCHIO, che è proprio «il primo dato». Con l'ordine
+  // opposto qui servirebbe `.at(-1)`, e nessuno se ne accorgerebbe finché
+  // l'atleta non ha due allenamenti.
+  const primoDato = completati[0] || null
+
+  // I due numeri della settimana, contati una volta sola invece che dentro il
+  // JSX: `AnelloSettimana` fa la stessa riduzione al suo interno, e una terza
+  // copia inline sarebbe il modo in cui i due cominciano a divergere.
+  const settimana = useMemo(() => ({
+    fatti: weeklyStatus.reduce((a, d) => a + d.workouts.filter(w => w.status === 'completed').length, 0),
+    assegnati: weeklyStatus.reduce((a, d) => a + d.workouts.length, 0),
+  }), [weeklyStatus])
+
+  const scartoSettimana = useMemo(() => scartoMinutiSettimana(storicoAtleta), [storicoAtleta])
+  const barreSettimana = useMemo(() => barreUltimiGiorni(storicoAtleta, 7), [storicoAtleta])
+
   // ── I numeri della Home coach ───────────────────────────────────────────
   // Tutti derivati dalle stesse due liste con useMemo, per la stessa ragione
   // di sopra: uno stato ricalcolato da un effetto è un render in più e un dato
@@ -876,6 +926,31 @@ setNotifications(prev => {
     const rpe = mediaRpeCategoria(storicoAtleta, categoria) ?? rpeAtteso(sections)
     if (rpe != null) voci.push({ etichetta: 'RPE', valore: rpe, evidenza: true })
     return voci
+  }
+
+  /**
+   * La riga compressa del prossimo allenamento: «6 blocchi · 52′».
+   *
+   * ⚠️ Misura con `durataWorkout` e `numeroBlocchi`, cioè con gli STESSI
+   * strumenti di `metaEroe` e di `weeklyStats.time`. `metaWorkout` di
+   * `rigaArchivio.js` direbbe la stessa cosa in italiano migliore, ma misura
+   * con `stimaWorkout` — l'altra scala, che su un «For Time» diverge fino
+   * all'89% (CLAUDE.md §9-quatervicies, BACKLOG #40). Su questa schermata i
+   * minuti della settimana stanno due card più su: due stimatori diversi
+   * darebbero due numeri che non si possono confrontare, e nessuno dei due
+   * sarebbe sbagliato preso da solo.
+   *
+   * ⚠️ Custom ed Evento non hanno blocchi da contare né una durata da stimare:
+   * lì la riga resta vuota, che è la stessa regola di `metaWorkout` e di
+   * `DurataBlocco` — «0 blocchi · 0′» è una bugia con l'aria di un dato.
+   */
+  const metaProssimo = (sections) => {
+    const s = sections || {}
+    const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
+    if (cat === 'Custom' || cat === 'Event' || s.isAutonomous === true || cat === 'Autonomo') return ''
+    const blocchi = numeroBlocchi(s)
+    if (blocchi === 0) return ''
+    return `${blocchi} ${blocchi === 1 ? (cat === 'Running' ? 'fase' : 'blocco') : (cat === 'Running' ? 'fasi' : 'blocchi')} · ${durataWorkout(s)}′`
   }
 
   // Riporta un allenamento a "da fare". Prima era un tap singolo, silenzioso e
@@ -1240,9 +1315,31 @@ setNotifications(prev => {
       {role === 'athlete' && (
         <div className="flex flex-col gap-3.5">
 
+          {/* 🔴 IL GIORNO 1 ESCE PRIMA DI TUTTO, E CHIUDE LA PAGINA.
+              Non è una card in più sopra l'albero esistente: al giorno 1 non
+              c'è nient'altro da mostrare, e ogni cella che restasse sotto
+              direbbe zero. Il ramo si chiude qui — niente anello 0/0, niente
+              serie a 0 giorni, niente «In arrivo» vuoto. */}
           {loading ? (
             <div className="rounded-[26px] border border-white/[.07] bg-[#1a1a1c] h-60 animate-pulse" />
-          ) : todayWorkouts.length > 0 ? (
+          ) : vuoto ? (
+            <>
+              <BenvenutoCoach coach={COACH} onProfilo={() => navigate('/profile')} />
+              {/* ⚠️ `onFissa` apre il modale dell'allenamento libero: è la
+                  strada a costo zero indicata dal disegno, e la card non
+                  mente — chiede una data, e una data la si può mettere.
+                  Perché non c'è di meglio: un obiettivo dell'atleta non è una
+                  tabella, gli eventi sono workout di categoria `Event` che
+                  assegna il coach, e una colonna nuova su `athletes` è vietata
+                  dal congelamento dello schema (CLAUDE.md regola 0-bis). Voce
+                  in BACKLOG per farlo nascere direttamente come `Event`. */}
+              <CampoObiettivo onFissa={() => setAutonomousModalOpen(true)} />
+              <CardPrimoLibero onAggiungi={() => setAutonomousModalOpen(true)} />
+              <ComeFunziona />
+            </>
+          ) : (
+          <>
+          {todayWorkouts.length > 0 ? (
             todayWorkouts.map((todayWorkout) => {
               const sections = todayWorkout.workouts?.sections
               const rawCat = sections?.category || (sections?.steps ? 'Running' : 'Hyrox')
@@ -1296,7 +1393,33 @@ setNotifications(prev => {
               )
             })
           ) : (
-            <HeroRest />
+            /* 🔴 Il riposo non è l'assenza di un allenamento: è una giornata
+               con un carico alle spalle e un seguito. Al posto del tratteggio
+               «Recupera le energie» ci sono i minuti della settimana, cosa
+               arriva dopo, e la riga per chi si è allenato lo stesso.
+               ⚠️ Nei dati il rest programmato e «il coach non ha assegnato
+               niente» sono la stessa riga, e non esiste un campo che li
+               distingua: chi non ha NIENTE in assoluto lo prende il ramo del
+               giorno 1, qui sopra. */
+            <>
+              <HeroRiposo minutiSettimana={weeklyStats.time} giorniAttivi={weeklyStats.completed}
+                onRivedi={() => navigate('/calendar')} />
+              <CardSettimanaChiusa minuti={weeklyStats.time} scarto={scartoSettimana}
+                fatti={settimana.fatti} totale={settimana.assegnati} barre={barreSettimana} />
+              {upcomingWorkouts[0]?.workouts && (() => {
+                const prossimo = upcomingWorkouts[0]
+                const fra = differenceInDays(parseISO(prossimo.completed_date), startOfDay(new Date()))
+                return (
+                  <CardDomani
+                    workout={prossimo.workouts}
+                    etichetta={fra === 1 ? 'Domani' : 'In arrivo'}
+                    quando={format(parseISO(prossimo.completed_date), 'EEE d', { locale: it })}
+                    meta={metaProssimo(prossimo.workouts.sections)}
+                    onOpen={() => navigate(`/workout/${prossimo.workouts.id}?athlete_id=${user.id}`)} />
+                )
+              })()}
+              <RigaFattoComunque onAggiungi={() => setAutonomousModalOpen(true)} />
+            </>
           )}
 
           {/* Il bento. La settimana non è più nascosta dietro uno swipe non
@@ -1304,20 +1427,55 @@ setNotifications(prev => {
               la traccia, non il contenuto. */}
           {weeklyStatus.length > 0 && (
             <div className="grid grid-cols-[1.05fr_1fr] gap-3.5">
+              {/* ⚠️ Nella prima settimana l'anello a 1/4 non deve leggersi come
+                  un ritardo: cambia solo come si chiama la cifra, non la cifra. */}
               <AnelloSettimana weeklyStatus={weeklyStatus}
+                etichetta={primaSettimana ? 'Settimana 1' : 'Settimana'}
+                stato={primaSettimana ? 'iniziata' : 'completati'}
                 onGiorno={(w) => navigate(`/workout/${w.workoutId}?athlete_id=${user.id}`)} />
               <div className="flex flex-col gap-3.5">
-                <CellaSerie giorni={serie} ultime={sparkline} />
-                <CellaVolume minuti={weeklyStats.time} rpe={weeklyStats.avgRpe} />
+                {primaSettimana ? (
+                  <>
+                    {/* Il primo allenamento completato è un DATO, non un
+                        contatore a 1: minuti, giorno e RPE di QUELLA seduta.
+                        Finché non ce n'è nemmeno uno, la cella dichiara cosa
+                        la accende invece di mostrare un contatore a zero. */}
+                    {primoDato ? (
+                      <CellaPrimoDato minuti={durataWorkout(primoDato.workouts?.sections)}
+                        data={primoDato.completed_date} rpe={rpeDichiarato(primoDato.notes)} />
+                    ) : (
+                      <CellaBloccata etichetta="Primo dato" testo="Arriva col primo allenamento che completi." />
+                    )}
+                    {/* ⚠️ Su uno o due allenamenti `weeklyStats.avgRpe` è una
+                        media di uno o due numeri: la cella bloccata non è una
+                        decorazione, è il motivo per cui quella media non si
+                        mostra. La soglia è `MINIMO_PRECEDENTI`, la stessa che
+                        `mediaRpeCategoria` usa già per tacere. */}
+                    <CellaBloccata etichetta="Media RPE"
+                      testo={<>Si accende dopo<br />{MINIMO_PRECEDENTI} allenamenti</>}
+                      fatti={completati.length} soglia={MINIMO_PRECEDENTI} />
+                  </>
+                ) : (
+                  <>
+                    <CellaSerie giorni={serie} ultime={sparkline} />
+                    <CellaVolume minuti={weeklyStats.time} rpe={weeklyStats.avgRpe} />
+                  </>
+                )}
               </div>
             </div>
           )}
 
-          {/* Scende sotto il bento: è importante, non urgente. L'urgente è oggi. */}
-          {nextEventHome && (
+          {/* Scende sotto il bento: è importante, non urgente. L'urgente è oggi.
+              ⚠️ `BannerObiettivoVuoto` sta SOLO nella prima settimana: al giorno
+              1 la stessa domanda la fa già `CampoObiettivo`, e due volte è
+              un'insistenza. Dopo, con lo storico in pagina, chiederlo di nuovo
+              a chi non ha una gara sarebbe rumore. */}
+          {nextEventHome ? (
             <BannerObiettivo evento={nextEventHome} giorni={countdownDays}
               onOpen={() => navigate(`/workout/${nextEventHome.workouts.id}?athlete_id=${user.id}`)} />
-          )}
+          ) : primaSettimana ? (
+            <BannerObiettivoVuoto onFissa={() => setAutonomousModalOpen(true)} />
+          ) : null}
 
           {loading ? (
             <div className="flex flex-col gap-2.5">
@@ -1344,6 +1502,8 @@ setNotifications(prev => {
                 )
               }}
             />
+          )}
+          </>
           )}
         </div>
       )}

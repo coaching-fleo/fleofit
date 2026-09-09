@@ -5,12 +5,30 @@
 > Ultimo aggiornamento: **9 settembre 2026**.
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
-> Ultimo commit su `ios-version`: **9 set 2026**, che porta tutto il lavoro dal 01/09 in poi
-> (§9-vicies → §9-septvicies, cancellazione account compresa). ⚠️ **L'hash non si scrive più qui dentro**: era
+> Ultimo commit su `ios-version`: **9 set 2026**, che porta gli **stati senza storico** della
+> Home atleta (§9-duodetricies) e lo **stimatore di durata unificato** (§9-undetricies,
+> BACKLOG #40 chiuso); il commit precedente dello stesso giorno portava tutto il lavoro dal
+> 01/09 in poi (§9-vicies → §9-septvicies, cancellazione account compresa). ⚠️ **L'hash non si scrive più qui dentro**: era
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **892 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **928 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> ⭐ **Il 09/09 gli stimatori di durata sono diventati UNO** (§9-undetricies, BACKLOG #40
+> chiuso): lo stesso allenamento diceva **58 minuti nella Home e 24 nella scheda**, e il
+> difetto è saltato fuori mettendo due screenshot del simulatore uno accanto all'altro.
+> Vince il **58**, per decisione del committente: sommare gli esercizi misura il tempo in
+> cui l'atleta si sta muovendo, non quello che passa nel box. ⚠️ Con la durata sono saliti
+> i **carichi** del modello predittivo (≈211 → ≈516 sullo stesso workout): i rapporti non
+> si spostano, il numero assoluto sì.
+> ⭐ **Il 09/09 la Home atleta ha guadagnato GLI STATI SENZA STORICO** (§9-duodetricies):
+> giorno 1, prima settimana e giorno di riposo. La regola che ne esce vale per tutta
+> l'app ed è entrata in DESIGN.md: **nessuna cella mostra uno zero — al posto di un dato
+> che non esiste ancora va la cosa che lo farà esistere.** Chi installava l'app apriva su
+> quattro zeri perfettamente corretti (anello 0/0, «Serie: 0 giorni», «0 min», «In arrivo»
+> vuoto), cioè quattro numeri veri che gli dicevano di essere già indietro. ⚠️ Il
+> `{weeklyStatus.length > 0 && …}` che sembrava proteggere il bento **non proteggeva da
+> niente**: `weeklyStatus` nasce già con sette giorni — è lo stesso difetto della Home
+> coach del 28/08, sullo stesso identico stato.
 > 🔴 **Il 02/09 App Store ha respinto la 1.1.0 (3) sulla linea guida 4.8 — Login Services**,
 > e il 03/09 è nato **Sign in with Apple** (§9-sexvicies). Non è il rifiuto di maggio che
 > torna: quello (2.3.1(a)) resta chiuso. La 4.8 **non vieta Google**, che infatti resta
@@ -56,7 +74,8 @@
 > davanti alla casa: è la domanda del passo 2, e la si fa solo a chi serve. 🔴 Il vicolo cieco
 > vero stava in `App.jsx`: chi entrava con Apple o Google senza profilo — il caso NORMALE di un
 > nuovo invitato — riceveva «Accesso Negato» e il codice non gli veniva mai chiesto.
-> > Dieci schermate rifatte su design di Claude Design: **Home atleta** il 26/08 (§9-octies),
+> > Dieci schermate rifatte su design di Claude Design (la **Home atleta** due volte: il
+> 26/08 la pagina, il 09/09 i suoi stati vuoti): **Home atleta** il 26/08 (§9-octies),
 > **Home coach** il 27/08 (§9-nonies) con la **pausa atleta** (§9-decies), **Crea Workout**
 > il 27/08 (§9-undecies), la **scheda del workout** (§9-duodecies) e la **scheda atleta**
 > (§9-terdecies) il 28/08, l'**archivio** (§9-sedecies), la **rubrica atleti**
@@ -156,7 +175,7 @@ Conseguenze pratiche, tutte controintuitive:
 
 ### Rapporto tra i due: SONO DIVERGENTI, ED ENTRAMBI SI MUOVONO
 Verificato il 25/08/2026 **dopo un `git fetch`**:
-`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 84`**
+`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 86`**
 (misurata il 09/09/2026 subito dopo il push: `main` è fermo al 25/08, `ios-version`
 continua a muoversi). ⚠️ **Questo numero invecchia di uno a ogni commit, questa riga
 compresa**: vale come ordine di grandezza — il divario è grande e cresce — non come
@@ -352,6 +371,8 @@ src/
 │  ├─ blockColors.js           # TYPE_COLORS, unificata dalle 5 copie sparse
 │  ├─ blockHints.js            # BLOCK_HINT: didascalie in chiaro dei tipi di blocco (§9-ter)
 │  ├─ categorie.js             # CORSIA/corsia/categoriaDi: la Regola della Corsia in un punto solo
+│  ├─ coach.js                 # ⚠️ COACH: il nome del coach è una COSTANTE, non una query —
+│  │                            #   dal lato atleta non è interrogabile (§9-duodetricies)
 │  ├─ codiceInvito.js          # ⚠️ il codice invito: normalizza anche il LINK del coach, e
 │  │                           #   dice perché «non esiste» e «già usato» sono lo stesso
 │  │                           #   messaggio — la RLS non li distingue (§9-septvicies)
@@ -368,9 +389,9 @@ src/
 │  │                           #   non sono arrivati, e un conteggio mancante SPARISCE invece di
 │  │                           #   diventare 0 (§9-duoetvicies)
 │  ├─ previsione.js           # ⚠️ il modello predittivo del carico (§9-quatervicies).
-│  │                           #   🔴 DUE SCALE: `caricoPrevisto` parla la lingua del
-│  │                           #   builder, `caricoAssegnazione` quella dello STORICO —
-│  │                           #   e non sono intercambiabili
+│  │                           #   ⚠️ Le due SCALE di durata non ci sono più (§9-undetricies),
+│  │                           #   ma restano due `rpeAtteso` diversi: `caricoPrevisto` usa
+│  │                           #   quello del builder, `caricoAssegnazione` quello dello STORICO
 │  ├─ reportAtleta.js          # ⚠️ il report del singolo: diario, movimenti con i carichi
 │  │                           #   (giri del blocco compresi), cinque settimane e le
 │  │                           #   PROPOSTE per la successiva (§9-vicies-bis)
@@ -389,9 +410,13 @@ src/
 │  ├─ offlineQueue.js          # ⚠️ coda offline + leggiJson/scriviJson — vedi §9 regola 0-bis
 │  ├─ pushToken.js             # rinfresco del token FCM
 │  ├─ rpe.js                   # parseNotesAndRpe / formatNotesWithRpe
-│  ├─ statistiche.js           # carico settimanale, completamento, distribuzione RPE
+│  ├─ statistiche.js           # carico settimanale, completamento, distribuzione RPE.
+│  │                            #   ⚠️ `minutiSettimana` misura la settimana di CALENDARIO
+│  │                            #   (lunedì), non sette giorni a ritroso (§9-duodetricies)
 │  ├─ statisticheCoach.js      # i numeri della Home coach: feedback, squadra del giorno, fermi, scaduti, copertura
-│  ├─ stimaWorkout.js         # ⚠️ durata STIMATA e RPE atteso del builder — non è un dato vero
+│  ├─ stimaWorkout.js         # ⚠️ L'UNICO stimatore di durata dei blocchi Hyrox: dal 09/09
+│  │                           #   `durataWorkout` lo somma invece di rifare il conto (§9-undetricies)
+│  │                           #   ⚠️ durata STIMATA e RPE atteso del builder — non è un dato vero
 │  │                           #   (§9-undecies). L'RPE è una media di POTENZA, non aritmetica.
 │  │                           #   ⚠️ Esiste un SECONDO `rpeAtteso` in statistiche.js, che è un
 │  │                           #   calcolo diverso per le stesse parole: la Home parte da
@@ -400,13 +425,16 @@ src/
 │  │                           #   in due schermate — non è stato unificato, sta in BACKLOG
 │  ├─ timerSequence.js         # buildTimerSequence + getNormalizedBlocks (§5 legacy)
 │  ├─ workoutTitle.js          # titolo generato dalla data (c'è anche su main)
-│  └─ __tests__/               # 230 test — il grosso della copertura (§9 punto 11)
+│  └─ __tests__/               # 246 test — il grosso della copertura (§9 punto 11)
 ├─ test/
 │  ├─ setup.js                 # jsdom, localStorage in memoria, finto Capacitor (§9-sexies)
 │  ├─ fintoSupabase.js         # catena fluente via Proxy — riutilizzabile per ogni pagina
 │  └─ montaPagina.jsx          # router e AuthContext VERI, non finti
 ├─ components/
 │  ├─ HomeAtletaUI.jsx         # i pezzi visivi della Home atleta (§9-octies) — sola presentazione
+│  ├─ HomeAtletaVuotiUI.jsx    # ⚠️ gli stati SENZA STORICO della Home atleta (§9-duodetricies):
+│  │                            #   giorno 1, prima settimana, riposo. Nessuna cella mostra
+│  │                            #   uno zero — è la regola, non una preferenza
 │  ├─ HomeCoachUI.jsx          # i pezzi visivi della Home coach (§9-nonies) — sola presentazione
 │  ├─ CreaWorkoutUI.jsx        # i pezzi visivi del builder (§9-undecies) — RiepilogoWorkout e BarraAzioni
 │  │                           #   servono ANCHE la scheda: stesso codice in scrittura e in lettura
@@ -450,7 +478,7 @@ src/
    ├─ bluetooth.js             # BluetoothService — singleton BLE fascia cardio
    ├─ health.js                # HealthService (Apple Health)
    ├─ motivations.js           # 15 frasi motivazionali + getDailyMotivation() con anti-ripetizione
-   └─ __tests__/               # 138 test su componenti e pagine montate (§9 punto 11)
+   └─ __tests__/               # 157 test su componenti e pagine montate (§9 punto 11)
 tools/                            # non entra nell'app: serve alle verifiche pre-submission
    ├─ ExportOptions-AppStore.plist # esporta un .ipa in locale, NON carica niente
    ├─ verifica-ipa.sh              # 6 controlli sul binario vero (§9-ter)
@@ -1152,11 +1180,11 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. ~~Nessun test automatico~~ → **892 test al 09/09/2026** (`npm test`, vitest), tutti
+11. ~~Nessun test automatico~~ → **927 test al 09/09/2026** (`npm test`, vitest), tutti
     verificati per mutazione: se si rompe di proposito il codice che coprono, falliscono.
     Non sono decorativi, ed è l'unico criterio che conta — vedi §9-sexies.
 
-    **528 sulla logica pura di `src/lib/`**
+    **544 sulla logica pura di `src/lib/`**
 
     | file | test | cosa protegge |
     |---|---|---|
@@ -1181,9 +1209,10 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 | `codiceInvito` | 8 | il codice invito: che `normalizzaCodice` riconosca il **LINK** del coach e non ne legga l'indirizzo — senza, chi incolla `https://…/?invite=7KQ2M4XB` ottiene `HTTPSFLE`, otto caratteri come quelli giusti e un errore che non spiega niente — e che a codice pieno nessuna casella resti «attiva», o la nona (che non esiste) si prenderebbe il cursore mentre la verifica sta già partendo |
 | `rigaImpostazioni` | 12 | le tre righe di Impostazioni che sono diventate numeri: i codici che tornano `null` finché non sono arrivati invece di «0 attivi», il conteggio mancante che SPARISCE invece di diventare zero — «0 atleti» accanto a «Esporta database» si legge come «non c'è niente da salvare» — e la pillola che in anteprima non dice «Atleta», che sarebbe vero e fuorviante |
 | `appleLogin` | 8 | Sign in with Apple: che il nonce dato al plugin sia lo **SHA-256** di quello dato a Supabase e non lo stesso valore — uno scambio lì non rompe nient'altro e in produzione dà un 400 che sembra un problema di configurazione su Apple — che senza `crypto.subtle` si torni `null` invece di lanciare (o su quella WebView non entra più nessuno), che il nome vuoto degli accessi successivi NON si scriva sopra quello salvato la prima volta, e che l'annullamento del foglio di sistema (1001) non passi per un guasto mentre 1004 sì |
+| `statistiche-vuoti` | 16 | gli stati senza storico: `senzaStorico` che è **falso** con un assegnato fuori dalla settimana — il caso che manderebbe il benvenuto del giorno 1 a chi ha già un programma — la settimana di CALENDARIO che esclude la domenica precedente (una finestra mobile la conterebbe dentro, e lo scarto non corrisponderebbe più al totale accanto), i `pending` che non sono volume, e lo scarto che torna `null` invece di `+214` con la settimana precedente vuota — anche quando quella settimana ha solo allenamenti **saltati** |
 | `blockColors` · `rpe` · `workoutTitle` | 6+6+6 | codifica colore, round-trip dell'RPE, titolo generato dalla data |
 
-    **364 su componenti, pagine e hook**
+    **383 su componenti, pagine e hook**
 
     | file | test | cosa protegge |
     |---|---|---|
@@ -1215,6 +1244,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 | `WorkoutDetailStoria` | 14 | la grafica da mettere sopra una storia: gli **esercizi** che ci sono davvero (è la sostanza, e una regressione lascerebbe una grafica impaginata benissimo che non dice più niente), l'RPE dichiarato, il `≈` sulla durata, il nodo rasterizzato che è la copia a misura vera e non l'anteprima riscalata, l'altezza **misurata sul nodo** invece di un 9:16 dato per scontato, la carta che resta semitrasparente e con gli angoli tondi, e — l'unico che conta più di tutti — **nessun `backgroundColor` passato a html-to-image**, che è ciò che tiene il PNG trasparente |
 | `PrevisioneBuilder` · `PrevisioneAssegnazione` | 4+6 | il modello nelle due pagine vere: la quarta cella che è il **prodotto** delle due accanto, la cella che sparisce (e non mostra zero) senza intensità dichiarata, il semaforo che porta la percentuale, l'atleta senza niente da segnalare che **non** riceve un «tutto ok», la pausa che resta in lista, l'avviso che NON blocca «Conferma», e la lettura fallita che spegne i semafori lasciando l'assegnazione intatta. ⚠️ L'ultimo è quello che conta di più: un di più non deve poter togliere il gesto che c'era. ⚠️ E la pausa si verifica **sulle colonne chieste** (`notes` nella `select`), perché il finto Supabase non filtra le colonne e l'asserzione a schermo passerebbe anche togliendola |
 | `Impostazioni` | 23 | la pagina ridisegnata su `Settings` montata: l'interruttore con `aria-checked` al posto del bottone che diceva dove sarebbe andato, il banner giallo «Operazione in corso» che non esiste più — ⚠️ con l'attesa tenuta aperta a mano, o il test passa anche rimettendolo — le 90 parole sul Garmin che ci sono TUTTE ma sotto una riga che si apre, i codici invito che l'atleta **non legge nemmeno**, e i test mattina/sera chiusi in fondo invece che fra le impostazioni. Dal 09/09 anche **«Elimina il mio account»**: che ci sia (e sopra «Esci»), che si mostri **anche al coach** — nasconderla a chi è in `ADMIN_EMAILS` vorrebbe dire nasconderla a `demo@fleofit.it`, cioè al revisore — che chieda conferma prima di toccare qualunque cosa, che marchi il **proprio** id e non quello di un altro, e che il messaggio **non** prometta che riaccedendo si annulla, perché è falso |
+| `HomeVuoti` | 19 | i tre stati senza storico su `Home` montata: il giorno 1 che **chiude la pagina** (niente anello 0/0, niente serie, niente volume, niente «In arrivo» sotto di esso — ed è la mutazione che conta, perché una card di benvenuto messa *sopra* l'albero esistente lascia il difetto intero con un cappello); «Primo dato» che porta i minuti di QUELL'allenamento e non `weeklyStats.time`; la prima settimana contata sui **completati** e non sulle righe (cinque assegnati e nessuno fatto sono ancora la prima settimana); «Domani» che diventa «In arrivo» quando il prossimo non è domani; e lo scarto che sparisce senza una settimana con cui confrontarsi. ⚠️ Il test sul «primo dato» usa **due** completati: con uno solo `[0]` e `.at(-1)` sono lo stesso oggetto, e l'ordine di `storicoAtleta` non sarebbe coperto da niente |
 | `WorkoutDetailScheda` | 20 | la scheda ridisegnata su `WorkoutDetail` montata: la terza cella del riepilogo, che su un allenamento chiuso è l'RPE **dichiarato** e non quello atteso — e scrive `—`, non 5; la didascalia di BLOCK_HINT (rilievo 3.2.1viii); i blocchi aperti senza toccare niente; il menu che tiene i comandi fuori dalla pagina; la barra che non fa due gialli; l'elenco delle assegnazioni; la grafica IG che resta **renderizzata** fuori schermo, e il testo INTERO dell'avviso sul riscaldamento |
 
     ⚠️ **I due contratti sono asimmetrici e devono restarlo**: `HyroxBlock` passa `block.id`,
@@ -1777,8 +1807,15 @@ bundle JS, didascalie presenti, zero occorrenze di `cloud-sync` e "Modalità Bun
 `cleartext` in `capacitor.config.json`, `arm64`, bundle id `it.federicoleo.fleofit` (non il `.dev`
 della configurazione Debug).
 
-> **Controllo obbligatorio prima di ogni archive**, è quello che è mancato a maggio:
-> `grep -l "demo@fleofit.it" dist/assets/*.js` deve stampare un file.
+> **Controlli obbligatori prima di ogni archive.** Il primo è quello che è mancato a maggio;
+> il secondo è stato aggiunto il 09/09/2026, dopo che il seme dell'ambiente di prova è
+> arrivato fino a una build in preparazione senza che niente lo segnalasse (§9-quinvicies).
+> ```bash
+> grep -l "demo@fleofit.it" dist/assets/*.js                                  # DEVE stampare un file
+> grep -l "AMBIENTE DI PROVA\|at-sara\|fleofit_demo_db" ios/App/App/public/assets/*.js   # NON deve stampare niente
+> ```
+> ⚠️ Il secondo si fa su `ios/App/App/public`, non su `dist`: è quella la copia che Xcode
+> compila, e le due divergono ogni volta che si salta `npx cap sync ios` (§2).
 > Attenzione a `grep -c` su più file: stampa una riga per file (quasi tutte `:0`) ed esce con
 > codice 1 quando non trova nulla — si legge come un fallimento e non lo è.
 
@@ -3635,12 +3672,20 @@ reggendo il carico e chi no si ricavava aprendo una scheda alla volta.
    del workout ha un workout e dodici atleti, la scheda dell'atleta ha un atleta
    e cento workout.
 
-### 🔴 LE DUE SCALE DI CARICO — la cosa da sapere prima di tutto
-Nel progetto convivono **due stimatori di durata**, e non è un dettaglio: su un
-blocco «For Time» da 5 round differiscono dell'**89%** (misurato il 02/09/2026 —
-`durataWorkout` addebita 15 minuti fissi a round, `durataBlocco` somma gli
-esercizi: 75 minuti contro 8). Quindi il carico si misura in due modi, e ognuno
-va confrontato **solo** con un termine di paragone costruito allo stesso modo:
+### ✅ LE DUE SCALE DI CARICO NON CI SONO PIÙ (dal 09/09/2026)
+🔴 **Questa sezione descrive un problema CHIUSO, e va letta al passato**: dal
+09/09/2026 lo stimatore è **uno solo** — `durataWorkout` somma `durataBlocco`
+per i blocchi Hyrox (BACKLOG #40, §9-undetricies). Resta qui perché spiega
+perché `caricoPrevisto` e `caricoAssegnazione` sono ancora **due funzioni**: la
+seconda usa l'`rpeAtteso` di `statistiche.js`, che è un calcolo diverso dal
+`rpeAtteso` di `stimaWorkout.js` — quella duplicazione **non** è stata chiusa.
+
+Com'era, e perché il difetto era impossibile da notare: convivevano **due
+stimatori di durata**, e su un blocco «For Time» da 5 round differivano
+dell'**89%** (`durataWorkout` addebitava 15 minuti fissi a round, `durataBlocco`
+sommava gli esercizi: 75 minuti contro 8). Il carico si misurava perciò in due
+modi, e ognuno andava confrontato **solo** con un paragone costruito allo stesso
+modo:
 
 - **`caricoPrevisto`** (il builder) misura con `stimaWorkout`, cioè con gli stessi
   strumenti delle due celle che gli stanno accanto: la quarta cella è il
@@ -3654,10 +3699,13 @@ va confrontato **solo** con un termine di paragone costruito allo stesso modo:
   pieno di For Time si proietterebbe quasi senza peso contro uno storico gonfiato
   dallo stesso tipo di blocco — direbbe «tranquillo» proprio dove non lo è.
 
-⚠️ Le due scale **non compaiono mai accanto**: il builder mostra un carico
-assoluto e nessun rapporto, il foglio di assegnazione un rapporto e nessun carico
-assoluto. Unificare i due stimatori è la correzione vera ed è in BACKLOG (#40):
-tocca numeri già visibili nel report e nel calendario.
+✅ **Unificare i due stimatori era la correzione vera, ed è stata fatta il
+09/09/2026** (§9-undetricies). ⚠️ Conseguenza da conoscere prima di leggere un
+numero del modello: **i carichi sono saliti**, perché la durata è salita. Sullo
+stesso Hyrox di prova `caricoPrevisto` passa da **≈211 a ≈516**. Le soglie del
+modello (`rapportoCarico`, `acwrProiettato`) sono **rapporti**, quindi non si
+spostano — numeratore e denominatore salgono insieme — ma il numero assoluto in
+cima al builder sì, e va ritarato sull'occhio del coach.
 
 ### ⚠️ Le sette cose da sapere prima di rimetterci mano
 
@@ -3757,10 +3805,33 @@ completa con l'RPE, si naviga il report. Niente esce dal browser.
 1. 🔴 **Non entra nel bundle di produzione, ed è la condizione che lo rende
    accettabile.** `import.meta.env.VITE_DEMO` viene sostituito da Vite in fase
    di build, quindi in una build normale il ternario di `supabaseClient.js`
-   diventa `false` e Rollup butta via il modulo. Verifica dopo `npm run build`:
-   `grep -l "AMBIENTE DI PROVA" dist/assets/*.js` → **nessun file**. Se un
-   giorno quel controllo diventasse una variabile a runtime, il finto client
-   finirebbe nell'`.ipa` spedito ad Apple.
+   diventa `false` e Rollup butta via il modulo. Se un giorno quel controllo
+   diventasse una variabile a runtime, il finto client finirebbe nell'`.ipa`
+   spedito ad Apple.
+
+   🔴 **IL CONTROLLO SCRITTO QUI ERA UNA META' DI VERITA', E IL 09/09/2026 HA
+   LASCIATO PASSARE IL SEME.** Diceva `grep -l "AMBIENTE DI PROVA"
+   dist/assets/*.js` → nessun file, e infatti quel giorno **passava**: il finto
+   client e il nastro erano davvero fuori. Ma `demoSemi.js` era **dentro** —
+   `Sara Villa`, `Andrea Conti`, i titoli dei workout di prova e le loro
+   assegnazioni erano nel bundle in preparazione per Apple, e nessun controllo
+   li vedeva perché quella stringa sta solo in `supabaseDemo.js`.
+   **Perché ci finivano**: i tre elenchi di `demoSemi.js` erano costanti a
+   livello di modulo costruite chiamando `A()`, `W()` e `AW()`. Rollup non può
+   dimostrare che una chiamata sia pura, quindi teneva gli inizializzatori —
+   mentre `invitation_codes` e `personal_records`, scritti come **letterali
+   puri**, li buttava. La differenza fra le due metà è tutta lì, ed è invisibile
+   a chi legge il sorgente.
+   Corretto rendendo i tre elenchi **funzioni**: a livello di modulo non resta
+   nessuna chiamata, e l'albero sparisce quando `semi` non ha chiamanti.
+
+   **La verifica giusta cerca il SEME, non il client** (il seme è l'ultimo a
+   uscire, quindi se non c'è lui non c'è niente):
+   ```bash
+   grep -l "AMBIENTE DI PROVA\|at-sara\|fleofit_demo_db" ios/App/App/public/assets/*.js
+   ```
+   → **nessun file**. ⚠️ E si guarda `ios/App/App/public`, non `dist`: è quella
+   la copia che Xcode compila (§2).
 2. 🔴 **NON è un clone di Postgres.** Implementa i metodi che l'app usa davvero,
    censiti il 02/09/2026: 16 metodi di catena, 8 tabelle, **due sole relazioni**
    (`athlete_workouts → workouts` e `→ athletes`). Se una pagina comincia a
@@ -4062,6 +4133,275 @@ preso: è lo stesso genere di difetto del conto alla rovescia del cestino
 `src/components/LoginUI.jsx` (sola presentazione).
 `src/pages/__tests__/LoginInvito.test.jsx` porta 14 test, tutti verificati per
 mutazione: sette mutazioni provate, sette prese.
+
+---
+
+## 9-duodetricies. Gli stati senza storico della Home atleta (09/09/2026)
+
+Stesso progetto Claude Design degli altri dieci schermi
+(`4a238081-a3ee-4f59-ae34-100f29d55601`), documento
+`codice/ISTRUZIONI-STATI-VUOTI.md`, stati **2a** (giorno 1), **2b** (prima
+settimana) e **2c** (giorno di riposo). Come per gli altri: **nessun campo di
+Supabase cambia forma**, nessuna query nuova, nessuna dipendenza nuova. La
+logica di `Home.jsx` — fetch, swipe di completamento, modale RPE, coda offline,
+notifiche realtime — non è stata toccata.
+
+### Il problema, in una riga
+La Home era scritta per un atleta che ha già uno storico, e per chi non ce l'ha
+mostrava **quattro zeri perfettamente corretti**: anello 0/0, «Serie: 0 giorni»,
+«Volume · RPE 0 min», e «In arrivo» vuoto. Cioè quattro numeri veri che dicono a
+chi ha appena installato l'app che è **già indietro**.
+
+### 🔴 LA REGOLA, ED È UNA SOLA
+*Nessuna cella mostra uno zero. Al posto di un dato che non esiste ancora va la
+cosa che lo farà esistere.* È la stessa famiglia di `rpeAtteso` che torna `null`
+invece di 5 (§9-octies), del `—` di `DurataBlocco` (§9-undecies punto 2) e del
+`—` della rubrica (§9-septdecies punto 3) — ma applicata a **una schermata
+intera** invece che a una cella.
+**Corollario:** una cella che si sbloccherà dichiara la soglia e il progresso
+(«Media RPE · si accende dopo 3 allenamenti · 1/3»), e la soglia si scrive solo
+quando c'è un progresso da raccontare: `0/1` è di nuovo lo zero che la regola
+toglie, ed è la ragione per cui `soglia` di `CellaBloccata` è **facoltativa**.
+
+### Cosa c'è ora
+- **2a · Giorno 1** — blocco giallo «*Federico Leo* ti segue da oggi» con la
+  scorciatoia al profilo, la domanda sull'obiettivo, la card per registrare il
+  primo allenamento, e le tre righe di «Come funziona».
+- **2b · Prima settimana** — l'anello si chiama «Settimana 1 · **iniziata**»
+  invece di «completati», e la colonna destra del bento porta «Primo dato»
+  (minuti, giorno e RPE di quella seduta) più la cella bloccata della media RPE.
+  Sotto, `BannerObiettivoVuoto` al posto del countdown.
+- **2c · Riposo** — al posto del tratteggio «Recupera le energie»: la corsia
+  Running, i minuti chiusi in settimana, la card del carico con lo scarto sulla
+  precedente, cosa arriva dopo, e «Ho fatto qualcosa comunque».
+
+### ⚠️ Le nove cose da sapere prima di rimetterci mano
+
+1. 🔴 **Il ramo del giorno 1 CHIUDE la pagina, non è una card in più.** Se
+   restasse sopra l'albero esistente, sotto di esso ci sarebbero ancora i
+   quattro zeri — cioè il difetto intero, con un cappello sopra. C'è un test che
+   cade solo su questa forma.
+2. 🔴 **`{weeklyStatus.length > 0 && …}` non proteggeva da niente**, ed è la
+   ragione per cui il difetto è sopravvissuto: `weeklyStatus` nasce **già con
+   sette giorni** (`useState` con inizializzatore, in cima a `Home.jsx`), quindi
+   quella condizione è sempre vera. È lo stesso difetto trovato sulla Home coach
+   il 28/08 (§9-nonies) sullo stesso identico stato.
+3. 🔴 **`primaSettimana` si conta sui COMPLETATI, mai su `storicoAtleta.length`.**
+   Quelle righe comprendono gli assegnati ancora da fare: un atleta con cinque
+   allenamenti in programma e nessuno fatto ha `length === 5`, quindi con quel
+   criterio uscirebbe dalla prima settimana e leggerebbe «Serie: 0 giorni» e
+   «0 min». È il caso che il conteggio delle righe lascia passare, e c'è un test.
+4. 🔴 **`storicoAtleta` è in ordine ASCENDENTE** (`.order('completed_date',
+   { ascending: true })` nel fetch), quindi «il primo dato» è `completati[0]`.
+   Il documento di design lo dava per discendente e diceva di verificarlo: con
+   un solo completato `[0]` e `.at(-1)` coincidono, quindi la mutazione si vede
+   solo da due allenamenti in su — il test ne usa due apposta.
+5. 🔴 **`CellaPrimoDato` porta i minuti di QUELL'allenamento, non
+   `weeklyStats.time`.** Il primo completato può essere della settimana scorsa,
+   e allora il totale settimanale vale 0: la cella scriverebbe «0 min» sotto una
+   data e un RPE veri. Il test lo prende mettendo il primo completato **fuori**
+   dalla settimana in corso — è l'unica configurazione in cui le due letture si
+   separano.
+6. 🔴 **`minutiSettimana` misura la settimana di CALENDARIO (lunedì-domenica),
+   non una finestra mobile di sette giorni.** È la correzione fatta rispetto al
+   documento di design: il numero accanto a cui vive — `weeklyStats.time` — è
+   calcolato su `startOfWeek(…, { weekStartsOn: 1 })`, e una finestra mobile
+   avrebbe prodotto uno scarto che non corrisponde al totale sopra di esso. È la
+   regola del LUNEDÌ di §9-septdecies punto 4 e §9-vicies, per la quarta volta.
+   Il caso che lo prende è la **domenica precedente**, che una finestra mobile
+   conterebbe dentro la settimana in corso.
+7. 🔴 **`scartoMinutiSettimana` torna `null`, non lo scarto**, quando la
+   settimana precedente è vuota: «+214 min sulla scorsa» su una settimana in cui
+   l'atleta non esisteva è un dato finto, e la card lo omette da sé. Vale anche
+   quando la settimana scorsa ha solo assegnati **non fatti**: un allenamento
+   saltato non è un termine di paragone.
+8. ⚠️ **`CardDomani` mostra il PRIMO in arrivo, non «domani».** Se il prossimo
+   assegnato è fra tre giorni, l'etichetta «Domani» è una riga che mente e
+   nessun errore la segnala: il chiamante calcola `differenceInDays` e passa
+   «In arrivo».
+9. ⚠️ **Il riposo programmato e «il coach non ha assegnato niente» sono la
+   stessa riga nei dati.** `todayWorkouts.length === 0` copre entrambi, e non
+   esiste un campo che dica «oggi è rest». La frase «È parte del piano» è vera
+   nel primo caso; è la versione onesta possibile finché quel campo non c'è, e
+   chi non ha **niente in assoluto** lo intercetta prima il ramo del giorno 1.
+
+### Il nome del coach è una costante, e non poteva essere altro
+`src/lib/coach.js`. Dal lato atleta il nome del coach **non è interrogabile**:
+lo schema non ha un `coach_id` — i coach sono un elenco di email dentro le
+policy RLS (§4-bis), cioè uno studio con un coach solo — e `athletes` si legge
+solo per la propria riga o da admin. È lo stesso muro contro cui sbatte già
+`CardInvitoValido` in `LoginUI` (§9-septvicies punto 1), che per questo scrive
+«Il tuo coach ti ha invitato» invece di un nome. Il giorno in cui esistono più
+coach, quella è l'unica riga da sostituire con una lettura vera — e
+`BenvenutoCoach` funziona anche senza: senza `coach` scrive «Il tuo coach ti
+segue da oggi».
+
+### 🔴 «Fissa l'obiettivo» apre il modale dell'allenamento libero, e va detto
+Un obiettivo dell'atleta **non è una tabella**: gli eventi sono workout di
+categoria `Event` che assegna il coach, e una colonna nuova su `athletes` è
+vietata dal congelamento dello schema (regola 0-bis). `onFissa` punta perciò a
+`setAutonomousModalOpen(true)`: la card non mente — chiede una data, e una data
+la si può mettere. Farlo nascere direttamente come `Event`, così che compaia nel
+calendario e nel `BannerObiettivo` esistente, è la strada a costo zero indicata
+dal design ed è **in BACKLOG**, non implementata.
+
+### ⚠️ Le classi dell'entrata sono state SOSTITUITE, non copiate
+Il documento di design usa `animate-in fade-in slide-in-from-bottom-2`,
+scrivendo che «arriva da tw-animate-css». **In questo progetto tw-animate-css
+NON è installato** e quelle classi generano zero CSS (§9-duodecies punto 1 e
+§9-quindecies punto 1, verificato sul bundle: `grep -c "animate-in"
+dist/assets/*.css` → 0). Sarebbe stata la terza volta che lo stesso difetto
+entra da una porta diversa. Qui l'entrata è `hero-transition`, il keyframe vero
+di `src/index.css`, che è esattamente «sale di 8px mentre appare».
+
+### 🔴 Il difetto che solo la pagina a 393px ha mostrato
+`CardDomani` metteva `capitalize` sull'**intera** riga di meta, e
+`text-transform: capitalize` non conosce le frasi: maiuscola **ogni parola**, e
+si leggeva «Gio 10 · 2 **B**locchi · 56′». Nessun test lo avrebbe preso — nel
+DOM il testo è già quello giusto, a cambiarlo è il foglio di stile. Ora
+`capitalize` sta sul solo nome del giorno. È lo stesso genere di difetto del
+conto alla rovescia del cestino (§9-septdecies punto 7), delle quattro celle del
+builder (§9-quatervicies) e della riga «Non ho un codice» (§9-septvicies).
+
+### Il codice morto che il rework ha lasciato indietro, ed è stato rimosso
+**`HeroRest`** in `HomeAtletaUI.jsx` — il tratteggio «Giorno di rest · Recupera
+le energie» — non ha più chiamanti: cancellato subito invece di restare
+esportato «finché questa versione non è in produzione», che è il modo in cui una
+correzione ne raggiunge due su tre (§9 punto 2). Con lui è uscito l'import di
+`CalendarDays`, che era suo soltanto.
+
+### I test, e le due mutazioni che erano nate invisibili
+`src/lib/__tests__/statistiche-vuoti.test.js` (16) e
+`src/pages/__tests__/HomeVuoti.test.jsx` (19), tutti verificati per mutazione:
+**tredici mutazioni provate, tredici prese**. Due sono state riscritte perché la
+mutazione le superava, ed è la stessa lezione di §9-sexies:
+- «mostra il primo allenamento come dato» nasceva con **un solo** completato, e
+  lì `completati[0]` e `.at(-1)` sono lo stesso oggetto: l'ordine di
+  `storicoAtleta` non era coperto da niente. Ora ne usa due, e il secondo vale
+  anche come totale della settimana — così la stessa asserzione prende sia
+  l'ordine sia la lettura di `weeklyStats.time`.
+- «con soli assegnati e nessun completato resta la prima settimana» non esisteva:
+  con il conteggio delle righe il test sarebbe stato verde e l'atleta con cinque
+  allenamenti in programma avrebbe letto quattro zeri.
+
+⚠️ **Due test storici sono stati riscritti, e per il motivo giusto.** In
+`NavigazioneApp.test.jsx` il marcatore «Giorno di rest» era la prova che la Home
+fosse ancora a schermo: quel finto atleta ha `athlete_workouts: []`, quindi ora
+vede il **giorno 1**. In `HomeCoach.test.jsx` l'assertion «l'admin non vede il
+ramo atleta» sarebbe diventata **trivialmente vera** — quella stringa non esiste
+più in tutta l'app — e ora guarda «ti segue da oggi», che è ciò che il coach
+vedrebbe davvero rimettendo `role === 'admin'` accanto a `role === 'athlete'`:
+il suo account è escluso da chi si segue (`COACHING_ID`), quindi non ha
+storico, quindi per la Home è al giorno 1.
+
+### I file nuovi
+`src/lib/coach.js`, `src/lib/statistiche.js` (tre funzioni appese:
+`senzaStorico`, `minutiSettimana`, `scartoMinutiSettimana`, più
+`MINIMO_PRECEDENTI` che diventa esportata — è la stessa soglia con cui
+`mediaRpeCategoria` già tace, e due «3» scritti a mano direbbero «si accende
+dopo 3 allenamenti» accendendola al quarto) e
+`src/components/HomeAtletaVuotiUI.jsx` (sola presentazione).
+`AnelloSettimana` prende due prop facoltative, `etichetta` e `stato`: i valori
+numerici non cambiano, cambia solo come si chiamano.
+
+### Cosa NON è stato fatto, e perché
+- **L'obiettivo non nasce come `Event`** (vedi sopra): è in BACKLOG.
+- **`fattiSettimana`/`assegnatiSettimana` non sono passate ad `AnelloSettimana`**,
+  che continua a ridurle al suo interno. Sono lo stesso `useMemo` e la stessa
+  sorgente, quindi non possono divergere; cambiare il contratto di un componente
+  già coperto da test per risparmiare una riduzione su sette elementi è un
+  rischio senza guadagno.
+- **La ridondanza fra `HeroRiposo` e `CardSettimanaChiusa` è rimasta.** Sul
+  riposo della prima settimana lo schermo dice «82 minuti in 2 giorni», poi
+  «82 min · 2 / 3», poi l'anello «2/3»: tre volte gli stessi due numeri. Il
+  disegno chiede entrambi, e nessuno dei due è sbagliato — la frase è il perché,
+  la card è il dato — ma è una decisione di prodotto, non di implementazione:
+  voce in BACKLOG.
+
+---
+
+## 9-undetricies. Uno stimatore di durata solo (09/09/2026) — BACKLOG #40
+
+Segnalazione del committente, guardando due screenshot del simulatore uno
+accanto all'altro: lo **stesso** allenamento diceva **58 minuti** nella Home e
+**24** nella scheda, a due tocchi di distanza. «Sistema la durata, deve dire 58
+anche nella scheda.»
+
+### Perché era invisibile
+Non era un arrotondamento: erano **due formule diverse**, e nessuna delle due
+era sbagliata presa da sola.
+
+| | `durataWorkout` (statistiche.js) | `durataBlocco` (stimaWorkout.js) |
+|---|---|---|
+| chi la leggeva | Home, report, calendario (volume), `caricoAssegnazione` | scheda, builder, archivio, grafica da storia, `caricoPrevisto` |
+| «For Time» | **15 min fissi × giri** | somma degli esercizi × giri |
+| «Cash In/Out» | **5 min fissi × giri** | somma degli esercizi × giri + rest |
+| su `hyroxCompleto` | 8 + 5 + 45 = **58** | 8:00 + 4:23 + 11:15 = **24** |
+
+Il difetto si vedeva solo mettendo due schermate affiancate, ed è saltato fuori
+esattamente così: preparando gli screenshot per l'App Store.
+
+### 🔴 La direzione l'ha scelta il committente, ed è l'OPPOSTA di quella che il backlog proponeva
+BACKLOG #40 proponeva «far leggere a `durataWorkout` la stima per esercizio e
+tenere i 15 minuti come ripiego», cioè far vincere il **24**. È stata scartata,
+e la ragione non è di codice: **sommare gli esercizi misura il tempo in cui
+l'atleta si sta muovendo**, a ritmo di gara e con zero transizioni — non quello
+che passa nel box. Su un «For Time» quel divario è di tre volte. Chi sa quanto
+durano davvero le sedute è il coach, e il numero è 58.
+
+### Com'è fatto adesso
+- I due forfait vivono in **due costanti esportate** di `stimaWorkout.js`:
+  `MINUTI_GIRO_FOR_TIME = 15` e `MINUTI_GIRO_CASH = 5`.
+- `durataWorkout` **non ha più una formula propria** per i blocchi Hyrox: fa
+  `for (const b of blocchiDi(s)) minuti += durataBlocco(b) / 60`.
+- La **corsa resta in `statistiche.js`**: `stimaWorkout.js` conosce solo i
+  blocchi Hyrox, e le fasi di corsa hanno un formato tutto loro.
+
+La proprietà che si guadagna, e che con due formule era impossibile: **il totale
+in cima alla scheda è la somma dei blocchi che la scheda stampa uno per uno**.
+Un coach che li somma a mente ritrova il numero.
+
+### ⚠️ Le quattro cose da sapere prima di rimetterci mano
+
+1. 🔴 **Il forfait si applica solo a un blocco che CONTIENE qualcosa.** Un «For
+   Time» ancora vuoto non dura 45 minuti: non è stimabile, e la scheda ci deve
+   scrivere «—» invece di «0:00» (§9-undecies punto 2). **È una svista che ho
+   commesso davvero**, e l'ha presa un test che esisteva già — «un blocco senza
+   esercizi non inventa una durata»: con il forfait nudo, un Cash Out vuoto da
+   due giri dichiarava 10 minuti.
+2. 🔴 **Il prezzo è visibile in scheda, e va accettato consapevolmente:** un
+   «For Time» dichiara 15 minuti a giro **qualunque cosa contenga**. Tre burpees
+   e tre giri completi di Hyrox pesano uguale, e la barra proporzionale del
+   riepilogo è quasi tutta sua (45 su 58). È il compromesso di una stima a
+   forfait, ed è la ragione per cui l'interfaccia continua a scrivere «≈».
+3. 🔴 **I carichi sono saliti con la durata.** `caricoPrevisto` è il prodotto
+   durata × RPE: sullo stesso Hyrox passa da **≈211 a ≈516**. Le soglie del
+   modello predittivo sono **rapporti** (`rapportoCarico`, `acwrProiettato`),
+   quindi non si spostano — numeratore e denominatore salgono insieme — ma il
+   numero assoluto del builder sì, e va ritarato sull'occhio del coach.
+4. ⚠️ **`rpeAtteso` è ANCORA in due copie** (`statistiche.js` e
+   `stimaWorkout.js`), e sono due calcoli diversi per le stesse parole: la Home
+   parte da `sections.intensity` e ripiega su una tabella per tipo di blocco, il
+   builder fa la media di potenza. Questa sessione ha unificato la **durata**,
+   non l'RPE. Resta in BACKLOG.
+
+### I test
+Sette toccati, e due riscritti perché la regola che dichiaravano è cambiata:
+- **«For Time moltiplica gli esercizi per i round»** → **«For Time è un forfait
+  per giro, qualunque cosa contenga»**, con due asserzioni: la cifra, e il fatto
+  che aggiungere 2000 m al blocco **non** la cambi. È la seconda a distinguere
+  le due formule, ed è l'unica che cade su una mutazione «rimetti la somma».
+- **«un blocco senza esercizi non inventa una durata»** → esteso al «For Time»,
+  perché è il test che ha preso la svista del punto 1.
+- Nuovo: **«il totale è la somma dei blocchi, non un secondo calcolo»**, che
+  confronta `durataWorkout` con la somma di `durataBlocco` calcolata **nel
+  test**. ⚠️ La mutazione che conta non è «ricopia le costanti» — quella dà gli
+  stessi numeri e il test resta verde, correttamente — ma «ricopia le costanti
+  **e poi cambiane una**», che è il modo reale in cui i due stimatori
+  tornerebbero a divergere. Verificato: cade solo lì.
+- Riallineati i numeri di `WorkoutDetailScheda` (34 → 37 min, carico 269 → 292):
+  ⚠️ quel test protegge l'**invariante** — il carico è il prodotto delle due
+  celle accanto — non la cifra.
 
 ---
 

@@ -140,7 +140,13 @@ describe('Navigazione fra le pagine private', () => {
     // cui fra una pagina e l'altra non lampeggia il nero — e si perde in
     // silenzio passando `useTransitions={false}` a BrowserRouter, che è la
     // mutazione con cui questo test è stato verificato.
-    expect(screen.getByText(/Giorno di rest/i)).toBeVisible()
+    // ⚠️ «ti segue da oggi» e non più «Giorno di rest»: questo finto atleta ha
+    // `athlete_workouts: []`, quindi dal 09/09/2026 la Home gli mostra il ramo
+    // del GIORNO 1 (CLAUDE.md §9-duodetricies) invece del tratteggio del
+    // riposo. Serve solo come marcatore di «la Home è ancora a schermo»: se un
+    // giorno cambia anche questa frase, va cambiato qui — non è la frase che il
+    // test protegge, è la visibilità.
+    expect(screen.getByText(/ti segue da oggi/i)).toBeVisible()
     expect(nav).toBeVisible()
 
     // ⚠️ `toBeVisible` e non `toBeInTheDocument`: quando un confine Suspense
@@ -213,7 +219,7 @@ describe('Navigazione fra le pagine private', () => {
 
   it('legge la riga dell\'atleta UNA volta sola in tutto l\'avvio', async () => {
     await avvia()
-    await screen.findByText(/Giorno di rest/i)
+    await screen.findByText(/ti segue da oggi/i)
 
     // 🔴 Erano TRE letture della stessa riga di `athletes` in un solo avvio, e
     // due di esse in FILA: `select('id')` per sapere se la riga esiste,

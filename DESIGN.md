@@ -215,10 +215,27 @@ esistono per identificare la disciplina, mai per decorare.
 Mai come sfondo di una superficie grande, mai due CTA gialle piene nella stessa schermata.
 Test: se in una vista il giallo copre più del 10% dei pixel, non è più un tratto, è vernice.
 
+> ⚠️ **L'unica eccezione, ed è nominata: il blocco di benvenuto del giorno 1**
+> (`BenvenutoCoach`, `src/components/HomeAtletaVuotiUI.jsx`, dal 09/09/2026). Gesso Ambra a
+> **pieno campo**, con l'ombra colorata. Vale perché succede **una volta sola nella vita
+> dell'atleta**, su una schermata che non ha nient'altro da mettere in gerarchia — non c'è un
+> eroe da cui distinguerlo, perché è lui l'unico contenuto. Ovunque altro il giallo resta
+> accento, pillola o bottone primario. La **Regola del Nero Sopra il Giallo** vale anche lì:
+> il testo di quel blocco è nero, incluso il sottotitolo (`text-black/70`).
+> Un secondo pieno campo giallo altrove non è un'estensione di questa eccezione: è la fine
+> della regola.
+
 **La Regola della Corsia.** Ogni categoria ha un colore e uno solo, e quel colore si propaga
 in modo coerente a puntino, bordo in hover, pillola, icona in filigrana e glow. Non si
 inventa un quinto colore-categoria e non si usa un colore-corsia per un elemento che non
 appartiene a quella categoria.
+
+> ⚠️ **Il riposo prende la corsia Running** (`HeroRiposo`, dal 09/09/2026), e non è arbitrio:
+> il giorno di riposo **non è l'assenza di un allenamento**, è una schermata con un carico
+> alle spalle e un seguito — i minuti della settimana, la frazione, cosa arriva dopo. Il
+> giallo è la corsia Hyrox, e tingerla di giallo la leggerebbe come un Hyrox mancato.
+> È l'unico uso di un colore-corsia per qualcosa che non è una categoria di workout, ed è
+> dichiarato qui perché non diventi un precedente.
 
 **La Regola del Nero Sopra il Giallo.** Su Gesso Ambra pieno il testo è nero (`#000`), mai
 bianco. Vale per CTA, pillole piene e giorno selezionato. Stesso principio sul Bianco Evento.
@@ -486,9 +503,28 @@ sono maiuscole `text-xs` peso 700, colorate nella corsia attiva. Usato per lista
 tempo/distanza, passo/velocità, reps/metri.
 
 ### Empty States
-Bordo tratteggiato (`border-dashed`, `#2a2a2a` o `#383838`), raggio 16px, `p-6`, testo
-centrato `gray-500`, spesso con icona in cerchio grigio. Il tratteggio è il segnale
-condiviso di "qui non c'è ancora niente, ma può esserci".
+
+**La Regola dello Zero che Non Si Scrive.** ⚠️ Aggiunta il 09/09/2026 con il rework degli
+stati senza storico: *nessuna cella mostra uno zero. Quando un dato non esiste ancora, al
+suo posto va la cosa che lo farà esistere.* Un anello 0/0, «Serie: 0 giorni» e «0 min» non
+sono uno stato vuoto — sono tre numeri **veri** che dicono a chi ha appena installato l'app
+che è già indietro. Il giorno 1 non è una schermata con i contatori a zero: è una schermata
+con un contenuto suo, e chiude la pagina invece di stare sopra il resto.
+**Corollario:** una cella che si sbloccherà **dichiara la soglia e il progresso** («Media RPE
+· si accende dopo 3 allenamenti · 1/3»), e la soglia si scrive solo quando c'è un progresso
+da raccontare — «0/1» è di nuovo lo zero che la regola toglie.
+📄 `src/components/HomeAtletaVuotiUI.jsx`; la condizione sta in `senzaStorico`
+(`src/lib/statistiche.js`) e guarda **tutte e tre** le fonti, perché chi ha un allenamento
+fra dieci giorni ha già un programma e non è al giorno 1.
+
+**Il tratteggio ha cambiato significato.** Non vuol più dire «vuoto» — il vuoto ora ha card
+piene — ma **«non ancora pieno»**: la cella bloccata che si accenderà, la riga «Ho fatto
+qualcosa comunque». Dove non c'è ancora niente si mette una carta con dentro il gesto che la
+riempirà, non un rettangolo tratteggiato che constata l'assenza.
+
+Forma, dove il tratteggio serve ancora: `border-dashed`, `#2a2a2a` o `#383838`, raggio 16px,
+`p-6`, testo centrato — ⚠️ **`text-muted`, non `gray-500`**, che è sotto il 4.5:1 ed è uscito
+dal sistema — spesso con icona in cerchio grigio.
 
 ### Skeleton Loading
 `bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl` con altezza fissa (`h-16`, `h-20`) e
@@ -510,6 +546,10 @@ condiviso di "qui non c'è ancora niente, ma può esserci".
 - **Do** mantenere 300ms `ease-out` come tempo standard delle transizioni e
   `cubic-bezier(0.16, 1, 0.3, 1)` per gli ingressi di pagina e modale.
 - **Do** dare al testo su fondo Gesso Ambra o Bianco Evento il colore nero.
+- **Do** mettere `capitalize` sul **solo** pezzo che va capitalizzato (il nome del giorno),
+  mai su una riga intera: `text-transform: capitalize` non conosce le frasi e maiuscola ogni
+  parola — «Gio 10 · 2 **B**locchi · 56′». È un difetto che il DOM non mostra (il testo è già
+  quello giusto) e che nessun test prende: lo decide il foglio di stile.
 
 ### Don't:
 - **Don't** usare `alert()` o `confirm()` nativi: rompono sia il tono sia il layer di modali.
@@ -524,6 +564,9 @@ condiviso di "qui non c'è ancora niente, ma può esserci".
 - **Don't** aggiungere gradienti saturi, illustrazioni allegre, badge, coriandoli o
   gamification: è l'anti-riferimento "app fitness generalista".
 - **Don't** progettare o proporre un tema chiaro: il sistema è dark-only per scelta.
+- **Don't** scrivere uno zero al posto di un dato che non esiste ancora: anello 0/0, «0
+  giorni», «0 min», «0 blocchi», «0/1». Al suo posto va la cosa che lo farà esistere, e una
+  cella che si sbloccherà dichiara la soglia e il progresso.
 - **Don't** scendere sotto `font-size: 16px` su input/textarea/select su iOS, né sotto
   **11px** su qualunque testo, né usare `text-gray-600` o `text-gray-500` sul testo: sono
   sotto il 4.5:1 e sono stati rimossi dal sistema. Il secondario è `text-muted`.

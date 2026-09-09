@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { durataBlocco } from '../stimaWorkout'
 import { calcolaStatistiche, durataWorkout, parseTime } from '../statistiche'
 
 // Perché questi test esistono
@@ -73,8 +74,28 @@ describe('durataWorkout', () => {
   })
 
   it('For Time e Cash In hanno una stima fissa, perché non hanno durata', () => {
-    expect(durataWorkout({ category: 'Hyrox', blocks: [{ type: 'For Time', params: { rounds: '2' } }] })).toBe(30)
-    expect(durataWorkout({ category: 'Hyrox', blocks: [{ type: 'Cash In', params: { rounds: '3' } }] })).toBe(15)
+    // ⚠️ I blocchi portano ora un esercizio, e non è un dettaglio del test: dal
+    // 09/09/2026 il forfait si applica solo a un blocco che contiene qualcosa,
+    // perché un blocco ancora vuoto non è «lungo zero» — è non stimabile, e la
+    // scheda ci scrive «—» invece di «0:00» (§9-undecies punto 2).
+    const es = [{ reps: '10' }]
+    expect(durataWorkout({ category: 'Hyrox', blocks: [{ type: 'For Time', params: { rounds: '2' }, exercises: es }] })).toBe(30)
+    expect(durataWorkout({ category: 'Hyrox', blocks: [{ type: 'Cash In', params: { rounds: '3' }, exercises: es }] })).toBe(15)
+  })
+
+  // 🔴 La proprietà che BACKLOG #40 esisteva per ottenere, e che con due
+  // stimatori era impossibile: il totale in cima alla scheda è la SOMMA dei
+  // blocchi che la scheda stampa uno per uno. Un coach che li somma a mente
+  // ritrova il numero. Prima diceva 58 nella Home e 24 nella scheda.
+  it('il totale è la somma dei blocchi, non un secondo calcolo', () => {
+    const blocks = [
+      { type: 'WarmUp', params: { duration: '8:00' }, exercises: [] },
+      { type: 'Cash In', params: { rounds: '1' }, exercises: [{ meters: '1000m' }, { meters: '50m' }] },
+      { type: 'For Time', params: { rounds: '3' }, exercises: [{ reps: '25' }, { meters: '100m' }, { meters: '500m' }] },
+    ]
+    const somma = blocks.reduce((t, b) => t + durataBlocco(b), 0) / 60
+    expect(durataWorkout({ category: 'Hyrox', blocks })).toBe(Math.round(somma))
+    expect(durataWorkout({ category: 'Hyrox', blocks })).toBe(58)
   })
 
   it('un workout senza durate vale 45 minuti, non zero', () => {
