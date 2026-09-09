@@ -1704,6 +1704,19 @@ chiesto di non essere chiamato.
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non
   funzionava, e che nessuno aveva provato.
 
+> 🔴 **«1.0» e «1.1.0 (3)» sono DUE numeri diversi, e la lettera di Apple li mescola.**
+> Su App Store Connect il record della versione dice **`1.0`** — è il numero metadati, quello
+> che gli utenti vedranno sullo Store. Il **build** dice **`1.1.0 (3)`**, cioè
+> `CFBundleShortVersionString` + `CFBundleVersion`, che vengono da `MARKETING_VERSION` e
+> `CURRENT_PROJECT_VERSION` nel `pbxproj`. La lettera del 02/09/2026 scriveva «Version
+> reviewed: 1.0 (3)», cioè la versione del record accanto al numero di build — e a chi legge
+> solo quella sembra che il progetto dichiari la versione sbagliata. **Non è così, e
+> `MARKETING_VERSION` non va riportato a 1.0**: il build precedente portava 1.1.0 e si è
+> agganciato al record 1.0 senza problemi. Verificato il 09/09/2026 sul pannello.
+> ⚠️ Conseguenza cosmetica da conoscere: ad approvazione avvenuta lo Store dirà **1.0** e
+> Impostazioni dirà **1.1.0**, perché quella riga viene da `App.getInfo()`, cioè dal build
+> (§9-duoetvicies punto 6). Si allinea dopo, scegliendo quale dei due è il numero vero.
+>
 > ℹ️ **Il build number del `pbxproj` NON è quello spedito, ed è normale.** Con
 > `method: app-store-connect`, `manageAppVersionAndBuildNumber` vale YES per impostazione
 > predefinita: Xcode alza da solo il numero oltre l'ultimo presente su App Store Connect.
