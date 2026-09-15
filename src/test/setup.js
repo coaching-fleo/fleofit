@@ -49,3 +49,27 @@ for (const nome of ['localStorage', 'sessionStorage']) {
   Object.defineProperty(window, nome, { value: localStorageInMemoria(), writable: true, configurable: true })
 }
 afterEach(() => { window.localStorage.clear(); window.sessionStorage.clear() })
+
+// jsdom non implementa `matchMedia`, e le due librerie di effetti non si
+// comportano allo stesso modo davanti a quel vuoto: `thinking-orbs` lo protegge
+// (`typeof matchMedia > 'u'`), `border-beam` lo chiama NUDO dentro un
+// inizializzatore di `useState` — anche quando gli si passa `theme="dark"`,
+// cioè anche quando la risposta non gli serve. Senza questo rimpiazzo il foglio
+// dell'IA non si monta affatto e ventinove test cadono su un errore che non
+// c'entra niente con quello che verificano.
+//
+// ⚠️ Risponde sempre `matches: false`: nessuna preferenza dichiarata, che è
+// anche il default di un dispositivo. Un test che avesse bisogno di
+// `prefers-reduced-motion` deve sovrascriverlo da sé.
+if (typeof window.matchMedia !== 'function') {
+  window.matchMedia = (query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })
+}

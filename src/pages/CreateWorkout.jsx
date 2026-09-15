@@ -29,6 +29,8 @@ import {
 import { chiudiTastieraSuInvio } from '../useTastiera'
 import { useBottomSheet } from '../useBottomSheet'
 import AudioVisualizer from '../components/AudioVisualizer'
+import { ThinkingOrb } from 'thinking-orbs'
+import { BorderBeam } from 'border-beam'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -487,6 +489,22 @@ const SECONDI_MUTO = 6
 /** Dopo quanto la generazione smette di essere «pochi secondi». */
 const MS_ATTESA_LUNGA = 9000
 
+/**
+ * L'orb dell'attesa, uno per ognuno dei DUE lavori che la generazione può
+ * fare — e sono due davvero: partendo dalla voce Gemini deve prima ascoltare
+ * la registrazione, partendo dal testo legge e basta. La riga sotto l'orb già
+ * lo distingue a parole; la figura lo distingue da lontano, che è tutto quello
+ * che si guarda mentre si aspetta.
+ *
+ * ⚠️ `stato` ed `etichetta` stanno nella STESSA riga di proposito: sono due
+ * modi di dire la stessa cosa, e tenerli in due tabelle è il modo in cui
+ * l'orb finisce a comporre mentre l'etichetta dice che sta ascoltando.
+ */
+const ORB_ATTESA = {
+  voce: { stato: 'listening', etichetta: 'Ascolto la registrazione' },
+  testo: { stato: 'composing', etichetta: 'Scrivo i blocchi' },
+}
+
 const mmssSecondi = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
 function AiGenerationModal({ onClose, onGenerate }) {
@@ -825,6 +843,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
   }
 
   const parla = livello > SOGLIA_VOCE
+  const orbAttesa = ORB_ATTESA[attesaDaVoce ? 'voce' : 'testo']
 
   return createPortal(
     // ⚠️ `touch-action: none` sta sul velo e non sul foglio: impedisce che il
@@ -833,11 +852,18 @@ function AiGenerationModal({ onClose, onGenerate }) {
     // via una registrazione già spedita, senza dire niente a nessuno.
     <div className={`fixed inset-0 z-[60] flex flex-col justify-end bg-black/85 touch-none ${classeVelo}`}
       style={stileVelo} onClick={loading ? undefined : chiudi}>
-      <div role="dialog" aria-label="Genera con IA" onClick={(e) => e.stopPropagation()}
-        style={stileFoglio}
-        className={`bg-[#141416] border-t border-ia/20 rounded-t-3xl px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]
-                    flex flex-col max-h-[88dvh] overflow-y-auto overscroll-contain
-                    shadow-[0_-20px_50px_-12px_rgba(0,0,0,.85)] ${classeFoglio}`}>
+      {/* ⚠️ `classeFoglio` e `stileFoglio` sono saliti SUL FASCIO, non sono
+          rimasti sul foglio: sono l'entrata e il trascinamento della maniglia,
+          e lasciandoli sotto il fascio sarebbe rimasto fermo mentre il foglio
+          scende sotto il dito — una cornice luminosa sospesa nel vuoto.
+          ⚠️ `useBottomSheet` non tiene ref sul nodo, passa solo classe e stile:
+          è la ragione per cui questo spostamento è sicuro. */}
+      <BorderBeam size="pulse-outside" colorVariant="ocean" theme="dark" strength={1} staticColors
+        className={classeFoglio} style={stileFoglio} onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label="Genera con IA"
+        className="bg-[#141416] border-t border-ia/20 rounded-t-3xl px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]
+                   flex flex-col max-h-[88dvh] overflow-y-auto overscroll-contain
+                   shadow-[0_-20px_50px_-12px_rgba(0,0,0,.85)]">
 
         <button type="button" aria-label={loading ? 'Generazione in corso' : 'Chiudi'}
           {...(loading ? {} : maniglia)} disabled={loading}
@@ -873,8 +899,17 @@ function AiGenerationModal({ onClose, onGenerate }) {
           // appena spedita. La generazione occupa il foglio INTERO finché non
           // ha finito.
           <div className={`${CARD} px-4 py-7 flex flex-col items-center text-center gap-3.5 shrink-0`}>
-            <span aria-hidden="true"
-              className="w-12 h-12 rounded-full border-[3px] border-ia/25 border-t-ia animate-spin" />
+            {/* 🔴 `theme` è PINNATO a `dark`, non lasciato su `auto`. Con `auto`
+                la libreria cerca un `data-theme`/`.dark` sugli antenati — che
+                qui non esiste, l'app è scura e basta — e ricade su
+                `prefers-color-scheme` DEL TELEFONO: su un iPhone in modalità
+                chiara disegnerebbe inchiostro scuro su #1e1e1e, cioè niente.
+                ⚠️ `aria-hidden` perché il paragrafo qui sotto ha già
+                `role="status"` e dice la stessa cosa. L'etichetta si passa lo
+                stesso: senza, il canvas se ne mette una INGLESE di sua
+                iniziativa («Composing…») sopra una riga italiana. */}
+            <ThinkingOrb state={orbAttesa.stato} size={64} theme="dark"
+              aria-hidden="true" aria-label={orbAttesa.etichetta} />
             <div>
               <p className="text-white text-[16px] font-extrabold tracking-[-.015em]" role="status">
                 {attesaLunga ? 'Ci sta mettendo più del solito…' : 'Sto scrivendo l\'allenamento'}
@@ -1001,6 +1036,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
           </div>
         )}
       </div>
+      </BorderBeam>
     </div>,
     document.body
   )
@@ -2608,7 +2644,20 @@ export default function CreateWorkout() {
               non scendere in fondo insieme alla lista man mano che cresce.
               L'artboard la disegnava sotto; alla prova sul dispositivo, con
               cinque blocchi aperti, non la trovava più nessuno. */}
-          <CardIA onClick={() => setAiModalOpen(true)} />
+          {/* ⚠️ `ocean` e non `colorful`: qui OGNI colore significa già una
+              categoria (giallo Hyrox, azzurro Corsa, magenta Custom, bianco
+              Gara), e un arcobaleno si leggerebbe come una quinta corsia che
+              non esiste. `ocean` è blu-viola, il vicinato di `--color-ia`.
+              ⚠️ `staticColors` spegne l'oscillazione di tinta: con essa accesa
+              l'`hue-rotate(±30deg)` porta il bordo fino al VERDE — che in
+              questa app vuol dire «completato» (§9-duetricies).
+              ⚠️ Il raggio non si passa: la libreria lo legge dal primo figlio,
+              quindi segue `rounded-[20px]` di `CardIA` da sé.
+              🔴 Il fascio sta QUI e non dentro `CardIA` perché `CreaWorkoutUI`
+              è un chunk condiviso con `WorkoutDetail`. */}
+          <BorderBeam size="md" colorVariant="ocean" theme="dark" strength={0.6} staticColors>
+            <CardIA onClick={() => setAiModalOpen(true)} />
+          </BorderBeam>
 
           <div className="flex flex-col gap-[11px]" data-drag-container>
             {blocks.map((block, idx) => (

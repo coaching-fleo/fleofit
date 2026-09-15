@@ -22,6 +22,30 @@ import { MemoryRouter } from 'react-router-dom'
 // la generazione IN CORSO e guardare cosa dice il foglio mentre si aspetta.
 let mockRispostaIA = () => Promise.resolve({ data: { blocks: [] }, error: null })
 
+// Il ramo NATIVO: `src/test/setup.js` finge sempre «web», e il percorso
+// «fermo la registrazione → Gemini ascolta» esiste SOLO lì. Va acceso a mano,
+// come fa `LoginApple.test.jsx`.
+let mockNativo = false
+
+vi.mock('@capacitor/core', () => ({
+  Capacitor: {
+    isNativePlatform: () => mockNativo,
+    getPlatform: () => (mockNativo ? 'ios' : 'web'),
+  },
+  registerPlugin: () => new Proxy({}, { get: () => vi.fn(() => Promise.resolve({ value: null })) }),
+  WebPlugin: class {},
+}))
+
+vi.mock('capacitor-voice-recorder', () => ({
+  VoiceRecorder: {
+    requestAudioRecordingPermission: () => Promise.resolve({ value: true }),
+    startRecording: () => Promise.resolve({ value: true }),
+    stopRecording: () => Promise.resolve({
+      value: { msDuration: 1200, recordDataBase64: 'AAAA', mimeType: 'audio/aac' },
+    }),
+  },
+}))
+
 vi.mock('../../supabaseClient', () => {
   const catena = {
     select: () => catena,
@@ -73,9 +97,15 @@ function ambienteAudio() {
   // non è un disegno sbagliato, è un'eccezione che porta giù il componente e
   // fa fallire il test con «non trovo Parla pure». Successo con
   // `createLinearGradient`.
+  // ⚠️ Lo stesso stub serve DUE disegni diversi: la forma d'onda e l'orb
+  // dell'attesa (`thinking-orbs`, che è anch'esso un canvas). Il secondo
+  // aggiunge `setTransform`, `arc`, `moveTo`/`lineTo`/`stroke` — e il suo
+  // primo fotogramma è sincrono dentro l'effetto, quindi un metodo mancante
+  // qui non è un orb disegnato male: è un'eccezione che porta giù il foglio.
   window.HTMLCanvasElement.prototype.getContext = () => ({
     clearRect: () => {}, beginPath: () => {}, fill: () => {}, rect: () => {}, roundRect: () => {},
     createLinearGradient: () => ({ addColorStop: () => {} }),
+    setTransform: () => {}, arc: () => {}, moveTo: () => {}, lineTo: () => {}, stroke: () => {},
   })
 }
 
@@ -84,6 +114,7 @@ const finteTracce = () => ({ getTracks: () => [{ stop: vi.fn() }] })
 beforeEach(() => {
   localStorage.clear()
   ambienteAudio()
+  mockNativo = false
   mockVolume = 0
   mockBande = 4
   mockRispostaIA = () => Promise.resolve({ data: { blocks: [] }, error: null })
@@ -114,8 +145,28 @@ describe('il foglio «Genera con IA»', () => {
     const foglio = await apriIA()
     // `.sheet-in` è un keyframe scritto in src/index.css. `animate-in` viene da
     // tw-animate-css, che non è installato: è il difetto, non l'alternativa.
-    expect(foglio.className).toContain('sheet-in')
+    //
+    // ⚠️ Dal 15/09 l'entrata non sta più sul nodo `role="dialog"`: è salita sul
+    // fascio di `border-beam` che lo avvolge (§9-duetricies). NON è una
+    // scorciatoia per far passare il test — è la condizione perché la cornice
+    // luminosa scenda INSIEME al foglio invece di restare sospesa nel vuoto
+    // mentre il foglio si abbassa sotto il dito.
+    const animato = foglio.parentElement
+    expect(animato.className).toContain('sheet-in')
+    expect(animato.className).not.toContain('animate-in')
     expect(foglio.className).not.toContain('animate-in')
+  })
+
+  it('toccare DENTRO il foglio non lo chiude', async () => {
+    // ⚠️ Dal 15/09 lo `stopPropagation` non sta più sul nodo `role="dialog"`:
+    // è sul fascio di `border-beam` che lo avvolge, e ci arriva come prop di
+    // passaggio. Se una versione futura della libreria smettesse di inoltrare
+    // le props HTML, il gesto più comune di questa superficie — toccare il
+    // campo per scrivere — chiuderebbe il foglio. Nessun errore, nessun log.
+    const foglio = await apriIA()
+    await userEvent.click(within(foglio).getByRole('textbox'))
+    await new Promise(r => setTimeout(r, 450))
+    expect(screen.getByRole('dialog', { name: 'Genera con IA' })).toBeInTheDocument()
   })
 
   it('non apre la tastiera da solo: il campo non prende il fuoco', async () => {
@@ -278,5 +329,49 @@ describe('fermata la registrazione, il foglio dice di aspettare', () => {
     // ZERO, cioè niente (§9-sexies, per l'ennesima volta).
     await new Promise(r => setTimeout(r, 450))
     expect(screen.getByRole('dialog', { name: 'Genera con IA' })).toBeInTheDocument()
+  })
+})
+
+describe('l\'attesa dice QUALE dei due lavori sta facendo', () => {
+  // L'anello CSS che girava non diceva niente: era lo stesso identico disco
+  // sia che Gemini stesse ASCOLTANDO una registrazione sia che stesse
+  // leggendo un testo. Sono due lavori diversi, la riga sotto lo diceva già a
+  // parole, e ora lo dice anche la figura — che è tutto quello che si guarda
+  // mentre si aspetta.
+  //
+  // ⚠️ L'orb è un canvas: `aria-hidden` lo toglie dall'albero di
+  // accessibilità, quindi si interroga il DOM e non i ruoli.
+  const orbDi = (foglio) => foglio.querySelector('canvas[aria-label]')
+
+  it('partendo dal TESTO scrive, e non aggiunge una seconda voce sopra il «role=status»', async () => {
+    mockRispostaIA = () => new Promise(() => {})
+
+    const foglio = await apriIA()
+    await userEvent.type(within(foglio).getByRole('textbox'), 'emom da 12 minuti')
+    await userEvent.click(screen.getByRole('button', { name: /Genera workout/ }))
+    await waitFor(() => expect(screen.getByText(/Sto scrivendo l'allenamento/)).toBeInTheDocument())
+
+    expect(orbDi(foglio)).toHaveAttribute('aria-label', 'Scrivo i blocchi')
+
+    // 🔴 Senza `aria-hidden` il canvas si presenta come `role="img"` con
+    // un'etichetta che la libreria si mette DA SOLA, e in inglese
+    // («Composing…»): VoiceOver leggerebbe una parola inglese sopra la riga
+    // italiana che ha già `role="status"`, e la leggerebbe per prima.
+    expect(within(foglio).queryByRole('img')).toBeNull()
+  })
+
+  it('partendo dalla VOCE ascolta, perché prima di scrivere c\'è una registrazione da sentire', async () => {
+    mockNativo = true
+    mockRispostaIA = () => new Promise(() => {})
+    navigator.mediaDevices = { getUserMedia: () => Promise.resolve(finteTracce()) }
+
+    const foglio = await apriIA()
+    await userEvent.click(within(foglio).getByRole('button', { name: /Detta l'allenamento/ }))
+    await waitFor(() => expect(within(foglio).getByText(/Parla pure/)).toBeInTheDocument())
+
+    await userEvent.click(within(foglio).getByRole('button', { name: /Ho finito, genera/ }))
+    await waitFor(() => expect(screen.getByText(/Sto scrivendo l'allenamento/)).toBeInTheDocument())
+
+    expect(orbDi(foglio)).toHaveAttribute('aria-label', 'Ascolto la registrazione')
   })
 })

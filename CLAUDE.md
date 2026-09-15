@@ -12,7 +12,7 @@
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **928 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **931 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
 > ⭐ **Il 09/09 gli stimatori di durata sono diventati UNO** (§9-undetricies, BACKLOG #40
 > chiuso): lo stesso allenamento diceva **58 minuti nella Home e 24 nella scheda**, e il
 > difetto è saltato fuori mettendo due screenshot del simulatore uno accanto all'altro.
@@ -276,6 +276,7 @@ Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **re
 | Backend | **Supabase** (Postgres + Auth + Storage + Realtime + Edge Functions) |
 | Mobile | **Capacitor 8** → target **iOS** (`ios/App`), niente cartella Android |
 | Export | `jspdf` (PDF scheda), `html-to-image` (`toPng`/`toBlob`) per la story Instagram |
+| Superficie IA | `thinking-orbs` — l'orb dell'attesa (§9-untricies) · `border-beam` — il fascio su card e foglio (§9-duetricies). ⚠️ Entrambe MIT e senza dipendenze, ed **entrambe si importano solo da `CreateWorkout.jsx`**: mai da un file condiviso |
 | Push | FCM (iOS nativo, via `@capacitor-community/fcm` + Firebase Admin lato Edge Function) + Web Push VAPID (browser) |
 | IA | Google **Gemini 2.5 Flash** (generazione workout + trascrizione audio) |
 
@@ -307,8 +308,13 @@ npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 > appena rimossa continuava a comparire nell'app. Non è un passo solo pre-archive:
 > serve **a ogni** compilazione da Xcode. Per questo esiste `npm run ios`.
 >
-> ⚠️ Il build stampa anche il peso dei chunk: `WorkoutDetail` deve restare intorno
-> agli **84 KB** (erano 68 fino al 01/09, poi 82 con `StoriaUI` + `recapStoria`
+> ⚠️ Il build stampa anche il peso dei chunk: `CreateWorkout` sta a **156 KB**
+> (erano 76 fino al 15/09: **+15** di `thinking-orbs`, che porta tutti e nove i
+> modi anche usandone due — §9-untricies — e **+64** di `border-beam`,
+> §9-duetricies). `CreaWorkoutUI` deve restare intorno ai **24 KB**: è un chunk
+> **condiviso con `WorkoutDetail`**, e una libreria di effetti importata lì
+> dentro la fa scaricare a ogni apertura di una scheda. E `WorkoutDetail` deve
+> restare intorno agli **84 KB** (erano 68 fino al 01/09, poi 82 con `StoriaUI` + `recapStoria`
 > §9-unetvicies, e 84 dal 02/09 con `previsione` + `PrevisioneUI` §9-quatervicies). Se risale sopra i 400, qualcuno ha rimesso `jspdf` o `html-to-image`
 > fra gli import in testa (§9-noviesdecies).
 >
@@ -4402,6 +4408,181 @@ Sette toccati, e due riscritti perché la regola che dichiaravano è cambiata:
 - Riallineati i numeri di `WorkoutDetailScheda` (34 → 37 min, carico 269 → 292):
   ⚠️ quel test protegge l'**invariante** — il carico è il prodotto delle due
   celle accanto — non la cifra.
+
+---
+
+## 9-untricies. L'orb dell'attesa IA (15/09/2026)
+
+Richiesta del committente: portare gli **orb** di `thinking-orbs`
+(https://libraries.dev/orbs) nella funzione IA di «Crea Workout». Installata
+la libreria, la decisione è stata **un solo slot**: l'attesa della generazione.
+
+### Dove NON va, e la ragione è già scritta altrove
+🔴 **Mai sull'alone del microfono in ascolto.** L'orb `listening` si anima sul
+proprio orologio, indifferente a quello che il microfono riceve: metterlo lì
+sarebbe **letteralmente il difetto `Math.random()` di §9-quindecies**, rimesso
+dentro dalla porta principale otto mesi dopo averlo tolto. Quell'alone deve
+restare fermo quando il microfono è morto, e continua a seguire `livello`.
+Scartati anche la card «Genera con IA» a riposo (animerebbe per sempre una
+pagina che non sta pensando, con un rAF acceso in tutto il builder) e i
+`Loader2` di export in `StoriaUI` (durano meno di un secondo, e porterebbero
+la libreria anche nel chunk di `WorkoutDetail`).
+
+### ⚠️ Le quattro cose da sapere prima di rimetterci mano
+
+1. 🔴 **`theme` è PINNATO a `dark`, e non è pedanteria.** Con `auto` la
+   libreria cerca un `data-theme`/`.dark` sugli antenati — che in questo
+   progetto **non esiste**, l'app è scura e basta — e ricade su
+   `prefers-color-scheme` **del telefono**: su un iPhone in modalità chiara
+   disegnerebbe inchiostro scuro su `#1e1e1e`, cioè niente. Il sintomo sarebbe
+   «l'orb non si vede su alcuni telefoni», che è il genere di segnalazione da
+   cui non si risale.
+2. 🔴 **Senza `aria-label` il canvas se ne mette uno INGLESE da solo**
+   (`role="img" aria-label="Composing…"`), sopra una riga italiana che ha già
+   `role="status"` — e VoiceOver leggerebbe prima quello. Si passa
+   `aria-hidden="true"`, com'era l'anello CSS di prima, **e** l'etichetta
+   italiana: se un giorno l'`aria-hidden` cade, almeno non ne esce inglese.
+3. **L'orb è monocromatico e non si colora.** I punti sono dipinti
+   `rgba(M,M,M,a)` in scala di grigi, non c'è nessuna prop colore e non c'è
+   `currentColor`. Quindi è **bianco**, non viola — decisione del committente
+   (15/09/2026): è l'inchiostro chiaro per cui i nove stati sono stati
+   disegnati, e su `#1e1e1e` legge come il testo della stessa card. Il viola
+   resta l'icona in testata e la CTA. Tingerlo con un `filter` CSS
+   (sepia+hue-rotate) funzionerebbe ed è stato scartato: degrada la resa dei
+   punti e aggiunge un filtro GPU su ogni fotogramma.
+4. **`ORB_ATTESA` tiene `stato` ed `etichetta` nella STESSA riga**, ed è il
+   punto della modifica: la generazione fa **due** lavori diversi — dalla voce
+   Gemini deve prima ascoltare la registrazione, dal testo legge e basta — e
+   la riga sotto l'orb lo diceva già a parole. Tenere stato ed etichetta in
+   due tabelle è il modo in cui l'orb finisce a comporre mentre l'etichetta
+   dice che sta ascoltando.
+
+### Cosa si guadagna oltre alla grafica
+`animate-spin` gira comunque; l'orb **rispetta `prefers-reduced-motion`** con
+un fotogramma fermo, si **sospende** fuori viewport (`IntersectionObserver`) e
+a scheda nascosta. Ed è robusto in jsdom: `if (!ctx) return`, quindi senza
+contesto 2D non esplode.
+
+### ⚠️ Il finto canvas dei test ora serve DUE disegni
+Lo stub di `ambienteAudio()` in `CreaWorkoutIA.test.jsx` era tarato sulla forma
+d'onda: l'orb aggiunge `setTransform`, `arc`, `moveTo`/`lineTo`/`stroke`. Il
+suo primo fotogramma è **sincrono dentro l'effetto**, quindi un metodo mancante
+lì non è un orb disegnato male — è un'eccezione che porta giù il foglio, con
+due test che falliscono su «non trovo Sto scrivendo l'allenamento». È successo
+davvero, ed è la stessa nota che il file portava già per `createLinearGradient`.
+
+### Il costo
++15 KB sul chunk `CreateWorkout` (76 → **91 KB**). Il motore importa tutti e
+nove i modi dal registry, quindi **non si tree-shaka** scegliendone due. Su iOS
+il bundle è già sul dispositivo: è costo di parsing, non di rete, e resta un
+altro ordine di grandezza rispetto agli 830 KB di `jspdf` di §9-noviesdecies.
+
+### I test, e le tre mutazioni
+Due nuovi in `CreaWorkoutIA.test.jsx` (930 test in tutto). ⚠️ Il secondo accende
+il **ramo nativo** — `src/test/setup.js` finge sempre «web», e il percorso
+«fermo la registrazione → Gemini ascolta» esiste solo lì: `mockNativo` più un
+finto `capacitor-voice-recorder`, come fa `LoginApple.test.jsx`.
+Tre mutazioni provate, tre prese, ognuna da un test diverso: l'orb che smette
+di seguire il lavoro (cade il test sulla voce), l'`aria-hidden` tolto (cade
+quello sul testo), l'anello CSS rimesso al posto dell'orb (cadono entrambi).
+⚠️ Gli assert interrogano il **DOM** e non i ruoli, proprio perché
+l'`aria-hidden` toglie il canvas dall'albero di accessibilità.
+
+---
+
+## 9-duetricies. Il fascio luminoso sulla superficie IA (15/09/2026)
+
+Richiesta del committente: portare `border-beam`
+(https://libraries.dev/beam) sulla funzione IA, **in due punti** — la card
+«Genera con IA» dentro lo step 2 del builder, e il foglio che si apre
+premendola. Installata la libreria (MIT, zero dipendenze, effetto tutto in CSS:
+`conic-gradient` + keyframes + `filter`).
+
+### 🔴 `colorVariant="ocean"`, e NON `colorful`
+In questa app ogni colore significa già una categoria — giallo Hyrox, azzurro
+Corsa, magenta Custom, bianco Gara (§6) — e un arcobaleno si legge come una
+**quinta corsia che non esiste**, per giunta piazzata sull'unica superficie che
+ha già un colore suo. `ocean` è blu-viola (`rgb(130,70,255)`,
+`rgb(140,100,240)`), cioè il vicinato di `--color-ia` = `#a855f7`.
+
+### 🔴 `staticColors`, o il bordo diventa VERDE
+Trovato **guardando la pagina, non leggendo il codice**, e sarebbe passato
+qualunque test. L'animazione di tinta è un
+`filter: hue-rotate(calc(base ± 30deg))` — `± 40` sul bloom — e `hue-rotate` in
+CSS è una matrice lineare che sui blu saturi **scavalca nel verde**. In questa
+app il verde vuol dire **«allenamento completato»**, quindi il foglio dell'IA
+lampeggiava periodicamente il colore di un'altra cosa. `staticColors` spegne
+l'oscillazione e lascia i colori dove sono: è la prop che esiste apposta.
+
+### 🔴 I due punti NON usano lo stesso preset, e non è una svista
+- **La card**: `size="md"`, il fascio che gira intorno al bordo. È un bottone,
+  e il giro si legge come un invito.
+- **Il foglio**: `size="pulse-outside"`, il respiro che sborda verso l'alto.
+  `md` lì dentro è stato provato ed è **quasi invisibile**, per una ragione
+  geometrica: i lati e il fondo del foglio sono a filo con i bordi dello
+  schermo, il contenitore di `md` ha `overflow: hidden`, e i segmenti del
+  gradiente sono misurati in **pixel assoluti** — su un elemento largo 393 e
+  alto 800 si diluiscono. L'unico bordo con spazio per vedersi è quello
+  superiore, ed è esattamente quello che `pulse-outside` illumina.
+  È anche il carattere giusto: su una superficie dove si legge e si scrive un
+  respiro lento disturba meno di un fascio che gira.
+
+### 🔴 `classeFoglio` e `stileFoglio` sono saliti SUL FASCIO
+Sono l'entrata `.sheet-in` e il trascinamento della maniglia
+(`src/useBottomSheet.js`). Lasciandoli sul foglio, il fascio sarebbe rimasto
+**fermo mentre il foglio scende sotto il dito** — una cornice luminosa sospesa
+nel vuoto. Lo spostamento è sicuro solo perché `useBottomSheet` non tiene
+nessun ref sul nodo: restituisce classe e stile e basta (§9-duodecies).
+⚠️ Con essi è salito anche lo **`stopPropagation`**, che arriva al fascio come
+prop di passaggio: se una versione futura della libreria smettesse di inoltrare
+le props HTML, toccare il campo di testo **chiuderebbe il foglio**. C'è un test.
+
+### 🔴 Il fascio della card sta nel CHIAMANTE, non dentro `CardIA`
+Ed è la scoperta che conta di più di questa sessione, uscita dal build e non
+dal codice. `CreaWorkoutUI.jsx` è un chunk **condiviso con `WorkoutDetail`**,
+che ne importa `RiepilogoWorkout` e `BarraAzioni` (§9 punto 1): un
+`import 'border-beam'` lì dentro lo portava a **88 KB**, cioè ~64 KB di fascio
+scaricati a ogni apertura di una scheda, dove di fasci non ce n'è nemmeno uno.
+È lo stesso danno che §9-noviesdecies aveva appena finito di togliere con
+`jspdf`. Spostato il wrapper sul call site in `CreateWorkout.jsx`,
+`CreaWorkoutUI` è tornato a **24 KB** e `WorkoutDetail` non si è mosso di un
+byte.
+> **La regola che ne esce**: una libreria di effetti non si importa mai in
+> `CreaWorkoutUI.jsx`, `stiliCard.js` o in qualunque altro pezzo condiviso. Il
+> peso lo paga chi usa l'effetto, non chi passa di lì.
+
+### ⚠️ Il raggio non si scrive a mano
+La libreria legge il `borderTopLeftRadius` del **primo figlio** e ci adatta il
+fascio. Quindi cambiando `rounded-[20px]` su `CardIA` il fascio segue da sé:
+passare `borderRadius` sarebbe il modo in cui i due si mettono a divergere di
+4px senza che nessuno se ne accorga.
+
+### 🔴 `window.matchMedia` non esiste in jsdom, e le due librerie non si comportano uguale
+`thinking-orbs` lo protegge (`typeof matchMedia > 'u'`), `border-beam` lo chiama
+**nudo** dentro un inizializzatore di `useState` — anche con `theme="dark"`
+passato esplicitamente, cioè anche quando la risposta non gli serve. Senza uno
+shim il foglio dell'IA **non si monta affatto**: 29 test cadevano su un errore
+che non c'entrava niente con quello che verificano. Lo shim sta ora in
+`src/test/setup.js`, accanto a quello di localStorage, e risponde sempre
+`matches: false`.
+
+### Il costo
+**+64 KB** sul chunk `CreateWorkout` (91 → **156 KB**). È il prezzo pieno di un
+effetto decorativo, e va saputo: su iOS il bundle è già sul dispositivo, quindi
+è parsing e non rete, e il chunk è caricato su richiesta. Se un giorno pesasse
+troppo, la strada è l'import pigro come per `jspdf`, non togliere l'effetto a
+metà.
+
+### I test
+Uno nuovo (**931** in tutto) più uno riscritto:
+- **«toccare DENTRO il foglio non lo chiude»**, che protegge lo
+  `stopPropagation` diventato prop di passaggio;
+- **«entra con un'animazione che ESISTE»** ora guarda il **genitore** del nodo
+  `role="dialog"`. ⚠️ Non è una scorciatoia per farlo passare: è la condizione
+  perché la cornice scenda insieme al foglio. La proprietà protetta è la stessa
+  di prima — il keyframe vero, non `animate-in` che genera zero CSS.
+Due mutazioni provate, due prese: tolto lo `stopPropagation` dal fascio, e
+entrata e trascinamento rimessi sul foglio.
 
 ---
 

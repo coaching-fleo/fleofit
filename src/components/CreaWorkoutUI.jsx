@@ -261,8 +261,14 @@ export function NumeroEsercizio({ n }) {
 // di partire da zero, l'altro è il gesto tranquillo che si ripete.
 export function CardIA({ onClick }) {
   return (
+    // 🔴 Il fascio luminoso NON si avvolge qui dentro, e non è una questione di
+    // stile: questo file è un chunk CONDIVISO con `WorkoutDetail`, che ne
+    // importa `RiepilogoWorkout` e `BarraAzioni`. Un `import 'border-beam'`
+    // qui farebbe scaricare ~60 KB di fascio a ogni apertura di una scheda,
+    // dove di fasci non ce n'è nemmeno uno — lo stesso danno che §9-noviesdecies
+    // ha appena finito di togliere con `jspdf`. Lo avvolge il chiamante.
     <button type="button" onClick={onClick}
-      className="relative overflow-hidden rounded-[20px] px-4 py-[15px] flex items-center gap-3 text-left
+      className="w-full relative overflow-hidden rounded-[20px] px-4 py-[15px] flex items-center gap-3 text-left
                  bg-gradient-to-br from-ia/[.17] to-ia/[.05] border border-ia/30
                  shadow-[0_16px_30px_-18px_rgba(0,0,0,.85),inset_0_1px_0_rgba(255,255,255,.06)]
                  hover:border-ia/60 transition active:scale-[.995]">
