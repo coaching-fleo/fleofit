@@ -12,7 +12,7 @@
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **931 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **935 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
 > ⭐ **Il 09/09 gli stimatori di durata sono diventati UNO** (§9-undetricies, BACKLOG #40
 > chiuso): lo stesso allenamento diceva **58 minuti nella Home e 24 nella scheda**, e il
 > difetto è saltato fuori mettendo due screenshot del simulatore uno accanto all'altro.
@@ -20,6 +20,16 @@
 > cui l'atleta si sta muovendo, non quello che passa nel box. ⚠️ Con la durata sono saliti
 > i **carichi** del modello predittivo (≈211 → ≈516 sullo stesso workout): i rapporti non
 > si spostano, il numero assoluto sì.
+> ⭐ **Il 15/09 «Salva workout» è sceso in fondo alla pagina** (§9-tertricies):
+> la barra era `sticky`, quindi occupava una riga di schermo per tutto il tempo in
+> cui si compone il workout — proprio mentre servono i blocchi — e il suo bordo
+> disegnava uno stacco netto sopra la capsula della tab bar. ⚠️ `BarraAzioni`
+> serve **tre** pagine: la prop `ancorata` resta `true` dove l'azione è la
+> RAGIONE per cui si è aperta la pagina (scheda workout, scheda atleta), e
+> diventa `false` dove è la CONCLUSIONE di un lavoro (il builder). Con la stessa
+> passata, **aprire un blocco ne tiene il titolo davanti**: chiudeva quello aperto
+> prima, la pagina si accorciava sopra la testa e il blocco toccato scivolava
+> fuori schermo verso l'alto — misurato, da **−351 px a +12**.
 > ⭐ **Il 09/09 la Home atleta ha guadagnato GLI STATI SENZA STORICO** (§9-duodetricies):
 > giorno 1, prima settimana e giorno di riposo. La regola che ne esce vale per tutta
 > l'app ed è entrata in DESIGN.md: **nessuna cella mostra uno zero — al posto di un dato
@@ -4574,7 +4584,7 @@ troppo, la strada è l'import pigro come per `jspdf`, non togliere l'effetto a
 metà.
 
 ### I test
-Uno nuovo (**931** in tutto) più uno riscritto:
+Uno nuovo (931 in tutto, poi 935 col §9-tertricies) più uno riscritto:
 - **«toccare DENTRO il foglio non lo chiude»**, che protegge lo
   `stopPropagation` diventato prop di passaggio;
 - **«entra con un'animazione che ESISTE»** ora guarda il **genitore** del nodo
@@ -4583,6 +4593,101 @@ Uno nuovo (**931** in tutto) più uno riscritto:
   di prima — il keyframe vero, non `animate-in` che genera zero CSS.
 Due mutazioni provate, due prese: tolto lo `stopPropagation` dal fascio, e
 entrata e trascinamento rimessi sul foglio.
+
+---
+
+## 9-tertricies. «Salva workout» in fondo, e il blocco che si apre (15/09/2026)
+
+Due segnalazioni del committente nello stesso messaggio, e la seconda è una
+conseguenza della prima: «il salva workout deve essere in fondo e basta», e
+«se scendo fino in fondo e premo su un blocco, il blocco si apre verso l'alto».
+
+### 🔴 La barra NON è più ancorata QUI, ma lo resta nelle altre due pagine
+`BarraAzioni` serve tre schermate (`CreateWorkout`, `WorkoutDetail`,
+`AthleteDetail`), e cambiarla per tutte avrebbe toccato due pagine che nessuno
+ha segnalato. Da qui la prop **`ancorata`**, che di default resta `true`.
+
+La regola che decide quale valore usare, e non è un gusto: **ancorata dove
+l'azione è la RAGIONE per cui si è aperta la pagina** — «Inizia allenamento»
+nella scheda, «Assegna» nella scheda atleta: lì restare a schermo *è* il punto.
+**In flusso dove l'azione è la CONCLUSIONE di un lavoro**: nel builder la barra
+mangiava una riga di schermo per tutto il tempo in cui si compone il workout,
+cioè proprio mentre si ha bisogno di vedere i blocchi.
+
+Con l'ancoraggio se ne va anche il suo vestito — velo, `backdrop-blur`,
+`border-t`. Servivano a separare la barra da ciò che le scorreva sotto; su una
+barra che sta in fondo alla pagina diventano una riga netta sospesa sopra la
+capsula della tab bar, ed è il secondo rilievo dello stesso messaggio.
+
+⚠️ **La barra sparisce con la tastiera ANCHE non ancorata**, e non è un avanzo:
+la pagina è `min-h-[100dvh]` con un `mt-auto` sopra la barra, quindi su un
+passo corto sta comunque al fondo della viewport — che con
+`Keyboard.resize: 'native'` si rimpicciolisce, incollandocela sopra esattamente
+come prima (§9-undecies punto 8). `useTastiera.test.jsx` resta valido.
+
+⚠️ **Il fondo pagina passa a `--fondo-pagina`**: senza una barra ancorata,
+`CreateWorkout` ricade nella convenzione delle altre cinque pagine (§6).
+ℹ️ Misurato: `App.jsx` riserva **già** `--altezza-navbar` per ogni pagina, e
+ogni pagina ne aggiunge un'altra per conto suo — il doppio conteggio è
+dell'app intera, non di questa modifica, e qui si limita a diventare visibile
+come aria sotto la CTA invece che come spazio coperto dalla barra.
+
+### 🔴 Aprire un blocco CHIUDE quello aperto prima, e la pagina si accorcia SOPRA LA TESTA
+È tutto il secondo difetto. Se il blocco che si chiude stava più in **alto**
+nella lista, il contenuto sopra sparisce e il blocco appena toccato scivola
+fuori schermo verso l'alto. A schermo non sembra uno scorrimento: sembra che il
+blocco si sia aperto al contrario.
+
+Misurato nel browser prima e dopo, con cinque blocchi e lo scroll in fondo:
+il titolo del primo blocco passa da **−351 px** (fuori schermo, sopra) a
+**+12 px**, e ci resta.
+
+Il meccanismo esisteva già — `bloccoDaMostrare` più l'effetto che scorre — ed
+era cablato **solo** alla creazione di un blocco. Due righe:
+1. `bloccoToggle` segna il blocco quando lo **apre** e azzera il segno quando
+   lo **chiude**. ⚠️ La scrittura del ref sta **dentro** l'updater di
+   `setOpenBlockId` perché `openBlockId` non può entrare nelle dipendenze del
+   gestore: deve restare un riferimento stabile o `React.memo` su `HyroxBlock`
+   smette di servire (§9-quinquies). È idempotente, quindi il doppio invio di
+   StrictMode non cambia niente.
+2. L'effetto dipende da **`[blocks, openBlockId]`** e non dalle sole `[blocks]`:
+   aprire un blocco che c'era già non tocca la lista, quindi con le vecchie
+   dipendenze non sarebbe mai scattato.
+
+⚠️ **Richiudere un blocco NON deve scorrere**: chiudendo, il blocco toccato è
+già in cima a ciò che sparisce e resta dov'è — uno scorrimento lì è la pagina
+che si muove da sola sotto un dito che voleva solo fare spazio. C'è un test.
+E resta valido quello storico: compilare i **parametri** di un blocco già
+aperto non muove niente.
+
+⚠️ **`scroll-mt-…` sulla radice del blocco porta la safe area**
+(`calc(env(safe-area-inset-top)+0.75rem)`, era `scroll-mt-4`):
+`scrollIntoView({ block: 'start' })` allinea al bordo della viewport, che su un
+iPhone col notch sta **sotto** la barra di stato — il titolo arriverebbe in
+cima e mezzo coperto proprio mentre lo si apre.
+
+### 🔴 `requestAnimationFrame` non scatta in una pagina `visibilityState: hidden`
+Vale per chiunque provi a verificare questa roba dal browser incorporato, e
+costa mezz'ora di diagnosi sbagliata: col pannello non visibile la pagina non
+disegna, quindi **il rAF non parte mai** e lo scorrimento non avviene — il
+codice sembra rotto e non lo è. Anche `behavior: 'smooth'` non anima per la
+stessa ragione, mentre `behavior: 'auto'` funziona. Per misurare la catena vera
+si sostituisce `requestAnimationFrame` con un `setTimeout` e lo `smooth` con un
+`auto`. È lo stesso genere di limite già annotato per `html-to-image`
+(§9-unetvicies).
+
+### I test, e le tre mutazioni
+Quattro nuovi in `CreaWorkoutBuilder.test.jsx` (**935** in tutto). Tre mutazioni
+provate, tre prese, ognuna da un test diverso: l'effetto rimesso su `[blocks]`,
+il toggle che segna il blocco anche quando lo chiude, e `<BarraAzioni>` senza
+`ancorata={false}`.
+⚠️ I due test sulla barra verificano l'**assenza** di `sticky`, non la presenza
+di qualcos'altro: è `sticky` a produrre il difetto, e una barra che guadagnasse
+per sbaglio un secondo ancoraggio passerebbe qualunque asserzione sulle classi
+nuove. Stessa lezione del bordo di `CARTA_RIGA` (§9-octodecies).
+⚠️ Il test che conta di più apre il **PRIMO** blocco mentre è aperto l'ultimo:
+aprendo l'ultimo la pagina cresce solo sotto e il titolo resta dov'era **anche
+senza la correzione**, quindi quel caso non prende niente.
 
 ---
 

@@ -298,18 +298,38 @@ export function BottoneGhost({ onClick, children, icona: Icona = Plus }) {
   )
 }
 
-// ── La barra fissa ────────────────────────────────────────────────────────
+// ── La barra delle azioni ─────────────────────────────────────────────────
 // Salva stava in fondo a uno scroll che cresce con il workout: più il coach
-// costruiva, più il salvataggio si allontanava. Ora è ancorato.
-export function BarraAzioni({ children }) {
+// costruiva, più il salvataggio si allontanava. Da qui la barra ancorata.
+//
+// ⚠️ `ancorata` NON è un gusto, ed è la ragione per cui il difetto del 15/09
+// non si è chiuso cambiando il componente per tutti. Dove l'azione è quella
+// per cui si è aperta la pagina — «Inizia allenamento» nella scheda, «Assegna»
+// nella scheda atleta — restare a schermo è il punto. Nel builder no: lì
+// l'azione è la CONCLUSIONE di un lavoro, e una barra che segue lo scroll
+// mangia una riga di schermo per tutto il tempo in cui si compone, proprio
+// mentre si ha bisogno di vedere i blocchi. Il committente l'ha segnalato il
+// 15/09/2026: «il salva workout deve essere in fondo e basta».
+export function BarraAzioni({ children, ancorata = true }) {
   // ⚠️ Sparisce mentre si scrive, come la navbar. Con `Keyboard.resize: 'native'`
   // la webview si rimpicciolisce: una barra ancorata al fondo si ritrova sopra
   // la tastiera, e a schermo sembra «salita in cima». Non c'è modo di tenerla
   // ferma dov'era — quel punto dello schermo, mentre si digita, non esiste più.
   // Quindi si toglie di mezzo, e torna appena la tastiera scende (invio, o un
   // tocco fuori dal campo).
+  // ⚠️ Sparisce anche NON ancorata, e non è una svista: la pagina è
+  // `min-h-[100dvh]` con un `mt-auto` sopra la barra, quindi su un passo corto
+  // la barra sta comunque al fondo della viewport — che con la tastiera aperta
+  // si rimpicciolisce, incollandocela sopra esattamente come prima.
   const tastieraAperta = useTastieraAperta()
   if (tastieraAperta) return null
+
+  // In fondo al contenuto e basta: niente velo, niente bordo, niente blur.
+  // Erano il vestito dell'ancoraggio — servivano a separare la barra da ciò che
+  // le scorreva sotto — e su una barra che sta in fondo alla pagina diventano
+  // una riga netta sospesa sopra la capsula della tab bar, che è il secondo
+  // rilievo del 15/09.
+  if (!ancorata) return <div className="flex items-center gap-3">{children}</div>
 
   return (
     // ⚠️ `bottom-0` la metterebbe SOTTO la navbar, che è `fixed` a z-50:

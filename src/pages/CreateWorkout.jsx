@@ -1530,6 +1530,10 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
     return ''
   }
 
+  // ⚠️ `scroll-mt-…` sulla radice porta la safe area, e non è decorazione:
+  // `scrollIntoView({ block: 'start' })` allinea il blocco al bordo della
+  // viewport, che su un iPhone col notch sta SOTTO la barra di stato — il
+  // titolo arriverebbe in cima e mezzo coperto proprio mentre lo si apre.
   return (
     <div
       {...(touchHandlers ? touchHandlers(index) : {})}
@@ -1564,7 +1568,7 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
       }}
       data-drag-item
       data-blocco-id={block.id}
-      className={`drag-item scroll-mt-4 relative overflow-hidden rounded-[20px] border cursor-move transition-all duration-200
+      className={`drag-item scroll-mt-[calc(env(safe-area-inset-top)+0.75rem)] relative overflow-hidden rounded-[20px] border cursor-move transition-all duration-200
         shadow-[0_16px_30px_-18px_rgba(0,0,0,.85),inset_0_1px_0_rgba(255,255,255,.05)] ${
         isOpen
           ? 'border-brand/[.26] bg-gradient-to-b from-[#211f18] to-[#191919]'
@@ -2120,7 +2124,21 @@ export default function CreateWorkout() {
   // funzionale. Se qui torna un'arrow inline, React.memo sul figlio smette di
   // servire senza che niente lo segnali — tranne HyroxBlockMemo.test.jsx.
   const bloccoToggle = useCallback((id) => {
-    setOpenBlockId(prev => (prev === id ? null : id))
+    setOpenBlockId(prev => {
+      if (prev === id) { bloccoDaMostrare.current = null; return null }
+      // ⚠️ Aprire un blocco CHIUDE quello aperto prima. Se quello stava più in
+      // ALTO nella lista, la pagina si accorcia sopra la testa del coach e il
+      // blocco appena toccato scivola fuori schermo verso l'alto: a schermo non
+      // sembra uno scorrimento, sembra che il blocco si sia aperto al contrario.
+      // Segnalato dal committente il 15/09/2026. Si segna quale riportare sotto
+      // gli occhi; a portarcelo è l'effetto su [blocks, openBlockId].
+      bloccoDaMostrare.current = id
+      return id
+    })
+    // ⚠️ La scrittura del ref sta dentro l'updater perché `openBlockId` non può
+    // entrare nelle dipendenze: questo gestore deve restare un riferimento
+    // stabile o `React.memo` su HyroxBlock smette di servire (§9-quinquies).
+    // È idempotente, quindi il doppio invio di StrictMode non cambia nulla.
   }, [])
 
   // onUpdate riceve il blocco intero: l'id è già dentro, niente da passare.
@@ -2188,7 +2206,12 @@ export default function CreateWorkout() {
       document.querySelector(`[data-blocco-id="${id}"]`)
         ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
     })
-  }, [blocks])
+    // ⚠️ `openBlockId` è nelle dipendenze quanto `blocks`: aprire un blocco che
+    // c'era già non tocca la lista, quindi con le sole `[blocks]` l'effetto non
+    // scatterebbe mai e il titolo resterebbe fuori schermo. Chi compila i
+    // parametri di un blocco già aperto non cambia nessuna delle due, e infatti
+    // la pagina non si muove — c'è un test che lo pretende.
+  }, [blocks, openBlockId])
 
   // Hook touch per riordinare le FASI RUNNING
   // Come per i blocchi: getTouchHandlers è memoizzato su onReorder, quindi
@@ -2541,7 +2564,7 @@ export default function CreateWorkout() {
 
   return (
     <div className="px-4 max-w-2xl mx-auto min-h-[100dvh] flex flex-col gap-[18px]
-                    pt-[calc(env(safe-area-inset-top)+1rem)] pb-[var(--altezza-navbar)] page-transition">
+                    pt-[calc(env(safe-area-inset-top)+1rem)] pb-[var(--fondo-pagina)] page-transition">
       <style>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .drag-item {
@@ -2821,11 +2844,13 @@ export default function CreateWorkout() {
         </div>
       )}
 
-      {/* Salva stava in fondo a uno scroll che cresce con il workout: più il
-          coach costruiva, più il salvataggio si allontanava. Ora è ancorato, e
-          la stessa barra serve i tre passi 2 e il passo 1. */}
+      {/* La stessa barra serve i tre passi 2 e il passo 1, ma qui NON è
+          ancorata: `mt-auto` la tiene al fondo della viewport finché il
+          contenuto è corto, e da lì in poi la si raggiunge scorrendo. In un
+          builder l'azione è la conclusione del lavoro, non la ragione per cui
+          si è aperta la pagina — vedi la nota su `ancorata` in CreaWorkoutUI. */}
       <div className="mt-auto" />
-      <BarraAzioni>
+      <BarraAzioni ancorata={false}>
         {step === 1 ? (
           <CtaPrimaria onClick={() => setStep(2)} disabled={!isStep1Valid} iconaCoda={ArrowRight}>
             Costruisci l'allenamento

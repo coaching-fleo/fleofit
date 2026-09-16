@@ -236,6 +236,49 @@ describe('il blocco appena creato finisce sotto gli occhi', () => {
     expect(bersaglio.querySelector('[data-tipo-blocco]').textContent).toBe('EMOM')
   })
 
+  it('aprire un blocco che c era già lo riporta sotto gli occhi', async () => {
+    // Segnalato dal committente il 15/09/2026. Aprire un blocco CHIUDE quello
+    // aperto prima: se quello stava più in alto, la pagina si accorcia sopra la
+    // testa e il blocco appena toccato scivola fuori schermo verso l'alto — a
+    // schermo sembra che si sia aperto al contrario, non che la pagina si sia
+    // mossa. ⚠️ Il caso che prende il difetto è APRIRE IL PRIMO mentre l'ultimo
+    // è aperto: aprendo l'ultimo la pagina cresce solo sotto, e il titolo resta
+    // dov'era anche senza correzione.
+    await alPasso2()
+    await aggiungiBlocco('WarmUp')
+    // ⚠️ Si azzera la spia PRIMA di aggiungere l'EMOM: senza, il `waitFor`
+    // successivo si accontenta della chiamata del WarmUp e il mockClear cade
+    // poi sul frame dell'EMOM, che arriva dopo e si legge come se fosse il
+    // tocco. È la stessa trappola annotata nel test qui sopra.
+    await vi.waitFor(() => expect(scorso).toHaveBeenCalled())
+    scorso.mockClear()
+    await aggiungiBlocco('EMOM')          // l'EMOM resta aperto, il WarmUp si chiude
+    await vi.waitFor(() => expect(scorso).toHaveBeenCalled())
+    await dueFrame()
+    scorso.mockClear()
+
+    await userEvent.click(document.querySelectorAll('[data-tipo-blocco]')[0])
+
+    await vi.waitFor(() => expect(scorso).toHaveBeenCalled())
+    const bersaglio = scorso.mock.instances[0]
+    expect(bersaglio.querySelector('[data-tipo-blocco]').textContent).toBe('WarmUp')
+  })
+
+  it('richiudere un blocco NON strappa la pagina', async () => {
+    // Il contraltare del precedente: chiudendo, il blocco toccato è già in
+    // cima a ciò che sparisce e resta dov'è. Uno scorrimento lì è la pagina
+    // che si muove da sola sotto un dito che voleva solo fare spazio.
+    await alPasso2()
+    await aggiungiBlocco('EMOM')
+    await vi.waitFor(() => expect(scorso).toHaveBeenCalled())
+    scorso.mockClear()
+
+    await userEvent.click(document.querySelectorAll('[data-tipo-blocco]')[0])
+
+    await dueFrame()
+    expect(scorso).not.toHaveBeenCalled()
+  })
+
   it('non scorre quando si modifica un blocco che c era già', async () => {
     // Il contraltare: uno scorrimento a ogni tocco strapperebbe la pagina di
     // mano al coach mentre compila i parametri.
@@ -247,6 +290,32 @@ describe('il blocco appena creato finisce sotto gli occhi', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Aumenta Rounds' }))
     await dueFrame()
     expect(scorso).not.toHaveBeenCalled()
+  })
+})
+
+describe('«Salva workout» sta in fondo, non davanti', () => {
+  // Segnalato dal committente il 15/09/2026: la barra era `sticky`, quindi
+  // occupava una riga di schermo per tutto il tempo in cui si compone il
+  // workout — proprio mentre si ha bisogno di vedere i blocchi — e il suo
+  // bordo superiore disegnava uno stacco netto sopra la capsula della tab bar.
+  //
+  // ⚠️ Si verifica l'ASSENZA di `sticky`, non la presenza di qualcos'altro: è
+  // `sticky` a produrre il difetto, e una barra che guadagnasse per sbaglio un
+  // secondo ancoraggio passerebbe qualunque asserzione sulle classi nuove.
+  // (Stessa lezione del bordo di CARTA_RIGA, CLAUDE.md §9-octodecies.)
+  const contenitoreDi = (nome) => screen.getByRole('button', { name: nome }).parentElement
+
+  it('la barra dello step 2 non segue lo scroll', async () => {
+    await alPasso2()
+    const barra = contenitoreDi(/Salva workout/)
+    expect(barra.className).not.toMatch(/sticky|fixed/)
+    expect(barra.className).not.toMatch(/border-t/)
+  })
+
+  it('e nemmeno quella dello step 1', async () => {
+    monta()
+    await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
+    expect(contenitoreDi(/Costruisci l'allenamento/).className).not.toMatch(/sticky|fixed/)
   })
 })
 
