@@ -129,4 +129,24 @@ if grep -rqs -- "Apple Health" "$APP" 2>/dev/null; then
 fi
 [[ $SALUTE -eq 0 ]] && echo "✅ HealthKit: nessuna traccia (entitlement, Info.plist, framework, bundle)"
 
+# 11. Bluetooth — la fascia cardio è uscita il 21/09/2026 (§9-quintricies), ed è
+#     lo stesso genere di residuo di HealthKit: un plugin ancora elencato in
+#     `Package.swift` linka `CoreBluetooth` al binario. 🔴 Qui però il pericolo è
+#     doppio, perché le chiavi d'uso NON ci sono più: se del codice BLE
+#     sopravvivesse e venisse eseguito, iOS **termina il processo** — cioè un
+#     crash al primo tocco, non un rilievo.
+BLE=0
+for chiave in NSBluetoothAlwaysUsageDescription NSBluetoothPeripheralUsageDescription; do
+  if /usr/libexec/PlistBuddy -c "Print :$chiave" "$APP/Info.plist" >/dev/null 2>&1; then
+    echo "❌ Bluetooth: $chiave ancora nell'Info.plist"; BLE=$((BLE + 1))
+  fi
+done
+if otool -L "$BIN" 2>/dev/null | grep -q "CoreBluetooth.framework"; then
+  echo "❌ Bluetooth: CoreBluetooth ancora linkato al binario"; BLE=$((BLE + 1))
+fi
+if grep -rqs -- "BleClient" "$APP" 2>/dev/null; then
+  echo "❌ Bluetooth: il ponte JS del plugin è ancora nel bundle web"; BLE=$((BLE + 1))
+fi
+[[ $BLE -eq 0 ]] && echo "✅ Bluetooth: nessuna traccia (Info.plist, framework, bundle)"
+
 rm -rf "$TMP"

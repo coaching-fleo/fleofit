@@ -12,7 +12,7 @@
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **935 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **932 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
 > 🔴 **Il 20/09 App Store ha respinto la 1.0 (5) con TRE rilievi insieme** (§9-quatertricies),
 > e **uno solo è codice**: la **2.5.1** — HealthKit linkato al binario senza una funzione
 > che lo giustifichi — chiusa il 21/09 togliendo Apple Health da tutte e cinque le porte
@@ -221,7 +221,6 @@ per conto suo. Un merge produrrà conflitti reali lì dentro, non banali da riso
 
 ### Cosa c'è davvero solo su `ios-version` (verificato su `origin/main` il 25/08/2026)
 Assenti da `main`: tutta la cartella `ios/`, `capacitor.config.ts`, `privacy-policy.html`,
-`src/pages/bluetooth.js` (fascia cardio BLE),
 `supabase/functions/ai-workout/` (generazione IA), `src/lib/blockHints.js`, l'**RPE**, la
 **Live Coach Cam**, la **modalità Offline** (ex "Bunker"), push FCM native, centro notifiche + badge.
 Aggiunti il 25-26/08 e ancora solo qui: **tutta l'infrastruttura di test**
@@ -302,7 +301,7 @@ Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **re
 ### Plugin Capacitor in uso
 `@capacitor/app`, `browser`, `filesystem`, `haptics`, `keyboard`, `network`,
 `push-notifications`, `screen-orientation`, `share`, `status-bar`,
-`@capacitor-community/bluetooth-le` (fascia cardio), `keep-awake` (TV), `media` (salva in galleria),
+`keep-awake` (TV), `media` (salva in galleria),
 `apple-sign-in` (Sign in with Apple, §9-sexvicies),
 `fcm`, `@capawesome/capacitor-badge` (badge icona),
 `@independo/capacitor-voice-recorder` + `capacitor-voice-recorder` (⚠️ **due librerie audio diverse**,
@@ -333,7 +332,7 @@ npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 > §9-duetricies). `CreaWorkoutUI` deve restare intorno ai **24 KB**: è un chunk
 > **condiviso con `WorkoutDetail`**, e una libreria di effetti importata lì
 > dentro la fa scaricare a ogni apertura di una scheda. E `WorkoutDetail` deve
-> restare intorno agli **84 KB** (erano 68 fino al 01/09, poi 82 con `StoriaUI` + `recapStoria`
+> restare intorno agli **83 KB** (erano 68 fino al 01/09, poi 82 con `StoriaUI` + `recapStoria`
 > §9-unetvicies, e 84 dal 02/09 con `previsione` + `PrevisioneUI` §9-quatervicies). Se risale sopra i 400, qualcuno ha rimesso `jspdf` o `html-to-image`
 > fra gli import in testa (§9-noviesdecies).
 >
@@ -359,7 +358,7 @@ Per testare su iPhone in dev live: scommentare `server.url` in `capacitor.config
 ## 3. Struttura dei file
 
 > Struttura del branch `ios-version`. Su `main` mancano `ios/`, `capacitor.config.ts`,
-> `privacy-policy.html`, `bluetooth.js`, `src/lib/` e la Edge Function `ai-workout`.
+> `privacy-policy.html`, `src/lib/` e la Edge Function `ai-workout`.
 > ⚠️ `TVDashboard.jsx` **c'è anche su `main`**, in una versione diversa (§1.1).
 
 ```
@@ -500,7 +499,6 @@ src/
    │                           #   🔒 L'UNICA pagina senza una versione atleta: rimanda alla Home
    ├─ Settings.jsx             # notifiche, backup/restore JSON, codici invito, BLE, password
    ├─ TVDashboard.jsx          # /tv — dashboard fullscreen per TV/Chromecast, codice a 4 cifre
-   ├─ bluetooth.js             # BluetoothService — singleton BLE fascia cardio
    ├─ motivations.js           # 15 frasi motivazionali + getDailyMotivation() con anti-ripetizione
    └─ __tests__/               # 157 test su componenti e pagine montate (§9 punto 11)
 tools/                            # non entra nell'app: serve alle verifiche pre-submission
@@ -1090,7 +1088,8 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   mandare **reazioni emoji** (🔥💪🚀👏💀) e messaggi audio **walkie-talkie** (upload su
   `voice-notes`, broadcast dell'URL, auto-delete dopo 60s).
 - **Settings**: notifiche push, backup/restore JSON, generazione codici invito + link
-  `?invite=CODICE`, connessione fascia cardio BLE, cambio password, simula atleta.
+  `?invite=CODICE`, cambio password, simula atleta.
+  ⚠️ La **fascia cardio BLE** è uscita il 21/09/2026 con tutto il Bluetooth (§9-quintricies).
 
 ### Workout Detail (il file più denso)
 - Rendering della scheda per categoria, note atleta con RPE, note vocali bidirezionali
@@ -4763,10 +4762,11 @@ non di codice raggiungibile: un `if (false)` non salva nessuno.
 managed by Capacitor CLI». Si toglie il pacchetto npm e si sincronizza, o la
 prossima `cap sync` lo rimette.
 
-**Cosa NON è stato toccato, e per buone ragioni:**
+**Cosa NON è stato toccato da QUESTO rilievo, e per buone ragioni:**
 - la **fascia cardio BLE** (`src/pages/bluetooth.js`) è **Core Bluetooth**, non
   HealthKit: legge i battiti dal dispositivo in tempo reale, non dall'archivio
-  Salute, e resta dov'è;
+  Salute, quindi il 2.5.1 non la riguardava. ⚠️ È uscita **lo stesso giorno**,
+  per decisione del committente e non per un rilievo: §9-quintricies;
 - `LSApplicationCategoryType = public.app-category.healthcare-fitness` nel
   `pbxproj` resta: è la **categoria dello Store** di un'app di allenamento, non
   un riferimento a HealthKit. Toglierla non risponde a niente e sposta l'app
@@ -4819,11 +4819,14 @@ della lettera e nessun altro. Le altre sette: Salute, Fitness, Informazioni
 sensibili, Email o messaggi, Foto o video, Dati audio, ID utente.
 
 🔴 **«Salute» NON si toglie, anche se HealthKit è uscito**, ed è il contrario
-di quello che sembra. La **fascia cardio BLE** mette `heartRate` nel payload
-Realtime del timer (`WorkoutDetail.jsx`, dentro `WorkoutTimer`), che va alla TV e
-alla Live Coach Cam: il battito lascia il dispositivo e arriva a un altro utente,
-quindi è raccolta di un dato sanitario. Toglierla sarebbe una
-**sotto**-dichiarazione, cioè un 5.1.2 peggiore di quello che si sta chiudendo.
+di quello che sembra. ⚠️ **La ragione è cambiata lo stesso giorno**: la mattina
+era la **fascia cardio BLE**, che metteva `heartRate` nel payload Realtime del
+timer verso la TV e la Live Coach Cam — un dato sanitario che lasciava il
+dispositivo. Il pomeriggio il BLE è uscito del tutto (§9-quintricies), e
+«Salute» resta per `athletes.weight`, `height` e `birth_date`, che nella
+tassonomia di Apple ricadono sotto *«any other user provided health or medical
+data»*. In entrambi i casi vale la stessa regola: togliere una dichiarazione è il
+verso che produce un 5.1.2 per **sotto**-dichiarazione.
 ⚠️ «**Informazioni sensibili**» sembra invece dichiarata di troppo — per Apple
 significa origine etnica, orientamento sessuale, convinzioni religiose, dati
 biometrici o genetici — ma non è nel rilievo, e non si tocca mentre si risponde
@@ -4884,6 +4887,73 @@ bottoncino**. Il 2.5.1 chiede una funzione *primaria*: scrivere l'allenamento
 battiti, che è la ragione per cui esiste `NSHealthUpdateUsageDescription`, quella
 che l'app dichiarava e non usava — e rileggerne i battiti per il report. È un
 pezzo di prodotto, non una scorciatoia dentro una modale. Voce in BACKLOG.
+
+---
+
+## 9-quintricies. La fascia cardio è uscita (21/09/2026)
+
+Decisione del committente, il giorno dopo il terzo rifiuto: *«disabilitiamo la
+funzione della fascia cardio — intanto era una funzionalità in fase di test.
+Facciamo contenti i revisori Apple.»* È la stessa aritmetica di HealthKit
+(§9-quatertricies): una funzione in prova che costa **due permessi di sistema**
+davanti a un'app con tre rifiuti alle spalle è tutto costo e nessun beneficio.
+
+### 🔴 Rimossa, non disabilitata — e qui il motivo è più duro di quello di HealthKit
+Con HealthKit un residuo era un **rilievo**. Qui è un **crash**: le chiavi
+`NSBluetoothAlwaysUsageDescription` e `NSBluetoothPeripheralUsageDescription`
+non ci sono più, e su iOS un accesso al Bluetooth senza la sua stringa d'uso non
+dà un errore da gestire — il sistema **termina il processo**. Quindi un
+`if (false)` attorno al codice BLE sarebbe la peggiore delle tre opzioni: lascia
+il framework linkato *e* una mina sotto il primo ramo che qualcuno riattiva.
+
+Le cinque porte, come per HealthKit:
+1. `src/pages/bluetooth.js` (`BluetoothService`, il singleton) — cancellato;
+2. i quattro chiamanti: l'interruttore e le 90 parole sul Garmin in `Settings`,
+   l'icona di stato «Cardio» in `WorkoutDetail`, la pillola BPM nella testata
+   della Home e nello spettatore della Live Coach Cam, il riquadro sulla TV;
+3. le due chiavi `NSBluetooth*` in `Info.plist`;
+4. il plugin `@capacitor-community/bluetooth-le` — `npm uninstall` più
+   `npx cap sync ios`: **18 plugin → 17**;
+5. il controllo **11** di `tools/verifica-ipa.sh`, che cerca le chiavi,
+   `CoreBluetooth.framework` in `otool -L` e `BleClient` nel bundle web.
+
+### 🔴 La conseguenza che non si vede: il battito non viaggia più
+`heartRate` viaggiava nel payload Realtime del timer (dentro `WorkoutTimer`),
+verso la TV **e** verso la Live Coach Cam. Era l'unico dato sanitario che
+lasciasse il dispositivo, ed era la ragione per cui «**Salute**» doveva restare
+sull'etichetta privacy la mattina dello stesso giorno (§9-quatertricies).
+⚠️ **«Salute» non si toglie comunque, ma ora per un'altra ragione**: restano
+`athletes.weight`, `height` e `birth_date`, che nella tassonomia di Apple
+ricadono sotto *«any other user provided health or medical data»*. Togliere una
+dichiarazione è il verso che produce un 5.1.2 per **sotto**-dichiarazione, e su
+un'app con tre rifiuti non si scommette per guadagnare una riga in meno su una
+scheda che già non mostra tracciamento.
+
+### Cosa NON è stato toccato
+Il **timer guidato**, la **Live Coach Cam** e il **cast su TV** restano interi:
+perdono una pillola rossa, non una funzione. Resta anche `@capacitor/network`,
+che col Bluetooth non c'entra.
+
+### ⚠️ L'errore che ho commesso, perché è istruttivo
+La prima passata su `Settings.jsx` ha tagliato per **indici** (`s.index(...)`
+fino al blocco successivo) invece che per stringhe esatte, e si è portata via
+anche `toggleNotifiche`, `generaCodice`, `copiaTesto` ed `eliminaCodice`, che
+stavano in mezzo. Il file compilava; a cadere sono stati **tutti e venti** i test
+della pagina, con un `toggleNotifiche is not defined` che non nominava niente di
+BLE. ✅ In un file da 700 righe si cancella per **sostituzione esatta**, mai per
+intervallo — e quando serve un intervallo, si rilegge il diff prima dei test.
+
+### I test: da quattro a uno, e l'uno protegge l'ASSENZA
+I quattro test sulla fascia cardio in `Impostazioni.test.jsx` sono diventati
+**uno**, che verifica che l'interruttore, la riga «Come si collega» e le 90
+parole sul Garmin **non ci siano**. ⚠️ Aspetta prima l'interruttore delle
+notifiche: senza, le `queryBy` girerebbero su una pagina ancora vuota e
+passerebbero anche con il cardio al suo posto (§9-sexies, ancora).
+Verificato per mutazione, e **due volte**: la prima rimetteva un
+`RigaInterruttore` senza `icona`, che fa crashare `Pastiglia` — cadevano tutti e
+venti i test, cioè il test era rosso **per il motivo sbagliato**, che vale quanto
+un verde per il motivo sbagliato. Con l'icona valida: **1 caduto su 20**.
+932 test in tutto (erano 935: quattro tolti, uno aggiunto).
 
 ---
 

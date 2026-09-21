@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
-import { ChevronUp, Download, Timer, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, CalendarDays, Mic, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, Heart, WifiOff, ClipboardList, Undo2, Image as ImmagineIcona, Share2 } from 'lucide-react'
+import { ChevronUp, Download, Timer, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, CalendarDays, Mic, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, WifiOff, ClipboardList, Undo2, Image as ImmagineIcona, Share2 } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -14,7 +14,6 @@ import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { Media } from '@capacitor-community/media'
 import { KeepAwake } from '@capacitor-community/keep-awake'
-import { BluetoothService } from './bluetooth'
 import { Network } from '@capacitor/network'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
@@ -252,9 +251,6 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null)
   const noteRef = useRef(null)
 
-  // Heart Rate (BLE)
-  const [heartRate, setHeartRate] = useState(null)
-  const [hrConnected, setHrConnected] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
 
   const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
@@ -299,29 +295,6 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     const listener = Network.addListener('networkStatusChange', status => setIsOffline(!status.connected))
     return () => { listener.then(l => l.remove()) }
   }, [])
-
-  useEffect(() => {
-    return BluetoothService.subscribe((connected, hr) => {
-      setHrConnected(connected)
-      setHeartRate(hr)
-    })
-  }, [])
-
-  const toggleHeartRate = async () => {
-    try {
-      if (hrConnected) {
-        await BluetoothService.disconnect()
-      } else {
-        await BluetoothService.connect()
-      }
-    } catch (error) {
-      console.error("BLE Error:", error);
-      const msg = error?.message || String(error);
-      if (!msg.includes('cancelled') && !msg.includes('User cancelled')) {
-        setAlertInfo({ title: 'Errore BLE', message: msg, type: 'error' })
-      }
-    }
-  }
 
   // Quando entri nel workout, se c'è una notifica pendente ad esso collegata, segnala come letta
   useEffect(() => {
@@ -1429,11 +1402,6 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         ) : (
           <IconaStato etichetta="TV" icona={MonitorUp} onClick={() => setTvModalOpen(true)} />
         )}
-        {(role === 'athlete' || isOwnProfile) && (
-          <IconaStato etichetta="Cardio" icona={Heart} accesa={hrConnected} colore="#ef4444"
-            valore={hrConnected && heartRate ? String(heartRate) : null}
-            pulsa={hrConnected && !!heartRate} onClick={toggleHeartRate} />
-        )}
       </TestataScheda>
 
       {isOffline && (
@@ -2071,7 +2039,6 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           athleteWorkoutId={athleteWorkoutId}
           athleteName={currentAthleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Atleta'}
           workoutTitle={workout.title}
-          heartRate={heartRate}
         />
       )}
       {showRpeModal && createPortal(
@@ -2108,7 +2075,7 @@ const SCHEMES = {
   custom: { bg: 'bg-[#0B0B0B]', text: 'text-custom', sub: 'text-custom/80', card: 'bg-[#1e1e1e] border-custom/20 text-custom', cardLabel: 'text-custom/60', icon: 'text-gray-400', btnBg: 'bg-custom text-white' }
 }
 
-function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle, heartRate }) {
+function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(sequence[0]?.duration || 0);
   const [isRunning, setIsRunning] = useState(false);
@@ -2235,17 +2202,17 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
       tvChannelRef.current.send({
         type: 'broadcast',
         event: 'timer_state',
-        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx], heartRate }
+        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx] }
       }).catch(()=>{});
     }
     if (liveChannelRef.current) {
       liveChannelRef.current.send({
         type: 'broadcast',
         event: 'timer_state',
-        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx], heartRate }
+        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx] }
       }).catch(()=>{});
     }
-  }, [currentIdx, timeLeft, isRunning, sequence, tvJoined, athleteWorkoutId, heartRate]);
+  }, [currentIdx, timeLeft, isRunning, sequence, tvJoined, athleteWorkoutId]);
   
   useEffect(() => {
     shortBeepAudio.current = new Audio(shortBeepURI);
@@ -2469,11 +2436,6 @@ return createPortal(
         </div>
         <div className="flex items-center gap-3 mb-1">
           <p className="text-3xl font-black text-white tabular-nums leading-none">{formatT(timeLeft)}</p>
-          {heartRate && (
-            <div className="flex items-center gap-1 text-red-500 font-bold bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-lg">
-              <Heart size={14} className="animate-pulse" fill="currentColor" /> {heartRate}
-            </div>
-          )}
         </div>
         <p className="text-sm font-medium text-gray-400 truncate">{currentStep?.task || 'Workout'}</p>
       </div>
@@ -2518,12 +2480,6 @@ return createPortal(
             >
               <ChevronDown size={28} />
             </button>
-            {heartRate && (
-              <div className="flex items-center gap-2 px-5 py-2 bg-black/30 border border-red-500/30 backdrop-blur-md rounded-full text-red-500 font-bold shadow-lg">
-                <Heart size={20} className="animate-pulse" fill="currentColor" />
-                <span className="text-xl tabular-nums">{heartRate} bpm</span>
-              </div>
-            )}
             <button aria-label={isMuted ? 'Riattiva i suoni' : 'Disattiva i suoni'} 
               onClick={() => setIsMuted(!isMuted)}
               onTouchStart={e => e.stopPropagation()} 

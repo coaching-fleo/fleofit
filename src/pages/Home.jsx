@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, Heart, WifiOff, RefreshCw, ChartNoAxesColumn } from 'lucide-react'
+import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, WifiOff, RefreshCw, ChartNoAxesColumn } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, format, parseISO, differenceInDays, startOfDay, getISOWeek } from 'date-fns'
@@ -12,7 +12,6 @@ import { createPortal } from 'react-dom'
 import { App as CapacitorApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
-import { BluetoothService } from './bluetooth'
 import { Network } from '@capacitor/network'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { leggiJson, scriviJson, leggiCoda, accodaSuStorage, chiaveCacheWorkout, CHIAVE_CODA } from '../lib/offlineQueue'
@@ -295,8 +294,6 @@ export default function Home() {
   const [liveAthletes, setLiveAthletes] = useState([])
   const [spectatingAthlete, setSpectatingAthlete] = useState(null)
 
-  const [hrConnected, setHrConnected] = useState(false)
-  const [heartRate, setHeartRate] = useState(null)
   const [isOffline, setIsOffline] = useState(false)
   const [syncingQueue, setSyncingQueue] = useState(false)
 
@@ -380,13 +377,6 @@ export default function Home() {
       setSyncingQueue(false)
     }
   }
-
-  useEffect(() => {
-    return BluetoothService.subscribe((connected, hr) => {
-      setHrConnected(connected)
-      setHeartRate(hr)
-    })
-  }, [])
 
   const randomMotiv = useMemo(() => {
     return getDailyMotivation()
@@ -1137,11 +1127,6 @@ setNotifications(prev => {
         // un pallino: senza, chi usa VoiceOver non saprebbe che ce ne sono.
         const azioni = (
           <>
-            {hrConnected && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 border border-red-500/30 text-red-500 rounded-full text-xs font-bold shrink-0">
-                <Heart size={14} className={heartRate ? "animate-pulse" : ""} fill="currentColor" /> {heartRate ? `${heartRate} bpm` : 'BLE'}
-              </div>
-            )}
             <BottoneVetro
               label={unreadCount > 0 ? `Apri il centro notifiche, ${unreadCount} da leggere` : 'Apri il centro notifiche'}
               title="Centro Notifiche" onClick={openNotifications} badge={unreadCount > 0}>
@@ -1753,11 +1738,6 @@ function LiveSpectatorModal({ athlete, onClose }) {
           <button aria-label="Chiudi" onClick={onClose} className="text-white/80 hover:text-white"><X size={20}/></button>
         </div>
         <div className="p-6 flex flex-col items-center justify-center min-h-[220px] relative">
-          {timerState?.heartRate && (
-            <div className="absolute top-2 right-4 flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 text-red-500 px-3 py-1 rounded-full text-xs font-bold">
-              <Heart size={14} className="animate-pulse" fill="currentColor" /> {timerState.heartRate} bpm
-            </div>
-          )}
           {timerState ? (<><p className="text-red-400 font-bold text-sm uppercase tracking-widest mb-1 text-center">{timerState.step?.title || 'Workout'}</p><p className="text-white font-black text-[5rem] tabular-nums tracking-tighter mb-4 leading-none">{formatT(timerState.timeLeft)}</p><div className="bg-[#111] border border-[#333] px-4 py-3 rounded-xl text-center w-full"><p className="text-gray-400 text-xs mb-1 uppercase font-bold tracking-wider">In Esecuzione</p><p className="text-white font-semibold truncate text-lg">{timerState.step?.task || 'Workout libero'}</p></div></>) : (<p className="text-muted font-medium animate-pulse text-center px-4">Connessione al telefono dell'atleta in corso...</p>)}
         </div>
         <div className="bg-[#111] p-5 border-t border-[#333]">

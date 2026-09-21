@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Heart, Ticket, Wrench, AlertTriangle, Trash2 } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, AlertTriangle, Trash2 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -14,7 +14,6 @@ import { PushNotifications } from '@capacitor/push-notifications'
 import { FCM } from '@capacitor-community/fcm'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
-import { BluetoothService } from './bluetooth'
 import { CHIAVE_ULTIMO_EXPORT, etichettaRuolo, riassuntoBackup, riassuntoCodici } from '../lib/rigaImpostazioni'
 import {
   BottoneEsci, CartaAccount, FoglioCodici, PiediPagina, RigaAzione, RigaInterruttore,
@@ -40,10 +39,7 @@ export default function Settings() {
   const isSimulatingAthlete = localStorage.getItem('adminRoleOverride') === 'athlete'
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
-  const [hrConnected, setHrConnected] = useState(false)
-  const [heartRate, setHeartRate] = useState(null)
 
-  const [istruzioniAperte, setIstruzioniAperte] = useState(false)
   const [sviluppoAperto, setSviluppoAperto] = useState(false)
   const [foglioCodiciAperto, setFoglioCodiciAperto] = useState(false)
   const [codici, setCodici] = useState(null)
@@ -56,11 +52,6 @@ export default function Settings() {
     try { return localStorage.getItem(CHIAVE_ULTIMO_EXPORT) } catch { return null }
   })
   const [versione, setVersione] = useState(null)
-
-  // La fascia cardio resta di chi si allena: il coach non ha allenamenti
-  // propri (il suo account è escluso da chi si segue), e un interruttore che
-  // non serve a niente è comunque un interruttore da leggere.
-  const mostraCardio = role === 'athlete' || isSimulatingAthlete
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -82,13 +73,6 @@ export default function Settings() {
       }
     }
     checkSubscription()
-  }, [])
-
-  useEffect(() => {
-    return BluetoothService.subscribe((connected, hr) => {
-      setHrConnected(connected)
-      setHeartRate(hr)
-    })
   }, [])
 
   /**
@@ -500,23 +484,6 @@ export default function Settings() {
     setOperazione(null)
   }
 
-  const toggleHeartRate = async () => {
-    setOperazione('cardio')
-    try {
-      if (hrConnected) {
-        await BluetoothService.disconnect()
-      } else {
-        await BluetoothService.connect()
-      }
-    } catch (error) {
-      const msg = error?.message || String(error);
-      if (!msg.includes('cancelled') && !msg.includes('User cancelled')) {
-        setAlertInfo({ title: 'Errore BLE', message: msg, type: 'error' })
-      }
-    }
-    setOperazione(null)
-  }
-
   /**
    * L'interruttore delle notifiche. I due percorsi esistevano già: quello che
    * non esisteva era un comando che dicesse dov'è, invece di dire dove andrà.
@@ -573,10 +540,6 @@ export default function Settings() {
   }
 
 
-  const dettaglioCardio = hrConnected
-    ? (heartRate ? `${heartRate} BPM in tempo reale` : 'Collegata · in attesa dei dati…')
-    : 'Non collegata'
-
   return (
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)]
                     page-transition flex flex-col gap-3.5">
@@ -597,36 +560,6 @@ export default function Settings() {
           attivo={notificationsEnabled} onCambia={toggleNotifiche}
           occupato={operazione === 'notifiche'} />
 
-        {mostraCardio && (
-          <>
-            <Separatore />
-            <RigaInterruttore
-              icona={Heart} tono="rosso" pieno={hrConnected}
-              titolo="Fascia cardio" dettaglio={dettaglioCardio}
-              classeDettaglio={hrConnected ? 'text-red-300 font-bold' : 'text-muted'}
-              attivo={hrConnected} onCambia={toggleHeartRate}
-              occupato={operazione === 'cardio'} />
-            <Separatore />
-            {/* 🔴 Il testo è quello di prima, parola per parola: è l'unica
-                spiegazione dell'app su come si collega un Garmin, e riassumerlo
-                butterebbe via proprio la parte che dice cosa fare. Quello che
-                cambia è che non lo si rilegga a ogni apertura — è la stessa
-                distinzione fatta per l'avviso sul riscaldamento (§9-duodecies). */}
-            <RigaPieghevole piccola
-              titolo="Come si collega una fascia o un Garmin"
-              aperto={istruzioniAperte} onToggle={() => setIstruzioniAperte(v => !v)}>
-              <p className="text-[13px] leading-relaxed text-gray-400">
-                Collega direttamente la tua Fascia Cardio (Polar, Wahoo, Garmin HRM) o il tuo
-                sportwatch. La connessione rimarrà attiva per tutto l'utilizzo dell'app.
-                <br /><br />
-                Se usi una fascia cardio, <strong className="text-white">collegala direttamente all'app</strong> (puoi
-                tenerla collegata in contemporanea anche all'orologio). Se usi un Garmin senza fascia,
-                assicurati di attivare la funzione "Trasmetti FC" o "Broadcast Heart Rate" nelle
-                impostazioni dell'orologio.
-              </p>
-            </RigaPieghevole>
-          </>
-        )}
       </CartaAccount>
 
       {/* ── Account ──────────────────────────────────────────────────────── */}

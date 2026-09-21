@@ -39,10 +39,6 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>FLEOFIT utilizza il Bluetooth per connettersi alla tua fascia cardio e leggere i battiti in tempo reale.</string>
-	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>FLEOFIT utilizza il Bluetooth per connettersi ai tuoi dispositivi.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>FLEOFIT ha bisogno del microfono per permetterti di registrare e inviare note vocali.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

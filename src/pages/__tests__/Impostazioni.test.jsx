@@ -40,15 +40,6 @@ vi.mock('@capacitor/app', () => ({ App: { getInfo: vi.fn(() => Promise.resolve({
 vi.mock('@capacitor/filesystem', () => ({ Filesystem: { writeFile: vi.fn() }, Directory: {}, Encoding: {} }))
 vi.mock('@capacitor/share', () => ({ Share: { share: vi.fn() } }))
 
-const ble = await vi.hoisted(async () => ({ stato: { connesso: false, bpm: null }, avvisa: { fn: null } }))
-vi.mock('../bluetooth', () => ({
-  BluetoothService: {
-    subscribe: (cb) => { ble.avvisa.fn = cb; cb(ble.stato.connesso, ble.stato.bpm); return () => {} },
-    connect: vi.fn(() => Promise.resolve()),
-    disconnect: vi.fn(() => Promise.resolve()),
-  },
-}))
-
 const Settings = (await import('../Settings')).default
 
 const montaCoach = () => montaPagina(<Settings />, {
@@ -63,7 +54,6 @@ beforeEach(() => {
   finto.chiamate.length = 0
   window.localStorage.clear()
   ctrl.codici.valore = []
-  ble.stato = { connesso: false, bpm: null }
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
@@ -121,35 +111,26 @@ describe('L\'eroe: account e stato del dispositivo', () => {
   })
 })
 
-describe('La fascia cardio', () => {
-  it('all\'atleta è un interruttore che dice il battito quando arriva', async () => {
-    ble.stato = { connesso: true, bpm: 72 }
+// 🔴 La fascia cardio è uscita il 21/09/2026 con tutto il BLE (§9-quintricies):
+// era una funzione in prova, e costava due permessi di sistema
+// (`NSBluetoothAlwaysUsageDescription` e `NSBluetoothPeripheralUsageDescription`)
+// più il battito trasmesso via Realtime, che è ciò che rendeva «Salute» una
+// dichiarazione obbligatoria sull'etichetta privacy.
+//
+// Questo test non protegge una funzione: protegge la sua ASSENZA. Rimettere
+// l'interruttore senza rimettere le chiavi d'uso in `Info.plist` fa **crashare**
+// l'app alla prima connessione, e rimettercele è un permesso in più davanti al
+// revisore su un'app che ha già tre rifiuti. ⚠️ Si attende prima l'interruttore
+// delle notifiche: senza, le `queryBy` girano su una pagina ancora vuota e
+// passerebbero anche con il cardio al suo posto.
+describe('La fascia cardio non c\'è più', () => {
+  it("all'atleta non compare nessun comando del cardio", async () => {
     montaAtleta()
-    const sw = await screen.findByRole('switch', { name: 'Fascia cardio' })
-    expect(sw).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByText('72 BPM in tempo reale')).toBeInTheDocument()
-  })
-
-  it('collegata senza dati non inventa un battito', async () => {
-    ble.stato = { connesso: true, bpm: null }
-    montaAtleta()
-    expect(await screen.findByText(/in attesa dei dati/i)).toBeInTheDocument()
-  })
-
-  it('🔴 le 90 parole sul Garmin ci sono TUTTE, ma sotto una riga che si apre', async () => {
-    // È l'unica spiegazione dell'app su come si collega un orologio:
-    // riassumerla butterebbe via proprio la parte che dice cosa fare. Quello
-    // che cambia è che non la si rilegga a ogni apertura.
-    montaAtleta()
-    expect(screen.queryByText(/Broadcast Heart Rate/)).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /Come si collega/i }))
-    expect(screen.getByText(/Broadcast Heart Rate/)).toBeInTheDocument()
-    expect(screen.getByText(/Polar, Wahoo, Garmin HRM/)).toBeInTheDocument()
-  })
-
-  it('al coach non si mostra affatto', () => {
-    montaCoach()
+    await screen.findByRole('switch', { name: 'Notifiche push' })
     expect(screen.queryByRole('switch', { name: 'Fascia cardio' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Come si collega/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Broadcast Heart Rate/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Polar, Wahoo, Garmin HRM/)).not.toBeInTheDocument()
   })
 })
 
