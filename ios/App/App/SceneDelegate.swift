@@ -2,9 +2,16 @@ import UIKit
 import Capacitor
 import AVFoundation
 
-// Da iOS 26 il ciclo di vita a UIScene non è più facoltativo: un'app compilata
-// con l'SDK nuovo che non lo adotta viene TERMINATA all'avvio
-// (__UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption, EXC_BREAKPOINT).
+// ⚠️ LA SCADENZA È iOS 27, NON iOS 26. Testuale da Apple («Transitioning to the
+// UIKit scene-based life cycle»): «Beginning in iOS 27 … apps built with the latest
+// SDK must adopt the scene-based life cycle or they fail to launch». Su iOS 26 il
+// sistema scrive soltanto «UIScene lifecycle will soon be required» nel log, e
+// l'app parte normalmente.
+// Chi vede un EXC_BREAKPOINT su
+// __UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption sta guardando il
+// *runtime issue breakpoint* di Xcode, che scatta solo col debugger attaccato: su
+// una build distribuita non esiste. È già costato un falso allarme il 21/09/2026,
+// con una build in revisione che si stava per ritirare senza motivo.
 // Questa classe è il template ufficiale di Capacitor 8.5.x, più la sessione audio
 // che prima viveva in applicationDidBecomeActive — metodo che con le scene
 // non viene più chiamato.

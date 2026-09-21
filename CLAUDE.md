@@ -292,7 +292,7 @@ Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **re
 | Icone | `lucide-react` |
 | Date | `date-fns` + locale `it` |
 | Backend | **Supabase** (Postgres + Auth + Storage + Realtime + Edge Functions) |
-| Mobile | **Capacitor 8** → target **iOS** (`ios/App`), niente cartella Android |
+| Mobile | **Capacitor 8.5.2** → target **iOS** (`ios/App`), niente cartella Android. ⚠️ Ciclo di vita a **UIScene** dal 21/09/2026 (§9-sextricies) |
 | Export | `jspdf` (PDF scheda), `html-to-image` (`toPng`/`toBlob`) per la story Instagram |
 | Superficie IA | `thinking-orbs` — l'orb dell'attesa (§9-untricies) · `border-beam` — il fascio su card e foglio (§9-duetricies). ⚠️ Entrambe MIT e senza dipendenze, ed **entrambe si importano solo da `CreateWorkout.jsx`**: mai da un file condiviso |
 | Push | FCM (iOS nativo, via `@capacitor-community/fcm` + Firebase Admin lato Edge Function) + Web Push VAPID (browser) |
@@ -4962,6 +4962,63 @@ Verificato per mutazione, e **due volte**: la prima rimetteva un
 venti i test, cioè il test era rosso **per il motivo sbagliato**, che vale quanto
 un verde per il motivo sbagliato. Con l'icona valida: **1 caduto su 20**.
 932 test in tutto (erano 935: quattro tolti, uno aggiunto).
+
+---
+
+## 9-sextricies. Il ciclo di vita a UIScene (21/09/2026)
+
+Migrazione fatta il 21/09 dopo il caricamento della build 6, e Capacitor portato
+da 8.3.4 a **8.5.2** (è la versione che porta `CAPSceneDelegateProxy`).
+
+### 🔴 LA SCADENZA È iOS 27, NON iOS 26 — e questa riga esiste per un falso allarme
+Testuale da Apple, *Transitioning to the UIKit scene-based life cycle*:
+
+> «Adopting the scene-based life cycle is required. **Beginning in iOS 27**,
+> iPadOS 27, Mac Catalyst 27, tvOS 27, and visionOS 27, apps built with the
+> latest SDK **must adopt** the scene-based life cycle **or they fail to
+> launch**.»
+
+E su iOS 26 il sistema scrive soltanto nel log: «UIScene lifecycle will soon be
+required. Failure to adopt will result in an assert in the future.»
+
+⚠️ **Un `EXC_BREAKPOINT` su
+`__UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption` non è il
+crash di produzione**: è il *runtime issue breakpoint* di Xcode, che scatta solo
+col debugger attaccato. Il 21/09/2026 quella lettura ha quasi fatto ritirare
+dalla revisione una build sana — la **6**, che non ha la migrazione e su iOS 26
+parte normalmente.
+
+### Le quattro porte della migrazione
+1. **`SceneDelegate.swift`** (nuovo) — template di Capacitor 8.5.x, più la
+   sessione audio `AVAudioSession` che prima stava in `applicationDidBecomeActive`.
+   🔴 Senza quello spostamento i **beep del timer guidato** non suonerebbero col
+   silenzioso inserito, e nessun errore lo direbbe.
+2. **`AppDelegate.swift`** — perde i metodi di ciclo di vita e
+   `application(_:open:)`. ⚠️ I deep link `fleofit://` (callback OAuth, reset
+   password) e gli universal link **non passano più di lì**: arrivano a
+   `scene(_:openURLContexts:)` e `scene(_:continue:)`, che li girano a
+   `SceneDelegateProxy`. Le **push restano** sull'AppDelegate, perché sono
+   dell'applicazione e non di una scena. Rimettere i vecchi metodi non dà errore:
+   semplicemente non li chiama più nessuno, in silenzio.
+3. **`Info.plist`** — `UIApplicationSceneManifest` con
+   `UISceneDelegateClassName = $(PRODUCT_MODULE_NAME).SceneDelegate`. Il nome
+   deve coincidere con la classe, o la scena non si aggancia.
+4. **`pbxproj`** — `SceneDelegate.swift` va referenziato a mano in **quattro**
+   punti (PBXFileReference, PBXBuildFile, il gruppo, la fase Sources): quel
+   progetto **non usa i gruppi sincronizzati col filesystem**, quindi un file
+   nuovo che non si aggiunge al target non viene compilato affatto — è la stessa
+   trappola di §9-sexvicies con Sign in with Apple.
+
+### Come si verifica, sul binario e non sul sorgente
+```bash
+/usr/libexec/PlistBuddy -c 'Print :UIApplicationSceneManifest' <App.app>/Info.plist
+strings <App.app>/App | grep -c '3App13SceneDelegate'   # 1 = la classe c'è
+```
+⚠️ `nm` su una build Release **non la trova**: i simboli sono strippati e il nome
+sopravvive solo nei metadati di reflection di Swift. E `strings | grep
+SceneDelegate` senza il modulo dà **19 occorrenze anche su una build NON
+migrata**, perché sono quelle di `CAPSceneDelegateProxy` dentro Capacitor: il
+mangled `3App13SceneDelegate` è l'unico che distingue la nostra classe.
 
 ---
 
