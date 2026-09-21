@@ -1761,6 +1761,14 @@ chiesto di non essere chiamato.
   nome, e l'app non chiede l'ATT) e **2.3.6** (l'age rating dichiara *In-App
   Controls* inesistenti). Solo il primo è codice, ed è chiuso il 21/09; gli altri
   due si correggono su App Store Connect. Tutto in §9-quatertricies.
+- **21 set 2026** — ✅ **build `1.1.0 (6)` archiviata, esportata e verificata.**
+  `xcodebuild archive` con `-derivedDataPath` su una cartella nuova (il *Clean
+  Build Folder* fatto in modo da non toccare la DerivedData di Xcode), poi
+  `-exportArchive` e `tools/verifica-ipa.sh`: **11 controlli su 11 verdi**,
+  compresi i due nuovi — nessuna traccia di HealthKit e nessuna di Bluetooth,
+  verificate con `otool -L` sul binario. ⚠️ Il `pbxproj` dichiarava
+  `CURRENT_PROJECT_VERSION = 3` e l'ipa è uscito **6**: è la rinumerazione
+  automatica descritta qui sotto, che ha funzionato per la terza volta.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non
