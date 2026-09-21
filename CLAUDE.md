@@ -2,7 +2,7 @@
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **9 settembre 2026**.
+> Ultimo aggiornamento: **21 settembre 2026**.
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
 > Ultimo commit su `ios-version`: **9 set 2026**, che porta gli **stati senza storico** della
@@ -13,6 +13,15 @@
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
 > `npm test` → **935 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> 🔴 **Il 20/09 App Store ha respinto la 1.0 (5) con TRE rilievi insieme** (§9-quatertricies),
+> e **uno solo è codice**: la **2.5.1** — HealthKit linkato al binario senza una funzione
+> che lo giustifichi — chiusa il 21/09 togliendo Apple Health da tutte e cinque le porte
+> da cui entra (codice, bottone, `Info.plist`, entitlement, **plugin npm**). Gli altri due
+> sono caselle sbagliate su **App Store Connect** e nel repository non c'è niente da
+> correggere: la **5.1.2(i)** — le etichette privacy dichiarano *tracking* su email e nome,
+> e l'app **non traccia** (verificato: nessun SDK pubblicitario, nessun IDFA, Firebase solo
+> come Messaging) — e la **2.3.6** — l'age rating dichiara *In-App Controls* che non
+> esistono. ⚠️ Aggiungere l'ATT sarebbe la correzione **sbagliata**.
 > ⭐ **Il 09/09 gli stimatori di durata sono diventati UNO** (§9-undetricies, BACKLOG #40
 > chiuso): lo stesso allenamento diceva **58 minuti nella Home e 24 nella scheda**, e il
 > difetto è saltato fuori mettendo due screenshot del simulatore uno accanto all'altro.
@@ -212,7 +221,7 @@ per conto suo. Un merge produrrà conflitti reali lì dentro, non banali da riso
 
 ### Cosa c'è davvero solo su `ios-version` (verificato su `origin/main` il 25/08/2026)
 Assenti da `main`: tutta la cartella `ios/`, `capacitor.config.ts`, `privacy-policy.html`,
-`src/pages/bluetooth.js` (fascia cardio BLE), `src/pages/health.js` (Apple Health),
+`src/pages/bluetooth.js` (fascia cardio BLE),
 `supabase/functions/ai-workout/` (generazione IA), `src/lib/blockHints.js`, l'**RPE**, la
 **Live Coach Cam**, la **modalità Offline** (ex "Bunker"), push FCM native, centro notifiche + badge.
 Aggiunti il 25-26/08 e ancora solo qui: **tutta l'infrastruttura di test**
@@ -295,7 +304,7 @@ Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **re
 `push-notifications`, `screen-orientation`, `share`, `status-bar`,
 `@capacitor-community/bluetooth-le` (fascia cardio), `keep-awake` (TV), `media` (salva in galleria),
 `apple-sign-in` (Sign in with Apple, §9-sexvicies),
-`fcm`, `@capawesome/capacitor-badge` (badge icona), `@capgo/capacitor-health` (Apple Health),
+`fcm`, `@capawesome/capacitor-badge` (badge icona),
 `@independo/capacitor-voice-recorder` + `capacitor-voice-recorder` (⚠️ **due librerie audio diverse**,
 vedi §9).
 
@@ -350,7 +359,7 @@ Per testare su iPhone in dev live: scommentare `server.url` in `capacitor.config
 ## 3. Struttura dei file
 
 > Struttura del branch `ios-version`. Su `main` mancano `ios/`, `capacitor.config.ts`,
-> `privacy-policy.html`, `bluetooth.js`, `health.js`, `src/lib/` e la Edge Function `ai-workout`.
+> `privacy-policy.html`, `bluetooth.js`, `src/lib/` e la Edge Function `ai-workout`.
 > ⚠️ `TVDashboard.jsx` **c'è anche su `main`**, in una versione diversa (§1.1).
 
 ```
@@ -492,7 +501,6 @@ src/
    ├─ Settings.jsx             # notifiche, backup/restore JSON, codici invito, BLE, password
    ├─ TVDashboard.jsx          # /tv — dashboard fullscreen per TV/Chromecast, codice a 4 cifre
    ├─ bluetooth.js             # BluetoothService — singleton BLE fascia cardio
-   ├─ health.js                # HealthService (Apple Health)
    ├─ motivations.js           # 15 frasi motivazionali + getDailyMotivation() con anti-ripetizione
    └─ __tests__/               # 157 test su componenti e pagine montate (§9 punto 11)
 tools/                            # non entra nell'app: serve alle verifiche pre-submission
@@ -1055,8 +1063,9 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   anti-ripetizione sulle ultime 10), banner countdown prossimo evento, **slider a 2 pagine**
   (settimana a pallini colorati per categoria/stato ↔ statistiche settimanali: tempo, completati,
   RPE medio), workout di oggi, prossimi allenamenti, scorciatoie, archivio.
-- **Completamento workout** → apre la **modale RPE**: slider 1-10 draggabile + note + pulsante
-  **🍏 Apple Health** che appende durata/calorie/battiti medi alle note.
+- **Completamento workout** → apre la **modale RPE**: slider 1-10 draggabile + note.
+  ⚠️ Il pulsante **🍏 Apple Health** è sparito il 21/09/2026 con tutto HealthKit: era il
+  rilievo **2.5.1** di Apple, e rimetterlo respinge la build (§9-quatertricies).
 - **Allenamento libero**: l'atleta crea un workout Custom autonomo con titolo, data e note.
 - **Modalità Offline**: `@capacitor/network` rileva l'assenza di rete → banner arancione,
   le azioni finiscono in `localStorage.fleofit_offline_queue` e vengono sincronizzate al ritorno
@@ -1747,6 +1756,12 @@ chiesto di non essere chiamato.
   Login Services**, cioè Google senza un'alternativa che permetta di nascondere la
   propria email. Non è una ricaduta del 2.3.1(a). Chiuso il 03/09 con Sign in with
   Apple (§9-sexvicies), **senza togliere Google**.
+- **20 set 2026** — 🔴 **respinta una terza volta, con TRE rilievi insieme** sulla
+  build `1.0 (5)`: **2.5.1** (HealthKit linkato senza una funzione primaria che lo
+  giustifichi), **5.1.2(i)** (le etichette privacy dichiarano *tracking* su email e
+  nome, e l'app non chiede l'ATT) e **2.3.6** (l'age rating dichiara *In-App
+  Controls* inesistenti). Solo il primo è codice, ed è chiuso il 21/09; gli altri
+  due si correggono su App Store Connect. Tutto in §9-quatertricies.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non
@@ -1825,11 +1840,19 @@ della configurazione Debug).
 
 > **Controlli obbligatori prima di ogni archive.** Il primo è quello che è mancato a maggio;
 > il secondo è stato aggiunto il 09/09/2026, dopo che il seme dell'ambiente di prova è
-> arrivato fino a una build in preparazione senza che niente lo segnalasse (§9-quinvicies).
+> arrivato fino a una build in preparazione senza che niente lo segnalasse (§9-quinvicies);
+> il terzo il 21/09/2026, dopo il rilievo **2.5.1** (§9-quatertricies).
 > ```bash
 > grep -l "demo@fleofit.it" dist/assets/*.js                                  # DEVE stampare un file
 > grep -l "AMBIENTE DI PROVA\|at-sara\|fleofit_demo_db" ios/App/App/public/assets/*.js   # NON deve stampare niente
+> grep -rl "Apple Health\|NSHealth\|capacitor-health\|developer.healthkit" ios/App/App/public/assets/ ios/App/App/*.plist ios/App/App/App.entitlements ios/App/CapApp-SPM/Package.swift   # NON deve stampare niente
 > ```
+> ⚠️ Il terzo cerca i **marcatori**, non la parola «health»: `@supabase/realtime-js`
+> porta nel bundle un `primaryPassedHealthCheck` che con un grep generico fa scattare
+> l'allarme a ogni build — e un controllo che grida sempre è un controllo che si smette
+> di leggere. ⚠️ Ed è solo un'anticipazione: HealthKit entra nel binario anche da un
+> plugin che nessuno chiama, e lì lo vede solo `otool -L` sull'`.ipa` esportato — è il
+> controllo **10** di `tools/verifica-ipa.sh`.
 > ⚠️ Il secondo si fa su `ios/App/App/public`, non su `dist`: è quella la copia che Xcode
 > compila, e le due divergono ogni volta che si salta `npx cap sync ios` (§2).
 > Attenzione a `grep -c` su più file: stampa una riga per file (quasi tutte `:0`) ed esce con
@@ -4688,6 +4711,139 @@ nuove. Stessa lezione del bordo di `CARTA_RIGA` (§9-octodecies).
 ⚠️ Il test che conta di più apre il **PRIMO** blocco mentre è aperto l'ultimo:
 aprendo l'ultimo la pagina cresce solo sotto e il titolo resta dov'era **anche
 senza la correzione**, quindi quel caso non prende niente.
+
+---
+
+## 9-quatertricies. Il rifiuto del 20/09/2026: HealthKit, ATT e il rating (21/09/2026)
+
+Terza bocciatura della stessa versione — build **1.0 (5)** — e per la prima
+volta con **tre rilievi insieme**. La cosa da sapere prima di aprire un file:
+**uno solo è codice.**
+
+| rilievo | cosa dice | dove si corregge |
+|---|---|---|
+| **2.5.1** | il binario contiene riferimenti a HealthKit e l'app non ha una funzione primaria che li giustifichi | **codice** |
+| **5.1.2(i)** | le etichette privacy dichiarano *tracking* su Email e Nome, e l'app non chiede il permesso ATT | **App Store Connect** |
+| **2.3.6** | l'age rating dichiara *In-App Controls* che nell'app non si trovano | **App Store Connect** |
+
+⚠️ La lettera scrive «Version reviewed: 1.0 (5)»: è il **record** 1.0 con il
+**build** 5, non un declassamento, e `MARKETING_VERSION` non va riportato a 1.0.
+È la stessa confusione già annotata in §9-ter, alla seconda comparsa.
+
+### 🔴 2.5.1 — Apple Health è uscito del tutto, e non è una perdita
+Il rilievo è letterale, e aveva ragione. Apple Health era **un bottoncino da
+11px dentro la modale RPE**: premuto, leggeva l'ultimo allenamento della
+giornata da Salute e **appendeva una riga di testo alle note**
+(`🍏 [Apple Health] Durata: … | Calorie: … | Battiti Medi: …`). Nient'altro
+nell'app lo leggeva: non le statistiche, non il carico, non il report. Quella
+riga finiva in `athlete_workouts.notes` come testo libero accanto al marcatore
+`[RPE: n/10]`, e da lì non tornava mai indietro.
+
+Cioè: il permesso più delicato che iOS conceda, chiesto per scrivere una frase.
+
+Non è stato disattivato, è stato **rimosso da tutte e cinque le porte** da cui
+HealthKit entra in un'app Capacitor. Servono tutte e cinque, perché Apple guarda
+il **binario** e ne basta una aperta:
+1. `src/pages/health.js` (`HealthService`) — cancellato;
+2. il bottone «🍏 Apple Health» e `handleHealthSync` in `RpeModal.jsx` (con
+   loro se n'è andato l'import di `mostraErrore`, che serviva solo a quello);
+3. `NSHealthShareUsageDescription` e `NSHealthUpdateUsageDescription` in
+   `ios/App/App/Info.plist`;
+4. `com.apple.developer.healthkit` in `ios/App/App/App.entitlements`;
+5. il plugin **`@capgo/capacitor-health`** — `npm uninstall`, poi
+   `npx cap sync ios` riscrive `CapApp-SPM/Package.swift` da sé: **19 plugin
+   → 18**.
+
+🔴 **Il punto 5 è quello che si dimentica, ed è l'unico che da solo fa respingere
+la build.** Senza codice, senza entitlement e senza chiavi d'uso, un plugin
+ancora elencato in `Package.swift` **linka comunque `HealthKit.framework`** al
+binario, e `otool -L` lo dichiara. Il rilievo parla di *riferimenti nel binario*,
+non di codice raggiungibile: un `if (false)` non salva nessuno.
+⚠️ **`Package.swift` non si modifica a mano** — porta scritto «DO NOT MODIFY —
+managed by Capacitor CLI». Si toglie il pacchetto npm e si sincronizza, o la
+prossima `cap sync` lo rimette.
+
+**Cosa NON è stato toccato, e per buone ragioni:**
+- la **fascia cardio BLE** (`src/pages/bluetooth.js`) è **Core Bluetooth**, non
+  HealthKit: legge i battiti dal dispositivo in tempo reale, non dall'archivio
+  Salute, e resta dov'è;
+- `LSApplicationCategoryType = public.app-category.healthcare-fitness` nel
+  `pbxproj` resta: è la **categoria dello Store** di un'app di allenamento, non
+  un riferimento a HealthKit. Toglierla non risponde a niente e sposta l'app
+  in uno scaffale sbagliato.
+
+**Il controllo 10 di `tools/verifica-ipa.sh`** guarda ora **quattro** tracce
+sull'`.ipa` esportato — entitlement, chiavi `NSHealth*`, `otool -L` e la scritta
+«Apple Health» nel bundle web — perché escono in momenti diversi e ognuna da
+sola è mezza verità. È la stessa lezione del seme dell'ambiente di prova
+(§9-quinvicies), che il controllo di allora lasciava passare proprio così.
+
+### 🔴 5.1.2(i) — l'app NON traccia: a mentire sono le etichette
+Il rilievo si legge male, e la lettura sbagliata costa una funzione inutile:
+sembra chiedere di **aggiungere** l'App Tracking Transparency. Non è così. Apple
+confronta due cose — cosa dichiari su App Store Connect e cosa fa il binario — e
+qui a essere sbagliata è la **dichiarazione**: qualcuno ha spuntato
+*Used for Tracking* su **Email Address** e **Name**.
+
+«Tracking», per Apple, ha una definizione stretta: collegare i dati dell'app con
+dati di **terze parti** a fini pubblicitari, oppure cederli a un **data broker**.
+Verificato in questa sessione, ed è no su tutta la linea:
+- **nessun SDK pubblicitario o di attribuzione** fra le dipendenze;
+- **nessun IDFA**: zero occorrenze di `ASIdentifierManager` / `AdSupport` /
+  `advertisingIdentifier` nei plugin nativi, e nessun
+  `NSUserTrackingUsageDescription` in `Info.plist` — l'app non ha mai avuto
+  nemmeno il modo di chiedere quel permesso;
+- **Firebase c'è solo come `FirebaseMessaging`**, e lo dichiara il
+  `Package.swift` del plugin `@capacitor-community/fcm` (un solo `.product`).
+  `GoogleService-Info.plist` ha `IS_ANALYTICS_ENABLED = false` e
+  `IS_ADS_ENABLED = false`.
+
+Email e nome servono a far entrare l'atleta e a chiamarlo per nome. Sono
+**Linked to You** — vero, e va dichiarato — ma **non** *Used for Tracking*.
+
+**Il gesto** (serve il ruolo Account Holder o Admin): App Store Connect → l'app →
+**App Privacy** → per **ogni** tipo di dato raccolto → *Used for Tracking* =
+**No** → Salva. Poi rispondere nel **Resolution Center** che l'app non traccia su
+nessuna piattaforma — Apple lo chiede esplicitamente nella seconda delle tre vie
+d'uscita che elenca.
+
+⚠️ **Aggiungere l'ATT sarebbe la correzione sbagliata**, e va detto perché è la
+prima che viene in mente: chiedere un permesso che non serve a niente è a sua
+volta un rilievo, e regala all'utente una schermata di sistema che non ha nessun
+effetto su nessun comportamento dell'app.
+
+### 🔴 2.3.6 — «In-App Controls» spuntato per sbaglio
+Stessa forma del precedente: una casella del **nuovo age rating** dichiara che
+l'app offre controlli parentali o un meccanismo di verifica dell'età. Non ne ha —
+niente PIN, niente limite di tempo, niente age gate. `athletes.birth_date` serve
+a scrivere «29 anni» nella scheda, non a sbarrare l'accesso a qualcosa.
+
+**Il gesto**: App Store Connect → l'app → **App Information** → **Age Rating** →
+Modifica → **Age Assurance / In-App Controls** = **None**.
+
+### ⚠️ Due cose che stanno fuori dal repository e vanno controllate
+1. **La descrizione sullo Store, le novità e gli screenshot.** Se citano «Apple
+   Health» o «Salute», vanno ripuliti anche loro: il 2.5.1 dice esplicitamente
+   *«as well as any references … from the app or its metadata»*, e una
+   descrizione che promette una funzione che non c'è è per giunta un **2.3.1**.
+2. **L'App ID su Apple Developer** ha ancora la capability *HealthKit* spuntata.
+   Non basta a far respingere la build — l'entitlement lo chiede il progetto, e
+   non lo chiede più — ma toglierla è l'unico modo di essere certi che non
+   rientri da una rigenerazione del provisioning profile. ⚠️ Toglierla invalida i
+   profili esistenti: con la firma automatica Xcode li rigenera, e serve comunque
+   un **Product → Clean Build Folder**, esattamente come per Sign in with Apple
+   (§9-sexvicies).
+
+### Cosa cambia per l'atleta, e cosa succederebbe rimettendolo
+Una riga in meno nella modale RPE, e nient'altro: le note già scritte che
+contengono `🍏 [Apple Health] …` restano testo e continuano a leggersi ovunque.
+
+Se un giorno quei numeri dovranno tornare, **la forma che Apple accetta non è il
+bottoncino**. Il 2.5.1 chiede una funzione *primaria*: scrivere l'allenamento
+**dentro** Salute a fine sessione — cioè `HKWorkout` con durata, calorie e
+battiti, che è la ragione per cui esiste `NSHealthUpdateUsageDescription`, quella
+che l'app dichiarava e non usava — e rileggerne i battiti per il report. È un
+pezzo di prodotto, non una scorciatoia dentro una modale. Voce in BACKLOG.
 
 ---
 

@@ -10,7 +10,7 @@ import { PushNotifications } from '@capacitor/push-notifications'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
 
-// Caricate su richiesta: l'avvio non deve pagare PDF, IA, BLE, TV e Health.
+// Caricate su richiesta: l'avvio non deve pagare PDF, IA, BLE e TV.
 const Calendar = lazy(() => import('./pages/Calendar'))
 const TVDashboard = lazy(() => import('./pages/TVDashboard'))
 const CreateWorkout = lazy(() => import('./pages/CreateWorkout'))

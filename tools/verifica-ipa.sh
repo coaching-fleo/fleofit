@@ -106,4 +106,27 @@ for traccia in "AMBIENTE DI PROVA" "at-sara" "fleofit_demo_db"; do
 done
 [[ $RESIDUI -eq 0 ]] && echo "✅ nessuna traccia dell'ambiente di prova"
 
+# 10. HealthKit — il rilievo 2.5.1 del 20/09/2026 (CLAUDE.md §9-quatertricies).
+#     Apple guarda il BINARIO, non il sorgente: basta che il framework resti
+#     linkato o che una chiave NSHealth* sopravviva nell'Info.plist perché la
+#     build venga respinta, anche senza una riga di codice che lo chiami. Le
+#     quattro tracce escono in momenti diversi — il plugin, l'entitlement, le
+#     stringhe d'uso e il link al framework — e ognuna da sola è mezza verità.
+SALUTE=0
+if print -r -- "$ENT" | grep -q "com.apple.developer.healthkit"; then
+  echo "❌ HealthKit: entitlement ancora presente"; SALUTE=$((SALUTE + 1))
+fi
+for chiave in NSHealthShareUsageDescription NSHealthUpdateUsageDescription; do
+  if /usr/libexec/PlistBuddy -c "Print :$chiave" "$APP/Info.plist" >/dev/null 2>&1; then
+    echo "❌ HealthKit: $chiave ancora nell'Info.plist"; SALUTE=$((SALUTE + 1))
+  fi
+done
+if otool -L "$BIN" 2>/dev/null | grep -q "HealthKit.framework"; then
+  echo "❌ HealthKit: framework ancora linkato al binario"; SALUTE=$((SALUTE + 1))
+fi
+if grep -rqs -- "Apple Health" "$APP" 2>/dev/null; then
+  echo "❌ HealthKit: la scritta «Apple Health» è ancora nel bundle web"; SALUTE=$((SALUTE + 1))
+fi
+[[ $SALUTE -eq 0 ]] && echo "✅ HealthKit: nessuna traccia (entitlement, Info.plist, framework, bundle)"
+
 rm -rf "$TMP"
