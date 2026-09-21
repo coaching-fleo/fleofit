@@ -4801,11 +4801,33 @@ Verificato in questa sessione, ed è no su tutta la linea:
 Email e nome servono a far entrare l'atleta e a chiamarlo per nome. Sono
 **Linked to You** — vero, e va dichiarato — ma **non** *Used for Tracking*.
 
-**Il gesto** (serve il ruolo Account Holder o Admin): App Store Connect → l'app →
-**App Privacy** → per **ogni** tipo di dato raccolto → *Used for Tracking* =
-**No** → Salva. Poi rispondere nel **Resolution Center** che l'app non traccia su
-nessuna piattaforma — Apple lo chiede esplicitamente nella seconda delle tre vie
-d'uscita che elenca.
+**Il gesto**, con le diciture lette sul pannello vero il 21/09/2026 — che è **in
+italiano**, mentre la guida Apple esiste solo in inglese, quindi le sue stringhe
+a schermo non si trovano. Barra laterale → **Privacy dell'app** → sezione
+**Tipologia di dati** → **Modifica** sulla riga del dato. Il flusso ha cinque
+passi e conta l'ultimo: *«Tu o i tuoi partner di terze parti utilizzate i nomi a
+scopo di monitoraggio?»* → **«No, non utilizziamo i nomi a scopo di
+monitoraggio»**. 🔴 Il bottone finale si chiama **«Pubblica»**, non «Salva»: va
+sulla scheda pubblica all'istante. Poi rispondere nel **Resolution Center** che
+l'app non traccia su nessuna piattaforma — Apple lo chiede esplicitamente nella
+seconda delle tre vie d'uscita che elenca.
+
+**Lo stato trovato il 21/09/2026.** Nove tipologie dichiarate, tutte con utilizzo
+«Funzionalità dell'app» e tutte collegate all'identità; **solo Nome e Indirizzo
+email** portano «*Si utilizzano a scopo di monitoraggio*», cioè esattamente i due
+della lettera e nessun altro. Le altre sette: Salute, Fitness, Informazioni
+sensibili, Email o messaggi, Foto o video, Dati audio, ID utente.
+
+🔴 **«Salute» NON si toglie, anche se HealthKit è uscito**, ed è il contrario
+di quello che sembra. La **fascia cardio BLE** mette `heartRate` nel payload
+Realtime del timer (`WorkoutDetail.jsx`, dentro `WorkoutTimer`), che va alla TV e
+alla Live Coach Cam: il battito lascia il dispositivo e arriva a un altro utente,
+quindi è raccolta di un dato sanitario. Toglierla sarebbe una
+**sotto**-dichiarazione, cioè un 5.1.2 peggiore di quello che si sta chiudendo.
+⚠️ «**Informazioni sensibili**» sembra invece dichiarata di troppo — per Apple
+significa origine etnica, orientamento sessuale, convinzioni religiose, dati
+biometrici o genetici — ma non è nel rilievo, e non si tocca mentre si risponde
+a un rifiuto.
 
 ⚠️ **Aggiungere l'ATT sarebbe la correzione sbagliata**, e va detto perché è la
 prima che viene in mente: chiedere un permesso che non serve a niente è a sua
@@ -4818,14 +4840,32 @@ l'app offre controlli parentali o un meccanismo di verifica dell'età. Non ne ha
 niente PIN, niente limite di tempo, niente age gate. `athletes.birth_date` serve
 a scrivere «29 anni» nella scheda, non a sbarrare l'accesso a qualcosa.
 
-**Il gesto**: App Store Connect → l'app → **App Information** → **Age Rating** →
-Modifica → **Age Assurance / In-App Controls** = **None**.
+**Il gesto**, in italiano: **Informazioni sull'App** → sezione **Età consigliata**
+→ **Classificazioni per età dell'app** → **Modifica** → **Parte 1:
+caratteristiche** → blocco **Controlli in-app**, due righe con interruttori
+**NO / SÌ**: *Controlli parentali* (già su NO il 21/09) e **«Verifica
+dell'età»** — che è il nome italiano di *Age Assurance*, ed era su **SÌ**. Va
+messa su **NO**, poi **Avanti** fino in fondo e **Salva**.
+
+⚠️ **Sotto, nel blocco «Capacità», altre due voci erano su SÌ e quasi certamente
+sono la ragione del 16+** (17+ sui sistemi precedenti alla 26): *Accesso al web
+senza limitazioni* — l'app apre solo i link Instagram/Strava del profilo — e
+*Contenuti generati dagli utenti*, la cui definizione Apple richiede l'«**ampia
+distribuzione**» di contenuti, mentre qui note e vocali restano fra il coach e
+quel solo atleta. *Messaggistica e chat* = SÌ è invece corretto: sono le note
+vocali. 🔴 **Non si cambiano nella stessa passata**: dichiarare UGC = NO su
+un'app con comunicazione fra utenti è il genere di risposta che Apple guarda da
+vicino (la **1.2** chiede moderazione, segnalazione e blocco a chi dichiara UGC),
+e qui si sta rispondendo a un rifiuto. Il 16+ si sistema dopo l'approvazione,
+quando sbagliare costa un ciclo di revisione e non una quarta bocciatura.
 
 ### ⚠️ Due cose che stanno fuori dal repository e vanno controllate
-1. **La descrizione sullo Store, le novità e gli screenshot.** Se citano «Apple
-   Health» o «Salute», vanno ripuliti anche loro: il 2.5.1 dice esplicitamente
-   *«as well as any references … from the app or its metadata»*, e una
-   descrizione che promette una funzione che non c'è è per giunta un **2.3.1**.
+1. ✅ **La descrizione sullo Store è già pulita**, verificato sul pannello il
+   21/09/2026: né la descrizione, né le parole chiave, né il testo promozionale
+   citano «Apple Health» o «Salute». Andava controllato perché il 2.5.1 dice
+   *«as well as any references … from the app or its metadata»*, e una descrizione
+   che promette una funzione che non c'è è per giunta un **2.3.1**. Restano da
+   guardare a occhio i **4 screenshot**.
 2. **L'App ID su Apple Developer** ha ancora la capability *HealthKit* spuntata.
    Non basta a far respingere la build — l'entitlement lo chiede il progetto, e
    non lo chiede più — ma toglierla è l'unico modo di essere certi che non
