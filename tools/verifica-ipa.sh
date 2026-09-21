@@ -149,4 +149,23 @@ if grep -rqs -- "BleClient" "$APP" 2>/dev/null; then
 fi
 [[ $BLE -eq 0 ]] && echo "✅ Bluetooth: nessuna traccia (Info.plist, framework, bundle)"
 
+# 12. Ciclo di vita a UIScene (§9-sextricies). 🔴 Da **iOS 27** un'app compilata
+#     con l'SDK più recente che non lo adotta **non parte**, testuale da Apple.
+#     Su iOS 26 è solo una riga di log, quindi il difetto non si vede provando
+#     l'app: si vede qui, o fra un anno addosso a tutti gli utenti insieme.
+#     ⚠️ Il conteggio usa il nome Swift MANGLED del nostro modulo. Un
+#     `grep SceneDelegate` generico dà **19 occorrenze anche su una build NON
+#     migrata**, perché sono quelle di CAPSceneDelegateProxy dentro Capacitor.
+SCENE=0
+CLASSE=$(/usr/libexec/PlistBuddy -c 'Print :UIApplicationSceneManifest:UISceneConfigurations:UIWindowSceneSessionRoleApplication:0:UISceneDelegateClassName' "$APP/Info.plist" 2>/dev/null)
+if [[ -z "$CLASSE" ]]; then
+  echo "❌ UIScene: nessun UIApplicationSceneManifest nell'Info.plist"; SCENE=$((SCENE + 1))
+fi
+if ! strings "$BIN" 2>/dev/null | grep -q '3App13SceneDelegate'; then
+  echo "❌ UIScene: la classe App.SceneDelegate NON è nel binario"
+  echo "   (il file non è nel target: il pbxproj non usa i gruppi sincronizzati)"
+  SCENE=$((SCENE + 1))
+fi
+[[ $SCENE -eq 0 ]] && echo "✅ UIScene: adottato ($CLASSE nel manifest e nel binario)"
+
 rm -rf "$TMP"
