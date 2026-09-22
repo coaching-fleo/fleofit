@@ -20,7 +20,8 @@ import { andamentoAtleta, GIORNI_ADERENZA } from '../lib/andamento'
 import { previsioneWorkout } from '../lib/previsione'
 import { RigaAvviso, AvvisoEsteso } from '../components/PrevisioneUI'
 import { coloreCategoria } from '../lib/colori'
-import { CARD, RIGA } from '../lib/stiliCard'
+import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
+         RIGA, TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
 import { TestataScheda, MenuScheda, IntestazioneSezione } from '../components/WorkoutDetailUI'
 import { BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import {
@@ -803,25 +804,25 @@ export default function AthleteDetail() {
 
       {/* MODAL CONFERMA RIMOZIONE WORKOUT */}
       {workoutToRemove && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
-            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
-              <AlertTriangle size={32} />
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+          <div role="dialog" aria-modal="true" aria-label="Sei sicuro?" className={CARTA_MODALE}>
+            <div className={`${BOLLA_MODALE} ${TONO_BOLLA.errore}`}>
+              <AlertTriangle size={26} aria-hidden="true" />
             </div>
-            <h2 className="text-xl font-bold text-white">Sei sicuro?</h2>
-            <p className="text-gray-400 text-sm">
+            <h2 className={TITOLO_MODALE}>Sei sicuro?</h2>
+            <p className={TESTO_MODALE}>
               Questa azione eliminerà l'allenamento e non può essere annullata.
             </p>
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-3 mt-2">
               <button 
                 onClick={() => setWorkoutToRemove(null)}
-                className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition"
+                className={BOTTONE_QUIETO}
               >
                 Annulla
               </button>
               <button 
                 onClick={confirmRemoveWorkout}
-                className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-500 transition"
+                className={BOTTONE_PERICOLO}
               >
                 Elimina
               </button>
@@ -904,8 +905,8 @@ export default function AthleteDetail() {
 
       {/* MODAL ALLENAMENTO AUTONOMO */}
       {autonomousModalOpen && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+          <div className={`${CARD} w-full max-w-sm p-6 flex flex-col gap-4 modal-transition`}>
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">{autonomousForm.id ? 'Modifica Allenamento' : 'Allenamento Libero'}</h2>
                <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-muted hover:text-white"><X size={20} /></button>
@@ -1023,8 +1024,8 @@ function SocialLinkModal({ athlete, type, onClose, onSaved }) {
   const isInsta = type === 'instagram'
 
   return (
-    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+      <div className={`${CARD} w-full max-w-sm flex flex-col modal-transition`}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Aggiungi {isInsta ? 'Instagram' : 'Strava'}</p>
           <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
@@ -1224,8 +1225,8 @@ function PrModal({ athleteId, initialPr, onClose, onSaved, onDelete }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+      <div className={`${CARD} w-full max-w-sm flex flex-col modal-transition`}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">{initialPr ? 'Modifica PR' : 'Aggiungi PR'}</p>
           <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
@@ -1374,8 +1375,8 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role, proprioPr
   }
 
   return (
-    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+      <div className={`${CARD} w-full max-w-md flex flex-col modal-transition`} style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Modifica Atleta</p>
           <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
@@ -1701,8 +1702,8 @@ function AssignWorkoutModal({ athleteId, atleta, storico, onClose, onAssigned })
     [atleta, storico, filtered, assignDate])
 
   return (
-    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+      <div className={`${CARD} w-full max-w-md flex flex-col modal-transition`} style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Assegna Workout</p>
           <button aria-label="Chiudi" onClick={() => { onClose(); setSelectedWorkouts([]); setAssignStep(1); }} className="text-muted hover:text-white"><X size={20} /></button>
@@ -1825,8 +1826,8 @@ function AssignWorkoutModal({ athleteId, atleta, storico, onClose, onAssigned })
 
       {/* MODAL ANTEPRIMA WORKOUT */}
       {previewWorkout && (
-        <div className="fixed inset-0 bg-black/90 z-[110] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col border border-[#333] animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 40px)' }}>
+        <div className="fixed inset-0 bg-black/90 z-[110] flex items-center justify-center p-4 velo-in">
+          <div className={`${CARD} w-full max-w-md flex flex-col modal-transition`} style={{ maxHeight: 'calc(100vh - 40px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg truncate pr-4">{previewWorkout.title}</p>
               <button aria-label="Chiudi l'anteprima" onClick={() => setPreviewWorkout(null)} className="text-muted hover:text-white shrink-0"><X size={20} /></button>

@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { montaPagina, oggi } from '../../test/montaPagina'
 import { CHIAVE_CODA, chiaveCacheWorkout } from '../../lib/offlineQueue'
+import { CARD } from '../../lib/stiliCard'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -274,3 +275,24 @@ describe('il conteggio delle notifiche non lette è DERIVATO, non tenuto a mano'
   })
 })
 
+describe('La modale RPE entra come le altre', () => {
+  // 🔴 È la modale più usata dell'app — la apre ogni completamento — ed è stata
+  // l'ultima a non avere un'entrata: `animate-in fade-in zoom-in-[0.96]` viene
+  // da tw-animate-css, che NON è installato e genera zero CSS.
+  // ⚠️ Porta anche `-translate-y-36` quando la tastiera sale. In Tailwind 4
+  // quell'utility scrive la proprietà `translate`, non `transform`, quindi non
+  // litiga con il keyframe — ma il test tiene ferma la classe che la trasporta:
+  // perderla vorrebbe dire il campo note sotto la tastiera, senza errori.
+  it('dichiara un keyframe che esiste, il velo che sfuma e lo spostamento tastiera', async () => {
+    montaPagina(<Home />)
+    await attendiCaricamento()
+    await userEvent.click(screen.getByRole('button', { name: /^Completa$/ }))
+
+    const carta = (await screen.findByRole('button', { name: /Fatto!/ })).closest('.modal-transition')
+    expect(carta).not.toBeNull()
+    expect([...carta.classList].some((c) => c.startsWith('animate-in'))).toBe(false)
+    CARD.split(' ').forEach((classe) => expect(carta).toHaveClass(classe))
+    expect(carta).toHaveClass('transition-transform')
+    expect(carta.parentElement).toHaveClass('velo-in')
+  })
+})

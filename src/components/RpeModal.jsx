@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Puntini } from './Puntini'
+import { CARD } from '../lib/stiliCard'
 
 export default function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving }) {
   const [isFocused, setIsFocused] = useState(false);
@@ -70,8 +71,8 @@ export default function RpeModal({ score, onScoreChange, notes, onNotesChange, o
     return 'Massimale 🔴';
   }
   return (
-    <div className="fixed inset-0 bg-black/85 z-[150] flex items-center justify-center p-4">
-      <div className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isFocused ? '-translate-y-36' : ''}`}>
+    <div className="fixed inset-0 bg-black/85 z-[150] flex items-center justify-center p-4 velo-in">
+      <div className={`${CARD} w-full max-w-sm p-6 flex flex-col modal-transition transition-transform ${isFocused ? '-translate-y-36' : ''}`}>
         <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Com'è andata?</h2>
         <p className="text-gray-400 text-sm mb-6">Valuta lo sforzo percepito (RPE) e aggiungi eventuali note per il coach.</p>
         <div className="flex flex-col gap-2 mb-6">

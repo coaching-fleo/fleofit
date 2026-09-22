@@ -15,6 +15,7 @@ import { FCM } from '@capacitor-community/fcm'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { CHIAVE_ULTIMO_EXPORT, etichettaRuolo, riassuntoBackup, riassuntoCodici } from '../lib/rigaImpostazioni'
+import { CARD } from '../lib/stiliCard'
 import {
   BottoneEsci, CartaAccount, FoglioCodici, PiediPagina, RigaAzione, RigaInterruttore,
   RigaPericolo, RigaPieghevole, Separatore, Sezione, TestataImpostazioni,
@@ -722,8 +723,8 @@ function PasswordModal({ onClose, user, setAlertInfo }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+      <div className={`${CARD} w-full max-w-sm flex flex-col modal-transition`}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold text-lg">Modifica Password</p>
           <button aria-label="Chiudi" type="button" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>

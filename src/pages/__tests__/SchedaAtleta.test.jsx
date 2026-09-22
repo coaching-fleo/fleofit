@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { montaPagina, oggi } from '../../test/montaPagina'
+import { CARTA_MODALE } from '../../lib/stiliCard'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -249,5 +250,26 @@ describe('La cancellazione del proprio account è salita in Impostazioni', () =>
     await apriModifica()
 
     expect(await screen.findByText('Elimina profilo atleta')).toBeInTheDocument()
+  })
+})
+
+describe('I dialoghi centrati', () => {
+  // 🔴 Stessa storia di `WorkoutDetail`: fino al 22/09/2026 le sette modali di
+  // questa pagina dichiaravano `animate-in fade-in zoom-in-[0.96]`, cioè
+  // tw-animate-css, che NON è installato e genera zero CSS. L'entrata non
+  // c'era, e la carta era quella di prima del rework.
+  it('la conferma di rimozione entra davvero, e il velo sfuma con lei', async () => {
+    dati.assegnazioni = [riga(giorno(2), 'pending')]
+    comeCoach()
+    await attendi()
+    await userEvent.click(screen.getAllByLabelText("Elimina l'allenamento")[0])
+
+    const carta = await screen.findByRole('dialog', { name: 'Sei sicuro?' })
+    // Il confronto è con la COSTANTE condivisa (§9-undequadragies): sette
+    // copie delle stesse classi erano il modo in cui queste modali avevano
+    // già cominciato a divergere fra loro.
+    CARTA_MODALE.split(' ').forEach((classe) => expect(carta).toHaveClass(classe))
+    expect([...carta.classList].some((c) => c.startsWith('animate-in'))).toBe(false)
+    expect(carta.parentElement).toHaveClass('velo-in')
   })
 })

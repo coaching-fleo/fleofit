@@ -97,19 +97,41 @@ body {
   animation: pageSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Animazione di apparizione per i popup/modali */
-@keyframes modalZoomIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+/* Entrata delle modali centrate (alert, conferme, il picker della data).
+
+   ⚠️ LA CURVA È QUELLA DELLA CASCATA, NON `.16,1,.3,1`. La prima stesura era
+   `scale(.95) → 1` in 0,2s con l'ease-out ESPONENZIALE: copre il 90% della
+   distanza nei primi 50ms, quindi a schermo non è un'entrata, è un lampo
+   nero seguito da una card già ferma. È lo stesso rilievo che ha fatto
+   nascere il linguaggio di movimento del 21/09 (§9-septtricies): allungare
+   la durata senza cambiare la curva rende l'entrata più LENTA a non
+   muoversi. Qui la curva è l'ease-out cubico di `--cascata-curva` e la
+   durata sta nella stessa famiglia del resto dell'app.
+
+   ⚠️ E si alza di 10px oltre a scalare: una scala pura su una card centrata
+   si legge come uno zoom, mentre tutto il resto dell'app entra salendo. */
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
 }
+/* ⚠️ `backwards`, non `both`, e la ragione NON è quella che sembra.
+   `forwards` fa conservare all'elemento il `transform` e l'`opacity`
+   dell'ultimo keyframe **per sempre**, all'origine animazione: cioè sopra
+   qualunque utility, stile inline o transizione che li tocchi dopo. Qui non
+   serve a niente — l'ultimo keyframe è già lo stile di base dell'elemento
+   (opacità 1, nessuna trasformazione) — e può solo inchiodare una modale che
+   un giorno debba muoversi. È la famiglia della regola per cui `.sheet-in`
+   non ha `fill` (il foglio deve poter essere trascinato) e per cui `HeroOggi`
+   non può avere animazioni sul nodo radice (§9-octies punto 1).
+   ℹ️ Il caso che sembrava dimostrarlo NON lo dimostra, ed è utile saperlo:
+   il foglio «Trasmetti in TV» si alza di 8rem con `-translate-y-32`, e in
+   Tailwind 4 quell'utility scrive la proprietà **`translate`**, non
+   `transform` — due proprietà indipendenti che si compongono. Misurato nel
+   browser: a fine animazione `transform: none` e `translate: 0px -128px`.
+   Quel foglio sarebbe sopravvissuto anche a `both`; il prossimo che anima
+   `transform` no. */
 .modal-transition {
-  animation: modalZoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modalIn 0.32s var(--cascata-curva) backwards;
 }
 
 /* Nascondi le scrollbar su tutti i browser */
@@ -436,6 +458,7 @@ body {
   .hero-transition { animation: none; }
   .anello-progresso { animation: none !important; }
   .sheet-in, .velo-in { animation: none; }
+  .modal-transition { animation: none; }
   .cascata > *, .cascata-voce { animation: none; }
   .passo-entra { animation: none; }
   /* ⚠️ I puntini smettono di pulsare ma NON spariscono: sono l'unica cosa che

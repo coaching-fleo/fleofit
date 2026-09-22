@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { CARTA_MODALE } from '../../lib/stiliCard'
 
 // Perché questo test esiste
 // ─────────────────────────
@@ -409,5 +410,28 @@ describe('Il numero che sale', () => {
     await attendi()
     // 37 è il valore d'arrivo (vedi il test del riepilogo qui sopra).
     expect(cella('Durata')).not.toBe('37min')
+  })
+})
+
+describe('I dialoghi centrati', () => {
+  // 🔴 Fino al 22/09/2026 l'entrata di TUTTE le modali di questa pagina era
+  // `animate-in fade-in zoom-in-[0.96]`, cioè tw-animate-css — che in questo
+  // progetto NON è installato e genera zero CSS (verificato sul bundle:
+  // `grep -c "animate-in" dist/assets/*.css` → 0). Erano animazioni che
+  // nessuno ha mai visto, e la carta portava ancora il vocabolario di PRIMA
+  // del rework (`bg-[#1e1e1e] border-[#2a2a2a] rounded-3xl`).
+  it('la conferma di eliminazione entra davvero, e il velo sfuma con lei', async () => {
+    apri({ ruolo: 'admin', utente: 'coach' })
+    await attendi()
+    await userEvent.click(screen.getByRole('button', { name: /Altre azioni/i }))
+    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: /Elimina/ }))
+
+    const carta = await screen.findByRole('dialog', { name: 'Sei sicuro?' })
+    // Il confronto è con la COSTANTE condivisa, non con le classi riscritte a
+    // mano: è l'unico modo perché questo dialogo non torni a divergere da
+    // quelli delle altre pagine (§9-undequadragies).
+    CARTA_MODALE.split(' ').forEach((classe) => expect(carta).toHaveClass(classe))
+    expect([...carta.classList].some((c) => c.startsWith('animate-in'))).toBe(false)
+    expect(carta.parentElement).toHaveClass('velo-in')
   })
 })

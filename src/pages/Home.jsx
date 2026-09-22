@@ -34,6 +34,8 @@ import { atletiFermi, allenamentiScaduti, copertura, feedbackNuovi, squadraDelGi
          atletiSeguiti, contaInPausa, FINESTRA_STORICO, FINESTRA_FEEDBACK,
          GIORNI_COPERTURA, GIORNI_FERMO } from '../lib/statisticheCoach'
 import { COACHING_ID } from '../lib/constants'
+import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARD_BASE, CARTA_MODALE,
+         TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
 
 /**
  * Quanti giorni di storico la Home carica insieme alla settimana corrente.
@@ -1609,8 +1611,8 @@ setNotifications(prev => {
 
       {/* MODAL ALLENAMENTO AUTONOMO */}
       {autonomousModalOpen && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+          <div className={`${CARD} w-full max-w-sm p-6 flex flex-col gap-4 modal-transition`}>
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">{autonomousForm.id ? 'Modifica Allenamento' : 'Allenamento Libero'}</h2>
                <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-muted hover:text-white"><X size={20} /></button>
@@ -1658,25 +1660,25 @@ setNotifications(prev => {
 
       {/* MODAL CONFERMA RIMOZIONE WORKOUT */}
       {workoutToRemove && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
-            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
-              <AlertTriangle size={32} />
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+          <div role="dialog" aria-modal="true" aria-label="Sei sicuro?" className={CARTA_MODALE}>
+            <div className={`${BOLLA_MODALE} ${TONO_BOLLA.errore}`}>
+              <AlertTriangle size={26} aria-hidden="true" />
             </div>
-            <h2 className="text-xl font-bold text-white">Sei sicuro?</h2>
-            <p className="text-gray-400 text-sm">
+            <h2 className={TITOLO_MODALE}>Sei sicuro?</h2>
+            <p className={TESTO_MODALE}>
               Questa azione eliminerà l'allenamento e non può essere annullata.
             </p>
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-3 mt-2">
               <button 
                 onClick={() => setWorkoutToRemove(null)}
-                className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition"
+                className={BOTTONE_QUIETO}
               >
                 Annulla
               </button>
               <button 
                 onClick={confirmRemoveWorkout}
-                className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-500 transition"
+                className={BOTTONE_PERICOLO}
               >
                 Elimina
               </button>
@@ -1746,8 +1748,8 @@ function LiveSpectatorModal({ athlete, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 z-[150] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] border border-red-500/30 rounded-3xl w-full max-w-sm flex flex-col overflow-hidden shadow-2xl shadow-red-500/10 animate-in fade-in zoom-in-[0.96] duration-300">
+    <div className="fixed inset-0 bg-black/90 z-[150] flex items-center justify-center p-4 velo-in">
+      <div className={`${CARD_BASE} border border-red-500/30 w-full max-w-sm flex flex-col overflow-hidden modal-transition`}>
         <div className="bg-red-600 p-4 flex items-center justify-between">
           <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-white animate-pulse"></div><p className="text-white font-bold">LIVE: {athlete.athleteName}</p></div>
           <button aria-label="Chiudi" onClick={onClose} className="text-white/80 hover:text-white"><X size={20}/></button>

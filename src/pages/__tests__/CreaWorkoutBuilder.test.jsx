@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { CARTA_MODALE } from '../../lib/stiliCard'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -498,5 +499,42 @@ describe('Il passo che entra', () => {
     const passo2 = document.querySelector('.passo-entra')
     expect(passo2).not.toBeNull()
     expect(passo2).not.toBe(passo1)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('La modale «Bozza Trovata»', () => {
+  // Segnalata dal committente il 22/09/2026: «non è graficamente coerente con
+  // il resto dell'app e compare secca». Era l'ultimo dialogo rimasto con il
+  // vocabolario di PRIMA del rework, e il suo velo arrivava a nero pieno nello
+  // stesso fotogramma in cui la carta cominciava a entrare — un nero che si
+  // accende secco copre qualunque movimento ci sia dietro.
+  const conBozza = () => localStorage.setItem('fleofit_workout_draft', JSON.stringify({
+    sourceId: null, title: 'Hyrox Soglia', date: '2026-09-22', workoutIntensity: '7',
+    category: 'Hyrox', blocks: [], runningSteps: [], coachNotes: '',
+  }))
+
+  it('la carta entra e il velo sfuma CON lei', async () => {
+    conBozza()
+    monta()
+    const carta = await screen.findByRole('dialog', { name: 'Bozza Trovata' })
+    // 🔴 Il keyframe dev'essere uno CHE ESISTE: `animate-in fade-in zoom-in`
+    // viene da tw-animate-css, che qui NON è installato e genera zero CSS.
+    expect(carta).toHaveClass('modal-transition')
+    expect([...carta.classList].some((c) => c.startsWith('animate-in'))).toBe(false)
+    // 🔴 E il velo è la metà che mancava: senza `velo-in` la carta si anima
+    // dietro un nero già pieno, che è esattamente ciò che si vedeva.
+    expect(carta.parentElement).toHaveClass('velo-in')
+  })
+
+  it('è fatta della carta sollevata condivisa, non di una copia', async () => {
+    conBozza()
+    monta()
+    const carta = await screen.findByRole('dialog', { name: 'Bozza Trovata' })
+    // Il confronto è con la COSTANTE, non con le classi riscritte a mano: è
+    // l'unico modo perché questo dialogo non torni a divergere di un raggio
+    // dalle card sopra cui si apre, e dagli altri cinque dialoghi che ora
+    // nascono dalla stessa costante (§9-undequadragies).
+    CARTA_MODALE.split(' ').forEach((classe) => expect(carta).toHaveClass(classe))
   })
 })

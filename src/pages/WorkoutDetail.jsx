@@ -45,7 +45,8 @@ import { BRAND, RUNNING, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
 import VoiceRecorder from '../components/VoiceRecorder'
-import { CARD } from '../lib/stiliCard'
+import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
+         TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 import { accodaSuStorage } from '../lib/offlineQueue'
 import { rpeDichiarato } from '../lib/rpe'
@@ -1794,8 +1795,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       </div>
       {/* MODAL: ASSEGNA AD ATLETA */}
       {assignModalOpen && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+        <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4 velo-in">
+          <div className={`${CARD} w-full max-w-md flex flex-col modal-transition`} style={{ maxHeight: 'calc(100vh - 100px)' }}>
             <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
               <p className="text-white font-bold text-lg">Assegna Workout</p>
               <button aria-label="Chiudi" onClick={() => { setAssignModalOpen(false); setSelectedAthletes([]); setAssignStep(1); }} className="text-muted hover:text-white"><X size={20} /></button>
@@ -1899,8 +1900,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
       {/* MODAL ALLENAMENTO AUTONOMO */}
       {autonomousModalOpen && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+          <div className={`${CARD} w-full max-w-sm p-6 flex flex-col gap-4 modal-transition`}>
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">Modifica Allenamento Libero</h2>
                <button aria-label="Chiudi" onClick={() => setAutonomousModalOpen(false)} className="text-muted hover:text-white"><X size={20} /></button>
@@ -1948,27 +1949,27 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
       {/* MODAL: CONFERMA ELIMINAZIONE WORKOUT */}
       {showDeleteConfirm && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
-            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
-              <AlertTriangle size={32} />
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+          <div role="dialog" aria-modal="true" aria-label="Sei sicuro?" className={CARTA_MODALE}>
+            <div className={`${BOLLA_MODALE} ${TONO_BOLLA.errore}`}>
+              <AlertTriangle size={26} aria-hidden="true" />
             </div>
-            <h2 className="text-xl font-bold text-white">Sei sicuro?</h2>
-            <p className="text-gray-400 text-sm">
+            <h2 className={TITOLO_MODALE}>Sei sicuro?</h2>
+            <p className={TESTO_MODALE}>
               Questa azione eliminerà definitivamente il workout dal calendario e non può essere annullata.
             </p>
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-3 mt-2">
               <button 
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={deleting}
-                className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50"
+                className={BOTTONE_QUIETO}
               >
                 Annulla
               </button>
               <button 
                 onClick={handleDeleteWorkout}
                 disabled={deleting}
-                className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-500 transition disabled:opacity-50"
+                className={BOTTONE_PERICOLO}
               >
                 {deleting ? 'Eliminazione...' : 'Elimina'}
               </button>
@@ -1980,21 +1981,20 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
       {/* MODAL: SUCCESSO ASSEGNAZIONE */}
       {showSuccessModal && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
-            <div className="w-16 h-16 rounded-full bg-green-900/30 text-green-500 flex items-center justify-center mx-auto mb-2 shrink-0">
-              <Check size={32} />
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+          <div role="dialog" aria-modal="true" aria-label="Workout Assegnato!" className={CARTA_MODALE}>
+            <div className={`${BOLLA_MODALE} ${TONO_BOLLA.successo}`}>
+              <Check size={26} aria-hidden="true" />
             </div>
-            <h2 className="text-xl font-bold text-white">Workout Assegnato!</h2>
-            <p className="text-gray-400 text-sm">
+            <h2 className={TITOLO_MODALE}>Workout Assegnato!</h2>
+            <p className={TESTO_MODALE}>
               L'allenamento è stato assegnato all'atleta con successo.
             </p>
-            <button 
-              onClick={() => setShowSuccessModal(false)}
-              className="mt-4 w-full py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition"
-            >
-              Chiudi
-            </button>
+            <div className="flex gap-3 mt-2">
+              <button onClick={() => setShowSuccessModal(false)} className={BOTTONE_QUIETO}>
+                Chiudi
+              </button>
+            </div>
           </div>
         </div>,
         document.body
@@ -2002,8 +2002,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
        {/* MODAL: TV SYNC */}
       {tvModalOpen && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className={`bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out transition-transform ${isTvInputFocused ? '-translate-y-32' : ''}`}>
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+          <div className={`${CARD} w-full max-w-sm p-6 flex flex-col gap-4 text-center modal-transition transition-transform ${isTvInputFocused ? '-translate-y-32' : ''}`}>
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white flex items-center gap-2"><MonitorUp size={24} className="text-brand" /> Trasmetti in TV</h2>
                <button aria-label="Chiudi" onClick={() => setTvModalOpen(false)} className="text-muted hover:text-white"><X size={20} /></button>

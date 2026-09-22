@@ -18,7 +18,8 @@ import { mostraErrore } from '../lib/alert'
 import { battito } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
 import { conVelo, coloreDaClasse, BRAND, RUNNING, CUSTOM, IA } from '../lib/colori'
-import { CARD, LABEL, VETRO } from '../lib/stiliCard'
+import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
+         LABEL, TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA, VETRO } from '../lib/stiliCard'
 import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { caricoPrevisto, collocazioneCarico } from '../lib/previsione'
 import {
@@ -325,8 +326,8 @@ function BlockPickerModal({ onAdd, onClose }) {
     const blockTypes = ['WarmUp', 'Cash In', 'ON/OFF', 'EMOM', 'AMRAP', 'For Time', 'Interval', 'Rest', 'Cash Out']
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm p-5 border border-[#333] animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+    <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4 velo-in">
+      <div className={`${CARD} w-full max-w-sm p-5 modal-transition`}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-white font-bold text-lg">Aggiungi Blocco</h3>
           <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20}/></button>
@@ -1185,8 +1186,12 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   // su centotrenta, e con la tastiera aperta il bottone di conferma finiva fuori
   // dallo schermo. Due passi con intestazione, come prescrive l'HIG per un
   // sotto-compito immersivo.
+  // ⚠️ `sheet-in` e non `modal-transition`: questa non è una carta centrata,
+  // è una schermata intera che copre il builder — sale dal basso come i bottom
+  // sheet. E anche qui l'entrata di prima (`animate-in slide-in-from-bottom-4`)
+  // generava zero CSS.
   return createPortal(
-    <div className="fixed inset-0 z-[60] bg-[#0B0B0B] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
+    <div className="fixed inset-0 z-[60] bg-[#0B0B0B] flex flex-col sheet-in">
       <div className="shrink-0 flex items-center gap-2 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] border-b border-[#2a2a2a]">
         {selected && (
           <button aria-label="Torna alla lista degli esercizi" onClick={() => setSelected(null)}
@@ -1801,8 +1806,8 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-[0.96] duration-300 ease-out" style={{ maxHeight: 'calc(100vh - 100px)' }}>
+    <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4 velo-in">
+      <div className={`${CARD} w-full max-w-md flex flex-col modal-transition`} style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
           <p className="text-white font-bold">{initialStep ? 'Modifica Fase Corsa' : 'Aggiungi Fase Corsa'}</p>
           <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
@@ -2912,8 +2917,8 @@ export default function CreateWorkout() {
 
       {/* SAVE MODAL */}
       {showSaveModal && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+          <div className={`${CARD} w-full max-w-sm p-6 flex flex-col gap-4 modal-transition`}>
             <div className="flex justify-between items-center mb-2">
                <h2 className="text-xl font-bold text-white">Salvataggio</h2>
                <button aria-label="Chiudi" onClick={() => setShowSaveModal(false)} className="text-muted hover:text-white"><X size={20} /></button>
@@ -2969,21 +2974,30 @@ export default function CreateWorkout() {
         document.body
       )}
 
-      {/* EXIT CONFIRM MODAL */}
+      {/* EXIT CONFIRM MODAL
+          ⚠️ Resta scritta a mano e NON diventa una `CustomConfirm`: la sua
+          conferma è distruttiva e si chiama «Sì, esci», mentre quel componente
+          ha due etichette fisse e la primaria gialla. Prende però lo stesso
+          vocabolario — carta sollevata, velo che sfuma, `modal-transition` —
+          o sulla stessa schermata convivrebbero due dialoghi di due epoche.
+          🔴 L'entrata che aveva prima era `animate-in fade-in zoom-in-[.96]`,
+          cioè tw-animate-css, che NON è installato: generava ZERO CSS. È la
+          quinta comparsa della stessa trappola (§9-duodecies, §9-quindecies,
+          §9-duodetricies, §9-septtricies). */}
       {showExitConfirm && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl w-full max-w-sm p-6 flex flex-col gap-4 text-center shadow-2xl animate-in fade-in zoom-in-[0.96] duration-300 ease-out">
-            <div className="w-16 h-16 rounded-full bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-2 shrink-0">
-              <AlertTriangle size={32} />
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
+          <div role="dialog" aria-modal="true" aria-label="Sei sicuro?" className={CARTA_MODALE}>
+            <div className={`${BOLLA_MODALE} ${TONO_BOLLA.errore}`}>
+              <AlertTriangle size={26} aria-hidden="true" />
             </div>
-            <h2 className="text-xl font-bold text-white">Sei sicuro?</h2>
-            <p className="text-gray-400 text-sm">
+            <h2 className={TITOLO_MODALE}>Sei sicuro?</h2>
+            <p className={TESTO_MODALE}>
               Hai delle modifiche non salvate. Se esci ora, i dati andranno persi.
             </p>
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-3 mt-2">
               <button 
                 onClick={() => setShowExitConfirm(false)}
-                className="flex-1 py-3 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition"
+                className={BOTTONE_QUIETO}
               >
                 Annulla
               </button>
@@ -2996,7 +3010,7 @@ export default function CreateWorkout() {
                   if (pendingPath === INDIETRO) indietro()
                   else navigate(pendingPath)
                 }}
-                className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-500 transition"
+                className={BOTTONE_PERICOLO}
               >
                 Sì, esci
               </button>

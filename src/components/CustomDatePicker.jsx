@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, parseISO, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
+import { CARD } from '../lib/stiliCard'
 
 export default function CustomDatePicker({ date, onChange, placeholder = "Seleziona data", className = "" }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -47,8 +48,8 @@ export default function CustomDatePicker({ date, onChange, placeholder = "Selezi
       </button>
 
       {isOpen && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setIsOpen(false)}>
-          <div className="bg-[#1e1e1e] border border-[#333] rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 velo-in" onClick={() => setIsOpen(false)}>
+          <div className={`${CARD} w-full max-w-sm p-6 modal-transition`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <button aria-label="Mese precedente" type="button" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 rounded-xl bg-[#2a2a2a] text-gray-400 hover:text-white hover:bg-brand hover:text-black transition">
                 <ChevronLeft size={20} />
