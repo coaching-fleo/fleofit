@@ -11,7 +11,7 @@
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **973 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **978 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
 > ⭐ **Il 22/09 è nata l'APERTURA dell'app** (§9-duodequadragies): l'area scura si ritira
 > dietro un arco e scopre la Home. 🔴 Registrando l'avvio vero è saltato fuori un difetto
 > che nessuno aveva mai misurato e che non c'entrava con la richiesta: **380ms di BIANCO
@@ -1241,7 +1241,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. ~~Nessun test automatico~~ → **973 test al 22/09/2026** (`npm test`, vitest), tutti
+11. ~~Nessun test automatico~~ → **978 test al 22/09/2026** (`npm test`, vitest), tutti
     verificati per mutazione: se si rompe di proposito il codice che coprono, falliscono.
     Non sono decorativi, ed è l'unico criterio che conta — vedi §9-sexies.
 
@@ -1273,7 +1273,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 | `statistiche-vuoti` | 16 | gli stati senza storico: `senzaStorico` che è **falso** con un assegnato fuori dalla settimana — il caso che manderebbe il benvenuto del giorno 1 a chi ha già un programma — la settimana di CALENDARIO che esclude la domenica precedente (una finestra mobile la conterebbe dentro, e lo scarto non corrisponderebbe più al totale accanto), i `pending` che non sono volume, e lo scarto che torna `null` invece di `+214` con la settimana precedente vuota — anche quando quella settimana ha solo allenamenti **saltati** |
 | `blockColors` · `rpe` · `workoutTitle` | 6+6+6 | codifica colore, round-trip dell'RPE, titolo generato dalla data |
 
-    **383 su componenti, pagine e hook**
+    **388 su componenti, pagine e hook**
 
     | file | test | cosa protegge |
     |---|---|---|
@@ -1283,7 +1283,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     | `CreateWorkoutMemo` | 5 | la memoizzazione **dal lato del chiamante** (§9-quinquies) |
     | `RunningStepRowMemo` · `HyroxBlockMemo` | 4+2 | che `React.memo` serva ancora a qualcosa |
     | `HomeCoach` | 28 | il cablaggio del ramo coach su `Home` montata: l'eroe porta le citazioni e il numero dell'arretrato (non delle righe stampate), aprire un feedback segna letto **solo quello**, la squadra cambia giorno, l'account del coach resta fuori, e le card «Calendario»/«Atleti» restano fuori dalla pagina. ⚠️ Gli ultimi quattro montano con `role: 'admin'`, non `'coach'`: è il ruolo che esiste davvero, ed è l'unico a cui la Home mostrava anche il ramo atleta (§9-nonies, 28/08) |
-    | `CreaWorkoutBuilder` | 20 | il builder ridisegnato su `CreateWorkout` montata: il riepilogo che segue i blocchi, il ritorno al passo 1 (unico posto dove nome e data si modificano), gli Stepper che scrivono il vocabolario di prima, «ultima volta», la ricerca esercizi che NON ruba il fuoco, lo scorrimento al blocco nuovo, e la ruota del passo (generi separati, valore intero, `—` in ogni genere) |
+    | `CreaWorkoutBuilder` | 30 | il builder ridisegnato su `CreateWorkout` montata: il riepilogo che segue i blocchi, il ritorno al passo 1 (unico posto dove nome e data si modificano), gli Stepper che scrivono il vocabolario di prima, «ultima volta», la ricerca esercizi che NON ruba il fuoco, lo scorrimento al blocco nuovo, la ruota del passo (generi separati, valore intero, `—` in ogni genere), la barra che NON è più `sticky` (§9-tertricies) e la modale della bozza — velo che sfuma, keyframe che ESISTE, carta sollevata condivisa (§9-undequadragies) |
     | `CreaWorkoutIA` | 10 | il foglio «Genera con IA»: l'entrata che **esiste** (`sheet-in`, non `animate-in`, che genera zero CSS), il campo che NON prende il fuoco, la maniglia che è un bottone, la forma d'onda alimentata da `getUserMedia` — che senza microfono **non si finge** ma non lascia lo schermo muto — l'attesa che occupa il foglio con la CTA che sparisce, e il foglio che durante la generazione **non si chiude**. E **tre** test sull'avviso «non arriva nessun suono», che sono tre perché il difetto stava nel confine: microfono morto → l'avviso c'è; voce normale → non c'è; **voce piana** → non c'è lo stesso, ed è quello che prende la soglia unica (§9-quindecies). ⚠️ Il finto analizzatore suona su **quattro bande su ventiquattro**, come una voce vera: uno che riempie lo spettro ha la media alta e passa anche con la logica sbagliata |
 | `ArchivioWorkout` | 21 | l'archivio ridisegnato su `WorkoutsArchive` montata: i gruppi per mese che restano nell'ordine giusto anche se la query torna per creazione, i chip derivati dai dati (mai «Libero», che la query del coach non fa arrivare), la ricerca che trova un ESERCIZIO e non solo il titolo, il titolo `null` che non porta via la pagina, e il contatore degli assegnati che all'atleta non si mostra — perché la sua query non lo carica nemmeno |
 | `AtletiLista` | 21 | la rubrica ridisegnata su `Athletes` montata: la frazione che viene dalla settimana e non dai workout in pagina, l'atleta in pausa che RESTA nella lista (è l'unico posto in cui il coach si accorge di averne dimenticato uno), il marcatore `[PAUSA]` che non si vede mai come testo, il cestino che non è più un accordion, e una sola `select` su `athlete_workouts` per venti atleti. ⚠️ Il test che conta di più è quello sull'allarme della riga, e ci sono voluti due tentativi: «zero questa settimana» e «fermo da cinque giorni» quasi sempre coincidono, e un atleta qualsiasi passa con entrambe le logiche — serve chi ha chiuso **sabato**, cioè quattro giorni fa ma nella settimana scorsa |
@@ -5435,6 +5435,155 @@ forma ritagliata — disegnerebbe una luce dritta sotto una curva.
   stacco rimasto nell'avvio e si chiude rifacendo l'immagine dark dell'asset.
 - **Il marchio del pre-disegno e quello di React sono due markup diversi.** Il
   test confronta gradiente, corpo e posizione; il resto è disciplina.
+
+---
+
+## 9-undequadragies. I dialoghi centrati (22/09/2026)
+
+Segnalazione del committente sulla modale **«Bozza Trovata»**, quella che apre
+`CreateWorkout` quando in `localStorage` c'è un `fleofit_workout_draft`: «non è
+graficamente coerente con il resto dell'app e compare secca senza animazione».
+
+### Erano due difetti, non uno
+1. 🔴 **Il velo arrivava a nero PIENO nel primo fotogramma.** La carta la sua
+   entrata ce l'aveva (`.modal-transition`), ma `bg-black/85` si accendeva
+   secco dietro di lei — e un nero che compare tutto insieme copre qualunque
+   movimento ci sia sotto. Ora il velo sfuma con **`velo-in`**, che è lo stesso
+   keyframe dei bottom sheet: il velo dell'app è uno.
+2. 🔴 **E la curva della carta era quella sbagliata.** `modalZoomIn` era
+   `scale(.95) → 1` in **0,2s** con `cubic-bezier(.16,1,.3,1)`, cioè l'ease-out
+   **esponenziale**: copre il 90% della distanza nei primi 50ms. Non è
+   un'entrata, è un lampo. È esattamente il rilievo da cui è nato il linguaggio
+   di movimento del 21/09 (§9-septtricies), e allungare la durata senza
+   cambiare la curva l'avrebbe resa solo **più lenta a non muoversi**. Ora è
+   `modalIn` — 10px di salita **più** `scale(.96)`, 0,32s, `--cascata-curva`.
+   ⚠️ Sale oltre a scalare perché una scala pura su una card centrata si legge
+   come uno zoom, mentre tutto il resto dell'app entra salendo.
+   Misurato nel browser: 40% a 52ms, 74% a 118ms, 92% a 185ms — visibilmente in
+   movimento per tutta la durata.
+
+### Il vocabolario: erano gli ultimi due dialoghi di prima del rework
+`CustomAlert` e `CustomConfirm` portavano ancora
+`bg-[#1e1e1e] border-[#2a2a2a] rounded-3xl shadow-2xl`, cioè il «Pattern card»
+del §6 — e si aprivano sopra dieci schermate che da un mese sono fatte di
+gradiente, hairline chiara e ombra proiettata. Ora usano **`CARD`**, la stessa
+costante di ogni card del progetto, più `VETRO` sul secondario e l'ombra ambra
+della CTA sul primario. La bolla dell'icona prende i toni di `TONO_VERDETTO`
+(fondo tenue, bordo, testo) al posto del `bg-red-900/30` pieno.
+Con essi è arrivato `role="dialog" aria-modal="true"` con il titolo come nome.
+
+⚠️ **Il peso del carattere NON sta nella costante condivisa del bottone.**
+`font-bold` e `font-black` sono due utility della **stessa specificità**: messe
+insieme in una stringa di classi, a decidere è l'ordine nel foglio di stile e
+non l'ordine in cui le si scrive. È la trappola del bordo di `CARTA_RIGA`
+(§9-octodecies) e del raggio di `CARD` (§9-sedecies), e qui è stata evitata
+facendo dichiarare il peso a ogni variante.
+
+### La correzione arriva a tutta l'app, ed è voluto
+`CustomAlert` e `CustomConfirm` sono montate in **otto pagine** più `AlertHost`
+in `App.jsx`: una modale speciale per la sola bozza sarebbe stata una copia, e
+la copia è il modo in cui una correzione ne raggiunge due su tre (§9 punto 1).
+`.modal-transition` è anche del picker della data in `Calendar.jsx`.
+
+### 🔴 E la modale «Sei sicuro?» dell'uscita non aveva NESSUNA animazione
+Sta sulla stessa schermata, scritta a mano, e la sua entrata era
+`animate-in fade-in zoom-in-[0.96] duration-300` — cioè **tw-animate-css, che
+non è installato**: zero CSS generato, verificato sul bundle
+(`grep -c "animate-in" dist/assets/*.css` → **0**). È la **quinta** comparsa
+della stessa trappola (§9-duodecies, §9-quindecies, §9-duodetricies,
+§9-septtricies). Ha preso velo, carta e keyframe delle altre due.
+⚠️ **Resta scritta a mano e non diventa una `CustomConfirm`**: la sua conferma
+è distruttiva e si chiama «Sì, esci», mentre quel componente ha due etichette
+fisse e la primaria gialla.
+
+### 🔴 Il secondo giro: `WorkoutDetail` e `AthleteDetail` avevano DODICI modali, non due
+Chiesto dal committente subito dopo, sulla scorta della voce di BACKLOG che
+diceva «due». **Il backlog contava le «Sei sicuro?», non le modali**: in quei
+due file ci sono **dodici** dialoghi centrati (assegna, allenamento libero,
+social, PR, modifica atleta, anteprima, TV, successo…) e **tutti e dodici**
+avevano `animate-in` e il vocabolario di prima. Sono passati tutti al velo che
+sfuma e alla carta sollevata; i tre che parlano all'utente — le due conferme
+distruttive e il «Workout Assegnato!» — hanno preso anche bolla, tipografia e
+bottoni. Dopo la passata: `grep -c "animate-in"` su quei due file → **0**.
+
+### Il vestito è salito in `lib/stiliCard.js`, e la ragione non è l'ordine
+`CARTA_MODALE`, `BOLLA_MODALE` + `TONO_BOLLA`, `TITOLO_MODALE`,
+`TESTO_MODALE`, `BOTTONE_QUIETO` / `BOTTONE_BRAND` / `BOTTONE_PERICOLO`.
+🔴 Stanno lì e non in `CustomModals.jsx` per **due** ragioni, e la seconda è
+quella che conta. La prima: un file di componenti che esporta anche una
+costante perde il Fast Refresh per intero (§9-octies punto 3). La seconda:
+`CustomAlert`/`CustomConfirm` **non possono** coprire tutti i dialoghi del
+progetto — quelli con una conferma distruttiva hanno etichette proprie
+(«Sì, esci», «Elimina») e **restano aperti mentre il lavoro è in corso**, cosa
+che il contratto di `CustomConfirm` non sa fare: chiude appena si conferma,
+quindi il «Eliminazione…» di `WorkoutDetail` non si vedrebbe mai. Restano
+perciò scritti a mano in tre pagine, ed erano **quattro copie** delle stesse
+stringhe di classi: la quinta sarebbe stata quella che diverge.
+
+### ⚠️ `backwards`, non `both` — e il caso che sembrava dimostrarlo NON lo dimostra
+`forwards` (cioè metà di `both`) fa conservare all'elemento `transform` e
+`opacity` dell'ultimo keyframe **per sempre**, all'origine animazione: sopra
+qualunque utility o stile inline che li tocchi dopo. Qui non serve a niente —
+l'ultimo keyframe è già lo stile di base — e può solo inchiodare una modale
+che un giorno debba muoversi (è la famiglia di `.sheet-in` senza `fill`).
+ℹ️ Il foglio «Trasmetti in TV», che si alza di 8rem con `-translate-y-32`,
+sembrava la prova: **non lo è**. In Tailwind 4 quell'utility scrive la
+proprietà **`translate`**, non `transform`, e le due si compongono. Misurato
+nel browser: a fine animazione `transform: none` e `translate: 0px -128px`.
+È annotato perché la spiegazione comoda era sbagliata, e una ragione falsa in
+un commento è peggio di nessun commento.
+
+### Il terzo giro: TUTTE le modali dell'app (BACKLOG #44, chiuso)
+Chiuso lo stesso giorno: `Home` (allenamento libero, conferma rimozione,
+spettatore LIVE), `CreateWorkout` (picker dei blocchi, picker della fase di
+corsa, salvataggio), `Settings` (modifica password), `RpeModal`,
+`CustomDatePicker`. **Nessuna modale centrata del progetto entra più con una
+classe che non esiste.**
+
+🔴 **Lo spettatore «LIVE» ha fatto nascere `CARD_BASE`.** Ha un bordo
+`border-red-500/30` che è uno **stato**, non decorazione: affiancarlo a `CARD`
+— che porta già `border-white/[.07]` — non avrebbe sovrascritto niente, perché
+sono due utility della stessa specificità e a decidere è l'ordine nel foglio di
+stile. È **esattamente** la trappola di `CARTA_RIGA_BASE` (§9-octodecies), alla
+sua terza comparsa: chi ha un bordo di stato parte da `CARD_BASE` e lo dichiara.
+
+⚠️ **`RpeModal` è la più usata dell'app e ha un cursore trascinabile**, quindi
+era l'unica a poter rompersi davvero: il punteggio si calcola da un
+`getBoundingClientRect()` della pista, e la carta ora si scala durante
+l'entrata. **Non è un difetto, ed è utile sapere perché**: il rettangolo è
+quello *visivo*, quindi il rapporto `(x - rect.left) / rect.width` resta
+coerente con ciò che il dito vede — e l'unica altra trasformazione è su Y,
+mentre il cursore legge X. Verificato nel browser, non dedotto: modale aperta,
+tocco a tre quarti della pista, 5 → **8**.
+⚠️ Il suo `-translate-y-36` con la tastiera aperta resta, e c'è un test che
+tiene ferma la classe che lo trasporta.
+
+⚠️ **Il picker degli esercizi a schermo intero ha preso `sheet-in`, non
+`modal-transition`**: non è una carta centrata, è una schermata che copre il
+builder, quindi sale dal basso. Anche la sua entrata di prima
+(`animate-in slide-in-from-bottom-4`) generava zero CSS.
+
+### Cosa NON è stato toccato
+Gli `animate-in` che **non** sono modali: i contenitori interni che sfumano al
+cambio di `key` in `CreateWorkout` (sette punti), l'onboarding in `App.jsx` e la
+TV. Sono decorazioni morte, non entrate mancanti, e restano BACKLOG #34.
+
+### I test
+Cinque nuovi — due in `CreaWorkoutBuilder.test.jsx`, uno in
+`WorkoutDetailScheda.test.jsx`, uno in `SchedaAtleta.test.jsx`, uno in
+`HomeOffline.test.jsx` per la modale RPE (**978** in tutto). **Nove mutazioni
+provate, nove prese**, ognuna da un test diverso: via `velo-in` (tre), ritorno
+ad `animate-in` (quattro), ritorno al vecchio vocabolario, via
+`transition-transform` dalla modale RPE.
+⚠️ Tutti e quattro confrontano la classe con la **costante `CARTA_MODALE`
+importata**, non con le classi riscritte a mano: è l'unico modo perché sei
+dialoghi in quattro file non tornino a divergere di un raggio.
+⚠️ E una verifica ha smentito una diagnosi: nel browser la carta sembrava
+**trasparente** in uno screenshot. Non lo era — il pannello non dipinge mentre
+è nascosto, quindi l'attesa non fa avanzare i fotogrammi e lo scatto cade a
+metà animazione. È lo stesso limite già annotato per `requestAnimationFrame`
+(§9-tertricies) e per `html-to-image` (§9-unetvicies): lo stile **calcolato**
+ha detto opacità 1 e gradiente al suo posto.
 
 ---
 
