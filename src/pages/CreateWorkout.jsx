@@ -2571,8 +2571,17 @@ export default function CreateWorkout() {
     //    scrive è nascosta (Navbar). Tenendolo, la barra non ancorata resterebbe
     //    sospesa 115px sopra la tastiera, su un vuoto. Senza, cade dove la mette
     //    iOS: subito sopra i tasti.
+    /* ⚠️ Niente `page-transition`, e qui è una correzione: la pagina che sale
+       di 15px MENTRE il passo entra da destra è movimento doppio — lo stesso
+       che è uscito dalle altre nove schermate il 21/09. Il passo si muove, la
+       pagina no.
+       ⚠️ E `TestataCrea` NON prende una voce di cascata, benché non sia
+       `sticky`. In un flusso a passi la testata è la CORNICE: porta l'indietro
+       e il titolo del workout, e i passi le scorrono dentro. Farla entrare
+       insieme al passo vorrebbe dire due gesti in direzioni diverse nello
+       stesso istante, su una schermata che ne ha già uno. */
     <div className={`px-4 max-w-2xl mx-auto min-h-[100dvh] flex flex-col gap-[18px]
-                    pt-[calc(env(safe-area-inset-top)+1rem)] page-transition
+                    pt-[calc(env(safe-area-inset-top)+1rem)]
                     ${tastieraAperta ? 'pb-3' : 'pb-[var(--fondo-pagina)]'}`}>
       <style>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }

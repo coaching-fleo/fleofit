@@ -482,6 +482,12 @@ describe('Il passo che entra', () => {
     monta()
     const passo1 = document.querySelector('.passo-entra')
     expect(passo1).not.toBeNull()
+    // 🔴 E la PAGINA non si muove. `page-transition` sulla radice più
+    // `passo-entra` sul passo è movimento doppio: la pagina sale di 15px mentre
+    // il contenuto entra da destra. È lo stesso difetto tolto dalle altre nove
+    // schermate il 21/09, ed era rimasto qui — in jsdom non si vede e nessun
+    // altro test ci casca.
+    expect(document.querySelector('.page-transition')).toBeNull()
     expect([...passo1.classList].some((c) => c.startsWith('animate-in'))).toBe(false)
 
     await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
