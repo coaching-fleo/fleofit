@@ -358,79 +358,73 @@ body {
 }
 
 /* ── L'APERTURA ────────────────────────────────────────────────────────────
-   La sovrapposizione che copre l'avvio e scopre la Home (src/components/
-   Apertura.jsx, dove c'è il perché delle forme colorate).
+   La sovrapposizione che copre l'avvio e scopre la Home
+   (src/components/Apertura.jsx, dove c'è il perché del meccanismo).
 
-   ⚠️ Le forme sono `radial-gradient`, come `.alone`: una sfocatura dentro un
-   elemento che anima l'opacità cambia colore quando il layer GPU viene
-   liberato, e qui l'opacità si anima per definizione (§9-septtricies). */
-.apertura-forma {
-  position: absolute;
-  border-radius: 9999px;
-  pointer-events: none;
-  background: radial-gradient(circle closest-side,
-    rgb(var(--alone-rgb) / var(--alone-alfa)) 0%,
-    rgb(var(--alone-rgb) / calc(var(--alone-alfa) * .45)) 55%,
-    rgb(var(--alone-rgb) / 0) 100%);
-}
-/* ⚠️ Le misure sono in `vmax` e non in px: su un iPad la stessa forma in pixel
-   sarebbe un puntino al centro di uno schermo enorme. */
-/* 🔴 LE DUE ANIMAZIONI PER FORMA NON SONO UN VEZZO: la seconda è il RESPIRO,
-   e serve a non far sembrare l'app bloccata. La schermata che questa
-   sostituisce aveva «Caricamento…» che pulsava; senza qualcosa che si muova,
-   un'attesa lunga — rete lenta, sessione da rinnovare — mostrerebbe uno
-   schermo fermo, che si legge come un guasto. Il respiro parte quando
-   l'entrata finisce e va avanti finché serve.
-   ⚠️ Respira in OPACITÀ e non in `transform`, perché il trasform è già
-   dell'entrata: due animazioni sulla stessa proprietà non si sommano — vince
-   l'ultima dichiarata, e il respiro cancellerebbe la posizione d'arrivo. */
-.apertura-forma-1 { width: 120vmax; height: 120vmax; left: -45vmax; top: -30vmax;
-  animation: aperturaForma1 1.6s cubic-bezier(.33, 1, .68, 1) both,
-             aperturaRespiro 3.2s 1.6s ease-in-out infinite alternate; }
-.apertura-forma-2 { width: 105vmax; height: 105vmax; right: -42vmax; bottom: -34vmax;
-  animation: aperturaForma2 1.7s cubic-bezier(.33, 1, .68, 1) both,
-             aperturaRespiro 3.6s 1.7s ease-in-out infinite alternate-reverse; }
+   🔴 SECONDA STESURA. La prima aveva due aloni `radial-gradient` che entravano
+   e una dissolvenza in uscita, bocciata dal committente: «quel gradiente è
+   osceno, e la dissolvenza non mi piace». Nel riferimento non c'è nessuna
+   dissolvenza — l'area scura resta ancorata in alto e il suo bordo inferiore,
+   una curva, RISALE scoprendo la pagina da sotto.
 
-@keyframes aperturaRespiro {
-  from { opacity: 1; }
-  to   { opacity: .58; }
-}
+   ⚠️ `clip-path: ellipse()` INTERPOLA fra due valori della stessa funzione:
+   l'arco si muove e si appiattisce da sé, senza JavaScript e senza un SVG da
+   animare a mano. Cambiarlo in `path()` o in due funzioni diverse toglie
+   l'interpolazione e l'animazione diventa uno scatto — senza dare errori.
 
-@keyframes aperturaForma1 {
-  from { transform: translate3d(-18vmax, 26vmax, 0) scale(.72); opacity: 0; }
-  to   { transform: none;                                       opacity: 1; }
-}
-@keyframes aperturaForma2 {
-  from { transform: translate3d(20vmax, -24vmax, 0) scale(.7);  opacity: 0; }
-  to   { transform: none;                                       opacity: 1; }
+   I numeri vengono dai fotogrammi del riferimento: centro dell'ellisse al 30%
+   da sinistra, raggio orizzontale 80%. Ne segue che il bordo destro dell'arco
+   sta al 48% della profondità del punto più basso, che è esattamente il
+   rapporto misurato nel video.
+   🔴 IL RAGGIO VERTICALE DI PARTENZA È 208%, E IL NUMERO È CALCOLATO.
+   Con questa geometria il bordo destro dell'arco sta al 48,41% del raggio,
+   quindi lo schermo è coperto fino all'angolo in basso a destra solo finché
+   il raggio è ≥ 206,6%. Sopra quel valore l'arco è FUORI SCHERMO e
+   l'animazione non si vede.
+   ⚠️ Partire da 220% — come faceva la prima stesura — butta via il 6% del
+   percorso in una zona invisibile, e con un ease-out esponenziale quel 6%
+   è un terzo del TEMPO: il tratto che si vede si consumava in un centinaio di
+   millisecondi, cioè uno scatto. Misurato nel browser campionando il
+   `clip-path` calcolato, non dedotto. Chi cambia `rx` o il centro deve
+   ricalcolare anche questo, o l'animazione torna a saltare. */
+.apertura {
+  clip-path: ellipse(80% 208% at 30% 0%);
+  /* ⚠️ La luce ambra sul bordo esiste per il PRIMO fotogramma dell'uscita,
+     quando sotto non è ancora comparso niente e un bordo fra due neri sarebbe
+     invisibile. Dopo, il contrasto lo fa la Home che si scopre.
+     ⚠️ `drop-shadow` e non `box-shadow`: box-shadow segue il rettangolo, non
+     la forma ritagliata — disegnerebbe una luce dritta sotto una curva. */
+  filter: drop-shadow(0 2px 12px rgb(241 186 23 / .42));
 }
 
-/* Il marchio arriva per ultimo e si assesta: è la cosa che si legge. */
 @keyframes aperturaMarchio {
-  from { opacity: 0; transform: scale(.88); }
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
 }
 .apertura-marchio { animation: aperturaMarchio .62s cubic-bezier(.33, 1, .68, 1) both; }
 
-/* 🔴 L'USCITA. Le forme scappano verso l'alto e il velo si spegne: la Home è
-   già montata sotto e sta facendo la sua cascata, quindi ciò che si scopre è
-   una pagina VIVA, non una pagina ferma.
-   ⚠️ La durata qui (.52s) deve coincidere con `USCITA_MS` in Apertura.jsx, che
-   è il momento in cui la sovrapposizione viene smontata. Se il CSS durasse di
-   più, l'ultimo pezzo di animazione verrebbe tagliato di netto. */
-@keyframes aperturaVia {
-  from { opacity: 1; }
-  to   { opacity: 0; }
-}
-@keyframes aperturaFormaVia {
-  to { transform: translate3d(0, -60vmax, 0) scale(1.25); opacity: 0; }
+/* 🔴 L'USCITA, IN TRE TEMPI COME NEL RIFERIMENTO: il marchio se ne va (260ms),
+   c'è una PAUSA di nero (130ms), poi l'arco risale (430ms). La pausa è
+   misurata, non inventata: nel video fra il logo che sfuma e la tenda che
+   parte c'è un battito di nero assoluto, ed è quello a far leggere il
+   passaggio come deliberato invece che come un caricamento.
+   ⚠️ Le tre durate devono coincidere con MARCHIO_MS, PAUSA_MS e ARCO_MS in
+   Apertura.jsx, che insieme decidono quando la sovrapposizione viene smontata.
+   Se il CSS durasse di più, l'ultimo pezzo verrebbe tagliato di netto.
+   ⚠️ LA CURVA È QUELLA CUBICA, non l'esponenziale storico del progetto.
+   Avevo scritto il contrario e l'ho corretto misurando: `cubic-bezier(.16,1,.3,1)`
+   copre il 90% della distanza nel primo quarto del tempo, e su un percorso che
+   è quasi tutto visibile vuol dire un arco che sparisce in un lampo e poi una
+   lunga attesa su niente. Nel riferimento la risalita è continua per ~400ms. */
+@keyframes aperturaArco {
+  from { clip-path: ellipse(80% 208% at 30% 0%); }
+  to   { clip-path: ellipse(80% 0%   at 30% 0%); }
 }
 @keyframes aperturaMarchioVia {
-  to { opacity: 0; transform: scale(1.06); }
+  to { opacity: 0; transform: translateY(-14px); }
 }
-.apertura-esce { animation: aperturaVia .52s cubic-bezier(.33, 1, .68, 1) both; }
-.apertura-esce .apertura-forma  { animation: aperturaFormaVia .52s cubic-bezier(.33, 1, .68, 1) both; }
-.apertura-esce .apertura-marchio { animation: aperturaMarchioVia .34s cubic-bezier(.33, 1, .68, 1) both; }
+.apertura-esce { animation: aperturaArco .43s .39s cubic-bezier(.33, 1, .68, 1) both; }
+.apertura-esce .apertura-marchio { animation: aperturaMarchioVia .26s cubic-bezier(.33, 1, .68, 1) both; }
 
 /* Nessuna si esegue per chi ha chiesto meno movimento. */
 @media (prefers-reduced-motion: reduce) {
@@ -442,9 +436,10 @@ body {
   /* ⚠️ I puntini smettono di pulsare ma NON spariscono: sono l'unica cosa che
      dice «sto lavorando» dentro una pillola senza più etichetta. */
   .puntini > span { animation: none; opacity: .7; }
-  /* ⚠️ L'apertura non si spegne del tutto: resta un velo che si dissolve, o
-     la Home comparirebbe di colpo — che è il difetto da cui è nata. */
-  .apertura-forma, .apertura-marchio { animation: none; }
-  .apertura-esce { animation: aperturaVia .2s linear both; }
-  .apertura-esce .apertura-forma, .apertura-esce .apertura-marchio { animation: none; }
+  /* ⚠️ L'arco resta, accorciato: è il gesto che scopre la Home, e toglierlo
+     del tutto rimetterebbe il taglio netto da cui questa animazione è nata.
+     Chi ha chiesto meno movimento non ha chiesto nessun movimento. */
+  .apertura-marchio { animation: none; }
+  .apertura-esce { animation: aperturaArco .2s linear both; }
+  .apertura-esce .apertura-marchio { animation: none; opacity: 0; }
 }

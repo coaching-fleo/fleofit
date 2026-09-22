@@ -8,42 +8,54 @@ import { menoMovimento } from '../useNumeroCheSale'
  * FLEOFIT ma poi sparisce e basta, voglio un'animazione smooth con qualche
  * shape che si muove per fare comparire la home».
  *
- * 🔴 PRIMA DI PROGETTARE, MISURARE. Registrando l'avvio vero sul simulatore
- * (`xcrun simctl io recordVideo`) e leggendo la luminanza fotogramma per
- * fotogramma, la sequenza era:
- *     nero 0,52s  →  🔴 BIANCO 0,38s  →  «FLEOFIT / Caricamento…»  →  taglio
- * Il lampo bianco non era nella richiesta ed è il difetto peggiore dei due: su
- * un'app tutta scura sono quasi quattro decimi di secondo di schermo acceso.
- * Si corregge fuori di qui — `index.html` e `capacitor.config.ts` — perché
- * avviene PRIMA che React esista.
+ * 🔴 SECONDA STESURA. La prima usava due aloni colorati che entravano e una
+ * dissolvenza in uscita: bocciata dal committente — «quel gradiente è osceno, e
+ * la dissolvenza non mi piace». Aveva ragione su entrambe, e la seconda è il
+ * punto: **nel riferimento non c'è nessuna dissolvenza**. Avevo aggirato il
+ * problema del contrasto (§9-septtricies: nero su nero non si vede) con degli
+ * aloni, invece di risolverlo.
  *
- * 🔴 PERCHÉ LE FORME SONO COLORATE, E NON UNA TENDA COME NEL RIFERIMENTO.
- * Nel video di riferimento la rivelazione è un foglio chiaro che sale su un
- * fondo nero: funziona perché è nero su crema, cioè contrasto totale. In
- * FLEOFIT tutto è `#0B0B0B` su `#1e1e1e` e una tenda fra quei due colori è
- * invisibile (CLAUDE.md §9-septtricies, dove era l'unica delle quattro
- * animazioni lasciata fuori). Qui il contrasto lo portano le FORME: ambra e
- * azzurro sono gli unici due colori dell'app che si staccano dal nero, e sono
- * le due corsie — Hyrox e Running. Non sono decorazione: sono il marchio che
- * si muove.
+ * 🔴 IL MECCANISMO VERO, riletto fotogramma per fotogramma: l'area scura resta
+ * ANCORATA IN ALTO e il suo bordo inferiore — una curva il cui punto più basso
+ * sta a circa un terzo da sinistra — RISALE, scoprendo la pagina da sotto. Non
+ * è un foglio che scorre via, non è un velo che si spegne: è un'area che si
+ * ritira dietro un arco. Misurato: ~400ms, con una decelerazione forte.
  *
- * ⚠️ SONO `radial-gradient`, NON CERCHI SFOCATI. Una `filter: blur()` dentro un
- * elemento che anima l'opacità cambia colore nell'istante in cui il layer GPU
- * viene liberato — misurato, Y 48,08 → 52,31 (§9-septtricies). Qui l'opacità si
- * anima eccome, quindi la sfocatura è proprio ciò che non si può usare.
+ * ⚠️ LA CURVA È UN'ELLISSE, e la scelta non è estetica. `clip-path: ellipse()`
+ * interpola fra due valori della STESSA funzione, quindi l'arco si muove e si
+ * appiattisce da sé senza JavaScript e senza un SVG da animare a mano.
+ * I numeri vengono dai fotogrammi: con il centro dell'ellisse al 30% da
+ * sinistra e un raggio orizzontale dell'80%, il bordo destro dell'arco risulta
+ * al 48% della profondità del punto più basso — nel video è 0,48.
+ *
+ * ⚠️ E IL CONTRASTO LO FA IL CONTENUTO, non un colore inventato. Sotto c'è la
+ * Home, già montata e già in cascata: quello che si vede risalire non è un
+ * bordo fra due neri, è la pagina che compare. L'arco porta solo una luce
+ * ambra sottile perché il gesto si legga anche nel primo fotogramma, quando
+ * sotto non è ancora comparso niente.
  */
 
 /** Quanto resta a schermo al minimo, anche se i dati arrivano subito. */
 const MINIMO_MS = 900
-/** L'uscita, dopo che l'app è pronta. */
-const USCITA_MS = 520
+/**
+ * L'uscita, in tre tempi come nel riferimento: il marchio se ne va, c'è una
+ * pausa di nero, poi l'arco risale.
+ * ⚠️ I 130ms di pausa sono MISURATI, non un ritardo inventato: nel video fra il
+ * logo che sfuma e la tenda che parte c'è un battito di nero assoluto, ed è
+ * quello a far leggere il passaggio come deliberato invece che come un
+ * caricamento. Toglierlo è la prima cosa che verrà in mente a qualcuno.
+ */
+const MARCHIO_MS = 260
+const PAUSA_MS = 130
+const ARCO_MS = 430
+const USCITA_MS = MARCHIO_MS + PAUSA_MS + ARCO_MS
 
 export function Apertura({ pronto, onFine }) {
   const [esce, setEsce] = useState(false)
   // ⚠️ L'istante di nascita si fissa in un EFFETTO, non durante il render:
   // `useRef(Date.now())` è una chiamata impura in fase di render, e due render
   // consecutivi darebbero due istanti diversi. È lo stesso difetto corretto su
-  // `Athletes.jsx` il 26/08/2026 (CLAUDE.md §9-septies), qui preso dal linter.
+  // `Athletes.jsx` il 26/08/2026 (CLAUDE.md §9-septies).
   const nato = useRef(0)
   useEffect(() => { nato.current = Date.now() }, [])
 
@@ -51,8 +63,7 @@ export function Apertura({ pronto, onFine }) {
     if (!pronto || esce) return
     // ⚠️ Il minimo NON è un ritardo inventato: senza, un avvio veloce mostra
     // l'apertura per due fotogrammi e si legge come uno sfarfallio — cioè
-    // peggio del taglio netto che stiamo togliendo. Con i dati lenti non
-    // aggiunge niente, perché il tempo è già passato.
+    // peggio del taglio netto che stiamo togliendo.
     const resta = Math.max(0, MINIMO_MS - (Date.now() - (nato.current || Date.now())))
     const t = setTimeout(() => setEsce(true), resta)
     return () => clearTimeout(t)
@@ -60,8 +71,8 @@ export function Apertura({ pronto, onFine }) {
 
   useEffect(() => {
     if (!esce) return
-    // ⚠️ `onFine` smonta la sovrapposizione. Va chiamato DOPO l'uscita, o la
-    // Home comparirebbe di colpo — che è il difetto che stiamo correggendo.
+    // ⚠️ `onFine` smonta la sovrapposizione, e va chiamato DOPO l'uscita: prima,
+    // e la Home comparirebbe di colpo — il difetto da cui è nata.
     const t = setTimeout(onFine, menoMovimento() ? 0 : USCITA_MS)
     return () => clearTimeout(t)
   }, [esce, onFine])
@@ -69,19 +80,14 @@ export function Apertura({ pronto, onFine }) {
   return (
     <div
       aria-hidden="true"
-      className={`fixed inset-0 z-[200] overflow-hidden bg-[#0B0B0B] ${esce ? 'apertura-esce' : ''}`}
+      className={`apertura fixed inset-0 z-[200] bg-[#0B0B0B] ${esce ? 'apertura-esce' : ''}`}
     >
-      {/* Le due forme. Partono fuori dallo schermo e si incrociano dietro al
-          marchio; in uscita scappano verso l'alto e liberano la pagina.
-          ⚠️ `will-change` NO: sono due elementi soli e vivono un secondo. */}
-      <span className="apertura-forma apertura-forma-1"
-        style={{ '--alone-rgb': '241 186 23', '--alone-alfa': .5 }} />
-      <span className="apertura-forma apertura-forma-2"
-        style={{ '--alone-rgb': '0 148 198', '--alone-alfa': .42 }} />
-
       {/* Il marchio, con la Regola del Logo di DESIGN.md: `FLEO` bianco,
-          `FIT` ambra, peso 900, in un h1 solo. */}
-      <div className="absolute inset-0 flex items-center justify-center">
+          `FIT` ambra, peso 900, in un h1 solo.
+          ⚠️ Sta in alto e non al centro esatto: quando l'arco risale, il punto
+          più basso della curva passa proprio dal centro dello schermo, e un
+          marchio lì in mezzo verrebbe tagliato a metà mentre se ne va. */}
+      <div className="absolute inset-x-0 top-[38%] flex justify-center">
         <h1 className="apertura-marchio text-[44px] leading-none font-black tracking-[-.03em] text-white">
           FLEO<span className="text-brand">FIT</span>
         </h1>
