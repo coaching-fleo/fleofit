@@ -408,12 +408,6 @@ body {
   filter: drop-shadow(0 2px 12px rgb(241 186 23 / .42));
 }
 
-@keyframes aperturaMarchio {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: none; }
-}
-.apertura-marchio { animation: aperturaMarchio .62s cubic-bezier(.33, 1, .68, 1) both; }
-
 /* 🔴 L'USCITA, IN TRE TEMPI COME NEL RIFERIMENTO: il marchio se ne va (260ms),
    c'è una PAUSA di nero (130ms), poi l'arco risale (430ms). La pausa è
    misurata, non inventata: nel video fra il logo che sfuma e la tenda che
@@ -450,7 +444,6 @@ body {
   /* ⚠️ L'arco resta, accorciato: è il gesto che scopre la Home, e toglierlo
      del tutto rimetterebbe il taglio netto da cui questa animazione è nata.
      Chi ha chiesto meno movimento non ha chiesto nessun movimento. */
-  .apertura-marchio { animation: none; }
   .apertura-esce { animation: aperturaArco .2s linear both; }
   .apertura-marchio-via { animation: none; opacity: 0; }
 }

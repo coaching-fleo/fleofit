@@ -46,25 +46,29 @@ const MINIMO_MS = 900
  * caricamento. Toglierlo è la prima cosa che verrà in mente a qualcuno.
  */
 /**
- * L'entrata del marchio, e quanto era già viva la pagina quando questo modulo è
- * stato caricato.
+ * 🔴 IL MARCHIO NON HA UN'ENTRATA, ED È LA CORREZIONE DI UN DIFETTO.
  *
- * 🔴 SERVE AL PASSAGGIO DI CONSEGNE COL PRE-DISEGNO. `index.html` dipinge il
- * primo fotogramma dell'apertura prima che React esista (misurato: 1,7 secondi
- * prima, sul simulatore). Quando React monta, il marchio è già entrato da un
- * pezzo: rigiocare l'entrata qui vorrebbe dire vederlo sfumare una seconda
- * volta, a metà apertura, senza nessuna ragione visibile.
+ * L'aveva (sfumava salendo di 10px), e produceva un rimbalzo: `index.html`
+ * dipinge il primo fotogramma dell'apertura prima che React esista, quindi
+ * quell'entrata veniva giocata due volte — una dal pre-disegno e una da qui,
+ * quando React monta a metà. A schermo il marchio arrivava a piena opacità, si
+ * abbassava di dieci pixel e si sbiadiva, poi tornava. Segnalato dal
+ * committente il 22/09/2026 e confermato fotogramma per fotogramma.
  *
- * ⚠️ Si legge a livello di MODULO e non durante il render: `performance.now()`
- * in fase di render è una chiamata impura — è la regola che ha già preso
- * `useRef(Date.now())` in questo stesso file. Il modulo viene caricato appena
- * prima del montaggio, quindi questo valore è di fatto «quanti millisecondi la
- * pagina era viva quando React è arrivato».
+ * ⚠️ HO PROVATO DUE VOLTE A SALVARE L'ENTRATA, E SONO STATE DUE VOLTE
+ * SBAGLIATE. Prima una soglia («se è passato più di 620ms, saltala»): copre
+ * solo il caso in cui React arriva tardi, mentre quando arriva a metà —  il
+ * caso normale — l'entrata non veniva saltata ma RICOMINCIATA. Poi un
+ * `animation-delay` negativo per riprenderla da dove stava, leggendo il punto
+ * con `getAnimations()` sul nodo del pre-disegno: non funziona perché questo
+ * modulo viene valutato PRIMA che quell'animazione sia partita, quindi non
+ * c'è ancora niente da leggere.
+ *
+ * La risposta non era un passaggio di consegne più furbo: era togliere la
+ * seconda animazione. Il marchio c'è e basta, identico prima e dopo, e non può
+ * più rimbalzare perché non gli succede niente. La cosa che si muove in questa
+ * schermata è l'arco, che è il punto.
  */
-const ENTRATA_MS = 620
-const ETA_AL_CARICAMENTO = typeof performance !== 'undefined' ? performance.now() : 0
-const MARCHIO_GIA_ENTRATO = ETA_AL_CARICAMENTO > ENTRATA_MS
-
 const MARCHIO_MS = 260
 const PAUSA_MS = 130
 const ARCO_MS = 430
@@ -104,18 +108,18 @@ export function Apertura({ pronto, onFine }) {
     >
       {/* Il marchio, con la Regola del Logo di DESIGN.md: `FLEO` bianco,
           `FIT` ambra, peso 900, in un h1 solo.
-          ⚠️ CENTRATO, e la prima stesura lo metteva al 38% per paura che l'arco
-          lo tagliasse a metà. Paura infondata: il marchio se ne va in 260ms e
-          l'arco parte a 390ms, quindi quando la curva passa dal centro dello
-          schermo lì non c'è più niente. Il pre-disegno in index.html lo centra
-          allo stesso modo, e i due devono coincidere. */}
+          ⚠️ CENTRATO, e una stesura precedente lo metteva al 38% per paura che
+          l'arco lo tagliasse a metà. Paura infondata: il marchio se ne va in
+          260ms e l'arco parte a 390ms, quindi quando la curva passa dal centro
+          dello schermo lì non c'è più niente. Il pre-disegno in index.html lo
+          centra allo stesso modo, e i due devono coincidere. */}
       <div className="absolute inset-0 flex items-center justify-center">
         {/* ⚠️ `apertura-marchio-via` è una classe a sé e non un discendente di
-            `.apertura-esce`: saltando l'entrata il marchio non ha più la classe
-            da cui il selettore dell'uscita pendeva, e se ne sarebbe andato di
-            colpo invece di sfumare. */}
+            `.apertura-esce`: il marchio non ha più nessun'altra classe — non ha
+            un'entrata, vedi sopra — quindi un selettore che pendesse da quella
+            non avrebbe niente a cui attaccarsi, e l'uscita sparirebbe. */}
         <h1 className={`text-[44px] leading-none font-black tracking-[-.03em] text-white
-                        ${esce ? 'apertura-marchio-via' : MARCHIO_GIA_ENTRATO ? '' : 'apertura-marchio'}`}>
+                      ${esce ? 'apertura-marchio-via' : ''}`}>
           FLEO<span className="text-brand">FIT</span>
         </h1>
       </div>
