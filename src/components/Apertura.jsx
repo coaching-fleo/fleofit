@@ -45,6 +45,26 @@ const MINIMO_MS = 900
  * quello a far leggere il passaggio come deliberato invece che come un
  * caricamento. Toglierlo è la prima cosa che verrà in mente a qualcuno.
  */
+/**
+ * L'entrata del marchio, e quanto era già viva la pagina quando questo modulo è
+ * stato caricato.
+ *
+ * 🔴 SERVE AL PASSAGGIO DI CONSEGNE COL PRE-DISEGNO. `index.html` dipinge il
+ * primo fotogramma dell'apertura prima che React esista (misurato: 1,7 secondi
+ * prima, sul simulatore). Quando React monta, il marchio è già entrato da un
+ * pezzo: rigiocare l'entrata qui vorrebbe dire vederlo sfumare una seconda
+ * volta, a metà apertura, senza nessuna ragione visibile.
+ *
+ * ⚠️ Si legge a livello di MODULO e non durante il render: `performance.now()`
+ * in fase di render è una chiamata impura — è la regola che ha già preso
+ * `useRef(Date.now())` in questo stesso file. Il modulo viene caricato appena
+ * prima del montaggio, quindi questo valore è di fatto «quanti millisecondi la
+ * pagina era viva quando React è arrivato».
+ */
+const ENTRATA_MS = 620
+const ETA_AL_CARICAMENTO = typeof performance !== 'undefined' ? performance.now() : 0
+const MARCHIO_GIA_ENTRATO = ETA_AL_CARICAMENTO > ENTRATA_MS
+
 const MARCHIO_MS = 260
 const PAUSA_MS = 130
 const ARCO_MS = 430
@@ -80,15 +100,22 @@ export function Apertura({ pronto, onFine }) {
   return (
     <div
       aria-hidden="true"
-      className={`apertura fixed inset-0 z-[200] bg-[#0B0B0B] ${esce ? 'apertura-esce' : ''}`}
+      className={`apertura fixed inset-0 z-[200] ${esce ? 'apertura-esce' : ''}`}
     >
       {/* Il marchio, con la Regola del Logo di DESIGN.md: `FLEO` bianco,
           `FIT` ambra, peso 900, in un h1 solo.
-          ⚠️ Sta in alto e non al centro esatto: quando l'arco risale, il punto
-          più basso della curva passa proprio dal centro dello schermo, e un
-          marchio lì in mezzo verrebbe tagliato a metà mentre se ne va. */}
-      <div className="absolute inset-x-0 top-[38%] flex justify-center">
-        <h1 className="apertura-marchio text-[44px] leading-none font-black tracking-[-.03em] text-white">
+          ⚠️ CENTRATO, e la prima stesura lo metteva al 38% per paura che l'arco
+          lo tagliasse a metà. Paura infondata: il marchio se ne va in 260ms e
+          l'arco parte a 390ms, quindi quando la curva passa dal centro dello
+          schermo lì non c'è più niente. Il pre-disegno in index.html lo centra
+          allo stesso modo, e i due devono coincidere. */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        {/* ⚠️ `apertura-marchio-via` è una classe a sé e non un discendente di
+            `.apertura-esce`: saltando l'entrata il marchio non ha più la classe
+            da cui il selettore dell'uscita pendeva, e se ne sarebbe andato di
+            colpo invece di sfumare. */}
+        <h1 className={`text-[44px] leading-none font-black tracking-[-.03em] text-white
+                        ${esce ? 'apertura-marchio-via' : MARCHIO_GIA_ENTRATO ? '' : 'apertura-marchio'}`}>
           FLEO<span className="text-brand">FIT</span>
         </h1>
       </div>

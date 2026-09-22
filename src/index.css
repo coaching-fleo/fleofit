@@ -388,6 +388,17 @@ body {
    `clip-path` calcolato, non dedotto. Chi cambia `rx` o il centro deve
    ricalcolare anche questo, o l'animazione torna a saltare. */
 .apertura {
+  /* 🔴 IL FONDO È UN Gradial-gradient(120% 88% at 32% 34%, #2b2210 0%, #16130b 45%, #0B0B0B 100%), E SERVE A FAR LEGGERE IL MOVIMENTO. Segnalato
+     dal committente: «il fatto che sia tutto nero fa poco contrasto e non si
+     capisce bene che c'è un'animazione». Con un nero piatto sopra una Home
+     quasi nera, l'arco che risale non ha niente da mostrare finché non arriva
+     sul primo contenuto. Il caldo ambra è più chiaro dove sta il marchio e dove
+     l'arco si abbassa, quindi è proprio la zona che se ne va.
+     ⚠️ Non è un ritorno agli aloni bocciati: quelli erano due cerchi sfumati
+     che ENTRAVANO in scena, questo è il fondo della superficie e sta fermo.
+     🔴 È DUPLICATO IN index.html, e deve restare identico: il pre-disegno lo
+     dipinge prima che questo foglio esista. C'è un test che li confronta. */
+  background: radial-gradient(120% 88% at 32% 34%, #2b2210 0%, #16130b 45%, #0B0B0B 100%);
   clip-path: ellipse(80% 208% at 30% 0%);
   /* ⚠️ La luce ambra sul bordo esiste per il PRIMO fotogramma dell'uscita,
      quando sotto non è ancora comparso niente e un bordo fra due neri sarebbe
@@ -424,7 +435,7 @@ body {
   to { opacity: 0; transform: translateY(-14px); }
 }
 .apertura-esce { animation: aperturaArco .43s .39s cubic-bezier(.33, 1, .68, 1) both; }
-.apertura-esce .apertura-marchio { animation: aperturaMarchioVia .26s cubic-bezier(.33, 1, .68, 1) both; }
+.apertura-marchio-via { animation: aperturaMarchioVia .26s cubic-bezier(.33, 1, .68, 1) both; }
 
 /* Nessuna si esegue per chi ha chiesto meno movimento. */
 @media (prefers-reduced-motion: reduce) {
@@ -441,5 +452,5 @@ body {
      Chi ha chiesto meno movimento non ha chiesto nessun movimento. */
   .apertura-marchio { animation: none; }
   .apertura-esce { animation: aperturaArco .2s linear both; }
-  .apertura-esce .apertura-marchio { animation: none; opacity: 0; }
+  .apertura-marchio-via { animation: none; opacity: 0; }
 }

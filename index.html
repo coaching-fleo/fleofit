@@ -24,10 +24,58 @@
          DOPO. Questa invece è già nel documento. -->
     <style>
       html, body { background-color: #0B0B0B; }
+
+      /* 🔴 IL PRIMO FOTOGRAMMA DELL'APERTURA, DIPINTO PRIMA DI REACT.
+         Misurato il 22/09/2026 sul simulatore: dall'apertura dell'app alle
+         prime forme passavano 1,7 secondi di nero, perché l'apertura non può
+         cominciare prima che la webview si sia avviata, il bundle sia stato
+         scaricato e React abbia montato. Questo blocco invece è già nel
+         documento: si dipinge appena l'HTML viene letto.
+
+         ⚠️ STA DENTRO #root DI PROPOSITO: `createRoot().render()` svuota il
+         contenitore al primo render, quindi il pre-disegno se ne va da solo
+         nell'istante in cui React prende il posto. Fuori da #root resterebbe
+         in pagina per sempre.
+
+         🔴 È UNA COPIA di `.apertura` e del marchio in src/components/
+         Apertura.jsx, e la copia è inevitabile: il foglio di stile e il bundle
+         arrivano DOPO, quindi qui non si può usare né Tailwind né una classe.
+         Il gradiente deve restare identico a quello di src/index.css o al
+         passaggio di consegne si vede uno scalino di colore — c'è un test che
+         confronta i due file.
+
+         ⚠️ Il carattere è quello di sistema (src/index.css riga ~74: Inter era
+         dichiarato ma non caricato), quindi qui NON serve precaricare niente e
+         il marchio è identico prima e dopo. Se un giorno si aggiunge un web
+         font, questo pre-disegno va precaricato o il logo cambierà forma a
+         metà apertura. */
+      #apertura-prima {
+        position: fixed; inset: 0; z-index: 200;
+        background: radial-gradient(120% 88% at 32% 34%, #2b2210 0%, #16130b 45%, #0B0B0B 100%);
+        display: flex; align-items: center; justify-content: center;
+      }
+      #apertura-prima h1 {
+        margin: 0; font-size: 44px; line-height: 1; font-weight: 900;
+        letter-spacing: -.03em; color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, system-ui, sans-serif;
+        animation: apPrimaIn .62s cubic-bezier(.33, 1, .68, 1) both;
+      }
+      #apertura-prima span { color: #f1ba17; }
+      @keyframes apPrimaIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: none; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #apertura-prima h1 { animation: none; }
+      }
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Il pre-disegno. React lo sostituisce montando <Apertura>, che riprende
+           esattamente da qui. Vedi lo <style> qui sopra. -->
+      <div id="apertura-prima"><h1>FLEO<span>FIT</span></h1></div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
