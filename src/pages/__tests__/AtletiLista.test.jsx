@@ -351,3 +351,43 @@ describe('Rubrica — ricerca', () => {
     expect(screen.getByText('Andrea Bianchi')).toBeInTheDocument()
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('La cascata sulla rubrica', () => {
+  // 🔴 Le sezioni sono DUE — gli attivi e «In pausa» — e `nth-child` riparte da
+  // capo a ogni intestazione: senza l'indice che scorre, gli atleti in pausa
+  // entrerebbero insieme ai primi della lista sopra invece che dopo di loro.
+  // Non dà errori e in jsdom non si vede: si vede solo aprendo la pagina.
+  it("l'indice scorre attraverso le due sezioni", async () => {
+    dati.atleti = [
+      atleta('a1', 'Luca', 'Rossi'),
+      atleta('a2', 'Giulia', 'Neri'),
+      atleta('a3', 'Marco', 'Donati', { notes: '[PAUSA: 2026-08-20]\nCi sentiamo' }),
+    ]
+    dati.assegnazioni = [attivoDiRecente('a1'), attivoDiRecente('a2')]
+    montaCoach()
+    await screen.findByText('Luca Rossi')
+
+    const indici = [...document.querySelectorAll('.cascata-voce')]
+      .map((el) => Number(el.style.getPropertyValue('--i')))
+    expect(indici.length).toBeGreaterThan(3)
+    expect(indici).toEqual([...indici].sort((a, b) => a - b))
+    expect(new Set(indici).size).toBe(indici.length)
+  })
+
+  // 🔴 La testata è `sticky`: cornice, non contenuto. Ricerca e chip di stato
+  // sono gli unici comandi della schermata — farli entrare in ritardo vorrebbe
+  // dire ritardare i comandi. Stessa regola dell'archivio.
+  it('la testata appiccicata NON entra, e la radice non ha `page-transition`', async () => {
+    dati.atleti = [atleta('a1', 'Luca', 'Rossi')]
+    dati.assegnazioni = [attivoDiRecente('a1')]
+    montaCoach()
+    await screen.findByText('Luca Rossi')
+
+    const testata = document.querySelector('.sticky')
+    expect(testata).not.toBeNull()
+    expect(testata.classList.contains('cascata-voce')).toBe(false)
+    expect(testata.closest('.cascata')).toBeNull()
+    expect(document.querySelector('.page-transition')).toBeNull()
+  })
+})

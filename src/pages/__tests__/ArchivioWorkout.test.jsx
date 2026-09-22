@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { montaPagina } from '../../test/montaPagina'
+import { MASSIMO_CASCATA } from '../../lib/cascata'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -263,5 +264,64 @@ describe('Archivio — vista atleta', () => {
     await screen.findByText('Fatto')
     expect(finto.chiamateA('workouts', 'select')).toHaveLength(0)
     expect(finto.chiamateA('athlete_workouts', 'select')).toHaveLength(1)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('La cascata sull\'archivio', () => {
+  const monta = () => montaPagina(<WorkoutsArchive />, { role: 'admin' })
+
+  // 🔴 IL TEST CHE GIUSTIFICA `src/lib/cascata.js`. Le righe stanno dentro i
+  // mesi, quindi `nth-child` riparte da capo a ogni intestazione: senza un
+  // indice che scorre attraverso i gruppi, la prima riga di agosto entrerebbe
+  // insieme alla prima di settembre e la cascata ricomincerebbe da zero a metà
+  // pagina. Non dà nessun errore e in jsdom non si vede: si vede solo scorrendo.
+  it('l\'indice scorre ATTRAVERSO i mesi, non riparte da ogni intestazione', async () => {
+    dati.workouts = [
+      HYROX(1, 'Settembre uno', '2026-09-10'),
+      HYROX(2, 'Settembre due', '2026-09-08'),
+      HYROX(3, 'Agosto uno', '2026-08-20'),
+    ]
+    monta()
+    await screen.findByText('Settembre uno')
+
+    const indici = [...document.querySelectorAll('.cascata-voce')]
+      .map((el) => Number(el.style.getPropertyValue('--i')))
+    // Intestazione settembre, 2 righe, intestazione agosto, 1 riga.
+    expect(indici).toHaveLength(5)
+    // Strettamente crescente: è tutta la proprietà.
+    expect(indici).toEqual([...indici].sort((a, b) => a - b))
+    expect(new Set(indici).size).toBe(indici.length)
+  })
+
+  // ⚠️ Il tetto deve coincidere con `nth-child(n+12)` in src/index.css, che da
+  // qui non è leggibile. Con 171 workout in produzione, senza tetto l'ultima
+  // riga entra dopo più di dodici secondi.
+  it('l\'indice si ferma a MASSIMO_CASCATA', async () => {
+    dati.workouts = Array.from({ length: 20 }, (_, i) =>
+      HYROX(i + 1, `Scheda ${i + 1}`, `2026-09-${String(20 - i).padStart(2, '0')}`))
+    monta()
+    await screen.findByText('Scheda 1')
+
+    const indici = [...document.querySelectorAll('.cascata-voce')]
+      .map((el) => Number(el.style.getPropertyValue('--i')))
+    expect(Math.max(...indici)).toBe(MASSIMO_CASCATA)
+    expect(indici.filter((i) => i === MASSIMO_CASCATA).length).toBeGreaterThan(1)
+  })
+
+  // 🔴 La testata è `sticky`: è la CORNICE della pagina, non il contenuto, e
+  // nel riferimento il contenitore sta fermo mentre si muovono le righe. È
+  // anche l'unico comando della schermata (§9-sedecies): farla entrare in
+  // ritardo vorrebbe dire ritardare la ricerca e i filtri.
+  it('la testata appiccicata NON entra, e la radice non ha `page-transition`', async () => {
+    dati.workouts = [HYROX(1, 'Settembre uno', '2026-09-10')]
+    monta()
+    await screen.findByText('Settembre uno')
+
+    const testata = document.querySelector('.sticky')
+    expect(testata).not.toBeNull()
+    expect(testata.classList.contains('cascata-voce')).toBe(false)
+    expect(testata.closest('.cascata')).toBeNull()
+    expect(document.querySelector('.page-transition')).toBeNull()
   })
 })

@@ -11,13 +11,17 @@
 // giorni» e un volume a «0 min» non sono uno stato vuoto: sono tre numeri veri
 // che dicono all'atleta appena arrivato che è già indietro.
 //
-// ⚠️ Perché l'entrata è `hero-transition` e non `animate-in fade-in
-// slide-in-from-bottom-2`: quelle classi vengono da **tw-animate-css, che in
-// questo progetto NON è installato** e genera zero CSS (CLAUDE.md §9-duodecies,
-// verificato sul bundle: `grep -c "animate-in" dist/assets/*.css` → 0). Il
-// disegno le usa perché altrove sono la convenzione; qui sarebbero
-// un'animazione che nessuno vede mai. Il keyframe vero è in `src/index.css`, ed
-// è esattamente «sale di 8px mentre appare».
+// ⚠️ NESSUNA di queste card dichiara la propria entrata, ed è voluto: a farle
+// entrare è `cascata` sul contenitore in `Home.jsx`, che le sfasa di 65ms l'una
+// dall'altra. Rimettere `hero-transition` qui non aggiunge un'entrata — ne mette
+// una SECONDA di pari specificità sullo stesso nodo, e a decidere quale vince
+// sarebbe l'ordine nel foglio di stile, in silenzio (§9-octodecies).
+//
+// ⚠️ E non si usa `animate-in fade-in slide-in-from-bottom-2`: quelle classi
+// vengono da **tw-animate-css, che in questo progetto NON è installato** e
+// generano zero CSS (CLAUDE.md §9-duodecies, verificato sul bundle:
+// `grep -c "animate-in" dist/assets/*.css` → 0). Il disegno le usa perché
+// altrove sono la convenzione; qui sarebbero un'animazione che nessuno vede.
 
 import { CalendarDays, ChevronRight, Plus, User, Dumbbell, Archive } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -36,7 +40,7 @@ import { CARD, LABEL } from '../lib/stiliCard'
 // La Regola del Nero Sopra il Giallo vale anche qui: il testo è nero.
 export function BenvenutoCoach({ coach, onProfilo }) {
   return (
-    <div className="relative overflow-hidden rounded-[26px] bg-brand p-[22px] pt-6 hero-transition
+    <div className="relative overflow-hidden rounded-[26px] bg-brand p-[22px] pt-6
                     shadow-[0_26px_50px_-22px_rgba(241,186,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]">
       <div aria-hidden="true" className="absolute -top-4 -right-3 opacity-[.13] -rotate-12 text-black">
         <Dumbbell size={132} />
@@ -233,10 +237,15 @@ export function BannerObiettivoVuoto({ onFissa }) {
 // interviene prima il ramo del giorno 1.
 export function HeroRiposo({ minutiSettimana, giorniAttivi, onRivedi }) {
   return (
-    <div className="relative overflow-hidden rounded-[26px] border border-running/[.28] p-[22px] hero-transition
+    <div className="relative overflow-hidden rounded-[26px] border border-running/[.28] p-[22px]
                     bg-gradient-to-br from-[#16202a] via-[#181a1d] to-[#151517]
                     shadow-[0_24px_48px_-20px_rgba(0,0,0,.9),inset_0_1px_0_rgba(255,255,255,.07)]">
-      <div aria-hidden="true" className="pointer-events-none absolute -top-32 -right-24 h-60 w-60 rounded-full bg-running/[.18] blur-2xl" />
+      {/* ⚠️ `alone` (src/index.css) e non `blur-2xl`: la sfocatura cambiava
+          colore nell'istante in cui la cascata finiva — misurato, Y 48,1 → 52,3.
+          Le misure sono quelle del disco da 240px PIÙ lo spegnimento della
+          sfocatura, o l'alone verrebbe tagliato di netto. */}
+      <div aria-hidden="true" style={{ '--alone-rgb': '0 148 198' }}
+        className="alone -top-[208px] -right-[176px] h-[400px] w-[400px]" />
       <div className="relative flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-running px-2.5 py-1 text-[11px] font-black uppercase tracking-[.08em] text-white">Riposo</span>

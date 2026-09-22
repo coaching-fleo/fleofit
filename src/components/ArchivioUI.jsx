@@ -146,9 +146,9 @@ function ChipCorsia({ etichetta, conteggio, punto, attivo, onClick }) {
  * errore: incolla l'intestazione a metà dei filtri, o la lascia scorrere
  * sotto di essi. Il gruppo dà già la struttura; a dire dove si è basta lui.
  */
-export function IntestazioneSezione({ etichetta, conteggio }) {
+export function IntestazioneSezione({ etichetta, conteggio, voce }) {
   return (
-    <div className="flex items-center gap-2.5 px-0.5 pt-3.5 pb-1.5">
+    <div style={voce} className={`flex items-center gap-2.5 px-0.5 pt-3.5 pb-1.5${voce ? ' cascata-voce' : ''}`}>
       <span className="font-mono text-[11px] font-bold uppercase tracking-[.14em] text-white leading-none">
         {etichetta}
       </span>
@@ -173,12 +173,12 @@ export function IntestazioneSezione({ etichetta, conteggio }) {
  * domande diverse, ed è il ruolo di chi guarda a decidere quale — come il
  * verso della nota vocale in `WorkoutDetail` (§9-duodecies punto 7).
  */
-export function RigaWorkout({ categoria, titolo, meta, assegnati, completato, onApri }) {
+export function RigaWorkout({ categoria, titolo, meta, assegnati, completato, onApri, voce }) {
   const c = corsia(categoria)
   return (
-    <button onClick={onApri}
+    <button onClick={onApri} style={voce}
       className={`${CARTA_RIGA} w-full text-left px-3.5 py-3 flex items-center gap-3
-                  hover:border-white/[.14] transition`}>
+                  hover:border-white/[.14] transition${voce ? ' cascata-voce' : ''}`}>
       <span className={`w-[3px] self-stretch rounded-full shrink-0 ${c.bg}`} />
       <span className="flex-1 min-w-0">
         <span className="block text-[14.5px] font-bold tracking-[-.01em] text-white truncate">

@@ -286,3 +286,19 @@ describe('Elimina il mio account (5.1.1v di App Store)', () => {
     expect(finto.supabase.auth.signOut).not.toHaveBeenCalled()
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────
+// La cascata (CLAUDE.md, il rework delle animazioni del 21/09/2026).
+// ⚠️ jsdom non carica `index.css`: il ritardo non è verificabile qui — è stato
+// misurato nel browser. Qui si protegge il CABLAGGIO, che è la parte che si
+// perde per distrazione e che non fa cadere nessun altro test.
+describe('La cascata sulle impostazioni', () => {
+  it('la radice la dichiara e non ha più `page-transition`', async () => {
+    montaCoach()
+    await screen.findByRole('switch', { name: /Notifiche push/i })
+    const radice = document.querySelector('.cascata')
+    expect(radice).not.toBeNull()
+    expect(radice.children.length).toBeGreaterThan(3)
+    expect(document.querySelector('.page-transition')).toBeNull()
+  })
+})

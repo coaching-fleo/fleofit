@@ -156,7 +156,7 @@ export default function WeeklyReport() {
   const vuota = squadra.assegnati === 0 && squadra.daVenire === 0 && report.righe.length > 0
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
       <TestataReport
         etichetta={settimana.etichetta}
         numero={settimana.numero}
@@ -167,6 +167,12 @@ export default function WeeklyReport() {
         onSuccessiva={() => cambiaSettimana(1)}
       />
 
+      {/* ⚠️ L'involucro esiste perché `TestataReport` è `sticky`: è la cornice
+          della pagina, non il contenuto, e non deve entrare (stessa regola di
+          archivio e rubrica). Mettere `cascata` sulla radice la includerebbe
+          fra i figli. Un div nudo non cambia il layout: la radice non è flex,
+          quindi i margini dei figli attraversano l'involucro come prima. */}
+      <div className="cascata">
       {!caricato ? <ScheletroReport /> : errore ? (
         <VuotoReport
           titolo="Non sono riuscito a leggere la settimana"
@@ -228,6 +234,7 @@ export default function WeeklyReport() {
           {report.inPausa.length > 0 && <SezionePausa righe={report.inPausa} />}
         </>
       )}
+      </div>
     </div>
   )
 }

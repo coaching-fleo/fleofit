@@ -92,7 +92,12 @@ export function ProposteSettimana({ voci = [], settimana, verdetto }) {
     <div className="relative overflow-hidden rounded-[26px] p-5 mt-4 border border-brand/20
                     bg-gradient-to-br from-[#232019] via-[#1b1b1d] to-[#161618]
                     shadow-[0_24px_48px_-20px_rgba(0,0,0,.9),inset_0_1px_0_rgba(255,255,255,.07)]">
-      <div aria-hidden="true" className="pointer-events-none absolute -top-32 -right-24 w-64 h-64 rounded-full blur-2xl bg-brand/[.16]" />
+      {/* ⚠️ `alone` e non `blur-2xl`: sotto un'animazione di opacità la sfocatura
+          cambia colore nell'istante in cui l'animazione finisce — WebKit la rende
+          sul layer GPU e la ridipinge dalla CPU quando il layer viene liberato
+          (misurato sul simulatore, src/index.css). */}
+      <div aria-hidden="true" style={{ '--alone-rgb': '241 186 23', '--alone-alfa': .16 }}
+        className="alone -top-[208px] -right-[176px] h-[416px] w-[416px]" />
       <div aria-hidden="true" className="pointer-events-none absolute top-0 right-0 p-[18px] opacity-[.08] -rotate-12">
         <ClipboardList size={92} className="text-brand" />
       </div>

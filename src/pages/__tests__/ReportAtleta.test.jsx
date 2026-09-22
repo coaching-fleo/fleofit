@@ -284,3 +284,29 @@ describe('Report atleta — la settimana e i guasti', () => {
     errori.mockRestore()
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────
+// La cascata (CLAUDE.md, il rework delle animazioni del 21/09/2026).
+// ⚠️ jsdom non carica `index.css`: il ritardo non è verificabile qui — è stato
+// misurato nel browser. Qui si protegge il CABLAGGIO.
+describe('La cascata sul report del singolo', () => {
+  it('la testata appiccicata resta fuori dalla cascata', async () => {
+    monta()
+    await screen.findByText('Come programmare la prossima')
+    const testata = document.querySelector('.sticky')
+    expect(testata).not.toBeNull()
+    expect(testata.closest('.cascata')).toBeNull()
+    const involucro = document.querySelector('.cascata')
+    expect(involucro).not.toBeNull()
+    expect(involucro.children.length).toBeGreaterThan(1)
+    expect(document.querySelector('.page-transition')).toBeNull()
+  })
+
+  it("l'eroe non usa una sfocatura", async () => {
+    monta()
+    await screen.findByText('Come programmare la prossima')
+    const sfocati = [...document.querySelectorAll('.cascata *')]
+      .filter((el) => [...el.classList].some((c) => c.startsWith('blur-')))
+    expect(sfocati).toHaveLength(0)
+  })
+})

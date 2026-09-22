@@ -19,6 +19,7 @@
 
 import { User, Plus, Dumbbell, FolderArchive, ChevronRight, FileText, Mic,
          CheckCircle2, Inbox } from 'lucide-react'
+import { useNumeroCheSale } from '../useNumeroCheSale'
 import { CARD, LABEL, RIGA } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 
@@ -101,9 +102,10 @@ export function BannerLive({ nome, dettaglio, onGuarda }) {
 // il testo obbliga ad aprire quattro schermate per sapere se una delle quattro
 // era urgente.
 //
-// ⚠️ L'entrata `hero-transition` la mette Home.jsx sul contenitore, non qui:
-// stessa disciplina della Home atleta, così il nodo resta libero per gli stili
-// inline di chi lo anima o lo trasforma.
+// ⚠️ L'entrata NON si dichiara qui: la mette `cascata` sul contenitore in
+// Home.jsx, che sfasa questo eroe dagli elementi sotto. Rimetterla sulla radice
+// non aggiunge un'entrata — ne mette una SECONDA di pari specificità, e a
+// decidere quale vince sarebbe l'ordine nel foglio di stile (§9-octodecies).
 
 /** L'RPE dichiarato, in pillola. Sopra il 9 diventa gialla: è l'unico caso in
  *  cui il numero da solo cambia cosa il coach deve fare. */
@@ -119,13 +121,22 @@ function PillolaRpe({ rpe }) {
 }
 
 export function HeroFeedback({ righe = [], mostrate = 3, espanso = false, onEspandi, onApri, finestraGiorni }) {
+  // ⚠️ È `righe.length` — le cose da leggere — non `totale`, che somma vocali e
+  // note e per una riga con entrambe vale due (§9-nonies punto 1).
+  const quanteCheSalgono = useNumeroCheSale(righe.length)
   const visibili = espanso ? righe : righe.slice(0, mostrate)
   const restanti = righe.length - visibili.length
   return (
     <div className="relative overflow-hidden rounded-[26px] p-5 border border-brand/20
                     bg-gradient-to-br from-[#232019] via-[#1b1b1d] to-[#161618]
                     shadow-[0_24px_48px_-20px_rgba(0,0,0,.9),inset_0_1px_0_rgba(255,255,255,.07)]">
-      <div aria-hidden="true" className="pointer-events-none absolute -top-32 -right-24 w-64 h-64 rounded-full blur-2xl bg-brand/[.16]" />
+      {/* ⚠️ `alone` e non `blur-2xl`: la sfocatura cambia colore nell'istante in
+          cui la cascata finisce, perché WebKit la rende sul layer GPU durante
+          l'animazione e la ridipinge dalla CPU quando il layer viene liberato
+          (misurato — src/index.css). Le misure sono quelle del disco da 256px
+          PIÙ lo spegnimento della sfocatura, o l'alone verrebbe tagliato. */}
+      <div aria-hidden="true" style={{ '--alone-rgb': '241 186 23', '--alone-alfa': .16 }}
+        className="alone -top-[208px] -right-[176px] h-[416px] w-[416px]" />
       <div aria-hidden="true" className="pointer-events-none absolute top-0 right-0 p-[18px] opacity-[.08] -rotate-12">
         <FileText size={92} className="text-brand" />
       </div>
@@ -135,7 +146,7 @@ export function HeroFeedback({ righe = [], mostrate = 3, espanso = false, onEspa
           <div className="min-w-0">
             <p className={`${LABEL} mb-2`}>Feedback nuovi</p>
             <h2 className="text-[44px] font-black leading-[.92] tracking-[-.02em] text-white">
-              {righe.length}
+              {quanteCheSalgono}
               <span className="text-[19px] font-bold tracking-[-.01em] text-muted"> da leggere</span>
             </h2>
           </div>

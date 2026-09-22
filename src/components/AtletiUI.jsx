@@ -104,10 +104,10 @@ function ChipStato({ etichetta, conteggio, punto, soloIcona, attivo, onClick }) 
  * cornice arancione la renderebbe atmosfera invece che allarme. Porta alla
  * lista già filtrata: un allarme che non ha una destinazione è una decorazione.
  */
-export function FasciaRichiamo({ testo, attiva, onApri }) {
+export function FasciaRichiamo({ testo, attiva, onApri, voce }) {
   return (
-    <button onClick={onApri} aria-pressed={attiva}
-      className={`w-full text-left mt-4 rounded-[18px] px-4 py-3.5 flex items-center gap-3.5 transition
+    <button onClick={onApri} aria-pressed={attiva} style={voce}
+      className={`${voce ? 'cascata-voce ' : ''}w-full text-left mt-4 rounded-[18px] px-4 py-3.5 flex items-center gap-3.5 transition
                   bg-gradient-to-r from-orange-500/10 to-orange-500/[.02]
                   shadow-[inset_0_1px_0_rgba(255,255,255,.05)]
                   ${attiva ? 'border-2 border-orange-500/60' : 'border border-orange-500/[.28] hover:border-orange-500/50'}`}>
@@ -166,11 +166,11 @@ export function AvatarAtleta({ foto, sigla, spento = false, dimensione = 42 }) {
  * alla frazione dipingerebbe di arancione l'intera rubrica ogni lunedì, cioè
  * un allarme che si accende quando non è successo niente.
  */
-export function RigaAtleta({ nome, meta, foto, sigla, aderenza, fermo, onApri }) {
+export function RigaAtleta({ nome, meta, foto, sigla, aderenza, fermo, onApri, voce }) {
   return (
-    <button onClick={onApri}
+    <button onClick={onApri} style={voce}
       className={`${CARTA_RIGA} w-full text-left px-3.5 py-3 flex items-center gap-3
-                  hover:border-white/[.14] transition`}>
+                  hover:border-white/[.14] transition${voce ? ' cascata-voce' : ''}`}>
       <AvatarAtleta foto={foto} sigla={sigla} />
       <span className="flex-1 min-w-0">
         <span className="block text-[14.5px] font-bold tracking-[-.01em] text-white truncate">{nome}</span>
@@ -242,11 +242,11 @@ function Aderenza({ assegnati, completati, tacche, compresso, quota, allarme }) 
  * dagli allarmi, non dalla lista — e qui non si misura aderenza, perché
  * misurare il piano di chi ha chiesto di fermarsi è la domanda sbagliata.
  */
-export function RigaPausa({ nome, dettaglio, foto, sigla, onApri }) {
+export function RigaPausa({ nome, dettaglio, foto, sigla, onApri, voce }) {
   return (
-    <button onClick={onApri}
-      className="w-full text-left rounded-2xl px-3.5 py-3 flex items-center gap-3
-                 bg-white/[.028] border border-white/[.06] hover:bg-white/[.05] transition">
+    <button onClick={onApri} style={voce}
+      className={`w-full text-left rounded-2xl px-3.5 py-3 flex items-center gap-3
+                 bg-white/[.028] border border-white/[.06] hover:bg-white/[.05] transition${voce ? ' cascata-voce' : ''}`}>
       <AvatarAtleta foto={foto} sigla={sigla} spento />
       <span className="flex-1 min-w-0">
         <span className="block text-[14.5px] font-bold text-gray-300 truncate">{nome}</span>
@@ -275,11 +275,11 @@ export function RigaPausa({ nome, dettaglio, foto, sigla, onApri }) {
  * di quella notte gira PRIMA, quindi da lì in poi non c'è più modo di
  * recuperarlo.
  */
-export function RigaEliminato({ nome, foto, sigla, giorni, onRipristina }) {
+export function RigaEliminato({ nome, foto, sigla, giorni, onRipristina, voce }) {
   const urgente = giorni <= 2
   return (
-    <div className="rounded-2xl px-3.5 py-3 flex items-center gap-3
-                    bg-white/[.028] border border-dashed border-white/[.12]">
+    <div style={voce} className={`rounded-2xl px-3.5 py-3 flex items-center gap-3
+                    bg-white/[.028] border border-dashed border-white/[.12]${voce ? ' cascata-voce' : ''}`}>
       <AvatarAtleta foto={foto} sigla={sigla} spento />
       <div className="flex-1 min-w-0">
         <p className="text-[14.5px] font-bold text-gray-300 truncate">{nome}</p>

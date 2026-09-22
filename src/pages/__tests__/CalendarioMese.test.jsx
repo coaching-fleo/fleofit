@@ -370,3 +370,31 @@ describe('Calendario — i comandi', () => {
     expect(select.args[0]).toContain('status')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────
+// La cascata (CLAUDE.md, il rework delle animazioni del 21/09/2026).
+// ⚠️ jsdom non carica `index.css`: il ritardo non è verificabile qui — è stato
+// misurato nel browser. Qui si protegge il CABLAGGIO, che è la parte che si
+// perde per distrazione e che non fa cadere nessun altro test.
+describe('La cascata sul calendario', () => {
+  it('la radice la dichiara e non ha più `page-transition`', async () => {
+    montaCoach()
+    await screen.findByText('Programmati')
+    const radice = document.querySelector('.cascata')
+    expect(radice).not.toBeNull()
+    // Testata, carta del mese, intestazione del giorno, lista del giorno.
+    expect(radice.children.length).toBeGreaterThan(2)
+    expect(document.querySelector('.page-transition')).toBeNull()
+  })
+
+  // ⚠️ Qui la testata ENTRA, al contrario di archivio e rubrica: non è
+  // `sticky`, scorre via con la pagina, quindi è contenuto e non cornice.
+  it('la testata è dentro la cascata, perché qui non è appiccicata', async () => {
+    montaCoach()
+    await screen.findByText('Programmati')
+    // La testata è il primo figlio della cascata, e non è appiccicata.
+    const radice = document.querySelector('.cascata')
+    expect(radice.firstElementChild.classList.contains('sticky')).toBe(false)
+    expect(document.querySelector('.sticky')).toBeNull()
+  })
+})

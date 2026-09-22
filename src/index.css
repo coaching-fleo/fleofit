@@ -175,9 +175,196 @@ body {
   animation: veloIn 0.3s ease-out;
 }
 
+/* ── LA CASCATA ────────────────────────────────────────────────────────────
+   I figli di un contenitore non appaiono insieme: ognuno sfuma salendo, e
+   parte 65ms dopo il precedente.
+
+   I numeri partono da una MISURA: contati fotogramma per fotogramma a 30fps
+   sul riferimento che il committente ha indicato il 21/09/2026 (una schermata
+   Flutter, undici elementi in fila) davano 20px di salita, 220ms per elemento,
+   65ms di scarto. Provati sul dispositivo il 21/09 sono stati allungati per
+   sua richiesta — «leggermente più lento, più smooth» — a 340ms e 75ms.
+   ⚠️ Stanno in quattro variabili e NON si scrivono nelle regole: sono la
+   sensazione di tutta l'app, e ritoccarle vuol dire toccare un punto solo.
+
+   🔴 LA CURVA NON È QUELLA DEL RESTO DEL PROGETTO, ED È DELIBERATO. Altrove
+   si usa `cubic-bezier(.16,1,.3,1)`, che è un ease-out *esponenziale*: copre
+   il 90% della distanza nel primo quarto del tempo e poi striscia. Su una
+   transizione di pagina è giusto — sparisce di mezzo. Su un elemento che
+   deve sembrare *morbido* legge come uno scatto seguito da un'attesa, ed è
+   esattamente ciò che il committente ha chiesto di togliere. Qui la curva è
+   un ease-out *cubico*: parte più dolce e resta visibilmente in movimento
+   per tutta la durata. Allungare la durata SENZA cambiarla non rende
+   l'entrata più morbida — la rende più lenta a non muoversi.
+
+   ⚠️ Perché un keyframe e non `animate-in fade-in slide-in-from-bottom-5`:
+   quelle classi vengono da tw-animate-css, che NON è installato e genera zero
+   CSS. È già successo tre volte in questo progetto (CLAUDE.md §9-duodecies,
+   §9-quindecies, §9-duodetricies) — qui non si ripete.
+
+   ⚠️ IL RITARDO SI LEGGE DA `--i`, e `--i` lo scrive `nth-child`. Così un
+   contenitore statico diventa una cascata aggiungendo UNA classe, senza
+   toccare i figli. Per le liste lunghe il chiamante può scrivere `--i` inline
+   (lo stile inline vince sulla regola), ed è l'unico caso in cui serve.
+
+   ⚠️ IL TETTO A 12 NON È UNA SEMPLIFICAZIONE. Dal tredicesimo in poi il
+   ritardo non cresce più: una lista da cento righe altrimenti impiegherebbe
+   più di sette secondi a finire di comparire, e le ultime entrerebbero molto
+   dopo che il dito ha già cominciato a scorrere. La cascata si chiude a
+   ~1,2s qualunque cosa contenga. ⚠️ È il tetto che rende sicuro allungare
+   `--cascata-scarto`: senza, ogni ritocco si moltiplica per la lista più
+   lunga dell'app, che è l'archivio da 171 workout. */
+:root {
+  --cascata-salita: 20px;
+  --cascata-durata: 0.34s;
+  --cascata-scarto: 75ms;
+  --cascata-curva: cubic-bezier(0.33, 1, 0.68, 1);
+}
+@keyframes cascataIn {
+  from { opacity: 0; transform: translateY(var(--cascata-salita)); }
+  to   { opacity: 1; transform: none; }
+}
+.cascata > *,
+.cascata-voce {
+  animation: cascataIn var(--cascata-durata) var(--cascata-curva) both;
+  animation-delay: calc((var(--i, 0) + var(--cascata-da, 0)) * var(--cascata-scarto));
+}
+.cascata > *:nth-child(1)  { --i: 0; }
+.cascata > *:nth-child(2)  { --i: 1; }
+.cascata > *:nth-child(3)  { --i: 2; }
+.cascata > *:nth-child(4)  { --i: 3; }
+.cascata > *:nth-child(5)  { --i: 4; }
+.cascata > *:nth-child(6)  { --i: 5; }
+.cascata > *:nth-child(7)  { --i: 6; }
+.cascata > *:nth-child(8)  { --i: 7; }
+.cascata > *:nth-child(9)  { --i: 8; }
+.cascata > *:nth-child(10) { --i: 9; }
+.cascata > *:nth-child(11) { --i: 10; }
+.cascata > *:nth-child(n+12) { --i: 11; }
+
+/* ── L'ALONE ───────────────────────────────────────────────────────────────
+   L'alone colorato che sta dietro alle card eroe, dipinto con un
+   `radial-gradient` invece che con `blur-2xl` su un cerchio pieno.
+
+   🔴 NON È UNA PREFERENZA DI STILE: È LA CORREZIONE DI UN DIFETTO MISURATO.
+   Segnalato dal committente il 21/09/2026 («al termine dell'animazione il
+   gradiente cambia leggermente colore»), e misurato registrando il simulatore
+   e leggendo il pixel fotogramma per fotogramma. Mentre la card si anima,
+   WebKit la promuove su un layer GPU e rende la `filter: blur()` con
+   l'approssimazione della GPU; finita l'animazione il layer viene liberato e
+   la stessa sfocatura è ridipinta dalla CPU. Due risultati diversi per lo
+   stesso pixel, e lo scarto è visibile: sopra l'alone, Y 48,08 → 52,31 e
+   V 119,07 → 115,56 nei 17ms dopo che il movimento è già finito. Fuori
+   dall'alone, sul gradiente vero, il colore non si muove di un decimo.
+
+   ⚠️ Quindi il difetto NON è del gradiente della card e non si corregge lì.
+   Un `radial-gradient` è una pittura pura: nessun filtro, nessun layer, e
+   viene reso identico dentro e fuori da una composizione. Costa anche meno
+   di una sfocatura da 40px ridisegnata a ogni entrata.
+
+   ⚠️ L'alternativa era tenere la sfocatura e inchiodare l'elemento su un
+   layer permanente (`will-change: filter`). Rende il colore costante, ma
+   costante sulla versione GPU — cioè quella più SCURA: l'alone perderebbe
+   l'8% di luminosità rispetto a come si vede oggi da fermo. Fra due colori
+   costanti si sceglie quello giusto.
+
+   ⚠️ Le misure delle card che lo usano sono quelle del cerchio sfocato più
+   il raggio della sfocatura: un disco da 240px con `blur(40px)` si spegne
+   intorno ai 400px, e un box più piccolo taglierebbe l'alone di netto. */
+.alone {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px;
+  background: radial-gradient(circle closest-side,
+    rgb(var(--alone-rgb) / var(--alone-alfa, .18)) 0%,
+    rgb(var(--alone-rgb) / var(--alone-alfa, .18)) 40%,
+    rgb(var(--alone-rgb) / calc(var(--alone-alfa, .18) * .5)) 60%,
+    rgb(var(--alone-rgb) / calc(var(--alone-alfa, .18) * .11)) 80%,
+    rgb(var(--alone-rgb) / 0) 100%);
+}
+
+/* ── LA CTA CHE SI CONTRAE ─────────────────────────────────────────────────
+   Un'azione che deve aspettare non si spegne: si stringe da tutta larghezza a
+   una pillola, e dentro nascono tre puntini.
+
+   Misurata sul riferimento indicato dal committente il 21/09/2026: il bottone
+   si restringe **da entrambi i lati verso il centro** in ~570ms, e l'etichetta
+   sfuma nei primi ~150. Le due durate sono diverse di proposito — il testo
+   deve sparire mentre c'è ancora spazio, o si vedrebbe tagliato dai bordi che
+   si chiudono.
+
+   🔴 PERCHÉ NON BASTA SPEGNERE IL BOTTONE. Un bottone disabilitato accanto a
+   un'attesa si legge come «non ha funzionato», ed è la stessa lezione del
+   foglio IA (CLAUDE.md §9-quindecies): lì la CTA spenta al 40% faceva premere
+   di nuovo il microfono, cioè buttare via la registrazione appena spedita. Qui
+   il gesto sbagliato sarebbe premere «Salva» una seconda volta.
+
+   ⚠️ SI CONTRAE SOLO DOVE L'ATTESA È VERA. `attesa` è falsa di default: un
+   bottone che apre un modale non aspetta niente, e contrarsi per 570ms
+   significherebbe solo ritardare il modale.
+
+   ⚠️ `margin-inline: auto` è ciò che la porta al CENTRO. Senza, un elemento
+   flex che smette di crescere lascia lo spazio libero alla sua destra e la
+   pillola resta appiccicata a sinistra — corretto per il layout, sbagliato per
+   l'occhio, perché il movimento non sembra più una contrazione ma una fuga. */
+/* 🔴 IL VALORE DI PARTENZA DEVE ESSERE UNA LUNGHEZZA, e lo dichiara il
+   chiamante (`max-w-[100vw]` su `CtaPrimaria`). Il default di `max-width` è
+   `none`, e da `none` il CSS non sa interpolare: la transizione non avviene
+   affatto e il bottone SALTA a 86px. Il difetto non dà nessun errore e in
+   jsdom non si vede — trovato il 21/09/2026 misurando il rettangolo nel
+   browser a 150ms dall'inizio, dove la larghezza era già quella finale.
+
+   ⚠️ E il raggio arriva a 26px, non a 9999. Metà dell'altezza (52px) è già una
+   pillola perfetta, mentre interpolare fino a 9999 rende il bordo tondo nei
+   primi fotogrammi — cioè il raggio finisce prima della larghezza, e la
+   contrazione si legge come due animazioni scollegate invece che una. */
+.cta-contratta {
+  max-width: 86px !important;
+  border-radius: 26px !important;
+  margin-inline: auto;
+}
+
+@keyframes puntiniSu {
+  0%, 80%, 100% { opacity: .28; transform: scale(.66); }
+  40%           { opacity: 1;   transform: scale(1); }
+}
+.puntini > span { animation: puntiniSu 1.05s ease-in-out infinite; }
+.puntini > span:nth-child(2) { animation-delay: .14s; }
+.puntini > span:nth-child(3) { animation-delay: .28s; }
+
+/* ── IL PASSO CHE ENTRA ────────────────────────────────────────────────────
+   Il cambio di passo del builder era netto: il passo 1 spariva e il 2 compariva
+   nello stesso fotogramma, e a schermo non si legge come «avanti», si legge
+   come un salto.
+
+   🔴 ENTRA E BASTA: non c'è un'uscita, ed è una rinuncia dichiarata. Nel
+   riferimento il passo che esce scivola via mentre quello nuovo arriva, ma là
+   le due schermate coesistono per qualche fotogramma. Qui `{step === 1 && …}`
+   smonta il vecchio nell'istante in cui il nuovo monta: per farli convivere
+   servirebbe tenere in pagina due alberi e una macchina a stati che decide
+   quando buttare il primo — su `CreateWorkout`, che è il file più grande del
+   progetto e quello dove si perde il lavoro non salvato. L'entrata da sola
+   copre la parte che si nota; l'uscita è un lavoro a sé.
+
+   ⚠️ Viene da DESTRA, non dal basso: è un passaggio orizzontale dentro un
+   flusso, non un elemento che arriva in una lista. Usare la stessa direzione
+   della cascata confonderebbe le due cose. */
+@keyframes passoEntra {
+  from { opacity: 0; transform: translateX(26px); }
+  to   { opacity: 1; transform: none; }
+}
+.passo-entra {
+  animation: passoEntra 0.38s var(--cascata-curva) both;
+}
+
 /* Nessuna si esegue per chi ha chiesto meno movimento. */
 @media (prefers-reduced-motion: reduce) {
   .hero-transition { animation: none; }
   .anello-progresso { animation: none !important; }
   .sheet-in, .velo-in { animation: none; }
+  .cascata > *, .cascata-voce { animation: none; }
+  .passo-entra { animation: none; }
+  /* ⚠️ I puntini smettono di pulsare ma NON spariscono: sono l'unica cosa che
+     dice «sto lavorando» dentro una pillola senza più etichetta. */
+  .puntini > span { animation: none; opacity: .7; }
 }

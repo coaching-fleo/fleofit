@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -416,5 +416,81 @@ describe('«Genera con IA» non scende con la lista', () => {
     const ia = screen.getByRole('button', { name: /Genera con IA/ })
     const primoBlocco = document.querySelector('[data-blocco-id]')
     expect(ia.compareDocumentPosition(primoBlocco) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('Il numero che NON sale', () => {
+  const vera = window.matchMedia
+  afterEach(() => { window.matchMedia = vera })
+
+  // 🔴 Nel builder i numeri del riepilogo cambiano a OGNI blocco aggiunto o
+  // toccato: un conteggio da 1,3 secondi a ogni modifica vorrebbe dire un
+  // numero sempre in movimento e mai leggibile, proprio mentre il coach lo sta
+  // usando per dosare la seduta. `RiepilogoWorkout` ha `anima` falso di
+  // default e la scheda è l'unica a chiederlo — questo test fissa la scelta.
+  //
+  // ⚠️ Il movimento va ACCESO a mano, o il test passa per il motivo sbagliato:
+  // con `prefers-reduced-motion` di tutta la suite non anima niente comunque.
+  it('il riepilogo del builder mostra subito il valore vero', async () => {
+    window.matchMedia = (q) => ({
+      matches: false, media: q, onchange: null,
+      addEventListener: () => {}, removeEventListener: () => {},
+      addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false,
+    })
+    await alPasso2()
+    await aggiungiBlocco('WarmUp')   // 3:00 di default
+    // Se il builder animasse, «Durata» partirebbe da 0 e «Blocchi» da 0.
+    expect(cella('Durata')).toBe('3min')
+    expect(cella('Blocchi')).toBe('1')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('La CTA che si contrae', () => {
+  // 🔴 A riposo il bottone NON deve contrarsi, e soprattutto non deve avere
+  // `aria-busy`: un lettore di schermo direbbe «occupato» su un bottone pronto.
+  it('a riposo «Salva workout» è largo e non è occupato', async () => {
+    await alPasso2()
+    await aggiungiBlocco('WarmUp')
+    const salva = screen.getByRole('button', { name: /Salva workout/i })
+    expect(salva.classList.contains('cta-contratta')).toBe(false)
+    expect(salva).not.toHaveAttribute('aria-busy')
+    expect(salva.querySelector('.puntini')).toBeNull()
+  })
+
+  // 🔴 E il valore di partenza di `max-width` deve essere una LUNGHEZZA.
+  // Il default è `none`, e da `none` il CSS non sa interpolare: il bottone
+  // salterebbe alla pillola invece di contrarsi. Il difetto non dà errori, non
+  // si vede in jsdom, e l'ho trovato misurando il rettangolo nel browser a
+  // 150ms dall'inizio — dove la larghezza era già quella finale.
+  it('dichiara un `max-width` di partenza, o la transizione non avviene', async () => {
+    await alPasso2()
+    await aggiungiBlocco('WarmUp')
+    const salva = screen.getByRole('button', { name: /Salva workout/i })
+    expect([...salva.classList].some((c) => c.startsWith('max-w-'))).toBe(true)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('Il passo che entra', () => {
+  // 🔴 Il keyframe dev'essere UNO CHE ESISTE. `animate-in slide-in-from-right`
+  // viene da tw-animate-css, che in questo progetto NON è installato e genera
+  // zero CSS: sarebbe la quarta volta che lo stesso difetto entra da una porta
+  // diversa (CLAUDE.md §9-duodecies, §9-quindecies, §9-duodetricies).
+  it('i due passi dichiarano `passo-entra`, non `animate-in`', async () => {
+    monta()
+    const passo1 = document.querySelector('.passo-entra')
+    expect(passo1).not.toBeNull()
+    expect([...passo1.classList].some((c) => c.startsWith('animate-in'))).toBe(false)
+
+    await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
+    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+
+    // Anche il passo 2, e dev'essere un nodo NUOVO: se fosse lo stesso, il
+    // keyframe non ripartirebbe e il cambio resterebbe netto.
+    const passo2 = document.querySelector('.passo-entra')
+    expect(passo2).not.toBeNull()
+    expect(passo2).not.toBe(passo1)
   })
 })

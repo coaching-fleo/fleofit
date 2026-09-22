@@ -27,6 +27,7 @@ import {
   GIORNI_CESTINO,
 } from '../lib/rigaAtleta'
 import { CampoRicerca, IntestazioneSezione } from '../components/ArchivioUI'
+import { voce } from '../lib/cascata'
 import {
   TestataAtleti, FiltriStato, FasciaRichiamo, RigaAtleta, RigaPausa,
   RigaEliminato, ScheletroAtleti, VuotoAtleti,
@@ -160,8 +161,17 @@ export default function Athletes() {
     : vista === 'pausa' ? `${lista.length}`
     : 'Completati / assegnati'
 
+  // ⚠️ L'indice scorre attraverso le DUE sezioni (attivi e «In pausa»): con
+  // `nth-child` gli atleti in pausa ripartirebbero da zero ed entrerebbero
+  // insieme ai primi della lista sopra (src/lib/cascata.js).
+  let n = 0
+
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] page-transition">
+    /* ⚠️ Niente `page-transition`, e `TestataAtleti` NON entra: è `sticky`,
+       cioè la cornice della pagina — ricerca e chip di stato sono gli unici
+       comandi della schermata, e farli arrivare in ritardo vorrebbe dire
+       ritardare i comandi. Stessa regola dell'archivio. */
+    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
       <TestataAtleti dettaglio={dettaglio} onNuovo={() => setModalOpen(true)}>
         <CampoRicerca valore={search} onCambia={setSearch}
           etichetta="Cerca un atleta" placeholder="Cerca nome o cognome" />
@@ -175,6 +185,7 @@ export default function Athletes() {
               attiva={vista === 'fermi'}
               onApri={() => cambiaVista(vista === 'fermi' ? 'attivi' : 'fermi')}
               testo={`${fermi.length} ${fermi.length === 1 ? 'atleta fermo' : 'atleti fermi'} da ${GIORNI_FERMO} giorni o più`}
+              voce={voce(n++)}
             />
           )}
 
@@ -192,20 +203,23 @@ export default function Athletes() {
             <>
               {lista.length > 0 && (
                 <>
-                  <IntestazioneSezione etichetta={titoloSezione} conteggio={dettaglioSezione} />
+                  <IntestazioneSezione etichetta={titoloSezione} conteggio={dettaglioSezione}
+                    voce={voce(n++)} />
                   <div className="flex flex-col gap-2">
                     {lista.map(x => vista === 'eliminati' ? (
                       <RigaEliminato key={x.id} nome={nomeAtleta(x)} foto={x.photo_url} sigla={iniziali(x)}
                         giorni={giorniRimastiCestino(x.deleted_at, caricatoIl)}
-                        onRipristina={() => ripristina(x)} />
+                        onRipristina={() => ripristina(x)} voce={voce(n++)} />
                     ) : vista === 'pausa' ? (
                       <RigaPausa key={x.id} nome={nomeAtleta(x)} dettaglio={etichettaPausa(x)}
-                        foto={x.photo_url} sigla={iniziali(x)} onApri={() => apriAtleta(x.id)} />
+                        foto={x.photo_url} sigla={iniziali(x)} onApri={() => apriAtleta(x.id)}
+                        voce={voce(n++)} />
                     ) : (
                       <RigaAtleta key={x.id} nome={nomeAtleta(x)} meta={metaAtleta(x, oggi)}
                         foto={x.photo_url} sigla={iniziali(x)}
                         aderenza={aderenze.get(x.id) || NESSUNA_ADERENZA}
-                        fermo={idFermi.has(x.id)} onApri={() => apriAtleta(x.id)} />
+                        fermo={idFermi.has(x.id)} onApri={() => apriAtleta(x.id)}
+                        voce={voce(n++)} />
                     ))}
                   </div>
                 </>
@@ -213,11 +227,13 @@ export default function Athletes() {
 
               {sostaVisibili.length > 0 && (
                 <>
-                  <IntestazioneSezione etichetta="In pausa" conteggio={`${sostaVisibili.length}`} />
+                  <IntestazioneSezione etichetta="In pausa" conteggio={`${sostaVisibili.length}`}
+                    voce={voce(n++)} />
                   <div className="flex flex-col gap-2">
                     {sostaVisibili.map(x => (
                       <RigaPausa key={x.id} nome={nomeAtleta(x)} dettaglio={etichettaPausa(x)}
-                        foto={x.photo_url} sigla={iniziali(x)} onApri={() => apriAtleta(x.id)} />
+                        foto={x.photo_url} sigla={iniziali(x)} onApri={() => apriAtleta(x.id)}
+                        voce={voce(n++)} />
                     ))}
                   </div>
                 </>

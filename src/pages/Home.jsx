@@ -1118,7 +1118,11 @@ setNotifications(prev => {
   }
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition
+    /* ⚠️ Niente `page-transition` qui, ed è deliberato: la pagina intera che
+       sale MENTRE i suoi figli salgono è movimento doppio, e nel riferimento il
+       contenitore è fermo — si muovono solo gli elementi. L'entrata la fanno
+       `cascata-voce` sulla testata e `cascata` sui due rami. */
+    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)]
                     min-h-screen bg-[radial-gradient(120%_60%_at_50%_0%,#17160f_0%,#0B0B0B_58%)]">
       {/* Header */}
       {(() => {
@@ -1151,7 +1155,7 @@ setNotifications(prev => {
         // per l'intera pagina, testata compresa.
         if (role === 'athlete') {
           return (
-            <div className="mb-3.5">
+            <div className="mb-3.5 cascata-voce">
               <HeaderHome
                 saluto={getGreeting()} nome={userName} motivazione={randomMotiv}
                 dataOggi={format(new Date(), 'EEE d MMMM', { locale: it })}
@@ -1163,7 +1167,7 @@ setNotifications(prev => {
         }
 
         return (
-          <div className="mb-3.5">
+          <div className="mb-3.5 cascata-voce">
             {/* `atletiCoach` è già senza COACHING_ID (il filtro sta nel fetch):
                 il totale qui è quello della rubrica, non uno più grande. Gli
                 atleti in pausa restano nel totale e si dichiarano a parte —
@@ -1205,7 +1209,10 @@ setNotifications(prev => {
           l'unica informazione presente, chi ha fatto cosa ieri, è la meno utile
           la mattina perché guarda indietro. */}
       {role !== 'athlete' && (
-        <div className="flex flex-col gap-3.5 mb-6">
+        /* ⚠️ `--cascata-da: 1` lascia la voce 0 alla testata, che sta fuori da
+            questo contenitore ed è il primo elemento che si vede. Senza, la
+            testata e la prima card partirebbero insieme. */
+        <div style={{ '--cascata-da': 1 }} className="flex flex-col gap-3.5 mb-6 cascata">
 
           {/* La Live Coach Cam dura quanto un allenamento: è una barra, non una
               sezione con un titolo che per 23 ore al giorno sta sopra il vuoto. */}
@@ -1220,7 +1227,7 @@ setNotifications(prev => {
           {loadingRecent ? (
             <div className="rounded-[26px] border border-white/[.07] bg-[#1a1a1c] h-52 animate-pulse" />
           ) : (
-            <div className="hero-transition">
+            <div>
               {feedback.elementi.length > 0
                 ? <HeroFeedback righe={feedback.elementi} mostrate={FEEDBACK_IN_HOME}
                     espanso={feedbackEspanso} onEspandi={() => setFeedbackEspanso(true)}
@@ -1298,7 +1305,15 @@ setNotifications(prev => {
           Prima erano otto sezioni dello stesso peso e l'allenamento di oggi —
           l'unica ragione per cui l'app si apre — arrivava dopo due schermate. */}
       {role === 'athlete' && (
-        <div className="flex flex-col gap-3.5">
+        /* ⚠️ `cascata` (src/index.css): i figli di questo contenitore entrano
+            uno dopo l'altro invece che tutti insieme. Il ritardo lo decide
+            `nth-child`, quindi i figli non sanno di essere in una cascata e
+            non c'è niente da passare loro. I tre che avevano `hero-transition`
+            sulla radice l'hanno perso: due animazioni di pari specificità
+            sullo stesso elemento non si sommano — a decidere sarebbe l'ordine
+            nel foglio di stile, in silenzio (è la trappola di `CARTA_RIGA`,
+            CLAUDE.md §9-octodecies). */
+        <div style={{ '--cascata-da': 1 }} className="flex flex-col gap-3.5 cascata">
 
           {/* 🔴 IL GIORNO 1 ESCE PRIMA DI TUTTO, E CHIUDE LA PAGINA.
               Non è una card in più sopra l'albero esistente: al giorno 1 non
@@ -1334,7 +1349,7 @@ setNotifications(prev => {
               const scorrevole = !completato
 
               return (
-                <div key={todayWorkout.id} className="relative overflow-hidden rounded-[26px] hero-transition">
+                <div key={todayWorkout.id} className="relative overflow-hidden rounded-[26px]">
                   {/* Pannello rivelato sotto la card mentre si scorre. Senza,
                       il movimento non dice cosa sta per succedere. Nascosto ai
                       lettori di schermo: il bottone visibile è la via ufficiale. */}

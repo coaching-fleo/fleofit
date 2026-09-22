@@ -306,3 +306,36 @@ describe('Report — quando la lettura fallisce', () => {
     errori.mockRestore()
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────
+// La cascata (CLAUDE.md, il rework delle animazioni del 21/09/2026).
+// ⚠️ jsdom non carica `index.css`: il ritardo non è verificabile qui — è stato
+// misurato nel browser. Qui si protegge il CABLAGGIO, che è la parte che si
+// perde per distrazione e che non fa cadere nessun altro test.
+describe('La cascata sul report della squadra', () => {
+  // 🔴 La testata è `sticky` — è il navigatore di settimana, l'unico comando
+  // della pagina — quindi resta FUORI dalla cascata. È la ragione per cui il
+  // contenuto sta in un involucro invece che avere `cascata` sulla radice.
+  it('la testata appiccicata resta fuori dalla cascata', async () => {
+    dati.atleti = [atleta('a1', 'Anna')]
+    monta()
+    await screen.findByRole('heading', { name: 'Report' })
+    const testata = document.querySelector('.sticky')
+    expect(testata).not.toBeNull()
+    expect(testata.closest('.cascata')).toBeNull()
+    const involucro = document.querySelector('.cascata')
+    expect(involucro).not.toBeNull()
+    expect(involucro.children.length).toBeGreaterThan(1)
+    expect(document.querySelector('.page-transition')).toBeNull()
+  })
+
+  it("l'eroe non usa una sfocatura", async () => {
+    dati.atleti = [atleta('a1', 'Anna')]
+    monta()
+    await screen.findByRole('heading', { name: 'Report' })
+    const sfocati = [...document.querySelectorAll('.cascata *')]
+      .filter((el) => [...el.classList].some((c) => c.startsWith('blur-')))
+    expect(sfocati).toHaveLength(0)
+    expect(document.querySelector('.cascata .alone')).not.toBeNull()
+  })
+})

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -355,5 +355,59 @@ describe('la grafica per Instagram', () => {
     expect(within(grafica).getByText('@FLEOFIT')).toBeInTheDocument()
     // Ed è fuori dal flusso, non in fondo alla pagina come prima.
     expect(grafica).toHaveStyle({ position: 'fixed', left: '-10000px' })
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+// La cascata (CLAUDE.md, il rework delle animazioni del 21/09/2026).
+// ⚠️ jsdom non carica `index.css`: il ritardo non è verificabile qui — è stato
+// misurato nel browser. Qui si protegge il CABLAGGIO.
+describe('La cascata sulla scheda', () => {
+  it('la radice la dichiara e non ha più `page-transition`', async () => {
+    apri()
+    await attendi()
+    const radice = document.querySelector('.cascata')
+    expect(radice).not.toBeNull()
+    // Testata, titolo, riepilogo, avviso, blocchi, note, barra…
+    expect(radice.children.length).toBeGreaterThan(3)
+    expect(document.querySelector('.page-transition')).toBeNull()
+  })
+
+  // ⚠️ I blocchi entrano come GRUPPO, non uno per uno: il loro contenitore è
+  // una delle sezioni della pagina, e farli cascare anche dentro vorrebbe dire
+  // due animazioni sovrapposte sullo stesso contenuto — il movimento doppio che
+  // `page-transition` produceva sull'intera pagina. Questo test fissa la scelta:
+  // se un giorno la si cambia, va cambiato anche lui, di proposito.
+  it('i blocchi entrano come gruppo, non uno per uno', async () => {
+    apri()
+    await attendi()
+    const contenitore = document.querySelector('[data-blocchi]')
+    expect(contenitore).not.toBeNull()
+    expect(contenitore.closest('.cascata')).not.toBeNull()
+    expect(contenitore.classList.contains('cascata')).toBe(false)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('Il numero che sale', () => {
+  const vera = window.matchMedia
+  const conMovimento = () => {
+    window.matchMedia = (q) => ({
+      matches: false, media: q, onchange: null,
+      addEventListener: () => {}, removeEventListener: () => {},
+      addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false,
+    })
+  }
+  afterEach(() => { window.matchMedia = vera })
+
+  // ⚠️ `src/test/setup.js` dichiara `prefers-reduced-motion: reduce` per tutta
+  // la suite, quindi qui il movimento va acceso a mano — o questo test
+  // verificherebbe il ramo fermo e passerebbe anche senza `anima`.
+  it('nella scheda il riepilogo parte più basso del valore vero', async () => {
+    conMovimento()
+    apri()
+    await attendi()
+    // 37 è il valore d'arrivo (vedi il test del riepilogo qui sopra).
+    expect(cella('Durata')).not.toBe('37min')
   })
 })

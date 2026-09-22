@@ -7,6 +7,7 @@
 
 
 import { useState, useEffect, useRef } from 'react'
+import { Puntini } from './Puntini'
 
 export default function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving }) {
   const [isFocused, setIsFocused] = useState(false);
@@ -127,7 +128,21 @@ export default function RpeModal({ score, onScoreChange, notes, onNotesChange, o
         </div>
         <div className="flex gap-3">
           <button onClick={onCancel} disabled={saving} className="flex-1 py-3.5 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">Annulla</button>
-          <button onClick={onSave} disabled={saving} className="flex-1 py-3.5 bg-brand text-black font-black rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg shadow-brand/20">{saving ? '...' : 'Fatto! 🎉'}</button>
+          {/* ⚠️ Si contrae invece di spegnersi: il salvataggio passa per la rete
+              e, offline, per la coda. Un bottone spento con «...» dentro si
+              legge come «non ha funzionato», e il gesto che ne segue è premere
+              di nuovo — che qui vuol dire accodare due volte lo stesso
+              completamento. Il perché della forma sta in src/index.css.
+              ⚠️ `max-w-[100vw]`: da `none` il CSS non sa interpolare e il
+              bottone salterebbe alla pillola invece di contrarsi. */}
+          <button onClick={onSave} disabled={saving} aria-busy={saving || undefined}
+            className={`relative flex-1 max-w-[100vw] py-3.5 bg-brand text-black font-black rounded-xl
+                        hover:brightness-110 overflow-hidden shadow-lg shadow-brand/20
+                        transition-[max-width,border-radius,filter] duration-[570ms] ease-[cubic-bezier(.33,1,.68,1)]
+                        ${saving ? 'cta-contratta' : 'disabled:opacity-50'}`}>
+            <span className={`block whitespace-nowrap transition-opacity duration-150 ${saving ? 'opacity-0' : 'opacity-100'}`}>Fatto! 🎉</span>
+            {saving && <span className="absolute inset-0 flex items-center justify-center"><Puntini /></span>}
+          </button>
         </div>
       </div>
     </div>

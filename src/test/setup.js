@@ -58,12 +58,20 @@ afterEach(() => { window.localStorage.clear(); window.sessionStorage.clear() })
 // dell'IA non si monta affatto e ventinove test cadono su un errore che non
 // c'entra niente con quello che verificano.
 //
-// ⚠️ Risponde sempre `matches: false`: nessuna preferenza dichiarata, che è
-// anche il default di un dispositivo. Un test che avesse bisogno di
-// `prefers-reduced-motion` deve sovrascriverlo da sé.
+// ⚠️ Risponde `matches: false` a tutto TRANNE `prefers-reduced-motion`, che
+// nei test vale SEMPRE `reduce`. Non è una comodità: i test verificano il
+// contenuto, non il moto, e con il movimento acceso ogni numero che sale
+// (`src/lib/useNumeroCheSale.js`) partirebbe da 0 — un `getByText('516')`
+// subito dopo il render troverebbe `0`, e l'esito dipenderebbe da quanti
+// fotogrammi jsdom riesce a far passare prima dell'asserzione. Cioè test che
+// falliscono a caso su una macchina lenta, che è il modo più veloce per
+// smettere di credere alla suite.
+//
+// ⚠️ Un test che voglia vedere il movimento deve sovrascriverlo da sé — come
+// `LoginApple` fa con il ramo nativo.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = (query) => ({
-    matches: false,
+    matches: /prefers-reduced-motion/.test(query),
     media: query,
     onchange: null,
     addEventListener: () => {},

@@ -2589,7 +2589,10 @@ export default function CreateWorkout() {
 
       {/* ── STEP 1: LA CATEGORIA COME DOMANDA ────────────────────── */}
       {step === 1 && (
-        <div className="flex flex-col gap-[18px]">
+        /* ⚠️ `passo-entra` (src/index.css): il cambio di passo era netto.
+            Entra da DESTRA, non dal basso: è un passaggio dentro un flusso,
+            non un elemento che arriva in una lista. */
+        <div className="flex flex-col gap-[18px] passo-entra">
           <div>
             <p className={`${LABEL} text-brand mb-[5px] tracking-[.11em]`}>{editId ? 'Modifica workout' : 'Nuovo workout'}</p>
             <h1 className="text-[29px] font-black tracking-[-.035em] leading-[1.1] text-white">
@@ -2648,7 +2651,7 @@ export default function CreateWorkout() {
 
       {/* ── STEP 2: IL BUILDER CON IL RIEPILOGO ──────────────────── */}
       {step === 2 && category === 'Hyrox' && (
-        <div className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-3.5 passo-entra">
 
           {/* Il builder era cieco: si aggiungevano blocchi senza sapere quanto
               dura la seduta. La barra sotto i tre numeri dice COME la durata è
@@ -2764,7 +2767,7 @@ export default function CreateWorkout() {
           Hyrox. Qui cambiano la cornice condivisa — testata, card, barra fissa —
           e non il modo di comporre le fasi, che resta quello di prima. */}
       {step === 2 && category === 'Running' && (
-        <div className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-3.5 passo-entra">
           <CardIntensita
             valore={workoutIntensity}
             onChange={setWorkoutIntensity}
@@ -2826,7 +2829,7 @@ export default function CreateWorkout() {
 
       {/* ── STEP 2: L'ALLENAMENTO DESCRITTO A PAROLE ─────────────── */}
       {step === 2 && category === 'Custom' && (
-        <div className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-3.5 passo-entra">
           <CardIntensita
             valore={workoutIntensity}
             onChange={setWorkoutIntensity}
@@ -2863,7 +2866,11 @@ export default function CreateWorkout() {
                 onClick={() => { setNewWorkoutName(title); setIsSavingAsNew(true); setShowSaveModal(true) }}
               />
             )}
-            <CtaPrimaria onClick={handleSave} disabled={saving} icona={Save}>
+            {/* ⚠️ `attesa` solo qui fra tutte le CtaPrimaria dell'app: le altre
+                aprono un modale, e contrarsi per 570ms vorrebbe dire ritardarlo.
+                L'etichetta «Salvo…» resta nel DOM anche se trasparente — è il
+                nome accessibile del bottone mentre è una pillola. */}
+            <CtaPrimaria onClick={handleSave} disabled={saving} attesa={saving} icona={Save}>
               {saving ? 'Salvo…' : saved ? 'Salvato!' : 'Salva workout'}
             </CtaPrimaria>
           </>

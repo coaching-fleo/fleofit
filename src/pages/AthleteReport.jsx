@@ -113,7 +113,7 @@ export default function AthleteReport() {
   const nome = atleta ? nomeAtleta(atleta) : 'Atleta'
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] page-transition">
+    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
       <TestataReportAtleta
         nome={caricato ? nome : ' '}
         foto={atleta?.photo_url}
@@ -126,6 +126,9 @@ export default function AthleteReport() {
         onSuccessiva={() => cambiaSettimana(1)}
       />
 
+      {/* ⚠️ Come nel report della squadra: `TestataReportAtleta` è `sticky` e
+          non entra. Vedi WeeklyReport.jsx per il perché dell'involucro. */}
+      <div className="cascata">
       {!caricato ? <ScheletroAtleta /> : errore ? (
         <VuotoReport
           titolo="Non sono riuscito a leggere la settimana"
@@ -167,6 +170,7 @@ export default function AthleteReport() {
           <BarraAtleta onScheda={() => navigate(`/athletes/${id}`)} onCrea={() => navigate('/create')} />
         </>
       )}
+      </div>
     </div>
   )
 }

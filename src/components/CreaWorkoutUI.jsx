@@ -21,6 +21,8 @@ import { useTastieraAperta, chiudiTastieraSuInvio } from '../useTastiera'
 import { battito } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
 import { minutiStimati, decimale } from '../lib/stimaWorkout'
+import { Puntini } from './Puntini'
+import { useNumeroCheSale } from '../useNumeroCheSale'
 
 // ── Testata ───────────────────────────────────────────────────────────────
 // Una sola testata per i due passi. Al passo 1 porta i pallini e «1 / 2», al
@@ -175,19 +177,31 @@ function Cella({ etichetta, valore, unita, ambra, classeValore, etichettaDueRigh
  * ⚠️ E `carico` è `null`, non 0, su un workout che non dichiara intensità: la
  * cella sparisce invece di dire che la seduta non pesa niente.
  */
-export function RiepilogoWorkout({ secondi, blocchi, rpe, segmenti, terzaCella, carico, collocazione }) {
+export function RiepilogoWorkout({ secondi, blocchi, rpe, segmenti, terzaCella, carico, collocazione, anima = false }) {
   const conDurata = segmenti.filter(s => s.secondi > 0)
   const mostraCarico = !terzaCella && carico != null
+  // 🔴 `anima` è FALSO di default, ed è la parte da non perdere. Questo
+  // componente serve DUE pagine: la scheda, dove i numeri arrivano una volta
+  // sola all'apertura, e il builder, dove cambiano a ogni blocco che si
+  // aggiunge o si tocca. Un conteggio da 1,3 secondi a ogni modifica vorrebbe
+  // dire un numero sempre in movimento e mai leggibile, proprio mentre il
+  // coach lo sta usando per dosare la seduta. Il conteggio va dove un numero
+  // ARRIVA, non dove lo si sta scrivendo.
+  const salita = (v) => (anima ? v : null)
+  const secondiSu = useNumeroCheSale(salita(secondi))
+  const blocchiSu = useNumeroCheSale(salita(blocchi))
+  const rpeSu = useNumeroCheSale(salita(rpe), { decimali: 1 })
+  const caricoSu = useNumeroCheSale(salita(carico))
   return (
     <div data-riepilogo className={`${CARD} px-[17px] py-[15px] flex flex-col gap-3.5`}>
       <div className="flex gap-2.5">
-        <Cella etichetta="Durata" valore={minutiStimati(secondi)} unita="min" etichettaDueRighe={mostraCarico} />
-        <Cella etichetta="Blocchi" valore={blocchi} etichettaDueRighe={mostraCarico} />
+        <Cella etichetta="Durata" valore={minutiStimati(anima ? secondiSu : secondi)} unita="min" etichettaDueRighe={mostraCarico} />
+        <Cella etichetta="Blocchi" valore={anima ? blocchiSu : blocchi} etichettaDueRighe={mostraCarico} />
         {terzaCella
           ? <Cella {...terzaCella} />
-          : <Cella etichetta="RPE atteso" valore={rpe === null ? '—' : decimale(rpe)} ambra={rpe !== null}
+          : <Cella etichetta="RPE atteso" valore={rpe === null ? '—' : decimale(anima ? rpeSu : rpe)} ambra={rpe !== null}
               etichettaDueRighe={mostraCarico} />}
-        {mostraCarico && <Cella etichetta="Carico" valore={`≈${carico}`} etichettaDueRighe />}
+        {mostraCarico && <Cella etichetta="Carico" valore={`≈${anima ? caricoSu : carico}`} etichettaDueRighe />}
       </div>
 
       {mostraCarico && collocazione && (
@@ -345,15 +359,35 @@ export function BarraAzioni({ children, ancorata = true }) {
   )
 }
 
-export function CtaPrimaria({ onClick, disabled, children, icona: Icona, iconaCoda: IconaCoda }) {
+/**
+ * La CTA principale.
+ *
+ * ⚠️ `attesa` è FALSA di default e va accesa solo dove si aspetta davvero (il
+ * salvataggio di un workout, non l'apertura di un modale): la contrazione dura
+ * 570ms, e su un gesto istantaneo sarebbe solo un ritardo. Il perché della
+ * forma sta in `src/index.css`, sotto «LA CTA CHE SI CONTRAE».
+ */
+export function CtaPrimaria({ onClick, disabled, children, icona: Icona, iconaCoda: IconaCoda, attesa = false }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled}
-      className="flex-1 min-h-[52px] rounded-2xl bg-brand text-black text-[16.5px] font-black tracking-[-.01em]
-                 flex items-center justify-center gap-2.5 transition hover:brightness-110 active:scale-[.99]
-                 disabled:opacity-50 shadow-[0_14px_26px_-10px_rgba(241,186,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]">
-      {Icona && <Icona size={19} aria-hidden="true" />}
-      {children}
-      {IconaCoda && <IconaCoda size={19} aria-hidden="true" />}
+    <button type="button" onClick={onClick} disabled={disabled || attesa} aria-busy={attesa || undefined}
+      className={`relative flex-1 max-w-[100vw] min-h-[52px] rounded-2xl bg-brand text-black text-[16.5px] font-black tracking-[-.01em]
+                 flex items-center justify-center gap-2.5 hover:brightness-110 active:scale-[.99]
+                 overflow-hidden transition-[max-width,border-radius,filter] duration-[570ms] ease-[cubic-bezier(.33,1,.68,1)]
+                 shadow-[0_14px_26px_-10px_rgba(241,186,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]
+                 ${attesa ? 'cta-contratta' : 'disabled:opacity-50'}`}>
+      {/* ⚠️ L'etichetta sfuma in 150ms, molto prima che la contrazione finisca:
+          deve sparire mentre c'è ancora spazio, o si vedrebbe tagliata dai
+          bordi che si chiudono. E resta nel DOM, così il bottone conserva il
+          proprio nome accessibile anche mentre è una pillola. */}
+      <span className={`flex items-center gap-2.5 whitespace-nowrap transition-opacity duration-150
+                        ${attesa ? 'opacity-0' : 'opacity-100'}`}>
+        {Icona && <Icona size={19} aria-hidden="true" />}
+        {children}
+        {IconaCoda && <IconaCoda size={19} aria-hidden="true" />}
+      </span>
+      {attesa && (
+        <span className="absolute inset-0 flex items-center justify-center"><Puntini /></span>
+      )}
     </button>
   )
 }

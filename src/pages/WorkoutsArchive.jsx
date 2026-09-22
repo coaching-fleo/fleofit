@@ -4,6 +4,7 @@ import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { categoriaDi } from '../lib/categorie'
+import { voce } from '../lib/cascata'
 import {
   metaWorkout, testoCercabile, raggruppaPerMese, conteggiPerCorsia,
 } from '../lib/rigaArchivio'
@@ -106,8 +107,19 @@ export default function WorkoutsArchive() {
       ? `${filtrati.length} di ${workouts.length} workout`
       : `${workouts.length} workout · ${corsie.length} ${corsie.length === 1 ? 'corsia' : 'corsie'}`
 
+  // ⚠️ L'indice della cascata scorre ATTRAVERSO i gruppi. `nth-child` qui non
+  // basta: le righe stanno dentro i mesi, quindi ripartirebbe da capo a ogni
+  // intestazione e agosto entrerebbe insieme a settembre (src/lib/cascata.js).
+  let n = 0
+
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] page-transition">
+    /* ⚠️ Niente `page-transition`: la pagina non sale più tutta insieme, entrano
+       gli elementi. ⚠️ E `TestataArchivio` NON entra, di proposito: è
+       `sticky`, cioè la cornice della pagina e non il suo contenuto — nel
+       riferimento il contenitore è fermo e si muovono le righe. È la regola per
+       tutte le pagine con una testata appiccicata; la testata della Home invece
+       scorre via con la pagina, quindi lì è contenuto e la sua voce ce l'ha. */
+    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
       <TestataArchivio onIndietro={indietro} dettaglio={dettaglio}>
         <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
         {corsie.length > 1 && (
@@ -123,7 +135,8 @@ export default function WorkoutsArchive() {
       ) : (
         gruppi.map(gruppo => (
           <div key={gruppo.chiave}>
-            <IntestazioneSezione etichetta={gruppo.etichetta} conteggio={gruppo.workouts.length} />
+            <IntestazioneSezione etichetta={gruppo.etichetta} conteggio={gruppo.workouts.length}
+              voce={voce(n++)} />
             <div className="flex flex-col gap-2">
               {gruppo.workouts.map(w => (
                 <RigaWorkout
@@ -134,6 +147,7 @@ export default function WorkoutsArchive() {
                   assegnati={isCoach ? (w.athlete_workouts?.length ?? 0) : undefined}
                   completato={!isCoach && w.status === 'completed'}
                   onApri={() => navigate(`/workout/${w.id}`)}
+                  voce={voce(n++)}
                 />
               ))}
             </div>

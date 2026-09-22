@@ -541,8 +541,10 @@ export default function Settings() {
 
 
   return (
+    /* ⚠️ Niente `page-transition`: la pagina non sale più tutta insieme.
+       `cascata` fa entrare i suoi figli uno dopo l'altro (src/index.css). */
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)]
-                    page-transition flex flex-col gap-3.5">
+                    flex flex-col gap-3.5 cascata">
 
       <TestataImpostazioni onIndietro={indietro} />
 

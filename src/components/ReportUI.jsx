@@ -16,6 +16,7 @@ import { ChevronLeft, ChevronRight, User, Mic, Plus, AlertTriangle,
 import { CARD, LABEL, RIGA, CARTA_RIGA_BASE, VETRO, TONO_VERDETTO } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 import { decimale, oreMinuti, VERDETTI } from '../lib/reportSettimanale'
+import { useNumeroCheSale } from '../useNumeroCheSale'
 
 // ── Pezzi minuti, non esportati ───────────────────────────────────────────
 
@@ -124,7 +125,12 @@ export function EroeSettimana({
     <div className="relative overflow-hidden rounded-[26px] p-5 mt-4 border border-brand/20
                     bg-gradient-to-br from-[#232019] via-[#1b1b1d] to-[#161618]
                     shadow-[0_24px_48px_-20px_rgba(0,0,0,.9),inset_0_1px_0_rgba(255,255,255,.07)]">
-      <div aria-hidden="true" className="pointer-events-none absolute -top-32 -right-24 w-64 h-64 rounded-full blur-2xl bg-brand/[.16]" />
+      {/* ⚠️ `alone` e non `blur-2xl`: sotto un'animazione di opacità la sfocatura
+          cambia colore nell'istante in cui l'animazione finisce — WebKit la rende
+          sul layer GPU e la ridipinge dalla CPU quando il layer viene liberato
+          (misurato sul simulatore, src/index.css). */}
+      <div aria-hidden="true" style={{ '--alone-rgb': '241 186 23', '--alone-alfa': .16 }}
+        className="alone -top-[208px] -right-[176px] h-[416px] w-[416px]" />
 
       <div className="relative flex flex-col gap-4">
         <div className="flex items-end justify-between gap-3">
@@ -205,10 +211,16 @@ function Cella({ etichetta, children, nota }) {
 
 export function BentoSettimana({ squadra }) {
   const { minuti, carico, caricoParziale, rpeMedio, senzaRpe, completati, delta } = squadra
+  // ⚠️ Si anima il NUMERO, non il formato: `oreMinuti` riceve i minuti che
+  // salgono e li impagina a ogni fotogramma, così «6h 15» si compone da sé.
+  const minutiCheSalgono = useNumeroCheSale(minuti)
+  // ⚠️ Il carico sale solo se c'è: a zero la cella scrive «—», e un trattino
+  // non conta fino a niente (regola di `rpeAtteso`).
+  const caricoCheSale = useNumeroCheSale(carico > 0 ? carico : null)
   return (
     <div className="grid grid-cols-3 gap-2.5 mt-3">
       <Cella etichetta="Volume" nota={`${completati} ${completati === 1 ? 'sessione' : 'sessioni'}`}>
-        {oreMinuti(minuti)}<Scarto valore={delta.minuti} confrontabile={delta.confrontabile} />
+        {oreMinuti(minutiCheSalgono)}<Scarto valore={delta.minuti} confrontabile={delta.confrontabile} />
       </Cella>
 
       {/* 🔴 Il `≈` compare quando il totale ha dovuto lasciare fuori qualcosa —
@@ -217,7 +229,7 @@ export function BentoSettimana({ squadra }) {
           presenta come completo è peggio di un totale mancante. */}
       <Cella etichetta="Carico"
         nota={caricoParziale ? `${senzaRpe} senza RPE` : 'minuti × RPE'}>
-        {carico > 0 ? <>{caricoParziale ? '≈' : ''}{carico}<Scarto valore={delta.carico} confrontabile={delta.confrontabile} /></> : '—'}
+        {carico > 0 ? <>{caricoParziale ? '≈' : ''}{caricoCheSale}<Scarto valore={delta.carico} confrontabile={delta.confrontabile} /></> : '—'}
       </Cella>
 
       {/* `null` e non 5: chi non ha dichiarato niente non ha una media. */}

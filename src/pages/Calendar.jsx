@@ -134,7 +134,9 @@ export default function Calendar() {
   const dataSelezionata = format(selectedDay, 'yyyy-MM-dd')
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
+    /* ⚠️ Niente `page-transition`: la pagina non sale più tutta insieme.
+       `cascata` fa entrare i suoi figli uno dopo l'altro (src/index.css). */
+    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)] cascata">
       <TestataCalendario
         mese={etichettaMese(currentMonth)}
         anno={format(currentMonth, 'yyyy')}

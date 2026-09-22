@@ -1389,8 +1389,16 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
 
   return (
+    /* ⚠️ Niente `page-transition`. Entrano le SEZIONI della scheda — testata,
+       titolo, esito, riepilogo, avviso, blocchi, note, assegnazioni — e i
+       blocchi entrano come gruppo, non uno per uno: il loro contenitore è una
+       di queste sezioni, e farli cascare anche dentro vorrebbe dire due
+       animazioni sovrapposte sullo stesso contenuto (è il movimento doppio che
+       `page-transition` produceva sull'intera pagina). Se un giorno li si vuole
+       uno per uno, serve un indice che continui quello delle sezioni, non una
+       cascata annidata. */
     <div className="px-4 max-w-2xl mx-auto min-h-[100dvh] flex flex-col gap-[15px]
-                    pt-[calc(env(safe-area-inset-top)+1rem)] pb-[var(--altezza-navbar)] page-transition">
+                    pt-[calc(env(safe-area-inset-top)+1rem)] pb-[var(--altezza-navbar)] cascata">
 
       {/* La testata porta due sole icone, e sono due STATI: si accendono e si
           spengono durante l'allenamento. Duplica, Modifica, gli export e
@@ -1444,6 +1452,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           e vale solo dove esistono dei blocchi da stimare. */}
       {riepilogo && (
         <RiepilogoWorkout
+          /* ⚠️ Solo qui: nel builder i numeri cambiano mentre si scrive. */
+          anima
           {...riepilogo}
           terzaCella={mostraRpeAtleta ? {
             etichetta: 'Il tuo RPE',

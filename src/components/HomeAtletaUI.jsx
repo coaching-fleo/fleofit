@@ -15,6 +15,7 @@
 // I VALORI dei colori non cambiano (CLAUDE.md regola 3).
 
 import { CheckCircle2, ChevronRight, Plus, Activity } from 'lucide-react'
+import { useNumeroCheSale } from '../useNumeroCheSale'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 // CARD, LABEL e la tabella delle corsie vivono in lib/ perché HomeCoachUI.jsx
@@ -74,8 +75,9 @@ export function BottoneVetro({ label, onClick, children, badge = false, title })
 // ⚠️ Nessuna animazione CSS su QUESTO nodo. È l'elemento su cui lo swipe di
 // completamento scrive `style.transform` a ogni movimento del dito, e
 // un'animazione con `fill: both` sullo stesso nodo vince sullo stile inline:
-// la card resterebbe immobile sotto il dito. L'entrata `hero-transition` la
-// mette Home.jsx sul contenitore, che invece non viene mai trasformato.
+// la card resterebbe immobile sotto il dito. L'entrata la mette `cascata` di
+// Home.jsx sul contenitore, che invece non viene mai trasformato — ed è la
+// ragione per cui la cascata va sul wrapper e mai sulla card.
 export function HeroOggi({ titolo, categoria, stato, meta = [], completato, onOpen, onToggle, azioni, swipe = {} }) {
   const c = corsia(categoria)
   const Icona = completato ? CheckCircle2 : c.icona
@@ -85,9 +87,18 @@ export function HeroOggi({ titolo, categoria, stato, meta = [], completato, onOp
         ? 'border-green-500/25 bg-gradient-to-br from-[#16231a] via-[#181a18] to-[#161618]'
         : 'border-brand/20 bg-gradient-to-br from-[#232019] via-[#1b1b1d] to-[#161618]'
         } shadow-[0_24px_48px_-20px_rgba(0,0,0,.9),inset_0_1px_0_rgba(255,255,255,.07)]`}>
-      {/* Alone di categoria: profondità atmosferica, non un gradiente saturo. */}
-      <div aria-hidden="true" className={`pointer-events-none absolute -top-32 -right-24 w-64 h-64 rounded-full blur-2xl
-        ${completato ? 'bg-green-500/10' : 'bg-brand/[.14]'}`} />
+      {/* Alone di categoria: profondità atmosferica, non un gradiente saturo.
+          ⚠️ `alone` e non `blur-2xl`: questa card è figlia della cascata, e una
+          sfocatura sotto un'animazione di opacità cambia colore nell'istante in
+          cui l'animazione finisce — WebKit la rende sul layer GPU e la ridipinge
+          dalla CPU quando il layer viene liberato (misurato, src/index.css).
+          Le misure sono quelle del disco da 256px PIÙ lo spegnimento della
+          sfocatura, o l'alone verrebbe tagliato di netto. */}
+      <div aria-hidden="true"
+        style={completato
+          ? { '--alone-rgb': '34 197 94', '--alone-alfa': .10 }
+          : { '--alone-rgb': '241 186 23', '--alone-alfa': .14 }}
+        className="alone -top-[208px] -right-[176px] h-[416px] w-[416px]" />
       <div aria-hidden="true" className="pointer-events-none absolute top-0 right-0 p-[18px] opacity-[.09] -rotate-12">
         <Icona size={104} className={completato ? 'text-green-500' : c.txt} />
       </div>
@@ -165,6 +176,10 @@ export function AnelloSettimana({ weeklyStatus = [], onGiorno, etichetta = 'Sett
   const fatti = weeklyStatus.reduce((a, d) => a + d.workouts.filter(w => w.status === 'completed').length, 0)
   const CIRCONFERENZA = 2 * Math.PI * 54          // 339.29 — vedi ringIn in index.css
   const offset = totale ? CIRCONFERENZA * (1 - fatti / totale) : CIRCONFERENZA
+  // Il numero sale insieme all'anello che si disegna (`anello-progresso`).
+  // ⚠️ SOLO il numero disegnato: l'`aria-label` qui sotto porta `fatti`, quello
+  // vero. Chi usa VoiceOver deve sentire il dato, non un conteggio in corso.
+  const fattiCheSalgono = useNumeroCheSale(fatti)
 
   return (
     <div className={`${CARD} p-[18px] flex flex-col gap-3.5`}>
@@ -179,7 +194,7 @@ export function AnelloSettimana({ weeklyStatus = [], onGiorno, etichetta = 'Sett
         </svg>
         <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-3xl font-black tracking-[-.04em] text-white leading-none">
-            {fatti}<span className="text-lg text-muted">/{totale}</span>
+            {fattiCheSalgono}<span className="text-lg text-muted">/{totale}</span>
           </span>
           <span className="text-[11px] font-bold uppercase tracking-[.02em] text-muted mt-1">{stato}</span>
         </div>
@@ -213,11 +228,12 @@ const categoriaGiorno = (w) => (w.category === 'Autonomo' ? 'Custom' : w.categor
 
 /** `ultime` = percentuali 0-100, le dà barreUltimiGiorni in lib/statistiche.js */
 export function CellaSerie({ giorni, ultime = [] }) {
+  const giorniCheSalgono = useNumeroCheSale(giorni)
   return (
     <div className={`${CARD} p-4 flex-1`}>
       <p className={LABEL}>Serie</p>
       <p className="mt-2.5 text-[34px] font-black tracking-[-.04em] text-white leading-none">
-        {giorni}<span className="text-[13px] font-semibold text-muted tracking-normal"> {giorni === 1 ? 'giorno' : 'giorni'}</span>
+        {giorniCheSalgono}<span className="text-[13px] font-semibold text-muted tracking-normal"> {giorni === 1 ? 'giorno' : 'giorni'}</span>
       </p>
       <div aria-hidden="true" className="flex items-end gap-1 h-[34px] mt-3">
         {ultime.map((v, i) => (
@@ -230,11 +246,12 @@ export function CellaSerie({ giorni, ultime = [] }) {
 }
 
 export function CellaVolume({ minuti, rpe }) {
+  const minutiCheSalgono = useNumeroCheSale(minuti)
   return (
     <div className={`${CARD} p-4 flex-1`}>
       <p className={LABEL}>Volume · RPE</p>
       <p className="mt-2.5 text-[26px] font-black tracking-[-.03em] text-white leading-none">
-        {minuti}<span className="text-[13px] font-semibold text-muted tracking-normal"> min</span>
+        {minutiCheSalgono}<span className="text-[13px] font-semibold text-muted tracking-normal"> min</span>
       </p>
       <div className="flex items-center gap-2 mt-2.5">
         <Activity size={14} className="text-brand" aria-hidden="true" />
