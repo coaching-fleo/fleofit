@@ -5,13 +5,20 @@
 > Ultimo aggiornamento: **22 settembre 2026**.
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
-> Ultimo commit su `ios-version`: **22 set 2026**, che porta **le animazioni dell'app**
-> (§9-septtricies): la cascata su nove schermate, i numeri che salgono, la CTA che si
-> contrae e il passo che entra. ⚠️ **L'hash non si scrive più qui dentro**: era
+> Ultimo commit su `ios-version`: **22 set 2026**, che porta **l'apertura dell'app**
+> (§9-duodequadragies) dopo **le animazioni dell'app** (§9-septtricies): la cascata su nove
+> schermate, i numeri che salgono, la CTA che si contrae e il passo che entra. ⚠️ **L'hash non si scrive più qui dentro**: era
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **968 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **973 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> ⭐ **Il 22/09 è nata l'APERTURA dell'app** (§9-duodequadragies): l'area scura si ritira
+> dietro un arco e scopre la Home. 🔴 Registrando l'avvio vero è saltato fuori un difetto
+> che nessuno aveva mai misurato e che non c'entrava con la richiesta: **380ms di BIANCO
+> PIENO** fra lo schermo di lancio e l'app — la webview che dipinge il proprio fondo prima
+> che il foglio di stile arrivi. ⚠️ E lo **schermo di lancio nativo è nero SENZA logo**:
+> quello che si vede è sempre stato il logo web. Resta aperto, ed è l'ultimo stacco
+> dell'avvio.
 > ⭐ **Il 21-22/09 l'app ha preso un linguaggio di movimento** (§9-septtricies), da un
 > riferimento indicato dal committente. ⚠️ Il video non era guardabile: i numeri sono stati
 > **contati fotogramma per fotogramma a 30fps** con ffmpeg, ed è l'unica ragione per cui
@@ -479,6 +486,9 @@ src/
 │  ├─ HomeCoachUI.jsx          # i pezzi visivi della Home coach (§9-nonies) — sola presentazione
 │  ├─ CreaWorkoutUI.jsx        # i pezzi visivi del builder (§9-undecies) — RiepilogoWorkout e BarraAzioni
 │  │                           #   servono ANCHE la scheda: stesso codice in scrittura e in lettura
+│  ├─ Apertura.jsx             # ⚠️ l'apertura dell'app (§9-duodequadragies): l'arco che
+│  │                           #   risale e scopre la Home. Il PRIMO fotogramma sta in
+│  │                           #   index.html, non qui — e il marchio NON ha un'entrata
 │  ├─ AudioVisualizer.jsx      # ⚠️ l'UNICA forma d'onda: note vocali E dettatura IA (§9-quindecies)
 │  ├─ Puntini.jsx              # ⚠️ i tre puntini della CTA contratta. Sta in un file SUO perché
 │  │                           #   lo usa RpeModal, montata dalla Home: importarlo da
@@ -1231,7 +1241,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. ~~Nessun test automatico~~ → **968 test al 22/09/2026** (`npm test`, vitest), tutti
+11. ~~Nessun test automatico~~ → **973 test al 22/09/2026** (`npm test`, vitest), tutti
     verificati per mutazione: se si rompe di proposito il codice che coprono, falliscono.
     Non sono decorativi, ed è l'unico criterio che conta — vedi §9-sexies.
 
@@ -5272,6 +5282,159 @@ difetto.
   delle sezioni attraverso blocchi condizionali. C'è un test che fissa la scelta.
 - **Il passo che esce** (vedi punto 4).
 - **La tenda curva**, che ha bisogno prima di un problema di contrasto risolto.
+
+---
+
+## 9-duodequadragies. L'apertura dell'app (22/09/2026)
+
+Richiesta del committente: «quando avvio l'app compare il logo FLEOFIT ma poi
+sparisce e basta, voglio un'animazione smooth con qualche shape che si muove per
+fare comparire la home».
+
+### 🔴 REGISTRARE L'AVVIO HA TROVATO DUE DIFETTI CHE NON ERANO NELLA RICHIESTA
+Prima di progettare qualcosa si è registrato l'avvio vero
+(`xcrun simctl io <udid> recordVideo`) e se ne è letta la luminanza fotogramma
+per fotogramma. La sequenza era:
+
+    nero 0,52s  →  🔴 BIANCO 0,38s  →  «FLEOFIT / Caricamento…»  →  taglio netto
+
+1. **380ms di bianco pieno.** Su un'app tutta scura è un flash in faccia, e non
+   se n'era mai accorto nessuno. È la webview che dipinge il proprio fondo prima
+   che il foglio di stile sia arrivato, quindi una regola in `src/index.css`
+   **non basta** — quel file arriva dopo. Corretto da due lati: uno `<style>` in
+   linea in `index.html` (già nel documento) e `ios.backgroundColor` in
+   `capacitor.config.ts` (copre la webview).
+2. 🔴 **Lo schermo di lancio nativo è NERO SENZA LOGO.** Il logo che si vedeva —
+   e che la richiesta chiamava «il logo FLEOFIT» — è sempre stato quello **web**.
+   ⚠️ Nella `Splash.imageset` la variante **dark** ha il logo **cinque volte più
+   piccolo** della light (10% contro 48% della larghezza). Resta aperto: è
+   un'immagine da rifare, non codice, ed è l'ultimo stacco dell'avvio.
+
+### Il meccanismo: l'arco che risale
+🔴 **Ci sono volute due stesure, e la prima era una scorciatoia.** Il riferimento
+(§9-septtricies) rivela con una tenda chiara che sale su fondo nero: funziona
+perché è **nero su crema**, contrasto totale. In FLEOFIT tutto è `#0B0B0B` su
+`#1e1e1e`, e per questo la tenda era l'unica delle quattro animazioni lasciata
+fuori dal rework. La prima stesura ha **aggirato** il problema con due aloni
+`radial-gradient` che entravano e una dissolvenza in uscita — bocciata dal
+committente in una riga: «quel gradiente è osceno, e la dissolvenza non mi
+piace». Aveva ragione, e la seconda metà è il punto: **nel riferimento non c'è
+nessuna dissolvenza**. Aggirare un problema è rispondere a un'altra domanda.
+
+Riletto fotogramma per fotogramma, il meccanismo vero è: **l'area scura resta
+ancorata in alto e il suo bordo inferiore — una curva il cui punto più basso sta
+a circa un terzo da sinistra — RISALE**, scoprendo la pagina da sotto. Non è un
+foglio che scorre via e non è un velo che si spegne.
+
+⚠️ **`clip-path: ellipse()` INTERPOLA** fra due valori della stessa funzione:
+l'arco si muove e si appiattisce da sé, senza JavaScript e senza un SVG animato
+a mano. Cambiarlo in `path()` o in due funzioni diverse toglie l'interpolazione e
+l'animazione diventa uno scatto, **senza dare errori**.
+
+I numeri vengono dai fotogrammi: centro dell'ellisse al **30%** da sinistra,
+raggio orizzontale **80%**, da cui segue che il bordo destro dell'arco sta al
+**48,41%** della profondità del punto più basso — nel video è 0,48.
+
+### 🔴 IL RAGGIO DI PARTENZA È 208%, E IL NUMERO È CALCOLATO
+Con quella geometria lo schermo è coperto fino all'angolo in basso a destra solo
+finché il raggio è **≥ 206,6%**: sopra, l'arco è **fuori schermo**. La prima
+stesura partiva da 220% e buttava via il 6% del percorso in una zona invisibile —
+che con un ease-out esponenziale è **un terzo del tempo**: il tratto visibile si
+consumava in un centinaio di millisecondi, cioè uno scatto.
+
+⚠️ Chi cambia `rx` o il centro **deve ricalcolare anche questo**, o l'animazione
+torna a saltare. Ed è la stessa famiglia di difetto di `max-width` che non
+interpola da `none` (§9-septtricies): l'animazione esiste, ma quasi tutta fuori
+da dove si guarda.
+
+⚠️ E la curva è **cubica**, non l'esponenziale storico del progetto. Il commento
+diceva il contrario ed è stato corretto misurando: su un percorso quasi tutto
+visibile, `cubic-bezier(.16,1,.3,1)` fa sparire l'arco in un lampo.
+
+### I tre tempi, e il battito in mezzo
+Marchio via (**260ms**) → **130ms di nero assoluto** → arco che risale (**430ms**).
+⚠️ La pausa è **misurata sul riferimento**, non un ritardo inventato: è quella a
+far leggere il passaggio come deliberato invece che come un caricamento, ed è la
+prima cosa che verrà in mente di togliere. Le tre durate stanno sia in
+`Apertura.jsx` sia in `src/index.css` e **devono coincidere**, o l'ultimo pezzo
+di animazione viene tagliato quando la sovrapposizione si smonta.
+
+### 🔴 LA SOVRAPPOSIZIONE STA SOPRA L'APP, NON AL POSTO SUO
+C'era un `if (loading) return <schermata>` in `ProtectedRoute`: con quella forma,
+nell'istante in cui i dati arrivano la schermata **smonta** e la Home **monta**
+nello stesso fotogramma — che è letteralmente il «sparisce e basta» della
+richiesta. Una sovrapposizione resta viva attraverso quel passaggio, e la sua
+uscita scopre una Home già montata e **già in cascata**.
+⚠️ Deve restare **lo stesso elemento** attraverso i rami di `ProtectedRoute`:
+renderizzarla in due punti diversi la farebbe smontare e rimontare al cambio di
+ramo, e l'entrata ripartirebbe a metà uscita.
+⚠️ Minimo **900ms** a schermo: senza, un avvio veloce la mostra per due
+fotogrammi e si legge come uno sfarfallio — peggio del taglio che sostituisce.
+
+### Il pre-disegno in `index.html`, e quanto vale davvero
+Il primo fotogramma dell'apertura è dipinto **dentro `index.html`**, così compare
+appena l'HTML viene letto invece di aspettare bundle e montaggio.
+⚠️ Sta **dentro `#root`** di proposito: `createRoot().render()` svuota il
+contenitore al primo render, quindi il pre-disegno se ne va da solo. Fuori da
+`#root` resterebbe in pagina per sempre, **sopra l'app**.
+
+🔴 **È UNA COPIA, e la copia è inevitabile**: il foglio di stile e il bundle
+arrivano dopo, quindi lì non si può usare né Tailwind né una classe. Quando le
+due metà divergono il sintomo è uno **scalino di colore** nell'istante del
+passaggio, che nessun errore segnala e che in jsdom non si vede.
+`src/__tests__/aperturaPredisegno.test.js` legge i file **dal disco** e li
+confronta. ⚠️ Uno dei tre era verde per il motivo sbagliato: usava
+un'espressione regolare fra `<div id="root">` e `</div>`, e spostando il
+pre-disegno **fuori** da `#root` la regex si allungava fino al `</div>`
+successivo e continuava a trovarcelo dentro. Riscritto leggendo l'albero con
+`DOMParser`.
+
+🔴 **VALE MENO DI QUANTO SEMBRA, ed è stato misurato.** La previsione era che
+togliesse «quasi tutti» gli 1,7 secondi di nero: **ne toglie 0,69**. Ipotesi
+provata e **scartata**: che a bloccare fosse il `<link>` del foglio di stile
+(124 KB, render-blocking). Reso non bloccante sulla sola copia costruita e
+rimisurato — 2,24s invece di 2,22s, cioè niente. Il resto dell'attesa sta **sotto
+il livello web** (schermo di lancio nativo, webview mostrata solo a pagina
+caricata) e da `index.html` non si raggiunge.
+
+### 🔴 IL MARCHIO NON HA UN'ENTRATA, E CI SONO VOLUTI DUE TENTATIVI SBAGLIATI
+L'aveva (sfumava salendo di 10px), e produceva un **rimbalzo** segnalato dal
+committente: il pre-disegno la giocava, e React la **rigiocava** montando a metà.
+Confermato fotogramma per fotogramma — il logo arrivava a piena opacità, si
+abbassava di dieci pixel e si sbiadiva, poi tornava.
+
+| tentativo | perché è sbagliato |
+|---|---|
+| una **soglia** («se è passato più di 620ms, saltala») | copre solo il caso in cui React arriva TARDI; quando arriva a metà — il caso normale — l'entrata non veniva saltata ma **ricominciata** |
+| un **`animation-delay` negativo** per riprenderla, leggendo il punto con `getAnimations()` | quel modulo è valutato **prima** che l'animazione del pre-disegno sia partita: non c'è ancora niente da leggere. Rimisurato, il calo era identico |
+
+**La risposta non era un passaggio di consegne più furbo: era togliere la seconda
+animazione.** Il marchio ora c'è e basta, identico prima e dopo, e non può
+rimbalzare perché non gli succede niente. Misurato sulla sua fascia: prima due
+cali di luminosità (46→41 e 69→46), ora **nessuno** — 78 costante.
+
+> ⚠️ **La regola che ne esce, e vale oltre questa schermata**: *due superfici che
+> disegnano lo stesso elemento non possono animarlo entrambe.* Quando succede,
+> non si cerca un modo più furbo di sincronizzarle — se ne toglie una.
+
+### Il gradiente, che NON è un ritorno agli aloni
+Segnalato dal committente: «il fatto che sia tutto nero fa poco contrasto e non
+si capisce bene che c'è un'animazione». Il fondo dell'apertura è un caldo ambra,
+più chiaro **dove sta il marchio e dove l'arco si abbassa** — cioè proprio la
+zona che se ne va. ⚠️ Gli aloni bocciati erano due cerchi sfumati che
+**entravano in scena**; questo è il fondo della superficie e **sta fermo**.
+⚠️ E il contrasto vero lo fa **il contenuto**: sotto c'è la Home già in cascata,
+quindi quello che risale non è un bordo fra due neri — è la pagina che compare.
+L'arco porta solo una luce ambra sottile, e serve al **primo fotogramma**, quando
+sotto non c'è ancora niente.
+⚠️ `drop-shadow` e non `box-shadow`: box-shadow segue il rettangolo e non la
+forma ritagliata — disegnerebbe una luce dritta sotto una curva.
+
+### Cosa resta aperto
+- **Lo schermo di lancio nativo**, nero e senza logo (vedi sopra). È l'unico
+  stacco rimasto nell'avvio e si chiude rifacendo l'immagine dark dell'asset.
+- **Il marchio del pre-disegno e quello di React sono due markup diversi.** Il
+  test confronta gradiente, corpo e posizione; il resto è disciplina.
 
 ---
 
