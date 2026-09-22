@@ -2,17 +2,28 @@
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **21 settembre 2026**.
+> Ultimo aggiornamento: **22 settembre 2026**.
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
-> Ultimo commit su `ios-version`: **9 set 2026**, che porta gli **stati senza storico** della
-> Home atleta (§9-duodetricies) e lo **stimatore di durata unificato** (§9-undetricies,
-> BACKLOG #40 chiuso); il commit precedente dello stesso giorno portava tutto il lavoro dal
-> 01/09 in poi (§9-vicies → §9-septvicies, cancellazione account compresa). ⚠️ **L'hash non si scrive più qui dentro**: era
+> Ultimo commit su `ios-version`: **22 set 2026**, che porta **le animazioni dell'app**
+> (§9-septtricies): la cascata su nove schermate, i numeri che salgono, la CTA che si
+> contrae e il passo che entra. ⚠️ **L'hash non si scrive più qui dentro**: era
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **932 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **968 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> ⭐ **Il 21-22/09 l'app ha preso un linguaggio di movimento** (§9-septtricies), da un
+> riferimento indicato dal committente. ⚠️ Il video non era guardabile: i numeri sono stati
+> **contati fotogramma per fotogramma a 30fps** con ffmpeg, ed è l'unica ragione per cui
+> non sono inventati. Quattro cose, in ordine di quanto si vedono: la **cascata** (i figli
+> di un contenitore entrano sfasati di 75ms, nove schermate), i **numeri che salgono**, la
+> **CTA che si contrae** in pillola, e il **passo del builder** che entra da destra.
+> 🔴 Tre trappole trovate MISURANDO e non leggendo il codice, tutte invisibili ai test:
+> una **sfocatura sotto un'animazione di opacità cambia colore** quando il layer GPU viene
+> liberato (Y 48,08 → 52,31 *dopo* la fine del movimento — sei aloni convertiti in
+> `radial-gradient`); **`max-width` non interpola da `none`**, quindi la CTA saltava invece
+> di contrarsi; e la **curva storica del progetto** (`.16,1,.3,1`) è un ease-out
+> esponenziale che su un'entrata legge come uno scatto, non come morbidezza.
 > 🔴 **Il 20/09 App Store ha respinto la 1.0 (5) con TRE rilievi insieme** (§9-quatertricies),
 > e **uno solo è codice**: la **2.5.1** — HealthKit linkato al binario senza una funzione
 > che lo giustifichi — chiusa il 21/09 togliendo Apple Health da tutte e cinque le porte
@@ -383,6 +394,9 @@ src/
 ├─ useBottomSheet.js           # ⚠️ l'UNICO bottom sheet fatto bene: entrata, maniglia, scroll bloccato (§9-duodecies)
 ├─ useIndietro.js              # ⚠️ il tasto «indietro», uno per tutta l'app: NON è `navigate(-1)`
 │                              #   e NON è una destinazione fissa — sono i due modi sbagliati (§9-tervicies)
+├─ useNumeroCheSale.js        # ⚠️ il numero che sale (§9-septtricies). La curva è ESPONENZIALE
+│                              #   e l'ultimo passo è ESATTO: 2^(-10) è 1/1024, quindi senza il
+│                              #   salto finale un carico di 22.000 resta a 21.978 per sempre
 ├─ lib/                        # logica pura, l'unica parte con test
 │  ├─ alert.js                 # mostraAlert/mostraErrore: alert applicativo senza passare props
 │  ├─ andamento.js             # aderenza, carico, volume e sforzo della scheda atleta — TUTTI
@@ -394,6 +408,9 @@ src/
 │  ├─ badge.js                 # ⚠️ l'UNICO punto che scrive il badge iOS (§8)
 │  ├─ blockColors.js           # TYPE_COLORS, unificata dalle 5 copie sparse
 │  ├─ blockHints.js            # BLOCK_HINT: didascalie in chiaro dei tipi di blocco (§9-ter)
+│  ├─ cascata.js               # ⚠️ SOLO per le liste ANNIDATE (archivio, rubrica): `nth-child`
+│  │                           #   riparte a ogni gruppo, quindi serve un indice che scorre.
+│  │                           #   `MASSIMO_CASCATA` deve coincidere col tetto in index.css
 │  ├─ categorie.js             # CORSIA/corsia/categoriaDi: la Regola della Corsia in un punto solo
 │  ├─ coach.js                 # ⚠️ COACH: il nome del coach è una COSTANTE, non una query —
 │  │                            #   dal lato atleta non è interrogabile (§9-duodetricies)
@@ -463,6 +480,9 @@ src/
 │  ├─ CreaWorkoutUI.jsx        # i pezzi visivi del builder (§9-undecies) — RiepilogoWorkout e BarraAzioni
 │  │                           #   servono ANCHE la scheda: stesso codice in scrittura e in lettura
 │  ├─ AudioVisualizer.jsx      # ⚠️ l'UNICA forma d'onda: note vocali E dettatura IA (§9-quindecies)
+│  ├─ Puntini.jsx              # ⚠️ i tre puntini della CTA contratta. Sta in un file SUO perché
+│  │                           #   lo usa RpeModal, montata dalla Home: importarlo da
+│  │                           #   CreaWorkoutUI trascinerebbe 24 KB di builder lì dentro
 │  ├─ WorkoutDetailUI.jsx      # i pezzi visivi della scheda workout (§9-duodecies) — sola presentazione
 │  ├─ StoriaUI.jsx             # ⚠️ la grafica da mettere SOPRA una storia + il foglio da cui
 │  │                           #   si esporta. Sfondo `transparent` di proposito (§9-unetvicies)
@@ -1033,7 +1053,14 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   Il meccanismo sta in `src/useBottomSheet.js` (entrata, trascinamento, uscita, blocco dello
   scorrimento sotto) e lo usa il menu della scheda workout. ⚠️ Il centro notifiche in `Home`
   ha ancora la **propria copia**, scritta a mano: BACKLOG #33.
-- **Transizione pagina**: classe `.page-transition` — slide-up 15px + fade, 0.3s `cubic-bezier(0.16,1,0.3,1)`.
+- **Entrata di una pagina**: **`.cascata` sul contenitore**, non `.page-transition` sulla
+  radice (§9-septtricies). I figli entrano sfasati di 75ms invece che tutti insieme; i
+  quattro parametri sono variabili su `:root` in `src/index.css` e valgono per tutta l'app.
+  ⚠️ **Una testata `sticky` è CORNICE e non entra**; una testata che scorre via è contenuto
+  e entra (`.cascata-voce`).
+- `.page-transition` **resta** per le schermate fuori dalle nove del rework (login, TV):
+  slide-up 15px + fade, 0.3s `cubic-bezier(0.16,1,0.3,1)`. ⚠️ Non va rimesso *insieme* a
+  una cascata: la pagina che sale mentre i figli salgono è movimento doppio.
 - **Scrollbar sempre nascoste** (regola globale in `index.css` + classe `.hide-scrollbar`).
 - **Safe area iOS**: ogni pagina apre con `pt-[calc(env(safe-area-inset-top)+1rem)]` e
   chiude con `pb-[var(--fondo-pagina)]` (o `pb-[var(--altezza-navbar)]` dove finisce
@@ -1204,7 +1231,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. ~~Nessun test automatico~~ → **927 test al 09/09/2026** (`npm test`, vitest), tutti
+11. ~~Nessun test automatico~~ → **968 test al 22/09/2026** (`npm test`, vitest), tutti
     verificati per mutazione: se si rompe di proposito il codice che coprono, falliscono.
     Non sono decorativi, ed è l'unico criterio che conta — vedi §9-sexies.
 
@@ -5019,6 +5046,232 @@ sopravvive solo nei metadati di reflection di Swift. E `strings | grep
 SceneDelegate` senza il modulo dà **19 occorrenze anche su una build NON
 migrata**, perché sono quelle di `CAPSceneDelegateProxy` dentro Capacitor: il
 mangled `3App13SceneDelegate` è l'unico che distingue la nostra classe.
+
+---
+
+## 9-septtricies. Il linguaggio di movimento (21-22/09/2026)
+
+Richiesta del committente: «ho visto questo video e mi piace molto questo stile di
+animazioni molto clean, voglio riproporlo sulla mia app».
+
+### 🔴 IL VIDEO NON ERA GUARDABILE, ED È LA COSA PIÙ IMPORTANTE DI QUESTA SEZIONE
+Un `.mp4` non si legge. La prima stesura del lavoro è stata **quattro candidate
+inventate a occhio**, e il committente le ha bocciate in una riga: «non sono
+abbastanza smooth». Avevano ragione a cadere — erano gusti, non misure.
+
+La strada giusta è: `ffmpeg` estrae i fotogrammi **alla frequenza nativa**, si
+montano in contact sheet, e si contano. Tutti i numeri di questa sezione vengono
+da lì, e nessuno è stato scelto. ⚠️ Vale per qualunque riferimento visivo futuro:
+**si misura, non si assomiglia**. Gli strumenti ci sono già sulla macchina
+(`ffmpeg`, `ffprobe`, `yt-dlp`), e lo stesso metodo serve a verificare il
+risultato — `xcrun simctl io <udid> recordVideo` registra il simulatore, e
+`signalstats` legge il colore di un rettangolo fotogramma per fotogramma.
+
+### Le quattro animazioni, con le misure
+
+| | cos'è | misurato |
+|---|---|---|
+| **la cascata** | i figli di un contenitore entrano uno dopo l'altro | 20px di salita, 220ms, 65ms di scarto |
+| **il numero che sale** | da 0 al valore, rallentando | 1,27s; residuo a un quinto ogni 0,2s |
+| **la CTA che si contrae** | il bottone diventa una pillola con tre puntini | 570ms, etichetta via nei primi 150 |
+| **la tenda curva** | un foglio sale con un bordo che cambia forma | 400ms in entrata, 150 in uscita |
+
+⚠️ **La tenda NON è stata implementata**, ed è l'unica delle quattro. Nel video
+legge perché è **nero su crema**: un contrasto totale. In FLEOFIT tutto è
+`#0B0B0B` su `#1e1e1e`, e una curva fra quei due colori è invisibile. Rimetterla
+in programma richiede prima di risolvere quel problema, non di scrivere il
+keyframe.
+
+### 1 · LA CASCATA — `.cascata`, `.cascata-voce`, `--cascata-*`
+
+Nove schermate: Home atleta, Home coach, archivio, rubrica, calendario, i due
+report, scheda workout, impostazioni.
+
+- **I quattro parametri stanno su `:root`** (`--cascata-salita`, `--durata`,
+  `--scarto`, `--curva`). Ritoccare il ritmo di tutta l'app è una riga.
+  ⚠️ I valori spediti (340ms / 75ms) sono **più lenti della misura** (220/65):
+  allungati su richiesta del committente dopo averli provati sul dispositivo.
+- **Il ritardo lo scrive `nth-child`**, quindi un contenitore diventa una cascata
+  aggiungendo UNA classe e i figli non sanno di esserci dentro.
+- **Il tetto a 12 voci non è una semplificazione**: l'archivio ha 171 workout, e
+  senza tetto l'ultima riga entrerebbe dopo più di sette secondi — molto dopo che
+  il dito ha già cominciato a scorrere.
+
+🔴 **LA CURVA NON È QUELLA DEL RESTO DEL PROGETTO, ED È DELIBERATO.** Altrove si
+usa `cubic-bezier(.16,1,.3,1)`, che è un ease-out **esponenziale**: copre il 90%
+della distanza nel primo quarto del tempo e poi striscia. Su una transizione di
+pagina è giusto — deve togliersi di mezzo. Su un elemento che deve sembrare
+*morbido* legge come uno scatto seguito da un'attesa, ed è esattamente ciò che il
+committente ha chiesto di togliere. La cascata usa un ease-out **cubico**
+(`.33,1,.68,1`). ⚠️ **Allungare la durata senza cambiare la curva non rende
+l'entrata più morbida — la rende più lenta a non muoversi.**
+
+🔴 **UNA TESTATA `STICKY` È CORNICE E NON ENTRA.** È la regola che decide ogni
+pagina futura. Nel riferimento il contenitore sta fermo e si muovono gli
+elementi; una testata appiccicata è la cornice della pagina, e nell'archivio e
+nella rubrica è anche **l'unico comando della schermata** (ricerca e filtri):
+farla entrare in ritardo vorrebbe dire ritardare i comandi. Una testata che
+scorre via con la pagina è invece contenuto, e la sua voce ce l'ha
+(`.cascata-voce`, con `--cascata-da` sul contenitore per lasciarle il posto 0).
+
+| entra | non entra |
+|---|---|
+| Home (atleta e coach), calendario, impostazioni, scheda | archivio, rubrica, report settimanale, report atleta |
+
+⚠️ **`page-transition` è uscito dalle nove.** La pagina che sale *mentre* i figli
+salgono è movimento doppio. Resta sulle schermate fuori dal rework.
+
+⚠️ **`src/lib/cascata.js` serve a UN caso solo: le liste annidate.** Nell'archivio
+le righe stanno dentro i mesi e nella rubrica dentro due sezioni, quindi
+`nth-child` riparte da capo e agosto entrerebbe insieme a settembre. Lì l'indice
+si passa inline (`voce(n++)`), che è l'unica ragione per cui l'escape esiste.
+🔴 `MASSIMO_CASCATA` **deve coincidere** con `nth-child(n+12)` in `src/index.css`:
+una regola CSS da JavaScript non è leggibile, ed è la stessa situazione dei colori
+di marchio (§6).
+
+### 2 · I NUMERI CHE SALGONO — `src/useNumeroCheSale.js`
+
+Anello della settimana, serie, volume, arretrato dei feedback, volume e carico del
+report, le quattro celle del riepilogo della scheda.
+
+🔴 **La curva è esponenziale, e NON è quella della cascata.** Misurando il residuo
+(3916 → 834 → 182 → 22 a intervalli regolari) ciò che manca si riduce a un quinto
+ogni 0,2 secondi. È la ragione per cui il numero è leggibile quasi subito e poi si
+assesta: un ease-out cubico passerebbe metà del tempo su cifre che cambiano ancora
+troppo per essere lette.
+
+🔴 **L'ULTIMO PASSO È ESATTO, NON CALCOLATO.** `2^(-10)` vale 1/1024, quindi a fine
+corsa la formula si ferma allo 0,9990: un carico di 22.000 resterebbe a **21.978
+per sempre**, e nessun errore lo segnalerebbe. È la riga più importante del file, e
+c'è un test che cade solo su quella.
+
+🔴 **IL BUILDER NON CONTA**, ed è una decisione. `RiepilogoWorkout` serve due
+pagine: la scheda, dove i numeri arrivano una volta all'apertura, e il builder,
+dove cambiano a **ogni blocco che si tocca**. Un conteggio da 1,3s a ogni modifica
+vorrebbe dire un numero sempre in movimento e mai leggibile, proprio mentre il
+coach lo usa per dosare la seduta. Prop `anima`, **falsa di default**, e due test
+che fissano la scelta dai due lati. *Il conteggio va dove un numero ARRIVA, non
+dove lo si sta scrivendo.*
+
+⚠️ **Gli `aria-label` portano sempre il valore vero.** Chi usa VoiceOver
+sull'anello sente «3 allenamenti completati su 5», mai un conteggio in corso.
+
+⚠️ `null` resta `null`: una cella senza dato non conta fino a zero. È la regola di
+`rpeAtteso` (§9-undecies punto 3), alla sua ennesima comparsa.
+
+🔴 **`src/test/setup.js` DICHIARA ORA `prefers-reduced-motion: reduce`** per tutta
+la suite, e chiunque scriva test su un numero deve saperlo. Senza, un
+`getByText('516')` subito dopo il render troverebbe `0`, e l'esito dipenderebbe da
+quanti fotogrammi jsdom fa passare prima dell'asserzione — cioè test che falliscono
+a caso su una macchina lenta. Un test che voglia vedere il movimento lo accende a
+mano, come `LoginApple` fa con il ramo nativo.
+
+### 3 · LA CTA CHE SI CONTRAE
+
+Da tutta larghezza a una pillola da 86px in 570ms, **da entrambi i lati verso il
+centro**, con tre puntini dentro. Verificato nel browser: 361 → 277 → 182 → 126 →
+97 → 86, con il centro fermo al centro dello schermo.
+
+Acceso in **due punti soli**, dove l'attesa è vera: «Salva workout» e «Fatto! 🎉»
+della modale RPE. ⚠️ `attesa` è **falsa di default**: le altre sei `CtaPrimaria`
+aprono un modale, e contrarsi per 570ms lì vorrebbe dire solo ritardarlo.
+
+🔴 **`max-width` NON INTERPOLA DA `none`.** Il default è `none`, e la transizione
+semplicemente non avviene: il bottone **saltava** a 86px. Nessun errore, invisibile
+in jsdom, trovato misurando il rettangolo a 150ms dall'inizio — dove la larghezza
+era già quella finale. Il valore di partenza lo dichiara il chiamante
+(`max-w-[100vw]`), e c'è un test che cade se sparisce.
+
+⚠️ Il raggio arriva a **26px**, non a 9999: metà dell'altezza è già una pillola
+perfetta, mentre interpolare fino a 9999 rende il bordo tondo nei primi fotogrammi
+— il raggio finirebbe prima della larghezza e la contrazione si leggerebbe come due
+animazioni scollegate.
+
+⚠️ **`Puntini` sta in un file suo**, non in `CreaWorkoutUI`: lo usa `RpeModal`, che
+è montata da Home, WorkoutDetail e AthleteDetail, e importarlo da lì farebbe
+scaricare 24 KB di builder dentro la Home. Stesso danno del fascio luminoso
+(§9-duetricies) e di `jspdf` in testa alla scheda (§9-noviesdecies).
+
+🔴 **Perché non basta spegnere il bottone**: un bottone disabilitato accanto a
+un'attesa si legge come «non ha funzionato», ed è la lezione del foglio IA
+(§9-quindecies) — lì la CTA spenta faceva premere di nuovo il microfono, cioè
+buttare la registrazione appena spedita. Qui il gesto sbagliato sarebbe premere
+«Salva» una seconda volta, o accodare due volte lo stesso completamento.
+
+### 4 · IL PASSO CHE ENTRA
+
+Il cambio di passo del builder era **netto**: il passo 1 spariva e il 2 compariva
+nello stesso fotogramma. Ora entra da destra in 380ms. ⚠️ **Orizzontale, non dal
+basso**: è un passaggio dentro un flusso, non un elemento che arriva in una lista,
+e usare la direzione della cascata confonderebbe le due cose.
+
+🔴 **Entra e basta: non c'è un'uscita, ed è una rinuncia dichiarata.** Nel
+riferimento il passo che esce scivola via *mentre* quello nuovo arriva, ma là le
+due schermate coesistono per qualche fotogramma. Qui `{step === 1 && …}` smonta il
+vecchio nell'istante in cui il nuovo monta: per farli convivere servirebbero due
+alberi in pagina e una macchina a stati, su `CreateWorkout` — il file più grande del
+progetto e quello dove si perde il lavoro non salvato.
+
+### 🔴 L'ALONE: una sfocatura sotto un'animazione di opacità CAMBIA COLORE
+
+Segnalato dal committente («al termine dell'animazione il gradiente cambia
+leggermente colore») e misurato registrando il simulatore:
+
+| zona | fine animazione | +17ms | scarto |
+|---|---|---|---|
+| **sopra l'alone sfocato** | Y 48,08 · V 119,07 | Y 52,31 · V 115,56 | **+4,2 · −3,5** |
+| gradiente della card | Y 44,25 | Y 44,30 | 0,05 |
+
+**Non era il gradiente della card**, e non si correggeva lì. WebKit promuove
+l'elemento animato su un layer GPU e rende la `filter: blur()` con
+l'approssimazione della GPU; finita l'animazione il layer viene liberato e la
+stessa sfocatura è ridipinta dalla CPU. Due risultati diversi per lo stesso pixel,
+e il salto avviene **dopo** che il movimento è già finito.
+
+**La regola che ne esce: mai una sfocatura dentro un elemento che anima l'opacità.**
+Al suo posto `.alone`, un `radial-gradient` — pittura pura, nessun filtro, nessun
+layer, reso identico dentro e fuori da una composizione, e costa meno di una
+sfocatura da 40px ridisegnata a ogni entrata.
+
+⚠️ L'alternativa scartata era inchiodare l'elemento su un layer permanente
+(`will-change: filter`): rende il colore costante, ma **costante sulla versione
+GPU**, cioè quella più scura — l'alone perderebbe l'8% di luminosità. Fra due
+colori costanti si sceglie quello giusto.
+
+⚠️ Le misure di `.alone` sono quelle del disco **più** lo spegnimento della
+sfocatura (un disco da 240px con `blur(40px)` si spegne intorno ai 400): un box
+delle dimensioni originali taglierebbe l'alone di netto.
+
+Sei aloni convertiti — tutti quelli che stanno sotto una cascata. Gli altri erano
+`backdrop-blur` su testate che **non** animano, che è un'altra cosa e non ha il
+difetto.
+
+### Le trappole di questa sessione, e quante volte sono tornate
+
+1. **`animate-in` genera zero CSS** (tw-animate-css non è installato). Quarta
+   comparsa, dopo §9-duodecies, §9-quindecies e §9-duodetricies. Tutti i keyframe
+   di questa sezione sono veri.
+2. **Due animazioni sullo stesso nodo non si sommano**: hanno la stessa
+   specificità e a decidere è l'ordine nel foglio di stile, in silenzio. È la
+   trappola di `CARTA_RIGA` (§9-octodecies) applicata alle animazioni — per questo
+   tre elementi hanno **perso** `hero-transition` diventando figli di una cascata.
+3. **Un test verde non dice niente finché non lo si è visto fallire** (§9-sexies).
+   26 mutazioni provate, 26 prese, ma **quattro solo dopo aver corretto lo
+   scenario**: il test non renderizzava l'elemento che diceva di proteggere — una
+   card di oggi che non c'era, un eroe dei feedback con la lista vuota, uno zero
+   iniziale già sparito prima dell'asserzione.
+4. ⚠️ **Verificare che un ripristino sia avvenuto.** Durante le mutazioni
+   sull'archivio un file non è tornato indietro, e per un momento il rosso è
+   sembrato un difetto del codice appena scritto. Da allora ogni giro di mutazioni
+   ricontrolla lo stato del file dopo il ripristino.
+
+### Cosa resta aperto
+- **I blocchi della scheda entrano come gruppo**, non uno per uno: il loro
+  contenitore è una sezione della pagina, e farli cascare anche dentro sarebbero
+  due animazioni sovrapposte. Per farli singoli serve un indice che continui quello
+  delle sezioni attraverso blocchi condizionali. C'è un test che fissa la scelta.
+- **Il passo che esce** (vedi punto 4).
+- **La tenda curva**, che ha bisogno prima di un problema di contrasto risolto.
 
 ---
 
