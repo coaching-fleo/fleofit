@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, fireEvent } from '@testing-library/react'
 
 // Perché questo test esiste
 // ──────────────────────────
@@ -60,6 +60,35 @@ describe('la barra delle azioni e la tastiera', () => {
 
     await tastiera('keyboardWillHide')
     expect(screen.getByRole('button', { name: 'Costruisci' })).toBeInTheDocument()
+  })
+})
+
+// ⚠️ E la barra NON ancorata fa l'opposto, che è il difetto del 22/09/2026: al
+// passo 1 del builder quella barra porta «Costruisci l'allenamento», cioè
+// l'unica via d'uscita della schermata. Nascondendola, toccare il campo «Nome»
+// chiudeva la strada: bisognava prima premere invio per far scendere la
+// tastiera. Una barra in flusso non può «salire in cima» — `mt-auto` la porta
+// al fondo della viewport rimpicciolita, cioè sopra i tasti, dove iOS mette le
+// proprie barre accessorie.
+describe('la barra NON ancorata resta premibile con la tastiera aperta', () => {
+  it('non sparisce quando la tastiera sale', async () => {
+    render(<BarraAzioni ancorata={false}><button>Costruisci</button></BarraAzioni>)
+    await act(async () => { await Promise.resolve() })
+
+    await tastiera('keyboardWillShow')
+    expect(screen.getByRole('button', { name: 'Costruisci' })).toBeInTheDocument()
+  })
+
+  // ⚠️ Questo è ciò che rende il tocco UNO e non due. Senza, iOS chiude la
+  // tastiera al mousedown, la webview si riallarga e la barra scende di ~300px
+  // prima che il click arrivi: il primo tocco cade nel vuoto. Non si vede in
+  // jsdom, dove niente si muove, e nessun'altra asserzione ci casca.
+  it('il tocco non toglie il fuoco al campo che si sta scrivendo', async () => {
+    render(<BarraAzioni ancorata={false}><button>Costruisci</button></BarraAzioni>)
+    await act(async () => { await Promise.resolve() })
+
+    const annullato = !fireEvent.mouseDown(screen.getByRole('button', { name: 'Costruisci' }))
+    expect(annullato).toBe(true)
   })
 })
 

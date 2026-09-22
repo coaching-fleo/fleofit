@@ -325,25 +325,35 @@ export function BottoneGhost({ onClick, children, icona: Icona = Plus }) {
 // mentre si ha bisogno di vedere i blocchi. Il committente l'ha segnalato il
 // 15/09/2026: «il salva workout deve essere in fondo e basta».
 export function BarraAzioni({ children, ancorata = true }) {
-  // ⚠️ Sparisce mentre si scrive, come la navbar. Con `Keyboard.resize: 'native'`
-  // la webview si rimpicciolisce: una barra ancorata al fondo si ritrova sopra
-  // la tastiera, e a schermo sembra «salita in cima». Non c'è modo di tenerla
-  // ferma dov'era — quel punto dello schermo, mentre si digita, non esiste più.
-  // Quindi si toglie di mezzo, e torna appena la tastiera scende (invio, o un
-  // tocco fuori dal campo).
-  // ⚠️ Sparisce anche NON ancorata, e non è una svista: la pagina è
-  // `min-h-[100dvh]` con un `mt-auto` sopra la barra, quindi su un passo corto
-  // la barra sta comunque al fondo della viewport — che con la tastiera aperta
-  // si rimpicciolisce, incollandocela sopra esattamente come prima.
+  // ⚠️ Solo la barra ANCORATA si nasconde mentre si scrive, e la distinzione è
+  // il difetto del 22/09. Con `Keyboard.resize: 'native'` la webview si
+  // rimpicciolisce: una barra `sticky` si ritrova incollata sopra la tastiera e
+  // a schermo sembra «salita in cima» — non c'è modo di tenerla ferma dov'era,
+  // quindi si toglie di mezzo. Una barra in FLUSSO non può saltare da nessuna
+  // parte: `mt-auto` la porta al fondo della viewport rimpicciolita, cioè
+  // esattamente sopra la tastiera, che è la barra accessoria di iOS.
+  // 🔴 Nasconderla anche lì toglieva l'unica via d'uscita del passo 1 del
+  // builder: si toccava «Nome», la tastiera saliva e «Costruisci l'allenamento»
+  // spariva. Segnalato dal committente il 22/09/2026: «non mi piace che devo
+  // premere invio per chiudere la tastiera, voglio poter cliccare direttamente».
   const tastieraAperta = useTastieraAperta()
-  if (tastieraAperta) return null
+  if (tastieraAperta && ancorata) return null
 
   // In fondo al contenuto e basta: niente velo, niente bordo, niente blur.
   // Erano il vestito dell'ancoraggio — servivano a separare la barra da ciò che
   // le scorreva sotto — e su una barra che sta in fondo alla pagina diventano
   // una riga netta sospesa sopra la capsula della tab bar, che è il secondo
   // rilievo del 15/09.
-  if (!ancorata) return <div className="flex items-center gap-3">{children}</div>
+  //
+  // ⚠️ `onMouseDown` annullato: il tocco NON deve togliere il fuoco al campo.
+  // Senza, iOS chiude la tastiera al `mousedown`, la webview si riallarga e la
+  // barra scende di 300px *prima* che il `click` venga consegnato — il primo
+  // tocco cade nel vuoto e va ripetuto. Tenendo il fuoco non si muove niente:
+  // la tastiera scende dopo, quando il campo si smonta. Nella barra non c'è
+  // nessun campo di testo, quindi il fuoco non serve a lei.
+  if (!ancorata) return (
+    <div className="flex items-center gap-3" onMouseDown={e => e.preventDefault()}>{children}</div>
+  )
 
   return (
     // ⚠️ `bottom-0` la metterebbe SOTTO la navbar, che è `fixed` a z-50:

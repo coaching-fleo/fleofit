@@ -26,7 +26,7 @@ import {
   NumeroEsercizio, CardIA, BottoneGhost, BarraAzioni, CtaPrimaria, BottoneQuadrato,
   Stepper, RigaUltimaVolta, RuotaValori, RigaTesto,
 } from '../components/CreaWorkoutUI'
-import { chiudiTastieraSuInvio } from '../useTastiera'
+import { chiudiTastieraSuInvio, useTastieraAperta } from '../useTastiera'
 import { useBottomSheet } from '../useBottomSheet'
 import AudioVisualizer from '../components/AudioVisualizer'
 import { ThinkingOrb } from 'thinking-orbs'
@@ -2078,6 +2078,9 @@ export default function CreateWorkout() {
   const defaultDate = searchParams.get('date')
 
   const [step, setStep] = useState(1) // 1=tipo, 2=build
+  // Serve al fondo pagina: con la tastiera aperta la tab bar non c'è, e lo
+  // spazio che le era riservato terrebbe la barra sospesa sopra un vuoto.
+  const tastieraAperta = useTastieraAperta()
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(defaultDate || format(new Date(), 'yyyy-MM-dd'))
   const [workoutIntensity, setWorkoutIntensity] = useState('5')
@@ -2563,8 +2566,14 @@ export default function CreateWorkout() {
   }
 
   return (
-    <div className="px-4 max-w-2xl mx-auto min-h-[100dvh] flex flex-col gap-[18px]
-                    pt-[calc(env(safe-area-inset-top)+1rem)] pb-[var(--fondo-pagina)] page-transition">
+    // ⚠️ Con la tastiera aperta il fondo pagina si azzera, e non è cosmesi: quel
+    //    padding riserva l'altezza della capsula della tab bar, che mentre si
+    //    scrive è nascosta (Navbar). Tenendolo, la barra non ancorata resterebbe
+    //    sospesa 115px sopra la tastiera, su un vuoto. Senza, cade dove la mette
+    //    iOS: subito sopra i tasti.
+    <div className={`px-4 max-w-2xl mx-auto min-h-[100dvh] flex flex-col gap-[18px]
+                    pt-[calc(env(safe-area-inset-top)+1rem)] page-transition
+                    ${tastieraAperta ? 'pb-3' : 'pb-[var(--fondo-pagina)]'}`}>
       <style>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .drag-item {
