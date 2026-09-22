@@ -8,6 +8,7 @@ import { Capacitor } from '@capacitor/core'
 import { Keyboard } from '@capacitor/keyboard'
 import { PushNotifications } from '@capacitor/push-notifications'
 import Navbar from './components/Navbar'
+import { Apertura } from './components/Apertura'
 import Home from './pages/Home'
 
 // Caricate su richiesta: l'avvio non deve pagare PDF, IA, BLE e TV.
@@ -186,6 +187,9 @@ function ProtectedRoute() {
   const [role, setRole] = useState(null)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
   const [userName, setUserName] = useState('')
+  // L'apertura si smonta da sé quando ha finito l'uscita: da lì in poi non
+  // deve più tornare, nemmeno se questo componente si ri-renderizza.
+  const [aperturaFinita, setAperturaFinita] = useState(false)
   const location = useLocation()
 
   useEffect(() => {
@@ -327,32 +331,35 @@ function ProtectedRoute() {
     setLoading(false)
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0B0B0B] flex flex-col items-center justify-center text-center p-4">
-        <h1 className="text-5xl font-black text-white tracking-tight mb-6 animate-pulse">FLEO<span className="text-brand">FIT</span></h1>
-        {userName ? (
-          <>
-            <h1 className="text-3xl font-bold text-white mb-2">Ciao!</h1>
-            <p className="text-brand text-sm font-medium">Stiamo preparando la tua app...</p>
-          </>
-        ) : (
-          <h1 className="text-xl font-bold text-white">Caricamento...</h1>
-        )}
-      </div>
-    )
-  }
+  // 🔴 L'APERTURA NON SOSTITUISCE L'APP, LE STA SOPRA — ed è tutta la
+  // differenza. Qui c'era un `if (loading) return <schermata>`: con quella
+  // forma, nell'istante in cui i dati arrivano la schermata SMONTA e la Home
+  // MONTA nello stesso fotogramma, che è esattamente il «sparisce e basta»
+  // segnalato dal committente il 22/09/2026. Una sovrapposizione invece resta
+  // viva attraverso quel passaggio, e la sua uscita scopre una Home già
+  // montata e già in cascata.
+  //
+  // ⚠️ E DEVE RESTARE LO STESSO ELEMENTO attraverso i rami di questo
+  // componente: renderizzarla in due punti diversi la farebbe smontare e
+  // rimontare al cambio di ramo, e l'entrata ripartirebbe a metà uscita.
+  const apertura = !aperturaFinita && (
+    <Apertura pronto={!loading} onFine={() => setAperturaFinita(true)} />
+  )
+
+  if (loading) return apertura
 
   if (!session) {
+    // ⚠️ Niente apertura qui: si sta uscendo verso il login, e un velo che si
+    // dissolve sopra un redirect è un velo che nessuno vede.
     return <Navigate to={`/login${location.search}${location.hash}`} replace />
   }
 
   if (needsOnboarding) {
-    return <Onboarding user={session.user} onComplete={async (newRole) => {
+    return <>{apertura}<Onboarding user={session.user} onComplete={async (newRole) => {
       const isAdmin = ADMIN_EMAILS.includes(session.user.email?.toLowerCase())
       setRole(isAdmin ? 'admin' : newRole)
       setNeedsOnboarding(false)
-    }} />
+    }} /></>
   }
 
   return (
@@ -361,6 +368,7 @@ function ProtectedRoute() {
     // già in mano. Chi consuma il contesto deve reggere `nome` mancante: i
     // test montano le pagine da sole e non lo passano (montaPagina.jsx).
     <AuthContext.Provider value={{ user: session.user, role, nome: userName }}>
+      {apertura}
       {/* Lo spazio per la tab bar viene da --altezza-navbar (src/index.css),
           non da un `pb-16` scritto qui: la barra è alta quanto è alta, e
           questo numero deve seguirla da solo. */}

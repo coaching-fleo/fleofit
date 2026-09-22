@@ -14,6 +14,17 @@
 
 <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0" />
     <title>FLEOFIT</title>
+
+    <!-- 🔴 IL FONDO SCURO STA QUI, IN LINEA, E NON SOLO IN index.css.
+         Misurato il 22/09/2026 registrando l'avvio sul simulatore: fra lo
+         schermo di lancio e l'app c'erano **380ms di BIANCO PIENO**. È la
+         webview che dipinge il proprio fondo prima che il foglio di stile sia
+         stato scaricato e applicato — su un'app tutta scura è un flash in
+         faccia. Una regola in `src/index.css` non basta: quel file arriva
+         DOPO. Questa invece è già nel documento. -->
+    <style>
+      html, body { background-color: #0B0B0B; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

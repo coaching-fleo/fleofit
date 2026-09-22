@@ -357,6 +357,81 @@ body {
   animation: passoEntra 0.38s var(--cascata-curva) both;
 }
 
+/* ── L'APERTURA ────────────────────────────────────────────────────────────
+   La sovrapposizione che copre l'avvio e scopre la Home (src/components/
+   Apertura.jsx, dove c'è il perché delle forme colorate).
+
+   ⚠️ Le forme sono `radial-gradient`, come `.alone`: una sfocatura dentro un
+   elemento che anima l'opacità cambia colore quando il layer GPU viene
+   liberato, e qui l'opacità si anima per definizione (§9-septtricies). */
+.apertura-forma {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(circle closest-side,
+    rgb(var(--alone-rgb) / var(--alone-alfa)) 0%,
+    rgb(var(--alone-rgb) / calc(var(--alone-alfa) * .45)) 55%,
+    rgb(var(--alone-rgb) / 0) 100%);
+}
+/* ⚠️ Le misure sono in `vmax` e non in px: su un iPad la stessa forma in pixel
+   sarebbe un puntino al centro di uno schermo enorme. */
+/* 🔴 LE DUE ANIMAZIONI PER FORMA NON SONO UN VEZZO: la seconda è il RESPIRO,
+   e serve a non far sembrare l'app bloccata. La schermata che questa
+   sostituisce aveva «Caricamento…» che pulsava; senza qualcosa che si muova,
+   un'attesa lunga — rete lenta, sessione da rinnovare — mostrerebbe uno
+   schermo fermo, che si legge come un guasto. Il respiro parte quando
+   l'entrata finisce e va avanti finché serve.
+   ⚠️ Respira in OPACITÀ e non in `transform`, perché il trasform è già
+   dell'entrata: due animazioni sulla stessa proprietà non si sommano — vince
+   l'ultima dichiarata, e il respiro cancellerebbe la posizione d'arrivo. */
+.apertura-forma-1 { width: 120vmax; height: 120vmax; left: -45vmax; top: -30vmax;
+  animation: aperturaForma1 1.6s cubic-bezier(.33, 1, .68, 1) both,
+             aperturaRespiro 3.2s 1.6s ease-in-out infinite alternate; }
+.apertura-forma-2 { width: 105vmax; height: 105vmax; right: -42vmax; bottom: -34vmax;
+  animation: aperturaForma2 1.7s cubic-bezier(.33, 1, .68, 1) both,
+             aperturaRespiro 3.6s 1.7s ease-in-out infinite alternate-reverse; }
+
+@keyframes aperturaRespiro {
+  from { opacity: 1; }
+  to   { opacity: .58; }
+}
+
+@keyframes aperturaForma1 {
+  from { transform: translate3d(-18vmax, 26vmax, 0) scale(.72); opacity: 0; }
+  to   { transform: none;                                       opacity: 1; }
+}
+@keyframes aperturaForma2 {
+  from { transform: translate3d(20vmax, -24vmax, 0) scale(.7);  opacity: 0; }
+  to   { transform: none;                                       opacity: 1; }
+}
+
+/* Il marchio arriva per ultimo e si assesta: è la cosa che si legge. */
+@keyframes aperturaMarchio {
+  from { opacity: 0; transform: scale(.88); }
+  to   { opacity: 1; transform: none; }
+}
+.apertura-marchio { animation: aperturaMarchio .62s cubic-bezier(.33, 1, .68, 1) both; }
+
+/* 🔴 L'USCITA. Le forme scappano verso l'alto e il velo si spegne: la Home è
+   già montata sotto e sta facendo la sua cascata, quindi ciò che si scopre è
+   una pagina VIVA, non una pagina ferma.
+   ⚠️ La durata qui (.52s) deve coincidere con `USCITA_MS` in Apertura.jsx, che
+   è il momento in cui la sovrapposizione viene smontata. Se il CSS durasse di
+   più, l'ultimo pezzo di animazione verrebbe tagliato di netto. */
+@keyframes aperturaVia {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes aperturaFormaVia {
+  to { transform: translate3d(0, -60vmax, 0) scale(1.25); opacity: 0; }
+}
+@keyframes aperturaMarchioVia {
+  to { opacity: 0; transform: scale(1.06); }
+}
+.apertura-esce { animation: aperturaVia .52s cubic-bezier(.33, 1, .68, 1) both; }
+.apertura-esce .apertura-forma  { animation: aperturaFormaVia .52s cubic-bezier(.33, 1, .68, 1) both; }
+.apertura-esce .apertura-marchio { animation: aperturaMarchioVia .34s cubic-bezier(.33, 1, .68, 1) both; }
+
 /* Nessuna si esegue per chi ha chiesto meno movimento. */
 @media (prefers-reduced-motion: reduce) {
   .hero-transition { animation: none; }
@@ -367,4 +442,9 @@ body {
   /* ⚠️ I puntini smettono di pulsare ma NON spariscono: sono l'unica cosa che
      dice «sto lavorando» dentro una pillola senza più etichetta. */
   .puntini > span { animation: none; opacity: .7; }
+  /* ⚠️ L'apertura non si spegne del tutto: resta un velo che si dissolve, o
+     la Home comparirebbe di colpo — che è il difetto da cui è nata. */
+  .apertura-forma, .apertura-marchio { animation: none; }
+  .apertura-esce { animation: aperturaVia .2s linear both; }
+  .apertura-esce .apertura-forma, .apertura-esce .apertura-marchio { animation: none; }
 }

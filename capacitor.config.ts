@@ -36,6 +36,14 @@ const config: CapacitorConfig = {
   // },
   // ────────────────────  FINE BLOCCO DA CANCELLARE  ────────────────────────
 
+  // 🔴 Il fondo della webview PRIMA che carichi qualunque cosa. Senza, fra lo
+  // schermo di lancio e l'app si vedono ~380ms di bianco (misurato il
+  // 22/09/2026 su registrazione del simulatore). Va insieme allo `<style>` in
+  // linea dentro index.html: questo copre la webview, quello il documento.
+  ios: {
+    backgroundColor: '#0B0B0B'
+  },
+
   plugins: {
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"]
