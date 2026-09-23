@@ -21,7 +21,7 @@ import RpeModal from '../components/RpeModal'
 import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 import { durataWorkout, numeroBlocchi, rpeAtteso, mediaRpeCategoria, serieGiorni, barreUltimiGiorni,
-         senzaStorico, scartoMinutiSettimana, MINIMO_PRECEDENTI } from '../lib/statistiche'
+         senzaStorico, minutiSettimana, scartoMinutiSettimana, MINIMO_PRECEDENTI } from '../lib/statistiche'
 import { parseNotesAndRpe, formatNotesWithRpe, rpeDichiarato } from '../lib/rpe'
 import { HeaderHome, BottoneVetro, HeroOggi, AnelloSettimana, CellaSerie, CellaVolume, BannerObiettivo, ListaInArrivo } from '../components/HomeAtletaUI'
 import { BenvenutoCoach, CampoObiettivo, CardPrimoLibero, ComeFunziona,
@@ -124,7 +124,9 @@ export default function Home() {
   // La card della squadra guarda oggi (0) o ieri (-1). Ieri è consultazione:
   // la domanda della mattina è su oggi, e il valore torna lì a ogni ricarica.
   const [scartoSquadra, setScartoSquadra] = useState(0)
-  const [weeklyStats, setWeeklyStats] = useState({ distance: '0 m', time: 0, reps: 0, completed: 0, avgRpe: '-' })
+  // ⚠️ `distance` e `reps` sono usciti il 23/09/2026: nessuno li leggeva, e
+  // tenevano in vita i due parser locali che sbagliavano i minuti.
+  const [weeklyStats, setWeeklyStats] = useState({ time: 0, completed: 0, avgRpe: '-' })
   // Le stesse righe che alimentano la settimana, tenute intere: la serie di
   // giorni, lo sparkline e l'RPE medio guardano indietro, non solo alla settimana.
   const [storicoAtleta, setStoricoAtleta] = useState([])
@@ -439,123 +441,50 @@ export default function Home() {
     }
     setWeeklyStatus(week)
 
-    // Calcolo Statistiche Settimanali
+    // ── Le statistiche della settimana ────────────────────────────────────
+    //
+    // 🔴 I MINUTI VENGONO DA `minutiSettimana`, NON DA UN CALCOLO LOCALE.
+    // Fino al 23/09/2026 qui dentro viveva una QUARTA copia dello stimatore di
+    // durata, con due parser scritti apposta — e il suo `parseTime` non
+    // riconosceva le distanze: su una fase `repeat` con `runDuration: '800m'`
+    // faceva `parseInt('800m')` = 800 e lo contava come 800 MINUTI per giro.
+    // Misurato nell'ambiente di prova su «Ripetute 6×800»: la Home dichiarava
+    // **4876 minuti** per la settimana, e il recap post-allenamento — due
+    // tocchi più in là — ne diceva **105**. È lo stesso difetto che
+    // `src/lib/statistiche.js` aveva già corretto il 26/08 (BACKLOG #30) e che
+    // qui era rimasto: l'ultima copia.
+    //
+    // ⚠️ `minutiSettimana` è anche la funzione su cui è costruito
+    // `scartoMinutiSettimana`, che produce lo scarto stampato ACCANTO a questo
+    // numero. Due sorgenti diverse darebbero una differenza calcolata fra due
+    // scale — aritmetica giusta e informazione falsa.
+    // ⚠️ Le si passa `weekStart`, non `new Date()`: è la settimana che la
+    // funzione ha già usato per l'anello e per i sette giorni, e una Home
+    // lasciata aperta oltre la mezzanotte ne userebbe due diverse.
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekStart.getDate() + 6)
     const weekEndStr = format(weekEnd, 'yyyy-MM-dd')
 
     const weekData = data.filter(w => w.completed_date >= weekStartStr && w.completed_date <= weekEndStr)
+    const fattiSettimana = weekData.filter(w => w.status === 'completed')
 
-    let distance = 0
-    let time = 0
-    let reps = 0
-    let completed = 0
-    let rpeSum = 0
-    let rpeCount = 0
+    // ⚠️ `rpeDichiarato` e non `parseNotesAndRpe`: il secondo torna **5**
+    // quando il marcatore manca, e quel 5 entrerebbe nella media come se fosse
+    // una misura — chi non compila mai l'RPE leggerebbe «5,0» come la propria
+    // media settimanale. È la regola di §9-octies, ed è anche ciò che rende
+    // questo numero uguale a quello del recap e della scheda atleta, che
+    // `rpeDichiarato` lo usano già. Senza nessun RPE segnato la cella scrive
+    // «-», che `CellaVolume` sa mostrare.
+    const rpeSegnati = fattiSettimana
+      .map(w => rpeDichiarato(w.notes))
+      .filter(v => v != null)
 
-    const parseTime = (val) => {
-       if (!val || val === '-') return 0
-       const s = String(val).toLowerCase()
-       if (s.includes('sec')) return (parseInt(s) || 0) / 60
-       if (s.includes('min')) {
-          const parts = s.replace('min', '').trim().split(':')
-          if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
-          return parseInt(s) || 0
-       }
-       const parts = s.split(':')
-       if (parts.length === 2) return parseInt(parts[0]) + parseInt(parts[1])/60
-       return parseInt(s) || 0
-    }
-
-    const parseDist = (val) => {
-       if (!val || val === '-') return 0
-       const s = String(val).toLowerCase()
-       if (s.includes('km')) return parseFloat(s) * 1000
-       if (s.includes('m') && !s.includes('min')) return parseInt(s) || 0
-       return 0
-    }
-
-    weekData.forEach(w => {
-      if (w.status === 'completed') {
-        completed++
-        
-        const parsed = parseNotesAndRpe(w.notes)
-        const rpeVal = parseInt(parsed.rpe)
-        if (!isNaN(rpeVal)) {
-            rpeSum += rpeVal
-            rpeCount++
-        }
-
-        const s = w.workouts?.sections || {}
-        const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
-        let workoutTime = 0;
-
-        if (cat === 'Running') {
-          const steps = s.steps || s.main?.steps || []
-          steps.forEach(step => {
-            if (step.type === 'repeat') {
-               const rounds = parseInt(step.rounds) || 1
-               distance += parseDist(step.runDuration) * rounds
-               distance += parseDist(step.recDuration) * rounds
-               workoutTime += parseTime(step.runDuration) * rounds
-               workoutTime += parseTime(step.recDuration) * rounds
-            } else {
-               distance += parseDist(step.duration)
-               let stepTime = parseTime(step.duration)
-               if (stepTime === 0 && step.duration) {
-                 const ds = String(step.duration).toLowerCase()
-                 if (ds.includes('km')) stepTime = parseFloat(ds) * 6
-                 else if (ds.includes('m')) stepTime = (parseInt(ds) || 0) / 1000 * 6
-               }
-               workoutTime += stepTime
-            }
-          })
-        } else {
-          let blocks = s.blocks || []
-          if (blocks.length === 0) {
-            if (s.warmup) blocks.push({type: 'WarmUp', params: { duration: s.warmup.duration }})
-            if (s.cashIn && s.cashIn.length > 0) blocks.push({type: 'Cash In', exercises: s.cashIn})
-            if (s.main) blocks.push({type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type, params: s.main.params || {}, exercises: s.main.exercises || []})
-            if (s.cashOut && s.cashOut.length > 0) blocks.push({type: 'Cash Out', exercises: s.cashOut})
-          }
-
-          blocks.forEach(b => {
-             let blockRounds = parseInt(b.params?.rounds) || 1
-             if (b.type === 'ON/OFF') {
-                 workoutTime += (parseTime(b.params?.on) + parseTime(b.params?.off)) * blockRounds
-             } else if (b.type === 'EMOM') {
-                 workoutTime += parseTime(b.params?.interval) * blockRounds
-             } else if (b.type === 'AMRAP' || b.type === 'WarmUp' || b.type === 'Rest') {
-                 workoutTime += parseTime(b.params?.duration)
-             } else if (b.type === 'For Time') {
-                 workoutTime += 15 * blockRounds
-             } else if (b.type === 'Cash In' || b.type === 'Cash Out') {
-                 workoutTime += 5 * blockRounds
-             }
-
-             (b.exercises || []).forEach(ex => {
-                distance += parseDist(ex.meters) * blockRounds
-                const r = ex.reps || ''
-                if (r && r !== '-' && r.toLowerCase() !== 'max') {
-                   reps += (parseInt(r) || 0) * blockRounds
-                }
-                if (b.type === 'Interval') {
-                    workoutTime += parseTime(ex.exTime) * blockRounds
-                }
-             })
-          })
-        }
-        if (workoutTime === 0) workoutTime = 45;
-        time += workoutTime;
-      }
-    })
-    
-    setWeeklyStats({ 
-       distance: distance >= 1000 ? (distance / 1000).toFixed(2).replace(/\.00$/, '') + ' km' : distance + ' m', 
-       time: Math.round(time), 
-       reps, 
-       completed,
-       avgRpe: rpeCount > 0 ? (rpeSum / rpeCount).toFixed(1) : '-'
+    setWeeklyStats({
+      time: Math.round(minutiSettimana(data, weekStart)),
+      completed: fattiSettimana.length,
+      avgRpe: rpeSegnati.length > 0
+        ? (rpeSegnati.reduce((a, b) => a + b, 0) / rpeSegnati.length).toFixed(1)
+        : '-',
     })
   }, [])
 
