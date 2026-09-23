@@ -12,7 +12,7 @@
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **1021 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **1025 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
 > ⭐ **Il 22/09 è nato il RECAP POST-ALLENAMENTO** (§9-quadragies): chiudere un
 > allenamento non è più un niente — quattro schede in stile storie con la seduta
 > appena fatta, la settimana, l'andamento a otto settimane e il prossimo passo.
@@ -20,9 +20,12 @@
 > (confronta otto settimane chiuse, e il grafico ne disegna sette), una **lettura
 > fallita annunciava «il primo è fatto»** a chi ne ha cento, e il recap montato da
 > tre pagine portava **32 KB nel chunk d'ingresso** — ora sta dietro un confine
-> pigro. ⚠️ E ha reso visibile un difetto che non è suo: la **Home dichiara 4876
-> minuti** dove il recap ne dice 105, perché ha una quarta copia dello stimatore
-> di durata che legge «800m» come 800 minuti (voce nuova in BACKLOG).
+> pigro. ⚠️ E ha reso visibile un difetto che non era suo: la Home dichiarava
+> **4876 minuti** dove il recap ne diceva 105 — una quarta copia dello stimatore
+> di durata che leggeva «800m» come 800 minuti. ✅ **Chiuso il 23/09**: i minuti
+> della settimana vengono da `minutiSettimana`, e con la copia sono uscite le
+> uniche due cose che la tenevano in vita — `weeklyStats.distance` e `.reps`,
+> che non leggeva nessuno.
 > ⭐ **Il 22/09 è nata l'APERTURA dell'app** (§9-duodequadragies): l'area scura si ritira
 > dietro un arco e scopre la Home. 🔴 Registrando l'avvio vero è saltato fuori un difetto
 > che nessuno aveva mai misurato e che non c'entrava con la richiesta: **380ms di BIANCO
@@ -1268,7 +1271,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. ~~Nessun test automatico~~ → **1021 test al 22/09/2026** (`npm test`, vitest), tutti
+11. ~~Nessun test automatico~~ → **1025 test al 23/09/2026** (`npm test`, vitest), tutti
     verificati per mutazione: se si rompe di proposito il codice che coprono, falliscono.
     Non sono decorativi, ed è l'unico criterio che conta — vedi §9-sexies.
 
@@ -1301,7 +1304,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 | `statistiche-vuoti` | 16 | gli stati senza storico: `senzaStorico` che è **falso** con un assegnato fuori dalla settimana — il caso che manderebbe il benvenuto del giorno 1 a chi ha già un programma — la settimana di CALENDARIO che esclude la domenica precedente (una finestra mobile la conterebbe dentro, e lo scarto non corrisponderebbe più al totale accanto), i `pending` che non sono volume, e lo scarto che torna `null` invece di `+214` con la settimana precedente vuota — anche quando quella settimana ha solo allenamenti **saltati** |
 | `blockColors` · `rpe` · `workoutTitle` | 6+6+6 | codifica colore, round-trip dell'RPE, titolo generato dalla data |
 
-    **450 su componenti, pagine e hook**
+    **454 su componenti, pagine e hook**
 
     | file | test | cosa protegge |
     |---|---|---|
@@ -1334,6 +1337,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 | `PrevisioneBuilder` · `PrevisioneAssegnazione` | 4+6 | il modello nelle due pagine vere: la quarta cella che è il **prodotto** delle due accanto, la cella che sparisce (e non mostra zero) senza intensità dichiarata, il semaforo che porta la percentuale, l'atleta senza niente da segnalare che **non** riceve un «tutto ok», la pausa che resta in lista, l'avviso che NON blocca «Conferma», e la lettura fallita che spegne i semafori lasciando l'assegnazione intatta. ⚠️ L'ultimo è quello che conta di più: un di più non deve poter togliere il gesto che c'era. ⚠️ E la pausa si verifica **sulle colonne chieste** (`notes` nella `select`), perché il finto Supabase non filtra le colonne e l'asserzione a schermo passerebbe anche togliendola |
 | `Impostazioni` | 23 | la pagina ridisegnata su `Settings` montata: l'interruttore con `aria-checked` al posto del bottone che diceva dove sarebbe andato, il banner giallo «Operazione in corso» che non esiste più — ⚠️ con l'attesa tenuta aperta a mano, o il test passa anche rimettendolo — le 90 parole sul Garmin che ci sono TUTTE ma sotto una riga che si apre, i codici invito che l'atleta **non legge nemmeno**, e i test mattina/sera chiusi in fondo invece che fra le impostazioni. Dal 09/09 anche **«Elimina il mio account»**: che ci sia (e sopra «Esci»), che si mostri **anche al coach** — nasconderla a chi è in `ADMIN_EMAILS` vorrebbe dire nasconderla a `demo@fleofit.it`, cioè al revisore — che chieda conferma prima di toccare qualunque cosa, che marchi il **proprio** id e non quello di un altro, e che il messaggio **non** prometta che riaccedendo si annulla, perché è falso |
 | `HomeVuoti` | 19 | i tre stati senza storico su `Home` montata: il giorno 1 che **chiude la pagina** (niente anello 0/0, niente serie, niente volume, niente «In arrivo» sotto di esso — ed è la mutazione che conta, perché una card di benvenuto messa *sopra* l'albero esistente lascia il difetto intero con un cappello); «Primo dato» che porta i minuti di QUELL'allenamento e non `weeklyStats.time`; la prima settimana contata sui **completati** e non sulle righe (cinque assegnati e nessuno fatto sono ancora la prima settimana); «Domani» che diventa «In arrivo» quando il prossimo non è domani; e lo scarto che sparisce senza una settimana con cui confrontarsi. ⚠️ Il test sul «primo dato» usa **due** completati: con uno solo `[0]` e `.at(-1)` sono lo stesso oggetto, e l'ordine di `storicoAtleta` non sarebbe coperto da niente |
+| `HomeVolume` | 4 | i minuti della settimana nella Home: che su una corsa a **ripetute misurate in metri** dicano minuti e non ore (la Home diceva 4876 dove il recap diceva 105), e che siano **identici** a `durataWorkout` — non solo dello stesso ordine di grandezza. ⚠️ I due test sono due apposta: il primo fissa la scala, il secondo l'identità, e una terza formula sbagliata di cinque minuti su sessanta passerebbe il primo e cadrebbe sul secondo. Più l'RPE medio che non conta il 5 di ripiego e scrive «-» quando nessuno l'ha dichiarato. ⚠️ Servono TRE completati nella settimana, o la Home mostra la cella bloccata della prima settimana al posto del volume e il test verifica un'altra schermata |
 | `RecapFoglio` | 8 | la cornice del recap, l'unico pezzo dell'app che si muove DA SOLO: il tempo che scade e porta la scheda successiva, il segmento che si riempie man mano, la **tenuta che lo ferma** — e che alzando il dito non fa saltare una scheda — e l'**ultima che non si chiude da sola**, perché porta «Apri la scheda». ⚠️ I quattro test sull'avanzamento devono **accendere il movimento a mano**: `src/test/setup.js` dichiara `prefers-reduced-motion: reduce` per tutta la suite, e con quello l'orologio non parte — un test scritto senza quella riga verificherebbe il caso opposto di quello che dice di verificare. ⚠️ E si avanza **una scheda per chiamata** di `advanceTimersByTime`: fra una e l'altra React deve riconciliare, e l'effetto che rimette l'orologio parte solo dopo quel commit |
 | `HomeRecap` · `SchedaAtletaRecap` · `WorkoutDetailRecap` | 5+2+1 | il cablaggio del recap sulle tre pagine da cui un atleta chiude un allenamento: che si apra, che porti l'RPE **dichiarato adesso** e non l'intensità del coach (5 contro 7, sotto l'etichetta «RPE»), che una lettura fallita si fermi alla prima scheda, e che **al coach non si apra**. ⚠️ Quest'ultimo vive solo in `SchedaAtletaRecap`: è l'unica superficie in cui il coach può chiudere l'allenamento di qualcun altro — nella Home il ramo atleta non esiste per lui, nella scheda del workout il comando è di `eAtleta`. ⚠️ E il caso della lettura fallita non si prova dalla Home: `erroreSu` vale per la TABELLA, quindi farebbe fallire anche l'UPDATE e il recap non si aprirebbe affatto |
 | `WorkoutDetailScheda` | 20 | la scheda ridisegnata su `WorkoutDetail` montata: la terza cella del riepilogo, che su un allenamento chiuso è l'RPE **dichiarato** e non quello atteso — e scrive `—`, non 5; la didascalia di BLOCK_HINT (rilievo 3.2.1viii); i blocchi aperti senza toccare niente; il menu che tiene i comandi fuori dalla pagina; la barra che non fa due gialli; l'elenco delle assegnazioni; la grafica IG che resta **renderizzata** fuori schermo, e il testo INTERO dell'avviso sul riscaldamento |
@@ -5801,16 +5805,43 @@ qualcun altro che nessun dato sostiene. Si offre l'unica cosa che l'atleta può
 fare da solo — registrare un allenamento libero — e si dice la **serie**, che è
 un dato vero che ha in mano. È la stessa disciplina di `HomeAtletaVuotiUI`.
 
-### ⚠️ Il difetto che il recap ha reso VISIBILE, e che non è suo
-Provandolo su Sara nell'ambiente di prova: la Home dichiara **4876 minuti** per
-la settimana, il recap **105** — a due tocchi di distanza. Non è una
-divergenza del recap, che usa `durataWorkout` come tutte le altre schermate: è
-una **quarta copia** dello stimatore, inline dentro `applicaStoricoAtleta` in
-`Home.jsx`, il cui `parseTime` non riconosce le distanze e legge `800m` come
-800 **minuti** per round. È lo stesso difetto che `src/lib/statistiche.js` ha
-corretto il 26/08 (BACKLOG #30) e che lì era rimasto. **Voce nuova in BACKLOG**:
-è un numero che l'atleta vede oggi, quindi la correzione è una decisione di
-prodotto, non una pulizia.
+### ✅ Il difetto che il recap ha reso visibile — chiuso il 23/09/2026
+Provandolo su Sara nell'ambiente di prova, la Home dichiarava **4876 minuti**
+per la settimana e il recap **105**, a due tocchi di distanza. Non era una
+divergenza del recap, che usa `durataWorkout` come tutte le altre schermate: era
+una **quarta copia** dello stimatore, scritta inline dentro
+`applicaStoricoAtleta`, il cui `parseTime` non riconosceva le distanze e leggeva
+`800m` come 800 **minuti** per giro. Lo stesso difetto che
+`src/lib/statistiche.js` aveva corretto il 26/08 (BACKLOG #30), rimasto qui.
+
+Ora `weeklyStats.time` è `minutiSettimana(data, weekStart)` — la stessa funzione
+su cui è costruito `scartoMinutiSettimana`, che stampa lo scarto **accanto** a
+quel numero: due sorgenti diverse davano una differenza calcolata fra due scale,
+cioè aritmetica giusta e informazione falsa. Verificato a schermo: 46 + 59 = 105,
+e il recap dice 105.
+
+🔴 **Con la copia sono uscite le due cose che la tenevano in vita.**
+`weeklyStats.distance` e `weeklyStats.reps` **non li leggeva nessuno** — zero
+occorrenze fuori dal calcolo che li produceva — ed erano l'unica ragione per cui
+esistevano i due parser locali (`parseTime`, `parseDist`). Il blocco passa da 118
+righe a 43. È la lezione di §9 punto 2: un calcolo morto non è inerte, tiene in
+piedi il codice sbagliato che lo serve.
+
+⚠️ **Nella stessa passata l'RPE medio della settimana è passato a
+`rpeDichiarato`.** Contava il **5** di ripiego di `parseNotesAndRpe` come se
+fosse una misura, quindi lo stesso atleta leggeva un RPE medio nella Home e un
+altro nel recap e nella scheda — che `rpeDichiarato` lo usano già. È la regola di
+§9-octies, ed è ciò che rende i due numeri uguali. Senza nessun RPE segnato la
+cella scrive «-» invece di «5,0».
+⚠️ **`calcolaStatistiche` ha ANCORA lo stesso guardiano inerte** (`load` e
+`distribuzioneRpe`, cioè i numeri del **coach** nella scheda atleta): non è stato
+toccato, resta la decisione di prodotto annotata in §9-octies.
+
+⚠️ **Cosa resta, e non è questo difetto**: `weeklyStats` non si ricalcola al
+completamento — `handleRpeSubmitHome` aggiorna `todayWorkouts` e `weeklyStatus`
+in modo ottimistico ma non il volume, che si aggiorna al caricamento successivo.
+Si vede chiudendo un allenamento e restando sulla Home: l'anello passa a 2/3 e i
+minuti no. È comportamento di sempre, indipendente dallo stimatore.
 
 ### L'ambiente di prova ha guadagnato il lato atleta
 `DEMO_ATLETA=at-sara npm run demo:atleta`. 🔴 Senza, il lato atleta **non era
