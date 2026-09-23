@@ -2,16 +2,27 @@
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **22 settembre 2026**.
+> Ultimo aggiornamento: **23 settembre 2026**.
 > **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
 > `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
-> Ultimo commit su `ios-version`: **22 set 2026**, che porta **l'apertura dell'app**
-> (§9-duodequadragies) dopo **le animazioni dell'app** (§9-septtricies): la cascata su nove
-> schermate, i numeri che salgono, la CTA che si contrae e il passo che entra. ⚠️ **L'hash non si scrive più qui dentro**: era
+> Ultimo commit su `ios-version`: **23 set 2026**, che porta il **recap post-allenamento**
+> (§9-quadragies) dopo **l'apertura dell'app** (§9-duodequadragies) e **le animazioni
+> dell'app** (§9-septtricies): la cascata su nove schermate, i numeri che salgono, la CTA
+> che si contrae e il passo che entra. ⚠️ **L'hash non si scrive più qui dentro**: era
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **978 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **1021 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> ⭐ **Il 22/09 è nato il RECAP POST-ALLENAMENTO** (§9-quadragies): chiudere un
+> allenamento non è più un niente — quattro schede in stile storie con la seduta
+> appena fatta, la settimana, l'andamento a otto settimane e il prossimo passo.
+> 🔴 Tre trappole trovate MISURANDO: il **verdetto sul volume non compariva mai**
+> (confronta otto settimane chiuse, e il grafico ne disegna sette), una **lettura
+> fallita annunciava «il primo è fatto»** a chi ne ha cento, e il recap montato da
+> tre pagine portava **32 KB nel chunk d'ingresso** — ora sta dietro un confine
+> pigro. ⚠️ E ha reso visibile un difetto che non è suo: la **Home dichiara 4876
+> minuti** dove il recap ne dice 105, perché ha una quarta copia dello stimatore
+> di durata che legge «800m» come 800 minuti (voce nuova in BACKLOG).
 > ⭐ **Il 22/09 è nata l'APERTURA dell'app** (§9-duodequadragies): l'area scura si ritira
 > dietro un arco e scopre la Home. 🔴 Registrando l'avvio vero è saltato fuori un difetto
 > che nessuno aveva mai misurato e che non c'entrava con la richiesta: **380ms di BIANCO
@@ -192,7 +203,7 @@ Il progetto vive su **due branch con due prodotti diversi**, entrambi attivi:
 | Branch | Cos'è | Dove finisce | Ultimo commit |
 |---|---|---|---|
 | **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi | **collegato a Vercel** → `https://fleofit.vercel.app`. LIVE, non rompere | `c2ed65d` — 25 ago 2026 |
-| **`ios-version`** | Versione nativa iOS/Capacitor, quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. L'app arriva sull'App Store da Xcode, non da un deploy | **9 set 2026** (`git log -1`) |
+| **`ios-version`** | Versione nativa iOS/Capacitor, quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. L'app arriva sull'App Store da Xcode, non da un deploy | **23 set 2026** (`git log -1`) |
 
 ### ⚠️ `ios-version` NON è un branch di rilascio (confermato dal committente il 24/08/2026)
 Non esiste nessuna pipeline collegata a `ios-version`. Pushare lì **non pubblica niente**: serve
@@ -212,8 +223,8 @@ Conseguenze pratiche, tutte controintuitive:
 
 ### Rapporto tra i due: SONO DIVERGENTI, ED ENTRAMBI SI MUOVONO
 Verificato il 25/08/2026 **dopo un `git fetch`**:
-`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 86`**
-(misurata il 09/09/2026 subito dopo il push: `main` è fermo al 25/08, `ios-version`
+`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 108`**
+(rimisurata il 23/09/2026 prima del push: `main` è fermo al 25/08, `ios-version`
 continua a muoversi). ⚠️ **Questo numero invecchia di uno a ogni commit, questa riga
 compresa**: vale come ordine di grandezza — il divario è grande e cresce — non come
 cifra da fidarsi. Per il valore vero si rilancia il comando dopo un `git fetch`, che è
@@ -332,6 +343,9 @@ npm run build    # tsc -b && vite build
 npm run lint     # eslint .
 npm test         # vitest run
 npm run demo     # AMBIENTE DI PROVA: l'app su dati finti in memoria (§9-quinvicies)
+npm run demo:atleta  # lo stesso, ma la sessione È un atleta finto — l'unico modo di
+                 #   vedere il LATO ATLETA con dei dati dentro (§9-quinvicies).
+                 #   DEMO_ATLETA=at-sofia npm run demo:atleta per cambiarlo
 npm run ios      # build + cap sync — USARE QUESTO prima di compilare da Xcode
 npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 ```
@@ -350,9 +364,15 @@ npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 > §9-duetricies). `CreaWorkoutUI` deve restare intorno ai **24 KB**: è un chunk
 > **condiviso con `WorkoutDetail`**, e una libreria di effetti importata lì
 > dentro la fa scaricare a ogni apertura di una scheda. E `WorkoutDetail` deve
-> restare intorno agli **83 KB** (erano 68 fino al 01/09, poi 82 con `StoriaUI` + `recapStoria`
+> restare intorno ai **79 KB** — 83 fino al 22/09, quando il chunk del recap si è
+> portato via un po' di logica condivisa (erano 68 fino al 01/09, poi 82 con `StoriaUI` + `recapStoria`
 > §9-unetvicies, e 84 dal 02/09 con `previsione` + `PrevisioneUI` §9-quatervicies). Se risale sopra i 400, qualcuno ha rimesso `jspdf` o `html-to-image`
 > fra gli import in testa (§9-noviesdecies).
+>
+> ⚠️ E `index` deve restare intorno ai **594 KB**: è il chunk d'ingresso, quello
+> che gatekeepa il primo fotogramma. Se sale di colpo di qualche decina di KB,
+> qualcuno ha importato in modo NON pigro un pezzo montato da più pagine — è
+> esattamente quello che il recap avrebbe fatto (§9-quadragies punto 6).
 >
 > Come si verifica se la copia è vecchia:
 > ```bash
@@ -490,6 +510,13 @@ src/
 │  │                           #   risale e scopre la Home. Il PRIMO fotogramma sta in
 │  │                           #   index.html, non qui — e il marchio NON ha un'entrata
 │  ├─ AudioVisualizer.jsx      # ⚠️ l'UNICA forma d'onda: note vocali E dettatura IA (§9-quindecies)
+│  ├─ RecapAllenamento.jsx     # ⚠️ SEI RIGHE: `lazy()` + `Suspense`. Il confine sta QUI e non
+│  │                           #   nelle tre pagine, o il recap torna nel chunk d'ingresso
+│  ├─ RecapDati.jsx            # le due letture del recap: la finestra di 90 giorni e il
+│  │                           #   conteggio di SEMPRE. ⚠️ Fallita, si ferma a `recapMinimo`
+│  ├─ RecapUI.jsx              # i pezzi visivi del recap (§9-quadragies) — sola presentazione.
+│  │                           #   ⚠️ Le schede avanzano DA SOLE: la barra è un orologio,
+│  │                           #   la tenuta lo ferma, e l'ultima non si chiude mai
 │  ├─ Puntini.jsx              # ⚠️ i tre puntini della CTA contratta. Sta in un file SUO perché
 │  │                           #   lo usa RpeModal, montata dalla Home: importarlo da
 │  │                           #   CreaWorkoutUI trascinerebbe 24 KB di builder lì dentro
@@ -1241,11 +1268,11 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     **eliminato il 24/08/2026** (`fc81404`): era codice dormiente che chiamava una Edge Function
     inesistente, e rinforzava il rilievo 2.3.1(a). La sincronizzazione Strava/Garmin resta un'idea
     non implementata (§10), ora senza codice morto a suggerire il contrario.
-11. ~~Nessun test automatico~~ → **978 test al 22/09/2026** (`npm test`, vitest), tutti
+11. ~~Nessun test automatico~~ → **1021 test al 22/09/2026** (`npm test`, vitest), tutti
     verificati per mutazione: se si rompe di proposito il codice che coprono, falliscono.
     Non sono decorativi, ed è l'unico criterio che conta — vedi §9-sexies.
 
-    **544 sulla logica pura di `src/lib/`**
+    **571 sulla logica pura di `src/lib/`**
 
     | file | test | cosa protegge |
     |---|---|---|
@@ -1267,13 +1294,14 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 | `reportAtleta` | 40 | il report del singolo: i giri del blocco moltiplicati sui movimenti (dieci burpees in un For Time da cinque round sono cinquanta, e contarli dieci fa sembrare leggera la seduta più dura), «Rest» che non è un movimento ed è l'unico a tenere la durata dentro `meters`, «saltato» contro «da fare» — che nei dati sono la stessa riga — il tetto all'aumento di volume (senza, a chi ha scaricato si propone +245%), e «fermo» che su una settimana passata è la fotografia di allora. ⚠️ Sette mutazioni provate, tutte prese |
 | `reportSettimanale` | 40 | i numeri del report coach: la settimana che comincia di LUNEDÌ anche la domenica sera, l'aderenza misurata sulla parte TRASCORSA (senza, il lunedì mattina è tutta la squadra in allarme), il carico che NON conta il 5 di ripiego, il rapporto acuto/cronico che torna `null` sotto quattro sessioni misurate invece di un 1,0 che si legge come «tutto a posto», e «Da iniziare» che non è «Senza programma». ⚠️ Cinque mutazioni provate, tutte prese |
 | `previsione` | 39 | il modello predittivo: il carico che è `null` e non 0 senza intensità dichiarata, il rapporto acuto/cronico che NON si calcola sotto lo storico minimo — nemmeno proiettando un carico enorme — il bias saturato a `BIAS_MASSIMO`, e l'ordine degli avvisi, dove la **pausa precede il carico**. ⚠️ Tre test valgono più degli altri e sono nati sbagliati: quello sulle corsie chiedeva un intruso **con blocchi** (una corsa non ne ha, quindi la mutazione era invisibile), quello sul giorno adiacente un allenamento **morbido** accanto a uno duro, e quello sul cancello dello storico quattro sedute in **una sola** settimana — l'unico caso in cui `rapportoCarico` da solo non basta |
+| `recapAllenamento` | 27 | il recap post-allenamento: il verdetto che resta muto sulle SETTE settimane chiuse del grafico e parla sulle otto — senza quel test la fascia non sarebbe mai comparsa, e `null` è anche la risposta giusta a un atleta nuovo — la settimana in corso tenuta fuori dal confronto, l'RPE medio che torna `null` invece di 5, la gara che NON è il prossimo allenamento, e `recapMinimo` che a una lettura fallita non annuncia «il primo è fatto» a chi ne ha cento. ⚠️ Il test sull'ordinale è nato incapace di cadere: passava anche ignorando del tutto `totaleCompletati`, perché l'ordinale lo legge direttamente. Il caso che prende la mutazione è **chi rientra dopo mesi** — una seduta nella finestra, cinquanta nella storia |
 | `codiceInvito` | 8 | il codice invito: che `normalizzaCodice` riconosca il **LINK** del coach e non ne legga l'indirizzo — senza, chi incolla `https://…/?invite=7KQ2M4XB` ottiene `HTTPSFLE`, otto caratteri come quelli giusti e un errore che non spiega niente — e che a codice pieno nessuna casella resti «attiva», o la nona (che non esiste) si prenderebbe il cursore mentre la verifica sta già partendo |
 | `rigaImpostazioni` | 12 | le tre righe di Impostazioni che sono diventate numeri: i codici che tornano `null` finché non sono arrivati invece di «0 attivi», il conteggio mancante che SPARISCE invece di diventare zero — «0 atleti» accanto a «Esporta database» si legge come «non c'è niente da salvare» — e la pillola che in anteprima non dice «Atleta», che sarebbe vero e fuorviante |
 | `appleLogin` | 8 | Sign in with Apple: che il nonce dato al plugin sia lo **SHA-256** di quello dato a Supabase e non lo stesso valore — uno scambio lì non rompe nient'altro e in produzione dà un 400 che sembra un problema di configurazione su Apple — che senza `crypto.subtle` si torni `null` invece di lanciare (o su quella WebView non entra più nessuno), che il nome vuoto degli accessi successivi NON si scriva sopra quello salvato la prima volta, e che l'annullamento del foglio di sistema (1001) non passi per un guasto mentre 1004 sì |
 | `statistiche-vuoti` | 16 | gli stati senza storico: `senzaStorico` che è **falso** con un assegnato fuori dalla settimana — il caso che manderebbe il benvenuto del giorno 1 a chi ha già un programma — la settimana di CALENDARIO che esclude la domenica precedente (una finestra mobile la conterebbe dentro, e lo scarto non corrisponderebbe più al totale accanto), i `pending` che non sono volume, e lo scarto che torna `null` invece di `+214` con la settimana precedente vuota — anche quando quella settimana ha solo allenamenti **saltati** |
 | `blockColors` · `rpe` · `workoutTitle` | 6+6+6 | codifica colore, round-trip dell'RPE, titolo generato dalla data |
 
-    **388 su componenti, pagine e hook**
+    **450 su componenti, pagine e hook**
 
     | file | test | cosa protegge |
     |---|---|---|
@@ -1306,6 +1334,8 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 | `PrevisioneBuilder` · `PrevisioneAssegnazione` | 4+6 | il modello nelle due pagine vere: la quarta cella che è il **prodotto** delle due accanto, la cella che sparisce (e non mostra zero) senza intensità dichiarata, il semaforo che porta la percentuale, l'atleta senza niente da segnalare che **non** riceve un «tutto ok», la pausa che resta in lista, l'avviso che NON blocca «Conferma», e la lettura fallita che spegne i semafori lasciando l'assegnazione intatta. ⚠️ L'ultimo è quello che conta di più: un di più non deve poter togliere il gesto che c'era. ⚠️ E la pausa si verifica **sulle colonne chieste** (`notes` nella `select`), perché il finto Supabase non filtra le colonne e l'asserzione a schermo passerebbe anche togliendola |
 | `Impostazioni` | 23 | la pagina ridisegnata su `Settings` montata: l'interruttore con `aria-checked` al posto del bottone che diceva dove sarebbe andato, il banner giallo «Operazione in corso» che non esiste più — ⚠️ con l'attesa tenuta aperta a mano, o il test passa anche rimettendolo — le 90 parole sul Garmin che ci sono TUTTE ma sotto una riga che si apre, i codici invito che l'atleta **non legge nemmeno**, e i test mattina/sera chiusi in fondo invece che fra le impostazioni. Dal 09/09 anche **«Elimina il mio account»**: che ci sia (e sopra «Esci»), che si mostri **anche al coach** — nasconderla a chi è in `ADMIN_EMAILS` vorrebbe dire nasconderla a `demo@fleofit.it`, cioè al revisore — che chieda conferma prima di toccare qualunque cosa, che marchi il **proprio** id e non quello di un altro, e che il messaggio **non** prometta che riaccedendo si annulla, perché è falso |
 | `HomeVuoti` | 19 | i tre stati senza storico su `Home` montata: il giorno 1 che **chiude la pagina** (niente anello 0/0, niente serie, niente volume, niente «In arrivo» sotto di esso — ed è la mutazione che conta, perché una card di benvenuto messa *sopra* l'albero esistente lascia il difetto intero con un cappello); «Primo dato» che porta i minuti di QUELL'allenamento e non `weeklyStats.time`; la prima settimana contata sui **completati** e non sulle righe (cinque assegnati e nessuno fatto sono ancora la prima settimana); «Domani» che diventa «In arrivo» quando il prossimo non è domani; e lo scarto che sparisce senza una settimana con cui confrontarsi. ⚠️ Il test sul «primo dato» usa **due** completati: con uno solo `[0]` e `.at(-1)` sono lo stesso oggetto, e l'ordine di `storicoAtleta` non sarebbe coperto da niente |
+| `RecapFoglio` | 8 | la cornice del recap, l'unico pezzo dell'app che si muove DA SOLO: il tempo che scade e porta la scheda successiva, il segmento che si riempie man mano, la **tenuta che lo ferma** — e che alzando il dito non fa saltare una scheda — e l'**ultima che non si chiude da sola**, perché porta «Apri la scheda». ⚠️ I quattro test sull'avanzamento devono **accendere il movimento a mano**: `src/test/setup.js` dichiara `prefers-reduced-motion: reduce` per tutta la suite, e con quello l'orologio non parte — un test scritto senza quella riga verificherebbe il caso opposto di quello che dice di verificare. ⚠️ E si avanza **una scheda per chiamata** di `advanceTimersByTime`: fra una e l'altra React deve riconciliare, e l'effetto che rimette l'orologio parte solo dopo quel commit |
+| `HomeRecap` · `SchedaAtletaRecap` · `WorkoutDetailRecap` | 5+2+1 | il cablaggio del recap sulle tre pagine da cui un atleta chiude un allenamento: che si apra, che porti l'RPE **dichiarato adesso** e non l'intensità del coach (5 contro 7, sotto l'etichetta «RPE»), che una lettura fallita si fermi alla prima scheda, e che **al coach non si apra**. ⚠️ Quest'ultimo vive solo in `SchedaAtletaRecap`: è l'unica superficie in cui il coach può chiudere l'allenamento di qualcun altro — nella Home il ramo atleta non esiste per lui, nella scheda del workout il comando è di `eAtleta`. ⚠️ E il caso della lettura fallita non si prova dalla Home: `erroreSu` vale per la TABELLA, quindi farebbe fallire anche l'UPDATE e il recap non si aprirebbe affatto |
 | `WorkoutDetailScheda` | 20 | la scheda ridisegnata su `WorkoutDetail` montata: la terza cella del riepilogo, che su un allenamento chiuso è l'RPE **dichiarato** e non quello atteso — e scrive `—`, non 5; la didascalia di BLOCK_HINT (rilievo 3.2.1viii); i blocchi aperti senza toccare niente; il menu che tiene i comandi fuori dalla pagina; la barra che non fa due gialli; l'elenco delle assegnazioni; la grafica IG che resta **renderizzata** fuori schermo, e il testo INTERO dell'avviso sul riscaldamento |
 
     ⚠️ **I due contratti sono asimmetrici e devono restarlo**: `HyroxBlock` passa `block.id`,
@@ -3933,7 +3963,16 @@ completa con l'RPE, si naviga il report. Niente esce dal browser.
    (`feedbackNuovi`), quindi quattro settimane di sedute misurate aprivano la
    Home con «35 da leggere» — comportamento corretto dell'app, ma non somiglia a
    nessun coach vero.
-6. **Il nastro giallo si ritira dopo quattro secondi.** A schermo intero copre la
+6. 🔴 **Il lato ATLETA non è guardabile senza `VITE_DEMO_ATLETA`** (22/09/2026).
+   «Anteprima come atleta» mette `adminRoleOverride`, ma la **sessione resta
+   quella del coach** — e il coach è escluso da chi si segue (`COACHING_ID`),
+   quindi non ha storico e la sua Home atleta è **sempre il giorno 1**. Ci si è
+   arrivati provando il recap post-allenamento (§9-quadragies), che senza un
+   atleta vero non aveva niente da mostrare. `VITE_DEMO_ATLETA` cambia l'**id**
+   della sessione e non l'email, che deve restare una di `ADMIN_EMAILS` o metà
+   delle schermate coach smette di esistere. Si usa con
+   `DEMO_ATLETA=at-sara npm run demo:atleta`, più l'anteprima attiva.
+7. **Il nastro giallo si ritira dopo quattro secondi.** A schermo intero copre la
    prima riga dell'intestazione — data e conteggio atleti — e questo ambiente
    serve anche a *guardare* le schermate. Un nastro che nasconde ciò che si è
    venuti a vedere è un nastro che si finisce per togliere.
@@ -5584,6 +5623,229 @@ dialoghi in quattro file non tornino a divergere di un raggio.
 metà animazione. È lo stesso limite già annotato per `requestAnimationFrame`
 (§9-tertricies) e per `html-to-image` (§9-unetvicies): lo stile **calcolato**
 ha detto opacità 1 e gradiente al suo posto.
+
+---
+
+## 9-quadragies. Il recap post-allenamento (22/09/2026)
+
+Richiesta del committente, con Runna come riferimento: «quando concludo un
+allenamento e segno come completato mi compare una schermata molto figa in
+stile storie di Instagram che mi dà un recap e mi fa vedere schermate molto
+belle graficamente. Voglio qualcosa del genere che magari mi faccia vedere un
+grafico e mi stimoli al prossimo allenamento. Se non è ancora programmato non
+fa nulla, inventa altro. Magari mostra anche un andamento totale degli
+allenamenti. Crea anche il caso se non ancora fatti altri allenamenti.»
+
+### Il problema, in una riga
+Chiudere un allenamento era un **niente**: si premeva «Fatto! 🎉», la modale RPE
+si chiudeva, e si tornava alla stessa Home con un pallino verde in più. Il
+momento in cui l'atleta ha appena finito — l'unico della giornata in cui è
+disposto a guardare i propri numeri — era l'unico in cui l'app non gliene
+mostrava nessuno.
+
+### Cosa c'è ora, nell'ordine in cui si scorre
+Una superficie a tutto schermo che arriva **dopo** la modale RPE, con la barra
+segmentata delle storie in cima. Quattro schede, e le ultime tre cambiano forma
+a seconda di quanto storico c'è:
+
+1. **Fatto** — la spunta nel colore della corsia, «Running · il tuo 14°
+   allenamento», il titolo, il giorno e le tre celle grandi.
+2. **Questa settimana** — l'anello fatti/assegnati, il volume con lo scarto
+   sulla settimana scorsa, la serie di giorni e i sette pallini.
+3. **Come stai andando** — il grafico a barre delle ultime **otto settimane**,
+   il verdetto sul volume, e i totali della finestra (sedute, ore, RPE medio).
+4. **Il prossimo** — l'allenamento già in programma, con «Apri la scheda» come
+   primaria; oppure il conto alla rovescia di una gara; oppure, se non c'è
+   niente, la serie da difendere e l'invito a registrare un libero.
+
+### 🔴 LE QUATTRO REGOLE CHE TENGONO ONESTA QUESTA SCHERMATA
+Stanno in testa a `src/lib/recapAllenamento.js` e sono la ragione per cui quel
+file esiste invece di essere trenta righe dentro un componente.
+
+1. **Nessuna cella mostra uno zero.** È la regola della Home (§9-duodetricies),
+   e qui pesa il doppio: è una schermata di festeggiamento, e un «0 min» dentro
+   un coriandolo si legge come una presa in giro. Le schede si **tolgono**
+   invece di riempirsi di zeri, e ognuna che sparisce ha un rimpiazzo che dice
+   cosa la accenderà — «il grafico si accende dopo 3 allenamenti · 1/3».
+2. **Il primo allenamento di sempre ha una scheda sua.** Con un solo completato
+   la settimana e l'andamento lasciano il posto a «Da qui in poi c'è una storia
+   da raccontare»: la serie appena nata, i minuti di quella seduta, e la soglia
+   dell'andamento con il suo progresso. Fra due e `MINIMO_ANDAMENTO`
+   allenamenti resta la settimana e l'andamento diventa la cella che dice
+   quanto manca.
+3. **Le soglie non si riscrivono qui.** `MINIMO_ANDAMENTO` **è**
+   `MINIMO_PRECEDENTI` di `statistiche.js` — la stessa con cui la Home decide
+   se accendere «Media RPE» — e `SOGLIA_STABILE` viene da `andamento.js`. Due
+   numeri scritti a mano in due punti direbbero all'atleta «si accende dopo 3
+   allenamenti» e lo accenderebbero al quarto, senza dare nessun errore.
+4. **Le tre celle della prima scheda vengono da `celleStoria`**, la stessa
+   funzione della grafica da storia (§9-unetvicies): il `≈` sulla durata, l'RPE
+   **dichiarato** che non ripiega su 5 ma sull'intensità del coach, la corsa
+   mista che non dichiara nessun totale. Riscriverle qui vorrebbe dire due
+   recap dello stesso allenamento con due numeri diversi — uno nell'app e uno
+   nell'immagine che finisce sotto gli occhi di tutti.
+
+### ⚠️ Le nove cose da sapere prima di rimetterci mano
+
+1. 🔴 **Il verdetto legge una serie PIÙ LUNGA di quella disegnata, e senza
+   questo non compariva mai.** Confronta quattro settimane chiuse con le
+   quattro precedenti, cioè **otto chiuse**; il grafico ne ha otto in tutto, di
+   cui l'ultima è quella in corso — quindi sette. Con la stessa serie per le
+   due cose la fascia sarebbe stata `null` **sempre**, e nessun test lo avrebbe
+   segnalato, perché `null` è anche la risposta giusta a un atleta nuovo. Da
+   qui `SETTIMANE_VERDETTO = SETTIMANE_ANDAMENTO + 1`. **Trovato guardando la
+   schermata, non leggendo il codice.**
+2. 🔴 **La settimana in corso resta fuori dal confronto.** È parziale per
+   definizione — il lunedì vale un settimo di sé stessa — e infilarla nella
+   media farebbe dichiarare un crollo ogni lunedì mattina. È la correzione che
+   l'aderenza del report ha già ricevuto (§9-vicies).
+3. 🔴 **Una lettura fallita NON diventa uno storico vuoto**, ed è la ragione per
+   cui esiste `recapMinimo`. La strada comoda era chiamare `costruisciRecap`
+   con `storico: []`, e lì il conteggio vale zero: a un atleta con cento
+   allenamenti alle spalle il recap avrebbe annunciato «il primo è fatto». Un
+   guasto travestito da dato, sulla schermata che esiste per dirgli una cosa
+   vera (§9-quater). Offline la scheda «fatto» si vede lo stesso: è costruita
+   con quello che la pagina ha già in mano.
+4. 🔴 **L'ordinale («il tuo 47°») è quello di SEMPRE, e per questo le letture
+   sono due.** La prima porta `sections` — la colonna più pesante del database
+   — ed è limitata a `GIORNI_RECAP = 90`; la seconda chiede i soli `id` dei
+   completati, senza finestra. Contare le righe della finestra direbbe «il tuo
+   4° allenamento» a chi ne ha fatti quarantasette, e manderebbe **il
+   benvenuto del giorno 1 a chi rientra dopo tre mesi**. C'è un test per
+   ognuno dei due casi.
+5. 🔴 **Il recap è di chi si è allenato, non di chi guarda.** La guardia è
+   `role === 'athlete'` in tutte e tre le pagine. Serve davvero in **una** sola:
+   la **scheda atleta**, dove il bottone «Cambia lo stato dell'allenamento» non
+   guarda il ruolo e il coach chiude per conto di un altro. Nella Home il ramo
+   atleta non esiste per lui, e nella scheda del workout il comando è riservato
+   a `eAtleta`. Il test che conta sta perciò in `SchedaAtletaRecap.test.jsx`.
+6. 🔴 **Il confine pigro non è un vezzo, ed è misurato.** Il recap lo montano
+   tre pagine, quindi Rollup lo raccoglie nel chunk condiviso — che qui è
+   quello di **ingresso**. Importato direttamente portava `index` da **593 a
+   626 KB**: 32 KB di parsing davanti a ogni apertura dell'app per una
+   schermata che si vede qualche volta a settimana. Ora
+   `RecapAllenamento.jsx` è solo `lazy()` + `Suspense`, il lavoro sta in
+   `RecapDati.jsx`, e il chunk `RecapDati` (22 KB) arriva al primo
+   completamento. ⚠️ Il confine sta **lì e non nelle tre pagine**: tre `lazy()`
+   da tenere allineati sono tre occasioni di riportarlo dentro.
+   ⚠️ E vale la regola di §9-duetricies: **nessun `html-to-image` né `jspdf`**
+   in questo albero. La grafica da condividere esiste già e sta nel menu della
+   scheda.
+7. 🔴 **Le schede AVANZANO DA SOLE, e le barre in cima sono un orologio.**
+   La prima stesura le lasciava ferme — la barra diceva solo a che punto si era
+   — e il committente l'ha corretta lo stesso giorno: in una storia il segmento
+   si riempie e passa oltre, ed è quello a dire che la schermata ha un séguito.
+   `DURATA_SCHEDA` è **6 secondi**, non i 5 di una storia fotografica: la
+   scheda più densa porta un grafico a otto barre e tre totali, e cinque
+   secondi bastano a guardarla ma non a leggerla.
+   Le due conseguenze senza cui la cosa non sarebbe praticabile:
+   - 🔴 **Tenere premuto mette in pausa**, come su Instagram. Senza, chi vuole
+     rileggere un numero non ha nessun modo di fermare la schermata — e il
+     gesto che proverebbe per primo è proprio tenere il dito giù. ⚠️ La
+     navigazione sta in `onClick` e NON in `onPointerUp`: le due metà sono
+     bottoni veri, raggiungibili da tastiera, e un `Invio` non produce nessun
+     evento di puntatore. I gestori del puntatore servono solo alla pausa e a
+     distinguere il tocco dalla **tenuta**, che `onClick` legge e da cui si
+     ferma — senza, alzare il dito dopo una pausa farebbe saltare una scheda.
+   - 🔴 **L'ultima scheda NON si chiude da sola.** In una storia l'ultimo
+     segmento pieno chiude tutto; qui l'ultima porta «Apri la scheda», che è
+     l'unica azione per cui questo recap esiste, e chiuderla allo scadere
+     vorrebbe dire portare via il bottone a chi lo stava per premere. Il
+     segmento resta pieno e il tempo si ferma. ⚠️ Un **tocco** sulla metà
+     destra lì chiude invece sì: è un gesto deliberato, ed è ciò che fa una
+     storia.
+   ⚠️ **Con `prefers-reduced-motion` l'avanzamento non parte affatto**, e il
+   segmento corrente si disegna **pieno**, non fermo a metà: una barra immobile
+   a metà si legge come un caricamento bloccato. Chi chiede meno movimento
+   quasi sempre chiede anche più tempo. È la stessa scelta di
+   `useNumeroCheSale` — e vuol dire che **un test sull'avanzamento deve
+   accendere il movimento a mano**, perché `src/test/setup.js` dichiara
+   `reduce` per tutta la suite.
+   ⚠️ **L'azzeramento del tempo sta in `mostra()`, non nell'effetto
+   dell'orologio**: lì sarebbe un `setState` sincrono dentro un effetto e
+   soprattutto arriverebbe un fotogramma DOPO il cambio di scheda — quel
+   fotogramma la barra nuova lo passa piena, ed è lo sfarfallio che si nota a
+   ogni avanzamento.
+   ⚠️ **L'orologio non parte finché la lettura è in corso**, e non è una
+   cautela generica: durante il caricamento il recap ha **una** scheda, quindi
+   il tempo scadrebbe sull'ultima e si fermerebbe lì — e quando le altre
+   arrivano nessuno lo farebbe ripartire.
+   ⚠️ Nessuna `transition` CSS sulla larghezza del segmento: la anima già il
+   ciclo di fotogrammi, e una transizione sopra le due cose farebbe strisciare
+   il segmento **oltre** il cambio di scheda.
+   ⚠️ **I bottoni «Avanti» e «Salta» sono usciti**, e al loro posto il piede
+   porta la riga che insegna il gesto: senza, il tocco a destra non lo scopre
+   nessuno. Il piede c'è **sempre e alla stessa altezza** anche quando non ha
+   un bottone, o le schede — che si centrano nello spazio che resta —
+   salterebbero su e giù a ogni avanzamento.
+   ⚠️ **Lo scorrimento orizzontale è stato tolto** con i due bottoni: con le
+   due metà toccabili sarebbe un secondo modo di fare la stessa cosa, e sui
+   bottoni rischiava di sommarsi al `click` che segue il `touchend`.
+
+8. ⚠️ **`key={indice}` sulla scheda**, o la cascata entra solo la prima volta e
+   le altre compaiono secche. E il contenuto si centra con `min-h-full` +
+   `justify-center` su un wrapper **dentro** lo scorrevole: `justify-center`
+   sul contenitore che scorre taglia la **cima** del contenuto, che qui è il
+   titolo.
+9. ⚠️ **L'alone dell'anello è inline, perché `.anello-progresso` ha un
+   `drop-shadow` ambra scritto a mano in `index.css`.** Su un anello azzurro
+   (Running) lo circonderebbe del colore di un'altra categoria — contro la
+   Regola della Corsia. Stessa ragione per cui l'etichetta dentro l'anello non
+   usa `LABEL`: il suo `tracking-[.1em]` porta «COMPLETATI» oltre i 104px del
+   cerchio, e la parola esce dai due lati.
+
+### 🔴 Quello che il recap NON promette
+Sulla scheda «il prossimo», quando non c'è niente in programma, **non** si
+scrive «il coach sta preparando il prossimo»: è una promessa fatta a nome di
+qualcun altro che nessun dato sostiene. Si offre l'unica cosa che l'atleta può
+fare da solo — registrare un allenamento libero — e si dice la **serie**, che è
+un dato vero che ha in mano. È la stessa disciplina di `HomeAtletaVuotiUI`.
+
+### ⚠️ Il difetto che il recap ha reso VISIBILE, e che non è suo
+Provandolo su Sara nell'ambiente di prova: la Home dichiara **4876 minuti** per
+la settimana, il recap **105** — a due tocchi di distanza. Non è una
+divergenza del recap, che usa `durataWorkout` come tutte le altre schermate: è
+una **quarta copia** dello stimatore, inline dentro `applicaStoricoAtleta` in
+`Home.jsx`, il cui `parseTime` non riconosce le distanze e legge `800m` come
+800 **minuti** per round. È lo stesso difetto che `src/lib/statistiche.js` ha
+corretto il 26/08 (BACKLOG #30) e che lì era rimasto. **Voce nuova in BACKLOG**:
+è un numero che l'atleta vede oggi, quindi la correzione è una decisione di
+prodotto, non una pulizia.
+
+### L'ambiente di prova ha guadagnato il lato atleta
+`DEMO_ATLETA=at-sara npm run demo:atleta`. 🔴 Senza, il lato atleta **non era
+guardabile con dei dati dentro**: «Anteprima come atleta» mette
+`adminRoleOverride` ma la sessione resta quella del coach, e il coach è escluso
+da chi si segue — quindi la sua Home atleta è sempre il giorno 1.
+`VITE_DEMO_ATLETA` cambia l'**id** della sessione, non l'email (che deve restare
+admin, o metà delle schermate coach non esiste). Con essa il seme ha preso due
+righe: un pending **oggi** per Sofia — l'unico modo di provare il ramo «primo
+allenamento di sempre» — e uno **fra due giorni** per Sara, senza il quale «il
+prossimo» cadeva sempre sul ripiego «lo decidi tu».
+
+### I file nuovi
+`src/lib/recapAllenamento.js` (logica pura), `src/components/RecapUI.jsx` (sola
+presentazione), `src/components/RecapDati.jsx` (le due letture) e
+`src/components/RecapAllenamento.jsx` (il confine pigro, sei righe).
+
+### I test, e le diciassette mutazioni
+35 test nuovi: 27 in `src/lib/__tests__/recapAllenamento.test.js`, 5 in
+`HomeRecap.test.jsx`, 2 in `SchedaAtletaRecap.test.jsx`, 1 in
+`WorkoutDetailRecap.test.jsx`. **Diciassette mutazioni provate, diciassette
+prese.**
+⚠️ Due test sono nati incapaci di cadere, ed è la lezione di §9-sexies alla sua
+ennesima comparsa:
+- «l'ordinale è quello di sempre» passava anche **ignorando del tutto**
+  `totaleCompletati`, perché l'ordinale lo legge direttamente mentre a usarlo
+  come conteggio è un'altra riga. Il caso che prende la mutazione è **chi
+  rientra dopo mesi**: una sola seduta nella finestra, cinquanta nella storia.
+- il caso della lettura fallita **non si può provare dalla Home**: `erroreSu`
+  del finto Supabase vale per la TABELLA, quindi farebbe fallire anche
+  l'UPDATE del completamento — il recap non si aprirebbe affatto e il test
+  verificherebbe un'altra cosa. Si monta `RecapAllenamento` da solo.
+⚠️ E le query dei test di pagina si restringono al dialogo con `within`:
+«RPE» e «7» esistono anche nella Home sotto di esso, e senza il confine il test
+passerebbe pure con un recap vuoto.
 
 ---
 
