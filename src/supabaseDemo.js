@@ -252,8 +252,16 @@ function query(tabella) {
 
 // ⚠️ L'email dev'essere una di ADMIN_EMAILS (src/App.jsx) o si entra come
 // atleta e metà delle schermate coach non esiste.
+//
+// 🔴 `VITE_DEMO_ATLETA` cambia l'ID della sessione, non l'email — ed è l'unico
+// modo di guardare il LATO ATLETA con dei dati dentro. «Anteprima come atleta»
+// (Impostazioni) mette `adminRoleOverride` ma la sessione resta quella del
+// coach, e il coach è escluso da chi si segue: la sua Home atleta è sempre il
+// giorno 1. Con `VITE_DEMO_ATLETA=at-sara npm run demo` più l'anteprima
+// attiva, la Home è quella di Sara — storico, settimana, allenamento di oggi.
+// L'email resta quella admin, o si perde l'accesso alle schermate coach.
 const UTENTE = {
-  id: '0118e43f-8791-4fd6-8032-bee028334c99',
+  id: import.meta.env.VITE_DEMO_ATLETA || '0118e43f-8791-4fd6-8032-bee028334c99',
   email: 'coaching@federicoleo.it',
   user_metadata: { first_name: 'Federico' },
 }

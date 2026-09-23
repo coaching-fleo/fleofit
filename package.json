@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "ios": "npm run build && npx cap sync ios",
     "demo": "VITE_DEMO=1 vite --host",
+    "demo:atleta": "VITE_DEMO=1 VITE_DEMO_ATLETA=${DEMO_ATLETA:-at-sara} vite --host --port 5175 --strictPort",
     "postinstall": "patch-package"
   },
   "dependencies": {

@@ -20,7 +20,7 @@
 // carico (CLAUDE.md §9-quatervicies). Il commento accanto al nome dice quale:
 // se un giorno un ramo smette di comparire, si parte da lì.
 
-export const VERSIONE_SEME = 4
+export const VERSIONE_SEME = 5
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -167,10 +167,15 @@ const assegnazioni = () => [
   AW('at-andrea', 'w-medio', nellaSettimana(0, 0), 'pending'),
   AW('at-andrea', 'w-medio', nellaSettimana(0, 1), 'pending'),
 
-  // Sara: ha già qualcosa OGGI.
+  // Sara: ha già qualcosa OGGI, e qualcosa DOPO.
+  // ⚠️ Il pending fra due giorni serve al recap post-allenamento: è l'unico
+  // atleta su cui si vede la scheda «il prossimo» nella forma «assegnato».
+  // Senza, chiudendo l'allenamento di oggi il recap cadrebbe sempre sul
+  // ripiego «lo decidi tu», e quel ramo non sarebbe mai provato.
   ...regolare('at-sara', 'w-forte', 8),
   AW('at-sara', 'w-forte', nellaSettimana(0, 0), 'completed', 8),
   AW('at-sara', 'w-corsa', giorno(0), 'pending'),
+  AW('at-sara', 'w-medio', giorno(2), 'pending'),
 
   // Paolo: due sole sedute, tutte nella stessa settimana.
   AW('at-paolo', 'w-medio', giorno(-4), 'completed', 7),
@@ -189,6 +194,9 @@ const assegnazioni = () => [
   AW('at-davide', 'w-medio', giorno(-2), 'pending'),
 
   // Sofia: appena arrivata, niente storico. Un assegnato la settimana prossima.
+  // ⚠️ E uno OGGI: è l'unico modo di provare il ramo «primo allenamento di
+  // sempre» del recap, che è anche quello che un utente nuovo vede per primo.
+  AW('at-sofia', 'w-leggero', giorno(0), 'pending'),
   AW('at-sofia', 'w-leggero', nellaSettimana(1, 1), 'pending'),
 
   // Qualcosa già programmato per la settimana prossima, così «copertura» vive.

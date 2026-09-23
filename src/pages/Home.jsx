@@ -18,6 +18,7 @@ import { leggiJson, scriviJson, leggiCoda, accodaSuStorage, chiaveCacheWorkout, 
 import { mostraErrore } from '../lib/alert'
 import { sincronizzaBadge } from '../lib/badge'
 import RpeModal from '../components/RpeModal'
+import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 import { durataWorkout, numeroBlocchi, rpeAtteso, mediaRpeCategoria, serieGiorni, barreUltimiGiorni,
          senzaStorico, scartoMinutiSettimana, MINIMO_PRECEDENTI } from '../lib/statistiche'
@@ -165,6 +166,9 @@ export default function Home() {
   const [currentY, setCurrentY] = useState(null)
   
   const [showRpeModal, setShowRpeModal] = useState(false)
+  // L'assegnazione appena chiusa, per il recap in stile storie che si apre
+  // subito dopo la modale RPE. `null` = nessun recap aperto.
+  const [recapAw, setRecapAw] = useState(null)
   // Rilancia il fetch dei dati senza ricaricare l'intera app (vedi confirmRemoveWorkout)
   const [refreshTick, setRefreshTick] = useState(0)
   // Swipe verso destra sulla card di oggi per completare. È un ACCELERATORE:
@@ -1032,8 +1036,12 @@ setNotifications(prev => {
     }))
 
     setShowRpeModal(false)
-    
+
+    // Il recap è dell'ATLETA che si è appena allenato, non di chi guarda: il
+    // coach che spunta un allenamento in anteprima non ha niente da
+    // festeggiare, e la schermata parlerebbe di uno storico che non è suo.
     if (role === 'athlete') {
+      setRecapAw({ ...workoutToComplete, status: newStatus, notes: finalNote })
       supabase.functions.invoke('send-reminders', {
         body: { mode: 'coach_notification', action: 'completed', athleteName: userName, workoutTitle: workoutToComplete.workouts?.title || workoutToComplete.title, route: `/workout/${workoutToComplete.workouts?.id || workoutToComplete.id}?athlete_id=${user.id}` }
       }).catch(console.error)
@@ -1707,7 +1715,28 @@ setNotifications(prev => {
         />,
         document.body
       )}
-      
+
+      {/* Il recap post-allenamento, in stile storie. Si apre da solo quando
+          l'atleta chiude un allenamento; la lettura che lo alimenta parte
+          soltanto qui dentro (src/components/RecapAllenamento.jsx). */}
+      {recapAw && createPortal(
+        <RecapAllenamento
+          aw={recapAw}
+          atletaId={user?.id}
+          onChiudi={() => setRecapAw(null)}
+          onApri={(passo) => {
+            setRecapAw(null)
+            if (passo.workoutId) navigate(`/workout/${passo.workoutId}?athlete_id=${user.id}`)
+          }}
+          onLibero={() => {
+            setRecapAw(null)
+            setAutonomousForm({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
+            setAutonomousModalOpen(true)
+          }}
+        />,
+        document.body
+      )}
+
       {/* MODAL SPETTATORE LIVE COACH */}
       {spectatingAthlete && createPortal(
         <LiveSpectatorModal 

@@ -44,6 +44,7 @@ import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/
 import { BRAND, RUNNING, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
+import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
          TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
@@ -259,6 +260,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [savingAutonomous, setSavingAutonomous] = useState(false)
 
   const [showRpeModal, setShowRpeModal] = useState(false)
+  // L'assegnazione appena chiusa, per il recap in stile storie (src/lib/recapAllenamento.js).
+  const [recapAw, setRecapAw] = useState(null)
   const [rpeScore, setRpeScore] = useState('5')
   const [rpeNotes, setRpeNotes] = useState('')
 
@@ -530,6 +533,28 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       setEditingNote(rpeNotes)
       setAthleteNote({ text: rpeNotes, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), athleteName: athleteNote?.athleteName || '' })
       setShowRpeModal(false)
+
+      // ⚠️ Il recap è solo di chi si è allenato. Da questa stessa pagina il
+      // coach può segnare completato l'allenamento di un atleta, e la
+      // schermata gli racconterebbe lo storico di qualcun altro come se fosse
+      // suo.
+      // ⚠️ E si apre anche OFFLINE, fuori dal ramo `status.connected`: la
+      // lettura che lo riempie fallirà, e il recap si fermerà alla scheda che
+      // non ha bisogno di leggere niente. Legarlo alla rete vorrebbe dire
+      // togliere il festeggiamento proprio a chi si è allenato in un posto
+      // senza campo.
+      if (role === 'athlete') {
+        setRecapAw({
+          id: athleteWorkoutId,
+          status: newStatus,
+          notes: finalNote,
+          // Per l'atleta `workout.date` porta già il suo `completed_date` (lo
+          // riscrive il fetch): è il giorno in cui l'ha fatto, non quello in
+          // cui il workout era in programma.
+          completed_date: workout?.date,
+          workouts: { id: workout?.id, title: workout?.title, sections: workout?.sections },
+        })
+      }
 
       if (role === 'athlete' && status.connected) {
         supabase.functions.invoke('send-reminders', {
@@ -2060,6 +2085,18 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           onSave={handleRpeSubmit} 
           onCancel={() => setShowRpeModal(false)} 
           saving={savingNote} 
+        />,
+        document.body
+      )}
+      {recapAw && createPortal(
+        <RecapAllenamento
+          aw={recapAw}
+          atletaId={queryAthleteId || user?.id}
+          onChiudi={() => setRecapAw(null)}
+          onApri={(passo) => {
+            setRecapAw(null)
+            if (passo.workoutId) navigate(`/workout/${passo.workoutId}?athlete_id=${queryAthleteId || user?.id}`)
+          }}
         />,
         document.body
       )}

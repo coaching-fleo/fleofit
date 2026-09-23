@@ -30,6 +30,7 @@ import {
 } from '../components/SchedaAtletaUI'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
+import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 
 const getRpeColorText = (val) => {
@@ -84,6 +85,8 @@ export default function AthleteDetail() {
   const [savingAutonomous, setSavingAutonomous] = useState(false)
 
   const [showRpeModal, setShowRpeModal] = useState(false)
+  // L'assegnazione appena chiusa, per il recap in stile storie (src/lib/recapAllenamento.js).
+  const [recapAw, setRecapAw] = useState(null)
   const [workoutToComplete, setWorkoutToComplete] = useState(null)
   const [rpeScore, setRpeScore] = useState('5')
   const [rpeNotes, setRpeNotes] = useState('')
@@ -229,7 +232,11 @@ export default function AthleteDetail() {
       setWorkouts(prev => prev.map(w => w.id === workoutToComplete.id ? { ...w, status: newStatus, notes: finalNote } : w))
       setShowRpeModal(false)
 
+      // ⚠️ Solo l'atleta, e questa pagina è anche `/profile`: il coach che
+      // spunta un allenamento dalla scheda di qualcun altro non ha niente da
+      // festeggiare, e il recap gli mostrerebbe uno storico che non è suo.
       if (role === 'athlete') {
+        setRecapAw({ ...workoutToComplete, status: newStatus, notes: finalNote })
         supabase.functions.invoke('send-reminders', {
           body: { mode: 'coach_notification', action: 'completed', athleteName: `${athlete.name} ${athlete.surname}`, workoutTitle: workoutToComplete.workouts?.title || 'Workout', route: `/workout/${workoutToComplete.workouts?.id || workoutToComplete.id}?athlete_id=${athlete.id}` }
         }).catch(console.error)
@@ -949,6 +956,18 @@ export default function AthleteDetail() {
             </div>
           </div>
         </div>,
+        document.body
+      )}
+      {recapAw && createPortal(
+        <RecapAllenamento
+          aw={recapAw}
+          atletaId={athlete?.id}
+          onChiudi={() => setRecapAw(null)}
+          onApri={(passo) => {
+            setRecapAw(null)
+            if (passo.workoutId) navigate(`/workout/${passo.workoutId}?athlete_id=${athlete?.id}`)
+          }}
+        />,
         document.body
       )}
       {showRpeModal && createPortal(
