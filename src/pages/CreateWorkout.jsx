@@ -6,7 +6,7 @@ import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, Chevro
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
-import { VoiceRecorder } from 'capacitor-voice-recorder'
+import { VoiceRecorder } from '@independo/capacitor-voice-recorder'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useTouchDrag } from '../useTouchDrag'
 import { blockHint } from '../lib/blockHints'

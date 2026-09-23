@@ -36,7 +36,7 @@ vi.mock('@capacitor/core', () => ({
   WebPlugin: class {},
 }))
 
-vi.mock('capacitor-voice-recorder', () => ({
+vi.mock('@independo/capacitor-voice-recorder', () => ({
   VoiceRecorder: {
     requestAudioRecordingPermission: () => Promise.resolve({ value: true }),
     startRecording: () => Promise.resolve({ value: true }),

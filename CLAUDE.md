@@ -336,8 +336,8 @@ Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **re
 `keep-awake` (TV), `media` (salva in galleria),
 `apple-sign-in` (Sign in with Apple, §9-sexvicies),
 `fcm`, `@capawesome/capacitor-badge` (badge icona),
-`@independo/capacitor-voice-recorder` + `capacitor-voice-recorder` (⚠️ **due librerie audio diverse**,
-vedi §9).
+`@independo/capacitor-voice-recorder` (note vocali **e** dettatura IA — una sola libreria audio
+dal 23/09/2026, §9 punto 4).
 
 ### Comandi
 ```bash
@@ -772,9 +772,8 @@ non esserci più.
 > da nessuna parte — solo un file muto. Da qui la guardia su `msDuration === 0`, che rifiuta
 > di caricare invece di tacere.
 
-> ℹ️ Restano installate **due** librerie audio (§9 punto 4). Ora però non sono equivalenti:
-> `@independo/capacitor-voice-recorder` è solo il ripiego, `capacitor-voice-recorder` serve
-> alla dettatura IA in CreateWorkout.
+> ℹ️ Dal 23/09/2026 la libreria audio è **una sola** (§9 punto 4), e su iOS è solo il ripiego
+> di `MediaRecorder` — sia per le note vocali sia per la dettatura IA in CreateWorkout.
 
 ### 🔴 Le push NON funzionano su una build Debug lanciata da Xcode
 Accertato il 25/08/2026. Il progetto ha due bundle id:
@@ -1249,8 +1248,13 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
    `isDistance` con la sua tassonomia e `MINUTES_OPTIONS`/`timeToSeconds`/`formatTime`
    (CreateWorkout), più 10 import inutilizzati.
 3. **Due scale colore RPE/intensità** diverse (§6) per lo stesso range 1-10.
-4. **Due librerie di registrazione audio** installate insieme (`capacitor-voice-recorder` usata in
-   CreateWorkout, `@independo/capacitor-voice-recorder` in Home/WorkoutDetail).
+4. ~~Due librerie di registrazione audio~~ → **chiuso il 23/09/2026.** 🔴 `capacitor-voice-recorder`
+   (tchvu3, 7.0.6) **non era mai compilato su iOS**: non ha un `Package.swift`, e `npx cap sync`
+   lo scartava con «does not have a Package.swift». Funzionava per caso: registra il plugin col
+   nome `'VoiceRecorder'`, lo stesso di `@independo/…`, quindi il suo JS chiamava il nativo
+   dell'altra libreria. Stessa API (`recordDataBase64`, `msDuration`, `mimeType`): CreateWorkout
+   ora importa `@independo/capacitor-voice-recorder` e l'altra è disinstallata (17 plugin → 16).
+   ⚠️ Non reinstallarla: due `registerPlugin` con lo stesso nome sono un'ambiguità, non un ripiego.
 5. **`window.location.reload()`** usato dopo alcuni salvataggi in Home invece di rifare il fetch.
 6. **Segreti nel repo**: `supabaseClient.js` contiene URL + anon key in chiaro (accettabile per una
    anon key **se** l'RLS è configurata correttamente — verificare le policy prima di aprire l'app);
@@ -2621,8 +2625,8 @@ Tre dettagli che non sono decorazione:
 
 ### 🔴 Su iOS l'audio della dettatura lo registra MediaRecorder, non il plugin
 È la stessa lezione delle note vocali (§4), applicata a un percorso che era
-rimasto indietro: `capacitor-voice-recorder` è un plugin diverso da
-`@independo/…`, ma la contesa su `AVAudioSession` è la stessa — e la forma
+rimasto indietro (fino al 23/09 la dettatura importava `capacitor-voice-recorder`,
+che però sotto chiamava lo stesso nativo di `@independo/…` — §9 punto 4), e la contesa su `AVAudioSession` è la stessa — e la forma
 d'onda ha bisogno di `getUserMedia`, che è esattamente ciò che il plugin non
 sopporta. Quindi: si apre sempre lo stream, e se `MediaRecorder` sa produrre un
 formato che Gemini legge, registra lui.
@@ -4601,7 +4605,7 @@ altro ordine di grandezza rispetto agli 830 KB di `jspdf` di §9-noviesdecies.
 Due nuovi in `CreaWorkoutIA.test.jsx` (930 test in tutto). ⚠️ Il secondo accende
 il **ramo nativo** — `src/test/setup.js` finge sempre «web», e il percorso
 «fermo la registrazione → Gemini ascolta» esiste solo lì: `mockNativo` più un
-finto `capacitor-voice-recorder`, come fa `LoginApple.test.jsx`.
+finto `@independo/capacitor-voice-recorder`, come fa `LoginApple.test.jsx`.
 Tre mutazioni provate, tre prese, ognuna da un test diverso: l'orb che smette
 di seguire il lavoro (cade il test sulla voce), l'`aria-hidden` tolto (cade
 quello sul testo), l'anello CSS rimesso al posto dell'orb (cadono entrambi).
