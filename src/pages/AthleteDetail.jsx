@@ -14,6 +14,7 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
+import { gradimentoDi } from '../lib/gradimento'
 import { isVoiceNoteValid } from '../lib/notaVocale'
 import { parseNotePausa, formatNotePausa } from '../lib/pausa'
 import { andamentoAtleta, GIORNI_ADERENZA } from '../lib/andamento'
@@ -219,7 +220,7 @@ export default function AthleteDetail() {
   const handleRpeSubmitAthleteDetail = async () => {
     setSavingRpe(true)
     const newStatus = 'completed'
-    const finalNote = formatNotesWithRpe(rpeScore, rpeNotes)
+    const finalNote = formatNotesWithRpe(rpeScore, rpeNotes, gradimentoDi(workoutToComplete.notes))
 
     const { error } = await supabase
       .from('athlete_workouts')
@@ -963,6 +964,7 @@ export default function AthleteDetail() {
           aw={recapAw}
           atletaId={athlete?.id}
           onChiudi={() => setRecapAw(null)}
+          onNote={(awId, notes) => setWorkouts(prev => prev.map(w => w.id === awId ? { ...w, notes } : w))}
           onApri={(passo) => {
             setRecapAw(null)
             if (passo.workoutId) navigate(`/workout/${passo.workoutId}?athlete_id=${athlete?.id}`)
@@ -1109,7 +1111,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
 
   const handleSaveNote = async () => {
     setSaving(true)
-    const finalNote = formatNotesWithRpe(parsed.rpe, note)
+    const finalNote = formatNotesWithRpe(parsed.rpe, note, parsed.gradimento)
     await onUpdateNote(entry.id, finalNote, entry.workouts?.title)
     setSaving(false)
   }
@@ -1538,7 +1540,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
 
   const handleSaveNote = async () => {
     setSaving(true)
-    const finalNote = formatNotesWithRpe(parsed.rpe, note)
+    const finalNote = formatNotesWithRpe(parsed.rpe, note, parsed.gradimento)
     await onUpdateNote(entry.id, finalNote, entry.workouts?.title)
     setSaving(false)
   }

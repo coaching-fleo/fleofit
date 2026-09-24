@@ -11,7 +11,7 @@
 
 import { format, parseISO, differenceInCalendarDays, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
-import { rpeDichiarato } from './rpe'
+import { rpeDichiarato, testoNota } from './rpe'
 import { isVoiceNoteValid } from './notaVocale'
 import { categoriaDi } from './categorie'
 import { inPausa } from './pausa'
@@ -199,7 +199,7 @@ export function feedbackNuovi(assegnazioni = [], visti = [], { finestra = FINEST
     const rpe = rpeDichiarato(a.notes)
     // Una nota che contiene SOLO il marcatore RPE è comunque un dato che
     // l'atleta ha inserito a mano: conta. Una nota vuota no.
-    const testo = String(a.notes || '').replace(/^\[RPE:\s*\d+\/10\]\s*/, '').trim()
+    const testo = testoNota(a.notes)
     const haNota = rpe != null || testo.length > 0
     if (!haVocale && !haNota) continue
     if (giaVisti.has(a.id)) continue

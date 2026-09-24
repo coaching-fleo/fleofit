@@ -178,3 +178,60 @@ describe('le barre avanzano da sole, come in una storia', () => {
     expect(barra.style.width).toBe('100%')
   })
 })
+
+describe('la domanda sul gradimento', () => {
+  const conDomanda = {
+    ...recap,
+    slide: [SCHEDE[0], { tipo: 'gradimento' }, ...SCHEDE.slice(1)],
+  }
+
+  it('🔴 NON scorre via da sola: passarla allo scadere risponderebbe al posto dell atleta', async () => {
+    ripristina = conMovimento()
+    vi.useFakeTimers()
+    const onGradimento = vi.fn()
+    render(<FoglioRecap recap={conDomanda} onChiudi={() => {}} onGradimento={onGradimento} />)
+    await scorri(6500)
+    expect(titoloCorrente()).toBe('Ti è piaciuto questo allenamento?')
+    await scorri(20000)
+    expect(titoloCorrente()).toBe('Ti è piaciuto questo allenamento?')
+    expect(onGradimento).not.toHaveBeenCalled()
+  })
+
+  it('una scelta la salva e passa alla scheda dopo', async () => {
+    const utente = userEvent.setup()
+    const onGradimento = vi.fn()
+    render(<FoglioRecap recap={conDomanda} onChiudi={() => {}} onGradimento={onGradimento} />)
+    await utente.click(screen.getByRole('button', { name: 'Scheda successiva' }))
+    await utente.click(screen.getByRole('button', { name: /Non mi è piaciuto/ }))
+    expect(onGradimento).toHaveBeenCalledWith('no')
+    expect(screen.getByRole('button', { name: /Non mi è piaciuto/ })).toHaveAttribute('aria-pressed', 'true')
+    await screen.findByText('A che punto sei', {}, { timeout: 1500 })
+  })
+
+  it('tornare INDIETRO dalla domanda non è «nessuna preferenza»', async () => {
+    const utente = userEvent.setup()
+    const onGradimento = vi.fn()
+    render(<FoglioRecap recap={conDomanda} onChiudi={() => {}} onGradimento={onGradimento} />)
+    await utente.click(screen.getByRole('button', { name: 'Scheda successiva' }))
+    await utente.click(screen.getByRole('button', { name: 'Scheda precedente' }))
+    expect(onGradimento).not.toHaveBeenCalled()
+  })
+
+  it('🔴 arriva senza niente selezionato, anche con un parere già dato in passato', async () => {
+    // Una scelta già accesa è una risposta suggerita: chi ha fretta la
+    // conferma senza averla data.
+    const utente = userEvent.setup()
+    render(<FoglioRecap recap={conDomanda} onChiudi={() => {}} onGradimento={() => {}} />)
+    await utente.click(screen.getByRole('button', { name: 'Scheda successiva' }))
+    expect(screen.getByRole('button', { name: /^Mi è piaciuto/ })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: /Non mi è piaciuto/ })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('«Salta» c è solo sulla domanda', async () => {
+    const utente = userEvent.setup()
+    render(<FoglioRecap recap={conDomanda} onChiudi={() => {}} onGradimento={() => {}} />)
+    expect(screen.queryByRole('button', { name: 'Salta' })).not.toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: 'Scheda successiva' }))
+    expect(screen.getByRole('button', { name: 'Salta' })).toBeInTheDocument()
+  })
+})

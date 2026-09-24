@@ -309,6 +309,52 @@ describe('l’elenco delle assegnazioni', () => {
     expect(finto.chiamateA('athlete_workouts', 'select')).toHaveLength(1)
     expect(screen.queryByText('Assegnato a')).not.toBeInTheDocument()
   })
+
+  // Il gradimento dal recap (src/lib/gradimento.js): il coach lo vede sommato
+  // sul workout e atleta per atleta; chi non ha mai visto la domanda non conta.
+  const conPareri = () => ([
+    ...assegnazione({ status: 'completed', notes: '[RPE: 8/10]\n[GRADIMENTO: si]\nbene' }),
+    { id: 'aw2', athlete_id: 'u2', workout_id: 'w1', completed_date: '2026-08-28',
+      status: 'completed', notes: '[RPE: 6/10]\n[GRADIMENTO: nessuna]\n', voice_note_url: null,
+      athletes: { id: 'u2', name: 'Sara', surname: 'Bellini', photo_url: null } },
+    { id: 'aw3', athlete_id: 'u3', workout_id: 'w1', completed_date: '2026-08-28',
+      status: 'completed', notes: '[RPE: 7/10]\n', voice_note_url: null,
+      athletes: { id: 'u3', name: 'Luca', surname: 'Ferretti', photo_url: null } },
+  ])
+
+  it('il coach vede il gradimento sommato, «senza parere» compreso', async () => {
+    ctrl.stato.assegnazioni = conPareri()
+    apri({ ruolo: 'admin', utente: 'coach' })
+    await attendi()
+    const gruppo = await screen.findByRole('group', { name: /Gradimento/ })
+    expect(gruppo).toHaveAccessibleName('Gradimento: 1 piaciuto, 0 non piaciuto, 1 senza parere, su 2 risposte')
+  })
+
+  it('e atleta per atleta, senza che il marcatore diventi una «nota»', async () => {
+    ctrl.stato.assegnazioni = conPareri()
+    apri({ ruolo: 'admin', utente: 'coach' })
+    await attendi()
+    expect(await screen.findByText('RPE 8 · 👍 · nota')).toBeInTheDocument()
+    expect(screen.getByText('RPE 6 · senza parere')).toBeInTheDocument()
+    expect(screen.getByText('RPE 7')).toBeInTheDocument()
+  })
+
+  it('senza nessuna risposta non c è una riga di zeri', async () => {
+    ctrl.stato.assegnazioni = assegnazione({ status: 'completed', notes: '[RPE: 8/10]\nbene' })
+    apri({ ruolo: 'admin', utente: 'coach' })
+    await attendi()
+    await screen.findByText('Assegnato a')
+    expect(screen.queryByRole('group', { name: /Gradimento/ })).not.toBeInTheDocument()
+  })
+
+  it('🔒 l atleta non vede il proprio parere, né come riepilogo né come testo', async () => {
+    ctrl.stato.assegnazioni = assegnazione({ status: 'completed', notes: '[RPE: 8/10]\n[GRADIMENTO: no]\nWall balls pesanti' })
+    apri()
+    await attendi()
+    await screen.findByText(/Wall balls pesanti/)
+    expect(screen.queryByRole('group', { name: /Gradimento/ })).not.toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('GRADIMENTO')
+  })
 })
 
 describe('la barra fissa in basso', () => {

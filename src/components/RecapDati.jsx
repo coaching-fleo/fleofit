@@ -16,13 +16,19 @@
 // ha già in mano e va a schermo al primo fotogramma. Le altre si aggiungono
 // quando la lettura arriva — non c'è un momento in cui il recap sia una rotella.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import { supabase } from '../supabaseClient'
 import { costruisciRecap, recapMinimo, GIORNI_RECAP } from '../lib/recapAllenamento'
+import { conGradimento, gradimentoDopoSalta } from '../lib/gradimento'
+import { accodaSuStorage } from '../lib/offlineQueue'
 import { FoglioRecap } from './RecapUI'
 
-export default function RecapDati({ aw, atletaId, onChiudi, onApri, onLibero }) {
+export default function RecapDati({ aw, atletaId, onChiudi, onApri, onLibero, onNote }) {
+  // La nota com'è ADESSO sul server. Parte da quella del completamento e
+  // segue ogni risposta: un secondo parere (si torna indietro e si cambia
+  // idea) deve partire dal primo, non dalla nota di prima del recap.
+  const notaAttuale = useRef(aw?.notes || '')
   const [storico, setStorico] = useState(null)
   const [totale, setTotale] = useState(null)
   // ⚠️ Lo stato iniziale dice già se c'è qualcosa da aspettare: metterlo a
@@ -69,6 +75,32 @@ export default function RecapDati({ aw, atletaId, onChiudi, onApri, onLibero }) 
     return () => { vivo = false }
   }, [atletaId])
 
+  /**
+   * Il parere sull'allenamento: 'si', 'no', oppure `null` per «Salta».
+   *
+   * ⚠️ Non blocca niente e non mostra errori: il recap va avanti nello stesso
+   * istante, e un allarme rosso su una schermata di festeggiamento per un dato
+   * facoltativo sarebbe sproporzionato. Se l'aggiornamento fallisce — offline,
+   * o il server che non risponde — la nota finisce nella coda offline, che è
+   * UNA voce per allenamento (`accoda`): se il completamento stesso era in
+   * coda, questa voce lo sostituisce portandosi dietro anche lo stato.
+   */
+  const salvaGradimento = (scelta) => {
+    if (!aw?.id) return
+    const valore = scelta ?? gradimentoDopoSalta(notaAttuale.current)
+    const note = conGradimento(notaAttuale.current, valore)
+    if (note === notaAttuale.current) return
+    notaAttuale.current = note
+    onNote?.(aw.id, note)
+
+    const accoda = () => accodaSuStorage({ id: aw.id, status: aw.status || 'completed', notes: note })
+    Promise.resolve(supabase.from('athlete_workouts').update({ notes: note }).eq('id', aw.id))
+      .then(({ error } = {}) => {
+        if (error) { console.error('[recap] gradimento non salvato, in coda', error); accoda() }
+      })
+      .catch((e) => { console.error('[recap] gradimento non salvato, in coda', e); accoda() })
+  }
+
   const recap = useMemo(() => {
     if (!aw) return null
     if (!storico) return recapMinimo({ aw })
@@ -79,6 +111,6 @@ export default function RecapDati({ aw, atletaId, onChiudi, onApri, onLibero }) 
 
   return (
     <FoglioRecap recap={recap} caricamento={caricamento}
-      onChiudi={onChiudi} onApri={onApri} onLibero={onLibero} />
+      onChiudi={onChiudi} onApri={onApri} onLibero={onLibero} onGradimento={salvaGradimento} />
   )
 }

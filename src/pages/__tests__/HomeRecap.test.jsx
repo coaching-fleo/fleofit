@@ -99,7 +99,7 @@ describe('il recap si apre quando l atleta chiude un allenamento', () => {
     expect(cella.textContent).not.toContain('7')
   })
 
-  it('con abbastanza storico ha quattro schede e si avanza fino al prossimo passo', async () => {
+  it('con abbastanza storico ha cinque schede e si avanza fino al prossimo passo', async () => {
     ctrl.storico.valore = storicoPieno()
     const utente = userEvent.setup()
     montaPagina(<Home />)
@@ -107,11 +107,13 @@ describe('il recap si apre quando l atleta chiude un allenamento', () => {
     await completa(utente)
 
     await screen.findByRole('dialog', { name: /Recap/ })
-    await waitFor(() => expect(screen.getAllByRole('button', { name: /Scheda \d+ di 4/ })).toHaveLength(4))
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /Scheda \d+ di 5/ })).toHaveLength(5))
 
     // ⚠️ Si avanza toccando la metà destra dello schermo, non un bottone
     // «Avanti»: dal 22/09 quei due bottoni non ci sono più (§9-quadragies).
     const avanti = () => utente.click(screen.getByRole('button', { name: 'Scheda successiva' }))
+    await avanti()
+    expect(screen.getByText('Ti è piaciuto questo allenamento?')).toBeInTheDocument()
     await avanti()
     expect(screen.getByText('Questa settimana')).toBeInTheDocument()
     await avanti()
@@ -138,7 +140,8 @@ describe('il recap si apre quando l atleta chiude un allenamento', () => {
     )
 
     const recap = await screen.findByRole('dialog', { name: /Recap/ })
-    await waitFor(() => expect(within(recap).getAllByRole('button', { name: /Scheda \d+ di 1/ })).toHaveLength(1))
+    // Due schede: «fatto» e il gradimento, che non leggono niente.
+    await waitFor(() => expect(within(recap).getAllByRole('button', { name: /Scheda \d+ di 2/ })).toHaveLength(2))
     expect(within(recap).queryByText(/storia da raccontare/i)).not.toBeInTheDocument()
     expect(within(recap).queryByText('Questa settimana')).not.toBeInTheDocument()
   })
@@ -165,5 +168,69 @@ describe('il recap si apre quando l atleta chiude un allenamento', () => {
     expect(screen.queryByRole('button', { name: /^Completa$/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: /Recap/ })).not.toBeInTheDocument()
     expect(utente).toBeTruthy()
+  })
+})
+
+// Il gradimento (src/lib/gradimento.js): un parere sull'allenamento, scritto
+// nella nota dell'assegnazione dopo l'RPE. Si verifica cosa finisce nel
+// database, perché è l'unica cosa che il coach vedrà.
+describe('il gradimento nel recap', () => {
+  /** Le note scritte dal recap, cioè gli UPDATE che portano SOLO `notes`. */
+  const noteScritte = () => finto.chiamateA('athlete_workouts', 'update')
+    .map(c => c.args[0])
+    .filter(v => v && Object.keys(v).length === 1 && 'notes' in v)
+    .map(v => v.notes)
+
+  const apriSulGradimento = async (utente) => {
+    montaPagina(<Home />)
+    await waitFor(() => expect(screen.getByText('Hyrox Forza')).toBeInTheDocument())
+    await completa(utente)
+    await screen.findByRole('dialog', { name: /Recap/ })
+    await utente.click(screen.getByRole('button', { name: 'Scheda successiva' }))
+    await screen.findByText('Ti è piaciuto questo allenamento?')
+  }
+
+  beforeEach(() => { finto.chiamate.length = 0 })
+
+  it('«Mi è piaciuto» scrive il parere DOPO l RPE, senza toccare il resto', async () => {
+    const utente = userEvent.setup()
+    await apriSulGradimento(utente)
+    await utente.click(screen.getByRole('button', { name: /Mi è piaciuto/ }))
+    await waitFor(() => expect(noteScritte()).toEqual(['[RPE: 5/10]\n[GRADIMENTO: si]\n']))
+  })
+
+  it('«Salta» registra «nessuna preferenza», e il recap va avanti', async () => {
+    const utente = userEvent.setup()
+    await apriSulGradimento(utente)
+    await utente.click(screen.getByRole('button', { name: 'Salta' }))
+    await waitFor(() => expect(noteScritte()).toEqual(['[RPE: 5/10]\n[GRADIMENTO: nessuna]\n']))
+    expect(screen.queryByText('Ti è piaciuto questo allenamento?')).not.toBeInTheDocument()
+  })
+
+  it('andare avanti col tocco senza scegliere vale come «Salta»', async () => {
+    const utente = userEvent.setup()
+    await apriSulGradimento(utente)
+    await utente.click(screen.getByRole('button', { name: 'Scheda successiva' }))
+    await waitFor(() => expect(noteScritte()).toEqual(['[RPE: 5/10]\n[GRADIMENTO: nessuna]\n']))
+  })
+
+  it('chiudere il recap PRIMA della domanda non registra niente', async () => {
+    // Chi non ha mai visto la domanda non ha scelto «nessuna preferenza»:
+    // registrarla gonfierebbe gli indifferenti con chi non è stato interpellato.
+    const utente = userEvent.setup()
+    montaPagina(<Home />)
+    await waitFor(() => expect(screen.getByText('Hyrox Forza')).toBeInTheDocument())
+    await completa(utente)
+    await screen.findByRole('dialog', { name: /Recap/ })
+    await utente.click(screen.getByRole('button', { name: /Chiudi il recap/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Recap/ })).not.toBeInTheDocument())
+    expect(noteScritte()).toEqual([])
+  })
+
+  it('chiudere il recap SULLA domanda è «nessuna preferenza»', async () => {
+    const utente = userEvent.setup()
+    await apriSulGradimento(utente)
+    await utente.click(screen.getByRole('button', { name: /Chiudi il recap/ }))
+    await waitFor(() => expect(noteScritte()).toEqual(['[RPE: 5/10]\n[GRADIMENTO: nessuna]\n']))
   })
 })

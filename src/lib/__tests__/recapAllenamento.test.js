@@ -187,22 +187,22 @@ describe('costruisciRecap', () => {
     const storico = Array.from({ length: 6 }, (_, i) =>
       riga(`2026-09-${String(10 + i).padStart(2, '0')}`))
     const r = costruisciRecap({ aw: chiuso, storico: [...storico, chiuso], totaleCompletati: 20, oggi: OGGI })
-    expect(tipi(r)).toEqual(['fatto', 'settimana', 'andamento', 'prossimo'])
+    expect(tipi(r)).toEqual(['fatto', 'gradimento', 'settimana', 'andamento', 'prossimo'])
   })
 
   it('al PRIMO allenamento di sempre la settimana e l\'andamento lasciano il posto al benvenuto', () => {
     const r = costruisciRecap({ aw: chiuso, storico: [chiuso], totaleCompletati: 1, oggi: OGGI })
-    expect(tipi(r)).toEqual(['fatto', 'primo', 'prossimo'])
+    expect(tipi(r)).toEqual(['fatto', 'gradimento', 'primo', 'prossimo'])
     // Nessuna cella mostra uno zero: al posto dell'andamento c'è la soglia che
     // lo accenderà.
-    expect(r.slide[1].soglia).toBe(MINIMO_ANDAMENTO)
+    expect(r.slide.find(s => s.tipo === 'primo').soglia).toBe(MINIMO_ANDAMENTO)
   })
 
   it('sotto la soglia l\'andamento diventa la cella che dice quanto manca', () => {
     const storico = [riga('2026-09-20'), chiuso]
     const r = costruisciRecap({ aw: chiuso, storico, totaleCompletati: 2, oggi: OGGI })
-    expect(tipi(r)).toEqual(['fatto', 'settimana', 'inArrivo', 'prossimo'])
-    expect(r.slide[2]).toMatchObject({ fatti: 2, soglia: MINIMO_ANDAMENTO })
+    expect(tipi(r)).toEqual(['fatto', 'gradimento', 'settimana', 'inArrivo', 'prossimo'])
+    expect(r.slide.find(s => s.tipo === 'inArrivo')).toMatchObject({ fatti: 2, soglia: MINIMO_ANDAMENTO })
   })
 
   it('chi rientra dopo mesi NON riceve il benvenuto del primo allenamento', () => {
@@ -211,7 +211,7 @@ describe('costruisciRecap', () => {
     // finestra gli annuncerebbe «il primo è fatto» dopo cinquanta allenamenti.
     // È lo stesso difetto di `recapMinimo`, da un'altra porta.
     const r = costruisciRecap({ aw: chiuso, storico: [chiuso], totaleCompletati: 50, oggi: OGGI })
-    expect(tipi(r)).toEqual(['fatto', 'settimana', 'andamento', 'prossimo'])
+    expect(tipi(r)).toEqual(['fatto', 'gradimento', 'settimana', 'andamento', 'prossimo'])
   })
 
   it('la settimana conta i giorni da LUNEDÌ, assegnati compresi', () => {
@@ -268,14 +268,30 @@ describe('costruisciRecap', () => {
 })
 
 describe('recapMinimo', () => {
-  it('è la sola scheda «fatto», e NON annuncia il primo allenamento', () => {
+  it('tiene solo «fatto» e il gradimento, e NON annuncia il primo allenamento', () => {
     // 🔴 È la risposta a una lettura fallita. La strada comoda era chiamare
     // `costruisciRecap` con uno storico vuoto, e lì `quanti` vale zero: a un
     // atleta con cento allenamenti alle spalle il recap avrebbe annunciato
     // «il primo è fatto» — un guasto travestito da dato.
     const aw = riga('2026-09-22', 'completed', { rpe: 8, sections: HYROX })
     const r = recapMinimo({ aw, oggi: OGGI })
-    expect(r.slide.map(s => s.tipo)).toEqual(['fatto'])
+    // Il gradimento resta: non legge niente, e offline la risposta va in coda.
+    expect(r.slide.map(s => s.tipo)).toEqual(['fatto', 'gradimento'])
     expect(r.slide[0].celle.length).toBeGreaterThan(0)
+  })
+})
+
+describe('la scheda del gradimento', () => {
+  it('sta subito dopo «fatto»', () => {
+    const aw = { ...riga('2026-09-22', 'completed', { rpe: 8, sections: HYROX }), notes: '[RPE: 8/10]\n[GRADIMENTO: no]\nduro' }
+    const r = costruisciRecap({ aw, storico: [aw], totaleCompletati: 1, oggi: OGGI })
+    expect(r.slide[1]).toEqual({ tipo: 'gradimento' })
+  })
+
+  it('senza un id da aggiornare la domanda non si fa', () => {
+    // Una risposta che non ha dove finire è una domanda finta.
+    const aw = { ...riga('2026-09-22', 'completed', { rpe: 8, sections: HYROX }), id: undefined }
+    const r = costruisciRecap({ aw, storico: [aw], totaleCompletati: 1, oggi: OGGI })
+    expect(r.slide.map(s => s.tipo)).not.toContain('gradimento')
   })
 })

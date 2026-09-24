@@ -316,6 +316,13 @@ export function costruisciRecap({ aw, storico = [], totaleCompletati = null, ogg
 
   const slide = [fatto]
 
+  // Il parere sull'allenamento (src/lib/gradimento.js), subito dopo «fatto»:
+  // è il momento in cui la seduta è ancora nelle gambe, e le schede che
+  // seguono parlano d'altro — la settimana, le otto settimane, il prossimo.
+  // ⚠️ Solo con un id da aggiornare: senza, la risposta non avrebbe dove
+  // finire, e una domanda la cui risposta si butta è una domanda finta.
+  if (aw?.id) slide.push({ tipo: 'gradimento' })
+
   if (primoDiSempre) {
     slide.push({
       tipo: 'primo',
@@ -371,7 +378,7 @@ export function costruisciRecap({ aw, storico = [], totaleCompletati = null, ogg
 }
 
 /**
- * Il recap ridotto alla sola scheda «fatto».
+ * Il recap ridotto alle schede che non leggono niente: «fatto» e il gradimento.
  *
  * 🔴 È la risposta a una lettura fallita — offline, o il server che non
  * risponde — e non un caso di ripiego cosmetico. Senza di lui la strada era
@@ -386,5 +393,7 @@ export function costruisciRecap({ aw, storico = [], totaleCompletati = null, ogg
  */
 export function recapMinimo({ aw, oggi = new Date() } = {}) {
   const { slide, categoria, titolo } = costruisciRecap({ aw, storico: [], totaleCompletati: null, oggi })
-  return { categoria, titolo, slide: slide.slice(0, 1) }
+  // ⚠️ Anche il gradimento resta: non ha bisogno di nessuna lettura, e
+  // offline la sua risposta finisce nella coda come il completamento.
+  return { categoria, titolo, slide: slide.filter(s => s.tipo === 'fatto' || s.tipo === 'gradimento') }
 }

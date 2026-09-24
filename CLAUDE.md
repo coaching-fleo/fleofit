@@ -12,7 +12,11 @@
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **1025 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **1053 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> ⭐ **Il 24/09 il recap chiede «ti è piaciuto?»** (§9-unquadragies): una scheda
+> con 👍/👎 e «Salta», e la risposta finisce nella nota dell'assegnazione come
+> `[GRADIMENTO: si|no|nessuna]` dopo l'RPE — **nessuna colonna**, lo schema è
+> congelato. Il coach la vede sulla scheda del workout; l'atleta mai.
 > ⭐ **Il 22/09 è nato il RECAP POST-ALLENAMENTO** (§9-quadragies): chiudere un
 > allenamento non è più un niente — quattro schede in stile storie con la seduta
 > appena fatta, la settimana, l'andamento a otto settimane e il prossimo passo.
@@ -5881,6 +5885,71 @@ ennesima comparsa:
 ⚠️ E le query dei test di pagina si restringono al dialogo con `within`:
 «RPE» e «7» esistono anche nella Home sotto di esso, e senza il confine il test
 passerebbe pure con un recap vuoto.
+
+---
+
+## 9-unquadragies. Il gradimento nel recap (24/09/2026)
+
+Richiesta del committente: una scheda del recap in cui l'atleta lascia
+«mi piace» o «non mi piace» sull'allenamento appena chiuso, senza essere
+forzato — sotto c'è «Salta» — e con il «nessuna preferenza» salvato anch'esso,
+visibile **solo al coach**, per costruirci sopra grafici di gradimento.
+
+### 🔴 Dove sta il dato: nella nota, dopo l'RPE
+Lo schema è congelato (regola 0-bis), quindi è lo stesso meccanismo dell'RPE e
+della pausa. `src/lib/gradimento.js`:
+
+    [RPE: 7/10]
+    [GRADIMENTO: si]
+    testo dell'atleta
+
+Quattro stati, e sono quattro risposte diverse: `si`, `no`, `nessuna` (ha visto
+la domanda e ha saltato) e **`null`** (la domanda non gli è mai stata fatta —
+recap chiuso prima, allenamenti di prima del 24/09, completamento dal coach).
+⚠️ `nessuna` e `null` **non si fondono**: il primo l'ha chiesto il committente,
+il secondo gonfierebbe gli indifferenti con chi non è stato interpellato.
+
+### ⚠️ Le sei cose da sapere prima di rimetterci mano
+1. 🔴 **Il marcatore sta DOPO l'RPE, mai prima.** `rpeDichiarato` legge
+   `^\[RPE:` ancorato all'inizio: messo davanti, ogni RPE del progetto
+   tornerebbe `null` senza un errore. C'è un test.
+2. 🔴 **Il marcatore non si vede mai come testo.** `parseNotesAndRpe` lo toglie da
+   `text` e lo riporta in `gradimento`; le tre copie del regex che citavano la
+   nota nei feedback e nei report (`statisticheCoach`, `reportSettimanale`,
+   `reportAtleta`) passano ora da **`testoNota`** in `rpe.js`. Senza, una nota
+   con il solo parere diventava la citazione «[GRADIMENTO: si]» nella Home coach.
+3. 🔴 **Chi riscrive la nota deve rimetterlo.** `formatNotesWithRpe(rpe, testo,
+   gradimento)` ha un terzo argomento, e i sei punti che lo chiamano gli passano
+   il parere di prima. È la trappola di `formatNotePausa` (§9-decies punto 2):
+   correggere una virgola non deve cancellare un parere. Per la stessa ragione
+   le tre pagine ricevono `onNote` dal recap e allineano il proprio stato.
+4. 🔴 **La scheda NON avanza da sola.** Passarla allo scadere dei sei secondi
+   vorrebbe dire rispondere «nessuna preferenza» al posto di chi stava leggendo.
+   Lasciarla **in avanti** senza scegliere — «Salta», tocco a destra, un
+   segmento più avanti, la X — vale «nessuna preferenza»; **tornare indietro no**,
+   e chiudere il recap **prima** di arrivarci non registra niente.
+5. **La domanda arriva sempre senza niente selezionato**, anche con un parere già dato: una scelta accesa è una risposta suggerita. E **«Salta» non ritira un parere già dato** (`gradimentoDopoSalta`): chi rifà un
+   completamento e salta la domanda tiene il 👍 di prima.
+6. **Il salvataggio non blocca e non allarma.** Un UPDATE fallito va nella coda
+   offline, che tiene una voce per allenamento — se il completamento stesso era
+   in coda, questa voce lo sostituisce portandosi dietro lo stato. Anche
+   `recapMinimo` (lettura fallita) tiene la domanda: non legge niente.
+
+### Chi lo vede
+Il coach, sulla **scheda del workout**: `GradimentoWorkout` sopra l'elenco
+«Assegnato a» (piaciuto / non piaciuto / senza parere, `null` e quindi assente
+finché nessuno ha risposto) e `👍`/`👎`/«senza parere» nella riga di ogni atleta.
+⚠️ **«Solo il coach» vale per l'interfaccia, non per il dato**: la riga è
+dell'atleta e un atleta che chiamasse l'API la leggerebbe — il marcatore
+nasconde, non cifra, come per la pausa. ⚠️ La web app su `main` lo mostra
+come testo grezzo dentro la nota, come l'RPE (§1.1).
+I grafici veri sono BACKLOG #56.
+
+### I test
+`src/lib/__tests__/gradimento.test.js` (12), più 4 in `RecapFoglio`, 5 in
+`HomeRecap` (cosa finisce davvero nel database per ogni uscita) e 4 in
+`WorkoutDetailScheda` (il coach lo vede, l'atleta no). Otto mutazioni provate,
+otto prese.
 
 ---
 

@@ -23,7 +23,7 @@
 import { format, parseISO, differenceInCalendarDays, getISOWeek } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { durataWorkout, rpeAtteso, numeroBlocchi } from './statistiche'
-import { rpeDichiarato } from './rpe'
+import { rpeDichiarato, testoNota } from './rpe'
 import { categoriaDi } from './categorie'
 import { isVoiceNoteValid } from './notaVocale'
 import { getNormalizedBlocks } from './timerSequence'
@@ -90,7 +90,7 @@ export function sessioniDi(righe = [], settimana) {
     // marcatore manca, e in una riga di diario quel 5 si legge come una seduta
     // media invece che come una seduta senza dato.
     const dichiarato = completato ? rpeDichiarato(r.notes) : null
-    const testo = String(r.notes || '').replace(/^\[RPE:\s*\d+\/10\]\s*/, '').trim()
+    const testo = testoNota(r.notes)
 
     return {
       id: r.id,

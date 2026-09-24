@@ -35,7 +35,7 @@ import { format, startOfWeek, endOfWeek, addWeeks, getISOWeek, parseISO,
          differenceInCalendarDays, startOfDay, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { durataWorkout, rpeAtteso } from './statistiche'
-import { rpeDichiarato } from './rpe'
+import { rpeDichiarato, testoNota } from './rpe'
 import { categoriaDi, CORSIA } from './categorie'
 import { inPausa, parseNotePausa } from './pausa'
 import { isVoiceNoteValid } from './notaVocale'
@@ -401,7 +401,7 @@ function feedbackDi(righe = [], nomi) {
   for (const r of righe) {
     const haVocale = isVoiceNoteValid(r.voice_note_url)
     const rpe = rpeDichiarato(r.notes)
-    const testo = String(r.notes || '').replace(/^\[RPE:\s*\d+\/10\]\s*/, '').trim()
+    const testo = testoNota(r.notes)
     if (!haVocale && !testo) continue
     elementi.push({
       id: r.id,

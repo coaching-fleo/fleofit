@@ -17,7 +17,7 @@
 // lettura la stessa cosa che ha visto in scrittura.
 
 import { createPortal } from 'react-dom'
-import { ChevronLeft, MoreHorizontal, ChevronDown, Activity, Check, User } from 'lucide-react'
+import { ChevronLeft, MoreHorizontal, ChevronDown, Activity, Check, User, ThumbsUp, ThumbsDown, Minus } from 'lucide-react'
 import { CARD, LABEL, RIGA, VETRO } from '../lib/stiliCard'
 import { useBottomSheet } from '../useBottomSheet'
 import { SpinaBlocco, DurataBlocco, NumeroEsercizio } from './CreaWorkoutUI'
@@ -356,6 +356,39 @@ export function RigaAssegnazione({ nome, foto, dettaglio, fatto, selezionata, on
         {fatto ? 'Fatto' : 'Da fare'}
       </span>
       {azione}
+    </div>
+  )
+}
+
+/**
+ * Il gradimento del workout, sommato su chi ha risposto nel recap
+ * (src/lib/gradimento.js). Solo coach.
+ *
+ * ⚠️ «Senza parere» ha la sua cella e non sparisce dentro le altre due: è chi
+ * ha visto la domanda e ha premuto «Salta», che è una risposta — e il
+ * committente l'ha chiesta. Chi la domanda non l'ha mai vista (recap chiuso
+ * prima, allenamenti di prima del 24/09) non entra in nessuno dei tre numeri.
+ */
+export function GradimentoWorkout({ si, no, nessuna, risposte }) {
+  const celle = [
+    { chiave: 'si', icona: ThumbsUp, valore: si, etichetta: 'Piaciuto', colore: 'text-green-400' },
+    { chiave: 'no', icona: ThumbsDown, valore: no, etichetta: 'Non piaciuto', colore: 'text-red-400' },
+    { chiave: 'nessuna', icona: Minus, valore: nessuna, etichetta: 'Senza parere', colore: 'text-muted' },
+  ]
+  return (
+    <div className={`${CARD} px-2 py-3.5 flex items-stretch divide-x divide-white/[.07]`}
+      role="group" aria-label={`Gradimento: ${si} piaciuto, ${no} non piaciuto, ${nessuna} senza parere, su ${risposte} risposte`}>
+      {celle.map(({ chiave, icona: Icona, valore, etichetta, colore }) => (
+        <div key={chiave} className="flex-1 min-w-0 flex flex-col items-center gap-1" aria-hidden="true">
+          <span className={`flex items-center gap-1.5 text-[20px] font-black tracking-[-.03em] text-white leading-none`}>
+            <Icona size={15} strokeWidth={2.4} className={colore} />
+            {valore}
+          </span>
+          <span className="font-mono text-[10.5px] font-bold uppercase tracking-[.08em] text-[#5b6070] truncate max-w-full px-1">
+            {etichetta}
+          </span>
+        </div>
+      ))}
     </div>
   )
 }

@@ -19,7 +19,7 @@
 // grafica da condividere esiste già, e sta nel menu della scheda.
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, X, ArrowRight, Flame, Plus, Trophy, Clock, Lock } from 'lucide-react'
+import { Check, X, ArrowRight, Flame, Plus, Trophy, Clock, Lock, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { CARD, LABEL, VETRO, BOTTONE_BRAND, BOTTONE_QUIETO, TONO_VERDETTO } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 import { coloreCategoria } from '../lib/colori'
@@ -404,8 +404,57 @@ function RigaGara({ gara }) {
   )
 }
 
+/**
+ * Il parere sull'allenamento (src/lib/gradimento.js).
+ *
+ * 🔴 NON SI FORZA NESSUNO. Sotto c'è «Salta», e saltare è una risposta vera —
+ * «nessuna preferenza» — che il coach vede come tale. Per la stessa ragione
+ * questa scheda NON avanza da sola: passarla allo scadere del tempo vorrebbe
+ * dire registrare «nessuna preferenza» a nome di chi stava ancora leggendo la
+ * domanda.
+ *
+ * ⚠️ La riga sotto il titolo dice CHI legge la risposta, ed è la ragione per
+ * cui qualcuno risponde sinceramente: un «non mi è piaciuto» si dà più
+ * volentieri sapendo che serve a cambiare il programma, non a finire in pubblico.
+ */
+function SchedaGradimento({ colore, scelta, onScegli }) {
+  // ⚠️ Si parte SEMPRE da nessuna selezione, anche se un completamento
+  // precedente aveva già una risposta: una scelta già accesa è una risposta
+  // suggerita, e chi ha fretta la conferma senza averla data.
+  const mostrata = scelta
+  const voce = (valore, Icona, etichetta) => {
+    const attiva = mostrata === valore
+    return (
+      <button type="button" onClick={() => onScegli?.(valore)} aria-pressed={attiva}
+        className={`${CARD} min-h-[136px] rounded-3xl flex flex-col items-center justify-center gap-3 px-3
+                    transition active:scale-[.97]`}
+        style={attiva ? { borderColor: colore, background: `${colore}2e`, boxShadow: `0 0 0 1px ${colore}` } : undefined}>
+        <Icona size={34} strokeWidth={2.2} aria-hidden="true"
+          style={{ color: attiva ? colore : '#fff' }} />
+        <span className={`text-[14px] font-extrabold tracking-[-.01em] ${attiva ? 'text-white' : 'text-gray-300'}`}>
+          {etichetta}
+        </span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="cascata flex flex-col gap-6">
+      <Testata occhiello="Il tuo parere" titolo="Ti è piaciuto questo allenamento?" colore={colore} />
+      <p className="text-[14px] text-gray-400 leading-relaxed -mt-3">
+        Lo vede solo il tuo coach: gli serve a capire quali allenamenti riproporre e quali cambiare.
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        {voce('si', ThumbsUp, 'Mi è piaciuto')}
+        {voce('no', ThumbsDown, 'Non mi è piaciuto')}
+      </div>
+    </div>
+  )
+}
+
 const SCHEDE = {
   fatto: SchedaFatto,
+  gradimento: SchedaGradimento,
   settimana: SchedaSettimana,
   andamento: SchedaAndamento,
   primo: SchedaPrimo,
@@ -445,16 +494,41 @@ const SCHEDE = {
  * `pointer-events-none` con i soli comandi riattivati. Messe sopra,
  * coprirebbero «Apri la scheda» e il tocco la avanzerebbe invece di aprirla.
  */
-export function FoglioRecap({ recap, onChiudi, onApri, onLibero, caricamento = false }) {
+export function FoglioRecap({ recap, onChiudi, onApri, onLibero, onGradimento, caricamento = false }) {
   const [indice, setIndice] = useState(0)
   const [progresso, setProgresso] = useState(0)
   const premuto = useRef(null)
   const inPausa = useRef(false)
   const tenuta = useRef(false)
-  const { chiudi, maniglia, stileFoglio, classeFoglio } = useBottomSheet(onChiudi)
+  const [scelta, setScelta] = useState(null)
+  const [risposto, setRisposto] = useState(false)
+  const dopoScelta = useRef(null)
 
   const schede = recap?.slide || []
   const corrente = schede[Math.min(indice, Math.max(0, schede.length - 1))]
+
+  /**
+   * Si lascia la domanda senza aver risposto: è «nessuna preferenza».
+   *
+   * Vale per «Salta», per il tocco a destra, per un segmento più avanti e per
+   * la chiusura del recap MENTRE la domanda è a schermo. Tornare indietro non
+   * conta — non è andarsene — e chi chiude il recap PRIMA di arrivarci non ha
+   * mai visto la domanda: per lui non si registra niente (`null` in
+   * `gradimento.js`, che è un'altra cosa).
+   *
+   * ⚠️ Può scattare due volte per la stessa uscita (la X chiama `chiudi`, e
+   * la chiusura passa di nuovo di qui): è innocuo, `salvaGradimento` non
+   * riscrive una nota identica.
+   */
+  const lasciaGradimento = () => {
+    if (corrente?.tipo !== 'gradimento' || risposto) return
+    setRisposto(true)
+    onGradimento?.(null)
+  }
+
+  const { chiudi, maniglia, stileFoglio, classeFoglio } = useBottomSheet(() => { lasciaGradimento(); onChiudi?.() })
+
+  useEffect(() => () => clearTimeout(dopoScelta.current), [])
   const ultima = indice >= schede.length - 1
   const apribile = !!onApri && corrente?.tipo === 'prossimo' && corrente.forma === 'assegnato' && !!corrente.workoutId
   const colore = coloreCategoria(recap?.categoria)
@@ -473,6 +547,7 @@ export function FoglioRecap({ recap, onChiudi, onApri, onLibero, caricamento = f
 
   const vaiA = (n) => {
     if (n < 0) return
+    if (n > indice) lasciaGradimento()
     if (n >= schede.length) {
       // ⚠️ Mentre la lettura è in corso il recap ha una scheda sola: un tocco
       // sulla metà destra chiuderebbe proprio ciò che sta per arrivare.
@@ -490,7 +565,7 @@ export function FoglioRecap({ recap, onChiudi, onApri, onLibero, caricamento = f
   // sull'ultima e si fermerebbe lì — e quando le altre arrivano nessuno lo
   // farebbe ripartire. Aspettando `caricamento`, il numero di schede è già
   // quello definitivo quando l'orologio si accende.
-  const attivo = !caricamento && !menoMovimento() && schede.length > 0
+  const attivo = !caricamento && !menoMovimento() && schede.length > 0 && corrente?.tipo !== 'gradimento'
   useEffect(() => {
     if (!attivo) return
     let frame
@@ -517,6 +592,22 @@ export function FoglioRecap({ recap, onChiudi, onApri, onLibero, caricamento = f
     frame = requestAnimationFrame(passo)
     return () => cancelAnimationFrame(frame)
   }, [indice, attivo, schede.length])
+
+  /**
+   * Una risposta vera. Si salva subito e si passa alla scheda dopo con un
+   * attimo di ritardo: quanto basta a vedere la scelta accendersi, che è la
+   * conferma che il tocco è arrivato.
+   * ⚠️ Cambiare idea è permesso — si torna indietro e si tocca l'altra — e
+   * ogni tocco scrive: vale l'ultimo.
+   */
+  const scegli = (valore) => {
+    setRisposto(true)
+    setScelta(valore)
+    onGradimento?.(valore)
+    clearTimeout(dopoScelta.current)
+    const da = indice
+    dopoScelta.current = setTimeout(() => { if (da + 1 < schede.length) mostra(da + 1) }, 420)
+  }
 
   /**
    * Il tocco sulle due metà.
@@ -571,7 +662,7 @@ export function FoglioRecap({ recap, onChiudi, onApri, onLibero, caricamento = f
             // bloccato.
             const quota = i < indice ? 1 : i > indice ? 0 : (attivo ? progresso : 1)
             return (
-              <button key={s.tipo + i} type="button" onClick={() => mostra(i)}
+              <button key={s.tipo + i} type="button" onClick={() => { if (i > indice) lasciaGradimento(); mostra(i) }}
                 aria-label={`Scheda ${i + 1} di ${schede.length}`} aria-current={i === indice || undefined}
                 className="flex-1 py-2">
                 <span className="block h-[3px] rounded-full bg-white/25 overflow-hidden">
@@ -611,7 +702,8 @@ export function FoglioRecap({ recap, onChiudi, onApri, onLibero, caricamento = f
           <div className="min-h-full flex flex-col justify-center px-5 py-7">
             {/* ⚠️ `key` sull'indice: rimonta la scheda, quindi la cascata riparte.
                 Senza, solo la prima entra e le altre compaiono secche. */}
-            {Scheda && <div key={indice}><Scheda dati={corrente} colore={colore} onApri={onApri} onLibero={onLibero} /></div>}
+            {Scheda && <div key={indice}><Scheda dati={corrente} colore={colore} onApri={onApri} onLibero={onLibero}
+              scelta={scelta} onScegli={scegli} /></div>}
             {caricamento && indice === 0 && (
               <p className="mt-6 text-[12.5px] text-muted text-center">Sto raccogliendo i tuoi numeri…</p>
             )}
@@ -626,7 +718,15 @@ export function FoglioRecap({ recap, onChiudi, onApri, onLibero, caricamento = f
           gesto — i due bottoni «Avanti» e «Salta» sono usciti il 22/09, e senza
           una riga che lo dica il tocco a destra non lo scopre nessuno. */}
       <div className="shrink-0 px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-2 flex items-center gap-3 min-h-[68px]">
-        {ultima && apribile ? (
+        {corrente?.tipo === 'gradimento' ? (
+          // «Salta» è una scritta e non un bottone pieno, di proposito: le due
+          // risposte sopra sono la domanda, questa è l'uscita. Ha comunque un
+          // bersaglio alto quanto il piede, o su un pollice non la si prende.
+          <button type="button" onClick={() => vaiA(indice + 1)}
+            className="flex-1 min-h-[48px] text-center text-[15px] font-bold text-muted hover:text-white transition">
+            Salta
+          </button>
+        ) : ultima && apribile ? (
           <>
             <button type="button" onClick={chiudi} className={`${BOTTONE_QUIETO} max-w-[38%]`}>Chiudi</button>
             <button type="button" onClick={() => onApri(corrente)} className={BOTTONE_BRAND}>Apri la scheda</button>

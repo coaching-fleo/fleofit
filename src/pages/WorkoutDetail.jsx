@@ -51,6 +51,7 @@ import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
 import { corsia } from '../lib/categorie'
 import { accodaSuStorage } from '../lib/offlineQueue'
 import { rpeDichiarato } from '../lib/rpe'
+import { gradimentoDi, riepilogoGradimento } from '../lib/gradimento'
 import { durataBlocco, mmss, minutiStimati, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { caricoPrevisto, previsioneSquadra, finestraPrevisione, testoAvviso } from '../lib/previsione'
 import { RigaAvviso, AvvisoEsteso, PrevisioneNonDisponibile } from '../components/PrevisioneUI'
@@ -66,7 +67,7 @@ import { RiepilogoWorkout, BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../
 import {
   TestataScheda, IconaStato, MenuScheda, TitoloScheda, AvvisoRiscaldamento,
   BloccoScheda, RigaEsercizio, IntestazioneSezione, CardNota, EsitoCompletato,
-  RigaAssegnazione, ElencoAssegnazioni, CtaVetro,
+  RigaAssegnazione, ElencoAssegnazioni, GradimentoWorkout, CtaVetro,
 } from '../components/WorkoutDetailUI'
 
 const getIntensityColor = (val) => {
@@ -434,7 +435,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         setCurrentAthleteName(`${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim())
         if (awData[0].notes) {
           const parsed = parseNotesAndRpe(awData[0].notes);
-          setAthleteNote({ text: parsed.text, rpe: parsed.rpe, dichiarato: rpeDichiarato(awData[0].notes), athleteName: `${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim() })
+          setAthleteNote({ text: parsed.text, rpe: parsed.rpe, dichiarato: rpeDichiarato(awData[0].notes), gradimento: parsed.gradimento, athleteName: `${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim() })
           setEditingNote(parsed.text)
           setRpeScore(parsed.rpe)
         } else {
@@ -508,7 +509,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const handleRpeSubmit = async () => {
     setSavingNote(true)
     const newStatus = 'completed'
-    const finalNote = formatNotesWithRpe(rpeScore, rpeNotes)
+    const finalNote = formatNotesWithRpe(rpeScore, rpeNotes, athleteNote?.gradimento)
 
     const status = await Network.getStatus()
     let hasError = false;
@@ -531,7 +532,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     } else {
       setWorkoutStatus(newStatus)
       setEditingNote(rpeNotes)
-      setAthleteNote({ text: rpeNotes, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), athleteName: athleteNote?.athleteName || '' })
+      setAthleteNote({ text: rpeNotes, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), gradimento: athleteNote?.gradimento ?? null, athleteName: athleteNote?.athleteName || '' })
       setShowRpeModal(false)
 
       // ⚠️ Il recap è solo di chi si è allenato. Da questa stessa pagina il
@@ -1370,6 +1371,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
    * Quando invece l'atleta è programmato in un altro giorno, quello è il dato
    * che conta.
    */
+  // Il gradimento di questo workout, sommato su chi l'ha fatto. `null` finché
+  // nessuno ha risposto: niente riga di zeri (src/lib/gradimento.js).
+  const gradimentoAssegnazioni = role !== 'athlete' ? riepilogoGradimento(assignments) : null
+
   const dettaglioAssegnazione = (a) => {
     const rpe = rpeDichiarato(a.notes)
     const testo = a.notes ? parseNotesAndRpe(a.notes).text.trim() : ''
@@ -1378,6 +1383,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       pezzi.push(format(parseISO(a.completed_date), 'EEE d MMM', { locale: it }))
     }
     if (rpe !== null) pezzi.push(`RPE ${rpe}`)
+    // Il gradimento dal recap (src/lib/gradimento.js). Solo il coach vede
+    // questo elenco, ed è l'unico posto dove il parere è attribuito a qualcuno.
+    const parere = { si: '👍', no: '👎', nessuna: 'senza parere' }[gradimentoDi(a.notes)]
+    if (parere) pezzi.push(parere)
     if (testo) pezzi.push('nota')
     if (a.voice_note_url) pezzi.push('vocale')
     return pezzi.length > 0 ? pezzi.join(' · ') : 'nessun riscontro'
@@ -1385,7 +1394,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
   const salvaNoteAtleta = async () => {
     setSavingNote(true)
-    const finalNote = formatNotesWithRpe(rpeScore, editingNote)
+    const finalNote = formatNotesWithRpe(rpeScore, editingNote, athleteNote?.gradimento)
 
     const status = await Network.getStatus()
     let success = true
@@ -1400,7 +1409,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     setSavingNote(false)
     if (!success) return
 
-    setAthleteNote({ text: editingNote, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), athleteName: athleteNote?.athleteName || '' })
+    setAthleteNote({ text: editingNote, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), gradimento: athleteNote?.gradimento ?? null, athleteName: athleteNote?.athleteName || '' })
     if (role === 'athlete' && status.connected) {
       supabase.functions.invoke('send-reminders', {
         body: {
@@ -1615,6 +1624,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               atleti guardati erano cinque «indietro» per uscire. */}
           <IntestazioneSezione etichetta="Assegnato a"
             dettaglio={assignments.length === 1 ? '1 atleta' : `${assignments.length} atleti`} />
+          {gradimentoAssegnazioni && <GradimentoWorkout {...gradimentoAssegnazioni} />}
           <ElencoAssegnazioni>
             {assignments.map(a => (
               <RigaAssegnazione
@@ -2093,6 +2103,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           aw={recapAw}
           atletaId={queryAthleteId || user?.id}
           onChiudi={() => setRecapAw(null)}
+          // ⚠️ Senza, correggere la nota subito dopo il recap la riscriverebbe
+          // con il gradimento di prima — cioè cancellerebbe quello appena dato.
+          onNote={(_, notes) => setAthleteNote(prev => prev ? { ...prev, gradimento: gradimentoDi(notes) } : prev)}
           onApri={(passo) => {
             setRecapAw(null)
             if (passo.workoutId) navigate(`/workout/${passo.workoutId}?athlete_id=${queryAthleteId || user?.id}`)

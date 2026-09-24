@@ -23,6 +23,7 @@ import VoiceRecorder from '../components/VoiceRecorder'
 import { durataWorkout, numeroBlocchi, rpeAtteso, mediaRpeCategoria, serieGiorni, barreUltimiGiorni,
          senzaStorico, minutiSettimana, scartoMinutiSettimana, MINIMO_PRECEDENTI } from '../lib/statistiche'
 import { parseNotesAndRpe, formatNotesWithRpe, rpeDichiarato } from '../lib/rpe'
+import { gradimentoDi } from '../lib/gradimento'
 import { HeaderHome, BottoneVetro, HeroOggi, AnelloSettimana, CellaSerie, CellaVolume, BannerObiettivo, ListaInArrivo } from '../components/HomeAtletaUI'
 import { BenvenutoCoach, CampoObiettivo, CardPrimoLibero, ComeFunziona,
          CellaPrimoDato, CellaBloccata, BannerObiettivoVuoto,
@@ -929,7 +930,9 @@ setNotifications(prev => {
   const handleRpeSubmitHome = async () => {
     setSavingRpe(true)
     const newStatus = 'completed'
-    const finalNote = formatNotesWithRpe(rpeScore, rpeNotes)
+    // ⚠️ Il gradimento di un completamento precedente si conserva: il recap
+    // richiede il parere, ma chi lo chiude prima di arrivarci non deve perderlo.
+    const finalNote = formatNotesWithRpe(rpeScore, rpeNotes, gradimentoDi(workoutToComplete.notes))
     
     const status = await Network.getStatus()
     if (!status.connected) {
@@ -1653,6 +1656,9 @@ setNotifications(prev => {
           aw={recapAw}
           atletaId={user?.id}
           onChiudi={() => setRecapAw(null)}
+          // Il gradimento riscrive la nota: senza tenerla allineata qui, il
+          // prossimo «segna da fare» ripartirebbe dalla nota di prima.
+          onNote={(awId, notes) => setTodayWorkouts(prev => prev.map(w => w.id === awId ? { ...w, notes } : w))}
           onApri={(passo) => {
             setRecapAw(null)
             if (passo.workoutId) navigate(`/workout/${passo.workoutId}?athlete_id=${user.id}`)
