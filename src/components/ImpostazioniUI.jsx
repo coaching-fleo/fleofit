@@ -16,6 +16,7 @@ import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, ChevronDown, User, LogOut, Plus, Copy, Link as LinkIcon, Trash2 } from 'lucide-react'
 import { CARD, LABEL, VETRO } from '../lib/stiliCard'
 import { useBottomSheet } from '../useBottomSheet'
+import { vibraScelta } from '../lib/aptica'
 
 // ── I toni delle icone ────────────────────────────────────────────────────
 // Una tavolozza chiusa, non un colore per riga. Il colore qui è una CATEGORIA
@@ -133,7 +134,7 @@ export function Interruttore({ attivo, onCambia, occupato = false, etichetta, to
     : 'bg-brand shadow-[0_6px_12px_-4px_rgba(241,186,23,.5)]'
   return (
     <button type="button" role="switch" aria-checked={attivo} aria-label={etichetta}
-      onClick={onCambia} disabled={occupato}
+      onClick={() => { vibraScelta(); onCambia() }} disabled={occupato}
       className={`shrink-0 w-[51px] h-[31px] rounded-full flex items-center p-0.5 transition-colors duration-200
                   disabled:opacity-50 ${occupato ? 'animate-pulse' : ''} ${
         attivo ? `justify-end ${acceso}` : 'justify-start bg-white/10 border border-white/[.12]'}`}>

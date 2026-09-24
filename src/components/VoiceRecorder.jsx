@@ -19,6 +19,7 @@ import { Capacitor } from '@capacitor/core'
 import { VoiceRecorder as NativeVoiceRecorder } from '@independo/capacitor-voice-recorder'
 import { mostraErrore } from '../lib/alert'
 import AudioVisualizer from './AudioVisualizer'
+import { battito, vibraPresa } from '../lib/aptica'
 
 export default function VoiceRecorder({ onSave, onCancel }) {
   const [isRecording, setIsRecording] = useState(false)
@@ -101,6 +102,7 @@ export default function VoiceRecorder({ onSave, onCancel }) {
         await NativeVoiceRecorder.startRecording()
         isCancelledRef.current = false
         setIsRecording(true)
+        vibraPresa()
         setRecordingTime(0)
         timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
       } catch (e) {
@@ -138,6 +140,7 @@ export default function VoiceRecorder({ onSave, onCancel }) {
         recorder.start()
         mediaRecorder.current = recorder
         setIsRecording(true)
+        vibraPresa()
         setRecordingTime(0)
         timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
       } catch (err) {
@@ -169,6 +172,7 @@ export default function VoiceRecorder({ onSave, onCancel }) {
   }
 
   const stopRecordingAndSave = async () => {
+    battito()
     isCancelledRef.current = false
     setIsRecording(false)
     clearInterval(timerRef.current)

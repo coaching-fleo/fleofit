@@ -15,7 +15,7 @@ import { it } from 'date-fns/locale'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { ERGOMETERS } from '../lib/constants'
 import { mostraErrore } from '../lib/alert'
-import { battito } from '../lib/aptica'
+import { battito, vibraPresa, vibraScelta, vibraSuccesso } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
 import { conVelo, coloreDaClasse, BRAND, RUNNING, CUSTOM, IA } from '../lib/colori'
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
@@ -775,7 +775,9 @@ function AiGenerationModal({ onClose, onGenerate }) {
     // che si sa già (react-hooks/set-state-in-effect).
     clearInterval(orologio.current)
     orologio.current = setInterval(() => setSecondi(s => s + 1), 1000)
-    battito()
+    // Il microfono che si accende è una PRESA, non un gradino: si detta spesso
+    // col telefono lontano dagli occhi, e questo è l'unico modo di saperlo partito.
+    vibraPresa()
   }
 
   // ── Stop ─────────────────────────────────────────────────────────────────
@@ -1249,14 +1251,14 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                   />
                   <button 
                     type="button"
-                    onClick={() => { setHybridMode('reps'); setMeters('-'); }}
+                    onClick={() => { if (hybridMode !== 'reps') vibraScelta(); setHybridMode('reps'); setMeters('-'); }}
                     className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'reps' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
                   >
                     🔁 Reps
                   </button>
                   <button 
                     type="button"
-                    onClick={() => { setHybridMode('distance'); setReps('-'); }}
+                    onClick={() => { if (hybridMode !== 'distance') vibraScelta(); setHybridMode('distance'); setReps('-'); }}
                     className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'distance' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
                   >
                     📏 Distanza
@@ -1273,14 +1275,14 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                   />
                   <button 
                     type="button"
-                    onClick={() => { setRunPaceMode('pace'); setSpeed('-'); }}
+                    onClick={() => { if (runPaceMode !== 'pace') vibraScelta(); setRunPaceMode('pace'); setSpeed('-'); }}
                     className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'pace' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
                   >
                     ⏱ Passo
                   </button>
                   <button 
                     type="button"
-                    onClick={() => { setRunPaceMode('speed'); setErgoPace('-'); }}
+                    onClick={() => { if (runPaceMode !== 'speed') vibraScelta(); setRunPaceMode('speed'); setErgoPace('-'); }}
                     className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'speed' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
                   >
                     ⚡ Velocità
@@ -1731,6 +1733,7 @@ function ModeToggle({ mode, onModeChange, value, onChange }) {
       <button 
         type="button"
         onClick={() => {
+           if (mode !== 'time') vibraScelta();
            onModeChange('time');
            if (!RUN_TIME_OPTIONS.includes(value)) onChange('1 min');
         }}
@@ -1741,6 +1744,7 @@ function ModeToggle({ mode, onModeChange, value, onChange }) {
       <button 
         type="button"
         onClick={() => {
+           if (mode !== 'distance') vibraScelta();
            onModeChange('distance');
            if (!RUN_DISTANCE_OPTIONS.includes(value)) onChange('100m');
         }}
@@ -2567,6 +2571,9 @@ export default function CreateWorkout() {
     }
 
     setSaved(true)
+    // Si esce dal builder senza nessun messaggio: la scheda che si apre è
+    // l'esito, e la vibrazione è la conferma che il salvataggio è riuscito.
+    vibraSuccesso()
     navigate(`/workout/${targetId}${athleteId ? `?athlete_id=${athleteId}` : ''}`, { replace: true })
   }
 

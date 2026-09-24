@@ -48,6 +48,12 @@ vi.mock('@capacitor/network', () => ({
   },
 }))
 
+const aptica = vi.hoisted(() => ({
+  battito: vi.fn(), vibraScelta: vi.fn(), vibraPresa: vi.fn(),
+  vibraSuccesso: vi.fn(), vibraErrore: vi.fn(), vibraRichiamo: vi.fn(),
+}))
+vi.mock('../../lib/aptica', () => aptica)
+
 const Home = (await import('../Home')).default
 const RecapAllenamento = (await import('../../components/RecapAllenamento')).default
 
@@ -78,6 +84,21 @@ beforeEach(() => {
 })
 
 describe('il recap si apre quando l atleta chiude un allenamento', () => {
+  it('chiudere l allenamento si SENTE, una volta sola', async () => {
+    // È l'esito più atteso dell'app (CLAUDE.md §9-duoquadragies). ⚠️ UNA
+    // volta: il salvataggio non passa da un CustomAlert, che vibrerebbe da sé,
+    // e una seconda notifica per lo stesso esito si leggerebbe come un errore.
+    Object.values(aptica).forEach(f => f.mockClear())
+    const utente = userEvent.setup()
+    montaPagina(<Home />)
+    await waitFor(() => expect(screen.getByText('Hyrox Forza')).toBeInTheDocument())
+    expect(aptica.vibraSuccesso).not.toHaveBeenCalled()
+    await completa(utente)
+    await screen.findByRole('dialog', { name: /Recap/ })
+    expect(aptica.vibraSuccesso).toHaveBeenCalledTimes(1)
+    expect(aptica.vibraErrore).not.toHaveBeenCalled()
+  })
+
   it("porta il titolo e l'RPE appena dichiarato", async () => {
     const utente = userEvent.setup()
     montaPagina(<Home />)

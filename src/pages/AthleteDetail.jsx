@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
 import { ChevronLeft, User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
+import { vibraScelta, vibraSuccesso } from '../lib/aptica'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -232,6 +233,7 @@ export default function AthleteDetail() {
     if (!error) {
       setWorkouts(prev => prev.map(w => w.id === workoutToComplete.id ? { ...w, status: newStatus, notes: finalNote } : w))
       setShowRpeModal(false)
+      vibraSuccesso()
 
       // ⚠️ Solo l'atleta, e questa pagina è anche `/profile`: il coach che
       // spunta un allenamento dalla scheda di qualcun altro non ha niente da
@@ -645,13 +647,13 @@ export default function AthleteDetail() {
                   }`}
                 />
                 <button
-                  onClick={() => setWorkoutView('list')}
+                  onClick={() => { if (workoutView !== 'list') vibraScelta(); setWorkoutView('list') }}
                   className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'list' ? 'text-white' : 'text-muted hover:text-gray-300'}`}
                 >
                   <LayoutList size={18} /> Elenco
                 </button>
                 <button
-                  onClick={() => setWorkoutView('calendar')}
+                  onClick={() => { if (workoutView !== 'calendar') vibraScelta(); setWorkoutView('calendar') }}
                   className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'calendar' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
                 >
                   <CalendarDays size={18} /> Calendario
@@ -848,6 +850,8 @@ export default function AthleteDetail() {
           storico={workouts}
           onClose={() => setAssignModalOpen(false)}
           onAssigned={() => {
+            // Il foglio si chiude senza un alert: l'esito lo dice il dito.
+            vibraSuccesso()
             setAssignModalOpen(false)
             fetchAthleteData(true)
           }}

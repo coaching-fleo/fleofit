@@ -437,8 +437,9 @@ cerchio pieno; un'azione con testo è sempre un rettangolo a 12px. Non si mescol
   (`py-3` / `py-3.5`). Nelle azioni conclusive porta il glow di stato
   (`shadow-lg shadow-[#f1ba17]/20`).
 - **Hover / Active:** `hover:brightness-110` (mai un secondo colore), transizione 300ms
-  `ease-out`. Su iOS l'hover non esiste: il feedback reale è aptico
-  (`Haptics.impact({ style: ImpactStyle.Light })`) più una micro-scala.
+  `ease-out`. Su iOS l'hover non esiste: il feedback reale è la micro-scala, più
+  l'aptico **solo se il tocco cambia uno stato o produce un esito** (vedi sotto).
+  Un bottone che naviga non vibra.
 - **Secondaria:** fondo `#2a2a2a`, testo bianco, peso 600 — `hover:bg-[#333]`. È il bottone
   di "Annulla" e di ogni azione non conclusiva.
 - **Icona:** cerchio pieno 44×44 (o 40×40) su `#2a2a2a` o `#1e1e1e` con bordo `#333`,
@@ -540,8 +541,11 @@ dal sistema — spesso con icona in cerchio grigio.
 - **Do** montare ogni modale con `createPortal(…, document.body)` e rispettare la scala di
   z-index (60 / 100 / 120 / 150).
 - **Do** usare `CustomAlert` e `CustomConfirm` per ogni messaggio o conferma.
-- **Do** accompagnare picker, slider e completamenti con feedback aptico
-  (`Haptics.impact`), con fallback `navigator.vibrate()` sul web.
+- **Do** accompagnare con feedback aptico ciò che l'occhio può perdersi o che non si
+  disfa — gradini di picker e slider, scelte fra pari, prese, esiti — e **solo** con i sei
+  verbi di `src/lib/aptica.js`. `navigator.vibrate()` su iPhone non esiste.
+- **Don't** far vibrare la navigazione, l'apertura di un foglio o di una conferma, né
+  una scelta già attiva ritoccata: un'app che ronza a ogni tocco insegna a ignorarla.
 - **Do** aprire ogni pagina con la safe area iOS e chiuderla con `pb-24`.
 - **Do** mantenere 300ms `ease-out` come tempo standard delle transizioni e
   `cubic-bezier(0.16, 1, 0.3, 1)` per gli ingressi di pagina e modale.

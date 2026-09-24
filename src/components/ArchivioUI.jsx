@@ -16,6 +16,7 @@
 import { ChevronLeft, ChevronRight, Search, Users, Check, X } from 'lucide-react'
 import { CARTA_RIGA, VETRO } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
+import { vibraScelta } from '../lib/aptica'
 
 // ── Testata ───────────────────────────────────────────────────────────────
 
@@ -121,7 +122,7 @@ export function FiltriCorsia({ corsie, attiva, totale, onCambia }) {
 
 function ChipCorsia({ etichetta, conteggio, punto, attivo, onClick }) {
   return (
-    <button onClick={onClick} aria-pressed={attivo}
+    <button onClick={() => { vibraScelta(); onClick() }} aria-pressed={attivo}
       className={`shrink-0 inline-flex items-center gap-1.5 pl-3 pr-3 py-1.5 rounded-full
                   text-[13px] transition ${attivo
         ? 'bg-brand text-black font-black tracking-[-.01em] shadow-[0_8px_18px_-8px_rgba(241,186,23,.6)]'

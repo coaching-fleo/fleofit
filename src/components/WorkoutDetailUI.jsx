@@ -21,6 +21,7 @@ import { ChevronLeft, MoreHorizontal, ChevronDown, Activity, Check, User, Thumbs
 import { CARD, LABEL, RIGA, VETRO } from '../lib/stiliCard'
 import { useBottomSheet } from '../useBottomSheet'
 import { SpinaBlocco, DurataBlocco, NumeroEsercizio } from './CreaWorkoutUI'
+import { vibraScelta } from '../lib/aptica'
 
 // ── Testata ───────────────────────────────────────────────────────────────
 // Erano cinque bottoncini in fila (TV, Cardio, Duplica, Modifica, Elimina) più
@@ -60,7 +61,7 @@ export function IconaStato({ etichetta, icona: Icona, accesa, colore, valore, on
     ? { background: `${colore}24`, borderColor: `${colore}57`, color: colore }
     : undefined
   return (
-    <button type="button" onClick={onClick} aria-label={etichetta} aria-pressed={!!accesa} title={etichetta}
+    <button type="button" onClick={() => { vibraScelta(); onClick?.() }} aria-label={etichetta} aria-pressed={!!accesa} title={etichetta}
       className={`shrink-0 h-11 rounded-full flex items-center justify-center gap-1.5 transition
                   hover:border-white/25 ${valore ? 'px-3.5' : 'w-11'} ${accesa ? 'border' : `${VETRO} text-gray-400`}`}
       style={stile}>

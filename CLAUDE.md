@@ -12,7 +12,12 @@
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **1053 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **1073 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> ⭐ **Il 24/09 l'app ha preso un LINGUAGGIO APTICO** (§9-duoquadragies): sei verbi in
+> `src/lib/aptica.js`, e una regola — vibra ciò che l'occhio può perdersi o che non si
+> disfa, mai la navigazione. 🔴 Due trappole trovate: `selectionChanged()` è muto senza
+> `selectionStart()`, e `navigator.vibrate` su iPhone non esiste — il drag&drop e le
+> reazioni della Live Coach Cam **non avevano mai vibrato**.
 > ⭐ **Il 24/09 il recap chiede «ti è piaciuto?»** (§9-unquadragies): una scheda
 > con 👍/👎 e «Salta», e la risposta finisce nella nota dell'assegnazione come
 > `[GRADIMENTO: si|no|nessuna]` dopo l'RPE — **nessuna colonna**, lo schema è
@@ -1118,8 +1123,10 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   (`rounded-full`, `rgba(30,30,34,.88)`, blur 22 + saturate 170%, ombra proiettata) con
   10px d'aria sopra e 16px sotto. La voce attiva prende un **cerchio** da 36px dietro la
   sola icona, non una pillola dietro icona ed etichetta (§9-quaterdecies).
-- **Feedback aptico**: `Haptics.impact({ style: ImpactStyle.Light })` sugli scroll-picker e sugli
-  slider, `Heavy` a fine round del timer; fallback `navigator.vibrate()` su web.
+- **Feedback aptico**: si passa SOLO dai sei verbi di `src/lib/aptica.js` (`battito`,
+  `vibraScelta`, `vibraPresa`, `vibraSuccesso`, `vibraErrore`, `vibraRichiamo`), mai da
+  `Haptics` o `navigator.vibrate` diretti — il secondo su iPhone non esiste. Dove vibrare e
+  dove NO: §9-duoquadragies. Il timer guidato resta a parte (`Heavy` a fine round).
 - **Testo non selezionabile** globalmente tranne input/textarea (regola inline in `App.jsx`).
 
 ---
@@ -5950,6 +5957,70 @@ I grafici veri sono BACKLOG #56.
 `HomeRecap` (cosa finisce davvero nel database per ogni uscita) e 4 in
 `WorkoutDetailScheda` (il coach lo vede, l'atleta no). Otto mutazioni provate,
 otto prese.
+
+---
+
+## 9-duoquadragies. Il linguaggio aptico (24/09/2026)
+
+Richiesta del committente: «aggiungi feedback aptico un po' in giro per tutta
+l'applicazione, in base a quella che credi sia la migliore soluzione UX».
+
+### Il criterio, prima dei punti
+**Il dito sente ciò che l'occhio potrebbe perdersi, o ciò che non si può più
+disfare.** Un gradino passato trascinando, una scelta cambiata, un esito, un
+oggetto afferrato. ⚠️ **NON si vibra sulla navigazione** — la tab bar di iOS
+non vibra — **né sull'apertura di un foglio o di una conferma**: un'app che
+ronza a ogni tocco insegna a non badarci più, e allora non la si sente nemmeno
+quando conta.
+
+### Sei verbi, in `src/lib/aptica.js`
+| verbo | generatore iOS | dove |
+|---|---|---|
+| `battito` | impatto Light | picker, slider RPE, ± dello Stepper, blocco scavalcato nel drag, soglia di un foglio o dello swipe, microfono che si ferma |
+| `vibraScelta` | selezione | chip dei filtri, segmentati, interruttori, giorno del calendario, card di categoria, 👍/👎 del recap, icona TV |
+| `vibraPresa` | impatto Medium | presa del drag&drop, microfono che parte (note vocali e dettatura IA), swipe di completamento compiuto |
+| `vibraSuccesso` | notifica Success | allenamento completato (tre pagine), workout salvato, assegnato (due fogli), codice invito accettato, ogni `CustomAlert` di successo |
+| `vibraErrore` | notifica Error | ogni `CustomAlert` d'errore, codice invito rifiutato o rete caduta |
+| `vibraRichiamo` | notifica Warning | reazione o vocale del coach durante il timer (Live Coach Cam) |
+
+### ⚠️ Le cinque cose da sapere prima di rimetterci mano
+1. 🔴 **Sul plugin iOS `selectionChanged()` è MUTO senza un
+   `selectionStart()` prima**: il generatore nasce lì. Nessun errore, nessuna
+   vibrazione. `vibraScelta` lo prepara una volta per sessione, e c'è un test
+   che verifica anche l'ordine delle due chiamate.
+2. 🔴 **`navigator.vibrate` su iPhone NON ESISTE.** La presa del drag&drop e le
+   reazioni della Live Coach Cam lo usavano come unica vibrazione: **su iOS non
+   avevano mai vibrato**. Ora passano dal plugin; `navigator.vibrate` resta solo
+   ripiego web.
+3. 🔴 **Il prefisso `vibra` evita un difetto vero, non un gusto.** La prima
+   stesura esportava `scelta`, `errore`, `successo`: in `RecapUI` la prop si
+   chiama già `scelta`, in `CreateWorkout` c'è una funzione locale `scelta`, in
+   `CustomAlert` una costante `errore`. L'import veniva ombreggiato in silenzio
+   — il 👍 del recap avrebbe chiamato una stringa. L'ha trovato il linter
+   (`no-unused-vars` sull'import), non i test.
+4. **Gli esiti degli alert vibrano da `CustomAlert`**, che è l'unico punto da
+   cui passano tutti — `mostraErrore`/`mostraSuccesso` e gli alert locali di
+   otto pagine. ⚠️ Chi mostra un alert di successo **non** chiami anche
+   `vibraSuccesso()`: due notifiche in fila per lo stesso esito si leggono come
+   un errore. Chiamarla a mano serve solo dove l'esito NON passa da un alert
+   (completamento, salvataggio, assegnazione, codice invito).
+5. **Una scelta già attiva ritoccata non vibra**: non è cambiato niente. I
+   controlli che si comportano da radio (segmenti, categoria, giorno,
+   gradimento) guardano lo stato prima di vibrare; quelli che fanno toggle
+   (chip, interruttori, fasce filtro) vibrano sempre, perché cambiano sempre.
+
+Il timer guidato **non è stato toccato**: ha già il suo aptico (Light per il
+beep corto, Heavy a fine round) legato ai suoni, ed è il posto in cui la
+vibrazione è più utile di tutte. L'interruttore «Feedback aptico di sistema»
+delle Impostazioni di iOS lo rispetta il sistema da solo: non serve una
+preferenza nostra.
+
+### I test
+`src/lib/__tests__/aptica.test.js` (12: il vocabolario sul ramo nativo acceso a
+mano), `src/__tests__/apticaPunti.test.jsx` (7: alert, soglia del foglio,
+interruttore, scelta già attiva, slider RPE) e uno in `HomeRecap.test.jsx`
+(completare vibra UNA volta). **Dodici mutazioni provate, dodici prese.**
+⚠️ Si sente solo sul telefono: il Simulatore non ha il Taptic Engine.
 
 ---
 

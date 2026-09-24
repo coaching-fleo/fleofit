@@ -18,7 +18,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { X, Copy, Wand2, Plus, Minus, Keyboard, Clock, ChevronRight } from 'lucide-react'
 import { CARD, LABEL, VETRO } from '../lib/stiliCard'
 import { useTastieraAperta, chiudiTastieraSuInvio } from '../useTastiera'
-import { battito } from '../lib/aptica'
+import { battito, vibraScelta } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
 import { minutiStimati, decimale } from '../lib/stimaWorkout'
 import { Puntini } from './Puntini'
@@ -64,7 +64,7 @@ export function TestataCrea({ passo, onIndietro, titolo, sottotitolo, onTitolo }
 // corsia di colore e una riga che dice cosa aspettarsi.
 export function CardCategoria({ attiva, colore, testoSuColore = '#fff', icona: Icona, nome, descrizione, onClick }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={attiva}
+    <button type="button" onClick={() => { if (!attiva) vibraScelta(); onClick() }} aria-pressed={attiva}
       className={`relative overflow-hidden rounded-[22px] px-[18px] py-[17px] flex items-center gap-3.5 text-left
                   transition active:scale-[.995] ${
         attiva
@@ -459,7 +459,7 @@ export function Stepper({
                      font-mono focus:outline-none focus:border-brand" />
       ) : (
         <div className="flex items-center gap-3">
-          <button type="button" aria-label={`Diminuisci ${etichetta}`} onClick={() => onPasso?.(-1)} disabled={!onPasso}
+          <button type="button" aria-label={`Diminuisci ${etichetta}`} onClick={() => { battito(); onPasso?.(-1) }} disabled={!onPasso}
             className={`shrink-0 w-[46px] h-[46px] rounded-[14px] ${VETRO} flex items-center justify-center text-white
                         hover:border-white/25 transition active:scale-95 disabled:opacity-30`}>
             <Minus size={20} aria-hidden="true" />
@@ -469,7 +469,7 @@ export function Stepper({
               className="font-mono text-[38px] font-extrabold tracking-[-.01em] text-white leading-none">{numero}</span>
             {unita && <span className="text-[15px] font-bold text-muted pl-1">{unita}</span>}
           </div>
-          <button type="button" aria-label={`Aumenta ${etichetta}`} onClick={() => onPasso?.(1)} disabled={!onPasso}
+          <button type="button" aria-label={`Aumenta ${etichetta}`} onClick={() => { battito(); onPasso?.(1) }} disabled={!onPasso}
             className={`shrink-0 w-[46px] h-[46px] rounded-[14px] ${VETRO} flex items-center justify-center text-white
                         hover:border-white/25 transition active:scale-95 disabled:opacity-30`}>
             <Plus size={20} aria-hidden="true" />
@@ -480,7 +480,7 @@ export function Stepper({
       {opzioni.length > 0 && (
         <div className="flex gap-[7px]">
           {opzioni.map(o => (
-            <button key={o} type="button" onClick={() => onChange(o)}
+            <button key={o} type="button" onClick={() => { if (!attivo(o)) vibraScelta(); onChange(o) }}
               className={`flex-1 min-w-0 min-h-11 rounded-xl font-mono text-[13px] font-extrabold tracking-[.01em]
                           flex items-center justify-center truncate px-1 border transition ${
                 attivo(o) ? '' : 'bg-white/[.055] border-white/10 text-[#c9ccd4] hover:border-white/20'
@@ -622,7 +622,7 @@ export function RuotaValori({ etichetta, valore, generi, onChange }) {
       {generi.length > 1 && (
         <div className="flex gap-1.5 p-1 rounded-2xl bg-black/40 border border-white/[.06]">
           {generi.map(g => (
-            <button key={g.id} type="button" onClick={() => setGenereScelto(g.id)}
+            <button key={g.id} type="button" onClick={() => { if (g.id !== genere.id) vibraScelta(); setGenereScelto(g.id) }}
               aria-pressed={g.id === genere.id}
               className={`flex-1 min-w-0 min-h-10 rounded-xl text-[12.5px] font-extrabold truncate px-2 transition ${
                 g.id === genere.id ? 'bg-white/[.09] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.08)]' : 'text-muted hover:text-gray-300'
@@ -655,7 +655,7 @@ export function RuotaValori({ etichetta, valore, generi, onChange }) {
             const distanza = Math.abs(i - indice)
             return (
               <button key={o.valore} type="button" role="option" aria-selected={i === indice}
-                onClick={() => onChange(o.valore)}
+                onClick={() => { if (o.valore !== valore) battito(); onChange(o.valore) }}
                 style={{
                   width: larghezza,
                   fontSize: distanza === 0 ? dimensione : distanza === 1 ? Math.round(dimensione * 0.6) : Math.round(dimensione * 0.52),

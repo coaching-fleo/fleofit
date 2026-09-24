@@ -16,6 +16,7 @@ import { Media } from '@capacitor-community/media'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 import { Network } from '@capacitor/network'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
+import { vibraRichiamo, vibraSuccesso } from '../lib/aptica'
 
 // 🔴 jspdf e html-to-image si caricano SOLO quando si esporta, e non è una
 // rifinitura: importati in testa finivano nel chunk della scheda, che pesava
@@ -534,6 +535,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       setEditingNote(rpeNotes)
       setAthleteNote({ text: rpeNotes, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), gradimento: athleteNote?.gradimento ?? null, athleteName: athleteNote?.athleteName || '' })
       setShowRpeModal(false)
+      vibraSuccesso()
 
       // ⚠️ Il recap è solo di chi si è allenato. Da questa stessa pagina il
       // coach può segnare completato l'allenamento di un atleta, e la
@@ -605,6 +607,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       setAssignModalOpen(false)
             setSelectedAthletes([])
       setAssignStep(1)
+      // «Workout Assegnato!» è una modale sua, non un CustomAlert: vibra qui.
+      vibraSuccesso()
       setShowSuccessModal(true)
       fetchWorkout()
     }
@@ -2212,8 +2216,10 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
       setReaction(payload.payload.emoji);
       setReactionType('emoji');
       setReactionVisible(true);
-      // La vibrazione è un di più: se il browser non la espone si va avanti.
-      try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch { /* opzionale */ }
+      // Il coach ti chiama: due colpi netti, che si sentono col telefono in
+      // tasca. Su iPhone `navigator.vibrate` non esiste, e fino al 24/09/2026
+      // questa reazione non aveva mai vibrato.
+      vibraRichiamo();
       reactionTimeoutRef.current = setTimeout(() => {
         setReactionVisible(false);
         reactionTimeoutRef.current = setTimeout(() => setReaction(null), 500);
@@ -2225,8 +2231,7 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
         setReaction('🎙️');
         setReactionType('voice');
         setReactionVisible(true);
-        // La vibrazione è un di più: se il browser non la espone si va avanti.
-        try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch { /* opzionale */ }
+        vibraRichiamo();
         const audio = new Audio(audioUrl);
         const closeVoice = () => {
            setReactionVisible(false);

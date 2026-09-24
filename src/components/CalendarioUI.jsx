@@ -15,6 +15,7 @@ import { ChevronLeft, ChevronRight, Plus, Search, Check } from 'lucide-react'
 import { CARD, CARTA_RIGA, CARTA_RIGA_BASE, LABEL, RIGA, VETRO } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 import { coloreCategoria } from '../lib/colori'
+import { vibraScelta } from '../lib/aptica'
 
 /**
  * Il verde di «fatto».
@@ -195,7 +196,7 @@ export function CellaGiorno({ numero, segno, selezionato, oggi, etichetta, onCli
     : 'text-[#6c7280] font-bold'
 
   return (
-    <button onClick={onClick} aria-label={etichetta}
+    <button onClick={() => { if (!selezionato) vibraScelta(); onClick() }} aria-label={etichetta}
       aria-pressed={selezionato} {...(oggi ? { 'aria-current': 'date' } : {})}
       className={`aspect-square rounded-[13px] flex flex-col items-center justify-center gap-[5px]
                   transition ${sfondo} ${oggi && !selezionato ? 'ring-1 ring-white/25' : ''}`}>

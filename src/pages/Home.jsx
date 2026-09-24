@@ -11,7 +11,7 @@ import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { createPortal } from 'react-dom'
 import { App as CapacitorApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
-import { Haptics, ImpactStyle } from '@capacitor/haptics'
+import { battito, vibraPresa, vibraSuccesso } from '../lib/aptica'
 import { Network } from '@capacitor/network'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { leggiJson, scriviJson, leggiCoda, accodaSuStorage, chiaveCacheWorkout, CHIAVE_CODA } from '../lib/offlineQueue'
@@ -250,7 +250,7 @@ export default function Home() {
     if (oltre !== s.oltre) {
       s.oltre = oltre
       // Un colpetto quando si attraversa la soglia: lo senti prima di lasciare.
-      if (oltre && Capacitor.isNativePlatform()) Haptics.impact({ style: ImpactStyle.Light }).catch(() => {})
+      if (oltre) battito()
     }
   }
 
@@ -276,7 +276,7 @@ export default function Home() {
     // Oltre la soglia: l'animazione VA FINO IN FONDO. La card esce di scena e il
     // pannello verde riempie tutto lo spazio; solo a movimento concluso si apre
     // la richiesta dell'RPE. Aprirla subito interrompeva il gesto a metà.
-    if (Capacitor.isNativePlatform()) Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {})
+    vibraPresa()
     if (pannello) { pannello.style.transition = 'opacity 0.12s ease-out'; pannello.style.opacity = '1' }
     el.style.transition = 'transform 0.34s cubic-bezier(0.32, 0.72, 0, 1)'
     el.style.transform = `translate3d(${el.offsetWidth}px,0,0)`
@@ -968,6 +968,8 @@ setNotifications(prev => {
     }))
 
     setShowRpeModal(false)
+    // L'allenamento è chiuso: è l'esito più atteso dell'app, e si sente.
+    vibraSuccesso()
 
     // Il recap è dell'ATLETA che si è appena allenato, non di chi guarda: il
     // coach che spunta un allenamento in anteprima non ha niente da

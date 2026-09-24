@@ -26,6 +26,7 @@ import { coloreCategoria } from '../lib/colori'
 import { useNumeroCheSale } from '../useNumeroCheSale'
 import { useBottomSheet } from '../useBottomSheet'
 import { menoMovimento } from '../useNumeroCheSale'
+import { vibraScelta } from '../lib/aptica'
 
 /** Il triplo `r g b` che `.alone` vuole nella sua variabile. */
 const rgbDi = (hex) => {
@@ -425,7 +426,7 @@ function SchedaGradimento({ colore, scelta, onScegli }) {
   const voce = (valore, Icona, etichetta) => {
     const attiva = mostrata === valore
     return (
-      <button type="button" onClick={() => onScegli?.(valore)} aria-pressed={attiva}
+      <button type="button" onClick={() => { if (!attiva) vibraScelta(); onScegli?.(valore) }} aria-pressed={attiva}
         className={`${CARD} min-h-[136px] rounded-3xl flex flex-col items-center justify-center gap-3 px-3
                     transition active:scale-[.97]`}
         style={attiva ? { borderColor: colore, background: `${colore}2e`, boxShadow: `0 0 0 1px ${colore}` } : undefined}>

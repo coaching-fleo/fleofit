@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, Check } from 'lucide-react'
 import { registraAlertHost } from '../lib/alert'
+import { vibraErrore, vibraSuccesso } from '../lib/aptica'
 import {
   BOLLA_MODALE, BOTTONE_BRAND, BOTTONE_QUIETO, CARTA_MODALE,
   TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA,
@@ -28,6 +29,18 @@ function Bolla({ tono, children }) {
 }
 
 export function CustomAlert({ info, onClose }) {
+  // L'esito si SENTE nell'istante in cui compare, come una notifica di sistema:
+  // è l'unico punto da cui passano tutti gli alert dell'app — quelli di
+  // mostraErrore/mostraSuccesso e quelli locali di otto pagine — quindi è qui
+  // che la vibrazione non può essere dimenticata da nessun chiamante.
+  // ⚠️ Chi mostra un alert di successo NON chiami anche `vibraSuccesso()`: due
+  // notifiche in fila per lo stesso esito si leggono come un errore.
+  useEffect(() => {
+    if (!info) return
+    if (info.type === 'error') vibraErrore()
+    else vibraSuccesso()
+  }, [info])
+
   if (!info) return null
   const errore = info.type === 'error'
   return (

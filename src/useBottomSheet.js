@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { battito } from './lib/aptica'
 
 /**
  * Un bottom sheet che si comporta come quelli di iOS: entra dal basso, si
@@ -108,6 +109,10 @@ export function useBottomSheet(onChiudi, { soglia = SOGLIA_CHIUSURA, durata = 30
   const muoviA = (y) => {
     // Solo verso il basso: tirare in su non alza il foglio oltre il suo posto.
     const giu = Math.max(0, y)
+    // Un colpetto quando il trascinamento attraversa la soglia, nei due versi:
+    // il dito sa PRIMA di lasciare se il foglio si chiuderà o tornerà su. È lo
+    // stesso gesto dello swipe di completamento in Home.
+    if ((offsetRef.current > soglia) !== (giu > soglia)) battito()
     offsetRef.current = giu
     setOffset(giu)
   }

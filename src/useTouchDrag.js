@@ -1,4 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react'
+import { battito, vibraPresa } from './lib/aptica'
 
 /**
  * useTouchDrag — drag & drop touch-native per iOS/Android
@@ -88,7 +89,9 @@ export function useTouchDrag({ onReorder }) {
 
     document.addEventListener('touchmove', preventScroll, { passive: false })
 
-    if (navigator.vibrate) navigator.vibrate(40)
+    // Il dito deve SENTIRE di aver preso il blocco: su iPhone `navigator.vibrate`
+    // non esiste, e questa presa non aveva mai vibrato.
+    vibraPresa()
   }, [collectRects, createGhost, preventScroll])
 
   const getTouchHandlers = useCallback((index) => ({
@@ -144,6 +147,8 @@ export function useTouchDrag({ onReorder }) {
 
       if (targetIdx !== lastTargetIdx.current) {
         onReorder(dragIdx.current, targetIdx)
+        // Un blocco scavalcato è un gradino: lo si sente senza guardare.
+        battito()
         dragIdx.current = targetIdx
         lastTargetIdx.current = targetIdx
         // Ricalcola i rect dopo il riordino

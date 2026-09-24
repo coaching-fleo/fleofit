@@ -8,6 +8,7 @@ import { Browser } from '@capacitor/browser'
 import { SignInWithApple } from '@capacitor-community/apple-sign-in'
 import { generaNonce, nomeDaApple, annullatoDallUtente } from '../lib/appleLogin'
 import { leggiJson } from '../lib/offlineQueue'
+import { vibraErrore, vibraSuccesso } from '../lib/aptica'
 import {
   normalizzaCodice, codiceCompleto, LUNGHEZZA_CODICE,
   AVVISO_CODICE_RIFIUTATO, AVVISO_CODICE_OFFLINE,
@@ -105,14 +106,17 @@ export default function Login() {
       .maybeSingle()
     setVerificando(false)
 
-    if (error) return setAvviso(AVVISO_CODICE_OFFLINE)
-    if (!data) return setAvviso(AVVISO_CODICE_RIFIUTATO)
+    // L'esito si SENTE: la verifica parte da sola all'ottavo carattere, quindi
+    // non c'è un bottone premuto che dica «ora sta rispondendo».
+    if (error) { vibraErrore(); return setAvviso(AVVISO_CODICE_OFFLINE) }
+    if (!data) { vibraErrore(); return setAvviso(AVVISO_CODICE_RIFIUTATO) }
 
     // Da qui in poi il codice vive in localStorage: è `ProtectedRoute` a
     // riscattarlo (UPDATE con `used_by`), perché quella scrittura richiede una
     // sessione e a questo punto la sessione non c'è ancora.
     localStorage.setItem('fleofit_invite_code', data.code)
     setInvito(data.code)
+    vibraSuccesso()
   }, [])
 
   useEffect(() => {

@@ -17,6 +17,7 @@ import { CARD, LABEL, RIGA, CARTA_RIGA_BASE, VETRO, TONO_VERDETTO } from '../lib
 import { corsia } from '../lib/categorie'
 import { decimale, oreMinuti, VERDETTI } from '../lib/reportSettimanale'
 import { useNumeroCheSale } from '../useNumeroCheSale'
+import { vibraScelta } from '../lib/aptica'
 
 // ── Pezzi minuti, non esportati ───────────────────────────────────────────
 
@@ -249,7 +250,7 @@ export function BentoSettimana({ squadra }) {
  */
 export function FasciaAzioni({ testo, dettaglio, attiva, onApri }) {
   return (
-    <button onClick={onApri} aria-pressed={attiva}
+    <button onClick={() => { vibraScelta(); onApri() }} aria-pressed={attiva}
       className={`w-full text-left mt-4 rounded-[18px] px-4 py-3.5 flex items-center gap-3.5 transition
                   bg-gradient-to-r from-orange-500/10 to-orange-500/[.02]
                   shadow-[inset_0_1px_0_rgba(255,255,255,.05)]

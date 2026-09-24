@@ -25,7 +25,7 @@ import { createPortal } from 'react-dom'
 import { X, Download, Send, Loader2 } from 'lucide-react'
 import { coloreCategoria, conVelo, BRAND } from '../lib/colori'
 import { useBottomSheet } from '../useBottomSheet'
-import { battito } from '../lib/aptica'
+import { vibraScelta } from '../lib/aptica'
 
 /**
  * La misura della grafica in punti CSS. Esportata a `FATTORE_STORIA` dà
@@ -446,7 +446,7 @@ export function FoglioStoria({ recap, sfondo, onSfondo, onChiudi, onSalva, onCon
   const riquadro = useRef(null)
   const scala = useScalaAnteprima(riquadro)
 
-  const cambiaSfondo = (valore) => { battito(); onSfondo(valore) }
+  const cambiaSfondo = (valore) => { if (valore !== sfondo) vibraScelta(); onSfondo(valore) }
 
   return createPortal(
     <div className={`fixed inset-0 z-[120] flex flex-col justify-end bg-black/90 touch-none ${classeVelo}`}

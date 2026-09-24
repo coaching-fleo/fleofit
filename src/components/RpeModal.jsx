@@ -9,6 +9,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Puntini } from './Puntini'
 import { CARD } from '../lib/stiliCard'
+import { battito } from '../lib/aptica'
 
 export default function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving }) {
   const [isFocused, setIsFocused] = useState(false);
@@ -29,6 +30,7 @@ export default function RpeModal({ score, onScoreChange, notes, onNotesChange, o
     
     if (String(newValue) !== String(score)) {
       onScoreChange(String(newValue));
+      battito();
     }
   };
 
