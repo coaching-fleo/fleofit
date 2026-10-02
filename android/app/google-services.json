@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1079747935630",
+    "project_id": "fleofit-9e2c1",
+    "storage_bucket": "fleofit-9e2c1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1079747935630:android:27820dbdcb6aff0b5cb8df",
+        "android_client_info": {
+          "package_name": "it.federicoleo.fleofit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAC3wTorrOzzqfn3zhGOa7C2MAM0KjtNiQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

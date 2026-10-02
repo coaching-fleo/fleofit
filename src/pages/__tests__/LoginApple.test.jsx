@@ -76,7 +76,7 @@ beforeEach(() => {
   ctrl.opzioni = null
   // Il bottone Apple esiste solo sul nativo, e `Login.jsx` lo decide da
   // window.Capacitor — non dal modulo @capacitor/core, che il setup finge web.
-  window.Capacitor = { isNativePlatform: () => true }
+  window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios' }
 })
 afterEach(() => { delete window.Capacitor })
 

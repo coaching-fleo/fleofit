@@ -421,13 +421,19 @@ body {
      🔴 È DUPLICATO IN index.html, e deve restare identico: il pre-disegno lo
      dipinge prima che questo foglio esista. C'è un test che li confronta. */
   background: radial-gradient(120% 88% at 32% 34%, #2b2210 0%, #16130b 45%, #0B0B0B 100%);
-  clip-path: ellipse(80% 208% at 30% 0%);
   /* ⚠️ La luce ambra sul bordo esiste per il PRIMO fotogramma dell'uscita,
      quando sotto non è ancora comparso niente e un bordo fra due neri sarebbe
      invisibile. Dopo, il contrasto lo fa la Home che si scopre.
      ⚠️ `drop-shadow` e non `box-shadow`: box-shadow segue il rettangolo, non
-     la forma ritagliata — disegnerebbe una luce dritta sotto una curva. */
-  filter: drop-shadow(0 2px 12px rgb(241 186 23 / .42));
+     la forma ritagliata — disegnerebbe una luce dritta sotto una curva.
+     🔴 LUCE E RITAGLIO STANNO SU `.apertura-esce`, NON QUI (02/10/2026,
+     Android). Registrando l'avvio sull'emulatore, un `clip-path` su questa
+     superficie a schermo intero faceva saltare la rasterizzazione alla
+     WebView: un riquadro dalla scritta «FIT» all'angolo in basso a destra non
+     veniva dipinto, e ci si vedeva la Home. Da ferma la superficie copre lo
+     schermo comunque, quindi il ritaglio serve solo durante la risalita.
+     L'altra metà della correzione è in Apertura.jsx: il marchio non sta più
+     DENTRO questo elemento. */
 }
 
 /* 🔴 L'USCITA, IN TRE TEMPI COME NEL RIFERIMENTO: il marchio se ne va (260ms),
@@ -450,7 +456,10 @@ body {
 @keyframes aperturaMarchioVia {
   to { opacity: 0; transform: translateY(-14px); }
 }
-.apertura-esce { animation: aperturaArco .43s .39s cubic-bezier(.33, 1, .68, 1) both; }
+.apertura-esce {
+  animation: aperturaArco .43s .39s cubic-bezier(.33, 1, .68, 1) both;
+  filter: drop-shadow(0 2px 12px rgb(241 186 23 / .42));
+}
 .apertura-marchio-via { animation: aperturaMarchioVia .26s cubic-bezier(.33, 1, .68, 1) both; }
 
 /* Nessuna si esegue per chi ha chiesto meno movimento. */

@@ -77,6 +77,8 @@ export default function Login() {
   // averlo: è la stessa regola del badge sulla navbar (CLAUDE.md §9-quaterdecies)
   // e del pannello filtri dell'archivio (§9-sedecies).
   const isNativo = typeof window !== 'undefined' && !!window?.Capacitor?.isNativePlatform?.()
+  // Sign in with Apple esiste solo su iOS: su Android il plugin non ha implementazione.
+  const isIOS = isNativo && window?.Capacitor?.getPlatform?.() === 'ios'
 
   // Gli appunti si LEGGONO solo dove il browser lo permette: senza `readText`
   // il bottone «Incolla» non potrebbe fare niente, e sotto le caselle c'è
@@ -401,7 +403,7 @@ export default function Login() {
 
   const modiPerEntrare = (dentroIlPasso2 = false) => (
     <div className="flex flex-col gap-2.5">
-      {isNativo && (
+      {isIOS && (
         <BottoneIdentita
           icona={<IconaApple />} etichetta="Continua con Apple"
           onClick={entraConApple} disabled={loading}

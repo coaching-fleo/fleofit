@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FLEOFIT</string>
+    <string name="title_activity_main">FLEOFIT</string>
+    <string name="package_name">it.federicoleo.fleofit</string>
+    <string name="custom_url_scheme">it.federicoleo.fleofit</string>
+</resources>

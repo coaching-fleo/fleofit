@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, createContext, useContext, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { App as CapacitorApp } from '@capacitor/app'
@@ -44,6 +44,7 @@ import { mostraErrore } from './lib/alert'
 import { rinfrescaTokenPush } from './lib/pushToken'
 import { scriviJson } from './lib/offlineQueue'
 import { sincronizzaBadge } from './lib/badge'
+import { gestisciIndietro, puoTornareIndietro } from './lib/indietroAndroid'
 
 function Onboarding({ user, onComplete }) {
   // L'onboarding del ruolo coach è disattivato: qui il ruolo è sempre 'athlete'.
@@ -435,12 +436,23 @@ function ScrollInCima() {
 
 function DeeplinkHandler() {
   const navigate = useNavigate();
+  // 🔴 GLI ASCOLTATORI SI REGISTRANO UNA VOLTA SOLA (02/10/2026).
+  // L'effetto dipendeva da `navigate`, che con BrowserRouter cambia identità a
+  // OGNI cambio di pagina, e non aveva cleanup: ogni navigazione aggiungeva un
+  // altro ascoltatore. Scoperto su Android, dove un tasto indietro tornava di
+  // DUE pagine; ma valeva anche su iOS per il tocco su una notifica e per il
+  // deep link, gestiti tante volte quante pagine si erano aperte, e per il
+  // rinfresco del token push, rifatto a ogni navigazione. Ora `navigate` passa
+  // da un ref e l'effetto ha un cleanup che li toglie.
+  const vaiA = useRef(navigate);
+  useEffect(() => { vaiA.current = navigate }, [navigate]);
 
   useEffect(() => {
     const isNative = typeof window !== 'undefined' && !!window?.Capacitor?.isNativePlatform?.();
+    const ascolti = [];
 
     if (isNative) {
-      CapacitorApp.addListener('appUrlOpen', async (event) => {
+      ascolti.push(CapacitorApp.addListener('appUrlOpen', async (event) => {
         const url = new URL(event.url);
         if (url.protocol === 'fleofit:') {
           Browser.close().catch(() => {});
@@ -457,12 +469,12 @@ function DeeplinkHandler() {
           if (accessToken && refreshToken) {
             // 3. Forza la creazione della sessione in Supabase in modo esplicito
             const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-            if (!error) return navigate('/', { replace: true });
+            if (!error) return vaiA.current('/', { replace: true });
           }
           
-          navigate(`/login${url.search}${url.hash}`, { replace: true });
+          vaiA.current(`/login${url.search}${url.hash}`, { replace: true });
         }
-      });
+      }));
 
       // 3-bis. Tiene fresco il token push: i token cambiano da soli e senza
       // questo l'utente smetteva di ricevere le notifiche in silenzio.
@@ -470,11 +482,26 @@ function DeeplinkHandler() {
         if (data?.session?.user?.id) rinfrescaTokenPush(data.session.user.id)
       }).catch(() => {})
 
+      // 3-ter. Il tasto indietro di Android: chiude prima la modale aperta, e
+      // solo senza modali torna alla pagina precedente (src/lib/indietroAndroid.js).
+      if (Capacitor.getPlatform() === 'android') {
+        ascolti.push(CapacitorApp.addListener('backButton', () => {
+          gestisciIndietro({
+            puoTornare: puoTornareIndietro(),
+            torna: () => window.history.back(),
+            // Dalla prima pagina l'app va in secondo piano invece di chiudersi,
+            // come fa Android 12+ con le app di sistema: riaprendola non si
+            // rifà tutta l'apertura.
+            esci: () => CapacitorApp.minimizeApp().catch(() => CapacitorApp.exitApp()),
+          })
+        }));
+      }
+
       // 4. Ascolta il "Tap" (tocco) dell'utente su una notifica push in entrata
-      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+      ascolti.push(PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
         const data = notification.notification.data;
         if (data && data.route) {
-          navigate(data.route);
+          vaiA.current(data.route);
         }
         const markAsRead = async () => {
           try {
@@ -493,9 +520,11 @@ function DeeplinkHandler() {
           } catch (e) { console.error(e); }
         };
         markAsRead();
-      });
+      }));
     }
-  }, [navigate]);
+    // ⚠️ `addListener` torna una PROMESSA di handle: si toglie quando arriva.
+    return () => ascolti.forEach(p => p.then(h => h.remove()).catch(() => {}));
+  }, []);
 
   return null;
 }
@@ -507,7 +536,10 @@ function App() {
         try {
           // Forza l'orologio bianco e rimuove la barra extra della tastiera web
           await StatusBar.setStyle({ style: Style.Dark })
-          await Keyboard.setAccessoryBarVisible({ isVisible: false })
+          // ⚠️ La barra accessoria esiste solo su iOS: su Android la chiamata
+          // RIFIUTA, e senza il catch il `try` saltava tutto ciò che segue —
+          // compreso l'ascolto di appStateChange che pulisce le notifiche.
+          await Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => {})
           
              PushNotifications.removeAllDeliveredNotifications().catch(() => {});
 

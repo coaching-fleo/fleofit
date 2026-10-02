@@ -12,7 +12,7 @@ import { useAuth } from '../App'
 import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
-import { Media } from '@capacitor-community/media'
+import { salvaInGalleria } from '../lib/galleria'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 import { Network } from '@capacitor/network'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
@@ -1090,7 +1090,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         })
         
         try {
-          await Media.savePhoto({ path: result.uri })
+          await salvaInGalleria(result.uri, fileName)
           setAlertInfo({ title: 'Salvato!', message: 'La grafica IG è stata salvata direttamente nella tua galleria fotografica.', type: 'success' })
         } catch {
           setAlertInfo({ title: 'Errore', message: 'Permesso negato o errore durante il salvataggio in galleria.', type: 'error' })
@@ -1156,7 +1156,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           path: nomeFile, data: dataUrl.split(',')[1], directory: Directory.Cache,
         })
         if (modo === 'galleria') {
-          await Media.savePhoto({ path: file.uri })
+          await salvaInGalleria(file.uri, nomeFile)
           setAlertInfo({
             title: 'Salvata',
             message: storiaSfondo

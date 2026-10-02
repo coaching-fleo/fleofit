@@ -43,6 +43,9 @@ const config: CapacitorConfig = {
   ios: {
     backgroundColor: '#0B0B0B'
   },
+  android: {
+    backgroundColor: '#0B0B0B'
+  },
 
   plugins: {
     PushNotifications: {

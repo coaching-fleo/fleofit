@@ -102,10 +102,16 @@ export function Apertura({ pronto, onFine }) {
   }, [esce, onFine])
 
   return (
-    <div
-      aria-hidden="true"
-      className={`apertura fixed inset-0 z-[200] ${esce ? 'apertura-esce' : ''}`}
-    >
+    // 🔴 IL FONDO RITAGLIATO E IL MARCHIO SONO FRATELLI, NON PADRE E FIGLIO
+    // (02/10/2026, Android). Con il marchio DENTRO l'elemento che anima il
+    // `clip-path`, la WebView di Android smetteva di dipingere un riquadro che
+    // partiva da «FIT» e arrivava all'angolo in basso a destra: il marchio
+    // diventa un livello GPU appena anima, e il ritaglio dell'antenato su un
+    // figlio composto è ciò che il compositore sbagliava. Registrato
+    // sull'emulatore, e nella fessura si vedeva la Home. Il marchio non ha
+    // bisogno del ritaglio: se ne va prima che l'arco parta.
+    <div aria-hidden="true" className="fixed inset-0 z-[200]">
+      <div className={`apertura absolute inset-0 ${esce ? 'apertura-esce' : ''}`} />
       {/* Il marchio, con la Regola del Logo di DESIGN.md: `FLEO` bianco,
           `FIT` ambra, peso 900, in un h1 solo.
           ⚠️ CENTRATO, e una stesura precedente lo metteva al 38% per paura che
