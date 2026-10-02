@@ -1,91 +1,41 @@
-# FLEOFIT — Cose da fare
+# FLEOFIT Android — Cose da fare
 
-> Stato al **22 settembre 2026**. `npm test` → **1025** · `npm run lint` → **41**.
-> ⭐ Il 22/09 è nato il **recap post-allenamento** (CLAUDE.md §9-quadragies): chiudere un
-> allenamento apre quattro schede in stile storie — la seduta appena fatta, la settimana,
-> l'andamento a otto settimane, il prossimo passo — con gli stati per il primo allenamento
-> di sempre e per chi non ha ancora niente in programma. Le schede **avanzano da sole**
-> come in una storia, si tocca a destra e a sinistra e si tiene premuto per fermarle. Ne escono la voce **54** (un
-> difetto che il recap ha reso visibile e che non era suo, **chiusa il 23/09**) e la
-> voce **55**.
-> 🔴 **Il 20/09 App Store ha respinto la 1.0 (5) con TRE rilievi**, e **due si chiudono
-> su App Store Connect, non qui**: sono le voci **8**, **9** e **10** della tabella sotto, e
-> senza di esse la build successiva viene respinta uguale con il codice perfetto.
-> Il terzo — **2.5.1**, HealthKit linkato al binario senza una funzione primaria che lo
-> giustifichi — è **chiuso il 21/09**: Apple Health tolto da tutte e cinque le porte
-> (CLAUDE.md §9-quatertricies). Ne esce la voce **50**.
-> 🔴 Prima della prossima build restano **due gesti a mano**, le voci 4-bis e 6 qui sotto:
-> senza codici invito nelle note per App Review, il revisore che prova Sign in with Apple
-> — cioè la correzione che gli hai promesso — **non entra**.
-> 🔴 Il 02/09 App Store ha respinto la 1.1.0 (3) sulla **4.8 — Login Services**, e il 03/09
-> è nato **Sign in with Apple** accanto a Google, che resta (CLAUDE.md §9-sexvicies).
-> ⚠️ Restano **due passi da fare a mano** prima della build: sono la voce 5 qui sotto.
-> ⭐ Il 02/09 è nato il **modello predittivo del carico** (§9-quatervicies): il builder dice
-> quanto pesa la seduta, il foglio di assegnazione cosa fa a chi la riceve. Fasi 1 e 2
-> chiuse (27-quinquies), le 3 e 4 aperte. 🔴 Ne è uscita la voce **40**: i due stimatori di
-> durata del progetto divergono dell'**89%** su un «For Time».
-> ⭐ Il 01/09 è nato il **report settimanale del coach** (`/report`), primo schermo
-> riservato al coach e prima volta che l'app dice chi scaricare e chi caricare: #27 chiuso
-> nella parte che i dati permettono (CLAUDE.md §9-vicies).
-> ⭐ Il 04/09 è stato rifatto l'**accesso** (CLAUDE.md §9-septvicies): via il bivio «Accedi /
-> Nuovo Utente», il codice invito diventa il passo 2 e lo si chiede solo a chi serve. 🔴 Il
-> vicolo cieco vero stava in `App.jsx`: chi entrava con Apple o Google senza profilo — il caso
-> normale di un nuovo invitato — riceveva «Accesso Negato» e il codice non gli veniva **mai**
-> chiesto. Ne escono le voci **47**, **48** e **49**.
-> Undici schermate rifatte su design di Claude Design: le due Home (atleta il 26/08, coach il
-> 27/08), **Crea Workout** il 27/08, la **scheda del workout** e la **scheda atleta** il 28/08,
-> l'**archivio**, la **rubrica atleti** e il **calendario** il 31/08, le **impostazioni** il
-> 01/09, più il foglio **«Genera con IA»** il 28/08: CLAUDE.md §9-octies, §9-nonies,
-> §9-undecies, §9-duodecies, §9-terdecies, §9-quindecies, §9-sedecies, §9-septdecies,
-> §9-octodecies e §9-duoetvicies.
-> Ultimo commit `5d10ad1` su `ios-version`; il lavoro del 02/09 non è ancora committato. Aggiornare questo file quando una voce si chiude o
-> se ne apre una nuova. Ogni voce dice *cosa*, *perché conta* e *cosa la blocca*:
-> senza il perché, fra sei mesi nessuno saprà se vale ancora la pena.
+> Stato al **2 ottobre 2026**. `npm test` → **1085** · `npm run lint` → **41**.
+> 🤖 **Questo è il backlog dell'app ANDROID** (branch `android-version`, nato il 02/10/2026
+> da `ios-version`). Le voci sull'App Store, Xcode e Sign in with Apple stanno nel
+> `BACKLOG.md` di `ios-version`, nell'altra cartella. Le voci sul codice condiviso (dati,
+> debito tecnico, schermate) restano qui perché valgono per tutte e due le app: chi ne chiude
+> una deve ricordarsi che sull'altro branch resta aperta.
 >
-> Contesto tecnico completo: [CLAUDE.md](CLAUDE.md) · Verità di prodotto:
+> Ogni voce dice *cosa*, *perché conta* e *cosa la blocca*: senza il perché, fra sei mesi
+> nessuno saprà se vale ancora la pena. Aggiornare questo file quando una voce si chiude o
+> se ne apre una nuova.
+>
+> Contesto tecnico completo: [CLAUDE.md](CLAUDE.md) (per Android il §A) · Verità di prodotto:
 > [PRODUCT.md](PRODUCT.md) · Design system: [DESIGN.md](DESIGN.md)
 
 ---
 
-## ✅ Prima della submission App Store — i tre controlli sono chiusi
+## 🤖 Android
 
-> Chiusi il 26/08/2026. Restano qui, barrati, perché **vanno rifatti a ogni build
-> nuova**: sono controlli sul binario, non sul sorgente, e il sorgente giusto non
-> garantisce il binario giusto. Il comando per rifarli tutti è più sotto.
-
-| # | Cosa | Perché |
+| # | Cosa | Perché conta / cosa la blocca |
 |---|---|---|
-| ~~1~~ | ✅ **CHIUSO il 26/08/2026.** `aps-environment = production`, `get-task-allow` assente, bundle id senza il suffisso `.dev`. Verificato sull'`.ipa` esportato con `tools/verifica-ipa.sh`, non sul sorgente | L'archivio dichiara `development` ed è **normale**: è firmato col profilo di sviluppo del team, ed è l'*export* che rifirma con quello di distribuzione. Guardare l'archivio non risponde alla domanda |
-| ~~2~~ | ✅ **CHIUSO il 26/08/2026.** Tutte e cinque le email di `ADMIN_EMAILS` sono nel binario spedito, `demo@fleofit.it` compresa | È il controllo che è mancato a maggio e che ha causato il rifiuto 2.3.1(a). ⚠️ In un'app Capacitor il bundle sta in `App.app/public/assets`, **non** nella radice del `.app`: cercare nel posto sbagliato dà un falso negativo, ed è successo |
-| ~~3~~ | ✅ **CHIUSO il 26/08/2026.** `demo@fleofit.it` assegna un workout, provato dall'app. È il rilievo che ha causato il rifiuto **2.3.1(a)** di maggio: l'account dato ad Apple era inerte | Il gesto attraversa **tre porte distinte**, tutte verificate anche sul database vivo: INSERT su `athlete_workouts` (`with_check`), il `.select('id')` sulle righe inserite (`qual`) e `send-reminders` mode `immediate` (`_shared/admin.ts`). Falliscono in modi diversi: errore a schermo → l'INSERT; workout assegnato ma nessuna push → `send-reminders`; nessun errore ma niente in tabella → il `.select`. Query in `tools/verifica-revisore.sql` |
-| 4 | **`npm run ios`** (build + sync) prima di **qualunque** compilazione da Xcode, non solo prima dell'archive | Xcode compila `ios/App/App/public`, che è una copia del bundle: senza sync costruisce con il codice della sincronizzazione precedente. Successo il 26/08/2026 — una funzione appena rimossa continuava a comparire nell'app, e sembrava che la modifica non avesse funzionato. Lo script `npm run ios` esiste per questo |
-| 5 | 🔴 **Sign in with Apple: capability sui DUE App ID + Client IDs su Supabase** — Apple Developer → Identifiers → `it.federicoleo.fleofit` **e** `it.federicoleo.fleofit.dev` → spunta *Sign In with Apple*; poi Supabase → Authentication → Providers → Apple → Enable, **Client IDs** = `it.federicoleo.fleofit,it.federicoleo.fleofit.dev`, **Secret Key vuoto**; poi in Xcode → Signing & Capabilities → + Sign in with Apple, su Debug e Release; e **Product → Clean Build Folder** prima di ricompilare | Senza, il bottone c'è e il login non entra — ed è **esattamente il rilievo 4.8 che ha causato il rifiuto del 02/09**, con in più l'aggravante di un percorso che al revisore si rompe in faccia. Il `.dev` serve perché in Debug l'app gira con quel bundle id, e sul nativo il destinatario del token è il bundle id: dimenticarlo dà un errore che sembra di Apple e viene da Supabase. ⚠️ NON servono Services ID né chiave `.p8`: quelli sono per il flusso web (CLAUDE.md §9-sexvicies) |
-| 4-bis | ⚠️ **Generare un codice invito attivo** (Impostazioni → Codici invito) | Rilevato `codici_attivi = 0` il 26/08. La registrazione è chiusa per scelta: senza codice valido il `ProtectedRoute` fa signOut verso `/login?error=unauthorized`. Un revisore che provasse a registrarsi come atleta verrebbe espulso senza spiegazione, e "flusso che non funziona" è il genere di rilievo che ha prodotto il 2.3.1(a). Costa un minuto |
-| 6 | 🔴 **Note per App Review: quattro o cinque codici invito ATTIVI, elencati** — «To test Sign in with Apple, use invitation code XXXXXXXX. Registration is invite-only.» | Il revisore testerà **esattamente** Sign in with Apple, perché è il rilievo 4.8 del 02/09. Con «Nascondi la mia email» Supabase gli crea un utente **nuovo**: niente riga `athletes`, niente codice, e `ProtectedRoute` lo porta al passo dell'invito. Senza un codice in mano, la correzione che gli hai promesso **non lo fa entrare** — ed è un secondo rilievo 4.8, il peggiore possibile. ⚠️ **Più di uno**: i codici sono monouso, quindi se prova anche Google il secondo tentativo trova il codice bruciato e vede lo stesso errore di un codice inesistente (la RLS non distingue i due casi, CLAUDE.md §9-septvicies) |
-| ~~8~~ | ✅ **CHIUSA il 21/09/2026**, verificata sull'anteprima della pagina del prodotto: la sezione **«Dati utilizzati per monitorarti» non esiste più**, zero righe su nove portano «Si utilizzano a scopo di monitoraggio», e le nove tipologie sono tutte ancora dichiarate — **«Salute» compresa**, che era la cosa da non toccare. Era: **Privacy dell'app → Tipologia di dati → Modifica su *Nome* e su *Indirizzo email*** → ultimo passo del flusso, *«utilizzate i nomi/gli indirizzi email a scopo di monitoraggio?»* → **«No»** → **Pubblica**. Poi rispondere nel **Resolution Center** che l'app non traccia su nessuna piattaforma. ⚠️ Il bottone finale si chiama **Pubblica**, non Salva: va sulla scheda pubblica subito. 🔴 **«Salute» non si tocca**: la fascia cardio BLE trasmette `heartRate` nel payload Realtime verso TV e Live Coach Cam, quindi è raccolta vera — toglierla sarebbe una sotto-dichiarazione, cioè un 5.1.2 peggiore | È il rilievo **5.1.2(i)** del 20/09, e nel repository non c'è niente da correggere: l'app **non traccia** — nessun SDK pubblicitario, nessun IDFA (zero `ASIdentifierManager`/`AdSupport` nei plugin), nessun `NSUserTrackingUsageDescription`, Firebase presente solo come `FirebaseMessaging` con `IS_ANALYTICS_ENABLED = false`. A mentire sono le etichette, dove qualcuno ha spuntato *tracking* su Email e Nome. ⚠️ **Aggiungere l'ATT è la correzione sbagliata**: un permesso che non serve a niente è a sua volta un rilievo (CLAUDE.md §9-quatertricies) |
-| ~~9~~ | ✅ **CHIUSA il 21/09/2026**, verificata sul pannello: *Verifica dell'età* → **NO**, *Controlli parentali* → NO, e le due righe *Social media* che erano **vuote** ora dicono NO. Classificazione invariata a **16+**, che è la prova che a tenerla alta erano le due voci sotto «Capacità» (voce 51) e non questa. ⚠️ Entra in vigore **con la prossima versione**: lo dice la testata di Informazioni sull'App. Era: **Informazioni sull'App → Età consigliata → Classificazioni per età dell'app → Modifica → Parte 1: caratteristiche → Controlli in-app → «Verifica dell'età» da SÌ a NO** (è il nome italiano di *Age Assurance*; *Controlli parentali* è già su NO), poi Avanti fino in fondo e Salva | È il rilievo **2.3.6** del 20/09. L'app non ha né PIN, né limite di tempo, né verifica dell'età: `athletes.birth_date` scrive «29 anni» nella scheda, non sbarra niente. Un minuto di lavoro, e senza non si passa |
-| 10 | ✅ **Descrizione, parole chiave e testo promozionale già puliti** (verificato sul pannello il 21/09/2026: zero «Apple Health» / «Salute») — restano da guardare a occhio i 4 screenshot. ⚠️ Su Apple Developer → Identifiers → `it.federicoleo.fleofit` togliere la capability **HealthKit** | Il 2.5.1 dice *«as well as any references … from the app or its metadata»*: una descrizione che promette una funzione che non c'è più è per giunta un **2.3.1**. La capability sull'App ID non basta a far respingere la build — l'entitlement lo chiede il progetto, e non lo chiede più — ma toglierla è l'unico modo di essere certi che non rientri da una rigenerazione del profilo. ⚠️ Invalida i profili esistenti: con la firma automatica Xcode li rigenera, e serve un **Clean Build Folder** |
-| 7 | ⚠️ **`./tools/verifica-ipa.sh` — ora ha i controlli 7, 8 e 10** su Sign in with Apple | Il 7 verifica l'entitlement **sull'ipa esportato**: la capability va abilitata sull'App ID, e se sta solo su `it.federicoleo.fleofit.dev` non sopravvive alla rifirma di distribuzione — il bottone resterebbe in pagina e il login fallirebbe **solo in produzione**, cioè solo per il revisore. L'8 verifica che il codice nativo del plugin sia dentro il binario: il conflitto SPM lo lascia fuori in silenzio (CLAUDE.md §9-sexvicies). Il **10**, aggiunto il 21/09, cerca **quattro** tracce di HealthKit — entitlement, chiavi `NSHealth*`, `otool -L` e la scritta «Apple Health» nel bundle web: un plugin ancora in `Package.swift` linka il framework anche senza una riga di codice che lo chiami, e lì lo vede solo `otool` |
-
-**Come si rifà tutto**, quando ci sarà una build nuova. L'export scrive su disco e
-**non carica niente** (`destination = export`):
-```bash
-xcodebuild -exportArchive -archivePath <archivio.xcarchive> -exportOptionsPlist tools/ExportOptions-AppStore.plist -exportPath /tmp/fleofit-export -allowProvisioningUpdates && ./tools/verifica-ipa.sh /tmp/fleofit-export
-```
-
-> ℹ️ **Il build number nel `pbxproj` non è quello spedito, e va bene così.**
-> Con `method: app-store-connect`, `manageAppVersionAndBuildNumber` vale YES per
-> impostazione predefinita: Xcode alza da solo il numero oltre l'ultimo presente su
-> App Store Connect. Misurato il 26/08/2026: `pbxproj` = 3, archivio = 2, ipa = **4**.
-> È la spiegazione dell'incremento "misterioso" del 24/08 annotato in CLAUDE.md §9-ter.
+| A1 | 🔴 **Riportare su `ios-version` le due correzioni che valgono anche per iOS**: gli ascoltatori nativi di `DeeplinkHandler` registrati a ogni cambio di pagina, e il marchio dell'apertura separato dal fondo ritagliato (CLAUDE.md §A.3 punti 6 e 2) | Su iPhone il tocco su una notifica viene gestito tante volte quante pagine si sono aperte, e il token push si rinfresca a ogni navigazione. Si fa **nell'altra cartella**, a mano: i branch non si allineano da soli. L'apertura va riguardata sul simulatore dopo il cambio di struttura |
+| A2 | **La tastiera su Android non è stata provata.** `Keyboard.resize: 'native'` è un'opzione solo iOS, e nel manifest non c'è `windowSoftInputMode` | I campi nelle modali devono restare sopra la tastiera e le barre ancorate in basso sparire mentre si scrive (`useTastiera`). Sull'emulatore la tastiera virtuale non compariva per `hw.keyboard=yes` (CLAUDE.md §A.2), quindi il comportamento vero non è ancora stato visto |
+| A3 | **L'icona piccola delle notifiche è quella di default** | Android la vuole monocromatica: una a colori diventa un quadratino bianco nella barra di stato. «FLEOFIT» a 24dp non si legge: serve un simbolo (una «F»?), e la scelta è del committente. Poi `meta-data com.google.firebase.messaging.default_notification_icon` nel manifest |
+| A4 | **Le push con l'app chiusa** e il tocco che porta al workout (`route`) | `google-services.json` c'è e il server non va toccato (CLAUDE.md §1.1), ma l'arrivo vero non è ancora stato provato |
+| A5 | **Il tasto indietro riconosce solo le modali che si chiudono con il velo, una X «Chiudi» o un bottone «Annulla/Chiudi/Indietro/No»** | Provate «Assegna», la conferma di «Elimina» e il menu della scheda. Le altre ~37 modali (Home, Calendario, builder, Impostazioni) non sono state provate una per una: una che si chiude con un'altra parola resta aperta (ma la pagina non cambia) |
+| A6 | **Provare su un telefono vero** | Come si sente la vibrazione (Android traduce tutto in impulsi fissi), qualità del microfono, push dopo giorni di inattività, margini di sicurezza dei fogli dal basso |
+| A7 | **Pubblicazione sul Play Store** | Non esiste ancora niente: firma di rilascio (keystore), `versionCode`/`versionName` in `android/app/build.gradle`, scheda dello Store, modulo sulla sicurezza dei dati (l'equivalente delle etichette privacy di Apple: l'app **non traccia**, come verificato per iOS), classificazione dei contenuti. Prima della build di rilascio: il blocco `server` di `capacitor.config.ts` commentato, e il seme dell'ambiente di prova assente dal bundle (CLAUDE.md §9-quinvicies) |
+| A8 | **`postinstall: patch-package` gira senza patch** | La sola patch era per lo Swift Package Manager di iOS ed è uscita con `ios/`. Innocuo; se non ne servono altre, lo script si può togliere |
 
 ---
 
-## 🧊 Congelati fino all'approvazione App Store
+## 🧊 Congelati (regola 0-bis)
 
-> Regola 0-bis di [CLAUDE.md](CLAUDE.md): lo schema del database non si tocca finché
-> l'app non è approvata. Il DB è uno solo e serve anche la web app in produzione,
-> senza staging. **Le letture restano permesse.**
+> Regola 0-bis di [CLAUDE.md](CLAUDE.md): lo schema del database non si tocca (decisione
+> presa per l'approvazione dell'app iOS, e vale per tutte e tre le app). Il DB è uno solo e
+> serve anche la web app in produzione e l'app iOS, senza staging. **Le letture restano permesse.**
 
 | # | Cosa | Gravità | Perché è congelato |
 |---|---|---|---|
@@ -129,9 +79,7 @@ xcodebuild -exportArchive -archivePath <archivio.xcarchive> -exportOptionsPlist 
 | 23 | **Lo step 2 della corsa non è ridisegnato.** Il rework di «Crea Workout» del 27/08 copre lo step 1 (tutte e tre le categorie) e lo step 2 Hyrox; il builder Running ha preso la cornice condivisa — testata, card, barra fissa — ma non il modo di comporre le fasi, che usa ancora `ScrollPicker` | mezza giornata, dopo il design | L'artboard lo dice esplicitamente («fammi vedere lo step 2 della corsa», in fondo a `Crea Workout.dc.html`). Non è debito lasciato indietro: è il pezzo successivo, e finché non c'è, `ScrollPicker` resta vivo e usato — non è codice morto da rimuovere |
 | ~~41~~ | ✅ **Un ambiente di prova esiste, dal 02/09/2026.** `npm run demo`: l'app intera su un Supabase finto in memoria (`src/supabaseDemo.js`), dati finti con date relative a oggi. Risolve — per lo sviluppo, non per il deploy — il problema che il progetto aveva da sempre: provare qualcosa voleva dire usare i dati veri degli atleti | ⚠️ NON sostituisce uno staging vero: non c'è Postgres, non ci sono le policy RLS, e le Edge Function non partono. Serve a **vedere e usare** l'app, non a validare query o permessi. CLAUDE.md §9-quinvicies |
 | ~~40~~ | 🔴 **Due stimatori di durata che divergevano dell'89%.** ✅ **CHIUSO il 09/09/2026**, su decisione del committente e sul numero che ha scelto lui: **58**. `durataWorkout` non ha più una formula propria — per i blocchi Hyrox somma `durataBlocco`, quindi lo stimatore è **uno solo** e il totale in cima alla scheda è la somma dei blocchi che la scheda stampa uno per uno. I forfait dei cronometri liberi vivono in due costanti esportate (`MINUTI_GIRO_FOR_TIME = 15`, `MINUTI_GIRO_CASH = 5`). ⚠️ **La direzione è l'opposta di quella che questa riga proponeva**: la strada scritta qui era «tenere la stima per esercizio e i 15 minuti solo come ripiego», che avrebbe dato **24** minuti. Sommare gli esercizi misura il tempo in cui l'atleta si sta muovendo, non quello che passa nel box. ⚠️ **Prezzo, visibile in scheda**: un «For Time» dichiara 15 minuti a giro qualunque cosa contenga, e la barra proporzionale del riepilogo è quasi tutta sua. ⚠️ **E il carico previsto è salito con lui** (≈211 → ≈516 sullo stesso workout), perché è il prodotto durata × RPE: i numeri del modello predittivo vanno riletti una volta sul campo. CLAUDE.md §9-quatervicies | — |
-| 53 | ⚠️ **iOS 27 non lancerà le app senza ciclo di vita a UIScene** compilate con l'SDK più recente (testuale da Apple). FLEOFIT lo ha adottato il 21/09/2026 (CLAUDE.md §9-sextricies) e la build **7** lo porta; la **6**, già in revisione, no — e su iOS 26 parte lo stesso, perché lì è solo una riga di log | Nessun blocco: fatto e verificato sul simulatore. Resta da sapere che il **controllo 12** di  lo protegge sul binario, ed è l'unico posto dove il difetto si vede prima di iOS 27 |
 | 52 | **La fascia cardio BLE è uscita il 21/09/2026** (CLAUDE.md §9-quintricies), per decisione del committente: era in prova e costava due permessi di sistema davanti a un'app con tre rifiuti. Se un giorno torna, torna **intera** — plugin, chiavi `NSBluetooth*` in `Info.plist`, e la dichiarazione «Salute» che a quel punto diventa di nuovo obbligatoria perché il battito **viaggia** (payload Realtime verso TV e Live Coach Cam) | 🔴 Non si riattiva a metà: senza le chiavi d'uso iOS **termina il processo**, cioè un crash al primo tocco e non un rilievo. Il controllo **11** di `tools/verifica-ipa.sh` verifica che non ne resti traccia nel binario |
-| 51 | ⚠️ **FLEOFIT è classificata 16+**, e non per il suo contenuto: nel questionario dell'età, sotto «Capacità», sono su SÌ *Accesso al web senza limitazioni* (l'app apre solo i link Instagram/Strava del profilo) e *Contenuti generati dagli utenti*, la cui definizione Apple richiede l'«**ampia distribuzione**» di contenuti — mentre qui note e vocali restano fra il coach e quel solo atleta. *Messaggistica e chat* = SÌ invece è corretto | 🔴 **Non si tocca finché il rifiuto non è chiuso.** Dichiarare UGC = NO su un'app con comunicazione fra utenti è il genere di risposta che Apple guarda da vicino: la **1.2** chiede moderazione, segnalazione e blocco a chi dichiara UGC, e FLEOFIT non ne ha. Da rivedere dopo l'approvazione, quando sbagliare costa un ciclo di revisione e non una quarta bocciatura |
 | 47 | **«Termini» e «Privacy» sul benvenuto sono testo, non collegamenti.** La riga c'è (l'artboard la disegna), ma le due parole non portano da nessuna parte | 1 ora, e una decisione | ⚠️ Non è una dimenticanza: **non esiste una URL che funzioni**. `privacy-policy.html` sta in radice, fuori da `public/`, quindi non entra nel bundle; e su Vercel la riscrittura di `vercel.json` manda tutto a `index.html`. I Termini non esistono affatto. Le strade: **(a)** spostare `privacy-policy.html` in `public/` — allora funziona sia sul web sia dentro l'app, perché `public/` finisce in `dist` e quindi in `ios/App/App/public` — e scrivere i Termini; **(b)** lasciare la riga com'è. ⚠️ Un link a un 404 sulla schermata di accesso è la prima cosa che un revisore tocca: (a) va fatta per intero o non fatta |
 | 48 | **Il passo 1 dell'accesso con email non è ridisegnato.** Il rework del 04/09 (CLAUDE.md §9-septvicies) copre il benvenuto e il passo 2 del codice; il form email ha preso la cornice condivisa — testata di passo, campi, CTA — ma non un disegno suo | mezza giornata, dopo il design | Il `dv-next` dell'artboard lo dà **esplicitamente** per il pezzo successivo («mostrami il form email (passo 1)»). Stessa scelta già fatta cinque volte: lo step 2 della corsa (voce 23), il pannello filtri dell'archivio (37), il foglio del giorno del calendario (40), la schermata dei codici invito (45), la modale «Nuovo Atleta» (39) |
 | 49 | 🟠 **Chi entra con Apple o Google e non ha un profilo deve ritoccare il bottone dopo il codice.** Il passo 2 gli mostra l'invito accettato e gli ripropone lo stesso accesso di prima | mezza giornata, ma è una decisione di architettura | ⚠️ Non è un passaggio dimenticato: il codice si riscatta con una sessione (`Authenticated users can claim an invitation code`), e la sessione l'ha appena chiusa `ProtectedRoute` — che la chiude perché **senza profilo non si entra**, ed è ancora il punto che lo decide. Toglierlo vuol dire tenere la sessione viva e far chiedere il codice **dentro** il cancello, cioè rimettere mano al pezzo più delicato dell'app per risparmiare un Face ID. ⚠️ Da valutare solo dopo l'approvazione App Store, e con dei test sul cancello prima di toccarlo |
@@ -205,7 +153,7 @@ xcodebuild -exportArchive -archivePath <archivio.xcarchive> -exportOptionsPlist 
 | 27-ter | **Il builder non si apre precompilato.** `/report/:id` dice quanto volume togliere, quanto è andato più duro del previsto e quali movimenti rimettere — ma poi «Crea workout» apre il builder vuoto | Dipende dal **25**: senza il *risultato* di un allenamento — non solo fatto/non fatto — un generatore produrrebbe programmazione plausibile e cieca, che è ciò che il report esiste per evitare |
 | 27-quater | **Il report non si esporta.** Un PDF (o una story) da mandare all'atleta o da archiviare | Nessun blocco, ma `jspdf` è appena uscito dal chunk della scheda (§9-noviesdecies): va importato **su richiesta**, non in testa, o si rifà lo stesso danno su un'altra pagina |
 | ~~29-storia~~ | **Grafica da mettere sopra una storia.** ✅ **Fatta il 01/09/2026**: PNG **trasparente** 1080×1920 con l'**elenco degli esercizi** e tre numeri grandi. Nessuna colonna nuova, nessuna query in più. ⚠️ La prima stesura ci metteva un profilo di sforzo a barre: tolto dal committente lo stesso giorno — era gradevole e non si leggeva. CLAUDE.md §9-unetvicies | — |
-| 29-bis | **Lo sticker si apre a mano su Instagram.** Oggi si salva in galleria (o si passa al foglio di condivisione) e poi lo si aggiunge alla storia con lo sticker «foto». Instagram ha uno schema apposta (`instagram-stories://share`, con l'immagine sulla pasteboard) che salterebbe due passaggi | Nessun plugin Capacitor in uso lo espone: servirebbe **codice nativo dentro `ios/App`**, e va provato su dispositivo (in simulatore Instagram non c'è). Non è bloccato dallo schema del DB |
+| 29-bis | **Lo sticker si apre a mano su Instagram.** Oggi si salva in galleria (o si passa al foglio di condivisione) e poi lo si aggiunge alla storia con lo sticker «foto». Instagram ha uno schema apposta (`instagram-stories://share`, con l'immagine sulla pasteboard) che salterebbe due passaggi | Nessun plugin Capacitor in uso lo espone: servirebbe **codice nativo dentro `android/`** (su Android: un `Intent` `com.instagram.share.ADD_TO_STORY`), e va provato su un dispositivo con Instagram installato. Non è bloccato dallo schema del DB |
 | 29-ter | **La durata è ancora una stima, anche nel recap.** Il timer guidato conosce il tempo reale di ogni step ma non lo salva da nessuna parte: sulla grafica esce `≈`, che è onesto ma non è un cronometro. Un tempo vero renderebbe il recap paragonabile a quello di Strava | Servirebbe una colonna su `athlete_workouts` → **congelato** (regola 0-bis). È lo stesso blocco del #25 |
 | ~~30-vuoti~~ | **Gli stati senza storico della Home atleta.** ✅ **Fatti il 09/09/2026**: giorno 1, prima settimana e giorno di riposo. Chi installava l'app apriva su quattro zeri corretti (anello 0/0, «Serie: 0 giorni», «0 min», «In arrivo» vuoto). Nessuna colonna nuova, nessuna query in più, nessuna dipendenza nuova. La regola che ne esce è in DESIGN.md e vale per tutta l'app. CLAUDE.md §9-duodetricies | — |
 | 30-bis | **«Fissa l'obiettivo» non crea davvero un evento.** La card del giorno 1 e il banner della prima settimana aprono il modale dell'**allenamento libero**: chiede una data, quindi non mente, ma l'obiettivo non compare nel calendario né nel `BannerObiettivo` esistente. La strada a costo zero è farlo nascere con `category: 'Event'` e la data scelta — zero schema nuovo | Nessun blocco tecnico. Serve decidere se l'atleta può inserirsi da solo un `Event` (oggi li assegna il coach) e se il coach va avvisato. Una colonna su `athletes` sarebbe l'altra strada ed è **vietata** dalla regola 0-bis |

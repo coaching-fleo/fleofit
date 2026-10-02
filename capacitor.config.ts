@@ -7,42 +7,32 @@ const config: CapacitorConfig = {
   bundledWebRuntime: false,
 
   // ─────────────────────────────────────────────────────────────────────────
-  // ⚠️⚠️  LIVE RELOAD — DA CANCELLARE PRIMA DI OGNI ARCHIVE PER L'APP STORE
+  // ⚠️⚠️  LIVE RELOAD — DA CANCELLARE PRIMA DI OGNI BUILD PER IL PLAY STORE
   // ─────────────────────────────────────────────────────────────────────────
   // Fa caricare l'app dal dev server invece che dal bundle copiato in
-  // ios/App/App/public: si compila UNA volta da Xcode, poi ogni salvataggio
-  // si vede sul telefono senza build né `cap sync`.
+  // android/app/src/main/assets/public: si installa UNA volta, poi ogni
+  // salvataggio si vede sull'emulatore senza build né `cap sync`.
   //
-  // Uso:  1) `npm run dev`   2) `npx cap sync ios`   3) Run da Xcode
-  //       (Mac e iPhone sulla stessa rete Wi-Fi)
+  // Uso:  1) `npm run dev`   2) `npx cap sync android`   3) `./gradlew installDebug`
+  //       Sull'emulatore il PC è 10.0.2.2, non localhost; su un telefono vero
+  //       serve l'IP del PC sulla stessa rete Wi-Fi.
   //
-  // 🔴 SE QUESTO BLOCCO FINISCE IN UN .ipa, L'APP SPEDITA PROVA A CARICARSI
-  //    DAL MAC DI CASA E RESTA BIANCA. È esattamente il blocco `server` +
-  //    `cleartext` rimosso nel commit fc81404 (CLAUDE.md §9-ter).
-  //    Verifica prima dell'archive:
-  //      grep -c "server" ios/App/App/capacitor.config.json   → deve dare 0
-  //
-  //    IP di questo Mac al 28/08/2026: 192.168.1.166 — cambia se cambia rete,
-  //    ed è già cambiato una volta (era .18). Il sintomo quando è sbagliato è
-  //    una schermata BIANCA sul telefono, senza nessun errore da nessuna parte:
-  //    la webview sta aspettando un server che non risponde. Si rilegge con
-  //      ipconfig getifaddr en0
-  //    e dopo averlo cambiato serve `npx cap sync ios` — il valore finisce in
-  //    ios/App/App/capacitor.config.json, che è la copia che Xcode compila.
-  
+  // 🔴 SE QUESTO BLOCCO FINISCE IN UNA BUILD DI RILASCIO, L'APP PROVA A
+  //    CARICARSI DAL PC DI CASA E RESTA BIANCA, senza nessun errore.
+  //    Verifica prima di ogni build di rilascio:
+  //      grep -c "server" android/app/src/main/assets/capacitor.config.json   → deve dare 0
+
   // server: {
-  //   url: 'http://192.168.1.166:5173',
+  //   url: 'http://10.0.2.2:5173',
   //   cleartext: true
   // },
   // ────────────────────  FINE BLOCCO DA CANCELLARE  ────────────────────────
 
   // 🔴 Il fondo della webview PRIMA che carichi qualunque cosa. Senza, fra lo
-  // schermo di lancio e l'app si vedono ~380ms di bianco (misurato il
-  // 22/09/2026 su registrazione del simulatore). Va insieme allo `<style>` in
-  // linea dentro index.html: questo copre la webview, quello il documento.
-  ios: {
-    backgroundColor: '#0B0B0B'
-  },
+  // schermo di lancio e l'app si vede un lampo bianco (misurato il 22/09/2026
+  // sull'app iOS, ed è un comportamento della webview, non della piattaforma).
+  // Va insieme allo `<style>` in linea dentro index.html: questo copre la
+  // webview, quello il documento.
   android: {
     backgroundColor: '#0B0B0B'
   },

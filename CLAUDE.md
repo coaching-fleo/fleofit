@@ -1,156 +1,30 @@
-# CLAUDE.md — Memoria globale progetto FLEOFIT
+# CLAUDE.md — Memoria globale progetto FLEOFIT · versione ANDROID
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **23 settembre 2026**.
-> **Due branch attivi e DIVERGENTI, ENTRAMBI MANUTENUTI**: `main` = web app in produzione ·
-> `ios-version` = app per l'App Store (§1.1 — rifare sempre `git fetch` prima di parlare dei due).
-> Ultimo commit su `ios-version`: **23 set 2026**, che porta il **recap post-allenamento**
-> (§9-quadragies) dopo **l'apertura dell'app** (§9-duodequadragies) e **le animazioni
-> dell'app** (§9-septtricies): la cascata su nove schermate, i numeri che salgono, la CTA
-> che si contrae e il passo che entra. ⚠️ **L'hash non si scrive più qui dentro**: era
-> autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
-> sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
-> `git log -1`, che non può mentire.
-> `npm test` → **1073 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
-> ⭐ **Il 24/09 l'app ha preso un LINGUAGGIO APTICO** (§9-duoquadragies): sei verbi in
-> `src/lib/aptica.js`, e una regola — vibra ciò che l'occhio può perdersi o che non si
-> disfa, mai la navigazione. 🔴 Due trappole trovate: `selectionChanged()` è muto senza
-> `selectionStart()`, e `navigator.vibrate` su iPhone non esiste — il drag&drop e le
-> reazioni della Live Coach Cam **non avevano mai vibrato**.
-> ⭐ **Il 24/09 il recap chiede «ti è piaciuto?»** (§9-unquadragies): una scheda
-> con 👍/👎 e «Salta», e la risposta finisce nella nota dell'assegnazione come
-> `[GRADIMENTO: si|no|nessuna]` dopo l'RPE — **nessuna colonna**, lo schema è
-> congelato. Il coach la vede sulla scheda del workout; l'atleta mai.
-> ⭐ **Il 22/09 è nato il RECAP POST-ALLENAMENTO** (§9-quadragies): chiudere un
-> allenamento non è più un niente — quattro schede in stile storie con la seduta
-> appena fatta, la settimana, l'andamento a otto settimane e il prossimo passo.
-> 🔴 Tre trappole trovate MISURANDO: il **verdetto sul volume non compariva mai**
-> (confronta otto settimane chiuse, e il grafico ne disegna sette), una **lettura
-> fallita annunciava «il primo è fatto»** a chi ne ha cento, e il recap montato da
-> tre pagine portava **32 KB nel chunk d'ingresso** — ora sta dietro un confine
-> pigro. ⚠️ E ha reso visibile un difetto che non era suo: la Home dichiarava
-> **4876 minuti** dove il recap ne diceva 105 — una quarta copia dello stimatore
-> di durata che leggeva «800m» come 800 minuti. ✅ **Chiuso il 23/09**: i minuti
-> della settimana vengono da `minutiSettimana`, e con la copia sono uscite le
-> uniche due cose che la tenevano in vita — `weeklyStats.distance` e `.reps`,
-> che non leggeva nessuno.
-> ⭐ **Il 22/09 è nata l'APERTURA dell'app** (§9-duodequadragies): l'area scura si ritira
-> dietro un arco e scopre la Home. 🔴 Registrando l'avvio vero è saltato fuori un difetto
-> che nessuno aveva mai misurato e che non c'entrava con la richiesta: **380ms di BIANCO
-> PIENO** fra lo schermo di lancio e l'app — la webview che dipinge il proprio fondo prima
-> che il foglio di stile arrivi. ⚠️ E lo **schermo di lancio nativo è nero SENZA logo**:
-> quello che si vede è sempre stato il logo web. Resta aperto, ed è l'ultimo stacco
-> dell'avvio.
-> ⭐ **Il 21-22/09 l'app ha preso un linguaggio di movimento** (§9-septtricies), da un
-> riferimento indicato dal committente. ⚠️ Il video non era guardabile: i numeri sono stati
-> **contati fotogramma per fotogramma a 30fps** con ffmpeg, ed è l'unica ragione per cui
-> non sono inventati. Quattro cose, in ordine di quanto si vedono: la **cascata** (i figli
-> di un contenitore entrano sfasati di 75ms, nove schermate), i **numeri che salgono**, la
-> **CTA che si contrae** in pillola, e il **passo del builder** che entra da destra.
-> 🔴 Tre trappole trovate MISURANDO e non leggendo il codice, tutte invisibili ai test:
-> una **sfocatura sotto un'animazione di opacità cambia colore** quando il layer GPU viene
-> liberato (Y 48,08 → 52,31 *dopo* la fine del movimento — sei aloni convertiti in
-> `radial-gradient`); **`max-width` non interpola da `none`**, quindi la CTA saltava invece
-> di contrarsi; e la **curva storica del progetto** (`.16,1,.3,1`) è un ease-out
-> esponenziale che su un'entrata legge come uno scatto, non come morbidezza.
-> 🔴 **Il 20/09 App Store ha respinto la 1.0 (5) con TRE rilievi insieme** (§9-quatertricies),
-> e **uno solo è codice**: la **2.5.1** — HealthKit linkato al binario senza una funzione
-> che lo giustifichi — chiusa il 21/09 togliendo Apple Health da tutte e cinque le porte
-> da cui entra (codice, bottone, `Info.plist`, entitlement, **plugin npm**). Gli altri due
-> sono caselle sbagliate su **App Store Connect** e nel repository non c'è niente da
-> correggere: la **5.1.2(i)** — le etichette privacy dichiarano *tracking* su email e nome,
-> e l'app **non traccia** (verificato: nessun SDK pubblicitario, nessun IDFA, Firebase solo
-> come Messaging) — e la **2.3.6** — l'age rating dichiara *In-App Controls* che non
-> esistono. ⚠️ Aggiungere l'ATT sarebbe la correzione **sbagliata**.
-> ⭐ **Il 09/09 gli stimatori di durata sono diventati UNO** (§9-undetricies, BACKLOG #40
-> chiuso): lo stesso allenamento diceva **58 minuti nella Home e 24 nella scheda**, e il
-> difetto è saltato fuori mettendo due screenshot del simulatore uno accanto all'altro.
-> Vince il **58**, per decisione del committente: sommare gli esercizi misura il tempo in
-> cui l'atleta si sta muovendo, non quello che passa nel box. ⚠️ Con la durata sono saliti
-> i **carichi** del modello predittivo (≈211 → ≈516 sullo stesso workout): i rapporti non
-> si spostano, il numero assoluto sì.
-> ⭐ **Il 15/09 «Salva workout» è sceso in fondo alla pagina** (§9-tertricies):
-> la barra era `sticky`, quindi occupava una riga di schermo per tutto il tempo in
-> cui si compone il workout — proprio mentre servono i blocchi — e il suo bordo
-> disegnava uno stacco netto sopra la capsula della tab bar. ⚠️ `BarraAzioni`
-> serve **tre** pagine: la prop `ancorata` resta `true` dove l'azione è la
-> RAGIONE per cui si è aperta la pagina (scheda workout, scheda atleta), e
-> diventa `false` dove è la CONCLUSIONE di un lavoro (il builder). Con la stessa
-> passata, **aprire un blocco ne tiene il titolo davanti**: chiudeva quello aperto
-> prima, la pagina si accorciava sopra la testa e il blocco toccato scivolava
-> fuori schermo verso l'alto — misurato, da **−351 px a +12**.
-> ⭐ **Il 09/09 la Home atleta ha guadagnato GLI STATI SENZA STORICO** (§9-duodetricies):
-> giorno 1, prima settimana e giorno di riposo. La regola che ne esce vale per tutta
-> l'app ed è entrata in DESIGN.md: **nessuna cella mostra uno zero — al posto di un dato
-> che non esiste ancora va la cosa che lo farà esistere.** Chi installava l'app apriva su
-> quattro zeri perfettamente corretti (anello 0/0, «Serie: 0 giorni», «0 min», «In arrivo»
-> vuoto), cioè quattro numeri veri che gli dicevano di essere già indietro. ⚠️ Il
-> `{weeklyStatus.length > 0 && …}` che sembrava proteggere il bento **non proteggeva da
-> niente**: `weeklyStatus` nasce già con sette giorni — è lo stesso difetto della Home
-> coach del 28/08, sullo stesso identico stato.
-> 🔴 **Il 02/09 App Store ha respinto la 1.1.0 (3) sulla linea guida 4.8 — Login Services**,
-> e il 03/09 è nato **Sign in with Apple** (§9-sexvicies). Non è il rifiuto di maggio che
-> torna: quello (2.3.1(a)) resta chiuso. La 4.8 **non vieta Google**, che infatti resta
-> dov'era — chiede che accanto ci sia un accesso che permetta di **tenere nascosta la
-> propria email**, cosa che né Google né email+password fanno. ⚠️ Sul **nativo** non
-> servono né Services ID né chiave `.p8`, quindi nemmeno il client secret che scade ogni
-> 6 mesi: è la mezza giornata che quasi tutte le guide fanno perdere.
-> ⭐ **Il 01/09 la scheda ha guadagnato la GRAFICA DA STORIA** (§9-unetvicies): un PNG
-> **trasparente** con l'elenco degli esercizi e tre numeri grandi, da appoggiare sopra
-> la propria storia come fa Strava con il percorso. È la prima cosa dell'app che finisce
-> sotto gli occhi di chi non ce l'ha — e la prima stesura ci aveva messo un grafico,
-> tolto dal committente lo stesso giorno perché era carino e non si leggeva.
-> ⭐ **Il 01/09 è nato il primo schermo riservato al coach: il REPORT SETTIMANALE**
-> (§9-vicies, BACKLOG #27), e lo stesso giorno il **report del SINGOLO ATLETA**
-> (`/report/:id`, §9-vicies-bis), che è quello su cui si scrive l'allenamento
-> successivo: le sedute una per una, i **movimenti con i carichi usati** — che
-> nell'app non esistevano da nessuna parte — e indicazioni su cosa fare, ognuna
-> con accanto il numero da cui esce. Tutto su tabelle esistenti, senza una
-> colonna nuova.
-> ⭐ **Il 02/09 è nato anche l'AMBIENTE DI PROVA** (§9-quinvicies): `npm run demo`
-> fa girare l'app intera su un Supabase finto in memoria. È la prima volta che si
-> può usare FLEOFIT senza toccare il database di produzione.
-> ⭐ **Il 02/09 è nato il MODELLO PREDITTIVO DEL CARICO** (§9-quatervicies,
-> `src/lib/previsione.js`): il builder dice quanto **pesa** la seduta che si sta
-> scrivendo, e il foglio di assegnazione dice — atleta per atleta — cosa succede al
-> suo carico se gliela si dà. 🔴 Ci convivono **due scale**, ed è la prima cosa da
-> leggere: i due stimatori di durata del progetto differiscono dell'**89%** su un
-> «For Time», quindi ogni carico va confrontato solo con un paragone misurato allo
-> stesso modo.
-> ⭐ **Il 02/09 il tasto «indietro» è diventato uno solo** (§9-tervicies, `src/useIndietro.js`):
-> tre pagine avevano una **destinazione fissa** che ignorava da dove si veniva — si apriva un
-> atleta dai feedback della Home coach e si finiva nella rubrica — e i `navigate(-1)` non
-> facevano niente quando la pagina era la prima della sessione (notifica push, deep link).
-> Insieme: la **tab bar non impila più** (`replace`) e la scheda che navigava a sé stessa
-> cambiando `athlete_id` non lascia più una voce di history a ogni atleta guardato.
-> ⭐ **Il 01/09 anche le IMPOSTAZIONI sono state rifatte** (§9-duoetvicies): l'eroe è
-> l'account con lo stato del dispositivo, gli acceso/spento sono interruttori con
-> `aria-checked`, i codici invito scendono a una riga con il numero, e il banner giallo
-> «Operazione in corso» lascia il posto allo stato dentro la riga che l'ha causato.
-> ⭐ **Il 04/09 è stato rifatto l'ACCESSO** (§9-septvicies, artboard `Login.dc.html` 1b): il
-> bivio «Accedi / Nuovo Utente» è sparito — chiedeva all'utente una cosa che l'utente non sa —
-> e al suo posto c'è una colonna sola di modi per entrare. Il codice invito non è più una porta
-> davanti alla casa: è la domanda del passo 2, e la si fa solo a chi serve. 🔴 Il vicolo cieco
-> vero stava in `App.jsx`: chi entrava con Apple o Google senza profilo — il caso NORMALE di un
-> nuovo invitato — riceveva «Accesso Negato» e il codice non gli veniva mai chiesto.
-> > Dieci schermate rifatte su design di Claude Design (la **Home atleta** due volte: il
-> 26/08 la pagina, il 09/09 i suoi stati vuoti): **Home atleta** il 26/08 (§9-octies),
-> **Home coach** il 27/08 (§9-nonies) con la **pausa atleta** (§9-decies), **Crea Workout**
-> il 27/08 (§9-undecies), la **scheda del workout** (§9-duodecies) e la **scheda atleta**
-> (§9-terdecies) il 28/08, l'**archivio** (§9-sedecies), la **rubrica atleti**
-> (§9-septdecies) e il **calendario** (§9-octodecies) il 31/08, le **impostazioni**
-> (§9-duoetvicies) il 01/09. Il 28/08 anche il
-> foglio **«Genera con IA»** (§9-quindecies),
-> che è dove l'entrata mancante di BACKLOG #34 si è vista per la seconda volta.
-> Il 31/08 anche l'**attesa fra una pagina e l'altra** (§9-noviesdecies): la scheda
-> workout scende da 480 a **68 KB** (**82 KB** dal 01/09 con la grafica da storia), e lì
-> sta la spiegazione del perché fra due pagine NON lampeggia niente — la pagina vecchia
-> resta immobile — che leggendo il codice si sbaglia in due modi diversi.
-> Build **1.1.0 (3)** in revisione su App Store Connect dal 24/08/2026, dopo il rifiuto di
-> maggio. ✅ **Il 26/08 la causa di quel rifiuto è stata chiusa e verificata dai due lati**:
-> `aps-environment = production` e le 5 email admin nell'`.ipa` spedito, e `demo@fleofit.it`
-> che assegna davvero un workout dall'app. Dettagli in §9-ter.
+> Ultimo aggiornamento: **2 ottobre 2026**.
+>
+> 🤖 **QUESTA CARTELLA È SOLO L'APP ANDROID.** Branch **`android-version`**, cartella
+> locale `~/Desktop/fleofit android-version`. Non contiene più niente di iOS: niente
+> `ios/`, niente Xcode, niente App Store.
+>
+> 🍏 **La versione iOS esiste ed è viva, ma sta ALTROVE**: branch **`ios-version`** su
+> GitHub e una **cartella locale separata** (`~/Desktop/FLEOFIT/fleofit ios-version`), con
+> il suo `CLAUDE.md`. Le **linee guida sono indicativamente le stesse** (palette, lingua,
+> regole sui dati, modo di testare), perché il codice React è lo stesso: questo branch è
+> nato il 02/10/2026 dall'ultimo commit di `ios-version`. Ma qui si lavora **solo per
+> Android**, e le correzioni non passano da un branch all'altro da sole (§1.1).
+>
+> ⚠️ **Le sezioni §9-* sono la storia del codice condiviso**, scritta quando l'app era
+> solo iOS. Dove dicono «iPhone», «simulatore» o «Xcode», la lezione sul codice vale anche
+> qui; le parti che riguardavano solo iOS — App Store, Sign in with Apple, HealthKit,
+> UIScene, la build da Xcode — sono state tolte da questo file e restano nel `CLAUDE.md`
+> di `ios-version`. Quello che è **specifico di Android** sta al **§A**, ed è la prima
+> cosa da leggere prima di toccare qualcosa di nativo.
+>
+> Ultimo commit: si legge con `git log -1` (l'hash non si scrive qui dentro: è
+> autoreferenziale, e nella versione iOS di questo file è stato sbagliato tre volte).
+> `npm test` → **1085 test** (02/10/2026).
 
 ---
 
@@ -160,19 +34,20 @@
 > *com'è fatto* il progetto; il backlog elenca *cosa manca*, con il perché di ognuna e
 > cosa la blocca. Aggiornare il backlog quando una voce si chiude.
 
-0. **Esistono DUE branch vivi con due destinazioni diverse** (`main` = web app in produzione,
-   `ios-version` = app per l'App Store). Prima di proporre un merge, un deploy o una modifica
-   condivisa (DB, Edge Function), leggere il §1.1: non sono intercambiabili.
-0-bis. 🔒 **LO SCHEMA DEL DATABASE È CONGELATO** fino all'approvazione su App Store (decisione del
-   committente, 24/08/2026). Niente migrazioni, niente tabelle nuove, nessuna modifica alle policy
-   RLS: l'unico database serve anche la web app in produzione e non c'è staging. **Le letture sono
-   permesse** (verifica policy, conteggi, export). Se una funzione richiede una migrazione, va
-   proposta e messa in attesa, non implementata. Vedi PRODUCT.md → Capabilities and Constraints.
+0. **Questa cartella è Android e basta.** Niente modifiche pensate per iOS, niente
+   `ios/`, niente `npm run ios`. Se una correzione vale per tutte e due le app (codice
+   React, Edge Function, dati), va detto al committente: su `ios-version` va **riportata a
+   mano**, in un'altra cartella (§1.1).
+0-bis. 🔒 **LO SCHEMA DEL DATABASE È CONGELATO** (decisione del committente, 24/08/2026). Niente
+   migrazioni, niente tabelle nuove, nessuna modifica alle policy RLS: l'unico database serve
+   anche la web app in produzione e l'app iOS, e non c'è staging. **Le letture sono permesse**
+   (verifica policy, conteggi, export). Se una funzione richiede una migrazione, va proposta e
+   messa in attesa, non implementata. Vedi PRODUCT.md → Capabilities and Constraints.
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
-   attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
-   chiavi localStorage `fleofit_*`, deep link `fleofit://`) — se si cambia nome serve un refactor
-   coordinato, non un semplice find&replace.
+   attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `strings.xml`,
+   l'album della galleria, chiavi localStorage `fleofit_*`, deep link `fleofit://`) — se si cambia
+   nome serve un refactor coordinato, non un semplice find&replace.
 2. **La grafica attuale è la baseline, non un vincolo eterno.** Modifiche di layout/UI sono attese
    e benvenute.
 3. **I COLORI SONO CORRETTI E VANNO MANTENUTI COME DEFAULT.** Non proporre palette alternative se
@@ -181,15 +56,16 @@
    a italiano (convenzione già esistente, mantenerla coerente per file).
 5. ⚠️ **I numeri di riga scadono in fretta, i nomi no.** Quando citi un punto del codice —
    qui, in un commit o parlando con il committente — nomina la funzione o la costante, non la
-   riga. Il 25/08/2026 tutti e cinque i riferimenti `file:riga` presenti in questo documento
-   puntavano a righe scorrelate.
-6. Prima di modificare un file grande (`WorkoutDetail.jsx` 2.938 righe, `AthleteDetail.jsx` 2.553,
-   `CreateWorkout.jsx` 2.348, `Home.jsx` 2.010 — contate il 26/08/2026) leggere le sezioni
-   rilevanti: c'è molta logica duplicata tra i file (vedi §9 Debito tecnico).
-   > I primi tre si sono alleggeriti fra il 25 e il 26/08 estraendo la logica pura in
-   > `src/lib/` (`offlineQueue`, `timerSequence`, `statistiche`, `badge`): è la direzione,
-   > non un'eccezione. `CreateWorkout` invece è **cresciuto**, per i `useCallback` che la
-   > memoizzazione richiede (§9-quinquies).
+   riga.
+6. Prima di modificare un file grande (`WorkoutDetail.jsx`, `AthleteDetail.jsx`,
+   `CreateWorkout.jsx`, `Home.jsx`, tutti sopra le 2.000 righe) leggere le sezioni rilevanti:
+   c'è molta logica duplicata tra i file (vedi §9 Debito tecnico). La direzione è estrarre la
+   logica pura in `src/lib/`.
+7. 🔴 **Una cosa nativa si dichiara provata solo dopo averla provata sull'emulatore** (§A.2).
+   Il 02/10/2026 il tasto indietro è stato dato per fatto avendolo provato su UNA modale — l'unica
+   delle quaranta che si chiude dal velo — e il committente ha trovato subito quella che non
+   funzionava. jsdom non ha né WebView né plugin: i test dicono che la logica è giusta, non che
+   Android la esegue.
 
 ---
 
@@ -201,111 +77,194 @@ li esegue con un timer guidato, li segna come completati con RPE e note, e il co
 tempo reale.
 
 - **Repo**: `https://github.com/coaching-fleo/fleofit`
-- **Cartella locale**: `~/Desktop/FLEOFIT/fleofit ios-version`
-- **App bundle iOS**: `it.federicoleo.fleofit` — display name `FLEOFIT`
-- **Deploy web**: Vercel (`https://fleofit.vercel.app`), SPA rewrite in `vercel.json`
-- **Deep link scheme**: `fleofit://` (usato per OAuth callback e reset password su iOS)
+- **Questa cartella**: `~/Desktop/fleofit android-version` → branch `android-version`
+- **Package Android**: `it.federicoleo.fleofit` — nome `FLEOFIT` (`android/app/src/main/res/values/strings.xml`)
+- **Deep link scheme**: `fleofit://` (ritorno dal login Google e dal link di recupero password)
+- **Web app in produzione**: Vercel (`https://fleofit.vercel.app`), da `main` — non da qui
 
 ---
 
-## 1.1 I due branch — LEGGERE PRIMA DI TOCCARE main
+## 1.1 I tre branch, e perché questo non è gli altri due
 
-Il progetto vive su **due branch con due prodotti diversi**, entrambi attivi:
-
-| Branch | Cos'è | Dove finisce | Ultimo commit |
+| Branch | Cos'è | Dove vive | Dove finisce |
 |---|---|---|---|
-| **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi | **collegato a Vercel** → `https://fleofit.vercel.app`. LIVE, non rompere | `c2ed65d` — 25 ago 2026 |
-| **`ios-version`** | Versione nativa iOS/Capacitor, quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. L'app arriva sull'App Store da Xcode, non da un deploy | **23 set 2026** (`git log -1`) |
+| **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi | — | **Vercel** → `https://fleofit.vercel.app`. LIVE, non rompere |
+| **`ios-version`** | App nativa **iOS**, quella dell'App Store | **un'altra cartella locale**, con il suo `CLAUDE.md` | Xcode → App Store Connect |
+| **`android-version`** | App nativa **Android** — **QUESTA** | questa cartella | Android Studio / Gradle → Play Store (non ancora pubblicata) |
 
-### ⚠️ `ios-version` NON è un branch di rilascio (confermato dal committente il 24/08/2026)
-Non esiste nessuna pipeline collegata a `ios-version`. Pushare lì **non pubblica niente**: serve
-solo a non perdere il lavoro. La build per l'App Store nasce da Xcode sulla cartella locale.
-Conseguenze pratiche, tutte controintuitive:
-- **Un push su `ios-version` non è un rilascio.** Il codice spedito ad Apple è quello archiviato da
-  Xcode in quel momento, che può essere più avanti o più indietro del branch (§9-ter: è già
-  successo con il build number).
-- **Un fix che deve andare in produzione web NON basta metterlo su `ios-version`.** Deve arrivare
-  su `main`, o non esiste per gli atleti che usano l'app oggi.
-- **Gli scheduled workflow di GitHub girano solo dal branch di default.** Un workflow corretto su
-  `ios-version` è un file inerte (§4 e §9 punto 9).
-- ⚠️ **Da verificare su Vercel**: se il progetto Vercel è collegato al repo GitHub, per impostazione
-  predefinita Vercel costruisce una **preview deployment per ogni branch pushato**, `ios-version`
-  incluso, su un URL pubblico. Controllare in Vercel → Settings → Git → *Ignored Build Step* /
-  *Production Branch* che le preview siano disattivate o protette da password.
+- **`android-version` è nato da `ios-version` il 02/10/2026** (il commit «Nasce l'app Android»).
+  Da lì i due vanno ognuno per conto suo: **una correzione fatta qui non arriva su iOS**, e
+  viceversa. Quando una modifica tocca il codice React condiviso, dirlo al committente perché
+  la riporti anche sull'altro branch.
+  ⚠️ Già due correzioni del 02/10 valgono anche per iOS e su `ios-version` **non ci sono**:
+  gli ascoltatori nativi registrati a ogni cambio di pagina (§A.3 punto 6) e il marchio
+  separato dal fondo ritagliato nell'apertura (§A.3 punto 2).
+- **Pushare `android-version` non pubblica niente**: nessuna pipeline è collegata. È il backup
+  del lavoro locale; l'app nasce da Gradle su questa cartella.
+- **`main` è molto indietro** (fermo al 25/08/2026) e non conosce l'RPE: vedi sotto.
+- **Regola, senza eccezioni**: `git fetch` prima di qualunque affermazione su quanto i branch
+  siano divergenti, e verificare con `git show origin/<branch>:<file>` prima di dire che
+  qualcosa «manca» da qualche parte.
 
-### Rapporto tra i due: SONO DIVERGENTI, ED ENTRAMBI SI MUOVONO
-Verificato il 25/08/2026 **dopo un `git fetch`**:
-`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 108`**
-(rimisurata il 23/09/2026 prima del push: `main` è fermo al 25/08, `ios-version`
-continua a muoversi). ⚠️ **Questo numero invecchia di uno a ogni commit, questa riga
-compresa**: vale come ordine di grandezza — il divario è grande e cresce — non come
-cifra da fidarsi. Per il valore vero si rilancia il comando dopo un `git fetch`, che è
-la regola di questa sezione.
-Il divario **cresce a ogni sessione di lavoro su `ios-version`**: più si aspetta, più il merge costa.
-**Un merge non è un fast-forward**: è un merge vero.
-
-> 🔴 **`main` NON è fermo, e questo documento ha già sbagliato due volte su questo punto.**
-> Prima diceva `0 18` e "non divergenti" (falso: nessuno aveva fatto fetch). Poi diceva
-> "`8919bfd` — 8 giu 2026" (falso al 25/08: **`main` ha ricevuto 8 commit fra il 24 e il 25
-> agosto**). Le correzioni fatte su `ios-version` vengono **riportate a mano su `main`**, una
-> a una: backup del database e dei bucket, titolo facoltativo, accessibilità, notifiche di
-> assegnazione, cestino degli atleti.
-> **Regola, senza eccezioni**: `git fetch` **prima** di qualunque affermazione sui due branch,
-> e prima di dire che qualcosa "manca su main" verificarlo con
-> `git show origin/main:<file>` o `git grep <cosa> origin/main -- src/`.
-
-Peggio del conteggio: i due branch hanno lavorato **in parallelo sugli stessi file**. Fra il 15 e
-il 21 maggio `main` ha ricevuto una propria linea di sviluppo su `TVDashboard.jsx`,
-`CreateWorkout.jsx` e `WorkoutDetail.jsx` (TV, opzioni ergometri, distanze di corsa, fix PDF/story
-IG, beep del timer), cioè proprio i file più grandi del progetto, che `ios-version` ha modificato
-per conto suo. Un merge produrrà conflitti reali lì dentro, non banali da risolvere.
-
-### Cosa c'è davvero solo su `ios-version` (verificato su `origin/main` il 25/08/2026)
-Assenti da `main`: tutta la cartella `ios/`, `capacitor.config.ts`, `privacy-policy.html`,
-`supabase/functions/ai-workout/` (generazione IA), `src/lib/blockHints.js`, l'**RPE**, la
-**Live Coach Cam**, la **modalità Offline** (ex "Bunker"), push FCM native, centro notifiche + badge.
-Aggiunti il 25-26/08 e ancora solo qui: **tutta l'infrastruttura di test**
-(`vitest.config.js`, `src/test/`, i `__tests__`), e quasi tutto `src/lib/` —
-`offlineQueue.js`, `rpe.js`, `blockColors.js`, `alert.js`, `pushToken.js`,
-`constants.js`, `timerSequence.js`, `statistiche.js`, `badge.js` — più
-`supabase/functions/_shared/admin.ts` e `tools/` (verifica dell'ipa e query sul revisore).
-⚠️ `src/lib/workoutTitle.js` invece **c'è anche su `main`**: è stato riportato lì il 24/08.
-
-Due correzioni rispetto a quanto scritto qui in passato:
-- ⚠️ **`TVDashboard.jsx` esiste anche su `main`.** La TV Dashboard non è esclusiva di `ios-version`:
-  esistono due implementazioni diverse, sviluppate in parallelo a maggio.
-- `main` **conosce** `Interval`, `Custom`, `Event` e `isAutonomous` (l'8 giugno ha ricevuto
-  "Coach can create custom workout"). Quel pezzo di incompatibilità non c'è più — resta solo l'RPE.
-
-### ⚠️ Il database e le Edge Function sono CONDIVISI
-Entrambi i branch puntano allo **stesso progetto Supabase** (`riyqtcssllupakjtoehj`) e alle **stesse
-Edge Function deployate**. Non esiste un ambiente di staging. Conseguenze concrete:
-- Una **migrazione di schema** fatta per iOS colpisce subito la web app in produzione.
-- `send-reminders` è **una sola funzione deployata**: 583 righe su `ios-version` contro 247 su
-  `main`, cioè 336 in più (rimisurate il 25/08/2026). Qualunque versione sia deployata, serve
-  entrambe le app. La lista admin non è più duplicata al suo interno: dal 25/08 importa
-  `supabase/functions/_shared/admin.ts`, che va tenuta allineata a `ADMIN_EMAILS` di
-  `src/App.jsx` e alle policy RLS (§9 punto 7).
-- ✅ Il fix del backup (`db-backup.yml`) **è su `main` dal 25/08/2026** (`e5d11c5`, `30c597b`,
-  `c2ed65d`) ed è **byte-identico** a quello di `ios-version`: verificato con
-  `diff <(git show origin/main:.github/workflows/db-backup.yml) .github/workflows/db-backup.yml`.
-  Conta perché i cron di GitHub girano **solo dal branch di default**: finché il file non era lì,
-  il backup notturno era quello rotto. Ora non lo è più.
-  Se in futuro tocchi quel workflow, il modo di riportarlo è **solo quel file**, non l'intero branch:
-  `git checkout main && git checkout ios-version -- .github/workflows/db-backup.yml`
+### ⚠️ Il database e le Edge Function sono CONDIVISI — da TRE app
+Tutti e tre i branch puntano allo **stesso progetto Supabase** (`riyqtcssllupakjtoehj`) e alle
+**stesse Edge Function deployate**. Non esiste un ambiente di staging. Quindi:
+- Una **migrazione di schema** colpisce subito la web app in produzione e l'app iOS.
+- `send-reminders` è **una sola funzione deployata** per tre app. Il suo messaggio FCM ha un
+  blocco `notification` generico, che Android mostra così com'è (la parte `apns` la ignora):
+  **le push Android non hanno richiesto nessuna modifica lato server**, e non serve deployare
+  niente per loro. Se un giorno si tocca quella funzione, il deploy vale per tutte e tre.
+- La lista admin vive in **tre posti** — `ADMIN_EMAILS` in `src/App.jsx`,
+  `supabase/functions/_shared/admin.ts` e le policy RLS — e devono coincidere (§9 punto 7).
 
 ### ⚠️ Incompatibilità dati nota: l'RPE
-`main` **non conosce l'RPE**: `parseNotesAndRpe`/`formatNotesWithRpe` non esistono su quel branch
-(0 occorrenze di "RPE" in `src/`). Quindi:
-- Un workout completato da iOS scrive `[RPE: 7/10]\ntesto` in `athlete_workouts.notes`;
-  sulla **web app quel prefisso appare come testo grezzo** dentro la nota.
-- Se l'atleta **modifica la nota dalla web app**, il valore viene riscritto verbatim
-  (`.update({ notes })` in `AthleteDetail.jsx` e `.update({ notes: finalNote })` in
-  `WorkoutDetail.jsx`; in `Home.jsx` il punto è sparito col codice morto rimosso il 25/08):
-  se cancella il prefisso, **l'RPE è perso** e le statistiche iOS (RPE medio, carico settimanale)
-  ricadono silenziosamente sul default 5.
-Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **retroportare
-`parseNotesAndRpe` su `main`** (anche solo in lettura, per non distruggere il dato).
+`main` **non conosce l'RPE**: `parseNotesAndRpe`/`formatNotesWithRpe` non esistono su quel branch.
+- Un workout completato da Android (o iOS) scrive `[RPE: 7/10]\ntesto` in `athlete_workouts.notes`;
+  sulla **web app quel prefisso appare come testo grezzo** dentro la nota. Lo stesso vale per
+  `[GRADIMENTO: …]` (§9-unquadragies) e per `[PAUSA: …]` in `athletes.notes` (§9-decies).
+- Se l'atleta **modifica la nota dalla web app** e cancella il prefisso, **l'RPE è perso** e le
+  statistiche ricadono silenziosamente sul default.
+
+---
+
+## A. ANDROID — leggere prima di toccare qualcosa di nativo
+
+Tutto quello che segue è stato **trovato provando l'app sull'emulatore** il 02/10/2026, e quasi
+niente si sarebbe visto leggendo il codice: la base era l'app iOS, e le differenze stanno nella
+WebView, nei plugin e nel manifest.
+
+### A.1 Come si costruisce e si installa
+
+```bash
+npm run android                       # build web + npx cap sync android
+```
+```bash
+cd android && ./gradlew installDebug  # compila e installa sull'emulatore/telefono collegato
+```
+
+- **Java**: Gradle vuole il JDK di Android Studio, non è nel PATH. In Git Bash:
+  `export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"`.
+- **adb**: `"$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"`. In Git Bash i percorsi che
+  cominciano con `/sdcard` vengono riscritti in percorsi Windows: serve `export MSYS_NO_PATHCONV=1`.
+- 🔴 **`npm run build` non basta**: Gradle impacchetta `android/app/src/main/assets/public`, che
+  è una **copia** del bundle depositata da `npx cap sync android`. Senza sync, l'app installata
+  ha il codice della volta prima e la modifica «non funziona». Per questo esiste `npm run android`.
+  ⚠️ Quella copia è in `android/.gitignore`, come le build: non va nel repository.
+- **`google-services.json`** sta in `android/app/` ed è versionato, come su iOS il
+  `GoogleService-Info.plist`. Non contiene segreti veri. Il `build.gradle` attiva Firebase
+  **solo se il file c'è**: senza, scrive nel log che le push non funzioneranno e prosegue.
+- `minSdk 24`, `targetSdk 36` (`android/variables.gradle`).
+
+### A.2 Come si verifica (senza un telefono vero)
+
+L'emulatore usato è un **Pixel con Google Play Services** (`sdk_gphone…`): riceve le push.
+
+| Cosa | Come |
+|---|---|
+| **Avvio, animazioni** | `adb shell screenrecord --size 720x1280 /sdcard/x.mp4`, poi `adb pull` e i fotogrammi con `ffmpeg -fps_mode passthrough`. ⚠️ Il video è a frequenza **variabile**: `-ss` su un file così sbaglia il punto, si estraggono tutti i fotogrammi e si guardano quelli |
+| **Console, rete, DOM** | `chrome://inspect` in Chrome sul PC → la WebView di FLEOFIT → *inspect* |
+| **Comandare la WebView da script** | `adb forward tcp:9333 localabstract:webview_devtools_remote_<pid>` (il nome si legge da `/proc/net/unix`), poi il protocollo DevTools (`/json` → WebSocket → `Runtime.evaluate`). È così che sono stati provati tasto indietro e galleria |
+| **Tasto indietro vero** | `adb shell input keyevent KEYCODE_BACK` |
+| **Vibrazione** | `adb shell dumpsys vibrator_manager` → «Recent vibrations»: ogni chiamata dell'app con durata e intensità. Si vede che è partita, non come si sente |
+| **Microfono** | Emulatore → ⋯ → Microphone → «Virtual microphone uses host audio input». ⚠️ Si spegne a ogni riavvio dell'emulatore |
+| **Chi ha il primo piano** | `adb shell dumpsys window \| grep mCurrentFocus` — è così che si è scoperto che il tasto indietro chiudeva l'app |
+| **Galleria** | `adb shell content query --uri content://media/external/images/media` — se il file è lì, Google Foto lo vede |
+
+⚠️ **La tastiera su schermo non compare sull'emulatore** se l'AVD ha `hw.keyboard=yes`: Android
+crede che ci sia una tastiera fisica e mostra solo un pallino di Gboard. Non è l'app. Si accende con
+`adb shell settings put secure show_ime_with_hard_keyboard 1`.
+
+Resta da provare **su un telefono vero**: come si sente la vibrazione (Android traduce tutto in
+impulsi fissi, «leggero» e «successo» si distinguono meno che su iPhone), la qualità del microfono,
+e le push con l'app chiusa da giorni.
+
+### A.3 Le differenze da iOS, una per una
+
+1. **Icona e schermo di lancio.** Erano quelli di Capacitor (la X azzurra su bianco).
+   `python tools/icone-android.py` li rigenera da `assets/icon.png`: ritaglia la **sola scritta**
+   e la mette dentro la zona sicura dell'icona adattiva (il cerchio da 66dp su 108), con il fondo
+   `#0B0B0B` come colore a parte. ⚠️ `npx capacitor-assets generate` **non va usato**: scala
+   l'icona intera e la maschera circolare taglia «FLEOFIT» ai lati.
+   Da Android 12 lo splash lo disegna il **sistema** da `styles.xml`
+   (`windowSplashScreenBackground` + `windowSplashScreenAnimatedIcon`): senza quelle righe si
+   vedeva l'icona di Capacitor su fondo chiaro prima dell'apertura scura.
+   ⚠️ L'icona piccola delle **notifiche** è ancora quella di default: Android la vuole
+   monocromatica, e il simbolo non è stato scelto (BACKLOG).
+2. 🔴 **L'apertura: un riquadro non veniva dipinto.** Registrando l'avvio, un rettangolo
+   `#0B0B0B` copriva «FIT» e arrivava all'angolo in basso a destra; durante l'uscita lasciava
+   vedere la Home sotto. Causa: un `clip-path` su una superficie a schermo intero che contiene
+   un figlio con un suo livello GPU (il marchio che anima). La WebView di Android sbaglia quel
+   ritaglio; Safari no. Due correzioni, e **servono entrambe** (provate una alla volta):
+   ritaglio e `drop-shadow` stanno solo su `.apertura-esce` (da ferma la superficie copre lo
+   schermo comunque), e in `Apertura.jsx` il marchio è **fratello** del fondo ritagliato, non
+   suo figlio. Togliere solo il `drop-shadow` **non** bastava.
+3. **Galleria** — `src/lib/galleria.js`. Su Android `@capacitor-community/media` **rifiuta**
+   `savePhoto` senza `albumIdentifier` («Album identifier required»); su iOS quel parametro non
+   esiste. L'album `FLEOFIT` sta nella memoria multimediale dell'app (`getAlbumsPath()`): Android
+   lo indicizza, la foto compare in Google Foto, e **non serve nessun permesso**.
+   ⚠️ `createAlbum` rifiuta se l'album esiste già, cioè dalla seconda volta in poi: l'errore si
+   ignora. Mai chiamare `Media.savePhoto` diretto: si passa da `salvaInGalleria`.
+4. 🔴 **Il tasto indietro di sistema** — `src/lib/indietroAndroid.js`, agganciato in
+   `DeeplinkHandler` (`App.jsx`) solo su Android.
+   - Senza ascoltatore Capacitor fa `history.back()`: con una modale aperta **cambiava pagina** e
+     lasciava la modale appesa sopra quella precedente.
+   - Ora: se in cima allo schermo c'è qualcosa **fuori da `#root`**, c'è una modale (sono tutte
+     `createPortal` su `body`, §8), e il tasto cerca **dentro di lei** il suo modo di chiudersi:
+     prima il velo **se React gli ha dato un `onClick`** (lo legge dalla chiave `__reactProps$`),
+     poi la X (`aria-label` che comincia con «Chiudi», o un bottone con la sola icona
+     `lucide-x`), poi un bottone con scritto **esattamente** «Annulla», «Chiudi», «Indietro» o
+     «No». Se non trova niente non fa niente — e **non cambia pagina**.
+   - 🔴 La prima stesura toccava solo il velo, ed era sbagliata: **delle quaranta modali UNA sola
+     si chiude dal velo** (il menu delle tre puntine). «Assegna workout» no.
+   - ⚠️ **Una modale nuova si chiude col tasto indietro solo se ha una X con `aria-label="Chiudi"`
+     o un «Annulla».** È la convenzione da rispettare; una parola diversa («Lascia stare»)
+     non viene riconosciuta.
+   - 🔴 **Il `canGoBack` di Capacitor mente**: con tre pagine nella cronologia diceva `false`, e
+     il tasto chiudeva l'app. Si legge la cronologia di **React Router** (`history.state.idx`,
+     `puoTornareIndietro`), la stessa di `useIndietro` (§9-tervicies). Dalla prima pagina l'app
+     va in **secondo piano** (`minimizeApp`), come le app di sistema da Android 12.
+5. **Manifest** (`android/app/src/main/AndroidManifest.xml`) — tutte righe che su iOS stanno in
+   `Info.plist` e che il progetto Capacitor generato non aveva:
+   - `RECORD_AUDIO` + `MODIFY_AUDIO_SETTINGS`: senza, `getUserMedia` dà `NotAllowedError` e il
+     plugin `VoiceRecorder` `MISSING_PERMISSION`. Note vocali e dettatura IA erano morte.
+   - `POST_NOTIFICATIONS`: da Android 13 senza questa riga `requestPermissions()` torna «negato»
+     **senza mostrare nessun dialogo**.
+   - L'`intent-filter` per **`fleofit://`**: senza, il login Google finiva nel browser e non
+     tornava più nell'app (stesso per il link di recupero password).
+   - `VIBRATE` la porta già `@capacitor/haptics`.
+6. 🔴 **Gli ascoltatori nativi si registravano a OGNI cambio di pagina** — e questo **vale anche
+   per iOS**. L'effetto di `DeeplinkHandler` dipendeva da `navigate`, che con `BrowserRouter`
+   cambia identità a ogni navigazione, e non aveva cleanup: deep link, tocco su una notifica e
+   tasto indietro venivano gestiti tante volte quante pagine si erano aperte (un tasto indietro
+   tornava di **due** pagine), e il token push si rinfrescava a ogni navigazione. Ora `navigate`
+   passa da un ref, l'effetto ha `[]` e un cleanup che toglie gli handle (`addListener` torna una
+   **promessa** di handle). ⚠️ Non ha un test: i test girano sul ramo web.
+7. **API solo iOS che su Android lanciano.** `Keyboard.setAccessoryBarVisible` rifiutava e
+   saltava il resto dell'avvio nativo in `App.jsx` (compresa la pulizia delle notifiche al
+   ritorno nell'app): ora ha il suo `.catch`. Chi aggiunge una chiamata a un plugin deve sapere
+   **su quale piattaforma esiste**, o darle un `.catch` che non porti via il resto.
+8. **Sign in with Apple** non c'è: `Login.jsx` mostra il bottone solo su `getPlatform() === 'ios'`.
+   Il plugin `@capacitor-community/apple-sign-in` resta fra le dipendenze perché `Login.jsx` lo
+   importa, ma su Android non ha implementazione. La linea guida 4.8 di Apple qui non vale.
+9. **Il microfono**: la WebView di Android sa registrare `audio/mp4` (verificato sull'emulatore,
+   Chrome 149), quindi la dettatura IA prende la strada di `MediaRecorder` come su iOS e l'audio
+   arriva in un formato che Gemini legge (§9-quindecies). ⚠️ Se una WebView più vecchia sapesse
+   solo `audio/webm`, `formatoRegistrabile()` torna `null` e si ripiega sul plugin.
+10. **Badge sull'icona**: su Android dipende dal launcher, spesso è un pallino o niente. Non è un
+    errore. `sincronizzaBadge` (§8) resta l'unico punto che lo scrive.
+
+### A.4 Cosa resta da provare o da fare su Android
+- **La tastiera.** `Keyboard.resize: 'native'` in `capacitor.config.ts` è un'opzione **solo iOS**
+  (§9-undecies punto 8): su Android il ridimensionamento lo decide `windowSoftInputMode` nel
+  manifest, che non è dichiarato. Da verificare che i campi nelle modali restino sopra la tastiera
+  e che le barre ancorate in basso spariscano mentre si scrive (`useTastiera`).
+- **Le push**: `google-services.json` c'è; resta da provare l'arrivo con l'app chiusa e il tocco
+  che porta al workout (`route`).
+- **L'icona monocromatica delle notifiche** (vedi A.3 punto 1).
+- Margini di sicurezza (`env(safe-area-inset-*)`) sui fogli dal basso: le pagine viste vanno, i
+  fogli vanno guardati uno per uno.
+- **Pubblicazione sul Play Store**: firma di rilascio, `versionCode`, scheda dello Store, modulo
+  sulla sicurezza dei dati — niente di questo esiste ancora.
 
 ---
 
@@ -333,20 +292,20 @@ Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **re
 | Icone | `lucide-react` |
 | Date | `date-fns` + locale `it` |
 | Backend | **Supabase** (Postgres + Auth + Storage + Realtime + Edge Functions) |
-| Mobile | **Capacitor 8.5.2** → target **iOS** (`ios/App`), niente cartella Android. ⚠️ Ciclo di vita a **UIScene** dal 21/09/2026 (§9-sextricies) |
+| Mobile | **Capacitor 8.5.2** → target **Android** (`android/`), Gradle, `minSdk 24` / `targetSdk 36`. Niente cartella `ios/`: sta su `ios-version` (§1.1) |
 | Export | `jspdf` (PDF scheda), `html-to-image` (`toPng`/`toBlob`) per la story Instagram |
 | Superficie IA | `thinking-orbs` — l'orb dell'attesa (§9-untricies) · `border-beam` — il fascio su card e foglio (§9-duetricies). ⚠️ Entrambe MIT e senza dipendenze, ed **entrambe si importano solo da `CreateWorkout.jsx`**: mai da un file condiviso |
-| Push | FCM (iOS nativo, via `@capacitor-community/fcm` + Firebase Admin lato Edge Function) + Web Push VAPID (browser) |
+| Push | FCM (`@capacitor/push-notifications` + `@capacitor-community/fcm`, `google-services.json`; Firebase Admin lato Edge Function) + Web Push VAPID (browser) |
 | IA | Google **Gemini 2.5 Flash** (generazione workout + trascrizione audio) |
 
 ### Plugin Capacitor in uso
 `@capacitor/app`, `browser`, `filesystem`, `haptics`, `keyboard`, `network`,
 `push-notifications`, `screen-orientation`, `share`, `status-bar`,
-`keep-awake` (TV), `media` (salva in galleria),
-`apple-sign-in` (Sign in with Apple, §9-sexvicies),
+`keep-awake` (TV), `media` (salva in galleria — su Android solo via `salvaInGalleria`, §A.3),
 `fcm`, `@capawesome/capacitor-badge` (badge icona),
-`@independo/capacitor-voice-recorder` (note vocali **e** dettatura IA — una sola libreria audio
-dal 23/09/2026, §9 punto 4).
+`@independo/capacitor-voice-recorder` (note vocali **e** dettatura IA, una sola libreria audio).
+`apple-sign-in` è fra le dipendenze solo perché `Login.jsx` lo importa: su Android non ha
+implementazione e il bottone non compare (§A.3 punto 8).
 
 ### Comandi
 ```bash
@@ -358,38 +317,21 @@ npm run demo     # AMBIENTE DI PROVA: l'app su dati finti in memoria (§9-quinvi
 npm run demo:atleta  # lo stesso, ma la sessione È un atleta finto — l'unico modo di
                  #   vedere il LATO ATLETA con dei dati dentro (§9-quinvicies).
                  #   DEMO_ATLETA=at-sofia npm run demo:atleta per cambiarlo
-npm run ios      # build + cap sync — USARE QUESTO prima di compilare da Xcode
-npx cap sync ios # solo la sincronizzazione, se il build è già fatto
+npm run android  # build + cap sync android — USARE QUESTO prima di ogni installazione (§A.1)
 ```
 
-> 🔴 **`npm run build` NON basta per vedere una modifica in Xcode.**
-> Xcode compila `ios/App/App/public`, che è una **copia** del bundle depositata da
-> `npx cap sync ios`. Senza sync, Xcode costruisce con il codice della sincronizzazione
-> precedente e la modifica sembra non aver funzionato.
-> Successo il 26/08/2026: la copia in Xcode era ferma al giorno prima, e una funzione
-> appena rimossa continuava a comparire nell'app. Non è un passo solo pre-archive:
-> serve **a ogni** compilazione da Xcode. Per questo esiste `npm run ios`.
->
 > ⚠️ Il build stampa anche il peso dei chunk: `CreateWorkout` sta a **156 KB**
-> (erano 76 fino al 15/09: **+15** di `thinking-orbs`, che porta tutti e nove i
-> modi anche usandone due — §9-untricies — e **+64** di `border-beam`,
-> §9-duetricies). `CreaWorkoutUI` deve restare intorno ai **24 KB**: è un chunk
-> **condiviso con `WorkoutDetail`**, e una libreria di effetti importata lì
-> dentro la fa scaricare a ogni apertura di una scheda. E `WorkoutDetail` deve
-> restare intorno ai **79 KB** — 83 fino al 22/09, quando il chunk del recap si è
-> portato via un po' di logica condivisa (erano 68 fino al 01/09, poi 82 con `StoriaUI` + `recapStoria`
-> §9-unetvicies, e 84 dal 02/09 con `previsione` + `PrevisioneUI` §9-quatervicies). Se risale sopra i 400, qualcuno ha rimesso `jspdf` o `html-to-image`
-> fra gli import in testa (§9-noviesdecies).
+> (+15 di `thinking-orbs`, §9-untricies, e +64 di `border-beam`, §9-duetricies).
+> `CreaWorkoutUI` deve restare intorno ai **24 KB**: è un chunk **condiviso con
+> `WorkoutDetail`**, e una libreria di effetti importata lì dentro la fa scaricare a ogni
+> apertura di una scheda. `WorkoutDetail` deve restare intorno ai **79 KB**: se risale sopra
+> i 400, qualcuno ha rimesso `jspdf` o `html-to-image` fra gli import in testa
+> (§9-noviesdecies).
 >
 > ⚠️ E `index` deve restare intorno ai **594 KB**: è il chunk d'ingresso, quello
 > che gatekeepa il primo fotogramma. Se sale di colpo di qualche decina di KB,
 > qualcuno ha importato in modo NON pigro un pezzo montato da più pagine — è
 > esattamente quello che il recap avrebbe fatto (§9-quadragies punto 6).
->
-> Come si verifica se la copia è vecchia:
-> ```bash
-> diff -q dist/assets/index-*.js ios/App/App/public/assets/index-*.js
-> ```
 
 ### Due configurazioni, non una
 `vite.config.ts` costruisce l'app · `vitest.config.js` la testa (jsdom,
@@ -401,15 +343,14 @@ prendono sempre il ramo web). Tenerle separate evita che il build di produzione 
 > tutte leggono localStorage in un effetto. Era il vero ostacolo ai test sulle pagine.
 > ⚠️ **Non creare mai un `vite.config.js`**: Vite risolve `.js` prima di `.ts` e
 > maschererebbe `vite.config.ts` senza dire niente. È già successo il 25/08/2026.
-Per testare su iPhone in dev live: scommentare `server.url` in `capacitor.config.ts` con l'IP locale.
+Per il live reload sull'emulatore: scommentare `server.url` in `capacitor.config.ts` (`10.0.2.2` è il PC visto dall'emulatore). ⚠️ Va ricommentato prima di ogni build di rilascio.
 
 ---
 
 ## 3. Struttura dei file
 
-> Struttura del branch `ios-version`. Su `main` mancano `ios/`, `capacitor.config.ts`,
-> `privacy-policy.html`, `src/lib/` e la Edge Function `ai-workout`.
-> ⚠️ `TVDashboard.jsx` **c'è anche su `main`**, in una versione diversa (§1.1).
+> Struttura del branch `android-version`. `android/` è il progetto Gradle generato da
+> Capacitor; `android/app/src/main/assets/public` è la copia del bundle (non versionata, §A.1).
 
 ```
 vite.config.ts                 # costruisce l'app
@@ -440,13 +381,15 @@ src/
 │  ├─ alert.js                 # mostraAlert/mostraErrore: alert applicativo senza passare props
 │  ├─ andamento.js             # aderenza, carico, volume e sforzo della scheda atleta — TUTTI
 │  │                           #   sulla stessa finestra di 30 giorni (§9-terdecies)
-│  ├─ appleLogin.js            # ⚠️ Sign in with Apple: il nonce va HASHATO per il plugin e
+│  ├─ appleLogin.js            # (solo iOS: qui non si usa) ⚠️ Sign in with Apple: il nonce va HASHATO per il plugin e
 │  │                           #   in chiaro per Supabase, e il nome di Apple arriva UNA
 │  │                           #   volta sola (§9-sexvicies)
 │  ├─ aptica.js                # battito(): il colpetto dei picker, era in due copie
-│  ├─ badge.js                 # ⚠️ l'UNICO punto che scrive il badge iOS (§8)
+│  ├─ badge.js                 # ⚠️ l'UNICO punto che scrive il badge dell'icona (§8)
 │  ├─ blockColors.js           # TYPE_COLORS, unificata dalle 5 copie sparse
 │  ├─ blockHints.js            # BLOCK_HINT: didascalie in chiaro dei tipi di blocco (§9-ter)
+│  ├─ galleria.js              # ⚠️ salvaInGalleria: su Android il plugin vuole un ALBUM (§A.3)
+│  ├─ indietroAndroid.js       # ⚠️ il tasto indietro di sistema: chiude prima la modale (§A.3)
 │  ├─ cascata.js               # ⚠️ SOLO per le liste ANNIDATE (archivio, rubrica): `nth-child`
 │  │                           #   riparte a ogni gruppo, quindi serve un indice che scorre.
 │  │                           #   `MASSIMO_CASCATA` deve coincidere col tetto in index.css
@@ -570,10 +513,13 @@ src/
    ├─ TVDashboard.jsx          # /tv — dashboard fullscreen per TV/Chromecast, codice a 4 cifre
    ├─ motivations.js           # 15 frasi motivazionali + getDailyMotivation() con anti-ripetizione
    └─ __tests__/               # 157 test su componenti e pagine montate (§9 punto 11)
-tools/                            # non entra nell'app: serve alle verifiche pre-submission
-   ├─ ExportOptions-AppStore.plist # esporta un .ipa in locale, NON carica niente
-   ├─ verifica-ipa.sh              # 6 controlli sul binario vero (§9-ter)
-   └─ verifica-revisore.sql        # solo letture: account demo, dati, policy (§9-ter)
+tools/                            # non entra nell'app
+   ├─ icone-android.py             # rigenera icone e splash Android dal marchio (§A.3)
+   └─ diagnosi-note-vocali.sql     # solo letture
+android/                          # il progetto Gradle (Capacitor). Si tocca a mano solo:
+   ├─ app/src/main/AndroidManifest.xml   # permessi e deep link (§A.3 punto 5)
+   ├─ app/src/main/res/values/styles.xml # splash di sistema (§A.3 punto 1)
+   └─ app/google-services.json           # Firebase, versionato (§A.1)
 supabase/
    ├─ functions/_shared/admin.ts   # ADMIN_EMAILS condivisa dalle due Edge Function (§9 punto 7)
    ├─ functions/send-reminders/    # notifiche push (5 modalità)
@@ -752,73 +698,15 @@ Prima erano entrambe aperte. Ora:
 ⚠️ Il deploy di `send-reminders` colpisce **anche la web app in produzione**: è una sola
 funzione per due app.
 
-### 🔴 Su iOS le note vocali si registrano con `MediaRecorder`, non col plugin nativo
-Accertato il 26/08/2026, con i log dal dispositivo. Il plugin
-`@independo/capacitor-voice-recorder` dichiarava successo e restituiva il nulla:
-
-```
-hasAudioRecordingPermission → {"value":true}
-startRecording              → {"value":true}
-stopRecording               → {"msDuration":0,"uri":"", ...}
-```
-
-Il file caricato era un contenitore M4A di **557 byte** — intestazione e zero campioni —
-contro gli 1-1,9 MB delle note di giugno e luglio. L'atleta vedeva la forma d'onda muoversi
-e non sentiva niente.
-
-**Causa**: WebView e recorder nativo si contendono `AVAudioSession`. Non esiste un ordine che
-vada bene a entrambi — togliendo `getUserMedia` dal ramo nativo il plugin **non parte affatto**
-(«Impossibile accedere al microfono»), tenendolo registra vuoto.
-
-**Soluzione**: `getUserMedia` funziona, e `MediaRecorder` è disponibile nel WKWebView da
-iOS 14.5. Su iOS si registra con quello; il plugin nativo resta come ripiego per WebView
-vecchi. La scelta è ricordata in un `ref`, perché allo stop non si può rifare guardando
-`isNative`: dipende anche da `MediaRecorder` e dallo stream, che a quel punto potrebbero
-non esserci più.
-
+### 🔴 Le note vocali si registrano con `MediaRecorder`, non col plugin nativo
+Lezione nata su iOS (26/08/2026) e valida anche qui: il plugin `@independo/capacitor-voice-recorder`
+su iOS dichiarava successo e restituiva un file **vuoto** (`msDuration: 0`), perché WebView e
+recorder nativo si contendevano la sessione audio. Da allora, dove `MediaRecorder` sa produrre un
+formato utile si registra con quello, e il plugin è il ripiego. Su Android `audio/mp4` è
+supportato (§A.3 punto 9), quindi vale la stessa strada.
 > ⚠️ **La lezione generale**: un plugin nativo che risponde `{"value":true}` non sta dicendo
-> che ha funzionato. Qui il difetto è sopravvissuto due mesi perché non c'era nessun errore
-> da nessuna parte — solo un file muto. Da qui la guardia su `msDuration === 0`, che rifiuta
-> di caricare invece di tacere.
-
-> ℹ️ Dal 23/09/2026 la libreria audio è **una sola** (§9 punto 4), e su iOS è solo il ripiego
-> di `MediaRecorder` — sia per le note vocali sia per la dettatura IA in CreateWorkout.
-
-### 🔴 Le push NON funzionano su una build Debug lanciata da Xcode
-Accertato il 25/08/2026. Il progetto ha due bundle id:
-- **Debug** → `it.federicoleo.fleofit.dev` (serve a far convivere le due app sullo stesso telefono)
-- **Release/archive** → `it.federicoleo.fleofit`
-
-`GoogleService-Info.plist` è registrato su `it.federicoleo.fleofit`, e le credenziali APNs su
-Firebase valgono **per un bundle id specifico**. Quindi una build Debug produce un token APNs di
-un'app che Firebase non conosce, e FCM risponde:
-`401 "Invalid APNs credential." · THIRD_PARTY_AUTH_ERROR`.
-
-**Non è un bug: è la conseguenza del suffisso `.dev`.** Sintomo caratteristico: la notifica
-**in-app arriva** (è solo una riga in `notifications`) ma **la push no**.
-
-Per testare le push: o si toglie temporaneamente il `.dev` dal bundle id in Debug (disinstallando
-prima l'app dal telefono), o si registra su Firebase una seconda app iOS `…​.dev` con il proprio
-`GoogleService-Info.plist` usato solo in Debug.
-
-⚠️ **Da verificare comunque prima di pubblicare**: `THIRD_PARTY_AUTH_ERROR` nasce anche da una
-credenziale APNs mancante o scaduta. Su Firebase Console → Cloud Messaging deve esserci una
-**APNs Authentication Key `.p8`** (copre sandbox e produzione, non scade) e non un certificato
-`.p12`. Se manca, le push non funzionano **per nessuno**, neanche dall'App Store.
-
-✅ **Verificato il 26/08/2026 sul binario spedito**: `aps-environment = production`.
-`App.entitlements` dichiara `development` ed è usato in entrambe le configurazioni, ma questo
-**non è un problema**: l'archivio è firmato col profilo di sviluppo del team
-("iOS Team Provisioning Profile", `get-task-allow = true`) ed è l'**export** che rifirma con il
-profilo di distribuzione sostituendo `production`. Quindi **ispezionare l'archivio non risponde
-alla domanda**: serve l'`.ipa` esportato.
-Si rifà così, senza caricare niente (`destination = export` nel plist):
-```bash
-xcodebuild -exportArchive -archivePath <archivio.xcarchive> \
-  -exportOptionsPlist tools/ExportOptions-AppStore.plist \
-  -exportPath /tmp/fleofit-export -allowProvisioningUpdates
-./tools/verifica-ipa.sh /tmp/fleofit-export
-```
+> che ha funzionato. Da qui la guardia su `msDuration === 0`, che rifiuta di caricare invece di
+> tacere.
 
 ### Secrets attesi (Supabase)
 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
@@ -1139,8 +1027,8 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   (settimana a pallini colorati per categoria/stato ↔ statistiche settimanali: tempo, completati,
   RPE medio), workout di oggi, prossimi allenamenti, scorciatoie, archivio.
 - **Completamento workout** → apre la **modale RPE**: slider 1-10 draggabile + note.
-  ⚠️ Il pulsante **🍏 Apple Health** è sparito il 21/09/2026 con tutto HealthKit: era il
-  rilievo **2.5.1** di Apple, e rimetterlo respinge la build (§9-quatertricies).
+  ⚠️ Il pulsante **🍏 Apple Health** è sparito il 21/09/2026 con tutto HealthKit (decisione
+  presa sul branch iOS per un rilievo di Apple): non esiste nemmeno qui.
 - **Allenamento libero**: l'atleta crea un workout Custom autonomo con titolo, data e note.
 - **Modalità Offline**: `@capacitor/network` rileva l'assenza di rete → banner arancione,
   le azioni finiscono in `localStorage.fleofit_offline_queue` e vengono sincronizzate al ritorno
@@ -1274,8 +1162,9 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
    una copia propria: dal 25/08 importano entrambe `supabase/functions/_shared/admin.ts`.
    Restano quindi **`src/App.jsx` + `_shared/admin.ts` + le policy RLS** = tre copie in tutto.
    ✅ Verificate allineate il 25/08 (stesse 5 email, e `pg_policies` coincide con la fotografia
-   in `supabase/schema/`). **È il meccanismo che ha causato il rifiuto 2.3.1(a) di maggio:
-   ricontrollarlo prima di ogni submission**, vedi §9-ter.
+   in `supabase/schema/`). **È il meccanismo che a maggio ha fatto respingere l'app iOS
+   (l'account del revisore era admin in una lista e non nelle altre): ricontrollarlo prima di
+   ogni pubblicazione**, anche sul Play Store.
 8. **`COACHING_ID` hardcodato** (`0118e43f-…`) in due file.
 9. ~~Backup GitHub Action con lista tabelle obsoleta~~ → **CHIUSO il 25/08/2026.** Riscritto il
    24/08 (`79d146a`, vedi §4) e **portato su `main`** il 25/08, dove i cron girano davvero.
@@ -1373,9 +1262,10 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
     Estendendo il pattern a `.js/.jsx` sono emersi **quattro `no-undef`**, cioè quattro
     `ReferenceError` latenti già in produzione, ognuno dei quali rompeva una funzione in silenzio
     (vedi il commit del 25/08). Sono stati corretti.
-    ⚠️ Vanno tenute le esclusioni: `ios/App/App/public` è la copia del bundle **minificato** che
-    `npx cap sync ios` deposita nel progetto Xcode, e analizzarla produceva 4.600 falsi problemi
-    che nascondevano quelli veri.
+    ⚠️ Vanno tenute le esclusioni: `android/app/src/main/assets/public` è la copia del bundle
+    **minificato** che `npx cap sync android` deposita nel progetto Gradle, e analizzarla produce
+    migliaia di falsi problemi che nascondono quelli veri (su iOS erano 4.600, con la stessa
+    copia in `ios/App/App/public`).
     ⚠️ Va tenuta anche l'esclusione di `.agents`, aggiunta il 25/08: le skill vendorizzate
     portavano 5 problemi che non sono codice del progetto.
     ✅ **Scesi da 164 a 47 il 25/08/2026.** Tutti i 34 `no-empty` sono chiusi, e con loro sono
@@ -1828,155 +1718,6 @@ chiesto di non essere chiamato.
 >
 > Resta vero che il valore grezzo è raggiungibile dall'atleta per altre vie (l'export JSON, una
 > chiamata all'API): il marcatore nasconde lo stato dall'interfaccia, non lo cifra.
-
----
-
-## 9-ter. App Store — rifiuto del 1.1.0 (2) e ri-sottomissione del 1.1.0 (3)
-
-### Cronologia
-- **22 mag 2026** — caricata `1.1.0 (2)`. **Respinta** con **2.3.1(a) Hidden features** e
-  **3.2.1(viii) Financial Services**.
-- **24 ago 2026** — correzioni applicate nel commit `fc81404`, caricata `1.1.0 (3)`.
-- **02 set 2026** — 🔴 **respinta di nuovo, ma per un'altra cosa**: linea guida **4.8
-  Login Services**, cioè Google senza un'alternativa che permetta di nascondere la
-  propria email. Non è una ricaduta del 2.3.1(a). Chiuso il 03/09 con Sign in with
-  Apple (§9-sexvicies), **senza togliere Google**.
-- **20 set 2026** — 🔴 **respinta una terza volta, con TRE rilievi insieme** sulla
-  build `1.0 (5)`: **2.5.1** (HealthKit linkato senza una funzione primaria che lo
-  giustifichi), **5.1.2(i)** (le etichette privacy dichiarano *tracking* su email e
-  nome, e l'app non chiede l'ATT) e **2.3.6** (l'age rating dichiara *In-App
-  Controls* inesistenti). Solo il primo è codice, ed è chiuso il 21/09; gli altri
-  due si correggono su App Store Connect. Tutto in §9-quatertricies.
-- **21 set 2026** — ✅ **build `1.1.0 (6)` archiviata, esportata e verificata.**
-  `xcodebuild archive` con `-derivedDataPath` su una cartella nuova (il *Clean
-  Build Folder* fatto in modo da non toccare la DerivedData di Xcode), poi
-  `-exportArchive` e `tools/verifica-ipa.sh`: **11 controlli su 11 verdi**,
-  compresi i due nuovi — nessuna traccia di HealthKit e nessuna di Bluetooth,
-  verificate con `otool -L` sul binario. ⚠️ Il `pbxproj` dichiarava
-  `CURRENT_PROJECT_VERSION = 3` e l'ipa è uscito **6**: è la rinumerazione
-  automatica descritta qui sotto, che ha funzionato per la terza volta.
-- **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
-  Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
-  `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non
-  funzionava, e che nessuno aveva provato.
-
-> 🔴 **«1.0» e «1.1.0 (3)» sono DUE numeri diversi, e la lettera di Apple li mescola.**
-> Su App Store Connect il record della versione dice **`1.0`** — è il numero metadati, quello
-> che gli utenti vedranno sullo Store. Il **build** dice **`1.1.0 (3)`**, cioè
-> `CFBundleShortVersionString` + `CFBundleVersion`, che vengono da `MARKETING_VERSION` e
-> `CURRENT_PROJECT_VERSION` nel `pbxproj`. La lettera del 02/09/2026 scriveva «Version
-> reviewed: 1.0 (3)», cioè la versione del record accanto al numero di build — e a chi legge
-> solo quella sembra che il progetto dichiari la versione sbagliata. **Non è così, e
-> `MARKETING_VERSION` non va riportato a 1.0**: il build precedente portava 1.1.0 e si è
-> agganciato al record 1.0 senza problemi. Verificato il 09/09/2026 sul pannello.
-> ⚠️ Conseguenza cosmetica da conoscere: ad approvazione avvenuta lo Store dirà **1.0** e
-> Impostazioni dirà **1.1.0**, perché quella riga viene da `App.getInfo()`, cioè dal build
-> (§9-duoetvicies punto 6). Si allinea dopo, scegliendo quale dei due è il numero vero.
->
-> ℹ️ **Il build number del `pbxproj` NON è quello spedito, ed è normale.** Con
-> `method: app-store-connect`, `manageAppVersionAndBuildNumber` vale YES per impostazione
-> predefinita: Xcode alza da solo il numero oltre l'ultimo presente su App Store Connect.
-> Misurato il 26/08/2026 sullo stesso archivio: `pbxproj` = 3, archivio = **2**, ipa esportato
-> = **4**. È la spiegazione dell'incremento "misterioso" del 24/08, che questo documento
-> attribuiva a una svista. Non serve riallineare il pbxproj a mano.
-
-> 🔴 **AGGIORNAMENTO 24/08/2026 — la causa del rifiuto NON è stata rimossa del tutto.**
-> `demo@fleofit.it` è stata aggiunta al bundle e a `send-reminders`, ma **non alle policy RLS**
-> (§4-bis). Nel database il revisore non è admin: vede l'interfaccia coach completamente vuota.
-> La build 1.1.0 (3) attualmente in revisione è quindi esposta a un **secondo rifiuto 2.3.1(a)**.
-> Il fix è un `ALTER POLICY` additivo su 5 policy, senza rischio per la web app.
-
-### 2.3.1(a) — causa accertata: l'account admin dato ad Apple era inerte
-Il ruolo coach non viene dal DB ma da `ADMIN_EMAILS` **hardcoded nel JS compilato**; nel bundle
-spedito a maggio c'erano solo le 4 email personali. Al login del revisore `isAdmin` era `false` →
-o vedeva solo il lato atleta, o veniva espulso da `signOut()` a `/login?error=unauthorized`
-(`App.jsx:185-223`). **Il ruolo coach in sé non è una violazione**: gli accessi per ruolo sono
-leciti, devono solo essere raggiungibili.
-
-> ⚠️ Corollario da ricordare: **che l'account esista su Supabase non significa nulla.** Può avere
-> tutti i permessi del mondo sul DB ed essere comunque `isAdmin = false`. E vale anche il
-> contrario: può essere `isAdmin = true` nel bundle e non poter fare niente, perché le policy
-> RLS hanno una **terza** lista di admin (§4-bis). Servono tutti e tre gli allineamenti.
->
-> ✅ **Verificati tutti e tre il 26/08/2026**, e non per lettura ma per prova:
-> `src/App.jsx` e `_shared/admin.ts` hanno le stesse 5 email; `pg_policies` sul database vivo
-> coincide riga per riga con `supabase/schema/`; le 5 email sono nell'`.ipa` esportato; e
-> `demo@fleofit.it` **ha davvero assegnato un workout dall'app**.
-> È il primo giro in cui il percorso del revisore è stato percorso invece che dedotto.
-
-### 3.2.1(viii) — falso positivo su "Cash In" / "Cash Out"
-46 occorrenze letterali nel bundle. Sono termini Hyrox (blocco di apertura e di chiusura), ma per
-lo scanner sono movimenti di denaro; il segnale è rinforzato da `push_subscriptions` e
-`invitation_codes`.
-**DECISIONE DEL COMMITTENTE (24/08/2026): la terminologia NON si tocca.** Strategia scelta:
-**non rinominare, disambiguare**. `block.type` resta `'Cash In'` ovunque.
-⚠️ **Mai fare find&replace**: sono valori persistiti in `workouts.sections.blocks[].type` (jsonb) e,
-nel legacy, chiavi `sections.cashIn`/`cashOut`; il DB è condiviso con la web app in produzione.
-
-### Correzioni applicate (commit `fc81404`)
-- `demo@fleofit.it` aggiunta a `ADMIN_EMAILS` (`src/App.jsx`) **e** alla lista gemella in
-  `send-reminders/index.ts` (§9 punto 7: sono due liste).
-- Nuovo `src/lib/blockHints.js` (`BLOCK_HINT`), didascalie affiancate al termine nel picker blocchi
-  e nell'intestazione blocco (`CreateWorkout.jsx`), nella scheda workout e nel PDF
-  (`WorkoutDetail.jsx`), e sulla TV (`TVDashboard.jsx`).
-- Rimossi: `NSSpeechRecognitionUsageDescription` (funzione inesistente su iOS), `CloudSyncService`
-  (codice dormiente), blocco `server`/`cleartext` da `capacitor.config.ts`, blocchi commentati
-  "OPZIONE COACH DISATTIVATA" (`App.jsx`, `Login.jsx`).
-- `UIRequiredDeviceCapabilities` da `armv7` ad `arm64`.
-- Toggle Settings → "Anteprima come atleta"; "Modalità Bunker" → "Modalità Offline".
-
-### Verifiche fatte sul binario spedito (24/08/2026)
-Fatte **dentro `App.app` dell'archivio caricato**, non sul sorgente: `demo@fleofit.it` presente nel
-bundle JS, didascalie presenti, zero occorrenze di `cloud-sync` e "Modalità Bunker", zero
-`cleartext` in `capacitor.config.json`, `arm64`, bundle id `it.federicoleo.fleofit` (non il `.dev`
-della configurazione Debug).
-
-> **Controlli obbligatori prima di ogni archive.** Il primo è quello che è mancato a maggio;
-> il secondo è stato aggiunto il 09/09/2026, dopo che il seme dell'ambiente di prova è
-> arrivato fino a una build in preparazione senza che niente lo segnalasse (§9-quinvicies);
-> il terzo il 21/09/2026, dopo il rilievo **2.5.1** (§9-quatertricies).
-> ```bash
-> grep -l "demo@fleofit.it" dist/assets/*.js                                  # DEVE stampare un file
-> grep -l "AMBIENTE DI PROVA\|at-sara\|fleofit_demo_db" ios/App/App/public/assets/*.js   # NON deve stampare niente
-> grep -rl "Apple Health\|NSHealth\|capacitor-health\|developer.healthkit" ios/App/App/public/assets/ ios/App/App/*.plist ios/App/App/App.entitlements ios/App/CapApp-SPM/Package.swift   # NON deve stampare niente
-> ```
-> ⚠️ Il terzo cerca i **marcatori**, non la parola «health»: `@supabase/realtime-js`
-> porta nel bundle un `primaryPassedHealthCheck` che con un grep generico fa scattare
-> l'allarme a ogni build — e un controllo che grida sempre è un controllo che si smette
-> di leggere. ⚠️ Ed è solo un'anticipazione: HealthKit entra nel binario anche da un
-> plugin che nessuno chiama, e lì lo vede solo `otool -L` sull'`.ipa` esportato — è il
-> controllo **10** di `tools/verifica-ipa.sh`.
-> ⚠️ Il secondo si fa su `ios/App/App/public`, non su `dist`: è quella la copia che Xcode
-> compila, e le due divergono ogni volta che si salta `npx cap sync ios` (§2).
-> Attenzione a `grep -c` su più file: stampa una riga per file (quasi tutte `:0`) ed esce con
-> codice 1 quando non trova nulla — si legge come un fallimento e non lo è.
-
-### Cosa non sta nel repo e va fatto a mano
-Account `demo@fleofit.it` su Supabase Auth **con riga `athletes` pre-creata** (senza, il revisore
-finisce in onboarding), dati demo perché la dashboard coach non si apra vuota, secondo account
-atleta, redeploy di `send-reminders`, note per il revisore, risposta nel **Resolution Center**.
-
-✅ **Stato al 26/08/2026** (query in `tools/verifica-revisore.sql`): l'account esiste, ha l'email
-confermata e la riga `athletes`; la dashboard coach non è vuota (12 atleti, 171 workout, 180
-assegnazioni).
-⚠️ **Aperto**: `codici_attivi = 0`. La registrazione è chiusa per scelta, ma con zero codici un
-revisore che provasse a registrarsi come atleta verrebbe espulso senza spiegazione. Generarne uno
-da Impostazioni → Codici invito.
-⚠️ Nota sulle verifiche: `athlete_workouts` **non ha `created_at`** e `id` è un UUID casuale,
-quindi non esiste modo di ordinarla per "più recente". Per controllare che un'assegnazione sia
-arrivata: contare le righe prima e dopo, oppure cercare per atleta e `completed_date`.
-
-### Verificato non problematico
-`hidden`/`unlock` sono classi Tailwind e `unlockAudio`; i file morti non vengono bundlati (Vite li
-esclude); nessuna eccezione ATS; nessun codice di pagamento/IAP; `ITSAppUsesNonExemptEncryption`
-già a `false`.
-
-### Se il rifiuto su 3.2.1(viii) si ripete
-**Non ricaricare una terza build in silenzio** — rispondere in Resolution Center e chiedere una
-chiamata con App Review.
-
-Documento operativo completo (reperti, note revisore, checklist):
-artifact "Riammissione FLEOFIT" — https://claude.ai/code/artifact/b2b8e586-a617-4172-98dc-f06e2b34ce6a
 
 ---
 
@@ -3618,8 +3359,8 @@ telefono**.
    falso — ma se un giorno si vuole «esiste un backup del 28 ago», quello è
    un'altra affermazione e richiede il database.
 6. **La versione arriva da `App.getInfo()` di Capacitor, e sul web non
-   compare.** `package.json` dice `0.0.0` e il numero vero vive nel `pbxproj`,
-   che Xcode incrementa **da solo** a ogni archive (§9-ter): una costante
+   compare.** `package.json` dice `0.0.0` e il numero vero vive in
+   `android/app/build.gradle` (`versionName`/`versionCode`): una costante
    scritta a mano qui sarebbe la quarta copia di un numero destinato a essere
    sbagliato.
 7. **La fascia cardio resta di chi si allena.** L'artboard la disegna anche
@@ -3960,10 +3701,10 @@ completa con l'RPE, si naviga il report. Niente esce dal browser.
    **La verifica giusta cerca il SEME, non il client** (il seme è l'ultimo a
    uscire, quindi se non c'è lui non c'è niente):
    ```bash
-   grep -l "AMBIENTE DI PROVA\|at-sara\|fleofit_demo_db" ios/App/App/public/assets/*.js
+   grep -l "AMBIENTE DI PROVA\|at-sara\|fleofit_demo_db" android/app/src/main/assets/public/assets/*.js
    ```
-   → **nessun file**. ⚠️ E si guarda `ios/App/App/public`, non `dist`: è quella
-   la copia che Xcode compila (§2).
+   → **nessun file**. ⚠️ E si guarda `android/app/src/main/assets/public`, non `dist`: è
+   quella la copia che Gradle impacchetta (§A.1).
 2. 🔴 **NON è un clone di Postgres.** Implementa i metodi che l'app usa davvero,
    censiti il 02/09/2026: 16 metodi di catena, 8 tabelle, **due sole relazioni**
    (`athlete_workouts → workouts` e `→ athletes`). Se una pagina comincia a
@@ -4002,166 +3743,6 @@ quindi nessuna push parte), lo **storage** (le note vocali si caricano ma l'URL
 è finto), il **Realtime** (la Live Coach Cam non vede nessuno). Sono
 esattamente i pezzi che in prova non si possono provare — ed è bene che
 falliscano in silenzio invece di rompere la pagina.
-
----
-
-## 9-sexvicies. Sign in with Apple (03/09/2026)
-
-Rifiuto di App Store del **02/09/2026** sulla build 1.1.0 (3), **linea guida 4.8 —
-Design: Login Services**. ⚠️ Non è il rifiuto di maggio che torna: il 2.3.1(a)
-resta chiuso (§9-ter). Questo è nuovo, e riguarda un pezzo che c'era da sempre.
-
-### Il rilievo si capisce al contrario di come sembra
-La 4.8 **non vieta i login di terze parti**. Dice che se ne offri uno devi offrire
-*anche* un'alternativa che rispetti tre condizioni, di cui una sola morde: deve
-permettere di **tenere nascosta la propria email a tutti**, te compreso. Google
-non lo fa. E non lo fa nemmeno **email+password**, che è la ragione per cui «ma
-c'è già l'accesso con email» non è una risposta valida: un account creato con il
-proprio indirizzo non tiene quell'indirizzo privato da nessuno.
-
-Quindi il lavoro è **additivo**. Google resta esattamente dov'era (decisione del
-committente, 03/09/2026), e accanto è nato Sign in with Apple.
-
-### 🔴 SUL NATIVO NON SERVONO NÉ UN SERVICES ID NÉ UNA CHIAVE `.p8`
-È il contrario di quello che dicono quasi tutte le guide, e vale mezza giornata
-più un carico di manutenzione permanente. Il Services ID e la chiave servono al
-flusso **OAuth via browser**, cioè al web, dove Supabase scambia un authorization
-code. Il flusso nativo non passa di lì: l'app riceve l'ID token **direttamente da
-Apple** e lo consegna a Supabase, che ne verifica la firma con le chiavi pubbliche
-di Apple e controlla che l'`aud` sia un bundle id autorizzato.
-Con loro sparisce anche il **client secret che scade ogni 6 mesi** — che sarebbe
-stato il costo peggiore dell'operazione, perché alla scadenza il login smette di
-funzionare senza preavviso e senza un errore in app.
-
-Resta quindi soltanto:
-- Apple Developer → App ID → capability **Sign In with Apple**, ⚠️ su
-  `it.federicoleo.fleofit` **e su `it.federicoleo.fleofit.dev`**: in Debug da
-  Xcode l'app gira col secondo. È la stessa trappola dei due bundle id delle push
-  (§4), ripresentata identica su un'altra funzione.
-- Supabase → Authentication → Providers → Apple → **Client IDs** con **entrambi**
-  i bundle id separati da virgola, e **Secret Key vuoto**. 🔴 Con il solo Services
-  ID il login web funzionerebbe e quello sull'iPhone no: sul nativo il
-  destinatario del token è il **bundle id**.
-- `com.apple.developer.applesignin` in `ios/App/App/App.entitlements`, più la
-  capability aggiunta in Xcode su Debug **e** Release (serve a rigenerare il
-  provisioning profile).
-
-### 🔴 IL PLUGIN È FERMO A CAPACITOR 7, E IL SINTOMO NON DICE NIENTE
-Successo il 03/09/2026, sul dispositivo: **«SignInWithApple plugin is not
-implemented on ios»**. Quel messaggio si legge come «manca il plugin» e porta a
-reinstallarlo, a rifare `cap sync`, a ripulire Xcode. Non è niente di tutto ciò.
-
-`@capacitor-community/apple-sign-in@7.1.0` — che è **l'ultima versione
-pubblicata**, non una vecchia — dichiara `capacitor-swift-pm` con
-`from: "7.0.0"`, che in SPM vuol dire `>= 7.0.0 < 8.0.0`. Ogni altro plugin del
-progetto dichiara `from: "8.0.0"` e l'app blocca la versione a `exact: "8.3.4"`.
-Il grafo dei pacchetti quindi **non si risolve affatto**:
-
-```
-xcodebuild: error: Could not resolve package dependencies:
-  'apple-sign-in' depends on 'capacitor-swift-pm' 7.0.0..<8.0.0 and
-  'capacitor-voice-recorder' depends on 'capacitor-swift-pm' 8.0.0..<9.0.0.
-```
-
-E qui sta la parte che inganna: **Xcode compila lo stesso**, riusando il grafo
-precedente, e il build **riesce**. Il ponte JS del plugin arriva comunque, perché
-lo porta `npx cap sync ios` insieme al bundle. Quindi in mano si ha un'app che
-sembra costruita bene, con il bottone al suo posto, e un'implementazione nativa
-che non è mai stata compilata.
-
-Come si verifica, invece di dedurlo:
-```bash
-cd ios/App && xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
-```
-
-**La correzione** è una riga, ed è bloccata nel repo: `patches/` +
-`patch-package` chiamato dal `postinstall` di `package.json`. Non è stata scelta
-per pigrizia rispetto a vendorizzare i 60 righi di Swift dentro `ios/App/App/`:
-quel progetto Xcode **non usa i gruppi sincronizzati col filesystem**, quindi un
-file nuovo va aggiunto al target a mano — e sbagliare quel passo produce
-**esattamente questo stesso errore**, in silenzio. La patch invece fallisce
-rumorosamente: senza, il build non risolve e lo dice.
-⚠️ Se un giorno esce una `7.1.1`, `patch-package` avvisa che la patch non si
-applica più. È il comportamento giusto: quel controllo non va disattivato.
-
-### 🔴 E UN BUILD NORMALE NON BASTA: SERVE IL CLEAN
-Corretto il vincolo, `-resolvePackageDependencies` riesce e `Package.resolved`
-elenca il pacchetto — ma **il build incrementale continua a non compilarlo**,
-perché il grafo dei bersagli in `DerivedData/.../XCBuildData` è ancora quello di
-prima. Il build riesce, e l'app dà lo stesso errore di runtime. Verificato: la
-cartella `Build/Intermediates.noindex/CapacitorCommunityAppleSignIn.build` non
-esisteva, mentre c'erano tutti gli altri diciotto plugin.
-Serve **Product → Clean Build Folder** (o `xcodebuild clean build`). Dopo, si
-controlla sul prodotto e non sul log:
-```bash
-strings <App.app>/App.debug.dylib | grep -c SignInWithApple   # 0 = non c'è
-```
-
-### 🔴 IL NONCE VA HASHATO DA UN LATO SOLO
-È il punto in cui questa integrazione fallisce senza dire perché, ed è
-verificabile leggendo le due metà:
-- il plugin fa `request.nonce = call.getString("nonce")`: scrive nel token **la
-  stringa che gli diamo**, non il suo hash;
-- `@supabase/auth-js` documenta l'opposto — «If the ID token contains a `nonce`
-  claim, then **the hash of this value** is compared to the value in the ID
-  token».
-
-Quindi **hash al plugin, valore in chiaro a Supabase**. Lo stesso valore ai due
-lati dà un 400 che sembra un problema di configurazione su Apple Developer, e ci
-si perdono ore a rifare una configurazione che era già giusta. Sta in
-`src/lib/appleLogin.js`, e c'è un test che monta la pagina e verifica che uno sia
-lo SHA-256 dell'altro.
-
-⚠️ `generaNonce` torna **`null`** quando la WebView non espone `crypto.subtle`, e
-non lancia: senza nonce il token non porta il claim, Supabase non ha niente da
-confrontare, e il login entra lo stesso. Si perde la protezione dal riutilizzo di
-un token già speso — il compromesso che accettano gli esempi nativi di Supabase —
-e si guadagna che un contesto non sicuro non chiuda fuori tutti.
-
-### 🔴 IL NOME ARRIVA UNA VOLTA SOLA, E POI MAI PIÙ
-Apple manda `givenName`/`familyName` **solo alla primissima autorizzazione**, e
-non sono nel token: da lì in poi tornano `null`. Se non si scrivono subito in
-`user_metadata` sono persi per sempre, e il sintomo non è un errore — è
-l'onboarding coi campi vuoti e la Home che saluta `email.split('@')[0]`, che con
-«Nascondi la mia email» è una stringa di caratteri casuali.
-⚠️ Per la stessa ragione `nomeDaApple` torna `null` invece di un oggetto con due
-stringhe vuote: scriverlo cancellerebbe il nome salvato la prima volta.
-
-### ⚠️ Le quattro conseguenze da conoscere prima di dire che è un bug
-1. 🔴 **Chi si allena già NON deve entrare con Apple.** Supabase unisce due
-   identità solo se l'email combacia, e con «Nascondi la mia email» l'indirizzo è
-   un `@privaterelay.appleid.com` che non combacia mai. Quell'atleta ottiene un
-   utente **nuovo**, senza riga `athletes` e senza codice invito, e
-   `ProtectedRoute` lo caccia su `/login?error=unauthorized`. Sign in with Apple è
-   di fatto la porta dei **nuovi inviti**, non un secondo ingresso per chi c'è già.
-2. 🔴 **Un account con email nascosta non può essere coach.** Le tre liste admin
-   sono per indirizzo (§4-bis), e un relay non è in nessuna delle tre. Il coach
-   continua a entrare con `coaching@federicoleo.it` e password.
-3. ⚠️ **Il recupero password non arriva a un indirizzo relay** se il dominio
-   mittente non è registrato nel servizio di inoltro di Apple. Non blocca niente —
-   chi entra con Apple non usa la password — ma non è un percorso da promettere.
-4. **Il bottone è bianco e sta SOPRA quello Google**, e non è gusto: la 4.8 chiede
-   che l'alternativa non sia «meno in vista» delle altre, ed è la prima cosa che
-   il revisore guarda dopo un rilievo su quella linea guida. Su fondo scuro le
-   linee guida di Apple prescrivono il bottone bianco, quindi un bottone nero su
-   `#1e1e1e` sarebbe conforme al marchio e fuori norma rispetto alla 4.8.
-
-### Il bottone si mostra solo sul NATIVO
-Sul web servirebbe il Services ID che il progetto non ha — la web app è fuori da
-questo lavoro, per decisione del committente. Un bottone che non può funzionare è
-peggio che non averlo: stessa regola del badge sulla navbar (§9-quaterdecies) e
-del pannello filtri dell'archivio (§9-sedecies). C'è un test che lo verifica dai
-due lati. ⚠️ Quel ramo lo toccano **solo** questo file e `useTastiera`:
-`src/test/setup.js` finge sempre «web», quindi va acceso a mano con
-`window.Capacitor` — e `Login.jsx` legge il **globale**, non il modulo
-`@capacitor/core`.
-
-### I file nuovi
-`src/lib/appleLogin.js` (logica pura, 8 test) e
-`src/pages/__tests__/LoginApple.test.jsx` (8 test su `Login` montata). Sei
-mutazioni provate sulla pagina, sei prese. Plugin
-`@capacitor-community/apple-sign-in@7.1.0` (dichiara `@capacitor/core >= 7`, ed è
-compatibile con SPM: `npx cap sync ios` lo elenca fra i 19).
 
 ---
 
@@ -4816,183 +4397,6 @@ senza la correzione**, quindi quel caso non prende niente.
 
 ---
 
-## 9-quatertricies. Il rifiuto del 20/09/2026: HealthKit, ATT e il rating (21/09/2026)
-
-Terza bocciatura della stessa versione — build **1.0 (5)** — e per la prima
-volta con **tre rilievi insieme**. La cosa da sapere prima di aprire un file:
-**uno solo è codice.**
-
-| rilievo | cosa dice | dove si corregge |
-|---|---|---|
-| **2.5.1** | il binario contiene riferimenti a HealthKit e l'app non ha una funzione primaria che li giustifichi | **codice** |
-| **5.1.2(i)** | le etichette privacy dichiarano *tracking* su Email e Nome, e l'app non chiede il permesso ATT | **App Store Connect** |
-| **2.3.6** | l'age rating dichiara *In-App Controls* che nell'app non si trovano | **App Store Connect** |
-
-⚠️ La lettera scrive «Version reviewed: 1.0 (5)»: è il **record** 1.0 con il
-**build** 5, non un declassamento, e `MARKETING_VERSION` non va riportato a 1.0.
-È la stessa confusione già annotata in §9-ter, alla seconda comparsa.
-
-### 🔴 2.5.1 — Apple Health è uscito del tutto, e non è una perdita
-Il rilievo è letterale, e aveva ragione. Apple Health era **un bottoncino da
-11px dentro la modale RPE**: premuto, leggeva l'ultimo allenamento della
-giornata da Salute e **appendeva una riga di testo alle note**
-(`🍏 [Apple Health] Durata: … | Calorie: … | Battiti Medi: …`). Nient'altro
-nell'app lo leggeva: non le statistiche, non il carico, non il report. Quella
-riga finiva in `athlete_workouts.notes` come testo libero accanto al marcatore
-`[RPE: n/10]`, e da lì non tornava mai indietro.
-
-Cioè: il permesso più delicato che iOS conceda, chiesto per scrivere una frase.
-
-Non è stato disattivato, è stato **rimosso da tutte e cinque le porte** da cui
-HealthKit entra in un'app Capacitor. Servono tutte e cinque, perché Apple guarda
-il **binario** e ne basta una aperta:
-1. `src/pages/health.js` (`HealthService`) — cancellato;
-2. il bottone «🍏 Apple Health» e `handleHealthSync` in `RpeModal.jsx` (con
-   loro se n'è andato l'import di `mostraErrore`, che serviva solo a quello);
-3. `NSHealthShareUsageDescription` e `NSHealthUpdateUsageDescription` in
-   `ios/App/App/Info.plist`;
-4. `com.apple.developer.healthkit` in `ios/App/App/App.entitlements`;
-5. il plugin **`@capgo/capacitor-health`** — `npm uninstall`, poi
-   `npx cap sync ios` riscrive `CapApp-SPM/Package.swift` da sé: **19 plugin
-   → 18**.
-
-🔴 **Il punto 5 è quello che si dimentica, ed è l'unico che da solo fa respingere
-la build.** Senza codice, senza entitlement e senza chiavi d'uso, un plugin
-ancora elencato in `Package.swift` **linka comunque `HealthKit.framework`** al
-binario, e `otool -L` lo dichiara. Il rilievo parla di *riferimenti nel binario*,
-non di codice raggiungibile: un `if (false)` non salva nessuno.
-⚠️ **`Package.swift` non si modifica a mano** — porta scritto «DO NOT MODIFY —
-managed by Capacitor CLI». Si toglie il pacchetto npm e si sincronizza, o la
-prossima `cap sync` lo rimette.
-
-**Cosa NON è stato toccato da QUESTO rilievo, e per buone ragioni:**
-- la **fascia cardio BLE** (`src/pages/bluetooth.js`) è **Core Bluetooth**, non
-  HealthKit: legge i battiti dal dispositivo in tempo reale, non dall'archivio
-  Salute, quindi il 2.5.1 non la riguardava. ⚠️ È uscita **lo stesso giorno**,
-  per decisione del committente e non per un rilievo: §9-quintricies;
-- `LSApplicationCategoryType = public.app-category.healthcare-fitness` nel
-  `pbxproj` resta: è la **categoria dello Store** di un'app di allenamento, non
-  un riferimento a HealthKit. Toglierla non risponde a niente e sposta l'app
-  in uno scaffale sbagliato.
-
-**Il controllo 10 di `tools/verifica-ipa.sh`** guarda ora **quattro** tracce
-sull'`.ipa` esportato — entitlement, chiavi `NSHealth*`, `otool -L` e la scritta
-«Apple Health» nel bundle web — perché escono in momenti diversi e ognuna da
-sola è mezza verità. È la stessa lezione del seme dell'ambiente di prova
-(§9-quinvicies), che il controllo di allora lasciava passare proprio così.
-
-### 🔴 5.1.2(i) — l'app NON traccia: a mentire sono le etichette
-Il rilievo si legge male, e la lettura sbagliata costa una funzione inutile:
-sembra chiedere di **aggiungere** l'App Tracking Transparency. Non è così. Apple
-confronta due cose — cosa dichiari su App Store Connect e cosa fa il binario — e
-qui a essere sbagliata è la **dichiarazione**: qualcuno ha spuntato
-*Used for Tracking* su **Email Address** e **Name**.
-
-«Tracking», per Apple, ha una definizione stretta: collegare i dati dell'app con
-dati di **terze parti** a fini pubblicitari, oppure cederli a un **data broker**.
-Verificato in questa sessione, ed è no su tutta la linea:
-- **nessun SDK pubblicitario o di attribuzione** fra le dipendenze;
-- **nessun IDFA**: zero occorrenze di `ASIdentifierManager` / `AdSupport` /
-  `advertisingIdentifier` nei plugin nativi, e nessun
-  `NSUserTrackingUsageDescription` in `Info.plist` — l'app non ha mai avuto
-  nemmeno il modo di chiedere quel permesso;
-- **Firebase c'è solo come `FirebaseMessaging`**, e lo dichiara il
-  `Package.swift` del plugin `@capacitor-community/fcm` (un solo `.product`).
-  `GoogleService-Info.plist` ha `IS_ANALYTICS_ENABLED = false` e
-  `IS_ADS_ENABLED = false`.
-
-Email e nome servono a far entrare l'atleta e a chiamarlo per nome. Sono
-**Linked to You** — vero, e va dichiarato — ma **non** *Used for Tracking*.
-
-**Il gesto**, con le diciture lette sul pannello vero il 21/09/2026 — che è **in
-italiano**, mentre la guida Apple esiste solo in inglese, quindi le sue stringhe
-a schermo non si trovano. Barra laterale → **Privacy dell'app** → sezione
-**Tipologia di dati** → **Modifica** sulla riga del dato. Il flusso ha cinque
-passi e conta l'ultimo: *«Tu o i tuoi partner di terze parti utilizzate i nomi a
-scopo di monitoraggio?»* → **«No, non utilizziamo i nomi a scopo di
-monitoraggio»**. 🔴 Il bottone finale si chiama **«Pubblica»**, non «Salva»: va
-sulla scheda pubblica all'istante. Poi rispondere nel **Resolution Center** che
-l'app non traccia su nessuna piattaforma — Apple lo chiede esplicitamente nella
-seconda delle tre vie d'uscita che elenca.
-
-**Lo stato trovato il 21/09/2026.** Nove tipologie dichiarate, tutte con utilizzo
-«Funzionalità dell'app» e tutte collegate all'identità; **solo Nome e Indirizzo
-email** portano «*Si utilizzano a scopo di monitoraggio*», cioè esattamente i due
-della lettera e nessun altro. Le altre sette: Salute, Fitness, Informazioni
-sensibili, Email o messaggi, Foto o video, Dati audio, ID utente.
-
-🔴 **«Salute» NON si toglie, anche se HealthKit è uscito**, ed è il contrario
-di quello che sembra. ⚠️ **La ragione è cambiata lo stesso giorno**: la mattina
-era la **fascia cardio BLE**, che metteva `heartRate` nel payload Realtime del
-timer verso la TV e la Live Coach Cam — un dato sanitario che lasciava il
-dispositivo. Il pomeriggio il BLE è uscito del tutto (§9-quintricies), e
-«Salute» resta per `athletes.weight`, `height` e `birth_date`, che nella
-tassonomia di Apple ricadono sotto *«any other user provided health or medical
-data»*. In entrambi i casi vale la stessa regola: togliere una dichiarazione è il
-verso che produce un 5.1.2 per **sotto**-dichiarazione.
-⚠️ «**Informazioni sensibili**» sembra invece dichiarata di troppo — per Apple
-significa origine etnica, orientamento sessuale, convinzioni religiose, dati
-biometrici o genetici — ma non è nel rilievo, e non si tocca mentre si risponde
-a un rifiuto.
-
-⚠️ **Aggiungere l'ATT sarebbe la correzione sbagliata**, e va detto perché è la
-prima che viene in mente: chiedere un permesso che non serve a niente è a sua
-volta un rilievo, e regala all'utente una schermata di sistema che non ha nessun
-effetto su nessun comportamento dell'app.
-
-### 🔴 2.3.6 — «In-App Controls» spuntato per sbaglio
-Stessa forma del precedente: una casella del **nuovo age rating** dichiara che
-l'app offre controlli parentali o un meccanismo di verifica dell'età. Non ne ha —
-niente PIN, niente limite di tempo, niente age gate. `athletes.birth_date` serve
-a scrivere «29 anni» nella scheda, non a sbarrare l'accesso a qualcosa.
-
-**Il gesto**, in italiano: **Informazioni sull'App** → sezione **Età consigliata**
-→ **Classificazioni per età dell'app** → **Modifica** → **Parte 1:
-caratteristiche** → blocco **Controlli in-app**, due righe con interruttori
-**NO / SÌ**: *Controlli parentali* (già su NO il 21/09) e **«Verifica
-dell'età»** — che è il nome italiano di *Age Assurance*, ed era su **SÌ**. Va
-messa su **NO**, poi **Avanti** fino in fondo e **Salva**.
-
-⚠️ **Sotto, nel blocco «Capacità», altre due voci erano su SÌ e quasi certamente
-sono la ragione del 16+** (17+ sui sistemi precedenti alla 26): *Accesso al web
-senza limitazioni* — l'app apre solo i link Instagram/Strava del profilo — e
-*Contenuti generati dagli utenti*, la cui definizione Apple richiede l'«**ampia
-distribuzione**» di contenuti, mentre qui note e vocali restano fra il coach e
-quel solo atleta. *Messaggistica e chat* = SÌ è invece corretto: sono le note
-vocali. 🔴 **Non si cambiano nella stessa passata**: dichiarare UGC = NO su
-un'app con comunicazione fra utenti è il genere di risposta che Apple guarda da
-vicino (la **1.2** chiede moderazione, segnalazione e blocco a chi dichiara UGC),
-e qui si sta rispondendo a un rifiuto. Il 16+ si sistema dopo l'approvazione,
-quando sbagliare costa un ciclo di revisione e non una quarta bocciatura.
-
-### ⚠️ Due cose che stanno fuori dal repository e vanno controllate
-1. ✅ **La descrizione sullo Store è già pulita**, verificato sul pannello il
-   21/09/2026: né la descrizione, né le parole chiave, né il testo promozionale
-   citano «Apple Health» o «Salute». Andava controllato perché il 2.5.1 dice
-   *«as well as any references … from the app or its metadata»*, e una descrizione
-   che promette una funzione che non c'è è per giunta un **2.3.1**. Restano da
-   guardare a occhio i **4 screenshot**.
-2. **L'App ID su Apple Developer** ha ancora la capability *HealthKit* spuntata.
-   Non basta a far respingere la build — l'entitlement lo chiede il progetto, e
-   non lo chiede più — ma toglierla è l'unico modo di essere certi che non
-   rientri da una rigenerazione del provisioning profile. ⚠️ Toglierla invalida i
-   profili esistenti: con la firma automatica Xcode li rigenera, e serve comunque
-   un **Product → Clean Build Folder**, esattamente come per Sign in with Apple
-   (§9-sexvicies).
-
-### Cosa cambia per l'atleta, e cosa succederebbe rimettendolo
-Una riga in meno nella modale RPE, e nient'altro: le note già scritte che
-contengono `🍏 [Apple Health] …` restano testo e continuano a leggersi ovunque.
-
-Se un giorno quei numeri dovranno tornare, **la forma che Apple accetta non è il
-bottoncino**. Il 2.5.1 chiede una funzione *primaria*: scrivere l'allenamento
-**dentro** Salute a fine sessione — cioè `HKWorkout` con durata, calorie e
-battiti, che è la ragione per cui esiste `NSHealthUpdateUsageDescription`, quella
-che l'app dichiarava e non usava — e rileggerne i battiti per il report. È un
-pezzo di prodotto, non una scorciatoia dentro una modale. Voce in BACKLOG.
-
----
-
 ## 9-quintricies. La fascia cardio è uscita (21/09/2026)
 
 Decisione del committente, il giorno dopo il terzo rifiuto: *«disabilitiamo la
@@ -5057,63 +4461,6 @@ Verificato per mutazione, e **due volte**: la prima rimetteva un
 venti i test, cioè il test era rosso **per il motivo sbagliato**, che vale quanto
 un verde per il motivo sbagliato. Con l'icona valida: **1 caduto su 20**.
 932 test in tutto (erano 935: quattro tolti, uno aggiunto).
-
----
-
-## 9-sextricies. Il ciclo di vita a UIScene (21/09/2026)
-
-Migrazione fatta il 21/09 dopo il caricamento della build 6, e Capacitor portato
-da 8.3.4 a **8.5.2** (è la versione che porta `CAPSceneDelegateProxy`).
-
-### 🔴 LA SCADENZA È iOS 27, NON iOS 26 — e questa riga esiste per un falso allarme
-Testuale da Apple, *Transitioning to the UIKit scene-based life cycle*:
-
-> «Adopting the scene-based life cycle is required. **Beginning in iOS 27**,
-> iPadOS 27, Mac Catalyst 27, tvOS 27, and visionOS 27, apps built with the
-> latest SDK **must adopt** the scene-based life cycle **or they fail to
-> launch**.»
-
-E su iOS 26 il sistema scrive soltanto nel log: «UIScene lifecycle will soon be
-required. Failure to adopt will result in an assert in the future.»
-
-⚠️ **Un `EXC_BREAKPOINT` su
-`__UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption` non è il
-crash di produzione**: è il *runtime issue breakpoint* di Xcode, che scatta solo
-col debugger attaccato. Il 21/09/2026 quella lettura ha quasi fatto ritirare
-dalla revisione una build sana — la **6**, che non ha la migrazione e su iOS 26
-parte normalmente.
-
-### Le quattro porte della migrazione
-1. **`SceneDelegate.swift`** (nuovo) — template di Capacitor 8.5.x, più la
-   sessione audio `AVAudioSession` che prima stava in `applicationDidBecomeActive`.
-   🔴 Senza quello spostamento i **beep del timer guidato** non suonerebbero col
-   silenzioso inserito, e nessun errore lo direbbe.
-2. **`AppDelegate.swift`** — perde i metodi di ciclo di vita e
-   `application(_:open:)`. ⚠️ I deep link `fleofit://` (callback OAuth, reset
-   password) e gli universal link **non passano più di lì**: arrivano a
-   `scene(_:openURLContexts:)` e `scene(_:continue:)`, che li girano a
-   `SceneDelegateProxy`. Le **push restano** sull'AppDelegate, perché sono
-   dell'applicazione e non di una scena. Rimettere i vecchi metodi non dà errore:
-   semplicemente non li chiama più nessuno, in silenzio.
-3. **`Info.plist`** — `UIApplicationSceneManifest` con
-   `UISceneDelegateClassName = $(PRODUCT_MODULE_NAME).SceneDelegate`. Il nome
-   deve coincidere con la classe, o la scena non si aggancia.
-4. **`pbxproj`** — `SceneDelegate.swift` va referenziato a mano in **quattro**
-   punti (PBXFileReference, PBXBuildFile, il gruppo, la fase Sources): quel
-   progetto **non usa i gruppi sincronizzati col filesystem**, quindi un file
-   nuovo che non si aggiunge al target non viene compilato affatto — è la stessa
-   trappola di §9-sexvicies con Sign in with Apple.
-
-### Come si verifica, sul binario e non sul sorgente
-```bash
-/usr/libexec/PlistBuddy -c 'Print :UIApplicationSceneManifest' <App.app>/Info.plist
-strings <App.app>/App | grep -c '3App13SceneDelegate'   # 1 = la classe c'è
-```
-⚠️ `nm` su una build Release **non la trova**: i simboli sono strippati e il nome
-sopravvive solo nei metadati di reflection di Swift. E `strings | grep
-SceneDelegate` senza il modulo dà **19 occorrenze anche su una build NON
-migrata**, perché sono quelle di `CAPSceneDelegateProxy` dentro Capacitor: il
-mangled `3App13SceneDelegate` è l'unico che distingue la nostra classe.
 
 ---
 
