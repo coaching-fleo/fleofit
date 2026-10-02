@@ -6,10 +6,10 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  // ios/App/App/public è la copia del bundle minificato che `npx cap sync ios`
+  // ios/App/App/public (e android/app/src/main/assets/public) è la copia del bundle minificato che `npx cap sync`
   // deposita nel progetto Xcode: analizzarla produceva 4.700 falsi problemi e
   // nascondeva quelli veri. .claude e agent sono tooling, non codice del progetto.
-  globalIgnores(['dist', 'ios/App/App/public', '.claude', 'agent', '.agents', 'public/sw.js']),
+  globalIgnores(['dist', 'ios/App/App/public', 'android/app/src/main/assets/public', 'android/app/build', '.claude', 'agent', '.agents', 'public/sw.js']),
   {
     files: ['**/*.{ts,tsx,js,jsx}'],
     extends: [

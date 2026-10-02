@@ -1,5 +1,8 @@
 # FLEOFIT — Cose da fare
 
+> 🧩 **Dal 02/10/2026 un backlog solo per le app native**, branch `app` (iOS + Android). Le voci
+> Android stanno nella sezione 🤖; tutte le altre valgono per il codice condiviso o per iOS.
+
 > Stato al **22 settembre 2026**. `npm test` → **1025** · `npm run lint` → **41**.
 > ⭐ Il 22/09 è nato il **recap post-allenamento** (CLAUDE.md §9-quadragies): chiudere un
 > allenamento apre quattro schede in stile storie — la seduta appena fatta, la settimana,
@@ -78,6 +81,20 @@ xcodebuild -exportArchive -archivePath <archivio.xcarchive> -exportOptionsPlist 
 > impostazione predefinita: Xcode alza da solo il numero oltre l'ultimo presente su
 > App Store Connect. Misurato il 26/08/2026: `pbxproj` = 3, archivio = 2, ipa = **4**.
 > È la spiegazione dell'incremento "misterioso" del 24/08 annotato in CLAUDE.md §9-ter.
+
+---
+
+## 🤖 Android
+
+| # | Cosa | Perché conta / cosa la blocca |
+|---|---|---|
+| A1 | **Riprovare su iOS le due correzioni di Android che toccano il codice condiviso**: gli ascoltatori nativi di `DeeplinkHandler` registrati una volta sola, e il marchio dell'apertura separato dal fondo ritagliato (CLAUDE.md §A.3 punti 2 e 6) | Provate solo sull'emulatore Android. Su iPhone la prima corregge un difetto vero (il tocco su una notifica gestito tante volte quante pagine si erano aperte); la seconda cambia la struttura dell'apertura, che va riguardata sul simulatore |
+| A2 | **La tastiera su Android non è stata provata.** `Keyboard.resize: 'native'` è un'opzione solo iOS, e nel manifest non c'è `windowSoftInputMode` | I campi nelle modali devono restare sopra la tastiera e le barre ancorate in basso sparire mentre si scrive (`useTastiera`). Sull'emulatore la tastiera virtuale non compariva per `hw.keyboard=yes` (CLAUDE.md §A.2), quindi il comportamento vero non è ancora stato visto |
+| A3 | **L'icona piccola delle notifiche è quella di default** | Android la vuole monocromatica: una a colori diventa un quadratino bianco nella barra di stato. «FLEOFIT» a 24dp non si legge: serve un simbolo (una «F»?), e la scelta è del committente. Poi `meta-data com.google.firebase.messaging.default_notification_icon` nel manifest |
+| A4 | **Le push con l'app chiusa** e il tocco che porta al workout (`route`) | `google-services.json` c'è e il server non va toccato (CLAUDE.md §1.1), ma l'arrivo vero non è ancora stato provato |
+| A5 | **Il tasto indietro riconosce solo le modali che si chiudono con il velo, una X «Chiudi» o un bottone «Annulla/Chiudi/Indietro/No»** | Provate «Assegna», la conferma di «Elimina» e il menu della scheda. Le altre ~37 modali (Home, Calendario, builder, Impostazioni) non sono state provate una per una: una che si chiude con un'altra parola resta aperta (ma la pagina non cambia) |
+| A6 | **Provare su un telefono vero** | Come si sente la vibrazione (Android traduce tutto in impulsi fissi), qualità del microfono, push dopo giorni di inattività, margini di sicurezza dei fogli dal basso |
+| A7 | **Pubblicazione sul Play Store** | Non esiste ancora niente: firma di rilascio (keystore), `versionCode`/`versionName` in `android/app/build.gradle`, scheda dello Store, modulo sulla sicurezza dei dati (l'equivalente delle etichette privacy di Apple: l'app **non traccia**, come verificato per iOS), classificazione dei contenuti. Prima della build di rilascio: il blocco `server` di `capacitor.config.ts` commentato, e il seme dell'ambiente di prova assente dal bundle (CLAUDE.md §9-quinvicies) |
 
 ---
 
