@@ -2981,9 +2981,19 @@ tipi di blocco, nomi degli esercizi, note e ritmi.
 tasto premuto: sono 171 workout da scandagliare nel jsonb.
 
 ### Cosa NON è stato implementato, e perché
-- **Il pannello «filtri avanzati»** dell'icona in alto a destra. L'artboard la
-  disegna e il suo stesso `dv-next` la dà per il prossimo pezzo di design: il
-  pannello non esiste. Un bottone che non fa niente **accanto a filtri che
+- ~~**Il pannello «filtri avanzati»**~~ → **i filtri per tipo di blocco ci sono dal
+  05/10/2026, ma NON come pannello.** Sono una **riga sua sotto le corsie** (`FiltriTipo`),
+  a colonne uguali: ON/OFF, EMOM, AMRAP, For Time, Interval (fuori Cash In, Cash Out, Rest
+  e WarmUp, che sono la cornice di quasi ogni seduta). 🔴 Ci sono volute tre stesure, tutte
+  bocciate dal committente lo stesso giorno per ragioni che valgono anche altrove: dietro
+  un'icona con un foglio **costava due tocchi in più**; in coda alla fila delle corsie
+  **bisognava scorrere** per vederli. Regola che ne esce: **nessun filtro fuori schermo** —
+  anche le corsie ora vanno a capo invece di scorrere. Senza conteggio nel chip: non ci
+  sta in ~70px, e il totale lo dice la testata. Le corsie si escludono fra
+  loro, i tipi si **sommano** (OR); «Tutti» azzera entrambi; i tipi si derivano dai dati
+  (`conteggiPerTipo`). ⚠️ `tipiBlocco` passa da `getNormalizedBlocks`, o i workout
+  legacy sparirebbero da ogni filtro.
+  Quanto segue era la ragione per cui il pannello non c'era: Un bottone che non fa niente **accanto a filtri che
   funzionano** è peggio che non averlo — è la stessa regola del badge numerico
   sulla navbar (§9-quaterdecies) e del `rpeAtteso` che torna `null` invece di 5.
 - **La voce «Archivio» nella tab bar.** L'artboard 1b la disegna, ma è lo stesso

@@ -397,3 +397,61 @@ describe('Archivio — tornando indietro riprende dov\'era', () => {
     scrollTo.mockRestore()
   })
 })
+
+// I tipi di blocco stanno nella stessa fila delle corsie: un tocco, come loro.
+describe('Archivio — filtri per tipo di blocco', () => {
+  const AMRAP = { id: 2, type: 'AMRAP', params: { duration: '12:00' }, exercises: [{ name: 'Burpees', reps: '10' }] }
+  const CASH = { id: 3, type: 'Cash In', params: {}, exercises: [{ name: 'Row', meters: '500m' }] }
+  const conBlocchi = () => {
+    dati.workouts = [
+      wk(1, 'Minuto per minuto', '2026-08-22', { category: 'Hyrox', blocks: [CASH, EMOM] }),
+      wk(2, 'Tutto quello che puoi', '2026-08-21', { category: 'Hyrox', blocks: [AMRAP] }),
+      CORSA(3, 'Long Run', '2026-08-20'),
+    ]
+  }
+  const gruppoTipi = () => screen.getByRole('group', { name: 'Filtra per tipo di blocco' })
+
+  it('offre solo i tipi che ci sono, mai Cash In, e filtra con un tocco', async () => {
+    conBlocchi()
+    montaCoach()
+    await screen.findByText('Minuto per minuto')
+    expect(within(gruppoTipi()).getByRole('button', { name: /EMOM/ })).toBeInTheDocument()
+    expect(within(gruppoTipi()).queryByRole('button', { name: /Cash In/ })).toBeNull()
+    expect(within(gruppoTipi()).queryByRole('button', { name: /ON\/OFF/ })).toBeNull()
+
+    // Una riga sua, non in coda alle corsie, e nessuna delle due scorre: un
+    // filtro fuori schermo è un filtro che non c'è.
+    const corsie = screen.getByRole('group', { name: 'Filtra per categoria' })
+    expect(corsie).not.toContainElement(gruppoTipi())
+    expect(corsie.className).not.toMatch(/overflow-x-auto/)
+    expect(gruppoTipi().className).not.toMatch(/overflow-x-auto/)
+
+    await userEvent.click(within(gruppoTipi()).getByRole('button', { name: /EMOM/ }))
+    expect(screen.getByText('Minuto per minuto')).toBeInTheDocument()
+    expect(screen.queryByText('Tutto quello che puoi')).not.toBeInTheDocument()
+    expect(screen.queryByText('Long Run')).not.toBeInTheDocument()
+    expect(screen.getByText('1 di 3 workout')).toBeInTheDocument()
+
+    // I tipi si sommano: due tipi valgono in OR.
+    await userEvent.click(within(gruppoTipi()).getByRole('button', { name: /AMRAP/ }))
+    expect(screen.getByText('Tutto quello che puoi')).toBeInTheDocument()
+    expect(within(gruppoTipi()).getByRole('button', { name: /EMOM/ })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('«Tutti» toglie anche i tipi, e un secondo tocco spegne il tipo', async () => {
+    conBlocchi()
+    montaCoach()
+    await screen.findByText('Minuto per minuto')
+    const emom = () => within(gruppoTipi()).getByRole('button', { name: /EMOM/ })
+    await userEvent.click(emom())
+    await userEvent.click(emom())
+    expect(screen.getByText('Long Run')).toBeInTheDocument()
+
+    await userEvent.click(emom())
+    const corsie = screen.getByRole('group', { name: 'Filtra per categoria' })
+    expect(within(corsie).getByRole('button', { name: /Tutti/ })).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(within(corsie).getByRole('button', { name: /Tutti/ }))
+    expect(screen.getByText('Long Run')).toBeInTheDocument()
+    expect(emom()).toHaveAttribute('aria-pressed', 'false')
+  })
+})

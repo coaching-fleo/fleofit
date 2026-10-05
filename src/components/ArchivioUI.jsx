@@ -100,22 +100,57 @@ export function CampoRicerca({
  * I chip di corsia. Riducono con un tocco quello che prima si poteva ridurre
  * solo digitando il titolo esatto.
  *
- * ⚠️ La fila scorre in orizzontale e NON va a capo: con quattro corsie ci sta,
- * ma il giorno in cui ne compare una quinta una fila che va a capo farebbe
- * saltare l'altezza della testata appiccicata, e con essa il punto in cui la
- * lista comincia.
+ * 🔴 VANNO A CAPO, NON SCORRONO (05/10/2026). La fila scorreva in orizzontale,
+ * e il committente non vuole dover scorrere per vedere un filtro: un chip
+ * fuori schermo è un filtro che non c'è. Con le corsie di oggi stanno in una
+ * riga; quando ne arriveranno altre, la fila guadagna una riga invece di
+ * nasconderle.
  */
-export function FiltriCorsia({ corsie, attiva, totale, onCambia }) {
+export function FiltriCorsia({ corsie, attiva, totale, onCambia, onTutti, tuttiAttivo = attiva === null }) {
   return (
-    <div role="group" aria-label="Filtra per categoria"
-      className="flex gap-2 mt-3 overflow-x-auto hide-scrollbar">
-      <ChipCorsia etichetta="Tutti" conteggio={totale} attivo={attiva === null}
-        onClick={() => onCambia(null)} />
+    <div role="group" aria-label="Filtra per categoria" className="flex flex-wrap gap-2 mt-3">
+      <ChipCorsia etichetta="Tutti" conteggio={totale} attivo={tuttiAttivo}
+        onClick={() => (onTutti ? onTutti() : onCambia(null))} />
       {corsie.map(({ categoria, n }) => (
         <ChipCorsia key={categoria} etichetta={corsia(categoria).etichetta} conteggio={n}
           punto={corsia(categoria).dot} attivo={attiva === categoria}
           onClick={() => onCambia(attiva === categoria ? null : categoria)} />
       ))}
+    </div>
+  )
+}
+
+/**
+ * I tipi di blocco, su una riga SUA sotto le corsie (05/10/2026).
+ *
+ * La storia, perché non si ripeta: prima dietro un'icona con un foglio (due
+ * tocchi di troppo), poi in coda alla fila delle corsie (bisognava scorrere
+ * per vederli). Ora sono una griglia a colonne uguali larga quanto lo
+ * schermo: tutti visibili, mai da scorrere, e separati dalle corsie perché
+ * rispondono a un'altra domanda — le corsie si escludono fra loro, i tipi si
+ * SOMMANO (più tipi valgono in OR, src/lib/rigaArchivio.js).
+ *
+ * ⚠️ Niente conteggio dentro il chip: cinque colonne su 393px lasciano ~70px a
+ * testa, e «For Time 20» non ci sta senza troncare. Quanti workout restano lo
+ * dice già la testata («12 di 128 workout»).
+ */
+export function FiltriTipo({ tipi, scelti, onCambia }) {
+  return (
+    <div role="group" aria-label="Filtra per tipo di blocco"
+      className="grid gap-1.5 mt-2"
+      style={{ gridTemplateColumns: `repeat(${tipi.length}, minmax(0, 1fr))` }}>
+      {tipi.map(({ tipo, n }) => {
+        const attivo = scelti.includes(tipo)
+        return (
+          <button key={tipo} onClick={() => { vibraScelta(); onCambia(tipo) }} aria-pressed={attivo}
+            aria-label={`${tipo}, ${n} workout`}
+            className={`min-w-0 px-1 py-1.5 rounded-full text-[12.5px] truncate transition ${attivo
+              ? 'bg-brand text-black font-black shadow-[0_8px_18px_-8px_rgba(241,186,23,.6)]'
+              : 'bg-white/[.03] border border-white/[.07] text-gray-300 font-bold hover:bg-white/[.07]'}`}>
+            {tipo}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -239,7 +274,7 @@ export function VuotoArchivio({ conFiltri, onAzzera }) {
       </p>
       <p className="mt-1.5 text-sm text-muted">
         {conFiltri
-          ? 'Prova con un altro termine, o togli il filtro di corsia.'
+          ? 'Prova con un altro termine, o togli un filtro.'
           : 'Gli allenamenti che crei finiscono qui. 🏋️'}
       </p>
       {conFiltri && (

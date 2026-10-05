@@ -8,10 +8,11 @@ import { categoriaDi } from '../lib/categorie'
 import { voce } from '../lib/cascata'
 import {
   metaWorkout, testoCercabile, raggruppaPerMese, conteggiPerCorsia,
+  tipiBlocco, conteggiPerTipo, passaFiltroTipi,
 } from '../lib/rigaArchivio'
 import {
   TestataArchivio, CampoRicerca, FiltriCorsia, IntestazioneSezione,
-  RigaWorkout, ScheletroArchivio, VuotoArchivio,
+  RigaWorkout, ScheletroArchivio, VuotoArchivio, FiltriTipo,
 } from '../components/ArchivioUI'
 
 // Tornando da un workout l'archivio riprende dov'era: src/useRipresa.js.
@@ -23,11 +24,13 @@ export default function WorkoutsArchive() {
   const [loading, setLoading] = useState(!ripresa)
   const [searchTerm, setSearchTerm] = useState(() => ripresa?.searchTerm ?? '')
   const [corsiaAttiva, setCorsiaAttiva] = useState(() => ripresa?.corsiaAttiva ?? null)
+  // I tipi di blocco scelti fra i chip (src/lib/rigaArchivio.js).
+  const [tipiScelti, setTipiScelti] = useState(() => ripresa?.tipiScelti ?? [])
   const navigate = useNavigate()
   const indietro = useIndietro('/')
   const isCoach = role !== 'athlete'
 
-  useRicorda('archivio', user?.id, ripresa, { workouts, searchTerm, corsiaAttiva, caricato: !loading })
+  useRicorda('archivio', user?.id, ripresa, { workouts, searchTerm, corsiaAttiva, tipiScelti, caricato: !loading })
 
   // Caricamento una volta sola, di proposito: `role` e `user` non cambiano
   // senza un rimontaggio della pagina. Aggiungere fetchWorkouts alle dipendenze
@@ -88,24 +91,30 @@ export default function WorkoutsArchive() {
   // premuto: scandaglia i blocchi e gli esercizi di ogni workout, e in
   // produzione i workout sono 171.
   const indice = useMemo(
-    () => workouts.map(w => ({ w, testo: testoCercabile(w), categoria: categoriaDi(w.sections) })),
+    () => workouts.map(w => ({
+      w, testo: testoCercabile(w), categoria: categoriaDi(w.sections), tipi: tipiBlocco(w),
+    })),
     [workouts]
   )
 
   const corsie = useMemo(() => conteggiPerCorsia(workouts), [workouts])
+  const tipi = useMemo(() => conteggiPerTipo(workouts), [workouts])
 
   const filtrati = useMemo(() => {
     const termine = searchTerm.trim().toLowerCase()
     return indice
       .filter(v => (corsiaAttiva === null || v.categoria === corsiaAttiva)
-                && (!termine || v.testo.includes(termine)))
+                && (!termine || v.testo.includes(termine))
+                && passaFiltroTipi(v.tipi, tipiScelti))
       .map(v => v.w)
-  }, [indice, searchTerm, corsiaAttiva])
+  }, [indice, searchTerm, corsiaAttiva, tipiScelti])
 
   const gruppi = useMemo(() => raggruppaPerMese(filtrati), [filtrati])
 
-  const conFiltri = searchTerm.trim() !== '' || corsiaAttiva !== null
-  const azzera = () => { setSearchTerm(''); setCorsiaAttiva(null) }
+  const conFiltri = searchTerm.trim() !== '' || corsiaAttiva !== null || tipiScelti.length > 0
+  const azzera = () => { setSearchTerm(''); setCorsiaAttiva(null); setTipiScelti([]) }
+  const cambiaTipo = (t) =>
+    setTipiScelti(prima => (prima.includes(t) ? prima.filter(x => x !== t) : [...prima, t]))
 
   // Il dettaglio della testata dice la scala: quanti sono e su quante corsie.
   // Sotto filtro dice quanti se ne stanno vedendo, che è l'unica domanda che
@@ -133,8 +142,10 @@ export default function WorkoutsArchive() {
         <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
         {corsie.length > 1 && (
           <FiltriCorsia corsie={corsie} attiva={corsiaAttiva} totale={workouts.length}
-            onCambia={setCorsiaAttiva} />
+            onCambia={setCorsiaAttiva} tuttiAttivo={corsiaAttiva === null && tipiScelti.length === 0}
+            onTutti={() => { setCorsiaAttiva(null); setTipiScelti([]) }} />
         )}
+        {tipi.length > 0 && <FiltriTipo tipi={tipi} scelti={tipiScelti} onCambia={cambiaTipo} />}
       </TestataArchivio>
 
       {/* 🔴 Tornando dalla scheda le righe non rifanno la cascata (ci sono già),

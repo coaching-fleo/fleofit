@@ -240,3 +240,46 @@ export const conteggiPerCorsia = (workouts = []) => {
   }
   return ORDINE_CORSIE.filter(c => conteggi.has(c)).map(c => ({ categoria: c, n: conteggi.get(c) }))
 }
+
+/**
+ * I tipi di blocco su cui si può filtrare l'archivio (05/10/2026).
+ *
+ * ⚠️ Fuori Cash In, Cash Out e Rest per decisione del committente, e fuori
+ * anche WarmUp: sono la cornice di quasi ogni seduta, non il suo carattere —
+ * un filtro che lascia passare tutto non riduce niente. Restano i blocchi che
+ * dicono che tipo di lavoro è. L'ordine è quello del picker dei blocchi.
+ * ⚠️ Sono i valori SALVATI in `sections.blocks[].type`: non si traducono.
+ */
+export const TIPI_FILTRABILI = ['ON/OFF', 'EMOM', 'AMRAP', 'For Time', 'Interval']
+
+/**
+ * I tipi di blocco di un workout, come insieme.
+ * ⚠️ Passa da `getNormalizedBlocks`, non da `sections.blocks`: i workout nel
+ * formato legacy hanno il blocco centrale in `sections.main`, e lì un «EMOM con
+ * `on`» è in realtà un ON/OFF (§5). Leggere solo `blocks` li farebbe sparire
+ * da ogni filtro senza un errore.
+ */
+export const tipiBlocco = (workout) =>
+  new Set(getNormalizedBlocks(workout || {}).map(b => b?.type).filter(Boolean))
+
+/**
+ * Quanti workout contengono ciascun tipo filtrabile. Come i chip di corsia, i
+ * tipi si DERIVANO dai dati: un tipo che nessun workout contiene non compare,
+ * perché premuto svuoterebbe la pagina.
+ */
+export const conteggiPerTipo = (workouts = []) => {
+  const conteggi = new Map()
+  for (const w of workouts) {
+    for (const t of tipiBlocco(w)) conteggi.set(t, (conteggi.get(t) || 0) + 1)
+  }
+  return TIPI_FILTRABILI.filter(t => conteggi.has(t)).map(t => ({ tipo: t, n: conteggi.get(t) }))
+}
+
+/**
+ * Il workout passa il filtro per tipo? Più tipi scelti valgono in OR — «ha un
+ * EMOM o un AMRAP» — perché è la domanda che si fa cercando un allenamento da
+ * riusare. In AND, due tipi raramente stanno nella stessa seduta e la lista si
+ * svuoterebbe al secondo tocco. Nessun tipo scelto = nessun filtro.
+ */
+export const passaFiltroTipi = (tipi, scelti = []) =>
+  scelti.length === 0 || scelti.some(t => tipi.has(t))

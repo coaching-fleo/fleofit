@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   giornoBreve, riepilogoCorsa, metaWorkout, testoCercabile,
   ordinaPerData, raggruppaPerMese, conteggiPerCorsia,
+  tipiBlocco, conteggiPerTipo, passaFiltroTipi,
 } from '../rigaArchivio'
 
 const hyrox = (blocks) => ({ date: '2026-08-22', sections: { category: 'Hyrox', blocks } })
@@ -209,5 +210,32 @@ describe('conteggiPerCorsia', () => {
       { sections: { isAutonomous: true } },
     ])
     expect(c).toEqual([{ categoria: 'Custom', n: 3 }])
+  })
+})
+
+describe('filtro per tipo di blocco', () => {
+  const b = (type) => ({ type, exercises: [] })
+
+  it('legge anche il formato legacy, dove un EMOM con `on` è un ON/OFF', () => {
+    const legacy = { sections: { category: 'Hyrox', main: { type: 'EMOM', params: { on: '1:00' }, exercises: [] } } }
+    expect([...tipiBlocco(legacy)]).toContain('ON/OFF')
+    expect([...tipiBlocco(legacy)]).not.toContain('EMOM')
+  })
+
+  it('conta i workout, non i blocchi, e lascia fuori cornice e tipi assenti', () => {
+    const lista = [
+      hyrox([b('WarmUp'), b('Cash In'), b('EMOM'), b('EMOM'), b('Rest'), b('Cash Out')]),
+      hyrox([b('EMOM'), b('AMRAP')]),
+      corsa([{ type: 'run', duration: '5 km' }]),
+    ]
+    // Due EMOM nello stesso workout sono UN workout con un EMOM.
+    expect(conteggiPerTipo(lista)).toEqual([{ tipo: 'EMOM', n: 2 }, { tipo: 'AMRAP', n: 1 }])
+  })
+
+  it('più tipi scelti valgono in OR, e nessuno scelto non filtra', () => {
+    const tipi = new Set(['AMRAP'])
+    expect(passaFiltroTipi(tipi, [])).toBe(true)
+    expect(passaFiltroTipi(tipi, ['EMOM', 'AMRAP'])).toBe(true)
+    expect(passaFiltroTipi(tipi, ['EMOM'])).toBe(false)
   })
 })
