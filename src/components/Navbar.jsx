@@ -65,7 +65,10 @@ const Etichetta = ({ attiva, children }) => (
  */
 function Voce({ a, icona, children }) {
   return (
-    <NavLink to={a} replace className={voce}>
+    // `daBarra` dice alla pagina che ci si è arrivati dalla barra, non da un
+    // gesto dentro un'altra pagina: il builder lo legge per non mostrare un
+    // «indietro» su una destinazione di pari grado (§9-tervicies).
+    <NavLink to={a} replace state={{ daBarra: true }} className={voce}>
       {({ isActive }) => (
         <>
           <Cerchio attiva={isActive} icona={icona} />
