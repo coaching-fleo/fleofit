@@ -12,7 +12,8 @@ import { useTouchDrag } from '../useTouchDrag'
 import { blockHint } from '../lib/blockHints'
 import { format, parseISO, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
-import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
+import { generaTitolo, titoliDelGiorno } from '../lib/workoutTitle'
+import { descriviWorkout, separaCodice, unisciCodice } from '../lib/codiceWorkout'
 import { ERGOMETERS } from '../lib/constants'
 import { mostraErrore } from '../lib/alert'
 import { battito, vibraPresa, vibraScelta, vibraSuccesso } from '../lib/aptica'
@@ -2275,7 +2276,17 @@ export default function CreateWorkout() {
       const { data, error } = await supabase.from('workouts').select('*').eq('id', sourceId).single()
       if (error || !data) return
 
-      setTitle(duplicateId ? `${data.title} (Copia)` : data.title)
+      // Il codice in coda al titolo non sta nel campo: si rigenera al
+      // salvataggio. E se il nome è quello che il contenuto genererebbe da sé,
+      // il campo resta VUOTO, così continua a seguire i blocchi.
+      const { nome } = separaCodice(data.title)
+      const sezioni = data.sections || {}
+      const generato = descriviWorkout({
+        category: sezioni.category || (sezioni.steps ? 'Running' : 'Hyrox'),
+        blocks: sezioni.blocks || [], steps: sezioni.steps || [],
+      }).nome
+      const scritto = nome === generato ? '' : nome
+      setTitle(duplicateId && scritto ? `${scritto} (Copia)` : scritto)
       setCoachNotes(data.coach_notes || '')
       
       let loadedDate = data.date
@@ -2460,7 +2471,14 @@ export default function CreateWorkout() {
     }
   }
 
-  const isStep1Valid = title.trim() !== '' || category === 'Custom'
+  // Il nome è facoltativo per tutte le categorie: se manca lo genera il
+  // contenuto (`src/lib/codiceWorkout.js`), e il codice segue SEMPRE il nome.
+  // Ricalcolati a ogni blocco toccato, così il coach vede il titolo che verrà
+  // salvato mentre lo costruisce.
+  const descrizione = useMemo(
+    () => descriviWorkout({ category, blocks, steps: runningSteps, intensity: workoutIntensity }),
+    [category, blocks, runningSteps, workoutIntensity])
+  const nomeMostrato = title.trim() || descrizione.nome || generaTitolo(date)
 
   // I tre numeri in cima allo step 2 e i segmenti della barra. Un useMemo e non
   // uno stato aggiornato da un effetto: sono una funzione dei blocchi, e uno
@@ -2497,7 +2515,6 @@ export default function CreateWorkout() {
 
 
   const handleSave = async () => {
-    if (!title && category !== 'Custom') return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci il titolo del workout!', type: 'error' })
     if (category === 'Hyrox' && blocks.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno un blocco!', type: 'error' })
     if (category === 'Running' && runningSteps.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno una fase di corsa!', type: 'error' })
     if (category === 'Custom' && !coachNotes.trim()) return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci una descrizione per l\'allenamento!', type: 'error' })
@@ -2514,11 +2531,22 @@ export default function CreateWorkout() {
   const performSave = async (saveAsNew) => {
     setShowSaveModal(false)
     setSaving(true)
-    const finalTitle = titoloOppureGenerato(
-      saveAsNew ? newWorkoutName : title,
-      date,
-      await titoliDelGiorno(supabase, date)
-    )
+    // Un nome scritto resta com'è. Uno generato si numera se quel giorno c'è
+    // già un titolo identico — nome E codice — come faceva il titolo dalla data.
+    const scritto = (saveAsNew ? newWorkoutName : title).trim()
+    const nomeBase = scritto || descrizione.nome
+    let finalTitle
+    if (!nomeBase) {
+      finalTitle = generaTitolo(date, await titoliDelGiorno(supabase, date))
+    } else if (scritto) {
+      finalTitle = unisciCodice(nomeBase, descrizione.codice)
+    } else {
+      const esistenti = await titoliDelGiorno(supabase, date)
+      finalTitle = unisciCodice(nomeBase, descrizione.codice)
+      for (let n = 2; esistenti.includes(finalTitle); n++) {
+        finalTitle = unisciCodice(`${nomeBase} (${n})`, descrizione.codice)
+      }
+    }
 
     const sections = {
       intensity: workoutIntensity,
@@ -2612,7 +2640,8 @@ export default function CreateWorkout() {
       <TestataCrea
         passo={step}
         onIndietro={handleBack}
-        titolo={step === 2 ? (title.trim() || generaTitolo(date)) : null}
+        titolo={step === 2 ? nomeMostrato : null}
+        codice={step === 2 ? descrizione.codice : null}
         sottotitolo={step === 2 ? sottotitoloWorkout : null}
         onTitolo={step === 2 ? () => setStep(1) : null}
       />
@@ -2656,7 +2685,7 @@ export default function CreateWorkout() {
                 enterKeyHint="done"
                 onKeyDown={chiudiTastieraSuInvio}
                 className="w-full bg-transparent text-[15.5px] font-bold text-white placeholder-[#5b6070] focus:outline-none"
-                placeholder={category === 'Custom' ? generaTitolo(date) : 'Es. Hyrox Strength #1'}
+                placeholder={descrizione.nome || (category === 'Custom' ? generaTitolo(date) : 'Facoltativo · lo genero dai blocchi')}
                 value={title}
                 onChange={e => setTitle(e.target.value)}
               />
@@ -2671,11 +2700,6 @@ export default function CreateWorkout() {
             </RigaCampo>
           </div>
 
-          {!isStep1Valid && (
-            <p className="text-center text-xs font-semibold text-muted animate-in fade-in duration-300">
-              Serve un nome per proseguire.
-            </p>
-          )}
         </div>
       )}
 
@@ -2885,7 +2909,7 @@ export default function CreateWorkout() {
       <div className="mt-auto" />
       <BarraAzioni ancorata={false}>
         {step === 1 ? (
-          <CtaPrimaria onClick={() => setStep(2)} disabled={!isStep1Valid} iconaCoda={ArrowRight}>
+          <CtaPrimaria onClick={() => setStep(2)} iconaCoda={ArrowRight}>
             Costruisci l'allenamento
           </CtaPrimaria>
         ) : (
@@ -2951,13 +2975,13 @@ export default function CreateWorkout() {
               </>
             ) : (
               <>
-                <p className="text-gray-400 text-sm">Inserisci il nome per il nuovo allenamento:</p>
+                <p className="text-gray-400 text-sm">Nome del nuovo allenamento — se lo lasci vuoto lo genero dai blocchi:</p>
                 <input 
                   autoFocus
                   className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand w-full mt-1 text-base"
                   value={newWorkoutName}
                   onChange={(e) => setNewWorkoutName(e.target.value)}
-                  placeholder="Nome del workout..."
+                  placeholder={descrizione.nome || 'Nome del workout...'}
                 />
                 <div className="flex gap-3 mt-4">
                   <button 
@@ -2968,7 +2992,7 @@ export default function CreateWorkout() {
                   </button>
                   <button 
                     onClick={() => performSave(true)}
-                    disabled={!newWorkoutName.trim() || saving}
+                    disabled={saving}
                     className="flex-1 py-3 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 text-sm"
                   >
                     {saving ? 'Salvataggio...' : 'Conferma'}

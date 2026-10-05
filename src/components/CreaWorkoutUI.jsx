@@ -28,7 +28,7 @@ import { useNumeroCheSale } from '../useNumeroCheSale'
 // Una sola testata per i due passi. Al passo 1 porta i pallini e «1 / 2», al
 // passo 2 il titolo e la data — che scendono lì proprio perché al passo 2 non
 // si compilano più, si consultano.
-export function TestataCrea({ passo, onIndietro, titolo, sottotitolo, onTitolo }) {
+export function TestataCrea({ passo, onIndietro, titolo, codice, sottotitolo, onTitolo }) {
   return (
     <div className="flex items-center gap-3">
       <button aria-label="Torna indietro" onClick={onIndietro}
@@ -45,6 +45,9 @@ export function TestataCrea({ passo, onIndietro, titolo, sottotitolo, onTitolo }
           aria-label="Modifica nome e data"
           className="flex-1 min-w-0 text-left rounded-xl px-1 py-0.5 -mx-1 hover:bg-white/[.04] transition disabled:hover:bg-transparent">
           <p className="text-base font-extrabold tracking-[-.02em] text-white truncate">{titolo}</p>
+          {/* Il codice che finirà in coda al titolo, ricalcolato a ogni blocco.
+              Monospazio e un tono sotto: è un'etichetta, non parte del nome. */}
+          {codice && <p data-codice className="font-mono text-[11.5px] font-bold text-brand/80 tracking-[.02em] truncate mt-[1px]">{codice}</p>}
           {sottotitolo && <p className={`${LABEL} mt-[2px] tracking-[.07em] truncate`}>{sottotitolo}</p>}
         </button>
       ) : <div className="flex-1" />}

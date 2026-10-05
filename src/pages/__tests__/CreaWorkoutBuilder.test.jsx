@@ -87,11 +87,30 @@ beforeEach(() => {
 })
 
 describe('lo step 1 fa una domanda sola', () => {
-  it('senza nome non si prosegue', async () => {
+  it('il nome è facoltativo anche per Hyrox: si prosegue senza', async () => {
     monta()
-    expect(screen.getByRole('button', { name: /Costruisci l'allenamento/ })).toBeDisabled()
-    await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
     expect(screen.getByRole('button', { name: /Costruisci l'allenamento/ })).toBeEnabled()
+    expect(screen.queryByText(/Serve un nome/)).not.toBeInTheDocument()
+  })
+
+  it('senza nome la testata mostra nome e codice generati, e li aggiorna a ogni blocco', async () => {
+    monta()
+    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+    const testata = () => screen.getByRole('button', { name: 'Modifica nome e data' })
+
+    await aggiungiBlocco('EMOM')                 // 1:00 × 10 round, vuoto
+    expect(testata()).toHaveTextContent('EMOM')
+    expect(document.querySelector('[data-codice]')).toHaveTextContent('EM 10′')
+
+    await aggiungiBlocco('AMRAP')                // + 10:00
+    expect(document.querySelector('[data-codice]')).toHaveTextContent('EM+AM 20′')
+  })
+
+  it('un nome scritto resta, e il codice lo segue comunque', async () => {
+    await alPasso2('Gambe dure')
+    await aggiungiBlocco('AMRAP')
+    expect(screen.getByRole('button', { name: 'Modifica nome e data' })).toHaveTextContent('Gambe dure')
+    expect(document.querySelector('[data-codice]')).toHaveTextContent('AM 10′')
   })
 
   it('«Custom» non ha bisogno di un nome: se ne genera uno dalla data', async () => {

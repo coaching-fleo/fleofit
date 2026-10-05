@@ -1192,6 +1192,9 @@ scrive un titolo, `src/lib/workoutTitle.js` ne **genera e salva** uno nel format
 - Il placeholder del campo mostra in anticipo il titolo che verrà salvato, così l'utente sa cosa ottiene.
 - Nessuna modifica di schema: `title` resta una stringa normale, quindi le due app restano compatibili.
 
+> ⚠️ **Dal 05/10/2026 il titolo porta anche un CODICE in coda** e il nome è facoltativo
+> per **tutte** le categorie, non più solo per Custom: §9-terquadragies.
+
 ### Event (gara)
 `{ "category": "Event", "isEvent": true, "isAutonomous": true }` — creato dal Calendario.
 Genera il banner countdown "Prossimo Obiettivo" in Home e in AthleteDetail.
@@ -6230,6 +6233,53 @@ mano), `src/__tests__/apticaPunti.test.jsx` (7: alert, soglia del foglio,
 interruttore, scelta già attiva, slider RPE) e uno in `HomeRecap.test.jsx`
 (completare vibra UNA volta). **Dodici mutazioni provate, dodici prese.**
 ⚠️ Si sente solo sul telefono: il Simulatore non ha il Taptic Engine.
+
+---
+
+## 9-terquadragies. Il nome generato e il codice nel titolo (05/10/2026)
+
+Richiesta del committente: non essere obbligato a dare un nome al workout, e
+leggere a colpo d'occhio cosa contiene. Tutto in `src/lib/codiceWorkout.js`.
+
+    Wall Balls & Burpees · EM+FT 55′ @8
+    Ripetute 8×400m      · RIP 50′ @9
+    Lungo 18 km          · CL 18K @5
+
+- **Il nome è facoltativo per Hyrox e Corsa** (prima solo per Custom). Se manca nasce
+  dal contenuto: Hyrox → i due esercizi che pesano di più nei blocchi di lavoro, giri
+  compresi; Corsa → «Ripetute 8×400m», «Lungo 18 km», «Corsa Z2», «Progressivo».
+  Custom resta «Allenamento libero · lun 5 ott», senza codice.
+- **Il codice** è COSA · QUANTO DURA · QUANTO È DURO. Sigle a due lettere dei soli
+  blocchi di lavoro (EM, AM, FT, OO, IN; oltre tre «+N»), per la corsa CL/RIP/PR.
+  Minuti esatti sotto i 10 e arrotondati a 5 sopra — quindi possono differire di un
+  paio di minuti dal riepilogo, che è voluto. Una corsa tutta a distanza dice i km
+  (`18K`), non minuti dedotti da un passo che nessuno ha scritto.
+- **Si aggiorna dal vivo** sotto il nome nella testata del passo 2 (`data-codice`).
+
+### ⚠️ Le cinque cose da sapere prima di rimetterci mano
+1. 🔴 **Il codice si SALVA dentro `workouts.title`** (decisione del committente): così
+   compare in archivio, PDF, storia, TV, push e web app senza toccarle, e la ricerca
+   dell'archivio lo trova. Il prezzo: chi modifica i blocchi dalla web app lascia il
+   codice vecchio finché non risalva dall'app.
+2. 🔴 **La forma è un contratto con `separaCodice`**, che lo riconosce in coda per
+   toglierlo prima di rigenerarlo. Senza, ogni salvataggio accoderebbe un secondo
+   codice. Chi cambia sigle o separatore cambia anche `CODICE_IN_CODA`.
+   ⚠️ Riconosce solo forme di codice vere: «Allenamento libero · lun 25 ago» e
+   «Hyrox forte · EMOM 40» NON vengono toccati. Un titolo che finisce con
+   « · 10K» scritto a mano invece sì: è il limite accettato di un codice testuale.
+3. 🔴 **Un nome generato, riaperto, torna VUOTO nel campo** (si confronta con quello che
+   il contenuto genererebbe): così continua a seguire i blocchi invece di diventare
+   testo fisso alla prima modifica.
+4. 🔴 **L'intensità è l'RPE ATTESO** (il riepilogo del builder, dagli esercizi), e solo
+   se manca quella dichiarata. Non il contrario: il cursore dichiarato nasce a 5, e
+   messo davanti scriverebbe «@5» su ogni workout in cui il coach non l'ha toccato.
+   Senza nessuna delle due la parte `@` non c'è. Sulla corsa vale la fase più dura.
+5. **La numerazione dei doppioni va sul NOME**, prima del codice («Sled (2) · EM 24′»):
+   accodata al titolo intero romperebbe il punto 2. Un nome scritto non si numera.
+
+I vecchi workout non hanno il codice finché non si risalvano: BACKLOG #57.
+Test: `src/lib/__tests__/codiceWorkout.test.js` (25), `CodiceTitolo.test.jsx` (2),
+tre in `CreaWorkoutBuilder.test.jsx`. Tre mutazioni provate, tre prese.
 
 ---
 
