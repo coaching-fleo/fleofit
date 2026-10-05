@@ -13,6 +13,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { useRipresa, useRicorda } from '../useRipresa'
 import { format, startOfDay, subDays } from 'date-fns'
 import { supabase } from '../supabaseClient'
 import { User } from 'lucide-react'
@@ -34,16 +35,22 @@ import {
 } from '../components/AtletiUI'
 
 export default function Athletes() {
-  const [athletes, setAthletes] = useState([])
-  const [eliminati, setEliminati] = useState([])
-  const [assegnazioni, setAssegnazioni] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [caricatoIl, setCaricatoIl] = useState(() => Date.now())
-  const [vista, setVista] = useState('attivi')
-  const [search, setSearch] = useState('')
+  const { role, user } = useAuth()
+  // Tornando dalla scheda di un atleta la rubrica riprende dov'era — posizione,
+  // vista e ricerca — come l'archivio (src/useRipresa.js).
+  const ripresa = useRipresa('atleti', user?.id)
+  const [athletes, setAthletes] = useState(() => ripresa?.athletes ?? [])
+  const [eliminati, setEliminati] = useState(() => ripresa?.eliminati ?? [])
+  const [assegnazioni, setAssegnazioni] = useState(() => ripresa?.assegnazioni ?? [])
+  const [loading, setLoading] = useState(!ripresa)
+  const [caricatoIl, setCaricatoIl] = useState(() => ripresa?.caricatoIl ?? Date.now())
+  const [vista, setVista] = useState(() => ripresa?.vista ?? 'attivi')
+  const [search, setSearch] = useState(() => ripresa?.search ?? '')
   const [modalOpen, setModalOpen] = useState(false)
   const navigate = useNavigate()
-  const { role } = useAuth()
+
+  useRicorda('atleti', user?.id, ripresa,
+    { athletes, eliminati, assegnazioni, caricatoIl, vista, search, caricato: !loading })
 
   useEffect(() => {
     if (role === 'athlete') {
@@ -54,7 +61,9 @@ export default function Athletes() {
   }, [role, navigate])
 
   const fetchAthletes = async () => {
-    setLoading(true)
+    // Con la lista ripresa in pagina la ricarica è silenziosa: lo scheletro
+    // accorcerebbe la pagina e butterebbe via la posizione appena rimessa.
+    if (!ripresa) setLoading(true)
     const adesso = new Date()
 
     // Una sola finestra per due domande. `atletiFermi` guarda indietro fino a
@@ -165,6 +174,9 @@ export default function Athletes() {
   // `nth-child` gli atleti in pausa ripartirebbero da zero ed entrerebbero
   // insieme ai primi della lista sopra (src/lib/cascata.js).
   let n = 0
+  // Tornando indietro le righe ci sono già: rifarle entrare una a una direbbe
+  // «pagina nuova». Al loro posto rientra tutta la lista (`ritorno-entra`).
+  const v = () => (ripresa ? undefined : voce(n++))
 
   return (
     /* ⚠️ Niente `page-transition`, e `TestataAtleti` NON entra: è `sticky`,
@@ -178,6 +190,9 @@ export default function Athletes() {
         <FiltriStato conteggi={conteggi} vista={vista} onCambia={cambiaVista} />
       </TestataAtleti>
 
+      {/* ⚠️ Sul contenitore della lista, non sulla testata: è `sticky`, quindi
+          cornice, e resta ferma come all'andata (src/index.css, IL RITORNO). */}
+      <div className={ripresa ? 'ritorno-entra' : undefined}>
       {loading ? <ScheletroAtleti /> : (
         <>
           {fermi.length > 0 && (vista === 'attivi' || vista === 'fermi') && (
@@ -185,7 +200,7 @@ export default function Athletes() {
               attiva={vista === 'fermi'}
               onApri={() => cambiaVista(vista === 'fermi' ? 'attivi' : 'fermi')}
               testo={`${fermi.length} ${fermi.length === 1 ? 'atleta fermo' : 'atleti fermi'} da ${GIORNI_FERMO} giorni o più`}
-              voce={voce(n++)}
+              voce={v()}
             />
           )}
 
@@ -204,22 +219,22 @@ export default function Athletes() {
               {lista.length > 0 && (
                 <>
                   <IntestazioneSezione etichetta={titoloSezione} conteggio={dettaglioSezione}
-                    voce={voce(n++)} />
+                    voce={v()} />
                   <div className="flex flex-col gap-2">
                     {lista.map(x => vista === 'eliminati' ? (
                       <RigaEliminato key={x.id} nome={nomeAtleta(x)} foto={x.photo_url} sigla={iniziali(x)}
                         giorni={giorniRimastiCestino(x.deleted_at, caricatoIl)}
-                        onRipristina={() => ripristina(x)} voce={voce(n++)} />
+                        onRipristina={() => ripristina(x)} voce={v()} />
                     ) : vista === 'pausa' ? (
                       <RigaPausa key={x.id} nome={nomeAtleta(x)} dettaglio={etichettaPausa(x)}
                         foto={x.photo_url} sigla={iniziali(x)} onApri={() => apriAtleta(x.id)}
-                        voce={voce(n++)} />
+                        voce={v()} />
                     ) : (
                       <RigaAtleta key={x.id} nome={nomeAtleta(x)} meta={metaAtleta(x, oggi)}
                         foto={x.photo_url} sigla={iniziali(x)}
                         aderenza={aderenze.get(x.id) || NESSUNA_ADERENZA}
                         fermo={idFermi.has(x.id)} onApri={() => apriAtleta(x.id)}
-                        voce={voce(n++)} />
+                        voce={v()} />
                     ))}
                   </div>
                 </>
@@ -228,12 +243,12 @@ export default function Athletes() {
               {sostaVisibili.length > 0 && (
                 <>
                   <IntestazioneSezione etichetta="In pausa" conteggio={`${sostaVisibili.length}`}
-                    voce={voce(n++)} />
+                    voce={v()} />
                   <div className="flex flex-col gap-2">
                     {sostaVisibili.map(x => (
                       <RigaPausa key={x.id} nome={nomeAtleta(x)} dettaglio={etichettaPausa(x)}
                         foto={x.photo_url} sigla={iniziali(x)} onApri={() => apriAtleta(x.id)}
-                        voce={voce(n++)} />
+                        voce={v()} />
                     ))}
                   </div>
                 </>
@@ -249,6 +264,7 @@ export default function Athletes() {
           )}
         </>
       )}
+      </div>
 
       {modalOpen && (
         <NewAthleteModal

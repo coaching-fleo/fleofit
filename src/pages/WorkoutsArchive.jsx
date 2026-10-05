@@ -1,5 +1,6 @@
-import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { useNavigate, useLocation, useNavigationType } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useRipresa, useRicorda } from '../useRipresa'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
@@ -13,28 +14,11 @@ import {
   RigaWorkout, ScheletroArchivio, VuotoArchivio,
 } from '../components/ArchivioUI'
 
-// 🔴 TORNANDO INDIETRO L'ARCHIVIO RIPRENDE DOV'ERA (02/10/2026).
-// `ScrollInCima` non tocca lo scorrimento sui ritorni (POP), ma non bastava: la
-// pagina si rimontava con lo scheletro, che è corto, quindi il browser
-// schiacciava lo scorrimento in cima — e quando la lista arrivava non c'era più
-// niente da riprendere. Si tiene perciò in memoria la lista, i filtri e la
-// posizione, **per voce di history** (`location.key`): così vale solo per il
-// ritorno a QUESTA voce, mai per un'apertura nuova dell'archivio, che deve
-// partire dall'inizio. La chiave `default` (prima pagina della sessione) non si
-// memorizza: non c'è nessuna voce da cui tornarci.
-// ⚠️ È memoria di modulo, non localStorage: dura quanto l'app aperta, ed è
-// giusto così — dopo un riavvio non esiste nessun «indietro» verso l'archivio.
-const memoria = new Map()
+// Tornando da un workout l'archivio riprende dov'era: src/useRipresa.js.
 
 export default function WorkoutsArchive() {
-  const { key } = useLocation()
-  const tipo = useNavigationType()
   const { role, user } = useAuth()
-  // Letta una volta al montaggio: una ricarica di sfondo non deve ritirarla.
-  const [ripresa] = useState(() => {
-    const m = tipo === 'POP' && key !== 'default' ? memoria.get(key) : null
-    return m && m.uid === user?.id ? m : null
-  })
+  const ripresa = useRipresa('archivio', user?.id)
   const [workouts, setWorkouts] = useState(() => ripresa?.workouts ?? [])
   const [loading, setLoading] = useState(!ripresa)
   const [searchTerm, setSearchTerm] = useState(() => ripresa?.searchTerm ?? '')
@@ -43,27 +27,7 @@ export default function WorkoutsArchive() {
   const indietro = useIndietro('/')
   const isCoach = role !== 'athlete'
 
-  // Lo stato da memorizzare sta in un ref: la scrittura avviene all'USCITA, e
-  // la pulizia di un effetto vede solo i valori del montaggio. Si aggiorna in
-  // un effetto e non durante il render, dove un ref non si scrive.
-  const stato = useRef(null)
-  useLayoutEffect(() => {
-    stato.current = { uid: user?.id, workouts, searchTerm, corsiaAttiva, caricato: !loading }
-  })
-
-  // ⚠️ Dipendenze vuote di proposito: `key` e `ripresa` sono quelli del
-  // montaggio, ed è a quella voce di history che la posizione appartiene.
-  // ⚠️ `useLayoutEffect` e non `useEffect`, in tutti e due i versi. All'uscita:
-  // la sua pulizia gira prima che `ScrollInCima` porti in cima la pagina nuova,
-  // quindi legge ancora la posizione vera. All'entrata: la posizione si rimette
-  // prima del primo fotogramma, senza un lampo in cima.
-  useLayoutEffect(() => {
-    if (ripresa) window.scrollTo(0, ripresa.scrollY)
-    return () => {
-      if (key === 'default' || !stato.current.caricato) return
-      memoria.set(key, { ...stato.current, scrollY: window.scrollY })
-    }
-  }, [])
+  useRicorda('archivio', user?.id, ripresa, { workouts, searchTerm, corsiaAttiva, caricato: !loading })
 
   // Caricamento una volta sola, di proposito: `role` e `user` non cambiano
   // senza un rimontaggio della pagina. Aggiungere fetchWorkouts alle dipendenze

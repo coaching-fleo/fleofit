@@ -2958,8 +2958,12 @@ filtro e posizione, **per voce di history** (`location.key`):
   La testata `sticky` resta ferma, come all'andata;
 - ⚠️ salvataggio e ripristino stanno in un `useLayoutEffect`: la sua pulizia gira prima che
   `ScrollInCima` porti in cima la pagina nuova, quindi legge ancora la posizione vera.
-⚠️ Le altre liste lunghe (rubrica, calendario) **non sono state verificate**: se mostrano
-lo scheletro al ritorno hanno lo stesso difetto, e la cura è la stessa.
+✅ **Dal 05/10/2026 vale anche per la rubrica atleti** (posizione, vista e ricerca), e il
+meccanismo sta in `src/useRipresa.js`: `useRipresa` va chiamato PRIMA degli `useState` (che
+ci si inizializzano), `useRicorda` DOPO (ha bisogno dei loro valori). Il `nome` della pagina
+entra nella chiave, così due liste non si scambiano mai lo stato.
+⚠️ Il calendario **non è stato verificato**: se mostra lo scheletro al ritorno ha lo stesso
+difetto, e la cura è la stessa — due righe con quei due hook.
 
 ### 🔴 Il difetto latente che il rework ha chiuso
 Il filtro faceva `w.title.toLowerCase()` **nudo**. `workouts.title` può essere

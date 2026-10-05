@@ -391,3 +391,76 @@ describe('La cascata sulla rubrica', () => {
     expect(document.querySelector('.page-transition')).toBeNull()
   })
 })
+
+// 🔴 Tornando dalla scheda di un atleta la rubrica ripartiva da capo, con lo
+// scheletro e lo scorrimento in cima. Due test apposta, come per l'archivio: il
+// ritorno RIPRENDE, l'apertura nuova no — una memoria che valesse per ogni
+// montaggio passerebbe il primo.
+describe('Rubrica — tornando indietro riprende dov\'era', () => {
+  const montaConStoria = async () => {
+    const { MemoryRouter, Routes, Route, useNavigate } = await import('react-router-dom')
+    const { AuthContext } = await import('../../App')
+    const { render } = await import('@testing-library/react')
+    const Scheda = () => {
+      const navigate = useNavigate()
+      return <>
+        <button onClick={() => navigate(-1)}>Indietro dalla scheda</button>
+        <button onClick={() => navigate('/athletes')}>Apri rubrica da capo</button>
+      </>
+    }
+    const Home = () => {
+      const navigate = useNavigate()
+      return <button onClick={() => navigate('/athletes')}>Vai rubrica</button>
+    }
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AuthContext.Provider value={{ user: { id: 'u1' }, role: 'admin' }}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/athletes" element={<Athletes />} />
+            <Route path="/athletes/:id" element={<Scheda />} />
+          </Routes>
+        </AuthContext.Provider>
+      </MemoryRouter>
+    )
+    await userEvent.click(screen.getByText('Vai rubrica'))
+  }
+
+  it('il ritorno rimette posizione e ricerca, senza scheletro, e rientra da sinistra', async () => {
+    dati.atleti = [atleta('a', 'Andrea', 'Bianchi'), atleta('b', 'Marco', 'Rossi')]
+    dati.assegnazioni = [attivoDiRecente('a'), attivoDiRecente('b')]
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    await montaConStoria()
+    await screen.findByText('Andrea Bianchi')
+    await userEvent.type(screen.getByRole('searchbox'), 'rossi')
+    window.scrollY = 480
+    await userEvent.click(screen.getByText('Marco Rossi'))
+    window.scrollY = 0
+    await userEvent.click(screen.getByText('Indietro dalla scheda'))
+    // Subito, senza aspettare la rete: è la lista di prima, con la sua ricerca.
+    expect(screen.getByText('Marco Rossi')).toBeInTheDocument()
+    expect(screen.queryByText('Andrea Bianchi')).not.toBeInTheDocument()
+    expect(screen.getByRole('searchbox')).toHaveValue('rossi')
+    expect(scrollTo).toHaveBeenCalledWith(0, 480)
+    // Il ritorno ha il suo movimento, e non è la cascata.
+    expect(document.querySelector('.ritorno-entra')).toContainElement(screen.getByText('Marco Rossi'))
+    expect(document.querySelector('.cascata-voce')).toBeNull()
+    scrollTo.mockRestore()
+  })
+
+  it('un\'apertura nuova della rubrica parte dall\'inizio', async () => {
+    dati.atleti = [atleta('a', 'Andrea', 'Bianchi'), atleta('b', 'Marco', 'Rossi')]
+    dati.assegnazioni = [attivoDiRecente('a'), attivoDiRecente('b')]
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    await montaConStoria()
+    await screen.findByText('Andrea Bianchi')
+    await userEvent.type(screen.getByRole('searchbox'), 'rossi')
+    window.scrollY = 480
+    await userEvent.click(screen.getByText('Marco Rossi'))
+    await userEvent.click(screen.getByText('Apri rubrica da capo'))
+    expect(await screen.findByText('Andrea Bianchi')).toBeInTheDocument()
+    expect(scrollTo).not.toHaveBeenCalledWith(0, 480)
+    expect(document.querySelector('.ritorno-entra')).toBeNull()
+    scrollTo.mockRestore()
+  })
+})
