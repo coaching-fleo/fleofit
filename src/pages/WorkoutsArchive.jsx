@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useNavigate, useLocation, useNavigationType } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
@@ -13,15 +13,57 @@ import {
   RigaWorkout, ScheletroArchivio, VuotoArchivio,
 } from '../components/ArchivioUI'
 
+// 🔴 TORNANDO INDIETRO L'ARCHIVIO RIPRENDE DOV'ERA (02/10/2026).
+// `ScrollInCima` non tocca lo scorrimento sui ritorni (POP), ma non bastava: la
+// pagina si rimontava con lo scheletro, che è corto, quindi il browser
+// schiacciava lo scorrimento in cima — e quando la lista arrivava non c'era più
+// niente da riprendere. Si tiene perciò in memoria la lista, i filtri e la
+// posizione, **per voce di history** (`location.key`): così vale solo per il
+// ritorno a QUESTA voce, mai per un'apertura nuova dell'archivio, che deve
+// partire dall'inizio. La chiave `default` (prima pagina della sessione) non si
+// memorizza: non c'è nessuna voce da cui tornarci.
+// ⚠️ È memoria di modulo, non localStorage: dura quanto l'app aperta, ed è
+// giusto così — dopo un riavvio non esiste nessun «indietro» verso l'archivio.
+const memoria = new Map()
+
 export default function WorkoutsArchive() {
-  const [workouts, setWorkouts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [corsiaAttiva, setCorsiaAttiva] = useState(null)
+  const { key } = useLocation()
+  const tipo = useNavigationType()
+  const { role, user } = useAuth()
+  // Letta una volta al montaggio: una ricarica di sfondo non deve ritirarla.
+  const [ripresa] = useState(() => {
+    const m = tipo === 'POP' && key !== 'default' ? memoria.get(key) : null
+    return m && m.uid === user?.id ? m : null
+  })
+  const [workouts, setWorkouts] = useState(() => ripresa?.workouts ?? [])
+  const [loading, setLoading] = useState(!ripresa)
+  const [searchTerm, setSearchTerm] = useState(() => ripresa?.searchTerm ?? '')
+  const [corsiaAttiva, setCorsiaAttiva] = useState(() => ripresa?.corsiaAttiva ?? null)
   const navigate = useNavigate()
   const indietro = useIndietro('/')
-  const { role, user } = useAuth()
   const isCoach = role !== 'athlete'
+
+  // Lo stato da memorizzare sta in un ref: la scrittura avviene all'USCITA, e
+  // la pulizia di un effetto vede solo i valori del montaggio. Si aggiorna in
+  // un effetto e non durante il render, dove un ref non si scrive.
+  const stato = useRef(null)
+  useLayoutEffect(() => {
+    stato.current = { uid: user?.id, workouts, searchTerm, corsiaAttiva, caricato: !loading }
+  })
+
+  // ⚠️ Dipendenze vuote di proposito: `key` e `ripresa` sono quelli del
+  // montaggio, ed è a quella voce di history che la posizione appartiene.
+  // ⚠️ `useLayoutEffect` e non `useEffect`, in tutti e due i versi. All'uscita:
+  // la sua pulizia gira prima che `ScrollInCima` porti in cima la pagina nuova,
+  // quindi legge ancora la posizione vera. All'entrata: la posizione si rimette
+  // prima del primo fotogramma, senza un lampo in cima.
+  useLayoutEffect(() => {
+    if (ripresa) window.scrollTo(0, ripresa.scrollY)
+    return () => {
+      if (key === 'default' || !stato.current.caricato) return
+      memoria.set(key, { ...stato.current, scrollY: window.scrollY })
+    }
+  }, [])
 
   // Caricamento una volta sola, di proposito: `role` e `user` non cambiano
   // senza un rimontaggio della pagina. Aggiungere fetchWorkouts alle dipendenze
@@ -32,7 +74,10 @@ export default function WorkoutsArchive() {
   }, [])
 
   const fetchWorkouts = async () => {
-    setLoading(true)
+    // Con la lista ripresa in pagina la ricarica è silenziosa: rimettere lo
+    // scheletro accorcerebbe la pagina e butterebbe via la posizione appena
+    // ripristinata.
+    if (!ripresa) setLoading(true)
     if (role === 'athlete') {
       const { data, error } = await supabase
         .from('athlete_workouts')
@@ -136,7 +181,7 @@ export default function WorkoutsArchive() {
         gruppi.map(gruppo => (
           <div key={gruppo.chiave}>
             <IntestazioneSezione etichetta={gruppo.etichetta} conteggio={gruppo.workouts.length}
-              voce={voce(n++)} />
+              voce={ripresa ? undefined : voce(n++)} />
             <div className="flex flex-col gap-2">
               {gruppo.workouts.map(w => (
                 <RigaWorkout
@@ -147,7 +192,9 @@ export default function WorkoutsArchive() {
                   assegnati={isCoach ? (w.athlete_workouts?.length ?? 0) : undefined}
                   completato={!isCoach && w.status === 'completed'}
                   onApri={() => navigate(`/workout/${w.id}`)}
-                  voce={voce(n++)}
+                  // Tornando indietro le righe ci sono già: rifarle entrare
+                  // sarebbe una pagina nuova, ed è proprio ciò che non è.
+                  voce={ripresa ? undefined : voce(n++)}
                 />
               ))}
             </div>

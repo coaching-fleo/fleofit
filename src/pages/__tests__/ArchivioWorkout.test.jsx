@@ -325,3 +325,69 @@ describe('La cascata sull\'archivio', () => {
     expect(document.querySelector('.page-transition')).toBeNull()
   })
 })
+
+// 🔴 Tornando da un workout l'archivio ripartiva da capo: si rimontava con lo
+// scheletro, la pagina si accorciava, e il browser schiacciava lo scorrimento
+// in cima. I due test sono due apposta: il ritorno RIPRENDE, l'apertura nuova
+// no — una memoria che valesse per ogni montaggio passerebbe il primo.
+describe('Archivio — tornando indietro riprende dov\'era', () => {
+  const montaConStoria = async () => {
+    const { MemoryRouter, Routes, Route, useNavigate } = await import('react-router-dom')
+    const { AuthContext } = await import('../../App')
+    const { render } = await import('@testing-library/react')
+    const Scheda = () => {
+      const navigate = useNavigate()
+      return <>
+        <button onClick={() => navigate(-1)}>Indietro dalla scheda</button>
+        <button onClick={() => navigate('/archive')}>Apri archivio da capo</button>
+      </>
+    }
+    const Home = () => {
+      const navigate = useNavigate()
+      return <button onClick={() => navigate('/archive')}>Vai archivio</button>
+    }
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AuthContext.Provider value={{ user: { id: 'u1' }, role: 'admin' }}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/archive" element={<WorkoutsArchive />} />
+            <Route path="/workout/:id" element={<Scheda />} />
+          </Routes>
+        </AuthContext.Provider>
+      </MemoryRouter>
+    )
+    await userEvent.click(screen.getByText('Vai archivio'))
+  }
+
+  it('il ritorno rimette posizione e ricerca, senza scheletro', async () => {
+    dati.workouts = [HYROX(1, 'Full Body', '2026-08-22'), CORSA(2, 'Long Run', '2026-08-20')]
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    await montaConStoria()
+    await screen.findByText('Full Body')
+    await userEvent.type(screen.getByRole('searchbox'), 'long')
+    window.scrollY = 640
+    await userEvent.click(screen.getByText('Long Run'))
+    window.scrollY = 0
+    await userEvent.click(screen.getByText('Indietro dalla scheda'))
+    // Subito, senza aspettare la rete: è la lista di prima.
+    expect(screen.getByText('Long Run')).toBeInTheDocument()
+    expect(screen.queryByText('Full Body')).not.toBeInTheDocument()
+    expect(scrollTo).toHaveBeenCalledWith(0, 640)
+    scrollTo.mockRestore()
+  })
+
+  it('un\'apertura nuova dell\'archivio parte dall\'inizio', async () => {
+    dati.workouts = [HYROX(1, 'Full Body', '2026-08-22'), CORSA(2, 'Long Run', '2026-08-20')]
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    await montaConStoria()
+    await screen.findByText('Full Body')
+    await userEvent.type(screen.getByRole('searchbox'), 'long')
+    window.scrollY = 640
+    await userEvent.click(screen.getByText('Long Run'))
+    await userEvent.click(screen.getByText('Apri archivio da capo'))
+    expect(await screen.findByText('Full Body')).toBeInTheDocument()
+    expect(scrollTo).not.toHaveBeenCalledWith(0, 640)
+    scrollTo.mockRestore()
+  })
+})
