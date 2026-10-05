@@ -173,6 +173,13 @@ export default function WorkoutsArchive() {
         )}
       </TestataArchivio>
 
+      {/* 🔴 Tornando dalla scheda le righe non rifanno la cascata (ci sono già),
+          ma senza niente al suo posto il ritorno era un taglio secco. La lista
+          rientra perciò da SINISTRA, cioè il verso opposto di `passo-entra`:
+          è il gesto «indietro» di iOS, e dice che si torna, non che si apre.
+          ⚠️ Sta sul contenitore della lista e non sulla testata, che è
+          `sticky` e quindi cornice: resta ferma, come all'andata. */}
+      <div className={ripresa ? 'ritorno-entra' : undefined}>
       {loading ? (
         <ScheletroArchivio />
       ) : gruppi.length === 0 ? (
@@ -201,6 +208,7 @@ export default function WorkoutsArchive() {
           </div>
         ))
       )}
+      </div>
     </div>
   )
 }

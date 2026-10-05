@@ -379,6 +379,23 @@ body {
   animation: passoEntra 0.38s var(--cascata-curva) both;
 }
 
+/* ── IL RITORNO ────────────────────────────────────────────────────────────
+   Il rovescio di `passo-entra`: una pagina RIPRESA tornando indietro (oggi
+   l'archivio, src/pages/WorkoutsArchive.jsx) rientra da SINISTRA. Non rifà la
+   cascata — le righe ci sono già, e farle salire una a una direbbe «pagina
+   nuova» — ma senza nessun movimento il ritorno era un taglio secco.
+   ⚠️ Stessa durata, stessa distanza e stessa curva di `passo-entra`: andata e
+   ritorno devono sembrare lo stesso gesto nei due versi.
+   ⚠️ `backwards` e non `both`: finita l'entrata l'elemento non deve tenersi
+   addosso un `transform` per sempre (§9-undequadragies). */
+@keyframes ritornoEntra {
+  from { opacity: 0; transform: translateX(-26px); }
+  to   { opacity: 1; transform: none; }
+}
+.ritorno-entra {
+  animation: ritornoEntra 0.38s var(--cascata-curva) backwards;
+}
+
 /* ── L'APERTURA ────────────────────────────────────────────────────────────
    La sovrapposizione che copre l'avvio e scopre la Home
    (src/components/Apertura.jsx, dove c'è il perché del meccanismo).
@@ -469,7 +486,7 @@ body {
   .sheet-in, .velo-in { animation: none; }
   .modal-transition { animation: none; }
   .cascata > *, .cascata-voce { animation: none; }
-  .passo-entra { animation: none; }
+  .passo-entra, .ritorno-entra { animation: none; }
   /* ⚠️ I puntini smettono di pulsare ma NON spariscono: sono l'unica cosa che
      dice «sto lavorando» dentro una pillola senza più etichetta. */
   .puntini > span { animation: none; opacity: .7; }

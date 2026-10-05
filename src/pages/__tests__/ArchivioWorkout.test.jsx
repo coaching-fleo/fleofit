@@ -374,6 +374,10 @@ describe('Archivio — tornando indietro riprende dov\'era', () => {
     expect(screen.getByText('Long Run')).toBeInTheDocument()
     expect(screen.queryByText('Full Body')).not.toBeInTheDocument()
     expect(scrollTo).toHaveBeenCalledWith(0, 640)
+    // Il ritorno ha un suo movimento, e non è la cascata: niente righe che
+    // risalgono una a una, la lista rientra da sinistra tutta insieme.
+    expect(document.querySelector('.ritorno-entra')).toContainElement(screen.getByText('Long Run'))
+    expect(document.querySelector('.cascata-voce')).toBeNull()
     scrollTo.mockRestore()
   })
 
@@ -388,6 +392,8 @@ describe('Archivio — tornando indietro riprende dov\'era', () => {
     await userEvent.click(screen.getByText('Apri archivio da capo'))
     expect(await screen.findByText('Full Body')).toBeInTheDocument()
     expect(scrollTo).not.toHaveBeenCalledWith(0, 640)
+    // All'andata entra la cascata, non il ritorno.
+    expect(document.querySelector('.ritorno-entra')).toBeNull()
     scrollTo.mockRestore()
   })
 })

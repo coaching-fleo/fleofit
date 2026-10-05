@@ -2952,7 +2952,10 @@ filtro e posizione, **per voce di history** (`location.key`):
   dall'inizio, e la chiave `default` (prima pagina della sessione) non si memorizza;
 - la ricarica dopo il ritorno è **silenziosa**: rimettere lo scheletro butterebbe via la
   posizione appena rimessa;
-- le righe **non rifanno la cascata**: ci sono già, e farle rientrare direbbe «pagina nuova»;
+- le righe **non rifanno la cascata**: ci sono già, e farle rientrare direbbe «pagina nuova».
+  Al suo posto la lista rientra **da sinistra** con `.ritorno-entra` (05/10/2026), il rovescio
+  di `.passo-entra` con stessa durata, distanza e curva: senza, il ritorno era un taglio secco.
+  La testata `sticky` resta ferma, come all'andata;
 - ⚠️ salvataggio e ripristino stanno in un `useLayoutEffect`: la sua pulizia gira prima che
   `ScrollInCima` porti in cima la pagina nuova, quindi legge ancora la posizione vera.
 ⚠️ Le altre liste lunghe (rubrica, calendario) **non sono state verificate**: se mostrano
