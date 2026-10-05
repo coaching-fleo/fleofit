@@ -2883,7 +2883,7 @@ testo — se non ricordavi il titolo esatto, non avevi una strada.
 1. **Una testata sola.** Erano due `h1` (il logo FLEOFIT e «Archivio Workout»)
    più un sottotitolo che ripeteva il titolo: tre righe prima di vedere un
    workout, su una schermata che si raggiunge da un link chiamato «Archivio».
-   Ora è «Archivio» più una riga in monospazio che dice la scala — «128 workout
+   Ora è «Archivio» più una riga che dice la scala (carattere normale, come nell'artboard: il monospazio resta alle sole intestazioni dei mesi — riallineato il 02/10/2026) — «128 workout
    · 3 corsie» — e che **sotto filtro cambia domanda**: «12 di 128 workout», che
    è l'unica cosa che resta da sapere quando la lista si accorcia sotto le dita.
 2. **La ricerca è diventata un filtro.** Una fila di chip per corsia con il

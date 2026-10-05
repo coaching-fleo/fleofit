@@ -46,7 +46,7 @@ export function TestataArchivio({ onIndietro, dettaglio, children }) {
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-black tracking-[-.03em] text-white leading-none">Archivio</h1>
           {dettaglio && (
-            <p className="mt-1 font-mono text-[11px] font-bold uppercase tracking-[.1em] text-muted leading-none">
+            <p className="mt-0.5 text-sm font-medium text-gray-400 leading-tight">
               {dettaglio}
             </p>
           )}
@@ -186,7 +186,7 @@ export function RigaWorkout({ categoria, titolo, meta, assegnati, completato, on
           {titolo}
         </span>
         {meta && (
-          <span className="block mt-[3px] font-mono text-[12px] font-medium text-muted leading-none truncate">
+          <span className="block mt-[3px] text-[13px] font-medium text-muted leading-tight truncate">
             {meta}
           </span>
         )}
