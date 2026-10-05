@@ -15,17 +15,16 @@
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **23 settembre 2026**.
+> Ultimo aggiornamento: **5 ottobre 2026**.
 > **Due prodotti, due branch**: `main` = web app in produzione · `app` = le app native iOS e
 > Android (§1.1 — rifare sempre `git fetch` prima di parlare dei branch).
-> Ultimo commit su `ios-version`: **23 set 2026**, che porta il **recap post-allenamento**
-> (§9-quadragies) dopo **l'apertura dell'app** (§9-duodequadragies) e **le animazioni
-> dell'app** (§9-septtricies): la cascata su nove schermate, i numeri che salgono, la CTA
-> che si contrae e il passo che entra. ⚠️ **L'hash non si scrive più qui dentro**: era
+> 🧩 **Il branch `app` è su GitHub dal 05/10/2026** (`origin/app`, prima esisteva solo in
+> locale). Gli ultimi commit portano l'**archivio che riprende dov'era** tornando da un
+> workout (§9-sedecies) dopo l'unificazione iOS + Android (§A). ⚠️ **L'hash non si scrive più qui dentro**: era
 > autoreferenziale — la riga descrive il commit che la contiene — e in questo file è già stato
 > sbagliato **tre volte**, con due commit esistenti solo per correggerlo. Si legge con
 > `git log -1`, che non può mentire.
-> `npm test` → **1073 test**, `npm run lint` → **41 problemi** (erano 164 la mattina del 25/08).
+> `npm test` → **1087 test**, `npm run lint` → **42 problemi** (erano 164 la mattina del 25/08).
 > ⭐ **Il 24/09 l'app ha preso un LINGUAGGIO APTICO** (§9-duoquadragies): sei verbi in
 > `src/lib/aptica.js`, e una regola — vibra ciò che l'occhio può perdersi o che non si
 > disfa, mai la navigazione. 🔴 Due trappole trovate: `selectionChanged()` è muto senza
@@ -218,7 +217,8 @@ li esegue con un timer guidato, li segna come completati con RPE e note, e il co
 tempo reale.
 
 - **Repo**: `https://github.com/coaching-fleo/fleofit`
-- **Cartella locale**: `~/Desktop/FLEOFIT/fleofit ios-version`
+- **Cartella locale**: `Z:\FedericoLeo\FLEOFITranchesleofit-app` (Windows, Android) —
+  sul Mac la copia per Xcode
 - **App bundle iOS**: `it.federicoleo.fleofit` — display name `FLEOFIT`
 - **Deploy web**: Vercel (`https://fleofit.vercel.app`), SPA rewrite in `vercel.json`
 - **Deep link scheme**: `fleofit://` (usato per OAuth callback e reset password su iOS)
@@ -239,7 +239,8 @@ Il progetto vive su **due branch con due prodotti diversi**, entrambi attivi:
 | Branch | Cos'è | Dove finisce | Ultimo commit |
 |---|---|---|---|
 | **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi | **collegato a Vercel** → `https://fleofit.vercel.app`. LIVE, non rompere | `c2ed65d` — 25 ago 2026 |
-| **`ios-version`** | Versione nativa iOS/Capacitor, quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. L'app arriva sull'App Store da Xcode, non da un deploy | **23 set 2026** (`git log -1`) |
+| **`app`** | Le app native **iOS e Android** sullo stesso codice (§A), quella caricata sull'App Store (§9-ter) | **collegato a NIENTE**: è solo il backup su GitHub del lavoro locale. Le app arrivano agli Store da Xcode e da Gradle, non da un deploy | **5 ott 2026** (`git log -1`) |
+| ~~`ios-version`~~ · ~~`android-version`~~ | superati dal 02/10/2026: storia, non ci si lavora più | — | `ios-version` 23 set 2026 |
 
 ### ⚠️ `ios-version` NON è un branch di rilascio (confermato dal committente il 24/08/2026)
 Non esiste nessuna pipeline collegata a `ios-version`. Pushare lì **non pubblica niente**: serve
@@ -259,9 +260,9 @@ Conseguenze pratiche, tutte controintuitive:
 
 ### Rapporto tra i due: SONO DIVERGENTI, ED ENTRAMBI SI MUOVONO
 Verificato il 25/08/2026 **dopo un `git fetch`**:
-`git rev-list --left-right --count origin/main...origin/ios-version` → **`49 108`**
-(rimisurata il 23/09/2026 prima del push: `main` è fermo al 25/08, `ios-version`
-continua a muoversi). ⚠️ **Questo numero invecchia di uno a ogni commit, questa riga
+`git rev-list --left-right --count origin/main...origin/app` → **`49 119`**
+(rimisurata il 05/10/2026 dopo il primo push di `app`: `main` è fermo al 25/08, `app`
+continua a muoversi; fino al 23/09 si misurava su `ios-version`, `49 108`). ⚠️ **Questo numero invecchia di uno a ogni commit, questa riga
 compresa**: vale come ordine di grandezza — il divario è grande e cresce — non come
 cifra da fidarsi. Per il valore vero si rilancia il comando dopo un `git fetch`, che è
 la regola di questa sezione.
@@ -2940,6 +2941,22 @@ testo — se non ricordavi il titolo esatto, non avevi una strada.
    scroll appena fatto, cioè proprio quando la lista è lunga.
    ⚠️ La safe area la porta la testata, non la pagina: un `pt` sul contenitore
    lascerebbe scorrere il contenuto sotto la barra di stato.
+
+### 🔴 Tornando da un workout l'archivio riprende dov'era (02/10/2026)
+`ScrollInCima` (§9-noviesdecies) non tocca lo scorrimento sui ritorni, ma non bastava:
+l'archivio si rimontava con lo **scheletro**, che è corto, la pagina si accorciava e il
+browser schiacciava lo scorrimento in cima — quando la lista arrivava non c'era più niente
+da riprendere. Ora `WorkoutsArchive` tiene in una `Map` **di modulo** lista, ricerca,
+filtro e posizione, **per voce di history** (`location.key`):
+- vale solo su un ritorno (`POP`) a QUELLA voce: un'apertura nuova dell'archivio riparte
+  dall'inizio, e la chiave `default` (prima pagina della sessione) non si memorizza;
+- la ricarica dopo il ritorno è **silenziosa**: rimettere lo scheletro butterebbe via la
+  posizione appena rimessa;
+- le righe **non rifanno la cascata**: ci sono già, e farle rientrare direbbe «pagina nuova»;
+- ⚠️ salvataggio e ripristino stanno in un `useLayoutEffect`: la sua pulizia gira prima che
+  `ScrollInCima` porti in cima la pagina nuova, quindi legge ancora la posizione vera.
+⚠️ Le altre liste lunghe (rubrica, calendario) **non sono state verificate**: se mostrano
+lo scheletro al ritorno hanno lo stesso difetto, e la cura è la stessa.
 
 ### 🔴 Il difetto latente che il rework ha chiuso
 Il filtro faceva `w.title.toLowerCase()` **nudo**. `workouts.title` può essere
