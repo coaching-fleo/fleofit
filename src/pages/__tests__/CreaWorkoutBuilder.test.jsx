@@ -142,6 +142,55 @@ describe('nome e data restano raggiungibili dal passo 2', () => {
   })
 })
 
+describe('il tasto indietro della testata', () => {
+  // ⚠️ Una freccia, non una X: al passo 2 torna al passo 1, e una X si legge
+  // come «butto via tutto». Dalla tab bar il builder è una destinazione come
+  // Calendario e Atleti, quindi al passo 1 non ha un indietro.
+  const montaDaBarra = () => render(
+    <MemoryRouter initialEntries={[{ pathname: '/create', state: { daBarra: true } }]}>
+      <CreateWorkout />
+    </MemoryRouter>)
+
+  it('aperto da un altro gesto, al passo 1 c\'è', () => {
+    monta()
+    expect(screen.getByRole('button', { name: 'Torna indietro' })).toBeInTheDocument()
+  })
+
+  it('aperto dalla tab bar, al passo 1 non c\'è', () => {
+    montaDaBarra()
+    expect(screen.getByRole('button', { name: /Costruisci l'allenamento/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Torna indietro' })).not.toBeInTheDocument()
+  })
+
+  it('al passo 2 c\'è sempre, e riporta al passo 1', async () => {
+    montaDaBarra()
+    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Torna al passo 1' }))
+    expect(screen.getByLabelText('Nome del workout')).toBeInTheDocument()
+  })
+
+  it('con dei blocchi chiede conferma, e Annulla resta al passo 2', async () => {
+    await alPasso2()
+    await aggiungiBlocco('AMRAP')
+    await userEvent.click(screen.getByRole('button', { name: 'Torna al passo 1' }))
+    const dialogo = screen.getByRole('dialog', { name: 'Sei sicuro?' })
+    expect(screen.queryByLabelText('Nome del workout')).not.toBeInTheDocument()
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Annulla' }))
+    expect(screen.queryByRole('dialog', { name: 'Sei sicuro?' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Nome del workout')).not.toBeInTheDocument()
+  })
+
+  it('confermando torna al passo 1, e i blocchi restano', async () => {
+    await alPasso2()
+    await aggiungiBlocco('AMRAP')
+    await userEvent.click(screen.getByRole('button', { name: 'Torna al passo 1' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Sei sicuro?' })).getByRole('button', { name: 'Conferma' }))
+    expect(screen.getByLabelText('Nome del workout')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+    expect(cella('Blocchi')).toBe('1')
+  })
+})
+
 describe('il riepilogo segue i blocchi', () => {
   it('un builder vuoto non inventa numeri', async () => {
     await alPasso2()

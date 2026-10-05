@@ -12,7 +12,7 @@
 // chiuso: il mese si legge come un pattern di carico invece che come puntini.
 
 import { ChevronLeft, ChevronRight, Plus, Search, Check } from 'lucide-react'
-import { CARD, CARTA_RIGA, CARTA_RIGA_BASE, LABEL, RIGA, VETRO } from '../lib/stiliCard'
+import { CARD, CARTA_RIGA, CARTA_RIGA_BASE, LABEL, RIGA, VETRO, META } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 import { coloreCategoria } from '../lib/colori'
 import { vibraScelta } from '../lib/aptica'
@@ -45,7 +45,7 @@ export function TestataCalendario({ mese, anno, onCerca, onNuovo }) {
   return (
     <div className="flex items-center justify-between px-0.5 pt-1.5 pb-0.5">
       <div>
-        <p className={`${LABEL} font-mono tracking-[.12em] leading-none mb-[3px]`}>Calendario · {anno}</p>
+        <p className={`${META} mb-[3px]`}>Calendario · {anno}</p>
         <h1 className="text-[26px] font-black tracking-[-.03em] text-white leading-none">{mese}</h1>
       </div>
       <div className="flex gap-2">
@@ -90,7 +90,7 @@ export function NavMese({ onPrecedente, onSuccessivo, onOggi, mostraOggi }) {
       </div>
       {mostraOggi && (
         <button onClick={onOggi}
-          className="px-3 h-[34px] rounded-[11px] font-mono text-[11px] font-bold uppercase
+          className="px-3 h-[34px] rounded-[11px] text-[11px] font-bold uppercase
                      tracking-[.1em] text-brand hover:bg-brand/10 transition">
           Oggi
         </button>
@@ -135,7 +135,7 @@ export function LegendaCorsie({ voci }) {
       {voci.map(({ chiave, etichetta, colore }) => (
         <span key={chiave} className="shrink-0 flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-[3px]" style={{ backgroundColor: colore }} aria-hidden="true" />
-          <span className="font-mono text-[10.5px] font-bold uppercase tracking-[.06em] text-muted leading-none">
+          <span className="text-[10.5px] font-bold uppercase tracking-[.06em] text-muted leading-none">
             {etichetta}
           </span>
         </span>
@@ -152,7 +152,7 @@ export function GrigliaMese({ vuote, celle }) {
     <div>
       <div className="grid grid-cols-7 gap-1 mb-1.5" aria-hidden="true">
         {GIORNI_SETTIMANA.map((g, i) => (
-          <div key={i} className="text-center font-mono text-[10.5px] font-bold text-[#5b6070] py-1">{g}</div>
+          <div key={i} className="text-center text-[10.5px] font-bold text-[#5b6070] py-1">{g}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
@@ -244,7 +244,7 @@ export function StrisciaMese({ celle }) {
         <div key={c.etichetta} className="contents">
           {i > 0 && <span className="w-px bg-white/[.07]" />}
           <div className="flex-1 min-w-0">
-            <p className={`${LABEL} font-mono leading-none`}>{c.etichetta}</p>
+            <p className={`${LABEL} leading-none`}>{c.etichetta}</p>
             <p className={`mt-[7px] text-[22px] font-black tracking-[-.03em] leading-none truncate
                            ${c.evidenzia ? 'text-brand' : 'text-white'}`}>
               {c.valore}
@@ -267,7 +267,7 @@ export function IntestazioneGiorno({ data, riepilogo }) {
     <div className="flex items-baseline justify-between gap-3 mt-4 mb-2.5">
       <h2 className="text-[15px] font-extrabold tracking-[-.01em] text-white">{data}</h2>
       {riepilogo && (
-        <span className="font-mono text-[11px] font-bold uppercase tracking-[.1em] text-muted shrink-0">
+        <span className="text-[11px] font-bold uppercase tracking-[.1em] text-muted shrink-0">
           {riepilogo}
         </span>
       )}
@@ -325,7 +325,7 @@ export function RigaSessione({ categoria, etichetta, titolo, meta, stato, onApri
               <Check size={10} strokeWidth={3.2} aria-hidden="true" /> Fatto
             </span>
           ) : (
-            <span className="font-mono text-[10.5px] font-bold uppercase tracking-[.09em] text-muted">
+            <span className="text-[10.5px] font-bold uppercase tracking-[.09em] text-muted">
               Da fare
             </span>
           ))}
@@ -334,7 +334,7 @@ export function RigaSessione({ categoria, etichetta, titolo, meta, stato, onApri
           {titolo}
         </span>
         {meta && (
-          <span className="block mt-[3px] font-mono text-[12px] font-medium text-muted leading-none truncate">
+          <span className="block mt-[3px] text-[12px] font-medium text-muted leading-none truncate">
             {meta}
           </span>
         )}

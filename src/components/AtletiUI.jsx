@@ -13,7 +13,7 @@
 
 import { useState } from 'react'
 import { ChevronRight, Plus, Trash2, Pause, User, RotateCcw } from 'lucide-react'
-import { CARTA_RIGA, VETRO } from '../lib/stiliCard'
+import { CARTA_RIGA, META, VETRO } from '../lib/stiliCard'
 import { vibraScelta } from '../lib/aptica'
 
 // ── Testata ───────────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ export function TestataAtleti({ dettaglio, onNuovo, children }) {
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-black tracking-[-.03em] text-white leading-none">Atleti</h1>
           {dettaglio && (
-            <p className="mt-1 font-mono text-[11px] font-bold uppercase tracking-[.1em] text-muted leading-none">
+            <p className={`mt-1 ${META}`}>
               {dettaglio}
             </p>
           )}
@@ -113,7 +113,7 @@ export function FasciaRichiamo({ testo, attiva, onApri, voce }) {
                   shadow-[inset_0_1px_0_rgba(255,255,255,.05)]
                   ${attiva ? 'border-2 border-orange-500/60' : 'border border-orange-500/[.28] hover:border-orange-500/50'}`}>
       <span className="flex-1 min-w-0">
-        <span className="block font-mono text-[11px] font-bold uppercase tracking-[.1em] text-orange-400 leading-none">
+        <span className="block text-[11px] font-bold uppercase tracking-[.1em] text-orange-400 leading-none">
           Da richiamare
         </span>
         <span className="block mt-1.5 text-sm font-bold tracking-[-.01em] text-white">{testo}</span>
@@ -176,7 +176,7 @@ export function RigaAtleta({ nome, meta, foto, sigla, aderenza, fermo, onApri, v
       <span className="flex-1 min-w-0">
         <span className="block text-[14.5px] font-bold tracking-[-.01em] text-white truncate">{nome}</span>
         {meta && (
-          <span className="block mt-[3px] font-mono text-[12px] font-medium text-muted leading-none truncate">
+          <span className="block mt-[3px] text-[12px] font-medium text-muted leading-none truncate">
             {meta}
           </span>
         )}
@@ -201,7 +201,7 @@ export function RigaAtleta({ nome, meta, foto, sigla, aderenza, fermo, onApri, v
 function Aderenza({ assegnati, completati, tacche, compresso, quota, allarme }) {
   if (!assegnati) {
     return (
-      <span className="shrink-0 font-mono text-[13px] font-bold text-[#4f5462]"
+      <span className="shrink-0 text-[13px] font-bold text-[#4f5462]"
         title="Niente in programma questa settimana">
         —<span className="sr-only">niente in programma questa settimana</span>
       </span>
@@ -254,7 +254,7 @@ export function RigaPausa({ nome, dettaglio, foto, sigla, onApri, voce }) {
         {/* Solo quando c'è la data: senza, la seconda riga direbbe «In pausa»
             sotto una pillola che dice già «Pausa». */}
         {dettaglio && (
-          <span className="block mt-[3px] font-mono text-[12px] font-medium text-muted leading-none truncate">
+          <span className="block mt-[3px] text-[12px] font-medium text-muted leading-none truncate">
             {dettaglio}
           </span>
         )}
@@ -284,7 +284,7 @@ export function RigaEliminato({ nome, foto, sigla, giorni, onRipristina, voce })
       <AvatarAtleta foto={foto} sigla={sigla} spento />
       <div className="flex-1 min-w-0">
         <p className="text-[14.5px] font-bold text-gray-300 truncate">{nome}</p>
-        <p className={`mt-[3px] font-mono text-[12px] font-medium leading-none truncate
+        <p className={`mt-[3px] text-[12px] font-medium leading-none truncate
                        ${urgente ? 'text-red-400' : 'text-muted'}`}>
           {/* ⚠️ Corto di proposito. «Cancellazione fra 5 giorni» accanto al
               bottone Ripristina, su 393px, finisce troncato in «Cancellazione

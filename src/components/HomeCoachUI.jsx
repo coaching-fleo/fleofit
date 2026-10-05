@@ -20,7 +20,7 @@
 import { User, Plus, Dumbbell, FolderArchive, ChevronRight, FileText, Mic,
          CheckCircle2, Inbox } from 'lucide-react'
 import { useNumeroCheSale } from '../useNumeroCheSale'
-import { CARD, LABEL, RIGA } from '../lib/stiliCard'
+import { CARD, LABEL, RIGA, META } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 
 // ── Pezzi minuti, non esportati ───────────────────────────────────────────
@@ -61,7 +61,7 @@ export function HeaderCoach({ dataOggi, atleti, inPausa = 0, azioni }) {
   return (
     <div className="flex items-center justify-between gap-3 px-0.5 pt-1.5 pb-0.5">
       <div className="min-w-0">
-        <p className={`${LABEL} mb-[3px] tracking-[.12em]`}>
+        <p className={`${META} mb-[3px] first-letter:uppercase`}>
           {dataOggi}{atleti > 0 ? ` · ${atleti} ${atleti === 1 ? 'atleta' : 'atleti'}` : ''}
           {inPausa > 0 && <span className="text-[#5b6070]"> · {inPausa} in pausa</span>}
         </p>
@@ -113,7 +113,7 @@ function PillolaRpe({ rpe }) {
   if (rpe == null) return null
   const forte = rpe >= 9
   return (
-    <span className={`shrink-0 whitespace-nowrap font-mono text-[11px] font-black leading-none px-1.5 py-1 rounded-full border
+    <span className={`shrink-0 whitespace-nowrap text-[11px] font-black leading-none px-1.5 py-1 rounded-full border
       ${forte ? 'bg-brand/[.14] border-brand/30 text-brand' : 'bg-white/[.07] border-white/[.13] text-gray-200'}`}>
       RPE {rpe}
     </span>
@@ -296,7 +296,7 @@ export function SquadraOggi({
                   : <User size={18} aria-hidden="true" />}
               </span>
               <span className={`text-[11px] font-bold max-w-full truncate ${r.stato === 'da fare' ? 'text-[#5b6070]' : 'text-gray-200'}`}>{r.nome}</span>
-              <span aria-hidden="true" className={`font-mono text-[11px] font-bold leading-none ${TESTO_STATO[r.stato]}`}>
+              <span aria-hidden="true" className={`text-[11px] font-bold leading-none ${TESTO_STATO[r.stato]}`}>
                 {r.rpe != null ? r.rpe : '—'}
               </span>
             </button>

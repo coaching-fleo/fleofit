@@ -185,11 +185,11 @@ function ChipCorsia({ etichetta, conteggio, punto, attivo, onClick }) {
 export function IntestazioneSezione({ etichetta, conteggio, voce }) {
   return (
     <div style={voce} className={`flex items-center gap-2.5 px-0.5 pt-3.5 pb-1.5${voce ? ' cascata-voce' : ''}`}>
-      <span className="font-mono text-[11px] font-bold uppercase tracking-[.14em] text-white leading-none">
+      <span className="text-[11px] font-bold uppercase tracking-[.14em] text-white leading-none">
         {etichetta}
       </span>
       <span className="flex-1 h-px bg-white/[.08]" />
-      <span className="font-mono text-[11px] font-bold tracking-[.1em] text-muted leading-none">
+      <span className="text-[11px] font-bold tracking-[.1em] text-muted leading-none">
         {conteggio}
       </span>
     </div>

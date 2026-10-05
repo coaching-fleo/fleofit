@@ -132,7 +132,7 @@ export function ComeFunziona() {
       <ol className="flex flex-col gap-2.5">
         {PASSI.map((t, i) => (
           <li key={i} className="flex items-baseline gap-3">
-            <span aria-hidden="true" className="w-5 shrink-0 font-mono text-xs font-extrabold text-brand">0{i + 1}</span>
+            <span aria-hidden="true" className="w-5 shrink-0 text-xs font-extrabold text-brand">0{i + 1}</span>
             <p className="text-[13.5px] font-medium leading-[1.45] text-[#b6bac4]">{t}</p>
           </li>
         ))}
@@ -192,7 +192,7 @@ export function CellaBloccata({ etichetta, testo, fatti = 0, soglia }) {
           <span aria-hidden="true" className="block h-1 flex-1 overflow-hidden rounded-full bg-white/[.09]">
             <span className="block h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
           </span>
-          <span className="font-mono text-[11px] font-extrabold text-muted">{fatti}/{soglia}</span>
+          <span className="text-[11px] font-extrabold text-muted">{fatti}/{soglia}</span>
         </div>
       )}
     </div>
@@ -286,7 +286,7 @@ export function CardSettimanaChiusa({ minuti, scarto, fatti, totale, barre = [] 
     <div className={`${CARD} flex flex-col gap-4 p-[18px]`}>
       <div className="flex items-baseline justify-between">
         <p className={LABEL}>{chiusa ? 'Settimana chiusa' : 'Settimana'}</p>
-        <span className={`font-mono text-[11px] font-extrabold uppercase tracking-[.06em]
+        <span className={`text-[11px] font-extrabold uppercase tracking-[.06em]
                           ${chiusa ? 'text-green-500' : 'text-muted'}`}>{fatti} / {totale}</span>
       </div>
       <div className="flex items-end gap-3.5">

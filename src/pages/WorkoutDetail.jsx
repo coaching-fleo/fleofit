@@ -1462,7 +1462,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         <div className="rounded-[18px] px-3.5 py-3 bg-orange-500/10 border border-orange-500/30 flex items-center gap-3">
           <WifiOff size={18} className="shrink-0 text-orange-500" aria-hidden="true" />
           <div className="min-w-0">
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[.1em] text-orange-500">Modalità Offline</p>
+            <p className="text-[11px] font-bold uppercase tracking-[.1em] text-orange-500">Modalità Offline</p>
             <p className="mt-0.5 text-[11.5px] leading-tight text-orange-500/80">
               Puoi allenarti e salvare. Sincronizziamo appena torna la linea.
             </p>
@@ -1616,7 +1616,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       ) : athleteNote ? (
         <CardNota etichetta={`Note di ${athleteNote.athleteName || 'atleta'}`} icona={User} colore="#3b82f6">
           {athleteNote.rpe && athleteNote.rpe !== '5' && (
-            <span className={`self-start font-mono text-[11px] font-extrabold tracking-[.05em] ${getRpeColorText(parseInt(athleteNote.rpe, 10))}`}>
+            <span className={`self-start text-[11px] font-extrabold tracking-[.05em] ${getRpeColorText(parseInt(athleteNote.rpe, 10))}`}>
               RPE {athleteNote.rpe}/10
             </span>
           )}

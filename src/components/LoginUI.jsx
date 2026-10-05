@@ -178,7 +178,7 @@ export function CaselleCodice({ valore, onChange, errore = false, disabled = fal
             {i === GRUPPO_CODICE && (
               <span className={`w-2.5 h-0.5 rounded-sm shrink-0 ${errore ? 'bg-red-500/45' : 'bg-[#383838]'}`} />
             )}
-            <div className={`w-[33px] h-[46px] rounded-xl border flex items-center justify-center font-mono font-bold text-[19px] text-white ${bordo(cella)}`}>
+            <div className={`w-[33px] h-[46px] rounded-xl border flex items-center justify-center font-bold text-[19px] text-white ${bordo(cella)}`}>
               {cella.carattere || (cella.attiva && !disabled ? <span className="w-0.5 h-[22px] rounded-sm bg-brand" /> : '')}
             </div>
           </div>
@@ -261,7 +261,7 @@ export function CardInvitoValido({ codice }) {
       <div className="w-[52px] h-[52px] rounded-full bg-green-500/15 border border-green-500/35 text-green-500 flex items-center justify-center mb-3.5">
         <Check size={26} strokeWidth={2.6} />
       </div>
-      <p className="font-mono text-[11px] font-bold uppercase tracking-[.12em] text-green-500 mb-1.5">Invito valido</p>
+      <p className="text-[11px] font-bold uppercase tracking-[.12em] text-green-500 mb-1.5">Invito valido</p>
       <p className="text-[21px] font-black tracking-[-.02em] leading-[1.25] text-white mb-4.5">
         Il tuo coach ti ha<br />invitato su FLEOFIT
       </p>
@@ -273,7 +273,7 @@ export function CardInvitoValido({ codice }) {
           <p className="text-[15px] font-bold text-white">Codice invito</p>
           <p className="text-xs font-medium text-muted mt-0.5">Vale una volta sola</p>
         </div>
-        <span className="shrink-0 font-mono text-xs font-bold tracking-[.09em] px-2.5 py-1.5 rounded-lg bg-green-500/[.12] border border-green-500/[.28] text-green-500">
+        <span className="shrink-0 text-xs font-bold tracking-[.09em] px-2.5 py-1.5 rounded-lg bg-green-500/[.12] border border-green-500/[.28] text-green-500">
           {codice}
         </span>
       </div>

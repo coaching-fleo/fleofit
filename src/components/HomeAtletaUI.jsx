@@ -21,7 +21,7 @@ import { it } from 'date-fns/locale'
 // CARD, LABEL e la tabella delle corsie vivono in lib/ perché HomeCoachUI.jsx
 // usa le stesse: esportarle da QUESTO file costerebbe il Fast Refresh
 // dell'intero modulo (react-refresh/only-export-components).
-import { CARD, LABEL, RIGA } from '../lib/stiliCard'
+import { CARD, LABEL, RIGA, META } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 
 
@@ -33,7 +33,7 @@ export function HeaderHome({ saluto, nome, dataOggi, settimana, motivazione, azi
   return (
     <div className="flex items-start justify-between gap-3 px-0.5 pt-1.5 pb-0.5">
       <div className="min-w-0">
-        <p className={`${LABEL} mb-[3px] tracking-[.12em]`}>
+        <p className={`${META} mb-[3px] first-letter:uppercase`}>
           {dataOggi}{settimana ? ` · Settimana ${settimana}` : ''}
         </p>
         <h1 className="text-[26px] font-black tracking-[-.03em] leading-[1.12] text-white text-balance">{saluto}, {nome}</h1>

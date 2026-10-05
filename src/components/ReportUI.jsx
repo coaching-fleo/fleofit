@@ -13,7 +13,7 @@
 
 import { ChevronLeft, ChevronRight, User, Mic, Plus, AlertTriangle,
          CheckCircle2, Inbox, Pause } from 'lucide-react'
-import { CARD, LABEL, RIGA, CARTA_RIGA_BASE, VETRO, TONO_VERDETTO } from '../lib/stiliCard'
+import { CARD, LABEL, RIGA, CARTA_RIGA_BASE, VETRO, TONO_VERDETTO, META } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 import { decimale, oreMinuti, VERDETTI } from '../lib/reportSettimanale'
 import { useNumeroCheSale } from '../useNumeroCheSale'
@@ -106,7 +106,7 @@ export function TestataReport({ etichetta, numero, corrente, avanti, onIndietro,
           «31 ago – 6 set» finiva in «31 ago – …» — cioè spariva proprio la
           data, che è l'unica cosa che dice quale settimana si sta guardando.
           Trovato guardando la pagina a 375px, non leggendo il codice. */}
-      <p className="mt-2 font-mono text-[11px] font-bold uppercase tracking-[.1em] text-muted leading-none truncate">
+      <p className={`mt-2 ${META} truncate`}>
         Settimana {numero} · {etichetta}{corrente ? ' · in corso' : ''}
       </p>
     </div>
@@ -194,7 +194,7 @@ function Scarto({ valore, confrontabile }) {
   if (!confrontabile || valore == null) return null
   const su = valore > 0
   return (
-    <span className={`ml-1.5 font-mono text-[11px] font-black ${su ? 'text-green-400' : valore < 0 ? 'text-orange-400' : 'text-muted'}`}>
+    <span className={`ml-1.5 text-[11px] font-black ${su ? 'text-green-400' : valore < 0 ? 'text-orange-400' : 'text-muted'}`}>
       {su ? '+' : ''}{valore}%
     </span>
   )
@@ -257,7 +257,7 @@ export function FasciaAzioni({ testo, dettaglio, attiva, onApri }) {
                   ${attiva ? 'border-2 border-orange-500/60' : 'border border-orange-500/[.28] hover:border-orange-500/50'}`}>
       <AlertTriangle size={19} className="shrink-0 text-orange-400" aria-hidden="true" />
       <span className="flex-1 min-w-0">
-        <span className="block font-mono text-[11px] font-bold uppercase tracking-[.1em] text-orange-400 leading-none">
+        <span className="block text-[11px] font-bold uppercase tracking-[.1em] text-orange-400 leading-none">
           Da fare adesso
         </span>
         <span className="block mt-1.5 text-sm font-bold tracking-[-.01em] text-white">{testo}</span>
@@ -277,7 +277,7 @@ export function NessunaAzione({ atleti }) {
                     shadow-[inset_0_1px_0_rgba(255,255,255,.05)]">
       <CheckCircle2 size={19} className="shrink-0 text-green-400" aria-hidden="true" />
       <div className="min-w-0">
-        <p className="font-mono text-[11px] font-bold uppercase tracking-[.1em] text-green-400 leading-none">Da fare adesso</p>
+        <p className="text-[11px] font-bold uppercase tracking-[.1em] text-green-400 leading-none">Da fare adesso</p>
         <p className="mt-1.5 text-sm font-bold tracking-[-.01em] text-white">Niente</p>
         <p className="mt-0.5 text-xs font-medium text-muted">
           {atleti === 1 ? 'Il tuo atleta è' : `Tutti e ${atleti} gli atleti sono`} nei parametri della settimana.
@@ -324,7 +324,7 @@ export function RigaReport({ riga, onApri }) {
             per cui quella riga è in cima alla pagina. */}
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2">
           <Tacche completati={riga.completati} assegnati={riga.assegnati} />
-          <span className="font-mono text-[11px] font-bold text-[#5b6070] leading-snug">{meta.join(' · ')}</span>
+          <span className="text-[11px] font-bold text-[#5b6070] leading-snug">{meta.join(' · ')}</span>
         </span>
       </span>
     </button>
@@ -357,7 +357,7 @@ export function MixCorsie({ corsie, totale }) {
     <div className={`${CARD} p-4 mt-3`}>
       <div className="flex items-baseline justify-between gap-3">
         <p className={LABEL}>Mix della settimana</p>
-        <span className="font-mono text-[11px] font-bold text-[#5b6070]">{totale} assegnati</span>
+        <span className="text-[11px] font-bold text-[#5b6070]">{totale} assegnati</span>
       </div>
       <div aria-hidden="true" className="flex gap-1 mt-3 h-2.5">
         {corsie.map(c => (
@@ -391,7 +391,7 @@ export function SezioneProgramma({ prossima, onApriAtleta, onCrea }) {
     <div className={`${CARD} p-[18px] mt-3 flex flex-col gap-3.5`}>
       <div className="flex items-baseline justify-between gap-3">
         <p className={LABEL}>Settimana prossima</p>
-        <span className="font-mono text-[11px] font-bold text-[#5b6070]">{prossima.etichetta}</span>
+        <span className="text-[11px] font-bold text-[#5b6070]">{prossima.etichetta}</span>
       </div>
 
       <div className="flex items-end justify-between gap-3">
@@ -441,7 +441,7 @@ export function FeedbackReport({ elementi, mostrate, espanso, onEspandi, onApri 
     <div className={`${CARD} p-[18px] mt-3 flex flex-col gap-3.5`}>
       <div className="flex items-baseline justify-between gap-3">
         <p className={LABEL}>Cosa ti hanno detto</p>
-        <span className="font-mono text-[11px] font-bold text-[#5b6070]">{elementi.length}</span>
+        <span className="text-[11px] font-bold text-[#5b6070]">{elementi.length}</span>
       </div>
       <div className="flex flex-col gap-2">
         {visibili.map(f => (
@@ -450,13 +450,13 @@ export function FeedbackReport({ elementi, mostrate, espanso, onEspandi, onApri 
             <span className="flex items-center gap-2 min-w-0">
               <span className="flex-1 text-[13.5px] font-extrabold text-white truncate">{f.nome}</span>
               {f.rpe != null && (
-                <span className={`shrink-0 font-mono text-[11px] font-black px-1.5 py-1 rounded-full border
+                <span className={`shrink-0 text-[11px] font-black px-1.5 py-1 rounded-full border
                   ${f.rpe >= 9 ? 'bg-brand/[.14] border-brand/30 text-brand' : 'bg-white/[.07] border-white/[.13] text-gray-200'}`}>
                   RPE {f.rpe}
                 </span>
               )}
               {f.haVocale && <Mic size={13} className="shrink-0 text-brand" aria-label="nota vocale" />}
-              <span className="shrink-0 font-mono text-[11px] font-bold text-[#5b6070]">{f.giorno}</span>
+              <span className="shrink-0 text-[11px] font-bold text-[#5b6070]">{f.giorno}</span>
             </span>
             <span className="block mt-1 text-[12.5px] font-medium text-muted truncate">
               {f.testo ? `«${f.testo}»` : f.titolo}

@@ -96,14 +96,14 @@ export function CartaAccount({ nome, email, ruolo, etichettaDispositivo, childre
           <p className="text-[19px] font-black tracking-[-.02em] text-white truncate">{nome}</p>
           <p className="mt-[3px] text-[12.5px] font-medium text-muted truncate">{email}</p>
         </div>
-        <span className="shrink-0 font-mono text-[11px] font-black uppercase tracking-[.06em] leading-none
+        <span className="shrink-0 text-[11px] font-black uppercase tracking-[.06em] leading-none
                          px-2.5 py-1.5 rounded-full bg-brand/[.14] border border-brand/[.32] text-brand">
           {ruolo}
         </span>
       </div>
 
       <div className="relative px-[18px] pb-[18px]">
-        <p className={`mb-2.5 font-mono ${LABEL}`}>{etichettaDispositivo}</p>
+        <p className={`mb-2.5 ${LABEL}`}>{etichettaDispositivo}</p>
         <div className="rounded-[18px] bg-black/[.42] border border-white/[.07] overflow-hidden">
           {children}
         </div>
@@ -242,7 +242,7 @@ export function RigaPieghevole({ icona, tono = 'neutro', titolo, aperto, onToggl
 export function Sezione({ etichetta, children }) {
   return (
     <section aria-label={etichetta}>
-      {etichetta && <p className={`mb-2 pl-1 font-mono ${LABEL}`}>{etichetta}</p>}
+      {etichetta && <p className={`mb-2 pl-1 ${LABEL}`}>{etichetta}</p>}
       <div className={`${CARD} overflow-hidden`}>{children}</div>
     </section>
   )
@@ -271,7 +271,7 @@ export function BottoneEsci({ onClick }) {
  */
 export function PiediPagina({ versione, email }) {
   return (
-    <p className="mt-2 text-center font-mono text-[11px] font-bold leading-[1.6] tracking-[.08em] text-[#5b6070]">
+    <p className="mt-2 text-center text-[11px] font-bold leading-[1.6] tracking-[.08em] text-[#5b6070]">
       {versione && <>{versione}<br /></>}
       {email}
     </p>
@@ -329,13 +329,13 @@ export function FoglioCodici({
 
           {!caricamento && (
             <>
-              <p className={`font-mono ${LABEL} pt-1`}>Attivi · {attivi.length}</p>
+              <p className={`${LABEL} pt-1`}>Attivi · {attivi.length}</p>
               {attivi.length === 0
                 ? <p className="text-muted text-xs pb-1">Nessun codice attivo. Generane uno nuovo.</p>
                 : attivi.map(c => (
                   <div key={c.id} className="rounded-2xl bg-white/[.05] border border-white/[.08] p-3
                                              flex items-center justify-between gap-2">
-                    <span className="font-mono text-lg text-brand tracking-widest">{c.code}</span>
+                    <span className="text-lg text-brand tracking-widest">{c.code}</span>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <BottoneCodice etichetta={`Copia il codice ${c.code}`} icona={Copy} onClick={() => onCopia(c)} />
                       <BottoneCodice etichetta={`Copia il link di invito per ${c.code}`} icona={LinkIcon} onClick={() => onCopiaLink(c)} />
@@ -344,19 +344,19 @@ export function FoglioCodici({
                   </div>
                 ))}
 
-              <p className={`font-mono ${LABEL} pt-3`}>Usati · {usati.length}</p>
+              <p className={`${LABEL} pt-3`}>Usati · {usati.length}</p>
               {usati.length === 0
                 ? <p className="text-muted text-xs">Nessun codice è stato ancora utilizzato.</p>
                 : usati.map(c => (
                   <div key={c.id} className="rounded-2xl bg-white/[.03] border border-white/[.06] p-3
                                              flex items-center gap-3">
-                    <span className="font-mono text-sm text-muted line-through shrink-0">{c.code}</span>
+                    <span className="text-sm text-muted line-through shrink-0">{c.code}</span>
                     <div className="flex-1 min-w-0 text-right">
                       <p className="text-[13px] font-semibold text-gray-300 truncate">
                         {c.riscattato_da || 'Utente sconosciuto'}
                       </p>
                       {c.riscattato_il && (
-                        <p className="font-mono text-[10.5px] uppercase tracking-[.08em] text-muted truncate">
+                        <p className="text-[10.5px] uppercase tracking-[.08em] text-muted truncate">
                           {c.riscattato_il}
                         </p>
                       )}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight } from 'lucide-react'
 import { supabase } from '../supabaseClient'
@@ -951,7 +951,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
                   <span className={`${LABEL} ${parla ? 'text-ia' : ''}`}>
                     {parla ? 'Ti sento' : 'Parla pure…'}
                   </span>
-                  <span className="font-mono text-[12px] font-extrabold text-gray-300 ml-auto">
+                  <span className="text-[12px] font-extrabold text-gray-300 ml-auto">
                     {mmssSecondi(secondi)}
                   </span>
                 </div>
@@ -1357,7 +1357,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                   <div className="flex items-center justify-between">
                     <span className={LABEL}>Intensità</span>
                     <div className="flex items-center gap-1.5">
-                      <span className={`font-mono text-sm font-extrabold ${getIntensityColor(intensity)}`}>{intensity}/10</span>
+                      <span className={`text-sm font-extrabold ${getIntensityColor(intensity)}`}>{intensity}/10</span>
                       <BicepsFlexed size={17} className={getIntensityColor(intensity)} />
                     </div>
                   </div>
@@ -1437,13 +1437,13 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
 
       <div className="flex-1 min-w-0 cursor-pointer group self-stretch flex flex-col justify-center" onClick={() => onEdit && onEdit(ex)}>
         <p className="text-sm font-bold text-white truncate group-hover:text-brand transition">{ex.name}</p>
-        <p className="mt-0.5 font-mono text-[11.5px] font-semibold tracking-[.02em] text-muted truncate">
+        <p className="mt-0.5 text-[11.5px] font-semibold tracking-[.02em] text-muted truncate">
           {[dettaglio, ex.notes].filter(Boolean).join(' · ') || '—'}
         </p>
       </div>
 
       {ex.intensity && (
-        <span className={`shrink-0 font-mono text-xs font-extrabold ${getIntensityColor(ex.intensity)}`}
+        <span className={`shrink-0 text-xs font-extrabold ${getIntensityColor(ex.intensity)}`}
           onClick={() => onEdit && onEdit(ex)}>{ex.intensity}/10</span>
       )}
 
@@ -1609,7 +1609,7 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
           </div>
         </div>
 
-        <p className="mt-[3px] font-mono text-[11.5px] font-bold tracking-[.03em] text-muted truncate">
+        <p className="mt-[3px] text-[11.5px] font-bold tracking-[.03em] text-muted truncate">
           {[
             blockHint(block.type),
             conEsercizi ? `${quantiEsercizi} eserciz${quantiEsercizi === 1 ? 'io' : 'i'}` : null,
@@ -2042,7 +2042,7 @@ function CardIntensita({ valore, onChange, classeColore }) {
       <div className="flex items-center justify-between">
         <span className={LABEL}>Intensità dichiarata</span>
         <div className="flex items-center gap-1.5">
-          <span className={`font-mono text-sm font-extrabold ${getIntensityColor(valore)}`}>{valore}/10</span>
+          <span className={`text-sm font-extrabold ${getIntensityColor(valore)}`}>{valore}/10</span>
           <BicepsFlexed size={17} className={getIntensityColor(valore)} />
         </div>
       </div>
@@ -2081,6 +2081,9 @@ const INDIETRO = Symbol('indietro')
 
 export default function CreateWorkout() {
   const [searchParams] = useSearchParams()
+  // Aperto dalla tab bar il builder è una destinazione, non una pagina in cui
+  // si è entrati: al passo 1 niente tasto indietro, come Calendario e Atleti.
+  const daBarra = useLocation().state?.daBarra === true
   const editId = searchParams.get('edit')
   const duplicateId = searchParams.get('duplicate')
   const awId = searchParams.get('aw_id')
@@ -2501,7 +2504,20 @@ export default function CreateWorkout() {
 
   const handleBack = () => {
     if (step === 2 && !sourceId) {
-      setStep(1)
+      // Con dei blocchi (o delle fasi) già composti la freccia chiede
+      // conferma: si legge come «butto via tutto», anche se lo stato resta.
+      // Il tocco sul titolo invece torna al passo 1 senza chiedere: è il
+      // gesto deliberato di chi vuole cambiare nome o data.
+      const composti = category === 'Running' ? runningSteps.length : category === 'Hyrox' ? blocks.length : 0
+      if (composti > 0) {
+        setConfirmInfo({
+          title: 'Sei sicuro?',
+          message: 'Torni alla scelta di nome, data e categoria. I blocchi restano, ma se cambi categoria non verranno salvati.',
+          onConfirm: () => setStep(1),
+        })
+      } else {
+        setStep(1)
+      }
     } else {
       if (hasUnsavedChanges && !saved) {
         setPendingPath(INDIETRO)
@@ -2692,7 +2708,7 @@ export default function CreateWorkout() {
       `}</style>
       <TestataCrea
         passo={step}
-        onIndietro={handleBack}
+        onIndietro={step === 1 && daBarra && !sourceId ? null : handleBack}
         titolo={step === 2 ? nomeMostrato : null}
         codice={step === 2 ? descrizione.codice : null}
         sottotitolo={step === 2 ? sottotitoloWorkout : null}

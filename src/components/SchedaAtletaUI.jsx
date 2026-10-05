@@ -114,7 +114,7 @@ export function CardAndamento({ titolo, percentuale, fatti, assegnati, settimane
                       height: `${Math.max((s.load / massimo) * 44, s.load > 0 ? 3 : 0)}px`,
                       background: ultima ? BRAND : '#2f2f33',
                     }} />
-                  <span className={`font-mono text-[11px] font-bold ${ultima ? 'text-brand' : 'text-muted'}`}>
+                  <span className={`text-[11px] font-bold ${ultima ? 'text-brand' : 'text-muted'}`}>
                     {s.breve}
                   </span>
                 </div>
@@ -126,7 +126,7 @@ export function CardAndamento({ titolo, percentuale, fatti, assegnati, settimane
 
       <div className="flex items-center gap-2.5 mt-4 pt-3.5 border-t border-white/[.07]">
         {suGiu !== null && (
-          <span className={`shrink-0 font-mono text-[11px] font-extrabold rounded-full px-2 py-1 ${
+          <span className={`shrink-0 text-[11px] font-extrabold rounded-full px-2 py-1 ${
             suGiu ? 'bg-green-500/[.12] text-green-400' : 'bg-orange-500/[.12] text-orange-400'}`}>
             {suGiu ? '+' : ''}{delta}%
           </span>
@@ -157,7 +157,7 @@ function Anello({ percentuale, sotto }) {
         <span className="text-[23px] font-black text-white leading-none">
           {percentuale}<span className="text-[13px]">%</span>
         </span>
-        <span className="mt-0.5 font-mono text-[11px] font-bold text-muted">{sotto}</span>
+        <span className="mt-0.5 text-[11px] font-bold text-muted">{sotto}</span>
       </div>
     </div>
   )
@@ -242,7 +242,7 @@ export function RigaObiettivo({ titolo, giorni, onClick }) {
       </span>
       <span className="shrink-0 text-right">
         <span className="block text-[22px] font-black text-white leading-none">{giorni}</span>
-        <span className="block mt-px font-mono text-[11px] font-bold text-muted">
+        <span className="block mt-px text-[11px] font-bold text-muted">
           {giorni === 1 ? 'giorno' : 'giorni'}
         </span>
       </span>
@@ -265,7 +265,7 @@ export function RigaApribile({ icona: Icona, titolo, conteggio, aperta, onToggle
       <Icona size={18} className={aperta ? 'text-brand shrink-0' : 'text-muted shrink-0'} aria-hidden="true" />
       <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{titolo}</span>
       {conteggio != null && (
-        <span className="shrink-0 font-mono text-[11px] font-bold text-muted">{conteggio}</span>
+        <span className="shrink-0 text-[11px] font-bold text-muted">{conteggio}</span>
       )}
       <ChevronDown size={17} aria-hidden="true"
         className={`shrink-0 transition-transform ${aperta ? 'rotate-180 text-brand' : 'text-muted'}`} />
@@ -291,7 +291,7 @@ export function PillolaPausa({ dal }) {
   return (
     <p className="inline-flex w-fit items-center gap-1.5 px-2.5 py-1 rounded-full whitespace-nowrap
                   bg-orange-500/10 border border-orange-500/30 text-orange-400
-                  font-mono text-[11px] font-bold uppercase tracking-[.06em]">
+                  text-[11px] font-bold uppercase tracking-[.06em]">
       <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-orange-400" />
       In pausa{dal ? ` dal ${dal}` : ''}
     </p>

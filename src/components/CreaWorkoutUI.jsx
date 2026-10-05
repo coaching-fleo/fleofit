@@ -15,7 +15,7 @@
 // (react-refresh/only-export-components, CLAUDE.md §9-octies punto 3).
 
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { X, Copy, Wand2, Plus, Minus, Keyboard, Clock, ChevronRight } from 'lucide-react'
+import { ChevronLeft, Copy, Wand2, Plus, Minus, Keyboard, Clock, ChevronRight } from 'lucide-react'
 import { CARD, LABEL, VETRO } from '../lib/stiliCard'
 import { useTastieraAperta, chiudiTastieraSuInvio } from '../useTastiera'
 import { battito, vibraScelta } from '../lib/aptica'
@@ -28,14 +28,21 @@ import { useNumeroCheSale } from '../useNumeroCheSale'
 // Una sola testata per i due passi. Al passo 1 porta i pallini e «1 / 2», al
 // passo 2 il titolo e la data — che scendono lì proprio perché al passo 2 non
 // si compilano più, si consultano.
+//
+// ⚠️ Il tasto è una FRECCIA, non una X: al passo 2 torna al passo 1, e una X lì
+// si legge come «butto via tutto». E senza `onIndietro` non c'è affatto: è il
+// caso del builder aperto dalla tab bar, che è una destinazione come
+// Calendario e Atleti — e quelle non hanno un indietro.
 export function TestataCrea({ passo, onIndietro, titolo, codice, sottotitolo, onTitolo }) {
   return (
-    <div className="flex items-center gap-3">
-      <button aria-label="Torna indietro" onClick={onIndietro}
-        className={`w-10 h-10 rounded-full ${VETRO} flex items-center justify-center text-gray-200
-                    hover:text-white hover:border-white/25 transition shrink-0`}>
-        <X size={19} />
-      </button>
+    <div className="flex items-center gap-3 min-h-10">
+      {onIndietro && (
+        <button aria-label={passo === 2 ? 'Torna al passo 1' : 'Torna indietro'} onClick={onIndietro}
+          className={`w-10 h-10 rounded-full ${VETRO} flex items-center justify-center text-gray-200
+                      hover:text-white hover:border-white/25 transition shrink-0`}>
+          <ChevronLeft size={19} />
+        </button>
+      )}
 
       {titolo ? (
         // Nome e data non sono più in cima allo schermo mentre si costruisce:
@@ -47,7 +54,7 @@ export function TestataCrea({ passo, onIndietro, titolo, codice, sottotitolo, on
           <p className="text-base font-extrabold tracking-[-.02em] text-white truncate">{titolo}</p>
           {/* Il codice che finirà in coda al titolo, ricalcolato a ogni blocco.
               Monospazio e un tono sotto: è un'etichetta, non parte del nome. */}
-          {codice && <p data-codice className="font-mono text-[11.5px] font-bold text-brand/80 tracking-[.02em] truncate mt-[1px]">{codice}</p>}
+          {codice && <p data-codice className="text-[11.5px] font-bold text-brand/80 tracking-[.02em] truncate mt-[1px]">{codice}</p>}
           {sottotitolo && <p className={`${LABEL} mt-[2px] tracking-[.07em] truncate`}>{sottotitolo}</p>}
         </button>
       ) : <div className="flex-1" />}
@@ -254,7 +261,7 @@ export function SpinaBlocco({ tipo, aperto, lavoro }) {
 export function DurataBlocco({ testo, acceso }) {
   const stimabile = testo !== '0:00'
   return (
-    <span className={`shrink-0 font-mono text-[13px] font-extrabold tracking-[.02em] ${
+    <span className={`shrink-0 text-[13px] font-extrabold tracking-[.02em] ${
       stimabile ? (acceso ? 'text-brand' : 'text-gray-200') : 'text-[#4a4f5c]'}`}>
       {stimabile ? testo : '—'}
     </span>
@@ -266,7 +273,7 @@ export function NumeroEsercizio({ n }) {
   return (
     <span aria-hidden="true"
       className="shrink-0 w-6 h-6 rounded-full bg-brand/[.13] border border-brand/30 flex items-center justify-center
-                 font-mono text-[11px] font-extrabold text-brand">
+                 text-[11px] font-extrabold text-brand">
       {n}
     </span>
   )
@@ -459,7 +466,7 @@ export function Stepper({
           onChange={e => onChange(e.target.value || '-')}
           placeholder={`Scrivi il valore${unita ? ` in ${unita}` : ''}…`}
           className="w-full bg-black/40 border border-white/10 rounded-[14px] px-4 py-3 text-white text-base
-                     font-mono focus:outline-none focus:border-brand" />
+                     focus:outline-none focus:border-brand" />
       ) : (
         <div className="flex items-center gap-3">
           <button type="button" aria-label={`Diminuisci ${etichetta}`} onClick={() => { battito(); onPasso?.(-1) }} disabled={!onPasso}
@@ -469,7 +476,7 @@ export function Stepper({
           </button>
           <div className="flex-1 text-center min-w-0">
             <span data-valore-di={etichetta}
-              className="font-mono text-[38px] font-extrabold tracking-[-.01em] text-white leading-none">{numero}</span>
+              className="text-[38px] font-extrabold tracking-[-.01em] text-white leading-none">{numero}</span>
             {unita && <span className="text-[15px] font-bold text-muted pl-1">{unita}</span>}
           </div>
           <button type="button" aria-label={`Aumenta ${etichetta}`} onClick={() => { battito(); onPasso?.(1) }} disabled={!onPasso}
@@ -484,7 +491,7 @@ export function Stepper({
         <div className="flex gap-[7px]">
           {opzioni.map(o => (
             <button key={o} type="button" onClick={() => { if (!attivo(o)) vibraScelta(); onChange(o) }}
-              className={`flex-1 min-w-0 min-h-11 rounded-xl font-mono text-[13px] font-extrabold tracking-[.01em]
+              className={`flex-1 min-w-0 min-h-11 rounded-xl text-[13px] font-extrabold tracking-[.01em]
                           flex items-center justify-center truncate px-1 border transition ${
                 attivo(o) ? '' : 'bg-white/[.055] border-white/10 text-[#c9ccd4] hover:border-white/20'
               }`}
@@ -619,7 +626,7 @@ export function RuotaValori({ etichetta, valore, generi, onChange }) {
     <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
       <div className="flex items-center justify-between gap-3">
         <span className={LABEL}>{etichetta}</span>
-        {genere.unita && <span className="font-mono text-[11px] font-bold text-[#5b6070]">{genere.unita}</span>}
+        {genere.unita && <span className="text-[11px] font-bold text-[#5b6070]">{genere.unita}</span>}
       </div>
 
       {generi.length > 1 && (
@@ -664,7 +671,7 @@ export function RuotaValori({ etichetta, valore, generi, onChange }) {
                   fontSize: distanza === 0 ? dimensione : distanza === 1 ? Math.round(dimensione * 0.6) : Math.round(dimensione * 0.52),
                 }}
                 className={`snap-center shrink-0 h-[62px] flex items-center justify-center px-1 whitespace-nowrap
-                  transition-all duration-150 ${numerico ? 'font-mono' : ''} ${
+                  transition-all duration-150 ${numerico ? 'tabular-nums' : ''} ${
                   distanza === 0 ? 'font-extrabold text-brand tracking-[-.02em]'
                     : distanza === 1 ? 'font-bold text-gray-300'
                     : 'font-bold text-[#4a4f5c]'

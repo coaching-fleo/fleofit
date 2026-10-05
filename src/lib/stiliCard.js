@@ -29,6 +29,13 @@ export const CARD = `${CARD_BASE} border border-white/[.07]`
 export const LABEL = 'text-[11px] font-bold uppercase tracking-[.1em] text-muted'
 
 /**
+ * La riga informativa (data, conteggi): lo stesso stile della meta di una riga
+ * dell'archivio. Niente maiuscolo spaziato, niente monospazio — scelta del
+ * committente del 05/10/2026.
+ */
+export const META = 'text-[13px] font-medium text-muted leading-tight'
+
+/**
  * La riga annidata dentro una sezione. Resta PIATTA di proposito: la carta
  * sollevata è un livello, non un effetto da ripetere a ogni profondità.
  */

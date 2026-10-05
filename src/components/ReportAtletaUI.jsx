@@ -14,7 +14,7 @@
 
 import { ChevronLeft, ChevronRight, User, Mic, Plus, ClipboardList,
          CheckCircle2, CircleSlash, CalendarClock, Dumbbell } from 'lucide-react'
-import { CARD, LABEL, RIGA, CARTA_RIGA_BASE, VETRO, TONO_VERDETTO } from '../lib/stiliCard'
+import { CARD, LABEL, RIGA, CARTA_RIGA_BASE, VETRO, TONO_VERDETTO, META } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 import { decimale, oreMinuti, VERDETTI } from '../lib/reportSettimanale'
 
@@ -71,7 +71,7 @@ export function TestataReportAtleta({
       {/* ⚠️ Su una riga sua e a tutta larghezza, come nel report squadra: in
           mezzo ai bottoni tondi «31 ago – 6 set» finiva troncato, e spariva
           proprio la data che dice quale settimana si sta guardando. */}
-      <p className="mt-2 font-mono text-[11px] font-bold uppercase tracking-[.1em] text-muted leading-none truncate">
+      <p className={`mt-2 ${META} truncate`}>
         Settimana {numero} · {etichetta}{corrente ? ' · in corso' : ''}
       </p>
     </div>
@@ -120,7 +120,7 @@ export function ProposteSettimana({ voci = [], settimana, verdetto }) {
               </span>
             )}
           </div>
-          <p className="mt-1.5 font-mono text-[11px] font-bold uppercase tracking-[.08em] text-[#5b6070]">
+          <p className="mt-1.5 text-[11px] font-bold uppercase tracking-[.08em] text-[#5b6070]">
             dalla settimana {settimana}
           </p>
         </div>
@@ -130,7 +130,7 @@ export function ProposteSettimana({ voci = [], settimana, verdetto }) {
             <li key={v.chiave} className="rounded-2xl px-3.5 py-3 bg-black/[.42] border border-white/[.07] flex gap-3">
               <span aria-hidden="true"
                 className={`shrink-0 w-6 h-6 rounded-full border flex items-center justify-center
-                            font-mono text-[11px] font-black ${TONO_VERDETTO[v.tono]}`}>
+                            text-[11px] font-black ${TONO_VERDETTO[v.tono]}`}>
                 {i + 1}
               </span>
               <span className="min-w-0">
@@ -204,7 +204,7 @@ export function AndamentoSettimane({ settimane = [] }) {
     <div className={`${CARD} p-4 mt-3`}>
       <div className="flex items-baseline justify-between gap-3">
         <p className={LABEL}>Carico, {settimane.length} settimane</p>
-        <span className="font-mono text-[11px] font-bold text-[#5b6070]">minuti × RPE</span>
+        <span className="text-[11px] font-bold text-[#5b6070]">minuti × RPE</span>
       </div>
       {/* ⚠️ `items-stretch` (il default) e `h-full` sulle colonne, NON
           `items-end`: con `items-end` la colonna si dimensiona sul contenuto,
@@ -214,14 +214,14 @@ export function AndamentoSettimane({ settimane = [] }) {
       <div className="flex gap-2 mt-4 h-[92px]">
         {settimane.map(s => (
           <div key={s.da} className="flex-1 h-full flex flex-col items-center gap-2 min-w-0">
-            <span className={`font-mono text-[10.5px] font-bold leading-none ${s.corrente ? 'text-brand' : 'text-[#5b6070]'}`}>
+            <span className={`text-[10.5px] font-bold leading-none ${s.corrente ? 'text-brand' : 'text-[#5b6070]'}`}>
               {s.punti > 0 ? `${s.caricoParziale ? '≈' : ''}${s.punti}` : '—'}
             </span>
             <span aria-hidden="true" className="w-full flex-1 flex items-end">
               <span className={`w-full rounded-t-[6px] rounded-b-[3px] ${s.corrente ? 'bg-brand' : 'bg-white/[.16]'}`}
                 style={{ height: `${massimo > 0 ? Math.max(3, Math.round((s.punti / massimo) * 100)) : 3}%` }} />
             </span>
-            <span className={`font-mono text-[10.5px] font-bold leading-none ${s.corrente ? 'text-white' : 'text-[#5b6070]'}`}>
+            <span className={`text-[10.5px] font-bold leading-none ${s.corrente ? 'text-white' : 'text-[#5b6070]'}`}>
               {s.breve}
             </span>
           </div>
@@ -229,7 +229,7 @@ export function AndamentoSettimane({ settimane = [] }) {
       </div>
       <div className="flex gap-2 mt-2.5">
         {settimane.map(s => (
-          <span key={s.da} className="flex-1 text-center font-mono text-[10px] font-bold text-[#5b6070] truncate">
+          <span key={s.da} className="flex-1 text-center text-[10px] font-bold text-[#5b6070] truncate">
             {s.assegnati > 0 ? `${s.completati}/${s.assegnati}` : '—'}
           </span>
         ))}
@@ -254,14 +254,14 @@ export function Diario({ sessioni = [], onApri }) {
             <span aria-hidden="true" className={`w-[3px] self-stretch rounded-full ${corsia(s.categoria).dot}`} />
             <span className="flex-1 min-w-0">
               <span className="flex items-center gap-2 min-w-0">
-                <span className="shrink-0 font-mono text-[11px] font-bold uppercase tracking-[.06em] text-[#5b6070]">{s.giorno}</span>
+                <span className="shrink-0 text-[11px] font-bold uppercase tracking-[.06em] text-[#5b6070]">{s.giorno}</span>
                 <span className="flex-1 text-[14px] font-extrabold text-white truncate">{s.titolo}</span>
                 <span className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-black ${stato.classe}`}>
                   <Icona size={13} aria-hidden="true" />{stato.etichetta}
                 </span>
               </span>
 
-              <span className="block mt-1 font-mono text-[11px] font-bold text-[#5b6070]">
+              <span className="block mt-1 text-[11px] font-bold text-[#5b6070]">
                 {oreMinuti(s.minuti)} · {s.blocchi} {s.blocchi === 1 ? 'blocco' : 'blocchi'}
                 {s.atteso != null && <> · previsto {s.atteso}</>}
                 {s.dichiarato != null && <> → <span className="text-gray-200">sentito {s.dichiarato}</span></>}
@@ -303,7 +303,7 @@ export function Movimenti({ righe = [], mostrati, espanso, onEspandi, soglia, co
     <div className={`${CARD} p-[18px] mt-3 flex flex-col gap-3.5`}>
       <div className="flex items-baseline justify-between gap-3">
         <p className={LABEL}>Movimenti e carichi</p>
-        <span className="font-mono text-[11px] font-bold text-[#5b6070]">{righe.length}</span>
+        <span className="text-[11px] font-bold text-[#5b6070]">{righe.length}</span>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -323,7 +323,7 @@ export function Movimenti({ righe = [], mostrati, espanso, onEspandi, soglia, co
                     in una schermata di carichi e ripetizioni è la lettura più
                     naturale, ed è sbagliata. Trovato guardando la pagina, non i
                     dati — i dati erano giusti. */}
-                <span className="block mt-0.5 font-mono text-[11px] font-bold text-[#5b6070] leading-snug">
+                <span className="block mt-0.5 text-[11px] font-bold text-[#5b6070] leading-snug">
                   {m.sedute} {m.sedute === 1 ? 'seduta' : 'sedute'}{volume ? ` · ${volume}` : ''}
                   {' · '}
                   <span className={trascurato ? 'text-orange-400' : ''}>
@@ -336,8 +336,8 @@ export function Movimenti({ righe = [], mostrati, espanso, onEspandi, soglia, co
                   scrive un trattino — la colonna resta vuota. */}
               {m.kgUltimo != null && (
                 <span className="shrink-0 text-right">
-                  <span className="block font-mono text-[15px] font-black text-white leading-none">{decimale(m.kgUltimo)}</span>
-                  <span className="block mt-0.5 font-mono text-[10px] font-bold text-[#5b6070] leading-none">kg</span>
+                  <span className="block text-[15px] font-black text-white leading-none">{decimale(m.kgUltimo)}</span>
+                  <span className="block mt-0.5 text-[10px] font-bold text-[#5b6070] leading-none">kg</span>
                 </span>
               )}
             </div>

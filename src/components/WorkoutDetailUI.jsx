@@ -66,7 +66,7 @@ export function IconaStato({ etichetta, icona: Icona, accesa, colore, valore, on
                   hover:border-white/25 ${valore ? 'px-3.5' : 'w-11'} ${accesa ? 'border' : `${VETRO} text-gray-400`}`}
       style={stile}>
       <Icona size={18} className={pulsa ? 'animate-pulse' : ''} aria-hidden="true" />
-      {valore && <span className="font-mono text-xs font-extrabold tracking-[.03em]">{valore}</span>}
+      {valore && <span className="text-xs font-extrabold tracking-[.03em]">{valore}</span>}
     </button>
   )
 }
@@ -130,14 +130,14 @@ export function TitoloScheda({ dot, etichettaCategoria, testoCategoria, data, ti
     <div>
       <div className="flex items-center gap-[7px] mb-[7px] flex-wrap">
         <span aria-hidden="true" className={`w-[7px] h-[7px] rounded-full ${dot}`} />
-        <span className={`font-mono text-[11px] font-bold uppercase tracking-[.11em] ${testoCategoria}`}>
+        <span className={`text-[11px] font-bold uppercase tracking-[.11em] ${testoCategoria}`}>
           {etichettaCategoria}
         </span>
         {data && (
-          <span className="font-mono text-[11px] font-bold uppercase tracking-[.07em] text-muted">· {data}</span>
+          <span className="text-[11px] font-bold uppercase tracking-[.07em] text-muted">· {data}</span>
         )}
         {intensita && (
-          <span className={`font-mono text-[11px] font-bold uppercase tracking-[.07em] ${classeIntensita}`}>
+          <span className={`text-[11px] font-bold uppercase tracking-[.07em] ${classeIntensita}`}>
             · Intensità {intensita}/10
           </span>
         )}
@@ -216,7 +216,7 @@ export function BloccoScheda({ tipo, hint, sottotitolo, durata, lavoro, apribile
           <p className="mt-[3px] text-[11.5px] font-semibold text-muted">
             {hint}
             {hint && sottotitolo && <span aria-hidden="true"> · </span>}
-            {sottotitolo && <span className="font-mono font-bold tracking-[.02em]">{sottotitolo}</span>}
+            {sottotitolo && <span className="font-bold tracking-[.02em]">{sottotitolo}</span>}
           </p>
         )}
       </div>
@@ -261,12 +261,12 @@ export function RigaEsercizio({ numero, nome, specifiche, note, intensita, class
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-white truncate">{nome}</p>
         {specifiche && (
-          <p className="mt-0.5 font-mono text-[11.5px] font-semibold tracking-[.02em] text-muted">{specifiche}</p>
+          <p className="mt-0.5 text-[11.5px] font-semibold tracking-[.02em] text-muted">{specifiche}</p>
         )}
         {note && <p className="mt-0.5 text-[11.5px] text-gray-400 text-pretty">{note}</p>}
       </div>
       {intensita && (
-        <span className={`shrink-0 font-mono text-xs font-extrabold tracking-[.04em] ${classeIntensita}`}>
+        <span className={`shrink-0 text-xs font-extrabold tracking-[.04em] ${classeIntensita}`}>
           {intensita}/10
         </span>
       )}
@@ -282,7 +282,7 @@ export function IntestazioneSezione({ etichetta, dettaglio }) {
     <div className="flex items-baseline gap-2 px-[3px] pt-1.5">
       <span className={`${LABEL} tracking-[.11em]`}>{etichetta}</span>
       {dettaglio && (
-        <span className="font-mono text-[11px] font-bold tracking-[.06em] text-[#5b6070]">{dettaglio}</span>
+        <span className="text-[11px] font-bold tracking-[.06em] text-[#5b6070]">{dettaglio}</span>
       )}
     </div>
   )
@@ -295,7 +295,7 @@ export function CardNota({ etichetta, icona: Icona, colore, children }) {
       style={{ background: `${colore}0f`, borderColor: `${colore}47` }}>
       <div className="flex items-center gap-[7px]">
         <Icona size={14} className="shrink-0" style={{ color: colore }} aria-hidden="true" />
-        <span className="font-mono text-[11px] font-bold uppercase tracking-[.1em]" style={{ color: colore }}>
+        <span className="text-[11px] font-bold uppercase tracking-[.1em]" style={{ color: colore }}>
           {etichetta}
         </span>
       </div>
@@ -321,7 +321,7 @@ export function EsitoCompletato({ dettaglio }) {
       </span>
       <div className="flex-1 min-w-0">
         <p className="text-[14.5px] font-extrabold tracking-[-.01em] text-white">Allenamento completato</p>
-        <p className="mt-0.5 font-mono text-[11px] font-bold uppercase tracking-[.06em] text-green-300">{dettaglio}</p>
+        <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[.06em] text-green-300">{dettaglio}</p>
       </div>
     </div>
   )
@@ -344,12 +344,12 @@ export function RigaAssegnazione({ nome, foto, dettaglio, fatto, selezionata, on
         </span>
         <span className="flex-1 min-w-0">
           <span className={`block text-sm font-bold truncate ${selezionata ? 'text-brand' : 'text-white'}`}>{nome}</span>
-          <span className="block mt-0.5 font-mono text-[11px] font-bold tracking-[.05em] text-[#5b6070] truncate">
+          <span className="block mt-0.5 text-[11px] font-bold tracking-[.05em] text-[#5b6070] truncate">
             {dettaglio}
           </span>
         </span>
       </button>
-      <span className={`shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 border font-mono text-[11px]
+      <span className={`shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 border text-[11px]
                         font-extrabold tracking-[.05em] ${
         fatto ? 'bg-green-500/[.13] border-green-500/30 text-green-400'
               : 'bg-white/[.06] border-white/[.12] text-muted'}`}>
@@ -385,7 +385,7 @@ export function GradimentoWorkout({ si, no, nessuna, risposte }) {
             <Icona size={15} strokeWidth={2.4} className={colore} />
             {valore}
           </span>
-          <span className="font-mono text-[10.5px] font-bold uppercase tracking-[.08em] text-[#5b6070] truncate max-w-full px-1">
+          <span className="text-[10.5px] font-bold uppercase tracking-[.08em] text-[#5b6070] truncate max-w-full px-1">
             {etichetta}
           </span>
         </div>
