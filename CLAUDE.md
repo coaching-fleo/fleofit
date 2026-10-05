@@ -6283,6 +6283,35 @@ tre in `CreaWorkoutBuilder.test.jsx`. Tre mutazioni provate, tre prese.
 
 ---
 
+## 9-quaterquadragies. «Salva una copia» che cambiava l'originale (05/10/2026)
+
+Segnalazione: salvando una copia di un workout a volte cambiava quello vero, quindi
+anche agli atleti a cui era assegnato. **Verificato: `performSave(true)` non ha mai
+sovrascritto niente** — inserisce sempre. Le strade per arrivarci erano tre, tutte in
+`CreateWorkout.jsx`, e sono chiuse:
+
+1. 🔴 **La bozza non sapeva se era una copia o una modifica.** Era legata al solo id di
+   partenza, e si scriveva appena il workout era caricato. Aperto «Duplica» e chiusa
+   l'app, aprendo poi «Modifica» dello stesso workout compariva «Bozza Trovata»:
+   ripristinarla caricava la copia — titolo «(Copia)» compreso — su una schermata che
+   salva SOPRA l'originale. Ora la bozza porta `modo` (`nuovo`/`copia`/`modifica`) e si
+   propone solo nello stesso modo; una bozza senza `modo` è di prima e si scarta.
+   ⚠️ E si scrive solo dopo un cambiamento VERO: il riferimento è il primo stato
+   completo dopo il caricamento (`caricato` + `bozzaDiPartenza`). Tornati com'era, la
+   bozza si cancella.
+2. **Nella scelta il giallo era «Sovrascrivi».** Ora il bottone pieno è «Salva come
+   nuovo», e sotto «Sovrascrivi esistente» c'è a quanti atleti (distinti) cambia.
+   Se quella lettura fallisce la riga non compare e la scelta resta possibile.
+3. 🔴 **Sovrascrivendo da un atleta (`aw_id`) la SUA data finiva su `workouts.date`**,
+   cioè spostava il workout per tutti. Ora in quel caso l'update di `workouts` non
+   porta `date`; la data dell'atleta va sulla sua assegnazione, come prima.
+   ⚠️ «Salva come nuovo» da un atleta sposta la SUA assegnazione sulla copia — è
+   voluto — e la finestra ora lo dice con il nome dell'atleta.
+
+Test: `src/pages/__tests__/SalvataggioModifica.test.jsx` (9). Cinque mutazioni, cinque prese.
+
+---
+
 ## 10. Idee/direzioni note per il futuro
 
 - Possibile **rebranding** (nome diverso da FLEOFIT) mantenendo la palette.

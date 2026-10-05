@@ -620,14 +620,21 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       const { error } = await supabase.from('athlete_workouts').delete().eq('id', athleteWorkoutId)
       setDeleting(false)
       if (error) setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
-      else navigate(-1)
+      else { setShowDeleteConfirm(false); indietro() }
     } else {
       const { error } = await supabase.from('workouts').delete().eq('id', id)
       setDeleting(false)
       if (error) {
         setAlertInfo({ title: 'Errore', message: "Errore durante l'eliminazione: " + error.message, type: 'error' })
       } else {
-        navigate(-1)
+        // 🔴 La conferma si chiude PRIMA di uscire. Dopo «Duplica» la pagina
+        // precedente è il workout ORIGINALE, cioè la stessa rotta: senza questa
+        // riga la finestra «Sei sicuro?» restava aperta sopra un workout che
+        // non c'entrava. `indietro` e non `navigate(-1)`: se la scheda era la
+        // prima pagina della sessione (una push), -1 non fa niente e si resta
+        // sul workout appena cancellato.
+        setShowDeleteConfirm(false)
+        indietro()
       }
     }
   }

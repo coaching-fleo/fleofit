@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, createContext, useContext, lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate, useNavigationType, useParams } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { App as CapacitorApp } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
@@ -18,6 +18,17 @@ const CreateWorkout = lazy(() => import('./pages/CreateWorkout'))
 const Athletes = lazy(() => import('./pages/Athletes'))
 const AthleteDetail = lazy(() => import('./pages/AthleteDetail'))
 const WorkoutDetail = lazy(() => import('./pages/WorkoutDetail'))
+
+// 🔴 Una scheda per WORKOUT, non una per rotta. React Router riusa lo stesso
+// componente quando cambia solo `:id`, quindi tornando da una copia appena
+// eliminata all'originale la pagina si portava dietro tutto lo stato della
+// copia — finestre aperte comprese. La chiave è il solo `id`: cambiare
+// `athlete_id` nella query (l'elenco «Assegnato a», §9-tervicies) resta lo
+// stesso workout e NON deve rimontare.
+function SchedaWorkout() {
+  const { id } = useParams()
+  return <WorkoutDetail key={id} />
+}
 const WorkoutsArchive = lazy(() => import('./pages/WorkoutsArchive'))
 const WeeklyReport = lazy(() => import('./pages/WeeklyReport'))
 const AthleteReport = lazy(() => import('./pages/AthleteReport'))
@@ -611,7 +622,7 @@ function App() {
             <Route path="/athletes" element={<Athletes />} />
             <Route path="/athletes/:id" element={<AthleteDetail />} />
             <Route path="/profile" element={<AthleteDetail />} />
-            <Route path="/workout/:id" element={<WorkoutDetail />} />
+            <Route path="/workout/:id" element={<SchedaWorkout />} />
             <Route path="/archive" element={<WorkoutsArchive />} />
             {/* Riservata al coach: la pagina rimanda l'atleta alla Home da sé,
                 come fa /athletes. Non è una guardia di sicurezza — quella la

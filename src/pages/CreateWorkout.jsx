@@ -19,7 +19,7 @@ import { mostraErrore } from '../lib/alert'
 import { battito, vibraPresa, vibraScelta, vibraSuccesso } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
 import { conVelo, coloreDaClasse, BRAND, RUNNING, CUSTOM, IA } from '../lib/colori'
-import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
+import { BOLLA_MODALE, BOTTONE_BRAND, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
          LABEL, TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA, VETRO } from '../lib/stiliCard'
 import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { caricoPrevisto, collocazioneCarico } from '../lib/previsione'
@@ -33,6 +33,7 @@ import { useBottomSheet } from '../useBottomSheet'
 import AudioVisualizer from '../components/AudioVisualizer'
 import { ThinkingOrb } from 'thinking-orbs'
 import { BorderBeam } from 'border-beam'
+import { scriviJson } from '../lib/offlineQueue'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -2085,6 +2086,12 @@ export default function CreateWorkout() {
   const awId = searchParams.get('aw_id')
   const athleteId = searchParams.get('athlete_id')
   const sourceId = editId || duplicateId
+  // Da dove viene la bozza: una modifica salva SOPRA l'originale, una copia no.
+  const modoBozza = editId ? 'modifica' : duplicateId ? 'copia' : 'nuovo'
+  // Il workout è arrivato (o non c'era niente da caricare): da qui in poi un
+  // cambiamento è del coach, non del caricamento.
+  const [caricato, setCaricato] = useState(!sourceId)
+  const bozzaDiPartenza = useRef(null)
   const defaultDate = searchParams.get('date')
 
   const [step, setStep] = useState(1) // 1=tipo, 2=build
@@ -2122,6 +2129,12 @@ export default function CreateWorkout() {
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [isSavingAsNew, setIsSavingAsNew] = useState(false)
   const [newWorkoutName, setNewWorkoutName] = useState('')
+  // Chi riceve il workout se lo si sovrascrive, e l'atleta da cui si è entrati in
+  // modifica. Servono alla finestra di salvataggio per dire cosa cambia a CHI:
+  // «Sovrascrivi» e «Salva come nuovo» hanno conseguenze opposte sugli atleti, e
+  // il coach le deve leggere prima di scegliere, non scoprirle dopo.
+  const [atletiAssegnati, setAtletiAssegnati] = useState(null)
+  const [nomeAtletaModifica, setNomeAtletaModifica] = useState('')
 
   const navigate = useNavigate()
   const indietro = useIndietro('/')
@@ -2274,7 +2287,7 @@ export default function CreateWorkout() {
     const fetchWorkoutToEdit = async () => {
       if (!sourceId) return
       const { data, error } = await supabase.from('workouts').select('*').eq('id', sourceId).single()
-      if (error || !data) return
+      if (error || !data) { setCaricato(true); return }
 
       // Il codice in coda al titolo non sta nel campo: si rigenera al
       // salvataggio. E se il nome è quello che il contenuto genererebbe da sé,
@@ -2291,8 +2304,12 @@ export default function CreateWorkout() {
       
       let loadedDate = data.date
       if (awId && !duplicateId) {
-        const { data: awData } = await supabase.from('athlete_workouts').select('completed_date').eq('id', awId).single()
-        if (awData) loadedDate = awData.completed_date
+        const { data: awData } = await supabase.from('athlete_workouts')
+          .select('completed_date, athletes(name, surname)').eq('id', awId).single()
+        if (awData) {
+          loadedDate = awData.completed_date
+          setNomeAtletaModifica(awData.athletes?.name || '')
+        }
       }
       if (!duplicateId) setDate(loadedDate)
       
@@ -2332,13 +2349,20 @@ export default function CreateWorkout() {
         }
       }
       setStep(2)
+      setCaricato(true)
     }
 
     const draftStr = localStorage.getItem('fleofit_workout_draft')
     if (draftStr) {
       try {
         const draft = JSON.parse(draftStr)
-        if ((draft.sourceId || null) === (sourceId || null)) {
+        // ⚠️ Si confronta anche il MODO, non solo il workout di partenza. Una
+        // bozza nata da «Duplica» e riproposta dentro «Modifica» dello stesso
+        // workout caricava la copia — titolo «(Copia)» compreso — su una
+        // schermata che salva SOPRA l'originale, cioè sopra il workout di
+        // tutti gli atleti a cui era assegnato. Una bozza senza modo è di
+        // prima della correzione: non si sa da dove viene, e si scarta.
+        if ((draft.sourceId || null) === (sourceId || null) && draft.modo === modoBozza) {
           setConfirmInfo({
             title: 'Bozza Trovata',
             message: 'Hai un allenamento non salvato! Vuoi ripristinarlo da dove eri rimasto?',
@@ -2350,7 +2374,11 @@ export default function CreateWorkout() {
               setBlocks(draft.blocks || [])
               setRunningSteps(draft.runningSteps || [])
               setCoachNotes(draft.coachNotes || '')
-              if (draft.title) setStep(2)
+              if (draft.title || draft.blocks?.length || draft.runningSteps?.length) setStep(2)
+              // La bozza ripristinata È già una modifica: non diventa il punto
+              // di riferimento, o la si cancellerebbe al primo render.
+              bozzaDiPartenza.current = ''
+              setCaricato(true)
               setConfirmInfo(null)
             },
             onCancel: () => {
@@ -2380,12 +2408,26 @@ export default function CreateWorkout() {
   const hasUnsavedChanges = title.trim() !== '' || blocks.length > 0 || runningSteps.length > 0
 
   // 0. Salvataggio automatico bozza in locale
+  //
+  // ⚠️ La bozza si scrive solo quando il coach ha CAMBIATO qualcosa rispetto a
+  // ciò che ha aperto. Prima si scriveva appena il workout era caricato, quindi
+  // aprire «Duplica» o «Modifica» e richiudere l'app lasciava una bozza di un
+  // lavoro che non esisteva — e la si ritrovava proposta la volta dopo.
+  // Il riferimento è il primo stato completo dopo il caricamento.
   useEffect(() => {
-    if (hasUnsavedChanges && !saved) {
-      const draft = { sourceId: sourceId || null, title, date, workoutIntensity, category, blocks, runningSteps, coachNotes }
-      localStorage.setItem('fleofit_workout_draft', JSON.stringify(draft))
+    if (!caricato || saved) return
+    const corpo = { title, date, workoutIntensity, category, blocks, runningSteps, coachNotes }
+    const firma = JSON.stringify(corpo)
+    if (bozzaDiPartenza.current === null) { bozzaDiPartenza.current = firma; return }
+    if (firma === bozzaDiPartenza.current) {
+      // Tornato com'era aperto: non c'è più niente da ripristinare.
+      if (sourceId) localStorage.removeItem('fleofit_workout_draft')
+      return
     }
-  }, [title, date, workoutIntensity, category, blocks, runningSteps, coachNotes, sourceId, hasUnsavedChanges, saved])
+    if (hasUnsavedChanges) {
+      scriviJson('fleofit_workout_draft', { sourceId: sourceId || null, modo: modoBozza, ...corpo })
+    }
+  }, [title, date, workoutIntensity, category, blocks, runningSteps, coachNotes, sourceId, modoBozza, hasUnsavedChanges, saved, caricato])
 
   useEffect(() => {
     if (saved) localStorage.removeItem('fleofit_workout_draft')
@@ -2522,7 +2564,13 @@ export default function CreateWorkout() {
     if (editId) {
       setNewWorkoutName(title)
       setIsSavingAsNew(false)
+      setAtletiAssegnati(null)
       setShowSaveModal(true)
+      // A quanti atleti cambia il workout se lo si sovrascrive. Se la lettura
+      // fallisce la riga non compare: la scelta resta possibile.
+      const { data: righe, error } = await supabase.from('athlete_workouts')
+        .select('athlete_id').eq('workout_id', editId)
+      if (!error && Array.isArray(righe)) setAtletiAssegnati(new Set(righe.map(r => r.athlete_id)).size)
     } else {
       performSave(false)
     }
@@ -2559,7 +2607,12 @@ export default function CreateWorkout() {
     let targetId = saveAsNew ? null : editId
 
     if (targetId) {
-      const { error } = await supabase.from('workouts').update(payload).eq('id', editId)
+      // 🔴 Entrando da un atleta (`aw_id`) la data in pagina è la SUA, non quella
+      // del workout: scriverla su `workouts.date` spostava il workout per tutti
+      // gli altri. La data di quell'atleta si aggiorna sulla sua assegnazione.
+      const aggiornamento = { ...payload }
+      if (awId) delete aggiornamento.date
+      const { error } = await supabase.from('workouts').update(aggiornamento).eq('id', editId)
       if (awId) {
         await supabase.from('athlete_workouts').update({ completed_date: date }).eq('id', awId)
       }
@@ -2957,25 +3010,35 @@ export default function CreateWorkout() {
             
             {!isSavingAsNew ? (
               <>
-                <p className="text-gray-400 text-sm">Vuoi sovrascrivere questo allenamento o salvarlo come nuovo?</p>
+                <p className="text-gray-400 text-sm">Vuoi salvarlo come un allenamento nuovo o sovrascrivere quello esistente?</p>
+                {/* ⚠️ «Salva come nuovo» è il bottone pieno e sta SOPRA: è la
+                    scelta che non tocca nessun altro. Prima il giallo era
+                    «Sovrascrivi», e chi confermava senza leggere cambiava il
+                    workout a tutti gli atleti che l'avevano assegnato. */}
                 <div className="flex flex-col gap-3 mt-2">
-                  <button 
-                    onClick={() => performSave(false)}
-                    className="w-full py-3 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition"
-                  >
-                    Sovrascrivi esistente
-                  </button>
-                  <button 
-                    onClick={() => setIsSavingAsNew(true)}
-                    className="w-full py-3 bg-[#2a2a2a] border border-[#383838] text-white font-bold rounded-xl hover:border-brand hover:text-brand transition"
-                  >
+                  <button onClick={() => setIsSavingAsNew(true)} className={`w-full ${BOTTONE_BRAND}`}>
                     Salva come nuovo
                   </button>
+                  <button onClick={() => performSave(false)} className={`w-full ${BOTTONE_QUIETO}`}>
+                    Sovrascrivi esistente
+                  </button>
+                  {atletiAssegnati > 0 && (
+                    <p data-avviso-sovrascrivi className="text-[12.5px] leading-snug text-amber-300/90 text-center -mt-1">
+                      Sovrascrivendo cambia il workout per {atletiAssegnati === 1 ? '1 atleta' : `${atletiAssegnati} atleti`} a cui è assegnato.
+                    </p>
+                  )}
                 </div>
               </>
             ) : (
               <>
                 <p className="text-gray-400 text-sm">Nome del nuovo allenamento — se lo lasci vuoto lo genero dai blocchi:</p>
+                {/* Entrando da un atleta, la copia NON resta solo una copia:
+                    la sua assegnazione passa alla versione nuova. Va detto. */}
+                {awId && (
+                  <p data-avviso-copia className="text-[12.5px] leading-snug text-amber-300/90">
+                    {nomeAtletaModifica || "L'atleta da cui sei entrato"} riceverà questa versione; gli altri atleti tengono l'originale.
+                  </p>
+                )}
                 <input 
                   autoFocus
                   className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand w-full mt-1 text-base"
