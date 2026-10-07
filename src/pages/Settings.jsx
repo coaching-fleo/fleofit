@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, AlertTriangle, Trash2 } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, AlertTriangle, Trash2, LifeBuoy } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -20,6 +20,9 @@ import {
   BottoneEsci, CartaAccount, FoglioCodici, PiediPagina, RigaAzione, RigaInterruttore,
   RigaPericolo, RigaPieghevole, Separatore, Sezione, TestataImpostazioni,
 } from '../components/ImpostazioniUI'
+import FoglioSegnalazione from '../components/FoglioSegnalazione'
+import { datiTecnici } from '../lib/segnalazione'
+import { leggiCoda } from '../lib/offlineQueue'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -43,6 +46,7 @@ export default function Settings() {
 
   const [sviluppoAperto, setSviluppoAperto] = useState(false)
   const [foglioCodiciAperto, setFoglioCodiciAperto] = useState(false)
+  const [foglioSegnalazioneAperto, setFoglioSegnalazioneAperto] = useState(false)
   const [codici, setCodici] = useState(null)
   // Parte già a `true` per il coach: la lista si chiede al montaggio, e
   // accenderlo dentro `caricaCodici` renderebbe quella funzione un setState
@@ -495,6 +499,36 @@ export default function Settings() {
     else handleEnableNotifications()
   }
 
+  // ── Segnala un problema ─────────────────────────────────────────────────
+
+  /**
+   * Spedisce con la Edge Function `segnalazione`, che verifica l'utente dal
+   * JWT e manda la mail al coach (nessuna tabella: regola 0-bis). Un errore
+   * detto dal server (`data.error`, es. il limite orario) arriva com'è a chi
+   * scrive; uno di rete senza parole diventa un messaggio che dice cosa fare.
+   */
+  const inviaSegnalazione = async (corpo) => {
+    const { data, error } = await supabase.functions.invoke('segnalazione', { body: corpo })
+    if (data?.error) throw new Error(data.error)
+    if (error) {
+      console.error('Segnalazione non inviata:', error)
+      throw new Error('Invio non riuscito. Riprova tra poco.')
+    }
+  }
+
+  /** Calcolati mentre il foglio è aperto, non al montaggio: la rete e la coda cambiano. */
+  const tecniciSegnalazione = () => datiTecnici({
+    versione,
+    piattaforma: Capacitor.getPlatform(),
+    userAgent: navigator.userAgent,
+    ruolo: etichettaRuolo(role, { anteprimaAtleta: isSimulatingAthlete }),
+    online: navigator.onLine,
+    inCoda: leggiCoda().length,
+    ora: new Date(),
+    lingua: navigator.language,
+    fuso: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  })
+
   // ── I codici invito ─────────────────────────────────────────────────────
 
   const generaCodice = async () => {
@@ -635,6 +669,14 @@ export default function Settings() {
         </>
       )}
 
+      {/* ── Aiuto ──────────────────────────────────────────────────────────
+          Per TUTTI i ruoli: chi trova i problemi è soprattutto l'atleta. */}
+      <Sezione etichetta="Aiuto">
+        <RigaAzione icona={LifeBuoy} titolo="Segnala un problema"
+          dettaglio="Arriva direttamente a Federico"
+          onClick={() => setFoglioSegnalazioneAperto(true)} />
+      </Sezione>
+
       {/* Fuori da ogni gruppo e sopra l'uscita: è l'ultimo gesto della
           pagina, ed è l'unico irreversibile che riguarda chi lo compie. */}
       <RigaPericolo icona={Trash2} titolo="Elimina il mio account"
@@ -658,6 +700,15 @@ export default function Settings() {
             copiaTesto(`${base}/?invite=${c.code}`, 'Link')
           }}
           onElimina={eliminaCodice} />
+      )}
+
+      {foglioSegnalazioneAperto && (
+        <FoglioSegnalazione
+          onChiudi={() => setFoglioSegnalazioneAperto(false)}
+          onInvia={inviaSegnalazione}
+          tecnici={tecniciSegnalazione()}
+          notificheSpente={!notificationsEnabled}
+          onAttivaNotifiche={toggleNotifiche} />
       )}
 
       {passwordModalOpen && createPortal(
