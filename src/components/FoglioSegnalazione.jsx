@@ -1,0 +1,335 @@
+// FoglioSegnalazione — «Segnala un problema», in tre passi dentro un foglio.
+//
+// Stesso patto degli altri *UI: qui non entra né `supabase` né un permesso
+// push. Il foglio raccoglie e mostra; chi spedisce è `onInvia`, che arriva da
+// `Settings`. Cosa si chiede e cosa parte lo decide `src/lib/segnalazione.js`.
+//
+// ⚠️ Il bottone in testata si chiama ESATTAMENTE «Chiudi» (passo 1 e dopo
+// l'invio) o «Indietro» (passi 2 e 3), e il velo fa la stessa cosa: il tasto
+// indietro di Android tocca prima il velo e poi cerca quelle parole
+// (src/lib/indietroAndroid.js). Un velo che chiudesse sempre porterebbe via
+// tutto il foglio a metà flusso.
+
+import { useRef, useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import {
+  Bug, Snail, BellOff, Timer, KeyRound, Lightbulb, ChevronLeft, ChevronRight, X, ImagePlus, Send, Check,
+} from 'lucide-react'
+import { useBottomSheet } from '../useBottomSheet'
+import { vibraScelta, vibraSuccesso, vibraErrore } from '../lib/aptica'
+import { leggiJson, scriviJson } from '../lib/offlineQueue'
+import { LABEL, VETRO } from '../lib/stiliCard'
+import {
+  CHIAVE_BOZZA, LIMITI, TIPI, bozzaVuota, corpoRichiesta, domandePer, validaSegnalazione,
+} from '../lib/segnalazione'
+import { riduciImmagine } from '../lib/immagineRidotta'
+
+const ICONE = { Bug, Snail, BellOff, Timer, KeyRound, Lightbulb }
+
+/** Una bozza letta da localStorage può essere qualunque cosa: si tiene solo ciò che ha la forma giusta. */
+function bozzaIniziale() {
+  const letta = leggiJson(CHIAVE_BOZZA, null)
+  const vuota = bozzaVuota()
+  if (!letta || typeof letta !== 'object') return vuota
+  return {
+    tipo: TIPI.some(t => t.id === letta.tipo) ? letta.tipo : null,
+    risposte: letta.risposte && typeof letta.risposte === 'object' ? letta.risposte : {},
+    descrizione: typeof letta.descrizione === 'string' ? letta.descrizione : '',
+  }
+}
+
+function cancellaBozza() {
+  try { localStorage.removeItem(CHIAVE_BOZZA) } catch { /* niente da fare */ }
+}
+
+/** Online/offline, ascoltato: la rete può tornare mentre il foglio è aperto. */
+function useInLinea() {
+  const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine !== false))
+  useEffect(() => {
+    const su = () => setOnline(true)
+    const giu = () => setOnline(false)
+    window.addEventListener('online', su)
+    window.addEventListener('offline', giu)
+    return () => { window.removeEventListener('online', su); window.removeEventListener('offline', giu) }
+  }, [])
+  return online
+}
+
+export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], notificheSpente = false, onAttivaNotifiche }) {
+  const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
+  const [bozza, setBozza] = useState(bozzaIniziale)
+  const [passo, setPasso] = useState(() => (bozza.tipo ? 2 : 1))
+  const [immagini, setImmagini] = useState([])
+  const [inviando, setInviando] = useState(false)
+  const [errore, setErrore] = useState(null)
+  const [erroreImmagine, setErroreImmagine] = useState(null)
+  const inviandoRef = useRef(false)
+  const fileRef = useRef(null)
+  const online = useInLinea()
+
+  const tipo = TIPI.find(t => t.id === bozza.tipo)
+  const domande = domandePer(bozza.tipo)
+  const valida = validaSegnalazione({ ...bozza, immagini })
+  const lunghezza = bozza.descrizione.trim().length
+
+  /** Ogni modifica finisce subito nella bozza: chi chiude a metà ritrova il testo. */
+  const aggiorna = (modifica) => {
+    setBozza(prima => {
+      const dopo = { ...prima, ...modifica }
+      scriviJson(CHIAVE_BOZZA, dopo)
+      return dopo
+    })
+  }
+
+  const indietro = () => {
+    if (passo === 2 || passo === 3) { setErrore(null); setPasso(passo - 1) }
+    else chiudi()
+  }
+
+  const scegliTipo = (id) => {
+    vibraScelta()
+    // Cambiando tipo, le risposte del tipo di prima non valgono più.
+    aggiorna(id === bozza.tipo ? {} : { tipo: id, risposte: {} })
+    setPasso(2)
+  }
+
+  const scegliRisposta = (idDomanda, opzione) => {
+    vibraScelta()
+    aggiorna({ risposte: { ...bozza.risposte, [idDomanda]: opzione } })
+  }
+
+  const aggiungiImmagini = async (e) => {
+    const file = [...(e.target.files || [])].slice(0, LIMITI.immaginiMax - immagini.length)
+    e.target.value = ''
+    setErroreImmagine(null)
+    for (const f of file) {
+      try {
+        const ridotta = await riduciImmagine(f)
+        setImmagini(prima => (prima.length >= LIMITI.immaginiMax ? prima : [...prima, ridotta]))
+      } catch (err) {
+        console.error('Screenshot non letto:', err)
+        setErroreImmagine('Uno screenshot non si è potuto leggere')
+      }
+    }
+  }
+
+  const invia = async () => {
+    // Il ref, non solo lo stato: due tocchi nello stesso fotogramma vedono
+    // entrambi `inviando === false`, e partirebbero due mail.
+    if (inviandoRef.current || !valida.ok) return
+    inviandoRef.current = true
+    setInviando(true)
+    setErrore(null)
+    try {
+      await onInvia(corpoRichiesta({ ...bozza, tecnici, immagini }))
+      vibraSuccesso()
+      cancellaBozza()
+      setPasso('fatto')
+    } catch (err) {
+      vibraErrore()
+      setErrore(err?.message || 'Invio non riuscito. Riprova tra poco.')
+    } finally {
+      inviandoRef.current = false
+      setInviando(false)
+    }
+  }
+
+  const etichettaTesta = passo === 2 || passo === 3 ? 'Indietro' : 'Chiudi'
+  const titolo = passo === 1 ? 'Segnala un problema'
+    : passo === 2 ? tipo?.titolo
+      : passo === 3 ? 'Controlla e invia' : null
+
+  return createPortal(
+    <div className={`fixed inset-0 z-[100] flex flex-col justify-end bg-black/85 touch-none ${classeVelo}`}
+      style={stileVelo} onClick={indietro}>
+      <div role="dialog" aria-label="Segnala un problema" onClick={(e) => e.stopPropagation()}
+        style={stileFoglio}
+        className={`bg-[#141416] border-t border-white/[.09] rounded-t-3xl px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]
+                    flex flex-col max-h-[85dvh] shadow-[0_-20px_50px_-12px_rgba(0,0,0,.85)] ${classeFoglio}`}>
+
+        <button type="button" aria-label="Trascina giù per chiudere" {...maniglia}
+          className="w-full pt-3 pb-2.5 -mx-4 px-4 flex justify-center shrink-0 touch-none
+                     cursor-grab active:cursor-grabbing group">
+          <span aria-hidden="true"
+            className="w-10 h-1 rounded-full bg-white/20 group-hover:bg-white/35 group-active:bg-white/45 transition-colors" />
+        </button>
+
+        <div className="flex items-center gap-3 shrink-0 pb-3">
+          <button type="button" aria-label={etichettaTesta} onClick={indietro}
+            className={`w-10 h-10 rounded-full flex items-center justify-center text-gray-200 hover:text-white transition shrink-0 ${VETRO}`}>
+            {etichettaTesta === 'Indietro' ? <ChevronLeft size={20} aria-hidden="true" /> : <X size={18} aria-hidden="true" />}
+          </button>
+          {titolo && <h2 className="text-xl font-black tracking-[-.02em] text-white truncate">{titolo}</h2>}
+        </div>
+
+        <div className="overflow-y-auto overscroll-contain hide-scrollbar flex flex-col gap-3 pb-2 touch-pan-y">
+          {passo === 1 && (
+            <>
+              <p className="text-[13.5px] text-gray-400 leading-relaxed">
+                Arriva direttamente a Federico. Scegli di cosa si tratta: ti chiediamo solo quello che serve.
+              </p>
+              <div className="flex flex-col gap-2">
+                {TIPI.map(t => {
+                  const Icona = ICONE[t.icona]
+                  return (
+                    <button key={t.id} type="button" onClick={() => scegliTipo(t.id)}
+                      className="w-full rounded-2xl bg-white/[.04] border border-white/[.08] px-3.5 py-3 flex items-center gap-3
+                                 text-left transition hover:bg-white/[.07] active:scale-[.995]">
+                      <span aria-hidden="true"
+                        className="w-[34px] h-[34px] rounded-xl border bg-brand/[.13] border-brand/[.28] text-brand flex items-center justify-center shrink-0">
+                        <Icona size={18} />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[15px] font-bold text-white">{t.titolo}</span>
+                        <span className="block mt-0.5 text-xs font-medium text-muted">{t.dettaglio}</span>
+                      </span>
+                      <ChevronRight size={17} className="text-[#5b6070] shrink-0" aria-hidden="true" />
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {passo === 2 && (
+            <>
+              {bozza.tipo === 'notifiche' && notificheSpente && (
+                <div className="rounded-2xl bg-brand/[.08] border border-brand/[.25] p-3.5 flex items-center gap-3">
+                  <p className="flex-1 text-[13px] text-gray-200 leading-snug">
+                    Le notifiche su questo dispositivo sono spente. Spesso basta riattivarle.
+                  </p>
+                  <button type="button" onClick={onAttivaNotifiche}
+                    className="shrink-0 bg-brand text-black text-sm font-bold px-3.5 py-2 rounded-full hover:brightness-110 transition">
+                    Attivale
+                  </button>
+                </div>
+              )}
+
+              {domande.map(d => (
+                <div key={d.id} role="radiogroup" aria-label={d.testo}>
+                  <p className={`mb-2 ${LABEL}`}>{d.testo}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {d.opzioni.map(o => {
+                      const scelta = bozza.risposte[d.id] === o
+                      return (
+                        <button key={o} type="button" role="radio" aria-checked={scelta}
+                          onClick={() => scegliRisposta(d.id, o)}
+                          className={`px-3.5 py-2 rounded-full text-[13px] font-bold border transition ${
+                            scelta ? 'bg-brand text-black border-brand' : 'bg-white/[.05] text-gray-200 border-white/[.1] hover:bg-white/[.09]'}`}>
+                          {o}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <label className="flex flex-col gap-2">
+                <span className={LABEL}>{bozza.tipo === 'idea' ? 'Raccontala' : 'Cosa è successo'}</span>
+                <textarea
+                  aria-label={bozza.tipo === 'idea' ? 'Descrivi la tua idea' : 'Descrivi il problema'}
+                  value={bozza.descrizione} maxLength={LIMITI.descrizioneMax} rows={5}
+                  onChange={(e) => aggiorna({ descrizione: e.target.value })}
+                  placeholder={bozza.tipo === 'idea' ? 'Cosa vorresti trovare nell\'app?' : 'Cosa stavi facendo, cosa ti aspettavi, cosa è successo invece'}
+                  className="w-full rounded-xl bg-[#111] border border-[#333] px-3.5 py-3 text-[15px] text-white
+                             placeholder:text-gray-600 focus:outline-none focus:border-brand/60 resize-none" />
+              </label>
+              <p className="-mt-1 text-[11.5px] font-medium text-muted flex justify-between">
+                <span>{lunghezza > 0 && lunghezza < LIMITI.descrizioneMin ? `Almeno ${LIMITI.descrizioneMin} caratteri` : ''}</span>
+                <span>{bozza.descrizione.length}/{LIMITI.descrizioneMax}</span>
+              </p>
+
+              {bozza.tipo !== 'idea' && (
+                <div className="flex flex-col gap-2">
+                  {immagini.length > 0 && (
+                    <div className="flex gap-2">
+                      {immagini.map((im, i) => (
+                        <div key={i} className="relative w-16 h-16 rounded-xl overflow-hidden border border-white/[.1]">
+                          <img src={`data:image/jpeg;base64,${im.base64}`} alt="" className="w-full h-full object-cover" />
+                          <button type="button" aria-label="Rimuovi immagine"
+                            onClick={() => setImmagini(prima => prima.filter((_, j) => j !== i))}
+                            className="absolute top-0.5 right-0.5 w-6 h-6 rounded-full bg-black/70 text-white flex items-center justify-center">
+                            <X size={13} aria-hidden="true" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {immagini.length < LIMITI.immaginiMax && (
+                    <button type="button" onClick={() => fileRef.current?.click()}
+                      className={`self-start flex items-center gap-2 px-3.5 py-2 rounded-full text-[13px] font-bold text-gray-200 ${VETRO}`}>
+                      <ImagePlus size={16} aria-hidden="true" /> Aggiungi screenshot
+                    </button>
+                  )}
+                  {erroreImmagine && <p className="text-xs text-red-500">{erroreImmagine}</p>}
+                  <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={aggiungiImmagini} />
+                </div>
+              )}
+
+              <button type="button" onClick={() => setPasso(3)} disabled={!valida.ok}
+                className="mt-1 w-full py-3.5 rounded-2xl bg-brand text-black font-black hover:brightness-110 transition
+                           disabled:opacity-40 disabled:hover:brightness-100">
+                Continua
+              </button>
+            </>
+          )}
+
+          {passo === 3 && (
+            <>
+              <div className="rounded-2xl bg-white/[.04] border border-white/[.08] p-3.5 flex flex-col gap-2.5">
+                <p className={LABEL}>{tipo?.titolo}</p>
+                {domande.filter(d => bozza.risposte[d.id]).map(d => (
+                  <p key={d.id} className="text-[13px] text-gray-300">
+                    <span className="text-muted">{d.testo} </span>{bozza.risposte[d.id]}
+                  </p>
+                ))}
+                <p className="text-[14px] text-white whitespace-pre-wrap break-words">{bozza.descrizione.trim()}</p>
+                {immagini.length > 0 && (
+                  <p className="text-[12px] text-muted">
+                    {immagini.length === 1 ? '1 immagine allegata' : `${immagini.length} immagini allegate`}
+                  </p>
+                )}
+              </div>
+
+              <details className="rounded-2xl bg-white/[.03] border border-white/[.06] px-3.5 py-3">
+                <summary className="text-[12.5px] font-bold text-muted cursor-pointer">Dati tecnici allegati</summary>
+                <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px]">
+                  {tecnici.map(r => (
+                    <div key={r.etichetta} className="contents">
+                      <dt className="text-muted">{r.etichetta}</dt>
+                      <dd className="text-gray-300 break-all">{r.valore}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </details>
+
+              {errore && <p role="alert" className="text-[13px] font-semibold text-red-500">{errore}</p>}
+
+              <button type="button" onClick={invia} disabled={inviando || !online}
+                className="w-full py-3.5 rounded-2xl bg-brand text-black font-black flex items-center justify-center gap-2
+                           hover:brightness-110 transition disabled:opacity-40 disabled:hover:brightness-100">
+                {!online ? 'Sei offline — la bozza resta qui'
+                  : inviando ? 'Invio…'
+                    : <><Send size={17} aria-hidden="true" />{errore ? 'Riprova' : 'Invia'}</>}
+              </button>
+            </>
+          )}
+
+          {passo === 'fatto' && (
+            <div className="py-6 flex flex-col items-center text-center gap-3">
+              <span aria-hidden="true"
+                className="w-14 h-14 rounded-full bg-green-500/[.14] border border-green-500/30 text-green-500 flex items-center justify-center">
+                <Check size={26} />
+              </span>
+              <p className="text-[19px] font-black tracking-tight text-white">Grazie, Federico la legge</p>
+              <p className="text-[13.5px] text-gray-400 leading-relaxed max-w-xs">
+                Se serve ti risponde all'indirizzo email con cui sei entrato.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
