@@ -1353,12 +1353,31 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     azionePrimaria = <CtaPrimaria onClick={apriAssegna} icona={Users}>Assegna ad atleta</CtaPrimaria>
   }
 
+  // ⚠️ Un workout che un atleta ha già SVOLTO non si modifica: la scheda è la
+  // stessa riga per tutti, e cambiarla riscriverebbe a posteriori quello che lui
+  // ha fatto — il recap, la storia, le statistiche leggerebbero blocchi che non
+  // ha mai eseguito. Si propone la copia, che lascia intatto l'originale.
+  // `assignments` porta TUTTE le assegnazioni anche quando si guarda un atleta.
+  const apriModifica = () => {
+    if (!assignments.some(a => a.status === 'completed')) {
+      navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`)
+      return
+    }
+    // Volutamente senza nomi (richiesta del committente, 07/10/2026).
+    setConfirmInfo({
+      title: 'Non si può modificare',
+      message: "Un atleta l'ha già svolto: cambiarlo riscriverebbe un allenamento già fatto.\n\nPuoi duplicarlo e modificare la copia.",
+      confirmLabel: 'Duplica',
+      onConfirm: () => navigate(`/create?duplicate=${id}`),
+    })
+  }
+
   // Il menu delle tre puntine: i cinque bottoncini che stavano sotto il titolo
   // più i quattro export che stavano in fondo alla pagina, tutti dello stesso
   // peso l'uno dell'altro. Sono comandi che si usano una volta.
   const vociMenu = [
     puoAssegnare && { etichetta: 'Duplica', icona: Copy, onClick: () => navigate(`/create?duplicate=${id}`) },
-    puoAssegnare && !isAuto && { etichetta: 'Modifica', icona: Edit, onClick: () => navigate(`/create?edit=${id}${athleteWorkoutId ? `&aw_id=${athleteWorkoutId}` : ''}${queryAthleteId ? `&athlete_id=${queryAthleteId}` : ''}`) },
+    puoAssegnare && !isAuto && { etichetta: 'Modifica', icona: Edit, onClick: apriModifica },
     isAuto && { etichetta: 'Modifica', icona: Edit, onClick: openEditAutonomous },
     eAtleta && completato && { etichetta: 'Segna come da fare', icona: Undo2, onClick: toggleStatus },
     type !== 'Event' && { etichetta: 'Esporta PDF', icona: Download, onClick: exportPDF },

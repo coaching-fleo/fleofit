@@ -69,7 +69,7 @@ export function CustomConfirm({ info, onClose }) {
         <p className={`${TESTO_MODALE} whitespace-pre-wrap`}>{info.message}</p>
         <div className="flex gap-3 mt-2">
           <button onClick={() => { if (info.onCancel) info.onCancel(); onClose(); }} className={BOTTONE_QUIETO}>Annulla</button>
-          <button onClick={() => { info.onConfirm(); onClose(); }} className={BOTTONE_BRAND}>Conferma</button>
+          <button onClick={() => { info.onConfirm(); onClose(); }} className={BOTTONE_BRAND}>{info.confirmLabel || 'Conferma'}</button>
         </div>
       </div>
     </div>

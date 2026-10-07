@@ -345,3 +345,28 @@ test, tutti verificati per mutazione.
 esercizio per esercizio, e la scheda è la pagina più aperta dell'app.
 
 ---
+
+---
+
+## 9-quinquadragies. «Modifica» bloccata su un workout già svolto (07/10/2026)
+
+Richiesta del committente: se almeno un atleta ha già completato il workout, il
+coach non lo può più modificare. «Modifica» nel menu delle tre puntine apre
+«Non si può modificare» con «Un atleta l'ha già svolto» — ⚠️ **volutamente
+senza nomi**, l'ha chiesto il committente — e due bottoni: **Annulla** e **Duplica** (`/create?duplicate=<id>`, la stessa
+strada della voce «Duplica»).
+
+- Il perché: `workouts` è UNA riga per tutti gli assegnati. Cambiarla dopo
+  riscriverebbe a posteriori un allenamento fatto — recap, storia e statistiche
+  leggerebbero blocchi mai eseguiti.
+- Il controllo sta in `apriModifica` di `WorkoutDetail.jsx` e legge
+  `assignments`, che porta **tutte** le assegnazioni anche quando si guarda la
+  scheda di un singolo atleta. È l'unico ingresso a `/create?edit=` dell'app;
+  chi aggiunge un secondo ingresso deve rifare lo stesso controllo.
+- `CustomConfirm` ora accetta `confirmLabel` (default «Conferma»).
+- ⚠️ Gli allenamenti autonomi (`isAuto`) non passano di qui: hanno la loro modale.
+- Offline il controllo legge la cache `fleofit_cache_all_aw_<id>`, che può essere
+  vecchia: un completamento arrivato dopo l'ultima apertura non si vede.
+
+Test: `src/pages/__tests__/WorkoutDetailModificaSvolto.test.jsx` (3). Mutazione
+(controllo sempre falso) presa da due test su tre.
