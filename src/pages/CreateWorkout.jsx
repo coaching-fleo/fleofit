@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight } from 'lucide-react'
+import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
@@ -13,7 +13,8 @@ import { blockHint } from '../lib/blockHints'
 import { format, parseISO, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { generaTitolo, titoliDelGiorno } from '../lib/workoutTitle'
-import { descriviWorkout, separaCodice, unisciCodice } from '../lib/codiceWorkout'
+import { codiceWorkout, separaCodice, unisciCodice } from '../lib/codiceWorkout'
+import { candidatiNome, nuovoSeme, scegliNome, nomeLibero, eNomeGenerato, nomiGiaUsati } from '../lib/nomeCasuale'
 import { ERGOMETERS } from '../lib/constants'
 import { mostraErrore } from '../lib/alert'
 import { battito, vibraPresa, vibraScelta, vibraSuccesso } from '../lib/aptica'
@@ -2102,6 +2103,14 @@ export default function CreateWorkout() {
   // spazio che le era riservato terrebbe la barra sospesa sopra un vuoto.
   const tastieraAperta = useTastieraAperta()
   const [title, setTitle] = useState('')
+  // Il nome che il workout prende se il campo resta vuoto: i candidati vengono
+  // dal contenuto (`src/lib/nomeCasuale.js`), il seme sceglie quale, e il dado
+  // cambia il seme. Riaperto in modifica resta quello già salvato
+  // (`nomeFissato`) finché i blocchi lo giustificano, e al salvataggio non
+  // conta come «già usato» da un altro workout (`nomeDiPartenza`).
+  const [semeNome, setSemeNome] = useState(() => nuovoSeme())
+  const [nomeFissato, setNomeFissato] = useState(null)
+  const nomeDiPartenza = useRef(null)
   const [date, setDate] = useState(defaultDate || format(new Date(), 'yyyy-MM-dd'))
   const [workoutIntensity, setWorkoutIntensity] = useState('5')
   const [category, setCategory] = useState('Hyrox')
@@ -2293,16 +2302,20 @@ export default function CreateWorkout() {
       if (error || !data) { setCaricato(true); return }
 
       // Il codice in coda al titolo non sta nel campo: si rigenera al
-      // salvataggio. E se il nome è quello che il contenuto genererebbe da sé,
-      // il campo resta VUOTO, così continua a seguire i blocchi.
+      // salvataggio. Un nome generato non sta nel campo nemmeno lui: in
+      // modifica resta quello, in una copia se ne sceglie un altro.
       const { nome } = separaCodice(data.title)
       const sezioni = data.sections || {}
-      const generato = descriviWorkout({
+      const candidati = candidatiNome({
         category: sezioni.category || (sezioni.steps ? 'Running' : 'Hyrox'),
         blocks: sezioni.blocks || [], steps: sezioni.steps || [],
-      }).nome
-      const scritto = nome === generato ? '' : nome
-      setTitle(duplicateId && scritto ? `${scritto} (Copia)` : scritto)
+      })
+      if (eNomeGenerato(nome, candidati)) {
+        setTitle('')
+        if (!duplicateId) { setNomeFissato(nome); nomeDiPartenza.current = nome }
+      } else {
+        setTitle(duplicateId && nome ? `${nome} (Copia)` : nome)
+      }
       setCoachNotes(data.coach_notes || '')
       
       let loadedDate = data.date
@@ -2529,14 +2542,22 @@ export default function CreateWorkout() {
     }
   }
 
-  // Il nome è facoltativo per tutte le categorie: se manca lo genera il
-  // contenuto (`src/lib/codiceWorkout.js`), e il codice segue SEMPRE il nome.
-  // Ricalcolati a ogni blocco toccato, così il coach vede il titolo che verrà
-  // salvato mentre lo costruisce.
-  const descrizione = useMemo(
-    () => descriviWorkout({ category, blocks, steps: runningSteps, intensity: workoutIntensity }),
+  // Il nome è facoltativo per tutte le categorie: Hyrox e Corsa ne prendono
+  // uno dal contenuto (`src/lib/nomeCasuale.js`), Custom la data. Il codice segue
+  // SEMPRE il nome, ricalcolato a ogni blocco toccato, così il coach vede il
+  // titolo che verrà salvato mentre lo costruisce.
+  const codice = useMemo(
+    () => codiceWorkout({ category, blocks, steps: runningSteps, intensity: workoutIntensity }),
     [category, blocks, runningSteps, workoutIntensity])
-  const nomeMostrato = title.trim() || descrizione.nome || generaTitolo(date)
+  const conNomeCasuale = category === 'Hyrox' || category === 'Running'
+  const candidati = useMemo(
+    () => candidatiNome({ category, blocks, steps: runningSteps }),
+    [category, blocks, runningSteps])
+  const nomeCasuale = nomeFissato && eNomeGenerato(nomeFissato, candidati)
+    ? nomeFissato
+    : scegliNome(candidati, semeNome)
+  const nomeAutomatico = conNomeCasuale ? nomeCasuale : generaTitolo(date)
+  const nomeMostrato = title.trim() || nomeAutomatico || generaTitolo(date)
 
   // I tre numeri in cima allo step 2 e i segmenti della barra. Un useMemo e non
   // uno stato aggiornato da un effetto: sono una funzione dei blocchi, e uno
@@ -2595,21 +2616,22 @@ export default function CreateWorkout() {
   const performSave = async (saveAsNew) => {
     setShowSaveModal(false)
     setSaving(true)
-    // Un nome scritto resta com'è. Uno generato si numera se quel giorno c'è
-    // già un titolo identico — nome E codice — come faceva il titolo dalla data.
+    // Un nome scritto resta com'è. Quello casuale si ricontrolla qui contro
+    // TUTTI i workout salvati — chi sovrascrive non conta il proprio — e se è
+    // già preso se ne sceglie un altro. Custom prende la data, numerata.
     const scritto = (saveAsNew ? newWorkoutName : title).trim()
-    const nomeBase = scritto || descrizione.nome
     let finalTitle
-    if (!nomeBase) {
-      finalTitle = generaTitolo(date, await titoliDelGiorno(supabase, date))
-    } else if (scritto) {
-      finalTitle = unisciCodice(nomeBase, descrizione.codice)
+    if (scritto) {
+      finalTitle = unisciCodice(scritto, codice)
+    } else if (conNomeCasuale) {
+      const usati = await nomiGiaUsati(supabase)
+      const proprio = !saveAsNew && editId ? usati.indexOf(nomeDiPartenza.current) : -1
+      if (proprio >= 0) usati.splice(proprio, 1)
+      const preso = usati.some(n => n.toLowerCase() === nomeCasuale?.toLowerCase())
+      const nome = (preso ? nomeLibero(candidati, usati, semeNome) : nomeCasuale) || generaTitolo(date)
+      finalTitle = unisciCodice(nome, codice)
     } else {
-      const esistenti = await titoliDelGiorno(supabase, date)
-      finalTitle = unisciCodice(nomeBase, descrizione.codice)
-      for (let n = 2; esistenti.includes(finalTitle); n++) {
-        finalTitle = unisciCodice(`${nomeBase} (${n})`, descrizione.codice)
-      }
+      finalTitle = generaTitolo(date, await titoliDelGiorno(supabase, date))
     }
 
     const sections = {
@@ -2710,7 +2732,7 @@ export default function CreateWorkout() {
         passo={step}
         onIndietro={step === 1 && daBarra && !sourceId ? null : handleBack}
         titolo={step === 2 ? nomeMostrato : null}
-        codice={step === 2 ? descrizione.codice : null}
+        codice={step === 2 ? codice : null}
         sottotitolo={step === 2 ? sottotitoloWorkout : null}
         onTitolo={step === 2 ? () => setStep(1) : null}
       />
@@ -2749,15 +2771,29 @@ export default function CreateWorkout() {
               dimenticano, e in cima resta la domanda che conta. */}
           <div className="flex flex-col gap-2.5">
             <RigaCampo etichetta="Nome">
-              <input
-                aria-label="Nome del workout"
-                enterKeyHint="done"
-                onKeyDown={chiudiTastieraSuInvio}
-                className="w-full bg-transparent text-[15.5px] font-bold text-white placeholder-[#5b6070] focus:outline-none"
-                placeholder={descrizione.nome || (category === 'Custom' ? generaTitolo(date) : 'Facoltativo · lo genero dai blocchi')}
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  aria-label="Nome del workout"
+                  enterKeyHint="done"
+                  onKeyDown={chiudiTastieraSuInvio}
+                  className="w-full bg-transparent text-[15.5px] font-bold text-white placeholder-[#5b6070] focus:outline-none"
+                  placeholder={nomeAutomatico || 'Facoltativo · lo scelgo dai blocchi'}
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                />
+                {/* Il nome casuale non piace? Se ne pesca un altro. Solo a
+                    campo vuoto: un nome scritto non si sostituisce. */}
+                {conNomeCasuale && nomeCasuale && !title.trim() && (
+                  <button
+                    type="button"
+                    aria-label="Un altro nome"
+                    onClick={() => { vibraScelta(); setNomeFissato(null); setSemeNome(s => s + 1) }}
+                    className="shrink-0 -my-1 p-1.5 rounded-full text-[#8a8f9c] hover:text-white active:scale-90 transition"
+                  >
+                    <Dices size={18} />
+                  </button>
+                )}
+              </div>
             </RigaCampo>
             <RigaCampo etichetta="Data">
               <CustomDatePicker
@@ -3047,7 +3083,7 @@ export default function CreateWorkout() {
               </>
             ) : (
               <>
-                <p className="text-gray-400 text-sm">Nome del nuovo allenamento — se lo lasci vuoto lo genero dai blocchi:</p>
+                <p className="text-gray-400 text-sm">Nome del nuovo allenamento — se lo lasci vuoto ne scelgo uno io:</p>
                 {/* Entrando da un atleta, la copia NON resta solo una copia:
                     la sua assegnazione passa alla versione nuova. Va detto. */}
                 {awId && (
@@ -3060,7 +3096,7 @@ export default function CreateWorkout() {
                   className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand w-full mt-1 text-base"
                   value={newWorkoutName}
                   onChange={(e) => setNewWorkoutName(e.target.value)}
-                  placeholder={descrizione.nome || 'Nome del workout...'}
+                  placeholder="Facoltativo"
                 />
                 <div className="flex gap-3 mt-4">
                   <button 

@@ -1,8 +1,12 @@
-// Il nome generato dal contenuto e il codice che segue ogni titolo.
+// Il codice che segue ogni titolo.
 //
-//     Sled & Wall Balls · EM+FT 55′ @8
-//     Ripetute 8×400    · RIP 50′ @8
-//     Corsa 12 km       · CL 12K @5
+//     Falco Implacabile · EM+FT 55′ @8
+//     Gambe dure        · RIP 50′ @8
+//     Tempesta Gialla   · CL 12K @5
+//
+// Il nome davanti è quello scritto dal coach o, se manca, uno casuale
+// (`nomeCasuale.js`). Fino al 07/10/2026 nasceva dagli esercizi: si ripeteva
+// a ogni workout ricreato con gli stessi esercizi.
 //
 // Il codice dice tre cose, sempre nello stesso ordine: COSA (la struttura del
 // lavoro centrale), QUANTO DURA, QUANTO È DURO. Serve al coach a colpo d'occhio,
@@ -19,7 +23,7 @@
 // separatore deve cambiare anche `CODICE_IN_CODA`, o i titoli si ritroveranno
 // con due codici in fila.
 
-import { durataBlocco, durataEsercizio, rpeAtteso, BLOCCHI_DI_LAVORO, giriBlocco } from './stimaWorkout'
+import { durataBlocco, rpeAtteso } from './stimaWorkout'
 import { riepilogoCorsa } from './rigaArchivio'
 import { durataWorkout } from './statistiche'
 
@@ -88,28 +92,6 @@ export const codiceHyrox = (blocks = [], intensitaDichiarata) => {
   return componi([struttureHyrox(blocks), minuti && `${minuti}′`, rpe && `@${rpe}`])
 }
 
-/**
- * Il nome di un workout Hyrox: i due esercizi che pesano di più nel lavoro
- * centrale, per tempo stimato (giri compresi). Senza blocchi di lavoro si
- * guarda tutto il workout. Senza esercizi, il tipo del primo blocco di lavoro.
- */
-export const nomeHyrox = (blocks = []) => {
-  const lavoro = blocks.filter(b => BLOCCHI_DI_LAVORO.has(b?.type))
-  const fonte = lavoro.length ? lavoro : blocks
-  const peso = new Map()
-  for (const b of fonte) {
-    const giri = giriBlocco(b)
-    for (const ex of b?.exercises || []) {
-      const nome = (ex?.name || '').trim()
-      if (!nome || nome === 'Rest') continue
-      peso.set(nome, (peso.get(nome) || 0) + Math.max(durataEsercizio(ex), 1) * giri)
-    }
-  }
-  const primi = [...peso.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([n]) => n)
-  if (primi.length) return primi.join(' & ')
-  return lavoro[0]?.type || ''
-}
-
 // ── Corsa ───────────────────────────────────────────────────────────────────
 
 const fasiCorsa = (steps = []) => steps.filter(s => s && (s.type === 'run'))
@@ -160,38 +142,13 @@ export const codiceCorsa = (steps = [], intensitaDichiarata) => {
   return componi([SIGLA_CORSA[strutturaCorsa(steps)], durata, rpe && `@${rpe}`])
 }
 
-const pulisciMisura = (v) => String(v ?? '').trim().replace(/\s+/g, ' ')
-
-/** Il nome di una corsa: «Ripetute 8×400m», «Lungo 18 km», «Corsa Z2», «Progressivo». */
-export const nomeCorsa = (steps = []) => {
-  if (!steps.length) return ''
-  const struttura = strutturaCorsa(steps)
-  if (struttura === 'ripetute') {
-    const rip = steps.find(s => s?.type === 'repeat')
-    const giri = parseInt(rip?.rounds, 10)
-    const misura = pulisciMisura(rip?.runDuration)
-    return Number.isFinite(giri) && giri > 0 && misura ? `Ripetute ${giri}×${misura}` : 'Ripetute'
-  }
-  if (struttura === 'progressivo') return 'Progressivo'
-
-  const r = riepilogoCorsa(steps)
-  const lungo = (r.puroDistanza && r.metri >= 15000) || (r.puroTempo && r.minuti >= 75)
-  const base = lungo ? 'Lungo' : 'Corsa'
-  if (r.puroDistanza && r.metri > 0) return `${base} ${String(chilometriCodice(r.metri)).replace('.', ',')} km`
-  const fasi = fasiCorsa(steps)
-  const zona = fasi.length === 1 && /^Z\d$/.test(String(fasi[0].pace || '').trim()) ? fasi[0].pace.trim() : null
-  return zona ? `${base} ${zona}` : base
-}
-
 // ── Il titolo intero ────────────────────────────────────────────────────────
 
-/** Nome e codice di un workout in costruzione. Custom ed Evento non hanno codice. */
-export const descriviWorkout = ({ category, blocks = [], steps = [], intensity } = {}) => {
-  if (category === 'Hyrox') {
-    return { nome: nomeHyrox(blocks), codice: codiceHyrox(blocks, intensity) }
-  }
-  if (category === 'Running') return { nome: nomeCorsa(steps), codice: codiceCorsa(steps, intensity) }
-  return { nome: '', codice: '' }
+/** Il codice di un workout in costruzione. Custom ed Evento non ne hanno. */
+export const codiceWorkout = ({ category, blocks = [], steps = [], intensity } = {}) => {
+  if (category === 'Hyrox') return codiceHyrox(blocks, intensity)
+  if (category === 'Running') return codiceCorsa(steps, intensity)
+  return ''
 }
 
 /** Toglie il codice dalla coda di un titolo: «Sled · EM 24′ @8» → { nome: 'Sled', codice: 'EM 24′ @8' }. */

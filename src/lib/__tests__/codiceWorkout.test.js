@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  codiceHyrox, nomeHyrox, codiceCorsa, nomeCorsa, descriviWorkout,
+  codiceHyrox, codiceCorsa, codiceWorkout,
   separaCodice, unisciCodice, minutiCodice, strutturaCorsa,
 } from '../codiceWorkout'
 
@@ -63,30 +63,6 @@ describe('codiceHyrox', () => {
   })
 })
 
-describe('nomeHyrox', () => {
-  it('i due esercizi che pesano di più nel lavoro, giri compresi', () => {
-    // Sled Push: 2 giri × 12,5s; Wall Balls: 24 × 45s → Wall Balls primo
-    expect(nomeHyrox([cashIn, emom, forTime])).toBe('Wall Balls & Burpees')
-  })
-
-  it('Cash In e riscaldamento non danno il nome se c è del lavoro', () => {
-    expect(nomeHyrox([cashIn, forTime])).toBe('Sled Push')
-  })
-
-  it('senza blocchi di lavoro guarda tutto', () => {
-    expect(nomeHyrox([cashIn])).toBe('SkiErg')
-  })
-
-  it('«Rest» non è un esercizio', () => {
-    const b = { type: 'AMRAP', params: {}, exercises: [ex('Rest', { meters: '5:00' }), ex('Row', { meters: '250m' })] }
-    expect(nomeHyrox([b])).toBe('Row')
-  })
-
-  it('un blocco di lavoro vuoto si chiama come il suo tipo', () => {
-    expect(nomeHyrox([{ type: 'AMRAP', params: {}, exercises: [] }])).toBe('AMRAP')
-  })
-})
-
 describe('corsa', () => {
   const ripetute = [
     { type: 'warmup', duration: '10 min', intensity: '3' },
@@ -94,25 +70,22 @@ describe('corsa', () => {
     { type: 'cooldown', duration: '10 min', intensity: '3' },
   ]
 
-  it('ripetute: nome dalla prima serie, intensità della fase più dura', () => {
-    expect(nomeCorsa(ripetute)).toBe('Ripetute 8×400m')
+  it('ripetute: intensità della fase più dura', () => {
     expect(codiceCorsa(ripetute)).toMatch(/^RIP \d+′ @9$/)
   })
 
   it('tutta a distanza dichiara i km, non minuti dedotti', () => {
     const lungo = [{ type: 'run', duration: '18 km', intensity: '5' }]
     expect(codiceCorsa(lungo)).toBe('CL 18K @5')
-    expect(nomeCorsa(lungo)).toBe('Lungo 18 km')
   })
 
   it('i km sotto i 10 tengono un decimale con la virgola', () => {
     expect(codiceCorsa([{ type: 'run', duration: '7.5 km' }])).toBe('CL 7,5K')
   })
 
-  it('a tempo dice i minuti, e la zona nel nome', () => {
+  it('a tempo dice i minuti', () => {
     const fondo = [{ type: 'run', duration: '45 min', pace: 'Z2', intensity: '5' }]
     expect(codiceCorsa(fondo)).toBe('CL 45′ @5')
-    expect(nomeCorsa(fondo)).toBe('Corsa Z2')
   })
 
   it('progressivo solo con intensità che salgono davvero', () => {
@@ -123,9 +96,14 @@ describe('corsa', () => {
   })
 })
 
-describe('descriviWorkout', () => {
-  it('Custom non ha né nome né codice: ci pensa il titolo dalla data', () => {
-    expect(descriviWorkout({ category: 'Custom' })).toEqual({ nome: '', codice: '' })
+describe('codiceWorkout', () => {
+  it('sceglie il codice della categoria', () => {
+    expect(codiceWorkout({ category: 'Hyrox', blocks: [emom] })).toBe(codiceHyrox([emom]))
+    expect(codiceWorkout({ category: 'Running', steps: [{ type: 'run', duration: '18 km' }] })).toBe('CL 18K')
+  })
+
+  it('Custom non ha codice: ci pensa il titolo dalla data', () => {
+    expect(codiceWorkout({ category: 'Custom' })).toBe('')
   })
 })
 

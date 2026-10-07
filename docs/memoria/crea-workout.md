@@ -660,6 +660,10 @@ senza la correzione**, quindi quel caso non prende niente.
 
 ## 9-terquadragies. Il nome generato e il codice nel titolo (05/10/2026)
 
+> ⚠️ **Il nome dagli esercizi non c'è più dal 07/10/2026**: Hyrox e Corsa senza
+> nome prendono un nome CASUALE (§9-quinquadragies, sotto). I punti 3 e 5 qui
+> sotto valgono solo per la storia; il codice e i punti 1, 2 e 4 restano veri.
+
 Richiesta del committente: non essere obbligato a dare un nome al workout, e
 leggere a colpo d'occhio cosa contiene. Tutto in `src/lib/codiceWorkout.js`.
 
@@ -733,3 +737,69 @@ sovrascritto niente** — inserisce sempre. Le strade per arrivarci erano tre, t
 Test: `src/pages/__tests__/SalvataggioModifica.test.jsx` (9). Cinque mutazioni, cinque prese.
 
 ---
+
+---
+
+## 9-quinquadragies. Il nome generato dai blocchi, in gergo Hyrox/running (07/10/2026)
+
+Richiesta del committente: il nome dagli esercizi («Wall Balls & Burpees») si
+ripeteva identico ogni volta che si ricreava un workout con gli stessi esercizi.
+Scartati un numero progressivo, la data, settimana + numero, esercizi + data e un
+nome scritto da Gemini. Un primo generatore di parole casuali («Falco
+Implacabile», «Diamante Elettrico») è stato **bocciato lo stesso giorno**: mai
+ripetuto, ma scollegato dall'allenamento. 🔴 **Il nome deve dire che allenamento
+è**: niente parole evocative senza legame con il contenuto.
+
+La soluzione, in `src/lib/nomeCasuale.js`: dal contenuto si ricava un **elenco di
+nomi pertinenti** (`candidatiNome`), in gergo inglese da box e da gruppo di corsa
+(scelta del committente fra italiano, gergo e misto), e un **seme casuale** sceglie
+quale usare.
+
+    Wall Ball Burner · Leg Crusher · Metcon EMOM     (EMOM Wall Balls + Burpees @8)
+    Compromised Sled Push · Sled Push & Run           (Sled + corsa For Time @9)
+    Easy SkiErg · Z2 Engine · SkiErg Flow             (erg AMRAP @5)
+    Hyrox Sim · Race Rehearsal                        (stazioni di gara + corsa)
+    VO2max 400s · 8×400 Repeats · Track Session       (8×400 @9)
+    Threshold 2K · Cruise Intervals                   (5×2 km @7)
+    Long Run Easy · Long 18K · Zone 2 Long            (18 km @5)
+    Zone 2 Run · Easy 45′ · Tempo Run · Progression Run
+
+- **Hyrox**: l'esercizio che pesa di più nei blocchi di lavoro (tempo stimato × giri),
+  il «focus» della sua famiglia (Leg, Engine, Grip, Metcon, Full Body con tre famiglie
+  o più), l'intensità da `rpeAtteso` (≥8 Burner/Grinder/Crusher/Redline/Blast, 6-7
+  Builder/Tempo/Threshold/Session, ≤5 Easy/Z2/Aerobic/Flow) e la struttura del blocco
+  principale (EMOM, AMRAP, Chipper/For Time, Intervals).
+- **Corsa**: ripetute per distanza o tempo della frazione (≤400 m velocità, fino a
+  1200 m VO2max, oltre soglia; frazione a intensità ≤6 → Tempo/Aerobic), progressivo,
+  lungo (≥15 km o ≥75′), poi per intensità massima: ≥8 Race Pace, 6-7 Tempo, sotto Easy.
+- Custom resta «Allenamento libero · lun 5 ott». Il codice in coda non cambia:
+  `descriviWorkout` è diventata `codiceWorkout` e torna solo il codice.
+- Il seme si sceglie all'apertura del builder; **l'elenco segue i blocchi, il seme
+  no**: toccando i blocchi il nome cambia e resta pertinente, a blocchi fermi resta
+  fermo. Il dado 🎲 nel campo Nome (solo a campo vuoto e con dei blocchi) cambia il
+  seme. Senza blocchi il campo dice «Facoltativo · lo scelgo dai blocchi».
+
+### ⚠️ Le cinque cose da sapere prima di rimetterci mano
+1. 🔴 **Corsa più una stazione è «compromised»**: il nome parla della STAZIONE anche
+   se in tempo stimato i chilometri di corsa pesano di più. Senza, Sled + 4×1 km
+   usciva «Run Burner». Con quasi tutte le stazioni di gara (≥6) più la corsa
+   escono solo nomi da simulazione.
+2. 🔴 **Unicità al salvataggio, contro TUTTI i workout** (`nomiGiaUsati`, una lettura
+   di `workouts.title`): se il nome è preso si passa al candidato dopo
+   (`nomeLibero`), e finiti i candidati si numera («Sled Grinder 2»). Se la lettura
+   fallisce si salva lo stesso.
+3. 🔴 **Un nome generato si riconosce perché sta fra i candidati del SUO workout**
+   (`eNomeGenerato`). Riaperto in **modifica** resta quello (`nomeFissato`) finché i
+   blocchi lo giustificano, e sovrascrivendo il workout non conta il proprio nome come
+   «già usato» (`nomeDiPartenza`); in una **copia** o in «Salva come nuovo» se ne
+   prende un altro. Un nome scritto a mano si tiene, con «(Copia)» nelle copie.
+   ⚠️ Cambiare gli elenchi rende «scritti a mano» i nomi già salvati che non vi
+   compaiono più: le copie li erediterebbero con «(Copia)».
+4. I nomi salvati fra il 05 e il 07/10 (esercizi, o le parole casuali bocciate) non
+   sono candidati: riaperti valgono come scritti a mano. Basta svuotare il campo.
+5. `candidatiNome` torna i candidati **sempre nello stesso ordine**: è il seme a dare
+   la varietà. Un ordine che cambiasse a ogni render farebbe saltare il nome.
+
+Test: `src/lib/__tests__/nomeCasuale.test.js` (19), `CodiceTitolo.test.jsx` (5),
+uno aggiornato in `CreaWorkoutBuilder.test.jsx`. Tre mutazioni provate
+(esclusione del proprio nome, cambio di nome se preso, il compromised), tre prese.

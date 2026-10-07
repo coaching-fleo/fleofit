@@ -25,7 +25,7 @@
   (`docs/memoria/app-store.md`).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint al 05/10/2026: `npm test` → **1087 test**, `npm run lint` → **42 problemi**.
+- Test e lint al 07/10/2026: `npm test` → **1160 test**, `npm run lint` → **42 problemi**.
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---
@@ -366,7 +366,9 @@ scrive un titolo, `src/lib/workoutTitle.js` ne **genera e salva** uno nel format
 - Nessuna modifica di schema: `title` resta una stringa normale, quindi le due app restano compatibili.
 
 > ⚠️ **Dal 05/10/2026 il titolo porta anche un CODICE in coda** e il nome è facoltativo
-> per **tutte** le categorie, non più solo per Custom: §9-terquadragies.
+> per **tutte** le categorie, non più solo per Custom: §9-terquadragies. Dal 07/10/2026
+> Hyrox e Corsa senza nome prendono un nome **dai blocchi, in gergo Hyrox/running**,
+> scelto a caso fra quelli pertinenti e mai ripetuto (`src/lib/nomeCasuale.js`, §9-quinquadragies).
 
 ### Event (gara)
 `{ "category": "Event", "isEvent": true, "isAutonomous": true }` — creato dal Calendario.
@@ -581,7 +583,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 |---|---|
 | `Home.jsx` (ramo atleta), `HomeAtletaUI`, `HomeAtletaVuotiUI`, `statistiche.js` | `home-atleta.md` |
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `statisticheCoach.js`, `pausa.js` | `home-coach.md` |
-| `CreateWorkout.jsx`, `CreaWorkoutUI`, `HyroxBlock`, `RunningStepRow`, foglio IA, `codiceWorkout.js`, salvataggio e bozza | `crea-workout.md` |
+| `CreateWorkout.jsx`, `CreaWorkoutUI`, `HyroxBlock`, `RunningStepRow`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, salvataggio e bozza | `crea-workout.md` |
 | `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |

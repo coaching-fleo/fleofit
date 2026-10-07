@@ -93,13 +93,15 @@ describe('lo step 1 fa una domanda sola', () => {
     expect(screen.queryByText(/Serve un nome/)).not.toBeInTheDocument()
   })
 
-  it('senza nome la testata mostra nome e codice generati, e li aggiorna a ogni blocco', async () => {
+  it('senza nome la testata mostra un nome dai blocchi, e il codice li segue', async () => {
     monta()
+    // Senza blocchi non c'è ancora niente da cui ricavare un nome.
+    expect(screen.getByLabelText('Nome del workout')).toHaveAttribute('placeholder', 'Facoltativo · lo scelgo dai blocchi')
     await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
     const testata = () => screen.getByRole('button', { name: 'Modifica nome e data' })
 
     await aggiungiBlocco('EMOM')                 // 1:00 × 10 round, vuoto
-    expect(testata()).toHaveTextContent('EMOM')
+    expect(testata()).toHaveTextContent(/EMOM/)
     expect(document.querySelector('[data-codice]')).toHaveTextContent('EM 10′')
 
     await aggiungiBlocco('AMRAP')                // + 10:00
