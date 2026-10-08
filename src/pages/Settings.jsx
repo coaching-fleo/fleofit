@@ -512,7 +512,11 @@ export default function Settings() {
     if (data?.error) throw new Error(data.error)
     if (error) {
       console.error('Segnalazione non inviata:', error)
-      throw new Error('Invio non riuscito. Riprova tra poco.')
+      // ⚠️ Su un non-2xx (400, 429, 502) supabase-js lascia `data` vuoto e mette
+      // la Response in `error.context`: il messaggio del server sta lì dentro.
+      let messaggio = null
+      try { messaggio = (await error.context?.json?.())?.error } catch { /* resta il generico */ }
+      throw new Error(messaggio || 'Invio non riuscito. Riprova tra poco.')
     }
   }
 

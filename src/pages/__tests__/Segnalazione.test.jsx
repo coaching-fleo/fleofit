@@ -93,6 +93,20 @@ describe('l\'invio', () => {
     expect(screen.getByRole('button', { name: 'Riprova' })).toBeInTheDocument()
   })
 
+  it('🔴 un 429 della funzione arriva con il SUO messaggio, non con quello generico', async () => {
+    // Su una risposta non-2xx supabase-js non riempie `data`: mette la
+    // Response in `error.context`. Leggere solo `data.error` vorrebbe dire che
+    // nessun messaggio del server arriva mai a chi scrive.
+    const errore = Object.assign(new Error('Edge Function returned a non-2xx status code'), {
+      context: { json: async () => ({ error: 'Troppe segnalazioni, riprova fra un\'ora' }) },
+    })
+    finto.supabase.functions.invoke.mockImplementation(() => Promise.resolve({ data: null, error: errore }))
+    const utente = userEvent.setup()
+    montaPagina(<Settings />, { role: 'athlete' })
+    await compila(utente)
+    expect(await screen.findByText('Troppe segnalazioni, riprova fra un\'ora')).toBeInTheDocument()
+  })
+
   it('un errore di rete senza messaggio dice comunque cosa fare', async () => {
     finto.supabase.functions.invoke.mockImplementation(() =>
       Promise.resolve({ data: null, error: new Error('FunctionsFetchError') }))
