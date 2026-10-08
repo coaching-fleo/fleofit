@@ -31,7 +31,7 @@ problema», fra le righe del coach e «Elimina il mio account». Visibile a tutt
    aiuto con il bottone «Attivale», che chiama lo stesso `toggleNotifiche` della pagina.
 3. **Riepilogo** — mostra tipo, risposte, descrizione, numero di immagini e i dati
    tecnici che partono; bottone «Invia». Esito: `vibraSuccesso` + schermata
-   «Grazie, Federico la legge», oppure `vibraErrore` + messaggio + «Riprova».
+   «Grazie per il feedback» (nessun nome, nessuna promessa di risposta — 08/10), oppure `vibraErrore` + messaggio + «Riprova».
 
 Navigazione: «Indietro» fra i passi (la parola esatta, così il tasto indietro di
 Android la trova — `indietroAndroid.js`); al passo 1 il bottone si chiama «Chiudi».

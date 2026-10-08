@@ -180,7 +180,7 @@ fino a 3 screenshot → riepilogo con i dati tecnici in chiaro → invio). Speci
 e piano: `docs/superpowers/specs/2026-10-07-segnalazioni-design.md` e
 `docs/superpowers/plans/2026-10-07-segnalazioni.md`.
 
-### ⚠️ Le sei cose da sapere prima di rimetterci mano
+### ⚠️ Le otto cose da sapere prima di rimetterci mano
 
 1. 🔴 **La mail la manda il SERVER, non il telefono.** Edge Function nuova
    `supabase/functions/segnalazione` → API di Resend. Il compositore di posta del
@@ -211,6 +211,15 @@ e piano: `docs/superpowers/specs/2026-10-07-segnalazioni-design.md` e
    chiudesse sempre farebbe sparire il foglio al tasto indietro di Android a metà
    flusso. La bozza (`fleofit_segnalazione_bozza`: tipo, risposte, descrizione,
    **non** le immagini) resta comunque, e si cancella solo dopo un invio riuscito.
+7. 🔴 **Il foglio non nomina mai una persona e non promette risposte** (decisione del
+   committente, 08/10/2026). Ringrazia e basta: «Grazie per il feedback». La riga
+   dice «Un problema o un'idea per l'app». C'è un test che cerca «Federico» e
+   «rispond» nel testo del foglio. Il `reply_to` della mail resta, ma è solo comodità
+   del coach, non un impegno verso chi scrive.
+8. **Fra un passo e l'altro il contenuto scivola**: `passo-entra` andando avanti,
+   `ritorno-entra` tornando indietro, le stesse classi del builder (già spente da
+   «riduci movimento»). All'apertura niente: entra già il foglio dal basso. Il
+   contenitore ha `key={passo}`, quindi si rimonta e lo scorrimento torna in cima.
 
 ### I file nuovi
 `src/lib/segnalazione.js` (18 test) · `src/lib/immagineRidotta.js` (3) ·

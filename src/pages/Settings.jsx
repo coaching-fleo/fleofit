@@ -677,7 +677,7 @@ export default function Settings() {
           Per TUTTI i ruoli: chi trova i problemi è soprattutto l'atleta. */}
       <Sezione etichetta="Aiuto">
         <RigaAzione icona={LifeBuoy} titolo="Segnala un problema"
-          dettaglio="Arriva direttamente a Federico"
+          dettaglio="Un problema o un'idea per l'app"
           onClick={() => setFoglioSegnalazioneAperto(true)} />
       </Sezione>
 

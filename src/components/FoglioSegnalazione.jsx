@@ -58,7 +58,10 @@ function useInLinea() {
 export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], notificheSpente = false, onAttivaNotifiche }) {
   const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
   const [bozza, setBozza] = useState(bozzaIniziale)
-  const [passo, setPasso] = useState(() => (bozza.tipo ? 2 : 1))
+  const [passo, setPassoGrezzo] = useState(() => (bozza.tipo ? 2 : 1))
+  // Il verso dell'ultimo cambio di passo: decide da che parte entra il nuovo.
+  // `null` all'apertura, perché lì entra già il foglio intero dal basso.
+  const [verso, setVerso] = useState(null)
   const [immagini, setImmagini] = useState([])
   const [inviando, setInviando] = useState(false)
   const [errore, setErrore] = useState(null)
@@ -66,6 +69,12 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
   const inviandoRef = useRef(false)
   const fileRef = useRef(null)
   const online = useInLinea()
+
+  /** Ogni cambio di passo dice il suo verso: avanti entra da destra, indietro da sinistra. */
+  const setPasso = (nuovo, versoNuovo = 'avanti') => {
+    setVerso(versoNuovo)
+    setPassoGrezzo(nuovo)
+  }
 
   const tipo = TIPI.find(t => t.id === bozza.tipo)
   const domande = domandePer(bozza.tipo)
@@ -82,7 +91,7 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
   }
 
   const indietro = () => {
-    if (passo === 2 || passo === 3) { setErrore(null); setPasso(passo - 1) }
+    if (passo === 2 || passo === 3) { setErrore(null); setPasso(passo - 1, 'indietro') }
     else chiudi()
   }
 
@@ -162,11 +171,18 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
           {titolo && <h2 className="text-xl font-black tracking-[-.02em] text-white truncate">{titolo}</h2>}
         </div>
 
-        <div className="overflow-y-auto overscroll-contain hide-scrollbar flex flex-col gap-3 pb-2 touch-pan-y">
+        {/* ⚠️ `key={passo}`: il contenitore si rimonta a ogni passo, così
+            l'animazione riparte e lo scorrimento torna in cima. Le due classi
+            sono quelle del builder (src/index.css), già spente da «riduci
+            movimento». Solo il passo che ENTRA si muove: quello che esce si
+            smonta nello stesso fotogramma, come nel builder. */}
+        <div key={passo} data-passo={passo}
+          className={`overflow-y-auto overscroll-contain hide-scrollbar flex flex-col gap-3 pb-2 touch-pan-y ${
+            verso === 'avanti' ? 'passo-entra' : verso === 'indietro' ? 'ritorno-entra' : ''}`}>
           {passo === 1 && (
             <>
               <p className="text-[13.5px] text-gray-400 leading-relaxed">
-                Arriva direttamente a Federico. Scegli di cosa si tratta: ti chiediamo solo quello che serve.
+                Raccontaci cosa non va. Scegli di cosa si tratta: ti chiediamo solo quello che serve.
               </p>
               <div className="flex flex-col gap-2">
                 {TIPI.map(t => {
@@ -321,10 +337,7 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
                 className="w-14 h-14 rounded-full bg-green-500/[.14] border border-green-500/30 text-green-500 flex items-center justify-center">
                 <Check size={26} />
               </span>
-              <p className="text-[19px] font-black tracking-tight text-white">Grazie, Federico la legge</p>
-              <p className="text-[13.5px] text-gray-400 leading-relaxed max-w-xs">
-                Se serve ti risponde all'indirizzo email con cui sei entrato.
-              </p>
+              <p className="text-[19px] font-black tracking-tight text-white">Grazie per il feedback</p>
             </div>
           )}
         </div>

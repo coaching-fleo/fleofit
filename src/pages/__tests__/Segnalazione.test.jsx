@@ -72,7 +72,7 @@ describe('l\'invio', () => {
     const utente = userEvent.setup()
     montaPagina(<Settings />, { role: 'athlete' })
     await compila(utente)
-    expect(await screen.findByText('Grazie, Federico la legge')).toBeInTheDocument()
+    expect(await screen.findByText('Grazie per il feedback')).toBeInTheDocument()
     expect(finto.supabase.functions.invoke).toHaveBeenCalledTimes(1)
     const [nome, { body }] = finto.supabase.functions.invoke.mock.calls[0]
     expect(nome).toBe('segnalazione')

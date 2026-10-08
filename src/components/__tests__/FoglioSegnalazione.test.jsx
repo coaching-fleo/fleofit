@@ -159,9 +159,53 @@ describe('l\'invio', () => {
     monta()
     await finoAlRiepilogo(utente)
     await utente.click(screen.getByRole('button', { name: 'Invia' }))
-    expect(await screen.findByText('Grazie, Federico la legge')).toBeInTheDocument()
+    expect(await screen.findByText('Grazie per il feedback')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Chiudi' })).toBeInTheDocument()
     await waitFor(() => expect(window.localStorage.getItem(CHIAVE_BOZZA)).toBeNull())
+  })
+})
+
+describe('il testo', () => {
+  it('non nomina mai una persona, e non promette una risposta', async () => {
+    // Decisione del committente (08/10/2026): il foglio ringrazia e basta.
+    // Nessun nome del coach, e nessun «ti rispondiamo»: non succederà.
+    const utente = userEvent.setup()
+    monta()
+    expect(document.body.textContent).not.toMatch(/Federico/)
+    await finoAlRiepilogo(utente)
+    await utente.click(screen.getByRole('button', { name: 'Invia' }))
+    await screen.findByText('Grazie per il feedback')
+    expect(document.body.textContent).not.toMatch(/Federico|rispond/i)
+  })
+})
+
+describe('il movimento fra i passi', () => {
+  // Il passo che arriva entra da destra andando avanti e da sinistra tornando
+  // indietro: le stesse due classi del builder (src/index.css), che con
+  // «riduci movimento» si spengono da sole.
+  const contenuto = () => screen.getByRole('dialog').querySelector('[data-passo]')
+
+  it('andando avanti il passo entra da destra', async () => {
+    const utente = userEvent.setup()
+    monta()
+    await utente.click(screen.getByRole('button', { name: /Notifiche/ }))
+    expect(contenuto()).toHaveAttribute('data-passo', '2')
+    expect(contenuto()).toHaveClass('passo-entra')
+  })
+
+  it('tornando indietro entra da sinistra', async () => {
+    const utente = userEvent.setup()
+    monta()
+    await utente.click(screen.getByRole('button', { name: /Notifiche/ }))
+    await utente.click(screen.getByRole('button', { name: 'Indietro' }))
+    expect(contenuto()).toHaveAttribute('data-passo', '1')
+    expect(contenuto()).toHaveClass('ritorno-entra')
+  })
+
+  it("all'apertura il primo passo non scivola: entra già il foglio", () => {
+    monta()
+    expect(contenuto()).not.toHaveClass('passo-entra')
+    expect(contenuto()).not.toHaveClass('ritorno-entra')
   })
 })
 
