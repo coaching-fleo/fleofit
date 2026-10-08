@@ -101,6 +101,13 @@ export function useTouchDrag({ onReorder }) {
       // Ignora se il tocco è su un button/input/select figlio
       if (e.target.closest('button, input, select, textarea, a')) return
 
+      // 🔴 Un tocco nato dentro un PORTALE non è un tocco su questo elemento.
+      // In React gli eventi risalgono l'albero dei componenti, non il DOM: il
+      // righello del foglio dei parametri (createPortal su body) arrivava fin
+      // qui, e tenendo il dito fermo 250ms prima di trascinarlo partiva il
+      // riordino del blocco — che blocca ogni scorrimento della pagina.
+      if (!e.currentTarget.contains(e.target)) return
+
       // Impedisce che il drag di un elemento figlio (es. esercizio) inneschi anche il drag del genitore (es. blocco)
       e.stopPropagation()
 

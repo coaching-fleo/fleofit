@@ -27,7 +27,7 @@ import { caricoPrevisto, collocazioneCarico } from '../lib/previsione'
 import {
   TestataCrea, CardCategoria, RigaCampo, RiepilogoWorkout, SpinaBlocco, DurataBlocco,
   NumeroEsercizio, CardIA, BottoneGhost, BarraAzioni, CtaPrimaria, BottoneQuadrato,
-  Stepper, RigaUltimaVolta, RuotaValori, RigaTesto,
+  RigaUltimaVolta, RigaTesto,
 } from '../components/CreaWorkoutUI'
 import { chiudiTastieraSuInvio, useTastieraAperta } from '../useTastiera'
 import { useBottomSheet } from '../useBottomSheet'
@@ -35,6 +35,8 @@ import AudioVisualizer from '../components/AudioVisualizer'
 import { ThinkingOrb } from 'thinking-orbs'
 import { BorderBeam } from 'border-beam'
 import { scriviJson } from '../lib/offlineQueue'
+import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
+import { SCALE, grandezza, testoMisura } from '../lib/scaleMisura'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -78,52 +80,7 @@ const isHybrid = (name) => HYBRID_EXERCISES.includes(name)
 
 const isDistance = (name) => isErgo(name) || isSled(name) || DISTANCE_EXERCISES.includes(name)
 
-const METERS_OPTIONS = [
-   '-', 'Max','50m','100m','150m','200m','250m','300m','400m','500m',
-  '600m','750m','1000m','1500m','2000m'
-]
-const HYBRID_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 50 }, (_, i) => `${(i + 1) * 10}m`)]
-const SLED_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 30 }, (_, i) => `${(i + 1) * 10}m`)]
-const CARRY_METERS_OPTIONS = ['-', 'Max', ...Array.from({ length: 50 }, (_, i) => `${(i + 1) * 10}m`)]
-const REPS_OPTIONS = ['-', 'Max', ...Array.from({ length: 100 }, (_, i) => `${i + 1}`)]
-const TIME_OPTIONS = [
-  '-',
-  ...Array.from({ length: 120 }, (_, i) => { // Fino a 10:00 in scatti da 5 sec
-    const s = (i + 1) * 5;
-    return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
-  }),
-  ...Array.from({ length: 220 }, (_, i) => { // Da 10:30 a 120:00 in scatti da 30 sec
-    const s = 600 + (i + 1) * 30;
-    return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
-  })
-]
-
-const REST_TIME_OPTIONS = [
-  '-',
-  ...Array.from({ length: 90 }, (_, i) => { // Fino a 15:00 in scatti da 10 sec
-    const s = (i + 1) * 10;
-    return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
-  })
-]
-
-const ROUNDS_OPTIONS = Array.from({ length: 40 }, (_, i) => `${i + 1}`)
-const KG_OPTIONS = [
-  '-',
-  'Nessun peso',
-  ...Array.from({ length: 300 }, (_, i) => `${i + 1} kg`),
-  ...[4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32].map(w => `2x${w} kg`)
-]
-
 // ─── COSTANTI RUNNING ─────────────────────────────────────────
-const RUN_TIME_OPTIONS = [
-  ...Array.from({ length: 60 }, (_, i) => `${i + 1} min`),
-  ...Array.from({ length: 12 }, (_, i) => `${(i + 1) * 5} sec`)
-]
-
-const RUN_DISTANCE_OPTIONS = [
-  ...Array.from({ length: 10 }, (_, i) => `${(i + 1) * 10}m`),
-  '150m', '200m', '250m', '300m', '400m', '500m', '600m', '800m', '1 km', '1.5 km', '2 km', '3 km', '4 km', '5 km', '10 km', '15 km', '21 km', '42 km'
-]
 const RUN_PACE_OPTIONS = [
   'Libero', 'Camminata', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out', 'Gara',
   ...Array.from({ length: 96 }, (_, i) => {
@@ -131,8 +88,6 @@ const RUN_PACE_OPTIONS = [
     return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')} /km`;
   })
 ]
-
-const SPEED_OPTIONS = ['-', ...Array.from({ length: 41 }, (_, i) => `${(5 + i * 0.5).toFixed(1)} km/h`)]
 
 const ERGO_PACE_OPTIONS = [
   '-', 'Libero', 'Gara Singola', 'Gara Doppia', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out',
@@ -143,56 +98,69 @@ const ERGO_PACE_OPTIONS = [
   ...Array.from({ length: 17 }, (_, i) => `${40 + i * 5} RPM`)
 ]
 
-const MAX_PACE_OPTIONS = ['-', ...RUN_PACE_OPTIONS]
+// ─── LE SCORCIATOIE DI RIPIEGO ────────────────────────────────────────────
+// Sotto il righello il foglio misure mostra i valori che il coach ha usato
+// davvero per QUELL'esercizio (lo storico, vedi `rapidiDi`). Queste servono
+// solo quando lo storico non dice niente — un esercizio mai programmato, un
+// parametro di blocco. Quattro e non cinque: è quante pillole stanno su una
+// riga a 375px senza andare a capo.
+// ⚠️ Niente pesi qui: i 6/9/14/20 kg erano i pesi della Wall Ball, proposti
+// anche sullo Squat. Senza storico, sul peso non si propone niente.
+const RAPIDI_REPS = ['10', '15', '20', '30']
+const RAPIDI_METRI = ['100m', '250m', '500m', '1000m']
+const RAPIDI_DURATA = ['1:00', '2:00', '3:00', '5:00']
+const RAPIDI_REST = ['0:30', '1:00', '1:30', '2:00']
+const RAPIDI_LAVORO = ['0:20', '0:30', '0:40', '1:00']
+const RAPIDI_INTERVALLO = ['0:30', '1:00', '1:30', '2:00']
+const RAPIDI_AMRAP = ['8:00', '10:00', '12:00', '20:00']
+const RAPIDI_ROUNDS = ['3', '5', '8', '10']
 
-const RUN_REPEAT_ROUNDS_OPTIONS = Array.from({ length: 30 }, (_, i) => `${i + 1}`)
-
-// ─── VALORI A PORTATA DI POLLICE ──────────────────────────────────────────
-// I «quick value» degli Stepper (§3d del redesign): non sono un sottoinsieme
-// casuale delle liste complete, sono i valori che il coach usa davvero. Le liste
-// intere restano — servono al passo del meno/più e alla digitazione — ma non si
-// scorrono più alla cieca.
-const RAPIDI_REPS = ['10', '15', '20', '30', '50']
-const RAPIDI_KG = ['-', '6 kg', '9 kg', '14 kg', '20 kg']
-const RAPIDI_METRI = ['-', '100m', '250m', '500m', '1000m']
-const RAPIDI_DURATA = ['1:00', '2:00', '3:00', '5:00', '10:00']
-const RAPIDI_REST = ['0:30', '1:00', '1:30', '2:00', '3:00']
-const RAPIDI_LAVORO = ['0:20', '0:30', '0:40', '1:00', '1:30']
-const RAPIDI_INTERVALLO = ['0:30', '1:00', '1:30', '2:00', '3:00']
-const RAPIDI_AMRAP = ['5:00', '8:00', '10:00', '12:00', '20:00']
-const RAPIDI_ROUNDS = ['3', '5', '8', '10', '20']
-
-// ─── I GENERI DEL PASSO ───────────────────────────────────────────────────
-// La scelta del passo ha DUE domande, non una: di che tipo di passo si parla, e
-// poi quale valore. Il primo è un elenco corto da vedere tutto insieme, il
-// secondo una scala fitta su cui si aggiusta per gradi — e sono due controlli
-// diversi (vedi la nota lunga su `RuotaValori`).
+// ─── IL PASSO CHE NON È UNA SCALA ─────────────────────────────────────────
+// «Z3», «All out», «Gara Singola» non stanno su un righello: sono poche voci da
+// vedere tutte insieme, e il foglio misure le mostra come pillole. I ritmi e
+// le cadenze invece sì, e quelli vivono in src/lib/scaleMisura.js.
 //
-// ⚠️ I generi sono DERIVATI dalle costanti con dei `filter`, non ricopiati:
-// i valori ammessi restano quelli delle liste, e aggiungerne uno lo fa comparire
-// qui da solo. L'etichetta perde il suffisso perché lo dice già l'intestazione
-// del genere, ma il valore scelto resta INTERO: è quello che finisce in
-// `workouts.sections`, su un database condiviso con la web app.
-const voce = (v, etichetta) => ({ valore: v, etichetta: etichetta ?? v })
-const senza = (suffisso) => (v) => voce(v, v.replace(suffisso, '').trim())
-const NIENTE = voce('-', '—')
+// ⚠️ Derivate dalle costanti con un `filter`, non ricopiate: i valori ammessi
+// restano quelli delle liste, e sono le stringhe che la web app sa leggere.
+const SENSAZIONI_ERGO = ERGO_PACE_OPTIONS
+  .filter(v => v !== '-' && !v.includes('/500m') && !v.endsWith('RPM'))
+  .map(v => ({ valore: v, etichetta: v }))
+const SENSAZIONI_CORSA = RUN_PACE_OPTIONS
+  .filter(v => !v.includes('/km'))
+  .map(v => ({ valore: v, etichetta: v }))
 
-const GENERI_PASSO_ERGO = [
-  { id: 'sensazione', titolo: 'A sensazione', opzioni: [NIENTE, ...ERGO_PACE_OPTIONS.filter(v => v !== '-' && !v.includes('/500m') && !v.endsWith('RPM')).map(v => voce(v))] },
-  { id: 'ritmo', titolo: 'Ritmo', unita: '/500m', opzioni: [NIENTE, ...ERGO_PACE_OPTIONS.filter(v => v.includes('/500m')).map(senza('/500m'))] },
-  { id: 'cadenza', titolo: 'Cadenza', unita: 'RPM', opzioni: [NIENTE, ...ERGO_PACE_OPTIONS.filter(v => v.endsWith('RPM')).map(senza('RPM'))] },
-]
+/**
+ * Il modo del passo di un esercizio già scritto: ritmo, cadenza, velocità o
+ * «a sensazione» (che per la corsa si chiama zona). Senza passo, ritmo.
+ */
+const modoDelPasso = (ex) => {
+  if (ex?.speed && ex.speed !== '-') return 'velocita'
+  const v = ex?.ergoPace
+  if (!v || v === '-') return 'ritmo'
+  if (v.includes('/km') || v.includes('/500m')) return 'ritmo'
+  if (v.endsWith('RPM')) return 'cadenza'
+  return ex?.name === 'Run' ? 'zona' : 'sensazione'
+}
 
-const GENERI_PASSO_CORSA = [
-  { id: 'sensazione', titolo: 'A sensazione', opzioni: [NIENTE, ...RUN_PACE_OPTIONS.filter(v => !v.includes('/km')).map(v => voce(v))] },
-  { id: 'ritmo', titolo: 'Ritmo', unita: '/km', opzioni: [NIENTE, ...RUN_PACE_OPTIONS.filter(v => v.includes('/km')).map(senza('/km'))] },
-]
+/** «Senza peso» ha avuto due nomi nel tempo: "-" e "Nessun peso". */
+const senzaPeso = (kg) => !kg || kg === '-' || kg === 'Nessun peso'
 
-const GENERI_VELOCITA = [
-  { id: 'velocita', titolo: 'Velocità', unita: 'km/h', opzioni: [NIENTE, ...SPEED_OPTIONS.filter(v => v !== '-').map(senza('km/h'))] },
-]
+/** I campi di un esercizio di cui si contano i valori per le scorciatoie. */
+const CAMPI_RAPIDI = ['reps', 'meters', 'kg', 'exTime', 'ergoPace', 'speed']
 
-const RAPIDI_METRI_CORTI = ['-', '20m', '50m', '100m', '200m']
+/**
+ * Un valore dello storico nella forma del foglio misure, o `null` se non è
+ * una misura. Il peso è salvato nudo ("9", "2x24") e il foglio lo tiene con
+ * l'unità ("9 kg"), come lo teneva lo Stepper.
+ */
+const valoreRapido = (campoEx, v) => {
+  const s = String(v ?? '').trim()
+  if (!s || s === '-' || s === 'Max' || s === 'Nessun peso' || s === 'Libero') return null
+  if (campoEx === 'kg') return /kg$/i.test(s) ? s : `${s} kg`
+  return s
+}
+
+const RAPIDI_METRI_CORTI = ['20m', '50m', '100m', '200m']
 
 /** Quanti workout recenti si scandagliano per la riga «ultima volta». */
 const STORICO_WORKOUT = 40
@@ -213,23 +181,6 @@ const CATEGORIE = [
 ]
 const ICONA_CATEGORIA = { Hyrox: Dumbbell, Running: Timer, Custom: FileText }
 const categoriaCorrente = (id) => CATEGORIE.find(c => c.id === id) || CATEGORIE[0]
-
-/**
- * Il meno e il più si muovono DENTRO la lista completa, non su un numero.
- *
- * È la ragione per cui un solo componente basta a reps, kg, tempi e passi:
- * i passi ("2:00" → "2:05", "9 kg" → "10 kg", "Z2" → "Z3") sono già codificati
- * nell'ordine delle liste esistenti, che restano la fonte dei valori ammessi.
- * Un `value + 1` avrebbe funzionato solo sui numeri interi.
- */
-const passoInLista = (lista, valore, direzione) => {
-  if (!lista || lista.length === 0) return valore
-  const i = lista.findIndex(o => String(o) === String(valore))
-  if (i === -1) return lista[0]
-  const prossimo = i + direzione
-  if (prossimo < 0 || prossimo >= lista.length) return valore
-  return lista[prossimo]
-}
 
 /**
  * Il dettaglio di un esercizio in una riga ("500m @ 1:52 · 9kg").
@@ -266,63 +217,6 @@ const moveElement = (list, from, to) => {
   const [moved] = copy.splice(from, 1)
   copy.splice(to, 0, moved)
   return copy
-}
-
-// ─── SCROLL PICKER ────────────────────────────────────────────
-function ScrollPicker({ options = [], value, onChange, label, type, isRun }) {
-  const displayOptions = type === 'time' && (!options || options.length === 0) ? TIME_OPTIONS : options || []
-  const containerRef = useRef(null)
-  const [isScrolling, setIsScrolling] = useState(false)
-  const scrollTimeout = useRef(null)
-  const activeTextColor = isRun ? 'text-running' : 'text-brand'
-  const activeBorderColor = isRun ? 'border-running/25' : 'border-brand/25'
-
-  useEffect(() => {
-    const index = displayOptions.findIndex(opt => String(opt) === String(value))
-    if (index !== -1 && containerRef.current && !isScrolling) {
-       containerRef.current.scrollTop = index * 40
-    }
-  }, [value, isScrolling, displayOptions])
-
-  const handleScroll = () => {
-    setIsScrolling(true)
-    clearTimeout(scrollTimeout.current)
-    
-    const el = containerRef.current
-    if (!el) return
-    
-    const index = Math.round(el.scrollTop / 40)
-    if (displayOptions[index] !== undefined && String(displayOptions[index]) !== String(value)) {
-      onChange(displayOptions[index])
-      battito()
-    }
-
-    scrollTimeout.current = setTimeout(() => {
-      setIsScrolling(false)
-    }, 150)
-  }
-
-  return (
-    <div className="flex flex-col gap-1">
-      {label && <p className="text-gray-400 text-xs">{label}</p>}
-      <div 
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="relative h-36 overflow-y-scroll snap-y snap-mandatory bg-[#0B0B0B] rounded-xl border border-[#383838] hide-scrollbar"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-        <div className="py-[52px]">
-          {displayOptions.map(opt => (
-            <div key={opt} onClick={() => onChange(opt)}
-              className={`snap-center h-10 flex items-center justify-center text-sm cursor-pointer select-none transition-colors
-                ${String(value) === String(opt) ? `${activeTextColor} font-bold text-base` : 'text-gray-400 hover:text-gray-400'}`}>
-              {opt}
-            </div>
-          ))}
-        </div>
-        <div className={`pointer-events-none absolute inset-x-4 top-[52px] h-10 border-y ${activeBorderColor} rounded`} />
-      </div>
-    </div>
-  )
 }
 
 function BlockPickerModal({ onAdd, onClose }) {
@@ -1064,9 +958,13 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   const [intensity, setIntensity] = useState(initialExercise?.intensity || '5')
   const [notes, setNotes] = useState(initialExercise?.notes || '')
 
-  // Quale parametro è aperto sulla tastiera. Uno solo alla volta: due campi in
-  // digitazione insieme vorrebbero dire due autoFocus che si contendono il fuoco.
-  const [digitando, setDigitando] = useState(null)
+  // Quale scheda del foglio misure è aperta. Se non c'è più (l'esercizio ibrido
+  // è passato da ripetizioni a distanza) si torna alla prima.
+  const [attiva, setAttiva] = useState(null)
+  // Che tipo di passo si sta scrivendo. Si legge dal valore quando c'è; finché
+  // il valore è "-" ricorda la pillola toccata — senza, scegliere «Cadenza» su
+  // un passo vuoto non cambierebbe niente a schermo.
+  const [modoPasso, setModoPasso] = useState(() => modoDelPasso(initialExercise))
 
   // ── «Ultima volta» ────────────────────────────────────────────────────────
   // I valori dell'ultima volta che questo esercizio è stato programmato. È il
@@ -1079,6 +977,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   // la scansione del jsonb si fa qui, su un numero di righe deliberatamente
   // piccolo. Se fallisce non succede niente: la riga semplicemente non compare.
   const [ultimi, setUltimi] = useState({})
+  const [frequenti, setFrequenti] = useState({})
   useEffect(() => {
     let vivo = true
     const carica = async () => {
@@ -1090,14 +989,28 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
           .limit(STORICO_WORKOUT)
         if (!vivo || error || !Array.isArray(data)) return
         const mappa = {}
+        const conteggi = {}
         for (const w of data) {
           for (const b of (w?.sections?.blocks || [])) {
             for (const ex of (b?.exercises || [])) {
-              if (ex?.name && !mappa[ex.name]) mappa[ex.name] = ex
+              if (!ex?.name) continue
+              if (!mappa[ex.name]) mappa[ex.name] = ex
+              // Quante volte ogni valore è stato programmato: le scorciatoie
+              // sotto il righello sono i valori che il coach USA per quel
+              // movimento, non una lista uguale per tutti — i 6, 9 e 14 kg
+              // della Wall Ball proposti anche sullo Squat erano il difetto.
+              const c = (conteggi[ex.name] ||= {})
+              for (const campoEx of CAMPI_RAPIDI) {
+                const v = valoreRapido(campoEx, ex[campoEx])
+                if (!v) continue
+                const perCampo = (c[campoEx] ||= {})
+                perCampo[v] = (perCampo[v] || 0) + 1
+              }
             }
           }
         }
         setUltimi(mappa)
+        setFrequenti(conteggi)
       } catch (e) {
         // Un catch muto qui ha già prodotto due guasti invisibili in questo
         // progetto (CLAUDE.md §9-quater): la riga è facoltativa, il log no.
@@ -1119,33 +1032,136 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     if (ultimaVolta.speed) setSpeed(ultimaVolta.speed)
     setKg(ultimaVolta.kg ? `${ultimaVolta.kg} kg` : '-')
     if (ultimaVolta.intensity) setIntensity(ultimaVolta.intensity)
+    // I modi seguono i valori, o il foglio mostrerebbe la scheda sbagliata:
+    // un ibrido riusato «a distanza» resterebbe sulle ripetizioni vuote.
+    if (ultimaVolta.meters && ultimaVolta.meters !== '-') setHybridMode('distance')
+    else if (ultimaVolta.reps && ultimaVolta.reps !== '-') setHybridMode('reps')
+    setRunPaceMode(ultimaVolta.speed && ultimaVolta.speed !== '-' ? 'speed' : 'pace')
+    setModoPasso(modoDelPasso(ultimaVolta))
   }
 
-  /**
-   * Un parametro che è una TASSONOMIA e non una scala — passo, velocità.
-   * La riga mostra il valore, il tocco apre l'elenco intero raggruppato.
-   */
-  const scelta = (chiave, { etichetta, generi, valore, set }) => (
-    <RuotaValori key={chiave} etichetta={etichetta} valore={valore} generi={generi} onChange={set} />
-  )
+  /** Le scorciatoie di un campo: i valori più usati per questo esercizio, o un ripiego. */
+  const rapidiDi = (campoEx, ripiego = []) => {
+    const conteggio = frequenti[selected]?.[campoEx]
+    if (!conteggio) return ripiego
+    return Object.entries(conteggio)
+      .sort((x, y) => y[1] - x[1])
+      .slice(0, 4)
+      .map(([v]) => v)
+      .sort((x, y) => (grandezza(x) ?? 0) - (grandezza(y) ?? 0))
+  }
 
-  /**
-   * Un parametro. Non è un componente ma una funzione che compone JSX: definire
-   * un componente dentro un altro lo rimonterebbe a ogni render, e con lui il
-   * campo di testo aperto sulla tastiera.
-   */
-  const campo = (chiave, { etichetta, lista, rapidi, valore, set, unita }) => (
-    <Stepper
-      etichetta={etichetta}
-      valore={valore}
-      unitaPredefinita={unita}
-      opzioni={rapidi}
-      onChange={set}
-      onPasso={(direzione) => set(passoInLista(lista, valore, direzione))}
-      inDigitazione={digitando === chiave}
-      onDigita={() => setDigitando(digitando === chiave ? null : chiave)}
-    />
-  )
+  // ── Le schede del foglio misure, una per campo ──────────────────────────
+  // Ogni funzione descrive UNA scheda: quale scala, quali scorciatoie, quali
+  // pillole. Quali schede ha un esercizio lo decide `misure` più sotto, con
+  // le stesse regole del builder di prima (ergometro, slitta, ibrido…).
+  const pillolaMax = (valore, set) =>
+    ({ id: 'max', titolo: 'Max', attiva: valore === 'Max', onClick: () => set(valore === 'Max' ? '-' : 'Max') })
+
+  // Un esercizio ibrido (Burpees Broad Jumps, affondi…) si misura a
+  // ripetizioni O a distanza: due pillole sopra il numero, al posto del
+  // segmento con le emoji. Cambiare modo svuota l'altro campo, come prima.
+  const modiIbrido = () => isHybrid(selected) ? [
+    { id: 'reps', titolo: 'Ripetizioni', attiva: hybridMode === 'reps', onClick: () => { setHybridMode('reps'); setMeters('-') } },
+    { id: 'distanza', titolo: 'Distanza', attiva: hybridMode === 'distance', onClick: () => { setHybridMode('distance'); setReps('-') } },
+  ] : []
+
+  const vistaRipetizioni = () => ({
+    chiave: 'reps', etichetta: 'Ripetizioni', scala: 'ripetizioni', valore: reps, onChange: setReps,
+    rapidi: rapidiDi('reps', RAPIDI_REPS), pillole: [...modiIbrido(), pillolaMax(reps, setReps)],
+  })
+
+  const vistaMetri = (ripiego) => ({
+    chiave: 'meters', etichetta: 'Distanza', scala: 'metri', valore: meters, onChange: setMeters,
+    rapidi: rapidiDi('meters', ripiego), pillole: [...modiIbrido(), pillolaMax(meters, setMeters)],
+  })
+
+  const vistaPeso = () => {
+    const doppio = /^2x/i.test(kg)
+    const senza = senzaPeso(kg)
+    const numero = parseFloat(String(kg).replace(/^2x/i, ''))
+    return {
+      chiave: 'kg', etichetta: 'Peso', valore: senza ? '-' : kg, onChange: setKg,
+      scala: doppio ? 'pesoDoppio' : 'peso',
+      rapidi: rapidiDi('kg').filter(v => /^2x/i.test(v) === doppio),
+      // «Due pesi» è il «2x24 kg» di prima: due manubri o due kettlebell
+      // uguali. Passando da uno a due si tiene il numero, quando ha senso.
+      pillole: [
+        { id: 'uno', titolo: 'Un peso', attiva: !senza && !doppio,
+          onClick: () => setKg(doppio && Number.isFinite(numero) ? `${numero} kg` : SCALE.peso.partenza) },
+        { id: 'due', titolo: 'Due pesi', attiva: doppio,
+          onClick: () => setKg(!senza && Number.isInteger(numero) && numero <= 50 ? `2x${numero} kg` : SCALE.pesoDoppio.partenza) },
+        { id: 'senza', titolo: 'Senza peso', attiva: senza, onClick: () => setKg('-') },
+      ],
+    }
+  }
+
+  const vistaDurata = () => ({
+    chiave: 'exTime', etichetta: 'Durata', scala: 'tempo', valore: exTime, onChange: setExTime,
+    rapidi: rapidiDi('exTime', RAPIDI_DURATA),
+  })
+
+  // Il Rest tiene la sua durata in `meters` (vedi la nota su `durataEsercizio`
+  // in src/lib/stimaWorkout.js): la scheda si chiama Durata ma scrive lì.
+  const vistaRecupero = () => ({
+    chiave: 'meters', etichetta: 'Durata', scala: 'recupero', valore: meters, onChange: setMeters,
+    rapidi: rapidiDi('meters', RAPIDI_REST),
+  })
+
+  /** Le pillole dei modi del passo. Cambiare modo svuota il valore: un «Z3» non è un ritmo. */
+  const pillolaModo = (id, titolo, svuota) => ({
+    id, titolo, attiva: modoPasso === id,
+    onClick: () => { if (modoPasso !== id) { setModoPasso(id); svuota() } },
+  })
+  const pillolaTogli = (valore, set) => (valore && valore !== '-')
+    ? [{ id: 'togli', titolo: 'Nessuno', attiva: false, onClick: () => set('-') }] : []
+
+  const vistaPassoErgo = () => {
+    const base = {
+      chiave: 'ergoPace', etichetta: 'Passo', valore: ergoPace, onChange: setErgoPace,
+      pillole: [
+        pillolaModo('ritmo', 'Ritmo', () => setErgoPace('-')),
+        pillolaModo('cadenza', 'Cadenza', () => setErgoPace('-')),
+        pillolaModo('sensazione', 'Sensazione', () => setErgoPace('-')),
+        ...pillolaTogli(ergoPace, setErgoPace),
+      ],
+    }
+    if (modoPasso === 'cadenza') return { ...base, scala: 'cadenza', rapidi: rapidiDi('ergoPace').filter(v => /RPM$/.test(v)) }
+    if (modoPasso === 'sensazione') return { ...base, scelte: SENSAZIONI_ERGO }
+    return { ...base, scala: 'passoErgo', rapidi: rapidiDi('ergoPace').filter(v => v.includes('/500m')) }
+  }
+
+  // La corsa dentro un workout Hyrox: ritmo, zona o velocità. La velocità
+  // scrive in `speed` e non in `ergoPace` — è il «Passo | Velocità» di prima.
+  const vistaPassoCorsa = () => {
+    const aPasso = () => { setRunPaceMode('pace'); setSpeed('-'); setErgoPace('-') }
+    const pillole = [
+      pillolaModo('ritmo', 'Ritmo', aPasso),
+      pillolaModo('zona', 'Zona', aPasso),
+      pillolaModo('velocita', 'Velocità', () => { setRunPaceMode('speed'); setErgoPace('-') }),
+    ]
+    if (modoPasso === 'velocita') {
+      return { chiave: 'speed', etichetta: 'Velocità', scala: 'velocita', valore: speed, onChange: setSpeed,
+        rapidi: rapidiDi('speed'), pillole: [...pillole, ...pillolaTogli(speed, setSpeed)] }
+    }
+    const base = { chiave: 'ergoPace', etichetta: 'Passo', valore: ergoPace, onChange: setErgoPace,
+      pillole: [...pillole, ...pillolaTogli(ergoPace, setErgoPace)] }
+    if (modoPasso === 'zona') return { ...base, scelte: SENSAZIONI_CORSA }
+    return { ...base, scala: 'passoCorsa', rapidi: rapidiDi('ergoPace').filter(v => v.includes('/km')) }
+  }
+
+  // Le stesse regole del builder di prima, ramo per ramo: cambia il gesto,
+  // non quali campi ha un esercizio né dove finiscono.
+  const misure = !selected ? [] : workoutType === 'Interval'
+    ? [vistaDurata(), isErgo(selected) ? vistaPassoErgo() : selected === 'Run' ? vistaPassoCorsa() : vistaPeso()]
+    : isErgo(selected) ? [vistaMetri(RAPIDI_METRI), vistaPassoErgo()]
+    : selected === 'Run' ? [vistaMetri(RAPIDI_METRI), vistaPassoCorsa()]
+    : selected === 'Rest' ? [vistaRecupero()]
+    : isHybrid(selected) ? [hybridMode === 'distance' ? vistaMetri(RAPIDI_METRI_CORTI) : vistaRipetizioni(), vistaPeso()]
+    : (isSled(selected) || isCarry(selected)) ? [vistaMetri(RAPIDI_METRI_CORTI), vistaPeso()]
+    : isDistance(selected) ? [vistaMetri(RAPIDI_METRI), vistaPeso()]
+    : [vistaRipetizioni(), vistaPeso()]
+  const schedaAttiva = misure.some(m => m.chiave === attiva) ? attiva : misure[0]?.chiave
 
   // Rifiltrare 120 esercizi a ogni carattere non è il costo vero, ma renderizzarli
   // sì: la lista non aveva alcun limite, quindi ogni tasto premuto ridisegnava
@@ -1162,7 +1178,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   const nascosti = filtered.length - visibili.length
   const isCustom = search && !HYROX_EXERCISES.find(e => e.toLowerCase() === search.toLowerCase())
 
-  const handleSelect = (name) => setSelected(name)
+  const handleSelect = (name) => { setSelected(name); setAttiva(null) }
 
   const handleConfirm = () => {
     if (!selected) return
@@ -1245,113 +1261,11 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {isHybrid(selected) && (
-                <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] mb-1">
-                  <div 
-                    className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
-                      hybridMode === 'reps' ? 'translate-x-0' : 'translate-x-full'
-                    }`}
-                  />
-                  <button 
-                    type="button"
-                    onClick={() => { if (hybridMode !== 'reps') vibraScelta(); setHybridMode('reps'); setMeters('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'reps' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
-                  >
-                    🔁 Reps
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => { if (hybridMode !== 'distance') vibraScelta(); setHybridMode('distance'); setReps('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${hybridMode === 'distance' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
-                  >
-                    📏 Distanza
-                  </button>
-                </div>
-              )}
-
-              {selected === 'Run' && (
-                <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] mb-1">
-                  <div 
-                    className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
-                      runPaceMode === 'pace' ? 'translate-x-0' : 'translate-x-full'
-                    }`}
-                  />
-                  <button 
-                    type="button"
-                    onClick={() => { if (runPaceMode !== 'pace') vibraScelta(); setRunPaceMode('pace'); setSpeed('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'pace' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
-                  >
-                    ⏱ Passo
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => { if (runPaceMode !== 'speed') vibraScelta(); setRunPaceMode('speed'); setErgoPace('-'); }}
-                    className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${runPaceMode === 'speed' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
-                  >
-                    ⚡ Velocità
-                  </button>
-                </div>
-              )}
-
               {testoUltimaVolta && (
                 <RigaUltimaVolta testo={testoUltimaVolta} onRiusa={riusaUltimaVolta} />
               )}
 
-              <div className="flex flex-col gap-3 animate-in fade-in duration-300" key={`${selected}-${hybridMode}-${runPaceMode}`}>
-                {workoutType === 'Interval' ? (
-                  <>
-                    {campo('exTime', { etichetta: 'Durata', lista: TIME_OPTIONS, rapidi: RAPIDI_DURATA, valore: exTime, set: setExTime })}
-                    {isErgo(selected)
-                      ? scelta('ergoPace', { etichetta: 'Passo (opzionale)', generi: GENERI_PASSO_ERGO, valore: ergoPace, set: setErgoPace })
-                      : selected === 'Run'
-                        ? (runPaceMode === 'pace'
-                            ? scelta('ergoPace', { etichetta: 'Passo (opzionale)', generi: GENERI_PASSO_CORSA, valore: ergoPace, set: setErgoPace })
-                            : scelta('speed', { etichetta: 'Velocità', generi: GENERI_VELOCITA, valore: speed, set: setSpeed }))
-                        : campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
-                  </>
-                ) : isErgo(selected) ? (
-                  <>
-                    {campo('meters', { etichetta: 'Distanza / Cal', lista: METERS_OPTIONS, rapidi: RAPIDI_METRI, valore: meters, set: setMeters })}
-                    {scelta('ergoPace', { etichetta: 'Passo (opzionale)', generi: GENERI_PASSO_ERGO, valore: ergoPace, set: setErgoPace })}
-                  </>
-                ) : selected === 'Run' ? (
-                  <>
-                    {campo('meters', { etichetta: 'Distanza', lista: METERS_OPTIONS, rapidi: RAPIDI_METRI, valore: meters, set: setMeters })}
-                    {runPaceMode === 'pace'
-                      ? scelta('ergoPace', { etichetta: 'Passo (opzionale)', generi: GENERI_PASSO_CORSA, valore: ergoPace, set: setErgoPace })
-                      : scelta('speed', { etichetta: 'Velocità', generi: GENERI_VELOCITA, valore: speed, set: setSpeed })}
-                  </>
-                ) : selected === 'Rest' ? (
-                  campo('meters', { etichetta: 'Durata', lista: REST_TIME_OPTIONS, rapidi: RAPIDI_REST, valore: meters, set: setMeters })
-                ) : isHybrid(selected) ? (
-                  <>
-                    {hybridMode === 'distance'
-                      ? campo('meters', { etichetta: 'Distanza', lista: HYBRID_METERS_OPTIONS, rapidi: RAPIDI_METRI_CORTI, valore: meters, set: setMeters })
-                      : campo('reps', { etichetta: 'Ripetizioni', lista: REPS_OPTIONS, rapidi: RAPIDI_REPS, valore: reps, set: setReps, unita: 'reps' })}
-                    {campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
-                  </>
-                ) : isSled(selected) ? (
-                  <>
-                    {campo('meters', { etichetta: 'Distanza', lista: SLED_METERS_OPTIONS, rapidi: RAPIDI_METRI_CORTI, valore: meters, set: setMeters })}
-                    {campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
-                  </>
-                ) : isCarry(selected) ? (
-                  <>
-                    {campo('meters', { etichetta: 'Distanza', lista: CARRY_METERS_OPTIONS, rapidi: RAPIDI_METRI_CORTI, valore: meters, set: setMeters })}
-                    {campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
-                  </>
-                ) : isDistance(selected) ? (
-                  <>
-                    {campo('meters', { etichetta: 'Distanza', lista: METERS_OPTIONS, rapidi: RAPIDI_METRI, valore: meters, set: setMeters })}
-                    {campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
-                  </>
-                ) : (
-                  <>
-                    {campo('reps', { etichetta: 'Ripetizioni', lista: REPS_OPTIONS, rapidi: RAPIDI_REPS, valore: reps, set: setReps, unita: 'reps' })}
-                    {campo('kg', { etichetta: 'Peso', lista: KG_OPTIONS, rapidi: RAPIDI_KG, valore: kg, set: setKg, unita: 'kg' })}
-                  </>
-                )}
-              </div>
+              <FoglioMisure misure={misure} attiva={schedaAttiva} onAttiva={setAttiva} />
 
               {selected !== 'Rest' && (
                 <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
@@ -1463,6 +1377,45 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
 }
 
 // ─── BLOCCO HYROX ───────────────────────────────────────
+/**
+ * I numeri di un blocco: quali sono, con che scala e che ripiego.
+ *
+ * ⚠️ I ripieghi sono quelli di BlockPickerModal e di `giriBlocco` in
+ * src/lib/stimaWorkout.js: un blocco mai toccato deve mostrare in pillola
+ * esattamente il numero su cui la durata è stimata.
+ * ⚠️ Il rest dei Cash In/Out esiste solo FRA i round: con un round solo non
+ * c'è, invece di restare lì a dire «1:00» di una pausa che non avverrà.
+ */
+const parametriDelBlocco = (block) => {
+  const round = (ripiego) => ({ chiave: 'rounds', etichetta: 'Round', scala: 'round', rapidi: RAPIDI_ROUNDS, ripiego })
+  switch (block.type) {
+    case 'WarmUp':
+    case 'Rest':
+      return [{ chiave: 'duration', etichetta: 'Durata', scala: 'tempo', rapidi: RAPIDI_DURATA, ripiego: '3:00' }]
+    case 'ON/OFF':
+      return [
+        { chiave: 'on', etichetta: 'ON', scala: 'tempo', rapidi: RAPIDI_LAVORO, ripiego: '1:00' },
+        { chiave: 'off', etichetta: 'OFF', scala: 'tempo', rapidi: RAPIDI_LAVORO, ripiego: '1:00' },
+        round('10'),
+      ]
+    case 'EMOM':
+      return [{ chiave: 'interval', etichetta: 'Ogni', scala: 'tempo', rapidi: RAPIDI_INTERVALLO, ripiego: '1:00' }, round('10')]
+    case 'AMRAP':
+      return [{ chiave: 'duration', etichetta: 'Durata', scala: 'tempo', rapidi: RAPIDI_AMRAP, ripiego: '10:00' }]
+    case 'For Time':
+      return [round('3')]
+    case 'Interval':
+      return [round('1')]
+    case 'Cash In':
+    case 'Cash Out':
+      return parseInt(block.params?.rounds, 10) > 1
+        ? [round('1'), { chiave: 'rest', etichetta: 'Rest', scala: 'recupero', rapidi: RAPIDI_REST, ripiego: '1:00' }]
+        : [round('1')]
+    default:
+      return []
+  }
+}
+
 // ⚠️ Memoizzato (BACKLOG #15). Ogni blocco aperto contiene scroll picker da 102
 // opzioni: senza memo, un carattere digitato nel titolo ne ridisegna migliaia.
 //
@@ -1490,24 +1443,17 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
   const updateParam = (k, v) => onUpdate({ ...block, params: { ...block.params, [k]: v } })
   const updateNotes = (notes) => onUpdate({ ...block, notes })
 
-  // Quale parametro è aperto sulla tastiera, come in ExercisePicker.
-  const [digitando, setDigitando] = useState(null)
+  // Quale parametro ha il foglio aperto, o `null`. I numeri del blocco non
+  // stanno più nella card: lì c'è il loro riepilogo in pillole, e il righello
+  // sale dal basso solo quando si tocca. Erano due Stepper da 170px sempre
+  // aperti sopra gli esercizi, cioè sopra la cosa che si è venuti a comporre.
+  const [foglio, setFoglio] = useState(null)
 
-  /** Un parametro del blocco. Vedi la nota gemella in ExercisePicker. */
-  const parametro = (chiave, { etichetta, lista, rapidi, ripiego }) => {
-    const valore = block.params?.[chiave] ?? ripiego
-    return (
-      <Stepper
-        etichetta={etichetta}
-        valore={valore}
-        opzioni={rapidi}
-        onChange={(v) => updateParam(chiave, v)}
-        onPasso={(direzione) => updateParam(chiave, passoInLista(lista, valore, direzione))}
-        inDigitazione={digitando === chiave}
-        onDigita={() => setDigitando(digitando === chiave ? null : chiave)}
-      />
-    )
-  }
+  const parametri = parametriDelBlocco(block).map(p => ({
+    chiave: p.chiave, etichetta: p.etichetta, scala: p.scala, rapidi: p.rapidi,
+    valore: block.params?.[p.chiave] ?? p.ripiego,
+    onChange: (v) => updateParam(p.chiave, v),
+  }))
 
   const c = TYPE_COLORS[block.type] || { text: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]' }
   const lavoro = BLOCCHI_DI_LAVORO.has(block.type)
@@ -1624,48 +1570,41 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
 
       {isOpen && (
         <div className="px-3.5 pb-[13px] flex flex-col gap-3 animate-in fade-in duration-200">
+          {parametri.length > 0 && (
+            <div className="flex gap-2">
+              {parametri.map(p => (
+                <button key={p.chiave} type="button" onClick={() => setFoglio(p.chiave)}
+                  aria-label={`${p.etichetta}: ${testoMisura(p)}`}
+                  className={`flex-1 min-w-0 rounded-2xl px-3.5 py-2.5 text-left ${VETRO}
+                              hover:border-white/25 transition active:scale-[.98]`}>
+                  <span className={`${LABEL} block truncate`}>{p.etichetta}</span>
+                  <span className="block mt-[3px] text-[17px] font-extrabold tracking-[-.01em] text-white tabular-nums truncate">
+                    {testoMisura(p)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {['WarmUp', 'Rest'].includes(block.type) && (
-            <>
-              {parametro('duration', { etichetta: 'Durata', lista: TIME_OPTIONS, rapidi: RAPIDI_DURATA, ripiego: '3:00' })}
-              <RigaTesto
-                icona={FileText}
-                etichetta="Note del blocco"
-                placeholder="Note (opzionale)…"
-                valore={block.notes || ''}
-                onChange={updateNotes}
-              />
-            </>
+            <RigaTesto
+              icona={FileText}
+              etichetta="Note del blocco"
+              placeholder="Note (opzionale)…"
+              valore={block.notes || ''}
+              onChange={updateNotes}
+            />
           )}
 
-          {block.type === 'ON/OFF' && (
-            <>
-              {parametro('on', { etichetta: 'ON — lavoro', lista: TIME_OPTIONS, rapidi: RAPIDI_LAVORO, ripiego: '1:00' })}
-              {parametro('off', { etichetta: 'OFF — recupero', lista: TIME_OPTIONS, rapidi: RAPIDI_LAVORO, ripiego: '1:00' })}
-              {parametro('rounds', { etichetta: 'Rounds', lista: ROUNDS_OPTIONS, rapidi: RAPIDI_ROUNDS, ripiego: '10' })}
-            </>
-          )}
-
-          {block.type === 'EMOM' && (
-            <>
-              {parametro('interval', { etichetta: 'Intervallo', lista: TIME_OPTIONS, rapidi: RAPIDI_INTERVALLO, ripiego: '1:00' })}
-              {parametro('rounds', { etichetta: 'Rounds', lista: ROUNDS_OPTIONS, rapidi: RAPIDI_ROUNDS, ripiego: '10' })}
-            </>
-          )}
-
-          {block.type === 'AMRAP' &&
-            parametro('duration', { etichetta: 'Durata', lista: TIME_OPTIONS, rapidi: RAPIDI_AMRAP, ripiego: '10:00' })}
-
-          {['For Time', 'Interval'].includes(block.type) &&
-            parametro('rounds', { etichetta: 'Rounds', lista: ROUNDS_OPTIONS, rapidi: RAPIDI_ROUNDS, ripiego: block.type === 'For Time' ? '3' : '1' })}
-
-          {['Cash In', 'Cash Out'].includes(block.type) && (
-            <>
-              {parametro('rounds', { etichetta: 'Rounds', lista: ROUNDS_OPTIONS, rapidi: RAPIDI_ROUNDS, ripiego: '1' })}
-              {/* Il rest esiste solo fra i round: con un round solo, il campo non
-                  ha nulla da dire e sparisce invece di restare a zero. */}
-              {parseInt(block.params?.rounds, 10) > 1 &&
-                parametro('rest', { etichetta: 'Rest fra i rounds', lista: REST_TIME_OPTIONS, rapidi: RAPIDI_REST, ripiego: '1:00' })}
-            </>
+          {foglio && (
+            <FoglioParametri
+              titolo={block.type}
+              sottotitolo={`Il blocco dura ${durataBlocco(block) > 0 ? mmss(durataBlocco(block)) : '—'}`}
+              misure={parametri}
+              attiva={foglio}
+              onAttiva={setFoglio}
+              onChiudi={() => setFoglio(null)}
+            />
           )}
 
           {/* Exercises */}
@@ -1725,62 +1664,115 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
 })
 
 // ─── COMPONENTI RUNNING BUILDER ────────────────────────────────
-function ModeToggle({ mode, onModeChange, value, onChange }) {
+
+const TIPI_FASE = [
+  { id: 'warmup', nome: 'Riscaldamento' },
+  { id: 'run', nome: 'Corsa' },
+  { id: 'recover', nome: 'Recupero' },
+  { id: 'cooldown', nome: 'Defaticamento' },
+  { id: 'repeat', nome: 'Ripetute' },
+]
+
+/** Una durata di corsa è un tempo («10 min», «30 sec») o una distanza («400m», «5 km»)? */
+const eTempoCorsa = (v) => /\b(min|sec)$/.test(String(v ?? ''))
+
+/** «3:50 /km» è un ritmo; «Z2», «Libero», «Camminata» sono una zona. */
+const eRitmoCorsa = (v) => String(v ?? '').includes('/km')
+
+/**
+ * Le schede «quanto» e «passo» di un tratto di corsa, per il foglio misure.
+ *
+ * Un tratto ha quattro valori — quanto (tempo O distanza), passo da, passo a —
+ * e prima erano TRE rotelle verticali strette affiancate più un segmento con
+ * le emoji, ripetute due volte per le ripetute: sei rotelle in una finestra.
+ *
+ * ⚠️ Il formato salvato NON cambia: «10 min», «400m», «1.5 km», e il passo come
+ * prima — `paceMin` e `paceMax` separati, più `pace` già composto da
+ * `formatPace` («3:50 - 4:00 /km»), che è quello che la scheda e la web app
+ * leggono (src/lib/rigaBlocco.js, RunningStepRow).
+ */
+function tratto({ prefisso = '', etichettaQuanto, quanto, setQuanto, passo, setPasso, passoMax, setPassoMax }) {
+  const aTempo = eTempoCorsa(quanto)
+  const ritmo = eRitmoCorsa(passo)
+  return [
+    {
+      chiave: `${prefisso}quanto`, etichetta: etichettaQuanto || (aTempo ? 'Durata' : 'Distanza'),
+      scala: aTempo ? 'durataCorsa' : 'distanzaCorsa',
+      valore: quanto, onChange: setQuanto,
+      rapidi: aTempo ? ['5 min', '10 min', '20 min', '30 min'] : ['200m', '400m', '1 km', '5 km'],
+      // Tempo o distanza: due pillole al posto del segmento con le emoji.
+      // Cambiando modo si parte dal valore tipico di quel modo, perché «10 min»
+      // non ha un corrispondente in metri.
+      pillole: [
+        { id: 'tempo', titolo: 'Tempo', attiva: aTempo, onClick: () => setQuanto(SCALE.durataCorsa.partenza) },
+        { id: 'distanza', titolo: 'Distanza', attiva: !aTempo, onClick: () => setQuanto(SCALE.distanzaCorsa.partenza) },
+      ],
+    },
+    {
+      chiave: `${prefisso}passo`, etichetta: 'Passo',
+      valore: passo, onChange: setPasso,
+      ...(ritmo
+        ? {
+            scala: 'passoCorsa',
+            rapidi: ['4:30 /km', '5:00 /km', '5:30 /km', '6:00 /km'],
+            // Il secondo estremo è facoltativo: «3:50 – 4:00».
+            secondo: { valore: passoMax, onChange: setPassoMax, etichetta: 'Passo fino a' },
+          }
+        : { scelte: SENSAZIONI_CORSA }),
+      pillole: [
+        { id: 'ritmo', titolo: 'Ritmo', attiva: ritmo, onClick: () => setPasso(SCALE.passoCorsa.partenza) },
+        // Una zona non ha un secondo estremo: tornando alle zone si toglie.
+        { id: 'zona', titolo: 'Zona', attiva: !ritmo, onClick: () => { setPasso('Libero'); setPassoMax('-') } },
+      ],
+    },
+  ]
+}
+
+/** L'intensità di un tratto, nella stessa card del builder Hyrox ma azzurra. */
+function IntensitaCorsa({ valore, onChange }) {
   return (
-    <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] mb-3">
-      <div 
-        className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
-          mode === 'time' ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      />
-      <button 
-        type="button"
-        onClick={() => {
-           if (mode !== 'time') vibraScelta();
-           onModeChange('time');
-           if (!RUN_TIME_OPTIONS.includes(value)) onChange('1 min');
-        }}
-        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'time' ? 'text-running' : 'text-muted hover:text-gray-300'}`}
-      >
-        ⏱ Tempo
-      </button>
-      <button 
-        type="button"
-        onClick={() => {
-           if (mode !== 'distance') vibraScelta();
-           onModeChange('distance');
-           if (!RUN_DISTANCE_OPTIONS.includes(value)) onChange('100m');
-        }}
-        className={`relative z-10 flex-1 py-2.5 text-xs uppercase font-bold transition-colors duration-300 ${mode === 'distance' ? 'text-running' : 'text-muted hover:text-gray-300'}`}
-      >
-        📏 Distanza
-      </button>
+    <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
+      <div className="flex items-center justify-between">
+        <span className={LABEL}>Intensità</span>
+        <div className="flex items-center gap-1.5">
+          <span className={`text-sm font-extrabold ${getIntensityColor(valore)}`}>{valore}/10</span>
+          <BicepsFlexed size={17} className={getIntensityColor(valore)} />
+        </div>
+      </div>
+      <IntensityPicker value={valore} onChange={onChange} activeColor="bg-running" />
     </div>
   )
 }
 
+/**
+ * Una fase di corsa: schermata intera come la scelta dell'esercizio, non più
+ * una finestrella con sei rotelle. Stessa testata, stesso foglio misure,
+ * stessa conferma fissa in basso — in azzurro, il colore della corsa.
+ */
 function RunningStepPicker({ onAdd, onClose, initialStep }) {
   const parseMin = (p) => p ? (p.includes(' - ') ? p.split(' - ')[0] + (p.includes('/km') ? ' /km' : '') : p) : 'Libero'
   const parseMax = (p) => p ? (p.includes(' - ') ? p.split(' - ')[1] : '-') : '-'
 
   const [type, setType] = useState(initialStep?.type || 'run')
   const [duration, setDuration] = useState(initialStep?.duration || '10 min')
-  const [durationMode, setDurationMode] = useState(!initialStep ? 'time' : ((initialStep.duration || '').includes('min') || (initialStep.duration || '').includes('sec') ? 'time' : 'distance'))
   const [pace, setPace] = useState(initialStep?.paceMin || parseMin(initialStep?.pace))
   const [paceMax, setPaceMax] = useState(initialStep?.paceMax || parseMax(initialStep?.pace))
   const [intensity, setIntensity] = useState(initialStep?.intensity || '5')
   const [notes, setNotes] = useState(initialStep?.notes || '')
   const [rounds, setRounds] = useState(initialStep?.rounds || '8')
   const [runDuration, setRunDuration] = useState(initialStep?.runDuration || '1 min')
-  const [runDurationMode, setRunDurationMode] = useState(!initialStep ? 'time' : ((initialStep.runDuration || '').includes('min') || (initialStep.runDuration || '').includes('sec') ? 'time' : 'distance'))
   const [runPace, setRunPace] = useState(initialStep?.runPaceMin || parseMin(initialStep?.runPace))
   const [runPaceMax, setRunPaceMax] = useState(initialStep?.runPaceMax || parseMax(initialStep?.runPace))
   const [runIntensity, setRunIntensity] = useState(initialStep?.runIntensity || '8')
   const [recDuration, setRecDuration] = useState(initialStep?.recDuration || '1 min')
-  const [recDurationMode, setRecDurationMode] = useState(!initialStep ? 'time' : ((initialStep.recDuration || '').includes('min') || (initialStep.recDuration || '').includes('sec') ? 'time' : 'distance'))
   const [recPace, setRecPace] = useState(initialStep?.recPaceMin || parseMin(initialStep?.recPace))
   const [recPaceMax, setRecPaceMax] = useState(initialStep?.recPaceMax || parseMax(initialStep?.recPace))
   const [recIntensity, setRecIntensity] = useState(initialStep?.recIntensity || '3')
+
+  // Le schede aperte: una per il tratto singolo, due per le ripetute (il
+  // tratto veloce e il recupero hanno ciascuno il proprio foglio).
+  const [attiva, setAttiva] = useState(initialStep?.type === 'repeat' ? 'volte' : 'quanto')
+  const [attivaRec, setAttivaRec] = useState('rec-quanto')
 
   const formatPace = (p, pMax) => {
     if (!pMax || pMax === '-') return p
@@ -1792,8 +1784,8 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
 
   const handleAdd = () => {
     onAdd({
-      id: initialStep ? initialStep.id : Math.random(), 
-      type, 
+      id: initialStep ? initialStep.id : Math.random(),
+      type,
       duration, pace: formatPace(pace, paceMax), paceMin: pace, paceMax, intensity, notes,
       rounds, runDuration, runPace: formatPace(runPace, runPaceMax), runPaceMin: runPace, runPaceMax, runIntensity,
       recDuration, recPace: formatPace(recPace, recPaceMax), recPaceMin: recPace, recPaceMax, recIntensity
@@ -1801,106 +1793,95 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
     onClose()
   }
 
-  const getTypeLabel = (t) => {
-    switch(t) {
-      case 'warmup': return 'Riscaldamento'
-      case 'run': return 'Corsa'
-      case 'recover': return 'Recupero'
-      case 'cooldown': return 'Defaticamento'
-      case 'repeat': return 'Ripetute'
-      default: return ''
-    }
-  }
+  const misureSingola = tratto({
+    quanto: duration, setQuanto: setDuration,
+    passo: pace, setPasso: setPace, passoMax: paceMax, setPassoMax: setPaceMax,
+  })
+
+  // Le ripetute: «Volte» sta nel foglio del tratto veloce, perché è la prima
+  // cosa che si dice di una seduta di ripetute («8 per 400»).
+  const misureVeloce = [
+    { chiave: 'volte', etichetta: 'Volte', scala: 'ripetute', valore: rounds, onChange: setRounds, rapidi: ['4', '6', '8', '10'] },
+    ...tratto({
+      quanto: runDuration, setQuanto: setRunDuration,
+      passo: runPace, setPasso: setRunPace, passoMax: runPaceMax, setPassoMax: setRunPaceMax,
+    }),
+  ]
+  const misureRecupero = tratto({
+    prefisso: 'rec-',
+    quanto: recDuration, setQuanto: setRecDuration,
+    passo: recPace, setPasso: setRecPace, passoMax: recPaceMax, setPassoMax: setRecPaceMax,
+  })
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4 velo-in">
-      <div className={`${CARD} w-full max-w-md flex flex-col modal-transition`} style={{ maxHeight: 'calc(100vh - 100px)' }}>
-        <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
-          <p className="text-white font-bold">{initialStep ? 'Modifica Fase Corsa' : 'Aggiungi Fase Corsa'}</p>
-          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
-        </div>
-        <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
-          <div className="flex flex-wrap gap-2 mb-1">
-            {['warmup', 'run', 'recover', 'cooldown', 'repeat'].map(t => (
-              <button key={t} onClick={() => setType(t)}
-                className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition ${
-                  type === t ? 'bg-running/20 border-running text-running' : 'bg-[#2a2a2a] border-[#383838] text-gray-400 hover:text-white'
+    <div role="dialog" aria-label={initialStep ? 'Modifica fase' : 'Nuova fase'}
+      className="fixed inset-0 z-[60] bg-[#0B0B0B] flex flex-col sheet-in">
+      <div className="shrink-0 flex items-center gap-2 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] border-b border-[#2a2a2a]">
+        <p className="text-white font-bold text-lg flex-1 truncate">{initialStep ? 'Modifica fase' : 'Nuova fase'}</p>
+        <button aria-label="Chiudi" onClick={onClose}
+          className="w-11 h-11 -mr-2 flex items-center justify-center text-muted hover:text-white shrink-0">
+          <X size={22} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+        {/* Che fase è: cinque voci da vedere tutte insieme. */}
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Tipo di fase">
+          {TIPI_FASE.map(t => {
+            const on = type === t.id
+            return (
+              <button key={t.id} type="button" aria-pressed={on}
+                // Le ripetute si aprono su «Volte»: è la prima cosa che se ne dice («8 per 400»).
+                onClick={() => { if (!on) { vibraScelta(); setAttiva(t.id === 'repeat' ? 'volte' : 'quanto') } setType(t.id) }}
+                className={`min-h-10 px-4 rounded-full text-[13px] font-extrabold border transition active:scale-95 ${
+                  on ? 'bg-running/15 border-running/45 text-running' : 'bg-white/[.055] border-white/10 text-[#c9ccd4] hover:border-white/20'
                 }`}>
-                {getTypeLabel(t)}
+                {t.nome}
               </button>
-            ))}
-          </div>
-          
-          <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out" key={type}>
-            {type === 'repeat' ? (
-              <>
-              <ScrollPicker isRun options={RUN_REPEAT_ROUNDS_OPTIONS} value={rounds} onChange={setRounds} label="Numero di ripetizioni" />
-              <div className="p-3 bg-[#222] border border-[#333] rounded-xl flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-running text-sm font-semibold">Fase Attiva (Corsa)</p>
-                  <div className="flex items-center gap-1">
-                    <span className={`text-xs font-bold ${getIntensityColor(runIntensity)}`}>{runIntensity}/10</span>
-                    <BicepsFlexed size={14} className={getIntensityColor(runIntensity)} />
-                  </div>
-                </div>
-                <ModeToggle mode={runDurationMode} onModeChange={setRunDurationMode} value={runDuration} onChange={setRunDuration} />
-                <div className="grid grid-cols-3 gap-2 animate-in fade-in duration-300" key={runDurationMode}>
-                  <ScrollPicker isRun options={runDurationMode === 'time' ? RUN_TIME_OPTIONS : RUN_DISTANCE_OPTIONS} value={runDuration} onChange={setRunDuration} label={runDurationMode === 'time' ? 'Durata' : 'Distanza'} />
-                  <ScrollPicker isRun options={RUN_PACE_OPTIONS} value={runPace} onChange={setRunPace} label="Da" />
-                  <ScrollPicker isRun options={MAX_PACE_OPTIONS} value={runPaceMax} onChange={setRunPaceMax} label="A (Opz.)" />
-                </div>
-                <IntensityPicker value={runIntensity} onChange={setRunIntensity} activeColor="bg-running" />
-              </div>
-              <div className="p-3 bg-[#222] border border-[#333] rounded-xl flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-green-400 text-sm font-semibold">Fase Recupero</p>
-                  <div className="flex items-center gap-1">
-                    <span className={`text-xs font-bold ${getIntensityColor(recIntensity)}`}>{recIntensity}/10</span>
-                    <BicepsFlexed size={14} className={getIntensityColor(recIntensity)} />
-                  </div>
-                </div>
-                <ModeToggle mode={recDurationMode} onModeChange={setRecDurationMode} value={recDuration} onChange={setRecDuration} />
-                <div className="grid grid-cols-3 gap-2 animate-in fade-in duration-300" key={recDurationMode}>
-                  <ScrollPicker isRun options={recDurationMode === 'time' ? RUN_TIME_OPTIONS : RUN_DISTANCE_OPTIONS} value={recDuration} onChange={setRecDuration} label={recDurationMode === 'time' ? 'Durata' : 'Distanza'} />
-                  <ScrollPicker isRun options={RUN_PACE_OPTIONS} value={recPace} onChange={setRecPace} label="Da" />
-                  <ScrollPicker isRun options={MAX_PACE_OPTIONS} value={recPaceMax} onChange={setRecPaceMax} label="A (Opz.)" />
-                </div>
-                <IntensityPicker value={recIntensity} onChange={setRecIntensity} activeColor="bg-running" />
-              </div>
-              <div>
-                <label className="text-gray-400 text-xs mb-1 block">Note</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-running text-base" placeholder="Es: mantieni la zona 2 costante..." />
-              </div>
-              </>
-            ) : (
-              <>
-              <ModeToggle mode={durationMode} onModeChange={setDurationMode} value={duration} onChange={setDuration} />
-              <div className="grid grid-cols-3 gap-2 animate-in fade-in duration-300" key={durationMode}>
-                <ScrollPicker isRun options={durationMode === 'time' ? RUN_TIME_OPTIONS : RUN_DISTANCE_OPTIONS} value={duration} onChange={setDuration} label={durationMode === 'time' ? 'Durata' : 'Distanza'} />
-                <ScrollPicker isRun options={RUN_PACE_OPTIONS} value={pace} onChange={setPace} label="Da" />
-                <ScrollPicker isRun options={MAX_PACE_OPTIONS} value={paceMax} onChange={setPaceMax} label="A (Opz.)" />
-              </div>
-              <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400 text-xs">💪 Intensità</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-bold ${getIntensityColor(intensity)}`}>{intensity}/10</span>
-                    <BicepsFlexed size={16} className={getIntensityColor(intensity)} />
-                  </div>
-                </div>
-                <IntensityPicker value={intensity} onChange={setIntensity} activeColor="bg-running" />
-              </div>
-              <div>
-                <label className="text-gray-400 text-xs mb-1 block">Note</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-running text-base" placeholder="Es: corsa leggera, focus tecnica..." />
-              </div>
-              </>
-            )}
-          </div>
-          <button onClick={handleAdd} className="w-full mt-2 py-3 bg-running text-white font-bold rounded-xl hover:brightness-110 transition">
-            {initialStep ? 'Salva Modifiche' : 'Aggiungi Fase'}
-          </button>
+            )
+          })}
         </div>
+
+        <div className="flex flex-col gap-4 passo-entra" key={type === 'repeat' ? 'ripetute' : 'singola'}>
+          {type === 'repeat' ? (
+            <>
+              <p className={`${LABEL} text-running -mb-1`}>Tratto veloce</p>
+              <FoglioMisure misure={misureVeloce} attiva={misureVeloce.some(m => m.chiave === attiva) ? attiva : 'volte'}
+                onAttiva={setAttiva} accento="running" />
+              <IntensitaCorsa valore={runIntensity} onChange={setRunIntensity} />
+
+              <p className={`${LABEL} text-green-400 -mb-1 mt-2`}>Recupero</p>
+              <FoglioMisure misure={misureRecupero} attiva={attivaRec} onAttiva={setAttivaRec} accento="running" />
+              <IntensitaCorsa valore={recIntensity} onChange={setRecIntensity} />
+            </>
+          ) : (
+            <>
+              <FoglioMisure misure={misureSingola} attiva={misureSingola.some(m => m.chiave === attiva) ? attiva : 'quanto'}
+                onAttiva={setAttiva} accento="running" />
+              <IntensitaCorsa valore={intensity} onChange={setIntensity} />
+            </>
+          )}
+
+          <RigaTesto
+            icona={FileText}
+            etichetta="Note della fase"
+            placeholder={type === 'repeat' ? 'Es: recupero da fermo, ultima tirata a tutta…' : 'Es: corsa leggera, focus tecnica…'}
+            valore={notes}
+            onChange={setNotes}
+          />
+        </div>
+      </div>
+
+      {/* Piede fisso, come nella scelta dell'esercizio: la conferma resta
+          raggiungibile qualunque sia la lunghezza delle ripetute. */}
+      <div className="shrink-0 px-4 pt-3 pb-[calc(13px+env(safe-area-inset-bottom))] border-t border-white/[.07] bg-[#0B0B0B]/[.9] backdrop-blur-xl flex">
+        <button type="button" onClick={handleAdd}
+          className="flex-1 min-h-[52px] rounded-2xl bg-running text-white text-[16.5px] font-black tracking-[-.01em]
+                     flex items-center justify-center gap-2.5 hover:brightness-110 active:scale-[.99] transition
+                     shadow-[0_14px_26px_-10px_rgba(0,148,198,.55),inset_0_1px_0_rgba(255,255,255,.3)]">
+          {initialStep ? <Save size={19} aria-hidden="true" /> : <Plus size={19} aria-hidden="true" />}
+          {initialStep ? 'Salva modifiche' : 'Aggiungi fase'}
+        </button>
       </div>
     </div>,
     document.body
@@ -2474,17 +2455,35 @@ export default function CreateWorkout() {
     }
 
     // Blocca fisicamente il "Pull to Refresh" tramite Javascript per Safari iOS
+    //
+    // 🔴 Si annulla SOLO un vero «tirare giù»: più verticale che orizzontale, e
+    // non dentro qualcosa che può ancora scorrere verso l'alto. Prima bastava
+    // che il dito scendesse di mezzo pixel: con un foglio aperto la pagina è
+    // bloccata (`position: fixed`, quindi `scrollY` vale sempre 0), e ogni
+    // trascinamento orizzontale del righello veniva annullato — il righello non
+    // si muoveva. Trovato sull'emulatore il 07/10/2026; jsdom non lo vede.
+    let touchStartX = 0
     let touchStartY = 0
+    const puoScorrereSu = (el) => {
+      for (let n = el; n && n !== document.body; n = n.parentElement) {
+        if (n.scrollTop > 0 && n.scrollHeight > n.clientHeight) return true
+      }
+      return false
+    }
     const handleTouchStart = (e) => {
-      if (e.touches && e.touches.length > 0) touchStartY = e.touches[0].clientY
+      if (e.touches && e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX
+        touchStartY = e.touches[0].clientY
+      }
     }
     const handleTouchMove = (e) => {
-      // Se stiamo scorrendo verso il basso partendo dalla cima della pagina
-      if (hasUnsavedChanges && !saved && window.scrollY <= 0) {
-        if (e.touches && e.touches.length > 0 && e.touches[0].clientY > touchStartY) {
-          e.preventDefault() // Annulla il ricaricamento manuale
-        }
-      }
+      if (!hasUnsavedChanges || saved || window.scrollY > 0) return
+      if (!e.touches || e.touches.length === 0) return
+      const giu = e.touches[0].clientY - touchStartY
+      const lato = Math.abs(e.touches[0].clientX - touchStartX)
+      if (giu <= 0 || lato >= giu) return          // non è un tirare giù
+      if (puoScorrereSu(e.target)) return          // lo consuma una lista interna
+      e.preventDefault() // Annulla il ricaricamento manuale
     }
     document.addEventListener('touchstart', handleTouchStart, { passive: false })
     document.addEventListener('touchmove', handleTouchMove, { passive: false })

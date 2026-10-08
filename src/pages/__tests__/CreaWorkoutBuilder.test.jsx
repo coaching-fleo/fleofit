@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { CARTA_MODALE } from '../../lib/stiliCard'
@@ -13,7 +13,7 @@ import { CARTA_MODALE } from '../../lib/stiliCard'
 //      AFFERMA da sé — se smette di seguire i blocchi, dice un numero falso;
 //   2. il passaggio fra i due passi, ora che nome e data vivono SOLO nel primo:
 //      se il ritorno si perde, un workout in modifica non è più rinominabile;
-//   3. gli Stepper al posto delle rotelle, che devono scrivere lo stesso
+//   3. il righello (prima gli Stepper) al posto delle rotelle, che deve scrivere lo stesso
 //      identico vocabolario di prima ("20", "9 kg") dentro
 //      workouts.sections.blocks[].exercises — il database è condiviso con la
 //      web app in produzione (CLAUDE.md §1.1), e un formato nuovo lì dentro non
@@ -58,7 +58,7 @@ async function aggiungiBlocco(tipo) {
 }
 
 /** Il valore di una cella del riepilogo, letto dalla sua etichetta.
- *  ⚠️ Scoped al riepilogo: «Durata» è anche l'etichetta di uno Stepper. */
+ *  ⚠️ Scoped al riepilogo: «Durata» è anche l'etichetta di una misura. */
 /**
  * ⚠️ Aspetta due frame. Lo scorrimento passa da `requestAnimationFrame`, che
  * NON è un timer: senza questa attesa, un `expect(scorso).not.toHaveBeenCalled()`
@@ -72,7 +72,7 @@ const cella = (etichetta) => {
   return within(riepilogo).getByText(etichetta).parentElement.textContent.replace(etichetta, '')
 }
 
-/** Il valore grande di uno Stepper. */
+/** Il numero grande del foglio misure, per la misura aperta. */
 const valore = (etichetta) => document.querySelector(`[data-valore-di="${etichetta}"]`).textContent
 
 // ⚠️ La spia va su HTMLElement.prototype, non su Element.prototype: jsdom non
@@ -219,38 +219,81 @@ describe('il riepilogo segue i blocchi', () => {
   })
 })
 
-describe('gli Stepper scrivono il vocabolario di prima', () => {
-  it('un esercizio scelto dai valori rapidi finisce nel blocco con lo stesso formato', async () => {
+describe('il righello scrive il vocabolario di prima', () => {
+  // Il righello (07/10/2026) ha sostituito lo Stepper: cambia il GESTO, non le
+  // stringhe che finiscono in workouts.sections. Questi test montano il builder
+  // vero e leggono la riga dell'esercizio, che è costruita da quelle stringhe.
+  const apri = async (nome) => {
     await alPasso2()
     await aggiungiBlocco('AMRAP')
     await userEvent.click(screen.getByRole('button', { name: /Esercizio/ }))
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), nome)
+    await userEvent.click(await screen.findByRole('button', { name: `Scegli ${nome}` }))
+  }
+  const sposta = async (misura, tasti) => {
+    screen.getByRole('slider', { name: misura }).focus()
+    await userEvent.keyboard(tasti)
+  }
 
-    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), 'Wall Balls')
-    await userEvent.click(await screen.findByRole('button', { name: 'Scegli Wall Balls' }))
-
-    // I valori rapidi sono bottoni con l'etichetta esatta della lista completa.
-    await userEvent.click(screen.getByRole('button', { name: '20' }))
-    await userEvent.click(screen.getByRole('button', { name: '9 kg' }))
-
+  it('le scorciatoie sono i valori dello storico di QUELL esercizio', async () => {
+    // Lo storico ha una Wall Ball da 15 reps e 6 kg: sono le sue scorciatoie.
+    // ⚠️ Prima i valori rapidi erano uguali per tutti, e proponevano i pesi
+    // della Wall Ball anche sullo Squat.
+    await apri('Wall Balls')
+    await userEvent.click(await screen.findByRole('button', { name: '15' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Peso:/ }))
+    await userEvent.click(screen.getByRole('button', { name: '6 kg' }))
     await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
 
-    // "20 reps · 9kg": è la stessa stringa che la scheda, il PDF e la web app
-    // sanno leggere. Il gesto è cambiato, il dato no.
-    expect(screen.getByText('20 reps 9kg')).toBeInTheDocument()
+    expect(screen.getByText('15 reps 6kg')).toBeInTheDocument()
   })
 
-  it('il più e il meno si muovono dentro la lista, non su un numero qualsiasi', async () => {
-    await alPasso2()
-    await aggiungiBlocco('AMRAP')
-    await userEvent.click(screen.getByRole('button', { name: /Esercizio/ }))
-    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), 'Wall Balls')
-    await userEvent.click(await screen.findByRole('button', { name: 'Scegli Wall Balls' }))
+  it('senza storico, sul peso non si propone niente', async () => {
+    await apri('Back Squat')
+    await userEvent.click(screen.getByRole('button', { name: /^Peso:/ }))
+    expect(screen.queryByRole('button', { name: /^\d+(,\d)? kg$/ })).not.toBeInTheDocument()
+  })
 
-    await userEvent.click(screen.getByRole('button', { name: '20' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Aumenta Ripetizioni' }))
+  it('una tacca alla volta: le ripetizioni vanno di uno, i chili di 2,5 sopra i 20', async () => {
+    await apri('Back Squat')
+    // Senza valore il righello sta sulla partenza (10): un passo a destra è 11.
+    await sposta('Ripetizioni', '{ArrowRight}')
+    expect(valore('Ripetizioni')).toBe('11')
 
-    // REPS_OPTIONS è ['-', 'Max', '1', '2', …]: dopo 20 viene 21, non 25.
-    expect(valore('Ripetizioni')).toBe('21')
+    await userEvent.click(screen.getByRole('button', { name: /^Peso:/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Scrivi Peso/ }))
+    await userEvent.type(screen.getByLabelText('Scrivi Peso'), '20{Enter}')
+    await sposta('Peso', '{ArrowRight}')
+    expect(valore('Peso')).toBe('22,5')
+
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+    // "22.5" con il punto: è la forma che `numero()` dei report e la web app leggono.
+    expect(screen.getByText('11 reps 22.5kg')).toBeInTheDocument()
+  })
+
+  it('un valore che non si capisce non passa, e lo dice', async () => {
+    await apri('Back Squat')
+    await userEvent.click(screen.getByRole('button', { name: /^Scrivi Ripetizioni/ }))
+    await userEvent.type(screen.getByLabelText('Scrivi Ripetizioni'), '12,5{Enter}')
+    expect(screen.getByRole('alert')).toHaveTextContent('Scrivi solo il numero')
+    // Il campo resta aperto, e il valore di prima non è cambiato.
+    expect(screen.getByRole('button', { name: /^Ripetizioni:/ })).toHaveAccessibleName('Ripetizioni: —')
+  })
+
+  it('aprire un esercizio non scrive niente da solo', async () => {
+    // Il righello si posa sulla partenza, ma il valore resta vuoto finché il
+    // coach non lo muove: un «10 reps» comparso da solo sarebbe un dato inventato.
+    await apri('Back Squat')
+    expect(screen.getByRole('button', { name: /^Ripetizioni:/ })).toHaveAccessibleName('Ripetizioni: —')
+    expect(screen.getByRole('slider', { name: 'Ripetizioni' })).toHaveAttribute('aria-valuetext', 'Non ancora scelto')
+  })
+
+  it('«Due pesi» scrive il 2x di sempre', async () => {
+    await apri('Back Squat')
+    await userEvent.click(screen.getByRole('button', { name: /^Peso:/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Due pesi' }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+    expect(screen.getByText('2x16kg')).toBeInTheDocument()
   })
 })
 
@@ -266,7 +309,7 @@ describe('«ultima volta»', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Riusa' }))
 
     expect(valore('Ripetizioni')).toBe('15')
-    expect(valore('Peso')).toBe('6')
+    expect(screen.getByRole('button', { name: /^Peso:/ })).toHaveAccessibleName('Peso: 6 kg')
   })
 })
 
@@ -358,7 +401,9 @@ describe('il blocco appena creato finisce sotto gli occhi', () => {
     await vi.waitFor(() => expect(scorso).toHaveBeenCalled())
     scorso.mockClear()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Aumenta Rounds' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Round: 10' }))
+    screen.getByRole('slider', { name: 'Round' }).focus()
+    await userEvent.keyboard('{ArrowRight}')
     await dueFrame()
     expect(scorso).not.toHaveBeenCalled()
   })
@@ -390,89 +435,188 @@ describe('«Salva workout» sta in fondo, non davanti', () => {
   })
 })
 
-describe('il passo: prima il genere, poi la ruota', () => {
-  // ⚠️ Due tentativi caduti prima di questo, e i test tengono in piedi la
-  // ragione di entrambi:
-  //   1. lo Stepper mostrava CINQUE valori su ottantacinque e il più/meno
-  //      attraversava categorie senza rapporto («Z3» → «All out» → «1:30»);
-  //   2. l'elenco a schermo pieno li mostrava tutti, ma per spostare un passo
-  //      di cinque secondi chiedeva di aprire, cercare e tornare indietro.
-  // Ora il genere è un segmento e il valore una ruota: dentro un genere la
-  // rotella è lo strumento giusto, è attraversare la tassonomia che la rende cieca.
-  const apriEsercizio = async (nome = 'Rowing') => {
+describe('il passo: prima il modo, poi il valore', () => {
+  // ⚠️ La lezione della ruota di prima resta: il passo ha DUE domande. Di che
+  // tipo — ritmo, cadenza, a sensazione — e lì le voci sono poche e si vedono
+  // tutte (pillole); poi quale valore, e lì è una scala fitta (il righello).
+  // Mescolarle in una lista sola metteva «Z5» accanto a «1:30 /500m».
+  const apriPasso = async (nome = 'Rowing') => {
     await alPasso2()
     await aggiungiBlocco('AMRAP')
     await userEvent.click(screen.getByRole('button', { name: /Esercizio/ }))
     await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), nome)
     await userEvent.click(await screen.findByRole('button', { name: `Scegli ${nome}` }))
+    await userEvent.click(screen.getByRole('button', { name: /^Passo:/ }))
   }
-  const ruotaPasso = () => screen.getByRole('listbox', { name: /Passo/ })
 
-  it('i tre generi dell ergometro sono tutti raggiungibili', async () => {
-    await apriEsercizio()
-    for (const g of ['A sensazione', 'Ritmo', 'Cadenza']) {
-      expect(screen.getByRole('button', { name: g })).toBeInTheDocument()
+  it('i tre modi dell ergometro sono tutti raggiungibili', async () => {
+    await apriPasso()
+    for (const m of ['Ritmo', 'Cadenza', 'Sensazione']) {
+      expect(screen.getByRole('button', { name: m })).toBeInTheDocument()
     }
   })
 
-  it('dentro «Ritmo» ci sono TUTTI e 61 i valori, non cinque', async () => {
-    await apriEsercizio()
-    await userEvent.click(screen.getByRole('button', { name: 'Ritmo' }))
-
-    const voci = within(ruotaPasso()).getAllByRole('option')
-    // 61 ritmi da 1:30 a 6:30 di cinque in cinque secondi, più il «—» in testa.
-    expect(voci).toHaveLength(62)
-    expect(within(ruotaPasso()).getByRole('option', { name: '1:30' })).toBeInTheDocument()
-    expect(within(ruotaPasso()).getByRole('option', { name: '6:30' })).toBeInTheDocument()
+  it('il ritmo è un righello con TUTTI i 61 valori, da 1:30 a 6:30', async () => {
+    await apriPasso()
+    const righello = screen.getByRole('slider', { name: 'Passo' })
+    expect(righello).toHaveAttribute('aria-valuemax', '60')
   })
 
-  it('cambiare genere cambia la scala, non la mescola', async () => {
-    // Il difetto dello Stepper era proprio questo: una lista sola in cui «Z5» e
-    // «1:30 /500m» erano vicini di casa.
-    await apriEsercizio()
-    await userEvent.click(screen.getByRole('button', { name: 'A sensazione' }))
-    expect(within(ruotaPasso()).getByRole('option', { name: 'Z4' })).toBeInTheDocument()
-    expect(within(ruotaPasso()).queryByRole('option', { name: '1:30' })).not.toBeInTheDocument()
+  it('cambiare modo cambia la scala, non la mescola', async () => {
+    await apriPasso()
+    await userEvent.click(screen.getByRole('button', { name: 'Sensazione' }))
+    expect(screen.getByRole('button', { name: 'Z4' })).toBeInTheDocument()
+    expect(screen.queryByRole('slider', { name: 'Passo' })).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Cadenza' }))
-    expect(within(ruotaPasso()).getByRole('option', { name: '60' })).toBeInTheDocument()
-    expect(within(ruotaPasso()).queryByRole('option', { name: 'Z4' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Z4' })).not.toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Passo' })).toHaveAttribute('aria-valuemax', '16')
   })
 
-  it('la voce scelta è quella al centro, ed è dichiarata come tale', async () => {
-    // Il «grande al centro» è aspetto; aria-selected è la stessa informazione
-    // per chi non vede la dimensione.
-    await apriEsercizio()
-    await userEvent.click(screen.getByRole('button', { name: 'Ritmo' }))
-    await userEvent.click(within(ruotaPasso()).getByRole('option', { name: '2:00' }))
-
-    const scelte = within(ruotaPasso()).getAllByRole('option', { selected: true })
-    expect(scelte).toHaveLength(1)
-    expect(scelte[0]).toHaveTextContent('2:00')
-  })
-
-  it('sceglie il valore INTERO, non l etichetta accorciata', async () => {
-    // La voce dice «2:00» perché l'intestazione dice già «/500m». Quello che
-    // finisce in workouts.sections deve però restare «2:00 /500m»: è la stringa
-    // che la scheda, il PDF e la web app sanno leggere, e un'etichetta
-    // accorciata lì dentro non darebbe **nessun** errore.
-    await apriEsercizio()
-    await userEvent.click(screen.getByRole('button', { name: 'Ritmo' }))
-    await userEvent.click(within(ruotaPasso()).getByRole('option', { name: '2:00' }))
-    await userEvent.click(screen.getByRole('button', { name: '500m' }))
+  it('scrive il valore INTERO, con la sua unità', async () => {
+    // Il numero grande dice «2:00» perché accanto c'è «/500m». Quello che
+    // finisce in workouts.sections deve però restare «2:00 /500m»: è la
+    // stringa che la scheda, il PDF e la web app sanno leggere.
+    await apriPasso()
+    await userEvent.click(screen.getByRole('button', { name: /^Scrivi Passo/ }))
+    await userEvent.type(screen.getByLabelText('Scrivi Passo'), '200{Enter}')
+    await userEvent.click(screen.getByRole('button', { name: /^Distanza:/ }))
+    await userEvent.click(screen.getByRole('button', { name: '500 m' }))
     await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
 
     expect(screen.getByText('500m @ 2:00 /500m')).toBeInTheDocument()
   })
 
-  it('«—» toglie il passo, da qualunque genere', async () => {
-    // Il passo è facoltativo: se il modo di NON indicarlo vive in un solo
-    // genere, chi sta guardando «Ritmo» deve cambiare scheda per cancellarlo.
-    await apriEsercizio()
-    for (const g of ['A sensazione', 'Ritmo', 'Cadenza']) {
-      await userEvent.click(screen.getByRole('button', { name: g }))
-      expect(within(ruotaPasso()).getByRole('option', { name: '—' })).toBeInTheDocument()
-    }
+  it('«Nessuno» toglie il passo', async () => {
+    await apriPasso()
+    await userEvent.click(screen.getByRole('button', { name: 'Sensazione' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Z3' }))
+    expect(screen.getByRole('button', { name: /^Passo:/ })).toHaveAccessibleName('Passo: Z3')
+    await userEvent.click(screen.getByRole('button', { name: 'Nessuno' }))
+    expect(screen.getByRole('button', { name: /^Passo:/ })).toHaveAccessibleName('Passo: —')
+  })
+})
+
+describe('i numeri del blocco stanno in un foglio dal basso', () => {
+  // Erano due Stepper da 170px sempre aperti sopra gli esercizi. Ora la card
+  // ha il loro riepilogo in pillole, e il righello sale solo quando serve.
+  it('una tacca di «Ogni» sposta la durata del blocco', async () => {
+    await alPasso2()
+    await aggiungiBlocco('EMOM')                       // 1:00 × 10 = 10:00
+    await userEvent.click(screen.getByRole('button', { name: 'Ogni: 1:00' }))
+    const foglio = screen.getByRole('dialog', { name: 'EMOM' })
+
+    within(foglio).getByRole('slider', { name: 'Ogni' }).focus()
+    await userEvent.keyboard('{ArrowRight}')           // 1:15 × 10 = 12:30
+
+    // La pillola nella card del blocco, non la scheda omonima nel foglio.
+    const card = document.querySelector('[data-blocco-id]')
+    expect(within(card).getByRole('button', { name: 'Ogni: 1:15' })).toBeInTheDocument()
+    expect(within(foglio).getByText('Il blocco dura 12:30')).toBeInTheDocument()
+    expect(cella('Durata')).toBe('13min')
+  })
+
+  it('il rest dei Cash In compare solo con più di un round', async () => {
+    await alPasso2()
+    await aggiungiBlocco('Cash In')
+    expect(screen.queryByRole('button', { name: /^Rest:/ })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Round: 1' }))
+    within(screen.getByRole('dialog', { name: 'Cash In' })).getByRole('slider', { name: 'Round' }).focus()
+    await userEvent.keyboard('{ArrowRight}')
+
+    expect(within(document.querySelector('[data-blocco-id]')).getByRole('button', { name: 'Rest: 1:00' })).toBeInTheDocument()
+  })
+
+  it('il foglio si chiude con la X, che il tasto indietro di Android sa trovare', async () => {
+    await alPasso2()
+    await aggiungiBlocco('AMRAP')
+    await userEvent.click(screen.getByRole('button', { name: 'Durata: 10:00' }))
+    const foglio = screen.getByRole('dialog', { name: 'AMRAP' })
+    await userEvent.click(within(foglio).getByRole('button', { name: 'Chiudi' }))
+    await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: 'AMRAP' })).not.toBeInTheDocument())
+  })
+})
+
+describe('il dito sul righello', () => {
+  // 🔴 Trovati sull'emulatore Android il 07/10/2026, invisibili a ogni test di
+  // prima: il righello nel foglio dei parametri NON SI MUOVEVA col dito.
+  //   1. il blocco del «tira giù per ricaricare» annullava ogni touchmove in cui
+  //      il dito scendeva di mezzo pixel, e con il foglio aperto la pagina è
+  //      bloccata (scrollY = 0): ogni trascinamento orizzontale moriva lì;
+  //   2. il tocco, nato in un portale, risaliva in React fino al blocco e dopo
+  //      250ms fermi faceva partire il riordino del blocco.
+  const tocco = (tipo, el, x, y) => {
+    const e = new Event(tipo, { bubbles: true, cancelable: true })
+    Object.defineProperty(e, 'touches', { value: [{ clientX: x, clientY: y }] })
+    el.dispatchEvent(e)
+    return e
+  }
+  const apriFoglio = async () => {
+    await alPasso2()
+    await aggiungiBlocco('EMOM')
+    await userEvent.click(screen.getByRole('button', { name: 'Ogni: 1:00' }))
+    return within(screen.getByRole('dialog', { name: 'EMOM' })).getByRole('slider', { name: 'Ogni' })
+  }
+
+  it('un trascinamento orizzontale che scende di poco NON viene annullato', async () => {
+    const righello = await apriFoglio()
+    tocco('touchstart', righello, 200, 500)
+    expect(tocco('touchmove', righello, 120, 501).defaultPrevented).toBe(false)
+  })
+
+  it('un vero tirare giù in cima alla pagina sì, come prima', async () => {
+    await alPasso2()
+    await aggiungiBlocco('EMOM')   // con dei blocchi ci sono modifiche da non perdere
+    const pagina = document.querySelector('[data-blocco-id]')
+    tocco('touchstart', pagina, 200, 300)
+    expect(tocco('touchmove', pagina, 205, 380).defaultPrevented).toBe(true)
+  })
+
+  it('tenere il dito fermo sul righello non afferra il blocco', async () => {
+    const righello = await apriFoglio()
+    fireEvent.touchStart(righello, { touches: [{ clientX: 200, clientY: 500 }] })
+    await new Promise(r => setTimeout(r, 320))
+    // Il riordino parte rendendo il blocco semitrasparente.
+    expect(document.querySelector('[data-blocco-id]').style.opacity).not.toBe('0.3')
+    fireEvent.touchEnd(righello)
+  })
+})
+
+describe('le fasi di corsa', () => {
+  const apriFase = async () => {
+    monta()
+    await userEvent.click(screen.getByRole('button', { name: /Corsa/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi la prima fase/ }))
+  }
+
+  it('un intervallo di passo si salva nel formato di prima', async () => {
+    // `pace` composto da formatPace («5:00 - 5:10 /km») più paceMin e paceMax
+    // separati: è quello che RunningStepRow, la scheda e la web app leggono.
+    await apriFase()
+    await userEvent.click(screen.getByRole('button', { name: /^Passo:/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ritmo' }))
+    await userEvent.click(screen.getByRole('button', { name: /Intervallo/ }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Nuova fase' })).getByRole('button', { name: 'Aggiungi fase' }))
+
+    expect(screen.getByText('@5:00 - 5:10 /km')).toBeInTheDocument()
+  })
+
+  it('tempo o distanza è una pillola, e la distanza scrive metri e chilometri come prima', async () => {
+    await apriFase()
+    await userEvent.click(screen.getByRole('button', { name: 'Distanza' }))
+    expect(screen.getByRole('button', { name: /^Distanza:/ })).toHaveAccessibleName('Distanza: 1 km')
+    await userEvent.click(screen.getByRole('button', { name: '400 m' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Nuova fase' })).getByRole('button', { name: 'Aggiungi fase' }))
+
+    expect(screen.getByText('400m')).toBeInTheDocument()
+  })
+
+  it('le ripetute si aprono su «Volte»', async () => {
+    await apriFase()
+    await userEvent.click(screen.getByRole('button', { name: 'Ripetute' }))
+    expect(screen.getByRole('slider', { name: 'Volte' })).toBeInTheDocument()
   })
 })
 

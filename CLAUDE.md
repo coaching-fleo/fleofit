@@ -25,7 +25,7 @@
   (`docs/memoria/app-store.md`).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint al 07/10/2026: `npm test` → **1160 test**, `npm run lint` → **42 problemi**.
+- Test e lint al 07/10/2026: `npm test` → **1202 test**; `npx eslint src` → **26 problemi** (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---
@@ -201,10 +201,12 @@ npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 > appena rimossa continuava a comparire nell'app. Non è un passo solo pre-archive:
 > serve **a ogni** compilazione da Xcode. Per questo esiste `npm run ios`.
 >
-> ⚠️ Il build stampa anche il peso dei chunk: `CreateWorkout` sta a **156 KB**
+> ⚠️ Il build stampa anche il peso dei chunk: `CreateWorkout` sta a **178 KB**
 > (erano 76 fino al 15/09: **+15** di `thinking-orbs`, che porta tutti e nove i
-> modi anche usandone due — §9-untricies — e **+64** di `border-beam`,
-> §9-duetricies). `CreaWorkoutUI` deve restare intorno ai **24 KB**: è un chunk
+> modi anche usandone due — §9-untricies — **+64** di `border-beam`,
+> §9-duetricies, e **+22** del righello il 07/10, §9-sexquadragies).
+> `CreaWorkoutUI` deve restare intorno ai **18 KB** (24 fino al 07/10, quando ne
+> sono usciti Stepper e ruota del passo): è un chunk
 > **condiviso con `WorkoutDetail`**, e una libreria di effetti importata lì
 > dentro la fa scaricare a ogni apertura di una scheda. E `WorkoutDetail` deve
 > restare intorno ai **79 KB** — 83 fino al 22/09, quando il chunk del recap si è
@@ -584,7 +586,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 |---|---|
 | `Home.jsx` (ramo atleta), `HomeAtletaUI`, `HomeAtletaVuotiUI`, `statistiche.js` | `home-atleta.md` |
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `statisticheCoach.js`, `pausa.js` | `home-coach.md` |
-| `CreateWorkout.jsx`, `CreaWorkoutUI`, `HyroxBlock`, `RunningStepRow`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, salvataggio e bozza | `crea-workout.md` |
+| `CreateWorkout.jsx`, `CreaWorkoutUI`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, salvataggio e bozza | `crea-workout.md` |
 | `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |

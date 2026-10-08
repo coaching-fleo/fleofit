@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createElement } from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -55,14 +55,14 @@ async function builderConUnaFase(tipo = 'Corsa') {
   await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
   await userEvent.click(screen.getByRole('button', { name: /Aggiungi la prima fase/ }))
   await userEvent.click(screen.getByRole('button', { name: tipo }))
-  await userEvent.click(screen.getByRole('button', { name: 'Aggiungi Fase' }))
+  await userEvent.click(within(screen.getByRole('dialog', { name: 'Nuova fase' })).getByRole('button', { name: 'Aggiungi fase' }))
   expect(screen.getAllByLabelText('Elimina la fase')).toHaveLength(1)
 }
 
 async function aggiungiFase(tipo) {
   await userEvent.click(screen.getByRole('button', { name: /Aggiungi una fase di corsa/ }))
   await userEvent.click(screen.getByRole('button', { name: tipo }))
-  await userEvent.click(screen.getByRole('button', { name: 'Aggiungi Fase' }))
+  await userEvent.click(within(screen.getByRole('dialog', { name: 'Nuova fase' })).getByRole('button', { name: 'Aggiungi fase' }))
 }
 
 beforeEach(() => { spiaCopy.mockClear() })

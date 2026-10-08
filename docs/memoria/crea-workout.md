@@ -32,7 +32,9 @@ allontanava man mano che il coach lavorava.
 4. **«Salva» è una barra fissa in basso**, la stessa per i due passi e per le tre
    categorie. Sopra, **«Genera con IA»** è una card piena a tutta larghezza e
    «Aggiungi blocco» il gesto tranquillo sotto di essa.
-5. **Le rotelle dei numeri sono sparite** dal flusso Hyrox: al loro posto il
+5. ⚠️ *Superato dal righello il 07/10/2026 (§9-sexquadragies, in fondo a questo
+   file): Stepper, ruota del passo e rotelle della corsa non esistono più.*
+   **Le rotelle dei numeri sono sparite** dal flusso Hyrox: al loro posto il
    valore grande, meno e più ai lati, i valori d'uso comune a portata di pollice
    e «Digita» per il valore esatto. In più la riga **«ultima volta»**, che
    ripropone i valori dell'ultima assegnazione dello stesso esercizio.
@@ -129,6 +131,8 @@ allontanava man mano che il coach lavorava.
    tocca il campo.
 
 ### ⚠️ Il passo NON usa lo Stepper, e ci sono voluti tre tentativi
+> *Dal 07/10/2026 la ruota è il righello (§9-sexquadragies), ma la lezione qui
+> sotto resta tutta: il modo è una pillola, il valore una scala.*
 Lo Stepper funziona su ripetizioni, chili, metri e tempi perché lì il «più uno»
 vuol dire qualcosa. Sul **passo** no. I due tentativi caduti, con la loro ragione:
 
@@ -803,3 +807,103 @@ quale usare.
 Test: `src/lib/__tests__/nomeCasuale.test.js` (19), `CodiceTitolo.test.jsx` (5),
 uno aggiornato in `CreaWorkoutBuilder.test.jsx`. Tre mutazioni provate
 (esclusione del proprio nome, cambio di nome se preso, il compromised), tre prese.
+
+---
+
+## 9-sexquadragies. Il righello (07/10/2026)
+
+Segnalato dal committente: «la scelta di metri, misure, distanze, numero blocchi
+non è veramente intuitiva». Tre proposte mostrate (righello, tabella alla Hevy,
+formati pronti); scelta del committente: **il righello**. Una prima proposta con
+un tastierino numerico disegnato da noi e la frase a «gettoni» è stata **bocciata
+senza appello** («oscena»): non riproporla.
+
+### Cosa c'è ora
+Un controllo solo per **ogni** numero del builder — ripetizioni, chili, metri,
+tempi, round, passo, durate e distanze di corsa:
+- **in alto le schede** delle misure di quella cosa, ognuna col suo valore scritto
+  («Ripetizioni 15 · Peso 9 kg»): si legge tutto senza aprire niente;
+- **il numero grande**, che toccato apre la tastiera numerica del telefono per il
+  valore esatto (con «Fatto»: la tastiera numerica di iOS non ha l'invio);
+- **il righello**, che si trascina col pollice con l'inerzia nativa e si aggancia
+  alle tacche;
+- **tre o quattro scorciatoie**: i valori più usati per QUELL'esercizio nello
+  storico, e solo in mancanza un ripiego (mai sul peso);
+- **le pillole** sopra il numero per i modi e i casi speciali: Max, Un peso / Due
+  pesi / Senza peso, Ripetizioni / Distanza degli ibridi, Ritmo / Cadenza /
+  Sensazione (ergometri), Ritmo / Zona / Velocità (Run), Tempo / Distanza (corsa).
+
+Dove vive:
+- `src/lib/scaleMisura.js` — le scale (quali valori esistono e con che scatto),
+  `indiceVicino`, `valoreDaTesto` («130» → «1:30»), `testoMisura`. Logica pura.
+- `src/components/Righello.jsx` — solo il gesto.
+- `src/components/FoglioMisure.jsx` — schede, numero, righello, scorciatoie;
+  più `FoglioParametri`, il foglio dal basso dei parametri dei blocchi.
+- In `CreateWorkout.jsx`: `ExercisePicker` (le funzioni `vista*` descrivono le
+  schede), `parametriDelBlocco` (i numeri di ogni tipo di blocco),
+  `RunningStepPicker` (ora a schermo intero, `tratto()` per «quanto» e «passo»).
+
+### ⚠️ Le sei cose da sapere prima di rimetterci mano
+1. 🔴 **Il formato salvato NON è cambiato.** Le scale producono le stesse stringhe
+   di prima («15», «9 kg» → `kg: "9"`, «250m», «1:30», «3:50 /km», «45 min»,
+   «1.5 km», «12.0 km/h»): il database è condiviso con la web app in produzione.
+   L'unica forma nuova è il **mezzo chilo** (`"82.5"`, col punto), che `numero()`
+   dei report e `metriDi`/`parseDuration` leggono già. `scaleMisura.test.js`
+   confronta le scale con le liste di prima **copiate lì apposta**: se una scala
+   cambia forma, quel test è il primo a dirlo.
+2. 🔴 **Il righello scrive solo quando lo muove il dito** (`dalDito` in
+   `Righello.jsx`). Anche lo scorrimento fatto dal codice (posarsi sul valore,
+   una scorciatoia) genera eventi di scroll: ascoltandoli, aprire un esercizio
+   senza peso gli scriverebbe da solo il valore di partenza. ⚠️ jsdom non genera
+   eventi di scroll, quindi **questo non è coperto da test**: va riprovato a mano
+   sul telefono dopo ogni modifica al righello. ✅ Provato sull'emulatore Android il
+   07/10/2026: aprendo e posandosi su una scorciatoia il valore non cambia.
+3. **Un valore vuoto non si scrive «—» a 64px**: si mostra spento il valore sotto
+   l'ago, e la scheda in alto dice «—». Il trattino gigante sembrava un difetto.
+4. **I numeri delle tacche stanno SOTTO le tacche**: sopra, il puntino dell'ago
+   copriva proprio il valore scelto.
+5. **I parametri del blocco non stanno più nella card**: lì ci sono le pillole
+   («Ogni 1:00 · Round 10»), e il righello sale dal basso (`FoglioParametri`,
+   che usa `useBottomSheet`). Il sottotitolo del foglio dice la durata del blocco
+   mentre la si cambia.
+6. **Righello e FoglioMisure si importano solo da `CreateWorkout`**, mai da
+   `CreaWorkoutUI.jsx` (chunk condiviso con la scheda workout, CLAUDE.md §2).
+   Da `CreaWorkoutUI` sono usciti `Stepper` e `RuotaValori`.
+
+### 🔴 Trovato sull'emulatore: il righello non si muoveva col dito
+Tutti i test erano verdi, e nel foglio dei parametri il righello **non scorreva**.
+Due cause, nessuna visibile in jsdom (ora ci sono tre test, «il dito sul righello»):
+1. il blocco del «tira giù per ricaricare» in `CreateWorkout` (l'effetto con
+   `handleTouchMove`) annullava ogni `touchmove` in cui il dito scendeva anche di
+   mezzo pixel, se la pagina era in cima. Con un foglio aperto `useBottomSheet`
+   blocca il body con `position: fixed`, quindi `scrollY` vale **sempre** 0: ogni
+   trascinamento orizzontale moriva lì. Ora si annulla solo un tirare giù vero
+   (più verticale che orizzontale) e non dentro una lista che può ancora salire —
+   lo stesso difetto impediva di riscorrere verso l'alto le liste interne;
+2. il tocco nato nel foglio (un **portale**) risaliva in React fino al blocco, che
+   ha il trascina-per-riordinare: tenendo il dito fermo 250ms partiva il riordino,
+   che blocca ogni scorrimento. `useTouchDrag` ora ignora i tocchi che non stanno
+   nel DOM dell'elemento (`currentTarget.contains(target)`).
+⚠️ La lezione: un gesto del dito si prova su un dispositivo (o con
+`adb shell input swipe` sull'emulatore), non solo con le frecce in jsdom.
+
+### Le scale, in breve
+Ripetizioni 1–100 di 1 · peso 0,5–20 di 0,5 poi fino a 300 di 2,5 · doppio 2×1–2×50
+· metri 10–300 di 10, poi 50 fino a 1000, 100 fino a 2000, 500 fino a 5000 · tempo
+5″ fino a 1′, 15″ fino a 10′, 30″ fino a 30′, 1′ fino a 120′ · recupero fino a 15′ ·
+passo corsa 2:00–9:55 di 5″ · passo ergo 1:30–6:30 di 5″ · cadenza 40–120 · velocità
+5–25 km/h di 0,5 · durata corsa 5″–55″ poi 1′–180′ · distanza corsa 10 m–950 m,
+poi 1–10 km di 0,5, poi fino a 42 km. Un valore vecchio che non cade su una tacca
+(«1:37») resta com'è finché non lo si tocca: il righello si posa sulla più vicina.
+
+### Non fatto, e perché
+- **Le calorie sugli ergometri** («20 cal»): sarebbe una forma nuova nel database,
+  e la web app su `main` e la stima della durata non la conoscono. Va deciso.
+- **Pesi standard Hyrox** come scorciatoie: andrebbero confermati dal committente.
+
+Test: `scaleMisura.test.js` (33), e in `CreaWorkoutBuilder.test.jsx` le sezioni
+«il righello scrive il vocabolario di prima», «il passo: prima il modo, poi il
+valore», «i numeri del blocco stanno in un foglio dal basso», «le fasi di corsa».
+Mutazioni provate e prese: formato del peso e del tempo nelle scale (9 test rossi),
+scorciatoie non dallo storico, scatti di 1 kg sopra i 20, intervallo di passo non
+composto.

@@ -33,6 +33,31 @@ cd android && ./gradlew installDebug  # compila e installa sull'emulatore/telefo
   **solo se il file c'è**: senza, scrive nel log che le push non funzioneranno e prosegue.
 - `minSdk 24`, `targetSdk 36` (`android/variables.gradle`).
 
+#### ⚠️ La cartella di rete (07/10/2026)
+`Z:` è una cartella di rete (`\192.168.100.2leo88`). Con Android Studio aperto
+`npx cap sync android` si ferma a metà (EPERM / ENOTEMPTY) e lascia **mezze vuote**
+due cartelle: `android/capacitor-cordova-android-plugins` (resta solo `build/`, e
+Gradle dice «cordova.variables.gradle does not exist») e
+`android/app/src/main/assets/public` (resta solo `cordova.js`). Anche *Clean Project*
+si blocca, e `app/build` resta piena di cartelle in cancellazione che Gradle non
+riesce più a leggere (AccessDeniedException su `mergeDebugResources`).
+
+Cosa funziona:
+1. chiudere Android Studio;
+2. cancellare a mano la cartella mezza vuota e rifare i pezzi separati:
+   `npx cap update android` (plugin) e `npx cap copy android` (codice web);
+3. verificare la copia con `diff -q dist/assets/index-*.js android/app/src/main/assets/public/assets/index-*.js`;
+4. le cartelle `build/` stanno **sul disco locale** grazie a
+   `~/.gradle/init.d/fleofit-build-locale.gradle` (fuori dal progetto, solo su questo
+   PC): Gradle lo applica da solo a ogni build, **anche da Android Studio**, e agisce
+   solo sui progetti con «fleofit» nel percorso. L'APK finisce in
+   `%LOCALAPPDATA%leofit-gradle-build\_app\outputspk\debug`. La cartella
+   `android/app/build` su Z: non si usa più (restano cartelle vuote non cancellabili:
+   ignorarle). Dopo averlo aggiunto è servito cancellare `android/.gradle`, dove Gradle
+   ricordava le uscite vecchie e provava a ripulirle («Failed to clean up output files»).
+
+La soluzione stabile è una copia di lavoro su un disco locale.
+
 ### A.2 Come si verifica (senza un telefono vero)
 
 L'emulatore usato è un **Pixel con Google Play Services** (`sdk_gphone…`): riceve le push.
