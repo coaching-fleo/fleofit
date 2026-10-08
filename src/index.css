@@ -189,6 +189,21 @@ body {
 .sheet-in {
   animation: sheetIn 0.34s cubic-bezier(0.16, 1, 0.3, 1);
 }
+/* ── L'USCITA DI UNA SCHERMATA A TUTTO SCHERMO ─────────────────────────────
+   Il rovescio, più leggero, di `sheet-in`: sfuma e scende di poco. Oggi la usa
+   «Segnala un problema» (src/components/FoglioSegnalazione.jsx), dopo il
+   ringraziamento e dopo un annullamento confermato. Chi chiude aspetta la
+   fine (DURATA_USCITA, 280ms) prima di smontare: a 0 con «riduci movimento».
+   `forwards`: l'ultimo fotogramma resta fino allo smontaggio, o la schermata
+   ricomparirebbe per un istante. */
+@keyframes schermataEsce {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(14px) scale(.985); }
+}
+.schermata-esce {
+  animation: schermataEsce 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
 @keyframes veloIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -483,7 +498,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .hero-transition { animation: none; }
   .anello-progresso { animation: none !important; }
-  .sheet-in, .velo-in { animation: none; }
+  .sheet-in, .velo-in, .schermata-esce { animation: none; }
   .modal-transition { animation: none; }
   .cascata > *, .cascata-voce { animation: none; }
   .passo-entra, .ritorno-entra { animation: none; }

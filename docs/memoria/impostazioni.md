@@ -181,7 +181,7 @@ I dati tecnici partono ma **non si mostrano** (committente, 08/10/2026). Specifi
 e piano: `docs/superpowers/specs/2026-10-07-segnalazioni-design.md` e
 `docs/superpowers/plans/2026-10-07-segnalazioni.md`.
 
-### ⚠️ Le otto cose da sapere prima di rimetterci mano
+### ⚠️ Le dieci cose da sapere prima di rimetterci mano
 
 1. 🔴 **La mail la manda il SERVER, non il telefono.** Edge Function nuova
    `supabase/functions/segnalazione` → API di Resend. Il compositore di posta del
@@ -202,8 +202,15 @@ e piano: `docs/superpowers/specs/2026-10-07-segnalazioni-design.md` e
    risponde (committente, 08/10/2026). Un test su `messaggioResend` lo verifica.
 4. **I limiti esistono due volte** (`src/lib/segnalazione.js` e `regole.ts`) e un
    test li confronta. `regole.ts` è puro (niente import Deno) apposta: così Vitest
-   lo prova. ⚠️ Il limite di 5 invii all'ora è **in memoria dell'istanza** — un
-   freno al doppio tocco, non una difesa. Una vera richiede una tabella (BACKLOG #60).
+   lo prova.
+   🔴 **Limite di invio: 3 all'ora e 10 al giorno per utente** (committente,
+   08/10/2026), salvato in `auth.users.app_metadata.segnalazioni_invii` — un
+   campo che esiste già e che l'utente **non può scrivere** (solo il service
+   role), quindi niente tabella e niente regola 0-bis violata. `auth.getUser`
+   rilegge l'utente dal database, quindi il conteggio è quello di adesso anche
+   con un JWT vecchio. Si conta solo l'invio **riuscito**; le altre chiavi degli
+   `app_metadata` (`provider`, letto da `App.jsx`) si conservano. Sopra resta il
+   `limitatore` in memoria, che ferma una raffica parallela sulla stessa istanza.
 5. 🔴 **Su un non-2xx `supabase-js` non riempie `data`**: mette la Response in
    `error.context`. `inviaSegnalazione` legge il messaggio da lì, o «Troppe
    segnalazioni» (429) e gli errori di validazione non arriverebbero mai a chi
@@ -223,7 +230,21 @@ e piano: `docs/superpowers/specs/2026-10-07-segnalazioni-design.md` e
    committente, 08/10/2026). Ringrazia e basta: «Grazie per il feedback». La riga
    dice «Un problema o un'idea per l'app». C'è un test che cerca «Federico» e
    «rispond» nel testo del foglio.
-8. **Fra un passo e l'altro il contenuto scivola**: `passo-entra` andando avanti,
+8. 🔴 **Niente link, codice o caratteri invisibili** (committente, 08/10/2026).
+   `testoProibito` rifiuta indirizzi web ed email (anche i domini «nudi» con i
+   suffissi più comuni), tag HTML (`<` + lettera: «<3» passa) e caratteri di
+   controllo o di direzione (U+202E ecc.). Le tre regex sono **identiche** in
+   `segnalazione.js` e `regole.ts`, e un test fa passare gli stessi casi da tutte
+   e due — il 08/10 ha preso davvero una divergenza. Il telefono lo dice sotto la
+   descrizione, in rosso; il server rifiuta comunque (descrizione **e** risposte).
+   I dati tecnici non si rifiutano ma si **disinnescano** (`://` → `[:]//`,
+   `www.` → `www[.]`, `@` → `[at]`): i client di posta fanno link anche del testo.
+9. **Il ringraziamento si chiude da solo dopo 2,2 secondi** (`DURATA_GRAZIE`);
+   «Chiudi» resta. Ogni uscita (tempo scaduto, «Chiudi», «Sì, annulla») passa da
+   `esci`: la schermata **sfuma e scende di poco** (`.schermata-esce` in
+   `src/index.css`, 280ms) e solo dopo si smonta; una volta sola, anche se tempo e
+   tocco arrivano insieme. Con «riduci movimento» l'uscita è istantanea.
+10. **Fra un passo e l'altro il contenuto scivola**: `passo-entra` andando avanti,
    `ritorno-entra` tornando indietro, le stesse classi del builder (già spente da
    «riduci movimento»). All'apertura niente: sale già tutta la schermata (`sheet-in`). Il
    contenitore ha `key={passo}`, quindi si rimonta e lo scorrimento torna in cima.

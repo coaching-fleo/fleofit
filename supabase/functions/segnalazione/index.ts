@@ -19,7 +19,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import {
-  type Corpo, limitatore, messaggioResend, validaCorpo,
+  type Corpo, LIMITI_INVIO, controllaInvii, limitatore, messaggioResend, validaCorpo,
 } from "./regole.ts"
 
 const corsHeaders = {
@@ -30,8 +30,12 @@ const corsHeaders = {
 const MITTENTE = Deno.env.get('SEGNALAZIONI_MITTENTE') || 'FLEOFIT <onboarding@resend.dev>';
 const DESTINATARIO = Deno.env.get('SEGNALAZIONI_DESTINATARIO') || 'coaching@federicoleo.it';
 
-// Vive quanto l'istanza: vedi il commento su `limitatore` in regole.ts.
-const limite = limitatore(5, 3_600_000);
+// Due limiti, uno sopra l'altro:
+//  • questo, in memoria, ferma una RAFFICA di richieste parallele sulla stessa
+//    istanza (vive quanto lei: vedi `limitatore` in regole.ts);
+//  • `controllaInvii`, più sotto, è quello che conta davvero: 3 all'ora e 10 al
+//    giorno per utente, salvati negli `app_metadata` e quindi persistenti.
+const limite = limitatore(LIMITI_INVIO.perOra, 3_600_000);
 
 const risposta = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), {
   status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -58,8 +62,17 @@ serve(async (req) => {
   const c = corpo as Corpo;
 
   if (!limite.consenti(utente.id)) {
-    console.warn(`segnalazione: limite orario raggiunto da ${utente.email}`);
+    console.warn(`segnalazione: raffica fermata in memoria per ${utente.email}`);
     return risposta({ error: "Troppe segnalazioni, riprova fra un'ora" }, 429);
+  }
+
+  // ⚠️ `auth.getUser` legge l'utente dal database, non dal token: gli
+  // `app_metadata` sono quelli di adesso, anche se il JWT è di un'ora fa.
+  const metadati = utente.app_metadata ?? {};
+  const verifica = controllaInvii(metadati.segnalazioni_invii, Date.now());
+  if (!verifica.consentito) {
+    console.warn(`segnalazione: limite persistente raggiunto da ${utente.email}`);
+    return risposta({ error: verifica.messaggio }, 429);
   }
 
   const chiave = Deno.env.get('RESEND_API_KEY');
@@ -68,10 +81,11 @@ serve(async (req) => {
     return risposta({ error: 'Invio non riuscito. Riprova tra poco.' }, 500);
   }
 
+  const servizio = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
   // Il nome come lo conosce il coach (rubrica atleti); se manca, l'email.
   let nome = utente.email;
   try {
-    const servizio = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const { data } = await servizio.from('athletes').select('name, surname').eq('id', utente.id).maybeSingle();
     const completo = [data?.name, data?.surname].filter(Boolean).join(' ').trim();
     if (completo) nome = completo;
@@ -91,6 +105,15 @@ serve(async (req) => {
     console.error(`segnalazione: Resend ha risposto ${invio.status}:`, await invio.text().catch(() => ''));
     return risposta({ error: 'Invio non riuscito. Riprova tra poco.' }, 502);
   }
+
+  // Si conta solo l'invio RIUSCITO: un guasto di Resend non deve consumare
+  // il limite di chi riprova. Le altre chiavi (`provider`, `providers`, che
+  // App.jsx legge) restano com'erano.
+  // ⚠️ Se questa scrittura fallisce la mail è già partita: si logga e basta.
+  const { error: metaErr } = await servizio.auth.admin.updateUserById(utente.id, {
+    app_metadata: { ...metadati, segnalazioni_invii: verifica.storico },
+  });
+  if (metaErr) console.error('segnalazione: conteggio invii non salvato:', metaErr);
 
   console.log(`segnalazione: inviata (${c.tipo}) da ${utente.email}`);
   return risposta({ ok: true });

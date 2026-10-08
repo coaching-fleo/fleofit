@@ -126,3 +126,40 @@ describe('corpoRichiesta', () => {
     expect(corpo.risposte.map(r => r.risposta)).toEqual(['Si ferma', 'Sempre'])
   })
 })
+
+describe('niente link né codice (committente, 08/10/2026)', () => {
+  const valida = (descrizione) => validaSegnalazione({ tipo: 'bug', descrizione, immagini: [] })
+
+  it.each([
+    'guarda https://sito-strano.ru/x qui',
+    'vai su http://esempio.it',
+    'apri www.esempio.com per favore',
+    'il sito esempio.com non va',
+    'scrivimi a mario.rossi@gmail.com subito',
+  ])('rifiuta un link o un indirizzo: %s', (testo) => {
+    expect(valida(testo).errore).toBe('Togli i link e gli indirizzi: non si possono inviare')
+  })
+
+  it.each([
+    'prima <script>alert(1)</script> dopo',
+    'un <img src=x onerror=alert(1)> qui dentro',
+    'testo con </div> chiuso male',
+  ])('rifiuta il codice: %s', (testo) => {
+    expect(valida(testo).errore).toBe('Il testo non può contenere codice')
+  })
+
+  it('rifiuta i caratteri invisibili e di controllo', () => {
+    expect(valida('testo normale‮con inversione').errore).toBe('Il testo contiene caratteri non ammessi')
+    expect(valida('testo normale\u0000con nullo').errore).toBe('Il testo contiene caratteri non ammessi')
+  })
+
+  it.each([
+    'Il timer si ferma al round 3 di 10',
+    'Wall Balls da 9.5 kg, ritmo 5:30 /km, Z2',
+    'Ti voglio bene <3 ma il timer si blocca',
+    'Versione 1.1.0, va a capo\ne ha una tabulazione\tqui',
+    'Ho scritto a.b e poi c.d nel campo note',
+  ])('lascia passare il testo normale: %s', (testo) => {
+    expect(valida(testo).ok).toBe(true)
+  })
+})

@@ -16,18 +16,19 @@
 // portale, sopra questo: se stesse dentro, il tasto troverebbe prima il nostro
 // «Indietro» di quello della conferma.
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Bug, Snail, BellOff, Timer, KeyRound, Lightbulb, ChevronLeft, ChevronRight, X, ImagePlus, Send, Check,
 } from 'lucide-react'
 import { useScorrimentoBloccato } from '../useBottomSheet'
 import { CustomConfirm } from './CustomModals'
+import { menoMovimento } from '../useNumeroCheSale'
 import { vibraScelta, vibraSuccesso, vibraErrore } from '../lib/aptica'
 import { leggiJson, scriviJson } from '../lib/offlineQueue'
 import { LABEL, VETRO } from '../lib/stiliCard'
 import {
-  CHIAVE_BOZZA, LIMITI, TIPI, bozzaVuota, corpoRichiesta, domandePer, validaSegnalazione,
+  CHIAVE_BOZZA, LIMITI, TIPI, bozzaVuota, corpoRichiesta, domandePer, testoProibito, validaSegnalazione,
 } from '../lib/segnalazione'
 import { riduciImmagine } from '../lib/immagineRidotta'
 
@@ -62,7 +63,14 @@ function useInLinea() {
   return online
 }
 
-export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], notificheSpente = false, onAttivaNotifiche }) {
+/** Quanto resta a schermo «Grazie per il feedback» prima di chiudersi da solo. */
+const DURATA_GRAZIE = 2200
+/** La dissolvenza d'uscita: stessa durata di `.schermata-esce` in src/index.css. */
+const DURATA_USCITA = 280
+
+export default function FoglioSegnalazione({
+  onChiudi, onInvia, tecnici = [], notificheSpente = false, onAttivaNotifiche, durataGrazie = DURATA_GRAZIE,
+}) {
   useScorrimentoBloccato()
   const [conferma, setConferma] = useState(null)
   const [bozza, setBozza] = useState(bozzaIniziale)
@@ -75,6 +83,9 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
   const [errore, setErrore] = useState(null)
   const [erroreImmagine, setErroreImmagine] = useState(null)
   const inviandoRef = useRef(false)
+  const chiusoRef = useRef(false)
+  const orologioUscita = useRef(null)
+  const [uscendo, setUscendo] = useState(false)
   const fileRef = useRef(null)
   const online = useInLinea()
 
@@ -83,6 +94,25 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
     setVerso(versoNuovo)
     setPassoGrezzo(nuovo)
   }
+
+  /**
+   * L'unica uscita: la schermata sfuma (`.schermata-esce`) e SOLO dopo si
+   * smonta. Una volta sola, anche se tempo scaduto e «Chiudi» arrivano insieme.
+   */
+  const esci = useCallback(() => {
+    if (chiusoRef.current) return
+    chiusoRef.current = true
+    setUscendo(true)
+    orologioUscita.current = setTimeout(onChiudi, menoMovimento() ? 0 : DURATA_USCITA)
+  }, [onChiudi])
+  useEffect(() => () => clearTimeout(orologioUscita.current), [])
+
+  // Il ringraziamento resta poco e se ne va da solo (committente, 08/10/2026).
+  useEffect(() => {
+    if (passo !== 'fatto') return
+    const orologio = setTimeout(esci, durataGrazie)
+    return () => clearTimeout(orologio)
+  }, [passo, durataGrazie, esci])
 
   const tipo = TIPI.find(t => t.id === bozza.tipo)
   const domande = domandePer(bozza.tipo)
@@ -109,7 +139,7 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
     message: 'Quello che hai scritto andrà perso.',
     cancelLabel: 'No',
     confirmLabel: 'Sì, annulla',
-    onConfirm: () => { cancellaBozza(); onChiudi() },
+    onConfirm: () => { cancellaBozza(); esci() },
   })
 
   const scegliTipo = (id) => {
@@ -171,8 +201,8 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
   return createPortal(
     <>
     <div role="dialog" aria-modal="true" aria-label="Segnala un problema"
-      className="fixed inset-0 z-[100] bg-[#0B0B0B] flex flex-col sheet-in
-                 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+      className={`fixed inset-0 z-[100] bg-[#0B0B0B] flex flex-col ${uscendo ? 'schermata-esce' : 'sheet-in'}
+                 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)]`}>
       <div className="w-full max-w-2xl mx-auto px-4 flex flex-col flex-1 min-h-0">
 
         {/* La barra: «Indietro» a sinistra (passi 2-3), l'uscita a destra.
@@ -184,7 +214,7 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
             </button>
           ) : <span aria-hidden="true" />}
           {passo === 'fatto' ? (
-            <button type="button" onClick={onChiudi} className={comandoTesta}>
+            <button type="button" onClick={esci} className={comandoTesta}>
               <X size={16} aria-hidden="true" />Chiudi
             </button>
           ) : (
@@ -276,7 +306,11 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
                              placeholder:text-gray-600 focus:outline-none focus:border-brand/60 resize-none" />
               </label>
               <p className="-mt-1 text-[11.5px] font-medium text-muted flex justify-between">
-                <span>{lunghezza > 0 && lunghezza < LIMITI.descrizioneMin ? `Almeno ${LIMITI.descrizioneMin} caratteri` : ''}</span>
+                {/* Un link, del codice o un carattere invisibile si dicono subito,
+                    in rosso: «Continua» spento senza un perché sarebbe un muro. */}
+                {testoProibito(bozza.descrizione)
+                  ? <span role="alert" className="text-red-500">{testoProibito(bozza.descrizione)}</span>
+                  : <span>{lunghezza > 0 && lunghezza < LIMITI.descrizioneMin ? `Almeno ${LIMITI.descrizioneMin} caratteri` : ''}</span>}
                 <span>{bozza.descrizione.length}/{LIMITI.descrizioneMax}</span>
               </p>
 

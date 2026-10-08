@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as client from '../segnalazione'
 import {
-  LIMITI, TIPI_VALIDI, allegati, messaggioResend, validaCorpo, oggettoSegnalazione, testoSegnalazione, htmlSegnalazione, limitatore,
+  LIMITI, TIPI_VALIDI, allegati, messaggioResend, testoProibito, disinnesca, controllaInvii, LIMITI_INVIO, validaCorpo, oggettoSegnalazione, testoSegnalazione, htmlSegnalazione, limitatore,
 } from '../../../supabase/functions/segnalazione/regole.ts'
 
 // Perché questi test esistono
@@ -131,6 +131,74 @@ describe('messaggioResend', () => {
     expect(m.text).toContain('Sofia Rossi <sofia@esempio.it>')
     expect(m.html).toContain('Sofia Rossi')
     expect(m.attachments).toEqual([])
+  })
+})
+
+describe('niente link né codice, anche sul server', () => {
+  // Il server è quello che decide: il telefono si può aggirare. Gli stessi
+  // casi passano da entrambe le regole, così non possono divergere.
+  const casi = [
+    ['guarda https://sito-strano.ru/x qui', false],
+    ['apri www.esempio.com per favore', false],
+    ['il sito esempio.com non va', false],
+    ['scrivimi a mario.rossi@gmail.com subito', false],
+    ['prima <script>alert(1)</script> dopo', false],
+    ['testo normale‮con inversione', false],
+    ['Il timer si ferma al round 3 di 10', true],
+    ['Wall Balls da 9.5 kg, ritmo 5:30 /km, Z2', true],
+    ['Ti voglio bene <3 ma il timer si blocca', true],
+  ]
+
+  it.each(casi)('telefono e server dicono la stessa cosa: %s', (testo, ammesso) => {
+    expect(testoProibito(testo) === null).toBe(ammesso)
+    expect(client.validaSegnalazione({ tipo: 'bug', descrizione: testo, immagini: [] }).ok).toBe(ammesso)
+  })
+
+  it('rifiuta la descrizione con un link', () => {
+    expect(validaCorpo(corpo({ descrizione: 'guarda https://x.ru/a subito' }))).not.toBeNull()
+  })
+
+  it('rifiuta una risposta con un link o un tag', () => {
+    expect(validaCorpo(corpo({ risposte: [{ domanda: 'Cosa succede?', risposta: 'vai su www.x.com' }] }))).not.toBeNull()
+    expect(validaCorpo(corpo({ risposte: [{ domanda: '<b>x</b>', risposta: 'Sempre' }] }))).not.toBeNull()
+  })
+
+  it('i dati tecnici non si rifiutano, ma un link dentro si disinnesca', () => {
+    expect(disinnesca('Bot +http://www.google.com/bot.html')).toBe('Bot +http[:]//www[.]google.com/bot.html')
+    const html = htmlSegnalazione(corpo({ tecnici: { Dispositivo: 'x https://a.ru y' } }), 'S', 's@e.it')
+    expect(html).not.toContain('https://')
+  })
+})
+
+describe('controllaInvii: il limite che sopravvive alla funzione', () => {
+  const ORA = 10_000_000_000
+  const MIN = 60_000
+
+  it("dichiara i limiti: 3 all'ora, 10 al giorno", () => {
+    expect(LIMITI_INVIO).toEqual({ perOra: 3, perGiorno: 10 })
+  })
+
+  it("il terzo invio dell'ora passa, il quarto no", () => {
+    const storico = [ORA - 50 * MIN, ORA - 20 * MIN]
+    expect(controllaInvii(storico, ORA).consentito).toBe(true)
+    expect(controllaInvii([...storico, ORA - MIN], ORA)).toEqual(
+      expect.objectContaining({ consentito: false, messaggio: "Hai già inviato 3 segnalazioni nell'ultima ora. Riprova più tardi." }))
+  })
+
+  it("dopo un'ora i vecchi non contano più per l'ora, ma sì per il giorno", () => {
+    const storico = Array.from({ length: 10 }, (_, i) => ORA - (2 + i) * 60 * MIN)
+    expect(controllaInvii(storico, ORA)).toEqual(
+      expect.objectContaining({ consentito: false, messaggio: 'Hai raggiunto il massimo di 10 segnalazioni al giorno. Riprova domani.' }))
+  })
+
+  it("lo storico aggiornato tiene solo le ultime 24 ore, più l'invio di adesso", () => {
+    const storico = [ORA - 25 * 60 * MIN, ORA - 2 * 60 * MIN]
+    expect(controllaInvii(storico, ORA).storico).toEqual([ORA - 2 * 60 * MIN, ORA])
+  })
+
+  it('uno storico rovinato non blocca nessuno', () => {
+    expect(controllaInvii('rotto', ORA).consentito).toBe(true)
+    expect(controllaInvii([null, 'x', -5], ORA).storico).toEqual([ORA])
   })
 })
 

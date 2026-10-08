@@ -84,7 +84,7 @@ describe('annullare', () => {
     await utente.type(screen.getByRole('textbox', { name: /Descrivi/ }), TESTO)
     await utente.click(screen.getByRole('button', { name: 'Annulla' }))
     await utente.click(screen.getByRole('button', { name: 'Sì, annulla' }))
-    expect(onChiudi).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(onChiudi).toHaveBeenCalledTimes(1))
     expect(window.localStorage.getItem(CHIAVE_BOZZA)).toBeNull()
   })
 
@@ -103,7 +103,7 @@ describe('annullare', () => {
     await screen.findByText('Grazie per il feedback')
     expect(screen.queryByRole('button', { name: 'Annulla' })).not.toBeInTheDocument()
     await utente.click(screen.getByRole('button', { name: 'Chiudi' }))
-    expect(onChiudi).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(onChiudi).toHaveBeenCalledTimes(1))
   })
 })
 
@@ -136,7 +136,70 @@ describe('la navigazione fra i passi', () => {
   })
 })
 
+/**
+ * Accende il movimento per un test: `src/test/setup.js` dichiara
+ * `prefers-reduced-motion: reduce` per tutta la suite, e con quello l'uscita
+ * è istantanea — cioè il test verificherebbe il caso opposto.
+ */
+const conMovimento = () => {
+  const prima = window.matchMedia
+  window.matchMedia = (query) => ({
+    matches: false, media: query, onchange: null,
+    addEventListener: () => {}, removeEventListener: () => {},
+    addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false,
+  })
+  return () => { window.matchMedia = prima }
+}
+
+describe("l'uscita", () => {
+  it('la schermata sfuma via, e SOLO dopo si chiude', async () => {
+    const ripristina = conMovimento()
+    try {
+      const utente = userEvent.setup()
+      const { onChiudi } = monta({ durataGrazie: 60_000 })
+      await finoAlRiepilogo(utente)
+      await utente.click(screen.getByRole('button', { name: 'Invia' }))
+      await utente.click(await screen.findByRole('button', { name: 'Chiudi' }))
+      expect(screen.getByRole('dialog', { name: 'Segnala un problema' })).toHaveClass('schermata-esce')
+      expect(onChiudi).not.toHaveBeenCalled()
+      await waitFor(() => expect(onChiudi).toHaveBeenCalledTimes(1))
+    } finally {
+      ripristina()
+    }
+  })
+})
+
+describe('il ringraziamento', () => {
+  it("dopo l'invio resta poco e si chiude da solo", async () => {
+    const utente = userEvent.setup()
+    const { onChiudi } = monta({ durataGrazie: 30 })
+    await finoAlRiepilogo(utente)
+    await utente.click(screen.getByRole('button', { name: 'Invia' }))
+    await screen.findByText('Grazie per il feedback')
+    await waitFor(() => expect(onChiudi).toHaveBeenCalledTimes(1))
+  })
+
+  it('toccando «Chiudi» prima del tempo si chiude UNA volta sola', async () => {
+    const utente = userEvent.setup()
+    const { onChiudi } = monta({ durataGrazie: 80 })
+    await finoAlRiepilogo(utente)
+    await utente.click(screen.getByRole('button', { name: 'Invia' }))
+    await utente.click(await screen.findByRole('button', { name: 'Chiudi' }))
+    await new Promise(r => setTimeout(r, 150))
+    expect(onChiudi).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('il passo dei dettagli', () => {
+  it('un link nella descrizione: lo dice, e «Continua» resta spento', async () => {
+    const utente = userEvent.setup()
+    monta()
+    await utente.click(screen.getByRole('button', { name: /Timer e allenamento/ }))
+    await utente.type(screen.getByRole('textbox', { name: /Descrivi/ }), 'guarda www.esempio.com per favore')
+    expect(screen.getByText('Togli i link e gli indirizzi: non si possono inviare')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continua' })).toBeDisabled()
+  })
+
   it('«Continua» resta spento con una descrizione di soli spazi', async () => {
     const utente = userEvent.setup()
     monta()

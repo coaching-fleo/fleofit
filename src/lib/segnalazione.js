@@ -64,6 +64,30 @@ export const domandePer = (tipo) => DOMANDE[tipo] || []
 
 export const bozzaVuota = () => ({ tipo: null, risposte: {}, descrizione: '' })
 
+// ── Niente link né codice (committente, 08/10/2026) ───────────────────────
+// ⚠️ Queste tre espressioni esistono IDENTICHE in
+// `supabase/functions/segnalazione/regole.ts`, che è quello che decide davvero
+// (il telefono si può aggirare). Un test fa passare gli stessi casi da tutte e
+// due: se una cambia da sola, cade.
+// Caratteri di controllo (tranne a capo e tab) e invisibili: zero-width e i
+// controlli di direzione, che servono a far leggere un testo diverso da com'è.
+// eslint-disable-next-line no-control-regex -- i caratteri di controllo sono proprio ciò che si cerca
+const CARATTERI_PROIBITI = new RegExp('[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]')
+// Un tag HTML: «<» seguito da una lettera, «/», «!» o «?». «<3» resta permesso.
+const CODICE = /<\s*\/?\s*[a-z!?]/i
+// Indirizzi web ed email. I domini «nudi» solo con i suffissi più comuni, così
+// «9.5 kg» o «a.b» non vengono presi per link.
+const LINK = /(https?:\/\/|ftp:\/\/|javascript:|www\.|[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|\b[a-z0-9-]{2,}\.(com|it|net|org|io|ly|me|co|app|xyz|ru|cn|info|biz|link|click|top|site|online|shop|eu|de|fr|uk|us|tk|gl|gg|to|be)\b)/i
+
+/** Il messaggio d'errore se il testo contiene qualcosa che non deve partire, o `null`. */
+export function testoProibito(testo) {
+  const t = String(testo ?? '')
+  if (CARATTERI_PROIBITI.test(t)) return 'Il testo contiene caratteri non ammessi'
+  if (CODICE.test(t)) return 'Il testo non può contenere codice'
+  if (LINK.test(t)) return 'Togli i link e gli indirizzi: non si possono inviare'
+  return null
+}
+
 /**
  * Si può proseguire? Lavora sul testo RIFILATO: dieci spazi sono una mail
  * muta, e non devono passare il controllo che li conta come dieci caratteri.
@@ -73,6 +97,7 @@ export function validaSegnalazione({ tipo, descrizione, immagini = [] }) {
   let errore = null
   if (!tipo) errore = 'Scegli di cosa si tratta'
   else if (testo.length < LIMITI.descrizioneMin) errore = `Scrivi almeno ${LIMITI.descrizioneMin} caratteri`
+  else if (testoProibito(testo)) errore = testoProibito(testo)
   else if (testo.length > LIMITI.descrizioneMax) errore = 'Massimo 4.000 caratteri'
   else if (immagini.length > LIMITI.immaginiMax) errore = `Massimo ${LIMITI.immaginiMax} immagini`
   return { ok: errore === null, errore }

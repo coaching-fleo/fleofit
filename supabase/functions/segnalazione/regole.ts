@@ -25,6 +25,34 @@ export const TITOLI_TIPO: Record<string, string> = {
 
 export const TIPI_VALIDI = Object.keys(TITOLI_TIPO);
 
+// ── Niente link né codice (committente, 08/10/2026) ───────────────────────
+// ⚠️ IDENTICHE a quelle di `src/lib/segnalazione.js`: un test fa passare gli
+// stessi casi da tutte e due. Qui però è il server, ed è lui che decide.
+// eslint-disable-next-line no-control-regex -- i caratteri di controllo sono proprio ciò che si cerca
+const CARATTERI_PROIBITI = new RegExp('[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]');
+const CODICE = /<\s*\/?\s*[a-z!?]/i;
+const LINK = /(https?:\/\/|ftp:\/\/|javascript:|www\.|[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|\b[a-z0-9-]{2,}\.(com|it|net|org|io|ly|me|co|app|xyz|ru|cn|info|biz|link|click|top|site|online|shop|eu|de|fr|uk|us|tk|gl|gg|to|be)\b)/i;
+
+/** Il messaggio d'errore se il testo contiene qualcosa che non deve partire, o `null`. */
+export function testoProibito(testo: unknown): string | null {
+  const t = String(testo ?? '');
+  if (CARATTERI_PROIBITI.test(t)) return 'Il testo contiene caratteri non ammessi';
+  if (CODICE.test(t)) return 'Il testo non può contenere codice';
+  if (LINK.test(t)) return 'Togli i link e gli indirizzi: non si possono inviare';
+  return null;
+}
+
+/**
+ * I dati tecnici non si rifiutano (uno user agent strano non deve bloccare
+ * una segnalazione vera), ma un link lì dentro non deve diventare cliccabile
+ * nella posta: i client di posta trasformano in link anche il testo semplice.
+ */
+export const disinnesca = (v: unknown) => String(v ?? '')
+  .replace(new RegExp(CARATTERI_PROIBITI.source, 'g'), '')
+  .replace(/:\/\//g, '[:]//')
+  .replace(/www\./gi, (m) => `${m.slice(0, 3)}[.]`)
+  .replace(/@/g, '[at]');
+
 type Risposta = { domanda: string; risposta: string };
 type Immagine = { nome: string; base64: string };
 export type Corpo = {
@@ -49,10 +77,13 @@ export function validaCorpo(corpo: unknown): string | null {
   const testo = eStringa(c.descrizione) ? c.descrizione.trim() : '';
   if (testo.length < LIMITI.descrizioneMin) return `Scrivi almeno ${LIMITI.descrizioneMin} caratteri`;
   if (testo.length > LIMITI.descrizioneMax) return 'Massimo 4.000 caratteri';
+  const proibito = testoProibito(testo);
+  if (proibito) return proibito;
 
   const risposte = c.risposte ?? [];
   if (!Array.isArray(risposte) || risposte.length > 5
-    || risposte.some(r => !r || !eStringa(r.domanda) || !eStringa(r.risposta) || r.domanda.length > 200 || r.risposta.length > 200)) {
+    || risposte.some(r => !r || !eStringa(r.domanda) || !eStringa(r.risposta) || r.domanda.length > 200 || r.risposta.length > 200
+      || testoProibito(r.domanda) || testoProibito(r.risposta))) {
     return 'Risposte non valide';
   }
 
@@ -111,7 +142,7 @@ export function testoSegnalazione(c: Corpo, nome: string, email: string): string
     c.descrizione.trim(),
     '',
     '— Dati tecnici —',
-    ...Object.entries(c.tecnici ?? {}).map(([k, v]) => `${k}: ${v}`),
+    ...Object.entries(c.tecnici ?? {}).map(([k, v]) => `${disinnesca(k)}: ${disinnesca(v)}`),
   ];
   if (c.immagini?.length) righe.push('', `Screenshot allegati: ${c.immagini.length}`);
   return righe.join('\n');
@@ -127,7 +158,7 @@ export function htmlSegnalazione(c: Corpo, nome: string, email: string): string 
   const risposte = (c.risposte ?? [])
     .map(r => `<li><span style="color:#888">${escape(r.domanda)}</span> ${escape(r.risposta)}</li>`).join('');
   const tecnici = Object.entries(c.tecnici ?? {})
-    .map(([k, v]) => `<tr><td style="color:#888;padding-right:12px">${escape(k)}</td><td>${escape(v)}</td></tr>`).join('');
+    .map(([k, v]) => `<tr><td style="color:#888;padding-right:12px">${escape(disinnesca(k))}</td><td>${escape(disinnesca(v))}</td></tr>`).join('');
   return [
     '<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.5;color:#111">',
     `<p style="margin:0 0 4px"><b>${escape(TITOLI_TIPO[c.tipo] ?? c.tipo)}</b></p>`,
@@ -159,4 +190,31 @@ export function limitatore(max = 5, finestraMs = 3_600_000) {
       return true;
     },
   };
+}
+
+// ── Il limite che sopravvive alla funzione ────────────────────────────────
+// `limitatore` vive in memoria e si azzera quando Supabase ricicla l'istanza.
+// Questo invece si appoggia agli `app_metadata` dell'utente (un campo che
+// esiste già, e che l'utente NON può scrivere: lo cambia solo il service role),
+// quindi vale fra un'istanza e l'altra senza una tabella nuova (regola 0-bis).
+export const LIMITI_INVIO = { perOra: 3, perGiorno: 10 };
+const ORA_MS = 3_600_000;
+const GIORNO_MS = 24 * ORA_MS;
+
+/**
+ * Si può inviare adesso? `storico` sono gli istanti (ms) degli invii riusciti.
+ * Torna anche lo storico da salvare: solo le ultime 24 ore, più l'invio di adesso.
+ * Uno storico rovinato non blocca nessuno: si riparte da vuoto.
+ */
+export function controllaInvii(storico: unknown, ora = Date.now(), limiti = LIMITI_INVIO) {
+  const puliti = (Array.isArray(storico) ? storico : [])
+    .filter((t): t is number => typeof t === 'number' && Number.isFinite(t) && t > 0 && t <= ora && ora - t < GIORNO_MS);
+  const nellOra = puliti.filter(t => ora - t < ORA_MS).length;
+  if (nellOra >= limiti.perOra) {
+    return { consentito: false, messaggio: `Hai già inviato ${limiti.perOra} segnalazioni nell'ultima ora. Riprova più tardi.`, storico: puliti };
+  }
+  if (puliti.length >= limiti.perGiorno) {
+    return { consentito: false, messaggio: `Hai raggiunto il massimo di ${limiti.perGiorno} segnalazioni al giorno. Riprova domani.`, storico: puliti };
+  }
+  return { consentito: true, messaggio: null, storico: [...puliti, ora] };
 }
