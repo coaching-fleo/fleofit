@@ -28,6 +28,11 @@
   verificate con `otool -L` sul binario. ⚠️ Il `pbxproj` dichiarava
   `CURRENT_PROJECT_VERSION = 3` e l'ipa è uscito **6**: è la rinumerazione
   automatica descritta qui sotto, che ha funzionato per la terza volta.
+  Commit `8d9a398`, 21/09/2026 alle 10:58: è il punto da cui contare le novità.
+- **29 set 2026** — ✅✅ **APPROVATA.** La build in vendita è la `1.1.0 (6)`. Quello che
+  è stato fatto dopo `8d9a398` (UIScene e Capacitor 8.5.2 del pomeriggio del 21/09
+  compresi, e con loro la build 7, esportata ma che nei commit non risulta caricata) arriva con il prossimo
+  aggiornamento: l'elenco per la scheda «Novità» è in `DEVLOG.md`, alla radice.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non

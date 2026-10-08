@@ -19,9 +19,11 @@
   Android sullo stesso codice React, cartella `C:\Users\FEDE\Desktop\FLEOFIT`
   (§1.1). L'ultimo commit si legge con `git log -1`, **mai scritto qui** (è stato sbagliato
   tre volte).
-- **Schema del database congelato** fino all'approvazione su App Store (§0, regola 0-bis).
-- **App Store**: build `1.1.0 (6)` archiviata e verificata il 21/09/2026 dopo il terzo
-  rifiuto; due rilievi su tre si correggono su App Store Connect, non nel codice
+- **Schema del database congelato** (§0, regola 0-bis): l'approvazione è arrivata, ma lo
+  sblocco resta una decisione del committente.
+- **App Store**: ✅ **APPROVATA il 29/09/2026** — build `1.1.0 (6)`, commit `8d9a398` del
+  21/09/2026. Tutto ciò che è venuto dopo quel commit **non è nell'app sullo Store**: le
+  modifiche da annunciare nel prossimo aggiornamento stanno in [DEVLOG.md](DEVLOG.md)
   (`docs/memoria/app-store.md`).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
@@ -44,7 +46,9 @@
    su quella (§A.2 per Android). Un plugin che su una piattaforma non c'è va chiamato con un
    `.catch`, o si porta via il codice che lo segue (§A.3 punto 7).
 0-bis. 🔒 **LO SCHEMA DEL DATABASE È CONGELATO** fino all'approvazione su App Store (decisione del
-   committente, 24/08/2026). Niente migrazioni, niente tabelle nuove, nessuna modifica alle policy
+   committente, 24/08/2026). ⚠️ L'app è stata **approvata il 29/09/2026**, ma PRODUCT.md lega lo
+   sblocco anche al passaggio definitivo alla sola app: **il congelamento resta finché il
+   committente non dice esplicitamente che è tolto**. Niente migrazioni, niente tabelle nuove, nessuna modifica alle policy
    RLS: l'unico database serve anche la web app in produzione e non c'è staging. **Le letture sono
    permesse** (verifica policy, conteggi, export). Se una funzione richiede una migrazione, va
    proposta e messa in attesa, non implementata. Vedi PRODUCT.md → Capabilities and Constraints.
