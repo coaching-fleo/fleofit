@@ -47,7 +47,7 @@ const menoMovimento = () => {
  * quindi la posizione va memorizzata e rimessa alla chiusura, o chiudendo il
  * menu si torna in cima alla scheda.
  */
-function useScorrimentoBloccato() {
+export function useScorrimentoBloccato() {
   useEffect(() => {
     const body = document.body
     const y = window.scrollY || 0

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as client from '../segnalazione'
 import {
-  LIMITI, TIPI_VALIDI, allegati, validaCorpo, oggettoSegnalazione, testoSegnalazione, htmlSegnalazione, limitatore,
+  LIMITI, TIPI_VALIDI, allegati, messaggioResend, validaCorpo, oggettoSegnalazione, testoSegnalazione, htmlSegnalazione, limitatore,
 } from '../../../supabase/functions/segnalazione/regole.ts'
 
 // Perché questi test esistono
@@ -110,6 +110,27 @@ describe('la mail', () => {
     const html = htmlSegnalazione(corpo({ risposte: [{ domanda: 'D<', risposta: 'R>' }] }), '<b>Io</b>', 's@e.it')
     expect(html).not.toContain('<b>Io</b>')
     expect(html).toContain('D&lt;')
+  })
+})
+
+describe('messaggioResend', () => {
+  const msg = () => messaggioResend(corpo(), {
+    nome: 'Sofia Rossi', email: 'sofia@esempio.it', mittente: 'FLEOFIT <a@b.it>', destinatario: 'coach@b.it',
+  })
+
+  it('🔴 non ha «Rispondi a»: alle segnalazioni non si risponde (committente, 08/10/2026)', () => {
+    expect(msg()).not.toHaveProperty('reply_to')
+    expect(msg()).not.toHaveProperty('replyTo')
+  })
+
+  it('va al destinatario, con oggetto, testo, HTML e allegati', () => {
+    const m = msg()
+    expect(m.from).toBe('FLEOFIT <a@b.it>')
+    expect(m.to).toEqual(['coach@b.it'])
+    expect(m.subject).toBe('[FLEOFIT] Notifiche · Sofia Rossi')
+    expect(m.text).toContain('Sofia Rossi <sofia@esempio.it>')
+    expect(m.html).toContain('Sofia Rossi')
+    expect(m.attachments).toEqual([])
   })
 })
 

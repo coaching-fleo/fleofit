@@ -19,7 +19,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import {
-  type Corpo, allegati, htmlSegnalazione, limitatore, oggettoSegnalazione, testoSegnalazione, validaCorpo,
+  type Corpo, limitatore, messaggioResend, validaCorpo,
 } from "./regole.ts"
 
 const corsHeaders = {
@@ -82,15 +82,9 @@ serve(async (req) => {
   const invio = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${chiave}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: MITTENTE,
-      to: [DESTINATARIO],
-      reply_to: utente.email,
-      subject: oggettoSegnalazione(c.tipo, nome),
-      text: testoSegnalazione(c, nome, utente.email),
-      html: htmlSegnalazione(c, nome, utente.email),
-      attachments: allegati(c.immagini),
-    }),
+    body: JSON.stringify(messaggioResend(c, {
+      nome, email: utente.email, mittente: MITTENTE, destinatario: DESTINATARIO,
+    })),
   });
 
   if (!invio.ok) {

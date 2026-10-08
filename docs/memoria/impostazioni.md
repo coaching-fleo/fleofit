@@ -175,8 +175,9 @@ mutazione.
 
 Gruppo **«Aiuto»** fra le righe del coach e «Elimina il mio account», per
 **tutti** i ruoli: i problemi li trova soprattutto l'atleta. Apre
-`FoglioSegnalazione` (tre passi: tipo → domande a scelta rapida, descrizione,
-fino a 3 screenshot → riepilogo con i dati tecnici in chiaro → invio). Specifica
+`FoglioSegnalazione`, una modale **a schermo intero** in tre passi: tipo →
+domande a scelta rapida, descrizione, fino a 3 screenshot → riepilogo → invio.
+I dati tecnici partono ma **non si mostrano** (committente, 08/10/2026). Specifica
 e piano: `docs/superpowers/specs/2026-10-07-segnalazioni-design.md` e
 `docs/superpowers/plans/2026-10-07-segnalazioni.md`.
 
@@ -196,8 +197,9 @@ e piano: `docs/superpowers/specs/2026-10-07-segnalazioni-design.md` e
    dell'account Resend: per un mittente `@federicoleo.it` serve verificare il dominio.
 3. 🔴 **Chi scrive lo dice il server, con `auth.getUser(token)`.** Non la lettura
    dei claim del JWT (come `identificaChiamante` in `send-reminders`), che
-   chiunque può fabbricare. La mail ha `reply_to` = l'indirizzo di chi scrive:
-   «Rispondi» gli risponde direttamente.
+   chiunque può fabbricare. Il nome e l'indirizzo stanno nel testo della mail
+   (riga «Da:»), ma la mail **non ha `reply_to`**: alle segnalazioni non si
+   risponde (committente, 08/10/2026). Un test su `messaggioResend` lo verifica.
 4. **I limiti esistono due volte** (`src/lib/segnalazione.js` e `regole.ts`) e un
    test li confronta. `regole.ts` è puro (niente import Deno) apposta: così Vitest
    lo prova. ⚠️ Il limite di 5 invii all'ora è **in memoria dell'istanza** — un
@@ -206,19 +208,24 @@ e piano: `docs/superpowers/specs/2026-10-07-segnalazioni-design.md` e
    `error.context`. `inviaSegnalazione` legge il messaggio da lì, o «Troppe
    segnalazioni» (429) e gli errori di validazione non arriverebbero mai a chi
    scrive. Trovato scrivendo la funzione, dopo aver collegato il foglio.
-6. **Il velo fa ciò che fa il bottone in testata** (passo 2-3: indietro di un
-   passo; altrimenti chiude). `indietroAndroid` tocca prima il velo: un velo che
-   chiudesse sempre farebbe sparire il foglio al tasto indietro di Android a metà
-   flusso. La bozza (`fleofit_segnalazione_bozza`: tipo, risposte, descrizione,
-   **non** le immagini) resta comunque, e si cancella solo dopo un invio riuscito.
+6. 🔴 **Schermo intero, e si esce SOLO da «Annulla» (con conferma) o da «Chiudi»
+   dopo l'invio** (committente, 08/10/2026; fino ad allora era un foglio dal basso
+   con maniglia e velo). La conferma dice «Vuoi annullare la segnalazione?» con
+   «No» / «Sì, annulla» — `CustomConfirm` ha preso per questo un `cancelLabel`
+   facoltativo: un «Annulla» per dire «non annullare» sarebbe stato ambiguo — e
+   confermando la bozza si butta. Il tasto indietro di Android cerca le parole nel
+   **testo** dei bottoni, nell'ordine del DOM: per questo «Indietro» è scritto (non
+   un'icona con `aria-label`) e sta prima di «Annulla», e la conferma vive in un
+   portale **suo**, o il tasto troverebbe prima l'«Indietro» che sta sotto.
+   La bozza (`fleofit_segnalazione_bozza`: tipo, risposte, descrizione, **non** le
+   immagini) si cancella dopo un invio riuscito o un annullamento confermato.
 7. 🔴 **Il foglio non nomina mai una persona e non promette risposte** (decisione del
    committente, 08/10/2026). Ringrazia e basta: «Grazie per il feedback». La riga
    dice «Un problema o un'idea per l'app». C'è un test che cerca «Federico» e
-   «rispond» nel testo del foglio. Il `reply_to` della mail resta, ma è solo comodità
-   del coach, non un impegno verso chi scrive.
+   «rispond» nel testo del foglio.
 8. **Fra un passo e l'altro il contenuto scivola**: `passo-entra` andando avanti,
    `ritorno-entra` tornando indietro, le stesse classi del builder (già spente da
-   «riduci movimento»). All'apertura niente: entra già il foglio dal basso. Il
+   «riduci movimento»). All'apertura niente: sale già tutta la schermata (`sheet-in`). Il
    contenitore ha `key={passo}`, quindi si rimonta e lo scorrimento torna in cima.
 
 ### I file nuovi

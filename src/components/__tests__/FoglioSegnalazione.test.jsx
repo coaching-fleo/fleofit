@@ -38,12 +38,76 @@ beforeEach(() => {
   window.localStorage.clear()
 })
 
-describe('la navigazione fra i passi', () => {
-  it('al passo 1 il bottone in testata si chiama «Chiudi»', () => {
+describe('lo schermo intero', () => {
+  // Dal 08/10/2026 non è più un foglio dal basso (decisione del committente):
+  // niente maniglia da trascinare, niente velo che chiude al tocco.
+  it('è una modale a schermo intero, senza maniglia', () => {
     monta()
-    expect(screen.getByRole('button', { name: 'Chiudi' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Segnala un problema' })).toHaveAttribute('aria-modal', 'true')
+    expect(screen.queryByRole('button', { name: /Trascina/ })).not.toBeInTheDocument()
+  })
+
+  it('al passo 1 c\'è «Annulla», e non «Indietro»', () => {
+    monta()
+    expect(screen.getByRole('button', { name: 'Annulla' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Indietro' })).not.toBeInTheDocument()
   })
+
+  it('🔴 «Indietro» ha la parola nel TESTO, non solo nell\'aria-label', async () => {
+    // indietroAndroid cerca le parole nel textContent: un bottone di sola
+    // icona non lo troverebbe, e il tasto indietro aprirebbe «Annulla».
+    const utente = userEvent.setup()
+    monta()
+    await utente.click(screen.getByRole('button', { name: /Notifiche/ }))
+    expect(screen.getByRole('button', { name: 'Indietro' }).textContent.trim()).toBe('Indietro')
+  })
+})
+
+describe('annullare', () => {
+  it('«Annulla» chiede conferma, e «No» lascia tutto com\'era', async () => {
+    const utente = userEvent.setup()
+    const { onChiudi } = monta()
+    await utente.click(screen.getByRole('button', { name: /Timer e allenamento/ }))
+    await utente.type(screen.getByRole('textbox', { name: /Descrivi/ }), TESTO)
+    await utente.click(screen.getByRole('button', { name: 'Annulla' }))
+    expect(screen.getByRole('dialog', { name: 'Vuoi annullare la segnalazione?' })).toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: 'No' }))
+    expect(screen.queryByRole('dialog', { name: 'Vuoi annullare la segnalazione?' })).not.toBeInTheDocument()
+    expect(onChiudi).not.toHaveBeenCalled()
+    expect(screen.getByRole('textbox', { name: /Descrivi/ })).toHaveValue(TESTO)
+  })
+
+  it('confermando chiude e butta la bozza', async () => {
+    const utente = userEvent.setup()
+    const { onChiudi } = monta()
+    await utente.click(screen.getByRole('button', { name: /Timer e allenamento/ }))
+    await utente.type(screen.getByRole('textbox', { name: /Descrivi/ }), TESTO)
+    await utente.click(screen.getByRole('button', { name: 'Annulla' }))
+    await utente.click(screen.getByRole('button', { name: 'Sì, annulla' }))
+    expect(onChiudi).toHaveBeenCalledTimes(1)
+    expect(window.localStorage.getItem(CHIAVE_BOZZA)).toBeNull()
+  })
+
+  it('c\'è anche al riepilogo', async () => {
+    const utente = userEvent.setup()
+    monta()
+    await finoAlRiepilogo(utente)
+    expect(screen.getByRole('button', { name: 'Annulla' })).toBeInTheDocument()
+  })
+
+  it('dopo l\'invio non c\'è più niente da annullare: «Chiudi» chiude senza chiedere', async () => {
+    const utente = userEvent.setup()
+    const { onChiudi } = monta()
+    await finoAlRiepilogo(utente)
+    await utente.click(screen.getByRole('button', { name: 'Invia' }))
+    await screen.findByText('Grazie per il feedback')
+    expect(screen.queryByRole('button', { name: 'Annulla' })).not.toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: 'Chiudi' }))
+    expect(onChiudi).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('la navigazione fra i passi', () => {
 
   it('scegliendo un tipo compaiono le sue domande, e il bottone diventa «Indietro»', async () => {
     const utente = userEvent.setup()
@@ -58,17 +122,6 @@ describe('la navigazione fra i passi', () => {
     const { onChiudi } = monta()
     await utente.click(screen.getByRole('button', { name: /Notifiche/ }))
     await utente.click(screen.getByRole('button', { name: 'Indietro' }))
-    expect(screen.getByRole('button', { name: /Qualcosa non funziona/ })).toBeInTheDocument()
-    expect(onChiudi).not.toHaveBeenCalled()
-  })
-
-  it('il velo, a metà flusso, torna indietro di un passo invece di chiudere', async () => {
-    // indietroAndroid tocca PRIMA il velo: se il velo chiudesse sempre, il
-    // tasto indietro di Android al passo 2 porterebbe via tutto il foglio.
-    const utente = userEvent.setup()
-    const { onChiudi } = monta()
-    await utente.click(screen.getByRole('button', { name: /Notifiche/ }))
-    await utente.click(screen.getByRole('dialog').parentElement)
     expect(screen.getByRole('button', { name: /Qualcosa non funziona/ })).toBeInTheDocument()
     expect(onChiudi).not.toHaveBeenCalled()
   })
@@ -109,12 +162,14 @@ describe('il passo dei dettagli', () => {
 })
 
 describe('l\'invio', () => {
-  it('il riepilogo mostra i dati tecnici che partono', async () => {
+  it('il riepilogo NON mostra i dati tecnici (partono lo stesso: vedi «spedisce il corpo composto»)', async () => {
+    // Decisione del committente (08/10/2026): a chi scrive non servono.
     const utente = userEvent.setup()
     monta()
     await finoAlRiepilogo(utente)
     expect(screen.getByText(TESTO)).toBeInTheDocument()
-    expect(screen.getByText('Atleta')).toBeInTheDocument()
+    expect(screen.queryByText(/Dati tecnici/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Atleta')).not.toBeInTheDocument()
   })
 
   it('un doppio tocco su «Invia» spedisce una volta sola', async () => {

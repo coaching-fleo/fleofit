@@ -79,6 +79,25 @@ export function validaCorpo(corpo: unknown): string | null {
 export const allegati = (immagini: Immagine[] = []) =>
   immagini.map((i, n) => ({ filename: `screenshot-${n + 1}.jpg`, content: i.base64 }));
 
+/**
+ * Il corpo della chiamata a Resend.
+ * ⚠️ Niente `reply_to`: alle segnalazioni non si risponde (committente,
+ * 08/10/2026). Chi ha scritto resta comunque nel testo, alla riga «Da:».
+ */
+export function messaggioResend(
+  c: Corpo,
+  { nome, email, mittente, destinatario }: { nome: string; email: string; mittente: string; destinatario: string },
+) {
+  return {
+    from: mittente,
+    to: [destinatario],
+    subject: oggettoSegnalazione(c.tipo, nome),
+    text: testoSegnalazione(c, nome, email),
+    html: htmlSegnalazione(c, nome, email),
+    attachments: allegati(c.immagini),
+  };
+}
+
 export const oggettoSegnalazione = (tipo: string, nome: string) =>
   `[FLEOFIT] ${TITOLI_TIPO[tipo] ?? 'Segnalazione'} · ${nome}`;
 

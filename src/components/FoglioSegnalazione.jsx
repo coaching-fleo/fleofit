@@ -1,21 +1,28 @@
-// FoglioSegnalazione — «Segnala un problema», in tre passi dentro un foglio.
+// FoglioSegnalazione — «Segnala un problema», in tre passi a schermo intero.
 //
 // Stesso patto degli altri *UI: qui non entra né `supabase` né un permesso
-// push. Il foglio raccoglie e mostra; chi spedisce è `onInvia`, che arriva da
-// `Settings`. Cosa si chiede e cosa parte lo decide `src/lib/segnalazione.js`.
+// push. La schermata raccoglie e mostra; chi spedisce è `onInvia`, che arriva
+// da `Settings`. Cosa si chiede e cosa parte lo decide `src/lib/segnalazione.js`.
 //
-// ⚠️ Il bottone in testata si chiama ESATTAMENTE «Chiudi» (passo 1 e dopo
-// l'invio) o «Indietro» (passi 2 e 3), e il velo fa la stessa cosa: il tasto
-// indietro di Android tocca prima il velo e poi cerca quelle parole
-// (src/lib/indietroAndroid.js). Un velo che chiudesse sempre porterebbe via
-// tutto il foglio a metà flusso.
+// Dal 08/10/2026 è a SCHERMO INTERO e non più un foglio dal basso (decisione
+// del committente): niente maniglia, niente velo che chiude al tocco. Si esce
+// solo da «Annulla», che chiede sempre conferma, o da «Chiudi» dopo l'invio.
+//
+// ⚠️ Il tasto indietro di Android (src/lib/indietroAndroid.js) cerca nel TESTO
+// dei bottoni le parole «Indietro», «Annulla», «Chiudi», «No», nell'ordine in
+// cui stanno in pagina. Per questo «Indietro» porta la parola scritta (non solo
+// un'icona con aria-label) e sta PRIMA di «Annulla»: ai passi 2-3 il tasto
+// torna di un passo, al passo 1 apre la conferma. E la conferma vive nel SUO
+// portale, sopra questo: se stesse dentro, il tasto troverebbe prima il nostro
+// «Indietro» di quello della conferma.
 
 import { useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Bug, Snail, BellOff, Timer, KeyRound, Lightbulb, ChevronLeft, ChevronRight, X, ImagePlus, Send, Check,
 } from 'lucide-react'
-import { useBottomSheet } from '../useBottomSheet'
+import { useScorrimentoBloccato } from '../useBottomSheet'
+import { CustomConfirm } from './CustomModals'
 import { vibraScelta, vibraSuccesso, vibraErrore } from '../lib/aptica'
 import { leggiJson, scriviJson } from '../lib/offlineQueue'
 import { LABEL, VETRO } from '../lib/stiliCard'
@@ -56,11 +63,12 @@ function useInLinea() {
 }
 
 export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], notificheSpente = false, onAttivaNotifiche }) {
-  const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
+  useScorrimentoBloccato()
+  const [conferma, setConferma] = useState(null)
   const [bozza, setBozza] = useState(bozzaIniziale)
   const [passo, setPassoGrezzo] = useState(() => (bozza.tipo ? 2 : 1))
   // Il verso dell'ultimo cambio di passo: decide da che parte entra il nuovo.
-  // `null` all'apertura, perché lì entra già il foglio intero dal basso.
+  // `null` all'apertura, perché lì entra già tutta la schermata dal basso.
   const [verso, setVerso] = useState(null)
   const [immagini, setImmagini] = useState([])
   const [inviando, setInviando] = useState(false)
@@ -91,9 +99,18 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
   }
 
   const indietro = () => {
-    if (passo === 2 || passo === 3) { setErrore(null); setPasso(passo - 1, 'indietro') }
-    else chiudi()
+    setErrore(null)
+    setPasso(passo - 1, 'indietro')
   }
+
+  /** Si chiede SEMPRE (committente, 08/10/2026): confermare butta la bozza. */
+  const chiediAnnulla = () => setConferma({
+    title: 'Vuoi annullare la segnalazione?',
+    message: 'Quello che hai scritto andrà perso.',
+    cancelLabel: 'No',
+    confirmLabel: 'Sì, annulla',
+    onConfirm: () => { cancellaBozza(); onChiudi() },
+  })
 
   const scegliTipo = (id) => {
     vibraScelta()
@@ -143,33 +160,41 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
     }
   }
 
-  const etichettaTesta = passo === 2 || passo === 3 ? 'Indietro' : 'Chiudi'
+  const aMetà = passo === 2 || passo === 3
   const titolo = passo === 1 ? 'Segnala un problema'
     : passo === 2 ? tipo?.titolo
       : passo === 3 ? 'Controlla e invia' : null
 
+  const comandoTesta = `h-10 px-3.5 rounded-full flex items-center gap-1 text-[14px] font-bold text-gray-200
+                        hover:text-white transition shrink-0 ${VETRO}`
+
   return createPortal(
-    <div className={`fixed inset-0 z-[100] flex flex-col justify-end bg-black/85 touch-none ${classeVelo}`}
-      style={stileVelo} onClick={indietro}>
-      <div role="dialog" aria-label="Segnala un problema" onClick={(e) => e.stopPropagation()}
-        style={stileFoglio}
-        className={`bg-[#141416] border-t border-white/[.09] rounded-t-3xl px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]
-                    flex flex-col max-h-[85dvh] shadow-[0_-20px_50px_-12px_rgba(0,0,0,.85)] ${classeFoglio}`}>
+    <>
+    <div role="dialog" aria-modal="true" aria-label="Segnala un problema"
+      className="fixed inset-0 z-[100] bg-[#0B0B0B] flex flex-col sheet-in
+                 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+      <div className="w-full max-w-2xl mx-auto px-4 flex flex-col flex-1 min-h-0">
 
-        <button type="button" aria-label="Trascina giù per chiudere" {...maniglia}
-          className="w-full pt-3 pb-2.5 -mx-4 px-4 flex justify-center shrink-0 touch-none
-                     cursor-grab active:cursor-grabbing group">
-          <span aria-hidden="true"
-            className="w-10 h-1 rounded-full bg-white/20 group-hover:bg-white/35 group-active:bg-white/45 transition-colors" />
-        </button>
-
-        <div className="flex items-center gap-3 shrink-0 pb-3">
-          <button type="button" aria-label={etichettaTesta} onClick={indietro}
-            className={`w-10 h-10 rounded-full flex items-center justify-center text-gray-200 hover:text-white transition shrink-0 ${VETRO}`}>
-            {etichettaTesta === 'Indietro' ? <ChevronLeft size={20} aria-hidden="true" /> : <X size={18} aria-hidden="true" />}
-          </button>
-          {titolo && <h2 className="text-xl font-black tracking-[-.02em] text-white truncate">{titolo}</h2>}
+        {/* La barra: «Indietro» a sinistra (passi 2-3), l'uscita a destra.
+            ⚠️ «Indietro» PRIMA di «Annulla» nel DOM: vedi in testa al file. */}
+        <div className="flex items-center justify-between gap-3 shrink-0 h-10">
+          {aMetà ? (
+            <button type="button" onClick={indietro} className={`${comandoTesta} pl-2.5`}>
+              <ChevronLeft size={18} aria-hidden="true" />Indietro
+            </button>
+          ) : <span aria-hidden="true" />}
+          {passo === 'fatto' ? (
+            <button type="button" onClick={onChiudi} className={comandoTesta}>
+              <X size={16} aria-hidden="true" />Chiudi
+            </button>
+          ) : (
+            <button type="button" onClick={chiediAnnulla} className={comandoTesta}>Annulla</button>
+          )}
         </div>
+
+        {titolo && (
+          <h2 className="shrink-0 mt-4 mb-3 text-[26px] leading-tight font-black tracking-[-.03em] text-white">{titolo}</h2>
+        )}
 
         {/* ⚠️ `key={passo}`: il contenitore si rimonta a ogni passo, così
             l'animazione riparte e lo scorrimento torna in cima. Le due classi
@@ -177,7 +202,7 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
             movimento». Solo il passo che ENTRA si muove: quello che esce si
             smonta nello stesso fotogramma, come nel builder. */}
         <div key={passo} data-passo={passo}
-          className={`overflow-y-auto overscroll-contain hide-scrollbar flex flex-col gap-3 pb-2 touch-pan-y ${
+          className={`flex-1 min-h-0 overflow-y-auto overscroll-contain hide-scrollbar flex flex-col gap-3 pb-2 ${
             verso === 'avanti' ? 'passo-entra' : verso === 'indietro' ? 'ritorno-entra' : ''}`}>
           {passo === 1 && (
             <>
@@ -307,18 +332,6 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
                 )}
               </div>
 
-              <details className="rounded-2xl bg-white/[.03] border border-white/[.06] px-3.5 py-3">
-                <summary className="text-[12.5px] font-bold text-muted cursor-pointer">Dati tecnici allegati</summary>
-                <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px]">
-                  {tecnici.map(r => (
-                    <div key={r.etichetta} className="contents">
-                      <dt className="text-muted">{r.etichetta}</dt>
-                      <dd className="text-gray-300 break-all">{r.valore}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </details>
-
               {errore && <p role="alert" className="text-[13px] font-semibold text-red-500">{errore}</p>}
 
               <button type="button" onClick={invia} disabled={inviando || !online}
@@ -332,7 +345,7 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
           )}
 
           {passo === 'fatto' && (
-            <div className="py-6 flex flex-col items-center text-center gap-3">
+            <div className="my-auto py-10 flex flex-col items-center text-center gap-3">
               <span aria-hidden="true"
                 className="w-14 h-14 rounded-full bg-green-500/[.14] border border-green-500/30 text-green-500 flex items-center justify-center">
                 <Check size={26} />
@@ -342,7 +355,10 @@ export default function FoglioSegnalazione({ onChiudi, onInvia, tecnici = [], no
           )}
         </div>
       </div>
-    </div>,
+    </div>
+    {/* Nel SUO portale, sopra la schermata: vedi in testa al file. */}
+    {createPortal(<CustomConfirm info={conferma} onClose={() => setConferma(null)} />, document.body)}
+    </>,
     document.body
   )
 }

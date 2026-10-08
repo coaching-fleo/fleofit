@@ -20,7 +20,11 @@ e «Rispondi» scrive direttamente a chi ha segnalato.
 Impostazioni → nuova `Sezione etichetta="Aiuto"` con `RigaAzione` «Segnala un
 problema», fra le righe del coach e «Elimina il mio account». Visibile a tutti i ruoli.
 
-## Il flusso (bottom sheet, tre passi)
+## Il flusso (tre passi)
+
+> **Cambiato il 08/10/2026 dal committente**: modale a schermo intero invece del
+> bottom sheet; «Annulla» sempre presente, con conferma; dati tecnici non mostrati;
+> la mail senza `reply_to`. Il dettaglio aggiornato è in `docs/memoria/impostazioni.md`.
 1. **Tipo** — sei scelte: `bug` Qualcosa non funziona · `lenta` Si blocca o è lenta ·
    `notifiche` Notifiche · `timer` Timer e allenamento · `accesso` Accesso e account ·
    `idea` Un'idea.
