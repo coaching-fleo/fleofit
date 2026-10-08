@@ -62,6 +62,10 @@ export function validaCorpo(corpo: unknown): string | null {
   if (immagini.some(i => !i || !eStringa(i.nome) || !eStringa(i.base64) || !/^[A-Za-z0-9+/]*=*$/.test(i.base64))) {
     return 'Immagini non valide';
   }
+  // Solo JPEG: «/9j/» è FF D8 FF, l'inizio di ogni JPEG. Il telefono manda
+  // solo quelli (riduciImmagine); qualunque altra cosa l'ha costruita qualcuno
+  // a mano, e finirebbe come allegato nella posta del coach.
+  if (immagini.some(i => !i.base64.startsWith('/9j/'))) return 'Allega solo immagini';
   if (immagini.some(i => byteBase64(i.base64) > LIMITI.byteImmagineMax)) return 'Un\'immagine è troppo grande';
 
   const tecnici = c.tecnici ?? {};
@@ -70,6 +74,10 @@ export function validaCorpo(corpo: unknown): string | null {
 
   return null;
 }
+
+/** Gli allegati per Resend. Il nome lo decide il server: quello del telefono non arriva mai nella posta. */
+export const allegati = (immagini: Immagine[] = []) =>
+  immagini.map((i, n) => ({ filename: `screenshot-${n + 1}.jpg`, content: i.base64 }));
 
 export const oggettoSegnalazione = (tipo: string, nome: string) =>
   `[FLEOFIT] ${TITOLI_TIPO[tipo] ?? 'Segnalazione'} · ${nome}`;

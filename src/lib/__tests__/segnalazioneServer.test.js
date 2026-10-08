@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as client from '../segnalazione'
 import {
-  LIMITI, TIPI_VALIDI, validaCorpo, oggettoSegnalazione, testoSegnalazione, htmlSegnalazione, limitatore,
+  LIMITI, TIPI_VALIDI, allegati, validaCorpo, oggettoSegnalazione, testoSegnalazione, htmlSegnalazione, limitatore,
 } from '../../../supabase/functions/segnalazione/regole.ts'
 
 // Perché questi test esistono
@@ -53,14 +53,30 @@ describe('validaCorpo', () => {
   })
 
   it('rifiuta la quarta immagine', () => {
-    const im = { nome: 'a.jpg', base64: 'QUJD' }
+    const im = { nome: 'a.jpg', base64: '/9j/QUJD' }
     expect(validaCorpo(corpo({ immagini: [im, im, im, im] }))).not.toBeNull()
   })
 
   it('rifiuta un\'immagine oltre 1,5 MB decodificata', () => {
     // 4 caratteri base64 = 3 byte: 2.100.000 caratteri ≈ 1,575 MB.
-    const grande = { nome: 'a.jpg', base64: 'A'.repeat(2_100_000) }
+    const grande = { nome: 'a.jpg', base64: '/9j/' + 'A'.repeat(2_100_000) }
     expect(validaCorpo(corpo({ immagini: [grande] }))).not.toBeNull()
+  })
+
+  it('🔴 accetta solo JPEG veri: un file qualunque non arriva nella posta del coach', () => {
+    // «/9j/» è FF D8 FF in base64, l'inizio di ogni JPEG. Il telefono manda
+    // solo JPEG (riduciImmagine); un allegato diverso l'ha costruito qualcuno a mano.
+    expect(validaCorpo(corpo({ immagini: [{ nome: 'a.jpg', base64: '/9j/4AAQ' }] }))).toBeNull()
+    expect(validaCorpo(corpo({ immagini: [{ nome: 'fattura.exe', base64: 'TVqQAAMA' }] }))).not.toBeNull()
+  })
+})
+
+describe('allegati', () => {
+  it('il nome lo decide il server, non chi spedisce', () => {
+    expect(allegati([{ nome: 'fattura.exe', base64: '/9j/AA' }, { nome: 'x', base64: '/9j/BB' }])).toEqual([
+      { filename: 'screenshot-1.jpg', content: '/9j/AA' },
+      { filename: 'screenshot-2.jpg', content: '/9j/BB' },
+    ])
   })
 
   it('rifiuta dati tecnici oltre 2 KB', () => {
