@@ -127,15 +127,21 @@ Traduci questo workout dettato a voce in un array JSON compatibile con l'app di 
 Tipi di blocco ammessi: "WarmUp", "Cash In", "ON/OFF", "EMOM", "AMRAP", "For Time", "Interval", "Rest", "Cash Out".
 Devi restituire ESCLUSIVAMENTE la struttura JSON.
 
+INTENSITÀ: ogni esercizio DEVE avere il campo "intensity", una stringa con un intero da "1" a "10" (scala RPE).
+- Se l'utente la dice (es. "a intensità 8", "RPE 7", "al massimo", "facile"), usa quella.
+- Se non la dice, stimala tu dal contesto: riscaldamento e Cash In leggeri 3-5, lavoro centrale 6-8,
+  For Time / AMRAP brevi o "all out" 8-10, defaticamento e Cash Out 3-5.
+- Non mettere mai "intensity" sull'esercizio "Rest".
+
 Esempio di struttura richiesta:
 [
   {
     "type": "EMOM",
     "params": { "interval": "1:00", "rounds": "12" },
     "exercises": [
-      { "name": "Burpees", "reps": "15" },
-      { "name": "Wall Balls", "reps": "10", "kg": "9" },
-      { "name": "Rowing", "meters": "250m" }
+      { "name": "Burpees", "reps": "15", "intensity": "8" },
+      { "name": "Wall Balls", "reps": "10", "kg": "9", "intensity": "8" },
+      { "name": "Rowing", "meters": "250m", "intensity": "7" }
     ]
   }
 ]

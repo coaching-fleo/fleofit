@@ -16,7 +16,7 @@
 
 ### Stato, in dieci righe
 - **Due prodotti**: `main` = web app in produzione (Vercel) · `app` = app native iOS **e**
-  Android sullo stesso codice React, cartella `Z:\FedericoLeo\FLEOFIT\branches\fleofit-app`
+  Android sullo stesso codice React, cartella `C:\Users\FEDE\Desktop\FLEOFIT`
   (§1.1). L'ultimo commit si legge con `git log -1`, **mai scritto qui** (è stato sbagliato
   tre volte).
 - **Schema del database congelato** fino all'approvazione su App Store (§0, regola 0-bis).
@@ -81,7 +81,9 @@ li esegue con un timer guidato, li segna come completati con RPE e note, e il co
 tempo reale.
 
 - **Repo**: `https://github.com/coaching-fleo/fleofit`
-- **Cartella locale**: `Z:\FedericoLeo\FLEOFITranchesleofit-app` (Windows, Android) —
+- **Cartella locale**: `C:\Users\FEDE\Desktop\FLEOFIT` (Windows, Android) — ⚠️ mai su un
+  disco di rete: fino all'08/10/2026 stava su `Z:`, e lì la suite di test non partiva
+  (worker in timeout dopo 10 minuti; in locale gira in poco più di un minuto) —
   sul Mac la copia per Xcode
 - **App bundle iOS**: `it.federicoleo.fleofit` — display name `FLEOFIT`
 - **Deploy web**: Vercel (`https://fleofit.vercel.app`), SPA rewrite in `vercel.json`

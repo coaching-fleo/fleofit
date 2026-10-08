@@ -35,6 +35,7 @@ import AudioVisualizer from '../components/AudioVisualizer'
 import { ThinkingOrb } from 'thinking-orbs'
 import { BorderBeam } from 'border-beam'
 import { scriviJson } from '../lib/offlineQueue'
+import { preparaBlocchiIA } from '../lib/blocchiIA'
 import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
 import { SCALE, grandezza, testoMisura } from '../lib/scaleMisura'
 
@@ -2900,14 +2901,7 @@ export default function CreateWorkout() {
         <AiGenerationModal 
           onClose={() => setAiModalOpen(false)}
           onGenerate={(newBlocks) => {
-            const formattedBlocks = newBlocks.map(b => ({
-              ...b,
-              id: Math.random(),
-              exercises: (b.exercises || []).map(ex => ({
-                ...ex,
-                id: Math.random()
-              }))
-            }))
+            const formattedBlocks = preparaBlocchiIA(newBlocks)
             setBlocks([...blocks, ...formattedBlocks])
             if (formattedBlocks.length > 0) {
               setOpenBlockId(formattedBlocks[formattedBlocks.length - 1].id)

@@ -907,3 +907,28 @@ valore», «i numeri del blocco stanno in un foglio dal basso», «le fasi di co
 Mutazioni provate e prese: formato del peso e del tempo nelle scale (9 test rossi),
 scorciatoie non dallo storico, scatti di 1 kg sopra i 20, intervallo di passo non
 composto.
+
+---
+
+## 9-septquadragies. L'intensità degli esercizi generati dall'IA (08/10/2026)
+
+Feedback del committente: con «Genera con IA» gli esercizi **non avevano
+intensità** se non la si dettava, e la riga non mostrava niente. Causa: il prompt
+di `ai-workout` non nominava mai `intensity` (l'esempio portava solo nome, reps,
+kg, metri), e il builder accodava i blocchi così come arrivavano. Un esercizio
+aggiunto a mano invece nasce sempre a 5 dal picker. Conseguenza meno visibile ma
+peggiore: senza intensità quegli esercizi **non pesano nell'RPE atteso** (§ sopra,
+il ciclo li salta), quindi un workout tutto generato non aveva RPE atteso.
+
+Rimedio su due livelli:
+1. **Il prompt** chiede `intensity` su ogni esercizio: quella dettata se c'è,
+   altrimenti stimata dal contesto (riscaldamento/Cash In/Cash Out leggeri, lavoro
+   centrale 6-8, all out 8-10), mai su «Rest». ⚠️ Vale solo dopo il deploy della
+   Edge Function, che è condivisa con la web app (innocuo lì: un campo in più).
+2. **`preparaBlocchiIA`** (`src/lib/blocchiIA.js`) è la rete sotto: normalizza
+   quello che Gemini scrive (7, "7/10", "8.5" → stringa intera 1-10) e, se manca o
+   è illeggibile, mette `INTENSITA_PREDEFINITA` = 5, lo stesso valore da cui parte
+   il picker. Niente intensità sull'esercizio «Rest», come nel picker.
+
+Test: `src/lib/__tests__/blocchiIA.test.js` (8). Mutazione provata e presa: il
+ripiego a 5 tolto.
