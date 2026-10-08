@@ -170,3 +170,50 @@ Due limiti da conoscere prima di dire che è chiusa del tutto:
 mutazione.
 
 ---
+
+## 9-segnalazioni. «Segnala un problema» (07-08/10/2026)
+
+Gruppo **«Aiuto»** fra le righe del coach e «Elimina il mio account», per
+**tutti** i ruoli: i problemi li trova soprattutto l'atleta. Apre
+`FoglioSegnalazione` (tre passi: tipo → domande a scelta rapida, descrizione,
+fino a 3 screenshot → riepilogo con i dati tecnici in chiaro → invio). Specifica
+e piano: `docs/superpowers/specs/2026-10-07-segnalazioni-design.md` e
+`docs/superpowers/plans/2026-10-07-segnalazioni.md`.
+
+### ⚠️ Le sei cose da sapere prima di rimetterci mano
+
+1. 🔴 **La mail la manda il SERVER, non il telefono.** Edge Function nuova
+   `supabase/functions/segnalazione` → API di Resend. Il compositore di posta del
+   telefono è stato scartato: su Android apre Gmail (si esce dall'app), richiede
+   un account configurato e un secondo «Invia». Niente tabella, per la regola
+   0-bis; niente riga in `notifications`, perché la policy `auth.uid() = user_id`
+   non lascia scrivere a un atleta una riga del coach (ed è scritta bene).
+2. 🔴 **È una funzione NUOVA apposta.** Una modalità in `send-reminders` avrebbe
+   voluto dire ridistribuire la funzione condivisa con la web app in produzione.
+   Questa la usa solo il foglio. Secret: `RESEND_API_KEY`; facoltativi
+   `SEGNALAZIONI_MITTENTE` e `SEGNALAZIONI_DESTINATARIO`. Con il mittente
+   predefinito `onboarding@resend.dev` Resend consegna **solo** all'indirizzo
+   dell'account Resend: per un mittente `@federicoleo.it` serve verificare il dominio.
+3. 🔴 **Chi scrive lo dice il server, con `auth.getUser(token)`.** Non la lettura
+   dei claim del JWT (come `identificaChiamante` in `send-reminders`), che
+   chiunque può fabbricare. La mail ha `reply_to` = l'indirizzo di chi scrive:
+   «Rispondi» gli risponde direttamente.
+4. **I limiti esistono due volte** (`src/lib/segnalazione.js` e `regole.ts`) e un
+   test li confronta. `regole.ts` è puro (niente import Deno) apposta: così Vitest
+   lo prova. ⚠️ Il limite di 5 invii all'ora è **in memoria dell'istanza** — un
+   freno al doppio tocco, non una difesa. Una vera richiede una tabella (BACKLOG #60).
+5. 🔴 **Su un non-2xx `supabase-js` non riempie `data`**: mette la Response in
+   `error.context`. `inviaSegnalazione` legge il messaggio da lì, o «Troppe
+   segnalazioni» (429) e gli errori di validazione non arriverebbero mai a chi
+   scrive. Trovato scrivendo la funzione, dopo aver collegato il foglio.
+6. **Il velo fa ciò che fa il bottone in testata** (passo 2-3: indietro di un
+   passo; altrimenti chiude). `indietroAndroid` tocca prima il velo: un velo che
+   chiudesse sempre farebbe sparire il foglio al tasto indietro di Android a metà
+   flusso. La bozza (`fleofit_segnalazione_bozza`: tipo, risposte, descrizione,
+   **non** le immagini) resta comunque, e si cancella solo dopo un invio riuscito.
+
+### I file nuovi
+`src/lib/segnalazione.js` (18 test) · `src/lib/immagineRidotta.js` (3) ·
+`src/components/FoglioSegnalazione.jsx` (13) · `src/pages/__tests__/Segnalazione.test.jsx` (6) ·
+`supabase/functions/segnalazione/{index,regole}.ts` (`segnalazioneServer.test.js`, 14).
+Ogni test nuovo è stato visto fallire rompendo apposta il codice che copre.

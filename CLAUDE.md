@@ -290,7 +290,8 @@ staging, **schema congelato** (§0, 0-bis).
 - 🔴 **Cancellare un atleta distrugge tutta la sua storia** (chiavi in CASCADE), col cron
   delle 00:00 UTC; il backup gira prima, alle 22:30.
 - **Edge Function**: `send-reminders` (5 modalità) e `ai-workout` (Gemini). Un deploy
-  colpisce anche la web app.
+  colpisce anche la web app. Più `segnalazione` (la mail «Segnala un problema» via Resend):
+  la usa solo l'app, quindi pubblicarla non tocca la web app.
 - Entrambi i bucket (`athlete-photos`, `voice-notes`) sono **pubblici**.
 
 ---
@@ -490,7 +491,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_name_<uid>`, `fleofit_invite_code`, `fleofit_motivation`, `fleofit_workout_draft`,
   `fleofit_offline_queue`, `fleofit_cache_workouts_<uid>`, `fleofit_cache_w_<id>`,
   `fleofit_cache_aw_<id>_<athleteId>`, `fleofit_cache_all_aw_<id>`, `fleofit_tv_code`,
-  `fleofit_ultimo_export`, `fleofit_invito_atteso`, `adminRoleOverride`.
+  `fleofit_ultimo_export`, `fleofit_invito_atteso`, `fleofit_segnalazione_bozza`, `adminRoleOverride`.
   ⚠️ `fleofit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
   dice «l'hai esportato da qui», e su un telefono nuovo semplicemente non c'è (§9-duoetvicies).
   ⚠️ `fleofit_invito_atteso` è un passaggio di consegne fra due caricamenti della pagina —
@@ -590,7 +591,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |
 | `Calendar.jsx`, `CalendarioUI`, `rigaCalendario.js` | `calendario.md` |
 | `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js` | `report.md` |
-| `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js` | `impostazioni.md` |
+| `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute` | `accesso.md` |
 | `previsione.js`, `stimaWorkout.js`, ogni durata o carico | `carico-e-durata.md` |
 | `Recap*.jsx`, `recapAllenamento.js`, `gradimento.js` | `recap.md` |
