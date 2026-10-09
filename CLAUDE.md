@@ -297,7 +297,7 @@ staging, **schema congelato** (§0, 0-bis).
   sia `WITH CHECK`. Una lista disallineata è la causa del rifiuto App Store 2.3.1(a).
 - 🔴 **Cancellare un atleta distrugge tutta la sua storia** (chiavi in CASCADE), col cron
   delle 00:00 UTC; il backup gira prima, alle 22:30.
-- **Edge Function**: `send-reminders` (5 modalità) e `ai-workout` (Gemini). Un deploy
+- **Edge Function**: `send-reminders` (5 modalità), `ai-workout` (Gemini, riserva Groq) e `ricerca-coach` (Groq, riserva Gemini: la ricerca del coach). ⚠️ Gemini gratuito = **20 richieste al giorno**, condivise da tutte le funzioni con la stessa chiave. `main` chiama solo `send-reminders`. Un deploy
   colpisce anche la web app. Più `segnalazione` (la mail «Segnala un problema» via Resend):
   la usa solo l'app, quindi pubblicarla non tocca la web app.
 - Entrambi i bucket (`athlete-photos`, `voice-notes`) sono **pubblici**.
@@ -603,6 +603,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js` | `report.md` |
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute` | `accesso.md` |
+| `RicercaCoach.jsx`, `ricercaCoach.js`, `dialogoRicerca.js`, `useDettatura.js`, Edge Function `ricerca-coach` | `ricerca.md` |
 | `previsione.js`, `stimaWorkout.js`, ogni durata o carico | `carico-e-durata.md` |
 | `Recap*.jsx`, `recapAllenamento.js`, `gradimento.js` | `recap.md` |
 | animazioni, `index.css`, `Apertura.jsx`, modali, `Navbar.jsx`, `aptica.js` | `movimento-e-aptica.md` |

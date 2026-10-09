@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
+import { useNavigate, useNavigationType } from 'react-router-dom'
 import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, WifiOff, RefreshCw, ChartNoAxesColumn } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
@@ -29,13 +29,17 @@ import { BenvenutoCoach, CampoObiettivo, CardPrimoLibero, ComeFunziona,
          CellaPrimoDato, CellaBloccata, BannerObiettivoVuoto,
          HeroRiposo, CardSettimanaChiusa, CardDomani, RigaFattoComunque } from '../components/HomeAtletaVuotiUI'
 import { COACH } from '../lib/coach'
-import { HeaderCoach, BannerLive, HeroFeedback, HeroNessunFeedback, SquadraOggi, SezioneAttenzione,
+import { HeaderCoach, BarraRicerca, BannerLive, HeroFeedback, HeroNessunFeedback, SquadraOggi, SezioneAttenzione,
          TuttiAttivi, BarraCopertura, CtaCreaWorkout, RigaDestinazione, TitoloSezione, RigaAttivita,
          AzioneApri } from '../components/HomeCoachUI'
 import { atletiFermi, allenamentiScaduti, copertura, feedbackNuovi, squadraDelGiorno,
          atletiSeguiti, contaInPausa, FINESTRA_STORICO, FINESTRA_FEEDBACK,
          GIORNI_COPERTURA, GIORNI_FERMO } from '../lib/statisticheCoach'
 import { COACHING_ID } from '../lib/constants'
+import { daRiaprire } from '../lib/ricercaSospesa'
+// Pigro: la ricerca è solo del coach, e il chunk d'ingresso non deve portarsela
+// dietro per ogni atleta che apre l'app (CLAUDE.md §2, peso di `index`).
+const RicercaCoach = lazy(() => import('../components/RicercaCoach'))
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARD_BASE, CARTA_MODALE,
          TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
 
@@ -120,6 +124,11 @@ export default function Home() {
   // gli stessi dati.
   const [assegnazioniCoach, setAssegnazioniCoach] = useState([])
   const [atletiCoach, setAtletiCoach] = useState([])
+  // Si torna con il tasto indietro da un risultato della ricerca: il foglio si
+  // riapre con la conversazione di prima (src/lib/ricercaSospesa.js). Solo su
+  // POP — arrivare in Home dalla tab bar non deve spalancare niente.
+  const tipoNavigazione = useNavigationType()
+  const [ricercaAperta, setRicercaAperta] = useState(() => tipoNavigazione === 'POP' && daRiaprire())
   // Quanti feedback l'eroe mostra prima di chiedere «+N altri».
   const [feedbackEspanso, setFeedbackEspanso] = useState(false)
   // La card della squadra guarda oggi (0) o ieri (-1). Ieri è consultazione:
@@ -1123,6 +1132,7 @@ setNotifications(prev => {
               inPausa={inPausa}
               azioni={azioni}
             />
+            <BarraRicerca onApri={() => setRicercaAperta(true)} />
           </div>
         )
       })()}
@@ -1678,8 +1688,16 @@ setNotifications(prev => {
       {spectatingAthlete && createPortal(
         <LiveSpectatorModal 
           athlete={spectatingAthlete} 
-          onClose={() => setSpectatingAthlete(null)} 
+          onClose={() => setSpectatingAthlete(null)}
         />, document.body
+      )}
+
+      {/* «Cerca con l'IA»: solo coach, caricato al primo tocco. Il portale
+          lo apre il componente stesso. */}
+      {ricercaAperta && role !== 'athlete' && (
+        <Suspense fallback={null}>
+          <RicercaCoach onChiudi={() => setRicercaAperta(false)} />
+        </Suspense>
       )}
     </div>
   )

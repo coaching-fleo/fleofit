@@ -1,6 +1,14 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import { ADMIN_EMAILS } from "../_shared/admin.ts"
+import { MODELLO_GROQ_PREDEFINITO, chatGroq, trascriviConWhisper } from "../_shared/groq.ts"
+import { blocchiDaTesto, daRipiegare, messaggioErrore, richiestaBlocchiGroq } from "./regole.ts"
+
+// Riserva su Groq quando Gemini è senza quota (09/10/2026): il piano gratuito
+// di Gemini 2.5 Flash dà 20 richieste al giorno, e finite quelle il builder
+// restava senza «Genera con IA» fino al giorno dopo. Senza GROQ_API_KEY la
+// funzione si comporta come prima.
+const MODELLO_GROQ = Deno.env.get('GROQ_MODELLO') || MODELLO_GROQ_PREDEFINITO
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,8 +43,10 @@ async function fetchWithRetry(url: string, options: any, maxRetries = 3) {
   for (let i = 0; i < maxRetries; i++) {
     const res = await fetch(url, options);
     lastResponse = res;
-    // Se la richiesta va a buon fine o è un errore client (es. 400), usciamo dal loop
-    if (res.status !== 429 && res.status < 500) {
+    // Si ritenta SOLO su 5xx (server pieno, passa in pochi secondi). Un 429 sul
+    // piano gratuito è la quota del GIORNO: ritentarlo bruciava altre
+    // richieste e sette secondi d'attesa prima di dire comunque di no.
+    if (res.status < 500) {
       return res;
     }
     // Se siamo all'ultimo tentativo, non aspettare e interrompi
@@ -98,11 +108,20 @@ serve(async (req) => {
           })
         });
 
-        const geminiData = await geminiRes.json();
+        const geminiData = await geminiRes.json().catch(() => ({}));
+        const chiaveGroq = Deno.env.get('GROQ_API_KEY');
         if (!geminiData.candidates || geminiData.candidates.length === 0) {
-          throw new Error("Errore trascrizione Gemini: " + JSON.stringify(geminiData));
+          console.error('ai-workout: trascrizione Gemini', geminiRes.status, JSON.stringify(geminiData).slice(0, 500));
+          if (!chiaveGroq || !daRipiegare(geminiRes.status)) throw new Error(messaggioErrore(geminiRes.status));
+          const w = await trascriviConWhisper(body.audioBase64, geminiMimeType, chiaveGroq);
+          if (w.testo == null) {
+            console.error('ai-workout: Whisper', w.stato, JSON.stringify(w.dati).slice(0, 500));
+            throw new Error(messaggioErrore(w.stato));
+          }
+          transcription = w.testo;
+        } else {
+          transcription = geminiData.candidates[0].content.parts[0].text.trim();
         }
-        transcription = geminiData.candidates[0].content.parts[0].text.trim();
         
       } else {
         throw new Error("Nessuna chiave API configurata in Supabase per la trascrizione (GEMINI).");
@@ -169,14 +188,24 @@ Testo dettato dall'utente: "${prompt}"
       })
     });
 
-    const data = await response.json();
-    if (!data.candidates) throw new Error(JSON.stringify(data));
-    
-    // Estraiamo il JSON dal testo dell'IA e lo processiamo
-    let jsonString = data.candidates[0].content.parts[0].text;
-    jsonString = jsonString.replace(/```json/gi, '').replace(/```/g, '').trim();
-    
-    const blocks = JSON.parse(jsonString);
+    const data = await response.json().catch(() => ({}));
+    let blocks: unknown[] | null = null;
+    if (data.candidates) {
+      blocks = blocchiDaTesto(data.candidates[0].content.parts[0].text);
+      if (!blocks) throw new Error("L'IA ha risposto in un formato illeggibile: riprova.");
+    } else {
+      console.error('ai-workout: Gemini', response.status, JSON.stringify(data).slice(0, 500));
+      const chiaveGroq = Deno.env.get('GROQ_API_KEY');
+      if (!chiaveGroq || !daRipiegare(response.status)) throw new Error(messaggioErrore(response.status));
+      // La riserva: stesso prompt, a Groq.
+      const g = await chatGroq(richiestaBlocchiGroq(systemPrompt, MODELLO_GROQ), chiaveGroq);
+      if (!g.ok) {
+        console.error('ai-workout: Groq', g.stato, JSON.stringify(g.dati).slice(0, 500));
+        throw new Error(messaggioErrore(g.stato));
+      }
+      blocks = blocchiDaTesto(g.dati?.choices?.[0]?.message?.content);
+      if (!blocks) throw new Error("L'IA di riserva ha risposto in un formato illeggibile: riprova.");
+    }
 
     return new Response(JSON.stringify({ blocks }), { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

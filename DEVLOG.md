@@ -26,6 +26,10 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 - **Nuovi filtri per tipo di blocco** nell'archivio: ON/OFF, EMOM, AMRAP, For Time, Interval.
 - Tornando da un workout l'archivio **riprende dove l'avevi lasciato**; lo stesso vale per la lista atleti tornando da un atleta.
 
+## Cerca con l'IA (coach)
+- Nuova **ricerca con l'IA** in Home, a voce o scritta: atleti fermi, allenamenti non completati, RPE alti, gare in arrivo, note degli atleti, numeri di un atleta, workout da riusare. Sotto la risposta c'è l'elenco dei risultati, e ogni riga apre la sua scheda.
+- Si può anche chiedere di **aprire una schermata** o di **creare un workout** per un atleta in una data.
+
 ## Segnala un problema
 - Nuova voce **«Segnala un problema»** in Impostazioni: un modulo guidato con screenshot allegabili e bozza salvata, che arriva per email.
 

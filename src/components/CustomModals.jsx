@@ -50,7 +50,7 @@ export function CustomAlert({ info, onClose }) {
           {errore ? <AlertTriangle size={26} aria-hidden="true" /> : <Check size={26} aria-hidden="true" />}
         </Bolla>
         <h2 className={TITOLO_MODALE}>{info.title}</h2>
-        <p className={`${TESTO_MODALE} whitespace-pre-wrap`}>{info.message}</p>
+        <p className={`${TESTO_MODALE} whitespace-pre-wrap break-words max-h-[45dvh] overflow-y-auto`}>{info.message}</p>
         <div className="flex gap-3 mt-2">
           <button onClick={onClose} className={BOTTONE_QUIETO}>Chiudi</button>
         </div>
@@ -66,7 +66,7 @@ export function CustomConfirm({ info, onClose }) {
       <div role="dialog" aria-modal="true" aria-label={info.title} className={CARTA_MODALE}>
         <Bolla tono="avviso"><AlertTriangle size={26} aria-hidden="true" /></Bolla>
         <h2 className={TITOLO_MODALE}>{info.title}</h2>
-        <p className={`${TESTO_MODALE} whitespace-pre-wrap`}>{info.message}</p>
+        <p className={`${TESTO_MODALE} whitespace-pre-wrap break-words max-h-[45dvh] overflow-y-auto`}>{info.message}</p>
         <div className="flex gap-3 mt-2">
           <button onClick={() => { if (info.onCancel) info.onCancel(); onClose(); }} className={BOTTONE_QUIETO}>{info.cancelLabel || 'Annulla'}</button>
           <button onClick={() => { info.onConfirm(); onClose(); }} className={BOTTONE_BRAND}>{info.confirmLabel || 'Conferma'}</button>

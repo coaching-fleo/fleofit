@@ -988,3 +988,29 @@ Test: `stazioniEmom.test.js` (8), tre in `timerSequence.test.js`, uno in
 su più minuti»). Mutazioni provate e prese: fasi sempre da un intervallo (3
 rossi), peso dell'RPE senza intervalli (1), campo non salvato dal picker (1).
 Più due in `blocchiIA.test.js`; mutazione presa: campo scartato da `preparaBlocchiIA`.
+
+
+## 9-ai-riserva. «Genera con IA» senza quota (09/10/2026)
+
+Il piano gratuito di **Gemini 2.5 Flash dà 20 richieste al giorno**. Finite
+quelle (il 09/10 le avevano consumate le prove della ricerca, che usava la
+stessa chiave), il builder:
+1. mostrava il **JSON d'errore di Google intero** — mille caratteri con link e
+   «retry in 11h20m35.12s» — che usciva dall'avviso;
+2. restava **senza IA per undici ore**.
+
+Rimedi:
+- `src/lib/erroreIA.js` traduce l'errore in una frase breve («Le richieste
+  gratuite all'IA per oggi sono finite: si riprova fra circa 11 ore…») e taglia
+  qualunque messaggio sconosciuto a 160 caratteri. `CustomAlert` e
+  `CustomConfirm` hanno ora `break-words` e un tetto d'altezza con scorrimento:
+  nessun avviso può più uscire dalla finestra, qualunque cosa gli si passi;
+- `ai-workout` ha la **riserva su Groq** (`_shared/groq.ts`): su 429/404/5xx di
+  Gemini rimanda lo stesso prompt a `gpt-oss-120b` in modalità JSON (che vuole
+  un oggetto: i blocchi stanno in `{"blocks": [...]}`, e `blocchiDaTesto`
+  accetta le due forme), e la voce a Whisper;
+- `fetchWithRetry` non ritenta più i **429**: sul piano gratuito sono la quota
+  del giorno, e ritentarli bruciava richieste e sette secondi prima del no;
+- il server manda messaggi brevi, non il corpo di Google (che va nei log).
+⚠️ `ai-workout` la chiama solo l'app: verificato che `main` usa soltanto
+`send-reminders`, quindi il suo deploy non tocca la web app.

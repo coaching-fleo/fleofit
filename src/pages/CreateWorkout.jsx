@@ -30,6 +30,7 @@ import {
   RigaUltimaVolta, RigaTesto,
 } from '../components/CreaWorkoutUI'
 import { chiudiTastieraSuInvio, useTastieraAperta } from '../useTastiera'
+import { messaggioErroreIA } from '../lib/erroreIA'
 import { useBottomSheet } from '../useBottomSheet'
 import AudioVisualizer from '../components/AudioVisualizer'
 import { ThinkingOrb } from 'thinking-orbs'
@@ -550,11 +551,10 @@ function AiGenerationModal({ onClose, onGenerate }) {
       onGenerate(data?.blocks || [])
       chiudi()
     } catch (e) {
-      let msg = e.message
-      if (msg.includes('503') || msg.toLowerCase().includes('high demand') || msg.toLowerCase().includes('overloaded')) {
-        msg = "I server dell'Intelligenza Artificiale sono attualmente sovraccarichi. Riprova tra qualche istante."
-      }
-      mostraErrore('Errore generazione IA: ' + msg)
+      // ⚠️ Mai il messaggio grezzo: a quota finita era il JSON intero di
+      // Google, e l'avviso usciva dalla finestra (src/lib/erroreIA.js).
+      console.error('Errore generazione IA:', e?.message)
+      mostraErrore(messaggioErroreIA(e?.message))
     } finally {
       fineAttesa()
     }

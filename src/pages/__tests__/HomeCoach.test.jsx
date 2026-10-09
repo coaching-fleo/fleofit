@@ -366,3 +366,20 @@ describe('La Home dell\'admin non è anche la Home di un atleta', () => {
     expect(screen.getByText(/· 1 in pausa/)).toBeInTheDocument()
   })
 })
+
+describe('«Cerca con l\'IA» (09/10/2026)', () => {
+  // Il bottone è solo del coach: la ricerca scorre TUTTI gli atleti, e lato
+  // atleta per decisione del committente non c'è ancora niente.
+  it('il coach ha il bottone, e apre il foglio', async () => {
+    const utente = userEvent.setup()
+    montaPagina(<Home />, { role: 'admin' })
+    await utente.click(await screen.findByRole('button', { name: "Cerca con l'IA" }))
+    expect(await screen.findByRole('dialog', { name: "Cerca con l'IA" })).toBeInTheDocument()
+  })
+
+  it('l\'atleta non ce l\'ha', async () => {
+    montaPagina(<Home />, { role: 'athlete' })
+    await screen.findByRole('button', { name: /centro notifiche/i })
+    expect(screen.queryByRole('button', { name: "Cerca con l'IA" })).not.toBeInTheDocument()
+  })
+})

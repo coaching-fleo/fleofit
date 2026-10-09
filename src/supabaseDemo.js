@@ -312,6 +312,7 @@ export function clientDemo() {
     },
     functions: {
       invoke: async (nome, opzioni) => {
+        if (nome === 'ricerca-coach') return { data: ricercaFinta(opzioni?.body), error: null }
         console.info('[demo] Edge Function non chiamata:', nome, opzioni?.body)
         return { data: { ok: true }, error: null }
       },
@@ -320,4 +321,37 @@ export function clientDemo() {
     removeChannel: () => {},
     rpc: async () => ({ data: null, error: null }),
   }
+}
+
+// ── «Cerca con l'IA» senza Gemini ───────────────────────────────────────────
+// Un finto modello a parole chiave: sceglie uno strumento come farebbe l'IA
+// e, ricevuto il risultato, scrive una frase. Serve a provare il foglio
+// (src/components/RicercaCoach.jsx) dal browser, non a imitare Gemini.
+function ricercaFinta(body = {}) {
+  if (body.audioBase64) return { testo: 'Chi non si allena da 5 giorni?' }
+  const ultima = (body.contents || []).at(-1)
+  const risposta = ultima?.parts?.find(p => p.functionResponse)?.functionResponse?.response
+  if (risposta) {
+    const testo = risposta.errore
+      ? `Non ci sono riuscito: ${risposta.errore}`
+      : risposta.totale != null
+        ? `Ho trovato ${risposta.totale} risultati (ambiente di prova).`
+        : `Ecco i numeri di ${risposta.atleta || "quell'atleta"} (ambiente di prova).`
+    return { contenuto: { role: 'model', parts: [{ text: testo }] } }
+  }
+  const d = String(ultima?.parts?.[0]?.text || '').toLowerCase()
+  const numero = parseInt((d.match(/\d+/) || [])[0], 10)
+  const chiama = (name, args) => ({ contenuto: { role: 'model', parts: [{ functionCall: { name, args } }] } })
+  if (/apri|crea|programma un/.test(d)) return chiama('apri', { schermata: 'crea_workout' })
+  if (/fermo|non si allena|inattiv/.test(d)) return chiama('cercaAtleti', { inattivi_da_giorni: numero || 5 })
+  if (/gara/.test(d)) return chiama('cercaAtleti', { gara_entro_giorni: 30 })
+  if (/rpe/.test(d)) return chiama('cercaAtleti', { rpe_minimo: numero || 8 })
+  if (/in programma/.test(d)) return chiama('cercaAtleti', { senza_programma_giorni: numero || 3 })
+  if (/note|scritto|dolor/.test(d)) return chiama('cercaNelleNote', { parole: ['dolor', 'male', 'fastidio', 'stanc'] })
+  if (/numeri|statistic|media/.test(d)) return chiama('statisticheAtleta', { atleta: d.split(' ').at(-1) })
+  const args = {}
+  if (/non completat|scadut/.test(d)) args.stato = 'scaduto'
+  if (/emom/.test(d)) args.tipo_blocco = 'EMOM'
+  if (/wall/.test(d)) args.esercizio = ['wall ball']
+  return chiama('cercaWorkout', args)
 }

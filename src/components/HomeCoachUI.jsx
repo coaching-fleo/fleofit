@@ -17,7 +17,7 @@
 // ha già un mittente in attesa. Chi è fermo resta in pagina, più in basso, con
 // lo stesso dato di prima.
 
-import { User, Plus, Dumbbell, FolderArchive, ChevronRight, FileText, Mic,
+import { User, Plus, Dumbbell, FolderArchive, ChevronRight, FileText, Mic, Search,
          CheckCircle2, Inbox } from 'lucide-react'
 import { useNumeroCheSale } from '../useNumeroCheSale'
 import { CARD, LABEL, RIGA, META } from '../lib/stiliCard'
@@ -72,6 +72,24 @@ export function HeaderCoach({ dataOggi, atleti, inPausa = 0, azioni }) {
       </div>
       <div className="flex items-center gap-2 shrink-0">{azioni}</div>
     </div>
+  )
+}
+
+// ── «Cerca con l'IA» (09/10/2026) ─────────────────────────────────────────
+// Una barra sotto la testata, e non un terzo bottone tondo accanto a
+// notifiche e impostazioni: con tre bottoni la riga «ven 9 ottobre · 10
+// atleti · 1 in pausa» andava a capo. E una barra che dice cosa si può cercare
+// si scopre da sola, un'icona no. Apre il foglio: il microfono sta lì dentro.
+export function BarraRicerca({ onApri }) {
+  return (
+    <button type="button" onClick={onApri} aria-label="Cerca con l'IA"
+      className="mt-3 w-full h-11 px-3.5 rounded-2xl bg-white/[.05] border border-white/10 backdrop-blur-xl
+                 flex items-center gap-2.5 text-left transition active:scale-[.99] hover:border-ia/45
+                 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+      <Search size={17} className="text-ia shrink-0" aria-hidden="true" />
+      <span className="flex-1 min-w-0 truncate text-[14px] font-medium text-muted">Cerca atleti, workout, note…</span>
+      <Mic size={17} className="text-ia shrink-0" aria-hidden="true" />
+    </button>
   )
 }
 
