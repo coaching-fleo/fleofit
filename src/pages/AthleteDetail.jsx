@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
@@ -19,6 +19,8 @@ import { gradimentoDi } from '../lib/gradimento'
 import { isVoiceNoteValid } from '../lib/notaVocale'
 import { parseNotePausa, formatNotePausa } from '../lib/pausa'
 import { andamentoAtleta, GIORNI_ADERENZA } from '../lib/andamento'
+import { leggiEstratti, estraiMancanti } from '../lib/noteEstratte'
+import { copertura } from '../lib/dalleNote'
 import { previsioneWorkout } from '../lib/previsione'
 import { RigaAvviso, AvvisoEsteso } from '../components/PrevisioneUI'
 import { coloreCategoria } from '../lib/colori'
@@ -55,6 +57,10 @@ const calculateAge = (dob) => {
   if (!dob) return 'N/A'
   return differenceInYears(new Date(), parseISO(dob))
 }
+
+// «Dalle note» si carica solo quando la apre un coach: chi entra in `/profile`
+// non scarica né il componente né i suoi conti (spec dati-dalle-note §4).
+const DalleNoteUI = lazy(() => import('../components/DalleNoteUI'))
 
 export default function AthleteDetail() {
   const { id: paramId } = useParams()
@@ -97,6 +103,11 @@ export default function AthleteDetail() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(new Date())
 
+  // Gli estratti delle note (src/lib/noteEstratte.js) e lo stato dell'analisi:
+  // 'pronto' | 'in_analisi' | 'sospesa' | 'errore'. Solo per il coach.
+  const [estrattiNote, setEstrattiNote] = useState([])
+  const [statoNote, setStatoNote] = useState('pronto')
+
   useEffect(() => {
     if (role === 'athlete' && !isOwnProfile) {
       navigate('/')
@@ -104,6 +115,34 @@ export default function AthleteDetail() {
     }
     fetchAthleteData()
   }, [id, role, isOwnProfile, navigate])
+
+  // «Dalle note»: prima si legge quello che c'è (si disegna subito), poi, solo
+  // se qualche nota aspetta, si chiede a `estrai-note` di analizzarla e si
+  // rilegge. Una volta per apertura della scheda: le note si scrivono alla
+  // chiusura di un allenamento, non mentre il coach guarda.
+  // ⚠️ Mai per l'atleta: la pagina è anche `/profile`.
+  useEffect(() => {
+    if (role === 'athlete' || loading) return
+    let annullato = false
+    ;(async () => {
+      const letti = await leggiEstratti(id)
+      if (annullato) return
+      if (letti.errore) { setStatoNote('errore'); return }
+      setEstrattiNote(letti.dati)
+      if (!copertura(workouts, letti.dati).inAttesa) { setStatoNote('pronto'); return }
+      setStatoNote('in_analisi')
+      const esito = await estraiMancanti(id)
+      if (annullato) return
+      const riletti = await leggiEstratti(id)
+      if (annullato) return
+      if (!riletti.errore) setEstrattiNote(riletti.dati)
+      setStatoNote(esito.sospesa ? 'sospesa' : 'pronto')
+    })()
+    return () => { annullato = true }
+    // `workouts` resta fuori di proposito: completare o togliere un workout
+    // dalla scheda non deve far ripartire l'IA. Lo fa la prossima apertura.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, role, loading])
 
   async function fetchAthleteData(silent = false) {
     if (!silent) setLoading(true)
@@ -573,6 +612,21 @@ export default function AthleteDetail() {
           <BarraFasce distribuzione={andamento.sforzo.distribuzione} />
         </CellaBento>
       </div>
+
+      {/* Cosa dicono le note, trasformate in dati: solo per il coach. */}
+      {role !== 'athlete' && (
+        <Suspense fallback={null}>
+          <DalleNoteUI
+            nome={athlete.name}
+            workouts={workouts}
+            estratti={estrattiNote}
+            stato={statoNote}
+            onApriWorkout={(awId) => {
+              const w = workouts.find(x => x.id === awId)
+              if (w?.workouts?.id) navigate(`/workout/${w.workouts.id}?athlete_id=${id}`)
+            }} />
+        </Suspense>
+      )}
 
       {/* Il banner del prossimo obiettivo era alto quanto una card, con un
           numero da 30px: teneva il peso di un eroe per un dato che cambia una
