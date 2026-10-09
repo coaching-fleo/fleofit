@@ -1,8 +1,8 @@
 # Dati dalle note — design
 
-> 09/10/2026 · branch `app` · stato: **specifica da approvare**.
-> Due decisioni restano al committente (§7): senza, si sviluppa sull'ambiente di
-> prova ma non si rilascia.
+> 09/10/2026 · branch `app` · stato: **approvata**, salvataggio = **tabella** (§7.1).
+> Resta al committente lo sblocco esplicito della migrazione e la verifica privacy
+> (§7.2): senza, si sviluppa sull'ambiente di prova ma non si rilascia.
 
 ## 1. Il problema
 
@@ -45,7 +45,7 @@ Un oggetto per nota analizzata, **anche vuoto**: una nota senza niente di utile 
   "athlete_workout_id": "uuid",
   "athlete_id": "uuid",
   "data": "2026-10-09",            // completed_date dell'assegnazione
-  "impronta": "sha1 del testo ripulito",
+  "impronta": "FNV-1a 32 bit, esadecimale, del testo ripulito", // rileva modifiche, non è sicurezza
   "stato": [{
     "fattore": "stanchezza" | "motivazione" | "viaggio" | "lavoro",
     "segno": -1 | 0 | 1,           // peggio del normale / normale / meglio
@@ -54,7 +54,8 @@ Un oggetto per nota analizzata, **anche vuoto**: una nota senza niente di utile 
   "risultati": [{
     "esercizio": "Wall Balls",     // solo nomi presenti nel workout, altrimenti null
     "misura": "tempo" | "kg" | "reps" | "round" | "distanza" | "passo",
-    "valore": 400,
+    "grezzo": "6:40",              // come scritto nella nota: lo restituisce l'IA
+    "valore": 400,                 // calcolato dalla FUNZIONE da `grezzo`, mai dall'IA
     "unita": "s" | "kg" | "reps" | "round" | "m" | "s/km",
     "citazione": "wall balls 9kg finite in 6:40"
   }],
@@ -130,8 +131,10 @@ superfici. Nessun colore nuovo.
 ### Edge Function `estrai-note` (nuova)
 - **Solo admin**, con `_shared/admin.ts`. La web app su `main` non la chiama: un
   deploy non tocca la produzione web.
-- **Azioni**: `leggi` (gli estratti di un atleta + i conteggi di copertura) ed
-  `estrai` (le note mancanti di un atleta).
+- **Una sola azione**: `estrai` (le note mancanti di un atleta). La **lettura**
+  la fa l'app direttamente sulla tabella, protetta dalle policy solo admin: con la
+  tabella non serve passare dalla funzione. La copertura si calcola nell'app, che
+  ha già le assegnazioni caricate.
 
 ### Il giro di `estrai`, per un atleta
 1. Legge da sola, con la chiave di servizio, le assegnazioni **completate con testo**
@@ -147,8 +150,9 @@ superfici. Nessun colore nuovo.
    upsert su `athlete_workout_id`.
 
 ### Quando parte
-All'apertura della scheda atleta da parte del coach: prima `leggi` (si disegna
-subito), poi `estrai` in sottofondo se ci sono note mancanti, poi una nuova `leggi`.
+All'apertura della scheda atleta da parte del coach: prima la lettura della tabella
+(si disegna subito), poi `estrai` in sottofondo se ci sono note mancanti, poi una
+nuova lettura.
 Un atleta con molto storico si recupera in più aperture, e la copertura lo dice.
 
 ### Dati che cambiano
@@ -166,7 +170,7 @@ Un atleta con molto storico si recupera in più aperture, e la copertura lo dice
 
 ### Lato client
 `src/lib/noteEstratte.js` — l'unico punto che parla con la funzione:
-`leggiEstratti(athleteId)`, `estraiMancanti(athleteId)`.
+`leggiEstratti(athleteId)` (select sulla tabella), `estraiMancanti(athleteId)` (la funzione).
 `src/lib/dalleNote.js` — funzioni pure per i grafici: serie dei risultati,
 settimane delle sensazioni, strisce dello stato, conteggio delle modifiche,
 stati vuoti.
