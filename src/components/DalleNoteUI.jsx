@@ -24,7 +24,7 @@ import { BRAND } from '../lib/colori'
 import { testoNota } from '../lib/rpe'
 import {
   FINESTRE, FINESTRA_INIZIALE, estrattiValidi, copertura, nellaFinestra, serieRisultati,
-  settimaneSensazioni, modificheFrequenti, righeStato, formattaValore,
+  settimaneSensazioni, modificheFrequenti, righeStato, formattaValore, partiFrequenti, ultimeSedute,
 } from '../lib/dalleNote'
 
 // La scala dell'RPE dell'app (verde → giallo → arancione → rosso), non colori nuovi.
@@ -155,13 +155,16 @@ function Serie({ serie }) {
 function CardSensazioni({ estratti, giorni, oggi, onApriWorkout }) {
   const settimane = settimaneSensazioni(estratti, giorni, oggi)
   const modifiche = modificheFrequenti(estratti)
+  const parti = partiFrequenti(estratti)
+  const sedute = ultimeSedute(estratti, 3)
   const [aperta, setAperta] = useState(null)
+  const [parteAperta, setParteAperta] = useState(null)
   const massimo = Math.max(1, ...settimane.map(s => s.troppo_facile + s.giusta + s.troppo_dura))
 
   return (
     <div className={`${CARD} p-[18px] flex flex-col gap-3`}>
       <h3 className={LABEL}>Sensazioni</h3>
-      {!settimane.length && !modifiche.length && (
+      {!settimane.length && !modifiche.length && !parti.length && (
         <Vuota>Nessuna sensazione sul workout nelle note degli ultimi {giorni} giorni</Vuota>
       )}
 
@@ -189,6 +192,55 @@ function CardSensazioni({ estratti, giorni, oggi, onApriWorkout }) {
             ))}
           </div>
         </>
+      )}
+
+      {/* Il giudizio sulla SEDUTA con le parole che lo motivano: l'IA pesa
+          tutta la nota, e il coach deve poter vedere su cosa (09/10, VERSIONE 3). */}
+      {sedute.length > 0 && (
+        <div className="pt-2 border-t border-white/[.07]">
+          <p className={`${LABEL} tracking-[.08em] mb-1.5`}>Ultime sedute</p>
+          {sedute.map(sd => (
+            <button key={sd.awId} type="button" onClick={() => onApriWorkout?.(sd.awId)}
+              className="w-full text-left py-1.5">
+              <span className="flex items-center gap-1.5 text-[13px] font-bold text-white">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORE_DIFFICOLTA[sd.difficolta] }} />
+                {giorno(sd.data)} · {NOME_DIFFICOLTA[sd.difficolta]}
+              </span>
+              <span className="block pl-3.5 text-[12px] text-muted">{sd.citazioni.map(c => `«${c}»`).join(' · ')}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* I giudizi su un pezzo della seduta: «cash out troppo facile» non è la
+          seduta troppo facile, ed è l'indicazione più concreta per il coach. */}
+      {parti.length > 0 && (
+        <div className="pt-2 border-t border-white/[.07]">
+          <p className={`${LABEL} tracking-[.08em] mb-1.5`}>Per blocco</p>
+          {parti.map(p => (
+            <div key={p.parte}>
+              <button type="button" aria-expanded={parteAperta === p.parte}
+                onClick={() => setParteAperta(parteAperta === p.parte ? null : p.parte)}
+                className="w-full text-left py-1.5 text-[13px] text-gray-300">
+                <span className="font-bold text-white">{p.parte}</span> · {p.prevalente
+                  ? `${NOME_DIFFICOLTA[p.prevalente].toLowerCase()} ${p.conteggi[p.prevalente]} su ${p.volte}`
+                  : `giudizi diversi, ${volte(p.volte)}`}
+              </button>
+              {parteAperta === p.parte && (
+                <ul className="pl-3 pb-1.5 flex flex-col gap-1">
+                  {p.citazioni.map((c, i) => (
+                    <li key={i}>
+                      <button type="button" onClick={() => onApriWorkout?.(c.awId)} className="text-left text-[12px] text-muted">
+                        <span className="inline-block w-1.5 h-1.5 mr-1.5 rounded-full align-middle" style={{ background: COLORE_DIFFICOLTA[c.difficolta] }} />
+                        «{c.testo}» · {giorno(c.data)}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
       {modifiche.length > 0 && (

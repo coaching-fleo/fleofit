@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   FINESTRE, FINESTRA_INIZIALE, estrattiValidi, copertura, nellaFinestra, serieRisultati,
-  settimaneSensazioni, modificheFrequenti, righeStato, formattaValore,
+  settimaneSensazioni, modificheFrequenti, righeStato, formattaValore, partiFrequenti, ultimeSedute,
 } from '../dalleNote'
 import { impronta, testoPulito, VERSIONE } from '../../../supabase/functions/estrai-note/regole.ts'
 
@@ -19,7 +19,7 @@ const aw = (id, data, notes, extra = {}) => ({ id, completed_date: data, status:
 const est = (w, estrazione = {}) => ({
   athlete_workout_id: w.id, data: w.completed_date, versione: VERSIONE,
   impronta: impronta(testoPulito(w.notes)),
-  estrazione: { stato: [], risultati: [], sensazioni: { difficolta: null, citazione: null, modifiche: [] }, ...estrazione },
+  estrazione: { stato: [], risultati: [], sensazioni: { seduta: { difficolta: null, citazioni: [] }, parti: [], modifiche: [] }, ...estrazione },
 })
 const tempo = (valore, citazione = 'wb in x') => ({ esercizio: 'Wall Balls', misura: 'tempo', grezzo: 'x', valore, unita: 's', citazione })
 
@@ -86,7 +86,7 @@ describe('serieRisultati', () => {
 
 describe('settimaneSensazioni', () => {
   it('per settimana da lunedì, solo settimane con una difficoltà', () => {
-    const s = (id, data, difficolta) => est(aw(id, data, 't'), { sensazioni: { difficolta, citazione: 'c', modifiche: [] } })
+    const s = (id, data, difficolta) => est(aw(id, data, 't'), { sensazioni: { seduta: { difficolta, citazioni: difficolta ? ['c'] : [] }, parti: [], modifiche: [] } })
     expect(settimaneSensazioni([
       s('a', '2026-10-06', 'troppo_dura'), s('b', '2026-10-09', 'giusta'), s('c', '2026-09-29', 'troppo_facile'), s('d', '2026-09-30', null),
     ], 90, OGGI)).toEqual([
@@ -98,7 +98,7 @@ describe('settimaneSensazioni', () => {
 
 describe('modificheFrequenti', () => {
   it('per esercizio e tipo, le più frequenti prima, senza esercizio escluse', () => {
-    const m = (id, data, modifiche) => est(aw(id, data, 't'), { sensazioni: { difficolta: null, citazione: null, modifiche } })
+    const m = (id, data, modifiche) => est(aw(id, data, 't'), { sensazioni: { seduta: { difficolta: null, citazioni: [] }, parti: [], modifiche } })
     const r = modificheFrequenti([
       m('a', '2026-10-01', [{ tipo: 'saltato', esercizio: 'Burpees', citazione: 'burpees no' }, { tipo: 'ridotto', esercizio: null, citazione: 'meno' }]),
       m('b', '2026-10-03', [{ tipo: 'saltato', esercizio: 'Burpees', citazione: 'saltati i burpees' }]),
@@ -106,6 +106,43 @@ describe('modificheFrequenti', () => {
     ])
     expect(r.map(x => [x.esercizio, x.tipo, x.volte])).toEqual([['Burpees', 'saltato', 2], ['Row', 'sostituito', 1]])
     expect(r[0].citazioni[1]).toEqual({ data: '2026-10-03', testo: 'saltati i burpees', awId: 'b' })
+  })
+})
+
+describe('partiFrequenti', () => {
+  // «Cash out troppo facile 3 volte su 4» è l'indicazione più concreta che
+  // una nota possa dare al coach: alza i carichi lì, non in tutta la seduta.
+  const p = (id, data, parti) => est(aw(id, data, 't'), { sensazioni: { seduta: { difficolta: null, citazioni: [] }, parti, modifiche: [] } })
+  const parte = (nome, difficolta, citazione) => ({ parte: nome, esercizio: null, difficolta, citazione })
+
+  it('per parte, con i conteggi e il giudizio che prevale, le più citate prima', () => {
+    const r = partiFrequenti([
+      p('a', '2026-10-01', [parte('Cash out', 'troppo_facile', 'facile il cash out'), parte('Sled', 'troppo_dura', 'sled durissima')]),
+      p('b', '2026-10-03', [parte('Cash out', 'troppo_facile', 'cash out una passeggiata')]),
+      p('c', '2026-10-05', [parte('cash out', 'giusta', 'cash out ok')]),
+    ])
+    expect(r.map(x => [x.parte, x.volte, x.prevalente])).toEqual([['Cash out', 3, 'troppo_facile'], ['Sled', 1, 'troppo_dura']])
+    expect(r[0].conteggi).toEqual({ troppo_facile: 2, giusta: 1, troppo_dura: 0 })
+    expect(r[0].citazioni[2]).toEqual({ data: '2026-10-05', testo: 'cash out ok', difficolta: 'giusta', awId: 'c' })
+  })
+  it('a pari merito non prevale niente', () => {
+    const r = partiFrequenti([p('a', '2026-10-01', [parte('Sled', 'troppo_dura', 'x1'), parte('Sled', 'troppo_facile', 'x2')])])
+    expect(r[0].prevalente).toBeNull()
+  })
+})
+
+describe('ultimeSedute', () => {
+  it('le sedute giudicate, dalla più recente, con le loro citazioni', () => {
+    const s = (id, data, difficolta, citazioni) => est(aw(id, data, 't'), { sensazioni: { seduta: { difficolta, citazioni }, parti: [], modifiche: [] } })
+    const r = ultimeSedute([
+      s('a', '2026-10-01', 'giusta', ['ok']),
+      s('b', '2026-10-05', 'troppo_dura', ['sentivo di svenire', 'amrap 2 giri']),
+      s('c', '2026-10-06', null, []),
+    ], 3)
+    expect(r).toEqual([
+      { data: '2026-10-05', difficolta: 'troppo_dura', citazioni: ['sentivo di svenire', 'amrap 2 giri'], awId: 'b' },
+      { data: '2026-10-01', difficolta: 'giusta', citazioni: ['ok'], awId: 'a' },
+    ])
   })
 })
 

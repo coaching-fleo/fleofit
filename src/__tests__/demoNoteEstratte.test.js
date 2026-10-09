@@ -29,7 +29,8 @@ describe('gli estratti della demo', () => {
       expect(stato.length, testo).toBe((proposta.stato ?? []).length)
       expect(risultati.length, testo).toBe((proposta.risultati ?? []).length)
       expect(sensazioni.modifiche.length, testo).toBe((proposta.sensazioni?.modifiche ?? []).length)
-      expect(sensazioni.difficolta, testo).toBe(proposta.sensazioni?.difficolta ?? null)
+      expect(sensazioni.seduta.difficolta, testo).toBe(proposta.sensazioni?.seduta?.difficolta ?? null)
+      expect(sensazioni.parti.length, testo).toBe((proposta.sensazioni?.parti ?? []).length)
     }
   })
 

@@ -26,7 +26,7 @@ const ATLETA = { id: 'a1', name: 'Sofia', surname: 'Neri', photo_url: null, weig
 const giorno = (scarto) => new Date(Date.now() + scarto * 86400000).toISOString().split('T')[0]
 const riga = (id, notes) => ({ id, completed_date: giorno(-2), status: 'completed', notes, voice_note_url: null, workouts: { id: `w-${id}`, title: 'Hyrox', sections: { category: 'Hyrox', blocks: [] } } })
 const estratto = (w) => ({ athlete_workout_id: w.id, data: w.completed_date, versione: VERSIONE, impronta: impronta(testoPulito(w.notes)),
-  estrazione: { stato: [], risultati: [], sensazioni: { difficolta: null, citazione: null, modifiche: [] } } })
+  estrazione: { stato: [], risultati: [], sensazioni: { seduta: { difficolta: null, citazioni: [] }, parti: [], modifiche: [] } } })
 
 const comeCoach = () => montaPagina(<AthleteDetail />, {
   role: 'admin', user: { id: 'coach', email: 'c@f.it' }, percorso: '/athletes/a1', rotta: '/athletes/:id',

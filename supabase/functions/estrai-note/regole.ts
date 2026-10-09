@@ -16,9 +16,9 @@
 // relativi alla salute e restano fuori finché il committente non ha chiuso le
 // verifiche di privacy (§7.2 della spec).
 
-// 2 dal 09/10/2026: la difficoltà vale solo per l'allenamento intero
-// (`parlaDiUnaParte`). Alzarla fa rianalizzare tutte le note già lette.
-export const VERSIONE = 2
+// 3 dal 09/10/2026: le sensazioni su due livelli, la seduta intera e le sue
+// parti (vedi `validaEstrazione`). Alzarla fa rianalizzare tutte le note già lette.
+export const VERSIONE = 3
 export const GRUPPO = 15
 export const MAX_GRUPPI = 3
 
@@ -137,33 +137,23 @@ const canonico = (nome: unknown, esercizi: string[]) =>
 
 const lista = (v: unknown): any[] => (Array.isArray(v) ? v : [])
 
-// ── La difficoltà è della SEDUTA, non di un pezzo ────────────────────────────
-// Trovato il 09/10 su una nota vera: «Finale molto facile il cash out» era
-// diventato «allenamento troppo facile», in una nota che per il resto
-// raccontava una seduta durissima. Le istruzioni all'IA lo vietano, ma il
-// controllo vero sta qui: una citazione che nomina un blocco o un esercizio del
-// workout giudica quel pezzo, e la difficoltà resta vuota. Meglio nessun dato
-// che uno rovesciato.
-const PARTI = [
-  'cash out', 'cash in', 'warm up', 'warmup', 'riscaldamento', 'defaticamento', 'cooldown', 'cool down',
-  'amrap', 'emom', 'for time', 'on off', 'interval', 'ripetute', 'recupero', 'blocco', 'finale', 'giro', 'round',
-]
+// ── Le parti di una seduta ──────────────────────────────────────────────────
+// «wall ball» nomina «Wall Balls»: si confrontano le parole, senza la s finale.
 const parole = (s: unknown) => piana(s).split(/[^a-z0-9]+/).filter(Boolean)
-// «wall ball» nomina «Wall Balls»: si confrontano le parole senza la s finale.
 const radice = (p: string) => (p.length > 3 && p.endsWith('s') ? p.slice(0, -1) : p)
-const nomina = (citazione: unknown, nome: string) => {
-  const nellaCitazione = parole(citazione).map(radice)
+const nomina = (testo: unknown, nome: unknown) => {
+  const nelTesto = parole(testo).map(radice)
   const delNome = parole(nome).map(radice)
-  return delNome.length > 0 && delNome.every(p => nellaCitazione.includes(p))
+  return delNome.length > 0 && delNome.every(p => nelTesto.includes(p))
 }
-const parlaDiUnaParte = (citazione: unknown, esercizi: string[]) =>
-  PARTI.some(p => nomina(citazione, p)) || esercizi.some(e => nomina(citazione, e))
+const maiuscola = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 export type Estrazione = {
   stato: { fattore: string, segno: number, citazione: string }[],
   risultati: { esercizio: string | null, misura: string, grezzo: string, valore: number, unita: string, citazione: string }[],
   sensazioni: {
-    difficolta: string | null, citazione: string | null,
+    seduta: { difficolta: string | null, citazioni: string[] },
+    parti: { parte: string, esercizio: string | null, difficolta: string, citazione: string }[],
     modifiche: { tipo: string, esercizio: string | null, citazione: string }[],
   },
 }
@@ -183,9 +173,27 @@ export function validaEstrazione(grezza: unknown, testo: string, esercizi: strin
     return [{ esercizio: canonico(r.esercizio, esercizi), misura: r.misura, grezzo: r.grezzo, valore: v.valore, unita: v.unita, citazione: r.citazione }]
   })
 
+  // Le sensazioni su DUE livelli (dal 09/10, VERSIONE 3). Una nota vera diceva
+  // «Finale molto facile il cash out» in una seduta al limite: con un solo
+  // giudizio per nota quel «facile» diventava la seduta. Ora la SEDUTA è il
+  // giudizio su tutto, che l'IA dà pesando l'intera nota — compresi i segnali
+  // di salute, citabili come motivo (decisione del 09/10) ma mai trasformati in
+  // una categoria — e le PARTI sono i giudizi su un blocco o un esercizio.
+  // Qui non si interpreta niente: si controlla che le citazioni esistano e che
+  // la parte compaia nella sua citazione.
   const s: any = g.sensazioni && typeof g.sensazioni === 'object' ? g.sensazioni : {}
-  const conDifficolta = DIFFICOLTA.includes(s.difficolta) && citazioneVera(s.citazione, testo)
-    && !parlaDiUnaParte(s.citazione, esercizi)
+  const sed: any = s.seduta && typeof s.seduta === 'object' ? s.seduta : {}
+  const citazioniSeduta = lista(sed.citazioni).filter(c => citazioneVera(c, testo))
+  const seduta = DIFFICOLTA.includes(sed.difficolta) && citazioniSeduta.length > 0
+    ? { difficolta: sed.difficolta, citazioni: citazioniSeduta }
+    : { difficolta: null, citazioni: [] }
+  const parti = lista(s.parti).flatMap(p => {
+    const nome = String(p?.parte ?? '').trim()
+    if (!DIFFICOLTA.includes(p?.difficolta) || !citazioneVera(p?.citazione, testo)) return []
+    if (nome.length < 2 || nome.length > 40 || !nomina(p.citazione, nome)) return []
+    const esercizio = esercizi.find(e => nomina(nome, e)) ?? null
+    return [{ parte: esercizio ?? maiuscola(nome), esercizio, difficolta: p.difficolta, citazione: p.citazione }]
+  })
   const modifiche = lista(s.modifiche)
     .filter(m => TIPI_MODIFICA.includes(m?.tipo) && citazioneVera(m?.citazione, testo))
     .map(m => ({ tipo: m.tipo, esercizio: canonico(m.esercizio, esercizi), citazione: m.citazione }))
@@ -193,11 +201,7 @@ export function validaEstrazione(grezza: unknown, testo: string, esercizi: strin
   return {
     stato,
     risultati,
-    sensazioni: {
-      difficolta: conDifficolta ? s.difficolta : null,
-      citazione: conDifficolta ? s.citazione : null,
-      modifiche,
-    },
+    sensazioni: { seduta, parti, modifiche },
   }
 }
 
@@ -231,20 +235,23 @@ export function daCancellare(righe: Riga[], esistenti: Esistente[]): string[] {
 }
 
 // ── Il giro con Groq ────────────────────────────────────────────────────────
-const ISTRUZIONI = `Sei un assistente che legge le note scritte da atleti di Hyrox e corsa dopo un allenamento, in italiano.
-Per ogni nota estrai SOLO ciò che è scritto, in JSON, con questa forma:
+const ISTRUZIONI = `Sei un assistente che legge le note scritte da atleti di Hyrox e corsa dopo un allenamento, in italiano, per il loro coach.
+Per ogni nota estrai in JSON, con questa forma:
 {"note":[{"i":<indice della nota>,
   "stato":[{"fattore":"stanchezza|motivazione|viaggio|lavoro","segno":-1|0|1,"citazione":"<parole esatte della nota>"}],
   "risultati":[{"esercizio":"<uno dei nomi in esercizi, o null>","misura":"tempo|kg|reps|round|distanza|passo","grezzo":"<il numero come è scritto, es. 6:40, 9kg, 1,2 km>","citazione":"<parole esatte della nota>"}],
-  "sensazioni":{"difficolta":"troppo_facile|giusta|troppo_dura|null","citazione":"<parole esatte o null>",
+  "sensazioni":{
+    "seduta":{"difficolta":"troppo_facile|giusta|troppo_dura|null","citazioni":["<parole esatte della nota>", "..."]},
+    "parti":[{"parte":"<il blocco o l'esercizio come lo chiama l'atleta, es. cash out, wall ball>","difficolta":"troppo_facile|giusta|troppo_dura","citazione":"<parole esatte della nota>"}],
     "modifiche":[{"tipo":"saltato|ridotto|sostituito|aggiunto","esercizio":"<uno dei nomi in esercizi, o null>","citazione":"<parole esatte della nota>"}]}}]}
 Regole:
-- "citazione" copia le parole ESATTE della nota, senza riassumere.
+- "citazione" e "citazioni" copiano le parole ESATTE della nota, senza riassumere.
+- "seduta" è il giudizio sull'allenamento INTERO: leggi tutta la nota e pesa tutto quello che racconta (fatica, cedimenti, malessere, quanto ha dovuto spezzare o rallentare), non solo la frase che contiene "facile" o "duro". In "citazioni" metti tutte le frasi che motivano il giudizio. Se la nota è contraddittoria o non dice abbastanza, metti difficolta null.
+- "parti" sono i giudizi su UN blocco o UN esercizio (es. "facile il cash out" → parte "cash out", troppo_facile). Un giudizio su una parte NON è il giudizio sulla seduta.
 - "grezzo" copia il numero come l'atleta l'ha scritto; non fare conversioni.
 - segno: -1 peggio del normale, 0 normale, 1 meglio del normale.
 - Se la nota non parla di un fattore, NON aggiungerlo. Liste vuote se non c'è niente.
-- "difficolta" giudica l'ALLENAMENTO INTERO: compilala solo se l'atleta dice com'è andata tutta la seduta. Se il giudizio riguarda un blocco o un esercizio (es. "facile il cash out"), lascia difficolta null.
-- Non estrarre dolori, infortuni, sonno, stress, malattie, ciclo, alimentazione o altri dati di salute.
+- I segnali di salute (dolori, malessere, sonno, alimentazione) possono motivare il giudizio sulla seduta e comparire fra le sue citazioni, ma non vanno mai in "stato".
 - Rispondi solo con il JSON, una voce per ogni nota ricevuta.`
 
 /** Il corpo per Groq (formato OpenAI). Solo testo ed esercizi: niente che dica chi è l'atleta. */

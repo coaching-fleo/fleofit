@@ -15,7 +15,7 @@ const OGGI = new Date(2026, 9, 9)
 const aw = (id, data, notes = `nota ${id}`) => ({ id, completed_date: data, status: 'completed', notes, workouts: { id: `w-${id}`, title: 'W' } })
 const est = (w, estrazione = {}) => ({
   athlete_workout_id: w.id, data: w.completed_date, versione: VERSIONE, impronta: impronta(testoPulito(w.notes)),
-  estrazione: { stato: [], risultati: [], sensazioni: { difficolta: null, citazione: null, modifiche: [] }, ...estrazione },
+  estrazione: { stato: [], risultati: [], sensazioni: { seduta: { difficolta: null, citazioni: [] }, parti: [], modifiche: [] }, ...estrazione },
 })
 const tempo = (valore) => ({ esercizio: 'Wall Balls', misura: 'tempo', grezzo: 'x', valore, unita: 's', citazione: 'wb' })
 
@@ -115,9 +115,30 @@ describe('DalleNoteUI', () => {
     expect(screen.queryByText(/7:00 · 10 ago/)).not.toBeInTheDocument()
   })
 
+  it('le ultime sedute dicono il giudizio e perché, con le parole dell\'atleta', async () => {
+    const w = aw('a', '2026-10-05')
+    const { onApriWorkout } = monta({ workouts: [w], estratti: [est(w, { sensazioni: {
+      seduta: { difficolta: 'troppo_dura', citazioni: ['dal secondo giro sentivo di svenire', 'Amrap 2 giri'] }, parti: [], modifiche: [] } })] })
+    expect(screen.getByText('Ultime sedute')).toBeInTheDocument()
+    const riga = screen.getByRole('button', { name: /5 ott · Troppo dura/ })
+    expect(riga).toHaveTextContent('«dal secondo giro sentivo di svenire» · «Amrap 2 giri»')
+    await userEvent.click(riga)
+    expect(onApriWorkout).toHaveBeenCalledWith('a')
+  })
+
+  it('per blocco: la parte, il giudizio che prevale e quante volte', async () => {
+    const parte = (c, d = 'troppo_facile') => ({ parte: 'Cash out', esercizio: null, difficolta: d, citazione: c })
+    const sens = (parti) => ({ sensazioni: { seduta: { difficolta: null, citazioni: [] }, parti, modifiche: [] } })
+    const a = aw('a', '2026-10-01'), b = aw('b', '2026-10-03'), c = aw('c', '2026-10-05')
+    monta({ workouts: [a, b, c], estratti: [est(a, sens([parte('facile il cash out')])), est(b, sens([parte('cash out leggero')])), est(c, sens([parte('cash out ok', 'giusta')]))] })
+    expect(screen.getByText('Per blocco')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Cash out · troppo facile 2 su 3/ }))
+    expect(screen.getByText(/«cash out leggero» · 3 ott/)).toBeInTheDocument()
+  })
+
   it('le modifiche frequenti si aprono sulle citazioni, e una citazione apre il workout', async () => {
     const a = aw('a', '2026-10-01'), b = aw('b', '2026-10-03')
-    const salta = (c) => ({ sensazioni: { difficolta: null, citazione: null, modifiche: [{ tipo: 'saltato', esercizio: 'Burpees', citazione: c }] } })
+    const salta = (c) => ({ sensazioni: { seduta: { difficolta: null, citazioni: [] }, parti: [], modifiche: [{ tipo: 'saltato', esercizio: 'Burpees', citazione: c }] } })
     const { onApriWorkout } = monta({ workouts: [a, b], estratti: [est(a, salta('burpees no')), est(b, salta('saltati i burpees'))] })
     await userEvent.click(screen.getByRole('button', { name: /Burpees · saltato · 2 volte/ }))
     await userEvent.click(screen.getByRole('button', { name: /saltati i burpees/ }))

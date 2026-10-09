@@ -19,11 +19,11 @@ import {
 
 const NOTA = 'Wall balls 9kg finite in 6:40, gambe distrutte. Burpees saltati.'
 const ESERCIZI = ['Wall Balls', 'Burpees']
-const VUOTA = { stato: [], risultati: [], sensazioni: { difficolta: null, citazione: null, modifiche: [] } }
+const VUOTA = { stato: [], risultati: [], sensazioni: { seduta: { difficolta: null, citazioni: [] }, parti: [], modifiche: [] } }
 
 describe('le liste dello standard v1', () => {
   it('niente categorie sanitarie fra i fattori', () => {
-    expect(VERSIONE).toBe(2) // 2 dal 09/10: la difficoltà vale solo per l'allenamento intero
+    expect(VERSIONE).toBe(3) // 3 dal 09/10: sensazioni su due livelli, seduta e parti
     expect(FATTORI).toEqual(['stanchezza', 'motivazione', 'viaggio', 'lavoro'])
     expect(MISURE).toEqual(['tempo', 'kg', 'reps', 'round', 'distanza', 'passo'])
     expect(DIFFICOLTA).toEqual(['troppo_facile', 'giusta', 'troppo_dura'])
@@ -127,13 +127,6 @@ describe('validaEstrazione', () => {
     const e = valida({ sensazioni: { modifiche: [{ tipo: 'saltato', esercizio: 'burpees', citazione: 'Burpees saltati' }] } })
     expect(e.sensazioni.modifiche).toEqual([{ tipo: 'saltato', esercizio: 'Burpees', citazione: 'Burpees saltati' }])
   })
-  it('difficoltà senza citazione vera → null', () => {
-    expect(valida({ sensazioni: { difficolta: 'troppo_dura', citazione: 'durissima' } }).sensazioni)
-      .toEqual({ difficolta: null, citazione: null, modifiche: [] })
-  })
-  it('difficoltà con citazione vera → tenuta', () => {
-    expect(valida({ sensazioni: { difficolta: 'troppo_dura', citazione: 'gambe distrutte' } }).sensazioni.difficolta).toBe('troppo_dura')
-  })
   it('citazioni troppo corte non valgono', () => {
     expect(valida({ stato: [{ fattore: 'stanchezza', segno: -1, citazione: 'in' }] }).stato).toEqual([])
   })
@@ -228,27 +221,44 @@ describe('le correzioni della revisione finale', () => {
   })
 })
 
-describe('la difficoltà è un giudizio sull\'allenamento INTERO', () => {
+describe('le sensazioni: la seduta intera e le sue parti', () => {
   // Trovato il 09/10 su una nota vera (qui riscritta, senza i dati
   // dell'atleta): «Finale molto facile il cash out» era diventato «allenamento
-  // troppo facile», in una nota che per il resto raccontava una seduta durissima.
-  // Un giudizio su un blocco o su un esercizio non è un giudizio sulla seduta.
-  const TESTO = 'Amrap 2 giri, dal secondo giro durissima. Finale molto facile il cash out, wall ball spezzati in due. Nel complesso giusta'
+  // troppo facile», in una seduta al limite. Una nota contiene spesso DUE
+  // giudizi — sulla seduta e su un pezzo — e lo standard li tiene separati.
+  // L'IA pesa tutta la nota; qui si controlla solo che non inventi.
+  const TESTO = 'Amrap 2 giri, dal secondo giro sentivo di svenire. Finale molto facile il cash out, wall ball spezzati in due.'
   const ES = ['Wall Balls', 'Sled Push', 'Burpees']
-  const diff = (difficolta, citazione) => validaEstrazione({ sensazioni: { difficolta, citazione } }, TESTO, ES).sensazioni.difficolta
+  const sens = (sensazioni) => validaEstrazione({ sensazioni }, TESTO, ES).sensazioni
 
-  it('una frase che nomina un blocco non decide la difficoltà', () => {
-    expect(diff('troppo_facile', 'Finale molto facile il cash out')).toBeNull()
-    expect(diff('troppo_dura', 'Amrap 2 giri, dal secondo giro durissima')).toBeNull()
+  it('la seduta tiene tutte le citazioni vere che la motivano', () => {
+    expect(sens({ seduta: { difficolta: 'troppo_dura', citazioni: ['dal secondo giro sentivo di svenire', 'Amrap 2 giri'] } }).seduta)
+      .toEqual({ difficolta: 'troppo_dura', citazioni: ['dal secondo giro sentivo di svenire', 'Amrap 2 giri'] })
   })
-  it('nemmeno una frase che nomina un esercizio del workout', () => {
-    expect(diff('troppo_facile', 'wall ball spezzati in due')).toBeNull()
+  it('una citazione inventata cade, le vere restano', () => {
+    expect(sens({ seduta: { difficolta: 'troppo_dura', citazioni: ['seduta infernale', 'Amrap 2 giri'] } }).seduta.citazioni)
+      .toEqual(['Amrap 2 giri'])
   })
-  it('un giudizio sulla seduta intera resta', () => {
-    expect(diff('giusta', 'Nel complesso giusta')).toBe('giusta')
+  it('senza nessuna citazione vera la seduta resta senza giudizio', () => {
+    expect(sens({ seduta: { difficolta: 'troppo_dura', citazioni: ['seduta infernale'] } }).seduta).toEqual({ difficolta: null, citazioni: [] })
+    expect(sens({ seduta: { difficolta: 'non_chiara', citazioni: ['Amrap 2 giri'] } }).seduta).toEqual({ difficolta: null, citazioni: [] })
   })
-  it('le istruzioni all\'IA lo dicono', () => {
-    const s = JSON.stringify(richiestaGroq([{ i: 0, testo: TESTO, esercizi: ES }], 'm'))
-    expect(s).toMatch(/allenamento intero/i)
+  it('un giudizio su un blocco diventa una parte, non la seduta', () => {
+    expect(sens({ parti: [{ parte: 'cash out', difficolta: 'troppo_facile', citazione: 'Finale molto facile il cash out' }] }).parti)
+      .toEqual([{ parte: 'Cash out', esercizio: null, difficolta: 'troppo_facile', citazione: 'Finale molto facile il cash out' }])
+  })
+  it('una parte che è un esercizio del workout prende il suo nome', () => {
+    expect(sens({ parti: [{ parte: 'wall ball', difficolta: 'troppo_dura', citazione: 'wall ball spezzati in due' }] }).parti[0])
+      .toMatchObject({ parte: 'Wall Balls', esercizio: 'Wall Balls' })
+  })
+  it('una parte che la sua citazione non nomina cade', () => {
+    expect(sens({ parti: [{ parte: 'sled push', difficolta: 'troppo_facile', citazione: 'Finale molto facile il cash out' }] }).parti).toEqual([])
+    expect(sens({ parti: [{ parte: 'cash out', difficolta: 'facilissimo', citazione: 'Finale molto facile il cash out' }] }).parti).toEqual([])
+  })
+  it('le istruzioni all\'IA chiedono i due livelli e il peso di tutta la nota', () => {
+    const s = richiestaGroq([{ i: 0, testo: TESTO, esercizi: ES }], 'm').messages[0].content
+    expect(s).toMatch(/"seduta"/)
+    expect(s).toMatch(/"parti"/)
+    expect(s).toMatch(/tutta la nota/i)
   })
 })

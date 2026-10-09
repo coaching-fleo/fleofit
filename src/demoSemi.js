@@ -24,7 +24,7 @@ import {
   VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
 } from '../supabase/functions/estrai-note/regole.ts'
 
-export const VERSIONE_SEME = 6
+export const VERSIONE_SEME = 7
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -169,7 +169,7 @@ export const PROPOSTE_DEMO = {
       { esercizio: 'Wall Balls', misura: 'tempo', grezzo: '0:58', citazione: 'Wall balls da 9kg chiuse in 0:58' },
       { esercizio: 'Wall Balls', misura: 'kg', grezzo: '9kg', citazione: 'Wall balls da 9kg' },
     ],
-    sensazioni: { difficolta: 'giusta', citazione: 'bella seduta' },
+    sensazioni: { seduta: { difficolta: 'giusta', citazioni: ['bella seduta'] } },
   },
   [ELENA_2]: { risultati: [{ esercizio: 'Wall Balls', misura: 'tempo', grezzo: '0:54', citazione: 'Wall balls in 0:54' }] },
   [ELENA_3]: {
@@ -177,22 +177,23 @@ export const PROPOSTE_DEMO = {
     sensazioni: { modifiche: [{ tipo: 'ridotto', esercizio: 'Burpees Broad Jump', citazione: 'Burpees broad jump ridotti a 8' }] },
   },
   [GIULIA_1]: {
-    sensazioni: { difficolta: 'troppo_dura', citazione: 'Troppo dura',
+    sensazioni: { seduta: { difficolta: 'troppo_dura', citazioni: ['Troppo dura'] },
       modifiche: [{ tipo: 'saltato', esercizio: 'Burpees Broad Jump', citazione: 'saltati gli ultimi burpees broad jump' }] },
   },
-  [GIULIA_2]: { sensazioni: { difficolta: 'giusta', citazione: 'Giusta oggi' } },
+  [GIULIA_2]: { sensazioni: { seduta: { difficolta: 'giusta', citazioni: ['Giusta oggi'] } } },
   [GIULIA_3]: {
     stato: [{ fattore: 'lavoro', segno: -1, citazione: 'settimana pesante al lavoro' }],
     sensazioni: { modifiche: [{ tipo: 'saltato', esercizio: 'Burpees Broad Jump', citazione: 'Burpees broad jump saltati di nuovo' }] },
   },
-  'Più dura di quanto sembrava': { sensazioni: { difficolta: 'troppo_dura', citazione: 'Più dura di quanto sembrava' } },
+  'Più dura di quanto sembrava': { sensazioni: { seduta: { difficolta: 'troppo_dura', citazioni: ['Più dura di quanto sembrava'] } } },
   [LUCA_1]: { stato: [{ fattore: 'stanchezza', segno: -1, citazione: 'Stanco morto' }] },
   [LUCA_2]: { stato: [{ fattore: 'motivazione', segno: 1, citazione: 'Motivazione alta' }] },
   [LUCA_3]: { stato: [
     { fattore: 'stanchezza', segno: -1, citazione: 'Gambe a pezzi' },
     { fattore: 'viaggio', segno: -1, citazione: 'dopo il viaggio di ieri' },
   ] },
-  'Sled pesantissimo': { sensazioni: { difficolta: 'troppo_dura', citazione: 'Sled pesantissimo' } },
+  // Un giudizio su UN pezzo, non sulla seduta (sensazioni su due livelli, VERSIONE 3).
+  'Sled pesantissimo': { sensazioni: { parti: [{ parte: 'sled', difficolta: 'troppo_dura', citazione: 'Sled pesantissimo' }] } },
   // Note che non dicono niente da estrarre: diventano estratti VUOTI, come
   // farebbe la funzione, e la copertura le conta come analizzate.
   'Tutto liscio': {},

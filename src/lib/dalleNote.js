@@ -84,7 +84,7 @@ export function serieRisultati(estratti = []) {
 export function settimaneSensazioni(estratti = [], giorni = FINESTRA_INIZIALE, oggi = new Date()) {
   const settimane = new Map()
   for (const e of nellaFinestra(estratti, giorni, oggi)) {
-    const d = e.estrazione?.sensazioni?.difficolta
+    const d = e.estrazione?.sensazioni?.seduta?.difficolta
     if (!d) continue
     const settimana = format(startOfWeek(parseISO(e.data), { weekStartsOn: 1 }), 'yyyy-MM-dd')
     if (!settimane.has(settimana)) settimane.set(settimana, { settimana, troppo_facile: 0, giusta: 0, troppo_dura: 0 })
@@ -92,6 +92,44 @@ export function settimaneSensazioni(estratti = [], giorni = FINESTRA_INIZIALE, o
   }
   return [...settimane.values()].sort((a, b) => a.settimana.localeCompare(b.settimana))
 }
+
+const DIFFICOLTA = ['troppo_facile', 'giusta', 'troppo_dura']
+// «Cash out» e «cash out», «wall ball» e «wall balls» sono la stessa parte.
+const chiaveParte = (p) => p.esercizio || String(p.parte).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(w => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w)).join(' ')
+
+/**
+ * I giudizi sui pezzi della seduta (un blocco, un esercizio), per parte: è
+ * l'indicazione più concreta che una nota possa dare — «cash out troppo
+ * facile 3 volte su 4» dice dove alzare, non solo che alzare.
+ * `prevalente` è `null` a pari merito: un giudizio che non prevale non si inventa.
+ */
+export function partiFrequenti(estratti = []) {
+  const per = new Map()
+  for (const e of estratti) {
+    for (const p of e.estrazione?.sensazioni?.parti ?? []) {
+      const chiave = chiaveParte(p)
+      if (!chiave) continue
+      if (!per.has(chiave)) per.set(chiave, { parte: p.parte, volte: 0, conteggi: { troppo_facile: 0, giusta: 0, troppo_dura: 0 }, citazioni: [] })
+      const voce = per.get(chiave)
+      voce.volte += 1
+      voce.conteggi[p.difficolta] += 1
+      voce.citazioni.push({ data: e.data, testo: p.citazione, difficolta: p.difficolta, awId: e.athlete_workout_id })
+    }
+  }
+  return [...per.values()].map(v => {
+    const massimo = Math.max(...DIFFICOLTA.map(d => v.conteggi[d]))
+    const primi = DIFFICOLTA.filter(d => v.conteggi[d] === massimo)
+    return { ...v, prevalente: primi.length === 1 ? primi[0] : null, citazioni: v.citazioni.sort((a, b) => a.data.localeCompare(b.data)) }
+  }).sort((a, b) => b.volte - a.volte)
+}
+
+/** Le ultime `quante` sedute con un giudizio, dalla più recente, con le citazioni che lo motivano. */
+export const ultimeSedute = (estratti = [], quante = 3) => estratti
+  .filter(e => e.estrazione?.sensazioni?.seduta?.difficolta)
+  .sort((a, b) => b.data.localeCompare(a.data))
+  .slice(0, quante)
+  .map(e => ({ data: e.data, difficolta: e.estrazione.sensazioni.seduta.difficolta, citazioni: e.estrazione.sensazioni.seduta.citazioni, awId: e.athlete_workout_id }))
 
 /** Gli esercizi che l'atleta salta, riduce o cambia più spesso. */
 export function modificheFrequenti(estratti = []) {

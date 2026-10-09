@@ -1,0 +1,75 @@
+[
+  {
+    "nome": "seduta al limite, finale facile",
+    "testo": "Amrap fatto 3 giri, dal secondo giro mi girava la testa e ho dovuto fermarmi due volte. Cash out molto facile, sled push con 120kg. Wall ball spezzati in tre",
+    "esercizi": ["Wall Balls", "Sled Push", "Burpees"],
+    "seduta": "troppo_dura",
+    "parti": [{ "parte": "Cash out", "difficolta": "troppo_facile" }]
+  },
+  {
+    "nome": "tutto facile",
+    "testo": "Oggi tutto molto facile, potevo spingere di più su tutto",
+    "esercizi": ["Wall Balls", "Rowing"],
+    "seduta": "troppo_facile",
+    "parti": []
+  },
+  {
+    "nome": "giusta con una parte dura",
+    "testo": "Allenamento giusto nel complesso, solo i burpees mi hanno distrutto",
+    "esercizi": ["Burpees", "SkiErg"],
+    "seduta": "giusta",
+    "parti": [{ "parte": "Burpees", "difficolta": "troppo_dura" }]
+  },
+  {
+    "nome": "solo numeri",
+    "testo": "Row 2000m in 7:45, wall balls 100 reps in 6:10",
+    "esercizi": ["Rowing", "Wall Balls"],
+    "seduta": null,
+    "parti": []
+  },
+  {
+    "nome": "contraddittoria",
+    "testo": "Non so, all'inizio benissimo poi a metà malissimo, poi di nuovo bene",
+    "esercizi": ["Wall Balls"],
+    "seduta": null,
+    "parti": []
+  },
+  {
+    "nome": "abbreviazioni e refusi",
+    "testo": "emom durissimo nn ce la facevo piu, gambe finite dopo 10 min, ho saltato gli ultimi 3 giri",
+    "esercizi": ["Wall Balls", "Burpees Broad Jump"],
+    "seduta": "troppo_dura",
+    "parti": []
+  },
+  {
+    "nome": "corsa leggera",
+    "testo": "Corsa tranquilla, ritmo 5:30 al km, gambe leggere, potevo andare avanti",
+    "esercizi": ["Corsa"],
+    "seduta": "troppo_facile",
+    "parti": []
+  },
+  {
+    "nome": "riscaldamento lungo",
+    "testo": "Riscaldamento troppo lungo, poi la parte centrale perfetta",
+    "esercizi": ["SkiErg", "Rowing"],
+    "seduta": "giusta",
+    "parti": [{ "parte": "Riscaldamento", "difficolta": "troppo_facile" }]
+  },
+  {
+    "nome": "stanco dal lavoro",
+    "testo": "Settimana pesante al lavoro, arrivato stanco morto. Seduta dura ma l'ho chiusa",
+    "esercizi": ["Sled Push", "Farmers Carry"],
+    "seduta": "troppo_dura",
+    "parti": []
+  },
+  {
+    "nome": "sled facile, carry duro",
+    "testo": "Sled facile oggi, il farmers carry invece durissimo con 32kg per mano",
+    "esercizi": ["Sled Push", "Farmers Carry"],
+    "seduta": null,
+    "parti": [
+      { "parte": "Sled Push", "difficolta": "troppo_facile" },
+      { "parte": "Farmers Carry", "difficolta": "troppo_dura" }
+    ]
+  }
+]

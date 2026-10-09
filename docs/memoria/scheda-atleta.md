@@ -158,16 +158,26 @@ motivazione, viaggio, lavoro, con una tacca sui giorni a RPE ≥ 8).
    allenamento a «da fare» non cancella la nota. La regola è in due punti che
    devono restare uguali: `daAnalizzare` in `regole.ts` e `conTesto` in
    `dalleNote.js`.
-7. 🔴 **La difficoltà giudica la SEDUTA INTERA** (dal 09/10, `VERSIONE = 2`). Su
-   una nota vera, «Finale molto facile il cash out» era diventato «allenamento
-   troppo facile», mentre il resto della nota raccontava una seduta durissima.
-   Ora la difficoltà si scarta se la citazione nomina un blocco (cash out,
-   AMRAP, finale, giro…) o un esercizio del workout (`parlaDiUnaParte` in
-   `regole.ts`, con «wall ball» che nomina «Wall Balls»). Lo dicono anche le
-   istruzioni all'IA, ma il controllo vero è quello nel codice.
-   ⚠️ Quella stessa nota parlava di quasi-svenimento, mangiare poco e dolore
-   lombare: tutto escluso dalla v1 per privacy (BACKLOG #67). È l'esempio di
-   cosa manca al coach finché la v2 non c'è.
+7. 🔴 **Le sensazioni sono su DUE livelli** (dal 09/10, `VERSIONE = 3`): la
+   **seduta** (il giudizio sull'allenamento intero, con TUTTE le citazioni che lo
+   motivano) e le **parti** (il giudizio su un blocco o un esercizio: «cash out
+   troppo facile»). Nasce da una nota vera — quasi-svenimento, dolore lombare,
+   «finale molto facile il cash out» — che con un solo giudizio per nota era
+   diventata «seduta troppo facile».
+   - Prima correzione, sbagliata e tolta lo stesso giorno: un filtro a parole
+     chiave che scartava ogni giudizio che nominava un blocco. Buttava via anche
+     giudizi buoni («AMRAP durissimo» in un workout fatto solo di AMRAP). La
+     lettura la fa l'IA, che pesa tutta la nota; il codice controlla solo che
+     non inventi (citazioni presenti, parte nominata nella sua citazione).
+   - **Decisione del 09/10 (scelta A)**: i segnali di salute possono motivare il
+     giudizio sulla seduta ed essere CITATI («sentivo di svenire»), ma non
+     diventano mai una categoria né un grafico (BACKLOG #67). La nota intera è
+     già visibile al coach: la citazione non aggiunge esposizione.
+   - La card mostra «Ultime sedute» (giudizio + citazioni) e «Per blocco»
+     (`partiFrequenti`: «Cash out · troppo facile 2 su 3»).
+   - **Prima di toccare le istruzioni all'IA**: `tools/prova-estrai-note/prova.mjs`
+     le prova su 10 note inventate (`GROQ_API_KEY=... node tools/prova-estrai-note/prova.mjs`).
+     Mai metterci note vere.
 8. **Nell'ambiente di prova gli estratti nascono nei semi** (`PROPOSTE_DEMO` in
    `src/demoSemi.js`), passati dalla stessa `validaEstrazione`: Elena (tempi sulle
    wall balls), Giulia (sensazioni e burpees saltati), Luca (stanchezza). Una nota
