@@ -2,7 +2,7 @@
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **7 ottobre 2026**.
+> Ultimo aggiornamento: **9 ottobre 2026**.
 
 > 📚 **Dal 07/10/2026 questo file tiene solo ciò che serve in OGNI sessione.** La storia —
 > perché ogni schermata è fatta così, le trappole trovate, i rifiuti di App Store, le
@@ -20,14 +20,15 @@
   (§1.1). L'ultimo commit si legge con `git log -1`, **mai scritto qui** (è stato sbagliato
   tre volte).
 - **Schema del database congelato** (§0, regola 0-bis): l'approvazione è arrivata, ma lo
-  sblocco resta una decisione del committente.
+  sblocco resta una decisione del committente. **Un'eccezione**, il 09/10/2026: la tabella
+  `note_estratte` («Dalle note», `docs/memoria/scheda-atleta.md`).
 - **App Store**: ✅ **APPROVATA il 29/09/2026** — build `1.1.0 (6)`, commit `8d9a398` del
   21/09/2026. Tutto ciò che è venuto dopo quel commit **non è nell'app sullo Store**: le
   modifiche da annunciare nel prossimo aggiornamento stanno in [DEVLOG.md](DEVLOG.md)
   (`docs/memoria/app-store.md`).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint al 07/10/2026: `npm test` → **1202 test**; `npx eslint src` → **26 problemi** (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
+- Test e lint al 09/10/2026: `npm test` → **1521 test**; `npx eslint src` → **27 problemi** (nessuno nei file di «Dalle note») (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---
@@ -52,6 +53,10 @@
    RLS: l'unico database serve anche la web app in produzione e non c'è staging. **Le letture sono
    permesse** (verifica policy, conteggi, export). Se una funzione richiede una migrazione, va
    proposta e messa in attesa, non implementata. Vedi PRODUCT.md → Capabilities and Constraints.
+   ✅ **Unica eccezione autorizzata finora** (09/10/2026, sì esplicito in sessione): la tabella
+   `note_estratte`, migrazione **additiva** applicata a mano dal SQL editor
+   (`supabase/schema/note_estratte_2026-10-09.sql`). Non è uno sblocco generale: **ogni
+   migrazione successiva richiede un nuovo sì esplicito**.
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -173,7 +178,7 @@ differenze da iOS una per una: `docs/memoria/android.md`.
 | Export | `jspdf` (PDF scheda), `html-to-image` (`toPng`/`toBlob`) per la story Instagram |
 | Superficie IA | `thinking-orbs` — l'orb dell'attesa (§9-untricies) · `border-beam` — il fascio su card e foglio (§9-duetricies). ⚠️ Entrambe MIT e senza dipendenze, ed **entrambe si importano solo da `CreateWorkout.jsx`**: mai da un file condiviso |
 | Push | FCM (iOS nativo, via `@capacitor-community/fcm` + Firebase Admin lato Edge Function) + Web Push VAPID (browser) |
-| IA | Google **Gemini 2.5 Flash** (generazione workout + trascrizione audio) |
+| IA | Google **Gemini 2.5 Flash** (generazione workout + trascrizione audio) · **Groq** (`openai/gpt-oss-120b`): riserva di `ai-workout`, prima scelta di `ricerca-coach`, **unica** IA di `estrai-note` (le note degli atleti non vanno a Gemini gratuito, che può usarle) |
 
 ### Plugin Capacitor in uso
 `@capacitor/app`, `browser`, `filesystem`, `haptics`, `keyboard`, `network`,
@@ -267,10 +272,12 @@ src/
 │                                   #   Athletes, AthleteDetail, WorkoutsArchive, WeeklyReport,
 │                                   #   AthleteReport, Settings, TVDashboard
 └─ test/                            # setup.js, fintoSupabase.js, montaPagina.jsx
-tools/                              # icone-android.py, verifica-ipa.sh, verifica-revisore.sql
+tools/                              # icone-android.py, verifica-ipa.sh, verifica-revisore.sql,
+                                    #   prova-estrai-note/ (istruzioni IA su note INVENTATE, prima del deploy)
 ios/ · android/                     # progetti nativi: a mano solo Info.plist, entitlements,
                                     #   AndroidManifest.xml, styles.xml
-supabase/functions/                 # send-reminders, ai-workout, _shared/admin.ts
+supabase/functions/                 # send-reminders, ai-workout, ricerca-coach, estrai-note,
+                                    #   segnalazione, _shared/admin.ts + groq.ts
 supabase/schema/                    # fotografia delle policy RLS — NON una migrazione
 docs/memoria/                       # la storia, un file per argomento (§11)
 ```
@@ -290,7 +297,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `athletes` | `id` = `auth.users.id`. Soft delete con `deleted_at` (**bigint in ms**). `notes` è la nota del coach **per** l'atleta (l'atleta la vede, ed è voluto) e porta il marcatore `[PAUSA: yyyy-MM-dd]`: si legge e scrive **solo** con `src/lib/pausa.js` |
 | `workouts` | `title` (mai vuoto, con il codice in coda), `date`, `sections` jsonb (§5), `coach_notes` |
 | `athlete_workouts` | qui sta lo **stato** (`status`, `completed_date`). `notes` porta `[RPE: n/10]` e `[GRADIMENTO: …]`: solo con `src/lib/rpe.js` e `gradimento.js`. `voice_note_url` si cancella con `#deleted=`. **Nessun `created_at`** |
-| `note_estratte` | ⚠️ **in attesa, NON applicata** (09/10/2026): i dati ricavati dalle note, solo admin. La scrive solo `estrai-note` |
+| `note_estratte` | ✅ **applicata il 09/10/2026**: i dati ricavati dalle note degli atleti (standard `VERSIONE` in `estrai-note/regole.ts`). Policy **solo admin** (`USING` e `WITH CHECK`), l'atleta non la legge. La scrive solo `estrai-note`. `main` non la conosce |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
 - 🔴 **Gli admin sono TRE liste da tenere allineate**: `ADMIN_EMAILS` in `src/App.jsx`,
@@ -298,7 +305,7 @@ staging, **schema congelato** (§0, 0-bis).
   sia `WITH CHECK`. Una lista disallineata è la causa del rifiuto App Store 2.3.1(a).
 - 🔴 **Cancellare un atleta distrugge tutta la sua storia** (chiavi in CASCADE), col cron
   delle 00:00 UTC; il backup gira prima, alle 22:30.
-- **Edge Function**: `send-reminders` (5 modalità), `ai-workout` (Gemini, riserva Groq) e `ricerca-coach` (Groq, riserva Gemini: la ricerca del coach). ⚠️ Gemini gratuito = **20 richieste al giorno**, condivise da tutte le funzioni con la stessa chiave. `main` chiama solo `send-reminders`. Un deploy
+- **Edge Function**: `send-reminders` (5 modalità), `ai-workout` (Gemini, riserva Groq), `ricerca-coach` (Groq, riserva Gemini: la ricerca del coach) ed `estrai-note` (**solo Groq**, con Zero Data Retention: le note degli atleti diventano dati, `docs/memoria/scheda-atleta.md`). ⚠️ Gemini gratuito = **20 richieste al giorno**, condivise da tutte le funzioni con la stessa chiave. `main` chiama solo `send-reminders`. Un deploy
   colpisce anche la web app. Più `segnalazione` (la mail «Segnala un problema» via Resend):
   la usa solo l'app, quindi pubblicarla non tocca la web app.
 - Entrambi i bucket (`athlete-photos`, `voice-notes`) sono **pubblici**.
