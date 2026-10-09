@@ -33,6 +33,15 @@
   è stato fatto dopo `8d9a398` (UIScene e Capacitor 8.5.2 del pomeriggio del 21/09
   compresi, e con loro la build 7, esportata ma che nei commit non risulta caricata) arriva con il prossimo
   aggiornamento: l'elenco per la scheda «Novità» è in `DEVLOG.md`, alla radice.
+- **09 ott 2026** — **build per l'aggiornamento `1.2.0` archiviata ed esportata in
+  locale** (`MARKETING_VERSION` 1.1.0 → **1.2.0**: la 1.1.0 è approvata, un
+  aggiornamento deve portare un numero più alto). Test 1315/1315, i tre grep
+  pre-archive puliti, `tools/verifica-ipa.sh` tutto verde, ipa `1.2.0 (3)` — il
+  build number riparte perché la versione è nuova. ⚠️ Le etichette privacy vanno
+  **integrate** per «Segnala un problema»: *Assistenza clienti* (testo e screenshot)
+  e *Altri dati diagnostici* (versione, dispositivo, lingua che partono con la
+  segnalazione via Resend). Si aggiunge, non si toglie niente. Testo «Novità» in
+  `DEVLOG.md`.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non

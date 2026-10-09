@@ -38,3 +38,34 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 ## Stabilità
 - App pronta per **iOS 27**.
 - Corretti link, notifiche e note vocali in alcuni casi in cui potevano comportarsi in modo anomalo.
+
+---
+
+## Testo per App Store Connect — «Novità di questa versione» (1.2.0)
+
+> Preparato il 09/10/2026 dall'elenco qui sopra, riscritto per chi legge lo Store.
+> Limite di Apple: 4000 caratteri.
+
+```
+ALLENAMENTO
+• Dopo ogni allenamento completato si apre un recap in stile storie: l'allenamento appena svolto, la tua settimana, l'andamento delle ultime otto settimane e il prossimo passo.
+• Nuova domanda «Ti è piaciuto?» dopo ogni allenamento, per dare un riscontro al coach.
+• Minuti e RPE medio della settimana ora sono calcolati correttamente.
+
+PER IL COACH
+• Nuovo righello per inserire ripetizioni, metri, chili e ritmi.
+• Il nome del workout è facoltativo: ne viene proposto uno, e il dado ne suggerisce un altro. Ogni titolo porta un codice con struttura, durata e intensità.
+• «Duplica» crea sempre una copia nuova e «Sovrascrivi» indica quanti atleti riguarda; un workout già svolto non si modifica più, si duplica.
+• Con la generazione IA ogni esercizio ha la sua intensità.
+• Archivio con filtri per tipo di blocco (ON/OFF, EMOM, AMRAP, For Time, Interval); archivio e lista atleti riprendono da dove li avevi lasciati.
+
+SEGNALA UN PROBLEMA
+• Nuova voce in Impostazioni per inviare una segnalazione o un'idea, anche con screenshot.
+
+GRAFICA
+• Nuova animazione d'apertura, schermate che compaiono a cascata, finestre di dialogo rinnovate e un nuovo carattere per date e numeri.
+• Vibrazioni su scelte, salvataggi e completamenti.
+
+STABILITÀ
+• Pronta per iOS 27, e correzioni a link, notifiche e note vocali.
+```
