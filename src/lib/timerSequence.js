@@ -7,6 +7,7 @@
 // Vedi CLAUDE.md §9 punto 1: src/lib è il posto di questa roba.
 
 import { ERGOMETERS } from './constants'
+import { fasiEmom } from './stazioniEmom'
 
 const isErgo = (name) => ERGOMETERS.includes(name)
 
@@ -96,7 +97,10 @@ export const buildTimerSequence = (workout) => {
       
       const getTaskForRound = (r) => {
         if (!b.exercises || b.exercises.length === 0) return null;
-        const ex = b.exercises[(r - 1) % b.exercises.length];
+        return taskDi(b.exercises[(r - 1) % b.exercises.length]);
+      };
+      const taskDi = (ex) => {
+        if (!ex) return null;
         const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''));
         const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : '';
         const kgStr = ex.kg ? `${ex.kg}kg` : '';
@@ -117,9 +121,13 @@ export const buildTimerSequence = (workout) => {
       } else if (b.type === 'EMOM') {
         const rounds = parseInt(b.params?.rounds, 10) || 10;
         const intSec = parseDuration(b.params?.interval || '1:00');
-        for(let r=1; r<=rounds; r++) {
-           seq.push({ id: `blk-${i}-${r}`, title: 'EMOM', subtitle: `Round ${r}/${rounds}`, duration: intSec, theme: 'emom', type: 'work', task: getTaskForRound(r) || 'EMOM' });
-        }
+        // Una stazione su più intervalli (src/lib/stazioniEmom.js) è UNA fase
+        // lunga quanto i suoi intervalli: niente «nuovo minuto» a metà di un
+        // lavoro continuo.
+        fasiEmom(b.exercises || [], rounds).forEach(({ esercizio, primo, ultimo }) => {
+           const giri = ultimo > primo ? `${primo}–${ultimo}` : `${primo}`;
+           seq.push({ id: `blk-${i}-${primo}`, title: 'EMOM', subtitle: `Round ${giri}/${rounds}`, duration: intSec * (ultimo - primo + 1), theme: 'emom', type: 'work', task: taskDi(esercizio) || 'EMOM' });
+        });
       } else if (b.type === 'AMRAP') {
         const sec = parseDuration(b.params?.duration || '10:00');
         seq.push({ id: `blk-${i}`, title: 'AMRAP', subtitle: '', duration: sec, theme: 'emom', type: 'work', task: exNames || 'AMRAP' });

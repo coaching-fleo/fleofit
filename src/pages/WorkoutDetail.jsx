@@ -58,6 +58,7 @@ import { caricoPrevisto, previsioneSquadra, finestraPrevisione, testoAvviso } fr
 import { RigaAvviso, AvvisoEsteso, PrevisioneNonDisponibile } from '../components/PrevisioneUI'
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { recapStoria } from '../lib/recapStoria'
+import { etichetteStazioni } from '../lib/stazioniEmom'
 import {
   GraficaStoria, FoglioStoria, LARGHEZZA_STORIA, ALTEZZA_STORIA, FATTORE_STORIA,
 } from '../components/StoriaUI'
@@ -988,11 +989,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
            doc.text(`  ${block.params?.duration || ''}${block.notes ? ' · ' + block.notes : ''}`, 20, y)
            y += 8
         } else {
+           const etichette = etichetteStazioni(block.exercises || [], block.type);
            (block.exercises || []).forEach((ex, i) => {
              doc.setTextColor(200, 200, 200)
              doc.setFont('helvetica', 'normal')
              doc.setFontSize(10)
-             const prefix = (block.type === 'EMOM' || block.type === 'ON/OFF') ? `Min.${i + 1}  ` : `· `
+             const prefix = (block.type === 'EMOM' || block.type === 'ON/OFF') ? `Min.${etichette[i]}  ` : `· `
              const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
              const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? ` @ ${ex.ergoPace}` : ''
              const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
@@ -1538,6 +1540,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             const esercizi = block.exercises || []
             const apribile = esercizi.length > 0 && !['WarmUp', 'Rest'].includes(block.type)
             const numerato = block.type === 'EMOM' || block.type === 'ON/OFF'
+            // In un EMOM il numero sono i minuti, anche «2–3» (src/lib/stazioniEmom.js).
+            const etichette = etichetteStazioni(esercizi, block.type)
             return (
               <BloccoScheda
                 key={block.id || idx}
@@ -1555,7 +1559,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 {esercizi.map((ex, i) => (
                   <RigaEsercizio
                     key={ex.id || i}
-                    numero={numerato ? i + 1 : null}
+                    numero={numerato ? etichette[i] : null}
                     nome={ex.name}
                     specifiche={specificheEsercizio(ex, isErgo)}
                     note={ex.notes}

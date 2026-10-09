@@ -102,6 +102,44 @@ describe('espansione dei round', () => {
     expect(compiti[2]).toContain('Burpees')
     expect(compiti[3]).toContain('Row')
   })
+
+  it('una stazione su due minuti è UNA fase da due minuti, non due da uno', () => {
+    // Il caso segnalato: «minuto 1 burpees, minuti 2 e 3 vogatore, minuto 4
+    // wall balls». Due fasi da un minuto farebbero ripartire il timer a metà
+    // di un lavoro continuo.
+    const seq = buildTimerSequence(hyrox([
+      { id: 1, type: 'EMOM', params: { interval: '1:00', rounds: '8' },
+        exercises: [
+          { name: 'Burpees', reps: '10' },
+          { name: 'Row', meters: '500m', intervals: '2' },
+          { name: 'Wall Balls', reps: '15' },
+        ] },
+    ]))
+    const passi = seq.filter(s => s.title === 'EMOM')
+    expect(passi.map(p => p.duration)).toEqual([60, 120, 60, 60, 120, 60])
+    expect(passi[1].task).toContain('Row')
+    expect(passi[1].subtitle).toBe('Round 2–3/8')
+    expect(passi[3].task).toContain('Burpees')
+    // La durata totale resta interval × rounds, come dice la scheda.
+    expect(passi.reduce((t, p) => t + p.duration, 0)).toBe(8 * 60)
+  })
+
+  it('se i round finiscono a metà stazione, l ultima fase si accorcia', () => {
+    const seq = buildTimerSequence(hyrox([
+      { id: 1, type: 'EMOM', params: { interval: '1:00', rounds: '2' },
+        exercises: [{ name: 'Burpees', reps: '10' }, { name: 'Row', meters: '500m', intervals: '3' }] },
+    ]))
+    expect(seq.filter(s => s.title === 'EMOM').map(p => p.duration)).toEqual([60, 60])
+  })
+
+  it('il campo intervals conta solo nell EMOM', () => {
+    // Su un ON/OFF ogni esercizio resta un round, qualunque cosa ci sia scritto.
+    const seq = buildTimerSequence(hyrox([
+      { id: 1, type: 'ON/OFF', params: { on: '0:40', off: '0:20', rounds: '3' },
+        exercises: [{ name: 'Row', meters: '200m', intervals: '2' }] },
+    ]))
+    expect(seq.filter(s => s.title === 'WORK (ON)')).toHaveLength(3)
+  })
 })
 
 describe('blocchi senza durata diventano cronometro', () => {

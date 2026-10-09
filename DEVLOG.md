@@ -20,6 +20,7 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 - La barra in basso resta premibile con la tastiera aperta.
 - Con la **generazione IA** ogni esercizio ha un'intensità, dettata o stimata.
 - Un workout già svolto da un atleta **non si può più modificare**: si può duplicare.
+- Negli **EMOM** un esercizio può durare **più minuti di fila** come stazione continua («minuti 2–3: vogatore»): il timer non riparte a metà.
 
 ## Archivio e atleti (coach)
 - **Nuovi filtri per tipo di blocco** nell'archivio: ON/OFF, EMOM, AMRAP, For Time, Interval.

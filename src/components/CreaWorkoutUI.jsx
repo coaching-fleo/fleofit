@@ -268,11 +268,14 @@ export function DurataBlocco({ testo, acceso }) {
 }
 
 /** La riga di un esercizio dentro il blocco aperto, in forma di sola lettura. */
+// `n` può essere anche «2–3», una stazione EMOM su più minuti
+// (src/lib/stazioniEmom.js): `min-w` e non `w`, così il cerchio si allunga in
+// pillola invece di tagliare il testo.
 export function NumeroEsercizio({ n }) {
   return (
-    <span aria-hidden="true"
-      className="shrink-0 w-6 h-6 rounded-full bg-brand/[.13] border border-brand/30 flex items-center justify-center
-                 text-[11px] font-extrabold text-brand">
+    <span aria-hidden="true" data-numero-esercizio
+      className="shrink-0 min-w-6 h-6 px-[5px] rounded-full bg-brand/[.13] border border-brand/30 flex items-center justify-center
+                 text-[11px] font-extrabold text-brand tabular-nums whitespace-nowrap">
       {n}
     </span>
   )

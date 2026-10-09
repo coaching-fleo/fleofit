@@ -932,3 +932,59 @@ Rimedio su due livelli:
 
 Test: `src/lib/__tests__/blocchiIA.test.js` (8). Mutazione provata e presa: il
 ripiego a 5 tolto.
+
+---
+
+## 9-octoquadragies. Le stazioni EMOM su più minuti (09/10/2026)
+
+Feedback del committente: in un EMOM serve poter scrivere «minuto 1 burpees,
+**minuti 2 e 3** vogatore, minuto 4 wall balls», dove 2–3 è **una stazione
+continua**, non lo stesso esercizio ripetuto due volte (quello si fa già con
+«Duplica»). Prima ogni esercizio valeva esattamente un intervallo.
+
+### Cosa c'è ora
+- Nel foglio dell'esercizio, **solo dentro un EMOM**, la card «Durata della
+  stazione»: cinque bottoni con il tempo già moltiplicato per l'intervallo del
+  blocco (1:00 · 2:00 · … oppure 1:30 · 3:00 · … se il blocco è «ogni 1:30»).
+- Il dato è **`intervals`** sull'esercizio, una stringa come gli altri campi
+  (`"2"`); assente o 1 = il comportamento di sempre. Si scrive solo se > 1.
+- Builder, scheda, PDF e TV numerano **«1 · 2–3 · 4»** (`etichetteStazioni`);
+  il timer fa **una fase sola** da 2′ (`fasiEmom`), con «Round 2–3/10».
+- Nell'RPE atteso una stazione da due intervalli pesa il doppio.
+- Tutta la logica sta in `src/lib/stazioniEmom.js`.
+
+### ⚠️ Le cose da sapere prima di rimetterci mano
+1. **«Round» resta il numero di INTERVALLI totali**, come prima. Quindi
+   `durataBlocco` non è cambiata, e un workout vecchio non cambia di un secondo.
+   Se i round finiscono a metà stazione, l'ultima fase si accorcia (con
+   1+2+1 minuti e 10 round l'ultimo vogatore dura un minuto): il coach che vuole
+   giri interi mette un multiplo della sequenza (12).
+2. ✅ **Portata anche su `main` il 09/10/2026** (commit `d7d53cd`, branch
+   `emom-stazioni-web`): stessa `stazioniEmom.js`, numerazione «2–3» in builder,
+   scheda, PDF e TV. Su `main` non c'è timer guidato. 🔴 Le due copie di
+   `stazioniEmom.js` vanno tenute uguali: il database è condiviso.
+3. Su ON/OFF e sugli altri blocchi il campo è **ignorato** anche se presente: c'è
+   un test.
+4. Prima di questa versione c'era un tentativo diverso, con righe duplicate e i
+   gesti «Unisci» / «Separa», scartato dal committente per il campo «Minuti»: è
+   rimasto in uno `git stash` («EMOM Unisci/Separa»), non va ripreso.
+5. ⚠️ `reportAtleta.movimentiDi` moltiplica ripetizioni e metri per **tutti** i
+   round del blocco anche in un EMOM, dove ogni esercizio si fa solo nei suoi
+   minuti. È un difetto **precedente** a questa modifica, non toccato qui.
+
+### L'IA (stesso giorno)
+Alla prima prova il committente ha dettato «minuti 2-3 sled push» e Gemini ha
+scritto due Sled Push separati: il prompt non conosceva il campo. Ora il prompt
+di `ai-workout` spiega `intervals` (una riga sola, mai l'esercizio ripetuto) e
+l'esempio lo usa; `preparaBlocchiIA` lo normalizza a stringa e lo toglie fuori
+dagli EMOM o quando vale 1. ✅ **Deploy di `ai-workout` fatto il 09/10/2026**
+(porta con sé anche l'intensità di §9-septquadragies). La funzione è condivisa
+con la web app: lì il campo in più è innocuo, viene ignorato.
+⚠️ NON si fondono lato app due righe uguali consecutive: il coach può volere
+davvero lo stesso esercizio in due minuti separati.
+
+Test: `stazioniEmom.test.js` (8), tre in `timerSequence.test.js`, uno in
+`stimaWorkout.test.js`, due in `CreaWorkoutBuilder.test.jsx` («le stazioni EMOM
+su più minuti»). Mutazioni provate e prese: fasi sempre da un intervallo (3
+rossi), peso dell'RPE senza intervalli (1), campo non salvato dal picker (1).
+Più due in `blocchiIA.test.js`; mutazione presa: campo scartato da `preparaBlocchiIA`.

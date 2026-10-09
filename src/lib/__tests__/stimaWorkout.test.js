@@ -119,6 +119,16 @@ describe('RPE atteso', () => {
     expect(rpeAtteso(blocchi)).toBe(8)
   })
 
+  it('in un EMOM una stazione da due minuti pesa il doppio di una da uno', () => {
+    // Stessi esercizi, stesse misure: cambia solo quanto dura la stazione.
+    // Senza il peso degli intervalli i due blocchi darebbero lo stesso RPE.
+    const emom = (intervals) => [{ type: 'EMOM', params: { interval: '1:00', rounds: '3' }, exercises: [
+      { name: 'Burpees', reps: '10', intensity: '3' },
+      { name: 'Burpees', reps: '10', intensity: '9', intervals },
+    ] }]
+    expect(rpeAtteso(emom('2'))).toBeGreaterThan(rpeAtteso(emom(undefined)))
+  })
+
   it('un Cash In leggero davanti a un blocco duro non spegne la seduta', () => {
     // È la ragione per cui questa funzione non fa una media aritmetica. Quindici
     // minuti a 3 davanti a dieci minuti a 10: la media direbbe 5,8, cioè un

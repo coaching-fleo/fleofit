@@ -17,6 +17,7 @@
 // test lì.
 
 import { parseDuration } from './timerSequence'
+import { intervalliDi } from './stazioniEmom'
 
 /** Un'esecuzione tranquilla di una ripetizione a corpo libero o con carico. */
 export const SECONDI_PER_REP = 3
@@ -227,7 +228,12 @@ export const rpeAtteso = (blocks = []) => {
     // Solo gli esercizi che un'intensità la dichiarano davvero. Gli altri non
     // hanno un valore da mediare, e gli si darebbe un numero inventato.
     const dichiarati = (b?.exercises || [])
-      .map(ex => ({ rpe: parseInt(ex?.intensity, 10), secondi: durataEsercizio(ex) }))
+      // In un EMOM una stazione su più intervalli (src/lib/stazioniEmom.js)
+      // occupa più tempo del blocco: pesa per quanti intervalli dura.
+      .map(ex => ({
+        rpe: parseInt(ex?.intensity, 10),
+        secondi: durataEsercizio(ex) * (b?.type === 'EMOM' ? intervalliDi(ex) : 1),
+      }))
       .filter(e => Number.isFinite(e.rpe) && e.rpe >= 1 && e.rpe <= 10)
     if (dichiarati.length === 0) continue
 

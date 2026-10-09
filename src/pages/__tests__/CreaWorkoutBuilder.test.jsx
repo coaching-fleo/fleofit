@@ -297,6 +297,38 @@ describe('il righello scrive il vocabolario di prima', () => {
   })
 })
 
+describe('le stazioni EMOM su più minuti', () => {
+  // Segnalato dal committente: «minuto 1 un esercizio, minuti 2 e 3 un altro».
+  // Una stazione continua è UN esercizio lungo due intervalli, non lo stesso
+  // ripetuto: il numero accanto deve dire «2–3», e il dato `intervals`.
+  const aggiungi = async (nome, durata) => {
+    await userEvent.click(screen.getByRole('button', { name: /^Esercizio$/ }))
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), nome)
+    await userEvent.click(await screen.findByRole('button', { name: `Scegli ${nome}` }))
+    if (durata) await userEvent.click(screen.getByRole('button', { name: `La stazione dura ${durata}` }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+  }
+  const numeri = () => [...document.querySelectorAll('[data-numero-esercizio]')].map(n => n.textContent)
+
+  it('una stazione da 2:00 si numera «2–3», e quella dopo riparte da 4', async () => {
+    await alPasso2()
+    await aggiungiBlocco('EMOM')
+    await aggiungi('Burpees')
+    await aggiungi('Rowing', '2:00')
+    await aggiungi('Wall Balls')
+    expect(numeri()).toEqual(['1', '2–3', '4'])
+  })
+
+  it('la scelta c è solo nell EMOM', async () => {
+    await alPasso2()
+    await aggiungiBlocco('AMRAP')
+    await userEvent.click(screen.getByRole('button', { name: /^Esercizio$/ }))
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), 'Rowing')
+    await userEvent.click(await screen.findByRole('button', { name: 'Scegli Rowing' }))
+    expect(screen.queryByRole('group', { name: 'Durata della stazione' })).not.toBeInTheDocument()
+  })
+})
+
 describe('«ultima volta»', () => {
   it('ripropone i valori dell ultima assegnazione dello stesso esercizio', async () => {
     await alPasso2()

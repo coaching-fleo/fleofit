@@ -36,6 +36,8 @@ import { ThinkingOrb } from 'thinking-orbs'
 import { BorderBeam } from 'border-beam'
 import { scriviJson } from '../lib/offlineQueue'
 import { preparaBlocchiIA } from '../lib/blocchiIA'
+import { intervalliDi, etichetteStazioni, MASSIMO_INTERVALLI } from '../lib/stazioniEmom'
+import { parseDuration } from '../lib/timerSequence'
 import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
 import { SCALE, grandezza, testoMisura } from '../lib/scaleMisura'
 
@@ -944,7 +946,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
 }
 
 // ─── EXERCISE PICKER MODAL ────────────────────────────────────
-function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initialExercise }) {
+function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initialExercise, intervalloBlocco }) {
   const [search, setSearch] = useState(initialExercise?.name || '')
   const [selected, setSelected] = useState(initialExercise?.name || null)
   const [hybridMode, setHybridMode] = useState(initialExercise?.meters && initialExercise.meters !== '-' ? 'distance' : 'reps')
@@ -958,6 +960,11 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   const [kg, setKg] = useState(initialExercise?.kg ? `${initialExercise.kg} kg` : '-')
   const [intensity, setIntensity] = useState(initialExercise?.intensity || '5')
   const [notes, setNotes] = useState(initialExercise?.notes || '')
+  // Solo in un EMOM: quanti intervalli di fila dura questo esercizio. Una
+  // stazione continua («minuti 2 e 3: 500 m di vogatore») non è lo stesso
+  // esercizio ripetuto due volte — src/lib/stazioniEmom.js.
+  const [intervalli, setIntervalli] = useState(() => intervalliDi(initialExercise))
+  const secondiIntervallo = parseDuration(intervalloBlocco || '1:00') || 60
 
   // Quale scheda del foglio misure è aperta. Se non c'è più (l'esercizio ibrido
   // è passato da ripetizioni a distanza) si torna alla prima.
@@ -1199,6 +1206,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
       speed: selected === 'Run' && runPaceMode === 'speed' ? speed : undefined,
       kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) || selected === 'Run' || selected === 'Rest' ? '' : kg.replace(' kg', ''),
       intensity: selected === 'Rest' ? undefined : intensity,
+      intervals: workoutType === 'EMOM' && intervalli > 1 ? String(intervalli) : undefined,
       notes
     })
     onClose()
@@ -1268,6 +1276,37 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 
               <FoglioMisure misure={misure} attiva={schedaAttiva} onAttiva={setAttiva} />
 
+              {workoutType === 'EMOM' && (
+                <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={LABEL}>Durata della stazione</span>
+                    <span className="text-[12.5px] font-bold text-muted">
+                      {intervalli > 1 ? 'Lavoro continuo' : 'Un intervallo'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5" role="group" aria-label="Durata della stazione">
+                    {Array.from({ length: MASSIMO_INTERVALLI }, (_, i) => i + 1).map(n => {
+                      const attivo = intervalli === n
+                      return (
+                        <button key={n} type="button" aria-pressed={attivo}
+                          aria-label={`La stazione dura ${mmssSecondi(secondiIntervallo * n)}`}
+                          onClick={() => { if (!attivo) vibraScelta(); setIntervalli(n) }}
+                          className={`min-h-11 rounded-xl border text-[13px] font-extrabold tabular-nums transition active:scale-95 ${
+                            attivo ? 'bg-brand/15 border-brand/45 text-brand' : 'bg-white/[.055] border-white/10 text-[#c9ccd4] hover:border-white/20'
+                          }`}>
+                          {mmssSecondi(secondiIntervallo * n)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {intervalli > 1 && (
+                    <p className="text-[12px] text-muted leading-snug">
+                      Il timer non riparte a metà: è una fase sola da {mmssSecondi(secondiIntervallo * intervalli)}, e conta {intervalli} round.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {selected !== 'Rest' && (
                 <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
                   <div className="flex items-center justify-between">
@@ -1307,10 +1346,11 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 }
 
 // ─── BLOCCO ESERCIZIO ─────────────────────────────────────────
-function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onEdit, touchHandlers, onDuplicate }) {
+function ExerciseRow({ ex, index, total, etichetta, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onEdit, touchHandlers, onDuplicate }) {
 
   // Il numero c'è sempre, non solo su EMOM e ON/OFF: lì è il minuto, altrove è
   // l'ordine — e l'ordine di un blocco è un'informazione, non un dettaglio.
+  // In un EMOM una stazione continua dice i suoi minuti: «2–3».
   const dettaglio = dettaglioEsercizio(ex)
 
   return (
@@ -1349,7 +1389,7 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
       className="drag-item flex items-center gap-[11px] rounded-[14px] px-[11px] py-[9px] bg-black/40 border border-white/[.06]
                  cursor-move hover:border-white/15 transition-all duration-200"
     >
-      <NumeroEsercizio n={index + 1} />
+      <NumeroEsercizio n={etichetta ?? index + 1} />
 
       <div className="flex-1 min-w-0 cursor-pointer group self-stretch flex flex-col justify-center" onClick={() => onEdit && onEdit(ex)}>
         <p className="text-sm font-bold text-white truncate group-hover:text-brand transition">{ex.name}</p>
@@ -1460,6 +1500,8 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
   const lavoro = BLOCCHI_DI_LAVORO.has(block.type)
   const conEsercizi = !['WarmUp', 'Rest'].includes(block.type)
   const quantiEsercizi = (block.exercises || []).length
+  // In un EMOM il numero accanto all'esercizio sono i suoi minuti, anche «2–3».
+  const etichette = etichetteStazioni(block.exercises || [], block.type)
 
   // ⚠️ Per WarmUp, Rest e AMRAP il riepilogo È la durata, e la durata sta già
   // in testa alla riga: ripeterla a sinistra vorrebbe dire scrivere due volte
@@ -1615,6 +1657,7 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
                 {(block.exercises || []).map((ex, i) => (
                   <ExerciseRow 
                     key={ex.id} ex={ex} index={i} total={block.exercises.length}
+                    etichetta={etichette[i]}
                     onRemove={(id) => onUpdate({ ...block, exercises: block.exercises.filter(e => e.id !== id) })}
                     onMoveUp={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx - 1) })}
                     onMoveDown={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx + 1) })}
@@ -1646,6 +1689,7 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
           {pickerOpen && (
             <ExercisePicker 
               workoutType={block.type}
+              intervalloBlocco={block.params?.interval}
               existingNames={(block.exercises || []).map(e => e.name)}
               initialExercise={editingExercise}
               onClose={() => { setPickerOpen(false); setEditingExercise(null); }}

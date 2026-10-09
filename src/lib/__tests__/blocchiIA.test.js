@@ -52,3 +52,23 @@ describe('preparaBlocchiIA', () => {
     expect(preparaBlocchiIA([null, 3])).toEqual([])
   })
 })
+
+describe('preparaBlocchiIA — le stazioni EMOM su più minuti', () => {
+  // Segnalato dal committente: «minuti 2-3 sled push» dettato all'IA usciva
+  // come due esercizi separati. Il prompt ora chiede `intervals`; qui si
+  // controlla che arrivi nella forma che scrive il picker.
+  it('in un EMOM tiene la durata della stazione, come stringa', () => {
+    const [b] = preparaBlocchiIA([{ type: 'EMOM', exercises: [{ name: 'Sled Push', meters: '50m', intervals: 2 }] }])
+    expect(b.exercises[0].intervals).toBe('2')
+  })
+
+  it('fuori da un EMOM, o se vale 1, il campo sparisce', () => {
+    const [amrap, emom] = preparaBlocchiIA([
+      { type: 'AMRAP', exercises: [{ name: 'Sled Push', intervals: '2' }] },
+      { type: 'EMOM', exercises: [{ name: 'Burpees', intervals: '1' }, { name: 'Row', intervals: 'due' }] },
+    ])
+    expect(amrap.exercises[0]).not.toHaveProperty('intervals')
+    expect(emom.exercises[0]).not.toHaveProperty('intervals')
+    expect(emom.exercises[1]).not.toHaveProperty('intervals')
+  })
+})

@@ -133,6 +133,15 @@ INTENSITÀ: ogni esercizio DEVE avere il campo "intensity", una stringa con un i
   For Time / AMRAP brevi o "all out" 8-10, defaticamento e Cash Out 3-5.
 - Non mettere mai "intensity" sull'esercizio "Rest".
 
+STAZIONI CONTINUE NEGLI EMOM: in un EMOM ogni esercizio vale UN intervallo, nell'ordine.
+Se l'utente dice che un esercizio occupa più intervalli di fila (es. "minuti 2-3 sled push",
+"dal minuto 4 al 6 rowing", "sled push per due minuti"), scrivi quell'esercizio UNA SOLA VOLTA
+con il campo "intervals" = quanti intervalli dura, come stringa ("2", "3"…, massimo "5").
+- NON ripetere l'esercizio in più righe: due righe uguali sono due esercizi separati.
+- Senza indicazioni di più minuti non mettere "intervals" (vale 1).
+- "intervals" esiste solo nei blocchi "EMOM".
+- "rounds" dell'EMOM resta il numero TOTALE di intervalli (minuti), stazioni lunghe comprese.
+
 Esempio di struttura richiesta:
 [
   {
@@ -140,7 +149,7 @@ Esempio di struttura richiesta:
     "params": { "interval": "1:00", "rounds": "12" },
     "exercises": [
       { "name": "Burpees", "reps": "15", "intensity": "8" },
-      { "name": "Wall Balls", "reps": "10", "kg": "9", "intensity": "8" },
+      { "name": "Sled Push", "meters": "50m", "kg": "100", "intensity": "8", "intervals": "2" },
       { "name": "Rowing", "meters": "250m", "intensity": "7" }
     ]
   }

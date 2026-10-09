@@ -10,6 +10,8 @@
  * valore illeggibile o mancante diventa quello che il picker avrebbe proposto.
  */
 
+import { intervalliDi } from './stazioniEmom'
+
 /** Lo stesso valore da cui parte il cursore nel picker dell'esercizio. */
 export const INTENSITA_PREDEFINITA = '5'
 
@@ -27,12 +29,24 @@ export function intensitaValida(valore) {
   return String(Math.min(n, 10))
 }
 
+/**
+ * La durata di una stazione EMOM (src/lib/stazioniEmom.js) come la scrive il
+ * picker: una stringa da «2» in su, e solo dentro un EMOM. Gemini può
+ * scriverla come numero, o metterla dove non vale niente: lì sparisce.
+ */
+const intervalliValidi = (tipo, ex) => {
+  if (tipo !== 'EMOM') return null
+  const n = intervalliDi(ex)
+  return n > 1 ? String(n) : null
+}
+
 /** Rest come esercizio non ha intensità, come nel picker. */
 const senzaIntensita = (ex) => ex?.name === 'Rest'
 
 /**
- * Aggiunge gli `id` client-side e completa l'intensità di ogni esercizio.
- * Non tocca nient'altro: quello che Gemini ha scritto resta com'è.
+ * Aggiunge gli `id` client-side, completa l'intensità di ogni esercizio e
+ * normalizza la durata delle stazioni EMOM. Non tocca nient'altro: quello che
+ * Gemini ha scritto resta com'è.
  */
 export function preparaBlocchiIA(blocchi) {
   if (!Array.isArray(blocchi)) return []
@@ -42,9 +56,15 @@ export function preparaBlocchiIA(blocchi) {
       ...b,
       id: Math.random(),
       exercises: (Array.isArray(b.exercises) ? b.exercises : []).map(ex => {
-        const { intensity, ...resto } = ex || {}
+        const { intensity, intervals: _intervals, ...resto } = ex || {}
         const valore = senzaIntensita(ex) ? undefined : (intensitaValida(intensity) ?? INTENSITA_PREDEFINITA)
-        return { ...resto, ...(valore ? { intensity: valore } : {}), id: Math.random() }
+        const intervalli = intervalliValidi(b.type, ex)
+        return {
+          ...resto,
+          ...(valore ? { intensity: valore } : {}),
+          ...(intervalli ? { intervals: intervalli } : {}),
+          id: Math.random(),
+        }
       }),
     }))
 }
