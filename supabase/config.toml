@@ -429,3 +429,11 @@ entrypoint = "./functions/ai-workout/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/ai-workout/*.html" ]
+
+[functions.estrai-note]
+enabled = true
+# Solo admin: il controllo vero è dentro la funzione (ADMIN_EMAILS), il JWT qui
+# toglie di mezzo le chiamate anonime prima ancora che arrivino.
+verify_jwt = true
+import_map = "./functions/estrai-note/deno.json"
+entrypoint = "./functions/estrai-note/index.ts"
