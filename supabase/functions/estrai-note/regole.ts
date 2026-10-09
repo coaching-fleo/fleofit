@@ -79,7 +79,11 @@ const numero = (s: string) => Number(s.replace(',', '.'))
  * è un tempo, è una frase.
  */
 export function valoreDaGrezzo(misura: string, grezzo: string): { valore: number, unita: string } | null {
+  // iOS trasforma ' e " in apici tipografici mentre si scrive (Smart
+  // Punctuation, attiva di serie): 4'55" arriva come 4’55”. Senza questa
+  // riga i tempi e i passi scritti su iPhone sparivano senza lasciare traccia.
   const g = String(grezzo || '').trim().toLowerCase()
+    .replace(/[’‘′]/g, "'").replace(/[”“″]/g, '"')
   if (!g) return null
   let m: RegExpMatchArray | null
   switch (misura) {
@@ -232,5 +236,29 @@ export function rispostaDaGroq(contenuto: string): Map<number, unknown> | null {
   let dati: any
   try { dati = JSON.parse(contenuto) } catch { return null }
   if (!dati || !Array.isArray(dati.note)) return null
-  return new Map(dati.note.filter((n: any) => Number.isInteger(n?.i)).map((n: any) => [n.i, n]))
+  // `Number`: i modelli scrivono spesso l'indice come stringa ("0").
+  return new Map(dati.note
+    .filter((n: any) => Number.isInteger(Number(n?.i)) && String(n?.i).trim() !== '')
+    .map((n: any) => [Number(n.i), n]))
+}
+
+/**
+ * Vero se la risposta parla di almeno una nota del gruppo (indici 0..n-1).
+ * ⚠️ Una risposta «valida» ma vuota farebbe salvare tutte le note del gruppo
+ * come estratti VUOTI, cioè «già lette» per sempre: va trattata come un
+ * fallimento, e il gruppo riprova alla prossima apertura.
+ */
+export function rispostaUtile(mappa: Map<number, unknown>, n: number): boolean {
+  for (let i = 0; i < n; i++) if (mappa.has(i)) return true
+  return false
+}
+
+/**
+ * La riga di log di un errore di Groq: stato, codice e tipo, NIENT'ALTRO.
+ * 🔴 In modalità JSON Groq risponde 400 con `error.failed_generation`, che è
+ * l'uscita del modello — cioè le parole delle note. Non deve finire nei log.
+ */
+export function rigaLogErrore(stato: number, dati: any): string {
+  const e = dati?.error
+  return [`estrai-note: Groq ${stato}`, e?.code, e?.type].filter(Boolean).join(' · ')
 }

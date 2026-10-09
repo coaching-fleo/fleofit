@@ -25,12 +25,20 @@ beforeEach(() => { finto.chiamate = [] })
 describe('leggiEstratti', () => {
   it('legge la tabella per atleta', async () => {
     finto.select = () => Promise.resolve({ data: [{ athlete_workout_id: 'a' }], error: null })
-    expect(await leggiEstratti('at-1')).toEqual({ dati: [{ athlete_workout_id: 'a' }], errore: false })
+    expect(await leggiEstratti('at-1')).toEqual({ dati: [{ athlete_workout_id: 'a' }], errore: false, assente: false })
     expect(finto.chiamate[0]).toMatchObject({ tabella: 'note_estratte', col: 'athlete_id', val: 'at-1' })
+  })
+  it('una tabella che non esiste ancora non è un errore: è un\'assenza', async () => {
+    // Finché la migrazione non è applicata (BACKLOG #66), la sezione non
+    // deve dire «errore» a ogni coach — revisore App Store compreso.
+    for (const code of ['42P01', 'PGRST205']) {
+      finto.select = () => Promise.resolve({ data: null, error: { code } })
+      expect(await leggiEstratti('at-1')).toEqual({ dati: [], errore: false, assente: true })
+    }
   })
   it('una lettura fallita ha uno stato suo', async () => {
     finto.select = () => Promise.resolve({ data: null, error: { message: 'x' } })
-    expect(await leggiEstratti('at-1')).toEqual({ dati: [], errore: true })
+    expect(await leggiEstratti('at-1')).toEqual({ dati: [], errore: true, assente: false })
   })
 })
 

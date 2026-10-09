@@ -41,7 +41,7 @@ Progetto Supabase: `riyqtcssllupakjtoehj`.
 **`note_estratte`** — ⚠️ **IN ATTESA: scritta il 09/10/2026, NON applicata** (serve lo sblocco del committente, regola 0-bis)
 `athlete_workout_id (PK, FK → athlete_workouts ON DELETE CASCADE), athlete_id (FK → athletes ON DELETE CASCADE), data, impronta, versione, estrazione jsonb, creato_at`
 - I dati ricavati dalle note degli atleti (scheda-atleta.md §9-dalle-note). La scrive SOLO la Edge Function `estrai-note` con la chiave di servizio; la leggono SOLO gli admin (una policy `ALL`, `USING` e `WITH CHECK` con le 5 email). L'atleta non legge i propri estratti.
-- File: `supabase/schema/note_estratte_2026-10-09.sql`. Finché non è applicata, `leggiEstratti` fallisce e la sezione dice «Non è stato possibile leggere i dati delle note»: la scheda resta intera.
+- File: `supabase/schema/note_estratte_2026-10-09.sql`. Finché non è applicata, `leggiEstratti` riconosce la tabella mancante (`42P01`/`PGRST205`, come i PR) e la sezione **non compare affatto**, né parte l'IA: una build da `app` si può archiviare senza mostrare un errore a ogni coach (revisore App Store compreso).
 
 **`notifications`** — `id, user_id, title, message, route, is_read, created_at`
 - Realtime attivo su INSERT/UPDATE in Home (`supabase.channel('public:notifications')`).

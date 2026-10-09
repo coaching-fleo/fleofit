@@ -11,12 +11,12 @@ import { impronta, testoPulito, VERSIONE } from '../../../supabase/functions/est
 // coach, l'IA si chiama solo se c'è davvero qualcosa da analizzare, e un'IA
 // che non risponde non deve rompere la scheda.
 
-const dati = await vi.hoisted(async () => ({ atleta: null, workouts: [], estratti: [] }))
+const dati = await vi.hoisted(async () => ({ atleta: null, workouts: [], estratti: [], tabellaAssente: false }))
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
   return fintoSupabase(() => ({
     athletes: [dati.atleta], athlete_workouts: dati.workouts, personal_records: [], note_estratte: dati.estratti,
-  }))
+  }), { erroreSu: () => (dati.tabellaAssente ? ['note_estratte'] : []), codiceErrore: 'PGRST205' })
 })
 vi.mock('../../supabaseClient', () => ({ supabase: finto.supabase }))
 
@@ -39,6 +39,7 @@ beforeEach(() => {
   dati.atleta = { ...ATLETA }
   dati.workouts = []
   dati.estratti = []
+  dati.tabellaAssente = false
   finto.chiamate.length = 0
   finto.supabase.functions.invoke.mockReset()
   finto.supabase.functions.invoke.mockImplementation(() => Promise.resolve({ data: { estratte: 0, restano: 0, sospesa: false }, error: null }))
@@ -89,5 +90,17 @@ describe('«Dalle note» nella scheda atleta', () => {
     await attendi()
     expect(await screen.findByText(/analisi sospesa/)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Sofia Neri/ })).toBeInTheDocument()
+  })
+
+  it('finché la tabella non esiste la sezione non c\'è, e l\'IA non parte', async () => {
+    dati.tabellaAssente = true
+    dati.workouts = [riga('x', 'wall balls in 6:40')]
+    comeCoach()
+    await attendi()
+    await waitFor(() => expect(finto.chiamateA('note_estratte', 'select')).toHaveLength(1))
+    await new Promise(r => setTimeout(r, 50))
+    expect(screen.queryByRole('heading', { name: 'Dalle note' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Non è stato possibile leggere/)).not.toBeInTheDocument()
+    expect(chiamateIA()).toHaveLength(0)
   })
 })

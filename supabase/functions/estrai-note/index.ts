@@ -28,7 +28,7 @@ import { ADMIN_EMAILS } from "../_shared/admin.ts"
 import { MODELLO_GROQ_PREDEFINITO, chatGroq } from "../_shared/groq.ts"
 import {
   GRUPPO, MAX_GRUPPI, VERSIONE, daCancellare, daEstrarre, eserciziDelWorkout, impronta,
-  richiestaGroq, rispostaDaGroq, testoPulito, validaEstrazione,
+  richiestaGroq, rigaLogErrore, rispostaDaGroq, rispostaUtile, testoPulito, validaEstrazione,
 } from "./regole.ts"
 
 const corsHeaders = {
@@ -101,9 +101,10 @@ serve(async (req) => {
     // All'IA solo indice locale, testo ed esercizi: niente id, nome o data.
     const { ok, stato, dati } = await chatGroq(richiestaGroq(gruppo, MODELLO), chiave).catch(() => ({ ok: false, stato: 0, dati: null }));
     const mappa = ok ? rispostaDaGroq(String(dati?.choices?.[0]?.message?.content ?? '')) : null;
-    if (!mappa) {
-      // Mai il testo delle note nei log: solo stato e risposta del fornitore.
-      console.error('estrai-note: Groq', stato, ok ? 'risposta illeggibile' : JSON.stringify(dati).slice(0, 500));
+    if (!mappa || !rispostaUtile(mappa, gruppo.length)) {
+      // Mai il testo delle note nei log, nemmeno dentro la risposta d'errore
+      // del fornitore: solo stato, codice e tipo (`rigaLogErrore`).
+      console.error(ok ? `estrai-note: Groq ${stato} · risposta senza note utili` : rigaLogErrore(stato, dati));
       sospesa = true;
       break;
     }

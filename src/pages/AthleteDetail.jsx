@@ -104,9 +104,10 @@ export default function AthleteDetail() {
   const [selectedDay, setSelectedDay] = useState(new Date())
 
   // Gli estratti delle note (src/lib/noteEstratte.js) e lo stato dell'analisi:
-  // 'pronto' | 'in_analisi' | 'sospesa' | 'errore'. Solo per il coach.
+  // 'caricamento' | 'assente' | 'pronto' | 'in_analisi' | 'sospesa' | 'errore'.
+  // 'assente' = la tabella non esiste ancora: la sezione non si mostra affatto.
   const [estrattiNote, setEstrattiNote] = useState([])
-  const [statoNote, setStatoNote] = useState('pronto')
+  const [statoNote, setStatoNote] = useState('caricamento')
 
   useEffect(() => {
     if (role === 'athlete' && !isOwnProfile) {
@@ -127,6 +128,7 @@ export default function AthleteDetail() {
     ;(async () => {
       const letti = await leggiEstratti(id)
       if (annullato) return
+      if (letti.assente) { setStatoNote('assente'); return }
       if (letti.errore) { setStatoNote('errore'); return }
       setEstrattiNote(letti.dati)
       if (!copertura(workouts, letti.dati).inAttesa) { setStatoNote('pronto'); return }
@@ -614,7 +616,7 @@ export default function AthleteDetail() {
       </div>
 
       {/* Cosa dicono le note, trasformate in dati: solo per il coach. */}
-      {role !== 'athlete' && (
+      {role !== 'athlete' && statoNote !== 'caricamento' && statoNote !== 'assente' && (
         <Suspense fallback={null}>
           <DalleNoteUI
             nome={athlete.name}

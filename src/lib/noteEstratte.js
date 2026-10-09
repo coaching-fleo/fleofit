@@ -15,7 +15,11 @@ export async function leggiEstratti(athleteId) {
     .from('note_estratte')
     .select('athlete_workout_id, data, impronta, versione, estrazione')
     .eq('athlete_id', athleteId)
-  return error ? { dati: [], errore: true } : { dati: data ?? [], errore: false }
+  // Tabella che non esiste ancora (la migrazione è in attesa, BACKLOG #66):
+  // non è un errore da mostrare a ogni coach, è una funzione non ancora
+  // accesa. Stessi due codici dei PR in AthleteDetail.
+  if (error && (error.code === '42P01' || error.code === 'PGRST205')) return { dati: [], errore: false, assente: true }
+  return error ? { dati: [], errore: true, assente: false } : { dati: data ?? [], errore: false, assente: false }
 }
 
 const SOSPESA = { estratte: 0, restano: null, sospesa: true }

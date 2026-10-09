@@ -3,7 +3,7 @@ import { testoNota } from '../rpe'
 import {
   VERSIONE, GRUPPO, MAX_GRUPPI, FATTORI, MISURE, DIFFICOLTA, TIPI_MODIFICA,
   testoPulito, impronta, eserciziDelWorkout, valoreDaGrezzo, validaEstrazione,
-  daEstrarre, daCancellare, richiestaGroq, rispostaDaGroq,
+  daEstrarre, daCancellare, richiestaGroq, rispostaDaGroq, rispostaUtile, rigaLogErrore,
 } from '../../../supabase/functions/estrai-note/regole.ts'
 
 // Perché questi test esistono
@@ -183,5 +183,38 @@ describe('richiestaGroq e rispostaDaGroq', () => {
     expect([...m.keys()]).toEqual([0, 2])
     expect(rispostaDaGroq('non json')).toBeNull()
     expect(rispostaDaGroq('{"altro":1}')).toBeNull()
+  })
+})
+
+describe('le correzioni della revisione finale', () => {
+  it('gli apici tipografici dell\'iPhone sono tempi e passi come gli altri', () => {
+    // iOS trasforma 4'55" in 4’55” mentre si scrive: senza, su iPhone i
+    // risultati sparivano senza lasciare traccia.
+    expect(valoreDaGrezzo('passo', '4’55”')).toEqual({ valore: 295, unita: 's/km' })
+    expect(valoreDaGrezzo('passo', '4′55″')).toEqual({ valore: 295, unita: 's/km' })
+    expect(valoreDaGrezzo('tempo', '6’40')).toEqual({ valore: 400, unita: 's' })
+    expect(valoreDaGrezzo('tempo', '45”')).toEqual({ valore: 45, unita: 's' })
+  })
+
+  it('un indice scritto come stringa vale lo stesso', () => {
+    expect([...rispostaDaGroq('{"note":[{"i":"0"},{"i":"x"}]}').keys()]).toEqual([0])
+  })
+
+  it('una risposta che non parla di nessuna nota del gruppo non è utile', () => {
+    // Altrimenti 15 note finirebbero salvate VUOTE, cioè «già lette» per sempre.
+    expect(rispostaUtile(new Map(), 15)).toBe(false)
+    expect(rispostaUtile(new Map([[20, {}]]), 15)).toBe(false)
+    expect(rispostaUtile(new Map([[3, {}]]), 15)).toBe(true)
+  })
+
+  it('il log di un errore di Groq non porta mai il testo generato', () => {
+    // In modalità JSON Groq risponde 400 con `failed_generation`: l'uscita
+    // del modello, cioè le parole delle note.
+    const dati = { error: { message: 'json_validate_failed', type: 'invalid_request_error', code: 'json_validate_failed', failed_generation: 'Wall balls 9kg finite in 6:40' } }
+    const riga = rigaLogErrore(400, dati)
+    expect(riga).toContain('400')
+    expect(riga).toContain('json_validate_failed')
+    expect(riga).not.toContain('Wall balls')
+    expect(rigaLogErrore(0, null)).toBe('estrai-note: Groq 0')
   })
 })

@@ -19,15 +19,18 @@ import { vi } from 'vitest'
  *                          con dati validi e il ramo di fallback non si esercita
  *                          mai (scoperto il 26/08/2026: due test passavano per
  *                          il motivo sbagliato).
+ * @param opzioni.codiceErrore  il `code` dell'errore (es. 'PGRST205', tabella
+ *                          che non esiste): serve a chi distingue «manca la
+ *                          tabella» da «la lettura è fallita».
  */
-export function fintoSupabase(risposte = {}, { erroreSu = [] } = {}) {
+export function fintoSupabase(risposte = {}, { erroreSu = [], codiceErrore } = {}) {
   const chiamate = []
 
   const catena = (tabella) => {
     const righe = typeof risposte === 'function' ? (risposte()[tabella] ?? []) : (risposte[tabella] ?? [])
     const tabelleInErrore = typeof erroreSu === 'function' ? erroreSu() : erroreSu
     const risultato = tabelleInErrore.includes(tabella)
-      ? { data: null, error: { message: 'rete assente' }, count: null }
+      ? { data: null, error: { message: 'rete assente', ...(codiceErrore ? { code: codiceErrore } : {}) }, count: null }
       : { data: righe, error: null, count: righe.length }
 
     // .single() e .maybeSingle() cambiano la FORMA della risposta: un oggetto
