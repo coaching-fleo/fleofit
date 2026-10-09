@@ -23,7 +23,7 @@ const VUOTA = { stato: [], risultati: [], sensazioni: { difficolta: null, citazi
 
 describe('le liste dello standard v1', () => {
   it('niente categorie sanitarie fra i fattori', () => {
-    expect(VERSIONE).toBe(1)
+    expect(VERSIONE).toBe(2) // 2 dal 09/10: la difficoltà vale solo per l'allenamento intero
     expect(FATTORI).toEqual(['stanchezza', 'motivazione', 'viaggio', 'lavoro'])
     expect(MISURE).toEqual(['tempo', 'kg', 'reps', 'round', 'distanza', 'passo'])
     expect(DIFFICOLTA).toEqual(['troppo_facile', 'giusta', 'troppo_dura'])
@@ -225,5 +225,30 @@ describe('le correzioni della revisione finale', () => {
     expect(riga).toContain('json_validate_failed')
     expect(riga).not.toContain('Wall balls')
     expect(rigaLogErrore(0, null)).toBe('estrai-note: Groq 0')
+  })
+})
+
+describe('la difficoltà è un giudizio sull\'allenamento INTERO', () => {
+  // Trovato il 09/10 su una nota vera (qui riscritta, senza i dati
+  // dell'atleta): «Finale molto facile il cash out» era diventato «allenamento
+  // troppo facile», in una nota che per il resto raccontava una seduta durissima.
+  // Un giudizio su un blocco o su un esercizio non è un giudizio sulla seduta.
+  const TESTO = 'Amrap 2 giri, dal secondo giro durissima. Finale molto facile il cash out, wall ball spezzati in due. Nel complesso giusta'
+  const ES = ['Wall Balls', 'Sled Push', 'Burpees']
+  const diff = (difficolta, citazione) => validaEstrazione({ sensazioni: { difficolta, citazione } }, TESTO, ES).sensazioni.difficolta
+
+  it('una frase che nomina un blocco non decide la difficoltà', () => {
+    expect(diff('troppo_facile', 'Finale molto facile il cash out')).toBeNull()
+    expect(diff('troppo_dura', 'Amrap 2 giri, dal secondo giro durissima')).toBeNull()
+  })
+  it('nemmeno una frase che nomina un esercizio del workout', () => {
+    expect(diff('troppo_facile', 'wall ball spezzati in due')).toBeNull()
+  })
+  it('un giudizio sulla seduta intera resta', () => {
+    expect(diff('giusta', 'Nel complesso giusta')).toBe('giusta')
+  })
+  it('le istruzioni all\'IA lo dicono', () => {
+    const s = JSON.stringify(richiestaGroq([{ i: 0, testo: TESTO, esercizi: ES }], 'm'))
+    expect(s).toMatch(/allenamento intero/i)
   })
 })

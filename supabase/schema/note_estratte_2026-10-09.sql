@@ -32,7 +32,7 @@ create table public.note_estratte (
     references public.athletes (id) on delete cascade,
   data date,                         -- completed_date dell'assegnazione
   impronta text not null,            -- FNV-1a del testo ripulito: se cambia, si rianalizza
-  versione smallint not null,        -- versione dello standard (oggi 1)
+  versione smallint not null,        -- versione dello standard (2 dal 09/10/2026)
   estrazione jsonb not null,         -- { stato, risultati, sensazioni }, anche vuoti
   creato_at timestamptz not null default now()
 );

@@ -16,7 +16,9 @@
 // relativi alla salute e restano fuori finché il committente non ha chiuso le
 // verifiche di privacy (§7.2 della spec).
 
-export const VERSIONE = 1
+// 2 dal 09/10/2026: la difficoltà vale solo per l'allenamento intero
+// (`parlaDiUnaParte`). Alzarla fa rianalizzare tutte le note già lette.
+export const VERSIONE = 2
 export const GRUPPO = 15
 export const MAX_GRUPPI = 3
 
@@ -135,6 +137,28 @@ const canonico = (nome: unknown, esercizi: string[]) =>
 
 const lista = (v: unknown): any[] => (Array.isArray(v) ? v : [])
 
+// ── La difficoltà è della SEDUTA, non di un pezzo ────────────────────────────
+// Trovato il 09/10 su una nota vera: «Finale molto facile il cash out» era
+// diventato «allenamento troppo facile», in una nota che per il resto
+// raccontava una seduta durissima. Le istruzioni all'IA lo vietano, ma il
+// controllo vero sta qui: una citazione che nomina un blocco o un esercizio del
+// workout giudica quel pezzo, e la difficoltà resta vuota. Meglio nessun dato
+// che uno rovesciato.
+const PARTI = [
+  'cash out', 'cash in', 'warm up', 'warmup', 'riscaldamento', 'defaticamento', 'cooldown', 'cool down',
+  'amrap', 'emom', 'for time', 'on off', 'interval', 'ripetute', 'recupero', 'blocco', 'finale', 'giro', 'round',
+]
+const parole = (s: unknown) => piana(s).split(/[^a-z0-9]+/).filter(Boolean)
+// «wall ball» nomina «Wall Balls»: si confrontano le parole senza la s finale.
+const radice = (p: string) => (p.length > 3 && p.endsWith('s') ? p.slice(0, -1) : p)
+const nomina = (citazione: unknown, nome: string) => {
+  const nellaCitazione = parole(citazione).map(radice)
+  const delNome = parole(nome).map(radice)
+  return delNome.length > 0 && delNome.every(p => nellaCitazione.includes(p))
+}
+const parlaDiUnaParte = (citazione: unknown, esercizi: string[]) =>
+  PARTI.some(p => nomina(citazione, p)) || esercizi.some(e => nomina(citazione, e))
+
 export type Estrazione = {
   stato: { fattore: string, segno: number, citazione: string }[],
   risultati: { esercizio: string | null, misura: string, grezzo: string, valore: number, unita: string, citazione: string }[],
@@ -161,6 +185,7 @@ export function validaEstrazione(grezza: unknown, testo: string, esercizi: strin
 
   const s: any = g.sensazioni && typeof g.sensazioni === 'object' ? g.sensazioni : {}
   const conDifficolta = DIFFICOLTA.includes(s.difficolta) && citazioneVera(s.citazione, testo)
+    && !parlaDiUnaParte(s.citazione, esercizi)
   const modifiche = lista(s.modifiche)
     .filter(m => TIPI_MODIFICA.includes(m?.tipo) && citazioneVera(m?.citazione, testo))
     .map(m => ({ tipo: m.tipo, esercizio: canonico(m.esercizio, esercizi), citazione: m.citazione }))
@@ -218,6 +243,7 @@ Regole:
 - "grezzo" copia il numero come l'atleta l'ha scritto; non fare conversioni.
 - segno: -1 peggio del normale, 0 normale, 1 meglio del normale.
 - Se la nota non parla di un fattore, NON aggiungerlo. Liste vuote se non c'è niente.
+- "difficolta" giudica l'ALLENAMENTO INTERO: compilala solo se l'atleta dice com'è andata tutta la seduta. Se il giudizio riguarda un blocco o un esercizio (es. "facile il cash out"), lascia difficolta null.
 - Non estrarre dolori, infortuni, sonno, stress, malattie, ciclo, alimentazione o altri dati di salute.
 - Rispondi solo con il JSON, una voce per ogni nota ricevuta.`
 

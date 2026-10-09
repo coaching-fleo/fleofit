@@ -158,7 +158,17 @@ motivazione, viaggio, lavoro, con una tacca sui giorni a RPE ≥ 8).
    allenamento a «da fare» non cancella la nota. La regola è in due punti che
    devono restare uguali: `daAnalizzare` in `regole.ts` e `conTesto` in
    `dalleNote.js`.
-7. **Nell'ambiente di prova gli estratti nascono nei semi** (`PROPOSTE_DEMO` in
+7. 🔴 **La difficoltà giudica la SEDUTA INTERA** (dal 09/10, `VERSIONE = 2`). Su
+   una nota vera, «Finale molto facile il cash out» era diventato «allenamento
+   troppo facile», mentre il resto della nota raccontava una seduta durissima.
+   Ora la difficoltà si scarta se la citazione nomina un blocco (cash out,
+   AMRAP, finale, giro…) o un esercizio del workout (`parlaDiUnaParte` in
+   `regole.ts`, con «wall ball» che nomina «Wall Balls»). Lo dicono anche le
+   istruzioni all'IA, ma il controllo vero è quello nel codice.
+   ⚠️ Quella stessa nota parlava di quasi-svenimento, mangiare poco e dolore
+   lombare: tutto escluso dalla v1 per privacy (BACKLOG #67). È l'esempio di
+   cosa manca al coach finché la v2 non c'è.
+8. **Nell'ambiente di prova gli estratti nascono nei semi** (`PROPOSTE_DEMO` in
    `src/demoSemi.js`), passati dalla stessa `validaEstrazione`: Elena (tempi sulle
    wall balls), Giulia (sensazioni e burpees saltati), Luca (stanchezza). Una nota
    scritta durante la demo resta «in analisi»: lì non c'è IA.
