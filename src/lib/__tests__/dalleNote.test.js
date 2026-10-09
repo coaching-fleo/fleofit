@@ -43,8 +43,8 @@ describe('estrattiValidi e copertura', () => {
   it('una versione vecchia non vale', () => {
     expect(estrattiValidi([{ ...est(a), versione: 0 }], [a])).toEqual([])
   })
-  it('le note solo-RPE e le assegnazioni da fare non contano', () => {
-    expect(copertura([a, b, soloRpe, daFare], [est(a)])).toEqual({ totali: 2, analizzate: 1, inAttesa: 1 })
+  it('le note solo-RPE non contano, quelle sugli allenamenti da fare sì', () => {
+    expect(copertura([a, b, soloRpe, daFare], [est(a), est(daFare)])).toEqual({ totali: 3, analizzate: 2, inAttesa: 1 })
   })
 })
 

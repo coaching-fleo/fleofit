@@ -180,9 +180,13 @@ export function validaEstrazione(grezza: unknown, testo: string, esercizi: strin
 type Riga = { id: string, status: string, notes: string | null, [k: string]: unknown }
 type Esistente = { athlete_workout_id: string, impronta: string, versione: number }
 
-const daAnalizzare = (r: Riga) => r.status === 'completed' && testoPulito(r.notes) !== ''
+// Ogni nota con del testo, QUALUNQUE sia lo stato: l'atleta può salvare la
+// nota senza chiudere l'allenamento, e riportarlo a «da fare» non la cancella.
+// Fino al 09/10 si leggevano solo i completati, e un atleta vero con tutte le
+// note su assegnazioni pending risultava «senza note».
+const daAnalizzare = (r: Riga) => testoPulito(r.notes) !== ''
 
-/** Le assegnazioni completate con testo che non hanno un estratto attuale. */
+/** Le assegnazioni con testo che non hanno un estratto attuale. */
 export function daEstrarre<T extends Riga>(righe: T[], esistenti: Esistente[]): T[] {
   const per = new Map(esistenti.map(e => [e.athlete_workout_id, e]))
   return righe.filter(r => {
@@ -193,8 +197,7 @@ export function daEstrarre<T extends Riga>(righe: T[], esistenti: Esistente[]): 
 }
 
 /**
- * Gli estratti da togliere: l'assegnazione è tornata «da fare», la nota è
- * stata svuotata, o la riga non c'è più. Un estratto orfano nei grafici
+ * Gli estratti da togliere: la nota è stata svuotata, o la riga non c'è più. Un estratto orfano nei grafici
  * direbbe una cosa che l'atleta non dice più.
  */
 export function daCancellare(righe: Riga[], esistenti: Esistente[]): string[] {

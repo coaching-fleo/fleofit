@@ -18,7 +18,7 @@ server legati all'atleta, e mostrarli in **grafici dedicati nella scheda atleta*
 ## 2. Perimetro
 
 **Dentro (v1)**
-- Solo note **scritte** dall'atleta alla chiusura di un allenamento.
+- Solo note **scritte** dall'atleta, su qualunque assegnazione (anche non completata: l'atleta può salvare la nota senza chiudere l'allenamento — correzione del 09/10 dopo la prima prova su dati veri).
 - Tre categorie: **risultati dichiarati**, **sensazioni sul workout**, **stato**
   limitato a fattori non sanitari.
 - Grafici nella scheda atleta, solo coach.

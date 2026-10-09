@@ -50,6 +50,13 @@ describe('DalleNoteUI', () => {
     expect(screen.getByText(/Non è stato possibile leggere/)).toBeInTheDocument()
   })
 
+  it('una nota su un allenamento ancora da fare è una nota nel periodo', () => {
+    const w = { ...aw('a', '2026-10-05'), status: 'pending' }
+    monta({ workouts: [w], estratti: [est(w)] })
+    expect(screen.queryByText(/non ha scritto note/)).not.toBeInTheDocument()
+    expect(screen.getByText('1 note analizzate su 1')).toBeInTheDocument()
+  })
+
   it('nessuna nota nel periodo: una frase, nessuna card', () => {
     monta({ workouts: [aw('a', '2026-01-01')] })
     expect(screen.getByText('Sofia non ha scritto note in questo periodo')).toBeInTheDocument()

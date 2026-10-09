@@ -149,7 +149,16 @@ motivazione, viaggio, lavoro, con una tacca sui giorni a RPE ≥ 8).
 5. **Per tempo e passo l'asse del grafico è rovesciato**: un miglioramento sale
    sempre. Alla prima prova sul telefono la linea di Elena (0:58 → 0:50) scendeva
    e si leggeva «peggio».
-6. **Nell'ambiente di prova gli estratti nascono nei semi** (`PROPOSTE_DEMO` in
+6. 🔴 **Si analizza ogni nota con del testo, QUALUNQUE sia lo stato
+   dell'assegnazione** (dal 09/10, sera). La prima versione leggeva solo i
+   completati, e alla prima prova su dati veri un atleta con le note risultava
+   «senza note in questo periodo»: tutte le sue note stavano su assegnazioni
+   `pending`. Succede perché nella scheda workout l'atleta può salvare la nota
+   senza chiudere l'allenamento (`salvaNoteAtleta`), e perché riportare un
+   allenamento a «da fare» non cancella la nota. La regola è in due punti che
+   devono restare uguali: `daAnalizzare` in `regole.ts` e `conTesto` in
+   `dalleNote.js`.
+7. **Nell'ambiente di prova gli estratti nascono nei semi** (`PROPOSTE_DEMO` in
    `src/demoSemi.js`), passati dalla stessa `validaEstrazione`: Elena (tempi sulle
    wall balls), Giulia (sensazioni e burpees saltati), Luca (stanchezza). Una nota
    scritta durante la demo resta «in analisi»: lì non c'è IA.

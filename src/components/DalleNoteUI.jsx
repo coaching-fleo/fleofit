@@ -44,7 +44,7 @@ export default function DalleNoteUI({ nome, workouts = [], estratti = [], stato 
   const cop = useMemo(() => copertura(workouts, estratti), [workouts, estratti])
   const finestra = useMemo(() => nellaFinestra(validi, giorni, oggi), [validi, giorni, oggi])
   const noteNelPeriodo = useMemo(() => nellaFinestra(
-    workouts.filter(w => w.status === 'completed' && testoNota(w.notes)).map(w => ({ data: w.completed_date })),
+    workouts.filter(w => testoNota(w.notes)).map(w => ({ data: w.completed_date })),
     giorni, oggi).length, [workouts, giorni, oggi])
 
   return (

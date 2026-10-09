@@ -23,20 +23,22 @@ export const FINESTRA_INIZIALE = 90
 const MENO_E_MEGLIO = ['tempo', 'passo']
 const NOME_MISURA = { tempo: 'Tempo', kg: 'Carico', reps: 'Ripetizioni', round: 'Round', distanza: 'Distanza', passo: 'Passo' }
 
-const completataConTesto = (w) => w?.status === 'completed' && testoNota(w.notes) !== ''
+// Qualunque stato: la stessa regola di `daAnalizzare` nel server (una nota
+// salvata su un allenamento non chiuso è comunque una nota dell'atleta).
+const conTesto = (w) => Boolean(w) && testoNota(w.notes) !== ''
 
 /** Gli estratti la cui nota è ancora quella analizzata, con lo standard di oggi. */
 export function estrattiValidi(estratti = [], workouts = []) {
   const per = new Map(workouts.map(w => [w.id, w]))
   return estratti.filter(e => {
     const w = per.get(e.athlete_workout_id)
-    return completataConTesto(w) && e.versione === VERSIONE && e.impronta === impronta(testoPulito(w.notes))
+    return conTesto(w) && e.versione === VERSIONE && e.impronta === impronta(testoPulito(w.notes))
   })
 }
 
 /** Quante note scritte ci sono, quante hanno un estratto valido, quante aspettano. */
 export function copertura(workouts = [], estratti = []) {
-  const totali = workouts.filter(completataConTesto).length
+  const totali = workouts.filter(conTesto).length
   const analizzate = estrattiValidi(estratti, workouts).length
   return { totali, analizzate, inAttesa: Math.max(0, totali - analizzate) }
 }

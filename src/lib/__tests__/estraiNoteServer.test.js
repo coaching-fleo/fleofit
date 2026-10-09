@@ -155,11 +155,20 @@ describe('daEstrarre e daCancellare', () => {
     const a = riga('a'), b = riga('b')
     expect(daEstrarre([a, b], [esiste(a, { impronta: 'deadbeef' }), esiste(b, { versione: 0 })]).map(r => r.id)).toEqual(['a', 'b'])
   })
-  it('da fare o solo RPE → non si estrae, e il vecchio estratto si cancella', () => {
-    const a = riga('a', { status: 'pending' }), b = riga('b', { notes: '[RPE: 7/10]\n[GRADIMENTO: si]' })
-    const esistenti = [{ athlete_workout_id: 'a', impronta: 'x', versione: 1 }, { athlete_workout_id: 'b', impronta: 'x', versione: 1 }, { athlete_workout_id: 'sparita', impronta: 'x', versione: 1 }]
-    expect(daEstrarre([a, b], esistenti)).toEqual([])
-    expect(daCancellare([a, b], esistenti).sort()).toEqual(['a', 'b', 'sparita'])
+  it('una nota su un allenamento ancora «da fare» si analizza lo stesso', () => {
+    // L'atleta può salvare la nota senza chiudere l'allenamento (scheda
+    // workout), e chi riporta un allenamento a «da fare» la lascia lì: sono
+    // comunque parole sue. Trovato il 09/10 su dati veri: un atleta con tutte
+    // le note su assegnazioni pending risultava «senza note».
+    const a = riga('a', { status: 'pending' })
+    expect(daEstrarre([a], []).map(r => r.id)).toEqual(['a'])
+    expect(daCancellare([a], [esiste(a)])).toEqual([])
+  })
+  it('solo RPE o riga sparita → non si estrae, e il vecchio estratto si cancella', () => {
+    const b = riga('b', { notes: '[RPE: 7/10]\n[GRADIMENTO: si]' })
+    const esistenti = [{ athlete_workout_id: 'b', impronta: 'x', versione: 1 }, { athlete_workout_id: 'sparita', impronta: 'x', versione: 1 }]
+    expect(daEstrarre([b], esistenti)).toEqual([])
+    expect(daCancellare([b], esistenti).sort()).toEqual(['b', 'sparita'])
   })
   it('un estratto ancora valido non si cancella', () => {
     const a = riga('a')
