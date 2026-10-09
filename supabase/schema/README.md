@@ -35,3 +35,14 @@ order by tablename, policyname;
 ```
 
 e riporta le modifiche qui. Vedi CLAUDE.md §4-bis per lo stato dei buchi noti.
+
+## Migrazioni in attesa
+
+File scritti e **non applicati**: aspettano lo sblocco esplicito del committente
+(CLAUDE.md §0, regola 0-bis). Li applica lui, dal SQL editor di Supabase.
+
+| File | Cosa fa | Perché la web app non ne è toccata |
+|---|---|---|
+| `note_estratte_2026-10-09.sql` | La tabella dei dati ricavati dalle note degli atleti («Dalle note» nella scheda atleta), con una policy solo admin | È una tabella nuova: `main` non la legge e non la scrive. La riempie solo la Edge Function `estrai-note` |
+
+Dopo averla applicata, la riga si sposta nella fotografia delle policy e qui si cancella.
