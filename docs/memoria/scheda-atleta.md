@@ -99,3 +99,57 @@ andando» in terza persona. Un test così passa lo stesso, e verifica un'altra
 pagina — §9-sexies, per l'ennesima volta.
 
 ---
+
+
+## 9-dalle-note. «Dalle note»: le note dell'atleta diventano dati (09/10/2026)
+
+Spec: `docs/superpowers/specs/2026-10-09-dati-dalle-note-design.md` · piano:
+`docs/superpowers/plans/2026-10-09-dati-dalle-note.md`.
+
+### Il problema, in una riga
+Il coach decideva su fatto/non fatto e RPE. Tempi, carichi, «troppo dura»,
+«burpees saltati», «settimana pesante al lavoro» stavano nel testo libero delle
+note, e per saperli bisognava rileggerle una per una.
+
+### Cosa c'è ora
+Sotto il bento, **solo per il coach**, la sezione «Dalle note» con la finestra
+30/90/365 giorni (di partenza 90), una riga di copertura («38 note analizzate su
+41 · 3 in analisi») e tre card: **Risultati** (una linea per esercizio + misura,
+solo da 2 valori), **Sensazioni** (difficoltà per settimana e «Modificati più
+spesso», con le citazioni che aprono il workout), **Stato** (stanchezza,
+motivazione, viaggio, lavoro, con una tacca sui giorni a RPE ≥ 8).
+
+| Pezzo | Dove |
+|---|---|
+| Le regole (cosa è un dato e cosa no) | `supabase/functions/estrai-note/regole.ts` |
+| L'estrazione, solo admin e solo Groq | Edge Function `estrai-note` |
+| Dove si salvano | tabella `note_estratte` — ⚠️ **scritta e NON applicata** (`supabase/schema/note_estratte_2026-10-09.sql`) |
+| La lettura e la chiamata | `src/lib/noteEstratte.js` |
+| I conti dei grafici | `src/lib/dalleNote.js` |
+| La grafica | `src/components/DalleNoteUI.jsx`, caricata pigra da `AthleteDetail` |
+
+### ⚠️ Le cose da sapere prima di rimetterci mano
+1. 🔴 **L'IA non è una fonte.** Ogni voce passa da `validaEstrazione`: la
+   citazione deve stare nella nota, il numero lo calcola la funzione da `grezzo`
+   (come l'atleta l'ha scritto) e `grezzo` deve stare nella citazione. Il
+   `valore` che manda l'IA si ignora.
+2. 🔴 **Niente dati di salute nello standard v1**: dolori, sonno, stress,
+   malattia, ciclo, alimentazione sono fuori per decisione del 09/10 (privacy
+   Apple e IA). L'IA riceve comunque il testo intero: per questo `estrai-note`
+   usa **solo Groq**, senza riserva Gemini, e all'IA arriva una nota anonima
+   (testo ed esercizi, niente id, nome, data).
+3. **Un estratto vale finché la nota è quella.** `estrattiValidi` confronta
+   l'impronta (FNV-1a del testo ripulito) con la nota di adesso: una nota
+   corretta dall'atleta torna «in analisi». `testoPulito` e `impronta` sono UNA
+   copia, importata dall'app dal file del server.
+4. **L'analisi parte all'apertura della scheda**, una volta, e solo se qualche
+   nota aspetta: al massimo 3 gruppi da 15 note per apertura. L'effetto NON
+   dipende da `workouts`, di proposito: completare un workout dalla scheda non
+   deve far ripartire l'IA.
+5. **Per tempo e passo l'asse del grafico è rovesciato**: un miglioramento sale
+   sempre. Alla prima prova sul telefono la linea di Elena (0:58 → 0:50) scendeva
+   e si leggeva «peggio».
+6. **Nell'ambiente di prova gli estratti nascono nei semi** (`PROPOSTE_DEMO` in
+   `src/demoSemi.js`), passati dalla stessa `validaEstrazione`: Elena (tempi sulle
+   wall balls), Giulia (sensazioni e burpees saltati), Luca (stanchezza). Una nota
+   scritta durante la demo resta «in analisi»: lì non c'è IA.

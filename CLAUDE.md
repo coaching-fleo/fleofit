@@ -290,6 +290,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `athletes` | `id` = `auth.users.id`. Soft delete con `deleted_at` (**bigint in ms**). `notes` è la nota del coach **per** l'atleta (l'atleta la vede, ed è voluto) e porta il marcatore `[PAUSA: yyyy-MM-dd]`: si legge e scrive **solo** con `src/lib/pausa.js` |
 | `workouts` | `title` (mai vuoto, con il codice in coda), `date`, `sections` jsonb (§5), `coach_notes` |
 | `athlete_workouts` | qui sta lo **stato** (`status`, `completed_date`). `notes` porta `[RPE: n/10]` e `[GRADIMENTO: …]`: solo con `src/lib/rpe.js` e `gradimento.js`. `voice_note_url` si cancella con `#deleted=`. **Nessun `created_at`** |
+| `note_estratte` | ⚠️ **in attesa, NON applicata** (09/10/2026): i dati ricavati dalle note, solo admin. La scrive solo `estrai-note` |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
 - 🔴 **Gli admin sono TRE liste da tenere allineate**: `ADMIN_EMAILS` in `src/App.jsx`,
@@ -596,7 +597,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `statisticheCoach.js`, `pausa.js` | `home-coach.md` |
 | `CreateWorkout.jsx`, `CreaWorkoutUI`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, salvataggio e bozza | `crea-workout.md` |
 | `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF | `scheda-workout.md` |
-| `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js` | `scheda-atleta.md` |
+| `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |
 | `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |
 | `Calendar.jsx`, `CalendarioUI`, `rigaCalendario.js` | `calendario.md` |

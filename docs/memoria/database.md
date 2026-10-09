@@ -38,6 +38,11 @@ Progetto Supabase: `riyqtcssllupakjtoehj`.
 
 **`personal_records`** — `id, athlete_id, exercise, value, date`
 
+**`note_estratte`** — ⚠️ **IN ATTESA: scritta il 09/10/2026, NON applicata** (serve lo sblocco del committente, regola 0-bis)
+`athlete_workout_id (PK, FK → athlete_workouts ON DELETE CASCADE), athlete_id (FK → athletes ON DELETE CASCADE), data, impronta, versione, estrazione jsonb, creato_at`
+- I dati ricavati dalle note degli atleti (scheda-atleta.md §9-dalle-note). La scrive SOLO la Edge Function `estrai-note` con la chiave di servizio; la leggono SOLO gli admin (una policy `ALL`, `USING` e `WITH CHECK` con le 5 email). L'atleta non legge i propri estratti.
+- File: `supabase/schema/note_estratte_2026-10-09.sql`. Finché non è applicata, `leggiEstratti` fallisce e la sezione dice «Non è stato possibile leggere i dati delle note»: la scheda resta intera.
+
 **`notifications`** — `id, user_id, title, message, route, is_read, created_at`
 - Realtime attivo su INSERT/UPDATE in Home (`supabase.channel('public:notifications')`).
 
@@ -54,6 +59,7 @@ Progetto Supabase: `riyqtcssllupakjtoehj`.
 - `voice-notes` — note vocali coach↔atleta; gli audio "live walkie-talkie" si **auto-eliminano dopo 60s**
 
 ### Edge Functions
+- **`estrai-note`** (09/10/2026, **non ancora pubblicata**) — `POST { athlete_id }`, solo admin. Legge le note dell'atleta, manda le mancanti a **Groq soltanto** (niente riserva Gemini: le note sono parole degli atleti) e salva in `note_estratte`. La web app non la chiama. Secret: `GROQ_API_KEY`, `GROQ_MODELLO` facoltativo.
 - **`send-reminders`** — 5 modalità via `body.mode`:
   - `morning` / `evening` (cron): promemoria agli **atleti**, personalizzato per nome, con fallback "Giorno di Rest".
     ⚠️ **Gli account in `ADMIN_EMAILS` sono esclusi** (28/08/2026): questa modalità parla a chi si

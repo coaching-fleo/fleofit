@@ -109,7 +109,7 @@ function CardRisultati({ estratti, giorni }) {
 }
 
 function Serie({ serie }) {
-  const { etichetta, punti, unita, scarto, migliorato } = serie
+  const { etichetta, misura, punti, unita, scarto, migliorato } = serie
   const ultimo = punti[punti.length - 1]
   if (punti.length < 2) {
     return (
@@ -121,7 +121,14 @@ function Serie({ serie }) {
   }
   const valori = punti.map(p => p.valore)
   const min = Math.min(...valori), max = Math.max(...valori)
-  const y = (v) => (max === min ? 17 : 32 - ((v - min) / (max - min)) * 30)
+  // Per tempo e passo meno è meglio: l'asse si rovescia, così un
+  // miglioramento SALE sempre. Una linea che scende si legge «peggio».
+  const rovescia = misura === 'tempo' || misura === 'passo'
+  const y = (v) => {
+    if (max === min) return 17
+    const t = (v - min) / (max - min)
+    return rovescia ? 2 + t * 30 : 32 - t * 30
+  }
   const linea = punti.map((p, i) => `${(i / (punti.length - 1)) * 100},${y(p.valore)}`).join(' ')
   return (
     <div>
@@ -164,7 +171,9 @@ function CardSensazioni({ estratti, giorni, oggi, onApriWorkout }) {
             aria-label={settimane.map(s => `settimana del ${giorno(s.settimana)}: ${
               ['troppo_facile', 'giusta', 'troppo_dura'].filter(k => s[k]).map(k => `${NOME_DIFFICOLTA[k].toLowerCase()} ${s[k]}`).join(', ')}`).join('; ')}>
             {settimane.map(s => (
-              <div key={s.settimana} className="flex-1 flex flex-col-reverse rounded-md overflow-hidden"
+              // max-w: con una sola settimana la barra era larga quanto la card,
+              // e si leggeva come un blocco di colore invece che come un dato.
+              <div key={s.settimana} className="flex-1 max-w-[28px] flex flex-col-reverse rounded-md overflow-hidden"
                 style={{ height: `${((s.troppo_facile + s.giusta + s.troppo_dura) / massimo) * 56}px` }}>
                 {['giusta', 'troppo_facile', 'troppo_dura'].map(k => s[k] > 0 && (
                   <div key={k} style={{ flexGrow: s[k], background: COLORE_DIFFICOLTA[k] }} />

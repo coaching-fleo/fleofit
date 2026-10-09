@@ -313,6 +313,9 @@ export function clientDemo() {
     functions: {
       invoke: async (nome, opzioni) => {
         if (nome === 'ricerca-coach') return { data: ricercaFinta(opzioni?.body), error: null }
+        // Gli estratti della demo nascono già nei semi (demoSemi.js): una
+        // nota scritta nella demo resta «in analisi», come senza IA.
+        if (nome === 'estrai-note') return { data: { estratte: 0, restano: 0, sospesa: false }, error: null }
         console.info('[demo] Edge Function non chiamata:', nome, opzioni?.body)
         return { data: { ok: true }, error: null }
       },

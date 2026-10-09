@@ -72,6 +72,24 @@ describe('DalleNoteUI', () => {
     expect(screen.getByText(/0:20 dall'ultima/)).toBeInTheDocument()
   })
 
+  it('un miglioramento sale sempre, anche quando è un tempo che scende', () => {
+    // Una linea che scende si legge «peggio»: per tempo e passo l'asse è
+    // rovesciato, così 7:00 → 6:40 sale come 8 kg → 9 kg.
+    const ultimaSale = () => {
+      const p = document.querySelector('polyline').getAttribute('points').split(' ').map(c => Number(c.split(',')[1]))
+      return p[p.length - 1] < p[0]
+    }
+    const a = aw('a', '2026-10-01'), b = aw('b', '2026-10-08')
+    const { unmount } = render(<DalleNoteUI nome="Sofia" workouts={[a, b]} oggi={OGGI} stato="pronto"
+      estratti={[est(a, { risultati: [tempo(420)] }), est(b, { risultati: [tempo(400)] })]} />)
+    expect(ultimaSale()).toBe(true)
+    unmount()
+    const kg = (v) => ({ esercizio: 'Wall Balls', misura: 'kg', grezzo: 'x', valore: v, unita: 'kg', citazione: 'c' })
+    render(<DalleNoteUI nome="Sofia" workouts={[a, b]} oggi={OGGI} stato="pronto"
+      estratti={[est(a, { risultati: [kg(8)] }), est(b, { risultati: [kg(9)] })]} />)
+    expect(ultimaSale()).toBe(true)
+  })
+
   it('card vuote: una frase per card, nessuno zero', () => {
     const w = aw('a', '2026-10-01')
     monta({ workouts: [w], estratti: [est(w)] })

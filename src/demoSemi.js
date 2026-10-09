@@ -20,7 +20,11 @@
 // carico (CLAUDE.md §9-quatervicies). Il commento accanto al nome dice quale:
 // se un giorno un ramo smette di comparire, si parte da lì.
 
-export const VERSIONE_SEME = 5
+import {
+  VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
+} from '../supabase/functions/estrai-note/regole.ts'
+
+export const VERSIONE_SEME = 6
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -144,18 +148,92 @@ const regolare = (atleta, workout, rpe, quante = 3, settimane = [-4, -3, -2, -1]
   return fuori
 }
 
+// ── Le note che diventano dati («Dalle note», 09/10/2026) ───────────────────
+// Qui non c'è un'IA: le «risposte» sono scritte a mano (PROPOSTE_DEMO) e poi
+// passano da `validaEstrazione`, la stessa regola del server. Così la demo non
+// mostra niente che la funzione vera scarterebbe, e un test lo verifica
+// (src/__tests__/demoNoteEstratte.test.js).
+const ELENA_1 = 'Wall balls da 9kg chiuse in 0:58 ogni minuto, bella seduta'
+const ELENA_2 = 'Wall balls in 0:54, meglio di due settimane fa'
+const ELENA_3 = 'Wall balls in 0:50! Burpees broad jump ridotti a 8 per il fiato'
+const GIULIA_1 = 'Troppo dura, saltati gli ultimi burpees broad jump'
+const GIULIA_2 = 'Giusta oggi, tutto fatto'
+const GIULIA_3 = 'Burpees broad jump saltati di nuovo, settimana pesante al lavoro'
+const LUCA_1 = 'Stanco morto, ma chiusa'
+const LUCA_2 = 'Motivazione alta oggi'
+const LUCA_3 = 'Gambe a pezzi dopo il viaggio di ieri'
+
+export const PROPOSTE_DEMO = {
+  [ELENA_1]: {
+    risultati: [
+      { esercizio: 'Wall Balls', misura: 'tempo', grezzo: '0:58', citazione: 'Wall balls da 9kg chiuse in 0:58' },
+      { esercizio: 'Wall Balls', misura: 'kg', grezzo: '9kg', citazione: 'Wall balls da 9kg' },
+    ],
+    sensazioni: { difficolta: 'giusta', citazione: 'bella seduta' },
+  },
+  [ELENA_2]: { risultati: [{ esercizio: 'Wall Balls', misura: 'tempo', grezzo: '0:54', citazione: 'Wall balls in 0:54' }] },
+  [ELENA_3]: {
+    risultati: [{ esercizio: 'Wall Balls', misura: 'tempo', grezzo: '0:50', citazione: 'Wall balls in 0:50' }],
+    sensazioni: { modifiche: [{ tipo: 'ridotto', esercizio: 'Burpees Broad Jump', citazione: 'Burpees broad jump ridotti a 8' }] },
+  },
+  [GIULIA_1]: {
+    sensazioni: { difficolta: 'troppo_dura', citazione: 'Troppo dura',
+      modifiche: [{ tipo: 'saltato', esercizio: 'Burpees Broad Jump', citazione: 'saltati gli ultimi burpees broad jump' }] },
+  },
+  [GIULIA_2]: { sensazioni: { difficolta: 'giusta', citazione: 'Giusta oggi' } },
+  [GIULIA_3]: {
+    stato: [{ fattore: 'lavoro', segno: -1, citazione: 'settimana pesante al lavoro' }],
+    sensazioni: { modifiche: [{ tipo: 'saltato', esercizio: 'Burpees Broad Jump', citazione: 'Burpees broad jump saltati di nuovo' }] },
+  },
+  'Più dura di quanto sembrava': { sensazioni: { difficolta: 'troppo_dura', citazione: 'Più dura di quanto sembrava' } },
+  [LUCA_1]: { stato: [{ fattore: 'stanchezza', segno: -1, citazione: 'Stanco morto' }] },
+  [LUCA_2]: { stato: [{ fattore: 'motivazione', segno: 1, citazione: 'Motivazione alta' }] },
+  [LUCA_3]: { stato: [
+    { fattore: 'stanchezza', segno: -1, citazione: 'Gambe a pezzi' },
+    { fattore: 'viaggio', segno: -1, citazione: 'dopo il viaggio di ieri' },
+  ] },
+  'Sled pesantissimo': { sensazioni: { difficolta: 'troppo_dura', citazione: 'Sled pesantissimo' } },
+  // Note che non dicono niente da estrarre: diventano estratti VUOTI, come
+  // farebbe la funzione, e la copertura le conta come analizzate.
+  'Tutto liscio': {},
+  'Bene il ritmo': {},
+  'Poi mi sono fermato': {},
+}
+
+/** Aggiunge un testo alla nota della seduta `indice` di una serie `regolare`. */
+const conNote = (lista, testi) => {
+  for (const [indice, testo] of Object.entries(testi)) lista[indice] = { ...lista[indice], notes: lista[indice].notes + testo }
+  return lista
+}
+
+/** Gli estratti di tutte le note scritte, come li salverebbe `estrai-note`. */
+const noteEstratte = (aws, ws) => aws
+  .filter(a => a.status === 'completed' && testoPulito(a.notes))
+  .map(a => {
+    const testo = testoPulito(a.notes)
+    const w = ws.find(x => x.id === a.workout_id)
+    return {
+      athlete_workout_id: a.id, athlete_id: a.athlete_id, data: a.completed_date,
+      impronta: impronta(testo), versione: VERSIONE_ESTRAZIONE,
+      estrazione: validaEstrazione(PROPOSTE_DEMO[testo] ?? {}, testo, eserciziDelWorkout(w?.sections)),
+      creato_at: new Date().toISOString(),
+    }
+  })
+
 const assegnazioni = () => [
   // Marco: leggero e costante. Un workout massimale gli fa saltare il carico.
   ...regolare('at-marco', 'w-leggero', 4),
   AW('at-marco', 'w-leggero', nellaSettimana(0, 0), 'completed', 4, 'Tutto liscio'),
 
   // Luca: pesante e costante, settimana seguita. Ha una seduta dura ieri.
-  ...regolare('at-luca', 'w-forte', 8),
-  AW('at-luca', 'w-forte', nellaSettimana(0, 0), 'completed', 8),
+  // Le note di Luca: stanco due volte, una motivato (sezione «Dalle note»).
+  ...conNote(regolare('at-luca', 'w-forte', 8), { 3: LUCA_2, 9: LUCA_1 }),
+  AW('at-luca', 'w-forte', nellaSettimana(0, 0), 'completed', 8, LUCA_3),
   AW('at-luca', 'w-completo', giorno(-1), 'completed', 8, 'Sled pesantissimo'),
 
   // Giulia: il coach prevede 6, lei segna 8. È il bias.
-  ...regolare('at-giulia', 'w-medio', 8, 2),
+  // Le note di Giulia: troppo dura, e i burpees saltati due volte.
+  ...conNote(regolare('at-giulia', 'w-medio', 8, 2), { 0: GIULIA_1, 2: GIULIA_2, 4: GIULIA_3 }),
   AW('at-giulia', 'w-medio', nellaSettimana(0, 0), 'completed', 8, 'Più dura di quanto sembrava'),
 
   // Andrea: due assegnati questa settimana, nessuno chiuso → aderenza bassa.
@@ -185,8 +263,9 @@ const assegnazioni = () => [
   ...regolare('at-chiara', 'w-leggero', 5, 2, [-4, -3]),
 
   // Elena: tutto in ordine. Non deve comparire nessun avviso.
-  ...regolare('at-elena', 'w-lungo', 8),
-  AW('at-elena', 'w-lungo', nellaSettimana(0, 0), 'completed', 8),
+  // Le note di Elena: tre tempi sulle wall balls, sempre meglio.
+  ...conNote(regolare('at-elena', 'w-lungo', 8), { 0: ELENA_1, 6: ELENA_2 }),
+  AW('at-elena', 'w-lungo', nellaSettimana(0, 0), 'completed', 8, ELENA_3),
 
   // Davide: fermo da nove giorni.
   ...regolare('at-davide', 'w-forte', 7, 3, [-4, -3]),
@@ -239,11 +318,16 @@ const personal_records = [
 
 /** Il database iniziale. Chiamata a ogni azzeramento, così le date si rifanno. */
 export function semi() {
+  // Una volta sola: gli id delle assegnazioni avanzano a ogni chiamata, e gli
+  // estratti devono puntare a QUESTE.
+  const aws = assegnazioni()
+  const ws = workouts()
   return {
     __versione: VERSIONE_SEME,
     athletes: atleti().map(a => ({ ...a })),
-    workouts: workouts().map(w => ({ ...w })),
-    athlete_workouts: assegnazioni().map(a => ({ ...a })),
+    workouts: ws.map(w => ({ ...w })),
+    athlete_workouts: aws.map(a => ({ ...a })),
+    note_estratte: noteEstratte(aws, ws),
     notifications: notifications.map(n => ({ ...n })),
     invitation_codes: invitation_codes.map(c => ({ ...c })),
     personal_records: personal_records.map(p => ({ ...p })),
