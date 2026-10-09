@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
+import { etichetteStazioni } from '../lib/stazioniEmom'
 import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw, Volume2, VolumeX } from 'lucide-react'
 /*import { Capacitor } from '@capacitor/core'
 import { KeepAwake } from '@capacitor-community/keep-awake'
@@ -158,7 +159,9 @@ function Section({ icon, label, color, stepNumber, className = "", isActive, chi
   )
 }
 
-function ExList({ exercises, showMinute, typeColor }) {
+function ExList({ exercises, showMinute, typeColor, tipo }) {
+  // In un EMOM il numero sono i minuti, anche «2–3» (src/lib/stazioniEmom.js).
+  const etichette = etichetteStazioni(exercises, tipo)
   return (
     <div className="flex flex-col w-full gap-3">
       {exercises.map((ex, i) => {
@@ -168,8 +171,8 @@ function ExList({ exercises, showMinute, typeColor }) {
         return (
         <div key={ex.id || i} className="flex items-start gap-4 bg-[#111] px-5 py-4 rounded-2xl border-2 border-[#333]">
           {showMinute && (
-            <div className="w-10 h-10 rounded-full bg-[#222] border-2 border-[#333] flex items-center justify-center shrink-0 mt-1">
-              <span className={`text-lg font-black ${typeColor}`}>{i + 1}</span>
+            <div className="min-w-10 h-10 px-2 rounded-full bg-[#222] border-2 border-[#333] flex items-center justify-center shrink-0 mt-1">
+              <span className={`text-lg font-black tabular-nums whitespace-nowrap ${typeColor}`}>{etichette[i]}</span>
             </div>
           )}
       <div className="flex-1 flex flex-col justify-center min-w-0">
@@ -660,7 +663,7 @@ export default function TVDashboard() {
                       {['WarmUp', 'Rest'].includes(block.type) ? (
                         <p className="text-gray-300 text-4xl font-bold">{block.params?.duration} {block.notes ? <span className="text-gray-500 text-3xl block mt-4">· {block.notes}</span> : ''}</p>
                       ) : (
-                        <ExList exercises={block.exercises || []} showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'} typeColor={TYPE_COLORS[block.type]?.text} />
+                        <ExList exercises={block.exercises || []} tipo={block.type} showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'} typeColor={TYPE_COLORS[block.type]?.text} />
                       )}
                   </Section>
                 ))

@@ -11,6 +11,7 @@ import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
+import { etichetteStazioni } from '../lib/stazioniEmom'
 
 const TYPE_COLORS = {
   'WarmUp': { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
@@ -710,11 +711,13 @@ export default function WorkoutDetail() {
            doc.text(`  ${block.params?.duration || ''}${block.notes ? ' · ' + block.notes : ''}`, 20, y)
            y += 8
         } else {
+           // In un EMOM il numero sono i minuti, anche «2–3» (src/lib/stazioniEmom.js).
+           const etichette = etichetteStazioni(block.exercises || [], block.type);
            (block.exercises || []).forEach((ex, i) => {
              doc.setTextColor(200, 200, 200)
              doc.setFont('helvetica', 'normal')
              doc.setFontSize(10)
-             const prefix = (block.type === 'EMOM' || block.type === 'ON/OFF') ? `Min.${i + 1}  ` : `· `
+             const prefix = (block.type === 'EMOM' || block.type === 'ON/OFF') ? `Min.${etichette[i]}  ` : `· `
              const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
              const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? ` @ ${ex.ergoPace}` : ''
              const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
@@ -951,7 +954,7 @@ export default function WorkoutDetail() {
              {['WarmUp', 'Rest'].includes(block.type) ? (
                <p className="text-gray-300 text-sm">{block.params?.duration} {block.notes ? ` · ${block.notes}` : ''}</p>
              ) : (
-               <ExList exercises={block.exercises || []} showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'} typeColor={TYPE_COLORS[block.type]?.text} />
+               <ExList exercises={block.exercises || []} tipo={block.type} showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'} typeColor={TYPE_COLORS[block.type]?.text} />
              )}
           </Section>
         ))
@@ -1591,7 +1594,9 @@ function Section({ icon, label, color, children }) {
   )
 }
 
-function ExList({ exercises, showMinute, typeColor }) {
+function ExList({ exercises, showMinute, typeColor, tipo }) {
+  // In un EMOM il numero sono i minuti, anche «2–3» (src/lib/stazioniEmom.js).
+  const etichette = etichetteStazioni(exercises, tipo)
   return (
     <div className="flex flex-col gap-2 mt-1">
       {exercises.map((ex, i) => {
@@ -1601,8 +1606,8 @@ function ExList({ exercises, showMinute, typeColor }) {
         return (
         <div key={ex.id || i} className="flex items-center gap-3">
           {showMinute && (
-            <div className="w-7 h-7 rounded-full bg-[#222] border border-[#333] flex items-center justify-center shrink-0">
-              <span className={`text-xs font-bold ${typeColor}`}>{i + 1}</span>
+            <div className="min-w-7 h-7 px-1.5 rounded-full bg-[#222] border border-[#333] flex items-center justify-center shrink-0">
+              <span className={`text-xs font-bold tabular-nums whitespace-nowrap ${typeColor}`}>{etichette[i]}</span>
             </div>
           )}
           <div className="flex-1">

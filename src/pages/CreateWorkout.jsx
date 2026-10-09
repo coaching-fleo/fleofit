@@ -8,6 +8,7 @@ import CustomDatePicker from '../components/CustomDatePicker'
 import { useTouchDrag } from '../useTouchDrag'
 import { format } from 'date-fns'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
+import { intervalliDi, etichetteStazioni, MASSIMO_INTERVALLI } from '../lib/stazioniEmom'
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -275,7 +276,7 @@ function BlockPickerModal({ onAdd, onClose }) {
 }
 
 // ─── EXERCISE PICKER MODAL ────────────────────────────────────
-function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initialExercise }) {
+function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initialExercise, intervalloBlocco }) {
   const [search, setSearch] = useState(initialExercise?.name || '')
   const [selected, setSelected] = useState(initialExercise?.name || null)
   const [hybridMode, setHybridMode] = useState(initialExercise?.meters && initialExercise.meters !== '-' ? 'distance' : 'reps')
@@ -288,6 +289,12 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   const [kg, setKg] = useState(initialExercise?.kg ? `${initialExercise.kg} kg` : '-')
   const [intensity, setIntensity] = useState(initialExercise?.intensity || '5')
   const [notes, setNotes] = useState(initialExercise?.notes || '')
+  // Solo in un EMOM: quanti intervalli di fila dura questo esercizio. Una
+  // stazione continua («minuti 2 e 3: sled push») non è lo stesso esercizio
+  // ripetuto due volte — src/lib/stazioniEmom.js. Stesso campo delle app.
+  const [intervalli, setIntervalli] = useState(() => intervalliDi(initialExercise))
+  const secondiIntervallo = timeToSeconds(intervalloBlocco || '1:00') || 60
+  const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
 
   const filtered = HYROX_EXERCISES.filter(ex =>
     ex.toLowerCase().includes(search.toLowerCase()) && (!existingNames.includes(ex) || ex === initialExercise?.name)
@@ -314,6 +321,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
       speed: selected === 'Run' && runPaceMode === 'speed' ? speed : undefined,
       kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) || selected === 'Run' || selected === 'Rest' ? '' : kg.replace(' kg', ''),
       intensity: selected === 'Rest' ? undefined : intensity,
+      intervals: workoutType === 'EMOM' && intervalli > 1 ? String(intervalli) : undefined,
       notes
     })
     onClose()
@@ -474,6 +482,30 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                 )}
               </div>
 
+              {workoutType === 'EMOM' && (
+                <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400 text-xs">⏱️ Durata della stazione</span>
+                    <span className="text-gray-500 text-xs">{intervalli > 1 ? 'Lavoro continuo' : 'Un intervallo'}</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5" role="group" aria-label="Durata della stazione">
+                    {Array.from({ length: MASSIMO_INTERVALLI }, (_, i) => i + 1).map(n => (
+                      <button key={n} type="button" aria-pressed={intervalli === n}
+                        aria-label={`La stazione dura ${mmss(secondiIntervallo * n)}`}
+                        onClick={() => setIntervalli(n)}
+                        className={`py-2 rounded-lg border text-xs font-bold tabular-nums transition ${
+                          intervalli === n ? 'bg-[#f1ba17]/15 border-[#f1ba17]/50 text-[#f1ba17]' : 'bg-[#2a2a2a] border-[#383838] text-gray-300 hover:border-[#444]'
+                        }`}>
+                        {mmss(secondiIntervallo * n)}
+                      </button>
+                    ))}
+                  </div>
+                  {intervalli > 1 && (
+                    <p className="text-gray-500 text-xs">Un lavoro unico da {mmss(secondiIntervallo * intervalli)}, che conta {intervalli} round.</p>
+                  )}
+                </div>
+              )}
+
               {selected !== 'Rest' && (
                 <div className="bg-[#222] border border-[#333] rounded-xl p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
@@ -508,7 +540,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 }
 
 // ─── BLOCCO ESERCIZIO ─────────────────────────────────────────
-function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, showMinute, onEdit, touchHandlers, onDuplicate }) {
+function ExerciseRow({ ex, index, total, etichetta, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, showMinute, onEdit, touchHandlers, onDuplicate }) {
 
   const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
   const paceStr = (isErgo(ex.name) || ex.name === 'Run') && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
@@ -555,8 +587,8 @@ function ExerciseRow({ ex, index, total, onRemove, onMoveUp, onMoveDown, onDragS
       </div>
 
       {showMinute && (
-        <div className="w-8 h-8 rounded-full bg-[#f1ba17]/10 border border-[#f1ba17]/30 flex items-center justify-center shrink-0">
-          <span className="text-[#f1ba17] text-xs font-bold">{index + 1}</span>
+        <div className="min-w-8 h-8 px-1.5 rounded-full bg-[#f1ba17]/10 border border-[#f1ba17]/30 flex items-center justify-center shrink-0">
+          <span className="text-[#f1ba17] text-xs font-bold tabular-nums whitespace-nowrap">{etichetta ?? index + 1}</span>
         </div>
       )}
 
@@ -775,6 +807,7 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
                 {(block.exercises || []).map((ex, i) => (
                   <ExerciseRow 
                     key={ex.id} ex={ex} index={i} total={block.exercises.length}
+                    etichetta={etichetteStazioni(block.exercises, block.type)[i]}
                     showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'}
                     onRemove={(id) => onUpdate({ ...block, exercises: block.exercises.filter(e => e.id !== id) })}
                     onMoveUp={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx - 1) })}
@@ -805,6 +838,7 @@ function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove,
           {pickerOpen && (
             <ExercisePicker 
               workoutType={block.type}
+              intervalloBlocco={block.params?.interval}
               existingNames={(block.exercises || []).map(e => e.name)}
               initialExercise={editingExercise}
               onClose={() => { setPickerOpen(false); setEditingExercise(null); }}
