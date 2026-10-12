@@ -11,8 +11,8 @@ import {
 // niente (e ripiegare sul campo libero) invece di mostrare una lista vuota.
 
 const VALENCIA = { id: '1', nome: 'HYROX Valencia', codice: 'VLC', dal: '2026-10-15', al: '2026-10-18', url: 'https://hyrox.com/event/hyrox-valencia/', continente: 'europe', paese: 'ES', paeseNome: 'Spain', immagine: 'https://hyrox.com/v.jpg' }
-const SAO_PAULO = { id: '2', nome: 'HYROX São Paulo', codice: 'SPO', dal: '2026-10-17', al: '2026-10-18', url: 'u', continente: 'south-america', paese: 'BR', paeseNome: 'Brazil' }
-const AMBURGO = { id: '3', nome: 'INTERSPORT HYROX Hamburg', codice: 'HAM', dal: '2026-10-28', al: '2026-11-01', url: 'u', continente: 'europe', paese: '', paeseNome: 'Germany' }
+const SAO_PAULO = { id: '2', nome: 'HYROX São Paulo', codice: 'SPO', dal: '2026-10-17', al: '2026-10-18', url: 'u', continente: 'south-america', paese: 'BR', paeseNome: 'Brazil', immagine: '' }
+const AMBURGO = { id: '3', nome: 'INTERSPORT HYROX Hamburg', codice: 'HAM', dal: '2026-10-28', al: '2026-11-01', url: 'u', continente: 'europe', paese: '', paeseNome: 'Germany', immagine: '' }
 const GARE = [VALENCIA, SAO_PAULO, AMBURGO]
 
 function memoria(iniziale = {}) {
@@ -113,7 +113,7 @@ describe('caricaGare', () => {
   const supa = (risposta) => ({ functions: { invoke: vi.fn(() => Promise.resolve(risposta)) } })
 
   it('una copia fresca non chiama il server', async () => {
-    const storage = memoria({ [CHIAVE_CACHE_GARE]: JSON.stringify({ versione: 2, salvate: ADESSO - 1000, gare: GARE }) })
+    const storage = memoria({ [CHIAVE_CACHE_GARE]: JSON.stringify({ versione: 3, salvate: ADESSO - 1000, gare: GARE }) })
     const s = supa({ data: null, error: null })
     expect(await caricaGare(s, { adesso: ADESSO, storage })).toEqual({ gare: GARE, errore: null })
     expect(s.functions.invoke).not.toHaveBeenCalled()
@@ -128,7 +128,7 @@ describe('caricaGare', () => {
   })
 
   it('server giù: usa la copia anche vecchia', async () => {
-    const storage = memoria({ [CHIAVE_CACHE_GARE]: JSON.stringify({ versione: 2, salvate: ADESSO - 30 * 86_400_000, gare: GARE }) })
+    const storage = memoria({ [CHIAVE_CACHE_GARE]: JSON.stringify({ versione: 3, salvate: ADESSO - 30 * 86_400_000, gare: GARE }) })
     const s = supa({ data: null, error: new Error('502') })
     expect(await caricaGare(s, { adesso: ADESSO, storage })).toEqual({ gare: GARE, errore: null })
   })
@@ -138,6 +138,16 @@ describe('caricaGare', () => {
     const s = supa({ data: { gare: GARE }, error: null })
     await caricaGare(s, { adesso: ADESSO, storage })
     expect(s.functions.invoke).toHaveBeenCalled()
+  })
+
+  // 🔴 Il caso del 12/10/2026: app aggiornata, funzione no. La lista vecchia
+  // si mostra ma non si salva, o le foto arrivano solo dodici ore dopo il deploy.
+  it('una lista di forma vecchia dal server si mostra ma non si salva', async () => {
+    const vecchie = GARE.map(({ id, nome, codice, dal, al, url, continente }) => ({ id, nome, codice, dal, al, url, continente }))
+    const storage = memoria()
+    const r = await caricaGare(supa({ data: { gare: vecchie }, error: null }), { adesso: ADESSO, storage })
+    expect(r.gare).toEqual(vecchie)
+    expect(storage.dati[CHIAVE_CACHE_GARE]).toBeUndefined()
   })
 
   it('server giù e nessuna copia: un errore, non una lista vuota spacciata per vera', async () => {

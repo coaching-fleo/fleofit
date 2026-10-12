@@ -16,7 +16,21 @@ export const CHIAVE_CACHE_GARE = 'fleofit_cache_gare_hyrox'
 const DURATA_CACHE = 12 * 3_600_000
 // Sale quando cambia la forma di una gara: una copia di forma vecchia (senza
 // foto né paese, prima del 12/10/2026) si butta invece di mostrarla a metà.
-const VERSIONE_CACHE = 2
+// 3: la 2 poteva contenere una lista di forma vecchia, ricevuta da una
+// funzione non ancora ripubblicata (vedi `formaAttuale`).
+const VERSIONE_CACHE = 3
+
+/**
+ * Una lista arrivata dal server nella forma attuale. ⚠️ Il telefono e la
+ * funzione si aggiornano in momenti diversi: un'app nuova davanti a una
+ * `gare-hyrox` non ancora ripubblicata riceve gare senza `immagine` né
+ * `paese`. Si mostrano lo stesso (meglio di niente) ma NON si salvano,
+ * così appena la funzione è aggiornata le foto arrivano subito e non dopo
+ * 12 ore (successo il 12/10/2026).
+ */
+export function formaAttuale(gare) {
+  return Array.isArray(gare) && gare.length > 0 && 'immagine' in gare[0] && 'paese' in gare[0]
+}
 
 /** I continenti del sito, nell'ordine del filtro, con il nome in italiano. */
 export const CONTINENTI = {
@@ -156,13 +170,15 @@ export function sectionsEvento(gara) {
  */
 export async function caricaGare(supabase, { adesso = Date.now(), storage = globalThis.localStorage } = {}) {
   const copia = leggiJson(CHIAVE_CACHE_GARE, null, storage)
-  const valida = copia?.versione === VERSIONE_CACHE && Array.isArray(copia.gare) && copia.gare.length > 0
+  const valida = copia?.versione === VERSIONE_CACHE && formaAttuale(copia.gare)
   if (valida && adesso - (copia.salvate || 0) < DURATA_CACHE) return { gare: copia.gare, errore: null }
 
   try {
     const { data, error } = await supabase.functions.invoke('gare-hyrox', { body: {} })
     if (error || !Array.isArray(data?.gare) || data.gare.length === 0) throw error || new Error('lista vuota')
-    scriviJson(CHIAVE_CACHE_GARE, { versione: VERSIONE_CACHE, salvate: adesso, gare: data.gare }, storage)
+    if (formaAttuale(data.gare)) {
+      scriviJson(CHIAVE_CACHE_GARE, { versione: VERSIONE_CACHE, salvate: adesso, gare: data.gare }, storage)
+    }
     return { gare: data.gare, errore: null }
   } catch (e) {
     console.warn('gare-hyrox non disponibile:', e)

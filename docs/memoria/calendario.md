@@ -196,6 +196,11 @@ La modale «Nuovo Evento / Gara» è uscita da `Calendar.jsx` ed è diventata
   italiano (`Intl.DisplayNames`), continente a pillola; ricerca e filtro
   «Tutte le regioni» (un `<select>`, così su iPhone apre il selettore di sistema).
 - La copia locale porta `versione`: una copia di forma vecchia si butta.
+- ⚠️ **App e funzione si aggiornano in momenti diversi.** Il 12/10/2026 l'app
+  nuova ha ricevuto la lista dalla `gare-hyrox` non ancora ripubblicata (senza
+  foto né paese) e l'ha salvata per 12 ore: le foto non sarebbero comparse
+  nemmeno dopo il deploy. Ora una lista di forma vecchia si mostra ma **non si
+  salva** (`formaAttuale`), e la versione della copia è salita a 3.
 - `src/lib/gareHyrox.js`: copia locale in `fleofit_cache_gare_hyrox` per 12 ore;
   se il server non risponde si usa la copia **anche vecchia**; senza copia la
   modale dice che la lista non c'è e porta al campo libero. Mai una lista vuota
