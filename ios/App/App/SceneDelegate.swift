@@ -22,7 +22,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = CAPBridgeViewController()
+        // ⚠️ FleoBridgeViewController e non CAPBridgeViewController: è lei che
+        // registra i plugin dell'app (LettoreTesto.swift). Tornando alla classe
+        // di Capacitor la foto in «Da un testo scritto» sparisce, senza errori.
+        window?.rootViewController = FleoBridgeViewController()
         window?.makeKeyAndVisible()
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)

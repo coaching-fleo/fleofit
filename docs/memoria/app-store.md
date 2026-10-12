@@ -467,3 +467,25 @@ migrata**, perché sono quelle di `CAPSceneDelegateProxy` dentro Capacitor: il
 mangled `3App13SceneDelegate` è l'unico che distingue la nostra classe.
 
 ---
+
+---
+
+## 9-foto-ocr. Fotocamera e radice nativa nuova (12/10/2026)
+
+Arrivati con la fase 2 di «Da un testo scritto» (docs/memoria/crea-workout.md):
+
+- 🔴 **`NSCameraUsageDescription` è nuovo in `Info.plist`.** Senza, la webview NON
+  offre «Scatta foto» nei campi `<input type="file">` (solo galleria e file):
+  WebKit la toglie da sé. Con la chiave compare anche nei campi della foto
+  profilo, ed è per questo che il testo nomina tutte e due le cose. Il revisore
+  può chiedere a cosa serve: la risposta è nel testo stesso.
+- **La radice della webview non è più `CAPBridgeViewController`** ma
+  `FleoBridgeViewController` (in `LettoreTesto.swift`), che registra il plugin
+  dell'app in `capacitorDidLoad`. ⚠️ `SceneDelegate` la crea per nome: se un
+  aggiornamento di Capacitor rigenera il file e rimette la classe di Capacitor,
+  la foto sparisce **senza errori** (il bottone non compare).
+- Vision lavora sul telefono: nessun dato esce, quindi niente da dichiarare nella
+  privacy dell'App Store per questa funzione.
+- Verificato sul simulatore (iPhone 18 Pro, iOS 26) con una foto di prova
+  aggiunta via `xcrun simctl addmedia`. Da riprovare su un iPhone vero, con una
+  lavagna vera, prima del rilascio.

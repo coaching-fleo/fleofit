@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, fireEvent } from '@testing-library/react'
 import { montaPagina } from '../../test/montaPagina'
 
 // Perché questi test esistono
@@ -99,6 +99,15 @@ describe('2a · Il giorno 1', () => {
     monta([])
     await screen.findByText(/ti segue da oggi/i)
     expect(screen.queryByLabelText('Fissa il tuo obiettivo')).not.toBeInTheDocument()
+  })
+
+  // Fino al 12/10/2026 «Aggiungi il tuo obiettivo» apriva l'allenamento
+  // libero: la gara non finiva né nel calendario né nel countdown.
+  it('l\'obiettivo si fissa con «Nuovo evento», non con l\'allenamento libero', async () => {
+    monta([])
+    fireEvent.click(await screen.findByLabelText('Aggiungi il tuo obiettivo'))
+    expect(await screen.findByText('Nuovo Evento / Gara')).toBeInTheDocument()
+    expect(screen.queryByText('Allenamento Libero')).not.toBeInTheDocument()
   })
 
   // 🔴 Il caso che `senzaStorico` esiste per prendere, e qui si verifica sulla

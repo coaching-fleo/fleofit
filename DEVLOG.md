@@ -23,6 +23,9 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 - Con la **generazione IA** ogni esercizio ha un'intensità, dettata o stimata.
 - **«Genera con IA» ora modifica anche**: se ci sono già blocchi (fatti a mano o dall'IA) basta chiedere la modifica — «porta l'EMOM a 16 minuti», «togli il Cash Out» — e l'IA riscrive l'allenamento cambiando solo quello; la modifica si può annullare.
 - I blocchi scritti dall'IA arrivano **tutti aperti**, pronti da rileggere.
+- Nuovo **«Da un testo scritto»**: si incolla un workout dalle Note o da un messaggio e l'app lo divide da sola in blocchi (o in fasi di corsa), senza IA. Prima di confermare mostra riga per riga cosa ha capito; quello che non capisce finisce nelle note, non si perde.
+- **Su iPhone anche da una foto**: si fotografa la lavagna o il foglio (o si sceglie uno screenshot) e l'app legge il testo da sola, sul telefono, anche su due colonne. Il testo letto si può correggere prima di usarlo. L'app ora chiede il permesso della **fotocamera**.
+- **Su Android anche da una foto** (da provare prima del rilascio): due bottoni, «Scatta una foto» e «Dalla galleria».
 - Un **blocco nuovo chiede subito i suoi numeri** (tempo, round…) e si aggiunge con un tasto di conferma.
 - Un workout già svolto da un atleta **non si può più modificare**: si può duplicare.
 - Negli **EMOM** un esercizio può durare **più minuti di fila** come stazione continua («minuti 2–3: vogatore»): il timer non riparte a metà.
@@ -34,6 +37,10 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 ## Cerca con l'IA (coach)
 - Nuova **ricerca con l'IA** in Home, a voce o scritta: atleti fermi, allenamenti non completati, RPE alti, gare in arrivo, note degli atleti, numeri di un atleta, workout da riusare. Sotto la risposta c'è l'elenco dei risultati, e ogni riga apre la sua scheda.
 - Si può anche chiedere di **aprire una schermata** o di **creare un workout** per un atleta in una data.
+
+## Calendario e gare
+- **«Nuovo evento» sceglie la gara dal calendario HYROX ufficiale**: si cerca per città, si tocca la gara e nome e giorni si compilano da soli; per le gare di più giorni si sceglie il proprio. «Altro evento» resta il campo libero di prima.
+- Dalla Home, **«Hai una gara in programma?»** apre la stessa scelta della gara: prima apriva l'allenamento libero, e la gara non compariva né nel calendario né nel conto alla rovescia.
 
 ## Segnala un problema
 - Nuova voce **«Segnala un problema»** in Impostazioni: un modulo guidato con screenshot allegabili e bozza salvata, che arriva per email.

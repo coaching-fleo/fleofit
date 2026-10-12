@@ -1,0 +1,88 @@
+// Regole pure di `gare-hyrox`: niente import Deno, così i test le provano da
+// vitest (src/lib/__tests__/gareHyroxServer.test.js) su una copia vera della
+// pagina, salvata in src/lib/__tests__/fixtures/find-my-race.html.
+//
+// ⚠️ Non esiste un'interfaccia ufficiale: si legge la pagina pubblica
+// https://hyrox.com/find-my-race/. L'API JSON di WordPress del sito espone
+// gli eventi ma SENZA date (i campi ACF sono vuoti), quindi non basta.
+// Se HYROX cambia il tema della pagina, `leggiGare` torna una lista vuota e
+// l'app ripiega sul campo libero: nessuna schermata rotta.
+
+export const URL_GARE = 'https://hyrox.com/find-my-race/'
+
+export type Gara = {
+  id: string          // il data-id di WordPress: stabile, sopravvive a un cambio di nome
+  nome: string
+  codice: string      // tre lettere della città (VLC, BUD…), quando c'è
+  dal: string         // yyyy-MM-dd
+  al: string          // yyyy-MM-dd, uguale a `dal` per una gara di un giorno
+  url: string
+  continente: string  // 'europe', 'north-america'… dalla classe del riquadro
+}
+
+const MESI: Record<string, string> = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+}
+
+/** «17. Oct. 2026» → «2026-10-17». `null` se il formato non è quello atteso. */
+export function leggiData(testo: string): string | null {
+  const m = /(\d{1,2})\.?\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{4})/.exec(testo || '')
+  if (!m) return null
+  const mese = MESI[m[2].toLowerCase()]
+  if (!mese) return null
+  return `${m[3]}-${mese}-${m[1].padStart(2, '0')}`
+}
+
+const ENTITA: Record<string, string> = { amp: '&', quot: '"', apos: "'", lt: '<', gt: '>', nbsp: ' ' }
+
+/** Le entità HTML di un titolo WordPress («&#8211;», «&amp;»). */
+export function decodifica(testo: string): string {
+  return testo
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&([a-z]+);/gi, (t, n) => ENTITA[n.toLowerCase()] ?? t)
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** Il valore del campo personalizzato `classe` dentro un riquadro. */
+function campo(riquadro: string, classe: string): string | null {
+  const re = new RegExp(`${classe}[^"]*"[^>]*>(?:<span class="w-post-elm-before">[^<]*</span>)?<span class="w-post-elm-value">([^<]*)<`)
+  return re.exec(riquadro)?.[1] ?? null
+}
+
+/**
+ * Le gare ADULTE della pagina, nell'ordine in cui il sito le mostra
+ * (cronologico). Restano fuori:
+ *  · le Youngstars (gare per ragazzi: l'app segue atleti adulti);
+ *  · i riquadri senza data (es. «HYROX New York» annunciata senza giorno):
+ *    una gara senza data non si può mettere in calendario;
+ *  · i riquadri dei partner, che stanno nella stessa griglia.
+ */
+export function leggiGare(html: string): Gara[] {
+  const riquadri = (html || '').match(/<article class="w-grid-item[^"]*"[^>]*>[\s\S]*?<\/article>/g) || []
+  const gare: Gara[] = []
+  const visti = new Set<string>()
+  for (const r of riquadri) {
+    const classi = /class="([^"]*)"/.exec(r)?.[1] || ''
+    if (!/\btype-event\b/.test(classi) || !/\btype-adults\b/.test(classi)) continue
+    const id = /data-id="(\d+)"/.exec(r)?.[1]
+    const titolo = /post_title[^>]*>\s*<a href="([^"]+)">([^<]+)<\/a>/.exec(r)
+    const dal = leggiData(campo(r, 'event_date_1') || '')
+    if (!id || !titolo || !dal || visti.has(id)) continue
+    const al = leggiData(campo(r, 'event_date_3') || '')
+    visti.add(id)
+    gare.push({
+      id,
+      nome: decodifica(titolo[2]),
+      codice: decodifica(campo(r, 'event_city_letter_code') || ''),
+      dal,
+      // Una fine PRIMA dell'inizio è un refuso del sito: meglio un giorno solo.
+      al: al && al >= dal ? al : dal,
+      url: titolo[1],
+      continente: /\bcontinent-([a-z-]+)/.exec(classi)?.[1] || '',
+    })
+  }
+  return gare
+}

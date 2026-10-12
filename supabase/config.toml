@@ -437,3 +437,10 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/estrai-note/deno.json"
 entrypoint = "./functions/estrai-note/index.ts"
+
+[functions.gare-hyrox]
+enabled = true
+# Legge solo una pagina pubblica, ma il JWT tiene fuori le chiamate anonime:
+# senza, chiunque potrebbe usarla per far scaricare hyrox.com a ripetizione.
+verify_jwt = true
+entrypoint = "./functions/gare-hyrox/index.ts"

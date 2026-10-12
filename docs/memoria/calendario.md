@@ -157,3 +157,45 @@ il colore di una sessione è quello della sua **corsia**, e viene da
 `coloreCategoria` come ovunque (§9 punto 1).
 
 ---
+
+## 9-gare-hyrox — «Nuovo evento» sceglie la gara dal calendario HYROX (12/10/2026)
+
+La modale «Nuovo Evento / Gara» è uscita da `Calendar.jsx` ed è diventata
+`src/components/NuovoEvento.jsx`, con due modi: **Gara HYROX** (predefinito) e
+**Altro evento** (il campo libero di prima, identico).
+
+### Da dove arrivano le gare
+- **Edge Function `gare-hyrox`** (`supabase/functions/gare-hyrox/`): legge
+  https://hyrox.com/find-my-race/ e torna `[{ id, nome, codice, dal, al, url, continente }]`.
+  Copia in memoria per 6 ore. **Nessun secret, nessuna tabella.** `main` non la chiama.
+- ⚠️ **Non c'è un'interfaccia ufficiale.** L'API JSON di WordPress del sito
+  (`/wp-json/wp/v2/event`) elenca gli eventi ma **senza date** (campi ACF vuoti):
+  per questo si legge la pagina. La lettura sta in `regole.ts` ed è provata su
+  una copia vera della pagina (`src/lib/__tests__/fixtures/find-my-race.html`).
+  Se un giorno si rompe: salvare la pagina nuova al posto della copia e guardare
+  quale test cade.
+- Il 12/10/2026 la pagina aveva **100 gare in una sola pagina** (fino a giugno 2027):
+  87 adulte con data. Escono le **Youngstars**, i riquadri dei **partner** (stessa
+  griglia) e le gare **senza data** (es. «HYROX New York»).
+- Serve un User-Agent da browser: il sito sta dietro Cloudflare.
+
+### Nel telefono
+- `src/lib/gareHyrox.js`: copia locale in `fleofit_cache_gare_hyrox` per 12 ore;
+  se il server non risponde si usa la copia **anche vecchia**; senza copia la
+  modale dice che la lista non c'è e porta al campo libero. Mai una lista vuota
+  spacciata per vera.
+- Si vedono solo le gare **non ancora finite** (una gara di quattro giorni
+  iniziata ieri si può ancora scegliere). Ricerca su nome e codice città, senza
+  accenti («sao» trova São Paulo, «vlc» Valencia).
+- Le gare durano più giorni: l'atleta sceglie **il suo** giorno. Si propone
+  quello selezionato nel calendario se cade dentro la gara, altrimenti il primo.
+
+### Cosa si salva
+Lo stesso evento di sempre (`category: 'Event'`, `isEvent`, `isAutonomous`) più
+`sections.hyrox = { id, codice, url, dal, al }`. Nessuna migrazione; `main` e
+tutte le schermate che leggono gli eventi lo trattano come prima. `sections.hyrox`
+serve alla **fase 2** (il tempo da results.hyrox.com dopo la gara, BACKLOG #69).
+
+### Demo
+`npm run demo` / `demo:atleta`: tre gare finte con date relative a oggi
+(`gareFinte` in `src/supabaseDemo.js`).

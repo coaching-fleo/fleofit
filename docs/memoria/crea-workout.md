@@ -1100,3 +1100,108 @@ portarsi dietro gli atleti dell'originale né le note.
 - La finestra di «Salva come nuovo» lo dice (`data-avviso-copia`).
 
 Test: `SalvataggioModifica.test.jsx` (13), i quattro nuovi visti fallire sul codice di prima.
+
+---
+
+## 9-da-testo. «Da un testo scritto» (12/10/2026)
+
+Richiesta del committente: «se qualcuno ha il workout scritto da qualche parte —
+nelle note, su una lavagna, in uno screen — l'app lo legge e lo converte nei
+blocchi», possibilmente **senza IA**. Il piano ha tre fasi; questa è la **1**:
+il testo **incollato**. La foto (OCR del telefono) è BACKLOG #66.
+
+### Com'è fatto
+- `src/lib/leggiWorkout.js` — **logica pura, nessuna IA**: regole riga per riga.
+  `leggiHyrox(testo)` → `{ blocchi, note, righe }`, `leggiCorsa(testo)` →
+  `{ fasi, note, righe }`. `righe` dice cosa è diventata ogni riga (`blocco`,
+  `esercizio`, `nuovo`, `nota`) ed è quello che l'anteprima mostra.
+- `src/components/FoglioDaTesto.jsx` — il bottom sheet, **pigro** (chunk suo,
+  ~18 KB): non pesa su `CreateWorkout` per chi non lo apre. Si apre dal bottone
+  «Da un testo scritto» sotto la card IA (Hyrox) e sotto l'intensità (Corsa).
+- `usaDaTesto` in `CreateWorkout` — i blocchi passano da `preparaBlocchiIA`
+  (id nuovi, intensità di partenza) come quelli dell'IA. Con blocchi già nel
+  builder si sceglie **«Aggiungi in coda»** o **«Sostituisci»**; la sostituzione
+  riusa la fascia «Annulla» di `modificaIA` (con `daTesto: true`, grigia e non
+  viola: non è IA). Le righe venute prima di ogni blocco vanno **in coda** alle
+  note del coach.
+- Le tassonomie (`HYROX_EXERCISES`, `isDistance`…) sono uscite da
+  `CreateWorkout.jsx` in **`src/lib/esercizi.js`**: due copie divergerebbero.
+
+### Cosa riconosce
+- Intestazioni: Warm up / riscaldamento, EMOM / E2MOM / «ogni 3' x 4», AMRAP,
+  For Time / RFT / «3 rounds», ON/OFF («40" on 20" off x8», «40/20»), Tabata,
+  Cash In / Buy in, Cash Out, Interval, Rest. «EMOM 12'» = durata **totale**.
+  Quello che segue i due punti («AMRAP 20: 10 burpees + 15 wb») è già esercizio.
+- Esercizi: reps, `max`, `3x10`, metri/km, `4x25m`, kg, `2x24kg`, `@60`, passo
+  `2:00/500`, `Z2`, rpm, `RPE 8` / `@8/10`, calorie (nella nota). Nomi esatti,
+  plurali, **sinonimi** (`ski`, `wb`, `bbj`, `affondi`…) e un errore di battitura.
+- Corsa: riscaldamento/defaticamento/recupero, `6x400m @3:45 rec 1'`, intervalli
+  di passo `4:10-4:20`, zone, «all out», «gara», «camminata».
+
+### 🔴 Le regole che non sono gusto
+1. **Nessun numero inventato.** EMOM senza durata → niente `rounds`; ripetute
+   senza recupero → `recDuration: ''`; «row 15» non diventa 15 metri (resta
+   nella nota). Il builder mostra il ripiego e il coach vede cosa manca.
+2. **Nessuna riga si perde.** Quello che non si capisce va nelle note del blocco
+   in cui stava, o in quelle del coach se viene prima di ogni blocco.
+3. **Il WarmUp NON ha esercizi nel builder** (`conEsercizi` in `HyroxBlock`):
+   trovato provandolo nel browser — «500m row» dentro un riscaldamento spariva
+   dalla scheda senza dire niente. Lì le righe vanno nelle **note del blocco**.
+4. **Le note del blocco sono un campo su UNA riga** (`RigaTesto`, un `<input>`):
+   un a capo lì incolla le parole («500m row20 jumping jack»). Si uniscono con
+   « · ». Le note del coach sono un'area di testo e tengono l'a capo.
+5. **Niente «contiene» sui nomi**: «wall» sta in Wall Balls e in Wall Walk.
+   Un nome non riconosciuto con un numero entra **col nome scritto** (esercizio
+   custom, segnato «esercizio nuovo» nell'anteprima).
+6. Un esercizio senza intestazione davanti — o dopo un Rest — apre un For Time
+   **senza giri**.
+
+### ⚠️ Da sapere
+- Le regole sono scritte sul gergo **generico**. Gli esempi veri del coach
+  (BACKLOG #67) vanno nei test **prima** di toccare una regola.
+- `ERGOMETERS` sta in `constants.js`, non in `esercizi.js`: `esercizi.js` lo
+  importa ma non lo riesporta.
+
+Test: `leggiWorkout.test.js` (29) e `CreaWorkoutDaTesto.test.jsx` (5); le regole
+🔴 viste fallire rompendo apposta il codice.
+
+### Fase 2: la foto (12/10/2026, solo iOS)
+- `ios/App/App/LettoreTesto.swift` — plugin dell'app, **Apple Vision**
+  (`VNRecognizeTextRequest`, `.accurate`, it-IT + en-US), tutto sul telefono:
+  niente IA generativa, niente rete, niente quota. Restituisce i pezzi di testo
+  con la **posizione** (frazioni, origine in alto a sinistra). La correzione
+  linguistica è accesa, con le parole del gergo protette (`PAROLE_GERGO` in
+  `src/lib/lettoreTesto.js`), o «SkiErg» diventerebbe una parola italiana.
+- `src/lib/testoDaFoto.js` — rimette i pezzi in **ordine di lettura**. Una
+  lavagna su due colonne letta dall'alto in basso mescolerebbe i due workout
+  riga per riga.
+  - Una colonna comincia dove **almeno tre** pezzi partono allineati a sinistra.
+  - Due allineamenti sono colonne diverse solo se i loro pezzi stanno sulle
+    **stesse righe**: un rientro (gli esercizi sotto «EMOM») ha righe sue.
+  - 🔴 Un pezzo che **scavalca** l'inizio di una colonna è un titolo. Trovato
+    sul simulatore: «HYROX SATURDAY» al centro della lavagna, stretto, copriva lo
+    spazio fra le colonne e con la prima regola (intervalli che si toccano) le
+    fondeva in una. I test non lo vedevano perché lì il titolo era largo.
+- `FoglioDaTesto` — «Fotografa o scegli una foto», solo se
+  `fotoDisponibile()`. La foto si riduce a **2400px, qualità 0.9**
+  (`riduciImmagine` ha preso le opzioni `max` e `qualita`): a 1280 la scritta di
+  una lavagna fotografata da lontano è troppo piccola. Il testo letto va **in
+  coda** al campo (si può fotografare in due scatti) e resta modificabile.
+- Fotocamera e radice nativa: docs/memoria/app-store.md §9-foto-ocr.
+- Android: fase 3, qui sotto.
+
+Test: `testoDaFoto.test.js` (9) e `FoglioDaTestoFoto.test.jsx` (5), visti
+fallire rompendo le regole; il caso della lavagna usa le posizioni lette da
+Vision sul simulatore.
+
+### Fase 3: la foto su Android (12/10/2026)
+- `android/app/src/main/java/it/federicoleo/fleofit/LettoreTestoPlugin.java` —
+  **ML Kit**, modello dentro l'app, registrato in `MainActivity`. Stessa
+  interfaccia del plugin iOS: il JavaScript non è cambiato, salvo i bottoni.
+- Su Android il foglio ha **due bottoni**, «Scatta una foto» (`capture`) e
+  «Dalla galleria»: la webview non offre la scelta da sé (android.md A.3 punto 11).
+- ⚠️ **Mai compilato**: scritto sul Mac, dove non c'è il JDK. Istruzioni di
+  prova in android.md A.4; la foto di prova è `tools/prova-foto/`.
+
+Test: `FoglioDaTestoFoto.test.jsx` (7): i due nuovi dicono un bottone su iOS e
+due su Android, con `capture` solo sullo scatto; visto fallire spegnendo la regola.

@@ -165,7 +165,13 @@ coach, quella è l'unica riga da sostituire con una lettura vera — e
 `BenvenutoCoach` funziona anche senza: senza `coach` scrive «Il tuo coach ti
 segue da oggi».
 
-### 🔴 «Fissa l'obiettivo» apre il modale dell'allenamento libero, e va detto
+### ✅ Dal 12/10/2026 «Fissa l'obiettivo» apre «Nuovo evento»
+`CampoObiettivo` e `BannerObiettivoVuoto` aprono `NuovoEvento`, la modale del
+calendario (gara HYROX dalla lista ufficiale o evento a mano): l'obiettivo nasce
+come workout `Event` assegnato all'atleta stesso, e compare nel calendario e nel
+`BannerObiettivo`. Nessuno schema nuovo. Il testo qui sotto è la storia di prima.
+
+### (storia) «Fissa l'obiettivo» apriva il modale dell'allenamento libero
 Un obiettivo dell'atleta **non è una tabella**: gli eventi sono workout di
 categoria `Event` che assegna il coach, e una colonna nuova su `athletes` è
 vietata dal congelamento dello schema (regola 0-bis). `onFissa` punta perciò a

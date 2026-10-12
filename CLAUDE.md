@@ -28,7 +28,7 @@
   (`docs/memoria/app-store.md`).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint al 09/10/2026: `npm test` → **1521 test**; `npx eslint src` → **27 problemi** (nessuno nei file di «Dalle note») (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
+- Test e lint al 12/10/2026: `npm test` → **1628 test**; `npx eslint src` → **27 problemi** (nessuno nei file di «Dalle note» né di «Da un testo scritto») (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---
@@ -274,10 +274,12 @@ src/
 └─ test/                            # setup.js, fintoSupabase.js, montaPagina.jsx
 tools/                              # icone-android.py, verifica-ipa.sh, verifica-revisore.sql,
                                     #   prova-estrai-note/ (istruzioni IA su note INVENTATE, prima del deploy)
-ios/ · android/                     # progetti nativi: a mano solo Info.plist, entitlements,
+                                    #   prova-foto/ (la lavagna di prova di «Da un testo scritto»)
+ios/ · android/                     # progetti nativi: a mano solo Info.plist, entitlements, i due plugin
+                                    #   dell'app (LettoreTesto.swift, LettoreTestoPlugin.java + MainActivity),
                                     #   AndroidManifest.xml, styles.xml
 supabase/functions/                 # send-reminders, ai-workout, ricerca-coach, estrai-note,
-                                    #   segnalazione, _shared/admin.ts + groq.ts
+                                    #   segnalazione, gare-hyrox, _shared/admin.ts + groq.ts
 supabase/schema/                    # fotografia delle policy RLS — NON una migrazione
 docs/memoria/                       # la storia, un file per argomento (§11)
 ```
@@ -307,7 +309,8 @@ staging, **schema congelato** (§0, 0-bis).
   delle 00:00 UTC; il backup gira prima, alle 22:30.
 - **Edge Function**: `send-reminders` (5 modalità), `ai-workout` (Gemini, riserva Groq), `ricerca-coach` (Groq, riserva Gemini: la ricerca del coach) ed `estrai-note` (**solo Groq**, con Zero Data Retention: le note degli atleti diventano dati, `docs/memoria/scheda-atleta.md`). ⚠️ Gemini gratuito = **20 richieste al giorno**, condivise da tutte le funzioni con la stessa chiave. `main` chiama solo `send-reminders`. Un deploy
   colpisce anche la web app. Più `segnalazione` (la mail «Segnala un problema» via Resend):
-  la usa solo l'app, quindi pubblicarla non tocca la web app.
+  la usa solo l'app, quindi pubblicarla non tocca la web app. E `gare-hyrox` (il calendario delle
+  gare HYROX, letto da hyrox.com), anche questa solo dell'app.
 - Entrambi i bucket (`athlete-photos`, `voice-notes`) sono **pubblici**.
 
 ---
@@ -348,7 +351,7 @@ Tre categorie principali + due implicite.
   }]
 }
 ```
-Tassonomie esercizi in `CreateWorkout.jsx:16-55`: `ERGOMETERS`, `SLED_EXERCISES`, `CARRY_EXERCISES`,
+Tassonomie esercizi in `src/lib/esercizi.js` (dal 12/10/2026, le legge anche `leggiWorkout.js`; `ERGOMETERS` in `src/lib/constants.js`): `SLED_EXERCISES`, `CARRY_EXERCISES`,
 `DISTANCE_EXERCISES`, `HYBRID_EXERCISES` (reps **o** distanza) + `HYROX_EXERCISES` (~130 esercizi,
 ordinati alfabeticamente). Si possono aggiungere esercizi **custom** scrivendoli a mano nel picker.
 
@@ -509,7 +512,8 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_name_<uid>`, `fleofit_invite_code`, `fleofit_motivation`, `fleofit_workout_draft`,
   `fleofit_offline_queue`, `fleofit_cache_workouts_<uid>`, `fleofit_cache_w_<id>`,
   `fleofit_cache_aw_<id>_<athleteId>`, `fleofit_cache_all_aw_<id>`, `fleofit_tv_code`,
-  `fleofit_ultimo_export`, `fleofit_invito_atteso`, `fleofit_segnalazione_bozza`, `adminRoleOverride`.
+  `fleofit_ultimo_export`, `fleofit_invito_atteso`, `fleofit_segnalazione_bozza`,
+  `fleofit_cache_gare_hyrox`, `adminRoleOverride`.
   ⚠️ `fleofit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
   dice «l'hai esportato da qui», e su un telefono nuovo semplicemente non c'è (§9-duoetvicies).
   ⚠️ `fleofit_invito_atteso` è un passaggio di consegne fra due caricamenti della pagina —
@@ -602,12 +606,12 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 |---|---|
 | `Home.jsx` (ramo atleta), `HomeAtletaUI`, `HomeAtletaVuotiUI`, `statistiche.js` | `home-atleta.md` |
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `statisticheCoach.js`, `pausa.js` | `home-coach.md` |
-| `CreateWorkout.jsx`, `CreaWorkoutUI`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, salvataggio e bozza | `crea-workout.md` |
+| `CreateWorkout.jsx`, `CreaWorkoutUI`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza | `crea-workout.md` |
 | `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |
 | `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |
-| `Calendar.jsx`, `CalendarioUI`, `rigaCalendario.js` | `calendario.md` |
+| `Calendar.jsx`, `CalendarioUI`, `rigaCalendario.js`, `NuovoEvento`, `gareHyrox.js`, Edge Function `gare-hyrox` | `calendario.md` |
 | `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js` | `report.md` |
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute` | `accesso.md` |
@@ -616,7 +620,8 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Recap*.jsx`, `recapAllenamento.js`, `gradimento.js` | `recap.md` |
 | animazioni, `index.css`, `Apertura.jsx`, modali, `Navbar.jsx`, `aptica.js` | `movimento-e-aptica.md` |
 | policy, cron, backup, bucket, Edge Function, push, note vocali | `database.md` |
-| `android/`, plugin nativi, emulatore | `android.md` |
+| `android/`, plugin nativi, emulatore, `MainActivity.java` | `android.md` |
+| `SceneDelegate.swift`, `FleoBridgeViewController`, plugin dell'app iOS | `app-store.md` (§9-foto-ocr) |
 | un archive o una risposta ad App Store, `ios/`, `Info.plist`, entitlements | `app-store.md` |
 | test, lint, `src/test/`, ambiente di prova, navigazione e tasto indietro | `qualita-e-test.md` |
 | merge, `main`, Vercel | `branch.md` |

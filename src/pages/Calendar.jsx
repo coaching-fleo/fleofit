@@ -2,12 +2,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { X } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, isSameDay, isToday } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useAuth } from '../App'
-import { CustomAlert } from '../components/CustomModals'
-import CustomDatePicker from '../components/CustomDatePicker'
+import NuovoEvento from '../components/NuovoEvento'
 import { categoriaDi, corsia } from '../lib/categorie'
 import { coloreCategoria } from '../lib/colori'
 import { metaWorkout, conteggiPerCorsia } from '../lib/rigaArchivio'
@@ -217,7 +215,7 @@ export default function Calendar() {
 
       {/* MODAL NUOVO EVENTO */}
       {eventModalOpen && createPortal(
-        <EventModal
+        <NuovoEvento
           athleteId={user.id}
           dataIniziale={dataSelezionata}
           onClose={() => setEventModalOpen(false)}
@@ -247,56 +245,4 @@ function etichettaCella(giorno, segno, lista) {
   const parti = [`${segno.n} ${segno.n === 1 ? 'allenamento' : 'allenamenti'}`]
   if (fatti > 0) parti.push(`${fatti} ${fatti === 1 ? 'completato' : 'completati'}`)
   return `${data}, ${parti.join(', ')}`
-}
-
-function EventModal({ athleteId, dataIniziale, onClose, onSaved }) {
-  const [title, setTitle] = useState('')
-  // La data parte da quella SELEZIONATA nel calendario, non da oggi: si apre
-  // questa modale dopo aver scelto un giorno, e ripartire da oggi obbligava a
-  // rifare la scelta appena fatta.
-  const [date, setDate] = useState(dataIniziale || format(new Date(), 'yyyy-MM-dd'))
-  const [saving, setSaving] = useState(false)
-  const [alertInfo, setAlertInfo] = useState(null)
-
-  const handleSave = async () => {
-    if (!title || !date) return setAlertInfo({ title: 'Errore', message: 'Titolo e data obbligatori', type: 'error' })
-    setSaving(true)
-    const { data: newW, error: wError } = await supabase.from('workouts').insert({
-      title,
-      date,
-      sections: { category: 'Event', isEvent: true, isAutonomous: true }
-    }).select().single()
-    if (wError) { setSaving(false); return setAlertInfo({ title: 'Errore', message: wError.message, type: 'error' }) }
-    const { error: awError } = await supabase.from('athlete_workouts').insert({
-      athlete_id: athleteId, workout_id: newW.id, completed_date: date, status: 'pending'
-    })
-    setSaving(false)
-    if (awError) return setAlertInfo({ title: 'Errore', message: awError.message, type: 'error' })
-    onSaved()
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#1e1e1e] rounded-3xl w-full max-w-sm flex flex-col border border-[#333] shadow-2xl modal-transition">
-        <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
-          <p className="text-white font-bold text-lg">Nuovo Evento / Gara</p>
-          <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
-        </div>
-        <div className="p-5 flex flex-col gap-4">
-          <div>
-            <label className="text-gray-400 text-xs pl-1 mb-1 block">Nome Evento *</label>
-            <input type="text" placeholder="Es. Maratona di Roma" value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-white text-base" />
-          </div>
-          <div>
-            <label className="text-gray-400 text-xs pl-1 mb-1 block">Data *</label>
-            <CustomDatePicker date={date} onChange={setDate} className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 hover:border-white w-full text-base" />
-          </div>
-          <button onClick={handleSave} disabled={saving || !title} className="w-full mt-2 py-3.5 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition disabled:opacity-50">
-            {saving ? 'Salvataggio...' : 'Aggiungi al Calendario'}
-          </button>
-        </div>
-      </div>
-      {alertInfo && <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />}
-    </div>
-  )
 }

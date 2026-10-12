@@ -159,8 +159,40 @@ e le push con l'app chiusa da giorni.
    solo `audio/webm`, `formatoRegistrabile()` torna `null` e si ripiega sul plugin.
 10. **Badge sull'icona**: su Android dipende dal launcher, spesso è un pallino o niente. Non è un
     errore. `sincronizzaBadge` (§8) resta l'unico punto che lo scrive.
+11. **La foto in «Da un testo scritto»** (12/10/2026): il plugin `LettoreTesto` qui è
+    `android/app/src/main/java/it/federicoleo/fleofit/LettoreTestoPlugin.java`, con **ML Kit**
+    (`com.google.mlkit:text-recognition`, modello **dentro** l'app: niente download al primo uso).
+    Stesso nome, stesso metodo `leggi({ base64, parole })` e stesse coordinate del gemello iOS
+    (frazioni, origine in ALTO a sinistra), quindi il JS non cambia. Tre differenze:
+    - 🔴 **È un plugin dell'app**: lo registra `MainActivity.onCreate` con `registerPlugin(…)`,
+      **prima** di `super.onCreate`. Dopo, la pagina non lo vede e il bottone non compare.
+    - **Due bottoni invece di uno.** La webview di Android non offre «scatta o galleria»: senza
+      `capture` apre solo la galleria, con `capture` solo la fotocamera (`BridgeWebChromeClient`
+      di Capacitor). `FoglioDaTesto` mette «Scatta una foto» e «Dalla galleria» quando
+      `getPlatform() === 'android'`. La fotocamera è quella di sistema: il manifest **non**
+      dichiara `CAMERA`, e così Capacitor non deve chiederla (se un giorno la si dichiara per
+      altro, Capacitor la chiederà prima di aprire la fotocamera).
+    - `parole` (il gergo da proteggere) si ignora: ML Kit non ha un vocabolario personalizzato
+      e non corregge in base alla lingua.
+
+    ⚠️ **Scritto sul Mac e MAI compilato** (sul Mac non c'è il JDK): va provato sul PC, vedi A.4.
 
 ### A.4 Cosa resta da provare o da fare su Android
+- 🔴 **La foto in «Da un testo scritto» (A.3 punto 11), mai compilata.** Sul PC:
+  1. `npm run android`, poi `cd android && ./gradlew installDebug`. Al primo build Gradle scarica
+     ML Kit; se si ferma su `LettoreTestoPlugin.java`, l'errore è lì e nient'altro è cambiato.
+  2. Mettere la foto di prova nella galleria dell'emulatore:
+     `adb push tools/prova-foto/lavagna-due-colonne.jpg /sdcard/Pictures/` e poi
+     `adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Pictures/lavagna-due-colonne.jpg`
+     (con `export MSYS_NO_PATHCONV=1` in Git Bash, A.1).
+  3. Crea Workout → Hyrox → «Da un testo scritto» → **«Dalla galleria»** → la lavagna.
+     Atteso, come su iOS: il titolo «HYROX SATURDAY» in cima, poi **tutta** la colonna di
+     sinistra e poi **tutta** quella di destra; nell'anteprima 4 blocchi (WarmUp, EMOM, For Time,
+     Rest) e 2 righe nelle note. Se le colonne escono mescolate riga per riga, ML Kit ha dato
+     coordinate diverse da Vision: guardarle da `chrome://inspect` (A.2) prima di toccare
+     `testoDaFoto.js`.
+  4. **«Scatta una foto»**: deve aprire la fotocamera (sull'emulatore, la scena virtuale).
+  5. ⚠️ Non salvare il workout: l'emulatore parla con il database di produzione (§1.1).
 - **La tastiera.** `Keyboard.resize: 'native'` in `capacitor.config.ts` è un'opzione **solo iOS**
   (§9-undecies punto 8): su Android il ridimensionamento lo decide `windowSoftInputMode` nel
   manifest, che non è dichiarato. Da verificare che i campi nelle modali restino sopra la tastiera

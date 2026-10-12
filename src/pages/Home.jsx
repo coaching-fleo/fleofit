@@ -18,6 +18,7 @@ import { leggiJson, scriviJson, leggiCoda, accodaSuStorage, chiaveCacheWorkout, 
 import { mostraErrore } from '../lib/alert'
 import { sincronizzaBadge } from '../lib/badge'
 import RpeModal from '../components/RpeModal'
+import NuovoEvento from '../components/NuovoEvento'
 import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 import { durataWorkout, numeroBlocchi, rpeAtteso, mediaRpeCategoria, serieGiorni, barreUltimiGiorni,
@@ -142,6 +143,9 @@ export default function Home() {
   const [storicoAtleta, setStoricoAtleta] = useState([])
 
   const [autonomousModalOpen, setAutonomousModalOpen] = useState(false)
+  // «Hai una gara in programma?»: la stessa modale del calendario (gara HYROX
+  // dalla lista ufficiale, o un evento scritto a mano), docs/memoria/calendario.md.
+  const [eventoModalOpen, setEventoModalOpen] = useState(false)
   const [autonomousForm, setAutonomousForm] = useState({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null })
   const [savingAutonomous, setSavingAutonomous] = useState(false)
   const [workoutToRemove, setWorkoutToRemove] = useState(null)
@@ -1279,15 +1283,11 @@ setNotifications(prev => {
           ) : vuoto ? (
             <>
               <BenvenutoCoach coach={COACH} onProfilo={() => navigate('/profile')} />
-              {/* ⚠️ `onFissa` apre il modale dell'allenamento libero: è la
-                  strada a costo zero indicata dal disegno, e la card non
-                  mente — chiede una data, e una data la si può mettere.
-                  Perché non c'è di meglio: un obiettivo dell'atleta non è una
-                  tabella, gli eventi sono workout di categoria `Event` che
-                  assegna il coach, e una colonna nuova su `athletes` è vietata
-                  dal congelamento dello schema (CLAUDE.md regola 0-bis). Voce
-                  in BACKLOG per farlo nascere direttamente come `Event`. */}
-              <CampoObiettivo onFissa={() => setAutonomousModalOpen(true)} />
+              {/* `onFissa` apre «Nuovo evento», la stessa modale del
+                  calendario: l'obiettivo nasce come workout `Event` e compare
+                  nel calendario e nel `BannerObiettivo` (fino al 12/10/2026
+                  apriva l'allenamento libero, BACKLOG 30-bis). */}
+              <CampoObiettivo onFissa={() => setEventoModalOpen(true)} />
               <CardPrimoLibero onAggiungi={() => setAutonomousModalOpen(true)} />
               <ComeFunziona />
             </>
@@ -1428,7 +1428,7 @@ setNotifications(prev => {
             <BannerObiettivo evento={nextEventHome} giorni={countdownDays}
               onOpen={() => navigate(`/workout/${nextEventHome.workouts.id}?athlete_id=${user.id}`)} />
           ) : primaSettimana ? (
-            <BannerObiettivoVuoto onFissa={() => setAutonomousModalOpen(true)} />
+            <BannerObiettivoVuoto onFissa={() => setEventoModalOpen(true)} />
           ) : null}
 
           {loading ? (
@@ -1558,6 +1558,16 @@ setNotifications(prev => {
             </div>
           </div>
         </div>,
+        document.body
+      )}
+
+      {eventoModalOpen && createPortal(
+        <NuovoEvento
+          athleteId={user.id}
+          dataIniziale={format(new Date(), 'yyyy-MM-dd')}
+          onClose={() => setEventoModalOpen(false)}
+          onSaved={() => { setEventoModalOpen(false); setRefreshTick(t => t + 1) }}
+        />,
         document.body
       )}
 

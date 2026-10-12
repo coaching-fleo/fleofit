@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback, memo, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2 } from 'lucide-react'
+import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
@@ -15,7 +15,7 @@ import { it } from 'date-fns/locale'
 import { generaTitolo, titoliDelGiorno } from '../lib/workoutTitle'
 import { codiceWorkout, separaCodice, unisciCodice } from '../lib/codiceWorkout'
 import { candidatiNome, nuovoSeme, scegliNome, nomeLibero, eNomeGenerato, nomiGiaUsati } from '../lib/nomeCasuale'
-import { ERGOMETERS } from '../lib/constants'
+import { HYROX_EXERCISES, isErgo, isSled, isCarry, isHybrid, isDistance } from '../lib/esercizi'
 import { mostraErrore } from '../lib/alert'
 import { battito, vibraPresa, vibraScelta, vibraSuccesso } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
@@ -42,47 +42,12 @@ import { parseDuration } from '../lib/timerSequence'
 import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
 import { SCALE, grandezza, testoMisura } from '../lib/scaleMisura'
 
+// Il lettore dei workout scritti si scarica solo quando si apre il foglio.
+const FoglioDaTesto = lazy(() => import('../components/FoglioDaTesto'))
+
 
 // ─── COSTANTI ────────────────────────────────────────────────
-const HYROX_EXERCISES = [
-  'Assault Bike', 'Atlas Stone Load', 'Axle Bar Clean', 'Axle Bar Deadlift',
-  'Back Lunge', 'Back Squat', 'Bar Muscle-up', 'Bar Pullover', 'Battle Ropes', 'Bear Crawl', 'Box Jump', 'Burpees', 'Burpees Broad Jumps', 'Burpees Jump',
-  'Chest-to-Bar', 'Clean', 'Cluster', 'Crossover Double Unders', 'Curve Treadmill',
-  'D-Ball Clean', 'Deadlift', 'Deficit Deadlift', 'Deficit Handstand Push-up', 'Devil Press', 'Double Unders', 'Dragon Flag', 'Dual Dumbbell Clean and Jerk', 'Dual Dumbbell Snatch', 'Dumbbell Box Step-Over', 'Dumbbell Snatch', 'Dumbbell Step-Up',
-  'Echo Bike',
-  'Farmers Carry', 'Farmers Walk', 'Freestanding Handstand Push-up', 'Front Lunge', 'Front Squat',
-  'GHD Back Extension', 'GHD Hip Extension', 'GHD Sit-up', 'Good Morning',
-  'Handstand Push-up', 'Handstand Walk', 'Hang Power Clean', 'Hang Power Snatch', 'Hang Squat Clean', 'Hang Squat Snatch', 'Hollow Body Hold', 'Hollow Rock',
-  'Jumping Jack', 'Jumping Muscle-up',
-  'Kettlebell Clean and Press', 'Kettlebell Goblet Squat', 'Kettlebell Snatch', 'Kettlebell Swing',
-  'L-Sit', 'Log Press',
-  'Man Maker', 'Military Press', 'Muscle Clean', 'Muscle Snatch',
-  'Overhead Squat', 'Overhead Walking Lunge',
-  'Pegboard Ascent', 'Pistol Squat', 'Plank', 'Power Clean', 'Power Snatch', 'Prowler Push', 'Pull-up', 'Push Jerk', 'Push Press', 'Push Up',
-  'Rest', 'Ring Dips', 'Ring Muscle-up', 'Romanian Deadlift', 'Rope Climb', 'Rowing', 'Run',
-  'Sandbag Bear Hug Squat', 'Sandbag Carry', 'Sandbag Lunges', 'Sandbag Over Shoulder', 'Shuttle Run', 'SkiErg', 'Skin the Cat', 'Sled Drag', 'Sled Pull', 'Sled Push', 'Snatch Balance', 'Sots Press', 'Split Jerk', 'Squat', 'Squat Clean', 'Squat Jack', 'Squat Snatch', 'Strict Handstand Push-up', 'Strict Muscle-up', 'Strict Press', 'Strict Pull-up', 'Suitcase Carry', 'Suitcase Deadlift', 'Sumo Deadlift', 'Sumo Deadlift High Pull', 'Superman Rock', 'Swim',
-  'Thruster', 'Tire Flip', 'Toes-to-Bar', 'Triple Unders', 'TrueForm Runner', 'Turkish Get-Up',
-  'V-Up',
-  "Waiter's Walk", 'Wall Balls', 'Wall Walk', 'Weighted Pull-up',
-  'Yoke Carry',
-  'Zercher Squat'
-]
-
-const isErgo = (name) => ERGOMETERS.includes(name)
-
-const SLED_EXERCISES = ['Sled Push', 'Sled Pull', 'Prowler Push', 'Sled Drag']
-const isSled = (name) => SLED_EXERCISES.includes(name)
-const CARRY_EXERCISES = ['Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', "Waiter's Walk", 'Handstand Walk', 'Bear Crawl']
-const isCarry = (name) => CARRY_EXERCISES.includes(name)
-const DISTANCE_EXERCISES = [
-  'Farmers Carry', 'Farmers Walk', 'Suitcase Carry', 'Sandbag Carry', 'Yoke Carry', 
-  "Waiter's Walk", 'Handstand Walk', 'Run', 'Bear Crawl', 'Shuttle Run', 'Swim'
-]
-
-const HYBRID_EXERCISES = ['Sandbag Lunges', 'Burpees Broad Jumps']
-const isHybrid = (name) => HYBRID_EXERCISES.includes(name)
-
-const isDistance = (name) => isErgo(name) || isSled(name) || DISTANCE_EXERCISES.includes(name)
+// Le tassonomie degli esercizi stanno in src/lib/esercizi.js.
 
 // ─── COSTANTI RUNNING ─────────────────────────────────────────
 const RUN_PACE_OPTIONS = [
@@ -2164,6 +2129,7 @@ export default function CreateWorkout() {
   const [bloccoInArrivo, setBloccoInArrivo] = useState(null)
   const [parametroInArrivo, setParametroInArrivo] = useState(null)
   const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [daTestoOpen, setDaTestoOpen] = useState(false)
   // L'ultima modifica fatta dall'IA: i blocchi di prima e quelli che ha
   // scritto. «Annulla» si vede solo finché la lista è ESATTAMENTE quella
   // scritta dall'IA (stesso riferimento): al primo ritocco a mano sparisce,
@@ -2296,6 +2262,32 @@ export default function CreateWorkout() {
     setBlocks(prev => [...prev, nuovo])
     apriSolo([nuovo.id])
     bloccoDaMostrare.current = nuovo.id
+  }
+
+  /**
+   * Quello che `FoglioDaTesto` ha letto da un workout scritto (src/lib/leggiWorkout.js).
+   * I blocchi passano da `preparaBlocchiIA` come quelli dell'IA: id nuovi e
+   * intensità di partenza. Le righe non capite vanno nelle note del coach,
+   * IN CODA a quello che c'era: non si sovrascrive una nota già scritta.
+   */
+  const usaDaTesto = ({ blocchi, fasi, note, sostituisci }) => {
+    if (note) setCoachNotes(prev => (prev.trim() ? `${prev.trimEnd()}\n${note}` : note))
+    if (fasi) {
+      const nuove = fasi.map(f => ({ ...f, id: Math.random() }))
+      setRunningSteps(prev => (sostituisci ? nuove : [...prev, ...nuove]))
+      return
+    }
+    const nuovi = preparaBlocchiIA(blocchi)
+    if (nuovi.length === 0) return
+    if (sostituisci) {
+      setModificaIA({ prima: blocks, dopo: nuovi, daTesto: true })
+      setBlocks(nuovi)
+    } else {
+      setBlocks(prev => [...prev, ...nuovi])
+    }
+    // Tutti aperti, come quelli dell'IA: sono da rileggere uno per uno.
+    apriSolo(nuovi.map(b => b.id))
+    bloccoDaMostrare.current = nuovi[0].id
   }
 
   const bloccoDragStart = useCallback((i) => { draggedBlockIdx.current = i }, [])
@@ -2947,9 +2939,16 @@ export default function CreateWorkout() {
             <CardIA onClick={() => setAiModalOpen(true)} inModifica={blocks.length > 0} />
           </BorderBeam>
 
+          <BottoneGhost icona={ScanText} onClick={() => setDaTestoOpen(true)}>Da un testo scritto</BottoneGhost>
+
+          {/* La stessa fascia serve a due sostituzioni: quella dell'IA (viola) e
+              quella del testo incollato, che non è IA e non ne porta il colore. */}
           {modificaIA && modificaIA.dopo === blocks && (
-            <div role="status" className="flex items-center gap-3 rounded-2xl border border-ia/30 bg-ia/10 px-4 py-2.5">
-              <p className="flex-1 text-[13px] font-semibold text-[#c4a6e8]">Blocchi modificati con l'IA</p>
+            <div role="status" className={`flex items-center gap-3 rounded-2xl px-4 py-2.5 ${modificaIA.daTesto
+              ? `${VETRO}` : 'border border-ia/30 bg-ia/10'}`}>
+              <p className={`flex-1 text-[13px] font-semibold ${modificaIA.daTesto ? 'text-gray-300' : 'text-[#c4a6e8]'}`}>
+                {modificaIA.daTesto ? 'Blocchi sostituiti dal testo' : 'Blocchi modificati con l\'IA'}
+              </p>
               <button type="button"
                 onClick={() => { setBlocks(modificaIA.prima); setModificaIA(null); battito() }}
                 className="flex items-center gap-1.5 text-[13px] font-extrabold text-white hover:text-ia transition px-1 -mx-1 min-h-9">
@@ -3064,6 +3063,17 @@ export default function CreateWorkout() {
         />
       )}
 
+      {daTestoOpen && (
+        <Suspense fallback={null}>
+          <FoglioDaTesto
+            categoria={category}
+            haGia={category === 'Running' ? runningSteps.length > 0 : blocks.length > 0}
+            onClose={() => setDaTestoOpen(false)}
+            onUsa={usaDaTesto}
+          />
+        </Suspense>
+      )}
+
       {/* ── STEP 2: LE FASI DI CORSA ─────────────────────────────── */}
       {/* ⚠️ Il corpo di questa schermata NON è stato ridisegnato: l'artboard
           «Crea Workout» copre lo step 1 (tutte e tre le categorie) e lo step 2
@@ -3076,6 +3086,8 @@ export default function CreateWorkout() {
             onChange={setWorkoutIntensity}
             classeColore="bg-running"
           />
+
+          <BottoneGhost icona={ScanText} onClick={() => setDaTestoOpen(true)}>Da un testo scritto</BottoneGhost>
 
           <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
             <div className="flex items-center justify-between">

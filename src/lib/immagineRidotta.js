@@ -16,20 +16,23 @@ export function dimensioniRidotte(larghezza, altezza, max = LATO_MAX) {
 /**
  * Legge un File dalla galleria e lo restituisce come JPEG ridotto, in base64
  * senza il prefisso `data:` (è il formato che Resend vuole negli allegati).
+ * `max` e `qualita` si cambiano per la lettura del testo di una foto
+ * (`lettoreTesto.js`): a 1280px la scritta di una lavagna fotografata da lontano
+ * diventa troppo piccola per l'OCR.
  * @returns {Promise<{ nome: string, base64: string }>}
  */
-export function riduciImmagine(file) {
+export function riduciImmagine(file, { max = LATO_MAX, qualita = QUALITA } = {}) {
   return new Promise((risolvi, rifiuta) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
       try {
-        const { larghezza, altezza } = dimensioniRidotte(img.naturalWidth, img.naturalHeight)
+        const { larghezza, altezza } = dimensioniRidotte(img.naturalWidth, img.naturalHeight, max)
         const tela = document.createElement('canvas')
         tela.width = larghezza
         tela.height = altezza
         tela.getContext('2d').drawImage(img, 0, 0, larghezza, altezza)
-        const base64 = tela.toDataURL('image/jpeg', QUALITA).split(',')[1]
+        const base64 = tela.toDataURL('image/jpeg', qualita).split(',')[1]
         const nome = `${(file.name || 'screenshot').replace(/\.[^.]+$/, '')}.jpg`
         risolvi({ nome, base64 })
       } catch (e) {

@@ -39,6 +39,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>FLEOFIT usa la fotocamera per fotografare un workout scritto, su una lavagna o un foglio, e trasformarlo in blocchi, e per la foto del profilo.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>FLEOFIT ha bisogno del microfono per permetterti di registrare e inviare note vocali.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

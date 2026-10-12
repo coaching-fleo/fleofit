@@ -315,6 +315,9 @@ export function clientDemo() {
         if (nome === 'ricerca-coach') return { data: ricercaFinta(opzioni?.body), error: null }
         // Gli estratti della demo nascono già nei semi (demoSemi.js): una
         // nota scritta nella demo resta «in analisi», come senza IA.
+        // Il calendario HYROX della demo: tre gare finte, date relative a oggi,
+        // così la lista non invecchia (la vera viene da hyrox.com).
+        if (nome === 'gare-hyrox') return { data: { gare: gareFinte() }, error: null }
         if (nome === 'estrai-note') return { data: { estratte: 0, restano: 0, sospesa: false }, error: null }
         console.info('[demo] Edge Function non chiamata:', nome, opzioni?.body)
         return { data: { ok: true }, error: null }
@@ -324,6 +327,15 @@ export function clientDemo() {
     removeChannel: () => {},
     rpc: async () => ({ data: null, error: null }),
   }
+}
+
+function gareFinte() {
+  const giorno = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10) }
+  return [
+    { id: 'd1', nome: 'HYROX Milano (demo)', codice: 'MIL', dal: giorno(10), al: giorno(13), url: 'https://hyrox.com/find-my-race/', continente: 'europe' },
+    { id: 'd2', nome: 'HYROX São Paulo (demo)', codice: 'SPO', dal: giorno(20), al: giorno(21), url: 'https://hyrox.com/find-my-race/', continente: 'south-america' },
+    { id: 'd3', nome: 'HYROX Budapest (demo)', codice: 'BUD', dal: giorno(35), al: giorno(35), url: 'https://hyrox.com/find-my-race/', continente: 'europe' },
+  ]
 }
 
 // ── «Cerca con l'IA» senza Gemini ───────────────────────────────────────────
