@@ -106,7 +106,7 @@ describe('2a · Il giorno 1', () => {
   it('l\'obiettivo si fissa con «Nuovo evento», non con l\'allenamento libero', async () => {
     monta([])
     fireEvent.click(await screen.findByLabelText('Aggiungi il tuo obiettivo'))
-    expect(await screen.findByText('Nuovo Evento / Gara')).toBeInTheDocument()
+    expect(await screen.findByText('Nuovo evento')).toBeInTheDocument()
     expect(screen.queryByText('Allenamento Libero')).not.toBeInTheDocument()
   })
 

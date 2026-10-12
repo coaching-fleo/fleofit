@@ -178,8 +178,24 @@ La modale «Nuovo Evento / Gara» è uscita da `Calendar.jsx` ed è diventata
   87 adulte con data. Escono le **Youngstars**, i riquadri dei **partner** (stessa
   griglia) e le gare **senza data** (es. «HYROX New York»).
 - Serve un User-Agent da browser: il sito sta dietro Cloudflare.
+- **Il paese** (dal 12/10/2026, sera): la pagina generale dice solo il
+  continente (classe `continent-*`), ma il filtro «Region/Country» del sito
+  risponde **lato server** con `?filter_region=<slug>`. La funzione chiede una
+  pagina per ognuno dei 36 paesi (8 alla volta, ~2,5 s in tutto, solo quando la
+  copia di 6 ore è scaduta) e incrocia gli id. Lo slug diventa un codice ISO con
+  `ISO_PAESI` in `regole.ts`: un test fallisce se il sito aggiunge un paese che
+  lì manca. Un paese che non risponde lascia le sue gare senza bandiera, non
+  fa sparire la lista. ⚠️ L'API JSON di WordPress non espone la tassonomia `region`.
+- **La foto** è quella del riquadro su hyrox.com, caricata direttamente dal loro
+  sito (non copiata). In **bianco e nero** (`grayscale`): a colori le foto di
+  città diverse litigherebbero con la palette.
 
 ### Nel telefono
+- **A tutto schermo** (dal 12/10/2026, sera), sul modello dell'app che il
+  committente ha indicato: card con foto, data, città, bandiera e paese in
+  italiano (`Intl.DisplayNames`), continente a pillola; ricerca e filtro
+  «Tutte le regioni» (un `<select>`, così su iPhone apre il selettore di sistema).
+- La copia locale porta `versione`: una copia di forma vecchia si butta.
 - `src/lib/gareHyrox.js`: copia locale in `fleofit_cache_gare_hyrox` per 12 ore;
   se il server non risponde si usa la copia **anche vecchia**; senza copia la
   modale dice che la lista non c'è e porta al campo libero. Mai una lista vuota
@@ -190,9 +206,13 @@ La modale «Nuovo Evento / Gara» è uscita da `Calendar.jsx` ed è diventata
 - Le gare durano più giorni: l'atleta sceglie **il suo** giorno. Si propone
   quello selezionato nel calendario se cade dentro la gara, altrimenti il primo.
 
+### La Home
+«Hai una gara in programma?» e il banner «Prossimo obiettivo» della prima
+settimana aprono questa stessa schermata (home-atleta.md).
+
 ### Cosa si salva
 Lo stesso evento di sempre (`category: 'Event'`, `isEvent`, `isAutonomous`) più
-`sections.hyrox = { id, codice, url, dal, al }`. Nessuna migrazione; `main` e
+`sections.hyrox = { id, codice, url, dal, al, paese, immagine }`. Nessuna migrazione; `main` e
 tutte le schermate che leggono gli eventi lo trattano come prima. `sections.hyrox`
 serve alla **fase 2** (il tempo da results.hyrox.com dopo la gara, BACKLOG #69).
 

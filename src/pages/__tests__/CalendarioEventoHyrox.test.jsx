@@ -23,9 +23,10 @@ const Calendar = (await import('../Calendar')).default
 // 12 ottobre 2026: Valencia (15–18) e Budapest (17) sono future, Monaco no.
 const OGGI = new Date(2026, 9, 12, 10, 0, 0)
 const GARE = [
-  { id: '10', nome: 'HYROX Monaco', codice: 'MUC', dal: '2026-10-01', al: '2026-10-04', url: 'u' },
-  { id: '11', nome: 'HYROX Valencia', codice: 'VLC', dal: '2026-10-15', al: '2026-10-18', url: 'https://hyrox.com/event/hyrox-valencia/' },
-  { id: '12', nome: 'HYROX Budapest', codice: 'BUD', dal: '2026-10-17', al: '2026-10-17', url: 'u' },
+  { id: '10', nome: 'HYROX Monaco', codice: 'MUC', dal: '2026-10-01', al: '2026-10-04', url: 'u', continente: 'europe', paese: 'DE' },
+  { id: '11', nome: 'HYROX Valencia', codice: 'VLC', dal: '2026-10-15', al: '2026-10-18', url: 'https://hyrox.com/event/hyrox-valencia/', continente: 'europe', paese: 'ES', citta: 'Valencia', immagine: 'https://hyrox.com/v.jpg' },
+  { id: '12', nome: 'HYROX Budapest', codice: 'BUD', dal: '2026-10-17', al: '2026-10-17', url: 'u', continente: 'europe', paese: 'HU' },
+  { id: '13', nome: 'HYROX São Paulo', codice: 'SPO', dal: '2026-10-17', al: '2026-10-18', url: 'u', continente: 'south-america', paese: 'BR' },
 ]
 
 beforeEach(() => {
@@ -52,19 +53,29 @@ describe('Nuovo evento — gara HYROX', () => {
   it('mostra solo le gare non ancora finite, e la ricerca le filtra', async () => {
     finto.supabase.functions.invoke.mockResolvedValue({ data: { gare: GARE }, error: null })
     const u = await apri()
-    expect(await screen.findByText('HYROX Valencia')).toBeInTheDocument()
-    expect(screen.getByText('HYROX Budapest')).toBeInTheDocument()
-    expect(screen.queryByText('HYROX Monaco')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /HYROX Valencia/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /HYROX Budapest/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /HYROX Monaco/ })).not.toBeInTheDocument()
 
     await u.type(screen.getByRole('searchbox', { name: 'Cerca gara HYROX' }), 'bud')
-    expect(screen.queryByText('HYROX Valencia')).not.toBeInTheDocument()
-    expect(screen.getByText('HYROX Budapest')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /HYROX Valencia/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /HYROX Budapest/ })).toBeInTheDocument()
+  })
+
+  it('filtra per regione del mondo, con bandiera e paese in italiano', async () => {
+    finto.supabase.functions.invoke.mockResolvedValue({ data: { gare: GARE }, error: null })
+    const u = await apri()
+    expect(await screen.findByText('Spagna')).toBeInTheDocument()
+    expect(screen.getByText('🇪🇸')).toBeInTheDocument()
+    await u.selectOptions(screen.getByRole('combobox', { name: 'Regione del mondo' }), 'south-america')
+    expect(screen.getByRole('button', { name: /HYROX São Paulo/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /HYROX Valencia/ })).not.toBeInTheDocument()
   })
 
   it('salva un evento con la gara dentro e il giorno scelto', async () => {
     finto.supabase.functions.invoke.mockResolvedValue({ data: { gare: GARE }, error: null })
     const u = await apri()
-    await u.click(await screen.findByText('HYROX Valencia'))
+    await u.click(await screen.findByRole('button', { name: /HYROX Valencia/ }))
     await u.click(screen.getByRole('button', { name: 'sab 17' }))
     await u.click(screen.getByRole('button', { name: 'Aggiungi al Calendario' }))
 
@@ -75,7 +86,10 @@ describe('Nuovo evento — gara HYROX', () => {
       date: '2026-10-17',
       sections: {
         category: 'Event', isEvent: true, isAutonomous: true,
-        hyrox: { id: '11', codice: 'VLC', url: 'https://hyrox.com/event/hyrox-valencia/', dal: '2026-10-15', al: '2026-10-18' },
+        hyrox: {
+          id: '11', codice: 'VLC', url: 'https://hyrox.com/event/hyrox-valencia/', dal: '2026-10-15', al: '2026-10-18',
+          paese: 'ES', immagine: 'https://hyrox.com/v.jpg',
+        },
       },
     })
     expect(finto.chiamateA('athlete_workouts', 'insert')[0].args[0]).toMatchObject({

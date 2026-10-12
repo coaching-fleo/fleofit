@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
-  gareFuture, cercaGare, periodoGara, giorniGara, giornoProposto, sectionsEvento, caricaGare, CHIAVE_CACHE_GARE,
+  gareFuture, cercaGare, periodoGara, continentiPresenti, filtraContinente, nomeContinente, bandiera, nomePaese, giorniGara, giornoProposto, sectionsEvento, caricaGare, CHIAVE_CACHE_GARE,
 } from '../gareHyrox'
 
 // Perché questi test esistono
@@ -10,9 +10,9 @@ import {
 // bastare, anche vecchia, e senza copia la modale deve sapere che non c'è
 // niente (e ripiegare sul campo libero) invece di mostrare una lista vuota.
 
-const VALENCIA = { id: '1', nome: 'HYROX Valencia', codice: 'VLC', dal: '2026-10-15', al: '2026-10-18', url: 'https://hyrox.com/event/hyrox-valencia/' }
-const SAO_PAULO = { id: '2', nome: 'HYROX São Paulo', codice: 'SPO', dal: '2026-10-17', al: '2026-10-18', url: 'u' }
-const AMBURGO = { id: '3', nome: 'INTERSPORT HYROX Hamburg', codice: 'HAM', dal: '2026-10-28', al: '2026-11-01', url: 'u' }
+const VALENCIA = { id: '1', nome: 'HYROX Valencia', codice: 'VLC', dal: '2026-10-15', al: '2026-10-18', url: 'https://hyrox.com/event/hyrox-valencia/', continente: 'europe', paese: 'ES', paeseNome: 'Spain', immagine: 'https://hyrox.com/v.jpg' }
+const SAO_PAULO = { id: '2', nome: 'HYROX São Paulo', codice: 'SPO', dal: '2026-10-17', al: '2026-10-18', url: 'u', continente: 'south-america', paese: 'BR', paeseNome: 'Brazil' }
+const AMBURGO = { id: '3', nome: 'INTERSPORT HYROX Hamburg', codice: 'HAM', dal: '2026-10-28', al: '2026-11-01', url: 'u', continente: 'europe', paese: '', paeseNome: 'Germany' }
 const GARE = [VALENCIA, SAO_PAULO, AMBURGO]
 
 function memoria(iniziale = {}) {
@@ -38,8 +38,35 @@ describe('cercaGare', () => {
     expect(cercaGare(GARE, 'vlc').map(g => g.id)).toEqual(['1'])
     expect(cercaGare(GARE, 'hyrox hamb').map(g => g.id)).toEqual(['3'])
   })
+  it('cerca anche per paese, in italiano e in inglese', () => {
+    expect(cercaGare(GARE, 'spagna').map(g => g.id)).toEqual(['1'])
+    expect(cercaGare(GARE, 'germany').map(g => g.id)).toEqual(['3'])
+  })
   it('una ricerca vuota tiene tutto', () => {
     expect(cercaGare(GARE, '  ')).toHaveLength(3)
+  })
+})
+
+describe('continenti e paesi', () => {
+  it('elenca i continenti presenti, nell\'ordine del filtro', () => {
+    expect(continentiPresenti(GARE)).toEqual(['europe', 'south-america'])
+    expect(continentiPresenti([...GARE, { continente: 'antarctica' }])).toEqual(['europe', 'south-america', 'antarctica'])
+  })
+  it('filtra per continente; vuoto = tutti', () => {
+    expect(filtraContinente(GARE, 'europe').map(g => g.id)).toEqual(['1', '3'])
+    expect(filtraContinente(GARE, '')).toHaveLength(3)
+  })
+  it('nomi in italiano, e uno sconosciuto ripulito', () => {
+    expect(nomeContinente('north-america')).toBe('Nord America')
+    expect(nomeContinente('antarctica')).toBe('Antarctica')
+  })
+  it('bandiera dal codice ISO, niente con un codice assente', () => {
+    expect(bandiera('ES')).toBe('🇪🇸')
+    expect(bandiera('')).toBe('')
+  })
+  it('paese in italiano, o l\'etichetta del sito senza codice', () => {
+    expect(nomePaese(VALENCIA)).toBe('Spagna')
+    expect(nomePaese(AMBURGO)).toBe('Germany')
   })
 })
 
@@ -70,7 +97,10 @@ describe('sectionsEvento', () => {
   it('resta un evento normale, con la gara in più', () => {
     expect(sectionsEvento(VALENCIA)).toEqual({
       category: 'Event', isEvent: true, isAutonomous: true,
-      hyrox: { id: '1', codice: 'VLC', url: 'https://hyrox.com/event/hyrox-valencia/', dal: '2026-10-15', al: '2026-10-18' },
+      hyrox: {
+        id: '1', codice: 'VLC', url: 'https://hyrox.com/event/hyrox-valencia/', dal: '2026-10-15', al: '2026-10-18',
+        paese: 'ES', immagine: 'https://hyrox.com/v.jpg',
+      },
     })
   })
   it('senza gara è l\'evento di sempre', () => {
@@ -83,7 +113,7 @@ describe('caricaGare', () => {
   const supa = (risposta) => ({ functions: { invoke: vi.fn(() => Promise.resolve(risposta)) } })
 
   it('una copia fresca non chiama il server', async () => {
-    const storage = memoria({ [CHIAVE_CACHE_GARE]: JSON.stringify({ salvate: ADESSO - 1000, gare: GARE }) })
+    const storage = memoria({ [CHIAVE_CACHE_GARE]: JSON.stringify({ versione: 2, salvate: ADESSO - 1000, gare: GARE }) })
     const s = supa({ data: null, error: null })
     expect(await caricaGare(s, { adesso: ADESSO, storage })).toEqual({ gare: GARE, errore: null })
     expect(s.functions.invoke).not.toHaveBeenCalled()
@@ -98,9 +128,16 @@ describe('caricaGare', () => {
   })
 
   it('server giù: usa la copia anche vecchia', async () => {
-    const storage = memoria({ [CHIAVE_CACHE_GARE]: JSON.stringify({ salvate: ADESSO - 30 * 86_400_000, gare: GARE }) })
+    const storage = memoria({ [CHIAVE_CACHE_GARE]: JSON.stringify({ versione: 2, salvate: ADESSO - 30 * 86_400_000, gare: GARE }) })
     const s = supa({ data: null, error: new Error('502') })
     expect(await caricaGare(s, { adesso: ADESSO, storage })).toEqual({ gare: GARE, errore: null })
+  })
+
+  it('una copia di forma vecchia (senza versione) si richiede al server', async () => {
+    const storage = memoria({ [CHIAVE_CACHE_GARE]: JSON.stringify({ salvate: ADESSO - 1000, gare: GARE }) })
+    const s = supa({ data: { gare: GARE }, error: null })
+    await caricaGare(s, { adesso: ADESSO, storage })
+    expect(s.functions.invoke).toHaveBeenCalled()
   })
 
   it('server giù e nessuna copia: un errore, non una lista vuota spacciata per vera', async () => {

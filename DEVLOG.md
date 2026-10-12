@@ -39,7 +39,7 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 - Si può anche chiedere di **aprire una schermata** o di **creare un workout** per un atleta in una data.
 
 ## Calendario e gare
-- **«Nuovo evento» sceglie la gara dal calendario HYROX ufficiale**: si cerca per città, si tocca la gara e nome e giorni si compilano da soli; per le gare di più giorni si sceglie il proprio. «Altro evento» resta il campo libero di prima.
+- **«Nuovo evento» sceglie la gara dal calendario HYROX ufficiale**: a tutto schermo, una card per gara con foto, città, bandiera e paese; si cerca per città o paese e si filtra per regione del mondo. Toccata la gara, nome e giorni si compilano da soli; per le gare di più giorni si sceglie il proprio. «Altro evento» resta il campo libero di prima.
 - Dalla Home, **«Hai una gara in programma?»** apre la stessa scelta della gara: prima apriva l'allenamento libero, e la gara non compariva né nel calendario né nel conto alla rovescia.
 
 ## Segnala un problema

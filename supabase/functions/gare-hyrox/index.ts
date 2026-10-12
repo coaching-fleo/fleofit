@@ -11,7 +11,7 @@
 // Nessun secret richiesto.
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
-import { type Gara, URL_GARE, leggiGare } from "./regole.ts"
+import { type Gara, URL_GARE, assegnaPaesi, idDellaPagina, leggiGare, leggiPaesi } from "./regole.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,18 +26,45 @@ const risposta = (corpo: unknown, status = 200) => new Response(JSON.stringify(c
 const DURATA_COPIA = 6 * 3_600_000;
 let copia: { gare: Gara[], aggiornate: string, scade: number } | null = null;
 
+const INTESTAZIONI = {
+  // ⚠️ Senza un User-Agent da browser il sito (dietro Cloudflare) può
+  // rispondere 403.
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36',
+  'Accept': 'text/html',
+  'Accept-Language': 'en',
+};
+
+async function pagina(url: string): Promise<string> {
+  const r = await fetch(url, { headers: INTESTAZIONI, signal: AbortSignal.timeout(10_000) });
+  if (!r.ok) throw new Error(`hyrox.com ha risposto ${r.status} su ${url}`);
+  return r.text();
+}
+
+/**
+ * La pagina generale non dice il PAESE di una gara (solo il continente), ma il
+ * sito filtra per paese lato server: `?filter_region=<slug>`. Si chiede una
+ * pagina per paese (36 il 12/10/2026, ~2,5 s in parallelo) e si incrociano gli
+ * id. Un paese che non risponde lascia le sue gare senza bandiera, non la
+ * lista vuota.
+ */
 async function scarica(): Promise<Gara[]> {
-  const r = await fetch(URL_GARE, {
-    headers: {
-      // ⚠️ Senza un User-Agent da browser il sito (dietro Cloudflare) può
-      // rispondere 403.
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36',
-      'Accept': 'text/html',
-      'Accept-Language': 'en',
-    },
-  });
-  if (!r.ok) throw new Error(`hyrox.com ha risposto ${r.status}`);
-  return leggiGare(await r.text());
+  const html = await pagina(URL_GARE);
+  const gare = leggiGare(html);
+  if (gare.length === 0) return gare;
+  const paesi = leggiPaesi(html);
+  const perPaese: Record<string, string[]> = {};
+  const coda = [...paesi];
+  const lavoratore = async () => {
+    for (let p = coda.shift(); p; p = coda.shift()) {
+      try {
+        perPaese[p.slug] = idDellaPagina(await pagina(`${URL_GARE}?filter_region=${encodeURIComponent(p.slug)}`));
+      } catch (e) {
+        console.warn(`gare-hyrox: paese ${p.slug} non letto:`, e);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: 8 }, lavoratore));
+  return assegnaPaesi(gare, paesi, perPaese);
 }
 
 serve(async (req) => {

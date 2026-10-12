@@ -332,9 +332,9 @@ export function clientDemo() {
 function gareFinte() {
   const giorno = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10) }
   return [
-    { id: 'd1', nome: 'HYROX Milano (demo)', codice: 'MIL', dal: giorno(10), al: giorno(13), url: 'https://hyrox.com/find-my-race/', continente: 'europe' },
-    { id: 'd2', nome: 'HYROX São Paulo (demo)', codice: 'SPO', dal: giorno(20), al: giorno(21), url: 'https://hyrox.com/find-my-race/', continente: 'south-america' },
-    { id: 'd3', nome: 'HYROX Budapest (demo)', codice: 'BUD', dal: giorno(35), al: giorno(35), url: 'https://hyrox.com/find-my-race/', continente: 'europe' },
+    { id: 'd1', nome: 'HYROX Milano (demo)', codice: 'MIL', dal: giorno(10), al: giorno(13), url: 'https://hyrox.com/find-my-race/', continente: 'europe', citta: 'Milano (demo)', paese: 'IT', paeseNome: 'Italy', immagine: 'https://hyrox.com/wp-content/uploads/2026/10/pexels-giuseppe-di-maria-163888120-28884755-copia-scaled-3-640x960.jpg' },
+    { id: 'd2', nome: 'HYROX São Paulo (demo)', codice: 'SPO', dal: giorno(20), al: giorno(21), url: 'https://hyrox.com/find-my-race/', continente: 'south-america', citta: 'São Paulo (demo)', paese: 'BR', paeseNome: 'Brazil', immagine: 'https://hyrox.com/wp-content/uploads/2026/03/Imagem-2-1274x960.jpg' },
+    { id: 'd3', nome: 'HYROX Budapest (demo)', codice: 'BUD', dal: giorno(35), al: giorno(35), url: 'https://hyrox.com/find-my-race/', continente: 'europe', citta: 'Budapest (demo)', paese: 'HU', paeseNome: 'Hungary', immagine: '' },
   ]
 }
 

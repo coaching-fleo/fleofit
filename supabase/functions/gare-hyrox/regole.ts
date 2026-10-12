@@ -18,6 +18,34 @@ export type Gara = {
   al: string          // yyyy-MM-dd, uguale a `dal` per una gara di un giorno
   url: string
   continente: string  // 'europe', 'north-america'… dalla classe del riquadro
+  citta: string       // il nome senza sponsor e senza «HYROX»: «Valencia», «Hamburg»
+  immagine: string    // la foto del riquadro su hyrox.com, '' se manca
+  paese: string       // ISO 3166 a due lettere ('ES'), '' se sconosciuto
+  paeseNome: string   // l'etichetta inglese del sito ('Spain'), per i paesi senza codice
+}
+
+export type Paese = { slug: string, nome: string }
+
+/**
+ * Lo slug del filtro «Region/Country» del sito → codice ISO, per bandiera e
+ * nome in italiano nel telefono. Un paese che il sito aggiunge e qui manca
+ * non rompe niente: arriva senza bandiera, con il nome inglese.
+ */
+export const ISO_PAESI: Record<string, string> = {
+  'argentina': 'AR', 'australia': 'AU', 'austria': 'AT', 'bahrain': 'BH', 'belgium': 'BE',
+  'brazil': 'BR', 'bulgaria': 'BG', 'canada': 'CA', 'chile': 'CL', 'china': 'CN',
+  'colombia': 'CO', 'costa-rica': 'CR', 'croatia': 'HR', 'czech-republic': 'CZ', 'czechia': 'CZ',
+  'denmark': 'DK', 'egypt': 'EG', 'estonia': 'EE', 'finland': 'FI', 'france': 'FR',
+  'germany': 'DE', 'greece': 'GR', 'hong-kong': 'HK', 'hungary': 'HU', 'iceland': 'IS',
+  'india': 'IN', 'indonesia': 'ID', 'ireland': 'IE', 'israel': 'IL', 'italy': 'IT',
+  'japan': 'JP', 'kuwait': 'KW', 'latvia': 'LV', 'lithuania': 'LT', 'luxembourg': 'LU',
+  'malaysia': 'MY', 'mexico': 'MX', 'morocco': 'MA', 'netherlands': 'NL', 'new-zealand': 'NZ',
+  'norway': 'NO', 'oman': 'OM', 'peru': 'PE', 'philippines': 'PH', 'poland': 'PL',
+  'portugal': 'PT', 'qatar': 'QA', 'romania': 'RO', 'rza-south-africa': 'ZA', 'saudi-arabia': 'SA',
+  'serbia': 'RS', 'singapore': 'SG', 'slovakia': 'SK', 'slovenia': 'SI', 'south-africa': 'ZA',
+  'south-korea': 'KR', 'spain': 'ES', 'sweden': 'SE', 'switzerland': 'CH', 'taiwan': 'TW',
+  'thailand': 'TH', 'turkey': 'TR', 'uae': 'AE', 'united-arab-emirates': 'AE', 'united-kingdom': 'GB',
+  'uk': 'GB', 'uruguay': 'UY', 'usa': 'US', 'united-states': 'US', 'vietnam': 'VN',
 }
 
 const MESI: Record<string, string> = {
@@ -73,16 +101,59 @@ export function leggiGare(html: string): Gara[] {
     if (!id || !titolo || !dal || visti.has(id)) continue
     const al = leggiData(campo(r, 'event_date_3') || '')
     visti.add(id)
+    const nome = decodifica(titolo[2])
     gare.push({
       id,
-      nome: decodifica(titolo[2]),
+      nome,
       codice: decodifica(campo(r, 'event_city_letter_code') || ''),
       dal,
       // Una fine PRIMA dell'inizio è un refuso del sito: meglio un giorno solo.
       al: al && al >= dal ? al : dal,
       url: titolo[1],
       continente: /\bcontinent-([a-z-]+)/.exec(classi)?.[1] || '',
+      citta: citta(nome),
+      immagine: /<img[^>]*\ssrc="(https:\/\/[^"]+)"/.exec(r)?.[1] || '',
+      paese: '',
+      paeseNome: '',
     })
   }
   return gare
+}
+
+/**
+ * «INTERSPORT HYROX Hamburg» → «Hamburg»: quello che viene dopo l'ultimo
+ * «HYROX», cioè senza lo sponsor davanti. Un nome senza «HYROX» resta com'è.
+ */
+export function citta(nome: string): string {
+  const m = /HYROX\s+(.+)$/i.exec(nome || '')
+  return (m ? m[1] : nome || '').trim()
+}
+
+/** I paesi del filtro «Region/Country» della pagina, con l'etichetta del sito. */
+export function leggiPaesi(html: string): Paese[] {
+  const re = /<input type="checkbox" value="([a-z0-9-]+)" name="filter_region"><span class="w-filter-item-value-label">([^<]*)</g
+  const paesi: Paese[] = []
+  for (const m of (html || '').matchAll(re)) {
+    if (!paesi.some(p => p.slug === m[1])) paesi.push({ slug: m[1], nome: decodifica(m[2]) })
+  }
+  return paesi
+}
+
+/** Gli id delle gare su una pagina filtrata per paese (`?filter_region=<slug>`). */
+export function idDellaPagina(html: string): string[] {
+  return leggiGare(html).map(g => g.id)
+}
+
+/**
+ * Mette il paese su ogni gara, a partire dalle pagine filtrate: `perPaese` è
+ * `{ slug: [id…] }`. Una gara che nessuna pagina ha nominato (una richiesta
+ * fallita) resta senza paese: niente bandiera, ma c'è.
+ */
+export function assegnaPaesi(gare: Gara[], paesi: Paese[], perPaese: Record<string, string[]>): Gara[] {
+  const diChi = new Map<string, Paese>()
+  for (const p of paesi) for (const id of perPaese[p.slug] || []) if (!diChi.has(id)) diChi.set(id, p)
+  return gare.map(g => {
+    const p = diChi.get(g.id)
+    return p ? { ...g, paese: ISO_PAESI[p.slug] || '', paeseNome: p.nome } : g
+  })
 }

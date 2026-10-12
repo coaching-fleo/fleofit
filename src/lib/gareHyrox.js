@@ -14,6 +14,56 @@ export const CHIAVE_CACHE_GARE = 'fleofit_cache_gare_hyrox'
 // Più corta della copia del server (6 ore) non serve: il calendario HYROX non
 // cambia nell'arco di una giornata in un modo che conti per chi si iscrive.
 const DURATA_CACHE = 12 * 3_600_000
+// Sale quando cambia la forma di una gara: una copia di forma vecchia (senza
+// foto né paese, prima del 12/10/2026) si butta invece di mostrarla a metà.
+const VERSIONE_CACHE = 2
+
+/** I continenti del sito, nell'ordine del filtro, con il nome in italiano. */
+export const CONTINENTI = {
+  'europe': 'Europa',
+  'north-america': 'Nord America',
+  'south-america': 'Sud America',
+  'asia-pacific': 'Asia e Pacifico',
+  'middle-east': 'Medio Oriente',
+  'africa': 'Africa',
+}
+
+/** Il nome di un continente; uno che il sito aggiunge esce con lo slug ripulito. */
+export function nomeContinente(slug) {
+  if (!slug) return ''
+  return CONTINENTI[slug] || slug.split('-').map(p => p[0].toUpperCase() + p.slice(1)).join(' ')
+}
+
+/** I continenti che compaiono nella lista, nell'ordine di `CONTINENTI`. */
+export function continentiPresenti(gare) {
+  const presenti = new Set((gare || []).map(g => g.continente).filter(Boolean))
+  const noti = Object.keys(CONTINENTI).filter(c => presenti.has(c))
+  return [...noti, ...[...presenti].filter(c => !CONTINENTI[c]).sort()]
+}
+
+/** `''` = tutti i continenti. */
+export function filtraContinente(gare, continente) {
+  return continente ? (gare || []).filter(g => g.continente === continente) : (gare || [])
+}
+
+/** «ES» → 🇪🇸. Un codice che non è di due lettere non dà bandiera. */
+export function bandiera(iso) {
+  if (!/^[A-Za-z]{2}$/.test(iso || '')) return ''
+  return String.fromCodePoint(...iso.toUpperCase().split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65))
+}
+
+let nomiPaesi = null
+/** Il paese in italiano («Spagna»); senza codice, l'etichetta inglese del sito. */
+export function nomePaese(gara) {
+  if (gara?.paese) {
+    try {
+      nomiPaesi = nomiPaesi || new Intl.DisplayNames(['it'], { type: 'region' })
+      const nome = nomiPaesi.of(gara.paese.toUpperCase())
+      if (nome && nome !== gara.paese.toUpperCase()) return nome
+    } catch { /* Intl senza DisplayNames: si ricade sull'etichetta del sito */ }
+  }
+  return gara?.paeseNome || ''
+}
 
 /** «São Paulo» e «sao paulo» devono trovarsi a vicenda. */
 function normalizza(testo) {
@@ -33,7 +83,7 @@ export function cercaGare(gare, testo) {
   const parole = normalizza(testo).split(/\s+/).filter(Boolean)
   if (parole.length === 0) return gare || []
   return (gare || []).filter(g => {
-    const dove = normalizza(`${g.nome} ${g.codice}`)
+    const dove = normalizza(`${g.nome} ${g.codice} ${nomePaese(g)} ${g.paeseNome || ''}`)
     return parole.every(p => dove.includes(p))
   })
 }
@@ -91,7 +141,10 @@ export function sectionsEvento(gara) {
   if (!gara) return base
   return {
     ...base,
-    hyrox: { id: gara.id, codice: gara.codice || '', url: gara.url || '', dal: gara.dal, al: gara.al },
+    hyrox: {
+      id: gara.id, codice: gara.codice || '', url: gara.url || '', dal: gara.dal, al: gara.al,
+      paese: gara.paese || '', immagine: gara.immagine || '',
+    },
   }
 }
 
@@ -103,13 +156,13 @@ export function sectionsEvento(gara) {
  */
 export async function caricaGare(supabase, { adesso = Date.now(), storage = globalThis.localStorage } = {}) {
   const copia = leggiJson(CHIAVE_CACHE_GARE, null, storage)
-  const valida = copia && Array.isArray(copia.gare) && copia.gare.length > 0
+  const valida = copia?.versione === VERSIONE_CACHE && Array.isArray(copia.gare) && copia.gare.length > 0
   if (valida && adesso - (copia.salvate || 0) < DURATA_CACHE) return { gare: copia.gare, errore: null }
 
   try {
     const { data, error } = await supabase.functions.invoke('gare-hyrox', { body: {} })
     if (error || !Array.isArray(data?.gare) || data.gare.length === 0) throw error || new Error('lista vuota')
-    scriviJson(CHIAVE_CACHE_GARE, { salvate: adesso, gare: data.gare }, storage)
+    scriviJson(CHIAVE_CACHE_GARE, { versione: VERSIONE_CACHE, salvate: adesso, gare: data.gare }, storage)
     return { gare: data.gare, errore: null }
   } catch (e) {
     console.warn('gare-hyrox non disponibile:', e)
