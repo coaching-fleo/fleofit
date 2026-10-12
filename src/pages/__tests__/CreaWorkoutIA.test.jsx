@@ -375,3 +375,69 @@ describe('l\'attesa dice QUALE dei due lavori sta facendo', () => {
     expect(orbDi(foglio)).toHaveAttribute('aria-label', 'Ascolto la registrazione')
   })
 })
+
+describe('con dei blocchi già scritti, il foglio MODIFICA invece di aggiungere', () => {
+  // Richiesta del committente (12/10/2026): «se ci sono blocchi, anche creati
+  // a mano, se chiedo una modifica me la deve fare». Prima ogni risposta
+  // dell'IA finiva IN CODA: chiedere «togli il Cash Out» aggiungeva un blocco.
+
+  /** Prima generazione (lista vuota), poi riapre il foglio con un blocco dentro. */
+  async function conUnBlocco() {
+    mockRispostaIA = () => Promise.resolve({
+      data: { blocks: [{ type: 'EMOM', params: { interval: '1:00', rounds: '12' }, exercises: [{ name: 'Burpees', reps: '15' }] }] },
+      error: null,
+    })
+    const foglio = await apriIA()
+    await userEvent.type(within(foglio).getByRole('textbox'), 'emom da 12')
+    await userEvent.click(screen.getByRole('button', { name: /Genera workout/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Genera con IA' })).toBeNull())
+    expect(screen.getAllByText(/EMOM/).length).toBeGreaterThan(0)
+  }
+
+  it('manda i blocchi attuali, senza id, e sostituisce la lista con quella modificata', async () => {
+    await conUnBlocco()
+    expect(screen.getByText('Chiedi una modifica ai blocchi che hai')).toBeInTheDocument()
+
+    const invoca = vi.fn(() => Promise.resolve({
+      data: { blocks: [{ type: 'AMRAP', params: { duration: '10:00' }, exercises: [{ name: 'Wall Balls', reps: '20' }] }], modifica: true },
+      error: null,
+    }))
+    mockRispostaIA = invoca
+    await userEvent.click(screen.getByRole('button', { name: /Genera con IA/ }))
+    const foglio = screen.getByRole('dialog', { name: 'Genera con IA' })
+    await userEvent.type(within(foglio).getByRole('textbox'), 'trasforma in amrap')
+    await userEvent.click(within(foglio).getByRole('button', { name: /Modifica workout/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Genera con IA' })).toBeNull())
+
+    const corpo = invoca.mock.calls[0][1].body
+    expect(corpo.blocchiAttuali).toHaveLength(1)
+    expect(corpo.blocchiAttuali[0].type).toBe('EMOM')
+    expect(corpo.blocchiAttuali[0].id).toBeUndefined()
+    expect(corpo.blocchiAttuali[0].exercises[0].id).toBeUndefined()
+
+    // Sostituita, non aggiunta in coda.
+    expect(screen.queryAllByText(/EMOM/)).toHaveLength(0)
+    expect(screen.getAllByText(/AMRAP/).length).toBeGreaterThan(0)
+
+    // E si torna indietro.
+    await userEvent.click(screen.getByRole('button', { name: /Annulla/ }))
+    expect(screen.queryAllByText(/AMRAP/)).toHaveLength(0)
+    expect(screen.getAllByText(/EMOM/).length).toBeGreaterThan(0)
+  })
+
+  it('se il server non dice «modifica» (funzione vecchia), aggiunge e NON cancella niente', async () => {
+    await conUnBlocco()
+    mockRispostaIA = () => Promise.resolve({
+      data: { blocks: [{ type: 'AMRAP', params: { duration: '10:00' }, exercises: [] }] },
+      error: null,
+    })
+    await userEvent.click(screen.getByRole('button', { name: /Genera con IA/ }))
+    const foglio = screen.getByRole('dialog', { name: 'Genera con IA' })
+    await userEvent.type(within(foglio).getByRole('textbox'), 'aggiungi amrap')
+    await userEvent.click(within(foglio).getByRole('button', { name: /Modifica workout/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Genera con IA' })).toBeNull())
+
+    expect(screen.getAllByText(/EMOM/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/AMRAP/).length).toBeGreaterThan(0)
+  })
+})

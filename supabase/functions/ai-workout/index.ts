@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import { ADMIN_EMAILS } from "../_shared/admin.ts"
 import { MODELLO_GROQ_PREDEFINITO, chatGroq, trascriviConWhisper } from "../_shared/groq.ts"
-import { blocchiDaTesto, daRipiegare, messaggioErrore, richiestaBlocchiGroq } from "./regole.ts"
+import { blocchiDaTesto, daRipiegare, istruzioniModifica, messaggioErrore, richiestaBlocchiGroq } from "./regole.ts"
 
 // Riserva su Groq quando Gemini è senza quota (09/10/2026): il piano gratuito
 // di Gemini 2.5 Flash dà 20 richieste al giorno, e finite quelle il builder
@@ -141,6 +141,11 @@ serve(async (req) => {
       throw new Error("Chiave API GEMINI_API_KEY non trovata per generare l'allenamento.");
     }
 
+    // Con i blocchi già nel builder la richiesta è una MODIFICA: l'IA
+    // restituisce l'allenamento intero e il client sostituisce la lista
+    // (12/10/2026). Senza, si genera come prima e il client aggiunge in coda.
+    const modifica = istruzioniModifica(body.blocchiAttuali);
+
     const systemPrompt = `
 Traduci questo workout dettato a voce in un array JSON compatibile con l'app di fitness.
 Tipi di blocco ammessi: "WarmUp", "Cash In", "ON/OFF", "EMOM", "AMRAP", "For Time", "Interval", "Rest", "Cash Out".
@@ -174,6 +179,7 @@ Esempio di struttura richiesta:
   }
 ]
 
+${modifica ?? ''}
 Testo dettato dall'utente: "${prompt}"
 `;
 
@@ -207,7 +213,9 @@ Testo dettato dall'utente: "${prompt}"
       if (!blocks) throw new Error("L'IA di riserva ha risposto in un formato illeggibile: riprova.");
     }
 
-    return new Response(JSON.stringify({ blocks }), { 
+    // `modifica` dice al client se SOSTITUIRE i blocchi o aggiungerli: un
+    // client vecchio non lo legge e aggiunge, come ha sempre fatto.
+    return new Response(JSON.stringify({ blocks, modifica: !!modifica }), { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     });
 

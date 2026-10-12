@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { preparaBlocchiIA, intensitaValida, INTENSITA_PREDEFINITA } from '../blocchiIA'
+import { preparaBlocchiIA, blocchiPerIA, intensitaValida, INTENSITA_PREDEFINITA } from '../blocchiIA'
 
 describe('intensitaValida', () => {
   it('legge i formati che un modello può restituire', () => {
@@ -70,5 +70,18 @@ describe('preparaBlocchiIA — le stazioni EMOM su più minuti', () => {
     expect(amrap.exercises[0]).not.toHaveProperty('intervals')
     expect(emom.exercises[0]).not.toHaveProperty('intervals')
     expect(emom.exercises[1]).not.toHaveProperty('intervals')
+  })
+})
+
+describe('blocchiPerIA', () => {
+  it('toglie gli id client-side e tiene tutto il resto', () => {
+    const [b] = blocchiPerIA([{ id: 0.1, type: 'EMOM', params: { rounds: '12' }, notes: 'n',
+      exercises: [{ id: 0.2, name: 'Burpees', reps: '15', kg: '9', notes: 'piano' }] }])
+    expect(b).toEqual({ type: 'EMOM', params: { rounds: '12' }, notes: 'n',
+      exercises: [{ name: 'Burpees', reps: '15', kg: '9', notes: 'piano' }] })
+  })
+  it('regge input storti', () => {
+    expect(blocchiPerIA(null)).toEqual([])
+    expect(blocchiPerIA([null, { type: 'Rest' }])).toEqual([{ type: 'Rest', exercises: [] }])
   })
 })

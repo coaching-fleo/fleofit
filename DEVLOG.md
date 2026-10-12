@@ -20,6 +20,7 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 - Tornando indietro dal secondo passo l'app chiede conferma se ci sono già blocchi.
 - La barra in basso resta premibile con la tastiera aperta.
 - Con la **generazione IA** ogni esercizio ha un'intensità, dettata o stimata.
+- **«Genera con IA» ora modifica anche**: se ci sono già blocchi (fatti a mano o dall'IA) basta chiedere la modifica — «porta l'EMOM a 16 minuti», «togli il Cash Out» — e l'IA riscrive l'allenamento cambiando solo quello; la modifica si può annullare.
 - Un workout già svolto da un atleta **non si può più modificare**: si può duplicare.
 - Negli **EMOM** un esercizio può durare **più minuti di fila** come stazione continua («minuti 2–3: vogatore»): il timer non riparte a metà.
 

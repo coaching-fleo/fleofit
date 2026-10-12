@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices } from 'lucide-react'
+import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
@@ -36,7 +36,7 @@ import AudioVisualizer from '../components/AudioVisualizer'
 import { ThinkingOrb } from 'thinking-orbs'
 import { BorderBeam } from 'border-beam'
 import { scriviJson } from '../lib/offlineQueue'
-import { preparaBlocchiIA } from '../lib/blocchiIA'
+import { preparaBlocchiIA, blocchiPerIA } from '../lib/blocchiIA'
 import { intervalliDi, etichetteStazioni, MASSIMO_INTERVALLI } from '../lib/stazioniEmom'
 import { parseDuration } from '../lib/timerSequence'
 import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
@@ -409,7 +409,11 @@ const ORB_ATTESA = {
 
 const mmssSecondi = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
-function AiGenerationModal({ onClose, onGenerate }) {
+// `blocchiAttuali`: i blocchi già nel builder. Se ce ne sono, il foglio
+// chiede una MODIFICA invece di una generazione (12/10/2026): l'IA riceve
+// l'allenamento e lo restituisce intero, cambiato dove il coach ha chiesto.
+function AiGenerationModal({ onClose, onGenerate, blocchiAttuali = [] }) {
+  const inModifica = blocchiAttuali.length > 0
   const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onClose)
 
   const [text, setText] = useState('')
@@ -537,7 +541,9 @@ function AiGenerationModal({ onClose, onGenerate }) {
   const chiamaIA = useCallback(async (body) => {
     iniziaAttesa(!!body.audioBase64)
     try {
-      const { data, error } = await supabase.functions.invoke('ai-workout', { body })
+      const { data, error } = await supabase.functions.invoke('ai-workout', {
+        body: inModifica ? { ...body, blocchiAttuali: blocchiPerIA(blocchiAttuali) } : body,
+      })
       if (error) {
         let errorMsg = error.message
         if (error.context && typeof error.context.json === 'function') {
@@ -548,7 +554,11 @@ function AiGenerationModal({ onClose, onGenerate }) {
         throw new Error(errorMsg)
       }
       if (data?.error) throw new Error(data.error)
-      onGenerate(data?.blocks || [])
+      // ⚠️ Si sostituisce SOLO se il server dice di aver fatto una modifica:
+      // una funzione non ancora aggiornata ignora i blocchi attuali e
+      // restituisce soltanto i nuovi, e sostituire vorrebbe dire cancellare
+      // tutto il resto.
+      onGenerate(data?.blocks || [], data?.modifica === true)
       chiudi()
     } catch (e) {
       // ⚠️ Mai il messaggio grezzo: a quota finita era il JSON intero di
@@ -558,7 +568,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
     } finally {
       fineAttesa()
     }
-  }, [onGenerate, chiudi, iniziaAttesa, fineAttesa])
+  }, [onGenerate, chiudi, iniziaAttesa, fineAttesa, inModifica, blocchiAttuali])
 
   const inviaAudio = useCallback(async (blob, mimeType) => {
     try {
@@ -788,7 +798,9 @@ function AiGenerationModal({ onClose, onGenerate }) {
           </span>
           <div className="flex-1 min-w-0">
             <p className="text-[16px] font-extrabold tracking-[-.015em] text-white">Genera con IA</p>
-            <p className="mt-[2px] text-[12.5px] font-medium text-[#c4a6e8]">Descrivi l'obiettivo, ti scrivo i blocchi</p>
+            <p className="mt-[2px] text-[12.5px] font-medium text-[#c4a6e8]">
+              {inModifica ? 'Chiedi una modifica, riscrivo i blocchi' : 'Descrivi l\'obiettivo, ti scrivo i blocchi'}
+            </p>
           </div>
         </div>
 
@@ -815,7 +827,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
               aria-hidden="true" aria-label={orbAttesa.etichetta} />
             <div>
               <p className="text-white text-[16px] font-extrabold tracking-[-.015em]" role="status">
-                {attesaLunga ? 'Ci sta mettendo più del solito…' : 'Sto scrivendo l\'allenamento'}
+                {attesaLunga ? 'Ci sta mettendo più del solito…' : inModifica ? 'Sto modificando l\'allenamento' : 'Sto scrivendo l\'allenamento'}
               </p>
               <p className="mt-1.5 text-[13px] text-muted leading-snug max-w-[16rem] mx-auto">
                 {attesaLunga
@@ -903,7 +915,9 @@ function AiGenerationModal({ onClose, onGenerate }) {
                 className="w-full bg-transparent text-white placeholder-gray-600 focus:outline-none resize-none
                            text-[15px] leading-relaxed min-h-[104px]"
                 rows={4}
-                placeholder="Es: EMOM da 12 minuti, 15 burpees e 10 box jump a minuti alterni…"
+                placeholder={inModifica
+                  ? 'Es: porta l\'EMOM a 16 minuti, togli il Cash Out, 20 wall balls al posto dei burpees…'
+                  : 'Es: EMOM da 12 minuti, 15 burpees e 10 box jump a minuti alterni…'}
                 value={text}
                 onChange={e => setText(e.target.value)}
               />
@@ -920,7 +934,9 @@ function AiGenerationModal({ onClose, onGenerate }) {
             </div>
 
             <p className="text-[12px] text-muted leading-snug px-1 pt-3 shrink-0">
-              I blocchi generati si aggiungono a quelli che hai già: puoi correggerli uno per uno.
+              {inModifica
+                ? 'Lavoro sui blocchi che hai già, anche quelli fatti a mano: cambio solo quello che chiedi, e puoi annullare.'
+                : 'I blocchi generati si aggiungono a quelli che hai già: puoi correggerli uno per uno.'}
             </p>
           </>
         )}
@@ -934,7 +950,7 @@ function AiGenerationModal({ onClose, onGenerate }) {
               className="w-full min-h-[52px] rounded-2xl bg-ia text-white text-[16.5px] font-black tracking-[-.01em]
                          flex items-center justify-center gap-2.5 transition hover:brightness-110 active:scale-[.99]
                          disabled:opacity-40 shadow-[0_14px_26px_-10px_rgba(168,85,247,.5)]">
-              Genera workout <ArrowRight size={19} aria-hidden="true" />
+              {inModifica ? 'Modifica workout' : 'Genera workout'} <ArrowRight size={19} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -2143,6 +2159,11 @@ export default function CreateWorkout() {
   const [blocks, setBlocks] = useState([])
   const [blockPickerOpen, setBlockPickerOpen] = useState(false)
   const [aiModalOpen, setAiModalOpen] = useState(false)
+  // L'ultima modifica fatta dall'IA: i blocchi di prima e quelli che ha
+  // scritto. «Annulla» si vede solo finché la lista è ESATTAMENTE quella
+  // scritta dall'IA (stesso riferimento): al primo ritocco a mano sparisce,
+  // così annullare non butta via anche il lavoro fatto dopo.
+  const [modificaIA, setModificaIA] = useState(null)
   const [openBlockId, setOpenBlockId] = useState(null)
   const draggedBlockIdx = useRef(null)
 
@@ -2885,8 +2906,19 @@ export default function CreateWorkout() {
               🔴 Il fascio sta QUI e non dentro `CardIA` perché `CreaWorkoutUI`
               è un chunk condiviso con `WorkoutDetail`. */}
           <BorderBeam size="md" colorVariant="ocean" theme="dark" strength={0.6} staticColors>
-            <CardIA onClick={() => setAiModalOpen(true)} />
+            <CardIA onClick={() => setAiModalOpen(true)} inModifica={blocks.length > 0} />
           </BorderBeam>
+
+          {modificaIA && modificaIA.dopo === blocks && (
+            <div role="status" className="flex items-center gap-3 rounded-2xl border border-ia/30 bg-ia/10 px-4 py-2.5">
+              <p className="flex-1 text-[13px] font-semibold text-[#c4a6e8]">Blocchi modificati con l'IA</p>
+              <button type="button"
+                onClick={() => { setBlocks(modificaIA.prima); setModificaIA(null); battito() }}
+                className="flex items-center gap-1.5 text-[13px] font-extrabold text-white hover:text-ia transition px-1 -mx-1 min-h-9">
+                <Undo2 size={15} aria-hidden="true" /> Annulla
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-col gap-[11px]" data-drag-container>
             {blocks.map((block, idx) => (
@@ -2944,8 +2976,21 @@ export default function CreateWorkout() {
       {aiModalOpen && (
         <AiGenerationModal 
           onClose={() => setAiModalOpen(false)}
-          onGenerate={(newBlocks) => {
+          blocchiAttuali={blocks}
+          onGenerate={(newBlocks, modifica) => {
             const formattedBlocks = preparaBlocchiIA(newBlocks)
+            if (modifica) {
+              // 🔴 Una lista vuota da una modifica non è «togli tutto»: è
+              // quasi sempre una risposta storta. Si tiene quello che c'era.
+              if (formattedBlocks.length === 0) {
+                mostraErrore('L\'IA non ha restituito nessun blocco: l\'allenamento è rimasto com\'era.')
+                return
+              }
+              setModificaIA({ prima: blocks, dopo: formattedBlocks })
+              setBlocks(formattedBlocks)
+              setOpenBlockId(null)
+              return
+            }
             setBlocks([...blocks, ...formattedBlocks])
             if (formattedBlocks.length > 0) {
               setOpenBlockId(formattedBlocks[formattedBlocks.length - 1].id)

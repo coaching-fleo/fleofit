@@ -1014,3 +1014,30 @@ Rimedi:
 - il server manda messaggi brevi, non il corpo di Google (che va nei log).
 ⚠️ `ai-workout` la chiama solo l'app: verificato che `main` usa soltanto
 `send-reminders`, quindi il suo deploy non tocca la web app.
+
+---
+
+## 9-ai-modifica. «Genera con IA» modifica i blocchi che ci sono (12/10/2026)
+
+Richiesta del committente: «se ci sono blocchi, anche creati a mano, se chiedo
+una modifica me la deve fare». Prima ogni risposta dell'IA finiva **in coda**:
+«togli il Cash Out» aggiungeva un blocco.
+
+- Con almeno un blocco nel builder, `AiGenerationModal` manda anche
+  `blocchiAttuali` (`blocchiPerIA` di `src/lib/blocchiIA.js`: gli stessi dati
+  **senza gli `id`**, che si rimettono nuovi al ritorno con `preparaBlocchiIA`).
+- `ai-workout` aggiunge al prompt `istruzioniModifica` (`regole.ts`): l'IA
+  restituisce l'allenamento **INTERO**, identico dove la richiesta non tocca.
+  Risponde con `modifica: true`, e solo allora il client **sostituisce** la lista.
+- 🔴 **Il client sostituisce solo se il server dice `modifica: true`.** Una
+  funzione non ancora pubblicata ignora i blocchi attuali e restituisce solo i
+  nuovi: sostituire avrebbe cancellato tutto il resto. Senza deploy si torna
+  semplicemente ad aggiungere.
+- Una modifica che torna **zero blocchi** non svuota il builder: avviso e niente.
+- **«Annulla»** nella fascia viola sotto la card: si vede finché `blocks` è
+  *lo stesso riferimento* scritto dall'IA, quindi sparisce al primo ritocco a
+  mano — annullare non butta via il lavoro fatto dopo.
+- Oltre `LUNGHEZZA_MASSIMA_BLOCCHI` (30.000 caratteri di JSON) il server non
+  manda i blocchi e torna a generare in coda.
+- Il foglio cambia le parole in modifica (sottotitolo, segnaposto, «Modifica
+  workout»), ma `aria-label` del dialogo resta «Genera con IA».

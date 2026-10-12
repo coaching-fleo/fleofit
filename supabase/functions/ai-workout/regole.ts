@@ -42,3 +42,38 @@ export function blocchiDaTesto(testo: string): unknown[] | null {
     return null
   }
 }
+
+/**
+ * Oltre questa lunghezza i blocchi attuali non si mandano all'IA: un workout
+ * vero ne occupa qualche migliaio di caratteri, e un corpo enorme vuol dire
+ * una richiesta lenta che brucia la quota gratuita.
+ */
+export const LUNGHEZZA_MASSIMA_BLOCCHI = 30000
+
+/**
+ * La parte del prompt che trasforma la generazione in una MODIFICA (12/10/2026).
+ *
+ * Senza blocchi attuali torna `null` e la funzione genera come prima, in coda.
+ * Con i blocchi, l'IA riceve l'allenamento intero e deve restituirlo INTERO,
+ * cambiato solo dove la richiesta lo chiede: il client sostituisce la lista.
+ * 🔴 «Intero» non è pedanteria: se l'IA restituisse solo il blocco toccato, il
+ * client cancellerebbe tutti gli altri.
+ */
+export function istruzioniModifica(blocchiAttuali: unknown): string | null {
+  if (!Array.isArray(blocchiAttuali) || blocchiAttuali.length === 0) return null
+  const json = JSON.stringify(blocchiAttuali)
+  if (json.length > LUNGHEZZA_MASSIMA_BLOCCHI) return null
+  return `
+MODALITÀ MODIFICA. Il coach ha GIÀ questo allenamento nel builder (JSON):
+${json}
+
+La sua richiesta è una MODIFICA di questo allenamento (cambiare, togliere, aggiungere,
+spostare, sostituire blocchi o esercizi), oppure un'aggiunta di blocchi nuovi.
+- Restituisci l'allenamento COMPLETO dopo la modifica: TUTTI i blocchi, anche quelli che non cambiano.
+- Tutto ciò che la richiesta non tocca resta IDENTICO: stessi blocchi nello stesso ordine,
+  stessi esercizi, stessi campi e valori (reps, meters, kg, ergoPace, speed, exTime, intensity,
+  intervals, notes, params). Non aggiungere, togliere o riscrivere campi di tua iniziativa.
+- Se la richiesta aggiunge blocchi senza dire dove, mettili in fondo.
+- Se la richiesta indica un blocco per posizione ("il secondo blocco", "l'ultimo") contali nell'ordine dell'array.
+`
+}

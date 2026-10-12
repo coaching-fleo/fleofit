@@ -68,3 +68,25 @@ export function preparaBlocchiIA(blocchi) {
       }),
     }))
 }
+
+/**
+ * I blocchi del builder come li legge `ai-workout` quando si chiede una
+ * MODIFICA (12/10/2026): gli stessi dati, senza gli `id` client-side.
+ *
+ * Gli `id` sono `Math.random()`: all'IA non dicono niente, e un modello che
+ * li ricopia (o li inventa) produrrebbe chiavi doppie nella lista. Si
+ * rimettono nuovi con `preparaBlocchiIA` al ritorno.
+ */
+const senzaId = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => k !== 'id'))
+
+export function blocchiPerIA(blocchi) {
+  if (!Array.isArray(blocchi)) return []
+  return blocchi
+    .filter(b => b && typeof b === 'object')
+    .map(b => ({
+      ...senzaId(b),
+      exercises: (Array.isArray(b.exercises) ? b.exercises : [])
+        .filter(ex => ex && typeof ex === 'object')
+        .map(senzaId),
+    }))
+}

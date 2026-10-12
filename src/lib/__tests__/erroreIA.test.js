@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { messaggioErroreIA, attesaDa, LUNGHEZZA_MASSIMA } from '../erroreIA'
-import { blocchiDaTesto, daRipiegare, messaggioErrore, richiestaBlocchiGroq } from '../../../supabase/functions/ai-workout/regole.ts'
+import { blocchiDaTesto, daRipiegare, istruzioniModifica, LUNGHEZZA_MASSIMA_BLOCCHI, messaggioErrore, richiestaBlocchiGroq } from '../../../supabase/functions/ai-workout/regole.ts'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -51,5 +51,21 @@ describe('ai-workout: la riserva', () => {
     const r = richiestaBlocchiGroq('PROMPT', 'openai/gpt-oss-120b')
     expect(r.response_format).toEqual({ type: 'json_object' })
     expect(r.messages[0].content.startsWith('PROMPT')).toBe(true)
+  })
+})
+
+describe('ai-workout: la modifica dei blocchi esistenti', () => {
+  it('senza blocchi attuali non c\'è modifica: si genera come prima', () => {
+    expect(istruzioniModifica(undefined)).toBeNull()
+    expect(istruzioniModifica([])).toBeNull()
+    expect(istruzioniModifica('x')).toBeNull()
+  })
+  it('con i blocchi, il prompt li contiene e chiede l\'allenamento INTERO', () => {
+    const t = istruzioniModifica([{ type: 'EMOM', exercises: [{ name: 'Burpees' }] }])
+    expect(t).toContain('"Burpees"')
+    expect(t).toMatch(/COMPLETO/)
+  })
+  it('un corpo enorme non si manda', () => {
+    expect(istruzioniModifica([{ notes: 'x'.repeat(LUNGHEZZA_MASSIMA_BLOCCHI) }])).toBeNull()
   })
 })
