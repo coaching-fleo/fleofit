@@ -9,10 +9,11 @@ import { voce } from '../lib/cascata'
 import {
   metaWorkout, testoCercabile, raggruppaPerMese, conteggiPerCorsia,
   tipiBlocco, conteggiPerTipo, passaFiltroTipi,
+  eserciziFiltrabili, conteggiPerEsercizio, passaFiltroEsercizi, prossimoStatoEsercizio,
 } from '../lib/rigaArchivio'
 import {
   TestataArchivio, CampoRicerca, FiltriCorsia, IntestazioneSezione,
-  RigaWorkout, ScheletroArchivio, VuotoArchivio, FiltriTipo,
+  RigaWorkout, ScheletroArchivio, VuotoArchivio, FiltriTipo, FiltriEsercizio,
 } from '../components/ArchivioUI'
 
 // Tornando da un workout l'archivio riprende dov'era: src/useRipresa.js.
@@ -26,11 +27,13 @@ export default function WorkoutsArchive() {
   const [corsiaAttiva, setCorsiaAttiva] = useState(() => ripresa?.corsiaAttiva ?? null)
   // I tipi di blocco scelti fra i chip (src/lib/rigaArchivio.js).
   const [tipiScelti, setTipiScelti] = useState(() => ripresa?.tipiScelti ?? [])
+  // Gli esercizi a tre stati: { SkiErg: 'con' | 'senza' } (src/lib/rigaArchivio.js).
+  const [eserciziScelti, setEserciziScelti] = useState(() => ripresa?.eserciziScelti ?? {})
   const navigate = useNavigate()
   const indietro = useIndietro('/')
   const isCoach = role !== 'athlete'
 
-  useRicorda('archivio', user?.id, ripresa, { workouts, searchTerm, corsiaAttiva, tipiScelti, caricato: !loading })
+  useRicorda('archivio', user?.id, ripresa, { workouts, searchTerm, corsiaAttiva, tipiScelti, eserciziScelti, caricato: !loading })
 
   // Caricamento una volta sola, di proposito: `role` e `user` non cambiano
   // senza un rimontaggio della pagina. Aggiungere fetchWorkouts alle dipendenze
@@ -93,26 +96,36 @@ export default function WorkoutsArchive() {
   const indice = useMemo(
     () => workouts.map(w => ({
       w, testo: testoCercabile(w), categoria: categoriaDi(w.sections), tipi: tipiBlocco(w),
+      esercizi: eserciziFiltrabili(w),
     })),
     [workouts]
   )
 
   const corsie = useMemo(() => conteggiPerCorsia(workouts), [workouts])
   const tipi = useMemo(() => conteggiPerTipo(workouts), [workouts])
+  const esercizi = useMemo(() => conteggiPerEsercizio(workouts), [workouts])
 
   const filtrati = useMemo(() => {
     const termine = searchTerm.trim().toLowerCase()
     return indice
       .filter(v => (corsiaAttiva === null || v.categoria === corsiaAttiva)
                 && (!termine || v.testo.includes(termine))
-                && passaFiltroTipi(v.tipi, tipiScelti))
+                && passaFiltroTipi(v.tipi, tipiScelti)
+                // «A blocchi» = ha almeno un blocco: le corse non hanno esercizi.
+                && passaFiltroEsercizi(v.esercizi, eserciziScelti, v.tipi.size > 0))
       .map(v => v.w)
-  }, [indice, searchTerm, corsiaAttiva, tipiScelti])
+  }, [indice, searchTerm, corsiaAttiva, tipiScelti, eserciziScelti])
 
   const gruppi = useMemo(() => raggruppaPerMese(filtrati), [filtrati])
 
-  const conFiltri = searchTerm.trim() !== '' || corsiaAttiva !== null || tipiScelti.length > 0
-  const azzera = () => { setSearchTerm(''); setCorsiaAttiva(null); setTipiScelti([]) }
+  const conEsercizi = Object.keys(eserciziScelti).length > 0
+  const conFiltri = searchTerm.trim() !== '' || corsiaAttiva !== null || tipiScelti.length > 0 || conEsercizi
+  const azzera = () => { setSearchTerm(''); setCorsiaAttiva(null); setTipiScelti([]); setEserciziScelti({}) }
+  const cambiaEsercizio = (id) => setEserciziScelti(prima => {
+    const { [id]: stato, ...altri } = prima
+    const prossimo = prossimoStatoEsercizio(stato)
+    return prossimo ? { ...altri, [id]: prossimo } : altri
+  })
   const cambiaTipo = (t) =>
     setTipiScelti(prima => (prima.includes(t) ? prima.filter(x => x !== t) : [...prima, t]))
 
@@ -142,10 +155,13 @@ export default function WorkoutsArchive() {
         <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
         {corsie.length > 1 && (
           <FiltriCorsia corsie={corsie} attiva={corsiaAttiva} totale={workouts.length}
-            onCambia={setCorsiaAttiva} tuttiAttivo={corsiaAttiva === null && tipiScelti.length === 0}
-            onTutti={() => { setCorsiaAttiva(null); setTipiScelti([]) }} />
+            onCambia={setCorsiaAttiva} tuttiAttivo={corsiaAttiva === null && tipiScelti.length === 0 && !conEsercizi}
+            onTutti={() => { setCorsiaAttiva(null); setTipiScelti([]); setEserciziScelti({}) }} />
         )}
         {tipi.length > 0 && <FiltriTipo tipi={tipi} scelti={tipiScelti} onCambia={cambiaTipo} />}
+        {esercizi.length > 0 && (
+          <FiltriEsercizio esercizi={esercizi} scelte={eserciziScelti} onCambia={cambiaEsercizio} />
+        )}
       </TestataArchivio>
 
       {/* 🔴 Tornando dalla scheda le righe non rifanno la cascata (ci sono già),

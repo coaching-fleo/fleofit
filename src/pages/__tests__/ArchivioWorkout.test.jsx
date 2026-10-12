@@ -455,3 +455,55 @@ describe('Archivio — filtri per tipo di blocco', () => {
     expect(emom()).toHaveAttribute('aria-pressed', 'false')
   })
 })
+
+// Ski e Row a tre stati: un tocco «con», il secondo «senza», il terzo spegne.
+describe('Archivio — filtri per esercizio', () => {
+  const blocco = (id, ...nomi) => ({ id, type: 'For Time', params: { rounds: '1' }, exercises: nomi.map(name => ({ name, meters: '500m' })) })
+  const conEsercizi = () => {
+    dati.workouts = [
+      wk(1, 'Con lo ski', '2026-08-22', { category: 'Hyrox', blocks: [blocco(1, 'SkiErg', 'Wall Balls')] }),
+      wk(2, 'Con il vogatore', '2026-08-21', { category: 'Hyrox', blocks: [blocco(2, 'Row')] }),
+      wk(3, 'Solo burpees', '2026-08-19', { category: 'Hyrox', blocks: [blocco(3, 'Burpees')] }),
+      CORSA(4, 'Long Run', '2026-08-20'),
+    ]
+  }
+  const gruppo = () => screen.getByRole('group', { name: 'Filtra per esercizio' })
+  const ski = () => within(gruppo()).getByRole('button', { name: /Ski/ })
+
+  it('con, senza, spento — e il senza lascia fuori le corse', async () => {
+    conEsercizi()
+    montaCoach()
+    await screen.findByText('Con lo ski')
+    expect(within(gruppo()).getByRole('button', { name: /Row/ })).toBeInTheDocument()
+
+    await userEvent.click(ski())
+    expect(ski()).toHaveTextContent(/^Ski$/)
+    expect(ski()).toHaveAccessibleName('Solo con Ski')
+    expect(screen.getByText('Con lo ski')).toBeInTheDocument()
+    expect(screen.queryByText('Con il vogatore')).not.toBeInTheDocument()
+    expect(screen.getByText('1 di 4 workout')).toBeInTheDocument()
+
+    await userEvent.click(ski())
+    expect(ski()).toHaveTextContent(/^Ski$/)
+    expect(ski()).toHaveAccessibleName('Solo senza Ski')
+    expect(screen.queryByText('Con lo ski')).not.toBeInTheDocument()
+    expect(screen.getByText('Con il vogatore')).toBeInTheDocument()
+    expect(screen.getByText('Solo burpees')).toBeInTheDocument()
+    expect(screen.queryByText('Long Run')).not.toBeInTheDocument()
+
+    await userEvent.click(ski())
+    expect(ski()).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByText('Long Run')).toBeInTheDocument()
+  })
+
+  it('«Tutti» spegne anche gli esercizi', async () => {
+    conEsercizi()
+    montaCoach()
+    await screen.findByText('Con lo ski')
+    await userEvent.click(ski())
+    const corsie = screen.getByRole('group', { name: 'Filtra per categoria' })
+    await userEvent.click(within(corsie).getByRole('button', { name: /Tutti/ }))
+    expect(ski()).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByText('Long Run')).toBeInTheDocument()
+  })
+})

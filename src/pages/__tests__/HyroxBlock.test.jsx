@@ -61,7 +61,7 @@ describe('riepilogo del blocco chiuso', () => {
     ['ON/OFF',   '1:00 ON / 1:00 OFF · 10 rounds'],
     ['EMOM',     'Ogni 1:00 x 10 rounds'],
     ['AMRAP',    '10:00'],
-    ['For Time', '3 rounds'],
+    ['For Time', '1 rounds'],
     ['Interval', '1 rounds'],
   ]
 

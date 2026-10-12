@@ -387,6 +387,7 @@ const senzaMinuto = (riga) => riga.replace(/^\s*(?:min(?:uto)?\.?\s*\d+|\d+\s*°
  *   note del coach);
  * - `righe`: una per riga non vuota, con `esito` — `blocco`, `esercizio`,
  *   `nuovo` (un esercizio che la lista non conosce: entra col nome scritto),
+ *   `dedotto` (solo la distanza, «300m»: l'esercizio è quello di prima),
  *   `nota` (non capita: è finita nelle note) — per l'anteprima.
  */
 export function leggiHyrox(testo) {
@@ -411,6 +412,7 @@ export function leggiHyrox(testo) {
     const { exTime, ...resto } = ex
     // `riconosciuto` serve all'anteprima, non al blocco.
     delete resto.riconosciuto
+    delete resto.dedotto
     // Il tempo di un esercizio ha un campo solo nei blocchi Interval; il Rest
     // lo tiene in `meters` (è così che `durataBlocco` lo legge). Altrove resta
     // scritto nella nota, non si perde.
@@ -420,6 +422,24 @@ export function leggiHyrox(testo) {
       else resto.notes = resto.notes ? `${exTime} · ${resto.notes}` : exTime
     }
     corrente.exercises.push(resto)
+  }
+
+  /**
+   * Una riga con SOLO una distanza («300m») in mezzo a una serie che alterna
+   * «200m ski / 10 burpees / 300m / 15 burpees»: chi scrive così sottintende
+   * l'esercizio misurato in metri di prima. Richiesta del committente
+   * (12/10/2026): «dove non c'è scritto ski dovrebbe arrivarci da solo».
+   * ⚠️ Solo le distanze: un numero nudo («15») può essere ripetizioni, giri o
+   * chili, e lì indovinare sarebbe inventare. Senza un esercizio in metri
+   * prima, la riga resta una nota. L'anteprima la segna «dedotto».
+   */
+  const dedotto = (pezzo) => {
+    if (!/^\s*\d+(?:[.,]\d+)?\s*(?:m|mt|metri|km|k)\s*$/i.test(pezzo)) return null
+    const precedenti = [...blocchi].reverse().flatMap(b => [...b.exercises].reverse())
+    const modello = precedenti.find(e => e.meters && e.name !== 'Rest')
+    if (!modello) return null
+    const ex = leggiEsercizio(`${pezzo} ${modello.name}`)
+    return ex ? { ...ex, dedotto: true } : null
   }
 
   for (const grezza of String(testo ?? '').split(/\r?\n/)) {
@@ -454,13 +474,14 @@ export function leggiHyrox(testo) {
       continue
     }
 
-    const pezzi = spezzaEsercizi(sorgente).map(p => ({ p, ex: leggiEsercizio(p) }))
+    const pezzi = spezzaEsercizi(sorgente).map(p => ({ p, ex: leggiEsercizio(p) ?? dedotto(p) }))
     if (pezzi.length > 0 && pezzi.every(x => x.ex)) {
       pezzi.forEach(({ ex }) => aggiungiEsercizio(ex))
       if (!intestazione) {
         righe.push({
           testo: riga,
-          esito: pezzi.every(x => x.ex.riconosciuto) ? 'esercizio' : 'nuovo',
+          esito: pezzi.some(x => x.ex.dedotto) ? 'dedotto'
+            : pezzi.every(x => x.ex.riconosciuto) ? 'esercizio' : 'nuovo',
           nome: pezzi.map(x => x.ex.name).join(' + '),
         })
       }

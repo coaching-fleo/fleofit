@@ -59,7 +59,7 @@ export const parametriBlocco = (block) => {
     case 'AMRAP':
       return `in ${p.duration || '10:00'}`
     case 'For Time':
-      return round(intero(p.rounds, 3))
+      return round(intero(p.rounds, 1))
     case 'Interval':
       return round(intero(p.rounds, 1))
     case 'Cash In':

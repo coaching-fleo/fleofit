@@ -115,7 +115,7 @@ export const giriBlocco = (block) => {
     case 'ON/OFF':
       return interoPositivo(p.rounds, 10)
     case 'For Time':
-      return interoPositivo(p.rounds, 3)
+      return interoPositivo(p.rounds, 1)
     case 'Interval':
     case 'Cash In':
     case 'Cash Out':

@@ -98,7 +98,7 @@ const getBlockTitle = (block) => {
      const dur = block.params?.duration || '10:00'
      return dur.includes('min') ? `AMRAP · ${dur}` : `AMRAP · ${dur} min`
   }
-  if (block.type === 'For Time') return `For Time · ${block.params?.rounds || '3'} rounds`
+  if (block.type === 'For Time') return `For Time · ${block.params?.rounds || '1'} rounds`
   if (block.type === 'Interval') return `Interval · ${block.params?.rounds || '1'} rounds`
 
   if (['Cash In', 'Cash Out'].includes(block.type)) {

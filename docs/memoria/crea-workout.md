@@ -1205,3 +1205,80 @@ Vision sul simulatore.
 
 Test: `FoglioDaTestoFoto.test.jsx` (7): i due nuovi dicono un bottone su iOS e
 due su Android, con `capture` solo sullo scatto; visto fallire spegnendo la regola.
+
+### Screenshot, tastiera e righe sottintese (12/10/2026)
+Provato dal committente su Android («funziona»), con tre rilievi:
+
+1. **La tastiera e l'orario finivano nel workout.** Su uno screenshot delle Note
+   Vision legge anche la barra di stato («11:574»: la campanella diventa un 4),
+   le icone («<», «•••»), la barra degli strumenti («Aa»), i suggerimenti
+   («The», «I'm») e i tasti a gruppi («QWERT», «A S», «× C»).
+   `senzaInterfaccia` in `testoDaFoto.js` li toglie **prima** di ordinare:
+   - è tastiera una riga con almeno 4 gruppi di 1–5 maiuscole, **o** le cui
+     lettere seguono l'ordine di una tastiera (QWERTY/QWERTZ/AZERTY): Vision
+     legge a volte la prima riga in due soli pezzi;
+   - cade tutto sotto la sua prima riga; nella fascia di 0,15 sopra cade solo
+     ciò che **non ha cifre** (una riga di workout attaccata alla tastiera resta);
+   - un orario nel 6% alto si porta via la sua riga; le icone senza lettere né
+     cifre spariscono ovunque.
+   Il caso vero è `fixtures/screenshot-note-ios.json`: le posizioni lette da
+   Vision **sullo screenshot del committente**, con le impostazioni dell'app.
+2. **«300m» da solo è lo ski di prima.** In «200m ski / 10 burpees / 300m /
+   15 burpees / 400m…» la distanza nuda prende l'**ultimo esercizio misurato in
+   metri** (`dedotto` in `leggiHyrox`), e l'anteprima la segna «dedotto dalle
+   righe sopra». ⚠️ Solo le distanze: un «15» nudo può essere reps, giri o kg,
+   e resta una nota. Senza un esercizio in metri prima, resta una nota.
+3. **«Non mi ha chiesto i permessi.»** È corretto così, non è una dimenticanza:
+   - la **galleria** passa dal selettore di sistema (iOS: PHPicker, che lo dice
+     con «Accesso privato alle foto»; Android: il selettore di file/foto). L'app
+     riceve solo la foto scelta e non legge la libreria: nessun permesso da
+     chiedere, ed è il modo che Apple e Google raccomandano;
+   - la **fotocamera** su iOS chiede il permesso al **primo** «Scatta foto»,
+     con il testo di `NSCameraUsageDescription`; su Android si apre l'app
+     fotocamera di sistema, che scatta lei: l'app non tocca la fotocamera e
+     non deve chiederla (il manifest non dichiara `CAMERA`, android.md A.3 p. 11).
+   ⚠️ Aggiungere un permesso «per sicurezza» sarebbe peggio: Apple respinge le
+   app che chiedono accessi che non usano (5.1.1).
+
+Test: `testoDaFoto.test.js` (15) e `leggiWorkout.test.js` (32), visti fallire
+togliendo il filtro e la deduzione.
+
+### Solo da un'immagine (12/10/2026)
+Richiesta del committente: «lascia solo da immagine; quando premo mi chiede
+direttamente l'immagine». Il bottone del builder è **«Da un'immagine»** e apre
+subito il selettore; l'incolla-testo come ingresso non c'è più.
+- 🔴 Il campo file sta in **`CreateWorkout`**, non nel foglio: il foglio è
+  pigro, e un tocco può aprire il selettore solo su un campo che esiste già nel
+  momento del tocco. Il foglio si monta con `file` e lo legge subito.
+- Il bottone compare solo se `fotoDisponibile()`: sul web non c'è più niente.
+- Il testo letto resta **correggibile**, ma chiuso sotto «Correggi il testo
+  letto»; «Aggiungi un'altra immagine» lo allunga (lavagna in due scatti).
+- Su Android il selettore è la sola galleria (android.md A.3 punto 11).
+- La fascia «Annulla» dice «Blocchi sostituiti dall'immagine».
+- `FoglioDaTesto.jsx` ha tenuto il nome del file: cambiano titolo e
+  `aria-label` del dialogo («Da un'immagine»).
+
+Test: `CreaWorkoutDaTesto.test.jsx` (8) — il primo verifica che il tocco apra il
+selettore senza foglio, visto fallire staccando il clic — e `FoglioDaTestoFoto.test.jsx` (4).
+
+### La tastiera sopra «Correggi il testo letto» (12/10/2026)
+Segnalato dal committente: aprendo il campo, la tastiera lo copriva tutto; con
+la prima correzione il foglio saliva **troppo** e si tagliava. Diagnosticato sul
+simulatore con le misure a schermo:
+- su iOS la webview si rimpicciolisce **da sé** (874 → 546 punti,
+  `Keyboard.resize: 'native'`): sollevare il foglio lì lo solleva due volte.
+  🔴 `useTastieraCheCopre` (src/useTastiera.js) torna **sempre 0 su iOS**; la
+  prima versione misurava anche lì, ma `keyboardDidShow` arriva con
+  `innerHeight` ancora intero e la misura vedeva tutta la tastiera;
+- su Android a tutta altezza la webview non si rimpicciolisce: lì il foglio si
+  solleva di quanto la tastiera copre (`paddingBottom` sul velo, `maxHeight`);
+- 🔴 nella webview l'evento `resize` **non arriva** quando la webview cambia
+  misura, e `scrollIntoView({ behavior: 'smooth' })` si interrompe a metà. Il
+  campo si porta in vista scrivendo `scrollTop` del foglio (`portaInVista`),
+  ricontrollando ogni 100 ms per 1,2 s dopo la salita della tastiera.
+- ⚠️ Riguarda solo questo foglio. Su Android le altre modali hanno lo stesso
+  rischio (android.md A.4, «La tastiera»): la correzione globale sarebbe
+  `Keyboard.resizeOnFullScreen: true` in capacitor.config.ts, da provare.
+- Test: `src/__tests__/useTastieraCheCopre.test.jsx` (3), visti fallire. Lo
+  scorrimento è verificato sul simulatore, non da un test (jsdom non ha layout).
+  Android da provare sul telefono.

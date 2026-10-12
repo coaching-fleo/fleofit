@@ -283,3 +283,64 @@ export const conteggiPerTipo = (workouts = []) => {
  */
 export const passaFiltroTipi = (tipi, scelti = []) =>
   scelti.length === 0 || scelti.some(t => tipi.has(t))
+
+/**
+ * Gli esercizi su cui si può filtrare l'archivio (12/10/2026): per ora i due
+ * ergometri che il committente cerca più spesso. `chiavi` sono i nomi ridotti
+ * all'osso (minuscolo, niente spazi né trattini) con cui il coach li scrive:
+ * «SkiErg» e «Rowing» dal picker, «Ski», «Row», «Vogatore» a mano o da una
+ * lavagna letta da `leggiWorkout.js`.
+ * ⚠️ Corrispondenza ESATTA sulla chiave, non «contiene»: «Bent Over Row» è un
+ * esercizio con il bilanciere, non il vogatore, e «Skin the Cat» non è uno ski.
+ */
+export const ESERCIZI_FILTRABILI = [
+  { id: 'SkiErg', etichetta: 'Ski', chiavi: ['skierg', 'ski', 'skyerg', 'sky', 'skier'] },
+  { id: 'Rowing', etichetta: 'Row', chiavi: ['rowing', 'row', 'rower', 'rowerg', 'vogatore', 'remo', 'remoergometro'] },
+]
+
+const chiaveEsercizio = (nome) => String(nome ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/**
+ * Gli esercizi filtrabili presenti in un workout, come insieme di `id`.
+ * Passa da `getNormalizedBlocks` per la stessa ragione di `tipiBlocco`.
+ */
+export const eserciziFiltrabili = (workout) => {
+  const presenti = new Set()
+  for (const b of getNormalizedBlocks(workout || {})) {
+    for (const ex of b?.exercises || []) {
+      const k = chiaveEsercizio(ex?.name)
+      const e = ESERCIZI_FILTRABILI.find(f => f.chiavi.includes(k))
+      if (e) presenti.add(e.id)
+    }
+  }
+  return presenti
+}
+
+/** Quanti workout contengono ciascun esercizio filtrabile; quelli assenti non compaiono. */
+export const conteggiPerEsercizio = (workouts = []) => {
+  const conteggi = new Map()
+  for (const w of workouts) {
+    for (const id of eserciziFiltrabili(w)) conteggi.set(id, (conteggi.get(id) || 0) + 1)
+  }
+  return ESERCIZI_FILTRABILI.filter(e => conteggi.has(e.id)).map(e => ({ ...e, n: conteggi.get(e.id) }))
+}
+
+/** Il giro di un chip a tre stati: spento → «con» → «senza» → spento. */
+export const prossimoStatoEsercizio = (stato) =>
+  stato === 'con' ? 'senza' : stato === 'senza' ? undefined : 'con'
+
+/**
+ * Il workout passa il filtro per esercizio? `scelte` è `{ SkiErg: 'con' | 'senza' }`.
+ * Più esercizi scelti valgono in AND — «con Ski e senza Row» — perché qui il
+ * negativo ha senso solo così: in OR «senza Row» lascerebbe passare tutto ciò
+ * che ha lo ski.
+ * ⚠️ Con un filtro attivo passano SOLO i workout a blocchi: gli esercizi
+ * esistono solo lì, e «senza Ski» che riempie la lista di corse lunghe
+ * risponderebbe a una domanda che nessuno ha fatto.
+ */
+export const passaFiltroEsercizi = (presenti, scelte = {}, aBlocchi = true) => {
+  const attive = Object.entries(scelte).filter(([, s]) => s === 'con' || s === 'senza')
+  if (attive.length === 0) return true
+  if (!aBlocchi) return false
+  return attive.every(([id, s]) => (s === 'con') === presenti.has(id))
+}

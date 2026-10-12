@@ -155,6 +155,38 @@ export function FiltriTipo({ tipi, scelti, onCambia }) {
   )
 }
 
+/**
+ * Gli esercizi, a tre stati (12/10/2026): un tocco «Con Ski», il secondo
+ * «Senza Ski», il terzo spegne. Una riga sua, sotto i tipi, per la stessa
+ * regola: nessun filtro fuori schermo.
+ *
+ * ⚠️ L'etichetta resta SEMPRE «Ski» / «Row» (scelta del committente,
+ * 12/10/2026): lo stato lo dice solo il colore — giallo «con», rosso «senza».
+ * Chi legge lo schermo lo sente da `aria-label`.
+ */
+export function FiltriEsercizio({ esercizi, scelte, onCambia }) {
+  return (
+    <div role="group" aria-label="Filtra per esercizio" className="flex flex-wrap gap-1.5 mt-2">
+      {esercizi.map(({ id, etichetta, n }) => {
+        const stato = scelte[id]
+        return (
+          <button key={id} onClick={() => { vibraScelta(); onCambia(id) }}
+            aria-pressed={stato ? 'true' : 'false'}
+            aria-label={stato === 'con' ? `Solo con ${etichetta}`
+              : stato === 'senza' ? `Solo senza ${etichetta}` : `${etichetta}, ${n} workout`}
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-[12.5px] transition ${stato === 'con'
+              ? 'bg-brand text-black font-black shadow-[0_8px_18px_-8px_rgba(241,186,23,.6)]'
+              : stato === 'senza'
+                ? 'bg-red-500/15 border border-red-500/40 text-red-400 font-black'
+                : 'bg-white/[.03] border border-white/[.07] text-gray-300 font-bold hover:bg-white/[.07]'}`}>
+            {etichetta}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function ChipCorsia({ etichetta, conteggio, punto, attivo, onClick }) {
   return (
     <button onClick={() => { vibraScelta(); onClick() }} aria-pressed={attivo}

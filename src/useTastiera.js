@@ -36,6 +36,54 @@ export function useTastieraAperta() {
   return aperta
 }
 
+/** Sotto questa misura il «resto» è solo l'area sicura in basso, non tastiera. */
+const RESTO_TRASCURABILE = 80
+
+/**
+ * Quanti px di tastiera COPRONO ancora la pagina: quelli che la webview non ha
+ * già tolto rimpicciolendosi. Nato il 12/10/2026 per il foglio «Da
+ * un'immagine», dove «Correggi il testo letto» finiva sotto la tastiera.
+ *
+ * - 🔴 su iOS è SEMPRE 0: `Keyboard.resize: 'native'` rimpicciolisce già la
+ *   webview fino al bordo della tastiera. La prima versione misurava anche lì,
+ *   ma `keyboardDidShow` arriva PRIMA che `innerHeight` si aggiorni: la misura
+ *   vedeva la finestra intera, e il foglio saliva due volte — a metà schermo,
+ *   tagliato (visto sul simulatore il 12/10/2026, segnalato dal committente);
+ * - su Android, con lo schermo a tutta altezza (targetSdk 36, edge-to-edge) la
+ *   webview NON si rimpicciolisce — `resize` è un'opzione solo iOS, e
+ *   `resizeOnFullScreen` non è attiva (docs/memoria/android.md A.4) — e la
+ *   tastiera copre tutto il fondo.
+ * Su Android si confronta l'altezza della finestra a tastiera chiusa con quella
+ * a tastiera aperta: se la webview si è rimpicciolita da sé (Android vecchi, o
+ * `resizeOnFullScreen` attivata un giorno), la differenza la sottrae.
+ * L'altezza del plugin è in px CSS su tutte e due (su Android: dp).
+ *
+ * ⚠️ Sul web torna sempre 0.
+ */
+export function useTastieraCheCopre() {
+  const [copre, setCopre] = useState(0)
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() === 'ios') return
+    let aChiusa = window.innerHeight
+    const handles = []
+    const registra = (evento, fn) => {
+      const r = Keyboard.addListener(evento, fn)
+      Promise.resolve(r).then(h => h && handles.push(h)).catch(() => {})
+    }
+    registra('keyboardDidShow', (info) => {
+      const giaTolta = Math.max(0, aChiusa - window.innerHeight)
+      const resto = Math.round((info?.keyboardHeight || 0) - giaTolta)
+      setCopre(resto > RESTO_TRASCURABILE ? resto : 0)
+    })
+    registra('keyboardWillHide', () => setCopre(0))
+    registra('keyboardDidHide', () => { aChiusa = window.innerHeight })
+    return () => { handles.forEach(h => h.remove && h.remove()) }
+  }, [])
+
+  return copre
+}
+
 /**
  * Invio chiude la tastiera invece di non fare niente.
  *

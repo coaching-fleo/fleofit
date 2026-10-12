@@ -24,6 +24,64 @@ const AFFIANCATE = 0.5
 /** Margine per dire che un pezzo «attraversa» l'inizio di una colonna. */
 const MARGINE = 0.02
 
+// ── L'interfaccia del telefono, da non leggere ────────────────────────────
+// Uno SCREENSHOT delle Note porta con sé l'orario, le icone, la barra degli
+// strumenti e soprattutto la TASTIERA: Vision la legge a gruppi di tasti
+// («QWERT», «A S», «× C») e ognuno diventava una riga nelle note del workout.
+// Segnalato dal committente il 12/10/2026 con uno screenshot vero; le posizioni
+// lette da Vision su quello screenshot sono il test `screenshot delle Note`.
+
+/** Un gruppo di tasti: da 1 a 5 lettere maiuscole, al netto di spazi e simboli. */
+const eTasto = (p) => /^[A-Z]{1,5}$/.test(p.testo.replace(/[\s×+⇧⌫]/g, ''))
+/** Quanti tasti sulla stessa riga fanno una tastiera, e non una sigla («EMOM»). */
+const TASTI_PER_RIGA = 4
+/** Le righe delle tastiere latine: QWERTY, QWERTZ, AZERTY. */
+const RIGHE_TASTIERA = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM', 'QWERTZUIOP', 'YXCVBNM', 'AZERTYUIOP', 'QSDFGHJKLM', 'WXCVBN']
+/** Le lettere `a` compaiono, nello stesso ordine, dentro `b`? */
+const inOrdine = (a, b) => {
+  let i = 0
+  for (const c of b) if (c === a[i]) i++
+  return i === a.length
+}
+/** Sopra la tastiera stanno i suggerimenti e la barra degli strumenti. */
+const SOPRA_TASTIERA = 0.15
+/** L'orario della barra di stato sta qui dentro, in alto. */
+const BARRA_STATO = 0.06
+
+/**
+ * I pezzi senza l'interfaccia del telefono:
+ * - la TASTIERA (righe con almeno quattro gruppi di tasti) e tutto quello che
+ *   sta sotto la sua prima riga; nella fascia appena sopra (suggerimenti,
+ *   «Aa») cade solo quello che non ha cifre — una riga di workout ne ha quasi
+ *   sempre, e così una che finisce attaccata alla tastiera non si perde;
+ * - la BARRA DI STATO: un orario in cima e quello che gli sta accanto;
+ * - le ICONE lette come testo («<», «•••»): niente lettere né cifre.
+ */
+export function senzaInterfaccia(pezzi) {
+  let resto = pezzi.filter(p => /[\p{L}\d]/u.test(p.testo))
+
+  const tasti = resto.filter(eTasto)
+  // Una riga di tasti è tastiera se i gruppi sono tanti, o se le loro lettere,
+  // da sinistra a destra, seguono l'ordine di una tastiera: Vision a volte ne
+  // legge una riga intera in due soli pezzi («QWERT» + «UIOP»).
+  const tastiera = (t) => {
+    const riga = tasti.filter(q => stessaRiga(t, q)).sort((a, b) => a.x - b.x)
+    if (riga.length >= TASTI_PER_RIGA) return true
+    const lettere = riga.map(q => q.testo.replace(/[^A-Z]/g, '')).join('')
+    return lettere.length >= 5 && RIGHE_TASTIERA.some(r => inOrdine(lettere, r))
+  }
+  const righeTastiera = tasti.filter(tastiera)
+  if (righeTastiera.length > 0) {
+    const cima = Math.min(...righeTastiera.map(p => p.y))
+    resto = resto.filter(p => p.y < cima - SOPRA_TASTIERA || (p.y < cima && /\d/.test(p.testo)))
+  }
+
+  const orario = resto.find(p => p.y < BARRA_STATO && /^\d{1,2}[:.]\d{2}/.test(p.testo.trim()))
+  if (orario) resto = resto.filter(p => p.y > orario.y + orario.h)
+
+  return resto
+}
+
 const centroY = (p) => p.y + p.h / 2
 
 /** Due pezzi stanno sulla stessa riga se si sovrappongono per metà altezza. */
@@ -78,9 +136,9 @@ const inizioColonne = (pezzi) => {
  * @param {{ testo: string, x: number, y: number, w: number, h: number }[]} pezzi
  */
 export function testoDaRighe(pezzi) {
-  const validi = (Array.isArray(pezzi) ? pezzi : [])
+  const validi = senzaInterfaccia((Array.isArray(pezzi) ? pezzi : [])
     .filter(p => p && typeof p.testo === 'string' && p.testo.trim()
-      && [p.x, p.y, p.w, p.h].every(Number.isFinite))
+      && [p.x, p.y, p.w, p.h].every(Number.isFinite)))
   if (validi.length === 0) return ''
 
   const inizi = inizioColonne(validi)

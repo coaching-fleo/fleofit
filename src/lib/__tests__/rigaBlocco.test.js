@@ -44,9 +44,9 @@ describe('il sottotitolo di un blocco', () => {
   it('usa gli stessi ripieghi del builder quando un parametro manca', () => {
     // Un blocco appena creato e mai aperto deve dire quello che vale davvero:
     // sono gli stessi default di BlockPickerModal e di `durataBlocco`. Se qui
-    // si scrivesse «10 round» dove il timer ne conta 3, la scheda mentirebbe.
+    // si scrivesse «10 round» dove il timer ne conta 1, la scheda mentirebbe.
     expect(sottotitoloBlocco({ type: 'EMOM', exercises: [{}] })).toBe('1 esercizio · ogni 1:00 × 10')
-    expect(sottotitoloBlocco({ type: 'For Time', exercises: [{}] })).toBe('1 esercizio · 3 round')
+    expect(sottotitoloBlocco({ type: 'For Time', exercises: [{}] })).toBe('1 esercizio · 1 round')
     expect(sottotitoloBlocco({ type: 'Interval', exercises: [{}] })).toBe('1 esercizio · 1 round')
   })
 

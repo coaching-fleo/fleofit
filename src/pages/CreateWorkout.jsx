@@ -41,6 +41,7 @@ import { intervalliDi, etichetteStazioni, MASSIMO_INTERVALLI } from '../lib/staz
 import { parseDuration } from '../lib/timerSequence'
 import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
 import { SCALE, grandezza, testoMisura } from '../lib/scaleMisura'
+import { fotoDisponibile } from '../lib/lettoreTesto'
 
 // Il lettore dei workout scritti si scarica solo quando si apre il foglio.
 const FoglioDaTesto = lazy(() => import('../components/FoglioDaTesto'))
@@ -1499,7 +1500,7 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
     } else if (block.type === 'AMRAP') {
       return `${block.params?.duration || '10:00'}`
     } else if (block.type === 'For Time') {
-      return `${block.params?.rounds || '3'} rounds`
+      return `${block.params?.rounds || '1'} rounds`
        } else if (block.type === 'Interval') {
       return `${block.params?.rounds || '1'} rounds`
     } else if (['Cash In', 'Cash Out'].includes(block.type)) {
@@ -2129,7 +2130,17 @@ export default function CreateWorkout() {
   const [bloccoInArrivo, setBloccoInArrivo] = useState(null)
   const [parametroInArrivo, setParametroInArrivo] = useState(null)
   const [aiModalOpen, setAiModalOpen] = useState(false)
-  const [daTestoOpen, setDaTestoOpen] = useState(false)
+  // «Da un'immagine»: l'immagine scelta, e con lei si apre il foglio che la legge.
+  // ⚠️ Il campo file sta QUI e non nel foglio: il foglio è pigro, e il
+  // selettore si apre solo da un campo che esiste già al momento del tocco.
+  const [immagineScelta, setImmagineScelta] = useState(null)
+  const inputImmagine = useRef(null)
+  const conImmagine = useMemo(() => fotoDisponibile(), [])
+  const scegliImmagine = (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) setImmagineScelta(file)
+  }
   // L'ultima modifica fatta dall'IA: i blocchi di prima e quelli che ha
   // scritto. «Annulla» si vede solo finché la lista è ESATTAMENTE quella
   // scritta dall'IA (stesso riferimento): al primo ritocco a mano sparisce,
@@ -2939,15 +2950,17 @@ export default function CreateWorkout() {
             <CardIA onClick={() => setAiModalOpen(true)} inModifica={blocks.length > 0} />
           </BorderBeam>
 
-          <BottoneGhost icona={ScanText} onClick={() => setDaTestoOpen(true)}>Da un testo scritto</BottoneGhost>
+          {conImmagine && (
+            <BottoneGhost icona={ScanText} onClick={() => inputImmagine.current?.click()}>Da un'immagine</BottoneGhost>
+          )}
 
           {/* La stessa fascia serve a due sostituzioni: quella dell'IA (viola) e
-              quella del testo incollato, che non è IA e non ne porta il colore. */}
+              quella dell'immagine letta, che non è IA e non ne porta il colore. */}
           {modificaIA && modificaIA.dopo === blocks && (
             <div role="status" className={`flex items-center gap-3 rounded-2xl px-4 py-2.5 ${modificaIA.daTesto
               ? `${VETRO}` : 'border border-ia/30 bg-ia/10'}`}>
               <p className={`flex-1 text-[13px] font-semibold ${modificaIA.daTesto ? 'text-gray-300' : 'text-[#c4a6e8]'}`}>
-                {modificaIA.daTesto ? 'Blocchi sostituiti dal testo' : 'Blocchi modificati con l\'IA'}
+                {modificaIA.daTesto ? 'Blocchi sostituiti dall\'immagine' : 'Blocchi modificati con l\'IA'}
               </p>
               <button type="button"
                 onClick={() => { setBlocks(modificaIA.prima); setModificaIA(null); battito() }}
@@ -2998,7 +3011,7 @@ export default function CreateWorkout() {
             if (type === 'ON/OFF') { newBlock.params.on = '1:00'; newBlock.params.off = '1:00'; newBlock.params.rounds = '10' }
             if (type === 'EMOM') { newBlock.params.interval = '1:00'; newBlock.params.rounds = '10' }
             if (type === 'AMRAP') { newBlock.params.duration = '10:00' }
-            if (type === 'For Time') { newBlock.params.rounds = '3' }
+            if (type === 'For Time') { newBlock.params.rounds = '1' }
                         if (type === 'Interval') { newBlock.params.rounds = '1' }
 
             if (type === 'Cash In' || type === 'Cash Out') { newBlock.params.rounds = '1' }
@@ -3063,12 +3076,18 @@ export default function CreateWorkout() {
         />
       )}
 
-      {daTestoOpen && (
+      {conImmagine && (
+        <input ref={inputImmagine} type="file" accept="image/*" className="hidden" onChange={scegliImmagine}
+          aria-label="Immagine del workout" />
+      )}
+
+      {immagineScelta && (
         <Suspense fallback={null}>
           <FoglioDaTesto
             categoria={category}
             haGia={category === 'Running' ? runningSteps.length > 0 : blocks.length > 0}
-            onClose={() => setDaTestoOpen(false)}
+            file={immagineScelta}
+            onClose={() => setImmagineScelta(null)}
             onUsa={usaDaTesto}
           />
         </Suspense>
@@ -3087,7 +3106,9 @@ export default function CreateWorkout() {
             classeColore="bg-running"
           />
 
-          <BottoneGhost icona={ScanText} onClick={() => setDaTestoOpen(true)}>Da un testo scritto</BottoneGhost>
+          {conImmagine && (
+            <BottoneGhost icona={ScanText} onClick={() => inputImmagine.current?.click()}>Da un'immagine</BottoneGhost>
+          )}
 
           <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
             <div className="flex items-center justify-between">

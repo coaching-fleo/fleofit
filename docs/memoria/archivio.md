@@ -134,6 +134,16 @@ tasto premuto: sono 171 workout da scandagliare nel jsonb.
   Quanto segue era la ragione per cui il pannello non c'era: Un bottone che non fa niente **accanto a filtri che
   funzionano** è peggio che non averlo — è la stessa regola del badge numerico
   sulla navbar (§9-quaterdecies) e del `rpeAtteso` che torna `null` invece di 5.
+- **I filtri per esercizio, Ski e Row (12/10/2026)**, anche **in negativo**: una riga sua
+  sotto i tipi (`FiltriEsercizio`), chip a **tre stati** — un tocco «con» (giallo), il
+  secondo «senza» (rosso), il terzo spegne. ⚠️ L'etichetta resta **sempre** «Ski» / «Row»:
+  lo stato lo dice solo il colore (scelta del committente, lo stesso giorno). Più esercizi valgono
+  in **AND** («con Ski e senza Row»): in OR il negativo lascerebbe passare tutto. ⚠️ Con un
+  filtro esercizio attivo passano **solo i workout a blocchi**: le corse non hanno esercizi,
+  e «senza Ski» le farebbe passare tutte. ⚠️ Il nome si confronta per chiave **esatta**
+  (`ESERCIZI_FILTRABILI` in `rigaArchivio.js`: SkiErg/Ski/Sky…, Rowing/Row/Vogatore/Remo…),
+  mai «contiene»: «Bent Over Row» e «Skin the Cat» non sono ergometri. Per aggiungere un
+  esercizio basta una voce in quell'elenco; il chip compare solo se qualche workout lo ha.
 - **La voce «Archivio» nella tab bar.** L'artboard 1b la disegna, ma è lo stesso
   caso di `Scheda Atleta.dc.html`: il navbar dell'artboard è **sfondo di scena**,
   non un pezzo di design. La navbar vera non ha quella voce (§9-quaterdecies),

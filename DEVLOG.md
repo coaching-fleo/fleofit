@@ -23,15 +23,15 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 - Con la **generazione IA** ogni esercizio ha un'intensità, dettata o stimata.
 - **«Genera con IA» ora modifica anche**: se ci sono già blocchi (fatti a mano o dall'IA) basta chiedere la modifica — «porta l'EMOM a 16 minuti», «togli il Cash Out» — e l'IA riscrive l'allenamento cambiando solo quello; la modifica si può annullare.
 - I blocchi scritti dall'IA arrivano **tutti aperti**, pronti da rileggere.
-- Nuovo **«Da un testo scritto»**: si incolla un workout dalle Note o da un messaggio e l'app lo divide da sola in blocchi (o in fasi di corsa), senza IA. Prima di confermare mostra riga per riga cosa ha capito; quello che non capisce finisce nelle note, non si perde.
-- **Su iPhone anche da una foto**: si fotografa la lavagna o il foglio (o si sceglie uno screenshot) e l'app legge il testo da sola, sul telefono, anche su due colonne. Il testo letto si può correggere prima di usarlo. L'app ora chiede il permesso della **fotocamera**.
-- **Su Android anche da una foto** (da provare prima del rilascio): due bottoni, «Scatta una foto» e «Dalla galleria».
+- Nuovo **«Da un'immagine»** (iPhone e Android): si sceglie la foto di una lavagna, di un foglio o uno screenshot delle Note, e l'app legge il workout da sola, sul telefono e senza IA, e lo divide in blocchi o fasi di corsa. Prima di confermare mostra cosa ha capito riga per riga; il testo letto si può correggere, e quello che non capisce finisce nelle note. Su iPhone si può anche scattare la foto al momento (l'app chiede il permesso della fotocamera la prima volta).
+- Da uno **screenshot** legge solo il workout: tastiera, orario e icone del telefono vengono ignorati. Una riga con la sola distanza («300m») prende l'esercizio di prima, e l'anteprima lo segnala.
 - Un **blocco nuovo chiede subito i suoi numeri** (tempo, round…) e si aggiunge con un tasto di conferma.
 - Un workout già svolto da un atleta **non si può più modificare**: si può duplicare.
 - Negli **EMOM** un esercizio può durare **più minuti di fila** come stazione continua («minuti 2–3: vogatore»): il timer non riparte a metà.
 
 ## Archivio e atleti (coach)
 - **Nuovi filtri per tipo di blocco** nell'archivio: ON/OFF, EMOM, AMRAP, For Time, Interval.
+- **Filtri per esercizio Ski e Row** nell'archivio, anche in negativo: un tocco mostra i workout **con** lo ski, il secondo quelli **senza**, il terzo toglie il filtro.
 - Tornando da un workout l'archivio **riprende dove l'avevi lasciato**; lo stesso vale per la lista atleti tornando da un atleta.
 
 ## Cerca con l'IA (coach)

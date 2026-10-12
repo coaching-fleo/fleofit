@@ -28,7 +28,7 @@
   (`docs/memoria/app-store.md`).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint al 12/10/2026: `npm test` → **1628 test**; `npx eslint src` → **27 problemi** (nessuno nei file di «Dalle note» né di «Da un testo scritto») (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
+- Test e lint al 12/10/2026: `npm test` → **1647 test**; `npx eslint src` → **27 problemi** (nessuno nei file di «Dalle note» né di «Da un testo scritto») (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---

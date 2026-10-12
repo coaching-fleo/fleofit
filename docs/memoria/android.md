@@ -166,12 +166,12 @@ e le push con l'app chiusa da giorni.
     (frazioni, origine in ALTO a sinistra), quindi il JS non cambia. Tre differenze:
     - 🔴 **È un plugin dell'app**: lo registra `MainActivity.onCreate` con `registerPlugin(…)`,
       **prima** di `super.onCreate`. Dopo, la pagina non lo vede e il bottone non compare.
-    - **Due bottoni invece di uno.** La webview di Android non offre «scatta o galleria»: senza
+    - **Solo la galleria.** La webview di Android non offre «scatta o galleria» come iOS: senza
       `capture` apre solo la galleria, con `capture` solo la fotocamera (`BridgeWebChromeClient`
-      di Capacitor). `FoglioDaTesto` mette «Scatta una foto» e «Dalla galleria» quando
-      `getPlatform() === 'android'`. La fotocamera è quella di sistema: il manifest **non**
-      dichiara `CAMERA`, e così Capacitor non deve chiederla (se un giorno la si dichiara per
-      altro, Capacitor la chiederà prima di aprire la fotocamera).
+      di Capacitor). Dal 12/10/2026 «Da un'immagine» apre SUBITO il selettore (richiesta del
+      committente), quindi su Android è la galleria: per una lavagna si scatta prima con la
+      fotocamera e poi la si sceglie. Se servisse anche lo scatto diretto, è un secondo campo con
+      `capture="environment"`: la fotocamera di sistema non richiede `CAMERA` nel manifest.
     - `parole` (il gergo da proteggere) si ignora: ML Kit non ha un vocabolario personalizzato
       e non corregge in base alla lingua.
 

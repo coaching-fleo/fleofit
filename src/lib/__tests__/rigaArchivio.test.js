@@ -3,6 +3,7 @@ import {
   giornoBreve, riepilogoCorsa, metaWorkout, testoCercabile,
   ordinaPerData, raggruppaPerMese, conteggiPerCorsia,
   tipiBlocco, conteggiPerTipo, passaFiltroTipi,
+  eserciziFiltrabili, conteggiPerEsercizio, passaFiltroEsercizi, prossimoStatoEsercizio,
 } from '../rigaArchivio'
 
 const hyrox = (blocks) => ({ date: '2026-08-22', sections: { category: 'Hyrox', blocks } })
@@ -239,3 +240,44 @@ describe('filtro per tipo di blocco', () => {
     expect(passaFiltroTipi(tipi, ['EMOM'])).toBe(false)
   })
 })
+
+describe('filtro per esercizio (Ski, Row)', () => {
+  const blocco = (...nomi) => ({ type: 'For Time', exercises: nomi.map(name => ({ name })) })
+
+  it('riconosce i nomi del picker e quelli scritti a mano, ma non gli omonimi', () => {
+    expect([...eserciziFiltrabili(hyrox([blocco('SkiErg', 'Wall Balls')]))]).toEqual(['SkiErg'])
+    expect([...eserciziFiltrabili(hyrox([blocco('ski erg'), blocco('Row')]))]).toEqual(['SkiErg', 'Rowing'])
+    expect([...eserciziFiltrabili(hyrox([blocco('Vogatore')]))]).toEqual(['Rowing'])
+    // «Bent Over Row» è un bilanciere, «Skin the Cat» un anello.
+    expect(eserciziFiltrabili(hyrox([blocco('Bent Over Row', 'Skin the Cat')])).size).toBe(0)
+  })
+
+  it('legge anche il formato legacy', () => {
+    const legacy = { sections: { category: 'Hyrox', main: { type: 'AMRAP', exercises: [{ name: 'Rowing' }] } } }
+    expect(eserciziFiltrabili(legacy).has('Rowing')).toBe(true)
+  })
+
+  it('conta i workout e lascia fuori gli esercizi che nessuno contiene', () => {
+    const lista = [hyrox([blocco('SkiErg'), blocco('SkiErg')]), hyrox([blocco('SkiErg')]), corsa([])]
+    expect(conteggiPerEsercizio(lista).map(e => [e.etichetta, e.n])).toEqual([['Ski', 2]])
+  })
+
+  it('il chip gira spento → con → senza → spento', () => {
+    expect(prossimoStatoEsercizio(undefined)).toBe('con')
+    expect(prossimoStatoEsercizio('con')).toBe('senza')
+    expect(prossimoStatoEsercizio('senza')).toBeUndefined()
+  })
+
+  it('con e senza valgono in AND, e un filtro attivo lascia fuori le corse', () => {
+    const soloSki = new Set(['SkiErg'])
+    expect(passaFiltroEsercizi(soloSki, {})).toBe(true)
+    expect(passaFiltroEsercizi(new Set(), {}, false)).toBe(true)
+    expect(passaFiltroEsercizi(soloSki, { SkiErg: 'con' })).toBe(true)
+    expect(passaFiltroEsercizi(soloSki, { SkiErg: 'senza' })).toBe(false)
+    expect(passaFiltroEsercizi(soloSki, { SkiErg: 'con', Rowing: 'senza' })).toBe(true)
+    expect(passaFiltroEsercizi(soloSki, { SkiErg: 'con', Rowing: 'con' })).toBe(false)
+    expect(passaFiltroEsercizi(new Set(), { SkiErg: 'senza' }, true)).toBe(true)
+    expect(passaFiltroEsercizi(new Set(), { SkiErg: 'senza' }, false)).toBe(false)
+  })
+})
+

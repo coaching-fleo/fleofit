@@ -206,6 +206,18 @@ tieni il ritmo`
     expect(ft.exercises[0].exTime).toBeUndefined()
   })
 
+  it('una riga con solo i metri prende l’ultimo esercizio in metri, e lo dice', () => {
+    const { blocchi, righe } = leggiHyrox('4 RFT\n500m row\n20 wall balls\n1000m\n15 wall balls')
+    expect(blocchi[0].exercises[2]).toMatchObject({ name: 'Rowing', meters: '1000m' })
+    expect(blocchi[0].exercises[2].dedotto).toBeUndefined()
+    expect(righe.find(r => r.testo === '1000m')).toMatchObject({ esito: 'dedotto', nome: 'Rowing' })
+  })
+
+  it('🔴 senza un esercizio in metri prima non indovina, e un numero nudo non si deduce', () => {
+    expect(leggiHyrox('3 rft\n20 burpees\n300m').righe[2].esito).toBe('nota')
+    expect(leggiHyrox('3 rft\n500m row\n15').righe[2].esito).toBe('nota')
+  })
+
   it('un testo vuoto non produce niente', () => {
     expect(leggiHyrox('')).toEqual({ blocchi: [], note: '', righe: [] })
     expect(leggiHyrox('\n  \n')).toEqual({ blocchi: [], note: '', righe: [] })
