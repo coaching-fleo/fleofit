@@ -223,8 +223,12 @@ export default function AthleteDetail() {
     })
   }
 
-  const toggleWorkoutStatus = async (id, currentStatus, scheduledDateStr) => {
+  // `notaScritta`: il testo che l'atleta ha appena scritto nella card e non è
+  // ancora salvato (arriva da updateWorkoutNote). Senza, la modale RPE parte
+  // dalla nota già salvata.
+  const toggleWorkoutStatus = async (id, currentStatus, scheduledDateStr, notaScritta) => {
     const w = workouts.find(wo => wo.id === id)
+    const notaIniziale = (parsed) => notaScritta ?? parsed.text
 
     if (currentStatus === 'completed') {
       const { error } = await supabase.from('athlete_workouts').update({ status: 'pending' }).eq('id', id)
@@ -244,7 +248,7 @@ export default function AthleteDetail() {
           setConfirmInfo(null);
           setWorkoutToComplete(w);
           const parsed = parseNotesAndRpe(w.notes);
-          setRpeNotes(parsed.text);
+          setRpeNotes(notaIniziale(parsed));
           setRpeScore(parsed.rpe);
           setShowRpeModal(true);
         }
@@ -254,7 +258,7 @@ export default function AthleteDetail() {
 
     setWorkoutToComplete(w);
     const parsed = parseNotesAndRpe(w.notes);
-    setRpeNotes(parsed.text);
+    setRpeNotes(notaIniziale(parsed));
     setRpeScore(parsed.rpe);
     setShowRpeModal(true);
   }
@@ -337,6 +341,24 @@ export default function AthleteDetail() {
   }
 
   const updateWorkoutNote = async (workoutId, notes, workoutTitle) => {
+    // Stessa regola di salvaNoteAtleta in WorkoutDetail (§9-undequinquagies):
+    // su un allenamento non completato la nota dell'atleta non si salva da
+    // sola. Il sì passa dal completamento di sempre con la nota già dentro,
+    // il «No» non scrive niente e la card tiene il testo.
+    const w = workouts.find(wo => wo.id === workoutId)
+    if (role === 'athlete' && w && w.status !== 'completed') {
+      setConfirmInfo({
+        title: "Hai completato l'allenamento?",
+        message: "La nota si salva quando segni l'allenamento come fatto.",
+        confirmLabel: "Sì, l'ho fatto",
+        cancelLabel: 'No',
+        // ⚠️ Al giro dopo: CustomConfirm chiama onClose subito dopo
+        // onConfirm, e chiuderebbe l'avviso «data futura» appena aperto.
+        onConfirm: () => setTimeout(() => toggleWorkoutStatus(w.id, w.status, w.completed_date, parseNotesAndRpe(notes).text), 0),
+      })
+      return
+    }
+
     const { error } = await supabase
       .from('athlete_workouts')
       .update({ notes })

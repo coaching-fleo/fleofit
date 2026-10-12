@@ -392,6 +392,17 @@ la nota non si salva da sola**.
   chiama `onClose` subito dopo `onConfirm`, e chiuderebbe nello stesso istante
   l'avviso «data futura» che `toggleStatus` apre. Un test lo copre.
 - Solo su `app`: la web app su `main` salva ancora la nota senza chiedere.
+- 🔴 **Le strade per scrivere la nota sono DUE**, non una: anche le card del
+  profilo dell'atleta (`/profile` = `AthleteDetail.jsx`, card di oggi e dei
+  prossimi giorni) hanno un campo nota con il proprio «Conferma». Il primo
+  commit copriva solo la scheda del workout, e il committente l'ha provata
+  proprio dal profilo: la nota si è salvata senza domande. Dal 12/10/2026 la
+  stessa regola sta in `updateWorkoutNote` di `AthleteDetail.jsx` (solo per
+  `role === 'athlete'`: il coach che corregge la nota dalla scheda dell'atleta
+  salva come prima), e `toggleWorkoutStatus` accetta il testo appena scritto
+  come quarto argomento, per metterlo nella modale RPE.
+  Test: `src/pages/__tests__/AthleteDetailNotaCompletamento.test.jsx` (5);
+  mutazione (domanda tolta) → 4 su 5 rossi.
 
 Test: `src/pages/__tests__/WorkoutDetailNotaCompletamento.test.jsx` (5).
 Mutazioni: domanda tolta → 4 test su 5 rossi; `setTimeout` tolto → il test della
