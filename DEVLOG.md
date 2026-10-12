@@ -9,6 +9,7 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 - Nuova domanda **«Ti è piaciuto?»** con 👍 / 👎 dopo ogni allenamento; il coach vede le risposte sulla scheda del workout.
 - Corretti i **minuti della settimana** in Home: le ripetute in metri venivano contate come minuti.
 - Corretto l'**RPE medio della settimana**: non conta più gli allenamenti in cui l'RPE non è stato segnato.
+- Scrivendo la **nota** su un allenamento non ancora segnato come fatto, l'app chiede se l'hai completato: la nota si salva insieme al completamento.
 
 ## Creazione dei workout (coach)
 - Nuovo **righello** per inserire ripetizioni, metri, chili e ritmi.

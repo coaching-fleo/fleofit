@@ -370,3 +370,30 @@ strada della voce «Duplica»).
 
 Test: `src/pages/__tests__/WorkoutDetailModificaSvolto.test.jsx` (3). Mutazione
 (controllo sempre falso) presa da due test su tre.
+
+## 9-undequinquagies. La nota dell'atleta si salva solo col completamento (12/10/2026)
+Richiesta del committente: alcuni atleti scrivevano la nota sul workout senza
+segnarlo come fatto, e il coach si ritrovava un allenamento «da fare» con dentro
+il racconto di com'era andato. La regola ora: **su un allenamento non completato
+la nota non si salva da sola**.
+
+- «Conferma note» (`salvaNoteAtleta` di `WorkoutDetail.jsx`), se `workoutStatus
+  !== 'completed'`, non scrive niente e chiede **«Hai completato l'allenamento?»**
+  con «Sì, l'ho fatto» / «No» — «No» e non «Non ancora», perché il tasto indietro di Android chiude solo i bottoni che si chiamano esattamente così (`indietroAndroid.js`).
+- Il **sì** chiama `toggleStatus`, cioè il completamento di sempre: avviso della
+  data futura → modale RPE con la nota già dentro (`setRpeNotes(editingNote)`) →
+  `handleRpeSubmit`, che salva nota e stato in UNA scrittura (o nella coda offline)
+  → recap. Nessuna seconda strada per completare.
+- Il **«No»** non salva niente e lascia il testo nel riquadro.
+- Su un allenamento già completato la nota si salva subito, come prima (serve a
+  correggerla), e solo lì parte la notifica «nota» al coach: sul completamento
+  parte già quella «completed».
+- ⚠️ `onConfirm` lancia `toggleStatus` con un `setTimeout(…, 0)`: `CustomConfirm`
+  chiama `onClose` subito dopo `onConfirm`, e chiuderebbe nello stesso istante
+  l'avviso «data futura» che `toggleStatus` apre. Un test lo copre.
+- Solo su `app`: la web app su `main` salva ancora la nota senza chiedere.
+
+Test: `src/pages/__tests__/WorkoutDetailNotaCompletamento.test.jsx` (5).
+Mutazioni: domanda tolta → 4 test su 5 rossi; `setTimeout` tolto → il test della
+data futura rosso. Provato anche nell'ambiente di prova (`demo-atleta` in
+`.claude/launch.json`, con `adminRoleOverride = 'athlete'`).

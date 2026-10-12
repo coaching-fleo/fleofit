@@ -1425,6 +1425,26 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   }
 
   const salvaNoteAtleta = async () => {
+    // Su un allenamento non completato la nota NON si salva da sola: alcuni
+    // atleti scrivevano com'era andata senza segnarlo come fatto, e il coach
+    // si ritrovava un workout «da fare» con dentro il racconto. Si chiede
+    // prima: il sì passa dal completamento di sempre (data futura → RPE con
+    // la nota già dentro → recap), che salva nota e stato insieme; il «no»
+    // non scrive niente e lascia il testo nel riquadro.
+    if (workoutStatus !== 'completed') {
+      setConfirmInfo({
+        title: "Hai completato l'allenamento?",
+        message: "La nota si salva quando segni l'allenamento come fatto.",
+        confirmLabel: "Sì, l'ho fatto",
+        cancelLabel: 'No',
+        // ⚠️ Al giro dopo, non subito: CustomConfirm chiama onClose subito
+        // dopo onConfirm, e chiuderebbe l'avviso «data futura» che
+        // toggleStatus apre nello stesso istante.
+        onConfirm: () => setTimeout(toggleStatus, 0),
+      })
+      return
+    }
+
     setSavingNote(true)
     const finalNote = formatNotesWithRpe(rpeScore, editingNote, athleteNote?.gradimento)
 

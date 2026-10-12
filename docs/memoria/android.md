@@ -20,8 +20,12 @@ npm run android                       # build web + npx cap sync android
 cd android && ./gradlew installDebug  # compila e installa sull'emulatore/telefono collegato
 ```
 
-- **Java**: Gradle vuole il JDK di Android Studio, non è nel PATH. In Git Bash:
-  `export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"`.
+- **Java**: serve il **JDK 21**, non è nel PATH. ⚠️ Il JBR di Android Studio è passato a
+  **Java 25**, che Gradle 8.14.3 non supporta («Unsupported class file major version 69»).
+  In Git Bash: `export JAVA_HOME=~/.gradle/jdks/eclipse_adoptium-21-amd64-windows.2`.
+  Dentro Android Studio vale `android/.gradle/config.properties` (`java.home`, file locale e
+  ignorato da git), che dal 12/10/2026 punta allo stesso JDK 21: se Studio propone «Apply
+  compatible Gradle JDK configuration», è perché quel file è tornato sul JBR.
 - **adb**: `"$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"`. In Git Bash i percorsi che
   cominciano con `/sdcard` vengono riscritti in percorsi Windows: serve `export MSYS_NO_PATHCONV=1`.
 - 🔴 **`npm run build` non basta**: Gradle impacchetta `android/app/src/main/assets/public`, che
