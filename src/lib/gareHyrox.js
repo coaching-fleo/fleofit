@@ -201,7 +201,7 @@ export function sectionsEvento(gara) {
     ...base,
     hyrox: {
       id: gara.id, codice: gara.codice || '', url: gara.url || '', dal: gara.dal, al: gara.al,
-      paese: gara.paese || '', immagine: gara.immagine || '',
+      paese: gara.paese || '', immagine: gara.immagine || '', citta: gara.citta || '',
     },
   }
 }

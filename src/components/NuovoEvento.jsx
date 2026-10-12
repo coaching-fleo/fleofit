@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
 import { X, Search, ChevronLeft, ExternalLink } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -12,6 +12,10 @@ import {
   blocchettoData, quandoGara, perMese,
 } from '../lib/gareHyrox'
 import { LABEL } from '../lib/stiliCard'
+
+// «Gara già corsa»: pigra, perché porta con sé la ricerca dei risultati e la
+// modale si apre anche dalla Home (chunk d'ingresso, CLAUDE.md §2).
+const GarePassate = lazy(() => import('./GarePassate'))
 
 /**
  * «Nuovo evento / gara», a tutto schermo: dal calendario (bottone +) e dalla
@@ -98,12 +102,16 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
     onSaved()
   }
 
-  const mostraSalva = modo === 'altro' || !!gara
+  const mostraSalva = modo === 'altro' || (modo === 'hyrox' && !!gara)
+  // Una gara passata si salva da sola (dentro GarePassate), e se ne possono
+  // aggiungere più di una: il calendario si ricarica alla chiusura.
+  const [passateSalvate, setPassateSalvate] = useState(false)
+  const chiudi = () => (passateSalvate ? onSaved() : onClose())
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#0B0B0B] flex flex-col velo-in">
       <div className="shrink-0 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex items-center gap-3">
-        <button aria-label="Chiudi" onClick={onClose}
+        <button aria-label="Chiudi" onClick={chiudi}
           className="w-11 h-11 rounded-full bg-[#1e1e1e] border border-[#2a2a2a] flex items-center justify-center text-gray-300 hover:text-white shrink-0">
           <X size={20} />
         </button>
@@ -113,19 +121,25 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
       <div className="flex-1 overflow-y-auto hide-scrollbar px-4 pb-6 flex flex-col gap-4">
         <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] shrink-0" role="tablist">
           <div
-            className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
-              modo === 'hyrox' ? 'translate-x-0' : 'translate-x-full'
+            className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc((100%-0.75rem)/3)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
+              modo === 'hyrox' ? 'translate-x-0' : modo === 'passata' ? 'translate-x-full' : 'translate-x-[200%]'
             }`}
           />
-          <button role="tab" aria-selected={modo === 'hyrox'} onClick={() => scegliModo('hyrox')}
-            className={`relative z-10 flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${modo === 'hyrox' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}>
-            Gara HYROX
-          </button>
-          <button role="tab" aria-selected={modo === 'altro'} onClick={() => scegliModo('altro')}
-            className={`relative z-10 flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${modo === 'altro' ? 'text-white' : 'text-muted hover:text-gray-300'}`}>
-            Altro evento
-          </button>
+          {[['hyrox', 'Prossima gara'], ['passata', 'Già corsa'], ['altro', 'Altro']].map(([m, testo]) => (
+            <button key={m} role="tab" aria-selected={modo === m} onClick={() => scegliModo(m)}
+              className={`relative z-10 flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-colors duration-300 ${
+                modo === m ? (m === 'altro' ? 'text-white' : 'text-brand') : 'text-muted hover:text-gray-300'
+              }`}>
+              {testo}
+            </button>
+          ))}
         </div>
+
+        {modo === 'passata' && (
+          <Suspense fallback={<div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl h-44 animate-pulse" />}>
+            <GarePassate athleteId={athleteId} onSalvato={() => setPassateSalvate(true)} />
+          </Suspense>
+        )}
 
         {modo === 'hyrox' && !gara && (
           <ListaGare

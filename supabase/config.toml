@@ -444,3 +444,10 @@ enabled = true
 # senza, chiunque potrebbe usarla per far scaricare hyrox.com a ripetizione.
 verify_jwt = true
 entrypoint = "./functions/gare-hyrox/index.ts"
+
+[functions.risultato-hyrox]
+enabled = true
+# Il JWT tiene fuori le chiamate anonime: ogni ricerca costa ~20 richieste a
+# results.hyrox.com, e la funzione limita anche per utente (12 l'ora).
+verify_jwt = true
+entrypoint = "./functions/risultato-hyrox/index.ts"

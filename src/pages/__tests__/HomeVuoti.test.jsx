@@ -318,3 +318,28 @@ describe('Una lettura fallita non si legge come «non hai niente»', () => {
     await waitFor(() => expect(screen.getByText(/ti segue da oggi/i)).toBeInTheDocument())
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────
+// Dopo una gara HYROX senza tempo la Home chiede «com'è andata?». Qui non si
+// cerca niente (ogni ricerca costa ~20 richieste a results.hyrox.com): la card
+// porta alla scheda, dove la ricerca parte.
+describe('Dopo una gara HYROX', () => {
+  const gara = (data, note = null) => ({
+    id: `aw-gara-${data}`, completed_date: data, status: 'pending', notes: note,
+    workouts: { id: 'w-gara', title: 'HYROX Turin', sections: { category: 'Event', isEvent: true, isAutonomous: true, hyrox: { id: '9', citta: 'Turin' } } },
+  })
+
+  it('chiede «com\'è andata?» il giorno dopo la gara', async () => {
+    monta([seduta('2026-09-01', { rpe: 7 }), seduta('2026-09-03', { rpe: 7, id: 'b' }), gara('2026-09-06')])
+    expect(await screen.findByRole('button', { name: /Com'è andata\?.*HYROX Turin/ })).toBeInTheDocument()
+    expect(finto.supabase.functions.invoke).not.toHaveBeenCalledWith('risultato-hyrox', expect.anything())
+  })
+
+  it('non lo chiede più quando il tempo è salvato', async () => {
+    monta([seduta('2026-09-01', { rpe: 7 }), gara('2026-09-06', '🏁 Tempo HYROX: 1:12:38')])
+    // la stessa Home, con la gara già passata, mostra comunque il suo banner vuoto
+    await waitFor(() => expect(finto.chiamateA('athlete_workouts').length).toBeGreaterThan(0))
+    await screen.findByLabelText('Fissa il tuo obiettivo')
+    expect(screen.queryByRole('button', { name: /Com'è andata\?/ })).not.toBeInTheDocument()
+  })
+})

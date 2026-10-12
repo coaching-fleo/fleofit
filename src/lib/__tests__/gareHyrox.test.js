@@ -124,7 +124,7 @@ describe('sectionsEvento', () => {
       category: 'Event', isEvent: true, isAutonomous: true,
       hyrox: {
         id: '1', codice: 'VLC', url: 'https://hyrox.com/event/hyrox-valencia/', dal: '2026-10-15', al: '2026-10-18',
-        paese: 'ES', immagine: 'https://hyrox.com/v.jpg',
+        paese: 'ES', immagine: 'https://hyrox.com/v.jpg', citta: '',
       },
     })
   })

@@ -102,6 +102,12 @@ const workouts = () => [
   W('w-corsa2', 'Fondo lento 12 km', 9, corsa(5)),
   W('w-libero', 'Allenamento libero · mobilità', 7, { category: 'Custom', isAutonomous: true }),
   W('w-gara', 'Hyrox Milano', -30, { category: 'Event', isEvent: true, isAutonomous: true }),
+  // Una gara HYROX già corsa e senza tempo: la Home di Sara chiede «com'è
+  // andata?» e la scheda trova il tempo finto di `risultatoFinto` (supabaseDemo.js).
+  W('w-gara-torino', 'HYROX Turin', 3, {
+    category: 'Event', isEvent: true, isAutonomous: true,
+    hyrox: { id: 'd9', codice: 'TRN', url: 'https://hyrox.com/find-my-race/', dal: giorno(-3), al: giorno(-3), citta: 'Turin', paese: 'IT', immagine: '' },
+  }),
 ]
 
 // ── gli atleti ──────────────────────────────────────────────────────────────
@@ -255,6 +261,7 @@ const assegnazioni = () => [
   AW('at-sara', 'w-forte', nellaSettimana(0, 0), 'completed', 8),
   AW('at-sara', 'w-corsa', giorno(0), 'pending'),
   AW('at-sara', 'w-medio', giorno(2), 'pending'),
+  AW('at-sara', 'w-gara-torino', giorno(-3), 'pending'),
 
   // Paolo: due sole sedute, tutte nella stessa settimana.
   AW('at-paolo', 'w-medio', giorno(-4), 'completed', 7),

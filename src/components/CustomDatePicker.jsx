@@ -5,7 +5,10 @@ import { it } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
 import { CARD } from '../lib/stiliCard'
 
-export default function CustomDatePicker({ date, onChange, placeholder = "Seleziona data", className = "" }) {
+// `meseIniziale` (yyyy-MM-dd, facoltativo): dove si apre il calendario quando
+// non c'è ancora una data — per una gara del 2023 ripartire da oggi vorrebbe
+// dire scorrere indietro trenta mesi.
+export default function CustomDatePicker({ date, onChange, placeholder = "Seleziona data", className = "", meseIniziale = null }) {
   const [isOpen, setIsOpen] = useState(false)
   
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -13,7 +16,7 @@ export default function CustomDatePicker({ date, onChange, placeholder = "Selezi
       const d = parseISO(date)
       if (isValid(d)) return d
     }
-    return new Date()
+    return meseIniziale && isValid(parseISO(meseIniziale)) ? parseISO(meseIniziale) : new Date()
   })
   
   const displayDate = date && isValid(parseISO(date)) ? format(parseISO(date), 'EEEE d MMMM yyyy', { locale: it }) : ''
@@ -36,7 +39,7 @@ export default function CustomDatePicker({ date, onChange, placeholder = "Selezi
       <button aria-label="Scegli una data"
         type="button"
         onClick={() => {
-          setCurrentMonth(date && isValid(parseISO(date)) ? parseISO(date) : new Date())
+          setCurrentMonth(date && isValid(parseISO(date)) ? parseISO(date) : (meseIniziale && isValid(parseISO(meseIniziale)) ? parseISO(meseIniziale) : new Date()))
           setIsOpen(true)
         }}
         className={`flex items-center gap-3 w-full text-left transition ${className}`}

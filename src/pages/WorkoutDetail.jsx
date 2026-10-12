@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
@@ -59,6 +59,10 @@ import { RigaAvviso, AvvisoEsteso, PrevisioneNonDisponibile } from '../component
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { recapStoria } from '../lib/recapStoria'
 import { etichetteStazioni } from '../lib/stazioniEmom'
+import { daChiedere, leggiIgnorate, tempoDallaNota } from '../lib/risultatoGara'
+// «Com'è andata?» sulle gare HYROX già corse: pigro, perché compare solo lì
+// e il chunk della scheda ha un peso da rispettare (CLAUDE.md §2).
+const RisultatoGara = lazy(() => import('../components/RisultatoGara'))
 import {
   GraficaStoria, FoglioStoria, LARGHEZZA_STORIA, ALTEZZA_STORIA, FATTORE_STORIA,
 } from '../components/StoriaUI'
@@ -1285,6 +1289,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const riepilogo = haBlocchi ? caricoPrevisto(blocks) : null
 
   const eAtleta = (role === 'athlete' || isOwnProfile) && !!athleteWorkoutId
+  // Gara HYROX già corsa: il tempo salvato si mostra grande, e se non c'è
+  // ancora lo si cerca su results.hyrox.com (docs/memoria/calendario.md).
+  const tempoGara = isEvent ? tempoDallaNota(athleteNote?.text) : null
+  const chiediTempo = isEvent && !!athleteWorkoutId && !!queryAthleteId && daChiedere(
+    { sections: s, giorno: workout.date, note: athleteNote?.text, awId: athleteWorkoutId },
+    format(new Date(), 'yyyy-MM-dd'), leggiIgnorate())
   const completato = workoutStatus === 'completed'
   const rpeAtletaDichiarato = athleteNote?.dichiarato ?? null
   // ⚠️ Su un allenamento chiuso la terza colonna del riepilogo NON è più l'RPE
@@ -1591,6 +1601,18 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             )
           })}
         </div>
+      ) : type === 'Event' && tempoGara ? (
+        <div className={`${CARD} p-6 text-center`}>
+          <p className="text-[11px] font-bold uppercase tracking-[.1em] text-muted">Il tuo tempo</p>
+          <p className="mt-2 text-[44px] font-black tracking-[-.04em] text-white leading-none tabular-nums">{tempoGara.tempo}</p>
+          {tempoGara.dettagli && <p className="mt-2 text-sm text-brand font-semibold">{tempoGara.dettagli}</p>}
+        </div>
+      ) : type === 'Event' && chiediTempo ? (
+        <Suspense fallback={<div className={`${CARD} h-40 animate-pulse`} />}>
+          <RisultatoGara
+            awId={athleteWorkoutId} athleteId={queryAthleteId} sections={s} titolo={workout.title}
+            giorno={workout.date} onSalvato={fetchWorkout} />
+        </Suspense>
       ) : type === 'Event' ? (
         <div className={`${CARD} p-8 text-center`}>
           <div className="w-20 h-20 bg-gradient-to-br from-brand to-yellow-600 text-black rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">

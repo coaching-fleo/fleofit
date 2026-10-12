@@ -90,13 +90,27 @@ describe('Nuovo evento — gara HYROX', () => {
         category: 'Event', isEvent: true, isAutonomous: true,
         hyrox: {
           id: '11', codice: 'VLC', url: 'https://hyrox.com/event/hyrox-valencia/', dal: '2026-10-15', al: '2026-10-18',
-          paese: 'ES', immagine: 'https://hyrox.com/v.jpg',
+          paese: 'ES', immagine: 'https://hyrox.com/v.jpg', citta: 'Valencia',
         },
       },
     })
     expect(finto.chiamateA('athlete_workouts', 'insert')[0].args[0]).toMatchObject({
       athlete_id: 'u1', workout_id: 'w-nuovo', completed_date: '2026-10-17', status: 'pending',
     })
+  })
+
+  // Fino al 12/10/2026 le gare passate si aggiungevano dai Personal record:
+  // il committente le ha volute qui, accanto alla prossima gara.
+  it('«Già corsa» elenca le gare passate di tutte le stagioni', async () => {
+    finto.supabase.functions.invoke.mockImplementation((nome, { body }) => Promise.resolve(
+      nome === 'risultato-hyrox' && body.azione === 'gare'
+        ? { data: { gare: [{ gruppo: '2026 Turin', stagione: 8, etichetta: '25/26', anno: '2026', citta: 'Turin' }] }, error: null }
+        : { data: { gare: GARE }, error: null },
+    ))
+    const u = await apri()
+    await u.click(screen.getByRole('tab', { name: 'Già corsa' }))
+    expect(await screen.findByText('Stagione 2025/26')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Turin 2026' })).toBeInTheDocument()
   })
 
   it('senza lista porta al campo libero, e l\'evento resta senza gara', async () => {

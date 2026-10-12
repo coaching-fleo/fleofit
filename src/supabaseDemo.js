@@ -318,6 +318,9 @@ export function clientDemo() {
         // Il calendario HYROX della demo: tre gare finte, date relative a oggi,
         // così la lista non invecchia (la vera viene da hyrox.com).
         if (nome === 'gare-hyrox') return { data: { gare: gareFinte() }, error: null }
+        if (nome === 'risultato-hyrox' && opzioni?.body?.azione === 'gare') return { data: { gare: garePassateFinte() }, error: null }
+        if (nome === 'risultato-hyrox' && opzioni?.body?.azione === 'dettaglio') return { data: { stato: 'trovato', dettaglio: dettaglioFinto(opzioni.body) }, error: null }
+        if (nome === 'risultato-hyrox') return { data: risultatoFinto(opzioni?.body), error: null }
         if (nome === 'estrai-note') return { data: { estratte: 0, restano: 0, sospesa: false }, error: null }
         console.info('[demo] Edge Function non chiamata:', nome, opzioni?.body)
         return { data: { ok: true }, error: null }
@@ -336,6 +339,47 @@ function gareFinte() {
     { id: 'd2', nome: 'HYROX São Paulo (demo)', codice: 'SPO', dal: giorno(20), al: giorno(21), url: 'https://hyrox.com/find-my-race/', continente: 'south-america', citta: 'São Paulo (demo)', paese: 'BR', paeseNome: 'Brazil', immagine: 'https://hyrox.com/wp-content/uploads/2026/03/Imagem-2-1274x960.jpg' },
     { id: 'd3', nome: 'HYROX Budapest (demo)', codice: 'BUD', dal: giorno(35), al: giorno(35), url: 'https://hyrox.com/find-my-race/', continente: 'europe', citta: 'Budapest (demo)', paese: 'HU', paeseNome: 'Hungary', immagine: '' },
   ]
+}
+
+// L'elenco delle gare passate della demo: poche gare vere di tre stagioni.
+function garePassateFinte() {
+  const g = (gruppo, stagione, etichetta) => ({ gruppo, stagione, etichetta, anno: gruppo.slice(0, 4), citta: gruppo.slice(5) })
+  return [
+    g('2026 Turin', 8, '25/26'), g('2026 Bologna', 8, '25/26'), g('2025 Rome', 8, '25/26'),
+    g('2025 Turin', 7, '24/25'), g('2024 Milan', 7, '24/25'), g('2025 Rimini', 7, '24/25'),
+    g('2023 Milan', 6, '23/24'), g('2024 Turin', 6, '23/24'),
+  ]
+}
+
+// Il tempo di gara della demo: una lista per cognome come quella vera (un
+// individuale, una coppia di Doubles, un omonimo per prefisso) e il dettaglio
+// con gli split di una gara vera (Torino 2026), per provare la scelta.
+function risultatoFinto(body = {}) {
+  const c = body.cognome || 'Villa'
+  const n = body.nome || 'Sara'
+  return {
+    stato: 'trovato', stagione: body.stagione || 8, gruppo: body.gruppo || `2026 ${body.citta || 'Turin'}`,
+    candidati: [
+      { idp: 'demo1', evento: 'H_DEMO', corrispondenza: 2, nome: `${c}, ${n} (ITA)`, nazione: 'ITA', divisione: 'HYROX - Saturday', categoriaEta: '30-34', tempo: '01:24:51' },
+      { idp: 'demo2', evento: 'HD_DEMO', corrispondenza: 2, nome: `Giulia Neri, ${n} ${c}`, nazione: '', divisione: 'HYROX DOUBLES - Sunday', categoriaEta: '30-39', tempo: '01:16:02' },
+      { idp: 'demo3', evento: 'H_DEMO', corrispondenza: 0, nome: `${c}ni, Marco (ITA)`, nazione: 'ITA', divisione: 'HYROX - Sunday', categoriaEta: '45-49', tempo: '01:38:10' },
+    ],
+  }
+}
+
+function dettaglioFinto(body = {}) {
+  const split = (t) => t.map((tempo, i) => ({ nome: `Running ${i + 1}`, tempo, posizione: '' }))
+  const nomi = ['1000m SkiErg', '50m Sled Push', '50m Sled Pull', '80m Burpee Broad Jump', '1000m Row', '200m Farmers Carry', '100m Sandbag Lunges', 'Wall Balls']
+  const st = ['00:04:06', '00:03:12', '00:05:39', '00:04:24', '00:04:40', '00:01:39', '00:04:19', '00:06:59']
+  const coppia = body.idp === 'demo2'
+  return {
+    nome: '', divisione: coppia ? 'HYROX DOUBLES - Sunday' : 'HYROX - Saturday', categoriaEta: coppia ? '30-39' : '30-34',
+    tempo: coppia ? '01:16:02' : body.idp === 'demo3' ? '01:38:10' : '01:24:51',
+    posizione: coppia ? '88' : '412', posizioneCategoria: coppia ? '14' : '57',
+    run: split(['00:03:21', '00:04:05', '00:04:40', '00:04:31', '00:04:36', '00:04:22', '00:04:29', '00:04:48']),
+    stazioni: nomi.map((nome, i) => ({ nome, tempo: st[i], posizione: '' })),
+    roxzone: '00:06:10', totaleCorsa: '00:34:52', url: 'https://results.hyrox.com/',
+  }
 }
 
 // ── «Cerca con l'IA» senza Gemini ───────────────────────────────────────────

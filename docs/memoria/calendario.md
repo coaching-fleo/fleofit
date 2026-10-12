@@ -235,3 +235,145 @@ serve alla **fase 2** (il tempo da results.hyrox.com dopo la gara, BACKLOG #69).
 ### Demo
 `npm run demo` / `demo:atleta`: tre gare finte con date relative a oggi
 (`gareFinte` in `src/supabaseDemo.js`).
+
+## 9-risultato-hyrox — Fase 2: il tempo dopo la gara (12/10/2026)
+
+Dopo una gara HYROX scelta dalla lista (quindi con `sections.hyrox`), l'app
+cerca da sola il tempo dell'atleta su **results.hyrox.com** e chiede «è tuo?»
+prima di salvarlo.
+
+### Dove compare
+- **Scheda della gara** (`WorkoutDetail`, evento): dal giorno DOPO quello di
+  gara e per 60 giorni, se un tempo non c'è già. `RisultatoGara` (caricato
+  pigro, chunk a sé di 8 KB) parte da solo: «Com'è andata? HYROX Turin».
+  Funziona anche per il coach dalla scheda dell'atleta.
+- **Home atleta**: `InvitoRisultato`, «Com'è andata? — Trova il tuo tempo
+  ufficiale», che porta alla scheda. ⚠️ **La Home non cerca**: ogni ricerca
+  costa ~20 richieste al sito, e la Home si apre molte volte al giorno.
+- Quando il tempo è salvato, la scheda mostra **il tempo grande** al posto di
+  «Vai e spacca tutto» (`tempoDallaNota`).
+
+### La Edge Function `risultato-hyrox`
+Riceve `{ citta, data, cognome, nome }`, non scrive niente. Come funziona il
+sito (mika:timing, dietro Cloudflare, nessuna API), verificato il 12/10/2026:
+- `/` porta all'ultima stagione (`/season-9/` = «Season 26/27»). Le stagioni
+  cominciano ad **agosto** (`etichettaStagione`); si cerca nella stagione della
+  data e poi in quella accanto.
+- Ogni stagione ha un menu `event_main_group`: «2026 Valencia», «2026 Sao
+  Paulo». ⚠️ **Una gara compare solo quando è vicina o già corsa**: oggi una
+  gara di dicembre non c'è, ed è normale (`gara-non-trovata`).
+- 🔴 **La ricerca per nome funziona UNA CATEGORIA ALLA VOLTA** (`event=H_…`,
+  `HPRO_…`, `HD_…`, una per giorno). Senza `event` cerca solo nella prima
+  (Pro del venerdì): un atleta Open non verrebbe mai trovato. Si cerca in
+  tutte, tranne le «Overall» (doppioni) e le Youngstars, 5 alla volta.
+- Il sito cerca per **prefisso**: «Rossi» trova anche «Rossin».
+  ⚠️ Superato la sera stessa (§9-solo-cognome): solo cognome, lista, scegli tu;
+  e i Doubles si trovano.
+- Il dettaglio dà categoria, posizioni, tempo, 8 run (`f-time_01…08`), 8
+  stazioni (`f-time_11…18`), Roxzone (`f-time_60`), totale corsa (`f-time_49`).
+- Prova completa dal Mac: Torino 2026, «Rossi Alessandro», 13 categorie,
+  3,9 secondi. Copia in memoria 30 minuti; 12 ricerche l'ora per utente.
+- ⚠️ **Non provata da Supabase prima del deploy**: Cloudflare potrebbe trattare
+  diversamente gli IP dei server. Se risponde 403, il telefono mostra «I
+  risultati HYROX non rispondono» e il tempo a mano resta disponibile.
+
+### Dove si salva, e perché non in `workouts`
+Le policy lasciano modificare `workouts` **solo agli admin** (rls_snapshot):
+l'atleta non può scriverci. Schema congelato, quindi niente colonne. Il tempo
+va in due posti che l'atleta scrive già (`salvaRisultato`):
+- un **record personale**: «HYROX Turin 2026» → «1:12:38», con la data della
+  gara (aggiornato, non duplicato, se c'è già);
+- una **riga leggibile in testa alla nota** dell'assegnazione, che passa a
+  «completato»: «🏁 Tempo HYROX: 1:12:38 · Pro · 79° assoluto · 31° di
+  categoria (30-34)». Testo normale e non un marcatore: la legge anche `main`.
+  ⚠️ Va DOPO `[RPE: …]` e `[GRADIMENTO: …]`, mai prima (`conRisultato`).
+- Gli **split** si vedono nella conferma, non si salvano (non c'è dove);
+  resta il link «Risultato ufficiale».
+- «Non ho partecipato» → `fleofit_gare_senza_risultato` (memoria del
+  dispositivo, come `fleofit_ultimo_export`).
+- `sections.hyrox.citta` dal 13/10/2026; per gli eventi di prima la città si
+  ricava dal titolo o dal link (`cittaGara`).
+
+### Demo
+Sara (`at-sara`) ha «HYROX Turin» tre giorni fa senza tempo; `risultatoFinto`
+in `supabaseDemo.js` risponde con un tempo e gli split veri di Torino 2026.
+
+## 9-gare-passate — I tempi delle gare HYROX già corse (12/10/2026)
+
+«Vorrei poter mettere anche i tempi passati dei miei vecchi HYROX.» ⚠️ Nato
+nei Personal record della scheda atleta; spostato la sera stessa nel
+**calendario**, «Nuovo evento» → «Già corsa» (§9-solo-cognome).
+
+### Perché si sceglie la gara da un elenco
+🔴 **results.hyrox.com non cerca un nome su tutte le gare**: solo una gara e
+una categoria alla volta (provato il 12/10/2026: `event_main_group` vuoto o
+`all` non trova niente). Cercare in tutte vorrebbe dire 355 gare × ~15
+categorie = migliaia di richieste. Quindi l'atleta sceglie la gara da un
+elenco di **tutte le stagioni** (`{ azione: 'gare' }` alla stessa Edge Function
+`risultato-hyrox`: una pagina per stagione, 355 gare in 9 stagioni, 1,6 s dal
+Mac, copia di 12 ore sul server e in `fleofit_cache_gare_passate`), e l'app
+cerca il nome lì (`{ gruppo, stagione, cognome, nome }`).
+- Provato anche sulle stagioni vecchie: Milano 2023 (stagione 6) e Amburgo
+  2019 (stagione 2) hanno le stesse pagine, split compresi. Lì la categoria
+  non porta il giorno («HYROX PRO», non «HYROX PRO - Friday»).
+- L'elenco della stagione in corso contiene anche gare non ancora corse:
+  cercandole risponde «non trovo il tuo nome», ed è vero.
+- hyresult.com ha lo storico per atleta già pronto, ma è un servizio di altri:
+  scelto di non leggerlo.
+
+### 🔴 La data la sceglie l'atleta
+Il sito **non dà la data** di una gara: né nell'elenco («2026 Turin»), né
+nella classifica, né nel dettaglio. E hyrox.com toglie le gare finite (la sua
+API ha solo le 100 future). Quindi dopo «Sì, è il mio tempo» l'app chiede
+«In che giorno era?»:
+- il calendario si apre su **gennaio dell'anno della gara** (`meseIniziale`,
+  prop nuova di `CustomDatePicker`): per una gara del 2023 ripartire da oggi
+  voleva dire scorrere trenta mesi;
+- se la categoria dice il giorno («HYROX PRO - Saturday», `giornoSettimana`),
+  lo suggerisce, e avvisa se la data scelta cade un altro giorno o in un altro
+  anno. Avvisa, **non blocca**: chi ha corso di venerdì sera può aver
+  sbagliato categoria nel ricordo, non nella data;
+- **senza giorno non si salva**: una data inventata finirebbe nel calendario
+  come vera.
+
+### Cosa si salva (`salvaGaraPassata`)
+- un **evento già chiuso** nel calendario: workout `Event` con
+  `isAutonomous: true` — l'unico tipo che un atleta può inserire, per la
+  policy «Permetti creazione workout autonomi» — e `sections.hyrox =
+  { citta, gruppo, stagione, passata: true }`; più l'assegnazione
+  `completed` con la riga «🏁 Tempo HYROX: …» nella nota;
+- il **record personale** «HYROX Turin 2026», aggiornato se c'è già. Se c'è,
+  la schermata lo dice prima («È già nei tuoi record: confermando lo
+  aggiorni»). ⚠️ L'evento invece si crea comunque: chi importa una gara già
+  chiusa con la fase 2 se la ritrova due volte in calendario. Raro (la fase 2
+  copre solo le gare scelte dalla lista dell'app), e il record resta uno.
+
+## 9-solo-cognome — Solo il cognome, la lista, e scegli tu (12/10/2026, sera)
+
+Due correzioni del committente sul giro precedente:
+
+1. **Le gare passate stanno nel calendario, non nei Personal record.** «Nuovo
+   evento» ha ora tre scelte: **Prossima gara · Già corsa · Altro**.
+   `GarePassate` è il corpo della scelta «Già corsa» (caricato pigro dentro
+   `NuovoEvento`, che si apre anche dalla Home). Se ne salvano più di una di
+   fila; alla chiusura il calendario si ricarica (`onSaved`). Il bottone nei
+   Personal record è stato tolto.
+2. **«Se è Doubles non voglio scriverla a mano: legga solo il cognome, mi dà
+   la lista e seleziono io chi sono.»** Quindi:
+   - si cerca **solo il cognome** (il nome resta solo per l'ordine della lista:
+     `corrispondenza`, che ora capisce anche le squadre «Anna Bianchi, Luca
+     Rossi»). Il cognome del profilo è precompilato e si può correggere;
+   - la Edge Function torna **la lista intera** (fino a 60 righe, individuali e
+     squadre) con categoria, giorno, fascia d'età e tempo; l'app **non propone
+     più nessuno come «tuo»**: si tocca la propria riga, e solo allora arriva il
+     dettaglio (`{ azione: 'dettaglio', stagione, idp, evento }`) con posizioni
+     e split, e il «Sì, sono io».
+   - 🔴 **Perché prima i Doubles non si trovavano**: la ricerca del sito vuole
+     `search_event=<categoria>` oltre a `event=<categoria>`. Senza, nelle
+     categorie a squadre torna zero righe; con, trova la coppia dal cognome di
+     uno dei due. In più, le squadre stanno nel campo `type-relay_member` e non
+     in `type-fullname`, e il sito ripete ogni componente due volte
+     (`nomeSquadra` le toglie). Verificato su Torino 2026: «Remonato» → la
+     coppia in HYROX DOUBLES; «Rossi» → 31 righe, 23 in coppia.
+   - Il dettaglio di una coppia si legge come quello di un individuale (tempo,
+     posizioni, 8+8 split); solo il nome è vuoto, e si tiene quello della riga.

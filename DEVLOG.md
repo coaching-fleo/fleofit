@@ -41,6 +41,9 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 ## Calendario e gare
 - **«Nuovo evento» sceglie la gara dal calendario HYROX ufficiale**: a tutto schermo, una card per gara con foto, città, bandiera e paese; si cerca per città o paese e si filtra per regione del mondo. Toccata la gara, nome e giorni si compilano da soli; per le gare di più giorni si sceglie il proprio. «Altro evento» resta il campo libero di prima.
 - Dalla Home, **«Hai una gara in programma?»** apre la stessa scelta della gara: prima apriva l'allenamento libero, e la gara non compariva né nel calendario né nel conto alla rovescia.
+- **Dopo una gara HYROX l'app trova da sola il tuo tempo ufficiale**: dal giorno dopo, la Home chiede «Com'è andata?» e la scheda della gara mostra tempo, categoria, posizioni, corsa, Roxzone e split. Scelta la propria riga e confermato, si salva fra i record personali e la gara risulta fatta. Il tempo si può anche scrivere a mano.
+- **I tempi delle gare HYROX già corse**: dal calendario, «Nuovo evento» → «Già corsa», si sceglie una gara da tutte le stagioni dal 2018 e, indicato il giorno, la gara entra nel calendario e nei record.
+- La ricerca del tempo usa **solo il cognome** e mostra la lista di chi l'ha, **coppie dei Doubles comprese**: tocchi la tua riga, vedi tempo e split, e confermi.
 
 ## Segnala un problema
 - Nuova voce **«Segnala un problema»** in Impostazioni: un modulo guidato con screenshot allegabili e bozza salvata, che arriva per email.

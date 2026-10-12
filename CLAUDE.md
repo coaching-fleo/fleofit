@@ -28,7 +28,7 @@
   (`docs/memoria/app-store.md`).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint al 12/10/2026: `npm test` → **1660 test**; `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note» né di «Da un testo scritto») (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
+- Test e lint al 12/10/2026: `npm test` → **1739 test**; `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note» né di «Da un testo scritto») (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---
@@ -279,7 +279,7 @@ ios/ · android/                     # progetti nativi: a mano solo Info.plist, 
                                     #   dell'app (LettoreTesto.swift, LettoreTestoPlugin.java + MainActivity),
                                     #   AndroidManifest.xml, styles.xml
 supabase/functions/                 # send-reminders, ai-workout, ricerca-coach, estrai-note,
-                                    #   segnalazione, gare-hyrox, _shared/admin.ts + groq.ts
+                                    #   segnalazione, gare-hyrox, risultato-hyrox, _shared/admin.ts + groq.ts
 supabase/schema/                    # fotografia delle policy RLS — NON una migrazione
 docs/memoria/                       # la storia, un file per argomento (§11)
 ```
@@ -310,7 +310,8 @@ staging, **schema congelato** (§0, 0-bis).
 - **Edge Function**: `send-reminders` (5 modalità), `ai-workout` (Gemini, riserva Groq), `ricerca-coach` (Groq, riserva Gemini: la ricerca del coach) ed `estrai-note` (**solo Groq**, con Zero Data Retention: le note degli atleti diventano dati, `docs/memoria/scheda-atleta.md`). ⚠️ Gemini gratuito = **20 richieste al giorno**, condivise da tutte le funzioni con la stessa chiave. `main` chiama solo `send-reminders`. Un deploy
   colpisce anche la web app. Più `segnalazione` (la mail «Segnala un problema» via Resend):
   la usa solo l'app, quindi pubblicarla non tocca la web app. E `gare-hyrox` (il calendario delle
-  gare HYROX, letto da hyrox.com), anche questa solo dell'app.
+  gare HYROX, letto da hyrox.com) e `risultato-hyrox` (il tempo dopo la gara, da
+  results.hyrox.com), anche queste solo dell'app.
 - Entrambi i bucket (`athlete-photos`, `voice-notes`) sono **pubblici**.
 
 ---
@@ -513,7 +514,8 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_offline_queue`, `fleofit_cache_workouts_<uid>`, `fleofit_cache_w_<id>`,
   `fleofit_cache_aw_<id>_<athleteId>`, `fleofit_cache_all_aw_<id>`, `fleofit_tv_code`,
   `fleofit_ultimo_export`, `fleofit_invito_atteso`, `fleofit_segnalazione_bozza`,
-  `fleofit_cache_gare_hyrox`, `adminRoleOverride`.
+  `fleofit_cache_gare_hyrox`, `fleofit_gare_senza_risultato`, `fleofit_cache_gare_passate`,
+  `adminRoleOverride`.
   ⚠️ `fleofit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
   dice «l'hai esportato da qui», e su un telefono nuovo semplicemente non c'è (§9-duoetvicies).
   ⚠️ `fleofit_invito_atteso` è un passaggio di consegne fra due caricamenti della pagina —
@@ -611,7 +613,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |
 | `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |
-| `Calendar.jsx`, `CalendarioUI`, `rigaCalendario.js`, `NuovoEvento`, `gareHyrox.js`, Edge Function `gare-hyrox` | `calendario.md` |
+| `Calendar.jsx`, `CalendarioUI`, `rigaCalendario.js`, `NuovoEvento`, `gareHyrox.js`, `RisultatoGara`, `InvitoRisultato`, `GarePassate`, `risultatoGara.js`, Edge Function `gare-hyrox` e `risultato-hyrox` | `calendario.md` |
 | `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js` | `report.md` |
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute` | `accesso.md` |

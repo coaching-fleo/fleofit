@@ -19,6 +19,8 @@ import { mostraErrore } from '../lib/alert'
 import { sincronizzaBadge } from '../lib/badge'
 import RpeModal from '../components/RpeModal'
 import NuovoEvento from '../components/NuovoEvento'
+import { InvitoRisultato } from '../components/InvitoRisultato'
+import { daChiedere, leggiIgnorate } from '../lib/risultatoGara'
 import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 import { durataWorkout, numeroBlocchi, rpeAtteso, mediaRpeCategoria, serieGiorni, barreUltimiGiorni,
@@ -101,6 +103,9 @@ export default function Home() {
   const [todayWorkouts, setTodayWorkouts] = useState([])
   const [upcomingWorkouts, setUpcomingWorkouts] = useState([])
   const [nextEventHome, setNextEventHome] = useState(null)
+  // L'ultima gara HYROX già corsa senza un tempo: la Home chiede «com'è
+  // andata?» e porta alla scheda, dove la ricerca parte da sola.
+  const [garaDaChiudere, setGaraDaChiudere] = useState(null)
   const [weeklyStatus, setWeeklyStatus] = useState(() => {
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
     const week = []
@@ -430,6 +435,12 @@ export default function Home() {
 
     const events = data.filter(w => (w.workouts?.sections?.category === 'Event') && w.completed_date >= todayStr).sort((a, b) => a.completed_date.localeCompare(b.completed_date))
     setNextEventHome(events[0] || null)
+
+    const ignorate = leggiIgnorate()
+    const passate = data
+      .filter(w => daChiedere({ sections: w.workouts?.sections, giorno: w.completed_date, note: w.notes, awId: w.id }, todayStr, ignorate))
+      .sort((a, b) => b.completed_date.localeCompare(a.completed_date))
+    setGaraDaChiudere(passate[0] || null)
 
     const week = []
     for(let i=0; i<7; i++) {
@@ -1424,6 +1435,10 @@ setNotifications(prev => {
               1 la stessa domanda la fa già `CampoObiettivo`, e due volte è
               un'insistenza. Dopo, con lo storico in pagina, chiederlo di nuovo
               a chi non ha una gara sarebbe rumore. */}
+          {garaDaChiudere && (
+            <InvitoRisultato titolo={garaDaChiudere.workouts?.title}
+              onOpen={() => navigate(`/workout/${garaDaChiudere.workouts.id}?athlete_id=${user.id}`)} />
+          )}
           {nextEventHome ? (
             <BannerObiettivo evento={nextEventHome} giorni={countdownDays}
               onOpen={() => navigate(`/workout/${nextEventHome.workouts.id}?athlete_id=${user.id}`)} />
