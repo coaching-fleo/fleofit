@@ -56,6 +56,7 @@ import { rinfrescaTokenPush } from './lib/pushToken'
 import { scriviJson } from './lib/offlineQueue'
 import { sincronizzaBadge } from './lib/badge'
 import { gestisciIndietro, puoTornareIndietro } from './lib/indietroAndroid'
+import { eUnLinkDiRecupero, recuperoInCorso, avviaRecupero, chiudiRecupero } from './lib/recuperoPassword'
 
 function Onboarding({ user, onComplete }) {
   // L'onboarding del ruolo coach è disattivato: qui il ruolo è sempre 'athlete'.
@@ -211,6 +212,7 @@ function ProtectedRoute() {
       await handleSession(session)
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+        if (event === 'PASSWORD_RECOVERY') avviaRecupero()
         handleSession(s)
       })
       sub = subscription
@@ -358,6 +360,10 @@ function ProtectedRoute() {
     <Apertura pronto={!loading} onFine={() => setAperturaFinita(true)} />
   )
 
+  // 🔴 Una sessione nata dal link «reimposta password» non apre l'app: prima
+  // si sceglie la password nuova (src/lib/recuperoPassword.js).
+  if (recuperoInCorso()) return <Navigate to="/login" replace />
+
   if (loading) return apertura
 
   if (!session) {
@@ -478,9 +484,18 @@ function DeeplinkHandler() {
           const refreshToken = hashParams.get('refresh_token');
 
           if (accessToken && refreshToken) {
+            // 🔴 Il link «reimposta password» porta gli stessi token di un
+            // login: senza questo controllo apriva la Home e la password
+            // nuova non veniva mai chiesta (src/lib/recuperoPassword.js).
+            // Si segna PRIMA di aprire la sessione, perché il login che
+            // ascolta `onAuthStateChange` non scappi verso la Home.
+            const recupero = eUnLinkDiRecupero(url.hash);
+            if (recupero) avviaRecupero();
+
             // 3. Forza la creazione della sessione in Supabase in modo esplicito
             const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-            if (!error) return vaiA.current('/', { replace: true });
+            if (!error) return vaiA.current(recupero ? '/login' : '/', { replace: true });
+            if (recupero) chiudiRecupero();
           }
           
           vaiA.current(`/login${url.search}${url.hash}`, { replace: true });

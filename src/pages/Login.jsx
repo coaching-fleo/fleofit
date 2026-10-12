@@ -8,6 +8,7 @@ import { Browser } from '@capacitor/browser'
 import { SignInWithApple } from '@capacitor-community/apple-sign-in'
 import { generaNonce, nomeDaApple, annullatoDallUtente } from '../lib/appleLogin'
 import { leggiJson } from '../lib/offlineQueue'
+import { recuperoInCorso, avviaRecupero, chiudiRecupero } from '../lib/recuperoPassword'
 import { vibraErrore, vibraSuccesso } from '../lib/aptica'
 import {
   normalizzaCodice, codiceCompleto, LUNGHEZZA_CODICE,
@@ -122,23 +123,24 @@ export default function Login() {
   }, [])
 
   useEffect(() => {
-    let isRecovery = window.location.hash.includes('type=recovery')
-    if (isRecovery) setVista('recupero')
+    // 🔴 Il recupero si legge da `recuperoInCorso()` e non dall'hash: sul web
+    // Supabase cancella `#…type=recovery` prima che questa pagina monti, e
+    // sull'app il link arriva da DeeplinkHandler (src/lib/recuperoPassword.js).
+    // Si rilegge a ogni evento perché può accendersi DOPO il montaggio.
+    if (recuperoInCorso()) setVista('recupero')
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        isRecovery = true
-        setVista('recupero')
-      } else if (session && !isRecovery) {
-        navigate('/')
-      }
+      if (event === 'PASSWORD_RECOVERY') avviaRecupero()
+      if (recuperoInCorso()) setVista('recupero')
+      else if (session) navigate('/')
     })
 
-    if (!isRecovery) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) navigate('/')
-      })
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (recuperoInCorso()) setVista('recupero')
+      else if (session) navigate('/')
+    })
+
+    const isRecovery = recuperoInCorso()
 
     // 🔴 Il link del coach salta le caselle. Chi apre `?invite=CODICE` non deve
     // vederle mai: arriva direttamente sulla card verde con il codice dentro.
@@ -379,6 +381,7 @@ export default function Login() {
     } else {
       setAlertInfo({ title: 'Successo', message: 'Password aggiornata con successo! Ora puoi accedere.', type: 'success' })
       window.history.replaceState(null, document.title, window.location.pathname + window.location.search)
+      chiudiRecupero()
       navigate('/')
     }
   }
@@ -386,6 +389,10 @@ export default function Login() {
   const tornaIndietro = () => {
     if (vista === 'recupero') {
       window.history.replaceState(null, document.title, window.location.pathname + window.location.search)
+      // 🔴 Chi rinuncia alla password nuova ESCE: la sessione del link di
+      // recupero non deve restare aperta come un accesso qualunque.
+      chiudiRecupero()
+      supabase.auth.signOut().catch(() => {})
       return setVista('benvenuto')
     }
     if (recuperoPassword) return setRecuperoPassword(false)
