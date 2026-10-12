@@ -737,6 +737,7 @@ sovrascritto niente** — inserisce sempre. Le strade per arrivarci erano tre, t
    porta `date`; la data dell'atleta va sulla sua assegnazione, come prima.
    ⚠️ «Salva come nuovo» da un atleta sposta la SUA assegnazione sulla copia — è
    voluto — e la finestra ora lo dice con il nome dell'atleta.
+   ⛔ **Superato il 12/10/2026** (9-quinquagies): la copia non sposta più niente.
 
 Test: `src/pages/__tests__/SalvataggioModifica.test.jsx` (9). Cinque mutazioni, cinque prese.
 
@@ -1076,3 +1077,26 @@ cercavano dopo, toccando le pillole.
   `confermaBlocco()` in `CreaWorkoutBuilder.test.jsx` e `CreateWorkoutMemo.test.jsx`.
   ⚠️ Mentre il foglio è aperto ci sono DUE bottoni «Aggiungi blocco» (quello
   della pagina e la conferma): l'helper prende quello dentro il dialogo.
+
+---
+
+## 9-quinquagies. La copia parte pulita: niente atleti, niente note (12/10/2026)
+
+Richiesta del committente: duplicando o modificando un workout, la copia non deve
+portarsi dietro gli atleti dell'originale né le note.
+
+- **«Salva come nuovo»** (da «Modifica»): prima, entrando da un atleta (`aw_id`),
+  la SUA riga di `athlete_workouts` veniva spostata sulla copia — con stato, RPE e
+  note scritte sull'originale. Ora `performSave` non tocca nessuna assegnazione, e
+  `athlete_id` assegna solo quando **non** c'è `editId`: in modifica quell'atleta è
+  «precedente». Dopo il salvataggio la scheda si apre senza `?athlete_id=`.
+- **Note del coach**: «Duplica» apre con il campo vuoto; «Salva come nuovo» salva
+  `coach_notes: ''` se il coach non le ha toccate (`noteDiPartenza`), altrimenti
+  tiene quelle riscritte — sono della copia.
+- ⚠️ **Custom è l'eccezione**: lì `coach_notes` È l'allenamento, svuotarle
+  vorrebbe dire copiare un workout vuoto (e il salvataggio lo rifiuterebbe).
+- **«Duplica» da un atleta** (`AthleteDetail`, `?duplicate=…&athlete_id=…`)
+  assegna ancora la copia a quell'atleta: è quello per cui si sta programmando.
+- La finestra di «Salva come nuovo» lo dice (`data-avviso-copia`).
+
+Test: `SalvataggioModifica.test.jsx` (13), i quattro nuovi visti fallire sul codice di prima.

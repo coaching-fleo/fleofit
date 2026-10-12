@@ -17,6 +17,7 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 - Ogni titolo porta un **codice** con struttura, durata e intensità del workout.
 - **«Duplica» non sovrascrive più l'originale**; il bottone principale è «Salva come nuovo» e «Sovrascrivi» dice quanti atleti riguarda.
 - Sovrascrivendo dalla scheda di un atleta non cambia più la data del workout per tutti.
+- **Duplicando o salvando come nuovo**, la copia non è più assegnata agli atleti dell'originale e parte senza le note del coach.
 - Tornando indietro dal secondo passo l'app chiede conferma se ci sono già blocchi.
 - La barra in basso resta premibile con la tastiera aperta.
 - Con la **generazione IA** ogni esercizio ha un'intensità, dettata o stimata.

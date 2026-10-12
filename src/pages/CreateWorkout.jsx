@@ -2206,7 +2206,10 @@ export default function CreateWorkout() {
   // «Sovrascrivi» e «Salva come nuovo» hanno conseguenze opposte sugli atleti, e
   // il coach le deve leggere prima di scegliere, non scoprirle dopo.
   const [atletiAssegnati, setAtletiAssegnati] = useState(null)
-  const [nomeAtletaModifica, setNomeAtletaModifica] = useState('')
+  // Le note del coach come sono arrivate dal workout di partenza: «Salva come
+  // nuovo» le lascia sull'originale (12/10/2026), salvo che il coach le abbia
+  // riscritte qui dentro — quelle sono della copia.
+  const [noteDiPartenza, setNoteDiPartenza] = useState('')
 
   const navigate = useNavigate()
   const indietro = useIndietro('/')
@@ -2390,16 +2393,18 @@ export default function CreateWorkout() {
       } else {
         setTitle(duplicateId && nome ? `${nome} (Copia)` : nome)
       }
-      setCoachNotes(data.coach_notes || '')
+      // Una copia parte SENZA le note del coach (richiesta del committente,
+      // 12/10/2026): erano scritte per gli atleti dell'originale. Tranne in
+      // Custom, dove le note SONO l'allenamento.
+      const eCustom = sezioni.category === 'Custom'
+      setNoteDiPartenza(data.coach_notes || '')
+      setCoachNotes(duplicateId && !eCustom ? '' : (data.coach_notes || ''))
       
       let loadedDate = data.date
       if (awId && !duplicateId) {
         const { data: awData } = await supabase.from('athlete_workouts')
-          .select('completed_date, athletes(name, surname)').eq('id', awId).single()
-        if (awData) {
-          loadedDate = awData.completed_date
-          setNomeAtletaModifica(awData.athletes?.name || '')
-        }
+          .select('completed_date').eq('id', awId).single()
+        if (awData) loadedDate = awData.completed_date
       }
       if (!duplicateId) setDate(loadedDate)
       
@@ -2733,7 +2738,11 @@ export default function CreateWorkout() {
       steps: category === 'Running' ? runningSteps : undefined
     }
 
-    const payload = { title: finalTitle, date, sections, coach_notes: coachNotes }
+    // «Salva come nuovo» da una modifica: la copia non porta le note scritte
+    // per l'originale, se il coach non le ha toccate. In Custom sì, sono il
+    // contenuto.
+    const noteCopia = saveAsNew && editId && category !== 'Custom' && coachNotes === noteDiPartenza
+    const payload = { title: finalTitle, date, sections, coach_notes: noteCopia ? '' : coachNotes }
     let targetId = saveAsNew ? null : editId
 
     if (targetId) {
@@ -2757,13 +2766,14 @@ export default function CreateWorkout() {
       }
       targetId = newWorkout.id
 
-      if (saveAsNew && awId) {
-        const { error: awError } = await supabase.from('athlete_workouts').update({
-          workout_id: targetId,
-          completed_date: date
-        }).eq('id', awId)
-        if (awError) console.error("Errore aggiornamento assegnazione:", awError)
-      } else if (athleteId) {
+      // 🔴 Una copia nata da «Modifica» NON eredita gli atleti dell'originale
+      // (richiesta del committente, 12/10/2026). Fino ad allora, entrando da un
+      // atleta, la sua assegnazione passava alla copia — con stato, RPE e note
+      // scritti sull'originale. Ora l'originale resta com'è per tutti, e la
+      // copia si assegna dalla sua scheda.
+      // `athlete_id` assegna solo quando si crea o si duplica DA un atleta: lì
+      // è l'atleta per cui si sta programmando, non uno «precedente».
+      if (athleteId && !editId) {
         const { data: newAssignment, error: awError } = await supabase.from('athlete_workouts').insert({
           athlete_id: athleteId,
           workout_id: targetId,
@@ -2785,7 +2795,8 @@ export default function CreateWorkout() {
     // Si esce dal builder senza nessun messaggio: la scheda che si apre è
     // l'esito, e la vibrazione è la conferma che il salvataggio è riuscito.
     vibraSuccesso()
-    navigate(`/workout/${targetId}${athleteId ? `?athlete_id=${athleteId}` : ''}`, { replace: true })
+    const conAtleta = athleteId && !(saveAsNew && editId)
+    navigate(`/workout/${targetId}${conAtleta ? `?athlete_id=${athleteId}` : ''}`, { replace: true })
   }
 
   return (
@@ -3217,11 +3228,11 @@ export default function CreateWorkout() {
             ) : (
               <>
                 <p className="text-gray-400 text-sm">Nome del nuovo allenamento — se lo lasci vuoto ne scelgo uno io:</p>
-                {/* Entrando da un atleta, la copia NON resta solo una copia:
-                    la sua assegnazione passa alla versione nuova. Va detto. */}
-                {awId && (
+                {/* La copia parte pulita: nessun atleta, nessuna nota
+                    dell'originale (12/10/2026). Va detto prima di confermare. */}
+                {editId && (
                   <p data-avviso-copia className="text-[12.5px] leading-snug text-amber-300/90">
-                    {nomeAtletaModifica || "L'atleta da cui sei entrato"} riceverà questa versione; gli altri atleti tengono l'originale.
+                    La copia non è assegnata a nessun atleta{category !== 'Custom' && noteDiPartenza && coachNotes === noteDiPartenza ? ' e non porta le note dell\'originale' : ''}. L'originale resta com'è.
                   </p>
                 )}
                 <input 

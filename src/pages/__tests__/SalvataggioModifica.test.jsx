@@ -25,7 +25,7 @@ const EMOM = {
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
   return fintoSupabase(() => ({
-    workouts: [{ id: 'w1', title: 'Originale', date: '2026-10-01', sections: EMOM, coach_notes: '' }],
+    workouts: [{ id: 'w1', title: 'Originale', date: '2026-10-01', sections: EMOM, coach_notes: 'Spingi forte' }],
     athlete_workouts: [
       { id: 'aw1', athlete_id: 'a1', completed_date: '2026-10-09', athletes: { name: 'Marco', surname: 'Rossi' } },
       { id: 'aw2', athlete_id: 'a2', completed_date: '2026-10-01', athletes: { name: 'Giulia', surname: 'Bianchi' } },
@@ -119,10 +119,49 @@ describe('entrando da un atleta', () => {
     expect(finto.chiamateA('workouts', 'update')[0].args[0].date).toBe('2026-10-01')
   })
 
-  it('«Salva come nuovo» dice che quell atleta riceverà la versione nuova', async () => {
+  it('«Salva come nuovo» lo dice: la copia non ha atleti né le note dell originale', async () => {
     await apri('/create?edit=w1&aw_id=aw1')
     await userEvent.click(screen.getByRole('button', { name: /Salva workout/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Salva come nuovo' }))
-    expect(screen.getByText(/Marco riceverà questa versione; gli altri atleti tengono l'originale/)).toBeInTheDocument()
+    expect(screen.getByText(/La copia non è assegnata a nessun atleta e non porta le note dell'originale/)).toBeInTheDocument()
+  })
+})
+
+// Richiesta del committente (12/10/2026): duplicando o salvando come nuovo, la
+// copia non eredita gli atleti dell'originale e nemmeno le sue note. Fino ad
+// allora, entrando da un atleta, la SUA assegnazione passava alla copia — con
+// stato, RPE e note scritti sull'originale.
+describe('la copia parte pulita', () => {
+  const salvaComeNuovo = async (url) => {
+    await apri(url)
+    await userEvent.click(screen.getByRole('button', { name: /Salva workout/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Salva come nuovo' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Conferma' }))
+    await waitFor(() => expect(finto.chiamateA('workouts', 'insert')).toHaveLength(1))
+  }
+
+  it('«Salva come nuovo» da un atleta NON sposta né crea assegnazioni', async () => {
+    await salvaComeNuovo('/create?edit=w1&aw_id=aw1&athlete_id=a1')
+    expect(finto.chiamateA('athlete_workouts', 'update')).toHaveLength(0)
+    expect(finto.chiamateA('athlete_workouts', 'insert')).toHaveLength(0)
+  })
+
+  it('«Salva come nuovo» non porta le note del coach dell originale', async () => {
+    await salvaComeNuovo('/create?edit=w1')
+    expect(finto.chiamateA('workouts', 'insert')[0].args[0].coach_notes).toBe('')
+  })
+
+  it('«Duplica» parte con le note vuote', async () => {
+    await apri('/create?duplicate=w1')
+    await userEvent.click(screen.getByRole('button', { name: /Salva workout/ }))
+    await waitFor(() => expect(finto.chiamateA('workouts', 'insert')).toHaveLength(1))
+    expect(finto.chiamateA('workouts', 'insert')[0].args[0].coach_notes).toBe('')
+  })
+
+  it('«Duplica» da un atleta assegna la copia a QUELL atleta, come prima', async () => {
+    await apri('/create?duplicate=w1&athlete_id=a1')
+    await userEvent.click(screen.getByRole('button', { name: /Salva workout/ }))
+    await waitFor(() => expect(finto.chiamateA('athlete_workouts', 'insert')).toHaveLength(1))
+    expect(finto.chiamateA('athlete_workouts', 'insert')[0].args[0].athlete_id).toBe('a1')
   })
 })
