@@ -1041,3 +1041,38 @@ una modifica me la deve fare». Prima ogni risposta dell'IA finiva **in coda**:
   manda i blocchi e torna a generare in coda.
 - Il foglio cambia le parole in modifica (sottotitolo, segnaposto, «Modifica
   workout»), ma `aria-label` del dialogo resta «Genera con IA».
+
+### I blocchi scritti dall'IA arrivano aperti (12/10/2026)
+Richiesta del committente: dopo una generazione restava aperto solo l'ultimo
+blocco, e li riapriva uno per uno per rileggerli. `openBlockId` (un id) è
+diventato **`bloccoAperti`, un Set**:
+- l'IA, sia generando sia modificando, apre **tutti** i blocchi che ha scritto;
+- a mano resta la fisarmonica: **aprire** un blocco chiude gli altri,
+  **chiudere** toglie solo quello (gli altri aperti dall'IA restano);
+- ⚠️ ogni cambio è un **Set nuovo**: lo stesso riferimento non farebbe
+  ripartire né il render né l'effetto che porta il blocco sotto gli occhi
+  (`[blocks, bloccoAperti]`, ex `[blocks, openBlockId]` qui sopra).
+
+---
+
+## 9-blocco-confermato. Un blocco nuovo chiede i suoi numeri (12/10/2026)
+
+Richiesta del committente: «tutti i blocchi, quando creati, chiedono le
+informazioni del blocco stesso (tempo o round) e poi si conferma con un tasto».
+Prima il blocco entrava nella lista con i valori di partenza, e i numeri si
+cercavano dopo, toccando le pillole.
+
+- Scelto il tipo in `BlockPickerModal`, il blocco va in **`bloccoInArrivo`**,
+  NON in `blocks`: si apre `FoglioParametri` sul primo parametro di
+  `parametriDelBlocco` (Durata, Ogni, ON, Round…).
+- `FoglioParametri` ha due prop nuove, `conferma` (l'etichetta del bottone) e
+  `onConferma`. ⚠️ Anche la conferma passa dall'**uscita animata**:
+  `onConferma` arriva a foglio sceso, come `onChiudi`; un ref decide quale
+  dei due chiamare. Ogni altra uscita (X, velo, maniglia, Esc, indietro di
+  Android) **scarta** il blocco.
+- Il blocco confermato entra con `aggiungiBlocco`: in fondo, aperto, sotto gli occhi.
+- I blocchi dell'IA **non** passano da qui: arrivano già con i loro numeri.
+- 🔴 I test che aggiungono blocchi col picker devono confermare: c'è
+  `confermaBlocco()` in `CreaWorkoutBuilder.test.jsx` e `CreateWorkoutMemo.test.jsx`.
+  ⚠️ Mentre il foglio è aperto ci sono DUE bottoni «Aggiungi blocco» (quello
+  della pagina e la conferma): l'helper prende quello dentro il dialogo.

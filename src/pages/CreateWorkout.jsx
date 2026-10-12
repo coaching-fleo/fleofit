@@ -2158,13 +2158,26 @@ export default function CreateWorkout() {
   const [category, setCategory] = useState('Hyrox')
   const [blocks, setBlocks] = useState([])
   const [blockPickerOpen, setBlockPickerOpen] = useState(false)
+  // Il blocco appena scelto nel picker, NON ancora nella lista (12/10/2026):
+  // prima chiede i suoi numeri (tempo, round…) e entra solo con «Aggiungi
+  // blocco». Chiudere il foglio senza confermare lo scarta.
+  const [bloccoInArrivo, setBloccoInArrivo] = useState(null)
+  const [parametroInArrivo, setParametroInArrivo] = useState(null)
   const [aiModalOpen, setAiModalOpen] = useState(false)
   // L'ultima modifica fatta dall'IA: i blocchi di prima e quelli che ha
   // scritto. «Annulla» si vede solo finché la lista è ESATTAMENTE quella
   // scritta dall'IA (stesso riferimento): al primo ritocco a mano sparisce,
   // così annullare non butta via anche il lavoro fatto dopo.
   const [modificaIA, setModificaIA] = useState(null)
-  const [openBlockId, setOpenBlockId] = useState(null)
+  // I blocchi aperti. Un INSIEME e non un id solo dal 12/10/2026: i blocchi
+  // scritti dall'IA arrivano tutti aperti, perché il coach li deve rileggere
+  // uno per uno — e aprirli a mano, uno alla volta, era la prima cosa che
+  // faceva dopo ogni generazione. A mano invece resta una fisarmonica: aprire
+  // un blocco chiude gli altri (`bloccoToggle`).
+  // ⚠️ Ogni modifica è un Set NUOVO: lo stesso riferimento non farebbe
+  // ripartire né il render né l'effetto che porta il blocco sotto gli occhi.
+  const [bloccoAperti, setBloccoAperti] = useState(() => new Set())
+  const apriSolo = useCallback((ids) => setBloccoAperti(new Set(ids)), [])
   const draggedBlockIdx = useRef(null)
 
   // ⚠️ Aggiungere un blocco CHIUDE quello aperto prima, quindi la pagina si
@@ -2209,18 +2222,25 @@ export default function CreateWorkout() {
   // funzionale. Se qui torna un'arrow inline, React.memo sul figlio smette di
   // servire senza che niente lo segnali — tranne HyroxBlockMemo.test.jsx.
   const bloccoToggle = useCallback((id) => {
-    setOpenBlockId(prev => {
-      if (prev === id) { bloccoDaMostrare.current = null; return null }
-      // ⚠️ Aprire un blocco CHIUDE quello aperto prima. Se quello stava più in
+    setBloccoAperti(prev => {
+      if (prev.has(id)) {
+        // Chiudere toglie SOLO questo: gli altri aperti (per esempio i blocchi
+        // appena scritti dall'IA) restano come sono.
+        bloccoDaMostrare.current = null
+        const resto = new Set(prev)
+        resto.delete(id)
+        return resto
+      }
+      // ⚠️ Aprire un blocco CHIUDE quelli aperti prima. Se quello stava più in
       // ALTO nella lista, la pagina si accorcia sopra la testa del coach e il
       // blocco appena toccato scivola fuori schermo verso l'alto: a schermo non
       // sembra uno scorrimento, sembra che il blocco si sia aperto al contrario.
       // Segnalato dal committente il 15/09/2026. Si segna quale riportare sotto
-      // gli occhi; a portarcelo è l'effetto su [blocks, openBlockId].
+      // gli occhi; a portarcelo è l'effetto su [blocks, bloccoAperti].
       bloccoDaMostrare.current = id
-      return id
+      return new Set([id])
     })
-    // ⚠️ La scrittura del ref sta dentro l'updater perché `openBlockId` non può
+    // ⚠️ La scrittura del ref sta dentro l'updater perché `bloccoAperti` non può
     // entrare nelle dipendenze: questo gestore deve restare un riferimento
     // stabile o `React.memo` su HyroxBlock smette di servire (§9-quinquies).
     // È idempotente, quindi il doppio invio di StrictMode non cambia nulla.
@@ -2268,6 +2288,13 @@ export default function CreateWorkout() {
       : b)))
   }, [])
 
+  /** Mette il blocco in fondo alla lista, aperto e sotto gli occhi. */
+  const aggiungiBlocco = (nuovo) => {
+    setBlocks(prev => [...prev, nuovo])
+    apriSolo([nuovo.id])
+    bloccoDaMostrare.current = nuovo.id
+  }
+
   const bloccoDragStart = useCallback((i) => { draggedBlockIdx.current = i }, [])
   const bloccoDragEnter = useCallback((i) => {
     const da = draggedBlockIdx.current
@@ -2291,12 +2318,12 @@ export default function CreateWorkout() {
       document.querySelector(`[data-blocco-id="${id}"]`)
         ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
     })
-    // ⚠️ `openBlockId` è nelle dipendenze quanto `blocks`: aprire un blocco che
+    // ⚠️ `bloccoAperti` è nelle dipendenze quanto `blocks`: aprire un blocco che
     // c'era già non tocca la lista, quindi con le sole `[blocks]` l'effetto non
     // scatterebbe mai e il titolo resterebbe fuori schermo. Chi compila i
     // parametri di un blocco già aperto non cambia nessuna delle due, e infatti
     // la pagina non si muove — c'è un test che lo pretende.
-  }, [blocks, openBlockId])
+  }, [blocks, bloccoAperti])
 
   // Hook touch per riordinare le FASI RUNNING
   // Come per i blocchi: getTouchHandlers è memoizzato su onReorder, quindi
@@ -2383,7 +2410,7 @@ export default function CreateWorkout() {
         setWorkoutIntensity(s.intensity || '5')
         setCategory(s.category || (s.steps ? 'Running' : 'Hyrox'))
         if (s.blocks && s.blocks.length > 0) {
-          setOpenBlockId(s.blocks[s.blocks.length - 1].id)
+          setBloccoAperti(new Set([s.blocks[s.blocks.length - 1].id]))
         }
       } else {
         const migratedBlocks = []
@@ -2408,7 +2435,7 @@ export default function CreateWorkout() {
         setBlocks(migratedBlocks)
         setWorkoutIntensity(s.intensity || '5')
         if (migratedBlocks.length > 0) {
-          setOpenBlockId(migratedBlocks[migratedBlocks.length - 1].id)
+          setBloccoAperti(new Set([migratedBlocks[migratedBlocks.length - 1].id]))
         }
       }
       setStep(2)
@@ -2924,7 +2951,7 @@ export default function CreateWorkout() {
             {blocks.map((block, idx) => (
               <HyroxBlock
                 key={block.id} block={block} index={idx} total={blocks.length}
-                isOpen={openBlockId === block.id}
+                isOpen={bloccoAperti.has(block.id)}
                 onToggle={bloccoToggle}
                 onUpdate={bloccoUpdate}
                 onRemove={bloccoRemove}
@@ -2965,11 +2992,31 @@ export default function CreateWorkout() {
                         if (type === 'Interval') { newBlock.params.rounds = '1' }
 
             if (type === 'Cash In' || type === 'Cash Out') { newBlock.params.rounds = '1' }
-            setBlocks([...blocks, newBlock])
-            setOpenBlockId(newBlock.id)
-            bloccoDaMostrare.current = newBlock.id
             setBlockPickerOpen(false)
+            const misure = parametriDelBlocco(newBlock)
+            if (misure.length === 0) return aggiungiBlocco(newBlock)
+            // Prima i numeri del blocco, poi la conferma: il foglio si apre
+            // sul primo parametro (Durata, Ogni, ON, Round…).
+            setParametroInArrivo(misure[0].chiave)
+            setBloccoInArrivo(newBlock)
           }}
+        />
+      )}
+
+      {bloccoInArrivo && (
+        <FoglioParametri
+          titolo={bloccoInArrivo.type}
+          sottotitolo={`Il blocco dura ${durataBlocco(bloccoInArrivo) > 0 ? mmss(durataBlocco(bloccoInArrivo)) : '—'}`}
+          misure={parametriDelBlocco(bloccoInArrivo).map(p => ({
+            chiave: p.chiave, etichetta: p.etichetta, scala: p.scala, rapidi: p.rapidi,
+            valore: bloccoInArrivo.params?.[p.chiave] ?? p.ripiego,
+            onChange: (v) => setBloccoInArrivo(b => ({ ...b, params: { ...b.params, [p.chiave]: v } })),
+          }))}
+          attiva={parametroInArrivo}
+          onAttiva={setParametroInArrivo}
+          conferma="Aggiungi blocco"
+          onConferma={() => { aggiungiBlocco(bloccoInArrivo); setBloccoInArrivo(null) }}
+          onChiudi={() => setBloccoInArrivo(null)}
         />
       )}
 
@@ -2988,12 +3035,16 @@ export default function CreateWorkout() {
               }
               setModificaIA({ prima: blocks, dopo: formattedBlocks })
               setBlocks(formattedBlocks)
-              setOpenBlockId(null)
+              // L'IA ha riscritto tutto l'allenamento: tutto da rileggere.
+              apriSolo(formattedBlocks.map(b => b.id))
+              bloccoDaMostrare.current = formattedBlocks[0].id
               return
             }
             setBlocks([...blocks, ...formattedBlocks])
             if (formattedBlocks.length > 0) {
-              setOpenBlockId(formattedBlocks[formattedBlocks.length - 1].id)
+              // Aperti TUTTI quelli appena generati; quelli che c'erano già
+              // si chiudono, come quando si aggiunge un blocco a mano.
+              apriSolo(formattedBlocks.map(b => b.id))
               // Il primo dei blocchi generati, non l'ultimo: l'IA ne scrive
               // parecchi in un colpo, e il coach deve vedere da dove comincia.
               bloccoDaMostrare.current = formattedBlocks[0].id

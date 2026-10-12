@@ -26,7 +26,7 @@
 //     secondo? — { valore, onChange, etichetta }: il secondo estremo di un
 //                intervallo («3:50–4:00»), facoltativo ("-" = assente). }
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Keyboard, Plus, X } from 'lucide-react'
 import Righello from './Righello'
@@ -316,9 +316,19 @@ export function FoglioMisure({ misure, attiva, onAttiva, accento = 'brand', senz
  *
  * ⚠️ La X ha `aria-label="Chiudi"`: è così che il tasto indietro di Android
  * trova il modo di chiudere una modale (src/lib/indietroAndroid.js).
+ *
+ * Con `conferma` (12/10/2026) il foglio ha in fondo un bottone con quella
+ * etichetta: è il passo di un blocco APPENA SCELTO, che entra nella lista solo
+ * quando lo si conferma. Ogni altra uscita — X, velo, maniglia, Esc, tasto
+ * indietro — passa da `onChiudi`, cioè lo scarta.
+ * ⚠️ Anche la conferma passa dall'uscita animata: `onConferma` arriva a
+ * foglio sceso, come `onChiudi`. Chiamarla subito smonterebbe il foglio a metà.
  */
-export function FoglioParametri({ titolo, sottotitolo, misure, attiva, onAttiva, onChiudi, accento = 'brand' }) {
-  const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
+export function FoglioParametri({ titolo, sottotitolo, misure, attiva, onAttiva, onChiudi, accento = 'brand', conferma, onConferma }) {
+  const confermato = useRef(false)
+  const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(
+    () => (confermato.current ? onConferma() : onChiudi()))
+  const conferma_ = () => { confermato.current = true; chiudi() }
 
   return createPortal(
     <div className="fixed inset-0 z-[70] flex flex-col justify-end">
@@ -346,6 +356,15 @@ export function FoglioParametri({ titolo, sottotitolo, misure, attiva, onAttiva,
         </div>
 
         <FoglioMisure misure={misure} attiva={attiva} onAttiva={onAttiva} accento={accento} senzaCarta />
+
+        {conferma && (
+          <button type="button" onClick={conferma_}
+            className="mt-3.5 w-full min-h-[52px] rounded-2xl bg-brand text-black text-[16.5px] font-black tracking-[-.01em]
+                       flex items-center justify-center gap-2.5 hover:brightness-110 active:scale-[.99] transition
+                       shadow-[0_14px_26px_-10px_rgba(241,186,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]">
+            <Plus size={19} aria-hidden="true" /> {conferma}
+          </button>
+        )}
       </div>
     </div>,
     document.body

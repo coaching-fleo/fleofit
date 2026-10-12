@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, within, fireEvent } from '@testing-library/react'
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { CARTA_MODALE } from '../../lib/stiliCard'
@@ -44,6 +44,17 @@ vi.mock('../../supabaseClient', () => {
 
 const CreateWorkout = (await import('../CreateWorkout')).default
 
+// Dal 12/10/2026 un blocco scelto nel picker chiede prima i suoi numeri, e
+// entra nella lista solo con «Aggiungi blocco» in fondo al foglio. La conferma
+// passa dall'uscita animata del foglio: si aspetta che sia sceso.
+async function confermaBlocco() {
+  const nelFoglio = () => screen.queryAllByRole('button', { name: 'Aggiungi blocco' })
+    .filter(b => b.closest('[role="dialog"]'))
+  await userEvent.click(nelFoglio()[0])
+  await waitFor(() => expect(nelFoglio()).toHaveLength(0))
+}
+
+
 const monta = () => render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
 
 async function alPasso2(nome = 'Prova') {
@@ -55,6 +66,7 @@ async function alPasso2(nome = 'Prova') {
 async function aggiungiBlocco(tipo) {
   await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
   await userEvent.click(screen.getByText(tipo))
+  await confermaBlocco()
 }
 
 /** Il valore di una cella del riepilogo, letto dalla sua etichetta.
@@ -782,5 +794,48 @@ describe('La modale «Bozza Trovata»', () => {
     // dalle card sopra cui si apre, e dagli altri cinque dialoghi che ora
     // nascono dalla stessa costante (§9-undequadragies).
     CARTA_MODALE.split(' ').forEach((classe) => expect(carta).toHaveClass(classe))
+  })
+})
+
+describe("un blocco nuovo chiede i suoi numeri, e si conferma", () => {
+  // Richiesta del committente (12/10/2026): ogni blocco, appena creato, chiede
+  // tempo o round e poi si conferma con un tasto. Prima entrava nella lista
+  // con i valori di partenza, e i numeri si cercavano dopo nelle pillole.
+  const blocchi = () => document.querySelectorAll('[data-blocco-id]').length
+
+  it("scelto il tipo, si apre il foglio dei parametri e il blocco NON è ancora nella lista", async () => {
+    await alPasso2()
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
+    await userEvent.click(screen.getByText('EMOM'))
+
+    const foglio = screen.getByRole('dialog', { name: 'EMOM' })
+    expect(within(foglio).getByRole('slider', { name: 'Ogni' })).toBeInTheDocument()
+    expect(within(foglio).getByRole('button', { name: 'Aggiungi blocco' })).toBeInTheDocument()
+    expect(blocchi()).toBe(0)
+  })
+
+  it("il valore scelto nel foglio è quello del blocco confermato", async () => {
+    await alPasso2()
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
+    await userEvent.click(screen.getByText('EMOM'))
+    const foglio = screen.getByRole('dialog', { name: 'EMOM' })
+    within(foglio).getByRole('slider', { name: 'Ogni' }).focus()
+    await userEvent.keyboard('{ArrowRight}')                 // 1:00 → 1:15
+    expect(within(foglio).getByText('Il blocco dura 12:30')).toBeInTheDocument()
+
+    await confermaBlocco()
+    expect(blocchi()).toBe(1)
+    const card = document.querySelector('[data-blocco-id]')
+    expect(within(card).getByRole('button', { name: 'Ogni: 1:15' })).toBeInTheDocument()
+  })
+
+  it("chiudere il foglio senza confermare non crea il blocco", async () => {
+    await alPasso2()
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
+    await userEvent.click(screen.getByText('AMRAP'))
+    const foglio = screen.getByRole('dialog', { name: 'AMRAP' })
+    await userEvent.click(within(foglio).getByRole('button', { name: 'Chiudi' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'AMRAP' })).toBeNull())
+    expect(blocchi()).toBe(0)
   })
 })

@@ -441,3 +441,71 @@ describe('con dei blocchi già scritti, il foglio MODIFICA invece di aggiungere'
     expect(screen.getAllByText(/AMRAP/).length).toBeGreaterThan(0)
   })
 })
+
+describe("i blocchi scritti dall'IA arrivano APERTI", () => {
+  // Richiesta del committente (12/10/2026): dopo una generazione i blocchi
+  // erano tutti chiusi tranne l'ultimo, e il coach li apriva uno per uno per
+  // rileggerli. Ogni blocco aperto ha il suo bottone «Esercizio».
+  const aperti = () => screen.queryAllByRole('button', { name: /^Esercizio$/ }).length
+
+  it('generando, si aprono tutti i blocchi nuovi', async () => {
+    mockRispostaIA = () => Promise.resolve({
+      data: { blocks: [
+        { type: 'Cash In', params: { rounds: '1' }, exercises: [{ name: 'Rowing', meters: '500m' }] },
+        { type: 'EMOM', params: { interval: '1:00', rounds: '12' }, exercises: [{ name: 'Burpees', reps: '15' }] },
+        { type: 'AMRAP', params: { duration: '10:00' }, exercises: [{ name: 'Wall Balls', reps: '20' }] },
+      ] },
+      error: null,
+    })
+    const foglio = await apriIA()
+    await userEvent.type(within(foglio).getByRole('textbox'), 'tre blocchi')
+    await userEvent.click(screen.getByRole('button', { name: /Genera workout/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Genera con IA' })).toBeNull())
+    expect(aperti()).toBe(3)
+  })
+
+  it('chiuderne uno lascia aperti gli altri; aprirne uno a mano resta una fisarmonica', async () => {
+    mockRispostaIA = () => Promise.resolve({
+      data: { blocks: [
+        { type: 'EMOM', params: { interval: '1:00', rounds: '12' }, exercises: [] },
+        { type: 'AMRAP', params: { duration: '10:00' }, exercises: [] },
+      ] },
+      error: null,
+    })
+    const foglio = await apriIA()
+    await userEvent.type(within(foglio).getByRole('textbox'), 'due blocchi')
+    await userEvent.click(screen.getByRole('button', { name: /Genera workout/ }))
+    await waitFor(() => expect(aperti()).toBe(2))
+
+    const testata = (tipo) => screen.getAllByText(tipo).find(el => el.hasAttribute('data-tipo-blocco'))
+    await userEvent.click(testata('EMOM'))
+    expect(aperti()).toBe(1)
+    await userEvent.click(testata('EMOM'))
+    expect(aperti()).toBe(1)
+  })
+
+  it("una MODIFICA apre tutto l'allenamento riscritto", async () => {
+    mockRispostaIA = () => Promise.resolve({
+      data: { blocks: [{ type: 'EMOM', params: { interval: '1:00', rounds: '12' }, exercises: [] }] },
+      error: null,
+    })
+    const foglio = await apriIA()
+    await userEvent.type(within(foglio).getByRole('textbox'), 'emom')
+    await userEvent.click(screen.getByRole('button', { name: /Genera workout/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Genera con IA' })).toBeNull())
+
+    mockRispostaIA = () => Promise.resolve({
+      data: { blocks: [
+        { type: 'EMOM', params: { interval: '1:00', rounds: '16' }, exercises: [] },
+        { type: 'Cash Out', params: { rounds: '1' }, exercises: [] },
+      ], modifica: true },
+      error: null,
+    })
+    await userEvent.click(screen.getByRole('button', { name: /Genera con IA/ }))
+    const foglio2 = screen.getByRole('dialog', { name: 'Genera con IA' })
+    await userEvent.type(within(foglio2).getByRole('textbox'), 'aggiungi cash out')
+    await userEvent.click(within(foglio2).getByRole('button', { name: /Modifica workout/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Genera con IA' })).toBeNull())
+    expect(aperti()).toBe(2)
+  })
+})

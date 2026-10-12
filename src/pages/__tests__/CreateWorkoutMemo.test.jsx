@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -53,6 +53,17 @@ vi.mock('../../supabaseClient', () => ({
 const { blockHint } = await import('../../lib/blockHints')
 const CreateWorkout = (await import('../CreateWorkout')).default
 
+// Dal 12/10/2026 un blocco scelto nel picker chiede prima i suoi numeri, e
+// entra nella lista solo con «Aggiungi blocco» in fondo al foglio. La conferma
+// passa dall'uscita animata del foglio: si aspetta che sia sceso.
+async function confermaBlocco() {
+  const nelFoglio = () => screen.queryAllByRole('button', { name: 'Aggiungi blocco' })
+    .filter(b => b.closest('[role="dialog"]'))
+  await userEvent.click(nelFoglio()[0])
+  await waitFor(() => expect(nelFoglio()).toHaveLength(0))
+}
+
+
 // Porta il builder al passo 2 con un blocco WarmUp già inserito.
 async function builderConUnBlocco() {
   render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
@@ -60,6 +71,7 @@ async function builderConUnBlocco() {
   await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
   await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
   await userEvent.click(screen.getByText('WarmUp'))
+  await confermaBlocco()
   expect(screen.getAllByLabelText('Elimina il blocco')).toHaveLength(1)
 }
 
@@ -91,6 +103,7 @@ describe('CreateWorkout non ridisegna i blocchi mentre si scrive nelle note', ()
 
     await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
     await userEvent.click(screen.getByText('AMRAP'))
+    await confermaBlocco()
 
     expect(blockHint).toHaveBeenCalled()
     expect(screen.getAllByLabelText('Elimina il blocco')).toHaveLength(2)
@@ -114,8 +127,10 @@ describe('modificare un blocco non ridisegna gli altri', () => {
     await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
     await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
     await userEvent.click(screen.getByText('AMRAP'))
+    await confermaBlocco()
     await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
     await userEvent.click(screen.getByText('WarmUp'))
+    await confermaBlocco()
 
     const note = screen.getByLabelText('Note del blocco')
     blockHint.mockClear()
@@ -136,6 +151,7 @@ describe('il riordino per id continua a funzionare dopo il refactor', () => {
     await builderConUnBlocco()
     await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
     await userEvent.click(screen.getByText('AMRAP'))
+    await confermaBlocco()
 
     const tipi = () => screen.getAllByLabelText('Elimina il blocco')
       .map(b => b.closest('[data-drag-item]').querySelector('[data-tipo-blocco]').textContent)
@@ -150,6 +166,7 @@ describe('il riordino per id continua a funzionare dopo il refactor', () => {
     await builderConUnBlocco()
     await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
     await userEvent.click(screen.getByText('AMRAP'))
+    await confermaBlocco()
 
     await userEvent.click(screen.getAllByLabelText('Elimina il blocco')[0])
     const rimasti = screen.getAllByLabelText('Elimina il blocco')
