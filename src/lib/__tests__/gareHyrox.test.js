@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
-  gareFuture, cercaGare, periodoGara, continentiPresenti, filtraContinente, nomeContinente, bandiera, nomePaese, giorniGara, giornoProposto, sectionsEvento, caricaGare, CHIAVE_CACHE_GARE,
+  gareFuture, cercaGare, periodoGara, blocchettoData, quandoGara, perMese, continentiPresenti, filtraContinente, nomeContinente, bandiera, nomePaese, giorniGara, giornoProposto, sectionsEvento, caricaGare, CHIAVE_CACHE_GARE,
 } from '../gareHyrox'
 
 // Perché questi test esistono
@@ -90,6 +90,31 @@ describe('periodoGara', () => {
     expect(periodoGara(VALENCIA)).toBe('15–18 ott 2026')
     expect(periodoGara(AMBURGO)).toBe('28 ott – 1 nov 2026')
     expect(periodoGara({ dal: '2026-12-31', al: '2027-01-02' })).toBe('31 dic 2026 – 2 gen 2027')
+  })
+})
+
+describe('blocchettoData', () => {
+  it('giorni sopra, mese sotto; a cavallo di due mesi una freccia', () => {
+    expect(blocchettoData({ dal: '2026-10-17', al: '2026-10-17' })).toEqual({ giorni: '17', mese: 'ott' })
+    expect(blocchettoData(VALENCIA)).toEqual({ giorni: '15–18', mese: 'ott' })
+    expect(blocchettoData(AMBURGO)).toEqual({ giorni: '28→1', mese: 'ott' })
+  })
+})
+
+describe('quandoGara', () => {
+  it('dice quanto manca, e «in corso» durante la gara', () => {
+    expect(quandoGara(VALENCIA, '2026-10-03')).toBe('Tra 12 giorni')
+    expect(quandoGara(VALENCIA, '2026-10-14')).toBe('Domani')
+    expect(quandoGara(VALENCIA, '2026-10-15')).toBe('Oggi')
+    expect(quandoGara(VALENCIA, '2026-10-17')).toBe('In corso')
+    expect(quandoGara(VALENCIA, '2026-10-19')).toBe('')
+  })
+})
+
+describe('perMese', () => {
+  it('raggruppa per mese d\'inizio, nell\'ordine di arrivo', () => {
+    const gruppi = perMese([VALENCIA, SAO_PAULO, { ...AMBURGO, dal: '2026-11-02', al: '2026-11-02' }])
+    expect(gruppi.map(g => [g.titolo, g.gare.length])).toEqual([['Ottobre 2026', 2], ['Novembre 2026', 1]])
   })
 })
 

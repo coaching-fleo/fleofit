@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { X, Search, ChevronLeft, ChevronDown, ExternalLink, MapPin } from 'lucide-react'
+import { X, Search, ChevronLeft, ExternalLink } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { supabase } from '../supabaseClient'
@@ -9,7 +9,9 @@ import { vibraScelta } from '../lib/aptica'
 import {
   caricaGare, gareFuture, cercaGare, giorniGara, giornoProposto, periodoGara, sectionsEvento,
   continentiPresenti, filtraContinente, nomeContinente, bandiera, nomePaese,
+  blocchettoData, quandoGara, perMese,
 } from '../lib/gareHyrox'
+import { LABEL } from '../lib/stiliCard'
 
 /**
  * «Nuovo evento / gara», a tutto schermo: dal calendario (bottone +) e dalla
@@ -129,17 +131,15 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
           <ListaGare
             gare={gare} errore={erroreGare} elenco={elenco} ricerca={ricerca} onRicerca={setRicerca}
             continenti={continenti} continente={continente} onContinente={setContinente}
-            onScegli={scegliGara} onAltro={() => scegliModo('altro')}
+            oggi={oggi} onScegli={scegliGara} onAltro={() => scegliModo('altro')}
           />
         )}
 
         {modo === 'hyrox' && gara && (
           <>
-            <div className="bg-[#1e1e1e] border border-brand/40 rounded-3xl overflow-hidden">
-              <FotoGara gara={gara} className="h-40" />
-              <div className="p-5 flex flex-col gap-3">
-                <InfoGara gara={gara} />
-                <div className="flex items-center justify-between pt-1">
+            <div className="flex flex-col gap-3">
+              <CardGara gara={gara} oggi={oggi} alta />
+              <div className="flex items-center justify-between px-1">
                   <button onClick={cambiaGara} className="flex items-center gap-1 text-sm text-gray-400 hover:text-white">
                     <ChevronLeft size={16} /> Cambia gara
                   </button>
@@ -148,7 +148,6 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
                       Sito <ExternalLink size={14} />
                     </a>
                   )}
-                </div>
               </div>
             </div>
 
@@ -203,59 +202,76 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
 }
 
 /**
- * La foto della gara presa da hyrox.com, in bianco e nero: le foto del sito
- * sono di città diverse con colori diversi, e a colori litigherebbero con la
- * palette (CLAUDE.md §6). Senza foto, o se non si carica, resta il fondo con
- * il codice della città: la card non cambia altezza.
+ * La card di una gara: la foto di hyrox.com riempie tutta la card, in bianco
+ * e nero e scurita da sinistra, e il testo ci sta sopra. A sinistra il
+ * blocchetto della data, a destra il codice della città in giallo — il segno
+ * FLEOFIT della card — e in basso città, paese e quanto manca.
+ *
+ * In bianco e nero perché le foto di città diverse, a colori, litigherebbero
+ * con la palette (CLAUDE.md §6). Senza foto, o se non si carica, resta il
+ * fondo scuro con il codice grande in filigrana: la card non cambia altezza.
  */
-function FotoGara({ gara, className = '' }) {
+function CardGara({ gara, oggi, alta = false }) {
   const [rotta, setRotta] = useState(false)
+  const { giorni, mese } = blocchettoData(gara)
+  const quando = quandoGara(gara, oggi)
+  const flag = bandiera(gara.paese)
+  const dove = [nomePaese(gara), nomeContinente(gara.continente)].filter(Boolean).join(' · ')
   return (
-    <div className={`relative bg-[#161616] overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden rounded-3xl bg-[#161616] ${alta ? 'h-52' : 'h-44'}`}>
       {gara.immagine && !rotta ? (
         <img src={gara.immagine} alt="" loading="lazy" decoding="async" onError={() => setRotta(true)}
           className="absolute inset-0 w-full h-full object-cover grayscale" />
       ) : (
-        <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center text-4xl font-black tracking-tight text-[#2a2a2a]">
+        <span aria-hidden="true" className="absolute -right-2 -bottom-6 text-[96px] font-black tracking-tighter text-white/[.04] -rotate-12 leading-none">
           {gara.codice || 'HYROX'}
         </span>
       )}
-    </div>
-  )
-}
+      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/10" />
+      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
 
-/** Periodo, città, bandiera e paese, continente: il corpo di una card. */
-function InfoGara({ gara }) {
-  const paese = nomePaese(gara)
-  const flag = bandiera(gara.paese)
-  return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-sm text-gray-400">{periodoGara(gara)}</p>
-      <p className="text-[22px] font-black tracking-tight text-white leading-tight">{gara.citta || gara.nome}</p>
-      <div className="flex items-center justify-between gap-3 mt-1">
-        <span className="flex items-center gap-2 min-w-0 text-[15px] text-gray-300">
-          {flag && (
-            <span aria-hidden="true" className="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center shrink-0 text-[26px] leading-none">
-              {flag}
+      <div className="relative h-full p-4 flex flex-col justify-between">
+        <div className="flex items-start justify-between gap-3">
+          <div className="rounded-2xl bg-black/55 backdrop-blur-md border border-white/10 px-3 py-1.5 text-center min-w-[58px]">
+            <p className="text-[19px] font-black text-white leading-tight tracking-tight">{giorni}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[.14em] text-brand">{mese}</p>
+          </div>
+          {gara.codice && (
+            <span className="text-[12px] font-black tracking-[.12em] px-2.5 py-1 rounded-lg bg-brand text-black">{gara.codice}</span>
+          )}
+        </div>
+
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className={`${alta ? 'text-[26px]' : 'text-[23px]'} font-black tracking-tight text-white leading-none truncate`}>
+              {gara.citta || gara.nome}
+            </p>
+            <p className="mt-1.5 flex items-center gap-1.5 text-[13px] font-medium text-gray-300 truncate">
+              {flag && <span aria-hidden="true" className="text-[15px] leading-none">{flag}</span>}
+              <span className="truncate">{dove}</span>
+            </p>
+          </div>
+          {quando && (
+            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
+              quando === 'In corso' || quando === 'Oggi'
+                ? 'bg-brand/15 text-brand border border-brand/40'
+                : 'bg-black/50 text-gray-300 border border-white/10'
+            }`}>
+              {quando}
             </span>
           )}
-          <span className="truncate">{paese}</span>
-        </span>
-        {gara.continente && (
-          <span className="text-xs font-bold px-3 py-1 rounded-full border border-[#383838] text-gray-300 shrink-0">
-            {nomeContinente(gara.continente)}
-          </span>
-        )}
+        </div>
       </div>
     </div>
   )
 }
 
-function ListaGare({ gare, errore, elenco, ricerca, onRicerca, continenti, continente, onContinente, onScegli, onAltro }) {
+function ListaGare({ gare, errore, elenco, ricerca, onRicerca, continenti, continente, onContinente, oggi, onScegli, onAltro }) {
+  const mesi = useMemo(() => perMese(elenco), [elenco])
   if (gare === null) {
     return (
-      <div className="flex flex-col gap-4" aria-label="Caricamento gare">
-        {[0, 1].map(i => <div key={i} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl h-64 animate-pulse" />)}
+      <div className="flex flex-col gap-3" aria-label="Caricamento gare">
+        {[0, 1, 2].map(i => <div key={i} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl h-44 animate-pulse" />)}
       </div>
     )
   }
@@ -267,44 +283,59 @@ function ListaGare({ gare, errore, elenco, ricerca, onRicerca, continenti, conti
       </div>
     )
   }
+  const scegliContinente = (c) => {
+    if (c === continente) return
+    vibraScelta()
+    onContinente(c)
+  }
   return (
     <div className="flex flex-col gap-3">
       <div className="relative">
         <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
         <input type="search" placeholder="Cerca città, paese o gara" value={ricerca} onChange={e => onRicerca(e.target.value)}
           aria-label="Cerca gara HYROX"
-          className="w-full bg-[#1e1e1e] border border-[#2a2a2a] text-white pl-11 pr-4 py-3 rounded-full focus:outline-none focus:border-brand text-base" />
+          className="w-full bg-[#111] border border-[#333] text-white pl-11 pr-4 py-3 rounded-xl focus:outline-none focus:border-brand text-base" />
       </div>
 
       {continenti.length > 1 && (
-        <label className="relative self-start flex items-center gap-2 bg-[#1e1e1e] border border-[#2a2a2a] rounded-full pl-4 pr-10 py-2.5 text-[15px] text-white focus-within:border-brand">
-          <MapPin size={18} className="text-brand shrink-0" aria-hidden="true" />
-          <select value={continente} onChange={e => { vibraScelta(); onContinente(e.target.value) }}
-            aria-label="Regione del mondo"
-            className="appearance-none bg-transparent text-white focus:outline-none pr-1">
-            <option value="">Tutte le regioni</option>
-            {continenti.map(c => <option key={c} value={c}>{nomeContinente(c)}</option>)}
-          </select>
-          <ChevronDown size={18} className="absolute right-3.5 text-gray-400 pointer-events-none" aria-hidden="true" />
-        </label>
+        <div role="group" aria-label="Regione del mondo" className="-mx-4 px-4 flex gap-2 overflow-x-auto hide-scrollbar">
+          {['', ...continenti].map(c => {
+            const attivo = c === continente
+            return (
+              <button key={c || 'tutte'} onClick={() => scegliContinente(c)} aria-pressed={attivo}
+                className={`shrink-0 px-3.5 py-2 rounded-full text-[13px] font-bold border transition ${
+                  attivo ? 'bg-white text-black border-white' : 'bg-[#111] text-gray-300 border-[#333] hover:border-gray-500'
+                }`}>
+                {c ? nomeContinente(c) : 'Tutto il mondo'}
+              </button>
+            )
+          })}
+        </div>
       )}
 
       {elenco.length === 0 ? (
         <p className="text-sm text-gray-500 text-center py-10">Nessuna gara trovata 🤷</p>
       ) : (
-        <ul className="flex flex-col gap-4">
-          {elenco.map(g => (
-            <li key={g.id}>
-              <button onClick={() => onScegli(g)} aria-label={`${g.nome}, ${periodoGara(g)}`}
-                className="w-full text-left bg-[#1e1e1e] border border-[#2a2a2a] hover:border-brand rounded-3xl overflow-hidden transition active:scale-[.99]">
-                <FotoGara gara={g} className="h-36" />
-                <div className="px-5 py-4">
-                  <InfoGara gara={g} />
-                </div>
-              </button>
-            </li>
+        <div className="flex flex-col gap-5 mt-1">
+          {mesi.map(m => (
+            <section key={m.chiave} aria-label={m.titolo} className="flex flex-col gap-2.5">
+              <div className="flex items-baseline justify-between px-1">
+                <p className={LABEL}>{m.titolo}</p>
+                <p className="text-[11px] font-semibold text-muted">{m.gare.length} {m.gare.length === 1 ? 'gara' : 'gare'}</p>
+              </div>
+              <ul className="flex flex-col gap-2.5">
+                {m.gare.map(g => (
+                  <li key={g.id}>
+                    <button onClick={() => onScegli(g)} aria-label={`${g.nome}, ${periodoGara(g)}`}
+                      className="w-full text-left rounded-3xl border border-[#2a2a2a] hover:border-brand transition active:scale-[.99] overflow-hidden">
+                      <CardGara gara={g} oggi={oggi} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   )

@@ -65,9 +65,11 @@ describe('Nuovo evento — gara HYROX', () => {
   it('filtra per regione del mondo, con bandiera e paese in italiano', async () => {
     finto.supabase.functions.invoke.mockResolvedValue({ data: { gare: GARE }, error: null })
     const u = await apri()
-    expect(await screen.findByText('Spagna')).toBeInTheDocument()
+    expect(await screen.findByText('Spagna · Europa')).toBeInTheDocument()
     expect(screen.getByText('🇪🇸')).toBeInTheDocument()
-    await u.selectOptions(screen.getByRole('combobox', { name: 'Regione del mondo' }), 'south-america')
+    // Le gare stanno sotto il loro mese
+    expect(screen.getByRole('region', { name: 'Ottobre 2026' })).toBeInTheDocument()
+    await u.click(screen.getByRole('button', { name: 'Sud America' }))
     expect(screen.getByRole('button', { name: /HYROX São Paulo/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /HYROX Valencia/ })).not.toBeInTheDocument()
   })

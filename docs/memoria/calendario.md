@@ -191,10 +191,21 @@ La modale «Nuovo Evento / Gara» è uscita da `Calendar.jsx` ed è diventata
   città diverse litigherebbero con la palette.
 
 ### Nel telefono
-- **A tutto schermo** (dal 12/10/2026, sera), sul modello dell'app che il
-  committente ha indicato: card con foto, data, città, bandiera e paese in
-  italiano (`Intl.DisplayNames`), continente a pillola; ricerca e filtro
-  «Tutte le regioni» (un `<select>`, così su iPhone apre il selettore di sistema).
+- **A tutto schermo** (dal 12/10/2026, sera). La prima stesura copiava da
+  vicino la card di un'altra app indicata dal committente (foto sopra, testo
+  sotto, menu «Tutte le regioni»): il committente l'ha giudicata «copiatissima»
+  e lo stesso giorno è diventata `CardGara`, una cosa nostra:
+  · la **foto riempie la card**, in bianco e nero e scurita da sinistra, con il
+    testo sopra;
+  · a sinistra il **blocchetto della data** («15–18 / OTT», `blocchettoData`),
+    a destra il **codice città in giallo** — il segno FLEOFIT;
+  · in basso città, bandiera, paese in italiano (`Intl.DisplayNames`) e
+    continente in una riga, e **quanto manca** («Tra 10 giorni», «In corso»,
+    `quandoGara`);
+  · le gare sono **raggruppate per mese** (`perMese`), come nel calendario;
+  · il filtro per regione è una **fila di pillole** scorrevoli, non un menu.
+  ⚠️ Non tornare alla card «foto sopra + corpo sotto con pillola del
+  continente»: è quella dell'altra app.
 - La copia locale porta `versione`: una copia di forma vecchia si butta.
 - ⚠️ **App e funzione si aggiornano in momenti diversi.** Il 12/10/2026 l'app
   nuova ha ricevuto la lista dalla `gare-hyrox` non ancora ripubblicata (senza
