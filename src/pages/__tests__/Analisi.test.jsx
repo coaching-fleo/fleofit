@@ -15,13 +15,14 @@ import { COACHING_ID } from '../../lib/constants'
 //  · il filtro sull'atleta, che vive nell'URL per poter tornare indietro;
 //  · la guardia del desktop: sul telefono la pagina non esiste.
 
-const dati = await vi.hoisted(async () => ({ atleti: [], assegnazioni: [], guasti: [], pagina: 0, comeStai: [] }))
+const dati = await vi.hoisted(async () => ({ atleti: [], assegnazioni: [], guasti: [], pagina: 0, comeStai: [], paginaCS: 0 }))
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
   return fintoSupabase(
     () => ({
       athletes: dati.atleti,
-      come_stai: dati.comeStai,
+      // Come `athlete_workouts`: ogni lettura è la pagina successiva da 1000.
+      get come_stai() { return dati.comeStai.slice(dati.paginaCS * 1000, ++dati.paginaCS * 1000) },
       // Ogni lettura di `athlete_workouts` è una pagina successiva da 1000.
       // Un getter, perché la funzione gira a ogni `from()` di QUALUNQUE tabella.
       get athlete_workouts() { return dati.assegnazioni.slice(dati.pagina * 1000, ++dati.pagina * 1000) },
@@ -75,6 +76,7 @@ beforeEach(() => {
   dati.guasti = []
   dati.pagina = 0
   dati.comeStai = []
+  dati.paginaCS = 0
   finto.chiamate.length = 0
 })
 afterEach(() => vi.useRealTimers())
@@ -157,6 +159,20 @@ describe('Analisi', () => {
     expect(anna.textContent).toMatch(/3,8/)
     expect(screen.getByRole('row', { name: /Bruno/ }).textContent).toMatch(/—/)
     expect(screen.getByRole('heading', { name: 'Come sta' })).toBeInTheDocument()
+  })
+
+  it('«Come sta» legge a pagine: oltre mille risposte non se ne perde nessuna', async () => {
+    dati.assegnazioni = [fatto('a1', '2026-10-05')]
+    // 1200 risposte di Bruno (2) e, per ultima, una di Anna (5): con una
+    // lettura sola la sua andrebbe persa e la cella direbbe «—».
+    dati.comeStai = [
+      ...Array.from({ length: 1200 }, () => ({ athlete_id: 'a2', giorno: '2026-10-05', sonno: 2, energia: 2, dolori: 2, stress: 2 })),
+      { athlete_id: 'a1', giorno: '2026-10-06', sonno: 5, energia: 5, dolori: 5, stress: 5 },
+    ]
+    monta()
+    const anna = await screen.findByRole('row', { name: /Anna/ })
+    await waitFor(() => expect(anna.textContent).toMatch(/5\/5/))
+    expect(finto.chiamateA('come_stai', 'range')).toHaveLength(2)
   })
 
   it('fuori dal desktop porta al report', async () => {

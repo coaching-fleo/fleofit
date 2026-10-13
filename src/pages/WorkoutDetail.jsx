@@ -1284,16 +1284,24 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // per l'atleta è la risposta di OGGI (serve a sapere se chiedergliela), per
   // il coach è quella del giorno della seduta (serve a leggerla).
   // `undefined` = non si sa ancora (o la tabella non c'è): non si chiede.
-  const [comeStai, setComeStai] = useState(undefined)
+  // ⚠️ La risposta si tiene INSIEME alla chiave (chi + giorno) per cui è stata
+  // letta, e vale solo finché la chiave è quella: la risposta di un altro giorno,
+  // o di un'altra scheda se il router riusa la pagina, non deve decidere se
+  // chiedere OGGI. Finché la lettura nuova non arriva, il valore è `undefined`.
+  const [letturaComeStai, setLetturaComeStai] = useState({ chiave: null, valore: undefined })
   const [foglioComeStai, setFoglioComeStai] = useState(null) // { poi } mentre è aperto
   const oggiStr = format(new Date(), 'yyyy-MM-dd')
   const guardaAtleta = (role === 'athlete' || isOwnProfile) && !!athleteWorkoutId
   const chiComeStai = guardaAtleta ? user?.id : (role !== 'athlete' ? queryAthleteId : null)
   const giornoComeStai = guardaAtleta ? oggiStr : workout?.date
+  const chiaveComeStai = chiComeStai && giornoComeStai ? `${chiComeStai}|${giornoComeStai}` : null
+  const comeStai = letturaComeStai.chiave === chiaveComeStai ? letturaComeStai.valore : undefined
+  const setComeStai = (valore) => setLetturaComeStai({ chiave: chiaveComeStai, valore })
   useEffect(() => {
     if (!chiComeStai || !giornoComeStai) return
     let vivo = true
-    leggiComeStai(chiComeStai, giornoComeStai).then(r => { if (vivo) setComeStai(r) })
+    const chiave = `${chiComeStai}|${giornoComeStai}`
+    leggiComeStai(chiComeStai, giornoComeStai).then(valore => { if (vivo) setLetturaComeStai({ chiave, valore }) })
     return () => { vivo = false }
   }, [chiComeStai, giornoComeStai])
 
@@ -1351,16 +1359,23 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // salta, e in entrambi i casi il timer parte: la domanda non blocca mai.
   const chiediComeStai = eAtleta && !completato &&
     daChiedereOggi({ risposta: comeStai, saltato: leggiSaltato(), oggi: oggiStr })
-  const rispondiComeStai = async (risposte) => {
-    const ok = await salvaComeStai(user.id, oggiStr, risposte)
-    // Anche se il salvataggio fallisce (rete giù) non si richiede oggi: chi
-    // ha risposto non deve rispondere due volte. La risposta persa è il male minore.
-    if (ok) setComeStai({ athlete_id: user.id, giorno: oggiStr, ...risposte })
-    else segnaSaltato(oggiStr)
+  const rispondiComeStai = (risposte) => {
+    // Prima si chiude e si parte, POI si salva: il timer non aspetta la rete
+    // (con il segnale scarso un upsert senza risposta lo terrebbe fermo).
+    // Ottimistico: la risposta vale subito, così l'invito sparisce.
     const poi = foglioComeStai?.poi
     setFoglioComeStai(null)
+    setComeStai({ athlete_id: user.id, giorno: oggiStr, ...risposte })
     poi?.()
+    salvaComeStai(user.id, oggiStr, risposte).then(ok => {
+      // Se il salvataggio fallisce non si richiede oggi: chi ha risposto non
+      // deve rispondere due volte. La risposta persa è il male minore.
+      if (!ok) segnaSaltato(oggiStr)
+    })
   }
+  // La X e il tasto indietro: annullare, non saltare. Niente timer, e la
+  // domanda resta (docs/memoria/scheda-workout.md §9-come-stai).
+  const chiudiComeStai = () => setFoglioComeStai(null)
   const saltaComeStai = () => {
     segnaSaltato(oggiStr)
     const poi = foglioComeStai?.poi
@@ -1887,7 +1902,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
       {foglioComeStai && (
         <Suspense fallback={null}>
-          <FoglioComeStai onSalva={rispondiComeStai} onSalta={saltaComeStai} />
+          <FoglioComeStai onSalva={rispondiComeStai} onSalta={saltaComeStai} onChiudi={chiudiComeStai} />
         </Suspense>
       )}
 

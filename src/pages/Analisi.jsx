@@ -97,7 +97,8 @@ export default function Analisi() {
       const [atletiRes, assRes, risposte] = await Promise.all([
         supabase.from('athletes').select('id, name, surname, photo_url, notes').is('deleted_at', null),
         leggiAssegnazioni(da, a),
-        leggiComeStaiFra(da, a),
+        // Solo il periodo: il confronto col periodo prima non usa «Come sta».
+        leggiComeStaiFra(settimaneDelPeriodo(periodo, adesso)[0].da, a),
       ])
       if (!vivo) return
       // ⚠️ Una lettura fallita non si inghiotte: senza righe la pagina

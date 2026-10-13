@@ -110,15 +110,27 @@ export async function salvaComeStai(athleteId, giorno, risposte) {
   return !error
 }
 
-/** Tutte le risposte fra due giorni, per la pagina Analisi. `[]` se la tabella non c'è. */
+const PAGINA = 1000
+
+/**
+ * Tutte le risposte fra due giorni, per la pagina Analisi. `[]` se la tabella non c'è.
+ * 🔴 A PAGINE, come `leggiAssegnazioni` in Analisi.jsx: il server restituisce al
+ * massimo mille righe senza dirlo, e su 26 settimane tre atleti costanti le superano.
+ */
 export async function leggiComeStaiFra(da, a) {
-  const { data, error } = await supabase.from('come_stai')
-    .select('athlete_id, giorno, sonno, energia, dolori, stress')
-    .gte('giorno', da).lte('giorno', a)
-    .limit(5000)
-  if (error) {
-    if (!tabellaAssente(error)) console.error('Come stai, lettura fallita:', error)
-    return []
+  const tutte = []
+  for (let pagina = 0; ; pagina++) {
+    const { data, error } = await supabase.from('come_stai')
+      .select('athlete_id, giorno, sonno, energia, dolori, stress')
+      .gte('giorno', da).lte('giorno', a)
+      .order('giorno', { ascending: true })
+      .order('athlete_id', { ascending: true })
+      .range(pagina * PAGINA, pagina * PAGINA + PAGINA - 1)
+    if (error) {
+      if (!tabellaAssente(error)) console.error('Come stai, lettura fallita:', error)
+      return []
+    }
+    tutte.push(...(data || []))
+    if (!data || data.length < PAGINA) return tutte
   }
-  return data ?? []
 }

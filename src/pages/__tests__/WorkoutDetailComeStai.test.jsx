@@ -8,7 +8,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 // (saltare fa partire il timer lo stesso), una volta al giorno; al coach si
 // mostra la risposta del giorno della seduta.
 
-const ctrl = await vi.hoisted(async () => ({ comeStai: [] }))
+const ctrl = await vi.hoisted(async () => ({ comeStai: [], salva: null }))
 
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
@@ -25,6 +25,11 @@ const finto = await vi.hoisted(async () => {
 })
 
 vi.mock('../../supabaseClient', () => ({ supabase: finto.supabase }))
+// `ctrl.salva` permette di simulare un salvataggio lento (rete scarsa).
+vi.mock('../../lib/comeStai', async (originale) => {
+  const vero = await originale()
+  return { ...vero, salvaComeStai: (...a) => (ctrl.salva ? ctrl.salva(...a) : vero.salvaComeStai(...a)) }
+})
 vi.mock('jspdf', () => ({ default: class {}, jsPDF: class {} }))
 vi.mock('html-to-image', () => ({ toPng: vi.fn(), toBlob: vi.fn() }))
 vi.mock('@capacitor/network', () => ({ Network: {
@@ -47,6 +52,7 @@ function apri({ ruolo = 'athlete', utente = 'u1' } = {}) {
 
 beforeEach(() => {
   ctrl.comeStai = []
+  ctrl.salva = null
   finto.chiamate.length = 0
   window.localStorage.clear()
 })
@@ -76,6 +82,28 @@ describe('Come stai oggi — atleta', () => {
     expect(opzioni).toEqual({ onConflict: 'athlete_id,giorno' })
     // Dall'invito, non dal timer: dopo la risposta non parte niente.
     expect(screen.queryByRole('button', { name: /Minimizza timer/i })).toBeNull()
+  })
+
+  it('con la rete lenta il timer parte subito, senza aspettare il salvataggio', async () => {
+    ctrl.salva = () => new Promise(() => {}) // non risponde mai
+    apri()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: /Avvia allenamento/i }))
+    await user.click(await screen.findByRole('radio', { name: 'Sonno: 3 su 5' }))
+    await user.click(screen.getByRole('button', { name: 'Fatto' }))
+    expect(await screen.findByRole('button', { name: /Minimizza timer/i })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Come stai oggi?' })).toBeNull()
+  })
+
+  it('la X (e il tasto indietro di Android) chiude senza far partire il timer, e si richiede', async () => {
+    apri()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: /Avvia allenamento/i }))
+    await user.click(await screen.findByRole('button', { name: 'Chiudi' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Come stai oggi?' })).toBeNull())
+    expect(screen.queryByRole('button', { name: /Minimizza timer/i })).toBeNull()
+    // Chiudere non è saltare: l'invito resta.
+    expect(screen.getByText('Come stai oggi?')).toBeInTheDocument()
   })
 
   it('se oggi ha già risposto non si chiede', async () => {

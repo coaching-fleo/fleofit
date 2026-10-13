@@ -22,14 +22,16 @@ describe('FoglioComeStai', () => {
     expect(onSalva).toHaveBeenCalledWith({ sonno: 4, stress: 2 })
   })
 
-  it('«Salta» e la X chiudono senza salvare', async () => {
+  it('«Salta» salta, la X chiude: due gesti diversi, nessuno dei due salva', async () => {
     const onSalva = vi.fn()
     const onSalta = vi.fn()
-    render(<FoglioComeStai onSalva={onSalva} onSalta={onSalta} />)
+    const onChiudi = vi.fn()
+    render(<FoglioComeStai onSalva={onSalva} onSalta={onSalta} onChiudi={onChiudi} />)
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Salta' }))
     await user.click(screen.getByRole('button', { name: 'Chiudi' }))
-    expect(onSalta).toHaveBeenCalledTimes(2)
+    expect(onSalta).toHaveBeenCalledTimes(1)
+    expect(onChiudi).toHaveBeenCalledTimes(1)
     expect(onSalva).not.toHaveBeenCalled()
   })
 })
