@@ -160,3 +160,8 @@ contenuto: testata `TestataReportDesktop` e due colonne (`data-disposizione="des
 ⚠️ I pezzi sono costanti JSX scritte una volta: chi aggiunge una sezione la mette in
 ENTRAMBE le disposizioni, o sparisce da una delle due senza errori. I test «versione
 desktop» in `ReportSettimanale.test.jsx` e `ReportAtleta.test.jsx` controllano le due strade.
+
+### «Come sta» in Analisi (13/10/2026)
+Colonna della tabella, grafico settimanale e colonna del CSV, dalle risposte di «Come stai
+oggi» (`come_stai`, vedi `scheda-workout.md` §9-come-stai). Non dipende dal filtro di
+categoria: è com'era l'atleta, non la seduta. Senza tabella la lettura torna `[]` e tutto è «—».

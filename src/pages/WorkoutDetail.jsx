@@ -3,13 +3,14 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
-import { ChevronUp, Download, Timer, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, CalendarDays, Mic, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, WifiOff, ClipboardList, Undo2, Image as ImmagineIcona, Share2 } from 'lucide-react'
+import { ChevronUp, Download, Timer, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, CalendarDays, Mic, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, WifiOff, ClipboardList, Undo2, Image as ImmagineIcona, Share2, HeartPulse } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
+import { DOMANDE, punteggio, fasciaComeStai, daChiedereOggi, leggiComeStai, salvaComeStai, leggiSaltato, segnaSaltato } from '../lib/comeStai'
 import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
@@ -64,6 +65,9 @@ import { daChiedere, leggiIgnorate, tempoDallaNota, senzaRisultato, conRisultato
 // «Com'è andata?» sulle gare HYROX già corse: pigro, perché compare solo lì
 // e il chunk della scheda ha un peso da rispettare (CLAUDE.md §2).
 const RisultatoGara = lazy(() => import('../components/RisultatoGara'))
+// Il foglio di «Come stai oggi» si apre al massimo una volta al giorno: pigro,
+// come gli altri pezzi che la scheda non mostra all'apertura (CLAUDE.md §2).
+const FoglioComeStai = lazy(() => import('../components/FoglioComeStai'))
 const StatisticheGara = lazy(() => import('../components/RisultatoGara').then(m => ({ default: m.StatisticheGara })))
 import {
   GraficaStoria, FoglioStoria, LARGHEZZA_STORIA, ALTEZZA_STORIA, FATTORE_STORIA,
@@ -1276,6 +1280,23 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     }
   }
 
+  // «Come stai oggi» (src/lib/comeStai.js). Una lettura sola, due significati:
+  // per l'atleta è la risposta di OGGI (serve a sapere se chiedergliela), per
+  // il coach è quella del giorno della seduta (serve a leggerla).
+  // `undefined` = non si sa ancora (o la tabella non c'è): non si chiede.
+  const [comeStai, setComeStai] = useState(undefined)
+  const [foglioComeStai, setFoglioComeStai] = useState(null) // { poi } mentre è aperto
+  const oggiStr = format(new Date(), 'yyyy-MM-dd')
+  const guardaAtleta = (role === 'athlete' || isOwnProfile) && !!athleteWorkoutId
+  const chiComeStai = guardaAtleta ? user?.id : (role !== 'athlete' ? queryAthleteId : null)
+  const giornoComeStai = guardaAtleta ? oggiStr : workout?.date
+  useEffect(() => {
+    if (!chiComeStai || !giornoComeStai) return
+    let vivo = true
+    leggiComeStai(chiComeStai, giornoComeStai).then(r => { if (vivo) setComeStai(r) })
+    return () => { vivo = false }
+  }, [chiComeStai, giornoComeStai])
+
   if (loading) return <div className="p-6 text-muted">Caricamento...</div>
   if (!workout) return <div className="p-6 text-red-400">Workout non trovato</div>
 
@@ -1326,7 +1347,32 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const timerDisponibile = haTimerGuidato(workout)
   const puoAssegnare = role !== 'athlete'
 
+  // Prima di avviare, una volta al giorno, «Come stai oggi?». Si risponde o si
+  // salta, e in entrambi i casi il timer parte: la domanda non blocca mai.
+  const chiediComeStai = eAtleta && !completato &&
+    daChiedereOggi({ risposta: comeStai, saltato: leggiSaltato(), oggi: oggiStr })
+  const rispondiComeStai = async (risposte) => {
+    const ok = await salvaComeStai(user.id, oggiStr, risposte)
+    // Anche se il salvataggio fallisce (rete giù) non si richiede oggi: chi
+    // ha risposto non deve rispondere due volte. La risposta persa è il male minore.
+    if (ok) setComeStai({ athlete_id: user.id, giorno: oggiStr, ...risposte })
+    else segnaSaltato(oggiStr)
+    const poi = foglioComeStai?.poi
+    setFoglioComeStai(null)
+    poi?.()
+  }
+  const saltaComeStai = () => {
+    segnaSaltato(oggiStr)
+    const poi = foglioComeStai?.poi
+    setFoglioComeStai(null)
+    poi?.()
+  }
+
   const apriTimer = () => {
+    if (!timerOpen && chiediComeStai) { setFoglioComeStai({ poi: avviaTimer }); return }
+    avviaTimer()
+  }
+  const avviaTimer = () => {
     if (timerOpen && !timerMinimized) { setTimerMinimized(true); return }
     if (timerOpen && timerMinimized) { setTimerMinimized(false); return }
     setTimerSequence(buildTimerSequence(workout))
@@ -1501,6 +1547,35 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // atleta): il telefono li impila nell'ordine di sempre, il desktop li
   // dispone su due colonne. ⚠️ Chi aggiunge una sezione la mette in ENTRAMBE
   // le disposizioni qui sotto, o sparisce da una delle due senza errori.
+  // «Come stai oggi»: all'atleta l'invito (se oggi non ha ancora risposto né
+  // saltato), al coach la risposta del giorno della seduta, se c'è.
+  const valoreComeStai = punteggio(comeStai)
+  const pComeStai = chiediComeStai ? (
+    <button type="button" onClick={() => setFoglioComeStai({ poi: null })}
+      className="rounded-[18px] px-4 py-3.5 bg-white/[.04] border border-white/[.08] text-left flex items-center gap-3
+                 transition hover:border-brand/40">
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm font-bold text-white">Come stai oggi?</span>
+        <span className="block text-[12.5px] text-gray-400">Quattro risposte, cinque secondi.</span>
+      </span>
+      <span className="text-sm font-bold text-brand shrink-0">Rispondi</span>
+    </button>
+  ) : (!guardaAtleta && valoreComeStai != null) ? (
+    <CardNota etichetta={`Come stava ${workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'EEE d MMM', { locale: it }) : 'quel giorno'}`}
+      icona={HeartPulse} colore={BRAND}>
+      <div className="flex items-baseline gap-2">
+        <span className="text-2xl font-black text-white tabular-nums">{String(valoreComeStai).replace('.', ',')}</span>
+        <span className="text-sm text-gray-400">/5 · {fasciaComeStai(valoreComeStai).etichetta}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+        {DOMANDE.map(d => (
+          <span key={d.chiave} className="text-[13px] text-gray-400 flex justify-between">
+            {d.titolo}<span className="text-white font-bold tabular-nums">{comeStai?.[d.chiave] ?? '—'}</span>
+          </span>
+        ))}
+      </div>
+    </CardNota>
+  ) : null
   const pOffline = (
     <>
       {isOffline && (
@@ -1792,12 +1867,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 </BarraAzioni>
               </div>
             )}
-            {pVocale}{pNoteAtleta}{pAssegnazioni}
+            {pComeStai}{pVocale}{pNoteAtleta}{pAssegnazioni}
           </div>
         </div>
       ) : (
         <>
-          {pOffline}{pTitolo}{pEsito}{pRiepilogo}{pAvviso}{pContenuto}{pNoteCoach}
+          {pOffline}{pTitolo}{pEsito}{pComeStai}{pRiepilogo}{pAvviso}{pContenuto}{pNoteCoach}
           {pVocale}{pNoteAtleta}{pAssegnazioni}
       {/* La barra fissa: «Avvia» non dipende più da quanto è lunga la lista dei
           blocchi. Prima stava sopra i blocchi per la stessa ragione, ma lì il
@@ -1808,6 +1883,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         {azioneSecondaria}
       </BarraAzioni>
         </>
+      )}
+
+      {foglioComeStai && (
+        <Suspense fallback={null}>
+          <FoglioComeStai onSalva={rispondiComeStai} onSalta={saltaComeStai} />
+        </Suspense>
       )}
 
       {menuOpen && <MenuScheda onChiudi={() => setMenuOpen(false)} voci={vociMenu} />}

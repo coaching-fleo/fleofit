@@ -15,12 +15,13 @@ import { COACHING_ID } from '../../lib/constants'
 //  · il filtro sull'atleta, che vive nell'URL per poter tornare indietro;
 //  · la guardia del desktop: sul telefono la pagina non esiste.
 
-const dati = await vi.hoisted(async () => ({ atleti: [], assegnazioni: [], guasti: [], pagina: 0 }))
+const dati = await vi.hoisted(async () => ({ atleti: [], assegnazioni: [], guasti: [], pagina: 0, comeStai: [] }))
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
   return fintoSupabase(
     () => ({
       athletes: dati.atleti,
+      come_stai: dati.comeStai,
       // Ogni lettura di `athlete_workouts` è una pagina successiva da 1000.
       // Un getter, perché la funzione gira a ogni `from()` di QUALUNQUE tabella.
       get athlete_workouts() { return dati.assegnazioni.slice(dati.pagina * 1000, ++dati.pagina * 1000) },
@@ -73,6 +74,7 @@ beforeEach(() => {
   dati.assegnazioni = []
   dati.guasti = []
   dati.pagina = 0
+  dati.comeStai = []
   finto.chiamate.length = 0
 })
 afterEach(() => vi.useRealTimers())
@@ -140,6 +142,21 @@ describe('Analisi', () => {
     expect(testo).toMatch(/Anna Rossi;;1;100;0,5;7;/)
     expect(clic).toHaveBeenCalled()
     clic.mockRestore()
+  })
+
+  it('«Come sta»: la media del periodo per atleta, «—» per chi non ha mai risposto', async () => {
+    dati.assegnazioni = [fatto('a1', '2026-10-05'), fatto('a2', '2026-10-06')]
+    dati.comeStai = [
+      { athlete_id: 'a1', giorno: '2026-10-05', sonno: 4, energia: 5, dolori: null, stress: null },
+      { athlete_id: 'a1', giorno: '2026-10-12', sonno: 3, energia: 3, dolori: 3, stress: 3 },
+    ]
+    monta()
+    const anna = await screen.findByRole('row', { name: /Anna/ })
+    expect(screen.getByRole('columnheader', { name: /Come sta/ })).toBeInTheDocument()
+    // (4,5 + 3) / 2 = 3,8 — la media dei giorni, non delle singole risposte.
+    expect(anna.textContent).toMatch(/3,8/)
+    expect(screen.getByRole('row', { name: /Bruno/ }).textContent).toMatch(/—/)
+    expect(screen.getByRole('heading', { name: 'Come sta' })).toBeInTheDocument()
   })
 
   it('fuori dal desktop porta al report', async () => {

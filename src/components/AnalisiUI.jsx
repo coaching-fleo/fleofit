@@ -142,6 +142,7 @@ const COLONNE = [
   { chiave: 'rpeMedio', titolo: 'RPE medio', testo: (r) => (r.rpeMedio == null ? '—' : virgola(r.rpeMedio)) },
   { chiave: 'scartoRpe', titolo: 'RPE vs previsto', testo: (r) => (r.scartoRpe == null ? '—' : `${r.scartoRpe > 0 ? '+' : ''}${virgola(r.scartoRpe)}`) },
   { chiave: 'acwr', titolo: 'ACWR', testo: (r) => (r.acwr == null ? '—' : virgola(r.acwr)) },
+  { chiave: 'comeSta', titolo: 'Come sta', testo: (r) => (r.comeSta == null ? '—' : `${virgola(r.comeSta)}/5`) },
   { chiave: 'ultima', titolo: 'Ultima seduta', testo: (r) => quandoFa(r.ultima) || '—' },
 ]
 

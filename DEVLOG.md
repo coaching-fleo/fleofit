@@ -5,6 +5,7 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 ---
 
 ## Allenamento e recap
+- Nuovo **«Come stai oggi?»**: prima di allenarsi, una volta al giorno, quattro risposte da 1 a 5 (sonno, energia, dolori, stress). Si può saltare e non blocca mai il timer; il coach vede le risposte sulla scheda dell'allenamento e nella pagina Analisi.
 - Dopo aver segnato un allenamento come fatto si apre un **recap in stile storie**: l'allenamento appena svolto, la settimana, l'andamento delle ultime otto settimane e il prossimo passo.
 - Nuova domanda **«Ti è piaciuto?»** con 👍 / 👎 dopo ogni allenamento; il coach vede le risposte sulla scheda del workout.
 - Corretti i **minuti della settimana** in Home: le ripetute in metri venivano contate come minuti.

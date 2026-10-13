@@ -24,7 +24,7 @@ import {
   VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
 } from '../supabase/functions/estrai-note/regole.ts'
 
-export const VERSIONE_SEME = 7
+export const VERSIONE_SEME = 8
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -324,6 +324,27 @@ const personal_records = [
   { id: 'p3', athlete_id: 'at-luca', exercise: '5 km', value: '19:10', date: giorno(-12) },
 ]
 
+// «Come stai oggi» (13/10/2026): cinque settimane di risposte, un giorno sì e
+// uno no. Luca peggiora (dorme poco, stress che sale) — è il caso che il coach
+// deve vedere in Analisi. Sara non ha risposto oggi: in `demo:atleta` la
+// domanda compare prima di «Avvia allenamento».
+const come_stai = () => {
+  const profili = {
+    'at-marco': (i) => ({ sonno: 4, energia: 4 + (i % 2), dolori: 3 + (i % 3 === 0 ? 1 : 0), stress: 4 }),
+    'at-luca': (i) => ({ sonno: Math.max(1, 4 - Math.floor(i / 5)), energia: Math.max(2, 4 - Math.floor(i / 6)), dolori: 3, stress: Math.max(1, 4 - Math.floor(i / 4)) }),
+    'at-giulia': (i) => ({ sonno: 3 + (i % 2), energia: 4, dolori: 2 + (i % 2), stress: 3 }),
+    'at-elena': () => ({ sonno: 5, energia: 4, dolori: 4, stress: 5 }),
+  }
+  const righe = []
+  for (const [athlete_id, valori] of Object.entries(profili)) {
+    for (let i = 0; i < 18; i++) {
+      // i = 0 è la risposta più vecchia: Luca peggiora andando verso oggi.
+      righe.push({ id: `cs-${athlete_id}-${i}`, athlete_id, giorno: giorno(-(35 - i * 2)), ...valori(i) })
+    }
+  }
+  return righe
+}
+
 /** Il database iniziale. Chiamata a ogni azzeramento, così le date si rifanno. */
 export function semi() {
   // Una volta sola: gli id delle assegnazioni avanzano a ogni chiamata, e gli
@@ -339,6 +360,7 @@ export function semi() {
     notifications: notifications.map(n => ({ ...n })),
     invitation_codes: invitation_codes.map(c => ({ ...c })),
     personal_records: personal_records.map(p => ({ ...p })),
+    come_stai: come_stai(),
     push_subscriptions: [],
     tv_sessions: [],
   }

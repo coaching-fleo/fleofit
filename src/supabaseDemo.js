@@ -161,7 +161,11 @@ function query(tabella) {
       const inserite = []
       for (const n of nuove) {
         if (azione === 'upsert' && conflitto) {
-          const i = tab.findIndex(r => r[conflitto] === n[conflitto])
+          // `onConflict` può essere una chiave COMPOSTA («athlete_id,giorno»):
+          // si confrontano tutte le colonne, come fa Postgres. Leggerla come
+          // un nome solo dava undefined === undefined e sovrascriveva la prima riga.
+          const colonne = conflitto.split(',').map(c => c.trim())
+          const i = tab.findIndex(r => colonne.every(c => r[c] === n[c]))
           if (i >= 0) { tab[i] = { ...tab[i], ...n, id: tab[i].id }; inserite.push(tab[i]); continue }
         }
         tab.push(n); inserite.push(n)

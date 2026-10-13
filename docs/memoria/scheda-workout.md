@@ -421,3 +421,39 @@ uno scorrimento suo) le azioni, il vocale, le note dell'atleta e le assegnazioni
 - Il menu delle tre puntine resta un foglio dal fondo: sul desktop la regola di
   `html.desktop` in `index.css` lo fa diventare una finestra centrata.
 - Test: «Scheda workout — versione desktop» in `WorkoutDetailScheda.test.jsx`.
+
+## 9-come-stai. «Come stai oggi» (13/10/2026)
+
+Quattro domande da 1 a 5 che l'atleta riceve prima di allenarsi, una volta al giorno:
+sonno, energia, dolori muscolari, stress. Tabella `come_stai` (seconda eccezione al
+congelamento dello schema, sì del committente il 13/10). Logica e rete in
+`src/lib/comeStai.js`, foglio in `src/components/FoglioComeStai.jsx`.
+
+Dove compare:
+- **Atleta**, nella scheda di un allenamento non ancora fatto: un invito «Come stai oggi?
+  Rispondi» sotto il titolo, e il foglio che si apre da solo premendo «Avvia allenamento».
+  Rispondere o saltare fa partire il timer lo stesso: **la domanda non blocca mai**.
+- **Coach**, nella scheda dell'atleta su quel workout: «Come stava» quel giorno, con la media
+  e le quattro risposte. In **Analisi**: la colonna «Come sta» (media del periodo) e il
+  grafico settimana per settimana.
+
+⚠️ Le cose da sapere:
+1. 🔴 **Tutte le scale vanno nello stesso verso, 5 = la cosa buona** (dolori 5 = nessuno,
+   stress 5 = basso). È ciò che permette la media senza girare niente. Una domanda nuova si
+   scrive nello stesso verso, o la media mente.
+2. Una risposta saltata è `null` e non entra nella media; un giorno senza risposte non esiste.
+   La media del periodo è la media dei GIORNI, non delle singole risposte.
+3. `leggiComeStai` torna `undefined` quando non può sapere (tabella assente, rete giù): in quel
+   caso **non si chiede**. Un foglio a sproposito davanti al timer è peggio di una risposta persa.
+4. «Salta» si ricorda per il giorno in `fleofit_come_stai_saltato` (memoria del dispositivo).
+   Se il salvataggio fallisce, il giorno si segna come saltato: chi ha risposto non deve
+   rispondere due volte.
+5. Si chiede per il giorno di OGGI, non per la data della seduta: è com'è l'atleta quando si
+   allena. Il coach invece legge la risposta del giorno della seduta (`workout.date`).
+6. La X del foglio ha `aria-label="Chiudi"`: è ciò che fa funzionare il tasto indietro di
+   Android, e vale come «Salta».
+7. Nella demo l'upsert con chiave composta (`athlete_id,giorno`) sovrascriveva la prima riga:
+   corretto in `supabaseDemo.js`, test in `src/__tests__/demoUpsert.test.js`.
+
+Non fatto (da decidere): il backup automatico (`db-backup.yml`, su `main`) e l'export
+in-app non includono ancora `come_stai`; nessun avviso al coach quando qualcuno sta male.

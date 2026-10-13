@@ -57,6 +57,8 @@
    `note_estratte`, migrazione **additiva** applicata a mano dal SQL editor
    (`supabase/schema/note_estratte_2026-10-09.sql`). Non è uno sblocco generale: **ogni
    migrazione successiva richiede un nuovo sì esplicito**.
+   ✅ **Seconda eccezione** (13/10/2026, sì esplicito in sessione): la tabella `come_stai`
+   («Come stai oggi»), additiva, da applicare a mano (`supabase/schema/come_stai_2026-10-13.sql`).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -305,6 +307,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `athletes` | `id` = `auth.users.id`. Soft delete con `deleted_at` (**bigint in ms**). `notes` è la nota del coach **per** l'atleta (l'atleta la vede, ed è voluto) e porta il marcatore `[PAUSA: yyyy-MM-dd]`: si legge e scrive **solo** con `src/lib/pausa.js` |
 | `workouts` | `title` (mai vuoto, con il codice in coda), `date`, `sections` jsonb (§5), `coach_notes` |
 | `athlete_workouts` | qui sta lo **stato** (`status`, `completed_date`). `notes` porta `[RPE: n/10]` e `[GRADIMENTO: …]`: solo con `src/lib/rpe.js` e `gradimento.js`. `voice_note_url` si cancella con `#deleted=`. **Nessun `created_at`** |
+| `come_stai` | «Come stai oggi»: una riga per atleta per GIORNO, quattro risposte 1–5 tutte con **5 = la cosa buona** (sonno, energia, dolori, stress). Policy come `athlete_workouts` (l'atleta le sue, gli admin tutte). ⚠️ **da applicare a mano** (`supabase/schema/come_stai_2026-10-13.sql`); finché manca l'app non chiede niente. `main` non la conosce |
 | `note_estratte` | ✅ **applicata il 09/10/2026**: i dati ricavati dalle note degli atleti (standard `VERSIONE` in `estrai-note/regole.ts`). Policy **solo admin** (`USING` e `WITH CHECK`), l'atleta non la legge. La scrive solo `estrai-note`. `main` non la conosce |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
@@ -522,6 +525,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_ultimo_export`, `fleofit_invito_atteso`, `fleofit_segnalazione_bozza`,
   `fleofit_cache_gare_hyrox`, `fleofit_gare_senza_risultato`, `fleofit_cache_gare_passate`,
   `fleofit_cache_risultato_<stagione>_<idp>`,
+  `fleofit_come_stai_saltato` (il giorno in cui l'atleta ha scelto «Salta»: memoria del dispositivo),
   `adminRoleOverride`.
   ⚠️ `fleofit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
   dice «l'hai esportato da qui», e su un telefono nuovo semplicemente non c'è (§9-duoetvicies).
@@ -616,7 +620,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Home.jsx` (ramo atleta), `HomeAtletaUI`, `HomeAtletaVuotiUI`, `statistiche.js` | `home-atleta.md` |
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `statisticheCoach.js`, `pausa.js`, `ultimeSedute.js` | `home-coach.md` |
 | `CreateWorkout.jsx`, `CreaWorkoutUI`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza | `crea-workout.md` |
-| `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF | `scheda-workout.md` |
+| `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF, `comeStai.js`, `FoglioComeStai` | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |
 | `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |

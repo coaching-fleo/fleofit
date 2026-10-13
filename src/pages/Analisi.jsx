@@ -39,6 +39,7 @@ import Striscia from '../components/grafici/Striscia'
 import StoricoEsercizio from '../components/StoricoEsercizio'
 import { leggiEstratti } from '../lib/noteEstratte'
 import { csvDa, nomeFileAnalisi } from '../lib/esportaCsv'
+import { leggiComeStaiFra, comeStaiPerSettimana, mediaComeStaiPer } from '../lib/comeStai'
 
 /** Righe per lettura: il massimo che Supabase restituisce di serie. */
 export const PAGINA = 1000
@@ -78,6 +79,8 @@ export default function Analisi() {
 
   const [atleti, setAtleti] = useState([])
   const [assegnazioni, setAssegnazioni] = useState([])
+  // «Come stai oggi»: le risposte del periodo. `[]` se la tabella non c'è ancora.
+  const [comeStai, setComeStai] = useState([])
   const [stato, setStato] = useState('carico') // 'carico' | 'errore' | 'pronto'
   const [caricatoIl, setCaricatoIl] = useState(() => Date.now())
 
@@ -91,9 +94,10 @@ export default function Analisi() {
       // sta dentro: quattro settimane, e il periodo più corto è di quattro).
       const da = periodoPrecedente(periodo, adesso)[0].da
       const a = settimaneDelPeriodo(periodo, adesso).at(-1).a
-      const [atletiRes, assRes] = await Promise.all([
+      const [atletiRes, assRes, risposte] = await Promise.all([
         supabase.from('athletes').select('id, name, surname, photo_url, notes').is('deleted_at', null),
         leggiAssegnazioni(da, a),
+        leggiComeStaiFra(da, a),
       ])
       if (!vivo) return
       // ⚠️ Una lettura fallita non si inghiotte: senza righe la pagina
@@ -107,6 +111,7 @@ export default function Analisi() {
       // Il coach non è un atleta da seguire: stesso filtro del Report.
       setAtleti((atletiRes.data || []).filter(x => x?.id && x.id !== COACHING_ID))
       setAssegnazioni(assRes.data || [])
+      setComeStai(risposte)
       setCaricatoIl(Date.now())
       setStato('pronto')
     }
@@ -139,16 +144,21 @@ export default function Analisi() {
   const analisi = useMemo(() => {
     const corrente = numeriPeriodo(visti, righe, settimane)
     const prima = numeriPeriodo(visti, righe, precedenti)
+    // «Come sta» non dipende dalla categoria: è com'era l'atleta, non la seduta.
+    const visibili = new Set(visti.map(a => a.id))
+    const risposte = comeStai.filter(r => visibili.has(r.athlete_id))
     const tabella = tabellaAnalisi(visti, righe, settimane)
+      .map(r => ({ ...r, comeSta: mediaComeStaiPer(risposte, r.id, settimane) }))
     return {
       numeri: confrontoPeriodi(corrente, prima),
       aderenza: aderenzaPerSettimana(visti, righe, settimane),
       mappa: mappaAderenza(visti, righe, settimane),
       minuti: caricoPerCategoria(righe, settimane),
       gradimento: gradimentoPerSettimana(righe, settimane),
+      comeSta: comeStaiPerSettimana(risposte, settimane),
       tabella,
     }
-  }, [visti, righe, settimane, precedenti])
+  }, [visti, righe, settimane, precedenti, comeStai])
 
   if (role === 'athlete') return <Navigate to="/" replace />
   if (!desktop) return <Navigate to="/report" replace />
@@ -172,6 +182,7 @@ export default function Analisi() {
       { titolo: 'RPE medio', valore: r => r.rpeMedio },
       { titolo: 'RPE vs previsto', valore: r => r.scartoRpe },
       { titolo: 'ACWR', valore: r => r.acwr },
+      { titolo: 'Come sta (1-5)', valore: r => r.comeSta },
       { titolo: 'Ultima seduta', valore: r => r.ultima },
     ], analisi.tabella)
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
@@ -235,14 +246,19 @@ export default function Analisi() {
                     parti: categorieVisibili.map(c => ({ nome: CORSIA[c].etichetta, valore: m[c], colore: coloreCategoria(c) })),
                   }))} />
               </Riquadro>
-              <Riquadro className="col-span-5" titolo="Gradimento"
+              <Riquadro className="col-span-5" titolo="Come sta"
+                spiega="La media di «Come stai oggi»: sonno, energia, dolori e stress, da 1 a 5 (5 è il meglio).">
+                <Linea titolo="Come sta" colore={BRAND} massimo={5} unita="/5"
+                  punti={analisi.comeSta.map((p, i) => ({ etichetta: colonne[i], valore: p.valore }))} />
+              </Riquadro>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <Riquadro titolo="Gradimento"
                 spiega="Quota di «mi è piaciuto» fra chi ha risposto alla domanda del recap.">
                 <Linea titolo="Gradimento" colore={BRAND}
                   punti={analisi.gradimento.map((p, i) => ({ etichetta: colonne[i], valore: p.valore }))} />
               </Riquadro>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
               <Riquadro titolo="Carico: ACWR della settimana in corso"
                 spiega={`La fascia chiara va da ${String(ACWR_BASSO).replace('.', ',')} a ${String(ACWR_ALTO).replace('.', ',')}: sopra si rischia, sotto si perde forma.`}>
                 <Striscia titolo="ACWR per atleta" fascia={[ACWR_BASSO, ACWR_ALTO]} minimo={0} massimo={2.5}
