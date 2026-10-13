@@ -400,3 +400,21 @@ describe('Desktop: ultime sedute chiuse', () => {
     }
   })
 })
+
+describe('Desktop: il centro notifiche', () => {
+  it('si apre come pannello a destra e si chiude con Esc', async () => {
+    const prima = window.matchMedia
+    window.matchMedia = vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+    try {
+      montaCoach()
+      const user = userEvent.setup()
+      await user.click(await screen.findByRole('button', { name: /^Notifiche/ }))
+      const pannello = await screen.findByRole('dialog', { name: 'Notifiche' })
+      expect(pannello.dataset.pannello).toBe('destra')
+      await user.keyboard('{Escape}')
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Notifiche' })).toBeNull())
+    } finally {
+      window.matchMedia = prima
+    }
+  })
+})

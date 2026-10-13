@@ -741,6 +741,17 @@ setNotifications(prev => {
     }, 300)
   }
 
+  // Desktop: Esc chiude il pannello delle notifiche, come ogni pannello da
+  // scrivania. Sul telefono non c'è una tastiera da cui premerlo.
+  useEffect(() => {
+    if (!desktop || !showNotifications) return
+    const suTasto = (e) => { if (e.key === 'Escape') closeNotifications() }
+    window.addEventListener('keydown', suTasto)
+    return () => window.removeEventListener('keydown', suTasto)
+    // Senza `closeNotifications` fra le dipendenze: è una funzione nuova a ogni
+    // render, e l'ascolto si rifarebbe a ogni render senza cambiare niente.
+  }, [desktop, showNotifications])
+
   const handleTouchStart = (e) => setStartY(e.touches[0].clientY)
   const handleTouchMove = (e) => {
     if (startY === null) return
@@ -1552,19 +1563,32 @@ setNotifications(prev => {
 
       {/* MODAL CENTRO NOTIFICHE */}
       {showNotifications && createPortal(
+        // Sul desktop è un PANNELLO che entra da destra, alto quanto la
+        // finestra: la pagina resta visibile accanto, come nelle app da
+        // scrivania. ⚠️ Il velo non usa `items-end`: la regola di `html.desktop`
+        // in index.css trasformerebbe il pannello in una finestra centrata.
+        // Sul telefono resta il foglio dal fondo di sempre.
         <div 
-          className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 transition-colors duration-300 ${isClosingNotifications || isOpeningNotifications ? 'bg-black/0' : 'bg-black/85'}`}
+          className={desktop
+            ? `fixed inset-0 z-[100] flex justify-end transition-colors duration-300 ${isClosingNotifications || isOpeningNotifications ? 'bg-black/0' : 'bg-black/50'}`
+            : `fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 transition-colors duration-300 ${isClosingNotifications || isOpeningNotifications ? 'bg-black/0' : 'bg-black/85'}`}
           onClick={closeNotifications}
         >
           <div 
-            className={`bg-[#1e1e1e] w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl h-[80vh] sm:h-[60vh] flex flex-col border border-[#333] shadow-2xl transition-all duration-300 ease-out ${isClosingNotifications || isOpeningNotifications ? 'translate-y-full sm:scale-95 sm:opacity-0' : (swipeOffset > 0 ? 'transition-none' : 'translate-y-0 sm:scale-100 sm:opacity-100')}`}
-            style={{ transform: swipeOffset > 0 ? `translateY(${swipeOffset}px)` : undefined }}
+            role="dialog" aria-modal="true" aria-label="Notifiche"
+            data-pannello={desktop ? 'destra' : 'fondo'}
+            className={desktop
+              ? `bg-[#1e1e1e] w-[420px] max-w-full h-full flex flex-col border-l border-[#2a2a2a] shadow-2xl transition-transform duration-300 ease-out ${isClosingNotifications || isOpeningNotifications ? 'translate-x-full' : 'translate-x-0'}`
+              : `bg-[#1e1e1e] w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl h-[80vh] sm:h-[60vh] flex flex-col border border-[#333] shadow-2xl transition-all duration-300 ease-out ${isClosingNotifications || isOpeningNotifications ? 'translate-y-full sm:scale-95 sm:opacity-0' : (swipeOffset > 0 ? 'transition-none' : 'translate-y-0 sm:scale-100 sm:opacity-100')}`}
+            style={{ transform: !desktop && swipeOffset > 0 ? `translateY(${swipeOffset}px)` : undefined }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="w-full flex justify-center pt-3 pb-2 touch-none cursor-grab active:cursor-grabbing sm:hidden" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-              <div className="w-12 h-1.5 bg-[#333] rounded-full"></div>
-            </div>
-            <div className="flex items-center justify-between px-5 pb-4 sm:pt-5 border-b border-[#2a2a2a]">
+            {!desktop && (
+              <div className="w-full flex justify-center pt-3 pb-2 touch-none cursor-grab active:cursor-grabbing sm:hidden" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                <div className="w-12 h-1.5 bg-[#333] rounded-full"></div>
+              </div>
+            )}
+            <div className={`flex items-center justify-between px-5 pb-4 border-b border-[#2a2a2a] ${desktop ? 'pt-[calc(env(safe-area-inset-top)+1.5rem)]' : 'sm:pt-5'}`}>
               <div className="flex items-center gap-2">
                 <p className="text-white font-bold text-lg">Notifiche</p>
                 {unreadCount > 0 && <span className="bg-brand text-black text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount} nuove</span>}
