@@ -34,3 +34,10 @@ describe('nomeFileAnalisi', () => {
     expect(nomeFileAnalisi(12, 'Giulia Neri', OGGI)).toBe('fleofit-analisi-giulia-neri-12sett-2026-10-14.csv')
   })
 })
+
+describe('csvDa: formule', () => {
+  it('un testo che comincia con = + - @ non diventa una formula in Excel; i numeri negativi restano numeri', () => {
+    const csv = csvDa(colonne, [{ nome: '=HYPERLINK("x")', ore: -1.5 }, { nome: '@Anna', ore: 1 }])
+    expect(csv.slice(1).split('\r\n').slice(1)).toEqual(['"\'=HYPERLINK(""x"")";-1,5', "'@Anna;1"])
+  })
+})

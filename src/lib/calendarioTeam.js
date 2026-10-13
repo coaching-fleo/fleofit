@@ -109,6 +109,18 @@ export const spostamentoValido = (chip, atletaId, data) =>
  * `assegnazioni` deve contenere anche le righe del destinatario nei giorni di
  * arrivo, altrimenti i doppioni non si vedono: è il chiamante a leggerle.
  */
+/**
+ * Un «allenamento libero» scritto dall'atleta (CLAUDE.md §5): un workout Custom
+ * autonomo SENZA note del coach, perché il contenuto sta in
+ * `athlete_workouts.notes`. Copiarlo vorrebbe dire assegnare a qualcuno un
+ * allenamento vuoto, con tanto di push. Un Custom scritto dal coach ha il suo
+ * testo in `coach_notes` e si copia come gli altri.
+ */
+export const liberoDellAtleta = (ass) => {
+  const s = ass?.workouts?.sections
+  return !!s && s.isAutonomous === true && categoriaDi(s) === 'Custom' && !String(ass.workouts?.coach_notes ?? '').trim()
+}
+
 export function copiaSettimana(assegnazioni = [], { daAtleta, aAtleta, giorni = [], scartoGiorni = 0 } = {}) {
   const dentro = new Set(giorni)
   const esistenti = new Set(assegnazioni
@@ -116,12 +128,13 @@ export function copiaSettimana(assegnazioni = [], { daAtleta, aAtleta, giorni = 
     .map(r => `${r.workout_id || r.workouts?.id}|${r.completed_date}`))
 
   const nuove = []
-  let saltate = 0
+  let saltate = 0, liberi = 0
   const origine = assegnazioni
     .filter(r => r?.athlete_id === daAtleta && dentro.has(r.completed_date))
     .sort((x, y) => x.completed_date.localeCompare(y.completed_date))
 
   for (const r of origine) {
+    if (liberoDellAtleta(r)) { liberi++; continue }
     const workout_id = r.workout_id || r.workouts?.id
     if (!workout_id) continue
     const completed_date = format(addDays(parseISO(r.completed_date), scartoGiorni), 'yyyy-MM-dd')
@@ -130,5 +143,5 @@ export function copiaSettimana(assegnazioni = [], { daAtleta, aAtleta, giorni = 
     esistenti.add(k)
     nuove.push({ athlete_id: aAtleta, workout_id, completed_date, status: 'pending' })
   }
-  return { nuove, saltate }
+  return { nuove, saltate, liberi }
 }

@@ -15,7 +15,12 @@ const BOM = '﻿'
 
 function campo(v) {
   if (v == null) return ''
-  const testo = typeof v === 'number' ? String(v).replace('.', ',') : String(v)
+  // 🔴 Un TESTO che comincia con = + - @ Excel lo esegue come formula, e i nomi
+  // li scrivono gli atleti stessi. L'apostrofo lo fa restare testo. Solo sui
+  // testi: un numero negativo (lo scarto RPE) deve restare un numero.
+  const testo = typeof v === 'number'
+    ? String(v).replace('.', ',')
+    : (/^[=+\-@\t\r]/.test(String(v)) ? `'${v}` : String(v))
   return /[;"\r\n]/.test(testo) ? `"${testo.replace(/"/g, '""')}"` : testo
 }
 

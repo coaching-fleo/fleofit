@@ -447,3 +447,9 @@ Logica in `copiaSettimana` di `src/lib/calendarioTeam.js`, con test.
 - ⚠️ Per «settimana dopo» la pagina legge PRIMA le righe del destinatario in quei giorni:
   la settimana dopo non è caricata, e senza quelle righe i doppioni non si vedrebbero.
 - Una push `immediate` per ogni riga creata, come quando si trascina dalla libreria.
+- 🔴 **Gli allenamenti liberi dell'atleta NON si copiano** (`liberoDellAtleta`): sono un
+  workout Custom autonomo senza `coach_notes`, con il contenuto nelle note dell'atleta.
+  Copiato sarebbe un allenamento vuoto con la sua push. Per riconoscerli la lettura della
+  settimana prende anche `workouts.coach_notes`.
+- 🔴 **Una copia alla volta** (`copiaInCorso`): la finestra si chiude prima della scrittura,
+  e un secondo clic nel frattempo raddoppierebbe la settimana.

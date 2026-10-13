@@ -14,7 +14,7 @@
 //   `send-reminders` in modalità `immediate`, come AthleteDetail e WorkoutDetail;
 // - spostare = cambiare `completed_date` di una sessione non ancora fatta.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { addWeeks, format, isToday } from 'date-fns'
@@ -25,7 +25,7 @@ import { useAuth } from '../App'
 import NuovoEvento from '../components/NuovoEvento'
 import { categoriaDi, corsia } from '../lib/categorie'
 import { separaCodice } from '../lib/codiceWorkout'
-import { giorniSettimana, chiave, grigliaTeam, caricoGiorni, spostamentoValido, copiaSettimana } from '../lib/calendarioTeam'
+import { giorniSettimana, chiave, grigliaTeam, caricoGiorni, spostamentoValido, copiaSettimana, liberoDellAtleta } from '../lib/calendarioTeam'
 
 const FILTRI = [
   { valore: null, etichetta: 'Tutti' },
@@ -150,7 +150,7 @@ export default function CalendarioTeam({ onVistaMese }) {
     Promise.all([
       supabase.from('athletes').select('id, name, surname, photo_url, notes').is('deleted_at', null),
       supabase.from('athlete_workouts')
-        .select('id, athlete_id, workout_id, completed_date, status, notes, workouts(id, title, sections)')
+        .select('id, athlete_id, workout_id, completed_date, status, notes, workouts(id, title, sections, coach_notes)')
         .gte('completed_date', da).lte('completed_date', a),
     ]).then(([aRes, sRes]) => {
       if (!vivo) return
@@ -220,11 +220,32 @@ export default function CalendarioTeam({ onVistaMese }) {
   }
 
   const [copiaDi, setCopiaDi] = useState(null) // la riga dell'atleta da copiare
+  // 🔴 Una copia alla volta. La finestra si chiude subito e la scrittura arriva
+  // dopo: un coach che riapre e riclicca nel frattempo leggerebbe la settimana
+  // d'arrivo ancora vuota e la riempirebbe due volte, push comprese.
+  const copiaInCorso = useRef(false)
+  const [copiando, setCopiando] = useState(false)
 
-  const sedute = (atletaId) => assegnazioni.filter(x => x.athlete_id === atletaId && x.completed_date >= da && x.completed_date <= a)
+  // Gli allenamenti liberi dell'atleta non si copiano (`liberoDellAtleta`): il
+  // conteggio della finestra non li promette.
+  const sedute = (atletaId) => assegnazioni.filter(x => x.athlete_id === atletaId
+    && x.completed_date >= da && x.completed_date <= a && !liberoDellAtleta(x))
 
   const copia = async (atleta, destinazione) => {
     setCopiaDi(null)
+    if (copiaInCorso.current) return
+    copiaInCorso.current = true
+    setCopiando(true)
+    try {
+      await eseguiCopia(atleta, destinazione)
+    } finally {
+      copiaInCorso.current = false
+      setCopiando(false)
+    }
+  }
+
+  const eseguiCopia = async (atleta, destinazione) => {
+    setAvviso({ testo: 'Copio la settimana…' })
     const dopo = destinazione === 'dopo'
     const aAtleta = dopo ? atleta.id : destinazione
     let elenco = assegnazioni
@@ -238,7 +259,7 @@ export default function CalendarioTeam({ onVistaMese }) {
       if (error) { setAvviso({ testo: `Copia non riuscita: ${error.message}`, errore: true }); return }
       elenco = [...assegnazioni, ...(arrivo || [])]
     }
-    const { nuove, saltate } = copiaSettimana(elenco, {
+    const { nuove, saltate, liberi } = copiaSettimana(elenco, {
       daAtleta: atleta.id, aAtleta, giorni: giorni.map(chiave), scartoGiorni: dopo ? 7 : 0,
     })
     const destinatario = dopo ? atleta.nome : nomeDi(aAtleta)
@@ -253,7 +274,8 @@ export default function CalendarioTeam({ onVistaMese }) {
     })
     setAvviso({
       testo: `${nuove.length} ${nuove.length === 1 ? 'allenamento copiato' : 'allenamenti copiati'} a ${destinatario}`
-        + (saltate > 0 ? ` · ${saltate} già ${saltate === 1 ? 'presente' : 'presenti'}` : ''),
+        + (saltate > 0 ? ` · ${saltate} già ${saltate === 1 ? 'presente' : 'presenti'}` : '')
+        + (liberi > 0 ? ` · ${liberi} ${liberi === 1 ? 'allenamento libero' : 'allenamenti liberi'} dell'atleta non ${liberi === 1 ? 'copiato' : 'copiati'}` : ''),
     })
     carica()
   }
@@ -359,9 +381,10 @@ export default function CalendarioTeam({ onVistaMese }) {
                     </span>
                   </button>
                   <button type="button" onClick={() => setCopiaDi(r)} aria-label={`Copia la settimana di ${r.nome}`}
+                    disabled={copiando}
                     title="Copia la settimana"
                     className="mr-2 w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/[.06]
-                               opacity-0 group-hover/riga:opacity-100 focus:opacity-100 transition">
+                               opacity-0 group-hover/riga:opacity-100 focus:opacity-100 transition disabled:cursor-wait disabled:opacity-30">
                     <Copy size={15} aria-hidden="true" />
                   </button>
                 </div>

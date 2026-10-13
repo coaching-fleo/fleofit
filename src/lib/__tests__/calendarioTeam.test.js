@@ -116,3 +116,16 @@ describe('copiaSettimana', () => {
     expect(nuove.map(n => n.workout_id)).toEqual(['w-1'])
   })
 })
+
+describe('copiaSettimana: gli allenamenti liberi dell\'atleta', () => {
+  it('non si copiano: il loro contenuto sta nelle note dell\'atleta, non nel workout', () => {
+    const settimana = giorni.map(chiave)
+    const libero = { id: 1, athlete_id: 'a', workout_id: 'w-1', completed_date: '2026-10-13', status: 'completed', notes: 'corsa libera 40',
+      workouts: { id: 'w-1', title: 'Allenamento libero · mar 13 ott', sections: { category: 'Custom', isAutonomous: true }, coach_notes: null } }
+    const delCoach = { id: 2, athlete_id: 'a', workout_id: 'w-2', completed_date: '2026-10-14', status: 'pending', notes: null,
+      workouts: { id: 'w-2', title: 'Mobilità', sections: { category: 'Custom', isAutonomous: true }, coach_notes: '20 minuti di mobilità' } }
+    const { nuove, liberi } = copiaSettimana([libero, delCoach], { daAtleta: 'a', aAtleta: 'b', giorni: settimana, scartoGiorni: 0 })
+    expect(nuove.map(n => n.workout_id)).toEqual(['w-2'])
+    expect(liberi).toBe(1)
+  })
+})
