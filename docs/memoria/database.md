@@ -263,7 +263,11 @@ aggiungila anche lì.**
   ⚠️ **13/10/2026: aggiunta `come_stai`** («Come stai oggi»). Sta sulla branch
   `main-backup-come-stai` partita da `origin/main`: finché non arriva su `main` il cron non la
   salva. Senza la tabella applicata la REST API risponde 404 e il job la salta con un avviso.
-  ⚠️ `note_estratte` NON è nel backup notturno (si rigenera rilanciando l'IA, ma costa richieste).
+  ✅ Lo stesso giorno anche **`note_estratte`**, scritta `note_estratte:athlete_workout_id`.
+  🔴 Le pagine si ordinano per `id`, e `note_estratte` non ha una colonna `id`: ordinare per una
+  colonna che non esiste fa rispondere HTTP 400, e il job fallisce **intero**, non solo su quella
+  tabella. Per questo `TABLES` accetta `tabella:colonna`. Chi aggiunge una tabella senza `id`
+  usa quella forma.
 - ✅ **L'esportazione dalle Impostazioni** (`src/lib/backup.js`, 13/10/2026) salva
   `athletes workouts athlete_workouts come_stai` e legge **a pagine**: prima usava
   `.limit(10000)`, ma il server restituisce al massimo 1000 righe e il file usciva troncato senza

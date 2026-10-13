@@ -43,7 +43,12 @@ jobs:
       #   tv_sessions        -> effimera, si rigenera a ogni sessione TV
       # come_stai (13/10/2026): «Come stai oggi». Finché la sua migrazione non è
       # applicata la REST API risponde 404 e il job la salta con un avviso.
-      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai'
+      #
+      # ⚠️ Le pagine si ordinano per `id`. Una tabella SENZA colonna `id` va scritta
+      # `tabella:colonna`, con la sua chiave: ordinare per una colonna che non
+      # esiste fa rispondere HTTP 400 e fallire TUTTO il backup, non solo lei.
+      # note_estratte (13/10/2026) ha come chiave athlete_workout_id.
+      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai note_estratte:athlete_workout_id'
 
       # Tabelle che non devono MAI essere vuote o mancanti:
       # se lo sono, il backup viene considerato non valido e il job fallisce.
@@ -93,7 +98,11 @@ jobs:
           REPORT="$TMP/report.tsv"                        # tabella <TAB> righe <TAB> stato
           : > "$REPORT"
 
-          for TABLE in $TABLES; do
+          for VOCE in $TABLES; do
+            # «tabella» oppure «tabella:colonna_di_ordinamento» (vedi TABLES sopra).
+            TABLE="${VOCE%%:*}"
+            ORDER="id"
+            if [ "$VOCE" != "$TABLE" ]; then ORDER="${VOCE#*:}"; fi
             echo "::group::$TABLE"
             ACC="$TMP/$TABLE.pages"
             : > "$ACC"
@@ -108,7 +117,7 @@ jobs:
                 -H "apikey: $SUPABASE_SERVICE_KEY" \
                 -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
                 -H "Accept: application/json" \
-                "$BASE_URL/rest/v1/$TABLE?select=*&order=id.asc&limit=$PAGE_SIZE&offset=$offset")"
+                "$BASE_URL/rest/v1/$TABLE?select=*&order=$ORDER.asc&limit=$PAGE_SIZE&offset=$offset")"
 
               # Tabella inesistente: avviso e passo oltre, senza far fallire tutto il backup.
               if [ "$http" = "404" ]; then
