@@ -240,4 +240,4 @@ esercizi 5–7 non comparivano mai.
   vecchi «12 round, 2 esercizi» ora durano il doppio (24 intervalli). Il titolo
   salvato porta la durata vecchia finché il workout non viene riaperto e salvato.
 - L'EMOM **non** cambia: lì i round restano gli intervalli (`stazioniEmom.js`).
-- Le istruzioni di `ai-workout` (`regole.ts`) lo dicono all'IA: valgono solo dopo il deploy.
+- Le istruzioni di `ai-workout` (`regole.ts`) lo dicono all'IA: pubblicate il 13/10/2026 (versione 24).
