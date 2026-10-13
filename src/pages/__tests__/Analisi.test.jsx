@@ -121,6 +121,27 @@ describe('Analisi', () => {
     expect(await screen.findByText(/9 kg · 20 rip\./)).toBeInTheDocument()
   })
 
+  it('«Esporta CSV» scarica la tabella degli atleti', async () => {
+    dati.assegnazioni = [fatto('a1', '2026-10-05')]
+    let blob = null
+    const crea = vi.fn((b) => { blob = b; return 'blob:finto' })
+    URL.createObjectURL = crea
+    URL.revokeObjectURL = vi.fn()
+    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    monta()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await user.click(await screen.findByRole('button', { name: /Esporta CSV/ }))
+    expect(crea).toHaveBeenCalledTimes(1)
+    // `Blob.text()` toglie il BOM leggendo: lo si cerca nei byte (EF BB BF).
+    const byte = new Uint8Array(await blob.arrayBuffer())
+    expect([...byte.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf])
+    const testo = await blob.text()
+    expect(testo).toMatch(/^Atleta;In pausa;Sedute/)
+    expect(testo).toMatch(/Anna Rossi;;1;100;0,5;7;/)
+    expect(clic).toHaveBeenCalled()
+    clic.mockRestore()
+  })
+
   it('fuori dal desktop porta al report', async () => {
     schermo(false)
     monta()

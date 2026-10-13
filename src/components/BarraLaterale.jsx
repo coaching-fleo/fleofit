@@ -61,7 +61,7 @@ export default function BarraLaterale() {
   return (
     <>
       <nav aria-label="Navigazione principale"
-        className="sticky top-0 h-screen w-[232px] shrink-0 flex flex-col gap-1 px-4 pt-7 pb-6
+        className="print:hidden sticky top-0 h-screen w-[232px] shrink-0 flex flex-col gap-1 px-4 pt-7 pb-6
                    bg-[#0f0f0f] border-r border-[#1c1c1c]">
         <div className="px-3 pb-6 flex items-baseline gap-2">
           <span className="text-2xl font-black tracking-[-.03em] text-white">FLEO<span className="text-brand">FIT</span></span>

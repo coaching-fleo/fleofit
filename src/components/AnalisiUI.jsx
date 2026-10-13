@@ -5,7 +5,7 @@
 // grigio, l'identità di una serie la porta il pallino accanto (dataviz).
 
 import { useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp, ChevronsUpDown, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronsUpDown, Download, Printer, X } from 'lucide-react'
 import { CORSIA } from '../lib/categorie'
 import { quandoFa } from '../lib/tabellaAtleti'
 
@@ -31,7 +31,7 @@ function Scelta({ etichetta, voci, valore, onCambia }) {
   )
 }
 
-export function TestataAnalisi({ titolo, sottotitolo, periodi, periodo, onPeriodo, categorie, categoria, onCategoria, atleta, onTogliAtleta, onApriScheda }) {
+export function TestataAnalisi({ titolo, sottotitolo, periodi, periodo, onPeriodo, categorie, categoria, onCategoria, atleta, onTogliAtleta, onApriScheda, onEsporta, onStampa }) {
   return (
     <header className="pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-5 flex flex-wrap items-end justify-between gap-4">
       <div>
@@ -39,7 +39,7 @@ export function TestataAnalisi({ titolo, sottotitolo, periodi, periodo, onPeriod
         <h1 className="text-3xl font-black tracking-tight text-white">{titolo}</h1>
         <p className="text-sm text-gray-400 mt-1">{sottotitolo}</p>
         {atleta && (
-          <div className="flex gap-2 mt-3">
+          <div className="flex gap-2 mt-3 print:hidden">
             <button type="button" onClick={onTogliAtleta}
               className="h-8 px-3 rounded-full bg-[#2a2a2a] text-xs font-bold text-gray-300 hover:text-white flex items-center gap-1.5">
               <X size={14} aria-hidden="true" /> Tutta la squadra
@@ -51,7 +51,19 @@ export function TestataAnalisi({ titolo, sottotitolo, periodi, periodo, onPeriod
           </div>
         )}
       </div>
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap items-center gap-4 print:hidden">
+        {onEsporta && (
+          <div className="flex gap-2">
+            <button type="button" onClick={onEsporta}
+              className="h-10 px-3.5 rounded-xl border border-[#333] text-xs font-bold text-gray-300 hover:text-white flex items-center gap-1.5">
+              <Download size={14} aria-hidden="true" /> Esporta CSV
+            </button>
+            <button type="button" onClick={onStampa}
+              className="h-10 px-3.5 rounded-xl border border-[#333] text-xs font-bold text-gray-300 hover:text-white flex items-center gap-1.5">
+              <Printer size={14} aria-hidden="true" /> Stampa
+            </button>
+          </div>
+        )}
         <Scelta etichetta="Periodo" valore={periodo} onCambia={onPeriodo}
           voci={periodi.map(p => ({ valore: p, testo: `${p} sett.` }))} />
         <Scelta etichetta="Categoria" valore={categoria} onCambia={onCategoria}

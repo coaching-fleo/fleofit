@@ -538,3 +538,16 @@ body {
   .apertura-esce { animation: aperturaArco .2s linear both; }
   .apertura-marchio-via { animation: none; opacity: 0; }
 }
+
+/* La stampa della pagina Analisi (piano desktop fase 2, #3). Il tema è solo
+   scuro: senza `print-color-adjust` il browser toglie gli sfondi e lascia il
+   testo bianco su carta bianca. La barra laterale e i bottoni si nascondono
+   con `print:hidden` dove sono scritti. */
+@media print {
+  html, body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: #0B0B0B;
+  }
+  @page { margin: 12mm; }
+}

@@ -38,6 +38,7 @@ import Mappa from '../components/grafici/Mappa'
 import Striscia from '../components/grafici/Striscia'
 import StoricoEsercizio from '../components/StoricoEsercizio'
 import { leggiEstratti } from '../lib/noteEstratte'
+import { csvDa, nomeFileAnalisi } from '../lib/esportaCsv'
 
 /** Righe per lettura: il massimo che Supabase restituisce di serie. */
 export const PAGINA = 1000
@@ -159,6 +160,28 @@ export default function Analisi() {
     setParametri(nuovi)
   }
 
+  // La tabella degli atleti in CSV: valori grezzi (la data, non «3 giorni fa»),
+  // così il foglio di calcolo li può ordinare e sommare.
+  const esporta = () => {
+    const csv = csvDa([
+      { titolo: 'Atleta', valore: r => r.nome },
+      { titolo: 'In pausa', valore: r => (r.pausa ? 'sì' : '') },
+      { titolo: 'Sedute', valore: r => r.sedute },
+      { titolo: 'Aderenza %', valore: r => r.aderenza },
+      { titolo: 'Ore', valore: r => r.ore },
+      { titolo: 'RPE medio', valore: r => r.rpeMedio },
+      { titolo: 'RPE vs previsto', valore: r => r.scartoRpe },
+      { titolo: 'ACWR', valore: r => r.acwr },
+      { titolo: 'Ultima seduta', valore: r => r.ultima },
+    ], analisi.tabella)
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nomeFileAnalisi(periodo, scelto ? `${scelto.name} ${scelto.surname || ''}` : null)
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
   const categorieVisibili = categoria ? [categoria] : CATEGORIE_ANALISI
   const colonne = settimane.map(etichetta)
   const intervallo = `${format(settimane[0].inizio, 'd MMM', { locale: it })} – ${format(settimane.at(-1).fine, 'd MMM yyyy', { locale: it })}`
@@ -173,6 +196,7 @@ export default function Analisi() {
         categorie={CATEGORIE_ANALISI} categoria={categoria} onCategoria={(c) => cambia('categoria', c)}
         atleta={scelto} onTogliAtleta={() => cambia('atleta', null)}
         onApriScheda={() => scelto && navigate(`/athletes/${scelto.id}`)}
+        onEsporta={stato === 'pronto' ? esporta : null} onStampa={() => window.print()}
       />
 
       <div className="cascata flex flex-col gap-3">
