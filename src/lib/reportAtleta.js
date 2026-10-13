@@ -115,7 +115,7 @@ export function sessioniDi(righe = [], settimana) {
 }
 
 /** Un numero scritto a mano, `null` se non è un numero utile. */
-const numero = (v) => {
+export const numero = (v) => {
   const n = parseFloat(String(v ?? '').replace(',', '.'))
   return Number.isFinite(n) && n > 0 ? n : null
 }

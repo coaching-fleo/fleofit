@@ -36,6 +36,8 @@ import Linea from '../components/grafici/Linea'
 import BarreImpilate from '../components/grafici/BarreImpilate'
 import Mappa from '../components/grafici/Mappa'
 import Striscia from '../components/grafici/Striscia'
+import StoricoEsercizio from '../components/StoricoEsercizio'
+import { leggiEstratti } from '../lib/noteEstratte'
 
 /** Righe per lettura: il massimo che Supabase restituisce di serie. */
 export const PAGINA = 1000
@@ -110,6 +112,17 @@ export default function Analisi() {
     carica()
     return () => { vivo = false }
   }, [desktop, periodo])
+
+  // I risultati che l'atleta ha scritto nelle note («Dalle note»), solo con un
+  // atleta scelto: servono allo storico di un esercizio. Se la lettura fallisce
+  // o la tabella non c'è, lo storico mostra la sola prescrizione.
+  const [estratti, setEstratti] = useState({ di: null, dati: [] })
+  useEffect(() => {
+    if (!desktop || !atletaId) return
+    let vivo = true
+    leggiEstratti(atletaId).then(r => { if (vivo) setEstratti({ di: atletaId, dati: r.dati }) })
+    return () => { vivo = false }
+  }, [desktop, atletaId])
 
   const oggi = useMemo(() => new Date(caricatoIl), [caricatoIl])
   const settimane = useMemo(() => settimaneDelPeriodo(periodo, oggi), [periodo, oggi])
@@ -218,6 +231,13 @@ export default function Analisi() {
                   voci={ordinati.map(r => ({ id: r.id, nome: r.nome, valore: r.scartoRpe }))} />
               </Riquadro>
             </div>
+
+            {scelto && (
+              <Riquadro titolo="Storico di un esercizio"
+                spiega="Quello che hai prescritto, seduta per seduta, e quello che ha scritto nelle note.">
+                <StoricoEsercizio righe={righe} estratti={estratti.di === scelto.id ? estratti.dati : []} />
+              </Riquadro>
+            )}
 
             <Riquadro titolo="Atleti" spiega="Clicca un atleta per vedere solo i suoi numeri. Clicca un'intestazione per ordinare.">
               <TabellaAnalisi righe={analisi.tabella} onScegli={(id) => cambia('atleta', id)} />

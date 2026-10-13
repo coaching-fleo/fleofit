@@ -106,6 +106,21 @@ describe('Analisi', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/Bruno/)
   })
 
+  it('lo storico di un esercizio compare solo con un atleta scelto', async () => {
+    const conEsercizio = { ...fatto('a1', '2026-10-05') }
+    conEsercizio.workouts = { ...conEsercizio.workouts, sections: { category: 'Hyrox', blocks: [{ type: 'For Time', params: { rounds: '1' }, exercises: [{ id: 1, name: 'Wall Balls', reps: '20', kg: '9' }] }] } }
+    dati.assegnazioni = [conEsercizio]
+    const { unmount } = monta()
+    await screen.findByRole('row', { name: /Anna/ })
+    expect(screen.queryByRole('heading', { name: 'Storico di un esercizio' })).toBeNull()
+    unmount()
+
+    dati.pagina = 0
+    monta('/analisi?atleta=a1')
+    expect(await screen.findByRole('heading', { name: 'Storico di un esercizio' })).toBeInTheDocument()
+    expect(await screen.findByText(/9 kg · 20 rip\./)).toBeInTheDocument()
+  })
+
   it('fuori dal desktop porta al report', async () => {
     schermo(false)
     monta()
