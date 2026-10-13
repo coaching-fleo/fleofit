@@ -408,3 +408,16 @@ Test: `src/pages/__tests__/WorkoutDetailNotaCompletamento.test.jsx` (5).
 Mutazioni: domanda tolta → 4 test su 5 rossi; `setTimeout` tolto → il test della
 data futura rosso. Provato anche nell'ambiente di prova (`demo-atleta` in
 `.claude/launch.json`, con `adminRoleOverride = 'athlete'`).
+
+## 9-scheda-desktop. La scheda workout sul desktop (13/10/2026)
+
+Solo coach su web ≥ 1024px (`useDesktop`). Due colonne: a sinistra titolo, esito,
+riepilogo, avviso, blocchi e note del coach; a destra (ferma mentre la pagina scorre, con
+uno scorrimento suo) le azioni, il vocale, le note dell'atleta e le assegnazioni.
+- I pezzi sono costanti JSX (`pTitolo`, `pContenuto`, `pAssegnazioni`…) scritte una volta
+  prima del `return`. ⚠️ Una sezione nuova va messa in ENTRAMBE le disposizioni.
+- La barra in fondo diventa un riquadro in cima alla colonna destra: è `BarraAzioni` con
+  `ancorata={false}`, la variante in flusso che esisteva già.
+- Il menu delle tre puntine resta un foglio dal fondo: sul desktop la regola di
+  `html.desktop` in `index.css` lo fa diventare una finestra centrata.
+- Test: «Scheda workout — versione desktop» in `WorkoutDetailScheda.test.jsx`.

@@ -481,3 +481,35 @@ describe('I dialoghi centrati', () => {
     expect(carta.parentElement).toHaveClass('velo-in')
   })
 })
+
+describe('Scheda workout — versione desktop', () => {
+  // `setup.js` mette un `matchMedia` finto per tutti: si ripristina quello.
+  const originale = window.matchMedia
+  const schermo = (largo) => {
+    window.matchMedia = vi.fn(() => ({ matches: largo, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+  }
+  afterEach(() => { window.matchMedia = originale })
+
+  it('sul desktop del coach: contenuto a sinistra, azioni e assegnazioni a destra', async () => {
+    schermo(true)
+    ctrl.stato = { sections: HYROX, assegnazioni: assegnazione() }
+    const { container } = apri({ ruolo: 'admin', utente: 'coach' })
+    await attendi()
+    const disposizione = container.querySelector('[data-disposizione="desktop"]')
+    expect(disposizione).not.toBeNull()
+    const destra = within(disposizione.querySelector('[data-colonna="destra"]'))
+    expect(destra.getByRole('button', { name: /Assegna ad atleta/ })).toBeInTheDocument()
+    expect(destra.getByText('Assegnato a')).toBeInTheDocument()
+    const sinistra = disposizione.querySelector('[data-colonna="sinistra"]')
+    expect(sinistra.querySelector('[data-blocchi]')).not.toBeNull()
+  })
+
+  it('sul telefono resta com\'era', async () => {
+    schermo(false)
+    ctrl.stato = { sections: HYROX, assegnazioni: assegnazione() }
+    const { container } = apri({ ruolo: 'admin', utente: 'coach' })
+    await attendi()
+    expect(container.querySelector('[data-disposizione="desktop"]')).toBeNull()
+    expect(screen.getByRole('button', { name: /Assegna ad atleta/ })).toBeInTheDocument()
+  })
+})

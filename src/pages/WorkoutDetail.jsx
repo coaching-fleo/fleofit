@@ -9,6 +9,7 @@ import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
+import { useSchermoLargo, eDesktop } from '../useDesktop'
 import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
@@ -225,6 +226,9 @@ export default function WorkoutDetail() {
   const [searchParams] = useSearchParams()
   const queryAthleteId = searchParams.get('athlete_id')
   const { role, user } = useAuth()
+  // Sul desktop (solo coach, src/useDesktop.js) la scheda va su due colonne:
+  // stessi pezzi del telefono, disposti diversamente.
+  const desktop = eDesktop(useSchermoLargo(), role)
   const isOwnProfile = queryAthleteId === user?.id
 
   const [workout, setWorkout] = useState(null)
@@ -1493,30 +1497,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   }
 
 
-  return (
-    /* ⚠️ Niente `page-transition`. Entrano le SEZIONI della scheda — testata,
-       titolo, esito, riepilogo, avviso, blocchi, note, assegnazioni — e i
-       blocchi entrano come gruppo, non uno per uno: il loro contenitore è una
-       di queste sezioni, e farli cascare anche dentro vorrebbe dire due
-       animazioni sovrapposte sullo stesso contenuto (è il movimento doppio che
-       `page-transition` produceva sull'intera pagina). Se un giorno li si vuole
-       uno per uno, serve un indice che continui quello delle sezioni, non una
-       cascata annidata. */
-    <div className="px-4 max-w-2xl mx-auto min-h-[100dvh] flex flex-col gap-[15px]
-                    pt-[calc(env(safe-area-inset-top)+1rem)] pb-[var(--altezza-navbar)] cascata">
-
-      {/* La testata porta due sole icone, e sono due STATI: si accendono e si
-          spengono durante l'allenamento. Duplica, Modifica, gli export e
-          Elimina — che sono comandi, e si usano una volta — stanno nel menu. */}
-      <TestataScheda onIndietro={indietro} onMenu={() => setMenuOpen(true)}>
-        {connectedTvCode ? (
-          <IconaStato etichetta="Scollega TV" icona={MonitorUp} accesa colore="#ef4444"
-            onClick={handleDisconnectTV} />
-        ) : (
-          <IconaStato etichetta="TV" icona={MonitorUp} onClick={() => setTvModalOpen(true)} />
-        )}
-      </TestataScheda>
-
+  // I pezzi della scheda, scritti una volta (stesso schema di Report e scheda
+  // atleta): il telefono li impila nell'ordine di sempre, il desktop li
+  // dispone su due colonne. ⚠️ Chi aggiunge una sezione la mette in ENTRAMBE
+  // le disposizioni qui sotto, o sparisce da una delle due senza errori.
+  const pOffline = (
+    <>
       {isOffline && (
         <div className="rounded-[18px] px-3.5 py-3 bg-orange-500/10 border border-orange-500/30 flex items-center gap-3">
           <WifiOff size={18} className="shrink-0 text-orange-500" aria-hidden="true" />
@@ -1528,7 +1514,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           </div>
         </div>
       )}
-
+    </>
+  )
+  const pTitolo = (
+    <>
       <TitoloScheda
         dot={corsiaWorkout.dot}
         etichettaCategoria={corsiaWorkout.etichetta}
@@ -1540,7 +1529,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         intensita={s?.intensity}
         classeIntensita={getIntensityColor(s?.intensity)}
       />
-
+    </>
+  )
+  const pEsito = (
+    <>
       {/* L'esito prima del contenuto: la domanda per cui si riapre la scheda di
           ieri è «l'ho fatto?», e la risposta era un bottone verde — cioè uno
           stato travestito da comando. */}
@@ -1554,7 +1546,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             .filter(Boolean).join(' · ')
         } />
       )}
-
+    </>
+  )
+  const pRiepilogo = (
+    <>
       {/* Gli stessi tre numeri e la stessa barra dello step 2 del builder: il
           coach ritrova in lettura ciò che ha visto in scrittura. È una STIMA,
           e vale solo dove esistono dei blocchi da stimare. */}
@@ -1571,9 +1566,15 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           } : undefined}
         />
       )}
-
+    </>
+  )
+  const pAvviso = (
+    <>
       {type !== 'Event' && type !== 'Custom' && <AvvisoRiscaldamento />}
-
+    </>
+  )
+  const pContenuto = (
+    <>
       {/* BLOCCHI */}
       {!isRunning && type !== 'Custom' && type !== 'Event' ? (
         <div className="flex flex-col gap-[9px]" data-blocchi>
@@ -1643,14 +1644,20 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <RunningList steps={s?.steps || s?.main?.steps || []} />
         </div>
       ) : null}
-
+    </>
+  )
+  const pNoteCoach = (
+    <>
       {/* NOTE COACH */}
       {type !== 'Custom' && workout.coach_notes && (
         <CardNota etichetta="Note del coach" icona={ClipboardList} colore={BRAND}>
           <p className="text-[13.5px] leading-[1.55] text-gray-300 whitespace-pre-wrap text-pretty">{workout.coach_notes}</p>
         </CardNota>
       )}
-
+    </>
+  )
+  const pVocale = (
+    <>
       {/* NOTA VOCALE */}
       {athleteWorkoutId && (role === 'admin' || voiceNoteUrl) && (
         <CardNota
@@ -1663,7 +1670,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           ) : null}
         </CardNota>
       )}
-
+    </>
+  )
+  const pNoteAtleta = (
+    <>
       {/* NOTE ATLETA */}
       {(role === 'athlete' || isOwnProfile) && athleteWorkoutId ? (
         <CardNota etichetta={`Le tue note su questo ${type === 'Event' ? 'evento' : 'allenamento'}`} icona={User} colore="#3b82f6">
@@ -1698,7 +1708,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <p className="text-[13.5px] leading-[1.55] text-gray-300 whitespace-pre-wrap text-pretty">{senzaRisultato(athleteNote.text)}</p>
         </CardNota>
       ) : null}
-
+    </>
+  )
+  const pAssegnazioni = (
+    <>
       {/* ASSEGNAZIONI (SOLO COACH) — un elenco, non N card con N ombre */}
       {role !== 'athlete' && assignments.length > 0 && (
         <div className="flex flex-col gap-[9px]">
@@ -1733,7 +1746,59 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           </ElencoAssegnazioni>
         </div>
       )}
+    </>
+  )
 
+  return (
+    /* ⚠️ Niente `page-transition`. Entrano le SEZIONI della scheda — testata,
+       titolo, esito, riepilogo, avviso, blocchi, note, assegnazioni — e i
+       blocchi entrano come gruppo, non uno per uno: il loro contenitore è una
+       di queste sezioni, e farli cascare anche dentro vorrebbe dire due
+       animazioni sovrapposte sullo stesso contenuto (è il movimento doppio che
+       `page-transition` produceva sull'intera pagina). Se un giorno li si vuole
+       uno per uno, serve un indice che continui quello delle sezioni, non una
+       cascata annidata. */
+    <div className={`${desktop ? 'px-8 max-w-[1280px] pb-[var(--fondo-pagina)]' : 'px-4 max-w-2xl pb-[var(--altezza-navbar)]'} mx-auto min-h-[100dvh] flex flex-col gap-[15px]
+                    pt-[calc(env(safe-area-inset-top)+1rem)] cascata`}>
+
+      {/* La testata porta due sole icone, e sono due STATI: si accendono e si
+          spengono durante l'allenamento. Duplica, Modifica, gli export e
+          Elimina — che sono comandi, e si usano una volta — stanno nel menu. */}
+      <TestataScheda onIndietro={indietro} onMenu={() => setMenuOpen(true)}>
+        {connectedTvCode ? (
+          <IconaStato etichetta="Scollega TV" icona={MonitorUp} accesa colore="#ef4444"
+            onClick={handleDisconnectTV} />
+        ) : (
+          <IconaStato etichetta="TV" icona={MonitorUp} onClick={() => setTvModalOpen(true)} />
+        )}
+      </TestataScheda>
+      {desktop ? (
+        // Desktop: a sinistra ciò che si legge (titolo, riepilogo, blocchi), a
+        // destra ciò che si fa (azioni, vocale, assegnazioni), fermo mentre
+        // la colonna sinistra scorre. La barra in fondo diventa un riquadro.
+        <div data-disposizione="desktop" className="grid grid-cols-12 gap-6 items-start">
+          <div data-colonna="sinistra" className="col-span-8 flex flex-col gap-[15px]">
+            {pOffline}{pTitolo}{pEsito}{pRiepilogo}{pAvviso}{pContenuto}{pNoteCoach}
+          </div>
+          {/* ⚠️ Ferma, quindi alta al massimo quanto la finestra: con venti
+              assegnazioni la sua coda resterebbe irraggiungibile finché la
+              colonna sinistra non finisce di scorrere. Scorre per conto suo. */}
+          <div data-colonna="destra" className="col-span-4 flex flex-col gap-[15px] sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto hide-scrollbar">
+            {(azionePrimaria || azioneSecondaria) && (
+              <div className="rounded-[20px] bg-[#1e1e1e] border border-[#2a2a2a] p-3">
+                <BarraAzioni ancorata={false}>
+                  {azionePrimaria}
+                  {azioneSecondaria}
+                </BarraAzioni>
+              </div>
+            )}
+            {pVocale}{pNoteAtleta}{pAssegnazioni}
+          </div>
+        </div>
+      ) : (
+        <>
+          {pOffline}{pTitolo}{pEsito}{pRiepilogo}{pAvviso}{pContenuto}{pNoteCoach}
+          {pVocale}{pNoteAtleta}{pAssegnazioni}
       {/* La barra fissa: «Avvia» non dipende più da quanto è lunga la lista dei
           blocchi. Prima stava sopra i blocchi per la stessa ragione, ma lì il
           completamento e l'assegnazione restavano in fondo allo scroll. */}
@@ -1742,6 +1807,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         {azionePrimaria}
         {azioneSecondaria}
       </BarraAzioni>
+        </>
+      )}
 
       {menuOpen && <MenuScheda onChiudi={() => setMenuOpen(false)} voci={vociMenu} />}
 
