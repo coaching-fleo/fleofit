@@ -216,6 +216,13 @@ Regola d'oro: **sotto i 1024 px non cambia un pixel, e nelle app native non camb
   righe: una lettura sola si fermerebbe in silenzio.
 - Piano e confronto coi concorrenti: `docs/superpowers/plans/2026-10-13-desktop-analisi-e-confronto.md`.
 
+#### ✅ Quarto giro, 13/10/2026: fase 2 del piano Analisi
+- **Analisi**: storico di un esercizio con un atleta scelto (`storicoEsercizio.js`,
+  `StoricoEsercizio.jsx`), «Esporta CSV» e «Stampa».
+- **Home coach**: «Ultime sedute chiuse» degli ultimi 7 giorni (`ultimeSedute.js`).
+- **Calendario team**: «Copia settimana» (`copiaSettimana` in `calendarioTeam.js`).
+- Piano: `docs/superpowers/plans/2026-10-13-desktop-fase-2.md`.
+
 ### Fase 3 — Le schermate desktop, coach per primo
 Il coach è chi lavora alla scrivania; l'atleta usa il telefono. Ordine proposto:
 

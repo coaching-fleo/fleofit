@@ -142,3 +142,14 @@ Le cose da sapere:
 - «Atleti attivi» al posto di «atleti fermi»: fermo è una fotografia di oggi, e su un
   periodo non si confronta.
 - I minuti per categoria sono minuti, non carico: il carico esclude le sedute senza RPE.
+
+### Fase 2 (13/10/2026): storico di un esercizio, CSV, stampa
+- **Storico di un esercizio** (solo con un atleta scelto): `src/lib/storicoEsercizio.js`.
+  Due colonne che non si mescolano: il PRESCRITTO (dal workout, coi parser di
+  `reportAtleta.js`: `numero` è esportato apposta) e il DICHIARATO (i `risultati` di
+  `note_estratte`, citati parola per parola). Copre le righe caricate per il periodo.
+- **CSV** (`src/lib/esportaCsv.js`): punto e virgola, virgola decimale, BOM — è per Excel
+  italiano. ⚠️ Nei test `Blob.text()` toglie il BOM: lo si controlla nei byte.
+- **Stampa**: `print:hidden` su barra laterale e bottoni, `print-color-adjust: exact` in
+  `index.css` perché il tema è solo scuro. Non verificata a occhio: il browser di prova non
+  mostra l'anteprima di stampa.
