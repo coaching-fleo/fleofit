@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
+import { leggiTutta } from '../lib/backup'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
@@ -456,9 +457,14 @@ export default function AthleteDetail() {
   }
 
   const handleExportData = async () => {
+    // Le risposte di «Come stai oggi» dell'atleta, se la tabella c'è.
+    // Una lettura fallita non ferma l'esportazione: il resto del profilo vale.
+    let comeStai = []
+    try { comeStai = (await leggiTutta('come_stai', q => q.eq('athlete_id', athlete.id))).righe } catch (err) { console.error(err) }
     const exportData = {
       athlete: athlete,
-      workouts: workouts
+      workouts: workouts,
+      come_stai: comeStai,
     }
     const fileName = `Backup_${athlete.name}_${athlete.surname}.json`
     const dataStr = JSON.stringify(exportData, null, 2)

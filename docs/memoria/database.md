@@ -260,6 +260,15 @@ aggiungila anche lì.**
 - ✅ **COSA SALVA DAVVERO IL BACKUP DI STANOTTE** (riletto su `origin/main` il 25/08/2026, è il
   file che il cron esegue):
   `TABLES='athletes workouts athlete_workouts personal_records invitation_codes notifications'`.
+  ⚠️ **13/10/2026: aggiunta `come_stai`** («Come stai oggi»). Sta sulla branch
+  `main-backup-come-stai` partita da `origin/main`: finché non arriva su `main` il cron non la
+  salva. Senza la tabella applicata la REST API risponde 404 e il job la salta con un avviso.
+  ⚠️ `note_estratte` NON è nel backup notturno (si rigenera rilanciando l'IA, ma costa richieste).
+- ✅ **L'esportazione dalle Impostazioni** (`src/lib/backup.js`, 13/10/2026) salva
+  `athletes workouts athlete_workouts come_stai` e legge **a pagine**: prima usava
+  `.limit(10000)`, ma il server restituisce al massimo 1000 righe e il file usciva troncato senza
+  dirlo. Il ripristino scrive nello stesso ordine, a blocchi da 500, e salta (dicendolo) le tabelle
+  che il database non ha. L'esportazione di un atleta dalla sua scheda porta anche le sue risposte.
   **`personal_records` è dentro**: era il dato meno ricostruibile del sistema e non era mai stato
   salvato — aggravato dal fatto che ha una policy RLS `ALL/{authenticated}/true`, cioè è
   cancellabile da qualunque utente loggato (§4-bis).

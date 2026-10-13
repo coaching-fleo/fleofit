@@ -41,7 +41,9 @@ jobs:
       # Escluse di proposito:
       #   push_subscriptions -> token dispositivo, non ripristinabili e a rotazione
       #   tv_sessions        -> effimera, si rigenera a ogni sessione TV
-      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications'
+      # come_stai (13/10/2026): «Come stai oggi». Finché la sua migrazione non è
+      # applicata la REST API risponde 404 e il job la salta con un avviso.
+      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai'
 
       # Tabelle che non devono MAI essere vuote o mancanti:
       # se lo sono, il backup viene considerato non valido e il job fallisce.

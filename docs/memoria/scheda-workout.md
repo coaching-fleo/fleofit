@@ -462,5 +462,5 @@ Dove compare:
 7. Nella demo l'upsert con chiave composta (`athlete_id,giorno`) sovrascriveva la prima riga:
    corretto in `supabaseDemo.js`, test in `src/__tests__/demoUpsert.test.js`.
 
-Non fatto (da decidere): il backup automatico (`db-backup.yml`, su `main`) e l'export
-in-app non includono ancora `come_stai`; nessun avviso al coach quando qualcuno sta male.
+Backup: `come_stai` è nell'esportazione in-app e nel backup notturno (vedi `database.md`).
+Non fatto (da decidere): nessun avviso al coach quando qualcuno sta male.

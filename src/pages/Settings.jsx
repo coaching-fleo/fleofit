@@ -9,6 +9,7 @@ import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { useAuth, ADMIN_EMAILS } from '../App'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
+import { esportaTutto, ripristinaTutto, scriviTutta } from '../lib/backup'
 import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
 import { PushNotifications } from '@capacitor/push-notifications'
@@ -156,19 +157,9 @@ export default function Settings() {
   const handleExportFull = async () => {
     setOperazione('export')
     try {
-      // Estraiamo tutti i dati (impostando un limite alto per sicurezza)
-      const { data: athletes } = await supabase.from('athletes').select('*').limit(10000)
-      const { data: workouts } = await supabase.from('workouts').select('*').limit(10000)
-      const { data: athlete_workouts } = await supabase.from('athlete_workouts').select('*').limit(10000)
-      
-      const backup = {
-        version: 1,
-        type: 'full_backup',
-        timestamp: new Date().toISOString(),
-        athletes: athletes || [],
-        workouts: workouts || [],
-        athlete_workouts: athlete_workouts || []
-      }
+      // A pagine e con «Come stai oggi» (src/lib/backup.js): prima `.limit(10000)`
+      // si fermava a mille righe senza dirlo, e il file usciva troncato.
+      const backup = await esportaTutto()
 
       // Salviamo in un file JSON
       const dataStr = JSON.stringify(backup, null, 2)
@@ -218,22 +209,14 @@ export default function Settings() {
         try {
           const text = await file.text()
           const data = JSON.parse(text)
-          if (data.type !== 'full_backup') throw new Error("File non valido per il ripristino totale.")
-          
-          if (data.athletes?.length) {
-            const { error } = await supabase.from('athletes').upsert(data.athletes, { onConflict: 'id' })
-            if (error) throw new Error("Errore atleti: " + error.message)
-          }
-          if (data.workouts?.length) {
-            const { error } = await supabase.from('workouts').upsert(data.workouts, { onConflict: 'id' })
-            if (error) throw new Error("Errore workouts: " + error.message)
-          }
-          if (data.athlete_workouts?.length) {
-            const { error } = await supabase.from('athlete_workouts').upsert(data.athlete_workouts, { onConflict: 'id' })
-            if (error) throw new Error("Errore assegnazioni: " + error.message)
-          }
-          
-          setAlertInfo({ title: 'Completato', message: "Ripristino totale completato con successo!", type: 'success' })
+          const { saltate } = await ripristinaTutto(data)
+          setAlertInfo({
+            title: 'Completato',
+            message: saltate.length
+              ? `Ripristino completato. Non ripristinate perché il database non le ha ancora: ${saltate.join(', ')}.`
+              : 'Ripristino totale completato con successo!',
+            type: 'success',
+          })
         } catch (err) {
           setAlertInfo({ title: 'Errore', message: "Errore importazione: " + err.message, type: 'error' })
         }
@@ -273,6 +256,8 @@ export default function Settings() {
           if (errW) throw new Error("Errore salvataggio assegnazioni: " + errW.message)
         }
       }
+      // «Come stai oggi», presente nei file esportati dal 13/10/2026.
+      if (data.come_stai?.length) await scriviTutta('come_stai', data.come_stai)
       
       setAlertInfo({ title: 'Completato', message: `Profilo di ${data.athlete.name} ${data.athlete.surname} ripristinato con successo!`, type: 'success' })
     } catch (err) {
