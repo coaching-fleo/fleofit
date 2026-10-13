@@ -19,13 +19,13 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { addWeeks, format, isToday } from 'date-fns'
 import { it } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Flag, GripVertical, Search, Check, CalendarDays, User } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Flag, GripVertical, Search, Check, CalendarDays, User, Copy, X } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import NuovoEvento from '../components/NuovoEvento'
 import { categoriaDi, corsia } from '../lib/categorie'
 import { separaCodice } from '../lib/codiceWorkout'
-import { giorniSettimana, chiave, grigliaTeam, caricoGiorni, spostamentoValido } from '../lib/calendarioTeam'
+import { giorniSettimana, chiave, grigliaTeam, caricoGiorni, spostamentoValido, copiaSettimana } from '../lib/calendarioTeam'
 
 const FILTRI = [
   { valore: null, etichetta: 'Tutti' },
@@ -53,6 +53,51 @@ function Volto({ foto, nome }) {
         ? <img src={foto} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.opacity = 0 }} />
         : (iniziali || <User size={14} aria-hidden="true" />)}
     </span>
+  )
+}
+
+/**
+ * «Copia settimana» (piano desktop fase 2, #5). La finestra È la conferma:
+ * dice quante sedute, a chi e in quali giorni, prima di scrivere qualcosa.
+ */
+function FoglioCopia({ atleta, quante, altri, etichettaSettimana, etichettaDopo, onCopia, onClose }) {
+  const [destinazione, setDestinazione] = useState('dopo')
+  const nomeDestinazione = destinazione === 'dopo' ? atleta.nome : altri.find(a => a.id === destinazione)?.nome
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/85 flex items-center justify-center p-6" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={`Copia la settimana di ${atleta.nome}`}
+        onClick={(e) => e.stopPropagation()}
+        className="modal-transition w-full max-w-md bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-black text-white">Copia la settimana di {atleta.nome}</h2>
+            <p className="text-sm text-gray-400 mt-1">
+              {quante} {quante === 1 ? 'allenamento' : 'allenamenti'} del {etichettaSettimana}, tutte le categorie. Le copie partono da fare.
+            </p>
+          </div>
+          <button type="button" aria-label="Chiudi" onClick={onClose}
+            className="w-9 h-9 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300 hover:text-white shrink-0">
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-gray-500">Dove</span>
+          <select value={destinazione} onChange={(e) => setDestinazione(e.target.value)}
+            className="h-11 px-3 rounded-xl bg-[#111] border border-[#333] text-sm text-white">
+            <option value="dopo">A {atleta.nome}, nella settimana dopo ({etichettaDopo})</option>
+            {altri.map(a => <option key={a.id} value={a.id}>A {a.nome}, negli stessi giorni</option>)}
+          </select>
+        </label>
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose}
+            className="flex-1 h-11 rounded-xl bg-[#2a2a2a] text-sm font-bold text-gray-300 hover:text-white">Annulla</button>
+          <button type="button" disabled={quante === 0} onClick={() => onCopia(destinazione)}
+            className="flex-1 h-11 rounded-xl bg-brand text-black text-sm font-bold hover:brightness-110 disabled:opacity-40">
+            Copia a {nomeDestinazione}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -174,6 +219,45 @@ export default function CalendarioTeam({ onVistaMese }) {
     }
   }
 
+  const [copiaDi, setCopiaDi] = useState(null) // la riga dell'atleta da copiare
+
+  const sedute = (atletaId) => assegnazioni.filter(x => x.athlete_id === atletaId && x.completed_date >= da && x.completed_date <= a)
+
+  const copia = async (atleta, destinazione) => {
+    setCopiaDi(null)
+    const dopo = destinazione === 'dopo'
+    const aAtleta = dopo ? atleta.id : destinazione
+    let elenco = assegnazioni
+    if (dopo) {
+      // La settimana dopo non è caricata: senza le sue righe i doppioni non si
+      // vedrebbero, e un secondo clic raddoppierebbe la settimana.
+      const giorniDopo = giorni.map(g => chiave(addWeeks(g, 1)))
+      const { data: arrivo, error } = await supabase.from('athlete_workouts')
+        .select('id, athlete_id, workout_id, completed_date')
+        .eq('athlete_id', aAtleta).gte('completed_date', giorniDopo[0]).lte('completed_date', giorniDopo[6])
+      if (error) { setAvviso({ testo: `Copia non riuscita: ${error.message}`, errore: true }); return }
+      elenco = [...assegnazioni, ...(arrivo || [])]
+    }
+    const { nuove, saltate } = copiaSettimana(elenco, {
+      daAtleta: atleta.id, aAtleta, giorni: giorni.map(chiave), scartoGiorni: dopo ? 7 : 0,
+    })
+    const destinatario = dopo ? atleta.nome : nomeDi(aAtleta)
+    if (nuove.length === 0) {
+      setAvviso({ testo: saltate > 0 ? `${destinatario} ha già tutti questi allenamenti` : 'Niente da copiare' })
+      return
+    }
+    const { data: create, error } = await supabase.from('athlete_workouts').insert(nuove).select('id')
+    if (error) { setAvviso({ testo: `Copia non riuscita: ${error.message}`, errore: true }); return }
+    ;(create || []).forEach(n => {
+      supabase.functions.invoke('send-reminders', { body: { mode: 'immediate', record_id: n.id } }).catch(console.error)
+    })
+    setAvviso({
+      testo: `${nuove.length} ${nuove.length === 1 ? 'allenamento copiato' : 'allenamenti copiati'} a ${destinatario}`
+        + (saltate > 0 ? ` · ${saltate} già ${saltate === 1 ? 'presente' : 'presenti'}` : ''),
+    })
+    carica()
+  }
+
   const iniziaDaLibreria = (e, workout) => {
     e.dataTransfer.setData(TIPO_DATI, JSON.stringify({ tipo: 'libreria', id: workout.id }))
     e.dataTransfer.effectAllowed = 'copy'
@@ -265,14 +349,22 @@ export default function CalendarioTeam({ onVistaMese }) {
               <div className="col-span-8 h-80 animate-pulse" />
             ) : righe.map(r => (
               <div key={r.id} className="contents">
-                <button type="button" onClick={() => navigate(`/athletes/${r.id}`)}
-                  className={`sticky left-0 z-10 bg-[#141414] px-4 py-2.5 border-b border-[#222] flex items-center gap-2.5 text-left group ${r.inPausa ? 'opacity-50' : ''}`}>
-                  <Volto foto={r.foto} nome={r.nome} />
-                  <span className="min-w-0 flex flex-col">
-                    <span className="text-[13px] font-bold text-white truncate group-hover:text-brand transition">{r.nome}</span>
-                    {r.inPausa && <span className="text-[11px] text-gray-400">in pausa</span>}
-                  </span>
-                </button>
+                <div className={`sticky left-0 z-10 bg-[#141414] border-b border-[#222] flex items-center group/riga ${r.inPausa ? 'opacity-50' : ''}`}>
+                  <button type="button" onClick={() => navigate(`/athletes/${r.id}`)}
+                    className="flex-1 min-w-0 pl-4 py-2.5 flex items-center gap-2.5 text-left group">
+                    <Volto foto={r.foto} nome={r.nome} />
+                    <span className="min-w-0 flex flex-col">
+                      <span className="text-[13px] font-bold text-white truncate group-hover:text-brand transition">{r.nome}</span>
+                      {r.inPausa && <span className="text-[11px] text-gray-400">in pausa</span>}
+                    </span>
+                  </button>
+                  <button type="button" onClick={() => setCopiaDi(r)} aria-label={`Copia la settimana di ${r.nome}`}
+                    title="Copia la settimana"
+                    className="mr-2 w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/[.06]
+                               opacity-0 group-hover/riga:opacity-100 focus:opacity-100 transition">
+                    <Copy size={15} aria-hidden="true" />
+                  </button>
+                </div>
                 {r.celle.map((c, i) => {
                   const k = `${r.id}|${c.data}`
                   return (
@@ -352,6 +444,15 @@ export default function CalendarioTeam({ onVistaMese }) {
             ${avviso.errore ? 'bg-red-950 border-red-500/50 text-red-200' : 'bg-[#1e1e1e] border-[#383838] text-white'}`}>
           {avviso.testo}
         </div>
+      )}
+
+      {copiaDi && createPortal(
+        <FoglioCopia atleta={copiaDi} quante={sedute(copiaDi.id).length}
+          altri={righe.filter(x => x.id !== copiaDi.id)}
+          etichettaSettimana={`${format(giorni[0], 'd MMM', { locale: it })} – ${format(giorni[6], 'd MMM', { locale: it })}`}
+          etichettaDopo={`${format(addWeeks(giorni[0], 1), 'd MMM', { locale: it })} – ${format(addWeeks(giorni[6], 1), 'd MMM', { locale: it })}`}
+          onCopia={(dest) => copia(copiaDi, dest)} onClose={() => setCopiaDi(null)} />,
+        document.body,
       )}
 
       {eventoAperto && createPortal(

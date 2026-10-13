@@ -3,7 +3,7 @@
 // Logica PURA: riceve atleti e assegnazioni già caricati, restituisce righe e
 // celle pronte da disegnare. Bozza «2 · Calendario» approvata il 13/10/2026.
 
-import { addDays, format, startOfWeek } from 'date-fns'
+import { addDays, format, parseISO, startOfWeek } from 'date-fns'
 import { categoriaDi } from './categorie'
 import { separaCodice } from './codiceWorkout'
 import { rpeDichiarato } from './rpe'
@@ -93,3 +93,42 @@ export function caricoGiorni(righe = []) {
  */
 export const spostamentoValido = (chip, atletaId, data) =>
   !!chip && !chip.completato && chip.atletaId === atletaId && chip.data !== data
+
+/**
+ * «Copia settimana» (piano desktop fase 2, #5): le sedute di un atleta nella
+ * settimana mostrata, da riassegnare a lui la settimana dopo (`scartoGiorni`
+ * 7) o a un altro atleta negli stessi giorni (`scartoGiorni` 0).
+ *
+ * - Le copie nascono SEMPRE `pending`: copiare una settimana fatta non vuol
+ *   dire che il destinatario l'abbia fatta.
+ * - Si salta ciò che il destinatario ha già (stesso workout, stessa data), e
+ *   `saltate` lo dice: un secondo clic non raddoppia la settimana.
+ * - Il workout resta lo stesso (`workout_id`): è un'assegnazione nuova, non una
+ *   copia del programma, come quando lo si trascina dalla libreria.
+ *
+ * `assegnazioni` deve contenere anche le righe del destinatario nei giorni di
+ * arrivo, altrimenti i doppioni non si vedono: è il chiamante a leggerle.
+ */
+export function copiaSettimana(assegnazioni = [], { daAtleta, aAtleta, giorni = [], scartoGiorni = 0 } = {}) {
+  const dentro = new Set(giorni)
+  const esistenti = new Set(assegnazioni
+    .filter(r => r?.athlete_id === aAtleta)
+    .map(r => `${r.workout_id || r.workouts?.id}|${r.completed_date}`))
+
+  const nuove = []
+  let saltate = 0
+  const origine = assegnazioni
+    .filter(r => r?.athlete_id === daAtleta && dentro.has(r.completed_date))
+    .sort((x, y) => x.completed_date.localeCompare(y.completed_date))
+
+  for (const r of origine) {
+    const workout_id = r.workout_id || r.workouts?.id
+    if (!workout_id) continue
+    const completed_date = format(addDays(parseISO(r.completed_date), scartoGiorni), 'yyyy-MM-dd')
+    const k = `${workout_id}|${completed_date}`
+    if (esistenti.has(k)) { saltate++; continue }
+    esistenti.add(k)
+    nuove.push({ athlete_id: aAtleta, workout_id, completed_date, status: 'pending' })
+  }
+  return { nuove, saltate }
+}

@@ -436,3 +436,14 @@ Ora `Calendar.jsx` usa `useRipresa`/`useRicorda` (`src/useRipresa.js`, come
 archivio e rubrica): al ritorno riprende mese, giorno scelto, lista e
 scorrimento, senza scheletro e senza rifare la cascata (`ritorno-entra`); la
 ricarica del mese è silenziosa. Le date si memorizzano come numeri.
+
+## 9-copia-settimana. «Copia settimana» nel calendario team (13/10/2026)
+
+Desktop, solo coach. Il bottone con l'icona di copia compare passando sul nome di un
+atleta. Copia **tutte** le sedute della settimana mostrata (anche quelle nascoste dal
+filtro di categoria) a lui nella settimana dopo, o a un altro atleta negli stessi giorni.
+Logica in `copiaSettimana` di `src/lib/calendarioTeam.js`, con test.
+- Le copie nascono `pending` e usano lo stesso `workout_id`: sono assegnazioni nuove.
+- ⚠️ Per «settimana dopo» la pagina legge PRIMA le righe del destinatario in quei giorni:
+  la settimana dopo non è caricata, e senza quelle righe i doppioni non si vedrebbero.
+- Una push `immediate` per ogni riga creata, come quando si trascina dalla libreria.

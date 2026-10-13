@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { giorniSettimana, grigliaTeam, caricoGiorni, spostamentoValido, chipDi } from '../calendarioTeam'
+import { giorniSettimana, grigliaTeam, caricoGiorni, spostamentoValido, chipDi, copiaSettimana, chiave } from '../calendarioTeam'
 import { COACHING_ID } from '../constants'
 
 const giorni = giorniSettimana(new Date(2026, 9, 15)) // giovedì 15 ottobre 2026
@@ -71,5 +71,48 @@ describe('calendarioTeam', () => {
     expect(spostamentoValido(chip, 'b', '2026-10-15')).toBe(false)
     expect(spostamentoValido(chip, 'a', '2026-10-13')).toBe(false)
     expect(spostamentoValido({ ...chip, completato: true }, 'a', '2026-10-15')).toBe(false)
+  })
+})
+
+describe('copiaSettimana', () => {
+  const settimana = giorni.map(chiave) // 12–18 ottobre 2026
+  const conWorkout = (id, athlete_id, data, extra = {}) => ({ ...ass(id, athlete_id, data, extra), workout_id: `w-${id}` })
+
+  it('nella settimana dopo sposta le date di sette giorni', () => {
+    const { nuove, saltate } = copiaSettimana(
+      [conWorkout(1, 'a', '2026-10-13'), conWorkout(2, 'a', '2026-10-15'), conWorkout(3, 'b', '2026-10-13')],
+      { daAtleta: 'a', aAtleta: 'a', giorni: settimana, scartoGiorni: 7 },
+    )
+    expect(nuove).toEqual([
+      { athlete_id: 'a', workout_id: 'w-1', completed_date: '2026-10-20', status: 'pending' },
+      { athlete_id: 'a', workout_id: 'w-2', completed_date: '2026-10-22', status: 'pending' },
+    ])
+    expect(saltate).toBe(0)
+  })
+
+  it('a un altro atleta tiene le date, e una seduta fatta nasce da fare', () => {
+    const { nuove } = copiaSettimana(
+      [conWorkout(1, 'a', '2026-10-13', { status: 'completed', notes: '[RPE: 8/10]' })],
+      { daAtleta: 'a', aAtleta: 'b', giorni: settimana, scartoGiorni: 0 },
+    )
+    expect(nuove).toEqual([{ athlete_id: 'b', workout_id: 'w-1', completed_date: '2026-10-13', status: 'pending' }])
+  })
+
+  it('non duplica un allenamento che il destinatario ha già quel giorno', () => {
+    const { nuove, saltate } = copiaSettimana(
+      [conWorkout(1, 'a', '2026-10-13'), conWorkout(2, 'a', '2026-10-14'), { ...conWorkout(9, 'b', '2026-10-13'), workout_id: 'w-1' }],
+      { daAtleta: 'a', aAtleta: 'b', giorni: settimana, scartoGiorni: 0 },
+    )
+    expect(nuove.map(n => n.workout_id)).toEqual(['w-2'])
+    expect(saltate).toBe(1)
+  })
+
+  it('una gara si copia come le altre, e fuori settimana non si copia niente', () => {
+    const { nuove } = copiaSettimana(
+      [conWorkout(1, 'a', '2026-10-17', { workouts: { id: 'w-1', title: 'Hyrox Milano', sections: { category: 'Event', isEvent: true } } }),
+        conWorkout(2, 'a', '2026-10-25')],
+      { daAtleta: 'a', aAtleta: 'b', giorni: settimana, scartoGiorni: 0 },
+    )
+    expect(nuove.map(n => n.workout_id)).toEqual(['w-1'])
   })
 })
