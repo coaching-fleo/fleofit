@@ -204,6 +204,18 @@ Regola d'oro: **sotto i 1024 px non cambia un pixel, e nelle app native non camb
   componenti del telefono) e schede in griglia per mese.
 - Restano col disegno del telefono dentro il guscio: scheda workout, Report, Impostazioni.
 
+#### ✅ Terzo giro, 13/10/2026: la pagina Analisi
+- **`/analisi`**, voce «Analisi» sotto «Report» nella barra laterale. Solo desktop
+  coach: fuori dal desktop rimanda a `/report`. Accanto al Report, non al suo posto
+  (decisione del committente): il Report dice cosa fare questa settimana, Analisi
+  come sta andando su 4/8/12/26 settimane.
+- Calcoli in `src/lib/analisi.js` (riusa `reportSettimanale`: l'ACWR è lo stesso
+  numero, un test lo confronta), grafici SVG senza librerie in
+  `src/components/grafici/`, presentazione in `AnalisiUI.jsx`.
+- Filtri nell'URL (`?periodo=&atleta=&categoria=`). Lettura **a pagine** da 1000
+  righe: una lettura sola si fermerebbe in silenzio.
+- Piano e confronto coi concorrenti: `docs/superpowers/plans/2026-10-13-desktop-analisi-e-confronto.md`.
+
 ### Fase 3 — Le schermate desktop, coach per primo
 Il coach è chi lavora alla scrivania; l'atleta usa il telefono. Ordine proposto:
 

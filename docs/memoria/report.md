@@ -123,3 +123,22 @@ cestino (§9-septdecies punto 7).
   pagina esiste per evitare.
 
 ---
+
+
+## 9-analisi. La pagina Analisi del desktop (13/10/2026)
+
+Accanto al report, solo desktop coach (`/analisi`). ⚠️ Prima di toccare una formula di
+`reportSettimanale.js` sapere che `src/lib/analisi.js` la RIUSA: `settimanaReport`,
+`parteTrascorsa`, `caricoDi`, `rapportoCarico`, `storicoCronico`, `scartoRpeDi`. Il test
+«ACWR identico a quello del report settimanale» in `analisi.test.js` lega i due numeri.
+
+Le cose da sapere:
+- Le celle della mappa hanno quattro stati: `ok`, `vuota` (niente assegnato), `prima`
+  (prima della prima assegnazione caricata), `pausa`. La pausa vale dalla data del
+  marcatore in poi: le pause **già finite** non lasciano traccia nel dato, quindi le loro
+  settimane contano come normali.
+- Il periodo di confronto finisce lo stesso giorno della settimana di oggi
+  (`periodoPrecedente`): così una settimana in corso si confronta con una pari.
+- «Atleti attivi» al posto di «atleti fermi»: fermo è una fotografia di oggi, e su un
+  periodo non si confronta.
+- I minuti per categoria sono minuti, non carico: il carico esclude le sedute senza RPE.

@@ -33,6 +33,8 @@ function SchedaWorkout() {
 const WorkoutsArchive = lazy(() => import('./pages/WorkoutsArchive'))
 const WeeklyReport = lazy(() => import('./pages/WeeklyReport'))
 const AthleteReport = lazy(() => import('./pages/AthleteReport'))
+// Solo desktop coach: fuori dal desktop la pagina rimanda da sé a /report.
+const Analisi = lazy(() => import('./pages/Analisi'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Login = lazy(() => import('./pages/Login'))
 // La barra laterale del desktop (solo coach, solo web, finestra ≥ 1024px): pigra,
@@ -671,6 +673,7 @@ function App() {
                 fanno le policy RLS — ma di interfaccia. */}
             <Route path="/report" element={<WeeklyReport />} />
             <Route path="/report/:id" element={<AthleteReport />} />
+            <Route path="/analisi" element={<Analisi />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

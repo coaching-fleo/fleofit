@@ -621,7 +621,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |
 | `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |
 | `Calendar.jsx`, `CalendarioUI`, `rigaCalendario.js`, `NuovoEvento`, `gareHyrox.js`, `RisultatoGara`, `InvitoRisultato`, `GarePassate`, `risultatoGara.js`, Edge Function `gare-hyrox` e `risultato-hyrox` | `calendario.md` |
-| `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js` | `report.md` |
+| `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js`, `Analisi.jsx`, `AnalisiUI.jsx`, `analisi.js`, `components/grafici/` | `report.md` |
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute` | `accesso.md` |
 | `RicercaCoach.jsx`, `ricercaCoach.js`, `dialogoRicerca.js`, `useDettatura.js`, Edge Function `ricerca-coach` | `ricerca.md` |

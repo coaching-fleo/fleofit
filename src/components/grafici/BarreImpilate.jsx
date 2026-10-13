@@ -20,7 +20,7 @@ export default function BarreImpilate({ titolo, colonne = [], unita = 'min' }) {
     <svg viewBox={`0 0 ${L} ${A}`} className="w-full h-auto" role="img">
       <title>{titolo}</title>
       <line x1={M.sx} x2={L - M.dx} y1={A - M.giu} y2={A - M.giu} stroke="#2a2a2a" strokeWidth="1" />
-      <text x={M.sx - 6} y={M.su + 4} textAnchor="end" fontSize="10" fill="#6b7280">{Math.round(massimo)}</text>
+      <text x={M.sx - 6} y={M.su + 4} textAnchor="end" fontSize="12" fill="#6b7280">{Math.round(massimo)}</text>
       {colonne.map((c, i) => {
         const cx = M.sx + fascia * i + (fascia - larga) / 2
         let base = A - M.giu
@@ -36,7 +36,7 @@ export default function BarreImpilate({ titolo, colonne = [], unita = 'min' }) {
               )
             })}
             {(colonne.length <= 12 || i === 0 || i === colonne.length - 1) && (
-              <text x={cx + larga / 2} y={A - 8} textAnchor="middle" fontSize="10" fill="#6b7280">{c.etichetta}</text>
+              <text x={cx + larga / 2} y={A - 8} textAnchor="middle" fontSize="12" fill="#6b7280">{c.etichetta}</text>
             )}
           </g>
         )

@@ -32,7 +32,7 @@ export default function Linea({ titolo, punti = [], colore, massimo = 100, unita
       {griglia.map(v => (
         <g key={v}>
           <line x1={M.sx} x2={L - M.dx} y1={y(v)} y2={y(v)} stroke="#2a2a2a" strokeWidth="1" />
-          <text x={M.sx - 6} y={y(v) + 4} textAnchor="end" fontSize="10" fill="#6b7280">{v}</text>
+          <text x={M.sx - 6} y={y(v) + 4} textAnchor="end" fontSize="12" fill="#6b7280">{v}</text>
         </g>
       ))}
       {tratti.filter(t => t.length > 1).map((t, i) => (
@@ -47,7 +47,7 @@ export default function Linea({ titolo, punti = [], colore, massimo = 100, unita
             </circle>
           )}
           {(i === 0 || i === punti.length - 1 || punti.length <= 12) && (
-            <text x={x(i)} y={A - 8} textAnchor="middle" fontSize="10" fill="#6b7280">{p.etichetta}</text>
+            <text x={x(i)} y={A - 8} textAnchor="middle" fontSize="12" fill="#6b7280">{p.etichetta}</text>
           )}
         </g>
       ))}
