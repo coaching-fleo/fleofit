@@ -8,6 +8,7 @@ import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { useAuth, ADMIN_EMAILS } from '../App'
+import { useSchermoLargo, eDesktop } from '../useDesktop'
 import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
 import { PushNotifications } from '@capacitor/push-notifications'
@@ -39,6 +40,8 @@ export default function Settings() {
   const fullImportRef = useRef(null)
   const athleteImportRef = useRef(null)
   const { role, user, nome } = useAuth()
+  // Sul desktop (solo coach, src/useDesktop.js) la pagina va su due colonne.
+  const desktop = eDesktop(useSchermoLargo(), role)
   const isAdminEmail = ADMIN_EMAILS.includes(user?.email?.toLowerCase())
   const isSimulatingAthlete = localStorage.getItem('adminRoleOverride') === 'athlete'
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
@@ -579,14 +582,11 @@ export default function Settings() {
   }
 
 
-  return (
-    /* ⚠️ Niente `page-transition`: la pagina non sale più tutta insieme.
-       `cascata` fa entrare i suoi figli uno dopo l'altro (src/index.css). */
-    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)]
-                    flex flex-col gap-3.5 cascata">
-
-      <TestataImpostazioni onIndietro={indietro} />
-
+  // I pezzi della pagina, scritti una volta: il telefono li impila nell'ordine
+  // di sempre, il desktop mette a destra gli strumenti del coach.
+  // ⚠️ Una sezione nuova va in ENTRAMBE le disposizioni.
+  const pCarta = (
+    <>
       {/* ── L'eroe: con quale account sei dentro, e cosa è acceso qui ────── */}
       <CartaAccount
         nome={nome || user?.email?.split('@')[0] || 'Il tuo profilo'}
@@ -602,7 +602,10 @@ export default function Settings() {
           occupato={operazione === 'notifiche'} />
 
       </CartaAccount>
-
+    </>
+  )
+  const pAccount = (
+    <>
       {/* ── Account ──────────────────────────────────────────────────────── */}
       <Sezione etichetta="Account">
         <RigaAzione icona={KeyRound} titolo="Modifica password"
@@ -623,7 +626,10 @@ export default function Settings() {
           </>
         )}
       </Sezione>
-
+    </>
+  )
+  const pCoach = (
+    <>
       {/* ── Solo coach ───────────────────────────────────────────────────── */}
       {role === 'admin' && (
         <>
@@ -672,7 +678,10 @@ export default function Settings() {
           </Sezione>
         </>
       )}
-
+    </>
+  )
+  const pAiuto = (
+    <>
       {/* ── Aiuto ──────────────────────────────────────────────────────────
           Per TUTTI i ruoli: chi trova i problemi è soprattutto l'atleta. */}
       <Sezione etichetta="Aiuto">
@@ -680,15 +689,49 @@ export default function Settings() {
           dettaglio="Un problema o un'idea per l'app"
           onClick={() => setFoglioSegnalazioneAperto(true)} />
       </Sezione>
-
+    </>
+  )
+  const pElimina = (
+    <>
       {/* Fuori da ogni gruppo e sopra l'uscita: è l'ultimo gesto della
           pagina, ed è l'unico irreversibile che riguarda chi lo compie. */}
       <RigaPericolo icona={Trash2} titolo="Elimina il mio account"
         dettaglio="Rimuove il profilo e tutto il tuo storico"
         onClick={eliminaAccount} occupato={operazione === 'eliminaAccount'} />
-
+    </>
+  )
+  const pUscita = (
+    <>
       <BottoneEsci onClick={handleLogout} />
       <PiediPagina versione={versione} email={user?.email} />
+    </>
+  )
+
+  return (
+    /* ⚠️ Niente `page-transition`: la pagina non sale più tutta insieme.
+       `cascata` fa entrare i suoi figli uno dopo l'altro (src/index.css). */
+    <div className={`${desktop ? 'px-8 max-w-[1100px]' : 'px-4 max-w-2xl'} mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)]
+                    flex flex-col gap-3.5 cascata`}>
+
+      <TestataImpostazioni onIndietro={desktop ? null : indietro} />
+
+      {desktop && role === 'admin' ? (
+        // Desktop: a sinistra chi sei e il tuo account, a destra gli strumenti
+        // del coach (inviti, backup, ripristino), che sono il grosso del lavoro
+        // da scrivania. Solo `admin` li ha: per gli altri la colonna è una.
+        <div data-disposizione="desktop" className="grid grid-cols-12 gap-6 items-start">
+          <div data-colonna="sinistra" className="col-span-5 flex flex-col gap-3.5">
+            {pCarta}{pAccount}{pAiuto}{pElimina}{pUscita}
+          </div>
+          <div data-colonna="destra" className="col-span-7 flex flex-col gap-3.5">
+            {pCoach}
+          </div>
+        </div>
+      ) : (
+        <>
+          {pCarta}{pAccount}{pCoach}{pAiuto}{pElimina}{pUscita}
+        </>
+      )}
 
       <input type="file" accept=".json" className="hidden" ref={fullImportRef} onChange={handleImportFull} />
       <input type="file" accept=".json" className="hidden" ref={athleteImportRef} onChange={handleImportAthlete} />

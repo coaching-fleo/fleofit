@@ -53,15 +53,18 @@ function Pastiglia({ icona: Icona, tono = 'neutro', pieno = false }) {
  * database non sono le impostazioni: era l'icona di una delle cinque card
  * promossa a simbolo dell'intera pagina.
  */
+/** Senza `onIndietro` niente freccia: sul desktop c'è la barra laterale. */
 export function TestataImpostazioni({ onIndietro }) {
   return (
-    <div className="flex items-center gap-3 py-1.5">
-      <button type="button" aria-label="Torna indietro" onClick={onIndietro}
-        className={`w-10 h-10 rounded-full flex items-center justify-center text-gray-200
-                    hover:text-white transition shrink-0 ${VETRO}`}>
-        <ChevronLeft size={20} />
-      </button>
-      <h1 className="text-[26px] font-black tracking-[-.03em] text-white leading-none">Impostazioni</h1>
+    <div className={`flex items-center gap-3 ${onIndietro ? 'py-1.5' : 'pt-4 pb-2'}`}>
+      {onIndietro && (
+        <button type="button" aria-label="Torna indietro" onClick={onIndietro}
+          className={`w-10 h-10 rounded-full flex items-center justify-center text-gray-200
+                      hover:text-white transition shrink-0 ${VETRO}`}>
+          <ChevronLeft size={20} />
+        </button>
+      )}
+      <h1 className={`${onIndietro ? 'text-[26px]' : 'text-3xl'} font-black tracking-[-.03em] text-white leading-none`}>Impostazioni</h1>
     </div>
   )
 }

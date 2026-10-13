@@ -254,3 +254,12 @@ e piano: `docs/superpowers/specs/2026-10-07-segnalazioni-design.md` e
 `src/components/FoglioSegnalazione.jsx` (13) · `src/pages/__tests__/Segnalazione.test.jsx` (6) ·
 `supabase/functions/segnalazione/{index,regole}.ts` (`segnalazioneServer.test.js`, 14).
 Ogni test nuovo è stato visto fallire rompendo apposta il codice che copre.
+
+## 9-impostazioni-desktop. Le Impostazioni sul desktop (13/10/2026)
+
+Solo coach su web ≥ 1024px. Con ruolo `admin` due colonne: a sinistra account, aiuto,
+elimina ed esci; a destra «Solo coach» (codici invito, export, import, ripristino,
+strumenti). Senza `admin` resta una colonna sola: la destra sarebbe vuota.
+`TestataImpostazioni` senza `onIndietro` non disegna la freccia (c'è la barra laterale).
+I pezzi (`pCarta`, `pCoach`…) sono scritti una volta: ⚠️ una sezione nuova va in ENTRAMBE
+le disposizioni. Test: «Impostazioni — versione desktop» in `Impostazioni.test.jsx`.

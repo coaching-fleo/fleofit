@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { montaPagina, UTENTE } from '../../test/montaPagina'
@@ -300,5 +300,34 @@ describe('La cascata sulle impostazioni', () => {
     expect(radice).not.toBeNull()
     expect(radice.children.length).toBeGreaterThan(3)
     expect(document.querySelector('.page-transition')).toBeNull()
+  })
+})
+
+describe('Impostazioni — versione desktop', () => {
+  // `setup.js` mette un `matchMedia` finto per tutti: si ripristina quello.
+  const originale = window.matchMedia
+  const schermo = (largo) => {
+    window.matchMedia = vi.fn(() => ({ matches: largo, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+  }
+  afterEach(() => { window.matchMedia = originale })
+
+  it('sul desktop del coach: account a sinistra, strumenti del coach a destra, niente freccia indietro', async () => {
+    schermo(true)
+    const { container } = montaCoach()
+    await screen.findByRole('heading', { name: 'Impostazioni' })
+    const destra = container.querySelector('[data-disposizione="desktop"] [data-colonna="destra"]')
+    expect(destra).not.toBeNull()
+    expect(within(destra).getByText('Codici invito')).toBeInTheDocument()
+    expect(within(destra).getByText('Ripristina database totale')).toBeInTheDocument()
+    const sinistra = container.querySelector('[data-colonna="sinistra"]')
+    expect(within(sinistra).getByText('Modifica password')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Torna indietro' })).toBeNull()
+  })
+
+  it('sul telefono resta com\'era', async () => {
+    schermo(false)
+    const { container } = montaCoach()
+    expect(await screen.findByRole('button', { name: 'Torna indietro' })).toBeInTheDocument()
+    expect(container.querySelector('[data-disposizione="desktop"]')).toBeNull()
   })
 })

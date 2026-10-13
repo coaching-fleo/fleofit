@@ -231,7 +231,8 @@ Regola d'oro: **sotto i 1024 px non cambia un pixel, e nelle app native non camb
   indietro, settimana accanto al titolo) e due colonne. I pezzi sono scritti una volta
   (`pEroe`, `pRighe`…, come in `AthleteDetail`): il telefono li impila nell'ordine di sempre.
   Nel report atleta «Scheda» e «Crea» passano dalla barra in fondo alla testata.
-- Restano col disegno del telefono dentro il guscio: scheda workout e Impostazioni.
+- **Scheda workout** e **Impostazioni** su due colonne (13/10/2026, stesso schema dei pezzi
+  scritti una volta). Tutte le pagine del coach hanno ora una versione desktop.
 
 ### Fase 3 — Le schermate desktop, coach per primo
 Il coach è chi lavora alla scrivania; l'atleta usa il telefono. Ordine proposto:
