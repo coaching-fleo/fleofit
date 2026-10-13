@@ -3,8 +3,9 @@ self.addEventListener('push', function(event) {
     const data = event.data.json();
     const options = {
       body: data.body,
-      icon: '/vite.svg', // Se hai un logo per la PWA, metti qui il percorso (es. /icon-192x192.png)
-      badge: '/vite.svg',
+      // Fino al 13/10/2026 puntavano a /vite.svg, che non esiste: la notifica web usciva senza icona.
+      icon: '/web-app-manifest-192x192.png',
+      badge: '/favicon-96x96.png',
       vibrate: [100, 50, 100],
       data: {
         url: data.url || '/'

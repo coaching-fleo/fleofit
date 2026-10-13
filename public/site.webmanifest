@@ -1,6 +1,7 @@
 {
   "name": "FLEOFIT",
   "short_name": "FLEOFIT",
+  "start_url": "/",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -15,7 +16,7 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#171717",
-  "background_color": "#171717",
+  "theme_color": "#0B0B0B",
+  "background_color": "#0B0B0B",
   "display": "standalone"
 }

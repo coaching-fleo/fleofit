@@ -112,3 +112,11 @@ Se si vuole tenere le due app in convivenza a lungo, il minimo sindacale è **re
 `parseNotesAndRpe` su `main`** (anche solo in lettura, per non distruggere il dato).
 
 ---
+
+### ⚠️ GitHub Pages pubblica `ios-version` (scoperto il 13/10/2026)
+`https://coaching-fleo.github.io/fleofit/` è costruito da **`ios-version`** (33 deploy
+`github-pages`, l'ultimo il 24/09/2026) e serve anche `privacy-policy.html` (risponde 200).
+Con buona probabilità è l'URL della privacy dato ad App Store: **`ios-version` non va
+cancellato né riscritto** finché quell'URL non è spostato altrove. Le preview Vercel dei
+push su `app` invece sono protette dal login Vercel (302 verso SSO). Il piano per la web
+app sul codice di `app` sta in `docs/piano-web-desktop.md`.
