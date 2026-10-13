@@ -59,6 +59,27 @@
   --fondo-pagina: calc(var(--altezza-navbar) + 0.5rem);
 }
 
+/* La versione desktop (src/useDesktop.js): niente tab bar, quindi niente spazio
+   per lei. La classe la mette App.jsx su <html>. */
+html.desktop {
+  --altezza-navbar: 0px;
+  --fondo-pagina: 3rem;
+}
+
+/* Sul desktop un foglio che sale dal fondo largo quanto lo schermo è una
+   striscia di 1440px: diventa una finestra di 640px, staccata dal bordo.
+   Vale per tutti i fogli costruiti come `fixed … justify-end` con il figlio
+   `rounded-t-3xl` (FoglioMisure, ricerca, scheda workout…), senza toccarli. */
+html.desktop .fixed.justify-end > .rounded-t-3xl,
+html.desktop .fixed.items-end > .rounded-t-3xl {
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+  margin-bottom: 24px;
+  border-radius: 1.5rem;
+  border: 1px solid rgb(255 255 255 / .08);
+}
+
 * {
   box-sizing: border-box;
 }

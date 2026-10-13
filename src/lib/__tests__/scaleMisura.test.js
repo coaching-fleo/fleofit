@@ -202,3 +202,12 @@ describe('il numero grande', () => {
     expect(unitaDi('peso', '9 kg')).toBe('kg')
   })
 })
+
+describe('i metri arrivano ai 10 km', () => {
+  it('gli ergometri si programmano fino a 10000m, a passi di 500 sopra i 2 km', () => {
+    const valori = SCALE.metri.voci.map(v => v.valore)
+    expect(valori.at(-1)).toBe('10000m')
+    expect(valori).toContain('7500m')
+    expect(valoreDaTesto('metri', '8000')).toBe('8000m')
+  })
+})

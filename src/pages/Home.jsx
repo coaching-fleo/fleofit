@@ -43,6 +43,10 @@ import { daRiaprire } from '../lib/ricercaSospesa'
 // Pigro: la ricerca è solo del coach, e il chunk d'ingresso non deve portarsela
 // dietro per ogni atleta che apre l'app (CLAUDE.md §2, peso di `index`).
 const RicercaCoach = lazy(() => import('../components/RicercaCoach'))
+// La Home del coach sulla versione desktop (src/useDesktop.js): pigra, il
+// telefono non la scarica mai.
+import { useSchermoLargo, eDesktop } from '../useDesktop'
+const HomeCoachDesktop = lazy(() => import('../components/HomeCoachDesktop'))
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARD_BASE, CARTA_MODALE,
          TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
 
@@ -97,6 +101,7 @@ export default function Home() {
   const navigate = useNavigate()
   const [stats, setStats] = useState({ workouts: 0, athletes: 0 })
   const { role, user, nome } = useAuth()
+  const desktop = eDesktop(useSchermoLargo(), role)
   const [loading, setLoading] = useState(true)
   const [loadingRecent, setLoadingRecent] = useState(true)
   
@@ -1090,10 +1095,40 @@ setNotifications(prev => {
        sale MENTRE i suoi figli salgono è movimento doppio, e nel riferimento il
        contenitore è fermo — si muovono solo gli elementi. L'entrata la fanno
        `cascata-voce` sulla testata e `cascata` sui due rami. */
-    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)]
-                    min-h-screen bg-[radial-gradient(120%_60%_at_50%_0%,#17160f_0%,#0B0B0B_58%)]">
+    <div className={desktop ? 'min-h-screen bg-[radial-gradient(120%_60%_at_50%_0%,#17160f_0%,#0B0B0B_58%)]' : `px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)]
+                    min-h-screen bg-[radial-gradient(120%_60%_at_50%_0%,#17160f_0%,#0B0B0B_58%)]`}>
+      {/* ── HOME COACH, DESKTOP ─────────────────────────────────────────────
+          Al posto della testata e del ramo coach qui sotto: stessi dati, stesse
+          callback, un'altra disposizione (src/components/HomeCoachDesktop.jsx).
+          Le modali in fondo a questa pagina restano condivise. */}
+      {desktop && (
+        <Suspense fallback={<div className="min-h-screen" />}>
+          <HomeCoachDesktop
+            saluto={getGreeting()} nome={nome || userName}
+            dataOggi={format(new Date(), 'EEEE d MMMM', { locale: it })}
+            caricamento={loadingRecent}
+            feedback={feedback.elementi}
+            fermi={fermi.slice(0, MASSIMO_FERMI_IN_HOME)}
+            scaduti={scaduti.map(x => ({ ...x, quando: quandoScaduto(x) }))}
+            squadra={squadra}
+            giorno={scartoSquadra === 0 ? 'oggi' : 'ieri'}
+            copertura={coperturaTre}
+            live={liveAthletes}
+            notificheDaLeggere={unreadCount}
+            onNotifiche={openNotifications}
+            onNuovoWorkout={() => navigate('/create')}
+            onCalendario={() => navigate('/calendar')}
+            onCambiaGiorno={() => setScartoSquadra(g => (g === 0 ? -1 : 0))}
+            onGuardaLive={(la) => setSpectatingAthlete(la)}
+            onApriFeedback={apriFeedback}
+            onApriAtleta={(a) => navigate(`/athletes/${a.id}`)}
+            onApriScaduto={(x) => navigate(`/workout/${x.workoutId}?athlete_id=${x.atletaId}`)}
+          />
+        </Suspense>
+      )}
+
       {/* Header */}
-      {(() => {
+      {!desktop && (() => {
         // Le due azioni sono identiche nei due rami: si scrivono una volta.
         // Il conteggio delle non lette vive nell'aria-label perché il badge è
         // un pallino: senza, chi usa VoiceOver non saprebbe che ce ne sono.
@@ -1177,7 +1212,7 @@ setNotifications(prev => {
           CTA, lista di ieri, due card verso destinazioni già in navbar), e
           l'unica informazione presente, chi ha fatto cosa ieri, è la meno utile
           la mattina perché guarda indietro. */}
-      {role !== 'athlete' && (
+      {role !== 'athlete' && !desktop && (
         /* ⚠️ `--cascata-da: 1` lascia la voce 0 alla testata, che sta fuori da
             questo contenitore ed è il primo elemento che si vede. Senza, la
             testata e la prima card partirebbero insieme. */

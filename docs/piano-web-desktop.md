@@ -166,6 +166,29 @@ Regola d'oro: **sotto i 1024 px non cambia un pixel, e nelle app native non camb
   come già si fa oggi.
 - Controllo a ogni passo: screenshot a 390 px prima/dopo, che devono coincidere.
 
+#### ✅ Stato al 13/10/2026: guscio e tre schermate fatti
+- **Regola**: `src/useDesktop.js` — `eDesktop(schermoLargo, role)`: web + ≥ 1024px + ruolo
+  diverso da `athlete`. Coperta da test (`src/__tests__/useDesktop.test.js`).
+- **Guscio**: `App.jsx` monta `BarraLaterale` (pigra) al posto della `Navbar` e mette
+  `html.desktop`, che in `src/index.css` azzera `--altezza-navbar` e trasforma i fogli dal
+  fondo (`fixed … justify-end > .rounded-t-3xl`) in finestre centrate di 640px. ⌘K apre la
+  ricerca da ogni pagina.
+- **Home coach**: `HomeCoachDesktop.jsx` (pigra), lista unica «Da guardare»
+  (`src/lib/cosaGuardare.js`, con test) + «Oggi» + copertura dei prossimi 3 giorni.
+- **Calendario**: `src/pages/CalendarioTeam.jsx` (pigra) — settimana × atleti, libreria da
+  trascinare (assegna + push `immediate`), sessioni da trascinare per cambiare giorno (solo
+  stesso atleta, solo non completate), doppio clic per creare. Logica in
+  `src/lib/calendarioTeam.js`, con test. «Mese» riporta al calendario di prima.
+- **Crea workout**: niente passo 1; colonna destra `CreaWorkoutDesktop.jsx` con categoria,
+  nome, data, riepilogo, intensità, tipi di blocco e salvataggio (⌘S). `DueColonne` in
+  `CreateWorkout.jsx` non aggiunge nulla sul telefono.
+- **Peso**: il pacchetto iniziale va da 617 a 619 KB. `index-*.js` sembra salito di 30 KB
+  ma è il locale italiano di date-fns, che prima stava in un chunk a parte caricato
+  comunque all'avvio.
+- **Le altre pagine** (Atleti, scheda atleta, scheda workout, Report, Archivio,
+  Impostazioni) dentro il guscio restano la loro colonna centrata: sono i punti 2, 5 e 6
+  qui sotto.
+
 ### Fase 3 — Le schermate desktop, coach per primo
 Il coach è chi lavora alla scrivania; l'atleta usa il telefono. Ordine proposto:
 

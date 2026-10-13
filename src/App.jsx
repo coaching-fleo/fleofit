@@ -8,6 +8,7 @@ import { Capacitor } from '@capacitor/core'
 import { Keyboard } from '@capacitor/keyboard'
 import { PushNotifications } from '@capacitor/push-notifications'
 import Navbar from './components/Navbar'
+import { useSchermoLargo, eDesktop } from './useDesktop'
 import { Apertura } from './components/Apertura'
 import Home from './pages/Home'
 
@@ -34,6 +35,9 @@ const WeeklyReport = lazy(() => import('./pages/WeeklyReport'))
 const AthleteReport = lazy(() => import('./pages/AthleteReport'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Login = lazy(() => import('./pages/Login'))
+// La barra laterale del desktop (solo coach, solo web, finestra ≥ 1024px): pigra,
+// così il chunk d'ingresso del telefono non cresce (CLAUDE.md §2).
+const BarraLaterale = lazy(() => import('./components/BarraLaterale'))
 
 
 
@@ -204,6 +208,13 @@ function ProtectedRoute() {
   // deve più tornare, nemmeno se questo componente si ri-renderizza.
   const [aperturaFinita, setAperturaFinita] = useState(false)
   const location = useLocation()
+  const desktop = eDesktop(useSchermoLargo(), role)
+
+  // `html.desktop` azzera l'altezza della tab bar (src/index.css): le pagine e
+  // le barre `sticky` che la leggono si adattano da sole, senza saperlo.
+  useEffect(() => {
+    document.documentElement.classList.toggle('desktop', desktop)
+  }, [desktop])
 
   useEffect(() => {
     let sub;
@@ -390,6 +401,21 @@ function ProtectedRoute() {
       {/* Lo spazio per la tab bar viene da --altezza-navbar (src/index.css),
           non da un `pb-16` scritto qui: la barra è alta quanto è alta, e
           questo numero deve seguirla da solo. */}
+      {desktop ? (
+        // Il desktop: barra laterale a sinistra, la pagina a destra. Niente
+        // tab bar. Le pagine non ancora ridisegnate restano la loro colonna
+        // centrata, dentro l'area a destra.
+        <div className="flex min-h-screen">
+          <Suspense fallback={<div className="w-[232px] shrink-0 bg-[#0f0f0f]" />}>
+            <BarraLaterale />
+          </Suspense>
+          <main className="flex-1 min-w-0">
+            <Suspense fallback={<div className="min-h-[60vh]" />}>
+              <Outlet />
+            </Suspense>
+          </main>
+        </div>
+      ) : (
       <div className="pb-[var(--altezza-navbar)]">
         {/* ⚠️ Il Suspense sta ANCHE qui, non solo intorno a <Routes>: a
             sospendere è il confine più vicino, e con il solo confine esterno
@@ -401,6 +427,7 @@ function ProtectedRoute() {
         </Suspense>
         <Navbar />
       </div>
+      )}
     </AuthContext.Provider>
   )
 }

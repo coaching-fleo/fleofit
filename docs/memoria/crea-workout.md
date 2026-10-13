@@ -911,6 +911,21 @@ composto.
 
 ---
 
+### Ritocchi del 13/10/2026 (richiesta del committente)
+- **Metri fino a 10 km**: la scala `METRI` di `scaleMisura.js` si fermava a 5000m, poco per gli
+  ergometri. Ora va avanti a passi di 500 fino a 10000m (vale anche per slitta, carry, Run: è la
+  stessa scala). Il formato resta `"7500m"`.
+- **«Scrivi» al posto dell'icona**: accanto al numero grande c'era solo una tastierina da 15px
+  grigio scuro, e non si capiva che il numero si potesse scrivere a mano. Ora è una pillola
+  con icona e parola «Scrivi» (`NumeroGrande` in `FoglioMisure.jsx`). Tutto il numero resta
+  toccabile come prima.
+- **Standard per esercizio** (`STANDARD_ESERCIZIO` in `CreateWorkout.jsx`): Wall Balls →
+  4, 6, 9, 12, 15 kg; ogni esercizio con «Lunge» nel nome → 10, 20, 30 kg; slitta (Sled, Prowler
+  Push/Pull/Drag) → 100, 150, 200 kg. Solo pesi: ripetizioni e metri restano dallo storico.
+  Vengono **prima** dello storico di `rapidiDi`: sono i valori
+  che il coach vuole sempre vedere. ⚠️ Cinque pillole e non quattro per la Wall Ball: a 375px
+  stanno su una riga solo perché le etichette sono corte.
+
 ## 9-septquadragies. L'intensità degli esercizi generati dall'IA (08/10/2026)
 
 Feedback del committente: con «Genera con IA» gli esercizi **non avevano

@@ -43,6 +43,9 @@ import { parseDuration } from '../lib/timerSequence'
 import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
 import { SCALE, grandezza, testoMisura } from '../lib/scaleMisura'
 import { fotoDisponibile } from '../lib/lettoreTesto'
+import { useAuth } from '../App'
+import { useSchermoLargo, eDesktop } from '../useDesktop'
+import CreaWorkoutDesktop from '../components/CreaWorkoutDesktop'
 
 // Il lettore dei workout scritti si scarica solo quando si apre il foglio.
 const FoglioDaTesto = lazy(() => import('../components/FoglioDaTesto'))
@@ -85,6 +88,18 @@ const RAPIDI_LAVORO = ['0:20', '0:30', '0:40', '1:00']
 const RAPIDI_INTERVALLO = ['0:30', '1:00', '1:30', '2:00']
 const RAPIDI_AMRAP = ['8:00', '10:00', '12:00', '20:00']
 const RAPIDI_ROUNDS = ['3', '5', '8', '10']
+
+// Gli STANDARD di alcuni movimenti (richiesta del committente, 13/10/2026):
+// valori fissi che vengono PRIMA dello storico, perché sono quelli che il
+// coach programma sempre — i pesi della Wall Ball, degli affondi, della slitta.
+// Qui sì un peso per esercizio: è legato al nome, non proposto a tutti.
+const STANDARD_ESERCIZIO = [
+  { nome: /^wall balls?$/i, kg: ['4 kg', '6 kg', '9 kg', '12 kg', '15 kg'] },
+  { nome: /lunge/i, kg: ['10 kg', '20 kg', '30 kg'] },
+  { nome: /^(sled |prowler )/i, kg: ['100 kg', '150 kg', '200 kg'] },
+]
+const standardDi = (esercizio, campoEx) =>
+  STANDARD_ESERCIZIO.find(s => s.nome.test(esercizio ?? ''))?.[campoEx] ?? null
 
 // ─── IL PASSO CHE NON È UNA SCALA ─────────────────────────────────────────
 // «Z3», «All out», «Gara Singola» non stanno su un righello: sono poche voci da
@@ -152,6 +167,21 @@ const CATEGORIE = [
 ]
 const ICONA_CATEGORIA = { Hyrox: Dumbbell, Running: Timer, Custom: FileText }
 const categoriaCorrente = (id) => CATEGORIE.find(c => c.id === id) || CATEGORIE[0]
+const COLORE_INTENSITA = { Hyrox: 'bg-brand', Running: 'bg-running', Custom: 'bg-custom' }
+
+/**
+ * Sul desktop il builder va su due colonne: i blocchi a sinistra, la colonna
+ * di CreaWorkoutDesktop a destra. Sul telefono non aggiunge niente.
+ */
+function DueColonne({ attive, colonna, children }) {
+  if (!attive) return children
+  return (
+    <div className="flex gap-8 items-start">
+      <div className="flex-1 min-w-0 flex flex-col gap-[18px]">{children}</div>
+      {colonna}
+    </div>
+  )
+}
 
 /**
  * Il dettaglio di un esercizio in una riga ("500m @ 1:52 · 9kg").
@@ -1039,6 +1069,8 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 
   /** Le scorciatoie di un campo: i valori più usati per questo esercizio, o un ripiego. */
   const rapidiDi = (campoEx, ripiego = []) => {
+    const standard = standardDi(selected, campoEx)
+    if (standard) return standard
     const conteggio = frequenti[selected]?.[campoEx]
     if (!conteggio) return ripiego
     return Object.entries(conteggio)
@@ -2114,6 +2146,11 @@ export default function CreateWorkout() {
   const defaultDate = searchParams.get('date')
 
   const [step, setStep] = useState(1) // 1=tipo, 2=build
+  // Sul desktop il passo 1 non c'è: categoria, nome e data stanno nella
+  // colonna di destra, accanto ai blocchi (src/components/CreaWorkoutDesktop.jsx).
+  const { role } = useAuth() || {}
+  const desktop = eDesktop(useSchermoLargo(), role)
+  const passo = desktop ? 2 : step
   // Serve al fondo pagina: con la tastiera aperta la tab bar non c'è, e lo
   // spazio che le era riservato terrebbe la barra sospesa sopra un vuoto.
   const tastieraAperta = useTastieraAperta()
@@ -2883,6 +2920,70 @@ export default function CreateWorkout() {
     navigate(`/workout/${targetId}${conAtleta ? `?athlete_id=${athleteId}` : ''}`, { replace: true })
   }
 
+  /** Un blocco nuovo del tipo scelto: dal foglio «Aggiungi blocco» o, sul desktop, dalla colonna. */
+  const aggiungiTipo = (type) => {
+    const newBlock = { id: Math.random(), type, params: {}, exercises: [] }
+    if (type === 'WarmUp' || type === 'Rest') newBlock.params.duration = '3:00'
+    if (type === 'ON/OFF') { newBlock.params.on = '1:00'; newBlock.params.off = '1:00'; newBlock.params.rounds = '10' }
+    if (type === 'EMOM') { newBlock.params.interval = '1:00'; newBlock.params.rounds = '10' }
+    if (type === 'AMRAP') { newBlock.params.duration = '10:00' }
+    if (type === 'For Time') { newBlock.params.rounds = '1' }
+    if (type === 'Interval') { newBlock.params.rounds = '1' }
+
+    if (type === 'Cash In' || type === 'Cash Out') { newBlock.params.rounds = '1' }
+    const misure = parametriDelBlocco(newBlock)
+    if (misure.length === 0) return aggiungiBlocco(newBlock)
+    // Prima i numeri del blocco, poi la conferma: il foglio si apre
+    // sul primo parametro (Durata, Ogni, ON, Round…).
+    setParametroInArrivo(misure[0].chiave)
+    setBloccoInArrivo(newBlock)
+  }
+
+  // ⌘S salva, sul desktop. Il riferimento evita di rimontare l'ascolto a ogni render.
+  const salvaRef = useRef(null)
+  useEffect(() => {
+    if (!desktop) return
+    const suTasto = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); salvaRef.current?.() }
+    }
+    window.addEventListener('keydown', suTasto)
+    return () => window.removeEventListener('keydown', suTasto)
+  }, [desktop])
+
+  const azioniSalva = (
+    <>
+      {editId && (
+        <BottoneQuadrato
+          etichetta="Salva come nuovo allenamento"
+          onClick={() => { setNewWorkoutName(title); setIsSavingAsNew(true); setShowSaveModal(true) }}
+        />
+      )}
+      {/* ⚠️ `attesa` solo qui fra tutte le CtaPrimaria dell'app: le altre
+          aprono un modale, e contrarsi per 570ms vorrebbe dire ritardarlo.
+          L'etichetta «Salvo…» resta nel DOM anche se trasparente — è il
+          nome accessibile del bottone mentre è una pillola. */}
+      <CtaPrimaria onClick={handleSave} disabled={saving} attesa={saving} icona={Save}>
+        {saving ? 'Salvo…' : saved ? 'Salvato!' : 'Salva workout'}
+      </CtaPrimaria>
+    </>
+  )
+  useEffect(() => { salvaRef.current = handleSave })
+
+  const colonnaDesktop = desktop && (
+    <CreaWorkoutDesktop
+      categorie={CATEGORIE} categoria={category} onCategoria={setCategory}
+      nome={title} onNome={setTitle}
+      segnapostoNome={nomeAutomatico || 'Facoltativo · lo scelgo dai blocchi'}
+      onAltroNome={conNomeCasuale && nomeCasuale && !title.trim()
+        ? () => { vibraScelta(); setNomeFissato(null); setSemeNome(x => x + 1) } : null}
+      data={date} onData={setDate}
+      riepilogo={category === 'Hyrox' ? <RiepilogoWorkout {...riepilogo} collocazione={collocazione} /> : null}
+      intensita={<CardIntensita valore={workoutIntensity} onChange={setWorkoutIntensity} classeColore={COLORE_INTENSITA[category]} />}
+      onAggiungiBlocco={category === 'Hyrox' ? aggiungiTipo : null}
+      azioni={azioniSalva}
+    />
+  )
+
   return (
     // ⚠️ Con la tastiera aperta il fondo pagina si azzera, e non è cosmesi: quel
     //    padding riserva l'altezza della capsula della tab bar, che mentre si
@@ -2898,7 +2999,7 @@ export default function CreateWorkout() {
        e il titolo del workout, e i passi le scorrono dentro. Farla entrare
        insieme al passo vorrebbe dire due gesti in direzioni diverse nello
        stesso istante, su una schermata che ne ha già uno. */
-    <div className={`px-4 max-w-2xl mx-auto min-h-[100dvh] flex flex-col gap-[18px]
+    <div className={`${desktop ? 'px-10 max-w-[1240px]' : 'px-4 max-w-2xl'} mx-auto min-h-[100dvh] flex flex-col gap-[18px]
                     pt-[calc(env(safe-area-inset-top)+1rem)]
                     ${tastieraAperta ? 'pb-3' : 'pb-[var(--fondo-pagina)]'}`}>
       <style>{`
@@ -2917,15 +3018,15 @@ export default function CreateWorkout() {
       `}</style>
       <TestataCrea
         passo={step}
-        onIndietro={step === 1 && daBarra && !sourceId ? null : handleBack}
-        titolo={step === 2 ? nomeMostrato : null}
-        codice={step === 2 ? codice : null}
-        sottotitolo={step === 2 ? sottotitoloWorkout : null}
-        onTitolo={step === 2 ? () => setStep(1) : null}
+        onIndietro={passo === 1 && daBarra && !sourceId ? null : handleBack}
+        titolo={passo === 2 ? nomeMostrato : null}
+        codice={passo === 2 ? codice : null}
+        sottotitolo={passo === 2 ? sottotitoloWorkout : null}
+        onTitolo={passo === 2 && !desktop ? () => setStep(1) : null}
       />
 
       {/* ── STEP 1: LA CATEGORIA COME DOMANDA ────────────────────── */}
-      {step === 1 && (
+      {passo === 1 && (
         /* ⚠️ `passo-entra` (src/index.css): il cambio di passo era netto.
             Entra da DESTRA, non dal basso: è un passaggio dentro un flusso,
             non un elemento che arriva in una lista. */
@@ -2995,21 +3096,22 @@ export default function CreateWorkout() {
         </div>
       )}
 
+      <DueColonne attive={desktop} colonna={colonnaDesktop}>
       {/* ── STEP 2: IL BUILDER CON IL RIEPILOGO ──────────────────── */}
-      {step === 2 && category === 'Hyrox' && (
+      {passo === 2 && category === 'Hyrox' && (
         <div className="flex flex-col gap-3.5 passo-entra">
 
           {/* Il builder era cieco: si aggiungevano blocchi senza sapere quanto
               dura la seduta. La barra sotto i tre numeri dice COME la durata è
               distribuita — un riscaldamento che si mangia metà seduta si vede a
               occhio, senza leggere un solo tempo. */}
-          <RiepilogoWorkout {...riepilogo} collocazione={collocazione} />
+          {!desktop && <RiepilogoWorkout {...riepilogo} collocazione={collocazione} />}
 
-          <CardIntensita
+          {!desktop && <CardIntensita
             valore={workoutIntensity}
             onChange={setWorkoutIntensity}
             classeColore="bg-brand"
-          />
+          />}
 
           {cardIA}
 
@@ -3054,24 +3156,7 @@ export default function CreateWorkout() {
       {blockPickerOpen && (
         <BlockPickerModal 
           onClose={() => setBlockPickerOpen(false)}
-          onAdd={(type) => {
-            const newBlock = { id: Math.random(), type, params: {}, exercises: [] }
-            if (type === 'WarmUp' || type === 'Rest') newBlock.params.duration = '3:00'
-            if (type === 'ON/OFF') { newBlock.params.on = '1:00'; newBlock.params.off = '1:00'; newBlock.params.rounds = '10' }
-            if (type === 'EMOM') { newBlock.params.interval = '1:00'; newBlock.params.rounds = '10' }
-            if (type === 'AMRAP') { newBlock.params.duration = '10:00' }
-            if (type === 'For Time') { newBlock.params.rounds = '1' }
-                        if (type === 'Interval') { newBlock.params.rounds = '1' }
-
-            if (type === 'Cash In' || type === 'Cash Out') { newBlock.params.rounds = '1' }
-            setBlockPickerOpen(false)
-            const misure = parametriDelBlocco(newBlock)
-            if (misure.length === 0) return aggiungiBlocco(newBlock)
-            // Prima i numeri del blocco, poi la conferma: il foglio si apre
-            // sul primo parametro (Durata, Ogni, ON, Round…).
-            setParametroInArrivo(misure[0].chiave)
-            setBloccoInArrivo(newBlock)
-          }}
+          onAdd={(type) => { setBlockPickerOpen(false); aggiungiTipo(type) }}
         />
       )}
 
@@ -3123,13 +3208,13 @@ export default function CreateWorkout() {
           «Crea Workout» copre lo step 1 (tutte e tre le categorie) e lo step 2
           Hyrox. Qui cambiano la cornice condivisa — testata, card, barra fissa —
           e non il modo di comporre le fasi, che resta quello di prima. */}
-      {step === 2 && category === 'Running' && (
+      {passo === 2 && category === 'Running' && (
         <div className="flex flex-col gap-3.5 passo-entra">
-          <CardIntensita
+          {!desktop && <CardIntensita
             valore={workoutIntensity}
             onChange={setWorkoutIntensity}
             classeColore="bg-running"
-          />
+          />}
 
           {cardIA}
 
@@ -3193,13 +3278,13 @@ export default function CreateWorkout() {
       )}
 
       {/* ── STEP 2: L'ALLENAMENTO DESCRITTO A PAROLE ─────────────── */}
-      {step === 2 && category === 'Custom' && (
+      {passo === 2 && category === 'Custom' && (
         <div className="flex flex-col gap-3.5 passo-entra">
-          <CardIntensita
+          {!desktop && <CardIntensita
             valore={workoutIntensity}
             onChange={setWorkoutIntensity}
             classeColore="bg-custom"
-          />
+          />}
 
           {cardIA}
 
@@ -3216,35 +3301,25 @@ export default function CreateWorkout() {
         </div>
       )}
 
+      </DueColonne>
+
       {/* La stessa barra serve i tre passi 2 e il passo 1, ma qui NON è
           ancorata: `mt-auto` la tiene al fondo della viewport finché il
           contenuto è corto, e da lì in poi la si raggiunge scorrendo. In un
           builder l'azione è la conclusione del lavoro, non la ragione per cui
           si è aperta la pagina — vedi la nota su `ancorata` in CreaWorkoutUI. */}
+      {!desktop && (<>
       <div className="mt-auto" />
       <BarraAzioni ancorata={false}>
-        {step === 1 ? (
+        {passo === 1 ? (
           <CtaPrimaria onClick={() => setStep(2)} iconaCoda={ArrowRight}>
             Costruisci l'allenamento
           </CtaPrimaria>
         ) : (
-          <>
-            {editId && (
-              <BottoneQuadrato
-                etichetta="Salva come nuovo allenamento"
-                onClick={() => { setNewWorkoutName(title); setIsSavingAsNew(true); setShowSaveModal(true) }}
-              />
-            )}
-            {/* ⚠️ `attesa` solo qui fra tutte le CtaPrimaria dell'app: le altre
-                aprono un modale, e contrarsi per 570ms vorrebbe dire ritardarlo.
-                L'etichetta «Salvo…» resta nel DOM anche se trasparente — è il
-                nome accessibile del bottone mentre è una pillola. */}
-            <CtaPrimaria onClick={handleSave} disabled={saving} attesa={saving} icona={Save}>
-              {saving ? 'Salvo…' : saved ? 'Salvato!' : 'Salva workout'}
-            </CtaPrimaria>
-          </>
+          azioniSalva
         )}
       </BarraAzioni>
+      </>)}
 
       {/* RUNNING STEP PICKER MODAL */}
       {runningPickerOpen && (

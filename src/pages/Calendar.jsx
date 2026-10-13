@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
@@ -21,11 +21,19 @@ import {
   StrisciaMese, IntestazioneGiorno, RigaSessione, AggiungiGiorno, VuotoGiorno,
   ScheletroGiorno,
 } from '../components/CalendarioUI'
+import { useSchermoLargo, eDesktop } from '../useDesktop'
+
+// La settimana del team sul desktop (src/useDesktop.js): pigra, il telefono
+// non la scarica mai.
+const CalendarioTeam = lazy(() => import('./CalendarioTeam'))
 
 export default function Calendar() {
   const navigate = useNavigate()
   const { role, user } = useAuth()
   const isAtleta = role === 'athlete'
+  const desktop = eDesktop(useSchermoLargo(), role)
+  // Sul desktop si apre la settimana del team; «Mese» riporta qui sotto.
+  const [vistaMese, setVistaMese] = useState(false)
   // Tornando indietro da una scheda il calendario riprende mese, giorno scelto
   // e posizione (13/10/2026: «devo tornare a dove ero»), come archivio e
   // rubrica (src/useRipresa.js). Le date viaggiano come numeri: la memoria è
@@ -147,11 +155,25 @@ export default function Calendar() {
 
   const dataSelezionata = format(selectedDay, 'yyyy-MM-dd')
 
+  if (desktop && !vistaMese) {
+    return (
+      <Suspense fallback={<div className="min-h-screen" />}>
+        <CalendarioTeam onVistaMese={() => setVistaMese(true)} />
+      </Suspense>
+    )
+  }
+
   return (
     /* ⚠️ Niente `page-transition`: la pagina non sale più tutta insieme.
        `cascata` fa entrare i suoi figli uno dopo l'altro (src/index.css).
        Al ritorno da una scheda la pagina c'è già: niente cascata, come l'archivio. */
     <div className={`px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)] ${ripresa ? 'ritorno-entra' : 'cascata'}`}>
+      {desktop && (
+        <button type="button" onClick={() => setVistaMese(false)}
+          className="mb-3 h-9 px-3.5 rounded-xl border border-[#383838] text-gray-300 text-[13px] font-bold hover:text-white">
+          ← Settimana del team
+        </button>
+      )}
       <TestataCalendario
         mese={etichettaMese(currentMonth)}
         anno={format(currentMonth, 'yyyy')}

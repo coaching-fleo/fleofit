@@ -260,6 +260,30 @@ describe('il righello scrive il vocabolario di prima', () => {
     expect(screen.getByText('15 reps 6kg')).toBeInTheDocument()
   })
 
+  it('la Wall Ball propone i pesi standard 4, 6, 9, 12 e 15 kg', async () => {
+    await apri('Wall Balls')
+    await userEvent.click(screen.getByRole('button', { name: /^Peso:/ }))
+    for (const kg of ['4', '6', '9', '12', '15']) {
+      expect(screen.getByRole('button', { name: `${kg} kg` })).toBeInTheDocument()
+    }
+  })
+
+  it('gli affondi propongono 10, 20 e 30 kg', async () => {
+    await apri('Front Lunge')
+    await userEvent.click(screen.getByRole('button', { name: /^Peso:/ }))
+    for (const kg of ['10', '20', '30']) {
+      expect(screen.getByRole('button', { name: `${kg} kg` })).toBeInTheDocument()
+    }
+  })
+
+  it('la slitta propone 100, 150 e 200 kg', async () => {
+    await apri('Sled Push')
+    await userEvent.click(screen.getByRole('button', { name: /^Peso:/ }))
+    for (const kg of ['100', '150', '200']) {
+      expect(screen.getByRole('button', { name: `${kg} kg` })).toBeInTheDocument()
+    }
+  })
+
   it('senza storico, sul peso non si propone niente', async () => {
     await apri('Back Squat')
     await userEvent.click(screen.getByRole('button', { name: /^Peso:/ }))

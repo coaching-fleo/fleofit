@@ -180,8 +180,15 @@ function NumeroGrande({ vista, valore, onChange, attivo = true, onTocca, piccolo
         className={`${dimensione} font-black leading-none tracking-[-.035em] tabular-nums transition-colors ${
           attivo && !vuoto ? 'text-white' : 'text-[#4a4f5c]'}`}>{numero}</span>
       {unita && <span className={`text-[16px] font-bold ${attivo && !vuoto ? 'text-muted' : 'text-[#3a3f4a]'}`}>{unita}</span>}
+      {/* Il segno che il numero si può scrivere a mano. Era un'icona da 15px
+          grigio scuro, e non si capiva (13/10/2026): ora è una pillola con la
+          parola, grande abbastanza per il pollice. */}
       {attivo && scala && !piccolo && (
-        <Keyboard size={15} aria-hidden="true" className="self-center ml-0.5 text-[#4a4f5c] group-hover:text-muted transition-colors" />
+        <span aria-hidden="true"
+          className="self-center ml-2 inline-flex items-center gap-1.5 min-h-9 px-3 rounded-full bg-white/[.07] border border-white/15
+                     text-[13px] font-extrabold tracking-normal text-[#c9ccd4] group-hover:border-white/30 group-hover:text-white transition-colors">
+          <Keyboard size={16} /> Scrivi
+        </span>
       )}
     </button>
   )

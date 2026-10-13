@@ -52,8 +52,9 @@ const PESO_DOPPIO = intervallo(1, 50, 1)
   .map(n => voce(`2x${n} kg`, `2×${n}`, n % 5 === 0 ? String(n) : null))
 
 // Dieci metri dove si misurano slitta, carry e affondi; poi cinquanta fino al
-// chilometro; poi cento fino ai due chilometri di remoergometro; poi cinquecento.
-const METRI = [...intervallo(10, 300, 10), ...intervallo(350, 1000, 50), ...intervallo(1100, 2000, 100), ...intervallo(2500, 5000, 500)]
+// chilometro; poi cento fino ai due chilometri di remoergometro; poi cinquecento
+// fino ai dieci chilometri (fino al 13/10/2026 si fermava a 5: poco per gli ergometri).
+const METRI = [...intervallo(10, 300, 10), ...intervallo(350, 1000, 50), ...intervallo(1100, 2000, 100), ...intervallo(2500, 10000, 500)]
   .map(n => voce(`${n}m`, String(n), (n <= 300 ? n % 50 === 0 : n <= 1000 ? n % 250 === 0 : n <= 2000 ? n % 500 === 0 : n % 1000 === 0) ? String(n) : null))
 
 const tempi = (tratti) => {
