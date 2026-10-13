@@ -95,10 +95,6 @@ export const buildTimerSequence = (workout) => {
     blocks.forEach((b, i) => {
       const exNames = (b.exercises || []).map(e => e.name).join(' • ');
       
-      const getTaskForRound = (r) => {
-        if (!b.exercises || b.exercises.length === 0) return null;
-        return taskDi(b.exercises[(r - 1) % b.exercises.length]);
-      };
       const taskDi = (ex) => {
         if (!ex) return null;
         const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''));
@@ -114,9 +110,16 @@ export const buildTimerSequence = (workout) => {
         const rounds = parseInt(b.params?.rounds, 10) || 10;
         const onSec = parseDuration(b.params?.on || '1:00');
         const offSec = parseDuration(b.params?.off || '1:00');
+        // «Round» sono i GIRI del circuito (dal 13/10/2026): ogni giro passa
+        // TUTTI gli esercizi, un ON + OFF ciascuno. Prima era un intervallo per
+        // round, e con 4 round e 7 esercizi gli ultimi tre non comparivano mai.
+        const esercizi = b.exercises?.length ? b.exercises : [null];
         for(let r=1; r<=rounds; r++) {
-           seq.push({ id: `blk-${i}-${r}-on`, title: 'WORK (ON)', subtitle: `Round ${r}/${rounds}`, duration: onSec, theme: 'hyrox', type: 'work', task: getTaskForRound(r) || 'Lavoro' });
-           seq.push({ id: `blk-${i}-${r}-off`, title: 'REST (OFF)', subtitle: `Round ${r}/${rounds}`, duration: offSec, theme: 'rest', type: 'rest', task: 'Riposo' });
+          esercizi.forEach((ex, k) => {
+           const dove = esercizi.length > 1 ? ` · ${k + 1}/${esercizi.length}` : '';
+           seq.push({ id: `blk-${i}-${r}-${k}-on`, title: 'WORK (ON)', subtitle: `Round ${r}/${rounds}${dove}`, duration: onSec, theme: 'hyrox', type: 'work', task: taskDi(ex) || 'Lavoro' });
+           seq.push({ id: `blk-${i}-${r}-${k}-off`, title: 'REST (OFF)', subtitle: `Round ${r}/${rounds}${dove}`, duration: offSec, theme: 'rest', type: 'rest', task: 'Riposo' });
+          });
         }
       } else if (b.type === 'EMOM') {
         const rounds = parseInt(b.params?.rounds, 10) || 10;

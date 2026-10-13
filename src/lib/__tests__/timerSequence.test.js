@@ -72,6 +72,21 @@ describe('espansione dei round', () => {
     expect(lavoro[2].subtitle).toBe('Round 3/3')
   })
 
+  it('ON/OFF: ogni round passa TUTTI gli esercizi, nell ordine', () => {
+    // Il caso del 13/10/2026: con 4 round e 7 esercizi il timer faceva 4
+    // intervalli e gli ultimi tre esercizi non comparivano mai.
+    const esercizi = Array.from({ length: 7 }, (_, i) => ({ name: `Es${i + 1}`, reps: '10' }))
+    const seq = buildTimerSequence(hyrox([
+      { id: 1, type: 'ON/OFF', params: { on: '0:50', off: '0:10', rounds: '4' }, exercises: esercizi },
+    ]))
+    const lavoro = seq.filter(s => s.title === 'WORK (ON)')
+    expect(lavoro).toHaveLength(28)
+    expect(lavoro[6].task).toContain('Es7')
+    expect(lavoro[7].task).toContain('Es1')
+    expect(lavoro[7].subtitle).toBe('Round 2/4 · 1/7')
+    expect(seq.filter(s => s.title === 'REST (OFF)')).toHaveLength(28)
+  })
+
   it('EMOM genera un passo per round, della durata dell intervallo', () => {
     const seq = buildTimerSequence(hyrox([
       { id: 1, type: 'EMOM', params: { interval: '1:30', rounds: '4' }, exercises: [{ name: 'Row', meters: '250m' }] },

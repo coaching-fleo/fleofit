@@ -113,6 +113,10 @@ con il campo "intervals" = quanti intervalli dura, come stringa ("2", "3"…, ma
 - "intervals" esiste solo nei blocchi "EMOM".
 - "rounds" dell'EMOM resta il numero TOTALE di intervalli (minuti), stazioni lunghe comprese.
 
+ON/OFF: "rounds" sono i GIRI DEL CIRCUITO, non gli intervalli. Ogni giro fa TUTTI gli esercizi
+del blocco, un ON + un OFF ciascuno: con 7 esercizi e "rounds": "4" sono 28 intervalli.
+Esempio: "50 on 10 off, 4 giri di 7 esercizi" → "params": { "on": "0:50", "off": "0:10", "rounds": "4" }.
+
 Esempio di struttura richiesta:
 [
   {

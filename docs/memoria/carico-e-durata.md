@@ -222,3 +222,22 @@ Sette toccati, e due riscritti perché la regola che dichiaravano è cambiata:
   celle accanto — non la cifra.
 
 ---
+
+## ON/OFF: i round sono GIRI del circuito (13/10/2026)
+
+Segnalato dal committente su «Compromised Burpee» (50″ on / 10″ off, 7 esercizi,
+4 round): il builder diceva **4′**, l'allenamento vero era **28′**. Fino a quel
+giorno «round» di un ON/OFF valeva come nell'EMOM, cioè **intervalli totali**, con
+la lista degli esercizi che ruotava: e il **timer** faceva solo 4 intervalli, gli
+esercizi 5–7 non comparivano mai.
+
+- Ora `durataBlocco` = `(on + off) × round × max(esercizi, 1)`, e `buildTimerSequence`
+  fa, per ogni round, un ON + OFF per **ogni** esercizio (sottotitolo «Round 2/4 · 1/7»).
+  Stessa formula nei `getBlockTitle` di `WorkoutDetail` (PDF) e `TVDashboard`.
+- `giriBlocco` non cambia: per `reportAtleta` ogni esercizio di un ON/OFF ora si fa
+  davvero `round` volte, quindi il conteggio dei movimenti è diventato giusto.
+- ⚠️ **Scelta esplicita del committente: vale anche per i workout già salvati.** I
+  vecchi «12 round, 2 esercizi» ora durano il doppio (24 intervalli). Il titolo
+  salvato porta la durata vecchia finché il workout non viene riaperto e salvato.
+- L'EMOM **non** cambia: lì i round restano gli intervalli (`stazioniEmom.js`).
+- Le istruzioni di `ai-workout` (`regole.ts`) lo dicono all'IA: valgono solo dopo il deploy.

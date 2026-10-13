@@ -63,6 +63,15 @@ describe('la durata di un blocco', () => {
     expect(durataBlocco(block)).toBe(atteso)
   })
 
+  // 🔴 Il caso del 13/10/2026: 50/10, 7 esercizi, 4 round. I round di un
+  // ON/OFF sono GIRI del circuito, e ogni giro fa tutti gli esercizi: 28′,
+  // non i 4′ che il builder dichiarava.
+  it('ON/OFF: i round sono giri, ogni esercizio è un intervallo', () => {
+    const esercizi = Array.from({ length: 7 }, (_, i) => ({ name: `Es ${i}`, reps: '10' }))
+    expect(durataBlocco({ type: 'ON/OFF', params: { on: '0:50', off: '0:10', rounds: '4' }, exercises: esercizi }))
+      .toBe(28 * 60)
+  })
+
   // 🔴 Riscritto il 09/09/2026 con la chiusura di BACKLOG #40. Prima diceva
   // «moltiplica gli ESERCIZI per i round»: ora un «For Time» è un forfait per
   // giro, perché sommare gli esercizi misura il tempo in cui l'atleta si sta

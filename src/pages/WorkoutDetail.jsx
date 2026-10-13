@@ -127,7 +127,9 @@ const getBlockTitle = (block) => {
       rounds = Math.ceil(timeToSeconds(block.params.total) / (onSec + offSec))
     }
     rounds = rounds || 10
-    return `ON/OFF · ${formatVal(block.params?.on)} ON / ${formatVal(block.params?.off)} OFF · ${rounds} rounds · ${formatTime((onSec + offSec) * rounds)}`
+    // I round sono giri del circuito: ogni giro fa tutti gli esercizi (`durataBlocco`).
+    const intervalli = rounds * Math.max(block.exercises?.length || 0, 1)
+    return `ON/OFF · ${formatVal(block.params?.on)} ON / ${formatVal(block.params?.off)} OFF · ${rounds} rounds · ${formatTime((onSec + offSec) * intervalli)}`
   }
   if (block.type === 'EMOM') {
     const intervalSec = timeToSeconds(block.params?.interval || '1:00') || 60

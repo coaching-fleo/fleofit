@@ -99,6 +99,8 @@ const sommaEsercizi = (esercizi = []) =>
 /**
  * Quante volte il blocco ripete i propri esercizi.
  *
+ * ⚠️ Su un EMOM i round sono gli INTERVALLI e la lista si ripete; su un ON/OFF
+ * sono i GIRI del circuito, e ogni giro fa tutti gli esercizi (`durataBlocco`).
  * ⚠️ I ripieghi (10 per EMOM e ON/OFF, 3 per For Time, 1 per gli altri) sono
  * quelli che BlockPickerModal assegna alla creazione e che la riga di riepilogo
  * del blocco chiuso dichiara: un blocco appena aggiunto e mai aperto deve
@@ -147,7 +149,13 @@ export const durataBlocco = (block) => {
     case 'EMOM':
       return parseDuration(p.interval || '1:00') * giri
     case 'ON/OFF':
-      return (parseDuration(p.on || '1:00') + parseDuration(p.off || '1:00')) * giri
+      // ⚠️ «Round» qui sono i GIRI DEL CIRCUITO (dal 13/10/2026), non gli
+      // intervalli: ogni esercizio è un ON + OFF, e il giro li fa tutti. Con
+      // 50/10, 7 esercizi e 4 round sono 28 intervalli, cioè 28′ — prima ne
+      // venivano 4, e il timer si fermava al quarto esercizio. Senza
+      // esercizi il giro vale un intervallo solo.
+      return (parseDuration(p.on || '1:00') + parseDuration(p.off || '1:00')) *
+        giri * Math.max(esercizi.length, 1)
     // ⚠️ «For Time» e «Cash In/Out» sono cronometri liberi: il tempo lo fa
     // l'atleta, e si stimano a forfait per giro (vedi MINUTI_GIRO_FOR_TIME).
     // «Interval» no — lì ogni esercizio dichiara il proprio `exTime`, quindi
