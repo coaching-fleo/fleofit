@@ -15,9 +15,9 @@
 > in due mesi: era a 436 KB, cioè oltre centomila unità di contesto lette a ogni avvio.
 
 ### Stato, in dieci righe
-- **Due prodotti**: `main` = web app in produzione (Vercel) · `app` = app native iOS **e**
-  Android sullo stesso codice React, cartella `C:\Users\FEDE\Desktop\FLEOFIT`
-  (§1.1). L'ultimo commit si legge con `git log -1`, **mai scritto qui** (è stato sbagliato
+- **Un codice solo, tre destinazioni** (dal 13/10/2026): si lavora su `app`, e lo stesso
+  codice React fa la web app (Vercel, pubblicata da `main`) e le app native iOS **e**
+  Android, cartella `C:\Users\FEDE\Desktop\FLEOFIT` (§1.1). L'ultimo commit si legge con `git log -1`, **mai scritto qui** (è stato sbagliato
   tre volte).
 - **Schema del database congelato** (§0, regola 0-bis): l'approvazione è arrivata, ma lo
   sblocco resta una decisione del committente. **Un'eccezione**, il 09/10/2026: la tabella
@@ -39,10 +39,11 @@
 > *com'è fatto* il progetto; il backlog elenca *cosa manca*, con il perché di ognuna e
 > cosa la blocca. Aggiornare il backlog quando una voce si chiude.
 
-0. **Esistono DUE branch vivi con due destinazioni diverse** (`main` = web app in produzione,
-   `app` = app native iOS **e** Android). Prima di proporre un merge, un deploy o una modifica
-   condivisa (DB, Edge Function), leggere il §1.1: non sono intercambiabili.
-   ⚠️ Su `app` una modifica al codice React vale per **due piattaforme**: chi tocca qualcosa di
+0. 🔴 **SI LAVORA E SI FA PUSH SU `app`. `main` = CIÒ CHE È PUBBLICATO SUL WEB** (dal
+   13/10/2026). `git push origin app` è un salvataggio (Vercel fa solo una preview
+   protetta); `git push origin app:main` **pubblica il sito per tutti**, e si fa solo su
+   richiesta esplicita del committente. Mai commit diretti su `main`. Dettagli al §1.1.
+   ⚠️ Su `app` una modifica al codice React vale per **tre piattaforme** (web, iOS, Android): chi tocca qualcosa di
    nativo (un plugin, un permesso, un gesto di sistema) deve sapere su quale esiste, e provarlo
    su quella (§A.2 per Android). Un plugin che su una piattaforma non c'è va chiamato con un
    `.catch`, o si porta via il codice che lo segue (§A.3 punto 7).
@@ -108,29 +109,33 @@ tempo reale.
 
 ---
 
-## 1.1 I branch — LEGGERE PRIMA DI TOCCARE main
+## 1.1 I branch — DOVE SI FA PUSH
 
-| Branch | Cos'è | Dove finisce |
+> ✅ **Passaggio fatto il 13/10/2026** (commit `4a9fc61`, «Il sito prende il codice
+> dell'app»): `main` ha preso il codice di `app` con un merge `-s ours` più un
+> fast-forward. Il sito di prima è salvato nel tag **`web-legacy-2026-10`** (`d7d53cd`).
+
+| Branch | Cos'è | Push |
 |---|---|---|
-| **`main`** (default) | **Web app in produzione**, quella che gli atleti usano oggi | collegato a **Vercel** → `https://fleofit.vercel.app`. LIVE, non rompere |
-| **`app`** | Le app native **iOS e Android** (§A) | collegato a **niente**: un push è un backup, non un rilascio. Le app arrivano agli Store da Xcode e da Gradle |
-| ~~`ios-version`~~ · ~~`android-version`~~ | superati dal 02/10/2026: storia, non ci si lavora più | — |
+| **`app`** | **Il branch di lavoro**: l'unico codice, per web, iOS e Android | `git push origin app` — salvataggio. Vercel ne fa una **preview** protetta, non tocca il sito |
+| **`main`** (default su GitHub) | **Ciò che è pubblicato sul web**: Vercel lo pubblica su `https://fleofit.vercel.app` a ogni push | `git push origin app:main` — **pubblica il sito per tutti**. Solo su richiesta esplicita del committente |
+| ~~`ios-version`~~ · ~~`android-version`~~ | storia, non ci si lavora più. ⚠️ `ios-version` **non va cancellato**: GitHub Pages lo pubblica, privacy policy compresa | — |
 
-- 🔴 **`git fetch` prima di qualunque affermazione sui due branch**, e prima di dire che
-  qualcosa «manca su main» verificarlo con `git show origin/main:<file>`. Questo documento
-  ha già sbagliato due volte su questo punto.
-- **Sono divergenti ed entrambi si muovono**, e hanno toccato gli stessi file grandi: un
-  merge è un merge vero, con conflitti reali.
-- 🔴 **Database ed Edge Function sono CONDIVISI** da web, iOS e Android, senza staging: una
-  migrazione o un deploy di `send-reminders` colpiscono subito la web app in produzione.
-- **Un fix che serve alla web app va portato su `main`**: metterlo su `app` non basta.
-- **I cron di GitHub girano solo dal branch di default** (`main`): un workflow corretto su
-  `app` è un file inerte.
-- ⚠️ **`main` non conosce l'RPE**: il prefisso `[RPE: n/10]` in `athlete_workouts.notes` lì
-  appare come testo, e se l'atleta riscrive la nota dalla web app l'RPE si perde.
+- 🔴 **Mai commit diretti su `main`**: `main` si muove solo in avanti, portato a `app`. Se un
+  giorno `git push origin app:main` venisse rifiutato (non fast-forward), qualcuno ha scritto
+  su `main`: fermarsi e guardare, **mai** forzare.
+- La fascia «Salva e pubblica» pubblica il branch corrente, cioè `app`: **non** è un rilascio
+  del sito.
+- Le app native arrivano agli Store da Xcode e da Gradle, non da un push.
+- `main` resta il **branch di default** su GitHub di proposito: lì girano i cron (il backup
+  notturno `db-backup.yml`), Vercel ha `main` come *Production Branch*. Un workflow
+  cambiato su `app` diventa attivo solo dopo il prossimo `app:main`.
+- 🔴 **Database ed Edge Function sono condivisi** da web, iOS e Android, senza staging.
+- Tornare indietro: *Instant Rollback* su Vercel (immediato). Solo se serve davvero,
+  `git push --force-with-lease origin web-legacy-2026-10:main`.
+- `git fetch` prima di qualunque affermazione sui branch.
 
-Tutto il resto — cosa c'è solo su `app`, la storia della divergenza, Vercel — in
-`docs/memoria/branch.md`.
+La storia della divergenza fino al 13/10/2026 è in `docs/memoria/branch.md`.
 
 ---
 

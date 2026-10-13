@@ -6,6 +6,12 @@
 
 ## 1.1 I due branch — LEGGERE PRIMA DI TOCCARE main
 
+> ✅ **Superato il 13/10/2026.** `main` ha preso il codice di `app` (`4a9fc61`, merge
+> `-s ours` di `origin/main` più fast-forward); il sito di prima è nel tag
+> `web-legacy-2026-10` (`d7d53cd`). Da allora **si lavora su `app`** e `main` è solo
+> **ciò che è pubblicato sul web**, portato avanti con `git push origin app:main`. Le regole
+> in vigore sono in `CLAUDE.md` §1.1; quanto segue è la storia di prima del passaggio.
+
 > 🧩 **Aggiornamento 02/10/2026.** Il branch nativo si chiama ora **`app`** e contiene iOS e
 > Android insieme. È nato da `android-version` (che a sua volta partiva dall'ultimo commit di
 > `ios-version`), **senza** il commit che toglieva `ios/`. Tutto ciò che sotto si dice di
