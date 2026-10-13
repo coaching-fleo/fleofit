@@ -215,3 +215,13 @@ chiesto di non essere chiamato.
 > chiamata all'API): il marcatore nasconde lo stato dall'interfaccia, non lo cifra.
 
 ---
+
+## 9-ultime-sedute. «Ultime sedute chiuse» nella Home desktop (13/10/2026)
+
+Sotto le due colonne della Home coach desktop: le sedute chiuse negli ultimi 7 giorni
+(oggi + 6), raggruppate per giorno, con RPE dichiarato, gradimento, nota e vocale.
+Logica in `src/lib/ultimeSedute.js`, calcolata DENTRO `HomeCoachDesktop` (chunk pigro) sulle
+righe che la Home ha già: nessuna lettura nuova.
+- ⚠️ Non è «tempo reale»: `athlete_workouts` non ha un orario, e Realtime su quella tabella
+  è configurazione del database condiviso. Dentro un giorno l'ordine non dice chi ha finito prima.
+- Sul desktop la Home rilegge quando la finestra torna visibile, al massimo una volta al minuto.

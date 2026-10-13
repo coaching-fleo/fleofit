@@ -383,3 +383,20 @@ describe('«Cerca con l\'IA» (09/10/2026)', () => {
     expect(screen.queryByRole('button', { name: "Cerca con l'IA" })).not.toBeInTheDocument()
   })
 })
+
+describe('Desktop: ultime sedute chiuse', () => {
+  it('elenca chi ha chiuso un allenamento, per giorno, con il suo RPE', async () => {
+    const prima = window.matchMedia
+    window.matchMedia = vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+    try {
+      ctrl.assegnazioni.valore = [fatta('u1', 'a2', -2, { notes: '[RPE: 7/10]' }), riga('u2', 'a3', -1)]
+      montaCoach()
+      const sezione = await screen.findByRole('region', { name: 'Ultime sedute chiuse' })
+      await waitFor(() => expect(sezione.textContent).toMatch(/Giulia Rossi.*Scheda u1.*RPE 7/))
+      // Una seduta non chiusa non è un'attività.
+      expect(sezione.textContent).not.toMatch(/Scheda u2/)
+    } finally {
+      window.matchMedia = prima
+    }
+  })
+})

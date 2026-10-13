@@ -9,10 +9,11 @@
 // calcolati da Home.jsx (src/lib/statisticheCoach.js), le azioni sono le stesse
 // callback del telefono. Si carica pigra: il telefono non la scarica mai.
 
-import { useState } from 'react'
-import { User, Plus, Bell, ChevronRight, Radio } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { User, Plus, Bell, ChevronRight, Radio, Mic, MessageSquare } from 'lucide-react'
 import { corsia } from '../lib/categorie'
 import { cosaGuardare } from '../lib/cosaGuardare'
+import { ultimeSedute } from '../lib/ultimeSedute'
 
 const MOSTRATE = 8
 
@@ -47,7 +48,19 @@ export default function HomeCoachDesktop({
   caricamento, notificheDaLeggere = 0,
   onNotifiche, onNuovoWorkout, onCalendario, onCambiaGiorno, onGuardaLive,
   onApriFeedback, onApriAtleta, onApriScaduto,
+  assegnazioni = [], atleti = [], onApriSeduta,
 }) {
+  const ultime = useMemo(() => ultimeSedute(assegnazioni, atleti), [assegnazioni, atleti])
+  // Raggruppate per giorno: dentro un giorno non c'è un orario (`ultimeSedute.js`).
+  const perGiorno = useMemo(() => {
+    const gruppi = []
+    for (const u of ultime) {
+      const ultimo = gruppi[gruppi.length - 1]
+      if (ultimo && ultimo.giorno === u.giorno) ultimo.voci.push(u)
+      else gruppi.push({ giorno: u.giorno, voci: [u] })
+    }
+    return gruppi
+  }, [ultime])
   const [tutte, setTutte] = useState(false)
   const voci = cosaGuardare({ feedback, fermi, scaduti })
   const visibili = tutte ? voci : voci.slice(0, MOSTRATE)
@@ -201,6 +214,43 @@ export default function HomeCoachDesktop({
             )}
           </section>
         </div>
+
+        <section aria-labelledby="t-ultime" className="flex flex-col gap-3">
+          <div className="flex items-baseline justify-between">
+            <h2 id="t-ultime" className="text-lg font-extrabold text-white">Ultime sedute chiuse</h2>
+            <span className="text-xs text-gray-500">ultimi 7 giorni</span>
+          </div>
+          <div className="rounded-[20px] bg-[#1e1e1e] border border-[#2a2a2a] px-[18px] py-1.5">
+            {caricamento ? (
+              <div className="h-32 animate-pulse" />
+            ) : ultime.length === 0 ? (
+              <p className="py-6 text-sm text-gray-400">Nessun allenamento chiuso negli ultimi 7 giorni.</p>
+            ) : perGiorno.map((g, gi) => (
+              <div key={g.giorno} className={gi > 0 ? 'border-t border-[#2a2a2a]' : ''}>
+                <p className="pt-3 pb-1 text-xs font-bold uppercase tracking-wider text-gray-500 first-letter:uppercase">{g.giorno}</p>
+                {g.voci.map(u => (
+                  <button key={u.id} type="button" onClick={() => onApriSeduta(u)}
+                    className="w-full flex items-center gap-3 py-2.5 text-left group">
+                    <Volto foto={u.foto} nome={u.nome} />
+                    <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+                      <span className="text-sm font-bold text-white group-hover:text-brand transition">{u.nome}</span>
+                      <span className="text-[13px] text-gray-400 truncate">{u.titolo}</span>
+                    </span>
+                    {u.haVocale && <Mic size={15} className="text-gray-400 shrink-0" aria-label="nota vocale" />}
+                    {u.haNota && <MessageSquare size={15} className="text-gray-400 shrink-0" aria-label="nota scritta" />}
+                    {u.gradimento === 'si' && <span className="text-[13px] text-gray-400 shrink-0">piaciuto</span>}
+                    {u.gradimento === 'no' && <span className="text-[13px] text-gray-400 shrink-0">non piaciuto</span>}
+                    {u.rpe != null && (
+                      <span className={`shrink-0 px-2.5 h-7 rounded-full flex items-center text-xs font-extrabold ${coloreRpe(u.rpe)}`}>
+                        RPE {u.rpe}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   )

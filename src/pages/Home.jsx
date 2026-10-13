@@ -697,6 +697,23 @@ setNotifications(prev => {
     }
   }, [role, user, refreshTick])
 
+  // Desktop: quando la finestra torna in primo piano si rilegge, così «Ultime
+  // sedute chiuse» non resta ferma a quando la scheda è stata aperta (piano
+  // desktop fase 2, #4). Al massimo una volta al minuto: un coach che passa da
+  // una finestra all'altra non deve rifare tutte le letture a ogni clic.
+  // Il telefono ha già il suo `appStateChange` qui sopra.
+  useEffect(() => {
+    if (!desktop) return
+    let ultima = Date.now()
+    const rientra = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - ultima < 60000) return
+      ultima = Date.now()
+      setRefreshTick(t => t + 1)
+    }
+    document.addEventListener('visibilitychange', rientra)
+    return () => document.removeEventListener('visibilitychange', rientra)
+  }, [desktop])
+
   useEffect(() => {
     if (showNotifications) {
       document.body.style.overflow = 'hidden'
@@ -1123,6 +1140,9 @@ setNotifications(prev => {
             onApriFeedback={apriFeedback}
             onApriAtleta={(a) => navigate(`/athletes/${a.id}`)}
             onApriScaduto={(x) => navigate(`/workout/${x.workoutId}?athlete_id=${x.atletaId}`)}
+            assegnazioni={assegnazioniCoach}
+            atleti={atletiCoach}
+            onApriSeduta={(x) => navigate(`/workout/${x.workoutId}?athlete_id=${x.atletaId}`)}
           />
         </Suspense>
       )}
