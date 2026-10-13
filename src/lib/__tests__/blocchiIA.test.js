@@ -73,6 +73,23 @@ describe('preparaBlocchiIA — le stazioni EMOM su più minuti', () => {
   })
 })
 
+describe('preparaBlocchiIA — i nomi degli esercizi', () => {
+  const nomi = (exercises) => preparaBlocchiIA([{ type: 'For Time', params: {}, exercises }])[0].exercises.map(e => e.name)
+
+  it('riporta gli ergometri al nome del picker, così il builder li riconosce', () => {
+    expect(nomi([{ name: 'Ski Erg' }, { name: 'skierg' }, { name: 'Row Erg' }, { name: 'Air Bike' }]))
+      .toEqual(['SkiErg', 'SkiErg', 'Rowing', 'Assault Bike'])
+  })
+
+  it('riporta al nome canonico anche gli esercizi della lista', () => {
+    expect(nomi([{ name: 'wall balls' }, { name: 'Sled push' }])).toEqual(['Wall Balls', 'Sled Push'])
+  })
+
+  it('lascia com’è un nome che non conosce, e Rest', () => {
+    expect(nomi([{ name: 'Mountain Climber Cross' }, { name: 'Rest' }])).toEqual(['Mountain Climber Cross', 'Rest'])
+  })
+})
+
 describe('blocchiPerIA', () => {
   it('toglie gli id client-side e tiene tutto il resto', () => {
     const [b] = blocchiPerIA([{ id: 0.1, type: 'EMOM', params: { rounds: '12' }, notes: 'n',

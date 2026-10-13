@@ -104,6 +104,13 @@ INTENSITÀ: ogni esercizio DEVE avere il campo "intensity", una stringa con un i
   For Time / AMRAP brevi o "all out" 8-10, defaticamento e Cash Out 3-5.
 - Non mettere mai "intensity" sull'esercizio "Rest".
 
+NOMI DEGLI ESERCIZI: gli ergometri si scrivono ESATTAMENTE così, senza spazi o varianti:
+"SkiErg", "Rowing", "Assault Bike", "Echo Bike", "TrueForm Runner", "Curve Treadmill"
+(mai "Ski Erg", "Ski", "Row", "Rower", "Air Bike"). Per un ergometro usa "meters" (es. "500m")
+e, se c'è un passo, "ergoPace" (es. "2:00 /500m"); le calorie vanno nelle "notes" (es. "15 cal").
+Le stazioni Hyrox si scrivono "Sled Push", "Sled Pull", "Burpees Broad Jumps", "Farmers Carry",
+"Sandbag Lunges", "Wall Balls", "Run".
+
 STAZIONI CONTINUE NEGLI EMOM: in un EMOM ogni esercizio vale UN intervallo, nell'ordine.
 Se l'utente dice che un esercizio occupa più intervalli di fila (es. "minuti 2-3 sled push",
 "dal minuto 4 al 6 rowing", "sled push per due minuti"), scrivi quell'esercizio UNA SOLA VOLTA

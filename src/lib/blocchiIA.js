@@ -11,7 +11,7 @@
  */
 
 import { intervalliDi } from './stazioniEmom'
-import { basso, passoCorsa, quantoCorsa } from './leggiWorkout'
+import { basso, passoCorsa, quantoCorsa, trovaEsercizio } from './leggiWorkout'
 
 /** Lo stesso valore da cui parte il cursore nel picker dell'esercizio. */
 export const INTENSITA_PREDEFINITA = '5'
@@ -41,12 +41,22 @@ const intervalliValidi = (tipo, ex) => {
   return n > 1 ? String(n) : null
 }
 
+/**
+ * Il nome dell'esercizio come lo scrive il picker (13/10/2026). Il modello
+ * scriveva «Ski Erg» al posto di «SkiErg»: il builder riconosce un ergometro
+ * dal nome ESATTO (`isErgo` di src/lib/esercizi.js), e con un nome diverso
+ * l'esercizio diventava un custom con i campi sbagliati — niente metri né
+ * passo /500m in modifica. Si usa la stessa lettura di `FoglioDaTesto`; un
+ * nome che non si riconosce resta com'è.
+ */
+const nomeCanonico = (nome) => (typeof nome === 'string' ? trovaEsercizio(nome) ?? nome : nome)
+
 /** Rest come esercizio non ha intensità, come nel picker. */
 const senzaIntensita = (ex) => ex?.name === 'Rest'
 
 /**
- * Aggiunge gli `id` client-side, completa l'intensità di ogni esercizio e
- * normalizza la durata delle stazioni EMOM. Non tocca nient'altro: quello che
+ * Aggiunge gli `id` client-side, completa l'intensità di ogni esercizio,
+ * riporta i nomi a quelli del picker e normalizza la durata delle stazioni EMOM. Non tocca nient'altro: quello che
  * Gemini ha scritto resta com'è.
  */
 export function preparaBlocchiIA(blocchi) {
@@ -62,6 +72,7 @@ export function preparaBlocchiIA(blocchi) {
         const intervalli = intervalliValidi(b.type, ex)
         return {
           ...resto,
+          ...(resto.name !== undefined ? { name: nomeCanonico(resto.name) } : {}),
           ...(valore ? { intensity: valore } : {}),
           ...(intervalli ? { intervals: intervalli } : {}),
           id: Math.random(),

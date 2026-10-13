@@ -1347,3 +1347,19 @@ e cerca la card. Visti fallire tutti e due (categoria finta «Nuoto», card tolt
 - ⚠️ **Serve il deploy di `ai-workout`** perché Corsa e Custom funzionino:
   `supabase functions deploy ai-workout`. La usa solo l'app (`main` chiama solo
   `send-reminders`), quindi non tocca la web app.
+
+## IA: i nomi degli esercizi riportati a quelli del picker (13/10/2026)
+
+L'IA scriveva a volte «Ski Erg» invece di «SkiErg». Il builder riconosce un
+ergometro solo dal nome **esatto** (`isErgo`, `ERGOMETERS`), quindi l'esercizio
+diventava un custom e in modifica mancavano metri e passo /500m.
+
+- `preparaBlocchiIA` (`src/lib/blocchiIA.js`) passa ogni nome da `trovaEsercizio`
+  di `leggiWorkout.js` (la stessa lettura di «Da un testo scritto»): «Ski Erg»,
+  «Row Erg», «Air Bike», «wall balls» → nome del picker. Un nome che non si
+  riconosce resta com'è.
+- `ISTRUZIONI_HYROX` in `ai-workout/regole.ts` elenca ora i nomi esatti degli
+  ergometri e delle stazioni, con i campi da usare (`meters`, `ergoPace`, calorie
+  nelle note). Vale solo dopo il deploy della funzione.
+- I workout già salvati con «Ski Erg» non si correggono da soli: vanno riaperti e
+  sistemati a mano.
