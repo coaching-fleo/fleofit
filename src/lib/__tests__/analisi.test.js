@@ -180,3 +180,33 @@ describe('tabellaAnalisi', () => {
     expect(riga.pausa).toBe(true)
   })
 })
+
+describe('correzioni della revisione finale', () => {
+  it('filtraRighe tiene solo le righe degli atleti seguiti (né coach né cancellati)', () => {
+    const righe = [fatto('a1', '2026-10-05'), fatto('coach', '2026-10-05'), fatto('cancellato', '2026-10-06')]
+    expect(filtraRighe(righe, { atleti: [atleta('a1')] }).map(r => r.athlete_id)).toEqual(['a1'])
+  })
+
+  it('il gradimento si ferma a oggi, come tutti gli altri numeri', () => {
+    const righe = [fatto('a1', '2026-10-13', { gradimento: 'si' }), fatto('a1', '2026-10-16', { gradimento: 'no' })]
+    const g = gradimentoPerSettimana(righe, settimaneDelPeriodo(8, OGGI))
+    expect(g[7].valore).toBe(100)
+  })
+
+  it('l\'aderenza della settimana in corso è quella del report', () => {
+    const atleti = [
+      atleta('a1'),
+      atleta('a2', { notes: '[PAUSA: 2026-10-01]\n' }),
+      atleta('a3'), // nuovo: niente prima di questa settimana
+      atleta('a4'), // niente in programma
+    ]
+    const righe = [
+      fatto('a1', '2026-10-05'), fatto('a1', '2026-10-12'), ass('a1', '2026-10-13'), ass('a1', '2026-10-15'),
+      ass('a2', '2026-10-12'),
+      fatto('a3', '2026-10-13'), fatto('a3', '2026-10-14'), ass('a3', '2026-10-14'),
+    ]
+    const serie = aderenzaPerSettimana(atleti, righe, settimaneDelPeriodo(8, OGGI))
+    const report = reportSettimanale(atleti, righe, { oggi: OGGI })
+    expect(serie.at(-1).valore).toBe(report.squadra.percentuale)
+  })
+})

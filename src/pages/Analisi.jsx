@@ -118,8 +118,8 @@ export default function Analisi() {
   const scelto = atletaId ? atleti.find(a => a.id === atletaId) || null : null
   const visti = useMemo(() => (scelto ? [scelto] : atleti), [scelto, atleti])
   const righe = useMemo(
-    () => filtraRighe(assegnazioni, { atletaId: scelto?.id, categoria }),
-    [assegnazioni, scelto, categoria]
+    () => filtraRighe(assegnazioni, { atletaId: scelto?.id, categoria, atleti }),
+    [assegnazioni, scelto, categoria, atleti]
   )
 
   const analisi = useMemo(() => {

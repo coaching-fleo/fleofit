@@ -64,9 +64,19 @@ export function settimaneDelPeriodo(quante = PERIODO_PREDEFINITO, oggi = new Dat
 export const periodoPrecedente = (quante = PERIODO_PREDEFINITO, oggi = new Date()) =>
   settimaneDelPeriodo(quante, subWeeks(oggi, quante))
 
-/** Le righe di un atleta e/o di una categoria. Senza filtri, tutte. */
-export function filtraRighe(righe = [], { atletaId, categoria } = {}) {
+/**
+ * Le righe di un atleta e/o di una categoria. Senza filtri, tutte.
+ *
+ * ⚠️ `atleti` tiene solo le righe di chi si segue: la lettura porta anche le
+ * sedute del coach e degli atleti cancellati (che restano fino al cron di
+ * mezzanotte). I numeri che passano dalla griglia le scartano da soli, ma
+ * minuti e gradimento leggono le righe dirette: senza questo filtro le barre
+ * dei minuti sommerebbero più delle ore scritte sopra.
+ */
+export function filtraRighe(righe = [], { atletaId, categoria, atleti } = {}) {
+  const seguiti = atleti ? new Set(atleti.map(a => a?.id)) : null
   return righe.filter(r =>
+    (!seguiti || seguiti.has(r?.athlete_id)) &&
     (!atletaId || r?.athlete_id === atletaId) &&
     (!categoria || categoriaDi(r?.workouts?.sections) === categoria))
 }
@@ -223,7 +233,7 @@ export function gradimentoPerSettimana(righe = [], settimane = []) {
   return settimane.map(s => {
     let si = 0, risposte = 0
     for (const r of nellaSettimana(righe, s)) {
-      if (r.status !== 'completed') continue
+      if (r.status !== 'completed' || (s.fino && r.completed_date > s.fino)) continue
       const g = gradimentoDi(r.notes)
       if (!g) continue
       risposte++
