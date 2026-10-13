@@ -70,6 +70,12 @@ html.desktop {
    striscia di 1440px: diventa una finestra di 640px, staccata dal bordo.
    Vale per tutti i fogli costruiti come `fixed … justify-end` con il figlio
    `rounded-t-3xl` (FoglioMisure, ricerca, scheda workout…), senza toccarli. */
+/* I tipi di blocco dell'archivio sono una griglia larga quanto il telefono
+   (una colonna per tipo): nella colonna dei filtri del desktop vanno su tre. */
+html.desktop .filtri-archivio [aria-label="Filtra per tipo di blocco"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
 html.desktop .fixed.justify-end > .rounded-t-3xl,
 html.desktop .fixed.items-end > .rounded-t-3xl {
   width: 100%;

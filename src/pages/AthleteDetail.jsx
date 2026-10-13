@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
+import { useSchermoLargo, eDesktop } from '../useDesktop'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
@@ -65,6 +66,9 @@ const DalleNoteUI = lazy(() => import('../components/DalleNoteUI'))
 export default function AthleteDetail() {
   const { id: paramId } = useParams()
   const { role, user } = useAuth()
+  // Sul desktop (solo coach, src/useDesktop.js) la scheda va su due colonne e
+  // storico e record partono aperti: lo spazio c'è.
+  const desktop = eDesktop(useSchermoLargo(), role)
   const id = paramId || user?.id
   const navigate = useNavigate()
   const indietro = useIndietro('/athletes')
@@ -76,8 +80,8 @@ export default function AthleteDetail() {
   // Le tre tab sono diventate due sezioni che si aprono in pagina, più un menu
   // per i comandi che erano tre bottoni in testata (CLAUDE.md §9-terdecies).
   const [menuAperto, setMenuAperto] = useState(false)
-  const [storicoAperto, setStoricoAperto] = useState(false)
-  const [prAperti, setPrAperti] = useState(false)
+  const [storicoAperto, setStoricoAperto] = useState(desktop)
+  const [prAperti, setPrAperti] = useState(desktop)
   const [loading, setLoading] = useState(true)
   const [workoutToRemove, setWorkoutToRemove] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -559,11 +563,10 @@ export default function AthleteDetail() {
     },
   ]
 
-  return (
-    <div className="px-4 max-w-2xl mx-auto min-h-[100dvh] flex flex-col gap-[14px] page-transition
-                    pt-[calc(env(safe-area-inset-top)+1rem)] pb-[var(--altezza-navbar)]
-                    bg-[radial-gradient(120%_46%_at_50%_0%,#17160f_0%,#0B0B0B_54%)]">
-
+  // I pezzi della scheda, scritti una volta: il telefono li impila, il
+  // desktop li mette su due colonne. L'ordine sul telefono è quello di sempre.
+  const pTestata = (
+    <>
       {/* La testata porta un menu e basta. Esporta, Modifica e Pausa erano tre
           bottoni dello stesso peso in cima alla pagina: tre comandi che si
           usano una volta, messi sopra il contenuto che si legge ogni volta.
@@ -572,7 +575,10 @@ export default function AthleteDetail() {
       <TestataScheda
         onIndietro={role !== 'athlete' && !isOwnProfile ? indietro : null}
         onMenu={() => setMenuAperto(true)} />
-
+    </>
+  )
+  const pIdentita = (
+    <>
       {/* 🔴 La pillola «In pausa» è nascosta all'atleta, e non è pudore: questa
           pagina è anche `/profile`. La pausa è uno stato interno della
           programmazione del coach, e dirla con una pillola arancione invece
@@ -602,7 +608,10 @@ export default function AthleteDetail() {
             : null} />
         ) : null}
         nota={pausaAtleta.testo} />
-
+    </>
+  )
+  const pAndamento = (
+    <>
       {/* L'EROE — «come sta andando».
           Era la terza tab, dietro due tocchi, spezzata in quattro grafici che
           non si parlavano: aderenza, volume, carico, RPE. Sono la stessa
@@ -616,7 +625,10 @@ export default function AthleteDetail() {
         delta={andamento.carico.delta}
         frase={andamento.frase.testo}
         dettaglio={andamento.frase.dettaglio} />
-
+    </>
+  )
+  const pBento = (
+    <>
       <div className="grid grid-cols-[1.05fr_1fr] gap-3">
         <CellaBento
           etichetta="Volume" valore={andamento.volume.minuti} unita="min"
@@ -636,7 +648,10 @@ export default function AthleteDetail() {
           <BarraFasce distribuzione={andamento.sforzo.distribuzione} />
         </CellaBento>
       </div>
-
+    </>
+  )
+  const pNote = (
+    <>
       {/* Cosa dicono le note, trasformate in dati: solo per il coach. */}
       {role !== 'athlete' && statoNote !== 'caricamento' && statoNote !== 'assente' && (
         <Suspense fallback={null}>
@@ -651,7 +666,10 @@ export default function AthleteDetail() {
             }} />
         </Suspense>
       )}
-
+    </>
+  )
+  const pObiettivo = (
+    <>
       {/* Il banner del prossimo obiettivo era alto quanto una card, con un
           numero da 30px: teneva il peso di un eroe per un dato che cambia una
           volta al giorno. È una riga, e resta cliccabile com'era. */}
@@ -661,7 +679,10 @@ export default function AthleteDetail() {
           giorni={countdownDays}
           onClick={() => navigate(`/workout/${nextEvent.workouts.id}?athlete_id=${id}`)} />
       )}
-
+    </>
+  )
+  const pOggi = (
+    <>
       {todayWorkoutsList.length > 0 && (
         <div className="flex flex-col gap-2.5">
           <IntestazioneSezione etichetta="Oggi" />
@@ -682,7 +703,10 @@ export default function AthleteDetail() {
           ))}
         </div>
       )}
-
+    </>
+  )
+  const pProssimi = (
+    <>
       {/* ⚠️ «Prossimi» NON è nell'artboard, e resta lo stesso. L'artboard
           disegna una giornata; togliere gli allenamenti già programmati
           vorrebbe dire che il coach non può più vedere cos'ha assegnato senza
@@ -706,7 +730,10 @@ export default function AthleteDetail() {
           ))}
         </div>
       )}
-
+    </>
+  )
+  const pStoricoRecord = (
+    <>
       {/* Le due tab che restavano diventano due righe che si aprono in pagina.
           La differenza che conta non è estetica: una tab nasconde il contenuto
           E la sua esistenza, una riga dice quanto c'è dentro prima di aprirla. */}
@@ -873,7 +900,10 @@ export default function AthleteDetail() {
             onClick={() => { setAutonomousForm({ title: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '', id: null, awId: null }); setAutonomousModalOpen(true); }} />
         )}
       </div>
-
+    </>
+  )
+  const pBarra = (
+    <>
       {/* Assegna e Crea erano due bottoncini accanto al titolo «Diario
           Workout», cioè a metà pagina: sono le due azioni per cui il coach
           apre la scheda di un atleta, e non devono dipendere da quanto è
@@ -885,6 +915,60 @@ export default function AthleteDetail() {
           <BottoneQuadrato icona={Plus} etichetta="Crea un workout per questo atleta"
             onClick={() => navigate(`/create?athlete_id=${id}`)} />
         </BarraAzioni>
+      )}
+    </>
+  )
+
+  return (
+    <div className={`${desktop ? 'px-10 max-w-[1320px] pt-6 gap-6' : 'px-4 max-w-2xl gap-[14px] pt-[calc(env(safe-area-inset-top)+1rem)]'} mx-auto min-h-[100dvh] flex flex-col page-transition
+                    pb-[var(--altezza-navbar)]
+                    bg-[radial-gradient(120%_46%_at_50%_0%,#17160f_0%,#0B0B0B_54%)]`}>
+
+      {desktop ? (
+        <>
+          {pTestata}
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex-1 min-w-0">{pIdentita}</div>
+            {!isOwnProfile && (
+              <div className="shrink-0 flex items-center gap-2.5 pt-2">
+                <button type="button" onClick={() => navigate(`/create?athlete_id=${id}`)}
+                  className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-[#2a2a2a] border border-[#383838] text-white text-sm font-bold hover:border-[#555]">
+                  <Plus size={17} aria-hidden="true" />Crea workout
+                </button>
+                <button type="button" onClick={() => setAssignModalOpen(true)}
+                  className="inline-flex items-center gap-2 h-11 px-[18px] rounded-xl bg-brand text-black text-sm font-extrabold hover:brightness-110">
+                  <Dumbbell size={17} aria-hidden="true" />Assegna
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] gap-6 items-start">
+            <div className="flex flex-col gap-[14px] min-w-0">
+              {pAndamento}
+              {pBento}
+              {pNote}
+              {pStoricoRecord}
+            </div>
+            <div className="flex flex-col gap-[14px] min-w-0 sticky top-6">
+              {pObiettivo}
+              {pOggi}
+              {pProssimi}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          {pTestata}
+          {pIdentita}
+          {pAndamento}
+          {pBento}
+          {pNote}
+          {pObiettivo}
+          {pOggi}
+          {pProssimi}
+          {pStoricoRecord}
+          {pBarra}
+        </>
       )}
 
       {menuAperto && <MenuScheda etichetta="Azioni sull'atleta" onChiudi={() => setMenuAperto(false)} voci={vociMenu} />}

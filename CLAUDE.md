@@ -633,7 +633,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `SceneDelegate.swift`, `FleoBridgeViewController`, plugin dell'app iOS | `app-store.md` (§9-foto-ocr) |
 | un archive o una risposta ad App Store, `ios/`, `Info.plist`, entitlements | `app-store.md` |
 | test, lint, `src/test/`, ambiente di prova, navigazione e tasto indietro | `qualita-e-test.md` |
-| `useDesktop.js`, `BarraLaterale`, `HomeCoachDesktop`, `CalendarioTeam`, `calendarioTeam.js`, `cosaGuardare.js`, `CreaWorkoutDesktop`, ogni cosa della versione desktop (solo coach) | `../piano-web-desktop.md` |
+| `useDesktop.js`, `BarraLaterale`, `HomeCoachDesktop`, `CalendarioTeam`, `calendarioTeam.js`, `cosaGuardare.js`, `CreaWorkoutDesktop`, `AtletiDesktop`, `ArchivioDesktop`, `tabellaAtleti.js`, ogni cosa della versione desktop (solo coach) | `../piano-web-desktop.md` |
 | merge, `main`, Vercel | `branch.md` |
 | dove sta un file e a cosa serve | `struttura.md` |
 | le funzionalità per sommi capi | `funzionalita.md` |

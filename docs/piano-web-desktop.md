@@ -189,6 +189,21 @@ Regola d'oro: **sotto i 1024 px non cambia un pixel, e nelle app native non camb
   Impostazioni) dentro il guscio restano la loro colonna centrata: sono i punti 2, 5 e 6
   qui sotto.
 
+#### ✅ Secondo giro, 13/10/2026 (richieste del committente)
+- **Login**: `Guscio` di `LoginUI.jsx` su schermo largo (qui il ruolo non si conosce: conta
+  solo `useSchermoLargo`) si divide in due, marchio a sinistra e accesso a destra. Test:
+  `GuscioLogin.test.jsx`.
+- **Calendario**: la griglia scorre nel suo riquadro, con la riga dei giorni `sticky top-0`
+  e la colonna dei nomi `sticky left-0`: con tanti atleti la data resta visibile.
+- **Atleti**: `AtletiDesktop.jsx` (pigra), tabella atleta · dati · settimana · ultimo ·
+  stato; «ultimo» da `src/lib/tabellaAtleti.js` (con test).
+- **Scheda atleta**: `AthleteDetail.jsx` scrive i pezzi una volta (`pTestata`, `pAndamento`…):
+  il telefono li impila nell'ordine di sempre, il desktop li mette su due colonne con
+  Assegna e Crea in alto; storico e record partono aperti.
+- **Archivio**: `ArchivioDesktop.jsx` (pigra), filtri in colonna a sinistra (gli stessi
+  componenti del telefono) e schede in griglia per mese.
+- Restano col disegno del telefono dentro il guscio: scheda workout, Report, Impostazioni.
+
 ### Fase 3 — Le schermate desktop, coach per primo
 Il coach è chi lavora alla scrivania; l'atleta usa il telefono. Ordine proposto:
 

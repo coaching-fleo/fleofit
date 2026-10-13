@@ -241,14 +241,19 @@ export default function CalendarioTeam({ onVistaMese }) {
       </header>
 
       <div className="flex gap-5 items-start">
-        <div className="flex-1 min-w-0 overflow-x-auto rounded-3xl bg-[#141414] border border-[#2a2a2a]">
+        {/* 🔴 La griglia scorre DENTRO il suo riquadro, non con la pagina: è
+            l'unico modo perché la riga dei giorni resti in cima (sticky) anche
+            con trenta atleti — un contenitore `overflow-x-auto` diventa il
+            riferimento dello sticky, e con la pagina che scorre i giorni se ne
+            andavano (segnalato dal committente il 13/10/2026). */}
+        <div className="flex-1 min-w-0 overflow-auto max-h-[calc(100vh-150px)] rounded-3xl bg-[#141414] border border-[#2a2a2a]">
           <div className="min-w-[900px] grid grid-cols-[190px_repeat(7,minmax(0,1fr))]">
-            <div className="px-4 py-3.5 border-b border-[#262626] text-xs font-bold text-gray-400 flex items-end">
+            <div className="sticky top-0 left-0 z-30 bg-[#141414] px-4 py-3.5 border-b border-[#262626] text-xs font-bold text-gray-400 flex items-end">
               {righe.length} {righe.length === 1 ? 'atleta' : 'atleti'}
             </div>
             {giorni.map(g => (
               <div key={chiave(g)}
-                className={`px-2.5 py-3 border-b border-[#262626] border-l border-[#1f1f1f] flex flex-col gap-0.5 ${isToday(g) ? 'bg-brand/[.06]' : ''}`}>
+                className={`sticky top-0 z-20 bg-[#141414] px-2.5 py-3 border-b border-[#262626] border-l border-[#1f1f1f] flex flex-col gap-0.5 ${isToday(g) ? 'shadow-[inset_0_0_0_999px_rgba(241,186,23,.06)]' : ''}`}>
                 <span className={`text-xs font-bold uppercase tracking-[.06em] ${isToday(g) ? 'text-brand' : 'text-gray-400'}`}>
                   {format(g, 'EEE', { locale: it })}
                 </span>
@@ -261,7 +266,7 @@ export default function CalendarioTeam({ onVistaMese }) {
             ) : righe.map(r => (
               <div key={r.id} className="contents">
                 <button type="button" onClick={() => navigate(`/athletes/${r.id}`)}
-                  className={`px-4 py-2.5 border-b border-[#222] flex items-center gap-2.5 text-left group ${r.inPausa ? 'opacity-50' : ''}`}>
+                  className={`sticky left-0 z-10 bg-[#141414] px-4 py-2.5 border-b border-[#222] flex items-center gap-2.5 text-left group ${r.inPausa ? 'opacity-50' : ''}`}>
                   <Volto foto={r.foto} nome={r.nome} />
                   <span className="min-w-0 flex flex-col">
                     <span className="text-[13px] font-bold text-white truncate group-hover:text-brand transition">{r.nome}</span>
@@ -291,7 +296,7 @@ export default function CalendarioTeam({ onVistaMese }) {
             ))}
 
             {!caricamento && righe.length > 0 && (<>
-              <div className="px-4 py-3 text-xs font-bold text-gray-400">Sessioni</div>
+              <div className="sticky left-0 z-10 bg-[#141414] px-4 py-3 text-xs font-bold text-gray-400">Sessioni</div>
               {carico.map((g, i) => (
                 <div key={i} className="px-2.5 py-3 border-l border-[#1f1f1f] flex flex-col gap-1.5">
                   <div aria-hidden="true" className="h-1.5 rounded-full bg-[#262626] overflow-hidden">

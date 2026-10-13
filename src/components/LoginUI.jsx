@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, KeyRound, ArrowRight, Check, AlertTriangle, 
 import { CARD, CARTA_RIGA_BASE, LABEL, RIGA, VETRO } from '../lib/stiliCard'
 import { celleCodice, GRUPPO_CODICE } from '../lib/codiceInvito'
 import { useBottomSheet } from '../useBottomSheet'
+import { useSchermoLargo } from '../useDesktop'
 
 /**
  * I pezzi visivi dell'accesso (artboard `Login.dc.html`, opzione 1b).
@@ -31,6 +32,33 @@ export function Guscio({ tinta = 'ambra', children }) {
   const alone = tinta === 'verde'
     ? 'radial-gradient(120% 45% at 50% 0%,#0f1a12 0%,#0B0B0B 58%)'
     : 'radial-gradient(120% 45% at 50% 0%,#17160f 0%,#0B0B0B 58%)'
+  // Sul computer (web, finestra ≥ 1024px) la pagina si divide in due: il
+  // marchio a sinistra, l'accesso a destra in una colonna larga quanto un
+  // telefono. Qui il ruolo non si conosce ancora, quindi conta solo lo
+  // schermo. Sul telefono e nelle app native resta tutto com'era.
+  const largo = useSchermoLargo()
+  if (largo) {
+    return (
+      <div className="min-h-screen flex bg-[#0B0B0B]">
+        <div className="relative flex-1 min-w-0 hidden lg:flex flex-col justify-between p-14 overflow-hidden border-r border-[#1c1c1c]"
+          style={{ background: 'radial-gradient(90% 70% at 20% 15%,#2b2210 0%,#16130b 45%,#0B0B0B 100%)' }}>
+          <p className="text-[28px] font-black tracking-[-.03em] text-white">FLEO<span className="text-brand">FIT</span></p>
+          <div className="max-w-[520px]">
+            <p className="text-[44px] leading-[1.05] font-black tracking-[-.035em] text-white">
+              Programma, segui e correggi.<br /><span className="text-brand">Tutto il team in una pagina.</span>
+            </p>
+            <p className="mt-5 text-base text-gray-300 max-w-[440px]">
+              Hyrox e Running: workout, calendario e feedback degli atleti, dal computer come dal telefono.
+            </p>
+          </div>
+          <p className="text-xs font-bold uppercase tracking-[.16em] text-gray-500">Hyrox &amp; Running</p>
+        </div>
+        <div className="w-[min(560px,100%)] shrink-0 flex flex-col px-10 py-10 page-transition" style={{ background: alone }}>
+          <div className="w-full max-w-[420px] mx-auto flex-1 flex flex-col">{children}</div>
+        </div>
+      </div>
+    )
+  }
   return (
     <div
       className="min-h-screen flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-[calc(1.5rem+env(safe-area-inset-bottom))] page-transition"

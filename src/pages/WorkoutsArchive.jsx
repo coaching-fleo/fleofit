@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRipresa, useRicorda } from '../useRipresa'
 import { useIndietro } from '../useIndietro'
@@ -15,6 +15,11 @@ import {
   TestataArchivio, CampoRicerca, FiltriCorsia, IntestazioneSezione,
   RigaWorkout, ScheletroArchivio, VuotoArchivio, FiltriTipo, FiltriEsercizio,
 } from '../components/ArchivioUI'
+import { useSchermoLargo, eDesktop } from '../useDesktop'
+
+// L'archivio a griglia sul desktop (src/useDesktop.js): pigro, il telefono non
+// lo scarica mai.
+const ArchivioDesktop = lazy(() => import('../components/ArchivioDesktop'))
 
 // Tornando da un workout l'archivio riprende dov'era: src/useRipresa.js.
 
@@ -32,6 +37,7 @@ export default function WorkoutsArchive() {
   const navigate = useNavigate()
   const indietro = useIndietro('/')
   const isCoach = role !== 'athlete'
+  const desktop = eDesktop(useSchermoLargo(), role)
 
   useRicorda('archivio', user?.id, ripresa, { workouts, searchTerm, corsiaAttiva, tipiScelti, eserciziScelti, caricato: !loading })
 
@@ -141,6 +147,45 @@ export default function WorkoutsArchive() {
   // ⚠️ L'indice della cascata scorre ATTRAVERSO i gruppi. `nth-child` qui non
   // basta: le righe stanno dentro i mesi, quindi ripartirebbe da capo a ogni
   // intestazione e agosto entrerebbe insieme a settembre (src/lib/cascata.js).
+  if (desktop) {
+    return (
+      <Suspense fallback={<div className="min-h-screen" />}>
+        <ArchivioDesktop
+          dettaglio={dettaglio}
+          onIndietro={null}
+          loading={loading}
+          gruppi={gruppi}
+          vuoto={<VuotoArchivio conFiltri={conFiltri} onAzzera={azzera} />}
+          filtri={<>
+            <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
+            {corsie.length > 1 && (
+              <FiltriCorsia corsie={corsie} attiva={corsiaAttiva} totale={workouts.length}
+                onCambia={setCorsiaAttiva} tuttiAttivo={corsiaAttiva === null && tipiScelti.length === 0 && !conEsercizi}
+                onTutti={() => { setCorsiaAttiva(null); setTipiScelti([]); setEserciziScelti({}) }} />
+            )}
+            {tipi.length > 0 && <FiltriTipo tipi={tipi} scelti={tipiScelti} onCambia={cambiaTipo} />}
+            {esercizi.length > 0 && (
+              <FiltriEsercizio esercizi={esercizi} scelte={eserciziScelti} onCambia={cambiaEsercizio} />
+            )}
+            {conFiltri && (
+              <button type="button" onClick={azzera} className="self-start mt-2 text-sm font-bold text-brand hover:brightness-110">
+                Azzera i filtri
+              </button>
+            )}
+          </>}
+          schede={(w) => ({
+            categoria: categoriaDi(w.sections),
+            titolo: w.title || 'Senza titolo',
+            meta: metaWorkout(w),
+            assegnati: isCoach ? (w.athlete_workouts?.length ?? 0) : undefined,
+            completato: !isCoach && w.status === 'completed',
+            onApri: () => navigate(isCoach ? `/workout/${w.id}` : `/workout/${w.id}?athlete_id=${user.id}`),
+          })}
+        />
+      </Suspense>
+    )
+  }
+
   let n = 0
 
   return (

@@ -10,7 +10,7 @@
 // forma. Cambia il JSX, cambia l'ordine, e la pagina fa una seconda lettura —
 // una sola query in più — per poter dire un numero.
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useRipresa, useRicorda } from '../useRipresa'
@@ -33,9 +33,16 @@ import {
   TestataAtleti, FiltriStato, FasciaRichiamo, RigaAtleta, RigaPausa,
   RigaEliminato, ScheletroAtleti, VuotoAtleti,
 } from '../components/AtletiUI'
+import { useSchermoLargo, eDesktop } from '../useDesktop'
+import { ultimoAllenamento, quandoFa } from '../lib/tabellaAtleti'
+
+// La tabella degli atleti sul desktop (src/useDesktop.js): pigra, il telefono
+// non la scarica mai.
+const AtletiDesktop = lazy(() => import('../components/AtletiDesktop'))
 
 export default function Athletes() {
   const { role, user } = useAuth()
+  const desktop = eDesktop(useSchermoLargo(), role)
   // Tornando dalla scheda di un atleta la rubrica riprende dov'era — posizione,
   // vista e ricerca — come l'archivio (src/useRipresa.js).
   const ripresa = useRipresa('atleti', user?.id)
@@ -177,6 +184,45 @@ export default function Athletes() {
   // Tornando indietro le righe ci sono già: rifarle entrare una a una direbbe
   // «pagina nuova». Al loro posto rientra tutta la lista (`ritorno-entra`).
   const v = () => (ripresa ? undefined : voce(n++))
+
+  const ultimi = useMemo(() => ultimoAllenamento(assegnazioni), [assegnazioni])
+
+  if (desktop) {
+    const riga = (x, stato) => ({
+      id: x.id, nome: nomeAtleta(x), foto: x.photo_url, sigla: iniziali(x), meta: metaAtleta(x, oggi),
+      aderenza: aderenze.get(x.id) || NESSUNA_ADERENZA,
+      fermo: stato === 'attivo' && idFermi.has(x.id),
+      ultimo: quandoFa(ultimi.get(x.id), oggi) || (idFermi.has(x.id) ? 'da più di 45 giorni' : null),
+      stato, pausaTesto: stato === 'pausa' ? etichettaPausa(x) : null,
+      giorniCestino: stato === 'eliminato' ? giorniRimastiCestino(x.deleted_at, caricatoIl) : null,
+      onApri: () => apriAtleta(x.id), onRipristina: () => ripristina(x),
+    })
+    const statoVista = vista === 'pausa' ? 'pausa' : vista === 'eliminati' ? 'eliminato' : 'attivo'
+    const righe = [...lista.map(x => riga(x, statoVista)), ...sostaVisibili.map(x => riga(x, 'pausa'))]
+    return (
+      <>
+        <Suspense fallback={<div className="min-h-screen" />}>
+          <AtletiDesktop
+            dettaglio={dettaglio} search={search} onSearch={setSearch}
+            conteggi={conteggi} vista={vista} onVista={cambiaVista} onNuovo={() => setModalOpen(true)}
+            loading={loading} righe={righe} fermi={fermi.length}
+            onRichiamo={() => cambiaVista(vista === 'fermi' ? 'attivi' : 'fermi')}
+            vuoto={athletes.length === 0 && eliminati.length === 0 ? 'Nessun atleta ancora: aggiungi il primo.'
+              : conRicerca ? 'Nessun atleta con questo nome.' : `Nessun atleta in «${titoloSezione}».`}
+            notaCestino={vista === 'eliminati' && lista.length > 0
+              ? `Dopo ${GIORNI_CESTINO} giorni vengono cancellati definitivamente, insieme ai loro allenamenti e record personali. L'operazione non è reversibile.`
+              : null}
+          />
+        </Suspense>
+        {modalOpen && (
+          <NewAthleteModal
+            onClose={() => setModalOpen(false)}
+            onSaved={() => { setModalOpen(false); fetchAthletes() }}
+          />
+        )}
+      </>
+    )
+  }
 
   return (
     /* ⚠️ Niente `page-transition`, e `TestataAtleti` NON entra: è `sticky`,
