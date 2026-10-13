@@ -310,3 +310,31 @@ describe('La cascata sul report del singolo', () => {
     expect(sfocati).toHaveLength(0)
   })
 })
+
+describe('Report atleta — versione desktop', () => {
+  const schermo = (largo) => {
+    window.matchMedia = vi.fn(() => ({ matches: largo, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+  }
+  // `setup.js` mette un `matchMedia` finto per tutti: si ripristina quello.
+  const originale = window.matchMedia
+  afterEach(() => { window.matchMedia = originale })
+
+  it('sul desktop: colonne, il nome nel titolo, Scheda e Crea in testata', async () => {
+    schermo(true)
+    dati.assegnazioni = [fatto(giorniFa(2), { rpe: 7 })]
+    const { container } = monta()
+    expect(await screen.findByRole('heading', { name: /Marco Bianchi/, level: 1 })).toBeInTheDocument()
+    expect(container.querySelector('[data-disposizione="desktop"]')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'Torna al report della squadra' })).toBeNull()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await user.click(screen.getByRole('button', { name: /Scheda atleta/ }))
+    await waitFor(() => expect(rotta()).toBe('/athletes/a1'))
+  })
+
+  it('sul telefono resta com\'era', async () => {
+    schermo(false)
+    const { container } = monta()
+    expect(await screen.findByRole('button', { name: 'Torna al report della squadra' })).toBeInTheDocument()
+    expect(container.querySelector('[data-disposizione="desktop"]')).toBeNull()
+  })
+})

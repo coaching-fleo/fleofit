@@ -339,3 +339,32 @@ describe('La cascata sul report della squadra', () => {
     expect(document.querySelector('.cascata .alone')).not.toBeNull()
   })
 })
+
+describe('Report — versione desktop', () => {
+  const schermo = (largo) => {
+    window.matchMedia = vi.fn(() => ({ matches: largo, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+  }
+  // `setup.js` mette un `matchMedia` finto per tutti: si ripristina quello.
+  const originale = window.matchMedia
+  afterEach(() => { window.matchMedia = originale })
+
+  it('sul desktop: colonne, nessuna freccia «indietro», la settimana nella testata', async () => {
+    schermo(true)
+    dati.atleti = [atleta('a1', 'Anna')]
+    dati.assegnazioni = [fatto('a1', '2026-09-01', { rpe: 7 })]
+    const { container } = monta()
+    expect(await screen.findByRole('heading', { name: 'Report', level: 1 })).toBeInTheDocument()
+    expect(container.querySelector('[data-disposizione="desktop"]')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'Torna indietro' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Settimana precedente' })).toBeInTheDocument()
+    expect(screen.getByText(/Settimana 36 · 31 ago – 6 set · in corso/)).toBeInTheDocument()
+  })
+
+  it('sul telefono resta com\'era', async () => {
+    schermo(false)
+    dati.atleti = [atleta('a1', 'Anna')]
+    const { container } = monta()
+    expect(await screen.findByRole('button', { name: 'Torna indietro' })).toBeInTheDocument()
+    expect(container.querySelector('[data-disposizione="desktop"]')).toBeNull()
+  })
+})

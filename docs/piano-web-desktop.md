@@ -202,7 +202,7 @@ Regola d'oro: **sotto i 1024 px non cambia un pixel, e nelle app native non camb
   Assegna e Crea in alto; storico e record partono aperti.
 - **Archivio**: `ArchivioDesktop.jsx` (pigra), filtri in colonna a sinistra (gli stessi
   componenti del telefono) e schede in griglia per mese.
-- Restano col disegno del telefono dentro il guscio: scheda workout, Report, Impostazioni.
+- Restano col disegno del telefono dentro il guscio: scheda workout, Report, Impostazioni (il Report è stato fatto nel quinto giro).
 
 #### ✅ Terzo giro, 13/10/2026: la pagina Analisi
 - **`/analisi`**, voce «Analisi» sotto «Report» nella barra laterale. Solo desktop
@@ -222,6 +222,16 @@ Regola d'oro: **sotto i 1024 px non cambia un pixel, e nelle app native non camb
 - **Home coach**: «Ultime sedute chiuse» degli ultimi 7 giorni (`ultimeSedute.js`).
 - **Calendario team**: «Copia settimana» (`copiaSettimana` in `calendarioTeam.js`).
 - Piano: `docs/superpowers/plans/2026-10-13-desktop-fase-2.md`.
+
+#### ✅ Quinto giro, 13/10/2026 (richieste del committente)
+- **Notifiche**: sul desktop il centro notifiche della Home è un pannello che entra da
+  destra (420px, alto quanto la finestra), si chiude con Esc o cliccando fuori. ⚠️ Il velo
+  NON usa `items-end`: la regola di `html.desktop` lo trasformerebbe in finestra centrata.
+- **Report** e **Report atleta**: testata desktop (`ReportDesktop.jsx`, niente freccia
+  indietro, settimana accanto al titolo) e due colonne. I pezzi sono scritti una volta
+  (`pEroe`, `pRighe`…, come in `AthleteDetail`): il telefono li impila nell'ordine di sempre.
+  Nel report atleta «Scheda» e «Crea» passano dalla barra in fondo alla testata.
+- Restano col disegno del telefono dentro il guscio: scheda workout e Impostazioni.
 
 ### Fase 3 — Le schermate desktop, coach per primo
 Il coach è chi lavora alla scrivania; l'atleta usa il telefono. Ordine proposto:

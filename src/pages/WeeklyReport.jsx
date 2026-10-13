@@ -22,6 +22,8 @@ import { useIndietro } from '../useIndietro'
 import { format, startOfDay } from 'date-fns'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
+import { useSchermoLargo, eDesktop } from '../useDesktop'
+import { TestataReportDesktop } from '../components/ReportDesktop'
 import { COACHING_ID } from '../lib/constants'
 import { FINESTRA_STORICO } from '../lib/statisticheCoach'
 import {
@@ -48,6 +50,9 @@ export default function WeeklyReport() {
   const navigate = useNavigate()
   const indietro = useIndietro('/')
   const { role } = useAuth()
+  // Sul desktop (solo coach) la stessa pagina va su due colonne: i pezzi sono
+  // gli stessi del telefono, cambia solo come sono disposti.
+  const desktop = eDesktop(useSchermoLargo(), role)
 
   useEffect(() => {
     if (role === 'athlete') navigate('/', { replace: true })
@@ -155,6 +160,99 @@ export default function WeeklyReport() {
   const righe = soloAzioni ? azioni : report.righe
   const vuota = squadra.assegnati === 0 && squadra.daVenire === 0 && report.righe.length > 0
 
+  // I pezzi della pagina, scritti una volta (stesso schema della scheda
+  // atleta): il telefono li impila nell'ordine di sempre, il desktop li
+  // dispone su due colonne — a sinistra la settimana e gli atleti, a destra
+  // ciò che si fa dopo (programmare, leggere i feedback).
+  const pEroe = (
+    <EroeSettimana
+      percentuale={squadra.percentuale}
+      completati={squadra.completati}
+      assegnati={squadra.assegnati}
+      daVenire={squadra.daVenire}
+      trascorsi={settimana.trascorsi}
+      corrente={settimana.corrente}
+      atleti={squadra.atleti}
+      frase={report.frase}
+    />
+  )
+  const pBento = !vuota && <BentoSettimana squadra={squadra} />
+  const pAzioni = azioni.length > 0 ? (
+    <FasciaAzioni
+      attiva={soloAzioni}
+      onApri={() => setSoloAzioni(v => !v)}
+      testo={`${azioni.length} ${azioni.length === 1 ? 'atleta richiede' : 'atleti richiedono'} un'azione`}
+      dettaglio={dettaglioAzioni}
+    />
+  ) : (
+    <NessunaAzione atleti={squadra.atleti} />
+  )
+  const pRighe = (
+    <>
+      <IntestazioneSezione
+        etichetta={soloAzioni ? 'Da fare adesso' : 'Atleta per atleta'}
+        conteggio={soloAzioni ? `${righe.length}` : 'Fatti / assegnati'}
+      />
+      <div className="flex flex-col gap-2">
+        {righe.map(r => <RigaReport key={r.id} riga={r} onApri={apriReport} />)}
+      </div>
+      <NotaCarico settimane={SETTIMANE_CRONICO} />
+    </>
+  )
+  const pMix = <MixCorsie corsie={report.corsie} totale={squadra.assegnati + squadra.daVenire} />
+  const pProgramma = prossima.utile && (
+    <SezioneProgramma prossima={prossima} onApriAtleta={apriAtleta} onCrea={() => navigate('/create')} />
+  )
+  const pFeedback = feedback.length > 0 && (
+    <FeedbackReport
+      elementi={feedback}
+      mostrate={FEEDBACK_IN_REPORT}
+      espanso={feedbackEspanso}
+      onEspandi={() => setFeedbackEspanso(true)}
+      onApri={apriFeedback}
+    />
+  )
+  const pPausa = report.inPausa.length > 0 && <SezionePausa righe={report.inPausa} />
+
+  const stato = !caricato ? <ScheletroReport /> : errore ? (
+    <VuotoReport
+      titolo="Non sono riuscito a leggere la settimana"
+      dettaglio="Controlla la connessione e riprova: meglio non dirti niente che dirti una settimana vuota che vuota non è." />
+  ) : report.righe.length === 0 ? (
+    <VuotoReport titolo="Nessun atleta in rubrica"
+      dettaglio="Il report nasce dagli allenamenti che assegni: aggiungi un atleta per cominciare. 🏃" />
+  ) : null
+
+  if (desktop) {
+    return (
+      <div className="px-8 max-w-[1280px] mx-auto pb-[var(--fondo-pagina)]">
+        <TestataReportDesktop
+          titolo="Report"
+          settimana={`Settimana ${settimana.numero} · ${settimana.etichetta}${settimana.corrente ? ' · in corso' : ''}`}
+          avanti={scarto < 0}
+          onPrecedente={() => cambiaSettimana(-1)}
+          onSuccessiva={() => cambiaSettimana(1)}
+        />
+        {stato ? <div className="cascata max-w-2xl">{stato}</div> : (
+          <div data-disposizione="desktop" className="cascata grid grid-cols-12 gap-x-6 items-start">
+            <div className="col-span-7 flex flex-col">
+              {pEroe}
+              {pBento}
+              {pAzioni}
+              {pRighe}
+            </div>
+            <div className="col-span-5 flex flex-col">
+              {pProgramma}
+              {pFeedback}
+              {pMix}
+              {pPausa}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
       <TestataReport
@@ -173,65 +271,16 @@ export default function WeeklyReport() {
           fra i figli. Un div nudo non cambia il layout: la radice non è flex,
           quindi i margini dei figli attraversano l'involucro come prima. */}
       <div className="cascata">
-      {!caricato ? <ScheletroReport /> : errore ? (
-        <VuotoReport
-          titolo="Non sono riuscito a leggere la settimana"
-          dettaglio="Controlla la connessione e riprova: meglio non dirti niente che dirti una settimana vuota che vuota non è." />
-      ) : report.righe.length === 0 ? (
-        <VuotoReport titolo="Nessun atleta in rubrica"
-          dettaglio="Il report nasce dagli allenamenti che assegni: aggiungi un atleta per cominciare. 🏃" />
-      ) : (
+      {stato || (
         <>
-          <EroeSettimana
-            percentuale={squadra.percentuale}
-            completati={squadra.completati}
-            assegnati={squadra.assegnati}
-            daVenire={squadra.daVenire}
-            trascorsi={settimana.trascorsi}
-            corrente={settimana.corrente}
-            atleti={squadra.atleti}
-            frase={report.frase}
-          />
-
-          {!vuota && <BentoSettimana squadra={squadra} />}
-
-          {azioni.length > 0 ? (
-            <FasciaAzioni
-              attiva={soloAzioni}
-              onApri={() => setSoloAzioni(v => !v)}
-              testo={`${azioni.length} ${azioni.length === 1 ? 'atleta richiede' : 'atleti richiedono'} un'azione`}
-              dettaglio={dettaglioAzioni}
-            />
-          ) : (
-            <NessunaAzione atleti={squadra.atleti} />
-          )}
-
-          <IntestazioneSezione
-            etichetta={soloAzioni ? 'Da fare adesso' : 'Atleta per atleta'}
-            conteggio={soloAzioni ? `${righe.length}` : 'Fatti / assegnati'}
-          />
-          <div className="flex flex-col gap-2">
-            {righe.map(r => <RigaReport key={r.id} riga={r} onApri={apriReport} />)}
-          </div>
-          <NotaCarico settimane={SETTIMANE_CRONICO} />
-
-          <MixCorsie corsie={report.corsie} totale={squadra.assegnati + squadra.daVenire} />
-
-          {prossima.utile && (
-            <SezioneProgramma prossima={prossima} onApriAtleta={apriAtleta} onCrea={() => navigate('/create')} />
-          )}
-
-          {feedback.length > 0 && (
-            <FeedbackReport
-              elementi={feedback}
-              mostrate={FEEDBACK_IN_REPORT}
-              espanso={feedbackEspanso}
-              onEspandi={() => setFeedbackEspanso(true)}
-              onApri={apriFeedback}
-            />
-          )}
-
-          {report.inPausa.length > 0 && <SezionePausa righe={report.inPausa} />}
+          {pEroe}
+          {pBento}
+          {pAzioni}
+          {pRighe}
+          {pMix}
+          {pProgramma}
+          {pFeedback}
+          {pPausa}
         </>
       )}
       </div>

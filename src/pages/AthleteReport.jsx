@@ -19,6 +19,8 @@ import { useIndietro } from '../useIndietro'
 import { format, startOfDay } from 'date-fns'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
+import { useSchermoLargo, eDesktop } from '../useDesktop'
+import { TestataReportDesktop } from '../components/ReportDesktop'
 import { FINESTRA_STORICO } from '../lib/statisticheCoach'
 import { settimanaReport, SETTIMANE_CRONICO } from '../lib/reportSettimanale'
 import { reportAtleta, MOVIMENTI_IN_PAGINA, GIORNI_TRASCURATO } from '../lib/reportAtleta'
@@ -44,6 +46,7 @@ export default function AthleteReport() {
   const navigate = useNavigate()
   const indietro = useIndietro('/report')
   const { role } = useAuth()
+  const desktop = eDesktop(useSchermoLargo(), role)
 
   useEffect(() => {
     if (role === 'athlete') navigate('/', { replace: true })
@@ -112,6 +115,83 @@ export default function AthleteReport() {
   const { settimana, misure, carico, sessioni, movimenti } = report
   const nome = atleta ? nomeAtleta(atleta) : 'Atleta'
 
+  const stato = !caricato ? <ScheletroAtleta /> : errore ? (
+    <VuotoReport
+      titolo="Non sono riuscito a leggere la settimana"
+      dettaglio="Controlla la connessione e riprova: meglio non dirti niente che proporti un allenamento su dati che non sono arrivati." />
+  ) : !atleta ? (
+    <VuotoReport titolo="Atleta non trovato"
+      dettaglio="Potrebbe essere stato eliminato. Torna al report della squadra per vedere chi c'è. 🔎" />
+  ) : null
+
+  // I pezzi, scritti una volta: il telefono li impila, il desktop li mette su
+  // due colonne — a sinistra cosa proporgli e i numeri, a destra il diario.
+  // L'eroe è la PROPOSTA, non il numero: la domanda per cui si apre questa
+  // pagina è cosa fargli fare, e i numeri servono a verificarla.
+  const pProposte = (
+    <ProposteSettimana voci={report.proposte.voci} settimana={settimana.etichetta}
+      verdetto={report.verdetto} />
+  )
+  const pNumeri = (
+    <NumeriAtleta misure={misure} carico={carico}
+      corrente={settimana.corrente} trascorsi={settimana.trascorsi} />
+  )
+  const pAndamento = <AndamentoSettimane settimane={report.settimane} />
+  const pDiario = (
+    <>
+      <IntestazioneSezione etichetta="Seduta per seduta"
+        conteggio={sessioni.length > 0 ? `${sessioni.length}` : '—'} />
+      {sessioni.length > 0
+        ? <Diario sessioni={sessioni} onApri={apriSeduta} />
+        : <VuotoDiario corrente={settimana.corrente} />}
+    </>
+  )
+  const pMovimenti = movimenti.length > 0 && (
+    <Movimenti righe={movimenti} mostrati={MOVIMENTI_IN_PAGINA} espanso={movimentiEspansi}
+      onEspandi={() => setMovimentiEspansi(true)} soglia={GIORNI_TRASCURATO}
+      corseEscluse={report.corseEscluse} />
+  )
+  const pNota = (
+    <p className="mt-3 px-0.5 text-[11px] leading-relaxed text-[#5b6070]">
+      Movimenti e carichi vengono dalle sedute <strong className="font-bold text-muted">completate</strong> degli
+      ultimi {FINESTRA_STORICO} giorni; il carico è minuti × RPE dichiarato e il moltiplicatore
+      confronta la settimana con la media delle ultime {SETTIMANE_CRONICO}.
+    </p>
+  )
+
+  if (desktop) {
+    return (
+      <div className="px-8 max-w-[1280px] mx-auto pb-[var(--fondo-pagina)]">
+        {/* Scheda e Crea stanno in testata: sul telefono sono la barra in fondo. */}
+        <TestataReportDesktop
+          sopratitolo="Report atleta"
+          titolo={caricato ? nome : ' '}
+          foto={atleta?.photo_url || null}
+          settimana={`Settimana ${settimana.numero} · ${settimana.etichetta}${settimana.corrente ? ' · in corso' : ''}`}
+          avanti={scarto < 0}
+          onPrecedente={() => cambiaSettimana(-1)}
+          onSuccessiva={() => cambiaSettimana(1)}
+          onScheda={() => navigate(`/athletes/${id}`)}
+          onCrea={() => navigate('/create')}
+        />
+        {stato ? <div className="cascata max-w-2xl">{stato}</div> : (
+          <div data-disposizione="desktop" className="cascata grid grid-cols-12 gap-x-6 items-start">
+            <div className="col-span-7 flex flex-col">
+              {pProposte}
+              {pNumeri}
+              {pAndamento}
+              {pMovimenti}
+            </div>
+            <div className="col-span-5 flex flex-col">
+              {pDiario}
+              {pNota}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
       <TestataReportAtleta
@@ -129,44 +209,14 @@ export default function AthleteReport() {
       {/* ⚠️ Come nel report della squadra: `TestataReportAtleta` è `sticky` e
           non entra. Vedi WeeklyReport.jsx per il perché dell'involucro. */}
       <div className="cascata">
-      {!caricato ? <ScheletroAtleta /> : errore ? (
-        <VuotoReport
-          titolo="Non sono riuscito a leggere la settimana"
-          dettaglio="Controlla la connessione e riprova: meglio non dirti niente che proporti un allenamento su dati che non sono arrivati." />
-      ) : !atleta ? (
-        <VuotoReport titolo="Atleta non trovato"
-          dettaglio="Potrebbe essere stato eliminato. Torna al report della squadra per vedere chi c'è. 🔎" />
-      ) : (
+      {stato || (
         <>
-          {/* L'eroe è la PROPOSTA, non il numero: la domanda per cui si apre
-              questa pagina è cosa fargli fare, e i numeri sotto servono a
-              verificarla. Regola dell'Eroe Unico. */}
-          <ProposteSettimana voci={report.proposte.voci} settimana={settimana.etichetta}
-            verdetto={report.verdetto} />
-
-          <NumeriAtleta misure={misure} carico={carico}
-            corrente={settimana.corrente} trascorsi={settimana.trascorsi} />
-
-          <AndamentoSettimane settimane={report.settimane} />
-
-          <IntestazioneSezione etichetta="Seduta per seduta"
-            conteggio={sessioni.length > 0 ? `${sessioni.length}` : '—'} />
-          {sessioni.length > 0
-            ? <Diario sessioni={sessioni} onApri={apriSeduta} />
-            : <VuotoDiario corrente={settimana.corrente} />}
-
-          {movimenti.length > 0 && (
-            <Movimenti righe={movimenti} mostrati={MOVIMENTI_IN_PAGINA} espanso={movimentiEspansi}
-              onEspandi={() => setMovimentiEspansi(true)} soglia={GIORNI_TRASCURATO}
-              corseEscluse={report.corseEscluse} />
-          )}
-
-          <p className="mt-3 px-0.5 text-[11px] leading-relaxed text-[#5b6070]">
-            Movimenti e carichi vengono dalle sedute <strong className="font-bold text-muted">completate</strong> degli
-            ultimi {FINESTRA_STORICO} giorni; il carico è minuti × RPE dichiarato e il moltiplicatore
-            confronta la settimana con la media delle ultime {SETTIMANE_CRONICO}.
-          </p>
-
+          {pProposte}
+          {pNumeri}
+          {pAndamento}
+          {pDiario}
+          {pMovimenti}
+          {pNota}
           <BarraAtleta onScheda={() => navigate(`/athletes/${id}`)} onCrea={() => navigate('/create')} />
         </>
       )}

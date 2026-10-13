@@ -153,3 +153,10 @@ Le cose da sapere:
 - **Stampa**: `print:hidden` su barra laterale e bottoni, `print-color-adjust: exact` in
   `index.css` perché il tema è solo scuro. Non verificata a occhio: il browser di prova non
   mostra l'anteprima di stampa.
+
+### Report desktop (13/10/2026)
+Sul desktop (solo coach) `WeeklyReport` e `AthleteReport` cambiano disposizione, non
+contenuto: testata `TestataReportDesktop` e due colonne (`data-disposizione="desktop"`).
+⚠️ I pezzi sono costanti JSX scritte una volta: chi aggiunge una sezione la mette in
+ENTRAMBE le disposizioni, o sparisce da una delle due senza errori. I test «versione
+desktop» in `ReportSettimanale.test.jsx` e `ReportAtleta.test.jsx` controllano le due strade.
