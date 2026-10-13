@@ -377,3 +377,62 @@ Due correzioni del committente sul giro precedente:
      coppia in HYROX DOUBLES; «Rossi» → 31 righe, 23 in coppia.
    - Il dettaglio di una coppia si legge come quello di un individuale (tempo,
      posizioni, 8+8 split); solo il nome è vuoto, e si tiene quello della riga.
+
+## 9-statistiche-gara — La scheda della gara mostra le statistiche (13/10/2026)
+
+«Quando vado sull'evento dopo averlo salvato con il mio tempo dal calendario
+non mi dice né tempi né nulla.» Due cause:
+
+1. 🔴 **Il calendario (e l'archivio) aprivano gli allenamenti dell'atleta senza
+   `athlete_id`**: `/workout/<id>`. Senza, `WorkoutDetail` non carica
+   l'assegnazione — nota, stato, RPE, tempo di gara — e mostra il workout nudo.
+   Valeva per OGNI allenamento aperto da lì, non solo per le gare. Ora l'atleta
+   apre `/workout/<id>?athlete_id=<suo id>`; il coach continua ad aprire la
+   programmazione (`CalendarioApri.test.jsx`).
+2. **Gli split non erano salvati da nessuna parte.** Dal 13/10 sotto la riga
+   del tempo c'è il **link al risultato ufficiale** («🔗 Risultato ufficiale:
+   https://results.hyrox.com/season-8/?content=detail&idp=…&event=…»):
+   `riferimentoDallaNota` ne ricava stagione, idp ed evento, e
+   `StatisticheGara` carica il dettaglio — tempo, posizioni, corsa, stazioni
+   (somma delle otto), Roxzone, la stazione migliore e quella dove si è perso
+   di più (per posizione), tutti gli split. Un risultato ufficiale non cambia:
+   la prima lettura resta nel telefono (`fleofit_cache_risultato_<stagione>_<idp>`)
+   e la scheda si apre anche offline.
+   - Link e non marcatore: la web app lo mostra come un link vero, e se
+     l'atleta lo cancella dalla nota si perdono solo gli split.
+   - Un tempo salvato **senza link** (a mano, o prima del 13/10) mostra il tempo
+     e «Aggiungi le statistiche della gara», che rifà la ricerca (per le gare
+     passate direttamente nel loro gruppo, `sections.hyrox.gruppo`) e riscrive
+     tempo e link.
+
+## 9-gara-bianca — La gara resta bianca, le note restano dell'atleta (13/10/2026)
+
+«C'è scritto allenamento completato, RPE non indicato: non lo voglio. Rimuovi
+le note, c'è già il tasto risultato ufficiale in fondo. Lascialo sempre bianco,
+anche se viene segnato come completato.»
+
+- **Niente «Allenamento completato · RPE non indicato» su una gara**:
+  `EsitoCompletato` in `WorkoutDetail` non compare quando `type === 'Event'`.
+  L'esito di una gara è la sua card (`StatisticheGara`).
+- **Le righe del risultato non stanno più nel riquadro delle note.** Tempo e
+  link restano nel database (sono l'unico posto dove il risultato è salvato,
+  schema congelato), ma `senzaRisultato` li toglie da ciò che l'atleta legge e
+  scrive, e dalla nota mostrata al coach; salvando, `conRisultatoDi` li rimette
+  in testa dalla nota di prima. 🔴 Chi tocca il salvataggio delle note
+  (`salvaNoteAtleta`, `handleRpeSubmit`) deve passare da lì: salvare il testo del
+  riquadro così com'è **cancellerebbe il risultato**, senza errori.
+  ⚠️ Di conseguenza dall'app l'atleta non può più cancellare il link a mano;
+  dalla web app su `main` sì, e la nota lì mostra ancora le due righe.
+- **Bianca nel calendario anche chiusa** (`eEvento` di `rigaCalendario.js`): il
+  segmento della griglia non diventa verde, un giorno con la sola gara non
+  prende il velo verde, la riga non porta né «Fatto» né «Da fare», e la voce
+  «Fatto» della legenda la accendono solo gli allenamenti. La gara conta
+  comunque fra i completati del mese: è solo aspetto.
+
+## 9-ripresa-calendario — Tornando indietro il calendario riprende dov'era (13/10/2026)
+
+Aprire una sessione e tornare indietro riportava al mese e al giorno di oggi.
+Ora `Calendar.jsx` usa `useRipresa`/`useRicorda` (`src/useRipresa.js`, come
+archivio e rubrica): al ritorno riprende mese, giorno scelto, lista e
+scorrimento, senza scheletro e senza rifare la cascata (`ritorno-entra`); la
+ricarica del mese è silenziosa. Le date si memorizzano come numeri.

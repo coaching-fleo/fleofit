@@ -285,7 +285,8 @@ export function NumeroEsercizio({ n }) {
 // «Genera con IA» era un mezzo bottone tratteggiato accanto ad «Aggiungi
 // blocco», cioè due gesti dello stesso peso. Non lo sono: uno è il modo veloce
 // di partire da zero, l'altro è il gesto tranquillo che si ripete.
-export function CardIA({ onClick, inModifica = false }) {
+// `sottotitolo` dice cosa verrà scritto, e cambia con la categoria (src/lib/iaCategorie.js).
+export function CardIA({ onClick, sottotitolo }) {
   return (
     // 🔴 Il fascio luminoso NON si avvolge qui dentro, e non è una questione di
     // stile: questo file è un chunk CONDIVISO con `WorkoutDetail`, che ne
@@ -307,8 +308,8 @@ export function CardIA({ onClick, inModifica = false }) {
       <span className="relative flex-1 min-w-0">
         <span className="block text-[15.5px] font-extrabold tracking-[-.015em] text-white">Genera con IA</span>
         <span className="block mt-[3px] text-[12.5px] font-medium text-[#c4a6e8]">
-          {/* Con dei blocchi già scritti — a mano o dall'IA — il foglio li modifica. */}
-          {inModifica ? 'Chiedi una modifica ai blocchi che hai' : 'Descrivi l\'obiettivo, ti scrivo i blocchi'}
+          {/* Con l'allenamento già scritto — a mano o dall'IA — il foglio lo modifica. */}
+          {sottotitolo}
         </span>
       </span>
       <ChevronRight size={17} className="relative text-ia shrink-0" aria-hidden="true" />

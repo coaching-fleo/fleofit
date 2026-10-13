@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   tempoCorto, leggiTempoScritto, divisioneCorta, cittaGara, nomeRecord, rigaRisultato, haRisultato,
-  conRisultato, daChiedere, splitInOrdine, tempoDallaNota,
+  conRisultato, senzaRisultato, conRisultatoDi, daChiedere, splitInOrdine, tempoDallaNota,
+  riferimentoDallaNota, riassuntoGara, statisticheSalvate,
   cercaGarePassate, perStagione, giornoSettimana, salvaGaraPassata, elencoGarePassate, CHIAVE_CACHE_PASSATE, nomeDaCercare, leggiIgnorate, ignora, salvaRisultato, CHIAVE_IGNORATE,
 } from '../risultatoGara'
 import { rpeDichiarato } from '../rpe'
@@ -219,5 +220,84 @@ describe('gare passate', () => {
     expect(scritte[1]).toMatchObject({ tabella: 'athlete_workouts', d: { athlete_id: 'u1', workout_id: 'w-nuovo', status: 'completed', completed_date: '2026-03-14' } })
     expect(scritte[1].d.notes).toMatch(/^🏁 Tempo HYROX: 1:12:38/)
     expect(scritte[2]).toMatchObject({ tabella: 'personal_records', op: 'insert', d: { exercise: 'HYROX Turin 2026', value: '1:12:38', date: '2026-03-14' } })
+  })
+})
+
+describe('il link al risultato ufficiale', () => {
+  const URL_UFF = 'https://results.hyrox.com/season-8/?content=detail&idp=LR3MS4JI462AEB&event=HPRO_LR3MS4JI12AE&lang=EN_CAP'
+
+  it('va sotto la riga del tempo, e si rilegge', () => {
+    const nota = conRisultato('[RPE: 9/10]\nGambe distrutte', rigaRisultato(RISULTATO), URL_UFF)
+    expect(nota.split('\n')).toEqual([
+      '[RPE: 9/10]',
+      '🏁 Tempo HYROX: 1:12:38 · Pro · 79° assoluto · 31° di categoria (30-34)',
+      `🔗 Risultato ufficiale: ${URL_UFF}`,
+      'Gambe distrutte',
+    ])
+    expect(rpeDichiarato(nota)).toBe(9)
+    expect(riferimentoDallaNota(nota)).toEqual({ stagione: 8, idp: 'LR3MS4JI462AEB', evento: 'HPRO_LR3MS4JI12AE' })
+  })
+
+  it('un nuovo salvataggio sostituisce anche il link', () => {
+    const prima = conRisultato('', rigaRisultato(RISULTATO), URL_UFF)
+    const dopo = conRisultato(prima, rigaRisultato(RISULTATO))
+    expect(dopo).toBe('🏁 Tempo HYROX: 1:12:38 · Pro · 79° assoluto · 31° di categoria (30-34)')
+    expect(riferimentoDallaNota(dopo)).toBeNull()
+  })
+
+  it('senza link, o con un link storpiato, nessun riferimento', () => {
+    expect(riferimentoDallaNota('🏁 Tempo HYROX: 1:12:38')).toBeNull()
+    expect(riferimentoDallaNota('🔗 Risultato ufficiale: https://results.hyrox.com/season-8/?idp=a%27b&event=X')).toBeNull()
+  })
+})
+
+describe('le statistiche salvate', () => {
+  const DETT = {
+    tempo: '01:12:38', totaleCorsa: '00:32:22', roxzone: '00:05:22',
+    stazioni: [
+      { nome: '1000m SkiErg', tempo: '00:04:06', posizione: '54' },
+      { nome: '50m Sled Push', tempo: '00:03:12', posizione: '40' },
+      { nome: '80m Burpee Broad Jump', tempo: '00:04:24', posizione: '165' },
+    ],
+  }
+
+  it('riassume corsa, stazioni, Roxzone, la stazione migliore e la peggiore per posizione', () => {
+    expect(riassuntoGara(DETT)).toMatchObject({
+      corsa: '32:22', roxzone: '5:22', stazioni: '11:42',
+      migliore: { nome: '50m Sled Push', pos: 40 },
+      peggiore: { nome: '80m Burpee Broad Jump', pos: 165 },
+    })
+  })
+
+  it('la prima lettura resta nel telefono: la seconda non chiede al sito', async () => {
+    const dati = {}
+    const storage = { getItem: k => dati[k] ?? null, setItem: (k, v) => { dati[k] = v }, removeItem: k => { delete dati[k] } }
+    const invoke = vi.fn(() => Promise.resolve({ data: { stato: 'trovato', dettaglio: DETT }, error: null }))
+    const rif = { stagione: 8, idp: 'X1', evento: 'H_X' }
+    expect((await statisticheSalvate({ functions: { invoke } }, rif, storage)).tempo).toBe('01:12:38')
+    expect((await statisticheSalvate({ functions: { invoke } }, rif, storage)).tempo).toBe('01:12:38')
+    expect(invoke).toHaveBeenCalledTimes(1)
+  })
+})
+
+// 13/10/2026: tempo e link li mostra la card della gara; il riquadro delle
+// note mostra solo le parole dell'atleta, e salvarle non cancella il risultato.
+describe('le note della gara senza il risultato', () => {
+  const riga = '🏁 Tempo HYROX: 1:12:38 · Pro'
+  const link = '🔗 Risultato ufficiale: https://results.hyrox.com/season-8/?idp=A1&event=B2'
+
+  it('senzaRisultato toglie tempo e link e lascia il resto', () => {
+    expect(senzaRisultato(`${riga}\n${link}\nGambe dure al sled`)).toBe('Gambe dure al sled')
+    expect(senzaRisultato(`${riga}\n${link}`)).toBe('')
+    expect(senzaRisultato(null)).toBe('')
+  })
+
+  it('conRisultatoDi rimette tempo e link davanti al testo nuovo', () => {
+    const prima = `${riga}\n${link}\nvecchia nota`
+    expect(conRisultatoDi(prima, 'nota nuova')).toBe(`${riga}\n${link}\nnota nuova`)
+    expect(conRisultatoDi(prima, '')).toBe(`${riga}\n${link}`)
+    expect(conRisultatoDi('senza gara', 'nota')).toBe('nota')
+    // Il tempo resta leggibile dopo il salvataggio, e l'RPE resta in testa.
+    expect(tempoDallaNota(conRisultatoDi(prima, 'x')).tempo).toBe('1:12:38')
   })
 })

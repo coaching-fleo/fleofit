@@ -189,7 +189,9 @@ export default function WorkoutsArchive() {
                   meta={metaWorkout(w)}
                   assegnati={isCoach ? (w.athlete_workouts?.length ?? 0) : undefined}
                   completato={!isCoach && w.status === 'completed'}
-                  onApri={() => navigate(`/workout/${w.id}`)}
+                  // ⚠️ Come nel calendario: all'atleta serve `athlete_id`, o la scheda
+                  // non carica la sua assegnazione (13/10/2026).
+                  onApri={() => navigate(isCoach ? `/workout/${w.id}` : `/workout/${w.id}?athlete_id=${user.id}`)}
                   // Tornando indietro le righe ci sono già: rifarle entrare
                   // sarebbe una pagina nuova, ed è proprio ciò che non è.
                   voce={ripresa ? undefined : voce(n++)}

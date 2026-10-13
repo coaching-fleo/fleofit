@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import { ADMIN_EMAILS } from "../_shared/admin.ts"
 import { MODELLO_GROQ_PREDEFINITO, chatGroq, trascriviConWhisper } from "../_shared/groq.ts"
-import { blocchiDaTesto, daRipiegare, istruzioniModifica, messaggioErrore, richiestaBlocchiGroq } from "./regole.ts"
+import { CATEGORIE_IA, categoriaIA, daRipiegare, istruzioniModifica, messaggioErrore, promptCategoria, richiestaGroq, risultatoDaTesto } from "./regole.ts"
 
 // Riserva su Groq quando Gemini è senza quota (09/10/2026): il piano gratuito
 // di Gemini 2.5 Flash dà 20 richieste al giorno, e finite quelle il builder
@@ -141,47 +141,20 @@ serve(async (req) => {
       throw new Error("Chiave API GEMINI_API_KEY non trovata per generare l'allenamento.");
     }
 
-    // Con i blocchi già nel builder la richiesta è una MODIFICA: l'IA
-    // restituisce l'allenamento intero e il client sostituisce la lista
-    // (12/10/2026). Senza, si genera come prima e il client aggiunge in coda.
-    const modifica = istruzioniModifica(body.blocchiAttuali);
+    // La categoria del builder (12/10/2026): Hyrox scrive blocchi, Corsa
+    // fasi, Custom una descrizione. Senza `categoria` è Hyrox, come chiedeva
+    // l'app fino ad allora (regole.ts, CATEGORIE_IA).
+    const categoria = categoriaIA(body.categoria);
+    if (!categoria) throw new Error("Questa categoria non ha ancora la generazione con IA.");
+    const { chiave } = CATEGORIE_IA[categoria];
 
-    const systemPrompt = `
-Traduci questo workout dettato a voce in un array JSON compatibile con l'app di fitness.
-Tipi di blocco ammessi: "WarmUp", "Cash In", "ON/OFF", "EMOM", "AMRAP", "For Time", "Interval", "Rest", "Cash Out".
-Devi restituire ESCLUSIVAMENTE la struttura JSON.
-
-INTENSITÀ: ogni esercizio DEVE avere il campo "intensity", una stringa con un intero da "1" a "10" (scala RPE).
-- Se l'utente la dice (es. "a intensità 8", "RPE 7", "al massimo", "facile"), usa quella.
-- Se non la dice, stimala tu dal contesto: riscaldamento e Cash In leggeri 3-5, lavoro centrale 6-8,
-  For Time / AMRAP brevi o "all out" 8-10, defaticamento e Cash Out 3-5.
-- Non mettere mai "intensity" sull'esercizio "Rest".
-
-STAZIONI CONTINUE NEGLI EMOM: in un EMOM ogni esercizio vale UN intervallo, nell'ordine.
-Se l'utente dice che un esercizio occupa più intervalli di fila (es. "minuti 2-3 sled push",
-"dal minuto 4 al 6 rowing", "sled push per due minuti"), scrivi quell'esercizio UNA SOLA VOLTA
-con il campo "intervals" = quanti intervalli dura, come stringa ("2", "3"…, massimo "5").
-- NON ripetere l'esercizio in più righe: due righe uguali sono due esercizi separati.
-- Senza indicazioni di più minuti non mettere "intervals" (vale 1).
-- "intervals" esiste solo nei blocchi "EMOM".
-- "rounds" dell'EMOM resta il numero TOTALE di intervalli (minuti), stazioni lunghe comprese.
-
-Esempio di struttura richiesta:
-[
-  {
-    "type": "EMOM",
-    "params": { "interval": "1:00", "rounds": "12" },
-    "exercises": [
-      { "name": "Burpees", "reps": "15", "intensity": "8" },
-      { "name": "Sled Push", "meters": "50m", "kg": "100", "intensity": "8", "intervals": "2" },
-      { "name": "Rowing", "meters": "250m", "intensity": "7" }
-    ]
-  }
-]
-
-${modifica ?? ''}
-Testo dettato dall'utente: "${prompt}"
-`;
+    // Con l'allenamento già nel builder la richiesta è una MODIFICA: l'IA
+    // restituisce l'allenamento intero e il client sostituisce (12/10/2026).
+    // Senza, si genera come prima e il client aggiunge in coda.
+    // `blocchiAttuali` è il nome che mandava l'app prima delle categorie.
+    const attuali = body.attuali ?? body.blocchiAttuali;
+    const modifica = istruzioniModifica(attuali, categoria);
+    const systemPrompt = promptCategoria(categoria, prompt, attuali);
 
     // Chiamata gratuita all'API del modello Gemini 2.5 Flash
     const response = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
@@ -195,27 +168,29 @@ Testo dettato dall'utente: "${prompt}"
     });
 
     const data = await response.json().catch(() => ({}));
-    let blocks: unknown[] | null = null;
+    let risultato: unknown[] | string | null = null;
     if (data.candidates) {
-      blocks = blocchiDaTesto(data.candidates[0].content.parts[0].text);
-      if (!blocks) throw new Error("L'IA ha risposto in un formato illeggibile: riprova.");
+      risultato = risultatoDaTesto(data.candidates[0].content.parts[0].text, categoria);
+      if (!risultato) throw new Error("L'IA ha risposto in un formato illeggibile: riprova.");
     } else {
       console.error('ai-workout: Gemini', response.status, JSON.stringify(data).slice(0, 500));
       const chiaveGroq = Deno.env.get('GROQ_API_KEY');
       if (!chiaveGroq || !daRipiegare(response.status)) throw new Error(messaggioErrore(response.status));
       // La riserva: stesso prompt, a Groq.
-      const g = await chatGroq(richiestaBlocchiGroq(systemPrompt, MODELLO_GROQ), chiaveGroq);
+      const g = await chatGroq(richiestaGroq(systemPrompt, MODELLO_GROQ, categoria), chiaveGroq);
       if (!g.ok) {
         console.error('ai-workout: Groq', g.stato, JSON.stringify(g.dati).slice(0, 500));
         throw new Error(messaggioErrore(g.stato));
       }
-      blocks = blocchiDaTesto(g.dati?.choices?.[0]?.message?.content);
-      if (!blocks) throw new Error("L'IA di riserva ha risposto in un formato illeggibile: riprova.");
+      risultato = risultatoDaTesto(g.dati?.choices?.[0]?.message?.content, categoria);
+      if (!risultato) throw new Error("L'IA di riserva ha risposto in un formato illeggibile: riprova.");
     }
 
-    // `modifica` dice al client se SOSTITUIRE i blocchi o aggiungerli: un
-    // client vecchio non lo legge e aggiunge, come ha sempre fatto.
-    return new Response(JSON.stringify({ blocks, modifica: !!modifica }), { 
+    // `modifica` dice al client se SOSTITUIRE o aggiungere: un client vecchio
+    // non lo legge e aggiunge, come ha sempre fatto. Il risultato sta sotto la
+    // sua chiave (`blocks`, `steps`, `testo`), e `categoria` dice al client che
+    // la funzione conosce le categorie: una versione vecchia non la manda.
+    return new Response(JSON.stringify({ categoria, [chiave]: risultato, modifica: !!modifica }), { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     });
 

@@ -20,7 +20,7 @@ const finto = await vi.hoisted(async () => {
 })
 vi.mock('../../supabaseClient', () => ({ supabase: finto.supabase }))
 
-const RisultatoGara = (await import('../RisultatoGara')).default
+const { default: RisultatoGara, StatisticheGara } = await import('../RisultatoGara')
 
 // Le righe come le dà la ricerca (senza split); il dettaglio arriva a parte.
 const RIGA = { idp: 'x1', evento: 'HPRO_X', corrispondenza: 2, nome: 'Rossi, Alessandro (ITA)', divisione: 'HYROX PRO - Friday', categoriaEta: '30-34', tempo: '01:12:38', nazione: 'ITA' }
@@ -77,7 +77,7 @@ describe('RisultatoGara', () => {
     await waitFor(() => expect(onSalvato).toHaveBeenCalled())
     const [aggiornamento] = finto.chiamateA('athlete_workouts', 'update')[0].args
     expect(aggiornamento.status).toBe('completed')
-    expect(aggiornamento.notes).toBe('🏁 Tempo HYROX: 1:12:38 · Pro · 79° assoluto · 31° di categoria (30-34)\nChe fatica')
+    expect(aggiornamento.notes).toBe('🏁 Tempo HYROX: 1:12:38 · Pro · 79° assoluto · 31° di categoria (30-34)\n🔗 Risultato ufficiale: https://results.hyrox.com/x\nChe fatica')
     expect(finto.chiamateA('personal_records', 'insert')[0].args[0])
       .toEqual({ athlete_id: 'u1', exercise: 'HYROX Turin 2026', value: '1:12:38', date: '2026-03-14' })
   })
@@ -139,5 +139,34 @@ describe('RisultatoGara', () => {
     await userEvent.type(screen.getByLabelText('Cognome da cercare'), 'Rossi')
     await userEvent.click(screen.getByRole('button', { name: 'Cerca il cognome' }))
     expect(await screen.findByText('Ho trovato un risultato. Sei tu?')).toBeInTheDocument()
+  })
+})
+
+describe('StatisticheGara', () => {
+  const NOTA = '🏁 Tempo HYROX: 1:12:38 · Pro · 79° assoluto\n🔗 Risultato ufficiale: https://results.hyrox.com/season-8/?content=detail&idp=X1&event=HPRO_X&lang=EN_CAP\nChe fatica'
+
+  it('con il link mostra le statistiche della gara, lette dal sito una volta', async () => {
+    rispondi(null, {
+      ...DETTAGLIO,
+      run: [{ nome: 'Running 1', tempo: '00:02:56', posizione: '' }],
+      stazioni: [{ nome: '1000m SkiErg', tempo: '00:04:06', posizione: '54' }, { nome: 'Wall Balls', tempo: '00:06:59', posizione: '153' }],
+    })
+    render(<StatisticheGara note={NOTA} />)
+    expect(screen.getByText('1:12:38')).toBeInTheDocument()
+    expect(await screen.findByText('La tua stazione migliore')).toBeInTheDocument()
+    expect(screen.getByText('Dove hai perso di più')).toBeInTheDocument()
+    expect(screen.getByText('Run 1')).toBeInTheDocument()
+    expect(screen.getByText('32:22')).toBeInTheDocument()
+    expect(finto.supabase.functions.invoke).toHaveBeenCalledWith('risultato-hyrox', {
+      body: { azione: 'dettaglio', stagione: 8, idp: 'X1', evento: 'HPRO_X' },
+    })
+  })
+
+  it('senza link mostra il tempo e offre di aggiungere le statistiche', async () => {
+    const onAggiorna = vi.fn()
+    render(<StatisticheGara note="🏁 Tempo HYROX: 1:12:38" onAggiorna={onAggiorna} />)
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi le statistiche della gara/ }))
+    expect(onAggiorna).toHaveBeenCalled()
+    expect(finto.supabase.functions.invoke).not.toHaveBeenCalled()
   })
 })

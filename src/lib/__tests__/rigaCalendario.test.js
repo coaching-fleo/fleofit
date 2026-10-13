@@ -90,6 +90,14 @@ describe('segnoGiorno', () => {
     expect(segnoGiorno(tutte).tuttiFatti).toBe(true)
   })
 
+  // 13/10/2026: una gara resta bianca anche chiusa, e non tinge il giorno.
+  it('una gara chiusa non diventa verde, e da sola non chiude il giorno', () => {
+    const gara = { id: 'g', date: '2026-08-22', status: 'completed', sections: { category: 'Event', isEvent: true } }
+    expect(segnoGiorno([gara]).segmenti).toEqual([{ categoria: 'Event', fatto: false }])
+    expect(segnoGiorno([gara]).tuttiFatti).toBe(false)
+    expect(segnoGiorno([gara, hyrox('2026-08-22', { status: 'completed' })]).tuttiFatti).toBe(true)
+  })
+
   it('un giorno vuoto non è un giorno chiuso', () => {
     expect(segnoGiorno([]).tuttiFatti).toBe(false)
     expect(segnoGiorno([]).segmenti).toEqual([])

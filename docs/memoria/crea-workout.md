@@ -1282,3 +1282,53 @@ simulatore con le misure a schermo:
 - Test: `src/__tests__/useTastieraCheCopre.test.jsx` (3), visti fallire. Lo
   scorrimento è verificato sul simulatore, non da un test (jsdom non ha layout).
   Android da provare sul telefono.
+
+---
+
+## 9-ai-categorie. «Genera con IA» su TUTTE le categorie (12/10/2026)
+
+> 🔴 **REGOLA DEL COMMITTENTE, vale anche per il futuro**: «anche sulle altre
+> tipologie di workout voglio vedere la creazione tramite IA, quindi anche su
+> corsa e su tutte le prossime categorie che aggiungerò». **Ogni categoria
+> nuova del builder nasce con «Genera con IA»**: non è un'aggiunta da fare
+> dopo, è parte del lavoro di creare la categoria.
+
+Fino ad allora la card viola c'era solo su Hyrox. Ora c'è su Hyrox, Corsa e Custom.
+
+**Dove sta ogni categoria** (tre posti, tutti obbligatori):
+1. `IA_PER_CATEGORIA` in `src/lib/iaCategorie.js` — la chiave della risposta,
+   come l'allenamento va all'IA (`perIA`) e come torna (`prepara`), e le parole
+   del foglio («ti scrivo le fasi», segnaposto, attesa, fascia «Annulla»).
+2. `CATEGORIE_IA` in `supabase/functions/ai-workout/regole.ts` — le istruzioni
+   per il modello e la chiave (`blocks`, `steps`, `testo`), uguale a quella del punto 1.
+3. In `CreateWorkout.jsx`: `contenutoIA` e `impostaContenutoIA` (quale stato è
+   l'allenamento di quella categoria) e `{cardIA}` / `{fasciaIA}` nel suo passo 2.
+
+**Il guardiano**: `src/lib/__tests__/iaCategorie.test.js` legge gli `id` di
+`CATEGORIE` dal sorgente di CreateWorkout e fallisce se uno manca nei punti 1-3;
+`CreaWorkoutIA.test.jsx` («in OGNI categoria») apre il passo 2 di ogni categoria
+e cerca la card. Visti fallire tutti e due (categoria finta «Nuoto», card tolta da Custom).
+
+**Come funziona**
+- Il client manda `{ prompt, categoria, attuali? }`; il server risponde
+  `{ categoria, <chiave>: risultato, modifica }`. Senza `categoria` il server fa
+  Hyrox, come prima (un'app vecchia continua a ricevere blocchi), e legge ancora
+  `blocchiAttuali` oltre ad `attuali`.
+- 🔴 **Una funzione non ancora pubblicata non manda `categoria` e scrive SEMPRE
+  blocchi Hyrox.** Per le categorie diverse da Hyrox il client controlla che la
+  risposta riporti la categoria giusta, altrimenti avvisa «non è ancora attiva
+  sul server» e non tocca niente. Senza questo controllo dei blocchi EMOM
+  finirebbero dentro una seduta di corsa.
+- **Corsa**: l'IA scrive fasi nella forma di `RunningStepPicker`;
+  `preparaFasiIA` (`src/lib/blocchiIA.js`) le normalizza con le stesse letture
+  di «Da un testo scritto» (`quantoCorsa`, `passoCorsa`, ora esportate da
+  `leggiWorkout.js`). Una durata non detta resta vuota, un recupero non detto
+  resta vuoto: nessun numero inventato.
+- **Custom**: l'IA scrive la descrizione per l'atleta (testo semplice, niente
+  markdown). Con una descrizione già scritta è una modifica: la sostituisce, e
+  «Annulla» la rimette com'era.
+- Modifica, «Annulla» e risposta vuota funzionano come per i blocchi
+  (9-ai-modifica): la fascia vive in `modificaIA`, che ora porta anche la `categoria`.
+- ⚠️ **Serve il deploy di `ai-workout`** perché Corsa e Custom funzionino:
+  `supabase functions deploy ai-workout`. La usa solo l'app (`main` chiama solo
+  `send-reminders`), quindi non tocca la web app.

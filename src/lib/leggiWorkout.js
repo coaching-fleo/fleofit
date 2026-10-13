@@ -42,7 +42,7 @@ export const pulisciRiga = (riga) => String(riga ?? '')
   .trim()
 
 /** Minuscole, senza accenti: per le regole, non per quello che si mostra. */
-const basso = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+export const basso = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
 const numero = (s) => parseFloat(String(s).replace(',', '.'))
 
@@ -512,7 +512,7 @@ const durataCorsa = (secondi) => {
 }
 
 /** Il «quanto» di un tratto: la prima distanza o, se non c'è, il primo tempo. */
-const quantoCorsa = (t) => {
+export const quantoCorsa = (t) => {
   const m = t.match(/(\d+(?:[.,]\d+)?)\s*(km|k|m|mt|metri)\b/)
   if (m) return distanzaCorsa(Math.round(numero(m[1]) * (m[2].startsWith('k') ? 1000 : 1)))
   const tempo = trovaTempo(t)
@@ -523,7 +523,7 @@ const quantoCorsa = (t) => {
  * Il passo di un tratto, con min e max come li scrive `RunningStepPicker`.
  * Senza passo scritto: «Libero», che è anche quello da cui parte il picker.
  */
-const passoCorsa = (t) => {
+export const passoCorsa = (t) => {
   let m = t.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/)
   if (m) {
     const min = `${+m[1]}:${m[2]} /km`

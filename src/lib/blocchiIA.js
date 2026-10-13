@@ -11,6 +11,7 @@
  */
 
 import { intervalliDi } from './stazioniEmom'
+import { basso, passoCorsa, quantoCorsa } from './leggiWorkout'
 
 /** Lo stesso valore da cui parte il cursore nel picker dell'esercizio. */
 export const INTENSITA_PREDEFINITA = '5'
@@ -89,4 +90,71 @@ export function blocchiPerIA(blocchi) {
         .filter(ex => ex && typeof ex === 'object')
         .map(senzaId),
     }))
+}
+
+// ─── LE FASI DI CORSA (12/10/2026) ─────────────────────────────────────────
+//
+// «Genera con IA» anche sulla Corsa (src/lib/iaCategorie.js). Il modello
+// scrive le fasi nella forma di `RunningStepPicker`, ma con la libertà di un
+// modello: «15 minuti», «4:30-4:40», un `type` che non esiste. Qui diventano
+// quello che il picker avrebbe salvato — le stesse letture di
+// `FoglioDaTesto` (`quantoCorsa`, `passoCorsa` di src/lib/leggiWorkout.js).
+
+const TIPI_FASE = new Set(['warmup', 'run', 'recover', 'cooldown', 'repeat'])
+
+const testo = (v) => (v === null || v === undefined ? '' : String(v).trim())
+
+/**
+ * Una durata di corsa come la scrive il picker («10 min», «400m», «5 km»).
+ * 🔴 Una durata che non si legge resta com'è, e una che manca resta vuota:
+ * inventare «10 min» cambierebbe la seduta senza che il coach lo veda.
+ */
+const quanto = (v) => {
+  const t = testo(v)
+  return t ? (quantoCorsa(` ${basso(t)} `) ?? t) : ''
+}
+
+/** Passo, `paceMin` e `paceMax` di un tratto, da un passo e un eventuale secondo estremo. */
+const passo = (min, max) => {
+  const a = testo(min)
+  const b = testo(max)
+  const forbice = b && b !== '-' ? `${a.replace(/\s*\/\s*km$/i, '')} - ${b}` : a
+  return passoCorsa(` ${basso(forbice)} `)
+}
+
+/** Le fasi che `ai-workout` restituisce, rese uguali a quelle composte a mano. */
+export function preparaFasiIA(fasi) {
+  if (!Array.isArray(fasi)) return []
+  return fasi
+    .filter(f => f && typeof f === 'object')
+    .map(f => {
+      const type = TIPI_FASE.has(f.type) ? f.type : 'run'
+      const note = testo(f.notes)
+      if (type === 'repeat') {
+        const veloce = passo(f.runPace ?? f.runPaceMin, f.runPaceMax)
+        const recupero = passo(f.recPace ?? f.recPaceMin, f.recPaceMax)
+        return {
+          id: Math.random(), type,
+          rounds: String(parseInt(f.rounds, 10) > 0 ? parseInt(f.rounds, 10) : 1),
+          runDuration: quanto(f.runDuration),
+          runPace: veloce.pace, runPaceMin: veloce.paceMin, runPaceMax: veloce.paceMax,
+          runIntensity: intensitaValida(f.runIntensity) ?? '8',
+          recDuration: quanto(f.recDuration),
+          recPace: recupero.pace, recPaceMin: recupero.paceMin, recPaceMax: recupero.paceMax,
+          recIntensity: intensitaValida(f.recIntensity) ?? '3',
+          notes: note,
+        }
+      }
+      const p = passo(f.pace ?? f.paceMin, f.paceMax)
+      return {
+        id: Math.random(), type, duration: quanto(f.duration),
+        ...p, intensity: intensitaValida(f.intensity) ?? INTENSITA_PREDEFINITA, notes: note,
+      }
+    })
+}
+
+/** Le fasi del builder come le legge `ai-workout` in una MODIFICA: senza `id`. */
+export function fasiPerIA(fasi) {
+  if (!Array.isArray(fasi)) return []
+  return fasi.filter(f => f && typeof f === 'object').map(senzaId)
 }

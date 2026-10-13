@@ -23,6 +23,7 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 - Con la **generazione IA** ogni esercizio ha un'intensità, dettata o stimata.
 - **«Genera con IA» ora modifica anche**: se ci sono già blocchi (fatti a mano o dall'IA) basta chiedere la modifica — «porta l'EMOM a 16 minuti», «togli il Cash Out» — e l'IA riscrive l'allenamento cambiando solo quello; la modifica si può annullare.
 - I blocchi scritti dall'IA arrivano **tutti aperti**, pronti da rileggere.
+- **«Genera con IA» anche sulla Corsa e su Custom**: sulla corsa l'IA scrive le fasi (riscaldamento, ripetute con recupero, passi e zone), su Custom la descrizione per l'atleta. Anche qui, se c'è già qualcosa, la richiesta diventa una modifica annullabile.
 - Nuovo **«Da un'immagine»** (iPhone e Android): si sceglie la foto di una lavagna, di un foglio o uno screenshot delle Note, e l'app legge il workout da sola, sul telefono e senza IA, e lo divide in blocchi o fasi di corsa. Prima di confermare mostra cosa ha capito riga per riga; il testo letto si può correggere, e quello che non capisce finisce nelle note. Su iPhone si può anche scattare la foto al momento (l'app chiede il permesso della fotocamera la prima volta).
 - Da uno **screenshot** legge solo il workout: tastiera, orario e icone del telefono vengono ignorati. Una riga con la sola distanza («300m») prende l'esercizio di prima, e l'anteprima lo segnala.
 - Un **blocco nuovo chiede subito i suoi numeri** (tempo, round…) e si aggiunge con un tasto di conferma.
@@ -40,10 +41,15 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 
 ## Calendario e gare
 - **«Nuovo evento» sceglie la gara dal calendario HYROX ufficiale**: a tutto schermo, una card per gara con foto, città, bandiera e paese; si cerca per città o paese e si filtra per regione del mondo. Toccata la gara, nome e giorni si compilano da soli; per le gare di più giorni si sceglie il proprio. «Altro evento» resta il campo libero di prima.
-- Dalla Home, **«Hai una gara in programma?»** apre la stessa scelta della gara: prima apriva l'allenamento libero, e la gara non compariva né nel calendario né nel conto alla rovescia.
 - **Dopo una gara HYROX l'app trova da sola il tuo tempo ufficiale**: dal giorno dopo, la Home chiede «Com'è andata?» e la scheda della gara mostra tempo, categoria, posizioni, corsa, Roxzone e split. Scelta la propria riga e confermato, si salva fra i record personali e la gara risulta fatta. Il tempo si può anche scrivere a mano.
 - **I tempi delle gare HYROX già corse**: dal calendario, «Nuovo evento» → «Già corsa», si sceglie una gara da tutte le stagioni dal 2018 e, indicato il giorno, la gara entra nel calendario e nei record.
+- **La scheda della gara mostra le statistiche**: tempo, posizioni, corsa, stazioni, Roxzone, la stazione migliore e quella dove hai perso di più, e tutti gli split. Per le gare salvate prima, «Aggiungi le statistiche della gara».
+- Corretto: aprendo un allenamento dal **calendario** o dall'archivio l'atleta non vedeva le sue note, l'RPE né il tempo di gara.
+- Sulla scheda della gara non compare più «Allenamento completato · RPE non indicato», e le note mostrano solo quello che scrive l'atleta: tempo e link al risultato ufficiale stanno nella card della gara.
+- Nel calendario **la gara resta bianca** anche quando è segnata come fatta.
+- Tornando indietro da un allenamento, **il calendario resta sul mese e sul giorno** da cui lo si era aperto.
 - La ricerca del tempo usa **solo il cognome** e mostra la lista di chi l'ha, **coppie dei Doubles comprese**: tocchi la tua riga, vedi tempo e split, e confermi.
+- Dalla Home, **«Hai una gara in programma?»** apre la stessa scelta della gara: prima apriva l'allenamento libero, e la gara non compariva né nel calendario né nel conto alla rovescia.
 
 ## Segnala un problema
 - Nuova voce **«Segnala un problema»** in Impostazioni: un modulo guidato con screenshot allegabili e bozza salvata, che arriva per email.

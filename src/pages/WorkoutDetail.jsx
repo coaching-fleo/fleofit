@@ -59,10 +59,11 @@ import { RigaAvviso, AvvisoEsteso, PrevisioneNonDisponibile } from '../component
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { recapStoria } from '../lib/recapStoria'
 import { etichetteStazioni } from '../lib/stazioniEmom'
-import { daChiedere, leggiIgnorate, tempoDallaNota } from '../lib/risultatoGara'
+import { daChiedere, leggiIgnorate, tempoDallaNota, senzaRisultato, conRisultatoDi } from '../lib/risultatoGara'
 // «Com'è andata?» sulle gare HYROX già corse: pigro, perché compare solo lì
 // e il chunk della scheda ha un peso da rispettare (CLAUDE.md §2).
 const RisultatoGara = lazy(() => import('../components/RisultatoGara'))
+const StatisticheGara = lazy(() => import('../components/RisultatoGara').then(m => ({ default: m.StatisticheGara })))
 import {
   GraficaStoria, FoglioStoria, LARGHEZZA_STORIA, ALTEZZA_STORIA, FATTORE_STORIA,
 } from '../components/StoriaUI'
@@ -243,6 +244,8 @@ export default function WorkoutDetail() {
   const [confirmInfo, setConfirmInfo] = useState(null)
   const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [athleteWorkoutId, setAthleteWorkoutId] = useState(null)
+  // «Aggiungi le statistiche della gara»: rifà la ricerca su un tempo già salvato senza link.
+  const [rifaiRicerca, setRifaiRicerca] = useState(false)
   const [workoutStatus, setWorkoutStatus] = useState('pending')
 const [selectedAthletes, setSelectedAthletes] = useState([])
   const [assignStep, setAssignStep] = useState(1)
@@ -442,7 +445,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         if (awData[0].notes) {
           const parsed = parseNotesAndRpe(awData[0].notes);
           setAthleteNote({ text: parsed.text, rpe: parsed.rpe, dichiarato: rpeDichiarato(awData[0].notes), gradimento: parsed.gradimento, athleteName: `${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim() })
-          setEditingNote(parsed.text)
+          // Tempo e link della gara li mostra la card della gara, non il riquadro.
+          setEditingNote(senzaRisultato(parsed.text))
           setRpeScore(parsed.rpe)
         } else {
           setAthleteNote(null)
@@ -515,7 +519,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const handleRpeSubmit = async () => {
     setSavingNote(true)
     const newStatus = 'completed'
-    const finalNote = formatNotesWithRpe(rpeScore, rpeNotes, athleteNote?.gradimento)
+    // ⚠️ Il riquadro non mostra tempo e link della gara: si rimettono dalla nota di prima.
+    const testoCompleto = conRisultatoDi(athleteNote?.text, rpeNotes)
+    const finalNote = formatNotesWithRpe(rpeScore, testoCompleto, athleteNote?.gradimento)
 
     const status = await Network.getStatus()
     let hasError = false;
@@ -538,7 +544,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     } else {
       setWorkoutStatus(newStatus)
       setEditingNote(rpeNotes)
-      setAthleteNote({ text: rpeNotes, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), gradimento: athleteNote?.gradimento ?? null, athleteName: athleteNote?.athleteName || '' })
+      setAthleteNote({ text: testoCompleto, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), gradimento: athleteNote?.gradimento ?? null, athleteName: athleteNote?.athleteName || '' })
       setShowRpeModal(false)
       vibraSuccesso()
 
@@ -1456,7 +1462,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     }
 
     setSavingNote(true)
-    const finalNote = formatNotesWithRpe(rpeScore, editingNote, athleteNote?.gradimento)
+    // ⚠️ Il riquadro non mostra tempo e link della gara: si rimettono dalla nota di prima.
+    const testoCompleto = conRisultatoDi(athleteNote?.text, editingNote)
+    const finalNote = formatNotesWithRpe(rpeScore, testoCompleto, athleteNote?.gradimento)
 
     const status = await Network.getStatus()
     let success = true
@@ -1471,7 +1479,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     setSavingNote(false)
     if (!success) return
 
-    setAthleteNote({ text: editingNote, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), gradimento: athleteNote?.gradimento ?? null, athleteName: athleteNote?.athleteName || '' })
+    setAthleteNote({ text: testoCompleto, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), gradimento: athleteNote?.gradimento ?? null, athleteName: athleteNote?.athleteName || '' })
     if (role === 'athlete' && status.connected) {
       supabase.functions.invoke('send-reminders', {
         body: {
@@ -1536,7 +1544,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       {/* L'esito prima del contenuto: la domanda per cui si riapre la scheda di
           ieri è «l'ho fatto?», e la risposta era un bottone verde — cioè uno
           stato travestito da comando. */}
-      {(role === 'athlete' || isOwnProfile) && athleteWorkoutId && workoutStatus === 'completed' && (
+      {/* ⚠️ Non su una gara (13/10/2026): «Allenamento completato · RPE non
+          indicato» sopra il tempo HYROX diceva la cosa sbagliata. L'esito di
+          una gara è la sua card, e resta bianca come nel calendario. */}
+      {(role === 'athlete' || isOwnProfile) && athleteWorkoutId && workoutStatus === 'completed' && type !== 'Event' && (
         <EsitoCompletato dettaglio={
           [riepilogo && `${minutiStimati(riepilogo.secondi)} min`,
            rpeAtletaDichiarato === null ? 'RPE non indicato' : `RPE ${rpeAtletaDichiarato}`]
@@ -1601,17 +1612,16 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             )
           })}
         </div>
-      ) : type === 'Event' && tempoGara ? (
-        <div className={`${CARD} p-6 text-center`}>
-          <p className="text-[11px] font-bold uppercase tracking-[.1em] text-muted">Il tuo tempo</p>
-          <p className="mt-2 text-[44px] font-black tracking-[-.04em] text-white leading-none tabular-nums">{tempoGara.tempo}</p>
-          {tempoGara.dettagli && <p className="mt-2 text-sm text-brand font-semibold">{tempoGara.dettagli}</p>}
-        </div>
-      ) : type === 'Event' && chiediTempo ? (
+      ) : type === 'Event' && tempoGara && !rifaiRicerca ? (
+        <Suspense fallback={<div className={`${CARD} h-40 animate-pulse`} />}>
+          <StatisticheGara note={athleteNote?.text}
+            onAggiorna={s?.hyrox && athleteWorkoutId && queryAthleteId ? () => setRifaiRicerca(true) : null} />
+        </Suspense>
+      ) : type === 'Event' && (chiediTempo || rifaiRicerca) ? (
         <Suspense fallback={<div className={`${CARD} h-40 animate-pulse`} />}>
           <RisultatoGara
             awId={athleteWorkoutId} athleteId={queryAthleteId} sections={s} titolo={workout.title}
-            giorno={workout.date} onSalvato={fetchWorkout} />
+            giorno={workout.date} onSalvato={() => { setRifaiRicerca(false); fetchWorkout() }} />
         </Suspense>
       ) : type === 'Event' ? (
         <div className={`${CARD} p-8 text-center`}>
@@ -1666,7 +1676,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             value={editingNote}
             onChange={(e) => setEditingNote(e.target.value)}
           />
-          <div className={`transition-all duration-300 ease-out overflow-hidden ${editingNote !== (athleteNote?.text || '') ? 'max-h-16 opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className={`transition-all duration-300 ease-out overflow-hidden ${editingNote !== senzaRisultato(athleteNote?.text) ? 'max-h-16 opacity-100' : 'max-h-0 opacity-0'}`}>
             <div className="flex justify-end">
               <button
                 onClick={salvaNoteAtleta}
@@ -1678,14 +1688,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             </div>
           </div>
         </CardNota>
-      ) : athleteNote ? (
+      ) : athleteNote && (senzaRisultato(athleteNote.text) || (athleteNote.rpe && athleteNote.rpe !== '5')) ? (
         <CardNota etichetta={`Note di ${athleteNote.athleteName || 'atleta'}`} icona={User} colore="#3b82f6">
           {athleteNote.rpe && athleteNote.rpe !== '5' && (
             <span className={`self-start text-[11px] font-extrabold tracking-[.05em] ${getRpeColorText(parseInt(athleteNote.rpe, 10))}`}>
               RPE {athleteNote.rpe}/10
             </span>
           )}
-          <p className="text-[13.5px] leading-[1.55] text-gray-300 whitespace-pre-wrap text-pretty">{athleteNote.text}</p>
+          <p className="text-[13.5px] leading-[1.55] text-gray-300 whitespace-pre-wrap text-pretty">{senzaRisultato(athleteNote.text)}</p>
         </CardNota>
       ) : null}
 

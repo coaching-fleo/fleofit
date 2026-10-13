@@ -377,8 +377,9 @@ function dettaglioFinto(body = {}) {
     tempo: coppia ? '01:16:02' : body.idp === 'demo3' ? '01:38:10' : '01:24:51',
     posizione: coppia ? '88' : '412', posizioneCategoria: coppia ? '14' : '57',
     run: split(['00:03:21', '00:04:05', '00:04:40', '00:04:31', '00:04:36', '00:04:22', '00:04:29', '00:04:48']),
-    stazioni: nomi.map((nome, i) => ({ nome, tempo: st[i], posizione: '' })),
-    roxzone: '00:06:10', totaleCorsa: '00:34:52', url: 'https://results.hyrox.com/',
+    stazioni: nomi.map((nome, i) => ({ nome, tempo: st[i], posizione: String([212, 140, 388, 501, 266, 97, 310, 455][i]) })),
+    roxzone: '00:06:10', totaleCorsa: '00:34:52',
+    url: `https://results.hyrox.com/season-${body.stagione || 8}/?content=detail&idp=${body.idp || 'demo1'}&event=${body.evento || 'H_DEMO'}&lang=EN_CAP`,
   }
 }
 

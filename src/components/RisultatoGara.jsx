@@ -5,7 +5,8 @@ import { vibraScelta, vibraSuccesso } from '../lib/aptica'
 import { CARD, LABEL } from '../lib/stiliCard'
 import {
   cercaRisultato, salvaRisultato, ignora, nomeDaCercare, cittaGara, divisioneCorta, tempoCorto,
-  splitInOrdine, leggiTempoScritto, dettaglioRisultato,
+  splitInOrdine, leggiTempoScritto, dettaglioRisultato, cercaInGara, tempoDallaNota, riferimentoDallaNota,
+  statisticheSalvate, riassuntoGara,
 } from '../lib/risultatoGara'
 
 /**
@@ -18,7 +19,13 @@ import {
  */
 export default function RisultatoGara({ awId, athleteId, sections, titolo, giorno, onSalvato }) {
   const citta = cittaGara(sections, titolo)
-  const cerca = useCallback((chi) => cercaRisultato(supabase, { citta, giorno, ...chi }), [citta, giorno])
+  // Una gara passata conosce già il suo gruppo sul sito dei risultati: non
+  // serve ritrovarlo da città e data.
+  const gruppo = sections?.hyrox?.gruppo
+  const stagione = sections?.hyrox?.stagione
+  const cerca = useCallback((chi) => (gruppo && stagione
+    ? cercaInGara(supabase, { gruppo, stagione, ...chi })
+    : cercaRisultato(supabase, { citta, giorno, ...chi })), [citta, giorno, gruppo, stagione])
   const conferma = async (risultato) => {
     await salvaRisultato(supabase, { awId, athleteId, citta, giorno, risultato })
     onSalvato?.()
@@ -302,6 +309,108 @@ function AltreStrade({ onAMano, onNonHo }) {
           Non ho partecipato
         </button>
       )}
+    </div>
+  )
+}
+
+/**
+ * Il risultato salvato di una gara, sulla sua scheda: il tempo grande e, se
+ * nella nota c'è il link al risultato ufficiale, le statistiche della gara —
+ * posizioni, corsa, stazioni, Roxzone, la stazione migliore e quella da
+ * migliorare, e tutti gli split. Il dettaglio si legge dal sito la prima
+ * volta e poi resta nel telefono (`statisticheSalvate`).
+ * Senza link (tempo scritto a mano, o salvato prima del 13/10/2026) mostra
+ * il tempo e offre `onAggiorna`, che rifà la ricerca.
+ */
+export function StatisticheGara({ note, onAggiorna }) {
+  const tempo = tempoDallaNota(note)
+  const rif = riferimentoDallaNota(note)
+  const [dettaglio, setDettaglio] = useState(null)
+  const [stato, setStato] = useState(rif ? 'carico' : 'senza')
+
+  useEffect(() => {
+    if (!rif) return
+    let vivo = true
+    statisticheSalvate(supabase, rif).then(d => {
+      if (!vivo) return
+      setDettaglio(d)
+      setStato(d ? 'pronto' : 'errore')
+    })
+    return () => { vivo = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rif?.stagione, rif?.idp, rif?.evento])
+
+  if (!tempo) return null
+  const r = riassuntoGara(dettaglio)
+  const split = splitInOrdine(dettaglio || {})
+  const url = String(note || '').split('\n').find(l => l.startsWith('🔗'))?.split(': ').slice(1).join(': ')
+
+  return (
+    <div className={`${CARD} p-5 flex flex-col gap-4`}>
+      <div className="text-center">
+        <p className={LABEL}>Il tuo tempo</p>
+        <p className="mt-2 text-[44px] font-black tracking-[-.04em] text-white leading-none tabular-nums">{tempo.tempo}</p>
+        {tempo.dettagli && <p className="mt-2 text-sm text-brand font-semibold">{tempo.dettagli}</p>}
+      </div>
+
+      {stato === 'carico' && <div className="h-24 rounded-2xl bg-[#111] border border-[#2a2a2a] animate-pulse" aria-label="Carico le statistiche" />}
+      {stato === 'errore' && <p className="text-sm text-gray-400 text-center">Le statistiche della gara non si caricano adesso. Riprova più tardi.</p>}
+
+      {stato === 'pronto' && r && (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <Cella etichetta="Corsa" valore={r.corsa || '—'} />
+            <Cella etichetta="Stazioni" valore={r.stazioni || '—'} />
+            <Cella etichetta="Roxzone" valore={r.roxzone || '—'} />
+          </div>
+          {(r.migliore || r.peggiore) && (
+            <div className="flex flex-col gap-2">
+              {r.migliore && <Rilievo etichetta="La tua stazione migliore" stazione={r.migliore} colore="text-green-400" />}
+              {r.peggiore && <Rilievo etichetta="Dove hai perso di più" stazione={r.peggiore} colore="text-orange-400" />}
+            </div>
+          )}
+          {split.length > 0 && (
+            <div>
+              <p className={`${LABEL} mb-1`}>Split</p>
+              <ol className="flex flex-col">
+                {split.map((s, i) => (
+                  <li key={i} className={`flex items-center justify-between py-1.5 text-sm border-t border-[#222] ${s.corsa ? 'text-gray-400' : 'text-white font-semibold'}`}>
+                    <span>{s.nome}</span>
+                    <span className="tabular-nums">{s.tempo}{s.posizione ? <span className="text-muted font-normal"> · {s.posizione}°</span> : null}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </>
+      )}
+
+      {url && (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 text-xs text-muted hover:text-white">
+          Risultato ufficiale <ExternalLink size={12} />
+        </a>
+      )}
+
+      {stato === 'senza' && onAggiorna && (
+        <button onClick={() => { vibraScelta(); onAggiorna() }}
+          className="w-full py-3 bg-[#2a2a2a] text-white font-bold rounded-xl hover:bg-[#333] transition flex items-center justify-center gap-2">
+          <RefreshCw size={16} /> Aggiungi le statistiche della gara
+        </button>
+      )}
+    </div>
+  )
+}
+
+function Rilievo({ etichetta, stazione, colore }) {
+  return (
+    <div className="flex items-center justify-between gap-3 bg-[#111] rounded-xl px-3 py-2.5">
+      <span className="min-w-0">
+        <span className={`block ${LABEL}`}>{etichetta}</span>
+        <span className="block text-white font-semibold truncate">{stazione.nome}</span>
+      </span>
+      <span className={`text-right shrink-0 tabular-nums font-bold ${colore}`}>
+        {tempoCorto(stazione.tempo)}<span className="block text-xs font-medium text-muted">{stazione.pos}° posto</span>
+      </span>
     </div>
   )
 }

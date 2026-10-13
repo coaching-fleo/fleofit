@@ -100,8 +100,8 @@ filtro e posizione, **per voce di history** (`location.key`):
 meccanismo sta in `src/useRipresa.js`: `useRipresa` va chiamato PRIMA degli `useState` (che
 ci si inizializzano), `useRicorda` DOPO (ha bisogno dei loro valori). Il `nome` della pagina
 entra nella chiave, così due liste non si scambiano mai lo stato.
-⚠️ Il calendario **non è stato verificato**: se mostra lo scheletro al ritorno ha lo stesso
-difetto, e la cura è la stessa — due righe con quei due hook.
+✅ Dal 13/10/2026 vale anche per il **calendario** (mese, giorno scelto e posizione):
+`docs/memoria/calendario.md`, 9-ripresa-calendario.
 
 ### 🔴 Il difetto latente che il rework ha chiuso
 Il filtro faceva `w.title.toLowerCase()` **nudo**. `workouts.title` può essere

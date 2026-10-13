@@ -409,11 +409,13 @@ describe('con dei blocchi già scritti, il foglio MODIFICA invece di aggiungere'
     await userEvent.click(within(foglio).getByRole('button', { name: /Modifica workout/ }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Genera con IA' })).toBeNull())
 
+    // `attuali` dal 12/10/2026 (prima `blocchiAttuali`, che il server legge ancora).
     const corpo = invoca.mock.calls[0][1].body
-    expect(corpo.blocchiAttuali).toHaveLength(1)
-    expect(corpo.blocchiAttuali[0].type).toBe('EMOM')
-    expect(corpo.blocchiAttuali[0].id).toBeUndefined()
-    expect(corpo.blocchiAttuali[0].exercises[0].id).toBeUndefined()
+    expect(corpo.categoria).toBe('Hyrox')
+    expect(corpo.attuali).toHaveLength(1)
+    expect(corpo.attuali[0].type).toBe('EMOM')
+    expect(corpo.attuali[0].id).toBeUndefined()
+    expect(corpo.attuali[0].exercises[0].id).toBeUndefined()
 
     // Sostituita, non aggiunta in coda.
     expect(screen.queryAllByText(/EMOM/)).toHaveLength(0)
@@ -507,5 +509,105 @@ describe("i blocchi scritti dall'IA arrivano APERTI", () => {
     await userEvent.click(within(foglio2).getByRole('button', { name: /Modifica workout/ }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Genera con IA' })).toBeNull())
     expect(aperti()).toBe(2)
+  })
+})
+
+describe('«Genera con IA» in OGNI categoria (12/10/2026)', () => {
+  // Regola del committente: la creazione con IA su tutte le categorie, anche
+  // quelle che verranno. Le categorie si leggono dal sorgente: una nuova fa
+  // fallire questo test finché il suo passo 2 non mostra la card.
+  const nomi = async () => {
+    const sorgente = (await import('../CreateWorkout.jsx?raw')).default
+    const blocco = sorgente.match(/const CATEGORIE = \[([\s\S]*?)\n\]/)[1]
+    return [...blocco.matchAll(/nome:\s*'([^']+)'/g)].map(m => m[1])
+  }
+
+  async function alPasso2(nome) {
+    render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
+    await userEvent.click(screen.getByRole('button', { name: new RegExp(nome) }))
+    await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
+    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+  }
+
+  it('il passo 2 di ogni categoria ha la card', async () => {
+    const tutte = await nomi()
+    expect(tutte.length).toBeGreaterThanOrEqual(3)
+    for (const nome of tutte) {
+      const { unmount } = render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
+      await userEvent.click(screen.getByRole('button', { name: new RegExp(nome) }))
+      await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+      expect(screen.getByRole('button', { name: /Genera con IA/ }), nome).toBeInTheDocument()
+      unmount()
+      localStorage.clear()
+    }
+  })
+
+  it('sulla Corsa chiede FASI, e le fasi arrivano nel builder', async () => {
+    const invoca = vi.fn(() => Promise.resolve({
+      data: {
+        categoria: 'Running', modifica: false,
+        steps: [{ type: 'repeat', rounds: '8', runDuration: '400m', runPace: '3:45 /km', recDuration: '1 min', recPace: 'Camminata' }],
+      },
+      error: null,
+    }))
+    mockRispostaIA = invoca
+    await alPasso2('Corsa')
+    expect(screen.getByText('Descrivi la seduta, ti scrivo le fasi')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Genera con IA/ }))
+    const foglio = screen.getByRole('dialog', { name: 'Genera con IA' })
+    await userEvent.type(within(foglio).getByRole('textbox'), '8 per 400')
+    await userEvent.click(within(foglio).getByRole('button', { name: /Genera workout/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Genera con IA' })).toBeNull())
+
+    expect(invoca.mock.calls[0][1].body).toMatchObject({ categoria: 'Running', prompt: '8 per 400' })
+    expect(screen.queryByText('Aggiungi la prima fase')).toBeNull()
+    expect(screen.getAllByText(/400m/).length).toBeGreaterThan(0)
+    // Con le fasi dentro, la card propone di modificarle.
+    expect(screen.getByText('Chiedi una modifica alle fasi che hai')).toBeInTheDocument()
+  })
+
+  it('una funzione non aggiornata (blocchi Hyrox) NON finisce dentro una Corsa', async () => {
+    mockRispostaIA = () => Promise.resolve({
+      data: { blocks: [{ type: 'EMOM', params: {}, exercises: [] }] }, error: null,
+    })
+    // Nei test l'host degli avvisi non è montato: `mostraAlert` lo dice con un warn.
+    const avviso = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await alPasso2('Corsa')
+    await userEvent.click(screen.getByRole('button', { name: /Genera con IA/ }))
+    const foglio = screen.getByRole('dialog', { name: 'Genera con IA' })
+    await userEvent.type(within(foglio).getByRole('textbox'), '8 per 400')
+    await userEvent.click(within(foglio).getByRole('button', { name: /Genera workout/ }))
+    await waitFor(() => expect(avviso).toHaveBeenCalledWith('AlertHost non montato:',
+      expect.objectContaining({ message: expect.stringMatching(/non è ancora attiva sul server/) })))
+    avviso.mockRestore()
+    expect(screen.getByText('Aggiungi la prima fase')).toBeInTheDocument()
+  })
+
+  it('su Custom scrive la descrizione, e una modifica si può annullare', async () => {
+    mockRispostaIA = () => Promise.resolve({
+      data: { categoria: 'Custom', modifica: false, testo: '4 giri: 10 affondi, 15 push up' }, error: null,
+    })
+    await alPasso2('Custom')
+    await userEvent.click(screen.getByRole('button', { name: /Genera con IA/ }))
+    let foglio = screen.getByRole('dialog', { name: 'Genera con IA' })
+    await userEvent.type(within(foglio).getByRole('textbox'), 'circuito')
+    await userEvent.click(within(foglio).getByRole('button', { name: /Genera workout/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Genera con IA' })).toBeNull())
+    expect(screen.getByDisplayValue('4 giri: 10 affondi, 15 push up')).toBeInTheDocument()
+
+    const invoca = vi.fn(() => Promise.resolve({
+      data: { categoria: 'Custom', modifica: true, testo: '5 giri: 10 affondi, 15 push up' }, error: null,
+    }))
+    mockRispostaIA = invoca
+    await userEvent.click(screen.getByRole('button', { name: /Genera con IA/ }))
+    foglio = screen.getByRole('dialog', { name: 'Genera con IA' })
+    await userEvent.type(within(foglio).getByRole('textbox'), '5 giri')
+    await userEvent.click(within(foglio).getByRole('button', { name: /Modifica workout/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Genera con IA' })).toBeNull())
+
+    expect(invoca.mock.calls[0][1].body.attuali).toBe('4 giri: 10 affondi, 15 push up')
+    expect(screen.getByDisplayValue('5 giri: 10 affondi, 15 push up')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Annulla/ }))
+    expect(screen.getByDisplayValue('4 giri: 10 affondi, 15 push up')).toBeInTheDocument()
   })
 })

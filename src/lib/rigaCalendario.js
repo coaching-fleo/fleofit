@@ -69,6 +69,14 @@ export const indicizzaPerGiorno = (workouts = []) => {
 const fatto = (w) => w?.status === 'completed'
 
 /**
+ * Una gara resta BIANCA anche chiusa (13/10/2026: «lascialo sempre di colore
+ * bianco, anche se viene segnato come completato»): non è un allenamento da
+ * spuntare, e il verde di «fatto» le toglierebbe il colore che la distingue.
+ * Conta comunque fra i completati del mese — vale solo per l'aspetto.
+ */
+export const eEvento = (w) => categoriaDi(w?.sections) === 'Event'
+
+/**
  * Il segno di una cella: i segmenti della barra-corsia, e se il giorno è chiuso.
  *
  * ⚠️ Qui NON si sceglie un colore. Il segmento porta la categoria e lo stato, e
@@ -79,12 +87,13 @@ export const segnoGiorno = (lista = []) => ({
   n: lista.length,
   segmenti: lista.slice(0, MASSIMO_SEGMENTI).map(w => ({
     categoria: categoriaDi(w?.sections),
-    fatto: fatto(w),
+    fatto: fatto(w) && !eEvento(w),
   })),
   // Il velo verde vale per il giorno INTERO, quindi pretende che sia tutto
   // chiuso: con una sessione su due fatta il giorno non è andato, e tingerlo
   // di verde direbbe il contrario. Il singolo segmento resta verde da sé.
-  tuttiFatti: lista.length > 0 && lista.every(fatto),
+  // Le gare non contano: un giorno con la sola gara resta neutro.
+  tuttiFatti: lista.some(w => !eEvento(w)) && lista.filter(w => !eEvento(w)).every(fatto),
 })
 
 /**

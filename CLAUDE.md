@@ -28,7 +28,7 @@
   (`docs/memoria/app-store.md`).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint al 12/10/2026: `npm test` → **1739 test**; `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note» né di «Da un testo scritto») (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
+- Test e lint al 12/10/2026: `npm test` → **1748 test**; `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note» né di «Da un testo scritto») (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---
@@ -72,6 +72,12 @@
    qui, in un commit o parlando con il committente — nomina la funzione o la costante, non la
    riga. Il 25/08/2026 tutti e cinque i riferimenti `file:riga` presenti in questo documento
    puntavano a righe scorrelate.
+5-bis. 🤖 **OGNI CATEGORIA DI WORKOUT HA «GENERA CON IA»** (regola del committente, 12/10/2026):
+   Hyrox, Corsa, Custom **e tutte quelle che verranno**. Chi aggiunge una categoria in
+   `CATEGORIE` di `CreateWorkout.jsx` le dà anche la generazione con IA, nello stesso lavoro:
+   `src/lib/iaCategorie.js`, `CATEGORIE_IA` in `supabase/functions/ai-workout/regole.ts`,
+   `contenutoIA` nel builder (`docs/memoria/crea-workout.md`, 9-ai-categorie). Un test
+   (`iaCategorie.test.js`) fallisce finché manca.
 6. Prima di modificare un file grande (`WorkoutDetail.jsx` 2.938 righe, `AthleteDetail.jsx` 2.553,
    `CreateWorkout.jsx` 2.348, `Home.jsx` 2.010 — contate il 26/08/2026) leggere le sezioni
    rilevanti: c'è molta logica duplicata tra i file (vedi `docs/memoria/qualita-e-test.md`, §9 Debito tecnico).
@@ -515,6 +521,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_cache_aw_<id>_<athleteId>`, `fleofit_cache_all_aw_<id>`, `fleofit_tv_code`,
   `fleofit_ultimo_export`, `fleofit_invito_atteso`, `fleofit_segnalazione_bozza`,
   `fleofit_cache_gare_hyrox`, `fleofit_gare_senza_risultato`, `fleofit_cache_gare_passate`,
+  `fleofit_cache_risultato_<stagione>_<idp>`,
   `adminRoleOverride`.
   ⚠️ `fleofit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
   dice «l'hai esportato da qui», e su un telefono nuovo semplicemente non c'è (§9-duoetvicies).
@@ -608,7 +615,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 |---|---|
 | `Home.jsx` (ramo atleta), `HomeAtletaUI`, `HomeAtletaVuotiUI`, `statistiche.js` | `home-atleta.md` |
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `statisticheCoach.js`, `pausa.js` | `home-coach.md` |
-| `CreateWorkout.jsx`, `CreaWorkoutUI`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza | `crea-workout.md` |
+| `CreateWorkout.jsx`, `CreaWorkoutUI`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza | `crea-workout.md` |
 | `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |

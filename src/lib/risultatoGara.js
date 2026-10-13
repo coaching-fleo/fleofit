@@ -19,6 +19,12 @@
 import { leggiJson, scriviJson } from './offlineQueue'
 
 export const PREFISSO_RIGA = '🏁 Tempo HYROX:'
+// La seconda riga: il link al risultato ufficiale. Dal 13/10/2026 la scheda
+// della gara lo rilegge (`riferimentoDallaNota`) per mostrare posizioni e
+// split, che non si salvano da nessuna parte (schema congelato). Un link e
+// non un marcatore: dalla web app si apre, e se l'atleta lo cancella si
+// perdono solo gli split, non il tempo.
+export const PREFISSO_LINK = '🔗 Risultato ufficiale:'
 export const CHIAVE_IGNORATE = 'fleofit_gare_senza_risultato'
 
 // Dopo due mesi la domanda «com'è andata?» non ha più senso.
@@ -97,13 +103,58 @@ export function haRisultato(note) {
 // `^\[RPE:` ancorato all'inizio (gradimento.js).
 const MARCATORI_IN_TESTA = /^(?:\[[A-ZÀ-Ü ]+:[^\]\n]*\]\s*\n?)*/
 
-/** La nota con la riga del tempo in testa (sostituisce quella vecchia, se c'era). */
-export function conRisultato(note, riga) {
+/**
+ * La nota con la riga del tempo in testa, e sotto il link al risultato
+ * ufficiale se c'è (sostituiscono quelle vecchie, se c'erano).
+ */
+export function conRisultato(note, riga, url = '') {
   const s = String(note || '')
   const testa = s.match(MARCATORI_IN_TESTA)[0]
   const corpo = s.slice(testa.length)
-    .split('\n').filter(l => !l.startsWith(PREFISSO_RIGA)).join('\n').replace(/^\s+/, '')
-  return `${testa}${riga}${corpo ? `\n${corpo}` : ''}`
+    .split('\n').filter(l => !l.startsWith(PREFISSO_RIGA) && !l.startsWith(PREFISSO_LINK)).join('\n').replace(/^\s+/, '')
+  const righe = url ? `${riga}\n${PREFISSO_LINK} ${url}` : riga
+  return `${testa}${righe}${corpo ? `\n${corpo}` : ''}`
+}
+
+const rigaDelRisultato = (l) => l.startsWith(PREFISSO_RIGA) || l.startsWith(PREFISSO_LINK)
+
+/**
+ * La nota come la legge e la scrive l'atleta: senza la riga del tempo e senza
+ * il link. 13/10/2026: «rimuovi le note, c'è già il tasto risultato ufficiale
+ * in fondo» — tempo e link li mostra la card della gara, e nel riquadro delle
+ * note restano solo le parole dell'atleta. Nel database le due righe restano:
+ * sono l'unico posto dove il risultato è salvato (schema congelato).
+ */
+export function senzaRisultato(note) {
+  return String(note || '').split('\n').filter(l => !rigaDelRisultato(l)).join('\n').replace(/^\s+/, '')
+}
+
+/**
+ * Il testo che l'atleta ha scritto, con davanti la riga del tempo e il link
+ * presi dalla nota di prima: salvare le note non deve cancellare il risultato
+ * che il riquadro non mostra.
+ */
+export function conRisultatoDi(notaPrima, testo) {
+  const righe = String(notaPrima || '').split('\n').filter(rigaDelRisultato)
+  const corpo = senzaRisultato(testo)
+  return [...righe, corpo].filter(Boolean).join('\n')
+}
+
+/**
+ * Da quale risultato viene il tempo della nota: `{ stagione, idp, evento }`
+ * letti dal link ufficiale, o `null` (tempo scritto a mano, o salvato prima
+ * del 13/10/2026).
+ */
+export function riferimentoDallaNota(note) {
+  const riga = String(note || '').split('\n').find(l => l.startsWith(PREFISSO_LINK))
+  if (!riga) return null
+  const m = /season-(\d+)\/\?(\S+)/.exec(riga)
+  if (!m) return null
+  const p = new URLSearchParams(m[2])
+  const idp = p.get('idp')
+  const evento = p.get('event')
+  if (!idp || !evento || !/^[A-Za-z0-9_]+$/.test(idp + evento)) return null
+  return { stagione: Number(m[1]), idp, evento }
 }
 
 /** Il giorno di oggi meno il giorno di gara, in giorni di calendario. */
@@ -189,7 +240,7 @@ export async function salvaRisultato(supabase, { awId, athleteId, citta, giorno,
   const { data: aw, error: e1 } = await supabase.from('athlete_workouts').select('notes').eq('id', awId).single()
   if (e1) throw e1
   const { error: e2 } = await supabase.from('athlete_workouts')
-    .update({ notes: conRisultato(aw?.notes, rigaRisultato(risultato)), status: 'completed' })
+    .update({ notes: conRisultato(aw?.notes, rigaRisultato(risultato), risultato.url), status: 'completed' })
     .eq('id', awId)
   if (e2) throw e2
 
@@ -318,8 +369,53 @@ export async function salvaGaraPassata(supabase, { athleteId, gara, giorno, risu
   if (e1) throw e1
   const { error: e2 } = await supabase.from('athlete_workouts').insert({
     athlete_id: athleteId, workout_id: w.id, completed_date: giorno, status: 'completed',
-    notes: rigaRisultato(risultato),
+    notes: conRisultato('', rigaRisultato(risultato), risultato.url),
   })
   if (e2) throw e2
   await salvaRecord(supabase, { athleteId, exercise: nomeRecord(gara.citta, gara.anno), value: tempoCorto(risultato.tempo), giorno })
+}
+
+// ── Le statistiche sulla scheda della gara ──────────────────────────────────
+
+const chiaveDettaglio = (r) => `fleofit_cache_risultato_${r.stagione}_${r.idp}`
+
+/**
+ * Il dettaglio di un risultato già salvato. Un risultato ufficiale non cambia
+ * più: la prima lettura resta nel telefono (`fleofit_cache_risultato_…`) e la
+ * scheda si apre anche offline, senza chiedere di nuovo al sito.
+ */
+export async function statisticheSalvate(supabase, rif, storage = globalThis.localStorage) {
+  if (!rif) return null
+  const copia = leggiJson(chiaveDettaglio(rif), null, storage)
+  if (copia?.tempo) return copia
+  const d = await dettaglioRisultato(supabase, rif)
+  if (d?.tempo) scriviJson(chiaveDettaglio(rif), d, storage)
+  return d
+}
+
+const secondi = (t) => {
+  const p = String(t || '').split(':').map(Number)
+  if (p.some(Number.isNaN) || p.length < 2) return null
+  return p.reduce((a, n) => a * 60 + n, 0)
+}
+
+/**
+ * Le statistiche da mostrare, ricavate dal dettaglio: corsa, stazioni (la
+ * somma delle otto), Roxzone, e la stazione più lenta e più veloce per
+ * posizione — dove si è perso e dove si è guadagnato rispetto agli altri.
+ */
+export function riassuntoGara(d) {
+  if (!d) return null
+  const stazioni = (d.stazioni || []).map(s => ({ ...s, sec: secondi(s.tempo), pos: Number(s.posizione) || null }))
+  const sommaStazioni = stazioni.every(s => s.sec != null) && stazioni.length
+    ? stazioni.reduce((a, s) => a + s.sec, 0) : null
+  const conPosizione = stazioni.filter(s => s.pos)
+  const ordinate = [...conPosizione].sort((a, b) => a.pos - b.pos)
+  return {
+    corsa: d.totaleCorsa ? tempoCorto(d.totaleCorsa) : null,
+    roxzone: d.roxzone ? tempoCorto(d.roxzone) : null,
+    stazioni: sommaStazioni != null ? tempoCorto(`${String(Math.floor(sommaStazioni / 3600)).padStart(2, '0')}:${String(Math.floor(sommaStazioni / 60) % 60).padStart(2, '0')}:${String(sommaStazioni % 60).padStart(2, '0')}`) : null,
+    migliore: ordinate.length > 1 ? ordinate[0] : null,
+    peggiore: ordinate.length > 1 ? ordinate[ordinate.length - 1] : null,
+  }
 }

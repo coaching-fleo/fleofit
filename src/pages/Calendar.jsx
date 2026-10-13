@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { format, startOfMonth, endOfMonth, isSameDay, isToday } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useAuth } from '../App'
+import { useRipresa, useRicorda } from '../useRipresa'
 import NuovoEvento from '../components/NuovoEvento'
 import { categoriaDi, corsia } from '../lib/categorie'
 import { coloreCategoria } from '../lib/colori'
@@ -13,7 +14,7 @@ import { rpeDichiarato } from '../lib/rpe'
 import {
   griglia, indicizzaPerGiorno, chiaveGiorno, segnoGiorno, riepilogoMese,
   riepilogoGiorno, formattaVolume, etichettaSessione, etichettaGiorno,
-  etichettaMese, eMeseCorrente,
+  etichettaMese, eMeseCorrente, eEvento,
 } from '../lib/rigaCalendario'
 import {
   TestataCalendario, CardMese, NavMese, LegendaCorsie, GrigliaMese, CellaGiorno,
@@ -22,21 +23,35 @@ import {
 } from '../components/CalendarioUI'
 
 export default function Calendar() {
-  const [currentMonth, setCurrentMonth] = useState(new Date())
-  const [workouts, setWorkouts] = useState([])
-  const [selectedDay, setSelectedDay] = useState(new Date())
-  const [loading, setLoading] = useState(true)
-  const [eventModalOpen, setEventModalOpen] = useState(false)
   const navigate = useNavigate()
   const { role, user } = useAuth()
   const isAtleta = role === 'athlete'
+  // Tornando indietro da una scheda il calendario riprende mese, giorno scelto
+  // e posizione (13/10/2026: «devo tornare a dove ero»), come archivio e
+  // rubrica (src/useRipresa.js). Le date viaggiano come numeri: la memoria è
+  // di modulo, ma un Date condiviso fra due montaggi è un invito a mutarlo.
+  const ripresa = useRipresa('calendario', user?.id)
+  const [currentMonth, setCurrentMonth] = useState(() => ripresa ? new Date(ripresa.mese) : new Date())
+  const [workouts, setWorkouts] = useState(() => ripresa?.workouts ?? [])
+  const [selectedDay, setSelectedDay] = useState(() => ripresa ? new Date(ripresa.giorno) : new Date())
+  const [loading, setLoading] = useState(!ripresa)
+  const [eventModalOpen, setEventModalOpen] = useState(false)
+  useRicorda('calendario', user?.id, ripresa, {
+    mese: currentMonth.getTime(), giorno: selectedDay.getTime(), workouts, caricato: !loading,
+  })
 
   useEffect(() => {
     fetchWorkouts()
   }, [currentMonth])
 
+  // Al ritorno il mese ripreso è già in pagina: la sua ricarica è silenziosa,
+  // senza scheletro (che è corto e schiaccerebbe lo scorrimento in cima).
+  const primoCaricamento = useRef(true)
+
   const fetchWorkouts = async () => {
-    setLoading(true)
+    const silenziosa = ripresa && primoCaricamento.current
+    primoCaricamento.current = false
+    if (!silenziosa) setLoading(true)
     const from = format(startOfMonth(currentMonth), 'yyyy-MM-dd')
     const to = format(endOfMonth(currentMonth), 'yyyy-MM-dd')
 
@@ -107,11 +122,12 @@ export default function Calendar() {
       etichetta: corsia(categoria).etichetta,
       colore: coloreCategoria(categoria),
     }))
-    if (sintesi.completati > 0) {
+    // Le gare chiuse restano bianche (eEvento): da sole non accendono la voce.
+    if (workouts.some(w => w.status === 'completed' && !eEvento(w))) {
       voci.push({ chiave: 'fatto', etichetta: 'Fatto', colore: '#22c55e' })
     }
     return voci
-  }, [corsie, sintesi.completati])
+  }, [corsie, workouts])
 
   const volume = formattaVolume(sintesi.minuti, sintesi.ignote, sintesi.misurate)
 
@@ -133,8 +149,9 @@ export default function Calendar() {
 
   return (
     /* ⚠️ Niente `page-transition`: la pagina non sale più tutta insieme.
-       `cascata` fa entrare i suoi figli uno dopo l'altro (src/index.css). */
-    <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)] cascata">
+       `cascata` fa entrare i suoi figli uno dopo l'altro (src/index.css).
+       Al ritorno da una scheda la pagina c'è già: niente cascata, come l'archivio. */
+    <div className={`px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)] pt-[calc(env(safe-area-inset-top)+1rem)] ${ripresa ? 'ritorno-entra' : 'cascata'}`}>
       <TestataCalendario
         mese={etichettaMese(currentMonth)}
         anno={format(currentMonth, 'yyyy')}
@@ -199,8 +216,12 @@ export default function Calendar() {
                 etichetta={etichettaSessione(w)}
                 titolo={w.title || 'Senza titolo'}
                 meta={meta}
-                stato={isAtleta ? (w.status === 'completed' ? 'fatto' : 'da fare') : null}
-                onApri={() => navigate(`/workout/${w.id}`)}
+                // Una gara non ha «da fare» né «fatto»: resta bianca (eEvento).
+                stato={isAtleta && !eEvento(w) ? (w.status === 'completed' ? 'fatto' : 'da fare') : null}
+                // ⚠️ All'atleta serve `athlete_id`: senza, la scheda non carica la SUA
+                // assegnazione (nota, stato, RPE, tempo di gara) e mostra il workout
+                // nudo (corretto il 13/10/2026). Il coach qui vede la programmazione.
+                onApri={() => navigate(isAtleta ? `/workout/${w.id}?athlete_id=${user.id}` : `/workout/${w.id}`)}
               />
             )
           })}

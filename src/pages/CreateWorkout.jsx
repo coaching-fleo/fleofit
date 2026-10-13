@@ -36,7 +36,8 @@ import AudioVisualizer from '../components/AudioVisualizer'
 import { ThinkingOrb } from 'thinking-orbs'
 import { BorderBeam } from 'border-beam'
 import { scriviJson } from '../lib/offlineQueue'
-import { preparaBlocchiIA, blocchiPerIA } from '../lib/blocchiIA'
+import { preparaBlocchiIA } from '../lib/blocchiIA'
+import { iaDellaCategoria, haGiaContenuto } from '../lib/iaCategorie'
 import { intervalliDi, etichetteStazioni, MASSIMO_INTERVALLI } from '../lib/stazioniEmom'
 import { parseDuration } from '../lib/timerSequence'
 import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
@@ -368,18 +369,22 @@ const MS_ATTESA_LUNGA = 9000
  * modi di dire la stessa cosa, e tenerli in due tabelle è il modo in cui
  * l'orb finisce a comporre mentre l'etichetta dice che sta ascoltando.
  */
+// L'etichetta del lavoro di scrittura dipende dalla categoria («Scrivo le
+// fasi»): sta in src/lib/iaCategorie.js, e qui si legge al momento.
 const ORB_ATTESA = {
-  voce: { stato: 'listening', etichetta: 'Ascolto la registrazione' },
-  testo: { stato: 'composing', etichetta: 'Scrivo i blocchi' },
+  voce: { stato: 'listening', etichetta: () => 'Ascolto la registrazione' },
+  testo: { stato: 'composing', etichetta: (ia) => ia.scrivo },
 }
 
 const mmssSecondi = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
-// `blocchiAttuali`: i blocchi già nel builder. Se ce ne sono, il foglio
-// chiede una MODIFICA invece di una generazione (12/10/2026): l'IA riceve
+// `attuali`: l'allenamento già nel builder — blocchi, fasi o descrizione,
+// secondo la `categoria` (src/lib/iaCategorie.js). Se c'è, il foglio chiede
+// una MODIFICA invece di una generazione (12/10/2026): l'IA riceve
 // l'allenamento e lo restituisce intero, cambiato dove il coach ha chiesto.
-function AiGenerationModal({ onClose, onGenerate, blocchiAttuali = [] }) {
-  const inModifica = blocchiAttuali.length > 0
+function AiGenerationModal({ onClose, onGenerate, categoria = 'Hyrox', attuali = [] }) {
+  const ia = iaDellaCategoria(categoria)
+  const inModifica = haGiaContenuto(attuali)
   const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onClose)
 
   const [text, setText] = useState('')
@@ -508,7 +513,7 @@ function AiGenerationModal({ onClose, onGenerate, blocchiAttuali = [] }) {
     iniziaAttesa(!!body.audioBase64)
     try {
       const { data, error } = await supabase.functions.invoke('ai-workout', {
-        body: inModifica ? { ...body, blocchiAttuali: blocchiPerIA(blocchiAttuali) } : body,
+        body: { ...body, categoria, ...(inModifica ? { attuali: ia.perIA(attuali) } : {}) },
       })
       if (error) {
         let errorMsg = error.message
@@ -520,11 +525,17 @@ function AiGenerationModal({ onClose, onGenerate, blocchiAttuali = [] }) {
         throw new Error(errorMsg)
       }
       if (data?.error) throw new Error(data.error)
+      // 🔴 Una funzione pubblicata prima delle categorie non manda `categoria`
+      // e scrive SEMPRE blocchi Hyrox: dentro una Corsa sarebbero spazzatura.
+      // Per Hyrox va bene com'è; per le altre si dice che manca il deploy.
+      if (categoria !== 'Hyrox' && data?.categoria !== categoria) {
+        throw new Error('La generazione con IA per questa categoria non è ancora attiva sul server.')
+      }
       // ⚠️ Si sostituisce SOLO se il server dice di aver fatto una modifica:
       // una funzione non ancora aggiornata ignora i blocchi attuali e
       // restituisce soltanto i nuovi, e sostituire vorrebbe dire cancellare
       // tutto il resto.
-      onGenerate(data?.blocks || [], data?.modifica === true)
+      onGenerate(data?.[ia.chiave] ?? (ia.chiave === 'testo' ? '' : []), data?.modifica === true)
       chiudi()
     } catch (e) {
       // ⚠️ Mai il messaggio grezzo: a quota finita era il JSON intero di
@@ -534,7 +545,7 @@ function AiGenerationModal({ onClose, onGenerate, blocchiAttuali = [] }) {
     } finally {
       fineAttesa()
     }
-  }, [onGenerate, chiudi, iniziaAttesa, fineAttesa, inModifica, blocchiAttuali])
+  }, [onGenerate, chiudi, iniziaAttesa, fineAttesa, inModifica, attuali, categoria, ia])
 
   const inviaAudio = useCallback(async (blob, mimeType) => {
     try {
@@ -765,7 +776,7 @@ function AiGenerationModal({ onClose, onGenerate, blocchiAttuali = [] }) {
           <div className="flex-1 min-w-0">
             <p className="text-[16px] font-extrabold tracking-[-.015em] text-white">Genera con IA</p>
             <p className="mt-[2px] text-[12.5px] font-medium text-[#c4a6e8]">
-              {inModifica ? 'Chiedi una modifica, riscrivo i blocchi' : 'Descrivi l\'obiettivo, ti scrivo i blocchi'}
+              {inModifica ? ia.foglio.modifica : ia.foglio.genera}
             </p>
           </div>
         </div>
@@ -790,7 +801,7 @@ function AiGenerationModal({ onClose, onGenerate, blocchiAttuali = [] }) {
                 stesso: senza, il canvas se ne mette una INGLESE di sua
                 iniziativa («Composing…») sopra una riga italiana. */}
             <ThinkingOrb state={orbAttesa.stato} size={64} theme="dark"
-              aria-hidden="true" aria-label={orbAttesa.etichetta} />
+              aria-hidden="true" aria-label={orbAttesa.etichetta(ia)} />
             <div>
               <p className="text-white text-[16px] font-extrabold tracking-[-.015em]" role="status">
                 {attesaLunga ? 'Ci sta mettendo più del solito…' : inModifica ? 'Sto modificando l\'allenamento' : 'Sto scrivendo l\'allenamento'}
@@ -799,8 +810,8 @@ function AiGenerationModal({ onClose, onGenerate, blocchiAttuali = [] }) {
                 {attesaLunga
                   ? 'Ancora un momento: se non arriva, il messaggio di errore te lo dice.'
                   : attesaDaVoce
-                    ? 'Ascolto la registrazione e la traduco in blocchi. Ci vogliono pochi secondi.'
-                    : 'Leggo la descrizione e scrivo i blocchi. Ci vogliono pochi secondi.'}
+                    ? `${ia.attesa.voce} Ci vogliono pochi secondi.`
+                    : `${ia.attesa.testo} Ci vogliono pochi secondi.`}
               </p>
             </div>
             <p className={`${LABEL} pt-1`}>Non chiudere</p>
@@ -881,9 +892,7 @@ function AiGenerationModal({ onClose, onGenerate, blocchiAttuali = [] }) {
                 className="w-full bg-transparent text-white placeholder-gray-600 focus:outline-none resize-none
                            text-[15px] leading-relaxed min-h-[104px]"
                 rows={4}
-                placeholder={inModifica
-                  ? 'Es: porta l\'EMOM a 16 minuti, togli il Cash Out, 20 wall balls al posto dei burpees…'
-                  : 'Es: EMOM da 12 minuti, 15 burpees e 10 box jump a minuti alterni…'}
+                placeholder={inModifica ? ia.esempio.modifica : ia.esempio.genera}
                 value={text}
                 onChange={e => setText(e.target.value)}
               />
@@ -900,9 +909,7 @@ function AiGenerationModal({ onClose, onGenerate, blocchiAttuali = [] }) {
             </div>
 
             <p className="text-[12px] text-muted leading-snug px-1 pt-3 shrink-0">
-              {inModifica
-                ? 'Lavoro sui blocchi che hai già, anche quelli fatti a mano: cambio solo quello che chiedi, e puoi annullare.'
-                : 'I blocchi generati si aggiungono a quelli che hai già: puoi correggerli uno per uno.'}
+              {inModifica ? ia.nota.modifica : ia.nota.genera}
             </p>
           </>
         )}
@@ -2291,7 +2298,7 @@ export default function CreateWorkout() {
     const nuovi = preparaBlocchiIA(blocchi)
     if (nuovi.length === 0) return
     if (sostituisci) {
-      setModificaIA({ prima: blocks, dopo: nuovi, daTesto: true })
+      setModificaIA({ categoria: 'Hyrox', prima: blocks, dopo: nuovi, daTesto: true })
       setBlocks(nuovi)
     } else {
       setBlocks(prev => [...prev, ...nuovi])
@@ -2664,6 +2671,80 @@ export default function CreateWorkout() {
   // stato derivato può restare indietro di un render (CLAUDE.md §9-septies).
   const riepilogo = useMemo(() => caricoPrevisto(blocks), [blocks])
 
+  // ── «Genera con IA» per categoria (12/10/2026) ─────────────────────────
+  // L'allenamento che l'IA legge e riscrive, e chi lo scrive, per ognuna
+  // delle categorie (src/lib/iaCategorie.js). 🔴 Una categoria nuova si
+  // aggiunge in queste due tabelle oltre che in `CATEGORIE`: il foglio e la
+  // card la servono da sé.
+  const iaCategoria = iaDellaCategoria(category)
+  const contenutoIA = { Hyrox: blocks, Running: runningSteps, Custom: coachNotes }[category]
+  const impostaContenutoIA = { Hyrox: setBlocks, Running: setRunningSteps, Custom: setCoachNotes }[category]
+
+  /** Quello che l'IA ha scritto, aggiunto in coda o al posto di quello che c'era. */
+  const usaIA = (risultato, modifica) => {
+    const nuovo = iaCategoria.prepara(risultato)
+    const vuoto = !haGiaContenuto(nuovo)
+    // 🔴 Una risposta vuota non è «togli tutto»: è quasi sempre una risposta
+    // storta. Si tiene quello che c'era.
+    if (vuoto && (modifica || category === 'Custom')) return mostraErrore(iaCategoria.vuoto)
+    if (vuoto) return
+    if (modifica) {
+      setModificaIA({ categoria: category, prima: contenutoIA, dopo: nuovo })
+      impostaContenutoIA(nuovo)
+    } else if (category === 'Custom') {
+      setCoachNotes(prev => (prev.trim() ? `${prev.trimEnd()}\n${nuovo}` : nuovo))
+    } else {
+      impostaContenutoIA(prev => [...prev, ...nuovo])
+    }
+    if (category !== 'Hyrox') return
+    // Aperti TUTTI i blocchi appena scritti (in una modifica, tutto
+    // l'allenamento riscritto); quelli che c'erano già si chiudono, come
+    // quando si aggiunge un blocco a mano. Si mostra il PRIMO: l'IA ne scrive
+    // parecchi in un colpo, e il coach deve vedere da dove comincia.
+    apriSolo(nuovo.map(b => b.id))
+    bloccoDaMostrare.current = nuovo[0].id
+  }
+
+  // ⚠️ `ocean` e non `colorful`: qui OGNI colore significa già una
+  // categoria (giallo Hyrox, azzurro Corsa, magenta Custom, bianco
+  // Gara), e un arcobaleno si leggerebbe come una quinta corsia che
+  // non esiste. `ocean` è blu-viola, il vicinato di `--color-ia`.
+  // ⚠️ `staticColors` spegne l'oscillazione di tinta: con essa accesa
+  // l'`hue-rotate(±30deg)` porta il bordo fino al VERDE — che in
+  // questa app vuol dire «completato» (§9-duetricies).
+  // ⚠️ Il raggio non si passa: la libreria lo legge dal primo figlio,
+  // quindi segue `rounded-[20px]` di `CardIA` da sé.
+  // 🔴 Il fascio sta QUI e non dentro `CardIA` perché `CreaWorkoutUI`
+  // è un chunk condiviso con `WorkoutDetail`.
+  // ⚠️ Sta SOPRA la lista, in ogni categoria: è il modo di PARTIRE da zero,
+  // quindi deve essere visibile quando la lista è vuota o corta. L'artboard la
+  // disegnava sotto; alla prova sul dispositivo, con cinque blocchi aperti,
+  // non la trovava più nessuno.
+  const cardIA = iaCategoria && (
+    <BorderBeam size="md" colorVariant="ocean" theme="dark" strength={0.6} staticColors>
+      <CardIA onClick={() => setAiModalOpen(true)}
+        sottotitolo={haGiaContenuto(contenutoIA) ? iaCategoria.card.modifica : iaCategoria.card.genera} />
+    </BorderBeam>
+  )
+
+  // La stessa fascia serve a due sostituzioni: quella dell'IA (viola) e
+  // quella dell'immagine letta, che non è IA e non ne porta il colore. Si vede
+  // finché l'allenamento è ESATTAMENTE quello scritto: al primo ritocco a mano
+  // sparisce, e annullare non butta via il lavoro fatto dopo.
+  const fasciaIA = modificaIA && modificaIA.categoria === category && modificaIA.dopo === contenutoIA && (
+    <div role="status" className={`flex items-center gap-3 rounded-2xl px-4 py-2.5 ${modificaIA.daTesto
+      ? `${VETRO}` : 'border border-ia/30 bg-ia/10'}`}>
+      <p className={`flex-1 text-[13px] font-semibold ${modificaIA.daTesto ? 'text-gray-300' : 'text-[#c4a6e8]'}`}>
+        {modificaIA.daTesto ? 'Blocchi sostituiti dall\'immagine' : iaCategoria?.modificati}
+      </p>
+      <button type="button"
+        onClick={() => { impostaContenutoIA(modificaIA.prima); setModificaIA(null); battito() }}
+        className="flex items-center gap-1.5 text-[13px] font-extrabold text-white hover:text-ia transition px-1 -mx-1 min-h-9">
+        <Undo2 size={15} aria-hidden="true" /> Annulla
+      </button>
+    </div>
+  )
+
   // Dove sta questa seduta rispetto a quelle che il coach scrive di solito.
   // ⚠️ Il termine di paragone si legge UNA volta all'apertura della pagina, e
   // se la lettura fallisce la riga semplicemente non compare: un confronto è
@@ -2930,45 +3011,13 @@ export default function CreateWorkout() {
             classeColore="bg-brand"
           />
 
-          {/* ⚠️ Sta QUI, sopra i blocchi, e non sotto: è il modo di PARTIRE da
-              zero, quindi deve essere visibile quando la lista è vuota o corta —
-              non scendere in fondo insieme alla lista man mano che cresce.
-              L'artboard la disegnava sotto; alla prova sul dispositivo, con
-              cinque blocchi aperti, non la trovava più nessuno. */}
-          {/* ⚠️ `ocean` e non `colorful`: qui OGNI colore significa già una
-              categoria (giallo Hyrox, azzurro Corsa, magenta Custom, bianco
-              Gara), e un arcobaleno si leggerebbe come una quinta corsia che
-              non esiste. `ocean` è blu-viola, il vicinato di `--color-ia`.
-              ⚠️ `staticColors` spegne l'oscillazione di tinta: con essa accesa
-              l'`hue-rotate(±30deg)` porta il bordo fino al VERDE — che in
-              questa app vuol dire «completato» (§9-duetricies).
-              ⚠️ Il raggio non si passa: la libreria lo legge dal primo figlio,
-              quindi segue `rounded-[20px]` di `CardIA` da sé.
-              🔴 Il fascio sta QUI e non dentro `CardIA` perché `CreaWorkoutUI`
-              è un chunk condiviso con `WorkoutDetail`. */}
-          <BorderBeam size="md" colorVariant="ocean" theme="dark" strength={0.6} staticColors>
-            <CardIA onClick={() => setAiModalOpen(true)} inModifica={blocks.length > 0} />
-          </BorderBeam>
+          {cardIA}
 
           {conImmagine && (
             <BottoneGhost icona={ScanText} onClick={() => inputImmagine.current?.click()}>Da un'immagine</BottoneGhost>
           )}
 
-          {/* La stessa fascia serve a due sostituzioni: quella dell'IA (viola) e
-              quella dell'immagine letta, che non è IA e non ne porta il colore. */}
-          {modificaIA && modificaIA.dopo === blocks && (
-            <div role="status" className={`flex items-center gap-3 rounded-2xl px-4 py-2.5 ${modificaIA.daTesto
-              ? `${VETRO}` : 'border border-ia/30 bg-ia/10'}`}>
-              <p className={`flex-1 text-[13px] font-semibold ${modificaIA.daTesto ? 'text-gray-300' : 'text-[#c4a6e8]'}`}>
-                {modificaIA.daTesto ? 'Blocchi sostituiti dall\'immagine' : 'Blocchi modificati con l\'IA'}
-              </p>
-              <button type="button"
-                onClick={() => { setBlocks(modificaIA.prima); setModificaIA(null); battito() }}
-                className="flex items-center gap-1.5 text-[13px] font-extrabold text-white hover:text-ia transition px-1 -mx-1 min-h-9">
-                <Undo2 size={15} aria-hidden="true" /> Annulla
-              </button>
-            </div>
-          )}
+          {fasciaIA}
 
           <div className="flex flex-col gap-[11px]" data-drag-container>
             {blocks.map((block, idx) => (
@@ -3043,36 +3092,12 @@ export default function CreateWorkout() {
         />
       )}
 
-      {aiModalOpen && (
-        <AiGenerationModal 
+      {aiModalOpen && iaCategoria && (
+        <AiGenerationModal
           onClose={() => setAiModalOpen(false)}
-          blocchiAttuali={blocks}
-          onGenerate={(newBlocks, modifica) => {
-            const formattedBlocks = preparaBlocchiIA(newBlocks)
-            if (modifica) {
-              // 🔴 Una lista vuota da una modifica non è «togli tutto»: è
-              // quasi sempre una risposta storta. Si tiene quello che c'era.
-              if (formattedBlocks.length === 0) {
-                mostraErrore('L\'IA non ha restituito nessun blocco: l\'allenamento è rimasto com\'era.')
-                return
-              }
-              setModificaIA({ prima: blocks, dopo: formattedBlocks })
-              setBlocks(formattedBlocks)
-              // L'IA ha riscritto tutto l'allenamento: tutto da rileggere.
-              apriSolo(formattedBlocks.map(b => b.id))
-              bloccoDaMostrare.current = formattedBlocks[0].id
-              return
-            }
-            setBlocks([...blocks, ...formattedBlocks])
-            if (formattedBlocks.length > 0) {
-              // Aperti TUTTI quelli appena generati; quelli che c'erano già
-              // si chiudono, come quando si aggiunge un blocco a mano.
-              apriSolo(formattedBlocks.map(b => b.id))
-              // Il primo dei blocchi generati, non l'ultimo: l'IA ne scrive
-              // parecchi in un colpo, e il coach deve vedere da dove comincia.
-              bloccoDaMostrare.current = formattedBlocks[0].id
-            }
-          }}
+          categoria={category}
+          attuali={contenutoIA}
+          onGenerate={usaIA}
         />
       )}
 
@@ -3106,9 +3131,13 @@ export default function CreateWorkout() {
             classeColore="bg-running"
           />
 
+          {cardIA}
+
           {conImmagine && (
             <BottoneGhost icona={ScanText} onClick={() => inputImmagine.current?.click()}>Da un'immagine</BottoneGhost>
           )}
+
+          {fasciaIA}
 
           <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
             <div className="flex items-center justify-between">
@@ -3171,6 +3200,10 @@ export default function CreateWorkout() {
             onChange={setWorkoutIntensity}
             classeColore="bg-custom"
           />
+
+          {cardIA}
+
+          {fasciaIA}
 
           <NoteCoach
             valore={coachNotes}
