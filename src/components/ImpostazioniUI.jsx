@@ -241,11 +241,20 @@ export function RigaPieghevole({ icona, tono = 'neutro', titolo, aperto, onToggl
 
 // ── Sezioni ───────────────────────────────────────────────────────────────
 
+/**
+ * L'etichetta sopra un gruppo. Esportata per il desktop: la carta dell'account
+ * non è una `Sezione`, ma sulla colonna sinistra ne prende l'etichetta perché le
+ * due colonne partano alla stessa altezza (segnalato dal committente, 13/10).
+ */
+export function EtichettaSezione({ children }) {
+  return <p data-etichetta-sezione className={`mb-2 pl-1 ${LABEL}`}>{children}</p>
+}
+
 /** Etichetta in monospazio + la carta che raccoglie le righe. */
 export function Sezione({ etichetta, children }) {
   return (
     <section aria-label={etichetta}>
-      {etichetta && <p className={`mb-2 pl-1 ${LABEL}`}>{etichetta}</p>}
+      {etichetta && <EtichettaSezione>{etichetta}</EtichettaSezione>}
       <div className={`${CARD} overflow-hidden`}>{children}</div>
     </section>
   )

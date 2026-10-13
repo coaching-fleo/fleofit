@@ -324,6 +324,19 @@ describe('Impostazioni — versione desktop', () => {
     expect(screen.queryByRole('button', { name: 'Torna indietro' })).toBeNull()
   })
 
+  it('le due colonne partono alla stessa altezza: un\'etichetta in cima a ciascuna', async () => {
+    // Segnalato dal committente il 13/10: la destra partiva con «Solo coach»
+    // sopra la carta, la sinistra direttamente con la carta, e i due riquadri
+    // non erano allineati. jsdom non misura, quindi si controlla la forma:
+    // il primo elemento di ogni colonna è un'etichetta di sezione.
+    schermo(true)
+    const { container } = montaCoach()
+    await screen.findByRole('heading', { name: 'Impostazioni' })
+    const prima = (lato) => container.querySelector(`[data-colonna="${lato}"]`).firstElementChild
+    expect(prima('sinistra').querySelector('[data-etichetta-sezione]')?.textContent).toBe('Profilo')
+    expect(prima('destra').querySelector('[data-etichetta-sezione]')?.textContent).toBe('Solo coach')
+  })
+
   it('sul telefono resta com\'era', async () => {
     schermo(false)
     const { container } = montaCoach()

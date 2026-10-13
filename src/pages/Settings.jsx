@@ -18,7 +18,7 @@ import { Share } from '@capacitor/share'
 import { CHIAVE_ULTIMO_EXPORT, etichettaRuolo, riassuntoBackup, riassuntoCodici } from '../lib/rigaImpostazioni'
 import { CARD } from '../lib/stiliCard'
 import {
-  BottoneEsci, CartaAccount, FoglioCodici, PiediPagina, RigaAzione, RigaInterruttore,
+  BottoneEsci, CartaAccount, EtichettaSezione, FoglioCodici, PiediPagina, RigaAzione, RigaInterruttore,
   RigaPericolo, RigaPieghevole, Separatore, Sezione, TestataImpostazioni,
 } from '../components/ImpostazioniUI'
 import FoglioSegnalazione from '../components/FoglioSegnalazione'
@@ -721,7 +721,13 @@ export default function Settings() {
         // da scrivania. Solo `admin` li ha: per gli altri la colonna è una.
         <div data-disposizione="desktop" className="grid grid-cols-12 gap-6 items-start">
           <div data-colonna="sinistra" className="col-span-5 flex flex-col gap-3.5">
-            {pCarta}{pAccount}{pAiuto}{pElimina}{pUscita}
+            {/* «Profilo» esiste solo qui: allinea la carta dell'account a
+                quella di «Solo coach», che ha la sua etichetta sopra. */}
+            <section aria-label="Profilo">
+              <EtichettaSezione>Profilo</EtichettaSezione>
+              {pCarta}
+            </section>
+            {pAccount}{pAiuto}{pElimina}{pUscita}
           </div>
           <div data-colonna="destra" className="col-span-7 flex flex-col gap-3.5">
             {pCoach}

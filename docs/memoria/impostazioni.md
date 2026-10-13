@@ -263,3 +263,6 @@ strumenti). Senza `admin` resta una colonna sola: la destra sarebbe vuota.
 `TestataImpostazioni` senza `onIndietro` non disegna la freccia (c'è la barra laterale).
 I pezzi (`pCarta`, `pCoach`…) sono scritti una volta: ⚠️ una sezione nuova va in ENTRAMBE
 le disposizioni. Test: «Impostazioni — versione desktop» in `Impostazioni.test.jsx`.
+- ⚠️ La colonna sinistra apre con l'etichetta «Profilo» (`EtichettaSezione`) sopra la carta
+  dell'account: senza, la destra — che apre con «Solo coach» — partiva un'etichetta più in
+  basso (segnalato dal committente). «Profilo» esiste solo sul desktop.
