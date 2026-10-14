@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   nuovoGruppoGym, tipoGruppo, serieDi, riassuntoEsercizio, riassuntoGruppo, durataGruppoGym, riepilogoGym,
   etichetteGym, preparaGymIA, gymPerIA, candidatiNomeGym, secondiGym, tempoGym, testoTempo, repsGym, caricoGym,
-  dettaglioDaSemplice, sempliceDaDettaglio, gruppiPerElenco, righeTestoGym, tipoSerieDopo, SECONDI_CAMBIO,
+  dettaglioDaSemplice, sempliceDaDettaglio, cambiaEsercizioGym, spostaInFase, gruppiPerElenco, righeTestoGym, tipoSerieDopo, SECONDI_CAMBIO,
 } from '../gym'
 import { trovaEsercizioGym, cercaEserciziGym, ESERCIZI_GYM, MUSCOLI } from '../eserciziGym'
 import { codiceWorkout, separaCodice, unisciCodice } from '../codiceWorkout'
@@ -207,5 +207,36 @@ describe('la scheda scritta dall\'IA', () => {
   it('un gruppo nuovo parte da 3 serie in centro e 1 nel riscaldamento', () => {
     expect(nuovoGruppoGym('principale', 'Leg press')).toMatchObject({ serie: '3', recupero: '1:30', esercizi: [{ reps: '10' }] })
     expect(nuovoGruppoGym('riscaldamento', 'Cyclette')).toMatchObject({ serie: '1', recupero: '', esercizi: [{ durata: '10:00' }] })
+  })
+})
+
+describe('«Cambia esercizio»', () => {
+  it('tiene id, numeri e note se la misura è la stessa', () => {
+    const prima = ex('Panca piana con bilanciere', { reps: '8-12', kg: '60 kg', rir: '2', notes: 'fermo in basso' })
+    expect(cambiaEsercizioGym(prima, 'Panca inclinata con manubri')).toEqual({ ...prima, name: 'Panca inclinata con manubri' })
+  })
+
+  it('da ripetizioni a tempo riparte dai valori di un esercizio nuovo', () => {
+    const prima = ex('Panca piana con bilanciere', { reps: '8', kg: '60 kg', rir: '2' })
+    const dopo = cambiaEsercizioGym(prima, 'Plank')
+    expect(dopo).toMatchObject({ id: prima.id, name: 'Plank', durata: '0:30', kg: '' })
+    expect(dopo.reps).toBeUndefined()
+    expect(dopo.rir).toBeUndefined()
+  })
+})
+
+describe('«Fase» di un gruppo', () => {
+  it('il gruppo va in fondo alla fase nuova, com\'è', () => {
+    const a = gruppo({ id: 'a', fase: 'riscaldamento', serie: '3' }, ex('Squat con bilanciere'))
+    const b = gruppo({ id: 'b' }, ex('Leg press'))
+    const dopo = spostaInFase([a, b], 'a', 'principale')
+    expect(dopo.map(g => g.id)).toEqual(['b', 'a'])
+    expect(dopo[1]).toEqual({ ...a, fase: 'principale' })
+  })
+
+  it('una fase sconosciuta o la stessa non cambiano niente', () => {
+    const lista = [gruppo({ id: 'a' }, ex('Leg press'))]
+    expect(spostaInFase(lista, 'a', 'principale')).toBe(lista)
+    expect(spostaInFase(lista, 'a', 'cardio')).toBe(lista)
   })
 })

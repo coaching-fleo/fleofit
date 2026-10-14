@@ -12,11 +12,20 @@
 //  1. **Scorre in modo nativo** (overflow-x con aggancio alle tacche), la stessa
 //     tecnica di `RuotaValori` che sul telefono ha già funzionato: l'inerzia
 //     del dito è quella di iOS e Android, non una nostra imitazione.
-//  2. **Scrive solo quando lo muove il dito.** Anche uno scorrimento fatto dal
-//     codice — il righello che si posa sul valore aperto, una scorciatoia
-//     toccata — genera eventi di scroll; se li ascoltasse, aprire un esercizio
-//     senza peso gli scriverebbe da solo il valore di partenza. Per questo c'è
-//     `dalDito`: vale solo fra il primo contatto e la fine dell'inerzia.
+//  2. **Lo scorrimento fatto dal codice è marcato, tutto il resto è del dito.**
+//     Il righello che si posa sul valore aperto, o su una scorciatoia toccata,
+//     genera eventi di scroll: `daCodice` dice dove sta andando, e finché ci va
+//     quegli eventi non scrivono — aprire un esercizio non inventa un valore.
+//     Ogni altro scorrimento è del coach (dito, inerzia, rotella) e scrive.
+//     🔴 Fino al 14/10/2026 era al contrario: si cercava di capire QUANDO c'era
+//     il dito, da touchstart/touchend più un timer di 180ms. Sul telefono quei
+//     segnali non sono affidabili — iOS usa il tocco che ferma un'inerzia
+//     senza sempre avvisare la pagina, Android manda `pointercancel` col dito
+//     ancora giù — e il righello, credendo il dito sparito, smetteva di
+//     scrivere: il numero restava bloccato mentre la scala scorreva. E il
+//     righello si riposizionava da solo mentre l'inerzia era ancora in corso,
+//     due animazioni che si scontravano. Segnalato più volte dal committente.
+//     Ora il righello non si riposiziona MAI su un valore che ha scelto lui.
 //  3. **Per chi non vede è un cursore** (`role="slider"`): si muove con le
 //     frecce e con i gesti di VoiceOver/TalkBack, e `aria-valuetext` dice il
 //     valore con la sua unità invece di un indice.
@@ -24,8 +33,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { battito } from '../lib/aptica'
 
-/** La larghezza di una tacca. Dieci tacche = 140px: un movimento comodo del pollice. */
-export const PASSO_TACCA = 14
+/**
+ * La larghezza di una tacca. Dieci tacche = 220px. Era 14 (140px ogni dieci)
+ * fino al 14/10/2026: il committente non riusciva a spostarlo di una tacca
+ * sola, perché bastavano 7px di dito per passare alla successiva.
+ */
+export const PASSO_TACCA = 22
 
 const menoMovimento = () => {
   try { return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true } catch { return false }
@@ -42,29 +55,52 @@ const menoMovimento = () => {
  */
 export default function Righello({ voci, indice, onScelta, etichetta, testoValore, colore = 'var(--color-brand)' }) {
   const pista = useRef(null)
-  const dalDito = useRef(false)
-  const premuto = useRef(false)
-  const fineInerzia = useRef(null)
   const ultimo = useRef(indice)
   const ultimoBattito = useRef(0)
   const primaVolta = useRef(true)
+  const vociPrima = useRef(voci)
+  // Dove sta andando uno scorrimento fatto dal codice, o null.
+  const daCodice = useRef(null)
+  const scadenzaCodice = useRef(null)
 
-  // Il righello si posa sul valore. Prima del disegno la prima volta (niente
-  // salto visibile), poi con un'animazione breve quando il valore cambia da
-  // fuori — una scorciatoia, «Riusa», il cambio di misura.
-  // ⚠️ Mai mentre il dito lo sta muovendo: glielo strapperebbe di mano.
-  useLayoutEffect(() => {
+  const liberaCodice = () => { daCodice.current = null; clearTimeout(scadenzaCodice.current) }
+  // Rete di sicurezza: se lo scorrimento del codice viene interrotto senza che
+  // ce ne accorgiamo (un dito che iOS non ci segnala), dopo una breve pausa
+  // senza eventi il righello torna del coach. Senza, resterebbe sordo — che è
+  // esattamente il difetto che questo file ha avuto.
+  const rinviaScadenza = (ms) => {
+    clearTimeout(scadenzaCodice.current)
+    scadenzaCodice.current = setTimeout(() => { daCodice.current = null }, ms)
+  }
+
+  /** Porta il righello sulla tacca `i` (scorrimento del codice, che non scrive). */
+  const portaA = useCallback((i, morbido) => {
     const el = pista.current
-    if (!el || dalDito.current) return
-    ultimo.current = indice
-    const x = indice * PASSO_TACCA
-    if (Math.abs(el.scrollLeft - x) < 1) return
-    if (primaVolta.current || menoMovimento() || typeof el.scrollTo !== 'function') el.scrollLeft = x
+    if (!el) return
+    const x = i * PASSO_TACCA
+    if (Math.abs(el.scrollLeft - x) < 1) { liberaCodice(); return }
+    daCodice.current = x
+    rinviaScadenza(400)
+    if (!morbido || menoMovimento() || typeof el.scrollTo !== 'function') el.scrollLeft = x
     else el.scrollTo({ left: x, behavior: 'smooth' })
-    primaVolta.current = false
-  }, [indice, voci])
+  }, [])
 
-  useEffect(() => () => clearTimeout(fineInerzia.current), [])
+  // Il righello si posa sul valore: prima del disegno la prima volta (niente
+  // salto visibile), poi con un'animazione breve quando il valore cambia da
+  // FUORI — una scorciatoia, «Riusa», il numero scritto a mano, il cambio di
+  // misura. ⚠️ Se l'indice è quello che ha appena scelto il righello stesso
+  // non si muove niente: l'inerzia del dito è ancora in corso, e uno
+  // scorrimento del codice sopra di lei è la collisione di prima.
+  useLayoutEffect(() => {
+    const nuoveVoci = vociPrima.current !== voci
+    vociPrima.current = voci
+    if (!primaVolta.current && !nuoveVoci && indice === ultimo.current) return
+    ultimo.current = indice
+    portaA(indice, !primaVolta.current && !nuoveVoci)
+    primaVolta.current = false
+  }, [indice, voci, portaA])
+
+  useEffect(() => () => clearTimeout(scadenzaCodice.current), [])
 
   const scegli = useCallback((i) => {
     const j = Math.max(0, Math.min(voci.length - 1, i))
@@ -78,24 +114,22 @@ export default function Righello({ voci, indice, onScelta, etichetta, testoValor
     onScelta(j)
   }, [voci.length, onScelta])
 
-  const inizioTocco = () => { premuto.current = true; dalDito.current = true; clearTimeout(fineInerzia.current) }
-  // ⚠️ Anche un tocco SENZA scorrimento deve restituire il righello: se
-  // `dalDito` restasse vero, il valore cambiato da fuori (una scorciatoia) non
-  // lo sposterebbe più. Ogni evento di scroll rinvia questa scadenza.
-  const fineTocco = () => {
-    premuto.current = false
-    clearTimeout(fineInerzia.current)
-    fineInerzia.current = setTimeout(() => { dalDito.current = false }, 180)
+  const scorri = () => {
+    const el = pista.current
+    if (daCodice.current != null) {
+      // Arrivato: da qui in poi ogni scorrimento è del coach.
+      if (Math.abs(el.scrollLeft - daCodice.current) < 1) liberaCodice()
+      else rinviaScadenza(150)
+      return
+    }
+    scegli(Math.round(el.scrollLeft / PASSO_TACCA))
   }
 
-  const scorri = () => {
-    if (!dalDito.current) return
-    const el = pista.current
-    scegli(Math.round(el.scrollLeft / PASSO_TACCA))
-    // L'inerzia continua dopo che il dito si è staccato: il righello resta
-    // «del dito» finché non si ferma davvero.
-    clearTimeout(fineInerzia.current)
-    fineInerzia.current = setTimeout(() => { if (!premuto.current) dalDito.current = false }, 180)
+  /** Un tasto o una tacca toccata: si sceglie, e il righello ci va. */
+  const vaiA = (i) => {
+    const j = Math.max(0, Math.min(voci.length - 1, i))
+    scegli(j)
+    portaA(j, true)
   }
 
   const tasto = (e) => {
@@ -106,7 +140,7 @@ export default function Righello({ voci, indice, onScelta, etichetta, testoValor
     else if (e.key === 'End') j = voci.length - 1
     if (j === null) return
     e.preventDefault()
-    scegli(j)
+    vaiA(j)
   }
 
   // Le due mezze-piste vuote ai lati: senza, la prima e l'ultima tacca non
@@ -126,12 +160,11 @@ export default function Righello({ voci, indice, onScelta, etichetta, testoValor
         aria-valuetext={testoValore}
         onScroll={scorri}
         onKeyDown={tasto}
-        onPointerDown={inizioTocco}
-        onPointerUp={fineTocco}
-        onPointerCancel={fineTocco}
-        onTouchStart={inizioTocco}
-        onTouchEnd={fineTocco}
-        onWheel={() => { dalDito.current = true; fineTocco() }}
+        // Il dito (o la rotella) che arriva a metà di uno scorrimento del
+        // codice se lo prende: da lì ogni movimento è suo.
+        onTouchStart={liberaCodice}
+        onPointerDown={liberaCodice}
+        onWheel={liberaCodice}
         className="flex items-end h-[64px] overflow-x-auto snap-x snap-mandatory overscroll-x-contain cursor-grab
                    active:cursor-grabbing rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
         style={{
@@ -145,7 +178,7 @@ export default function Righello({ voci, indice, onScelta, etichetta, testoValor
         {margine}
         {voci.map((v, i) => (
           <span key={v.valore} aria-hidden="true"
-            onClick={() => { dalDito.current = false; scegli(i) }}
+            onClick={() => vaiA(i)}
             className="snap-center shrink-0 h-full flex flex-col items-center justify-start gap-[7px] pt-3 cursor-pointer"
             style={{ width: PASSO_TACCA }}>
             <span className={`w-[2px] rounded-full ${v.tacca ? 'h-[22px] bg-[#5b6070]' : 'h-[11px] bg-white/[.14]'}`} />

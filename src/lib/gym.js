@@ -49,6 +49,18 @@ const ID_FASI = FASI_GYM.map(f => f.id)
 /** La fase di un gruppo, con la parte principale come ripiego. */
 export const faseDi = (gruppo) => (ID_FASI.includes(gruppo?.fase) ? gruppo.fase : 'principale')
 
+/**
+ * Porta un gruppo in un'altra fase («Cambia fase» del foglio, 14/10/2026):
+ * l'IA a volte mette nel riscaldamento quello che va nella parte principale.
+ * Il gruppo resta com'è — esercizi, serie, recupero, note — e va in fondo
+ * alla fase nuova: l'ordine dentro una fase è l'ordine dell'elenco.
+ */
+export const spostaInFase = (gruppi = [], id, fase) => {
+  const g = (gruppi || []).find(x => x.id === id)
+  if (!g || !ID_FASI.includes(fase) || faseDi(g) === fase) return gruppi
+  return [...gruppi.filter(x => x.id !== id), { ...g, fase }]
+}
+
 /** I gruppi nell'ordine delle fasi, mantenendo l'ordine dentro ciascuna. */
 export const gruppiInOrdine = (gruppi = []) =>
   FASI_GYM.flatMap(f => (gruppi || []).filter(g => faseDi(g) === f.id))
@@ -194,6 +206,30 @@ export const nuovoEsercizioGym = (nome, fase = 'principale') => {
     ex.reps = fase === 'principale' ? '10' : '12'
   }
   return ex
+}
+
+/**
+ * Lo stesso esercizio con un altro nome: è il «Cambia» del foglio, per quando
+ * l'IA (o la mano) ha messo il movimento sbagliato. Si tiene quello che il
+ * coach ha già scritto — id, note, cadenza, RIR, serie per serie — finché ha
+ * ancora senso: passare da ripetizioni a tempo (o viceversa) riparte dai
+ * valori di un esercizio nuovo, perché «10» ripetizioni non sono 10 secondi.
+ */
+export const cambiaEsercizioGym = (esercizio, nome, fase = 'principale') => {
+  const voce = voceGym(nome)
+  const nuovo = nuovoEsercizioGym(nome, fase)
+  const stessaMisura = voceGym(esercizio.name).misura === voce.misura
+  const fuori = { ...esercizio, name: nuovo.name }
+  if (!stessaMisura) {
+    delete fuori.reps
+    delete fuori.durata
+    delete fuori.dettaglio
+    delete fuori.rir
+    delete fuori.cadenza
+    Object.assign(fuori, voce.misura === 'tempo' ? { durata: nuovo.durata } : { reps: nuovo.reps })
+    if (voce.carico === false) fuori.kg = ''
+  }
+  return fuori
 }
 
 /** Un gruppo nuovo con un esercizio. Riscaldamento e defaticamento partono da una serie, senza recupero. */

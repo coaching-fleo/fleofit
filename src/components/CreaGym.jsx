@@ -23,9 +23,9 @@
 // indietro di Android lo chiude (src/lib/indietroAndroid.js).
 // ⚠️ Niente librerie di effetti qui: questo file lo importa solo CreateWorkout.
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, X, Copy, ChevronUp, ChevronDown, Trash2, Link2, Unlink, Search, Check, ListOrdered } from 'lucide-react'
+import { Plus, X, Copy, ChevronUp, ChevronDown, Trash2, Link2, Unlink, Search, Check, ListOrdered, Repeat2 } from 'lucide-react'
 import { CARD, LABEL, VETRO } from '../lib/stiliCard'
 import { useBottomSheet } from '../useBottomSheet'
 import { vibraScelta, battito } from '../lib/aptica'
@@ -35,7 +35,7 @@ import { MUSCOLI, cercaEserciziGym, voceGym } from '../lib/eserciziGym'
 import {
   FASI_GYM, faseDi, nuovoGruppoGym, nuovoEsercizioGym, tipoGruppo, conDettaglio, serieDi,
   riassuntoEsercizio, riassuntoGruppo, testoTempo, etichetteGym, dettaglioDaSemplice,
-  sempliceDaDettaglio, tipoSerie, tipoSerieDopo, caricoGym, repsGym, NOME_TIPO_GRUPPO,
+  sempliceDaDettaglio, tipoSerie, tipoSerieDopo, caricoGym, repsGym, NOME_TIPO_GRUPPO, cambiaEsercizioGym, spostaInFase,
 } from '../lib/gym'
 
 const nuovoId = () => Math.random()
@@ -60,6 +60,8 @@ export default function CreaGym({ gruppi, setGruppi }) {
   const [picker, setPicker] = useState(null)
   const [editor, setEditor] = useState(null)        // { gruppoId, esercizioId }
   const [editorGruppo, setEditorGruppo] = useState(null) // id di un gruppo con più esercizi
+  // Il picker a scelta singola sopra il foglio dell'esercizio: «Cambia».
+  const [cambio, setCambio] = useState(false)
   const etichette = useMemo(() => etichetteGym(gruppi), [gruppi])
 
   const aggiorna = (id, fn) => setGruppi(prev => prev.map(g => (g.id === id ? fn(g) : g)))
@@ -192,7 +194,22 @@ export default function CreaGym({ gruppi, setGruppi }) {
           etichetta={(etichette.get(gruppoInEditor.id) || [])[gruppoInEditor.esercizi.indexOf(esercizioInEditor)]}
           onGruppo={(nuovo) => aggiorna(gruppoInEditor.id, () => nuovo)}
           onRimuovi={() => { rimuoviEsercizio(gruppoInEditor.id, esercizioInEditor.id) }}
+          onCambia={() => setCambio(true)}
+          onFase={(fase) => setGruppi(prev => spostaInFase(prev, gruppoInEditor.id, fase))}
           onChiudi={() => setEditor(null)}
+        />
+      )}
+
+      {cambio && gruppoInEditor && esercizioInEditor && (
+        <PickerGym titolo="Cambia esercizio" unico
+          onAggiungi={([nome]) => {
+            if (!nome) return
+            aggiorna(gruppoInEditor.id, g => ({
+              ...g,
+              esercizi: g.esercizi.map(e => (e.id === esercizioInEditor.id ? cambiaEsercizioGym(e, nome, faseDi(g)) : e)),
+            }))
+          }}
+          onChiudi={() => setCambio(false)}
         />
       )}
 
@@ -200,6 +217,7 @@ export default function CreaGym({ gruppi, setGruppi }) {
         <FoglioGruppoGym
           gruppo={gruppoMulti}
           onGruppo={(nuovo) => aggiorna(gruppoMulti.id, () => nuovo)}
+          onFase={(fase) => setGruppi(prev => spostaInFase(prev, gruppoMulti.id, fase))}
           onChiudi={() => setEditorGruppo(null)}
         />
       )}
@@ -309,8 +327,11 @@ function CardGruppo({ gruppo, etichette, primo, ultimo, onApri, onApriGruppo, on
 
 // ── La cornice dei fogli ─────────────────────────────────────────────────
 
-function Foglio({ titolo, sottotitolo, onChiudi, children, alto = false, piede }) {
+function Foglio({ titolo, sottotitolo, onChiudi, children, alto = false, piede, onPronto }) {
   const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
+  // Chi deve chiudere il foglio da un tocco nel contenuto (il picker «unico»)
+  // riceve la chiusura animata, non solo quella del piede.
+  useEffect(() => { onPronto?.(() => chiudi) }, [onPronto, chiudi])
   return createPortal(
     <div className="fixed inset-0 z-[70] flex flex-col justify-end">
       <div aria-hidden="true" onClick={chiudi} className={`absolute inset-0 bg-black/70 ${classeVelo}`} style={stileVelo} />
@@ -355,8 +376,9 @@ const BOTTONE_FATTO = 'w-full min-h-[52px] rounded-2xl bg-gym text-black text-[1
 /**
  * La libreria, filtrabile per muscolo e per testo, con selezione multipla.
  * Un nome che non c'è si aggiunge com'è scritto: diventa un esercizio custom.
+ * Con `unico` (il «Cambia» del foglio) il primo tocco sceglie e chiude.
  */
-export function PickerGym({ titolo, onAggiungi, onChiudi }) {
+export function PickerGym({ titolo, onAggiungi, onChiudi, unico = false }) {
   const [testo, setTesto] = useState('')
   const [muscolo, setMuscolo] = useState(null)
   const [scelti, setScelti] = useState([])
@@ -365,8 +387,10 @@ export function PickerGym({ titolo, onAggiungi, onChiudi }) {
   const nuovo = scritto && !risultati.some(e => e.nome.toLowerCase() === scritto.toLowerCase())
     && !scelti.some(n => n.toLowerCase() === scritto.toLowerCase())
 
+  const [chiusura, setChiusura] = useState(null)
   const alterna = (nome) => {
     vibraScelta()
+    if (unico) { onAggiungi([nome]); chiusura?.(); return }
     setScelti(prev => (prev.includes(nome) ? prev.filter(n => n !== nome) : [...prev, nome]))
   }
 
@@ -376,8 +400,9 @@ export function PickerGym({ titolo, onAggiungi, onChiudi }) {
     .filter(g => g.voci.length > 0)
 
   return (
-    <Foglio titolo={titolo} sottotitolo="Tocca per scegliere, anche più di uno" onChiudi={onChiudi} alto
-      piede={(chiudi) => (
+    <Foglio titolo={titolo} sottotitolo={unico ? 'Tocca il movimento giusto' : 'Tocca per scegliere, anche più di uno'}
+      onChiudi={onChiudi} alto onPronto={setChiusura}
+      piede={unico ? null : (chiudi) => (
         <button type="button" disabled={!scelti.length} className={BOTTONE_FATTO}
           onClick={() => { onAggiungi(scelti); chiudi() }}>
           <Plus size={19} aria-hidden="true" />
@@ -461,7 +486,7 @@ const estremiReps = (r) => {
   return m ? [m[1], m[2]] : [r || '-', '-']
 }
 
-export function FoglioEsercizioGym({ gruppo, esercizio, etichetta, onGruppo, onRimuovi, onChiudi }) {
+export function FoglioEsercizioGym({ gruppo, esercizio, etichetta, onGruppo, onRimuovi, onCambia, onFase, onChiudi }) {
   const singolo = tipoGruppo(gruppo) === 'singolo'
   const dettaglio = conDettaglio(gruppo)
   const voce = voceGym(esercizio.name)
@@ -532,7 +557,17 @@ export function FoglioEsercizioGym({ gruppo, esercizio, etichetta, onGruppo, onR
         </div>
       )}>
       <div className="flex flex-col gap-3.5">
+        {onCambia && (
+          <button type="button" onClick={() => { battito(); onCambia() }}
+            className={`min-h-11 rounded-2xl px-4 flex items-center gap-3 text-left ${VETRO} hover:border-white/25 transition`}>
+            <Repeat2 size={18} className="text-gym shrink-0" aria-hidden="true" />
+            <span className="flex-1 min-w-0 text-[14px] font-extrabold text-white">Cambia esercizio</span>
+          </button>
+        )}
+
         <FoglioMisure misure={misure} attiva={attiva} onAttiva={setScheda} accento="gym" senzaCarta />
+
+        {onFase && <SceltaFase fase={faseDi(gruppo)} onFase={onFase} />}
 
         {singolo && (
           <button type="button"
@@ -584,6 +619,31 @@ export function FoglioEsercizioGym({ gruppo, esercizio, etichetta, onGruppo, onR
         </div>
       </div>
     </Foglio>
+  )
+}
+
+/**
+ * In che fase sta il gruppo: tre pillole, come il tipo di una fase di corsa.
+ * Cambiarla porta il gruppo (superserie intera) in fondo alla fase nuova.
+ */
+function SceltaFase({ fase, onFase }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className={`${LABEL} px-1`}>Fase</p>
+      <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="Fase">
+        {FASI_GYM.map(f => {
+          const scelta = fase === f.id
+          return (
+            <button key={f.id} type="button" aria-pressed={scelta}
+              onClick={() => { if (!scelta) { vibraScelta(); onFase(f.id) } }}
+              className={`min-h-10 px-1 rounded-xl text-[12.5px] font-extrabold border transition
+                ${scelta ? 'bg-gym text-black border-gym' : 'bg-white/[.06] border-white/[.1] text-[#c9ccd4] hover:border-white/25'}`}>
+              {f.id === 'principale' ? 'Principale' : f.nome}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -656,7 +716,7 @@ function TabellaSerie({ righe, aTempo, onRighe }) {
 
 // ── Il foglio di una superserie ──────────────────────────────────────────
 
-export function FoglioGruppoGym({ gruppo, onGruppo, onChiudi }) {
+export function FoglioGruppoGym({ gruppo, onGruppo, onFase, onChiudi }) {
   const [scheda, setScheda] = useState('serie')
   const misure = [
     { chiave: 'serie', etichetta: 'Giri', scala: 'serie', rapidi: ['2', '3', '4', '5'],
@@ -671,6 +731,7 @@ export function FoglioGruppoGym({ gruppo, onGruppo, onChiudi }) {
       )}>
       <div className="flex flex-col gap-3.5">
         <FoglioMisure misure={misure} attiva={scheda} onAttiva={setScheda} accento="gym" senzaCarta />
+        {onFase && <SceltaFase fase={faseDi(gruppo)} onFase={onFase} />}
         <CampoTesto etichetta="Note della superserie" placeholder="Es. nessuna pausa fra A1 e A2"
           valore={gruppo.note || ''} onChange={(v) => onGruppo({ ...gruppo, note: v })} />
       </div>

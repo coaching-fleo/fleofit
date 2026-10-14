@@ -926,6 +926,44 @@ composto.
   che il coach vuole sempre vedere. ⚠️ Cinque pillole e non quattro per la Wall Ball: a 375px
   stanno su una riga solo perché le etichette sono corte.
 
+### Ritocchi del 14/10/2026 (richiesta del committente)
+- **Righello meno sensibile**: `PASSO_TACCA` di `Righello.jsx` da 14 a **22px**. Con 14 bastavano
+  7px di dito per cambiare tacca, e una correzione di un valore solo non riusciva. Il prezzo:
+  per attraversare una scala lunga serve un trascinamento più ampio (l'inerzia nativa resta).
+  ⚠️ Non provato sul telefono: è un gesto, jsdom non lo vede (punto 2 delle «sei cose»).
+- **Il Rest apre su 1:00** (`handleSelect` in `ExercisePicker`): è l'unica eccezione a «aprire
+  un esercizio non scrive niente da solo». Si scrive solo se `meters` non è già un tempo: un Rest
+  riaperto tiene il suo valore, e i «500m» di un esercizio scelto prima non contano. Il blocco
+  Rest invece nasce già a 3:00 da `aggiungiTipo`. Test: «il Rest apre già su un minuto».
+- 🔴 **Bug: fermarsi col dito giù bloccava il righello.** Scorrendo, una pausa di un attimo e poi
+  avanti e indietro: il valore restava fermo (il committente l'ha visto sugli 8′ dell'AMRAP, ma
+  non dipendeva dalle scorciatoie). Causa: appena lo scorrimento nativo prende il gesto, il
+  browser manda `pointercancel` **col dito ancora appoggiato**; il righello lo trattava come un
+  dito staccato, e dopo 180ms senza scroll `dalDito` tornava falso. Ora il dito si segue solo con
+  `touchstart`/`touchend`/`touchcancel`; gli eventi del puntatore valgono solo per il mouse.
+  Test: `src/components/__tests__/Righello.test.jsx` (visto fallire prima della correzione).
+- 🔴 **Il vero colpevole, trovato dopo la seconda segnalazione** («si blocca a caso, quando
+  rallento, senza staccare il dito»): il blocco del «tira giù per ricaricare» in `CreateWorkout`
+  misurava a ogni `touchmove` lo spostamento **dal punto di partenza**. Trascinando il righello
+  lontano e tornando vicino a dove il dito si era posato, l'orizzontale totale si azzerava, e
+  pochi pixel di discesa bastavano a sembrare un tirare giù: `preventDefault`, e su iPhone lo
+  scorrimento si ferma a metà gesto. Ora la direzione si decide **una volta**, al primo movimento
+  oltre 8px, e resta quella fino al dito staccato; il gesto sta in un ref (`gestoDito`), così una
+  riregistrazione dell'effetto a metà gesto non riparte da zero. Test in «il dito sul righello»
+  («lontano a sinistra e ritorno…», «un gesto nato orizzontale…»), visti fallire col codice di prima.
+- 🔴 **Terza segnalazione: «lancio, interrompo l'animazione col dito, e il numero si blocca».**
+  Rifatta la logica di `Righello.jsx`: non si cerca più di capire QUANDO c'è il dito
+  (`dalDito`, touchstart/touchend e un timer di 180ms: tolti), si marca lo scorrimento del
+  **codice** (`daCodice`, la x dove sta andando). Ogni altro scorrimento — dito, inerzia,
+  rotella — scrive. Il tocco che ferma un'inerzia su iOS non sempre arriva alla pagina:
+  col vecchio sistema il righello, credendo il dito sparito, ignorava tutto. Tre regole:
+  1. il righello **non si riposiziona mai** su un indice che ha scelto lui (era il secondo
+     scorrimento che si scontrava con l'inerzia);
+  2. un dito/rotella a metà di uno scorrimento del codice lo libera subito;
+  3. rete di sicurezza: senza eventi per 150ms (400 all'avvio) `daCodice` scade da solo,
+     così il righello non resta mai sordo.
+  Test: `Righello.test.jsx` (6; tre falliscono col codice di prima).
+
 ## 9-septquadragies. L'intensità degli esercizi generati dall'IA (08/10/2026)
 
 Feedback del committente: con «Genera con IA» gli esercizi **non avevano
@@ -1420,3 +1458,51 @@ spunta una serie.
    tenuto presente finché il prossimo aggiornamento non è pubblicato.
 8. **Non fatto**: la TV (`TVDashboard`) non mostra i gruppi Gym; il desktop
    usa lo stesso builder del telefono nella colonna di sinistra.
+
+## «Cambia esercizio» su un esercizio già messo (14/10/2026)
+
+Richiesta del committente: dopo «Genera con IA» capita un movimento sbagliato,
+e cambiarlo voleva dire eliminarlo, rifarlo e trascinarlo al suo posto.
+
+- **Hyrox** (`ExercisePicker`): aprendo un esercizio esistente c'è in cima la
+  riga «Cambia esercizio» (`tornaAllaLista`). Torna alla lista **svuotando la
+  ricerca** — prima la freccia indietro c'era già, ma la ricerca conteneva il
+  nome dell'esercizio e la lista mostrava solo quello, quindi la strada non si
+  vedeva. Numeri, note, id e posizione restano; `handleConfirm` tiene solo i
+  campi che il nuovo esercizio usa. Dopo il cambio la riga dice «era …».
+- **Gym** (`FoglioEsercizioGym`): la riga «Cambia esercizio» apre `PickerGym`
+  con `unico` (il primo tocco sceglie e chiude, con la chiusura animata passata
+  da `onPronto` del `Foglio`). Il nome si cambia con `cambiaEsercizioGym` di
+  `src/lib/gym.js`: stessa misura → tiene tutto; da ripetizioni a tempo (o
+  viceversa) riparte dai valori di un esercizio nuovo e toglie reps/durata,
+  serie per serie, RIR e cadenza — «10» ripetizioni non sono 10 secondi.
+- **Corsa** (`RunningStepPicker`): le pillole del tipo c'erano già anche in
+  modifica, ma passando fra fase singola e «Ripetute» i numeri ripartivano dai
+  valori di partenza. Ora `cambiaTipo` porta il tratto singolo nel tratto
+  veloce (durata/distanza, passo, intensità) e viceversa; fra due fasi singole
+  (Corsa → Riscaldamento) i numeri restano già da soli. In modifica, sopra le
+  pillole, c'è «Cambia tipo di fase» con «era …».
+- **Blocchi Hyrox** (`HyroxBlock`): nel blocco aperto, in cima, «Cambia tipo
+  di blocco» riapre `BlockPickerModal` con `blocco` (tipo attuale segnato). Il
+  cambio passa da `cambiaTipoBlocco` di `src/lib/cambiaTipoBlocco.js`: stesso
+  id, esercizi e note restano; dei parametri restano solo quelli che il tipo
+  nuovo legge (la tabella `PARAMETRI` = le chiavi di `parametriDelBlocco`, da
+  tenere allineate), gli altri si tolgono e il builder ripiega. Uscendo da un
+  EMOM si toglie `intervals` agli esercizi. **WarmUp e Rest** non hanno
+  esercizi nel builder: portandoci un blocco, gli esercizi diventano il testo
+  del blocco (`rigaDaEsercizio`, «Wall Balls · 20 reps · 6 kg — nota»), e
+  tornando a un blocco di lavoro il testo torna esercizi (`esercizioDaRiga`,
+  col lettore di «Da un testo scritto»; una riga non riconosciuta diventa un
+  esercizio col suo testo come nome). 🔴 Le righe si separano con «; », non
+  con un a-capo: le note del blocco sono un `<input>`, che gli a-capo li
+  toglie. (Fino al primo giro dello stesso giorno era vietato: WarmUp e Rest
+  spenti con «Ha degli esercizi».) ⚠️ Un blocco portato a **Interval** tiene reps e
+  metri degli esercizi: la durata (`exTime`) si mette aprendo l'esercizio.
+- **Fasi Gym**: nel foglio dell'esercizio e in quello della superserie c'è
+  «Fase» (Riscaldamento / Principale / Defaticamento, `SceltaFase`). Cambia
+  fase con `spostaInFase` di `src/lib/gym.js`: il gruppo resta com'è (serie,
+  recupero, esercizi — niente valori di partenza del riscaldamento) e va **in
+  fondo** alla fase nuova, perché l'ordine dentro una fase è l'ordine
+  dell'elenco. Una superserie si sposta intera.
+- Test: `CreaWorkoutBuilder.test.jsx`, `Gym.test.jsx`, `gym.test.js`,
+  `cambiaTipoBlocco.test.js`, visti fallire rompendo il codice.

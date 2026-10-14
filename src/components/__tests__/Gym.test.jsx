@@ -89,3 +89,32 @@ describe('la scheda Gym dell\'atleta', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0)
   })
 })
+
+describe('«Cambia esercizio» nel foglio Gym', () => {
+  it('sceglie un altro movimento e tiene serie, reps e carico', async () => {
+    const user = userEvent.setup()
+    const g = { id: 1, fase: 'principale', serie: '4', recupero: '1:30', note: '', esercizi: [{ id: 11, name: 'Panca piana con bilanciere', reps: '8', kg: '60 kg' }] }
+    render(<Banco iniziali={[g]} />)
+    await user.click(screen.getByRole('button', { name: /Panca piana con bilanciere/ }))
+    await user.click(screen.getByRole('button', { name: 'Cambia esercizio' }))
+    const foglio = screen.getByRole('dialog', { name: 'Cambia esercizio' })
+    await user.type(within(foglio).getByRole('searchbox'), 'panca inclinata con manubri')
+    await user.click(within(foglio).getByRole('button', { name: /Panca inclinata con manubri/ }))
+    await waitFor(() => expect(visto.gruppi[0].esercizi[0].name).toBe('Panca inclinata con manubri'))
+    expect(visto.gruppi[0]).toMatchObject({ serie: '4', esercizi: [{ id: 11, reps: '8', kg: '60 kg' }] })
+  })
+})
+
+describe('«Fase» nel foglio Gym', () => {
+  it('sposta l\'esercizio dal riscaldamento alla parte principale', async () => {
+    const user = userEvent.setup()
+    const g = { id: 1, fase: 'riscaldamento', serie: '4', recupero: '1:30', note: '', esercizi: [{ id: 11, name: 'Squat con bilanciere', reps: '8', kg: '80 kg' }] }
+    render(<Banco iniziali={[g]} />)
+    await user.click(screen.getByRole('button', { name: /Squat con bilanciere/ }))
+    const fase = screen.getByRole('group', { name: 'Fase' })
+    await user.click(within(fase).getByRole('button', { name: 'Principale' }))
+    await waitFor(() => expect(visto.gruppi[0].fase).toBe('principale'))
+    expect(visto.gruppi[0]).toMatchObject({ serie: '4', esercizi: [{ id: 11, reps: '8', kg: '80 kg' }] })
+    expect(within(fase).getByRole('button', { name: 'Principale' })).toHaveAttribute('aria-pressed', 'true')
+  })
+})

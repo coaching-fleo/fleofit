@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback, memo, lazy, Suspense
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText } from 'lucide-react'
+import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText, Repeat2 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
@@ -10,6 +10,7 @@ import { VoiceRecorder } from '@independo/capacitor-voice-recorder'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useTouchDrag } from '../useTouchDrag'
 import { blockHint } from '../lib/blockHints'
+import { cambiaTipoBlocco } from '../lib/cambiaTipoBlocco'
 import { format, parseISO, isValid } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { generaTitolo, titoliDelGiorno } from '../lib/workoutTitle'
@@ -225,24 +226,37 @@ const moveElement = (list, from, to) => {
   return copy
 }
 
-function BlockPickerModal({ onAdd, onClose }) {
+// Con `blocco` è il «Cambia tipo di blocco»: il tipo attuale è segnato
+// (src/lib/cambiaTipoBlocco.js).
+function BlockPickerModal({ onAdd, onClose, blocco }) {
     const blockTypes = ['WarmUp', 'Cash In', 'ON/OFF', 'EMOM', 'AMRAP', 'For Time', 'Interval', 'Rest', 'Cash Out']
 
   return createPortal(
     <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4 velo-in">
       <div className={`${CARD} w-full max-w-sm p-5 modal-transition`}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-white font-bold text-lg">Aggiungi Blocco</h3>
+          <h3 className="text-white font-bold text-lg">{blocco ? 'Cambia tipo di blocco' : 'Aggiungi Blocco'}</h3>
           <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20}/></button>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          {blockTypes.map(t => (
-            <button key={t} onClick={() => onAdd(t)} className="bg-[#2a2a2a] border border-[#383838] text-white font-medium py-3 px-2 rounded-xl hover:border-brand hover:text-brand transition text-sm flex flex-col items-center gap-0.5 group">
-              <span>{t}</span>
-              <span className="text-[11px] font-normal text-muted group-hover:text-brand/70 leading-tight text-center">{blockHint(t)}</span>
-            </button>
-          ))}
+          {blockTypes.map(t => {
+            const attuale = blocco?.type === t
+            return (
+              <button key={t} onClick={() => onAdd(t)} aria-pressed={blocco ? attuale : undefined}
+                className={`bg-[#2a2a2a] border text-white font-medium py-3 px-2 rounded-xl hover:border-brand hover:text-brand transition text-sm flex flex-col items-center gap-0.5 group
+                  ${attuale ? 'border-brand text-brand' : 'border-[#383838]'}`}>
+                <span>{t}</span>
+                <span className="text-[11px] font-normal text-muted group-hover:text-brand/70 leading-tight text-center">{blockHint(t)}</span>
+              </button>
+            )
+          })}
         </div>
+        {blocco && (
+          <p className="mt-4 text-[12.5px] text-muted leading-snug">
+            Esercizi e note restano, e i numeri del blocco dove il tipo nuovo li usa.
+            In WarmUp e Rest gli esercizi diventano il testo del blocco, una riga ciascuno.
+          </p>
+        )}
       </div>
     </div>,
     document.body
@@ -1212,7 +1226,22 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   const nascosti = filtered.length - visibili.length
   const isCustom = search && !HYROX_EXERCISES.find(e => e.toLowerCase() === search.toLowerCase())
 
-  const handleSelect = (name) => { setSelected(name); setAttiva(null) }
+  // Il Rest apre già su un minuto: è il recupero che si programma quasi sempre,
+  // e un righello vuoto costringeva ad andare avanti e indietro per «posarlo».
+  // Solo se la durata non è già un tempo (un Rest riaperto tiene il suo, e i
+  // «500m» di un esercizio scelto prima non sono una durata).
+  const handleSelect = (name) => {
+    setSelected(name)
+    setAttiva(null)
+    if (name === 'Rest' && !/^\d+:\d{2}$/.test(meters)) setMeters('1:00')
+  }
+
+  // «Cambia esercizio»: torna alla lista tenendo i numeri già scritti. Serve
+  // soprattutto dopo «Genera con IA», quando il movimento è sbagliato ma il
+  // resto no — prima bisognava eliminarlo, rifarlo e trascinarlo al suo posto.
+  // La ricerca si svuota: aperta su un esercizio esistente conteneva il suo
+  // nome, e la lista mostrava solo quello.
+  const tornaAllaLista = () => { setSelected(null); if (initialExercise) setSearch('') }
 
   const handleConfirm = () => {
     if (!selected) return
@@ -1250,7 +1279,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     <div className="fixed inset-0 z-[60] bg-[#0B0B0B] flex flex-col sheet-in">
       <div className="shrink-0 flex items-center gap-2 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] border-b border-[#2a2a2a]">
         {selected && (
-          <button aria-label="Torna alla lista degli esercizi" onClick={() => setSelected(null)}
+          <button aria-label="Torna alla lista degli esercizi" onClick={tornaAllaLista}
             className="w-11 h-11 -ml-2 flex items-center justify-center text-muted hover:text-white shrink-0">
             <ChevronLeft size={22} />
           </button>
@@ -1296,6 +1325,17 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
             </div>
           ) : (
             <div className="flex flex-col gap-4">
+              {initialExercise && (
+                <button type="button" onClick={() => { battito(); tornaAllaLista() }}
+                  className={`min-h-11 rounded-2xl px-4 flex items-center gap-3 text-left ${VETRO} hover:border-white/25 transition`}>
+                  <Repeat2 size={18} className="text-brand shrink-0" aria-hidden="true" />
+                  <span className="flex-1 min-w-0 text-[14px] font-extrabold text-white">Cambia esercizio</span>
+                  {selected !== initialExercise.name && (
+                    <span className="shrink-0 text-[12px] font-medium text-muted truncate max-w-[45%]">era {initialExercise.name}</span>
+                  )}
+                </button>
+              )}
+
               {testoUltimaVolta && (
                 <RigaUltimaVolta testo={testoUltimaVolta} onRiusa={riusaUltimaVolta} />
               )}
@@ -1496,6 +1536,7 @@ const parametriDelBlocco = (block) => {
 // `onUpdate` fa eccezione e riceve il blocco intero: l'id è già lì dentro.
 export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate, touchHandlers, onDuplicateExerciseRequest }) {
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [cambioTipo, setCambioTipo] = useState(false)
   const [editingExercise, setEditingExercise] = useState(null)
   const [draggedExIdx, setDraggedExIdx] = useState(null)
 
@@ -1639,6 +1680,25 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
 
       {isOpen && (
         <div className="px-3.5 pb-[13px] flex flex-col gap-3 animate-in fade-in duration-200">
+          {/* Prima l'unico modo era rifare il blocco, esercizio per esercizio. */}
+          <button type="button" onClick={() => { battito(); setCambioTipo(true) }}
+            className={`min-h-11 rounded-2xl px-4 flex items-center gap-3 text-left ${VETRO} hover:border-white/25 transition`}>
+            <Repeat2 size={18} className="text-brand shrink-0" aria-hidden="true" />
+            <span className="flex-1 min-w-0 text-[14px] font-extrabold text-white">Cambia tipo di blocco</span>
+            <span className="shrink-0 text-[12px] font-medium text-muted">{block.type}</span>
+          </button>
+
+          {cambioTipo && (
+            <BlockPickerModal
+              blocco={block}
+              onClose={() => setCambioTipo(false)}
+              onAdd={(tipo) => {
+                setCambioTipo(false)
+                if (tipo !== block.type) { vibraScelta(); onUpdate(cambiaTipoBlocco(block, tipo)) }
+              }}
+            />
+          )}
+
           {parametri.length > 0 && (
             <div className="flex gap-2">
               {parametri.map(p => (
@@ -1845,6 +1905,23 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
   const [attiva, setAttiva] = useState(initialStep?.type === 'repeat' ? 'volte' : 'quanto')
   const [attivaRec, setAttivaRec] = useState('rec-quanto')
 
+  // Cambiare il tipo di una fase già messa (l'IA ha fatto «Corsa» dove andava
+  // «Ripetute», o il contrario) tiene i numeri: il tratto singolo diventa il
+  // tratto veloce delle ripetute e viceversa. Prima si ripartiva dai valori di
+  // partenza, e conveniva eliminarla e rifarla.
+  const cambiaTipo = (nuovo) => {
+    if (nuovo === type) return
+    vibraScelta()
+    setAttiva(nuovo === 'repeat' ? 'volte' : 'quanto')
+    if (nuovo === 'repeat' && type !== 'repeat') {
+      setRunDuration(duration); setRunPace(pace); setRunPaceMax(paceMax); setRunIntensity(intensity)
+    } else if (nuovo !== 'repeat' && type === 'repeat') {
+      setDuration(runDuration); setPace(runPace); setPaceMax(runPaceMax); setIntensity(runIntensity)
+    }
+    setType(nuovo)
+  }
+  const tipoDiPrima = initialStep && initialStep.type !== type ? TIPI_FASE.find(t => t.id === initialStep.type)?.nome : null
+
   const formatPace = (p, pMax) => {
     if (!pMax || pMax === '-') return p
     if (p.includes(' /km') && pMax.includes(' /km')) {
@@ -1896,14 +1973,23 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
-        {/* Che fase è: cinque voci da vedere tutte insieme. */}
+        {/* Che fase è: cinque voci da vedere tutte insieme. Su una fase già
+            messa lo si dice: è da qui che si cambia, senza rifarla. */}
+        {initialStep && (
+          <div className="flex items-baseline justify-between gap-3 px-1 -mb-1">
+            <span className={LABEL}>Cambia tipo di fase</span>
+            <span className="text-[12px] font-medium text-muted truncate">
+              {tipoDiPrima ? `era ${tipoDiPrima}` : 'i numeri restano'}
+            </span>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2" role="group" aria-label="Tipo di fase">
           {TIPI_FASE.map(t => {
             const on = type === t.id
             return (
               <button key={t.id} type="button" aria-pressed={on}
                 // Le ripetute si aprono su «Volte»: è la prima cosa che se ne dice («8 per 400»).
-                onClick={() => { if (!on) { vibraScelta(); setAttiva(t.id === 'repeat' ? 'volte' : 'quanto') } setType(t.id) }}
+                onClick={() => cambiaTipo(t.id)}
                 className={`min-h-10 px-4 rounded-full text-[13px] font-extrabold border transition active:scale-95 ${
                   on ? 'bg-running/15 border-running/45 text-running' : 'bg-white/[.055] border-white/10 text-[#c9ccd4] hover:border-white/20'
                 }`}>
@@ -2585,6 +2671,11 @@ export default function CreateWorkout() {
     if (saved) localStorage.removeItem('fleofit_workout_draft')
   }, [saved])
 
+  // Il gesto del dito in corso, per il blocco del «tira giù» qui sotto. In un
+  // ref e non dentro l'effetto: se l'effetto si riregistra a metà gesto, il
+  // punto di partenza non deve ripartire da zero.
+  const gestoDito = useRef({ x: 0, y: 0, direzione: null })
+
   useEffect(() => {
     // 1. Intercetta chiusura/aggiornamento del tab del browser
     const handleBeforeUnload = (e) => {
@@ -2617,8 +2708,14 @@ export default function CreateWorkout() {
     // bloccata (`position: fixed`, quindi `scrollY` vale sempre 0), e ogni
     // trascinamento orizzontale del righello veniva annullato — il righello non
     // si muoveva. Trovato sull'emulatore il 07/10/2026; jsdom non lo vede.
-    let touchStartX = 0
-    let touchStartY = 0
+    //
+    // 🔴 E la direzione si decide UNA volta, al primo movimento chiaro, poi
+    // resta quella fino al dito staccato. Prima si misurava a ogni touchmove dal
+    // punto di partenza: trascinando il righello lontano e tornando vicino a
+    // dove il dito si era posato, l'orizzontale totale si azzerava, e pochi
+    // pixel di discesa sembravano un tirare giù — su iPhone il righello si
+    // fermava a metà gesto, «a caso» (committente, 14/10/2026).
+    const SOGLIA_DIREZIONE = 8
     const puoScorrereSu = (el) => {
       for (let n = el; n && n !== document.body; n = n.parentElement) {
         if (n.scrollTop > 0 && n.scrollHeight > n.clientHeight) return true
@@ -2627,16 +2724,20 @@ export default function CreateWorkout() {
     }
     const handleTouchStart = (e) => {
       if (e.touches && e.touches.length > 0) {
-        touchStartX = e.touches[0].clientX
-        touchStartY = e.touches[0].clientY
+        gestoDito.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, direzione: null }
       }
     }
     const handleTouchMove = (e) => {
-      if (!hasUnsavedChanges || saved || window.scrollY > 0) return
       if (!e.touches || e.touches.length === 0) return
-      const giu = e.touches[0].clientY - touchStartY
-      const lato = Math.abs(e.touches[0].clientX - touchStartX)
-      if (giu <= 0 || lato >= giu) return          // non è un tirare giù
+      const g = gestoDito.current
+      if (g.direzione === null) {
+        const giu = e.touches[0].clientY - g.y
+        const lato = Math.abs(e.touches[0].clientX - g.x)
+        if (Math.max(Math.abs(giu), lato) < SOGLIA_DIREZIONE) return
+        g.direzione = giu > lato ? 'giu' : 'altro'
+      }
+      if (g.direzione !== 'giu') return               // non è un tirare giù
+      if (!hasUnsavedChanges || saved || window.scrollY > 0) return
       if (puoScorrereSu(e.target)) return          // lo consuma una lista interna
       e.preventDefault() // Annulla il ricaricamento manuale
     }

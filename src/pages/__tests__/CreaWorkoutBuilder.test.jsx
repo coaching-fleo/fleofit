@@ -324,6 +324,16 @@ describe('il righello scrive il vocabolario di prima', () => {
     expect(screen.getByRole('slider', { name: 'Ripetizioni' })).toHaveAttribute('aria-valuetext', 'Non ancora scelto')
   })
 
+  it('il Rest apre già su un minuto', async () => {
+    // L'unica eccezione a «non scrive niente da solo», chiesta dal committente
+    // il 14/10/2026: il recupero è quasi sempre un minuto, e partire vuoti
+    // costringeva a muovere il righello avanti e indietro per posarlo lì.
+    await apri('Rest')
+    expect(screen.getByRole('slider', { name: 'Durata' })).toHaveAttribute('aria-valuetext', '1:00')
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+    expect(screen.getByText(/1:00/)).toBeInTheDocument()
+  })
+
   it('«Due pesi» scrive il 2x di sempre', async () => {
     await apri('Back Squat')
     await userEvent.click(screen.getByRole('button', { name: /^Peso:/ }))
@@ -633,6 +643,27 @@ describe('il dito sul righello', () => {
     expect(tocco('touchmove', righello, 120, 501).defaultPrevented).toBe(false)
   })
 
+  it('lontano a sinistra e ritorno, col dito sceso di poco, NON viene annullato', async () => {
+    // 🔴 Segnalato dal committente il 14/10/2026: «si blocca a caso». Il
+    // controllo misurava dal punto di partenza: tornando vicino a dove il dito
+    // si era posato, l'orizzontale totale si azzerava, e pochi pixel di discesa
+    // bastavano a farlo sembrare un tirare giù — su iPhone il righello si fermava.
+    const righello = await apriFoglio()
+    tocco('touchstart', righello, 200, 500)
+    expect(tocco('touchmove', righello, 60, 503).defaultPrevented).toBe(false)
+    expect(tocco('touchmove', righello, 195, 512).defaultPrevented).toBe(false)
+  })
+
+  it('un gesto nato orizzontale resta orizzontale anche se poi scende', async () => {
+    await alPasso2()
+    await aggiungiBlocco('EMOM')
+    // Fuori da un blocco: il blocco ha il suo scorrimento laterale, che non c'entra.
+    const pagina = document.body
+    tocco('touchstart', pagina, 200, 300)
+    expect(tocco('touchmove', pagina, 150, 302).defaultPrevented).toBe(false)
+    expect(tocco('touchmove', pagina, 200, 340).defaultPrevented).toBe(false)
+  })
+
   it('un vero tirare giù in cima alla pagina sì, come prima', async () => {
     await alPasso2()
     await aggiungiBlocco('EMOM')   // con dei blocchi ci sono modifiche da non perdere
@@ -685,6 +716,22 @@ describe('le fasi di corsa', () => {
     await apriFase()
     await userEvent.click(screen.getByRole('button', { name: 'Ripetute' }))
     expect(screen.getByRole('slider', { name: 'Volte' })).toBeInTheDocument()
+  })
+
+  it('cambiare tipo a una fase già messa tiene i numeri', async () => {
+    // Richiesta del committente (14/10/2026): l'IA fa «Corsa» dove andavano
+    // le ripetute. Il tratto singolo diventa il tratto veloce, non riparte da 1 min.
+    await apriFase()
+    await userEvent.click(screen.getByRole('button', { name: 'Distanza' }))
+    await userEvent.click(screen.getByRole('button', { name: '400 m' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Nuova fase' })).getByRole('button', { name: 'Aggiungi fase' }))
+
+    await userEvent.click(screen.getByText('400m'))
+    const foglio = screen.getByRole('dialog', { name: 'Modifica fase' })
+    expect(within(foglio).getByText('Cambia tipo di fase')).toBeInTheDocument()
+    await userEvent.click(within(foglio).getByRole('button', { name: 'Ripetute' }))
+    expect(within(foglio).getByText('era Corsa')).toBeInTheDocument()
+    expect(within(foglio).getAllByRole('button', { name: /^Distanza:/ })[0]).toHaveAccessibleName('Distanza: 400 m')
   })
 })
 
@@ -862,4 +909,59 @@ describe("un blocco nuovo chiede i suoi numeri, e si conferma", () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'AMRAP' })).toBeNull())
     expect(blocchi()).toBe(0)
   })
+})
+
+describe('«Cambia tipo di blocco»', () => {
+  it('il blocco cambia tipo e tiene i suoi esercizi', async () => {
+    await alPasso2()
+    await aggiungiBlocco('For Time')
+    await userEvent.click(screen.getByRole('button', { name: /Esercizio/ }))
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), 'Burpees')
+    await userEvent.click(await screen.findByRole('button', { name: 'Scegli Burpees' }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+
+    await userEvent.click(screen.getByRole('button', { name: /Cambia tipo di blocco/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^AMRAP/ }))
+
+    expect(document.querySelector('[data-tipo-blocco]')).toHaveTextContent('AMRAP')
+    expect(screen.getByText('Burpees')).toBeInTheDocument()
+
+    // In WarmUp l'esercizio diventa il testo del riscaldamento.
+    await userEvent.click(screen.getByRole('button', { name: /Cambia tipo di blocco/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^WarmUp/ }))
+    expect(document.querySelector('[data-tipo-blocco]')).toHaveTextContent('WarmUp')
+    expect(screen.getByDisplayValue(/^Burpees/)).toBeInTheDocument()
+  }, 15000)
+})
+
+describe('«Cambia esercizio» su un esercizio già messo', () => {
+  // Richiesta del committente (14/10/2026): l'IA a volte mette il movimento
+  // sbagliato, e cambiarlo voleva dire eliminarlo, rifarlo e trascinarlo al
+  // suo posto. Dall'esercizio aperto si sceglie un altro nome: i numeri e la
+  // posizione restano.
+  it('cambia il nome, tiene reps, peso e posto', async () => {
+    await alPasso2()
+    await aggiungiBlocco('AMRAP')
+    for (const [nome, reps] of [['Wall Balls', '15'], ['Burpees', null]]) {
+      await userEvent.click(screen.getByRole('button', { name: /Esercizio/ }))
+      await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), nome)
+      await userEvent.click(await screen.findByRole('button', { name: `Scegli ${nome}` }))
+      if (reps) await userEvent.click(await screen.findByRole('button', { name: reps }))
+      await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+    }
+
+    await userEvent.click(screen.getByText('Wall Balls'))
+    await userEvent.click(screen.getByRole('button', { name: /Cambia esercizio/ }))
+    // La ricerca riparte vuota: prima conteneva «Wall Balls» e mostrava solo quello.
+    expect(screen.getByPlaceholderText(/Cerca o scrivi/)).toHaveValue('')
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), 'Thruster')
+    await userEvent.click(await screen.findByRole('button', { name: 'Scegli Thruster' }))
+    expect(screen.getByText('era Wall Balls')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Salva modifiche/ }))
+
+    expect(screen.queryByText('Wall Balls')).toBeNull()
+    const nomi = screen.getAllByText(/^(Thruster|Burpees)$/).map(n => n.textContent)
+    expect(nomi).toEqual(['Thruster', 'Burpees'])
+    expect(screen.getByText(/^15 reps/)).toBeInTheDocument()
+  }, 15000)
 })

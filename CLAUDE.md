@@ -81,6 +81,12 @@
    `src/lib/iaCategorie.js`, `CATEGORIE_IA` in `supabase/functions/ai-workout/regole.ts`,
    `contenutoIA` nel builder (`docs/memoria/crea-workout.md`, 9-ai-categorie). Un test
    (`iaCategorie.test.js`) fallisce finché manca.
+5-ter. 🔁 **TUTTO CIÒ CHE SI METTE IN UN WORKOUT SI CAMBIA DA DENTRO** (regola del committente,
+   14/10/2026): esercizi, tipo di blocco, tipo di fase, fase Gym — in **ogni** categoria, anche
+   in quelle che verranno. Mai «elimina, rifai e trascina al suo posto»: si apre la cosa e si
+   cambia, tenendo posizione e numeri finché hanno senso. Serve soprattutto dopo «Genera con
+   IA». Oggi: «Cambia esercizio» (Hyrox e Gym), «Cambia tipo di blocco» (`cambiaTipoBlocco.js`),
+   tipo di fase della corsa, «Fase» Gym (`spostaInFase`) — `docs/memoria/crea-workout.md`.
 6. Prima di modificare un file grande (`WorkoutDetail.jsx` 2.938 righe, `AthleteDetail.jsx` 2.553,
    `CreateWorkout.jsx` 2.348, `Home.jsx` 2.010 — contate il 26/08/2026) leggere le sezioni
    rilevanti: c'è molta logica duplicata tra i file (vedi `docs/memoria/qualita-e-test.md`, §9 Debito tecnico).
