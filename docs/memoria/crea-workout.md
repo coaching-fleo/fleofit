@@ -1363,3 +1363,60 @@ diventava un custom e in modifica mancavano metri e passo /500m.
   nelle note). Vale solo dopo il deploy della funzione.
 - I workout già salvati con «Ski Erg» non si correggono da soli: vanno riaperti e
   sistemati a mano.
+
+## 9-gym. La categoria Gym, la scheda da palestra (13/10/2026)
+
+Richiesta del committente: una quarta categoria accanto a Hyrox, Corsa e Custom,
+«con tutti i blocchi e gli esercizi classici di un allenamento in palestra,
+ripetizioni, serie», con gli esercizi e i macchinari più famosi **generici, non
+brandizzati**, dopo aver guardato le app che lo fanno già.
+
+**Cosa fanno le altre app** (da cui vengono le scelte): le app per coach
+(Trainerize, TrueCoach, Everfit) organizzano la scheda in sezioni —
+riscaldamento, parte principale, defaticamento — con esercizi singoli o
+raggruppati in superserie e circuiti, ognuno con serie, ripetizioni, carico,
+recupero, cadenza e RPE/RIR; i diari da palestra (Hevy, Strong) aggiungono i
+tipi di serie (riscaldamento, drop set, cedimento), la selezione di più
+esercizi alla volta dalla libreria e il timer di recupero che parte quando si
+spunta una serie.
+
+**Le quattro decisioni del committente** (domande fatte in sessione):
+1. colore **verde acqua `#14B8A6`** (`--color-gym`, `GYM` in `colori.js`, il
+   test dei colori controlla che coincidano);
+2. serie **semplice** («4 × 10 · 60 kg · rec 1:30») con il **dettaglio serie per
+   serie** solo se richiesto;
+3. **fasi + superserie**;
+4. lato atleta **scheda + timer di recupero**, il completamento resta quello di sempre.
+
+**Dove sta**
+- `src/lib/eserciziGym.js` — la libreria (~170 voci, `MUSCOLI`, `misura` reps/tempo,
+  `carico`), `trovaEsercizioGym` con i sinonimi inglesi («bench press» → «Panca
+  piana con bilanciere»).
+- `src/lib/gym.js` — il formato (commento in testa), riassunti, lettere A/B1/B2,
+  durata stimata, nome automatico dai muscoli («Push Day», «Leg Day», «Full
+  Body»), `preparaGymIA`, righe per PDF e storia. Test: `gym.test.js`.
+- `src/components/CreaGym.jsx` — il builder (pigro, lo importa solo CreateWorkout).
+- `src/components/SchedaGymUI.jsx` — la scheda nella pagina del workout (pigra).
+- Il codice nel titolo è `GYM 60′ @7` (`codiceGym`, `SIGLA_GYM` è fra le sigle
+  di `CODICE_IN_CODA`).
+
+### ⚠️ Le cose da sapere prima di rimetterci mano
+1. **Il tipo di gruppo non si salva**: 1 esercizio = singolo, 2 = superserie,
+   3 = triserie, 4+ = circuito (`tipoGruppo`). Così non può contraddire i dati.
+2. **Con `dettaglio` il campo `serie` è ignorato**: le serie sono le righe.
+   Si legge sempre `serieDi`. Il dettaglio esiste solo sugli esercizi singoli:
+   unire in superserie lo toglie (`sempliceDaDettaglio`).
+3. **Le spunte delle serie non si salvano** (schema congelato, niente
+   localStorage): servono durante la seduta. Il timer conta sull'ora, non sui tick.
+4. **Il timer guidato non c'è** per Gym (`haTimerGuidato`): ha il suo recupero.
+5. **Il righello** usa la scala nuova `serie` (1–12) di `scaleMisura.js`; le
+   ripetizioni a intervallo («8-12») passano dal `secondo` di `FoglioMisure`.
+6. **IA**: `IA_PER_CATEGORIA.Gym` (chiave `gym`) e `CATEGORIE_IA.Gym` in
+   `ai-workout/regole.ts`. 🔴 **Serve il deploy di `ai-workout`** perché funzioni
+   (`supabase functions deploy ai-workout`); prima l'app avvisa «non è ancora
+   attiva sul server» e non tocca niente.
+7. 🔴 **L'app sullo Store (1.1.0) non conosce Gym**: un workout Gym assegnato a
+   un atleta che ha ancora quella versione gli appare come un Hyrox vuoto. Va
+   tenuto presente finché il prossimo aggiornamento non è pubblicato.
+8. **Non fatto**: la TV (`TVDashboard`) non mostra i gruppi Gym; il desktop
+   usa lo stesso builder del telefono nella colonna di sinistra.

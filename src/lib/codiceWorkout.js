@@ -26,6 +26,7 @@
 import { durataBlocco, rpeAtteso } from './stimaWorkout'
 import { riepilogoCorsa } from './rigaArchivio'
 import { durataWorkout } from './statistiche'
+import { SIGLA_GYM, minutiGym } from './gym'
 
 /** Le sigle dei blocchi di lavoro. Cash In/Out, WarmUp e Rest non hanno sigla: sono la cornice di quasi ogni seduta. */
 export const SIGLA_BLOCCO = {
@@ -44,7 +45,7 @@ export const MASSIMO_SIGLE = 3
 
 export const SEPARATORE_CODICE = ' · '
 
-const SIGLE = [...Object.values(SIGLA_BLOCCO), ...Object.values(SIGLA_CORSA)].join('|')
+const SIGLE = [...Object.values(SIGLA_BLOCCO), ...Object.values(SIGLA_CORSA), SIGLA_GYM].join('|')
 // struttura? durata? intensità? — ma almeno un pezzo, sempre in coda al titolo.
 const STRUTTURA = `(?:${SIGLE})(?:\\+(?:${SIGLE}|\\d+))*`
 const DURATA = '\\d+(?:,\\d)?(?:′|K)'
@@ -142,12 +143,27 @@ export const codiceCorsa = (steps = [], intensitaDichiarata) => {
   return componi([SIGLA_CORSA[strutturaCorsa(steps)], durata, rpe && `@${rpe}`])
 }
 
+// ── Gym ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Il codice di una scheda da palestra: «GYM 60′ @7». La struttura non ha
+ * sigle (una scheda è sempre esercizi e serie); l'intensità è quella
+ * dichiarata dal coach, perché gli esercizi Gym non ne hanno una loro.
+ */
+export const codiceGym = (gruppi = [], intensitaDichiarata) => {
+  if (!gruppi.length) return ''
+  const m = minutiCodice(minutiGym(gruppi))
+  const rpe = intensitaValida(intensitaDichiarata)
+  return componi([SIGLA_GYM, m && `${m}′`, rpe && `@${rpe}`])
+}
+
 // ── Il titolo intero ────────────────────────────────────────────────────────
 
 /** Il codice di un workout in costruzione. Custom ed Evento non ne hanno. */
-export const codiceWorkout = ({ category, blocks = [], steps = [], intensity } = {}) => {
+export const codiceWorkout = ({ category, blocks = [], steps = [], gym = [], intensity } = {}) => {
   if (category === 'Hyrox') return codiceHyrox(blocks, intensity)
   if (category === 'Running') return codiceCorsa(steps, intensity)
+  if (category === 'Gym') return codiceGym(gym, intensity)
   return ''
 }
 

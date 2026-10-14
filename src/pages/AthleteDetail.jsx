@@ -821,7 +821,7 @@ export default function AthleteDetail() {
                               const cat = w.workouts?.sections?.category || 'Hyrox'
                               const isCustom = cat === 'Custom' || cat === 'Autonomo' || w.workouts?.sections?.isAutonomous === true
                               const isEvent = cat === 'Event' || w.workouts?.sections?.isEvent === true
-                              const color = coloreCategoria(isEvent ? 'Event' : (cat === 'Running' ? 'Running' : (isCustom ? 'Custom' : 'Hyrox')))
+                              const color = coloreCategoria(isEvent ? 'Event' : (cat === 'Running' || cat === 'Gym' ? cat : (isCustom ? 'Custom' : 'Hyrox')))
                               return <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selected ? '#000' : color }} />
                             })}
                           </div>

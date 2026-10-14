@@ -21,7 +21,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, X, ArrowRight, Flame, Plus, Trophy, Clock, Lock, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { CARD, LABEL, VETRO, BOTTONE_BRAND, BOTTONE_QUIETO, TONO_VERDETTO } from '../lib/stiliCard'
-import { corsia } from '../lib/categorie'
+import { corsia, parolaPezzi } from '../lib/categorie'
 import { coloreCategoria } from '../lib/colori'
 import { useNumeroCheSale } from '../useNumeroCheSale'
 import { useBottomSheet } from '../useBottomSheet'
@@ -332,7 +332,7 @@ function SchedaProssimo({ dati, colore, onApri, onLibero }) {
             <span className="block text-[12.5px] text-muted mt-1 first-letter:uppercase">
               {dati.data}
               {dati.minuti != null && ` · ≈${dati.minuti} min`}
-              {dati.blocchi != null && ` · ${dati.blocchi} ${dati.blocchi === 1 ? 'blocco' : 'blocchi'}`}
+              {dati.blocchi != null && ` · ${dati.blocchi} ${parolaPezzi(dati.categoria, dati.blocchi)}`}
             </span>
           </span>
           {onApri && <ArrowRight size={18} className="text-muted shrink-0" aria-hidden="true" />}

@@ -66,7 +66,7 @@ spostare, sostituire ${parti} o esercizi), oppure un'aggiunta.
 - Restituisci l'allenamento COMPLETO dopo la modifica: l'intero elenco di ${parti}, comprese le parti che non cambiano.
 - Tutto ciò che la richiesta non tocca resta IDENTICO: stesso elenco di ${parti} nello stesso ordine,
   stessi esercizi, stessi campi e valori (reps, meters, kg, ergoPace, speed, exTime, intensity,
-  intervals, notes, params, duration, pace). Non aggiungere, togliere o riscrivere campi di tua iniziativa.
+  intervals, notes, params, duration, pace, serie, recupero, durata, rir, cadenza, dettaglio). Non aggiungere, togliere o riscrivere campi di tua iniziativa.
 - Se la richiesta aggiunge qualcosa senza dire dove, mettilo in fondo.
 - Se la richiesta indica una parte per posizione ("il secondo", "l'ultimo") contali nell'ordine dell'array.
 `
@@ -174,6 +174,54 @@ Esempio di struttura richiesta:
 ]
 `
 
+const ISTRUZIONI_GYM = `
+Traduci questo allenamento in PALESTRA (scheda con esercizi, serie, ripetizioni e carichi) dettato a voce
+in un array JSON di GRUPPI, compatibile con l'app di fitness. Devi restituire ESCLUSIVAMENTE la struttura JSON.
+
+Un GRUPPO è un esercizio singolo oppure più esercizi fatti di fila senza pausa (superserie, triserie, circuito).
+Campi del gruppo:
+- "fase": "riscaldamento", "principale" oppure "defaticamento".
+- "serie": quante serie (per un gruppo con più esercizi: quanti giri), stringa ("4").
+- "recupero": il recupero dopo ogni serie o giro, "m:ss" ("1:30", "0:45", "2:00"). "" se non c'è.
+- "note": facoltativo.
+- "esercizi": array di uno o più esercizi.
+
+Campi dell'esercizio:
+- "name": il nome in ITALIANO come si scrive su una scheda, generico e senza marchi
+  (es. "Panca piana con bilanciere", "Panca inclinata con manubri", "Lat machine avanti", "Pulley basso",
+  "Rematore con manubrio", "Squat con bilanciere", "Leg press", "Leg extension", "Leg curl sdraiato",
+  "Stacco rumeno", "Hip thrust con bilanciere", "Military press", "Alzate laterali con manubri",
+  "Curl con manubri", "Curl a martello", "Push down con corda", "French press con bilanciere EZ",
+  "Croci ai cavi", "Chest press", "Trazioni alla sbarra", "Calf raise in piedi", "Crunch", "Plank",
+  "Tapis roulant", "Cyclette", "Ellittica", "Vogatore", "Stretching", "Mobilità articolare").
+- "reps": le ripetizioni come stringa: "10", un intervallo "8-12", oppure "Max" (a cedimento).
+- "durata": SOLO per esercizi a tempo (plank, cardio, stretching, mobilità), "m:ss" ("0:30", "10:00"). Senza "reps".
+- "kg": il carico come stringa con l'unità ("60 kg"). "" per corpo libero o se non detto.
+- "rir": facoltativo, ripetizioni in riserva ("2").
+- "cadenza": facoltativo ("3-1-1-0").
+- "notes": facoltativo.
+- "dettaglio": SOLO se le serie sono diverse fra loro (piramidale, serie di riscaldamento, drop set), e solo in
+  un gruppo con UN esercizio: un array di serie { "tipo": "normale"|"riscaldamento"|"drop"|"cedimento",
+  "reps": "12", "kg": "60 kg" }. In quel caso "serie" è il numero di righe del dettaglio.
+
+Non inventare carichi che l'utente non ha detto: lascia "kg" vuoto. Se non dice le ripetizioni di un esercizio a
+ripetizioni, usa "10". Se non dice serie, usa "3" nella parte principale e "1" nel riscaldamento e defaticamento.
+Se non dice il recupero, usa "1:30" nella parte principale e "" altrove. Aggiungi riscaldamento e defaticamento
+solo se l'utente li chiede o chiede una seduta completa.
+
+Esempio di struttura richiesta:
+[
+  { "fase": "riscaldamento", "serie": "1", "recupero": "", "esercizi": [ { "name": "Tapis roulant", "durata": "10:00" } ] },
+  { "fase": "principale", "serie": "4", "recupero": "2:00", "esercizi": [ { "name": "Panca piana con bilanciere", "reps": "8", "kg": "70 kg", "rir": "2" } ] },
+  { "fase": "principale", "serie": "3", "recupero": "1:30", "esercizi": [
+      { "name": "Push down con corda", "reps": "12", "kg": "25 kg" },
+      { "name": "French press con bilanciere EZ", "reps": "10", "kg": "20 kg" } ] },
+  { "fase": "principale", "serie": "4", "recupero": "1:30", "esercizi": [ { "name": "Squat con bilanciere", "dettaglio": [
+      { "tipo": "riscaldamento", "reps": "10", "kg": "40 kg" }, { "tipo": "normale", "reps": "8", "kg": "80 kg" },
+      { "tipo": "normale", "reps": "6", "kg": "90 kg" }, { "tipo": "drop", "reps": "10", "kg": "60 kg" } ] } ] }
+]
+`
+
 const ISTRUZIONI_CUSTOM = `
 Scrivi la DESCRIZIONE di un allenamento a partire da quello che il coach detta a voce.
 La descrizione la legge l'atleta: italiano chiaro, in seconda persona, una riga per esercizio o parte
@@ -186,6 +234,7 @@ Restituisci ESCLUSIVAMENTE un oggetto JSON della forma {"testo": "..."}, con gli
 export const CATEGORIE_IA: Record<string, CategoriaIA> = {
   Hyrox: { chiave: 'blocks', parti: 'blocchi', istruzioni: ISTRUZIONI_HYROX },
   Running: { chiave: 'steps', parti: 'fasi', istruzioni: ISTRUZIONI_CORSA },
+  Gym: { chiave: 'gym', parti: 'gruppi', istruzioni: ISTRUZIONI_GYM },
   Custom: { chiave: 'testo', testo: true, parti: 'descrizione', istruzioni: ISTRUZIONI_CUSTOM },
 }
 

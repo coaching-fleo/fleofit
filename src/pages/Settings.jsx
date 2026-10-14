@@ -16,7 +16,7 @@ import { PushNotifications } from '@capacitor/push-notifications'
 import { FCM } from '@capacitor-community/fcm'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
-import { CHIAVE_ULTIMO_EXPORT, etichettaRuolo, riassuntoBackup, riassuntoCodici } from '../lib/rigaImpostazioni'
+import { CHIAVE_ULTIMO_EXPORT, etichettaRuolo, riassuntoBackup, riassuntoCodici, senzaPassword } from '../lib/rigaImpostazioni'
 import { CARD } from '../lib/stiliCard'
 import {
   BottoneEsci, CartaAccount, EtichettaSezione, FoglioCodici, PiediPagina, RigaAzione, RigaInterruttore,
@@ -46,6 +46,9 @@ export default function Settings() {
   const isAdminEmail = ADMIN_EMAILS.includes(user?.email?.toLowerCase())
   const isSimulatingAthlete = localStorage.getItem('adminRoleOverride') === 'athlete'
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
+  // Account nato da Apple o Google: niente password attuale da chiedere, e la
+  // riga spiega a cosa serve sceglierne una (lib/rigaImpostazioni.js).
+  const primaPassword = senzaPassword(user)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
 
   const [sviluppoAperto, setSviluppoAperto] = useState(false)
@@ -593,8 +596,9 @@ export default function Settings() {
     <>
       {/* ── Account ──────────────────────────────────────────────────────── */}
       <Sezione etichetta="Account">
-        <RigaAzione icona={KeyRound} titolo="Modifica password"
-          dettaglio="Aggiorna la password di accesso"
+        <RigaAzione icona={KeyRound}
+          titolo={primaPassword ? 'Password per il sito' : 'Modifica password'}
+          dettaglio={primaPassword ? 'Per entrare anche dal computer, con email e password' : 'Aggiorna la password di accesso'}
           onClick={() => setPasswordModalOpen(true)} />
 
         {isAdminEmail && (
@@ -753,6 +757,7 @@ export default function Settings() {
         <PasswordModal
           onClose={() => setPasswordModalOpen(false)}
           user={user}
+          primaPassword={primaPassword}
           setAlertInfo={setAlertInfo}
         />,
         document.body
@@ -778,57 +783,111 @@ function dataRiscatto(iso) {
     return null
   }
 }
-function PasswordModal({ onClose, user, setAlertInfo }) {
+/**
+ * Il foglio della password, in due modi.
+ *
+ * - **Modifica**: chi ha già una password conferma quella attuale.
+ * - **Prima password** (`primaPassword`): chi è entrato con Apple o Google non
+ *   ne ha una, e Sign in with Apple sul sito non c'è. Qui la sceglie, e vede
+ *   l'indirizzo con cui entrare dal computer — con «Nascondi la mia email» è un
+ *   `…@privaterelay.appleid.com` che nessuno ricorda, per questo si copia.
+ */
+function PasswordModal({ onClose, user, primaPassword = false, setAlertInfo }) {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [saving, setSaving] = useState(false)
+  const [copiato, setCopiato] = useState(false)
+
+  const copiaEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(user?.email || '')
+      setCopiato(true)
+    } catch {
+      // Senza appunti l'indirizzo resta lì, in un campo selezionabile.
+    }
+  }
 
   const handleUpdate = async (e) => {
     if (e && e.preventDefault) e.preventDefault()
-    if (!currentPassword) return setAlertInfo({ title: 'Errore', message: 'Inserisci la password attuale.', type: 'error' })
+    if (!primaPassword && !currentPassword) return setAlertInfo({ title: 'Errore', message: 'Inserisci la password attuale.', type: 'error' })
     if (!newPassword || newPassword.length < 6) return setAlertInfo({ title: 'Errore', message: 'La nuova password deve avere almeno 6 caratteri.', type: 'error' })
     
     setSaving(true)
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: currentPassword
-    })
-    
-    if (signInError) {
-      setSaving(false)
-      return setAlertInfo({ title: 'Errore', message: 'La password attuale non è corretta.', type: 'error' })
+    if (!primaPassword) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword
+      })
+
+      if (signInError) {
+        setSaving(false)
+        return setAlertInfo({ title: 'Errore', message: 'La password attuale non è corretta.', type: 'error' })
+      }
     }
     
     const { error: updateError } = await supabase.auth.updateUser({ password: newPassword })
     
     setSaving(false)
     if (updateError) {
-      setAlertInfo({ title: 'Errore', message: updateError.message, type: 'error' })
+      // ⚠️ Con «Secure password change» attivo su Supabase, una sessione più
+      // vecchia di 24 ore deve riconfermarsi con un codice via email — che a
+      // un indirizzo nascosto da Apple può non arrivare. Rientrare con Apple
+      // fa una sessione nuova, ed è la strada che funziona sempre.
+      const vecchia = updateError.code === 'reauthentication_needed' || /reauthenticat/i.test(updateError.message || '')
+      setAlertInfo({
+        title: 'Errore',
+        message: vecchia ? 'Per sicurezza esci dall\'account, rientra e riprova subito.' : updateError.message,
+        type: 'error',
+      })
+    } else if (primaPassword) {
+      setAlertInfo({ title: 'Password salvata', message: `Dal computer entra con ${user?.email} e questa password.`, type: 'success' })
+      onClose()
     } else {
       setAlertInfo({ title: 'Successo', message: 'Password aggiornata con successo!', type: 'success' })
       onClose()
     }
   }
 
+  const campo = 'w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand text-base'
+
   return (
     <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
       <div className={`${CARD} w-full max-w-sm flex flex-col modal-transition`}>
         <div className="flex items-center justify-between p-5 border-b border-[#2a2a2a]">
-          <p className="text-white font-bold text-lg">Modifica Password</p>
+          <p className="text-white font-bold text-lg">{primaPassword ? 'Password per il sito' : 'Modifica Password'}</p>
           <button aria-label="Chiudi" type="button" onClick={onClose} className="text-muted hover:text-white"><X size={20} /></button>
         </div>
         <div className="p-5 flex flex-col gap-4" onKeyDown={e => { if (e.key === 'Enter') handleUpdate(e) }}>
+          {primaPassword ? (
+            <>
+              <p className="text-gray-400 text-sm leading-snug">
+                Sul sito non si entra con Apple. Scegli una password: dal computer entrerai con questo indirizzo e la password.
+              </p>
+              <div>
+                <label className="text-gray-400 text-xs pl-1 mb-1 block">La tua email di accesso</label>
+                <div className="flex gap-2">
+                  <input type="text" readOnly value={user?.email || ''} aria-label="La tua email di accesso"
+                    onFocus={e => e.target.select()} className={`${campo} min-w-0 text-sm`} />
+                  <button type="button" onClick={copiaEmail}
+                    className="shrink-0 px-4 rounded-xl bg-[#2a2a2a] text-white text-sm font-bold hover:brightness-110 transition">
+                    {copiato ? 'Copiata' : 'Copia'}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="text-gray-400 text-xs pl-1 mb-1 block">Password attuale</label>
+              <input type="password" placeholder="La tua password attuale" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className={campo} />
+            </div>
+          )}
           <div>
-            <label className="text-gray-400 text-xs pl-1 mb-1 block">Password attuale</label>
-            <input type="password" placeholder="La tua password attuale" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand text-base" />
+            <label className="text-gray-400 text-xs pl-1 mb-1 block">{primaPassword ? 'Password' : 'Nuova password'}</label>
+            <input type="password" autoComplete="new-password" placeholder="Almeno 6 caratteri" aria-label={primaPassword ? 'Password' : 'Nuova password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} className={campo} />
           </div>
-          <div>
-            <label className="text-gray-400 text-xs pl-1 mb-1 block">Nuova password</label>
-            <input type="password" placeholder="Scegli una nuova password sicura" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand text-base" />
-          </div>
-          <button type="button" onClick={handleUpdate} disabled={saving || !currentPassword || !newPassword} className="w-full mt-2 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
-            {saving ? 'Salvataggio...' : 'Aggiorna Password'}
+          <button type="button" onClick={handleUpdate} disabled={saving || (!primaPassword && !currentPassword) || !newPassword} className="w-full mt-2 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+            {saving ? 'Salvataggio...' : (primaPassword ? 'Salva password' : 'Aggiorna Password')}
           </button>
         </div>
       </div>

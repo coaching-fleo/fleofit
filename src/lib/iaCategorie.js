@@ -2,7 +2,7 @@
  * «Genera con IA» per ogni categoria del builder (12/10/2026).
  *
  * Richiesta del committente: la generazione con IA su TUTTE le categorie —
- * Hyrox, Corsa, Custom — e su tutte quelle che verranno. Fino ad allora il
+ * Hyrox, Corsa, Custom — e su tutte quelle che verranno (Gym dal 13/10/2026). Fino ad allora il
  * foglio sapeva scrivere solo blocchi Hyrox.
  *
  * 🔴 UNA CATEGORIA NUOVA IN `CATEGORIE` (src/pages/CreateWorkout.jsx) VA
@@ -21,6 +21,7 @@
  */
 
 import { blocchiPerIA, fasiPerIA, preparaBlocchiIA, preparaFasiIA } from './blocchiIA'
+import { gymPerIA, preparaGymIA } from './gym'
 
 const descrizione = (t) => (typeof t === 'string' ? t.trim() : '')
 
@@ -62,6 +63,25 @@ export const IA_PER_CATEGORIA = {
     attesa: { voce: 'Ascolto la registrazione e la traduco in fasi.', testo: 'Leggo la descrizione e scrivo le fasi.' },
     modificati: 'Fasi modificate con l\'IA',
     vuoto: 'L\'IA non ha restituito nessuna fase: l\'allenamento è rimasto com\'era.',
+  },
+  Gym: {
+    chiave: 'gym',
+    perIA: gymPerIA,
+    prepara: preparaGymIA,
+    card: { genera: 'Descrivi la seduta, ti scrivo la scheda', modifica: 'Chiedi una modifica alla scheda che hai' },
+    foglio: { genera: 'Descrivi la seduta, ti scrivo la scheda', modifica: 'Chiedi una modifica, riscrivo la scheda' },
+    esempio: {
+      genera: 'Es: petto e tricipiti, panca piana 4×8 a 70 kg, croci ai cavi 3×12, superserie push down e french press…',
+      modifica: 'Es: aggiungi un riscaldamento di 10 minuti di tapis, porta la panca a 5 serie, recupero 2 minuti…',
+    },
+    nota: {
+      genera: 'Gli esercizi generati si aggiungono a quelli che hai già: puoi correggerli uno per uno.',
+      modifica: 'Lavoro sulla scheda che hai già, anche quella fatta a mano: cambio solo quello che chiedi, e puoi annullare.',
+    },
+    scrivo: 'Scrivo la scheda',
+    attesa: { voce: 'Ascolto la registrazione e scrivo la scheda.', testo: 'Leggo la descrizione e scrivo la scheda.' },
+    modificati: 'Scheda modificata con l\'IA',
+    vuoto: 'L\'IA non ha restituito nessun esercizio: la scheda è rimasta com\'era.',
   },
   Custom: {
     chiave: 'testo',

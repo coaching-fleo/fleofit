@@ -344,3 +344,44 @@ describe('Impostazioni — versione desktop', () => {
     expect(container.querySelector('[data-disposizione="desktop"]')).toBeNull()
   })
 })
+
+describe('La password per chi è entrato con Apple', () => {
+  // 🔴 Sign in with Apple c'è solo sull'app iPhone: sul sito chi si è
+  // registrato così non ha un bottone per entrare. Fino al 13/10/2026 il
+  // foglio chiedeva «la password attuale», che quell'atleta non ha mai avuto,
+  // e verificarla con `signInWithPassword` falliva sempre: niente web, mai.
+  const APPLE = {
+    ...UTENTE, email: 'x7k2@privaterelay.appleid.com',
+    app_metadata: { provider: 'apple', providers: ['apple'] },
+  }
+
+  it('🔴 la riga dice a cosa serve, e il foglio non chiede la password attuale', async () => {
+    const utente = userEvent.setup()
+    montaPagina(<Settings />, { role: 'athlete', user: APPLE })
+    await utente.click(await screen.findByText('Password per il sito'))
+
+    expect(screen.queryByText('Password attuale')).not.toBeInTheDocument()
+    // L'indirizzo nascosto da Apple, che nessuno ricorda: è quello da scrivere sul sito.
+    expect(screen.getByLabelText('La tua email di accesso')).toHaveValue('x7k2@privaterelay.appleid.com')
+  })
+
+  it('🔴 salva la password senza verificarne una che non esiste', async () => {
+    const utente = userEvent.setup()
+    montaPagina(<Settings />, { role: 'athlete', user: APPLE })
+    await utente.click(await screen.findByText('Password per il sito'))
+    await utente.type(screen.getByLabelText('Password'), 'segreta123')
+    await utente.click(screen.getByText('Salva password'))
+
+    await waitFor(() => expect(finto.supabase.auth.updateUser).toHaveBeenCalledWith({ password: 'segreta123' }))
+    expect(await screen.findByText(/Dal computer entra con x7k2@privaterelay\.appleid\.com/)).toBeInTheDocument()
+  })
+
+  it('chi ha email e password vede il foglio di sempre', async () => {
+    const utente = userEvent.setup()
+    montaPagina(<Settings />, { role: 'athlete', user: { ...UTENTE, app_metadata: { providers: ['email'] } } })
+    await utente.click(await screen.findByText('Modifica password'))
+
+    expect(screen.getByText('Password attuale')).toBeInTheDocument()
+    expect(screen.queryByLabelText('La tua email di accesso')).not.toBeInTheDocument()
+  })
+})

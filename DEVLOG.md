@@ -30,6 +30,7 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 - Un **blocco nuovo chiede subito i suoi numeri** (tempo, round…) e si aggiunge con un tasto di conferma.
 - Un workout già svolto da un atleta **non si può più modificare**: si può duplicare.
 - Negli **EMOM** un esercizio può durare **più minuti di fila** come stazione continua («minuti 2–3: vogatore»): il timer non riparte a metà.
+- Nuova categoria **Gym** per le schede da palestra: oltre 170 esercizi e macchinari generici divisi per gruppo muscolare, serie × ripetizioni × carico × recupero, intervalli di ripetizioni («8–12»), RIR e cadenza, superserie e circuiti, riscaldamento e defaticamento, e se serve le serie una per una (piramidale, riscaldamento, drop set, cedimento). Anche qui c'è «Genera con IA». L'atleta spunta le serie e a ogni spunta parte il **timer di recupero**.
 
 ## Archivio e atleti (coach)
 - **Nuovi filtri per tipo di blocco** nell'archivio: ON/OFF, EMOM, AMRAP, For Time, Interval.
@@ -54,6 +55,9 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 
 ## Segnala un problema
 - Nuova voce **«Segnala un problema»** in Impostazioni: un modulo guidato con screenshot allegabili e bozza salvata, che arriva per email.
+
+## Accesso
+- Chi è entrato con **Apple** può scegliere una password da **Impostazioni → «Password per il sito»**, senza che gli si chieda quella attuale (che non ha): così entra anche dal sito, dove Apple non c'è, con l'indirizzo mostrato nel foglio.
 
 ## Grafica e animazioni
 - **Nuova animazione d'apertura** dell'app, senza più il lampo bianco all'avvio.

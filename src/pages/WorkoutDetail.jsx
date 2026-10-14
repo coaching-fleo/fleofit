@@ -44,7 +44,7 @@ import { ERGOMETERS, COACHING_ID } from '../lib/constants'
 import { sincronizzaBadge } from '../lib/badge'
 import { isVoiceNoteValid } from '../lib/notaVocale'
 import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/timerSequence'
-import { BRAND, RUNNING, coloreCategoria, conVelo } from '../lib/colori'
+import { BRAND, RUNNING, GYM, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
 import RecapAllenamento from '../components/RecapAllenamento'
@@ -60,6 +60,7 @@ import { caricoPrevisto, previsioneSquadra, finestraPrevisione, testoAvviso } fr
 import { RigaAvviso, AvvisoEsteso, PrevisioneNonDisponibile } from '../components/PrevisioneUI'
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { recapStoria } from '../lib/recapStoria'
+import { riepilogoGym, righeTestoGym, gruppiPerElenco } from '../lib/gym'
 import { etichetteStazioni } from '../lib/stazioniEmom'
 import { daChiedere, leggiIgnorate, tempoDallaNota, senzaRisultato, conRisultatoDi } from '../lib/risultatoGara'
 // «Com'è andata?» sulle gare HYROX già corse: pigro, perché compare solo lì
@@ -68,6 +69,8 @@ const RisultatoGara = lazy(() => import('../components/RisultatoGara'))
 // Il foglio di «Come stai oggi» si apre al massimo una volta al giorno: pigro,
 // come gli altri pezzi che la scheda non mostra all'apertura (CLAUDE.md §2).
 const FoglioComeStai = lazy(() => import('../components/FoglioComeStai'))
+// La scheda da palestra (13/10/2026): pigra, la scaricano solo i workout Gym.
+const SchedaGymUI = lazy(() => import('../components/SchedaGymUI'))
 const StatisticheGara = lazy(() => import('../components/RisultatoGara').then(m => ({ default: m.StatisticheGara })))
 import {
   GraficaStoria, FoglioStoria, LARGHEZZA_STORIA, ALTEZZA_STORIA, FATTORE_STORIA,
@@ -824,7 +827,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
     const category = (rawCat === 'Autonomo' || rawCat === 'Custom') ? 'Custom' : (rawCat === 'Event' ? 'Event' : rawCat)
     const isRunning = category === 'Running'
-    const type = category === 'Custom' ? 'Custom' : (category === 'Event' ? 'Event' : (isRunning ? 'Running' : 'Hyrox'))
+    const type = category === 'Custom' ? 'Custom' : (category === 'Event' ? 'Event' : (isRunning ? 'Running' : category === 'Gym' ? 'Gym' : 'Hyrox'))
     let y = 20
 
     // Header
@@ -859,6 +862,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     doc.setFontSize(11)
     if (type === 'Running') {
       doc.setTextColor(0, 148, 198)
+    } else if (type === 'Gym') {
+      doc.setTextColor(20, 184, 166)
     } else if (type === 'Custom') {
       doc.setTextColor(209, 17, 73)
     } else if (type === 'Event') {
@@ -874,6 +879,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     if (s?.intensity) {
       if (type === 'Running') {
         doc.setTextColor(0, 148, 198)
+      } else if (type === 'Gym') {
+        doc.setTextColor(20, 184, 166)
       } else if (type === 'Custom') {
         doc.setTextColor(209, 17, 73)
       } else if (type === 'Event') {
@@ -907,6 +914,28 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       const lines = doc.splitTextToSize(textToPrint, 170)
       doc.text(lines, 20, y)
       y += lines.length * 5 + 6
+    } else if (type === 'Gym') {
+      // La scheda da palestra: fase, poi un esercizio per riga (src/lib/gym.js).
+      for (const riga of righeTestoGym(s?.gym || [])) {
+        if (riga.genere === 'fase') {
+          y += 2
+          doc.setTextColor(20, 184, 166)
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(11)
+          doc.text(riga.testo.toUpperCase(), 20, y)
+          y += 6
+          continue
+        }
+        const x = riga.rientro ? 30 : 25
+        doc.setFont('helvetica', riga.genere === 'gruppo' ? 'bold' : 'normal')
+        doc.setFontSize(riga.genere === 'nota' ? 9 : 10)
+        doc.setTextColor(...(riga.genere === 'nota' ? [140, 140, 140] : riga.genere === 'gruppo' ? [20, 184, 166] : [210, 210, 210]))
+        const lines = doc.splitTextToSize(riga.testo, 190 - x)
+        doc.text(lines, x, y)
+        y += lines.length * 5 + 1
+        if (y > 270) { doc.addPage(); doc.setFillColor(23, 23, 23); doc.rect(0, 0, 210, 297, 'F'); y = 20 }
+      }
+      y += 4
     } else if (type === 'Running') {
            doc.setTextColor(150, 150, 150)
       doc.setFont('helvetica', 'bold')
@@ -1319,15 +1348,19 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const isRunning = category === 'Running'
   const blocks = getNormalizedBlocks(workout)
   const mainBlock = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type)) || blocks[0] || { type: 'Hyrox' }
-  const type = isEvent ? 'Event' : (isCustom ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
+  const isGym = category === 'Gym'
+  const type = isEvent ? 'Event' : (isCustom ? 'Custom' : (isRunning ? 'Running' : isGym ? 'Gym' : mainBlock.type))
   const corsiaWorkout = corsia(category)
 
   // Il riepilogo vale solo dove ci sono blocchi da stimare. Corsa, Custom ed
   // Evento non ne hanno: mostrare «0 min · 0 blocchi» sarebbe una bugia con
   // l'aria di un dato, che è la stessa ragione per cui `DurataBlocco` scrive
   // «—» invece di «0:00».
-  const haBlocchi = !isRunning && type !== 'Custom' && type !== 'Event' && blocks.length > 0
-  const riepilogo = haBlocchi ? caricoPrevisto(blocks) : null
+  const haBlocchi = !isRunning && !isGym && type !== 'Custom' && type !== 'Event' && blocks.length > 0
+  // Gym: durata stimata, esercizi e serie (src/lib/gym.js), senza RPE atteso.
+  const numeriGym = isGym ? riepilogoGym(s.gym || []) : null
+  const riepilogo = haBlocchi ? caricoPrevisto(blocks)
+    : numeriGym?.esercizi ? { secondi: numeriGym.secondi, blocchi: numeriGym.esercizi, rpe: null, segmenti: [] } : null
 
   const eAtleta = (role === 'athlete' || isOwnProfile) && !!athleteWorkoutId
   // Gara HYROX già corsa: il tempo salvato si mostra grande, e se non c'è
@@ -1650,12 +1683,13 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           /* ⚠️ Solo qui: nel builder i numeri cambiano mentre si scrive. */
           anima
           {...riepilogo}
+          etichettaBlocchi={isGym ? 'Esercizi' : 'Blocchi'}
           terzaCella={mostraRpeAtleta ? {
             etichetta: 'Il tuo RPE',
             valore: rpeAtletaDichiarato === null ? '—' : rpeAtletaDichiarato,
             unita: rpeAtletaDichiarato === null ? null : '/10',
             classeValore: rpeAtletaDichiarato === null ? 'text-[#4a4f5c]' : getRpeColorText(rpeAtletaDichiarato),
-          } : undefined}
+          } : isGym ? { etichetta: 'Serie', valore: numeriGym.serie } : undefined}
         />
       )}
     </>
@@ -1668,7 +1702,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const pContenuto = (
     <>
       {/* BLOCCHI */}
-      {!isRunning && type !== 'Custom' && type !== 'Event' ? (
+      {isGym ? (
+        <Suspense fallback={<div className={`${CARD} h-40 animate-pulse`} />}>
+          {/* Spunte e timer di recupero solo per l'atleta che la sta facendo. */}
+          <SchedaGymUI gruppi={s.gym || []} interattiva={eAtleta && !completato} />
+        </Suspense>
+      ) : !isRunning && type !== 'Custom' && type !== 'Event' ? (
         <div className="flex flex-col gap-[9px]" data-blocchi>
           {blocks.map((block, idx) => {
             const esercizi = block.exercises || []
@@ -1994,7 +2033,21 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', background: 'rgba(209,17,73,0.05)', borderRadius: '16px', border: '1px solid rgba(209,17,73,0.1)' }}>
                   <div style={{ fontSize: '17px', fontWeight: 500, color: '#fff', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{workout.coach_notes || athleteNote?.text || 'Allenamento Custom'}</div>
                 </div>
-              ) : !isRunning ? blocks.map((b, i) => {
+              ) : isGym ? gruppiPerElenco(s?.gym || []).map((g, i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', background: 'rgba(20,184,166,0.05)', borderRadius: '16px', border: '1px solid rgba(20,184,166,0.12)' }}>
+                  {g.intestazione && (
+                    <div style={{ fontSize: '15px', fontWeight: 900, color: GYM, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {[g.intestazione.titolo, g.intestazione.dettaglio].filter(Boolean).join(' · ')}
+                    </div>
+                  )}
+                  {g.esercizi.map((ex, j) => (
+                    <div key={j} style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{ex.nome}</span>
+                      {ex.specifiche && <span style={{ fontSize: '15px', fontWeight: 600, color: '#888', marginTop: '2px' }}>{ex.specifiche}</span>}
+                    </div>
+                  ))}
+                </div>
+              )) : !isRunning ? blocks.map((b, i) => {
                 let shortTitle = b.type;
                 if (b.type === 'EMOM') shortTitle = `EMOM ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
                 else if (b.type === 'AMRAP') shortTitle = `AMRAP ${b.params?.duration || ''}`;

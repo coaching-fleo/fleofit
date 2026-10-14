@@ -38,6 +38,7 @@ import { useBottomSheet } from '../useBottomSheet'
 const ACCENTI = {
   brand: 'var(--color-brand)',
   running: 'var(--color-running)',
+  gym: 'var(--color-gym)',
 }
 
 const riassuntoDi = (vista) => {

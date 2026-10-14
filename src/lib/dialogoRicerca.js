@@ -41,7 +41,7 @@ export const DICHIARAZIONI = [
         dal: DATA,
         al: DATA,
         stato: { type: 'string', enum: ['completato', 'da_fare', 'scaduto', 'non_assegnato'], description: 'scaduto = non completato con data passata; non_assegnato = workout creati e mai dati a nessun atleta.' },
-        categoria: { type: 'string', enum: ['Hyrox', 'Running', 'Custom', 'Event'], description: 'Running = corsa, Custom = allenamento libero, Event = gara.' },
+        categoria: { type: 'string', enum: ['Hyrox', 'Running', 'Gym', 'Custom', 'Event'], description: 'Running = corsa, Gym = scheda da palestra (pesi), Custom = allenamento libero, Event = gara.' },
         tipo_blocco: { type: 'string', description: 'Tipo di blocco esatto: WarmUp, Cash In, ON/OFF, EMOM, AMRAP, For Time, Interval, Rest, Cash Out; per la corsa: warmup, run, recover, cooldown, repeat.' },
         esercizio: { type: 'array', items: { type: 'string' }, description: "Nomi o pezzi di nome di esercizi, ne basta uno (es. ['wall ball', 'sled push'])." },
         testo: { type: 'array', items: { type: 'string' }, description: 'Parole da cercare in titolo, note del coach, esercizi e distanze (es. ["400m"]). Ne basta una.' },

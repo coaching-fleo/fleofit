@@ -4,6 +4,7 @@ import { categoriaDi } from './categorie'
 // 🔴 UNO stimatore solo per i blocchi Hyrox (BACKLOG #40, chiuso il 09/09/2026).
 // Prima ce n'erano due e dicevano 58 e 24 minuti sullo stesso allenamento.
 import { durataBlocco } from './stimaWorkout'
+import { minutiGym } from './gym'
 
 // Statistiche della scheda atleta, estratte da AthleteDetail.jsx il 26/08/2026.
 //
@@ -97,6 +98,8 @@ export const durataWorkout = (sections) => {
         minuti += parseTime(step.duration)
       }
     }
+  } else if (cat === 'Gym') {
+    minuti = minutiGym(s.gym || [])
   } else {
     for (const b of blocchiDi(s)) minuti += durataBlocco(b) / 60
   }
@@ -189,11 +192,12 @@ export function calcolaStatistiche(workouts = [], oggi = new Date()) {
 // Riusano `durataWorkout` e `blocchiDi`, così il calcolo della durata resta
 // in un punto solo (era già stato duplicato tre volte, BACKLOG #30).
 
-/** Quanti blocchi ha un allenamento; per la corsa, quante fasi. */
+/** Quanti blocchi ha un allenamento; per la corsa, quante fasi; per Gym, quanti esercizi. */
 export const numeroBlocchi = (sections) => {
   const s = sections || {}
   const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
   if (cat === 'Running') return (s.steps || s.main?.steps || []).length
+  if (cat === 'Gym') return (s.gym || []).reduce((n, g) => n + (g.esercizi?.length || 0), 0)
   return blocchiDi(s).length
 }
 
@@ -235,6 +239,8 @@ export const rpeAtteso = (sections) => {
     if (fasi.length === 0) return null
     return Math.round(fasi.reduce((a, b) => a + b, 0) / fasi.length)
   }
+
+  if (cat === 'Gym') return null
 
   const pesi = blocchiDi(s)
     .filter(b => b.type !== 'WarmUp' && b.type !== 'Rest')

@@ -15,7 +15,7 @@
 import { ChevronLeft, ChevronRight, User, Mic, Plus, ClipboardList,
          CheckCircle2, CircleSlash, CalendarClock, Dumbbell } from 'lucide-react'
 import { CARD, LABEL, RIGA, CARTA_RIGA_BASE, VETRO, TONO_VERDETTO, META } from '../lib/stiliCard'
-import { corsia } from '../lib/categorie'
+import { corsia, parolaPezzi } from '../lib/categorie'
 import { decimale, oreMinuti, VERDETTI } from '../lib/reportSettimanale'
 
 // ── Pezzi minuti, non esportati ───────────────────────────────────────────
@@ -262,7 +262,7 @@ export function Diario({ sessioni = [], onApri }) {
               </span>
 
               <span className="block mt-1 text-[11px] font-bold text-[#5b6070]">
-                {oreMinuti(s.minuti)} · {s.blocchi} {s.blocchi === 1 ? 'blocco' : 'blocchi'}
+                {oreMinuti(s.minuti)} · {s.blocchi} {parolaPezzi(s.categoria, s.blocchi)}
                 {s.atteso != null && <> · previsto {s.atteso}</>}
                 {s.dichiarato != null && <> → <span className="text-gray-200">sentito {s.dichiarato}</span></>}
                 {/* Lo scarto è la sola cosa di questa riga che il coach non può

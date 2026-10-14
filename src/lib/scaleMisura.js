@@ -39,6 +39,10 @@ const RIPETIZIONI = intervallo(1, 100, 1)
 const ROUND = intervallo(1, 40, 1)
   .map(n => voce(String(n), String(n), n === 1 || n % 5 === 0 ? String(n) : null))
 
+// Le serie di un esercizio in palestra (categoria Gym, 13/10/2026).
+const SERIE = intervallo(1, 12, 1)
+  .map(n => voce(String(n), String(n), n === 1 || n % 5 === 0 ? String(n) : null))
+
 const RIPETUTE = intervallo(1, 30, 1)
   .map(n => voce(String(n), String(n), n === 1 || n % 5 === 0 ? String(n) : null))
 
@@ -114,6 +118,7 @@ export const SCALE = {
   ripetizioni: { voci: RIPETIZIONI, unita: 'reps', tastiera: 'numeric', partenza: '10' },
   round: { voci: ROUND, unita: 'round', tastiera: 'numeric', partenza: '5' },
   ripetute: { voci: RIPETUTE, unita: 'volte', tastiera: 'numeric', partenza: '8' },
+  serie: { voci: SERIE, unita: 'serie', tastiera: 'numeric', partenza: '3' },
   peso: { voci: PESO, unita: 'kg', tastiera: 'decimal', partenza: '10 kg' },
   pesoDoppio: { voci: PESO_DOPPIO, unita: 'kg', tastiera: 'numeric', partenza: '2x16 kg' },
   metri: { voci: METRI, unita: 'm', tastiera: 'numeric', partenza: '100m' },
@@ -262,7 +267,7 @@ export const valoreDaTesto = (nome, testo) => {
       return n ? `${n.toFixed(1)} km/h` : null
     }
     default: {
-      // ripetizioni, round, ripetute: interi.
+      // ripetizioni, round, ripetute, serie: interi.
       const n = numeroDaTesto(testo)
       return n && Number.isInteger(n) ? String(n) : null
     }
@@ -317,6 +322,6 @@ export const testoMisura = (vista, valore = vista.valore) => {
   // Le unità «di ritmo» (/km, /500m) e i minuti si capiscono dalla forma del
   // numero («3:50», «1:30»), e reps/round/volte le dice già l'etichetta
   // accanto («Round 10»): scriverle sarebbe solo rumore.
-  const ovvia = !unita || unita.startsWith('/') || ['min', 'reps', 'round', 'volte'].includes(unita)
+  const ovvia = !unita || unita.startsWith('/') || ['min', 'reps', 'round', 'volte', 'serie'].includes(unita)
   return ovvia ? numero : `${numero} ${unita}`
 }

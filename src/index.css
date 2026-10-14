@@ -31,6 +31,7 @@
      attuali sono quelli giusti: non proporne altri senza richiesta esplicita. */
   --color-running: #0094C6;   /* categoria Running, picker corsa */
   --color-custom: #D11149;    /* categoria Custom / allenamento autonomo */
+  --color-gym: #14B8A6;       /* categoria Gym (scheda da palestra), dal 13/10/2026 */
   --color-ia: #a855f7;        /* generazione con IA, note vocali */
 }
 

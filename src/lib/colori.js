@@ -6,12 +6,15 @@
 // scritto a mano, e un rebranding li dimenticherebbe.
 //
 // ⚠️ DEVONO restare uguali ai token di `src/index.css` (`--color-brand`,
-// `--color-running`, `--color-custom`, `--color-ia`). Sono due elenchi perché
+// `--color-running`, `--color-custom`, `--color-gym`, `--color-ia`). Sono due elenchi perché
 // vivono in due mondi diversi, non perché siano indipendenti: cambiarne uno
 // solo produce un'app di due colori. CLAUDE.md §6.
 export const BRAND = '#f1ba17'
 export const RUNNING = '#0094C6'
 export const CUSTOM = '#D11149'
+// Verde acqua: scelto dal committente il 13/10/2026 per la categoria Gym.
+// Lontano dal verde di «completato» (green-500) e dall'azzurro della corsa.
+export const GYM = '#14B8A6'
 export const IA = '#a855f7'
 export const EVENTO = '#ffffff'
 
@@ -19,6 +22,7 @@ export const EVENTO = '#ffffff'
 export const coloreCategoria = (categoria) => {
   if (categoria === 'Running') return RUNNING
   if (categoria === 'Custom' || categoria === 'Autonomo') return CUSTOM
+  if (categoria === 'Gym') return GYM
   if (categoria === 'Event') return EVENTO
   return BRAND
 }
@@ -52,8 +56,8 @@ export const coloreDaClasse = (classe = '') => {
   // `ia` è un ago troppo corto, e la classe Tailwind `via-brand` (gradienti) lo
   // contiene. Con un semplice includes() un gradiente giallo diventava viola.
   // Trovato per mutazione il 26/08/2026, subito dopo aver scritto la funzione.
-  const trovato = String(classe).match(/-(brand|running|custom|ia)(?![a-z])/)
+  const trovato = String(classe).match(/-(brand|running|custom|gym|ia)(?![a-z])/)
   if (!trovato) return BRAND
-  return { brand: BRAND, running: RUNNING, custom: CUSTOM, ia: IA }[trovato[1]]
+  return { brand: BRAND, running: RUNNING, custom: CUSTOM, gym: GYM, ia: IA }[trovato[1]]
 }
 

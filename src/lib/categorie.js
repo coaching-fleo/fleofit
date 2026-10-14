@@ -1,4 +1,4 @@
-// Le quattro "corsie" di categoria, in un punto solo.
+// Le cinque "corsie" di categoria, in un punto solo.
 //
 // DESIGN.md → La Regola della Corsia: ogni categoria ha un colore e uno solo,
 // e quel colore si propaga ovunque quella categoria compaia. Farlo davvero
@@ -8,12 +8,13 @@
 // ⚠️ Le classi sono stringhe INTERE e statiche: Tailwind non le troverebbe se
 // fossero composte a runtime (`text-${x}`).
 
-import { CalendarDays, Dumbbell, Timer, Flame } from 'lucide-react'
+import { CalendarDays, Dumbbell, Timer, Flame, BicepsFlexed } from 'lucide-react'
 
 export const CORSIA = {
   Hyrox: { etichetta: 'Hyrox', txt: 'text-brand', bg: 'bg-brand', dot: 'bg-brand', bordo: 'hover:border-brand', testoSuBg: 'text-black', icona: Flame },
   Running: { etichetta: 'Running', txt: 'text-running', bg: 'bg-running', dot: 'bg-running', bordo: 'hover:border-running', testoSuBg: 'text-white', icona: Timer },
   Custom: { etichetta: 'Libero', txt: 'text-custom', bg: 'bg-custom', dot: 'bg-custom', bordo: 'hover:border-custom', testoSuBg: 'text-white', icona: Dumbbell },
+  Gym: { etichetta: 'Gym', txt: 'text-gym', bg: 'bg-gym', dot: 'bg-gym', bordo: 'hover:border-gym', testoSuBg: 'text-black', icona: BicepsFlexed },
   Event: { etichetta: 'Gara', txt: 'text-white', bg: 'bg-white', dot: 'bg-white', bordo: 'hover:border-white', testoSuBg: 'text-black', icona: CalendarDays },
 }
 
@@ -33,4 +34,16 @@ export const categoriaDi = (sections) => {
   if (grezza === 'Event') return 'Event'
   if (grezza === 'Custom' || grezza === 'Autonomo' || s.isAutonomous === true) return 'Custom'
   return grezza
+}
+
+/**
+ * Come si chiamano i pezzi di un allenamento: blocchi per Hyrox, fasi per la
+ * corsa, esercizi per Gym. `numeroBlocchi` (statistiche.js) li conta con la
+ * stessa divisione, quindi numero e parola non possono non coincidere.
+ */
+export const parolaPezzi = (categoria, n) => {
+  const uno = n === 1
+  if (categoria === 'Running') return uno ? 'fase' : 'fasi'
+  if (categoria === 'Gym') return uno ? 'esercizio' : 'esercizi'
+  return uno ? 'blocco' : 'blocchi'
 }

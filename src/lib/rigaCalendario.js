@@ -18,6 +18,7 @@ import { it } from 'date-fns/locale'
 import { getNormalizedBlocks } from './timerSequence'
 import { riepilogoWorkout, minutiStimati, decimale } from './stimaWorkout'
 import { categoriaDi, corsia } from './categorie'
+import { riepilogoGym } from './gym'
 import { dataValida, riepilogoCorsa } from './rigaArchivio'
 
 /**
@@ -113,6 +114,11 @@ export const minutiWorkout = (workout) => {
   if (categoria === 'Running') {
     const r = riepilogoCorsa(workout?.sections?.steps || [])
     return r.puroTempo && r.minuti > 0 ? Math.round(r.minuti) : null
+  }
+
+  if (categoria === 'Gym') {
+    const minuti = minutiStimati(riepilogoGym(workout?.sections?.gym || []).secondi)
+    return minuti > 0 ? minuti : null
   }
 
   const blocchi = getNormalizedBlocks(workout || {})

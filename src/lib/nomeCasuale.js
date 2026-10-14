@@ -24,6 +24,7 @@ import { durataEsercizio, giriBlocco, durataBlocco, rpeAtteso, BLOCCHI_DI_LAVORO
 import { riepilogoCorsa } from './rigaArchivio'
 import { ERGOMETERS } from './constants'
 import { separaCodice } from './codiceWorkout'
+import { candidatiNomeGym } from './gym'
 
 // ── Hyrox: cosa si fa ───────────────────────────────────────────────────────
 
@@ -212,9 +213,10 @@ const candidatiCorsa = (steps = []) => {
 // ── Scelta ──────────────────────────────────────────────────────────────────
 
 /** I nomi pertinenti a un workout, sempre nello stesso ordine. Vuoto se non c'è ancora contenuto. */
-export function candidatiNome({ category, blocks = [], steps = [] } = {}) {
+export function candidatiNome({ category, blocks = [], steps = [], gym = [] } = {}) {
   if (category === 'Hyrox') return candidatiHyrox(blocks)
   if (category === 'Running') return candidatiCorsa(steps)
+  if (category === 'Gym') return candidatiNomeGym(gym)
   return []
 }
 

@@ -7,7 +7,7 @@
 //
 // È La Regola della Corsia di DESIGN.md: ogni categoria ha un colore e uno solo,
 // e quel colore attraversa puntino, bordo in hover, pillola, icona e glow.
-import { RUNNING, CUSTOM, EVENTO } from './colori'
+import { RUNNING, CUSTOM, GYM, EVENTO } from './colori'
 
 export const TYPE_COLORS = {
   'WarmUp':   { text: 'text-gray-400', bg: 'bg-[#2a2a2a]', border: 'border-[#383838]', hex: '#9ca3af' },
@@ -21,5 +21,6 @@ export const TYPE_COLORS = {
   'Interval': { text: 'text-gray-200', bg: 'bg-[#222]',    border: 'border-[#333]',    hex: '#e5e5e5' },
   'Running':  { text: 'text-running', bg: 'bg-running/10', border: 'border-running/30', hex: RUNNING },
   'Custom':   { text: 'text-custom', bg: 'bg-custom/10', border: 'border-custom/30', hex: CUSTOM },
+  'Gym':      { text: 'text-gym', bg: 'bg-gym/10', border: 'border-gym/30', hex: GYM },
   'Event':    { text: 'text-white',     bg: 'bg-white/10',     border: 'border-white/30',     hex: EVENTO },
 }

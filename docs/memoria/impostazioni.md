@@ -266,3 +266,27 @@ le disposizioni. Test: «Impostazioni — versione desktop» in `Impostazioni.te
 - ⚠️ La colonna sinistra apre con l'etichetta «Profilo» (`EtichettaSezione`) sopra la carta
   dell'account: senza, la destra — che apre con «Solo coach» — partiva un'etichetta più in
   basso (segnalato dal committente). «Profilo» esiste solo sul desktop.
+
+## 9-password-apple. La password per chi è entrato con Apple (13/10/2026)
+
+Sign in with Apple c'è **solo sull'app iPhone** (`accesso.md`): chi si è registrato
+così, sul sito non aveva un modo di entrare. Il foglio «Modifica password» chiedeva la
+password attuale e la verificava con `signInWithPassword`, che per un account Apple
+fallisce sempre — quindi non poteva nemmeno sceglierne una.
+
+Ora `senzaPassword(user)` (`rigaImpostazioni.js`) guarda `app_metadata.providers`
+(ripiego: `identities`): se `email` non c'è, la riga diventa **«Password per il sito»**
+e il foglio non chiede la password attuale, mostra l'indirizzo di accesso con «Copia»
+(con «Nascondi la mia email» è un `…@privaterelay.appleid.com` che nessuno ricorda) e
+salva con `updateUser({ password })`. Da lì, sul web, si entra con email e password.
+Vale anche per chi è entrato solo con Google.
+- ⚠️ Dopo il salvataggio `providers` resta senza `email` (Supabase scrive la password
+  sull'utente, non aggiunge un'identità): la riga resta «Password per il sito», ed è
+  voluto, il foglio serve anche a cambiarla.
+- ⚠️ Con «Secure password change» attivo su Supabase, una sessione più vecchia di 24 ore
+  riceve `reauthentication_needed`, e il codice di conferma andrebbe all'indirizzo relay,
+  che può non riceverlo. Il foglio dice di uscire, rientrare con Apple e riprovare.
+- ⚠️ Non provato su un account Apple vero: i test usano un utente finto. La prima prova
+  sul telefono è da fare (salvare, poi entrare dal sito con l'indirizzo mostrato).
+Test: `senzaPassword` in `rigaImpostazioni.test.js`, «La password per chi è entrato con
+Apple» in `Impostazioni.test.jsx`.

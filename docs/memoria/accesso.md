@@ -139,6 +139,9 @@ stringhe vuote: scriverlo cancellerebbe il nome salvato la prima volta.
 3. ⚠️ **Il recupero password non arriva a un indirizzo relay** se il dominio
    mittente non è registrato nel servizio di inoltro di Apple. Non blocca niente —
    chi entra con Apple non usa la password — ma non è un percorso da promettere.
+   ⚠️ Per entrare dal **sito** (dove Apple non c'è) la password si sceglie dall'app:
+   Impostazioni → «Password per il sito», senza password attuale (`impostazioni.md`,
+   9-password-apple, 13/10/2026).
 4. **Il bottone è bianco e sta SOPRA quello Google**, e non è gusto: la 4.8 chiede
    che l'alternativa non sia «meno in vista» delle altre, ed è la prima cosa che
    il revisore guarda dopo un rilievo su quella linea guida. Su fondo scuro le

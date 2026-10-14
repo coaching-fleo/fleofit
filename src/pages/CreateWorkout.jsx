@@ -19,7 +19,7 @@ import { HYROX_EXERCISES, isErgo, isSled, isCarry, isHybrid, isDistance } from '
 import { mostraErrore } from '../lib/alert'
 import { battito, vibraPresa, vibraScelta, vibraSuccesso } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
-import { conVelo, coloreDaClasse, BRAND, RUNNING, CUSTOM, IA } from '../lib/colori'
+import { conVelo, coloreDaClasse, BRAND, RUNNING, CUSTOM, GYM, IA } from '../lib/colori'
 import { BOLLA_MODALE, BOTTONE_BRAND, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
          LABEL, TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA, VETRO } from '../lib/stiliCard'
 import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
@@ -40,6 +40,7 @@ import { preparaBlocchiIA } from '../lib/blocchiIA'
 import { iaDellaCategoria, haGiaContenuto } from '../lib/iaCategorie'
 import { intervalliDi, etichetteStazioni, MASSIMO_INTERVALLI } from '../lib/stazioniEmom'
 import { parseDuration } from '../lib/timerSequence'
+import { riepilogoGym } from '../lib/gym'
 import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
 import { SCALE, grandezza, testoMisura } from '../lib/scaleMisura'
 import { fotoDisponibile } from '../lib/lettoreTesto'
@@ -49,6 +50,9 @@ import CreaWorkoutDesktop from '../components/CreaWorkoutDesktop'
 
 // Il lettore dei workout scritti si scarica solo quando si apre il foglio.
 const FoglioDaTesto = lazy(() => import('../components/FoglioDaTesto'))
+// Il builder della scheda da palestra (13/10/2026): pigro come il foglio
+// qui sopra, così chi apre Hyrox non scarica la libreria degli esercizi Gym.
+const CreaGym = lazy(() => import('../components/CreaGym'))
 
 
 // ─── COSTANTI ────────────────────────────────────────────────
@@ -163,11 +167,12 @@ const STORICO_WORKOUT = 40
 const CATEGORIE = [
   { id: 'Hyrox',   nome: 'Hyrox',  descrizione: 'Blocchi, esercizi, EMOM e AMRAP', colore: BRAND,   testoSuColore: '#000' },
   { id: 'Running', nome: 'Corsa',  descrizione: 'Fasi, passo e ripetute',          colore: RUNNING, testoSuColore: '#fff' },
+  { id: 'Gym',     nome: 'Gym',    descrizione: 'Esercizi, serie, ripetizioni e carichi', colore: GYM, testoSuColore: '#000' },
   { id: 'Custom',  nome: 'Custom', descrizione: 'Solo una descrizione scritta',    colore: CUSTOM,  testoSuColore: '#fff' },
 ]
-const ICONA_CATEGORIA = { Hyrox: Dumbbell, Running: Timer, Custom: FileText }
+const ICONA_CATEGORIA = { Hyrox: Dumbbell, Running: Timer, Gym: BicepsFlexed, Custom: FileText }
 const categoriaCorrente = (id) => CATEGORIE.find(c => c.id === id) || CATEGORIE[0]
-const COLORE_INTENSITA = { Hyrox: 'bg-brand', Running: 'bg-running', Custom: 'bg-custom' }
+const COLORE_INTENSITA = { Hyrox: 'bg-brand', Running: 'bg-running', Gym: 'bg-gym', Custom: 'bg-custom' }
 
 /**
  * Sul desktop il builder va su due colonne: i blocchi a sinistra, la colonna
@@ -2215,6 +2220,9 @@ export default function CreateWorkout() {
   const [editingStep, setEditingStep] = useState(null)
   const draggedStepIdx = useRef(null)
 
+  // Gym: i gruppi della scheda da palestra (`sections.gym`, src/lib/gym.js)
+  const [gymGroups, setGymGroups] = useState([])
+
   // Note + pause
   const [coachNotes, setCoachNotes] = useState('')
 
@@ -2432,7 +2440,7 @@ export default function CreateWorkout() {
       const sezioni = data.sections || {}
       const candidati = candidatiNome({
         category: sezioni.category || (sezioni.steps ? 'Running' : 'Hyrox'),
-        blocks: sezioni.blocks || [], steps: sezioni.steps || [],
+        blocks: sezioni.blocks || [], steps: sezioni.steps || [], gym: sezioni.gym || [],
       })
       if (eNomeGenerato(nome, candidati)) {
         setTitle('')
@@ -2459,6 +2467,7 @@ export default function CreateWorkout() {
       if (s.blocks || s.steps || s.category) {
         setBlocks(s.blocks || [])
         setRunningSteps(s.steps || [])
+        setGymGroups(s.gym || [])
         setWorkoutIntensity(s.intensity || '5')
         setCategory(s.category || (s.steps ? 'Running' : 'Hyrox'))
         if (s.blocks && s.blocks.length > 0) {
@@ -2515,8 +2524,9 @@ export default function CreateWorkout() {
               setCategory(draft.category || 'Hyrox')
               setBlocks(draft.blocks || [])
               setRunningSteps(draft.runningSteps || [])
+              setGymGroups(draft.gymGroups || [])
               setCoachNotes(draft.coachNotes || '')
-              if (draft.title || draft.blocks?.length || draft.runningSteps?.length) setStep(2)
+              if (draft.title || draft.blocks?.length || draft.runningSteps?.length || draft.gymGroups?.length) setStep(2)
               // La bozza ripristinata È già una modifica: non diventa il punto
               // di riferimento, o la si cancellerebbe al primo render.
               bozzaDiPartenza.current = ''
@@ -2547,7 +2557,7 @@ export default function CreateWorkout() {
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
 
-  const hasUnsavedChanges = title.trim() !== '' || blocks.length > 0 || runningSteps.length > 0
+  const hasUnsavedChanges = title.trim() !== '' || blocks.length > 0 || runningSteps.length > 0 || gymGroups.length > 0
 
   // 0. Salvataggio automatico bozza in locale
   //
@@ -2558,7 +2568,7 @@ export default function CreateWorkout() {
   // Il riferimento è il primo stato completo dopo il caricamento.
   useEffect(() => {
     if (!caricato || saved) return
-    const corpo = { title, date, workoutIntensity, category, blocks, runningSteps, coachNotes }
+    const corpo = { title, date, workoutIntensity, category, blocks, runningSteps, gymGroups, coachNotes }
     const firma = JSON.stringify(corpo)
     if (bozzaDiPartenza.current === null) { bozzaDiPartenza.current = firma; return }
     if (firma === bozzaDiPartenza.current) {
@@ -2569,7 +2579,7 @@ export default function CreateWorkout() {
     if (hasUnsavedChanges) {
       scriviJson('fleofit_workout_draft', { sourceId: sourceId || null, modo: modoBozza, ...corpo })
     }
-  }, [title, date, workoutIntensity, category, blocks, runningSteps, coachNotes, sourceId, modoBozza, hasUnsavedChanges, saved, caricato])
+  }, [title, date, workoutIntensity, category, blocks, runningSteps, gymGroups, coachNotes, sourceId, modoBozza, hasUnsavedChanges, saved, caricato])
 
   useEffect(() => {
     if (saved) localStorage.removeItem('fleofit_workout_draft')
@@ -2665,7 +2675,8 @@ export default function CreateWorkout() {
       // conferma: si legge come «butto via tutto», anche se lo stato resta.
       // Il tocco sul titolo invece torna al passo 1 senza chiedere: è il
       // gesto deliberato di chi vuole cambiare nome o data.
-      const composti = category === 'Running' ? runningSteps.length : category === 'Hyrox' ? blocks.length : 0
+      const composti = category === 'Running' ? runningSteps.length : category === 'Hyrox' ? blocks.length
+        : category === 'Gym' ? gymGroups.length : 0
       if (composti > 0) {
         setConfirmInfo({
           title: 'Sei sicuro?',
@@ -2691,12 +2702,12 @@ export default function CreateWorkout() {
   // SEMPRE il nome, ricalcolato a ogni blocco toccato, così il coach vede il
   // titolo che verrà salvato mentre lo costruisce.
   const codice = useMemo(
-    () => codiceWorkout({ category, blocks, steps: runningSteps, intensity: workoutIntensity }),
-    [category, blocks, runningSteps, workoutIntensity])
-  const conNomeCasuale = category === 'Hyrox' || category === 'Running'
+    () => codiceWorkout({ category, blocks, steps: runningSteps, gym: gymGroups, intensity: workoutIntensity }),
+    [category, blocks, runningSteps, gymGroups, workoutIntensity])
+  const conNomeCasuale = category === 'Hyrox' || category === 'Running' || category === 'Gym'
   const candidati = useMemo(
-    () => candidatiNome({ category, blocks, steps: runningSteps }),
-    [category, blocks, runningSteps])
+    () => candidatiNome({ category, blocks, steps: runningSteps, gym: gymGroups }),
+    [category, blocks, runningSteps, gymGroups])
   const nomeCasuale = nomeFissato && eNomeGenerato(nomeFissato, candidati)
     ? nomeFissato
     : scegliNome(candidati, semeNome)
@@ -2707,6 +2718,14 @@ export default function CreateWorkout() {
   // uno stato aggiornato da un effetto: sono una funzione dei blocchi, e uno
   // stato derivato può restare indietro di un render (CLAUDE.md §9-septies).
   const riepilogo = useMemo(() => caricoPrevisto(blocks), [blocks])
+  // Gym: durata stimata, esercizi e serie totali (src/lib/gym.js). Niente RPE
+  // atteso: gli esercizi di una scheda non hanno un'intensità loro.
+  const numeriGym = useMemo(() => riepilogoGym(gymGroups), [gymGroups])
+  // ⚠️ Con la scheda vuota niente riepilogo: «0 min · 0 · 0» è un dato finto.
+  const riepilogoGymCard = numeriGym.esercizi > 0 && (
+    <RiepilogoWorkout secondi={numeriGym.secondi} blocchi={numeriGym.esercizi} rpe={null} segmenti={[]}
+      etichettaBlocchi="Esercizi" terzaCella={{ etichetta: 'Serie', valore: numeriGym.serie }} carico={null} />
+  )
 
   // ── «Genera con IA» per categoria (12/10/2026) ─────────────────────────
   // L'allenamento che l'IA legge e riscrive, e chi lo scrive, per ognuna
@@ -2714,8 +2733,8 @@ export default function CreateWorkout() {
   // aggiunge in queste due tabelle oltre che in `CATEGORIE`: il foglio e la
   // card la servono da sé.
   const iaCategoria = iaDellaCategoria(category)
-  const contenutoIA = { Hyrox: blocks, Running: runningSteps, Custom: coachNotes }[category]
-  const impostaContenutoIA = { Hyrox: setBlocks, Running: setRunningSteps, Custom: setCoachNotes }[category]
+  const contenutoIA = { Hyrox: blocks, Running: runningSteps, Gym: gymGroups, Custom: coachNotes }[category]
+  const impostaContenutoIA = { Hyrox: setBlocks, Running: setRunningSteps, Gym: setGymGroups, Custom: setCoachNotes }[category]
 
   /** Quello che l'IA ha scritto, aggiunto in coda o al posto di quello che c'era. */
   const usaIA = (risultato, modifica) => {
@@ -2814,6 +2833,7 @@ export default function CreateWorkout() {
   const handleSave = async () => {
     if (category === 'Hyrox' && blocks.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno un blocco!', type: 'error' })
     if (category === 'Running' && runningSteps.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno una fase di corsa!', type: 'error' })
+    if (category === 'Gym' && gymGroups.length === 0) return setAlertInfo({ title: 'Dati mancanti', message: 'Aggiungi almeno un esercizio!', type: 'error' })
     if (category === 'Custom' && !coachNotes.trim()) return setAlertInfo({ title: 'Dati mancanti', message: 'Inserisci una descrizione per l\'allenamento!', type: 'error' })
     
     if (editId) {
@@ -2856,7 +2876,8 @@ export default function CreateWorkout() {
       intensity: workoutIntensity,
       category: category,
       blocks: category === 'Hyrox' ? blocks : undefined,
-      steps: category === 'Running' ? runningSteps : undefined
+      steps: category === 'Running' ? runningSteps : undefined,
+      gym: category === 'Gym' ? gymGroups : undefined,
     }
 
     // «Salva come nuovo» da una modifica: la copia non porta le note scritte
@@ -2977,7 +2998,8 @@ export default function CreateWorkout() {
       onAltroNome={conNomeCasuale && nomeCasuale && !title.trim()
         ? () => { vibraScelta(); setNomeFissato(null); setSemeNome(x => x + 1) } : null}
       data={date} onData={setDate}
-      riepilogo={category === 'Hyrox' ? <RiepilogoWorkout {...riepilogo} collocazione={collocazione} /> : null}
+      riepilogo={category === 'Hyrox' ? <RiepilogoWorkout {...riepilogo} collocazione={collocazione} />
+        : category === 'Gym' ? riepilogoGymCard : null}
       intensita={<CardIntensita valore={workoutIntensity} onChange={setWorkoutIntensity} classeColore={COLORE_INTENSITA[category]} />}
       onAggiungiBlocco={category === 'Hyrox' ? aggiungiTipo : null}
       azioni={azioniSalva}
@@ -3065,7 +3087,7 @@ export default function CreateWorkout() {
                   enterKeyHint="done"
                   onKeyDown={chiudiTastieraSuInvio}
                   className="w-full bg-transparent text-[15.5px] font-bold text-white placeholder-[#5b6070] focus:outline-none"
-                  placeholder={nomeAutomatico || 'Facoltativo · lo scelgo dai blocchi'}
+                  placeholder={nomeAutomatico || (category === 'Gym' ? 'Facoltativo · lo scelgo dagli esercizi' : 'Facoltativo · lo scelgo dai blocchi')}
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                 />
@@ -3273,6 +3295,35 @@ export default function CreateWorkout() {
             etichetta="Note coach"
             nota="Nel PDF"
             placeholder="Es: parti tranquillo, chiudi progressivo…"
+          />
+        </div>
+      )}
+
+      {/* ── STEP 2: LA SCHEDA DA PALESTRA (13/10/2026) ─────────────── */}
+      {passo === 2 && category === 'Gym' && (
+        <div className="flex flex-col gap-3.5 passo-entra">
+          {!desktop && riepilogoGymCard}
+
+          {!desktop && <CardIntensita
+            valore={workoutIntensity}
+            onChange={setWorkoutIntensity}
+            classeColore="bg-gym"
+          />}
+
+          {cardIA}
+
+          {fasciaIA}
+
+          <Suspense fallback={<div className={`${CARD} h-40 animate-pulse`} />}>
+            <CreaGym gruppi={gymGroups} setGruppi={setGymGroups} />
+          </Suspense>
+
+          <NoteCoach
+            valore={coachNotes}
+            onChange={setCoachNotes}
+            etichetta="Note coach"
+            nota="Nel PDF"
+            placeholder="Es: scarico la settimana prossima, tieni 2 ripetizioni in riserva…"
           />
         </div>
       )}

@@ -332,7 +332,7 @@ staging, **schema congelato** (§0, 0-bis).
 
 ## 5. Il formato `workouts.sections` (jsonb) — struttura chiave
 
-Tre categorie principali + due implicite.
+Quattro categorie principali (Hyrox, Running, Gym, Custom) + l'Evento.
 
 ### Comune
 ```jsonc
@@ -386,6 +386,19 @@ ordinati alfabeticamente). Si possono aggiungere esercizi **custom** scrivendoli
 ```
 Ritmi ammessi: `Libero`, `Camminata`, `Z1`–`Z5`, `All out`, `Gara`, oppure `m:ss /km` da 2:00 a 10:00.
 
+### Gym → `sections.gym[]` (dal 13/10/2026)
+```jsonc
+{ "id": 0.1, "fase": "riscaldamento"|"principale"|"defaticamento",
+  "serie": "4", "recupero": "1:30", "note": "",
+  "esercizi": [{ "id": 0.2, "name": "Panca piana con bilanciere",
+    "reps": "10" | "8-12" | "Max", "durata": "0:30" /* solo esercizi a tempo */,
+    "kg": "60 kg" | "", "rir": "2", "cadenza": "3-1-1-0", "notes": "…",
+    "dettaglio": [{ "tipo": "normale"|"riscaldamento"|"drop"|"cedimento", "reps": "12", "kg": "60 kg" }] }] }
+```
+Più esercizi in un gruppo = superserie/circuito (il tipo non si salva). Con `dettaglio`
+il campo `serie` è ignorato: si legge con `serieDi` di `src/lib/gym.js`. Libreria in
+`src/lib/eserciziGym.js`. Storia e trappole: `docs/memoria/crea-workout.md` (9-gym).
+
 ### Custom / Autonomo
 `{ "category": "Custom", "isAutonomous": true }` — nessun blocco, il contenuto vive in
 `workouts.coach_notes` (creato dal coach) o in `athlete_workouts.notes` (allenamento libero
@@ -435,6 +448,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 | **Bordi** | `#2a2a2a` / `#333` / `#383838` / `#444` | in scala crescente di contrasto |
 | **Running** | `#0094C6` (azzurro) | categoria Running, picker corsa |
 | **Custom / Autonomo** | `#D11149` (rosso magenta) | categoria Custom |
+| **Gym** | `#14B8A6` (verde acqua) | categoria Gym, dal 13/10/2026 (`--color-gym`, scelto dal committente) |
 | **Event / Gara** | `#ffffff` | categoria Evento |
 | **IA / voce** | `#a855f7` (viola) | modale "Genera con IA" |
 | **Successo** | `green-500` Tailwind | workout completato |
@@ -624,7 +638,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 |---|---|
 | `Home.jsx` (ramo atleta), `HomeAtletaUI`, `HomeAtletaVuotiUI`, `statistiche.js` | `home-atleta.md` |
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `statisticheCoach.js`, `pausa.js`, `ultimeSedute.js` | `home-coach.md` |
-| `CreateWorkout.jsx`, `CreaWorkoutUI`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza | `crea-workout.md` |
+| `CreateWorkout.jsx`, `CreaWorkoutUI`, `CreaGym`, `SchedaGymUI`, `gym.js`, `eserciziGym.js`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza | `crea-workout.md` |
 | `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF, `comeStai.js`, `FoglioComeStai` | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |

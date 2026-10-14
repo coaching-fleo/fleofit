@@ -18,9 +18,10 @@ import { it } from 'date-fns/locale'
 import { getNormalizedBlocks } from './timerSequence'
 import { riepilogoWorkout, minutiStimati, decimale } from './stimaWorkout'
 import { categoriaDi, corsia } from './categorie'
+import { riepilogoGym } from './gym'
 
 /** L'ordine in cui le corsie compaiono nei filtri. Hyrox prima: è la specialità. */
-export const ORDINE_CORSIE = ['Hyrox', 'Running', 'Custom', 'Event']
+export const ORDINE_CORSIE = ['Hyrox', 'Running', 'Gym', 'Custom', 'Event']
 
 /** La data di un workout, o `null` se manca o è illeggibile. */
 export const dataValida = (iso) => {
@@ -139,6 +140,13 @@ export const metaWorkout = (workout, { giorno = true } = {}) => {
     if (r.fasi > 0) parti.push(`${r.fasi} ${r.fasi === 1 ? 'fase' : 'fasi'}`)
     if (r.puroDistanza && r.metri > 0) parti.push(chilometri(r.metri))
     else if (r.puroTempo && r.minuti > 0) parti.push(`${Math.round(r.minuti)}′`)
+  } else if (categoria === 'Gym') {
+    const r = riepilogoGym(workout?.sections?.gym || [])
+    if (r.esercizi > 0) {
+      parti.push(`${r.esercizi} ${r.esercizi === 1 ? 'esercizio' : 'esercizi'}`)
+      const minuti = minutiStimati(r.secondi)
+      if (minuti > 0) parti.push(`${minuti}′`)
+    }
   } else if (categoria !== 'Custom' && categoria !== 'Event') {
     const blocchi = getNormalizedBlocks(workout || {})
     if (blocchi.length > 0) {
@@ -170,6 +178,10 @@ export const testoCercabile = (workout) => {
   for (const blocco of getNormalizedBlocks(workout || {})) {
     parti.push(blocco?.type, blocco?.notes)
     for (const esercizio of blocco?.exercises || []) parti.push(esercizio?.name, esercizio?.notes)
+  }
+  for (const gruppo of sezioni.gym || []) {
+    parti.push(gruppo?.note)
+    for (const esercizio of gruppo?.esercizi || []) parti.push(esercizio?.name, esercizio?.notes)
   }
   for (const step of sezioni.steps || []) {
     parti.push(step?.type, step?.notes, step?.pace, step?.runPace)

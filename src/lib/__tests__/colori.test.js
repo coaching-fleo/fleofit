@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
-import { BRAND, RUNNING, CUSTOM, IA, EVENTO, coloreCategoria, conVelo, coloreDaClasse } from '../colori'
+import { BRAND, RUNNING, CUSTOM, GYM, IA, EVENTO, coloreCategoria, conVelo, coloreDaClasse } from '../colori'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -27,6 +27,7 @@ describe('i due elenchi di colori devono coincidere', () => {
     ['brand', BRAND],
     ['running', RUNNING],
     ['custom', CUSTOM],
+    ['gym', GYM],
     ['ia', IA],
   ])('--color-%s in index.css è lo stesso valore del modulo JS', (nome, valore) => {
     expect(token(nome)).toBe(valore.toLowerCase())
@@ -45,6 +46,7 @@ describe('coloreCategoria', () => {
     ['Running', RUNNING],
     ['Custom', CUSTOM],
     ['Autonomo', CUSTOM],
+    ['Gym', GYM],
     ['Event', EVENTO],
   ])('%s → %s', (categoria, atteso) => {
     expect(coloreCategoria(categoria)).toBe(atteso)
@@ -84,6 +86,7 @@ describe('coloreDaClasse', () => {
     ['bg-brand', BRAND],
     ['bg-running', RUNNING],
     ['bg-custom', CUSTOM],
+    ['bg-gym', GYM],
     ['bg-ia', IA],
     ['hover:bg-running/20', RUNNING],
     // ⚠️ `via-brand` contiene la sottostringa "ia": con un includes() ingenuo

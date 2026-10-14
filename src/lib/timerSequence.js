@@ -71,7 +71,9 @@ export const haTimerGuidato = (workout) => {
   const s = workout?.sections || {}
   const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
   if (rawCat === 'Event' || s?.isEvent === true) return false
-  return rawCat !== 'Running'
+  // Gym ha il suo timer di recupero dentro la scheda (13/10/2026): una
+  // scheda da palestra non si segue con un conto alla rovescia di blocchi.
+  return rawCat !== 'Running' && rawCat !== 'Gym'
 }
 
 export const buildTimerSequence = (workout) => {

@@ -38,7 +38,7 @@ export const PERIODI = [4, 8, 12, 26]
 export const PERIODO_PREDEFINITO = 8
 
 /** Le categorie che si possono filtrare. «Event» non è un allenamento. */
-export const CATEGORIE_ANALISI = ['Hyrox', 'Running', 'Custom']
+export const CATEGORIE_ANALISI = ['Hyrox', 'Running', 'Gym', 'Custom']
 
 const nomeAtleta = (a) => [a?.name, a?.surname].filter(Boolean).join(' ').trim() || 'Atleta'
 
@@ -214,7 +214,7 @@ export function mappaAderenza(atleti = [], righe = [], settimane = []) {
  */
 export function caricoPerCategoria(righe = [], settimane = []) {
   return settimane.map(s => {
-    const voce = { chiave: s.chiave, Hyrox: 0, Running: 0, Custom: 0 }
+    const voce = { chiave: s.chiave, Hyrox: 0, Running: 0, Gym: 0, Custom: 0 }
     for (const r of nellaSettimana(righe, s)) {
       if (r.status !== 'completed' || (s.fino && r.completed_date > s.fino)) continue
       const cat = categoriaDi(r.workouts?.sections)

@@ -25,6 +25,7 @@ import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 import { durataWorkout, numeroBlocchi, rpeAtteso, mediaRpeCategoria, serieGiorni, barreUltimiGiorni,
          senzaStorico, minutiSettimana, scartoMinutiSettimana, MINIMO_PRECEDENTI } from '../lib/statistiche'
+import { parolaPezzi } from '../lib/categorie'
 import { parseNotesAndRpe, formatNotesWithRpe, rpeDichiarato } from '../lib/rpe'
 import { gradimentoDi } from '../lib/gradimento'
 import { HeaderHome, BottoneVetro, HeroOggi, AnelloSettimana, CellaSerie, CellaVolume, BannerObiettivo, ListaInArrivo } from '../components/HomeAtletaUI'
@@ -904,7 +905,7 @@ setNotifications(prev => {
   const metaEroe = (sections, categoria) => {
     const voci = [
       { etichetta: 'Durata', valore: durataWorkout(sections), unita: '′' },
-      { etichetta: 'Blocchi', valore: numeroBlocchi(sections) },
+      { etichetta: categoria === 'Gym' ? 'Esercizi' : 'Blocchi', valore: numeroBlocchi(sections) },
     ]
     const rpe = mediaRpeCategoria(storicoAtleta, categoria) ?? rpeAtteso(sections)
     if (rpe != null) voci.push({ etichetta: 'RPE', valore: rpe, evidenza: true })
@@ -933,7 +934,7 @@ setNotifications(prev => {
     if (cat === 'Custom' || cat === 'Event' || s.isAutonomous === true || cat === 'Autonomo') return ''
     const blocchi = numeroBlocchi(s)
     if (blocchi === 0) return ''
-    return `${blocchi} ${blocchi === 1 ? (cat === 'Running' ? 'fase' : 'blocco') : (cat === 'Running' ? 'fasi' : 'blocchi')} · ${durataWorkout(s)}′`
+    return `${blocchi} ${parolaPezzi(cat, blocchi)} · ${durataWorkout(s)}′`
   }
 
   // Riporta un allenamento a "da fare". Prima era un tap singolo, silenzioso e

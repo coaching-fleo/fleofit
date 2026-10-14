@@ -31,6 +31,7 @@ const FILTRI = [
   { valore: null, etichetta: 'Tutti' },
   { valore: 'Hyrox', etichetta: 'Hyrox' },
   { valore: 'Running', etichetta: 'Corsa' },
+  { valore: 'Gym', etichetta: 'Gym' },
   { valore: 'Custom', etichetta: 'Libero' },
   { valore: 'Event', etichetta: 'Gare' },
 ]
@@ -39,6 +40,7 @@ const FILTRI = [
 const FONDO = {
   Hyrox: 'bg-brand/10 border-brand/30',
   Running: 'bg-running/[.13] border-running/40',
+  Gym: 'bg-gym/[.13] border-gym/40',
   Custom: 'bg-custom/[.13] border-custom/40',
   Event: 'bg-white border-white',
 }

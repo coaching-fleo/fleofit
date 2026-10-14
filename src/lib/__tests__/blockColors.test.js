@@ -11,7 +11,7 @@ import { BLOCK_HINT } from '../blockHints'
 // È La Regola della Corsia di DESIGN.md: ogni categoria ha un colore e uno solo,
 // e quel colore attraversa puntino, bordo in hover, pillola, icona e glow.
 
-const CATEGORIE = ['Running', 'Custom', 'Event']
+const CATEGORIE = ['Running', 'Gym', 'Custom', 'Event']
 
 describe('TYPE_COLORS copre tutto ciò che la UI può mostrare', () => {
   it('ha un colore per ogni tipo di blocco offerto dal builder', () => {
@@ -49,9 +49,10 @@ describe('ogni voce ha la forma completa', () => {
     }
   })
 
-  it('le tre categorie hanno i colori della palette, non grigi', () => {
+  it('le categorie hanno i colori della palette, non grigi', () => {
     expect(TYPE_COLORS['Running'].hex.toLowerCase()).toBe('#0094c6')
     expect(TYPE_COLORS['Custom'].hex.toLowerCase()).toBe('#d11149')
+    expect(TYPE_COLORS['Gym'].hex.toLowerCase()).toBe('#14b8a6')
     expect(TYPE_COLORS['Event'].hex.toLowerCase()).toBe('#ffffff')
   })
 })

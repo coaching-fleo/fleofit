@@ -100,3 +100,31 @@ export function etichettaRuolo(role, { anteprimaAtleta = false } = {}) {
   if (anteprimaAtleta) return 'Anteprima atleta'
   return role === 'athlete' ? 'Atleta' : 'Coach'
 }
+
+/**
+ * Vero quando l'account è nato da Apple o Google e quindi non ha una password
+ * da cui partire.
+ *
+ * 🔴 Sign in with Apple esiste solo sull'app iPhone (Login.jsx, `isIOS`): chi si
+ * è registrato così, sul sito non ha un bottone con cui entrare. La riga della
+ * password diventa allora «Password per il sito», e il foglio non chiede la
+ * password attuale — che non c'è, e che `signInWithPassword` rifiuterebbe
+ * sempre, lasciando l'atleta chiuso fuori dal web per sempre.
+ *
+ * ⚠️ `app_metadata.providers` elenca i modi di entrare; `identities` è il
+ * ripiego per una sessione che non lo porta. Se nessuno dei due dice niente,
+ * torna `false`: il comportamento di prima, «Modifica password».
+ *
+ * ⚠️ Dopo aver scelto una password l'account resta senza `email` fra i
+ * provider (Supabase scrive la password sull'utente, non aggiunge
+ * un'identità), quindi la riga resta «Password per il sito». È voluto: il
+ * foglio serve anche a cambiarla, e non c'è modo di sapere se ne esiste già una.
+ */
+export function senzaPassword(user) {
+  const providers = user?.app_metadata?.providers
+  const lista = Array.isArray(providers) && providers.length
+    ? providers
+    : (Array.isArray(user?.identities) ? user.identities.map(i => i?.provider) : [])
+  if (!lista.length) return false
+  return !lista.includes('email')
+}

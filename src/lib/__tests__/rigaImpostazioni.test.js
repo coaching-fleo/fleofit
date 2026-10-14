@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { etichettaRuolo, riassuntoBackup, riassuntoCodici } from '../rigaImpostazioni'
+import { etichettaRuolo, riassuntoBackup, riassuntoCodici, senzaPassword } from '../rigaImpostazioni'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -84,5 +84,35 @@ describe('etichettaRuolo', () => {
     // un coach, e sarebbe l'unica cosa in pagina a non spiegare perché metà
     // dei comandi sono spariti.
     expect(etichettaRuolo('athlete', { anteprimaAtleta: true })).toBe('Anteprima atleta')
+  })
+})
+
+describe('senzaPassword', () => {
+  // 🔴 Chi si registra con Apple (solo sull'app iPhone) sul sito non ha un
+  // bottone per entrare: l'unica strada è una password scelta dall'app, senza
+  // che gli si chieda «la password attuale» che non ha mai avuto.
+  it('🔴 vero per chi è entrato solo con Apple', () => {
+    expect(senzaPassword({ app_metadata: { provider: 'apple', providers: ['apple'] } })).toBe(true)
+  })
+
+  it('vero anche per chi è entrato solo con Google', () => {
+    expect(senzaPassword({ app_metadata: { providers: ['google'] } })).toBe(true)
+  })
+
+  it('falso quando fra i modi di entrare c’è anche l’email', () => {
+    expect(senzaPassword({ app_metadata: { providers: ['email'] } })).toBe(false)
+    expect(senzaPassword({ app_metadata: { providers: ['apple', 'email'] } })).toBe(false)
+  })
+
+  it('senza `providers` legge le identità', () => {
+    expect(senzaPassword({ identities: [{ provider: 'apple' }] })).toBe(true)
+    expect(senzaPassword({ identities: [{ provider: 'email' }] })).toBe(false)
+  })
+
+  // Un utente di cui non si sa niente non perde il foglio di sempre.
+  it('falso quando non si sa: resta «Modifica password»', () => {
+    expect(senzaPassword(null)).toBe(false)
+    expect(senzaPassword({ email: 'a@b.it' })).toBe(false)
+    expect(senzaPassword({ app_metadata: { providers: [] }, identities: [] })).toBe(false)
   })
 })

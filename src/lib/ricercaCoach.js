@@ -125,6 +125,10 @@ export function eserciziDi(workout) {
   for (const b of getNormalizedBlocks(workout || {})) {
     for (const ex of b?.exercises || []) if (ex?.name) nomi.push(ex.name)
   }
+  // Gym (13/10/2026): gli esercizi stanno nei gruppi di `sections.gym`.
+  for (const g of workout?.sections?.gym || []) {
+    for (const ex of g?.esercizi || []) if (ex?.name) nomi.push(ex.name)
+  }
   return [...new Set(nomi)]
 }
 
@@ -202,7 +206,7 @@ function nelPeriodo(lista, dal, al) {
 // ── Strumento 1: cercaWorkout ───────────────────────────────────────────────
 
 const STATI = new Set(['completato', 'da_fare', 'scaduto'])
-const CATEGORIE = new Set(['Hyrox', 'Running', 'Custom', 'Event'])
+const CATEGORIE = new Set(['Hyrox', 'Running', 'Gym', 'Custom', 'Event'])
 
 /**
  * I filtri sul CONTENUTO di un workout, uguali per le assegnazioni e per i

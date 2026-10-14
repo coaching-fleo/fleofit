@@ -186,7 +186,7 @@ function Cella({ etichetta, valore, unita, ambra, classeValore, etichettaDueRigh
  * ⚠️ E `carico` è `null`, non 0, su un workout che non dichiara intensità: la
  * cella sparisce invece di dire che la seduta non pesa niente.
  */
-export function RiepilogoWorkout({ secondi, blocchi, rpe, segmenti, terzaCella, carico, collocazione, anima = false }) {
+export function RiepilogoWorkout({ secondi, blocchi, rpe, segmenti, terzaCella, carico, collocazione, anima = false, etichettaBlocchi = 'Blocchi' }) {
   const conDurata = segmenti.filter(s => s.secondi > 0)
   const mostraCarico = !terzaCella && carico != null
   // 🔴 `anima` è FALSO di default, ed è la parte da non perdere. Questo
@@ -205,7 +205,7 @@ export function RiepilogoWorkout({ secondi, blocchi, rpe, segmenti, terzaCella, 
     <div data-riepilogo className={`${CARD} px-[17px] py-[15px] flex flex-col gap-3.5`}>
       <div className="flex gap-2.5">
         <Cella etichetta="Durata" valore={minutiStimati(anima ? secondiSu : secondi)} unita="min" etichettaDueRighe={mostraCarico} />
-        <Cella etichetta="Blocchi" valore={anima ? blocchiSu : blocchi} etichettaDueRighe={mostraCarico} />
+        <Cella etichetta={etichettaBlocchi} valore={anima ? blocchiSu : blocchi} etichettaDueRighe={mostraCarico} />
         {terzaCella
           ? <Cella {...terzaCella} />
           : <Cella etichetta="RPE atteso" valore={rpe === null ? '—' : decimale(anima ? rpeSu : rpe)} ambra={rpe !== null}

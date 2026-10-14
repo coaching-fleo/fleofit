@@ -34,6 +34,7 @@ import { getNormalizedBlocks } from './timerSequence'
 import { parametriBlocco, specificheEsercizio } from './rigaBlocco'
 import { ERGOMETERS } from './constants'
 import { riepilogoWorkout, minutiStimati, decimale } from './stimaWorkout'
+import { gruppiPerElenco, riepilogoGym } from './gym'
 
 /**
  * Quante righe l'elenco può occupare prima di dover dire «e altri N».
@@ -175,6 +176,7 @@ export const righeAllenamento = (workout) => {
   if (categoria === 'Event') return []
   if (categoria === 'Custom') return righeNota(workout?.coach_notes)
   if (categoria === 'Running') return impagina(gruppiCorsa(sections.steps || []))
+  if (categoria === 'Gym') return impagina(gruppiPerElenco(sections.gym || []))
   return impagina(gruppiBlocchi(getNormalizedBlocks(workout || {})))
 }
 
@@ -217,6 +219,13 @@ export const celleStoria = (workout, { rpe = null } = {}) => {
       celle.push({ chiave: 'durata', valore: String(Math.round(r.minuti)), unita: 'min', etichetta: 'Durata' })
     }
     if (r.fasi > 0) celle.push({ chiave: 'fasi', valore: String(r.fasi), etichetta: r.fasi === 1 ? 'Fase' : 'Fasi' })
+  } else if (categoria === 'Gym') {
+    const r = riepilogoGym(sections.gym || [])
+    if (r.esercizi > 0) {
+      const minuti = minutiStimati(r.secondi)
+      if (minuti > 0) celle.push({ chiave: 'durata', valore: String(minuti), unita: 'min', circa: true, etichetta: 'Durata' })
+      celle.push({ chiave: 'serie', valore: String(r.serie), etichetta: 'Serie' })
+    }
   } else if (categoria !== 'Custom' && categoria !== 'Event') {
     const blocchi = getNormalizedBlocks(workout || {})
     if (blocchi.length > 0) {
