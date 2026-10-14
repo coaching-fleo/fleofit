@@ -146,10 +146,8 @@ describe('La cascata sulla Home atleta', () => {
 
 // ─────────────────────────────────────────────────────────────────────────
 describe('La cascata sulla Home coach', () => {
-  // 🔴 SERVE UN FEEDBACK VERO, e non è un dettaglio dello scenario: senza,
-  // in pagina va `HeroNessunFeedback`, che l'alone non ce l'ha — il test sulla
-  // sfocatura passerebbe senza verificare niente. Verificato per mutazione:
-  // con la lista vuota, rimettere `blur-2xl` NON faceva cadere nulla.
+  // 🔴 SERVE UN FEEDBACK VERO: senza, «Da smaltire» resta vuota e il test
+  // sulla sfocatura guarderebbe una pagina con meno elementi del vero.
   const montaCoach = ({ conFeedback = true } = {}) => {
     ctrl.atleti = [{ id: 'a1', name: 'Luca', surname: 'Rossi', photo_url: null, notes: null }]
     ctrl.righe = conFeedback ? [{
@@ -164,8 +162,8 @@ describe('La cascata sulla Home coach', () => {
 
   it('il contenitore del ramo coach la dichiara, e riparte dalla voce 1', async () => {
     montaCoach()
-    const cta = await screen.findByText(/Crea workout/i)
-    const padre = cta.closest('.cascata')
+    const sezione = await screen.findByText('Da smaltire')
+    const padre = sezione.closest('.cascata')
     expect(padre).not.toBeNull()
     expect(padre.children.length).toBeGreaterThan(1)
     // 🔴 Lo sfasamento è la metà che si perde riscrivendo: senza, la testata e
@@ -192,15 +190,15 @@ describe('La cascata sulla Home coach', () => {
   // jsdom — si vede solo sul telefono.
   it('la radice della pagina non ha più `page-transition`', async () => {
     montaCoach()
-    const padre = (await screen.findByText(/Crea workout/i)).closest('.cascata')
+    const padre = (await screen.findByText('Da smaltire')).closest('.cascata')
     expect(document.querySelector('.page-transition')).toBeNull()
     expect(padre.closest('.page-transition')).toBeNull()
   })
 
-  it("l'eroe dei feedback non è una sfocatura e non porta una seconda entrata", async () => {
+  it('nessuna card è una sfocatura e nessuna porta una seconda entrata', async () => {
     montaCoach()
-    // L'eroe c'è davvero: senza questa riga il test guarda una pagina in cui
-    // l'alone non è mai stato renderizzato.
+    // Il feedback c'è davvero: senza questa riga il test guarda una pagina
+    // più povera di quella vera.
     expect(await screen.findByText(/Tutto liscio/i)).toBeInTheDocument()
     const padre = document.querySelector('.cascata')
     expect([...padre.children].filter((el) => el.classList.contains('hero-transition'))).toHaveLength(0)

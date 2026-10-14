@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
 import { useNavigate, useNavigationType } from 'react-router-dom'
-import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, WifiOff, RefreshCw, ChartNoAxesColumn } from 'lucide-react'
+import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, WifiOff, RefreshCw } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
-import { startOfWeek, format, parseISO, differenceInDays, startOfDay, getISOWeek } from 'date-fns'
+import { startOfWeek, endOfWeek, format, parseISO, differenceInDays, startOfDay, getISOWeek } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { getDailyMotivation } from './motivations'
 import CustomDatePicker from '../components/CustomDatePicker'
@@ -33,12 +33,11 @@ import { BenvenutoCoach, CampoObiettivo, CardPrimoLibero, ComeFunziona,
          CellaPrimoDato, CellaBloccata, BannerObiettivoVuoto,
          HeroRiposo, CardSettimanaChiusa, CardDomani, RigaFattoComunque } from '../components/HomeAtletaVuotiUI'
 import { COACH } from '../lib/coach'
-import { HeaderCoach, BarraRicerca, BannerLive, HeroFeedback, HeroNessunFeedback, SquadraOggi, SezioneAttenzione,
-         TuttiAttivi, BarraCopertura, CtaCreaWorkout, RigaDestinazione, TitoloSezione, RigaAttivita,
-         AzioneApri } from '../components/HomeCoachUI'
+import { HeaderCoach, BarraRicerca, BannerLive } from '../components/HomeCoachUI'
 import { atletiFermi, allenamentiScaduti, copertura, feedbackNuovi, squadraDelGiorno,
-         atletiSeguiti, contaInPausa, FINESTRA_STORICO, FINESTRA_FEEDBACK,
-         GIORNI_COPERTURA, GIORNI_FERMO } from '../lib/statisticheCoach'
+         contaInPausa, FINESTRA_STORICO, GIORNI_COPERTURA, GIORNI_GARE, GIORNI_SEGNALI } from '../lib/statisticheCoach'
+import { leggiComeStaiFra } from '../lib/comeStai'
+import { leggiEstrattiDal } from '../lib/noteEstratte'
 import { COACHING_ID } from '../lib/constants'
 import { daRiaprire } from '../lib/ricercaSospesa'
 // Pigro: la ricerca è solo del coach, e il chunk d'ingresso non deve portarsela
@@ -48,6 +47,9 @@ const RicercaCoach = lazy(() => import('../components/RicercaCoach'))
 // telefono non la scarica mai.
 import { useSchermoLargo, eDesktop } from '../useDesktop'
 const HomeCoachDesktop = lazy(() => import('../components/HomeCoachDesktop'))
+// Il corpo della Home coach sul telefono: pigro anche lui, perché i conti del
+// cruscotto pesano e l'atleta non deve scaricarli (src/useCruscottoCoach.js).
+const HomeCoachTelefono = lazy(() => import('../components/HomeCoachTelefono'))
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARD_BASE, CARTA_MODALE,
          TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
 
@@ -82,13 +84,6 @@ const chiaveFeedbackVisti = (uid) => `fleofit_feedback_visti_${uid}`
  * non si chiama. Chi ne ha di più li trova tutti in Atleti.
  */
 const MASSIMO_FERMI_IN_HOME = 4
-/**
- * Quante citazioni di feedback stanno nell'eroe prima del «+N altri».
- *
- * Tre è il punto in cui la card resta leggibile in un colpo d'occhio: alla
- * quarta l'eroe supera la piega e smette di essere un eroe.
- */
-const FEEDBACK_IN_HOME = 3
 
 /**
  * «scaduto mercoledì» finché il giorno della settimana è ancora univoco, poi
@@ -136,16 +131,19 @@ export default function Home() {
   // gli stessi dati.
   const [assegnazioniCoach, setAssegnazioniCoach] = useState([])
   const [atletiCoach, setAtletiCoach] = useState([])
+  // Il cruscotto (14/10/2026, src/lib/cruscottoCoach.js): le risposte di oggi a
+  // «Come stai», gli estratti delle note delle ultime settimane e le gare dei
+  // prossimi due mesi. Tre letture a parte perché nessuna delle tre sta nella
+  // finestra di `assegnazioniCoach`, e ciascuna che fallisce lascia `[]`: la
+  // sezione che ne dipende si spegne, la Home no.
+  const [comeStaiCoach, setComeStaiCoach] = useState([])
+  const [estrattiCoach, setEstrattiCoach] = useState([])
+  const [gareCoach, setGareCoach] = useState([])
   // Si torna con il tasto indietro da un risultato della ricerca: il foglio si
   // riapre con la conversazione di prima (src/lib/ricercaSospesa.js). Solo su
   // POP — arrivare in Home dalla tab bar non deve spalancare niente.
   const tipoNavigazione = useNavigationType()
   const [ricercaAperta, setRicercaAperta] = useState(() => tipoNavigazione === 'POP' && daRiaprire())
-  // Quanti feedback l'eroe mostra prima di chiedere «+N altri».
-  const [feedbackEspanso, setFeedbackEspanso] = useState(false)
-  // La card della squadra guarda oggi (0) o ieri (-1). Ieri è consultazione:
-  // la domanda della mattina è su oggi, e il valore torna lì a ogni ricarica.
-  const [scartoSquadra, setScartoSquadra] = useState(0)
   // ⚠️ `distance` e `reps` sono usciti il 23/09/2026: nessuno li leggeva, e
   // tenevano in vita i due parser locali che sbagliavano i minuti.
   const [weeklyStats, setWeeklyStats] = useState({ time: 0, completed: 0, avgRpe: '-' })
@@ -574,7 +572,24 @@ export default function Home() {
         // sapere chi è già programmato. Attività di oggi e ieri, allenamenti
         // scaduti e feedback stanno tutti dentro questo intervallo.
         const coachDaStr = format(new Date(Date.now() - FINESTRA_STORICO * 86400000), 'yyyy-MM-dd')
-        const coachAStr = format(new Date(Date.now() + (GIORNI_COPERTURA - 1) * 86400000), 'yyyy-MM-dd')
+        // Fino a domenica, per la griglia della settimana — o fino a dopodomani,
+        // se la settimana finisce prima dei tre giorni del telefono.
+        const domenica = endOfWeek(new Date(), { weekStartsOn: 1 })
+        const coachA = Math.max(domenica.getTime(), Date.now() + (GIORNI_COPERTURA - 1) * 86400000)
+        const coachAStr = format(new Date(coachA), 'yyyy-MM-dd')
+        const oggiCoachStr = format(new Date(), 'yyyy-MM-dd')
+        promises.push(
+          leggiComeStaiFra(oggiCoachStr, oggiCoachStr).then(setComeStaiCoach),
+          leggiEstrattiDal(format(new Date(Date.now() - (GIORNI_SEGNALI - 1) * 86400000), 'yyyy-MM-dd')).then(setEstrattiCoach),
+          // Le gare: tutte le assegnazioni dei prossimi due mesi, e il filtro sulla
+          // categoria si fa qui. Due mesi di programmazione futura sono poche righe.
+          supabase.from('athlete_workouts')
+            .select('id, athlete_id, completed_date, status, workouts(id, title, sections)')
+            .gte('completed_date', oggiCoachStr)
+            .lte('completed_date', format(new Date(Date.now() + GIORNI_GARE * 86400000), 'yyyy-MM-dd'))
+            .limit(1000)
+            .then(({ data }) => setGareCoach(data || []))
+        )
         promises.push(
           Promise.all([
             supabase.from('workouts').select('*', { count: 'exact', head: true }),
@@ -837,7 +852,6 @@ setNotifications(prev => {
   // che può restare indietro.
   // Chi il coach sta davvero seguendo: la rubrica meno chi è in pausa. È il
   // denominatore onesto dell'eroe — «2 di 7» quando due dei nove si sono fermati.
-  const seguiti = useMemo(() => atletiSeguiti(atletiCoach), [atletiCoach])
   const inPausa = useMemo(() => contaInPausa(atletiCoach), [atletiCoach])
   const fermi = useMemo(() => atletiFermi(atletiCoach, assegnazioniCoach), [atletiCoach, assegnazioniCoach])
   const scaduti = useMemo(() => allenamentiScaduti(atletiCoach, assegnazioniCoach), [atletiCoach, assegnazioniCoach])
@@ -869,9 +883,13 @@ setNotifications(prev => {
   }, [liveAthletes, assegnazioniCoach])
 
   const squadra = useMemo(
-    () => squadraDelGiorno(atletiCoach, assegnazioniCoach, { scarto: scartoSquadra, inCorso: inCorsoOra }),
-    [atletiCoach, assegnazioniCoach, scartoSquadra, inCorsoOra]
+    () => squadraDelGiorno(atletiCoach, assegnazioniCoach, { inCorso: inCorsoOra }),
+    [atletiCoach, assegnazioniCoach, inCorsoOra]
   )
+
+  const scadutiConQuando = useMemo(() => scaduti.map(x => ({ ...x, quando: quandoScaduto(x) })), [scaduti])
+  const fermiInHome = useMemo(() => fermi.slice(0, MASSIMO_FERMI_IN_HOME), [fermi])
+  const apriSeduta = (x) => navigate(`/workout/${x.workoutId}?athlete_id=${x.atletaId}`)
 
   /**
    * Apre UN feedback, e nello stesso gesto lo segna come letto.
@@ -1135,26 +1153,24 @@ setNotifications(prev => {
           <HomeCoachDesktop
             saluto={getGreeting()} nome={nome || userName}
             dataOggi={format(new Date(), 'EEEE d MMMM', { locale: it })}
+            intestazione={`${atletiCoach.length} atleti${inPausa > 0 ? ` · ${inPausa} in pausa` : ''}`}
             caricamento={loadingRecent}
+            atleti={atletiCoach} assegnazioni={assegnazioniCoach} comeStai={comeStaiCoach}
+            estratti={estrattiCoach} righeGare={gareCoach} copertura={coperturaTre}
             feedback={feedback.elementi}
-            fermi={fermi.slice(0, MASSIMO_FERMI_IN_HOME)}
-            scaduti={scaduti.map(x => ({ ...x, quando: quandoScaduto(x) }))}
+            fermi={fermiInHome}
+            scaduti={scadutiConQuando}
             squadra={squadra}
-            giorno={scartoSquadra === 0 ? 'oggi' : 'ieri'}
-            copertura={coperturaTre}
             live={liveAthletes}
             notificheDaLeggere={unreadCount}
             onNotifiche={openNotifications}
             onNuovoWorkout={() => navigate('/create')}
             onCalendario={() => navigate('/calendar')}
-            onCambiaGiorno={() => setScartoSquadra(g => (g === 0 ? -1 : 0))}
             onGuardaLive={(la) => setSpectatingAthlete(la)}
             onApriFeedback={apriFeedback}
             onApriAtleta={(a) => navigate(`/athletes/${a.id}`)}
-            onApriScaduto={(x) => navigate(`/workout/${x.workoutId}?athlete_id=${x.atletaId}`)}
-            assegnazioni={assegnazioniCoach}
-            atleti={atletiCoach}
-            onApriSeduta={(x) => navigate(`/workout/${x.workoutId}?athlete_id=${x.atletaId}`)}
+            onApriScaduto={apriSeduta}
+            onApriSeduta={apriSeduta}
           />
         </Suspense>
       )}
@@ -1239,8 +1255,8 @@ setNotifications(prev => {
       )}
 
       {/* ── HOME COACH ─────────────────────────────────────────────────
-          L'eroe è chi richiede attenzione: gli atleti che stanno sparendo.
-          Prima questa pagina non conteneva un solo dato — era un menù (logo,
+          Il cruscotto del 14/10/2026 (src/lib/cruscottoCoach.js). Prima ancora
+          questa pagina non conteneva un solo dato — era un menù (logo,
           CTA, lista di ieri, due card verso destinazioni già in navbar), e
           l'unica informazione presente, chi ha fatto cosa ieri, è la meno utile
           la mattina perché guarda indietro. */}
@@ -1258,78 +1274,22 @@ setNotifications(prev => {
               onGuarda={() => setSpectatingAthlete(la)} />
           ))}
 
-          {/* L'eroe: l'unica voce IN ENTRATA della pagina. Se resta lì,
-              l'atleta ha parlato e nessuno ha risposto. */}
-          {loadingRecent ? (
-            <div className="rounded-[26px] border border-white/[.07] bg-[#1a1a1c] h-52 animate-pulse" />
-          ) : (
-            <div>
-              {feedback.elementi.length > 0
-                ? <HeroFeedback righe={feedback.elementi} mostrate={FEEDBACK_IN_HOME}
-                    espanso={feedbackEspanso} onEspandi={() => setFeedbackEspanso(true)}
-                    finestraGiorni={FINESTRA_FEEDBACK} onApri={apriFeedback} />
-                : <HeroNessunFeedback />}
-            </div>
-          )}
-
-          {/* La squadra della giornata: cinque su sette, e quali due mancano.
-              Prima era una lista di eventi «oggi e ieri», che elencava senza
-              far vedere l'insieme. */}
-          {loadingRecent ? (
-            <div className="rounded-[22px] border border-white/[.07] bg-[#1a1a1c] h-44 animate-pulse" />
-          ) : (
-            <SquadraOggi righe={squadra.righe} completati={squadra.completati} assegnati={squadra.assegnati}
-              inCorso={squadra.inCorso} rpeMedio={squadra.rpeMedio}
-              giorno={scartoSquadra === 0 ? 'oggi' : 'ieri'}
-              onCambiaGiorno={() => setScartoSquadra(g => (g === 0 ? -1 : 0))}
-              onApriAtleta={(a) => navigate(`/athletes/${a.id}`)} />
-          )}
-
-          {/* L'unica superficie gialla piena della pagina: Regola del Tratto Unico. */}
-          <CtaCreaWorkout onClick={() => navigate('/create')} />
-
-          {/* Il report della settimana. Sta SOPRA l'archivio perché è materiale
-              di decisione — chi caricare, chi richiamare — e l'archivio è
-              materiale di lavoro: si apre sapendo già cosa si cerca. */}
-          <RigaDestinazione icona={ChartNoAxesColumn} titolo="Report settimanale"
-            sottotitolo="Aderenza, carico e chi richiede un'azione"
-            label="Apri il report settimanale"
-            onClick={() => navigate('/report')} />
-
-          <RigaDestinazione titolo="Archivio workout"
-            sottotitolo={`${stats.workouts} allenamenti · riusa e duplica`}
-            label="Apri l'archivio dei workout"
-            onClick={() => navigate('/archive')} />
-
-          {/* Chi sta sparendo. Non è più l'eroe: chi è fermo da nove giorni lo è
-              ancora fra un'ora, un feedback non letto no. Ma resta in pagina,
-              con lo stesso dato — i giorni di fermo e l'azione a un tocco. */}
-          {!loadingRecent && (
-            fermi.length > 0
-              ? <SezioneAttenzione righe={fermi.slice(0, MASSIMO_FERMI_IN_HOME)} soglia={GIORNI_FERMO}
-                  onApriAtleta={(a) => navigate(`/athletes/${a.id}`)} />
-              : <TuttiAttivi totale={seguiti.length} />
-          )}
-
-          {/* L'unico numero della Home che dice «devi programmare adesso». */}
-          <BarraCopertura coperti={coperturaTre.coperti} totale={coperturaTre.totale}
-            senza={coperturaTre.senza} giorni={GIORNI_COPERTURA} />
-
-          {/* Lavoro da smaltire, non un allarme: in fondo e in forma di lista.
-              Accanto all'atleta fermo si mescolerebbero due problemi di segno
-              diverso — una persona che si allontana e una casella da chiudere. */}
-          {scaduti.length > 0 && (<>
-            <TitoloSezione meta={`${scaduti.length} apert${scaduti.length === 1 ? 'o' : 'i'}`}>Allenamenti scaduti</TitoloSezione>
-            <div className="flex flex-col gap-2.5">
-              {scaduti.map(s => (
-                <RigaAttivita key={s.id} categoria={s.categoria} titolo={s.nome}
-                  sottotitolo={`${s.titolo} · scaduto ${quandoScaduto(s)}`}
-                  coda={<AzioneApri />}
-                  ariaLabel={`Apri l'allenamento scaduto di ${s.nome}`}
-                  onClick={() => navigate(`/workout/${s.workoutId}?athlete_id=${s.atletaId}`)} />
-              ))}
-            </div>
-          </>)}
+          {/* Il corpo: pigro, src/components/HomeCoachTelefono.jsx. */}
+          <Suspense fallback={<div className="rounded-[20px] border border-[#2a2a2a] bg-[#1e1e1e] h-[104px] animate-pulse" />}>
+            <HomeCoachTelefono
+              caricamento={loadingRecent}
+              atleti={atletiCoach} assegnazioni={assegnazioniCoach} comeStai={comeStaiCoach}
+              estratti={estrattiCoach} righeGare={gareCoach} copertura={coperturaTre}
+              squadra={squadra}
+              feedback={feedback.elementi} fermi={fermiInHome} scaduti={scadutiConQuando}
+              numeroWorkout={stats.workouts}
+              onApriAtleta={(a) => navigate(`/athletes/${a.id}`)}
+              onApriFeedback={apriFeedback}
+              onApriScaduto={apriSeduta}
+              onApriSeduta={apriSeduta}
+              onReport={() => navigate('/report')}
+              onArchivio={() => navigate('/archive')} />
+          </Suspense>
         </div>
       )}
 

@@ -15,6 +15,7 @@ import { rpeDichiarato, testoNota } from './rpe'
 import { isVoiceNoteValid } from './notaVocale'
 import { categoriaDi } from './categorie'
 import { inPausa } from './pausa'
+import { rpeAtteso } from './statistiche'
 
 /** Da quanti giorni senza allenamenti completati un atleta "richiede attenzione". */
 export const GIORNI_FERMO = 5
@@ -24,6 +25,15 @@ export const GIORNI_COPERTURA = 3
 export const FINESTRA_STORICO = 45
 /** Da quanti giorni indietro si raccoglie il feedback non ancora letto. */
 export const FINESTRA_FEEDBACK = 14
+/**
+ * Su quante settimane il cruscotto cerca i segnali sul programma, e quanto
+ * avanti cerca le gare (src/lib/cruscottoCoach.js). Stanno QUI perché Home.jsx
+ * le usa per le query: importarle da cruscottoCoach.js porterebbe tutto il
+ * cruscotto — regole di «Dalle note» comprese — nel chunk d'ingresso, che
+ * scaricano anche gli atleti (CLAUDE.md §2, peso di `index`).
+ */
+export const GIORNI_SEGNALI = 28
+export const GIORNI_GARE = 60
 
 /**
  * Gli atleti che il coach sta effettivamente seguendo: la rubrica meno chi è
@@ -279,6 +289,9 @@ export function squadraDelGiorno(atleti = [], assegnazioni = [], { scarto = 0, i
       categoria: categoriaDi(ass.workouts?.sections),
       stato: completato ? 'completato' : vivi.has(atleta.id) ? 'in corso' : 'da fare',
       rpe: valore,
+      // L'intensità prevista (`rpeAtteso`): è ciò che la Home confronta con
+      // «Come stai oggi» per dire chi arriva stanco a un allenamento duro.
+      intensita: rpeAtteso(ass.workouts?.sections),
     })
   }
   righe.sort((a, b) => rangoStato(a.stato) - rangoStato(b.stato) || a.nome.localeCompare(b.nome))

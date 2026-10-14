@@ -24,7 +24,7 @@ import {
   VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
 } from '../supabase/functions/estrai-note/regole.ts'
 
-export const VERSIONE_SEME = 8
+export const VERSIONE_SEME = 10
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -84,6 +84,20 @@ const corsa = (intensita) => ({
   ],
 })
 
+// Una scheda Gym (13/10/2026): due gruppi, la forma di CLAUDE.md §5.
+const gym = (intensita) => ({
+  category: 'Gym', intensity: String(intensita),
+  gym: [
+    { id: 7.1, fase: 'principale', serie: '4', recupero: '2:00', note: '', esercizi: [
+      { id: 7.2, name: 'Squat con bilanciere', reps: '6', kg: '80 kg', rir: '2', cadenza: '', notes: '' },
+    ] },
+    { id: 7.3, fase: 'principale', serie: '3', recupero: '1:30', note: '', esercizi: [
+      { id: 7.4, name: 'Panca piana con bilanciere', reps: '8', kg: '60 kg', rir: '2', cadenza: '', notes: '' },
+      { id: 7.5, name: 'Trazioni alla sbarra', reps: 'Max', kg: '', rir: '1', cadenza: '', notes: '' },
+    ] },
+  ],
+})
+
 const W = (id, title, giorniFa, sections) => ({
   id, title, date: giorno(-giorniFa), sections, coach_notes: '',
   created_at: new Date(Date.now() - giorniFa * 86400000).toISOString(),
@@ -101,6 +115,8 @@ const workouts = () => [
   W('w-corsa', 'Ripetute 6×800', 4, corsa(8)),
   W('w-corsa2', 'Fondo lento 12 km', 9, corsa(5)),
   W('w-libero', 'Allenamento libero · mobilità', 7, { category: 'Custom', isAutonomous: true }),
+  W('w-gym', 'Forza · gambe e spinta', 2, gym(7)),
+  W('w-gara-mezza', 'Mezza maratona di Firenze', -46, { category: 'Event', isEvent: true, isAutonomous: true }),
   W('w-gara', 'Hyrox Milano', -30, { category: 'Event', isEvent: true, isAutonomous: true }),
   // Una gara HYROX già corsa e senza tempo: la Home di Sara chiede «com'è
   // andata?» e la scheda trova il tempo finto di `risultatoFinto` (supabaseDemo.js).
@@ -227,7 +243,7 @@ const noteEstratte = (aws, ws) => aws
     }
   })
 
-const assegnazioni = () => [
+const assegnazioni = () => conSettimanaPiena([
   // Marco: leggero e costante. Un workout massimale gli fa saltare il carico.
   ...regolare('at-marco', 'w-leggero', 4),
   AW('at-marco', 'w-leggero', nellaSettimana(0, 0), 'completed', 4, 'Tutto liscio'),
@@ -290,9 +306,55 @@ const assegnazioni = () => [
   AW('at-marco', 'w-medio', nellaSettimana(1, 1), 'pending'),
   AW('at-luca', 'w-lungo', nellaSettimana(1, 2), 'pending'),
 
-  // La gara in calendario.
+  // La gara in calendario: quattro atleti sulla stessa gara, e una seconda.
   AW('at-marco', 'w-gara', giorno(30), 'pending'),
-]
+  AW('at-luca', 'w-gara', giorno(30), 'pending'),
+  AW('at-giulia', 'w-gara', giorno(30), 'pending'),
+  AW('at-sara', 'w-gara', giorno(30), 'pending'),
+  AW('at-andrea', 'w-gara-mezza', giorno(46), 'pending'),
+
+])
+
+/** Aggiunge la settimana piena senza raddoppiare un giorno già assegnato. */
+const conSettimanaPiena = (base) => {
+  const presi = new Set(base.map(a => `${a.athlete_id}|${a.completed_date}`))
+  return [...base, ...settimanaPiena()
+    .filter(x => !presi.has(`${x.atleta}|${x.data}`))
+    .map(x => AW(x.atleta, x.workout, x.data, 'pending'))]
+}
+
+/**
+ * La settimana piena (14/10/2026, Home coach): da OGGI ai sei giorni dopo,
+ * un programma vero per ogni atleta seguito — così la griglia della Home e del
+ * calendario team non è fatta di «+». Solo sedute DA FARE: il passato resta
+ * quello scritto sopra, che regge gli scenari delle altre schermate (Davide
+ * fermo, Andrea con aderenza bassa, Paolo con poco storico).
+ * Il piano è per giorno della settimana (0 = lunedì); `null` è riposo, e un
+ * giorno già assegnato sopra non si raddoppia. Chiara è in pausa: niente.
+ */
+const PIANO = {
+  'at-marco': ['w-leggero', 'w-corsa2', 'w-medio', null, 'w-gym', 'w-completo2', null],
+  'at-luca': ['w-forte', 'w-corsa', 'w-gym', 'w-completo', null, 'w-lungo', null],
+  'at-giulia': ['w-medio', null, 'w-corsa2', 'w-medio', 'w-gym', null, 'w-corsa2'],
+  'at-andrea': ['w-medio', 'w-medio', 'w-corsa', null, 'w-corsa2', null, 'w-corsa2'],
+  'at-sara': ['w-forte', 'w-corsa', 'w-medio', 'w-gym', null, 'w-completo', null],
+  'at-paolo': [null, 'w-medio', null, 'w-gym', null, 'w-leggero', null],
+  'at-elena': ['w-lungo', 'w-gym', 'w-corsa2', null, 'w-medio', 'w-libero', null],
+  'at-davide': ['w-forte', null, 'w-leggero', 'w-corsa2', null, 'w-gym', null],
+  'at-sofia': ['w-leggero', null, 'w-leggero', 'w-libero', null, 'w-corsa2', null],
+}
+const settimanaPiena = () => {
+  const fuori = []
+  for (let scarto = 0; scarto < 7; scarto++) {
+    const data = giorno(scarto)
+    const settimana = (new Date(`${data}T12:00:00`).getDay() + 6) % 7
+    for (const [atleta, piano] of Object.entries(PIANO)) {
+      const workout = piano[settimana]
+      if (workout) fuori.push({ atleta, workout, data })
+    }
+  }
+  return fuori
+}
 
 // ── il resto ────────────────────────────────────────────────────────────────
 
@@ -342,6 +404,17 @@ const come_stai = () => {
       righe.push({ id: `cs-${athlete_id}-${i}`, athlete_id, giorno: giorno(-(35 - i * 2)), ...valori(i) })
     }
   }
+  // Oggi (14/10/2026, Home coach): Sara arriva alle ripetute dopo una notte
+  // pessima — è il riquadro rosso di «Oggi» — e Sofia sta bene.
+  righe.push({ id: 'cs-oggi-sara', athlete_id: 'at-sara', giorno: giorno(0), sonno: 1, energia: 2, dolori: 3, stress: 3 })
+  righe.push({ id: 'cs-oggi-sofia', athlete_id: 'at-sofia', giorno: giorno(0), sonno: 4, energia: 4, dolori: 5, stress: 4 })
+  // Settimana piena: quasi tutti rispondono. Giulia ha dormito poco ma oggi ha
+  // un allenamento leggero — è l'avviso arancione, non il riquadro rosso.
+  righe.push({ id: 'cs-oggi-marco', athlete_id: 'at-marco', giorno: giorno(0), sonno: 4, energia: 5, dolori: 4, stress: 4 })
+  righe.push({ id: 'cs-oggi-luca', athlete_id: 'at-luca', giorno: giorno(0), sonno: 3, energia: 3, dolori: 3, stress: 3 })
+  righe.push({ id: 'cs-oggi-giulia', athlete_id: 'at-giulia', giorno: giorno(0), sonno: 2, energia: 3, dolori: 4, stress: 3 })
+  righe.push({ id: 'cs-oggi-elena', athlete_id: 'at-elena', giorno: giorno(0), sonno: 5, energia: 5, dolori: 4, stress: 5 })
+  righe.push({ id: 'cs-oggi-paolo', athlete_id: 'at-paolo', giorno: giorno(0), sonno: 4, energia: 4, dolori: 4, stress: 3 })
   return righe
 }
 

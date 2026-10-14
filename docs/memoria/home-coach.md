@@ -225,3 +225,77 @@ righe che la Home ha già: nessuna lettura nuova.
 - ⚠️ Non è «tempo reale»: `athlete_workouts` non ha un orario, e Realtime su quella tabella
   è configurazione del database condiviso. Dentro un giorno l'ordine non dice chi ha finito prima.
 - Sul desktop la Home rilegge quando la finestra torna visibile, al massimo una volta al minuto.
+
+## 9-cruscotto. Il cruscotto della Home coach (14/10/2026)
+
+Il committente non voleva la Home coach «né per i contenuti né per l'aspetto», su
+telefono e desktop. Il disegno approvato è la tela Claude Design «Home coach FLEOFIT»
+(due tavole, Desktop e Telefono). Al posto dell'eroe dei feedback, della squadra, dei
+fermi, della copertura e — sul desktop — di «Ultime sedute chiuse», ora c'è un cruscotto
+che risponde alle domande del mattino nell'ordine in cui il coach se le fa:
+
+1. **Il polso del team**: aderenza a 7 giorni (in punti sulla settimana prima), come sta
+   il team oggi («Come stai»), RPE medio della settimana accanto all'intensità prevista,
+   prossima gara. Sul telefono è una riga che scorre di lato.
+2. **Oggi**: chi si allena, con cosa, e le quattro tacche di «Come stai». Un **allarme**
+   (riquadro rosso, «Alleggerisci») è un allenamento con intensità prevista ≥ 8 per chi
+   stamattina ha risposto 1 o 2 ad almeno una domanda (in pagina: «ha un allenamento intenso oggi: guarda come sta»); con un allenamento leggero è solo
+   un avviso arancione. A cose fatte non suona più.
+3. **Da rivedere nel programma**: i segnali che si vedono solo su più sedute — RPE
+   dichiarato stabilmente sopra (≥ +1,5) o sotto (≤ −2) l'intensità programmata su almeno
+   tre sedute, carico (minuti × RPE) della settimana ≥ 30% sopra la media delle quattro
+   precedenti, esercizi saltati/ridotti/cambiati almeno due volte secondo «Dalle note».
+4. **Da smaltire**: feedback, fermi e scaduti in UNA lista (`cosaGuardare`).
+5. **La settimana** (desktop) / **Prossimi 3 giorni** (telefono): la griglia atleti ×
+   giorni di `grigliaTeam`; un giorno futuro vuoto è tratteggiato, «da programmare».
+6. **Gare in arrivo**: le gare dei prossimi 60 giorni, una per workout con i nomi.
+
+Report e Archivio restano come righe in fondo al telefono (non hanno una voce nella tab
+bar); la CTA gialla «Crea workout» è uscita dal telefono (c'è «Workout» nella tab bar).
+
+### Dove sta
+- `src/lib/cruscottoCoach.js` — tutti i conti, puri, testati (`cruscottoCoach.test.js`,
+  verificati per mutazione). Le soglie sono costanti in testa al file.
+- `src/useCruscottoCoach.js` — il hook che li mette insieme.
+- `src/components/CruscottoCoachUI.jsx` — le card, `compatto` = telefono.
+- `src/components/HomeCoachTelefono.jsx` e `HomeCoachDesktop.jsx` — le due disposizioni,
+  **entrambe pigre**.
+- `Home.jsx` carica: la finestra di prima allungata fino a domenica, più tre letture
+  nuove — `come_stai` di oggi, `note_estratte` delle ultime 4 settimane
+  (`leggiEstrattiDal`), le assegnazioni dei prossimi 60 giorni per le gare. Ognuna che
+  fallisce lascia `[]`: si spegne la sezione, non la Home.
+
+### ⚠️ Le trappole
+1. **Il peso.** `segnaliProgramma` importa `dalleNote.js`, che importa le regole di
+   `estrai-note` (con il testo delle istruzioni all'IA). Importato da `Home.jsx`, il chunk
+   `index` è salito da 597 a 623 KB: lo scarica anche ogni atleta. Per questo i conti
+   stanno nel hook e il corpo del telefono è pigro come il desktop; le due costanti che
+   servono alle query (`GIORNI_SEGNALI`, `GIORNI_GARE`) stanno in `statisticheCoach.js`.
+   Dopo il lavoro `index` è a 585 KB (è uscito anche il codice morto).
+2. **L'aderenza lascia fuori OGGI**: la mattina nessuno ha ancora fatto niente, e contarlo
+   farebbe crollare il numero ogni mattina.
+3. **«Alleggerisci» non modifica niente**: apre l'allenamento di quell'atleta. Il workout
+   può essere assegnato a più atleti, e cambiarlo per tutti non è un tocco.
+4. **Il riposo non esiste nei dati**: un giorno passato vuoto è riposo (grigio), uno
+   futuro vuoto è «da programmare» (tratteggio). Non c'è modo di distinguere un riposo
+   PROGRAMMATO da un buco.
+5. **Lo «scarico prima della gara»** della tela non c'è: richiede una regola che il
+   committente non ha ancora deciso.
+6. L'oggi/ieri della vecchia card squadra è uscito: la domanda del mattino è su oggi.
+7. 🔴 **Frasi semplici, sugli allenamenti e non sulla persona** (richiesta del
+   committente, 14/10/2026). Erano «Giulia lo sente più duro del previsto», «Marco salta
+   i Wall Balls», «Sara non sta bene»: lette con malizia sono un giudizio o una diagnosi.
+   Il secondo tentativo, «RPE sopra l'intensità programmata», era giusto ma **troppo
+   tecnico per la Home**: il tecnico va nei report e in Analisi. Ora: «allenamenti più
+   faticosi del previsto», «ha saltato Wall Balls 2 volte», «ha un allenamento intenso
+   oggi: guarda come sta», «1 da tenere d'occhio». Chi aggiunge un segnale scrive così.
+
+Codice uscito: `HeroFeedback`, `HeroNessunFeedback`, `SquadraOggi`, `SezioneAttenzione`,
+`TuttiAttivi`, `BarraCopertura`, `CtaCreaWorkout`, `TitoloSezione`, `RigaAttivita`,
+`AzioneApri` (`HomeCoachUI.jsx`) e `src/lib/ultimeSedute.js` con il suo test.
+Nell'ambiente di prova (`VERSIONE_SEME` 10) quasi tutti rispondono oggi a «Come stai»:
+Sara arriva alle ripetute con una notte pessima (riquadro rosso), Giulia ha dormito poco
+ma ha un fondo lento (avviso arancione). E c'è una **settimana piena**: `PIANO` in
+`demoSemi.js` programma da oggi ai sei giorni dopo ogni atleta seguito, solo sedute da
+fare e senza raddoppiare un giorno già assegnato — il passato resta quello degli scenari
+delle altre schermate. Hyrox Milano ha quattro atleti, più una mezza maratona per Andrea.

@@ -33,3 +33,19 @@ export async function estraiMancanti(athleteId) {
     return SOSPESA
   }
 }
+
+/**
+ * Gli estratti di TUTTI gli atleti da `da` in poi: i segnali della Home coach
+ * (`segnaliProgramma` in cruscottoCoach.js). La policy li consegna solo agli
+ * admin. Una lettura fallita o una tabella assente tornano `[]`: la Home non
+ * mostra un errore per una sezione che si accende quando ci sono i dati.
+ */
+export async function leggiEstrattiDal(da) {
+  const { data, error } = await supabase
+    .from('note_estratte')
+    .select('athlete_id, athlete_workout_id, data, impronta, versione, estrazione')
+    .gte('data', da)
+    .limit(1000)
+  if (error && error.code !== '42P01' && error.code !== 'PGRST205') console.error('Estratti delle note, lettura fallita:', error)
+  return error ? [] : (data ?? [])
+}

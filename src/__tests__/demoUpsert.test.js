@@ -28,7 +28,7 @@ describe('demo: upsert', () => {
     const db = clientDemo()
     await db.from('come_stai').upsert({ athlete_id: 'at-sofia', giorno: '2030-01-01', sonno: 3 }, { onConflict: 'athlete_id,giorno' })
     await db.from('come_stai').upsert({ athlete_id: 'at-sofia', giorno: '2030-01-01', sonno: 5 }, { onConflict: 'athlete_id,giorno' })
-    const { data } = await db.from('come_stai').select('*').eq('athlete_id', 'at-sofia')
+    const { data } = await db.from('come_stai').select('*').eq('athlete_id', 'at-sofia').eq('giorno', '2030-01-01')
     expect(data).toHaveLength(1)
     expect(data[0].sonno).toBe(5)
   })

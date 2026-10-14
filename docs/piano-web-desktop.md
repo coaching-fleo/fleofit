@@ -175,6 +175,8 @@ Regola d'oro: **sotto i 1024 px non cambia un pixel, e nelle app native non camb
   ricerca da ogni pagina.
 - **Home coach**: `HomeCoachDesktop.jsx` (pigra), lista unica «Da guardare»
   (`src/lib/cosaGuardare.js`, con test) + «Oggi» + copertura dei prossimi 3 giorni.
+  ⚠️ **Rifatta il 14/10/2026** come cruscotto (polso, oggi con «Come stai», segnali sul
+  programma, da smaltire, settimana, gare): `docs/memoria/home-coach.md`, 9-cruscotto.
 - **Calendario**: `src/pages/CalendarioTeam.jsx` (pigra) — settimana × atleti, libreria da
   trascinare (assegna + push `immediate`), sessioni da trascinare per cambiare giorno (solo
   stesso atleta, solo non completate), doppio clic per creare. Logica in
@@ -219,7 +221,7 @@ Regola d'oro: **sotto i 1024 px non cambia un pixel, e nelle app native non camb
 #### ✅ Quarto giro, 13/10/2026: fase 2 del piano Analisi
 - **Analisi**: storico di un esercizio con un atleta scelto (`storicoEsercizio.js`,
   `StoricoEsercizio.jsx`), «Esporta CSV» e «Stampa».
-- **Home coach**: «Ultime sedute chiuse» degli ultimi 7 giorni (`ultimeSedute.js`).
+- **Home coach**: «Ultime sedute chiuse» degli ultimi 7 giorni (`ultimeSedute.js`). ⚠️ Uscita il 14/10/2026 con il cruscotto: guardava solo indietro.
 - **Calendario team**: «Copia settimana» (`copiaSettimana` in `calendarioTeam.js`).
 - Piano: `docs/superpowers/plans/2026-10-13-desktop-fase-2.md`.
 
