@@ -59,7 +59,7 @@
    (`supabase/schema/note_estratte_2026-10-09.sql`). Non è uno sblocco generale: **ogni
    migrazione successiva richiede un nuovo sì esplicito**.
    ✅ **Seconda eccezione** (13/10/2026, sì esplicito in sessione): la tabella `come_stai`
-   («Come stai oggi»), additiva, da applicare a mano (`supabase/schema/come_stai_2026-10-13.sql`).
+   («Come stai oggi»), additiva, ✅ **applicata il 14/10/2026** (`supabase/schema/come_stai_2026-10-13.sql`).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -318,7 +318,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `athletes` | `id` = `auth.users.id`. Soft delete con `deleted_at` (**bigint in ms**). `notes` è la nota del coach **per** l'atleta (l'atleta la vede, ed è voluto) e porta il marcatore `[PAUSA: yyyy-MM-dd]`: si legge e scrive **solo** con `src/lib/pausa.js` |
 | `workouts` | `title` (mai vuoto, con il codice in coda), `date`, `sections` jsonb (§5), `coach_notes` |
 | `athlete_workouts` | qui sta lo **stato** (`status`, `completed_date`). `notes` porta `[RPE: n/10]` e `[GRADIMENTO: …]`: solo con `src/lib/rpe.js` e `gradimento.js`. `voice_note_url` si cancella con `#deleted=`. **Nessun `created_at`** |
-| `come_stai` | «Come stai oggi»: una riga per atleta per GIORNO, quattro risposte 1–5 tutte con **5 = la cosa buona** (sonno, energia, dolori, stress). Policy come `athlete_workouts` (l'atleta le sue, gli admin tutte). ⚠️ **da applicare a mano** (`supabase/schema/come_stai_2026-10-13.sql`); finché manca l'app non chiede niente. `main` non la conosce |
+| `come_stai` | «Come stai oggi»: una riga per atleta per GIORNO, quattro risposte 1–5 tutte con **5 = la cosa buona** (sonno, energia, dolori, stress). Policy come `athlete_workouts` (l'atleta le sue, gli admin tutte). ✅ **applicata il 14/10/2026** (`supabase/schema/come_stai_2026-10-13.sql`), nel backup notturno |
 | `note_estratte` | ✅ **applicata il 09/10/2026**: i dati ricavati dalle note degli atleti (standard `VERSIONE` in `estrai-note/regole.ts`). Policy **solo admin** (`USING` e `WITH CHECK`), l'atleta non la legge. La scrive solo `estrai-note`. `main` non la conosce |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 

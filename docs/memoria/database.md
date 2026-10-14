@@ -260,9 +260,10 @@ aggiungila anche lì.**
 - ✅ **COSA SALVA DAVVERO IL BACKUP DI STANOTTE** (riletto su `origin/main` il 25/08/2026, è il
   file che il cron esegue):
   `TABLES='athletes workouts athlete_workouts personal_records invitation_codes notifications'`.
-  ⚠️ **13/10/2026: aggiunta `come_stai`** («Come stai oggi»). Sta sulla branch
-  `main-backup-come-stai` partita da `origin/main`: finché non arriva su `main` il cron non la
-  salva. Senza la tabella applicata la REST API risponde 404 e il job la salta con un avviso.
+  ✅ **13/10/2026: aggiunta `come_stai`** («Come stai oggi») a `TABLES`, ora su `main`.
+  La tabella è stata **applicata il 14/10/2026** (`supabase db query --linked -f
+  supabase/schema/come_stai_2026-10-13.sql`, verificata: una policy, comando ALL), quindi da
+  quella notte il cron la salva davvero.
   ✅ Lo stesso giorno anche **`note_estratte`**, scritta `note_estratte:athlete_workout_id`.
   🔴 Le pagine si ordinano per `id`, e `note_estratte` non ha una colonna `id`: ordinare per una
   colonna che non esiste fa rispondere HTTP 400, e il job fallisce **intero**, non solo su quella

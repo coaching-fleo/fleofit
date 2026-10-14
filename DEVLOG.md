@@ -29,6 +29,7 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 - Da uno **screenshot** legge solo il workout: tastiera, orario e icone del telefono vengono ignorati. Una riga con la sola distanza («300m») prende l'esercizio di prima, e l'anteprima lo segnala.
 - Un **blocco nuovo chiede subito i suoi numeri** (tempo, round…) e si aggiunge con un tasto di conferma.
 - Un workout già svolto da un atleta **non si può più modificare**: si può duplicare.
+- **Tutto si cambia da dentro**: esercizio, tipo di blocco, tipo di fase della corsa e fase della Gym si cambiano aprendoli, senza eliminare e rifare.
 - Negli **EMOM** un esercizio può durare **più minuti di fila** come stazione continua («minuti 2–3: vogatore»): il timer non riparte a metà.
 - Nuova categoria **Gym** per le schede da palestra: oltre 170 esercizi e macchinari generici divisi per gruppo muscolare, serie × ripetizioni × carico × recupero, intervalli di ripetizioni («8–12»), RIR e cadenza, superserie e circuiti, riscaldamento e defaticamento, e se serve le serie una per una (piramidale, riscaldamento, drop set, cedimento). Anche qui c'è «Genera con IA». L'atleta spunta le serie e a ogni spunta parte il **timer di recupero**.
 
@@ -74,29 +75,25 @@ Le modifiche fatte dopo la versione approvata il **29/09/2026** (build `1.1.0 (6
 
 ## Testo per App Store Connect — «Novità di questa versione» (1.2.0)
 
-> Preparato il 09/10/2026 dall'elenco qui sopra, riscritto per chi legge lo Store.
-> Limite di Apple: 4000 caratteri.
+> Riscritto il 14/10/2026, più corto di quello del 09/10 (su richiesta del committente).
+> Limite di Apple: 4000 caratteri. ⚠️ «Come stai oggi» NON c'è ancora: la tabella
+> `come_stai` è stata applicata il 14/10/2026, dopo che questo testo era stato scritto.
+> Ora la domanda compare nell'app: si può aggiungere qui.
 
 ```
-ALLENAMENTO
-• Dopo ogni allenamento completato si apre un recap in stile storie: l'allenamento appena svolto, la tua settimana, l'andamento delle ultime otto settimane e il prossimo passo.
-• Nuova domanda «Ti è piaciuto?» dopo ogni allenamento, per dare un riscontro al coach.
-• Minuti e RPE medio della settimana ora sono calcolati correttamente.
+NOVITÀ
+• Nuova categoria Gym: schede da palestra con serie, ripetizioni, carichi e superserie, e il timer di recupero a ogni serie spuntata.
+• Dopo ogni allenamento un recap in stile storie e la domanda «Ti è piaciuto?».
+• Gare HYROX: scegli la gara dal calendario ufficiale; dopo la gara l'app trova il tuo tempo con split e statistiche e lo salva tra i record.
 
 PER IL COACH
-• Nuovo righello per inserire ripetizioni, metri, chili e ritmi.
-• Il nome del workout è facoltativo: ne viene proposto uno, e il dado ne suggerisce un altro. Ogni titolo porta un codice con struttura, durata e intensità.
-• «Duplica» crea sempre una copia nuova e «Sovrascrivi» indica quanti atleti riguarda; un workout già svolto non si modifica più, si duplica.
-• Con la generazione IA ogni esercizio ha la sua intensità.
-• Archivio con filtri per tipo di blocco (ON/OFF, EMOM, AMRAP, For Time, Interval); archivio e lista atleti riprendono da dove li avevi lasciati.
+• «Genera con IA» su ogni categoria, e ora modifica anche un workout già scritto.
+• «Da un'immagine»: fotografa una lavagna o un foglio e il workout diventa blocchi.
+• Ricerca con l'IA, a voce o scritta, su atleti, allenamenti e note.
+• Righello per i numeri, nome del workout facoltativo, nuovi filtri nell'archivio.
 
-SEGNALA UN PROBLEMA
-• Nuova voce in Impostazioni per inviare una segnalazione o un'idea, anche con screenshot.
-
-GRAFICA
-• Nuova animazione d'apertura, schermate che compaiono a cascata, finestre di dialogo rinnovate e un nuovo carattere per date e numeri.
-• Vibrazioni su scelte, salvataggi e completamenti.
-
-STABILITÀ
-• Pronta per iOS 27, e correzioni a link, notifiche e note vocali.
+E INOLTRE
+• «Segnala un problema» in Impostazioni.
+• Nuova animazione d'apertura, grafica rinnovata e vibrazioni.
+• Minuti e RPE medio della settimana corretti. Pronta per iOS 27.
 ```
