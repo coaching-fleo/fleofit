@@ -50,6 +50,15 @@
 
 ---
 
+## ⏸️ In stand-by — da ricordare al prossimo aggiornamento App Store
+
+> **Consenso privacy, policy nuova e mail automatica dei cambi di policy** (14/10/2026).
+> Progetto scritto e approvato nella sostanza: `docs/superpowers/specs/2026-10-14-consenso-privacy-design.md`.
+> Fermo per decisione del committente finché non sono scelti **nome e dominio** (servono a
+> mittente Resend, indirizzo della policy, registrazione Apple per il relay delle email).
+> 🔴 Motivo per cui conta: linea guida Apple **5.1.2(i)** — note degli atleti mandate a IA di
+> terze parti (Groq, Gemini) senza informativa né permesso esplicito. Chiude anche la #47.
+
 ## ✅ Prima della submission App Store — i tre controlli sono chiusi
 
 > Chiusi il 26/08/2026. Restano qui, barrati, perché **vanno rifatti a ogni build

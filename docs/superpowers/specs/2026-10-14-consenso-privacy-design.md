@@ -1,6 +1,11 @@
 # Consenso privacy all'iscrizione e avviso automatico dei cambi di policy
 
 > Progetto del 14/10/2026. Decisioni del committente prese in sessione lo stesso giorno.
+>
+> ⏸️ **IN STAND-BY dal 14/10/2026** (decisione del committente): si sta scegliendo il nome
+> nuovo dell'app, e con lui il dominio — da cui dipendono mittente delle mail (Resend),
+> indirizzo della policy e registrazione Apple. Non si implementa niente finché il
+> committente non lo riprende. Da ricordargli quando prepara il prossimo aggiornamento App Store.
 
 ## Perché
 
@@ -25,8 +30,7 @@
   coach a mano.
 - **Finché siamo in prova la mail arriva solo al coach**; a tutti gli atleti solo quando il
   committente lo dice.
-- Titolare del trattamento: **Federico Leo**, Via Altaguardia 3 (⚠️ città e CAP da
-  completare), P. IVA **12721740962**, email per le richieste privacy
+- Titolare del trattamento: **Federico Leo**, Via Altaguardia 3, 20135 Milano, P. IVA **12721740962**, email per le richieste privacy
   **coaching@federicoleo.it**.
 
 ### La scelta sul consenso obbligatorio, e il suo limite
