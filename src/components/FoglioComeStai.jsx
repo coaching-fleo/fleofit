@@ -18,18 +18,9 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
-import { DOMANDE } from '../lib/comeStai'
+import { DOMANDE, TONI_RISPOSTA } from '../lib/comeStai'
 import { vibraScelta } from '../lib/aptica'
 import { CARD, BOTTONE_BRAND, BOTTONE_QUIETO, TITOLO_MODALE, TESTO_MODALE } from '../lib/stiliCard'
-
-// Dal rosso (la risposta peggiore) al verde (la migliore), uguale per tutte.
-const TONO_SCELTA = [
-  'bg-red-500 text-white',
-  'bg-orange-500 text-black',
-  'bg-brand text-black',
-  'bg-lime-400 text-black',
-  'bg-green-500 text-black',
-]
 
 export default function FoglioComeStai({ onSalva, onSalta, onChiudi }) {
   const [risposte, setRisposte] = useState({})
@@ -72,7 +63,7 @@ export default function FoglioComeStai({ onSalva, onSalta, onChiudi }) {
                     aria-label={`${d.titolo}: ${parola}`}
                     onClick={() => scegli(d.chiave, v)}
                     className={`min-h-11 py-1 px-0.5 rounded-xl text-[11px] leading-tight font-bold hyphens-auto [overflow-wrap:anywhere] transition active:scale-95 ${
-                      scelto ? TONO_SCELTA[i] : 'bg-white/[.06] text-gray-300 hover:bg-white/[.1]'}`}>
+                      scelto ? `${TONI_RISPOSTA[i].sfondo} ${TONI_RISPOSTA[i].testo}` : 'bg-white/[.06] text-gray-300 hover:bg-white/[.1]'}`}>
                     {parola}
                   </button>
                 )

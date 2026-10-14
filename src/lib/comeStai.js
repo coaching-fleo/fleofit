@@ -24,6 +24,19 @@ export const DOMANDE = [
   { chiave: 'stress', titolo: 'Stress', scelte: ['Molto alto', 'Alto', 'Normale', 'Basso', 'Nessuno'] },
 ]
 
+/**
+ * Il colore di una risposta, dal rosso (1) al verde (5): lo stesso nel foglio
+ * dell'atleta e nel riepilogo del coach, così una tacca rossa vuol dire la
+ * stessa cosa in tutti e due. Classi intere, perché Tailwind le trovi.
+ */
+export const TONI_RISPOSTA = [
+  { sfondo: 'bg-red-500', testo: 'text-white' },
+  { sfondo: 'bg-orange-500', testo: 'text-black' },
+  { sfondo: 'bg-brand', testo: 'text-black' },
+  { sfondo: 'bg-lime-400', testo: 'text-black' },
+  { sfondo: 'bg-green-500', testo: 'text-black' },
+]
+
 /** La parola di una risposta (1–5), o `null` se manca. */
 export const parolaRisposta = (domanda, valore) =>
   (Number.isInteger(valore) && valore >= 1 && valore <= 5 ? domanda.scelte[valore - 1] : null)

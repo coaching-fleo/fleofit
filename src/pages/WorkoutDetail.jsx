@@ -10,7 +10,7 @@ import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
-import { DOMANDE, parolaRisposta, punteggio, fasciaComeStai, daChiedereOggi, leggiComeStai, salvaComeStai, leggiSaltato, segnaSaltato } from '../lib/comeStai'
+import { DOMANDE, TONI_RISPOSTA, parolaRisposta, punteggio, fasciaComeStai, daChiedereOggi, leggiComeStai, salvaComeStai, leggiSaltato, segnaSaltato } from '../lib/comeStai'
 import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
@@ -1617,13 +1617,29 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         <span className="text-2xl font-black text-white tabular-nums">{String(valoreComeStai).replace('.', ',')}</span>
         <span className="text-sm text-gray-400">/5 · {fasciaComeStai(valoreComeStai).etichetta}</span>
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-        {DOMANDE.map(d => (
-          <span key={d.chiave} className="text-[13px] text-gray-400 flex justify-between">
-            {d.titolo}<span className="text-white font-bold">{parolaRisposta(d, comeStai?.[d.chiave]) ?? '—'}</span>
-          </span>
-        ))}
-      </div>
+      {/* Una riga per domanda (14/10/2026): sulla griglia a due colonne di
+          prima «Sonno Pessimo Energia Poca» non si capiva cosa andava con
+          cosa. Le tacche hanno i colori dei bottoni dell'atleta. */}
+      <ul className="flex flex-col divide-y divide-white/[.07]">
+        {DOMANDE.map(d => {
+          const v = comeStai?.[d.chiave]
+          const parola = parolaRisposta(d, v)
+          return (
+            <li key={d.chiave} className="flex items-center gap-3 py-2 first:pt-0.5 last:pb-0">
+              <span className="flex-1 min-w-0 text-[13px] text-gray-400">{d.titolo}</span>
+              <span className="flex gap-[3px] shrink-0" aria-hidden="true">
+                {[1, 2, 3, 4, 5].map(t => (
+                  <span key={t} className={`w-[11px] h-1.5 rounded-full ${
+                    parola && t <= v ? TONI_RISPOSTA[v - 1].sfondo : 'bg-white/[.1]'}`} />
+                ))}
+              </span>
+              <span className={`w-[76px] shrink-0 text-right text-[13px] font-bold ${parola ? 'text-white' : 'text-gray-500'}`}>
+                {parola ?? '—'}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
     </CardNota>
   ) : null
   const pOffline = (

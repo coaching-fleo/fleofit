@@ -445,6 +445,9 @@ Dove compare:
    si legge «tanti dolori». I bottoni del foglio dicono una parola (`scelte` in `DOMANDE`,
    la buona sempre a destra, colore dal rosso al verde) e il coach in «Come stava» legge la
    stessa parola (`parolaRisposta`). Il numero resta solo nel dato e nella media /5.
+   Il riepilogo del coach è **una riga per domanda** (nome · cinque tacche · parola), non
+   la griglia a due colonne di prima, dove «Sonno Pessimo Energia Poca» non si capiva cosa
+   andava con cosa. Le tacche usano `TONI_RISPOSTA`, gli stessi colori dei bottoni.
 2. Una risposta saltata è `null` e non entra nella media; un giorno senza risposte non esiste.
    La media del periodo è la media dei GIORNI, non delle singole risposte.
 3. `leggiComeStai` torna `undefined` quando non può sapere (tabella assente, rete giù): in quel
