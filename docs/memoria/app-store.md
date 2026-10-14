@@ -42,6 +42,28 @@
   e *Altri dati diagnostici* (versione, dispositivo, lingua che partono con la
   segnalazione via Resend). Si aggiunge, non si toglie niente. Testo «Novità» in
   `DEVLOG.md`.
+  ⚠️ **Correzione del 14/10/2026**: quella build `1.2.0 (3)` era stata **caricata e approvata**
+  — su App Store Connect la 1.2.0 risulta «Pronta per la distribuzione», in vendita. Questo
+  file non l'aveva registrato, e il 14/10 un archivio nuovo è stato quasi caricato sulla 1.2.0.
+  Contiene il codice fino al commit `799b119` (09/10 10:44). Prima di ogni archive si guarda
+  lo **stato della versione** su App Store Connect, non solo questo file.
+- **14 ott 2026** — `MARKETING_VERSION` 1.2.0 → **1.2.1**. Archiviata 1.2.1, `verifica-ipa.sh`
+  tutto verde (sul primo archivio dello stesso codice, uscito 1.2.0 (4)). ⚠️ Lo script è
+  **zsh**: con `bash` dà un errore di sintassi. Novità in `DEVLOG.md`, contate da `799b119`.
+  ✅ **Inviata in revisione il 14/10/2026.** Su App Store Connect: versione **1.2.1** creata,
+  «Novità» nella forma BREVE di `DEVLOG.md` (cinque righe: il committente non vuole il papiro).
+  Note per il revisore riscritte rispetto alla 1.2.0, in quattro punti: riferimento alla 1.2.0
+  approvata; «What's new» con dove trovare Gym, «Come stai oggi», gare HYROX, IA nel builder,
+  «Da un'immagine» (lettura sul dispositivo, nessuna IA) e ricerca IA; una sezione nuova
+  **«AI and data»** che dichiara che le funzioni IA del coach (generazione, ricerca, «Dalle
+  note») mandano testo a **Groq e Google Gemini**; permessi da tre a **quattro** (fotocamera).
+  Account del revisore invariati; i tre codici invito delle note (`DNCEGH89`, `O4URK2ZX`,
+  `2XHDHI14`) verificati il 14/10 ancora attivi e mai usati.
+  ⚠️ **Rischio noto, accettato**: la sezione «AI and data» è onesta ma può far chiedere ad
+  Apple un permesso esplicito (linea guida **5.1.2(i)**, dati personali a IA di terze parti).
+  Se arriva quel rilievo la risposta è già progettata: `docs/superpowers/specs/2026-10-14-consenso-privacy-design.md`,
+  in stand-by finché non sono scelti nome e dominio. Nascondere l'IA nelle note sarebbe stato
+  peggio: il revisore la vede comunque con l'account coach.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non

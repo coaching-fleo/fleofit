@@ -2,7 +2,7 @@
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
-> Ultimo aggiornamento: **9 ottobre 2026**.
+> Ultimo aggiornamento: **14 ottobre 2026**.
 
 > 📚 **Dal 07/10/2026 questo file tiene solo ciò che serve in OGNI sessione.** La storia —
 > perché ogni schermata è fatta così, le trappole trovate, i rifiuti di App Store, le
@@ -22,10 +22,13 @@
 - **Schema del database congelato** (§0, regola 0-bis): l'approvazione è arrivata, ma lo
   sblocco resta una decisione del committente. **Un'eccezione**, il 09/10/2026: la tabella
   `note_estratte` («Dalle note», `docs/memoria/scheda-atleta.md`).
-- **App Store**: ✅ **APPROVATA il 29/09/2026** — build `1.1.0 (6)`, commit `8d9a398` del
-  21/09/2026. Tutto ciò che è venuto dopo quel commit **non è nell'app sullo Store**: le
-  modifiche da annunciare nel prossimo aggiornamento stanno in [DEVLOG.md](DEVLOG.md)
-  (`docs/memoria/app-store.md`).
+- **App Store**: in vendita la **1.2.0** — build `1.2.0 (3)`, commit `799b119` del
+  09/10/2026 (la 1.1.0 (6) era stata approvata il 29/09). ⏳ **La 1.2.1 è in revisione dal
+  14/10/2026** (archivio delle 11:39, codice di `c315006` + versione 1.2.1): novità in
+  [DEVLOG.md](DEVLOG.md), contate da `799b119`. Il prossimo aggiornamento sarà la **1.2.2**.
+  ⚠️ Prima di archiviare si controlla lo stato della versione su App Store Connect
+  (`docs/memoria/app-store.md`). ⏸️ In stand-by e da ricordare al prossimo aggiornamento:
+  consenso privacy + policy nuova (BACKLOG, in cima).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
 - Test e lint al 12/10/2026: `npm test` → **1748 test**; `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note» né di «Da un testo scritto») (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
