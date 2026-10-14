@@ -15,11 +15,19 @@ describe('FoglioComeStai', () => {
     expect(fatto).toBeDisabled()
 
     const user = userEvent.setup()
-    await user.click(screen.getByRole('radio', { name: 'Sonno: 4 su 5' }))
-    await user.click(screen.getByRole('radio', { name: 'Stress: 2 su 5' }))
-    expect(screen.getByRole('radio', { name: 'Sonno: 4 su 5' })).toHaveAttribute('aria-checked', 'true')
+    await user.click(screen.getByRole('radio', { name: 'Sonno: Buono' }))
+    await user.click(screen.getByRole('radio', { name: 'Stress: Alto' }))
+    expect(screen.getByRole('radio', { name: 'Sonno: Buono' })).toHaveAttribute('aria-checked', 'true')
     await user.click(fatto)
     expect(onSalva).toHaveBeenCalledWith({ sonno: 4, stress: 2 })
+  })
+
+  it('i bottoni dicono parole, non numeri, e la risposta buona è a destra', () => {
+    render(<FoglioComeStai onSalva={vi.fn()} onSalta={vi.fn()} />)
+    const dolori = screen.getByRole('radiogroup', { name: 'Dolori muscolari' })
+    const voci = [...dolori.querySelectorAll('[role="radio"]')].map(b => b.textContent)
+    expect(voci).toEqual(['Molti', 'Parecchi', 'Qualcuno', 'Pochi', 'Nessuno'])
+    expect(screen.queryByRole('radio', { name: /su 5/ })).toBeNull()
   })
 
   it('«Salta» salta, la X chiude: due gesti diversi, nessuno dei due salva', async () => {

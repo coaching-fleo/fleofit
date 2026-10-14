@@ -4,6 +4,12 @@
 // ⚠️ Deve costare cinque secondi: quattro righe di cinque bottoni, nessun
 // campo di testo, nessuna risposta obbligatoria. «Fatto» parte con una sola
 // risposta, «Salta» non salva niente e non lo richiede fino a domani.
+// I bottoni dicono una PAROLA, non un numero (14/10/2026): «Dolori 5» si
+// leggeva «tanti dolori». La risposta buona è sempre a destra, e il colore
+// della scelta va dal rosso al verde con lei.
+// ⚠️ Cinque parole in fila stanno strette: a 360 punti «Qualcuno» usciva dal
+// bottone. Per questo sotto i 390 la finestra stringe i margini, e sui telefoni
+// più stretti la parola va a capo DENTRO il bottone invece di sbordare.
 // La X ha `aria-label="Chiudi"`: è ciò che fa funzionare il tasto indietro di
 // Android su questa modale (src/lib/indietroAndroid.js). ⚠️ Chiudere NON è
 // saltare: chi preme indietro vuole annullare, quindi niente timer e niente
@@ -15,6 +21,15 @@ import { X } from 'lucide-react'
 import { DOMANDE } from '../lib/comeStai'
 import { vibraScelta } from '../lib/aptica'
 import { CARD, BOTTONE_BRAND, BOTTONE_QUIETO, TITOLO_MODALE, TESTO_MODALE } from '../lib/stiliCard'
+
+// Dal rosso (la risposta peggiore) al verde (la migliore), uguale per tutte.
+const TONO_SCELTA = [
+  'bg-red-500 text-white',
+  'bg-orange-500 text-black',
+  'bg-brand text-black',
+  'bg-lime-400 text-black',
+  'bg-green-500 text-black',
+]
 
 export default function FoglioComeStai({ onSalva, onSalta, onChiudi }) {
   const [risposte, setRisposte] = useState({})
@@ -33,7 +48,7 @@ export default function FoglioComeStai({ onSalva, onSalta, onChiudi }) {
   return createPortal(
     <div className="fixed inset-0 bg-black/85 z-[150] flex items-center justify-center p-4 velo-in">
       <div role="dialog" aria-modal="true" aria-label="Come stai oggi?"
-        className={`${CARD} w-full max-w-sm p-6 flex flex-col gap-5 modal-transition max-h-[calc(100dvh-2rem)] overflow-y-auto hide-scrollbar`}>
+        className={`${CARD} w-full max-w-sm px-4 py-6 min-[390px]:px-6 flex flex-col gap-5 modal-transition max-h-[calc(100dvh-2rem)] overflow-y-auto hide-scrollbar`}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className={TITOLO_MODALE}>Come stai oggi?</h2>
@@ -48,22 +63,20 @@ export default function FoglioComeStai({ onSalva, onSalta, onChiudi }) {
         {DOMANDE.map(d => (
           <div key={d.chiave} role="radiogroup" aria-label={d.titolo} className="flex flex-col gap-2">
             <p className="text-sm font-bold text-white">{d.titolo}</p>
-            <div className="grid grid-cols-5 gap-2">
-              {[1, 2, 3, 4, 5].map(v => {
+            <div className="grid grid-cols-5 gap-1 min-[390px]:gap-1.5">
+              {d.scelte.map((parola, i) => {
+                const v = i + 1
                 const scelto = risposte[d.chiave] === v
                 return (
                   <button key={v} type="button" role="radio" aria-checked={scelto}
-                    aria-label={`${d.titolo}: ${v} su 5`}
+                    aria-label={`${d.titolo}: ${parola}`}
                     onClick={() => scegli(d.chiave, v)}
-                    className={`h-11 rounded-xl text-[15px] font-extrabold transition active:scale-95 ${
-                      scelto ? 'bg-brand text-black' : 'bg-white/[.06] text-gray-300 hover:bg-white/[.1]'}`}>
-                    {v}
+                    className={`min-h-11 py-1 px-0.5 rounded-xl text-[11px] leading-tight font-bold hyphens-auto [overflow-wrap:anywhere] transition active:scale-95 ${
+                      scelto ? TONO_SCELTA[i] : 'bg-white/[.06] text-gray-300 hover:bg-white/[.1]'}`}>
+                    {parola}
                   </button>
                 )
               })}
-            </div>
-            <div className="flex justify-between text-[11px] text-gray-500">
-              <span>{d.basso}</span><span>{d.alto}</span>
             </div>
           </div>
         ))}

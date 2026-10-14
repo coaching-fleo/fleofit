@@ -74,7 +74,7 @@ describe('Come stai oggi — atleta', () => {
     apri()
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: /Rispondi/ }))
-    await user.click(screen.getByRole('radio', { name: 'Energia: 5 su 5' }))
+    await user.click(screen.getByRole('radio', { name: 'Energia: Al top' }))
     await user.click(screen.getByRole('button', { name: 'Fatto' }))
     await waitFor(() => expect(finto.chiamateA('come_stai', 'upsert')).toHaveLength(1))
     const [riga, opzioni] = finto.chiamateA('come_stai', 'upsert')[0].args
@@ -89,7 +89,7 @@ describe('Come stai oggi — atleta', () => {
     apri()
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: /Avvia allenamento/i }))
-    await user.click(await screen.findByRole('radio', { name: 'Sonno: 3 su 5' }))
+    await user.click(await screen.findByRole('radio', { name: 'Sonno: Così così' }))
     await user.click(screen.getByRole('button', { name: 'Fatto' }))
     expect(await screen.findByRole('button', { name: /Minimizza timer/i })).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'Come stai oggi?' })).toBeNull()
@@ -124,5 +124,8 @@ describe('Come stai oggi — coach', () => {
     // La media di 2, 3 e 4: il «—» dei dolori non conta come zero.
     const fascia = screen.getByText(/\/5 · Così così/)
     expect(fascia.previousElementSibling.textContent).toBe('3')
+    // Le risposte a parole, non col numero: «Stress 4» si leggerebbe «stressato».
+    expect(screen.getByText('Scarso')).toBeInTheDocument()
+    expect(screen.getByText('Basso')).toBeInTheDocument()
   })
 })

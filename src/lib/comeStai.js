@@ -13,12 +13,20 @@
 import { supabase } from '../supabaseClient'
 import { leggiJson, scriviJson } from './offlineQueue'
 
+// 🔴 Le risposte si mostrano a PAROLE, mai col numero (14/10/2026, richiesta
+// del committente): «Dolori 5» si legge «tanti dolori», mentre qui vuol dire
+// nessuno. Il numero resta solo nel dato salvato e nella media. `scelte[0]`
+// vale 1, `scelte[4]` vale 5 — la cosa buona, sempre a destra.
 export const DOMANDE = [
-  { chiave: 'sonno', titolo: 'Sonno', basso: 'Pessimo', alto: 'Ottimo' },
-  { chiave: 'energia', titolo: 'Energia', basso: 'A terra', alto: 'Al massimo' },
-  { chiave: 'dolori', titolo: 'Dolori muscolari', basso: 'Molti', alto: 'Nessuno' },
-  { chiave: 'stress', titolo: 'Stress', basso: 'Alto', alto: 'Basso' },
+  { chiave: 'sonno', titolo: 'Sonno', scelte: ['Pessimo', 'Scarso', 'Così così', 'Buono', 'Ottimo'] },
+  { chiave: 'energia', titolo: 'Energia', scelte: ['A terra', 'Poca', 'Normale', 'Tanta', 'Al top'] },
+  { chiave: 'dolori', titolo: 'Dolori muscolari', scelte: ['Molti', 'Parecchi', 'Qualcuno', 'Pochi', 'Nessuno'] },
+  { chiave: 'stress', titolo: 'Stress', scelte: ['Molto alto', 'Alto', 'Normale', 'Basso', 'Nessuno'] },
 ]
+
+/** La parola di una risposta (1–5), o `null` se manca. */
+export const parolaRisposta = (domanda, valore) =>
+  (Number.isInteger(valore) && valore >= 1 && valore <= 5 ? domanda.scelte[valore - 1] : null)
 
 const arrotonda = (n) => Math.round(n * 10) / 10
 

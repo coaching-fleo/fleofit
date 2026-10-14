@@ -441,6 +441,10 @@ Dove compare:
 1. 🔴 **Tutte le scale vanno nello stesso verso, 5 = la cosa buona** (dolori 5 = nessuno,
    stress 5 = basso). È ciò che permette la media senza girare niente. Una domanda nuova si
    scrive nello stesso verso, o la media mente.
+   🔴 **Ma il numero non si MOSTRA mai** (14/10/2026, richiesta del committente): «Dolori 5»
+   si legge «tanti dolori». I bottoni del foglio dicono una parola (`scelte` in `DOMANDE`,
+   la buona sempre a destra, colore dal rosso al verde) e il coach in «Come stava» legge la
+   stessa parola (`parolaRisposta`). Il numero resta solo nel dato e nella media /5.
 2. Una risposta saltata è `null` e non entra nella media; un giorno senza risposte non esiste.
    La media del periodo è la media dei GIORNI, non delle singole risposte.
 3. `leggiComeStai` torna `undefined` quando non può sapere (tabella assente, rete giù): in quel

@@ -10,7 +10,7 @@ import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
-import { DOMANDE, punteggio, fasciaComeStai, daChiedereOggi, leggiComeStai, salvaComeStai, leggiSaltato, segnaSaltato } from '../lib/comeStai'
+import { DOMANDE, parolaRisposta, punteggio, fasciaComeStai, daChiedereOggi, leggiComeStai, salvaComeStai, leggiSaltato, segnaSaltato } from '../lib/comeStai'
 import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
@@ -1620,7 +1620,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       <div className="grid grid-cols-2 gap-x-4 gap-y-1">
         {DOMANDE.map(d => (
           <span key={d.chiave} className="text-[13px] text-gray-400 flex justify-between">
-            {d.titolo}<span className="text-white font-bold tabular-nums">{comeStai?.[d.chiave] ?? '—'}</span>
+            {d.titolo}<span className="text-white font-bold">{parolaRisposta(d, comeStai?.[d.chiave]) ?? '—'}</span>
           </span>
         ))}
       </div>
