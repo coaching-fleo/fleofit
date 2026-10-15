@@ -10,7 +10,7 @@
 // pesano (src/useCruscottoCoach.js), e l'atleta non deve scaricarli.
 // Testata, barra di ricerca e Live Coach Cam restano in Home.jsx.
 
-import { ChartNoAxesColumn, Megaphone } from 'lucide-react'
+import { ChartNoAxesColumn } from 'lucide-react'
 import { cosaGuardare } from '../lib/cosaGuardare'
 import { GIORNI_COPERTURA } from '../lib/statisticheCoach'
 import { useCruscottoCoach } from '../useCruscottoCoach'
@@ -20,7 +20,7 @@ import { PolsoTeam, CardOggi, CardSegnali, CardSmaltire, CardPiano, CardGare } f
 export default function HomeCoachTelefono({
   atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura,
   feedback, fermi, scaduti, caricamento, numeroWorkout,
-  onApriAtleta, onApriFeedback, onApriScaduto, onApriSeduta, onReport, onArchivio, onMessaggio,
+  onApriAtleta, onApriFeedback, onApriScaduto, onApriSeduta, onReport, onArchivio,
 }) {
   const { gare, polso, oggi, segnali, piano, notaPiano } = useCruscottoCoach({
     atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura, settimana: false,
@@ -56,9 +56,6 @@ export default function HomeCoachTelefono({
 
     {/* Report e archivio restano, in fondo: materiale di lavoro che si apre
         sapendo già cosa si cerca, e sul telefono non hanno una voce nella tab bar. */}
-    <RigaDestinazione icona={Megaphone} titolo="Messaggio a tutti"
-      sottotitolo="Un avviso per tutti gli atleti"
-      label="Scrivi un messaggio a tutti gli atleti" onClick={onMessaggio} />
     <RigaDestinazione icona={ChartNoAxesColumn} titolo="Report settimanale"
       sottotitolo="Aderenza, carico e chi richiede un'azione"
       label="Apri il report settimanale" onClick={onReport} />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
 import { useNavigate, useNavigationType } from 'react-router-dom'
-import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, WifiOff, RefreshCw } from 'lucide-react'
+import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, WifiOff, RefreshCw, Megaphone } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { startOfWeek, endOfWeek, format, parseISO, differenceInDays, startOfDay, getISOWeek } from 'date-fns'
@@ -1196,7 +1196,7 @@ setNotifications(prev => {
             onApriAtleta={(a) => navigate(`/athletes/${a.id}`)}
             onApriScaduto={apriSeduta}
             onApriSeduta={apriSeduta}
-            onMessaggio={() => navigate('/messaggi?scrivi=1')}
+            onMessaggio={() => navigate('/messaggi')}
           />
         </Suspense>
       )}
@@ -1208,6 +1208,13 @@ setNotifications(prev => {
         // un pallino: senza, chi usa VoiceOver non saprebbe che ce ne sono.
         const azioni = (
           <>
+            {/* La bacheca «Dal coach» per il coach: sempre a portata, in testata
+                (prima era una riga in fondo alla Home, che non si trovava). */}
+            {role !== 'athlete' && (
+              <BottoneVetro label="Apri la bacheca dei messaggi" onClick={() => navigate('/messaggi')}>
+                <Megaphone size={18} />
+              </BottoneVetro>
+            )}
             <BottoneVetro
               label={unreadCount > 0 ? `Apri il centro notifiche, ${unreadCount} da leggere` : 'Apri il centro notifiche'}
               title="Centro Notifiche" onClick={openNotifications} badge={unreadCount > 0}>
@@ -1314,8 +1321,7 @@ setNotifications(prev => {
               onApriScaduto={apriSeduta}
               onApriSeduta={apriSeduta}
               onReport={() => navigate('/report')}
-              onArchivio={() => navigate('/archive')}
-              onMessaggio={() => navigate('/messaggi?scrivi=1')} />
+              onArchivio={() => navigate('/archive')} />
           </Suspense>
         </div>
       )}

@@ -107,10 +107,17 @@ describe('Dal coach in Home atleta', () => {
   })
 })
 
-describe('Messaggio a tutti in Home coach', () => {
-  it('c\'è la riga e porta a /messaggi?scrivi=1', async () => {
+describe('La bacheca dalla Home coach', () => {
+  it('il megafono in testata porta alla bacheca', async () => {
     monta({ role: 'coach' })
-    await userEvent.click(await screen.findByLabelText('Scrivi un messaggio a tutti gli atleti'))
-    expect(await screen.findByTestId('dove')).toHaveTextContent('/messaggi?scrivi=1')
+    await userEvent.click(await screen.findByLabelText('Apri la bacheca dei messaggi'))
+    expect(await screen.findByTestId('dove')).toHaveTextContent('/messaggi')
+    expect(screen.getByTestId('dove')).not.toHaveTextContent('scrivi')
+  })
+
+  it('l\'atleta non ha il megafono in testata', async () => {
+    monta()
+    expect(await screen.findByText('Hyrox Forza')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Apri la bacheca dei messaggi')).not.toBeInTheDocument()
   })
 })

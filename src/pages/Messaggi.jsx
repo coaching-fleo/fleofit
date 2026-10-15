@@ -1,21 +1,21 @@
 // Messaggi.jsx — la bacheca «Dal coach» (15/10/2026).
-// Atleta: sola lettura. Coach: «Messaggio a tutti» (il foglio, con la push) e il
-// menu di ogni messaggio — Fissa, Modifica, Elimina, ottimistici con rollback,
-// e «Manda la notifica» (rinvio dopo aver chiuso il foglio: il server deduplica).
-// Il foglio e il menu stanno in FoglioMessaggio.jsx; qui la lista e chi la cambia.
-// `?scrivi=1` apre il foglio all'arrivo (le entrate in Home e sul desktop).
+// Atleta: sola lettura. Coach: «+ Nuovo» in testata (la pagina NuovoMessaggio,
+// `/messaggi/nuovo`) e il menu di ogni messaggio — Fissa ed Elimina ottimistici
+// con rollback, Modifica (la stessa pagina, `?modifica=<id>`), e «Manda la
+// notifica» (rinvio di una push non partita: il server deduplica).
+// Il menu sta in FoglioMessaggio.jsx; qui la lista e chi la cambia.
+// `?scrivi=1` (le entrate di prima) porta alla pagina di scrittura.
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Megaphone, ChevronLeft } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { Plus, ChevronLeft } from 'lucide-react'
+import { useSearchParams, useNavigate, Navigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { ListaMessaggi } from '../components/MessaggiUI'
-import FoglioMessaggio, { MenuMessaggio } from '../components/FoglioMessaggio'
+import { MenuMessaggio } from '../components/FoglioMessaggio'
 import { CustomConfirm } from '../components/CustomModals'
 import { visibiliPer, ordina, CHIAVE_VISTO, puoInviareBroadcast } from '../lib/messaggiCoach'
-import { COACHING_ID } from '../lib/constants'
 import { mostraErrore, mostraSuccesso } from '../lib/alert'
 import { vibraSuccesso, vibraErrore } from '../lib/aptica'
 import { VETRO } from '../lib/stiliCard'
@@ -35,17 +35,15 @@ export default function Messaggi() {
   const indietro = useIndietro('/')
   const coach = role !== 'athlete'
   const demo = !puoInviareBroadcast(user?.email ?? null)
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
   const idRichiesto = params.get('m')
   const [messaggi, setMessaggi] = useState([])
   const [caricato, setCaricato] = useState(false)
   const [erroreCaricamento, setErroreCaricamento] = useState(false)
   const [evidenzaSpentaPer, setEvidenzaSpentaPer] = useState(null)
-  // Il foglio: chiuso, aperto per un messaggio nuovo (`{}`), o per correggerne uno.
-  const [foglio, setFoglio] = useState(() => (coach && params.get('scrivi') === '1' ? {} : null))
   const [menu, setMenu] = useState(null)
   const [conferma, setConferma] = useState(null)
-  const [numeroAtleti, setNumeroAtleti] = useState(null)
   const [notificaInVolo, setNotificaInVolo] = useState(false)
   const notificaInVoloRef = useRef(false)
   // L'ultimo ?m= per cui la lista è stata letta: quello iniziale lo copre già la prima lettura.
@@ -75,26 +73,6 @@ export default function Messaggi() {
       .then(righe => { if (montata.current) { setMessaggi(righe); setErroreCaricamento(false) } })
       .catch(e => console.warn('Messaggi del coach non riletti:', e))
   }, [caricato, idRichiesto, messaggi])
-
-  // «Arriverà a N atleti»: le stesse esclusioni di `send-reminders` — attivi,
-  // compresi quelli in pausa, senza l'account nascosto e senza il mittente.
-  // ⚠️ Può superare i destinatari veri: il server toglie anche gli altri account
-  // admin che hanno una riga athletes, e qui la lista admin non si legge.
-  useEffect(() => {
-    if (!coach) return
-    let vivo = true
-    ;(async () => {
-      try {
-        const { data, error } = await supabase.from('athletes').select('id, deleted_at').is('deleted_at', null)
-        if (error) throw error
-        const n = (data || []).filter(a => a.deleted_at == null && a.id !== COACHING_ID && a.id !== user?.id).length
-        if (vivo) setNumeroAtleti(n)
-      } catch (e) {
-        console.warn('Atleti non contati:', e)
-      }
-    })()
-    return () => { vivo = false }
-  }, [coach, user?.id])
 
   /** Sostituisce (o aggiunge in testa) una riga: lo usano l'invio, la modifica e i rollback. */
   const metti = (riga) => setMessaggi(prima => (prima.some(m => m.id === riga.id)
@@ -156,7 +134,7 @@ export default function Messaggi() {
     setMenu(null)
     if (!m) return
     if (scelta === 'fissa') fissa(m)
-    if (scelta === 'modifica') setFoglio({ iniziale: m })
+    if (scelta === 'modifica') navigate(`/messaggi/nuovo?modifica=${m.id}`)
     if (scelta === 'notifica') rimandaNotifica(m)
     if (scelta === 'elimina') setConferma({
       title: 'Eliminare il messaggio?',
@@ -164,11 +142,6 @@ export default function Messaggi() {
       confirmLabel: 'Elimina',
       onConfirm: () => elimina(m),
     })
-  }
-
-  const chiudiFoglio = () => {
-    setFoglio(null)
-    if (params.get('scrivi')) setParams(p => { p.delete('scrivi'); return p }, { replace: true })
   }
 
   const visibili = useMemo(
@@ -212,6 +185,9 @@ export default function Messaggi() {
     return () => clearTimeout(t)
   }, [trovato, idRichiesto])
 
+  // Le entrate di prima aprivano il foglio con ?scrivi=1: ora c'è la pagina.
+  if (coach && params.get('scrivi') === '1') return <Navigate to="/messaggi/nuovo" replace />
+
   return (
     <div className="min-h-screen bg-[#0B0B0B] text-white px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-[var(--fondo-pagina)]">
       <div className="cascata max-w-2xl mx-auto">
@@ -220,22 +196,20 @@ export default function Messaggi() {
             className={`w-10 h-10 rounded-full flex items-center justify-center text-gray-200 hover:text-white transition shrink-0 ${VETRO}`}>
             <ChevronLeft size={19} />
           </button>
-          <h1 className="text-3xl font-black tracking-tight">Dal coach</h1>
+          <h1 className="flex-1 min-w-0 text-3xl font-black tracking-tight truncate">Dal coach</h1>
+          {coach && (
+            <button type="button" onClick={() => navigate('/messaggi/nuovo')} aria-label="Nuovo messaggio"
+              className="shrink-0 min-h-[40px] inline-flex items-center gap-1 rounded-full bg-brand text-black px-4 text-[14px] font-extrabold hover:brightness-110 transition">
+              <Plus size={17} aria-hidden="true" />Nuovo
+            </button>
+          )}
         </div>
-        {coach && (
-          <button type="button" onClick={() => setFoglio({})}
-            className="w-full mb-4 min-h-[52px] rounded-xl bg-brand text-black font-bold flex items-center justify-center gap-2 hover:brightness-110 transition">
-            <Megaphone size={18} aria-hidden="true" />Messaggio a tutti
-          </button>
-        )}
         {caricato && (erroreCaricamento
           ? <p role="alert" className="text-sm text-red-500">Non riesco a caricare i messaggi.</p>
           : <ListaMessaggi messaggi={visibili} evidenziatoId={evidenziatoId} coach={coach} onMenu={setMenu} />)}
       </div>
       {coach && (
         <>
-          <FoglioMessaggio aperto={!!foglio} onChiudi={chiudiFoglio} numeroAtleti={numeroAtleti}
-            demo={demo} iniziale={foglio?.iniziale ?? null} onInviato={metti} />
           {menu && <MenuMessaggio messaggio={menu} onChiudi={dopoMenu} demo={demo} notificaInVolo={notificaInVolo} />}
           {createPortal(<CustomConfirm info={conferma} onClose={() => setConferma(null)} />, document.body)}
         </>

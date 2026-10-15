@@ -14,7 +14,7 @@
 - Il backup notturno ha `messaggi_coach` in `TABLES`: la salva davvero dal primo `app:main` (il workflow attivo è quello di `main`).
 - 🔴 **Cancello di rilascio.** Finché la tabella non è applicata **e** `send-reminders` col modo
   `broadcast` non è pubblicata: **niente `git push origin app:main`** e **nessun archive della 1.2.2**.
-  Le entrate del coach (riga in Home telefono, bottone sul desktop, voce «Messaggi» della barra
+  Le entrate del coach (megafono in testata della Home telefono, bottone sul desktop, voce «Messaggi» della barra
   laterale) sono **sempre visibili**: pubblicate prima, mostrerebbero una funzione rotta (la bacheca
   non carica, Invia fallisce). L'ordine è: sì del committente → tabella → deploy della funzione →
   solo allora `app:main` e archive. E il deploy della funzione non va anticipato alla tabella:
@@ -25,12 +25,13 @@
 |---|---|
 | `src/lib/messaggiCoach.js` | logica pura: `visibiliPer`, `ordina`, `daMostrareInHome`, `testoValido`, `CHIAVE_BOZZA`, `CHIAVE_VISTO` (riesporta `anteprima`, `routeMessaggio`, `puoInviareBroadcast` da `broadcast.ts`) |
 | `src/components/MessaggiUI.jsx` | sola presentazione della bacheca |
-| `src/components/FoglioMessaggio.jsx` | il foglio dove il coach scrive/corregge |
-| `src/pages/Messaggi.jsx` | rotta `/messaggi`; `?m=<id>` evidenzia un messaggio (deep link dalla notifica), `?scrivi=1` apre il foglio |
+| `src/pages/NuovoMessaggio.jsx` | rotta `/messaggi/nuovo`: la pagina dove il coach scrive, prova su di sé, invia; `?modifica=<id>` corregge |
+| `src/components/FoglioMessaggio.jsx` | solo il menu «…» di un messaggio (Fissa · Modifica · Manda la notifica · Elimina) |
+| `src/pages/Messaggi.jsx` | rotta `/messaggi`; `?m=<id>` evidenzia un messaggio (deep link dalla notifica), `?scrivi=1` (le entrate di prima) porta a `/messaggi/nuovo`; «+ Nuovo» in testata (solo coach) |
 | `supabase/functions/send-reminders/broadcast.ts` | invio: controllo permesso, notifiche in `notifications`, push |
-| Entrate | Home atleta (card «Dal coach», **anche al giorno 1**), riga in `HomeCoachTelefono`, bottone nell'intestazione di `HomeCoachDesktop`, voce «Messaggi» in `BarraLaterale` |
+| Entrate | Home atleta (card «Dal coach», **anche al giorno 1**), **megafono in testata** della Home coach (`BottoneVetro` in `Home.jsx`, accanto a campanella e impostazioni), bottone «Messaggi» nell'intestazione di `HomeCoachDesktop`, voce «Messaggi» in `BarraLaterale` |
 
-Chiavi localStorage: `fleofit_messaggio_bozza` (bozza del foglio), `fleofit_messaggi_visto_fino`
+Chiavi localStorage: `fleofit_messaggio_bozza` (bozza della pagina di scrittura), `fleofit_messaggi_visto_fino`
 (l'ultima volta che l'atleta ha guardato la bacheca: spegne la card in Home).
 
 ## Perché una bacheca e non solo una notifica
@@ -64,6 +65,13 @@ Conseguenza del testo intero: un messaggio **eliminato** dalla bacheca resta nei
 già consegnati. È accettato; non si cancellano le notifiche.
 
 ## Invio
+- **È una pagina, non un foglio** (`/messaggi/nuovo`, 15/10/2026, dopo la prima prova su iPhone del
+  committente). Il foglio dal basso arrivava in ritardo rispetto alla tastiera, e «Fissa in cima»
+  al primo tocco chiudeva la tastiera senza cambiare (il layout si spostava sotto il dito). Ora la
+  pagina è `fixed inset-0 z-[60]`: con `Keyboard.resize` 'native' la webview si accorcia e la barra
+  in fondo (Prova su di me · Invia a N) resta incollata sopra la tastiera. La pillola «Fissa in
+  cima» e i bottoni della barra fermano `pointerdown`/`mousedown`: il campo non perde il fuoco, la
+  tastiera resta su, il tocco conta. Riuscito l'invio si torna a `/messaggi?m=<id>`.
 - Nuovo tentativo (retry) senza doppioni: la funzione deduplica con `notifications.route`
   (`routeMessaggio`, `/messaggi?m=<id>`).
 - Il tasto **Invia è disabilitato mentre la chiamata è in corso**: due chiamate concorrenti
@@ -74,10 +82,10 @@ già consegnati. È accettato; non si cancellano le notifiche.
   l'ha già ricevuto e **senza gli account admin** (`trovaIdAdmin`, passati come `escludi` a
   `destinatariBroadcast`): un coach con una riga `athletes` non riceve il messaggio a tutti. Se
   `listUsers` fallisce si invia **senza** quel filtro, con `console.error` — la stessa scelta dei
-  promemoria del mattino. Per questo «Arriverà a N atleti» nel foglio può **superare** i destinatari
+  promemoria del mattino. Per questo «N atleti» nella pagina di scrittura può **superare** i destinatari
   veri: il client non legge la lista admin.
 - **«Manda la notifica»** nel menu di un messaggio: rifà il passo 2 (`send-reminders`, stesso
-  `record_id`) dopo che il foglio è stato chiuso e «Riprova» non c'è più. Sicuro grazie al dedup:
+  `record_id`) quando la push non era partita e dalla pagina si è usciti senza «Riprova». Sicuro grazie al dedup:
   chi l'ha già ricevuta viene saltato, e l'esito dice a quanti è partita (o che l'avevano tutti).
   Spenta nel demo e mentre una chiamata è in volo.
 - **«Prova su di me»** (15/10/2026, chiesta dal committente per provare senza disturbare gli
@@ -86,7 +94,7 @@ già consegnati. È accettato; non si cancellano le notifiche.
   in Home. Il server prende l'id del chiamante dal token (`sub`), scrive UNA riga in
   `notifications` per lui (titolo «Messaggio dal coach (prova)», route `/messaggi`, senza `?m=`
   perché il messaggio non esiste) e manda la push ai SUOI dispositivi. Prova push, tocco, centro
-  notifiche e badge; non prova l'evidenza del messaggio nuovo. Il foglio resta aperto con la
+  notifiche e badge; non prova l'evidenza del messaggio nuovo. La pagina resta aperta con la
   bozza. Esito: «Prova mandata ai tuoi dispositivi (N)», oppure «Nessun tuo dispositivo ha le
   notifiche attive» se `sent` è 0. Spento nel demo (stessa regola di `broadcast`) e a testo
   vuoto. Il server rifà il controllo del testo con `testoAccettabile` (la prova non passa dal
@@ -109,6 +117,6 @@ Versione dei semi 11.
 ## Da fare
 - Il sì del committente, applicare la tabella, pubblicare `send-reminders` (BACKLOG).
 - Prove sul telefono: push vera su iOS e Android, tocco → messaggio evidenziato, badge a zero
-  aprendo la bacheca, foglio chiuso col tasto indietro su Android.
+  aprendo la bacheca, pagina di scrittura chiusa col tasto indietro su Android.
 - **Conferme di lettura**: rimandate di proposito.
 - **Chat con il singolo atleta**: ancora aperta.

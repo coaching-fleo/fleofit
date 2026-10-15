@@ -37,6 +37,7 @@ const AthleteReport = lazy(() => import('./pages/AthleteReport'))
 const Analisi = lazy(() => import('./pages/Analisi'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Messaggi = lazy(() => import('./pages/Messaggi'))
+const NuovoMessaggio = lazy(() => import('./pages/NuovoMessaggio'))
 const Login = lazy(() => import('./pages/Login'))
 // La barra laterale del desktop (solo coach, solo web, finestra ≥ 1024px): pigra,
 // così il chunk d'ingresso del telefono non cresce (CLAUDE.md §2).
@@ -677,6 +678,7 @@ function App() {
             <Route path="/analisi" element={<Analisi />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/messaggi" element={<Messaggi />} />
+            <Route path="/messaggi/nuovo" element={<NuovoMessaggio />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
