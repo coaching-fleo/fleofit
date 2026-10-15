@@ -39,9 +39,8 @@ function bozzaIniziale() {
   }
 }
 
-function cancellaBozza() {
-  try { localStorage.removeItem(CHIAVE_BOZZA) } catch { /* niente da fare */ }
-}
+/** Non c'è un «rimuovi» in offlineQueue: `null` vale «nessuna bozza» (bozzaIniziale). */
+const cancellaBozza = () => scriviJson(CHIAVE_BOZZA, null)
 
 /** Il guscio comune dei due fogli: velo, maniglia, testata con la X. */
 function Foglio({ titolo, chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo, children }) {
@@ -75,7 +74,7 @@ const CTA = 'w-full min-h-[52px] rounded-2xl bg-brand text-black text-[16px] fon
 
 /**
  * @param numeroAtleti  null finché non è letto: allora la riga non compare.
- * @param demo          l'account di prova: Invia spento (il blocco vero è nel database).
+ * @param demo          l'account di prova: Invia e Salva spenti (il blocco vero è nel database).
  * @param iniziale      il messaggio da correggere; assente = messaggio nuovo.
  * @param onInviato     (riga) => void — la riga nuova o corretta, per la bacheca.
  *                      In modifica arriva DUE volte se il salvataggio fallisce:
@@ -144,12 +143,15 @@ function Contenuto({ onChiudi, numeroAtleti = null, demo = false, iniziale = nul
 
   const salvaModifica = () => inEsclusiva(async () => {
     const nuovo = testo.trim()
+    if (demo) return
     if (nuovo === iniziale.testo) { sheet.chiudi(); return }
     setErrore(null)
     const valori = { testo: nuovo, modificato_at: new Date().toISOString() }
     onInviato?.({ ...iniziale, ...valori })
-    const { error } = await supabase.from('messaggi_coach').update(valori).eq('id', iniziale.id)
-    if (error) {
+    // ⚠️ `.select('id')`: una riga che la RLS non lascia toccare (il demo) torna
+    // [] SENZA errore. Zero righe toccate è un fallimento, non un successo.
+    const { data, error } = await supabase.from('messaggi_coach').update(valori).eq('id', iniziale.id).select('id')
+    if (error || !data?.length) {
       onInviato?.(iniziale)
       vibraErrore()
       setErrore('Modifica non salvata. Controlla la connessione e riprova.')
@@ -206,10 +208,10 @@ function Contenuto({ onChiudi, numeroAtleti = null, demo = false, iniziale = nul
               </span>
             </button>
           )}
-          {demo && !modifica && <p className="text-xs text-gray-400">Nell'account di prova i messaggi non partono</p>}
+          {demo && <p className="text-xs text-gray-400">Nell'account di prova i messaggi non partono</p>}
           {errore && <p role="alert" className="text-xs text-red-500">{errore}</p>}
           {modifica ? (
-            <button type="button" onClick={salvaModifica} disabled={!valido || inVolo} className={CTA}>
+            <button type="button" onClick={salvaModifica} disabled={!valido || demo || inVolo} className={CTA}>
               {inVolo ? 'Salvo…' : 'Salva'}
             </button>
           ) : (
@@ -230,22 +232,24 @@ function Contenuto({ onChiudi, numeroAtleti = null, demo = false, iniziale = nul
  * sta ancora uscendo si troverebbe lo scorrimento della pagina già bloccato, e
  * alla fine lo lascerebbe bloccato per sempre (useScorrimentoBloccato).
  */
-export function MenuMessaggio({ messaggio, onChiudi }) {
+export function MenuMessaggio({ messaggio, onChiudi, demo = false }) {
   const scelta = useRef(null)
   const sheet = useBottomSheet(() => onChiudi(scelta.current))
-  const scegli = (s) => { scelta.current = s; sheet.chiudi() }
-  const voce = 'w-full min-h-[52px] flex items-center gap-3 px-4 rounded-2xl bg-[#222] border border-[#333] text-left text-[15px] font-bold transition hover:border-[#444]'
+  // Il demo non scrive (RLS): le tre voci si vedono, spente, con il perché.
+  const scegli = (s) => { if (demo) return; scelta.current = s; sheet.chiudi() }
+  const voce = 'w-full min-h-[52px] flex items-center gap-3 px-4 rounded-2xl bg-[#222] border border-[#333] text-left text-[15px] font-bold transition hover:border-[#444] disabled:opacity-40 disabled:pointer-events-none'
   return (
     <Foglio titolo="Messaggio" {...sheet}>
       <div className="flex flex-col gap-2">
-        <button type="button" onClick={() => scegli('fissa')} className={`${voce} text-white`}>
+        {demo && <p className="text-xs text-gray-400 pb-1">Nell'account di prova i messaggi non partono</p>}
+        <button type="button" onClick={() => scegli('fissa')} disabled={demo} className={`${voce} text-white`}>
           {messaggio.fissato ? <PinOff size={18} aria-hidden="true" /> : <Pin size={18} aria-hidden="true" />}
           {messaggio.fissato ? 'Togli dai fissati' : 'Fissa'}
         </button>
-        <button type="button" onClick={() => scegli('modifica')} className={`${voce} text-white`}>
+        <button type="button" onClick={() => scegli('modifica')} disabled={demo} className={`${voce} text-white`}>
           <Pencil size={18} aria-hidden="true" />Modifica
         </button>
-        <button type="button" onClick={() => scegli('elimina')} className={`${voce} text-red-500`}>
+        <button type="button" onClick={() => scegli('elimina')} disabled={demo} className={`${voce} text-red-500`}>
           <Trash2 size={18} aria-hidden="true" />Elimina
         </button>
         <button type="button" onClick={sheet.chiudi} className="w-full min-h-[48px] text-[15px] font-bold text-gray-400 hover:text-white">

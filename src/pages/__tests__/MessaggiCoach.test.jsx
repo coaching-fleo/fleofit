@@ -102,7 +102,7 @@ describe('Messaggi — il coach', () => {
     expect(ins[0].args[0]).toEqual({ testo: 'Domani si corre alle 7', fissato: true })
     expect(finto.chiamateA('messaggi_coach', 'select').length).toBeGreaterThanOrEqual(2) // anche dopo l'insert
     expect(finto.supabase.functions.invoke).toHaveBeenCalledWith('send-reminders', { body: { mode: 'broadcast', record_id: 'm-nuovo' } })
-    expect(localStorage.getItem(CHIAVE_BOZZA)).toBeNull()
+    expect(JSON.parse(localStorage.getItem(CHIAVE_BOZZA))).toBeNull()
     // Il foglio si chiude e il messaggio è in cima alla bacheca.
     await waitFor(() => expect(screen.queryByLabelText('Testo del messaggio')).toBeNull())
     expect(ordineRighe(container)[0]).toBe('m-nuovo')
@@ -183,7 +183,7 @@ describe('Messaggi — il coach', () => {
     let sblocca
     const originale = finto.supabase.from.getMockImplementation()
     finto.supabase.from.mockImplementation((t) => (t === 'messaggi_coach'
-      ? { update: (v) => { finto.chiamate.push({ tabella: t, metodo: 'update', args: [v] }); return { eq: () => new Promise(r => { sblocca = r }) } } }
+      ? { update: (v) => { finto.chiamate.push({ tabella: t, metodo: 'update', args: [v] }); return { eq: () => ({ select: () => new Promise(r => { sblocca = r }) }) } } }
       : originale(t)))
     await apriMenu('vecchio', 'Fissa')
     await waitFor(() => expect(ordineRighe(container)[0]).toBe('vecchio'))
@@ -241,6 +241,75 @@ describe('Messaggi — il coach', () => {
     await waitFor(() => expect(finto.chiamateA('messaggi_coach', 'delete')).toHaveLength(1))
     expect(finto.chiamateA('messaggi_coach', 'eq').some(c => c.args[0] === 'id' && c.args[1] === 'nuovo')).toBe(true)
     await waitFor(() => expect(screen.queryByText('Messaggio nuovo')).toBeNull())
+  })
+})
+
+describe('Messaggi — scritture rifiutate e account di prova', () => {
+  it('«Fissa» che non tocca nessuna riga (RLS, senza errore) torna giù', async () => {
+    const { container } = montaPagina(<Messaggi />, { user: COACH, role: 'admin' })
+    await screen.findByText('Avviso vecchio')
+    finto.dati.messaggi_coach = [] // update(...).select('id') → []
+    await apriMenu('vecchio', 'Fissa')
+    await waitFor(() => expect(finto.chiamateA('messaggi_coach', 'update')).toHaveLength(1))
+    expect(finto.chiamateA('messaggi_coach', 'select').some(c => c.args[0] === 'id')).toBe(true)
+    await waitFor(() => expect(ordineRighe(container)).toEqual(['fiss', 'nuovo', 'vecchio']))
+  })
+
+  it('«Modifica» rifiutata: il testo torna quello di prima e il foglio dice l\'errore', async () => {
+    montaPagina(<Messaggi />, { user: COACH, role: 'admin' })
+    await screen.findByText('Messaggio nuovo')
+    await apriMenu('nuovo', 'Modifica')
+    const area = await screen.findByLabelText('Testo del messaggio')
+    finto.errori.tabelle = ['messaggi_coach']
+    fireEvent.change(area, { target: { value: 'Messaggio corretto' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    expect(await screen.findByText(/Modifica non salvata/)).toBeTruthy()
+    expect(document.getElementById('messaggio-nuovo').textContent).toContain('Messaggio nuovo')
+    expect(screen.getByLabelText('Testo del messaggio').value).toBe('Messaggio corretto') // il lavoro non si perde
+  })
+
+  it('«Modifica» che non tocca nessuna riga: stesso rollback', async () => {
+    montaPagina(<Messaggi />, { user: COACH, role: 'admin' })
+    await screen.findByText('Messaggio nuovo')
+    await apriMenu('nuovo', 'Modifica')
+    const area = await screen.findByLabelText('Testo del messaggio')
+    finto.dati.messaggi_coach = []
+    fireEvent.change(area, { target: { value: 'Messaggio corretto' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    expect(await screen.findByText(/Modifica non salvata/)).toBeTruthy()
+    expect(document.getElementById('messaggio-nuovo').textContent).toContain('Messaggio nuovo')
+  })
+
+  it.each([
+    ['in errore', () => { finto.errori.tabelle = ['messaggi_coach'] }],
+    ['senza righe toccate', () => { finto.dati.messaggi_coach = [] }],
+  ])('«Elimina» %s: la riga torna', async (_, rompi) => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    montaPagina(<Messaggi />, { user: COACH, role: 'admin' })
+    await screen.findByText('Messaggio nuovo')
+    await apriMenu('nuovo', 'Elimina')
+    const dialogo = await screen.findByRole('dialog', { name: 'Eliminare il messaggio?' })
+    rompi()
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Elimina' }))
+    await waitFor(() => expect(finto.chiamateA('messaggi_coach', 'delete')).toHaveLength(1))
+    expect(await screen.findByText('Messaggio nuovo')).toBeTruthy()
+  })
+
+  it('account di prova: il menu mostra le voci spente e il perché, e non scrive', async () => {
+    montaPagina(<Messaggi />, { user: { ...COACH, email: 'demo@fleofit.it' }, role: 'admin' })
+    await screen.findByText('Messaggio nuovo')
+    fireEvent.click(within(document.getElementById('messaggio-nuovo')).getByLabelText('Azioni messaggio'))
+    const menu = await screen.findByRole('dialog', { name: 'Messaggio' })
+    expect(within(menu).getByText("Nell'account di prova i messaggi non partono")).toBeTruthy()
+    for (const voce of ['Fissa', 'Modifica', 'Elimina']) {
+      const b = within(menu).getByRole('button', { name: voce })
+      expect(b.disabled).toBe(true)
+      fireEvent.click(b)
+    }
+    await new Promise(r => setTimeout(r, 400))
+    expect(screen.queryByLabelText('Testo del messaggio')).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Eliminare il messaggio?' })).toBeNull()
+    expect(finto.chiamateA('messaggi_coach', 'update')).toHaveLength(0)
   })
 })
 

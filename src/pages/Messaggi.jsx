@@ -24,6 +24,7 @@ const DURATA_EVIDENZA_MS = 2000
 export default function Messaggi() {
   const { user, role } = useAuth()
   const coach = role !== 'athlete'
+  const demo = !puoInviareBroadcast(user?.email ?? null)
   const [params, setParams] = useSearchParams()
   const idRichiesto = params.get('m')
   const [messaggi, setMessaggi] = useState([])
@@ -80,8 +81,10 @@ export default function Messaggi() {
   const fissa = async (m) => {
     metti({ ...m, fissato: !m.fissato })
     try {
-      const { error } = await supabase.from('messaggi_coach').update({ fissato: !m.fissato }).eq('id', m.id)
+      // 0 righe toccate senza errore = la RLS l'ha rifiutato (il demo): fallimento.
+      const { data, error } = await supabase.from('messaggi_coach').update({ fissato: !m.fissato }).eq('id', m.id).select('id')
       if (error) throw error
+      if (!data?.length) throw new Error('nessuna riga aggiornata')
     } catch (e) {
       console.warn('Messaggio non fissato:', e)
       metti(m)
@@ -92,8 +95,9 @@ export default function Messaggi() {
   const elimina = async (m) => {
     setMessaggi(prima => prima.filter(x => x.id !== m.id))
     try {
-      const { error } = await supabase.from('messaggi_coach').delete().eq('id', m.id)
+      const { data, error } = await supabase.from('messaggi_coach').delete().eq('id', m.id).select('id')
       if (error) throw error
+      if (!data?.length) throw new Error('nessuna riga eliminata')
     } catch (e) {
       console.warn('Messaggio non eliminato:', e)
       metti(m)
@@ -178,8 +182,8 @@ export default function Messaggi() {
       {coach && (
         <>
           <FoglioMessaggio aperto={!!foglio} onChiudi={chiudiFoglio} numeroAtleti={numeroAtleti}
-            demo={!puoInviareBroadcast(user?.email ?? null)} iniziale={foglio?.iniziale ?? null} onInviato={metti} />
-          {menu && <MenuMessaggio messaggio={menu} onChiudi={dopoMenu} />}
+            demo={demo} iniziale={foglio?.iniziale ?? null} onInviato={metti} />
+          {menu && <MenuMessaggio messaggio={menu} onChiudi={dopoMenu} demo={demo} />}
           {createPortal(<CustomConfirm info={conferma} onClose={() => setConferma(null)} />, document.body)}
         </>
       )}
