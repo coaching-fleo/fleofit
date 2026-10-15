@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
 import { ADMIN_EMAILS } from "../_shared/admin.ts"
-import { TITOLO_BROADCAST, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast } from "./broadcast.ts"
+import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile } from "./broadcast.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -33,7 +33,7 @@ function leggiClaim(token: string): Record<string, any> | null {
   }
 }
 
-async function identificaChiamante(req: Request): Promise<{ admin: boolean; email: string | null; ruolo: string | null; servizio: boolean }> {
+async function identificaChiamante(req: Request): Promise<{ admin: boolean; email: string | null; ruolo: string | null; servizio: boolean; id?: string | null }> {
   const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
   if (!token) return { admin: false, email: null, ruolo: null, servizio: false };
   if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) return { admin: true, email: null, ruolo: 'service_role', servizio: true };
@@ -42,7 +42,10 @@ async function identificaChiamante(req: Request): Promise<{ admin: boolean; emai
   const ruolo = claim?.role ?? null;
   if (ruolo === 'service_role') return { admin: true, email: null, ruolo, servizio: true };
   const email = typeof claim?.email === 'string' ? claim.email.trim().toLowerCase() : null;
-  return { admin: !!email && ADMIN_EMAILS.includes(email), email, ruolo, servizio: false };
+  // `sub` è l'id dell'utente: serve a «Prova su di me» per sapere a chi mandarla.
+  // La firma del token l'ha già verificata la piattaforma (verify_jwt).
+  const id = typeof claim?.sub === 'string' ? claim.sub : null;
+  return { admin: !!email && ADMIN_EMAILS.includes(email), email, ruolo, servizio: false, id };
 }
 
 // Gli id degli utenti admin, ricavati scorrendo la lista di Supabase Auth.
@@ -188,14 +191,15 @@ serve(async (req) => {
     const APPLICA_CONTROLLO_CRON = true;
     const APPLICA_CONTROLLO_ADMIN = true;
     const chiamante = await identificaChiamante(req);
-    const soloAdmin = ['immediate', 'voice_note', 'broadcast'];
+    const soloAdmin = ['immediate', 'voice_note', 'broadcast', 'broadcast_prova'];
     const modiCron = ['morning', 'evening'];
 
     console.log(`send-reminders: mode='${mode}' ruolo=${chiamante.ruolo ?? 'nessuno'} email=${chiamante.email ?? 'nessuna'} admin=${chiamante.admin}`);
 
     // 'broadcast' è più stretto: l'account demo è admin ma non deve notificare tutti.
-    if (mode === 'broadcast' && !puoInviareBroadcast(chiamante.email)) {
-      console.warn(`send-reminders: 'broadcast' NON autorizzata per ${chiamante.email ?? 'anonimo'}`);
+    // 'broadcast_prova' segue la stessa regola: il demo non manda niente, nemmeno a sé.
+    if ((mode === 'broadcast' || mode === 'broadcast_prova') && !puoInviareBroadcast(chiamante.email)) {
+      console.warn(`send-reminders: '${mode}' NON autorizzata per ${chiamante.email ?? 'anonimo'}`);
       return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -357,6 +361,33 @@ serve(async (req) => {
       }
       await Promise.all(notifications);
       return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ==========================================
+    // MODALITÀ BROADCAST_PROVA («Prova su di me»)
+    // ==========================================
+    // La push del «Messaggio a tutti» mandata SOLO ai dispositivi del coach che la
+    // chiede. Il messaggio non viene salvato in `messaggi_coach`: nessun atleta lo
+    // vede, né in bacheca né in Home. Una riga in `notifications` per il coach, così
+    // si prova anche il centro notifiche e il badge che torna a zero aprendo la bacheca.
+    if (mode === 'broadcast_prova') {
+      const testo = testoAccettabile(body.testo);
+      if (!testo || !chiamante.id) {
+        return new Response(JSON.stringify({ error: 'Testo o utente mancante' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const { data: notif, error: dbErr } = await supabase.from('notifications')
+        .insert({ user_id: chiamante.id, title: TITOLO_PROVA, message: testo, route: ROUTE_BACHECA })
+        .select().maybeSingle();
+      if (dbErr) throw dbErr;
+      const { data: subscriptions, error: subError } = await supabase
+        .from('push_subscriptions').select('*').eq('user_id', chiamante.id);
+      if (subError) throw subError;
+      await Promise.all((subscriptions || []).map((sub: any) =>
+        sendPush(sub, TITOLO_PROVA, anteprima(testo), ROUTE_BACHECA, notif?.id)));
+      // sent = dispositivi del coach a cui è partita la push (0 = nessuno iscritto alle notifiche).
+      return new Response(JSON.stringify({ success: true, sent: (subscriptions || []).length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // ==========================================

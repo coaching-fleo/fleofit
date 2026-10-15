@@ -72,6 +72,9 @@ function Foglio({ titolo, chiudi, maniglia, stileFoglio, stileVelo, classeFoglio
 
 const CTA = 'w-full min-h-[52px] rounded-2xl bg-brand text-black text-[16px] font-black hover:brightness-110 ' +
   'active:scale-[.99] transition disabled:opacity-40 disabled:pointer-events-none'
+// «Prova su di me»: secondario, sotto Invia (§6: bottoni secondari su #2a2a2a).
+const SECONDARIO = 'w-full min-h-[48px] rounded-2xl bg-[#2a2a2a] border border-[#333] text-white text-[15px] font-bold ' +
+  'transition hover:border-[#444] disabled:opacity-40 disabled:pointer-events-none'
 
 /**
  * @param numeroAtleti  null finché non è letto: allora la riga non compare.
@@ -95,6 +98,7 @@ function Contenuto({ onChiudi, numeroAtleti = null, demo = false, iniziale = nul
   const [inVolo, setInVolo] = useState(false)
   const [errore, setErrore] = useState(null)
   const [daRiprovare, setDaRiprovare] = useState(null) // id del messaggio già in bacheca
+  const [esitoProva, setEsitoProva] = useState(null) // { testo, errore } di «Prova su di me»
   const inVoloRef = useRef(false)
 
   const lunghezza = testo.trim().length
@@ -102,7 +106,7 @@ function Contenuto({ onChiudi, numeroAtleti = null, demo = false, iniziale = nul
   const valido = testoValido(testo)
 
   const salvaBozza = (b) => { if (!modifica) scriviJson(CHIAVE_BOZZA, b) }
-  const cambiaTesto = (t) => { setTesto(t); setErrore(null); salvaBozza({ testo: t, fissato }) }
+  const cambiaTesto = (t) => { setTesto(t); setErrore(null); setEsitoProva(null); salvaBozza({ testo: t, fissato }) }
   const cambiaFissato = () => { vibraScelta(); setFissato(!fissato); salvaBozza({ testo, fissato: !fissato }) }
 
   /** Una sola chiamata alla volta: il ref chiude anche i tocchi nello stesso fotogramma. */
@@ -141,6 +145,31 @@ function Contenuto({ onChiudi, numeroAtleti = null, demo = false, iniziale = nul
   })
 
   const riprova = () => inEsclusiva(() => mandaPush(daRiprovare))
+
+  // «Prova su di me»: la push solo ai dispositivi di chi la manda. Niente insert
+  // (nessun atleta vede niente), niente conferma, il foglio resta aperto con la
+  // bozza: dopo la prova si manda davvero.
+  const provaSuDiMe = () => inEsclusiva(async () => {
+    if (!valido || demo) return
+    setEsitoProva(null)
+    let esito
+    try {
+      const { data, error } = await supabase.functions.invoke('send-reminders', { body: { mode: 'broadcast_prova', testo: testo.trim() } })
+      esito = error || data?.success === false ? null : data
+    } catch {
+      esito = null
+    }
+    if (!esito) {
+      vibraErrore()
+      setEsitoProva({ errore: true, testo: 'La prova non è partita. Controlla la connessione e riprova.' })
+    } else if (!esito.sent) {
+      vibraErrore()
+      setEsitoProva({ errore: true, testo: 'Nessun tuo dispositivo ha le notifiche attive' })
+    } else {
+      vibraSuccesso()
+      setEsitoProva({ errore: false, testo: `Prova mandata ai tuoi dispositivi (${esito.sent})` })
+    }
+  })
 
   const salvaModifica = () => inEsclusiva(async () => {
     const nuovo = testo.trim()
@@ -216,9 +245,19 @@ function Contenuto({ onChiudi, numeroAtleti = null, demo = false, iniziale = nul
               {inVolo ? 'Salvo…' : 'Salva'}
             </button>
           ) : (
-            <button type="button" onClick={chiediConferma} disabled={!valido || demo || inVolo} className={CTA}>
-              {inVolo ? 'Invio…' : 'Invia'}
-            </button>
+            <>
+              <button type="button" onClick={chiediConferma} disabled={!valido || demo || inVolo} className={CTA}>
+                {inVolo ? 'Invio…' : 'Invia'}
+              </button>
+              <button type="button" onClick={provaSuDiMe} disabled={!valido || demo || inVolo} className={SECONDARIO}>
+                Prova su di me
+              </button>
+              {esitoProva && (
+                <p role="status" className={`text-xs text-center ${esitoProva.errore ? 'text-red-500' : 'text-gray-300'}`}>
+                  {esitoProva.testo}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

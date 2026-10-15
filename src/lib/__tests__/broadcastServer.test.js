@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   TITOLO_BROADCAST, EMAIL_DEMO, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast,
+  TITOLO_PROVA, ROUTE_BACHECA, testoAccettabile,
 } from '../../../supabase/functions/send-reminders/broadcast.ts'
 import { COACHING_ID } from '../constants'
 
@@ -73,5 +74,23 @@ describe('destinatariBroadcast', () => {
   it('senza escludi si comporta come prima', () => {
     expect(destinatariBroadcast([{ id: 'a1', deleted_at: null }], { mittenteId: 'm1', coachingId: COACHING_ID, giaNotificati: [] }))
       .toEqual(['a1'])
+  })
+})
+
+// «Prova su di me»: la push parte solo verso i dispositivi del coach, e il
+// messaggio non entra in bacheca. Il titolo dice che è una prova.
+describe('prova su di me', () => {
+  it('il titolo dice che è una prova, e porta alla bacheca senza un messaggio', () => {
+    expect(TITOLO_PROVA).toBe('Messaggio dal coach (prova)')
+    expect(TITOLO_PROVA).not.toBe(TITOLO_BROADCAST)
+    expect(ROUTE_BACHECA).toBe('/messaggi')
+  })
+  it('testoAccettabile torna il testo pulito, o null se vuoto o troppo lungo', () => {
+    expect(testoAccettabile('  Ciao a tutti \n')).toBe('Ciao a tutti')
+    expect(testoAccettabile('   \n\t ')).toBeNull()
+    expect(testoAccettabile('x'.repeat(2000))).toBe('x'.repeat(2000))
+    expect(testoAccettabile('x'.repeat(2001))).toBeNull()
+    expect(testoAccettabile(undefined)).toBeNull()
+    expect(testoAccettabile(42)).toBeNull()
   })
 })

@@ -353,3 +353,54 @@ describe('Messaggi — caricamento fallito', () => {
     expect(screen.queryByText('Qui troverai i messaggi del coach')).toBeNull()
   })
 })
+
+// «Prova su di me»: la push solo ai dispositivi del coach, senza salvare il
+// messaggio (nessun atleta vede niente) e senza chiudere il foglio.
+describe('Messaggi — prova su di me', () => {
+  const prova = () => screen.getByRole('button', { name: 'Prova su di me' })
+
+  it('manda il testo ripulito a send-reminders in modo prova, senza insert e senza conferma', async () => {
+    await apriFoglio()
+    fireEvent.change(campo(), { target: { value: 'Sabato ritrovo alle 8\n\n' } })
+    fireEvent.click(prova())
+    await waitFor(() => expect(finto.supabase.functions.invoke).toHaveBeenCalledTimes(1))
+    expect(finto.supabase.functions.invoke).toHaveBeenCalledWith('send-reminders', { body: { mode: 'broadcast_prova', testo: 'Sabato ritrovo alle 8' } })
+    expect(finto.chiamateA('messaggi_coach', 'insert')).toHaveLength(0)
+    expect(screen.queryByRole('dialog', { name: /Mandare a/ })).toBeNull()
+    expect(await screen.findByText('Prova mandata ai tuoi dispositivi (2)')).toBeTruthy()
+    // Il foglio resta aperto con il testo, e la bozza c'è ancora: dopo la prova si manda davvero.
+    expect(campo().value).toBe('Sabato ritrovo alle 8\n\n')
+    expect(JSON.parse(localStorage.getItem(CHIAVE_BOZZA))?.testo).toBe('Sabato ritrovo alle 8\n\n')
+  })
+
+  it('nessun dispositivo iscritto: lo dice', async () => {
+    finto.supabase.functions.invoke.mockResolvedValueOnce({ data: { success: true, sent: 0 }, error: null })
+    await apriFoglio()
+    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+    fireEvent.click(prova())
+    expect(await screen.findByText('Nessun tuo dispositivo ha le notifiche attive')).toBeTruthy()
+  })
+
+  it('prova fallita: lo dice', async () => {
+    finto.supabase.functions.invoke.mockResolvedValueOnce({ data: null, error: { message: 'rete' } })
+    await apriFoglio()
+    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+    fireEvent.click(prova())
+    expect(await screen.findByText('La prova non è partita. Controlla la connessione e riprova.')).toBeTruthy()
+  })
+
+  it('testo vuoto o account di prova: spento, e non parte niente', async () => {
+    await apriFoglio()
+    expect(prova().disabled).toBe(true)
+    fireEvent.click(prova())
+    expect(finto.supabase.functions.invoke).not.toHaveBeenCalled()
+  })
+
+  it('account di prova: spento anche con il testo', async () => {
+    await apriFoglio({ ...COACH, email: 'demo@fleofit.it' })
+    fireEvent.change(campo(), { target: { value: 'Ciao a tutti' } })
+    expect(prova().disabled).toBe(true)
+    fireEvent.click(prova())
+    expect(finto.supabase.functions.invoke).not.toHaveBeenCalled()
+  })
+})

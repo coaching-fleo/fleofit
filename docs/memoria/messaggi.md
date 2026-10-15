@@ -80,6 +80,17 @@ già consegnati. È accettato; non si cancellano le notifiche.
   `record_id`) dopo che il foglio è stato chiuso e «Riprova» non c'è più. Sicuro grazie al dedup:
   chi l'ha già ricevuta viene saltato, e l'esito dice a quanti è partita (o che l'avevano tutti).
   Spenta nel demo e mentre una chiamata è in volo.
+- **«Prova su di me»** (15/10/2026, chiesta dal committente per provare senza disturbare gli
+  atleti): bottone secondario sotto Invia. Chiama `send-reminders` con `mode: 'broadcast_prova'`
+  e il `testo`, **senza** insert in `messaggi_coach`: nessun atleta vede niente, né in bacheca né
+  in Home. Il server prende l'id del chiamante dal token (`sub`), scrive UNA riga in
+  `notifications` per lui (titolo «Messaggio dal coach (prova)», route `/messaggi`, senza `?m=`
+  perché il messaggio non esiste) e manda la push ai SUOI dispositivi. Prova push, tocco, centro
+  notifiche e badge; non prova l'evidenza del messaggio nuovo. Il foglio resta aperto con la
+  bozza. Esito: «Prova mandata ai tuoi dispositivi (N)», oppure «Nessun tuo dispositivo ha le
+  notifiche attive» se `sent` è 0. Spento nel demo (stessa regola di `broadcast`) e a testo
+  vuoto. Il server rifà il controllo del testo con `testoAccettabile` (la prova non passa dal
+  check della tabella).
 
 ## La pagina
 - **Freccia indietro** in testata (`useIndietro('/')`, `aria-label="Torna indietro"`, come l'Archivio):

@@ -8,11 +8,12 @@
 // ⚠️ Anteprima, route e permesso d'invio vivono lato server in `broadcast.ts`:
 // qui si riesportano, non si riscrivono.
 
-export { anteprima, routeMessaggio, puoInviareBroadcast } from '../../supabase/functions/send-reminders/broadcast.ts'
+import { testoAccettabile } from '../../supabase/functions/send-reminders/broadcast.ts'
+
+export { anteprima, routeMessaggio, puoInviareBroadcast, MAX_CARATTERI } from '../../supabase/functions/send-reminders/broadcast.ts'
 
 export const CHIAVE_BOZZA = 'fleofit_messaggio_bozza'
 export const CHIAVE_VISTO = 'fleofit_messaggi_visto_fino'
-export const MAX_CARATTERI = 2000
 
 const istante = (x) => new Date(x).getTime()
 
@@ -42,6 +43,5 @@ export function daMostrareInHome(messaggi, vistoFino) {
 }
 
 export function testoValido(testo) {
-  const n = String(testo ?? '').trim().length
-  return n >= 1 && n <= MAX_CARATTERI
+  return testoAccettabile(testo) !== null
 }

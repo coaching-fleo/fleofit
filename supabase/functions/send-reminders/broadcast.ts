@@ -3,6 +3,13 @@
 import { isAdminEmail } from "../_shared/admin.ts"
 
 export const TITOLO_BROADCAST = 'Messaggio dal coach'
+// «Prova su di me»: la push va solo ai dispositivi del coach che la chiede, e il
+// messaggio NON entra in bacheca (nessun atleta vede niente). Per questo apre la
+// bacheca senza puntare a un messaggio.
+export const TITOLO_PROVA = 'Messaggio dal coach (prova)'
+export const ROUTE_BACHECA = '/messaggi'
+// Lo stesso limite del check della tabella (btrim, 1–2000).
+export const MAX_CARATTERI = 2000
 // L'account demo è admin (serve al revisore App Store) ma non deve far partire
 // notifiche vere a tutti gli atleti.
 export const EMAIL_DEMO = 'demo@fleofit.it'
@@ -39,4 +46,12 @@ export function destinatariBroadcast(
   return atleti
     .filter((a) => !a.deleted_at && a.id !== opz.coachingId && a.id !== opz.mittenteId && !fuori.has(a.id))
     .map((a) => a.id)
+}
+
+// Il testo pulito se si può mandare (da 1 a MAX_CARATTERI dopo il trim), altrimenti null.
+// Il server non si fida del client: la prova non passa dalla tabella e dal suo check.
+export function testoAccettabile(testo: unknown): string | null {
+  if (typeof testo !== 'string') return null
+  const t = testo.trim()
+  return t.length >= 1 && t.length <= MAX_CARATTERI ? t : null
 }

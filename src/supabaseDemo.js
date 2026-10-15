@@ -337,6 +337,8 @@ export function clientDemo() {
           const atleti = (db().athletes ?? []).filter(a => !a.deleted_at).length
           return { data: { success: true, sent: atleti, saltati: 0 }, error: null }
         }
+        // «Prova su di me»: un solo dispositivo finto, il coach.
+        if (nome === 'send-reminders' && opzioni?.body?.mode === 'broadcast_prova') return { data: { success: true, sent: 1 }, error: null }
         if (nome === 'estrai-note') return { data: { estratte: 0, restano: 0, sospesa: false }, error: null }
         console.info('[demo] Edge Function non chiamata:', nome, opzioni?.body)
         return { data: { ok: true }, error: null }
