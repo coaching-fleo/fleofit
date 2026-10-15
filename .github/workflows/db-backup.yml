@@ -44,9 +44,8 @@ jobs:
       # come_stai (13/10/2026): «Come stai oggi». Finché la sua migrazione non è
       # applicata la REST API risponde 404 e il job la salta con un avviso.
       #
-      # messaggi_coach (15/10/2026): «Messaggio a tutti». Stessa regola: finché la
-      # sua migrazione non è applicata (sì del committente in attesa) il job la
-      # salta con un avviso.
+      # messaggi_coach (15/10/2026): «Messaggio a tutti». Applicata il
+      # 15/10/2026; se un giorno mancasse, il job la salterebbe con un avviso.
       #
       # ⚠️ Le pagine si ordinano per `id`. Una tabella SENZA colonna `id` va scritta
       # `tabella:colonna`, con la sua chiave: ordinare per una colonna che non

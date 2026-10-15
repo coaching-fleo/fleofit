@@ -269,8 +269,8 @@ aggiungila anche lì.**
   colonna che non esiste fa rispondere HTTP 400, e il job fallisce **intero**, non solo su quella
   tabella. Per questo `TABLES` accetta `tabella:colonna`. Chi aggiunge una tabella senza `id`
   usa quella forma.
-- ⏳ **15/10/2026: aggiunta `messaggi_coach`** a `TABLES` («Messaggio a tutti»). Tabella **non ancora
-  applicata** (manca il sì del committente): finché non esiste il job la salta con un avviso.
+- ⏳ **15/10/2026: aggiunta `messaggi_coach`** a `TABLES` («Messaggio a tutti»). Tabella **applicata il
+  15/10/2026** (sì esplicito del committente in sessione); la salva dal primo `app:main`.
   Policy: lettura per tutti gli autenticati; scrittura `ALL` con la lista admin **senza
   `demo@fleofit.it`** (USING e WITH CHECK allineati) — l'unica tabella dove la lista di scrittura
   differisce. Dettagli in `messaggi.md`.

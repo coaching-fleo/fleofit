@@ -4,13 +4,13 @@
 > Chat col singolo atleta: **ancora aperta**, non è questa funzione.
 
 ## Stato
-- ⏳ **Tabella `messaggi_coach` NON ancora applicata**: manca il sì esplicito del committente
-  (CLAUDE.md §0, regola 0-bis: ogni migrazione ne richiede uno). File pronto:
-  `supabase/schema/messaggi_coach_2026-10-15.sql`. Finché non è applicata, la bacheca non può
-  leggere né scrivere sul database vero.
+- ✅ **Tabella `messaggi_coach` applicata il 15/10/2026**, dopo il sì esplicito del committente in
+  sessione (CLAUDE.md §0, regola 0-bis), con `supabase db query --linked -f
+  supabase/schema/messaggi_coach_2026-10-15.sql`. Verificata: due policy (SELECT e ALL) e i
+  default delle colonne.
 - ⏳ **`send-reminders` col modo `broadcast` NON ancora pubblicata** (`supabase/functions/send-reminders/broadcast.ts`
   e il ramo in `index.ts`). Un deploy colpisce anche la web app su `main`: va fatto dopo la migrazione.
-- Il backup notturno ha già `messaggi_coach` in `TABLES`; finché la tabella non esiste il job la salta con un avviso.
+- Il backup notturno ha `messaggi_coach` in `TABLES`: la salva davvero dal primo `app:main` (il workflow attivo è quello di `main`).
 - 🔴 **Cancello di rilascio.** Finché la tabella non è applicata **e** `send-reminders` col modo
   `broadcast` non è pubblicata: **niente `git push origin app:main`** e **nessun archive della 1.2.2**.
   Le entrate del coach (riga in Home telefono, bottone sul desktop, voce «Messaggi» della barra

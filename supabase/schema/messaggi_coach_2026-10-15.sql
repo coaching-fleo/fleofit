@@ -1,7 +1,7 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- messaggi_coach — «Messaggio a tutti», la bacheca del coach per gli atleti
--- Scritta il 15/10/2026 · ⏳ il sì ESPLICITO del committente è ancora IN ATTESA
--- (non è stato dato): questo file NON va applicato finché non arriva
+-- Scritta il 15/10/2026 · sì ESPLICITO del committente in sessione, lo stesso
+-- giorno («vai»), e applicata il 15/10/2026 con `supabase db query --linked -f`
 -- (CLAUDE.md §0, regola 0-bis: ogni migrazione richiede il suo sì).
 --
 -- Migrazione ADDITIVA: una tabella nuova che `main` (la web app di oggi) non

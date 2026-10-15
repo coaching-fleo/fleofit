@@ -63,6 +63,8 @@
    migrazione successiva richiede un nuovo sì esplicito**.
    ✅ **Seconda eccezione** (13/10/2026, sì esplicito in sessione): la tabella `come_stai`
    («Come stai oggi»), additiva, ✅ **applicata il 14/10/2026** (`supabase/schema/come_stai_2026-10-13.sql`).
+   ✅ **Terza eccezione** (15/10/2026, sì esplicito in sessione): la tabella `messaggi_coach`
+   («Messaggio a tutti»), additiva, ✅ **applicata il 15/10/2026** (`supabase/schema/messaggi_coach_2026-10-15.sql`).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -322,7 +324,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `workouts` | `title` (mai vuoto, con il codice in coda), `date`, `sections` jsonb (§5), `coach_notes` |
 | `athlete_workouts` | qui sta lo **stato** (`status`, `completed_date`). `notes` porta `[RPE: n/10]` e `[GRADIMENTO: …]`: solo con `src/lib/rpe.js` e `gradimento.js`. `voice_note_url` si cancella con `#deleted=`. **Nessun `created_at`** |
 | `come_stai` | «Come stai oggi»: una riga per atleta per GIORNO, quattro risposte 1–5 tutte con **5 = la cosa buona** (sonno, energia, dolori, stress). Policy come `athlete_workouts` (l'atleta le sue, gli admin tutte). ✅ **applicata il 14/10/2026** (`supabase/schema/come_stai_2026-10-13.sql`), nel backup notturno |
-| `messaggi_coach` | «Messaggio a tutti»: la bacheca «Dal coach». Lettura per tutti gli autenticati, scrittura **solo admin e senza `demo@fleofit.it`** (unica tabella con quella differenza). ⏳ **NON applicata**: manca il sì esplicito (`supabase/schema/messaggi_coach_2026-10-15.sql`). `docs/memoria/messaggi.md` |
+| `messaggi_coach` | «Messaggio a tutti»: la bacheca «Dal coach». Lettura per tutti gli autenticati, scrittura **solo admin e senza `demo@fleofit.it`** (unica tabella con quella differenza). ✅ **applicata il 15/10/2026** (`supabase/schema/messaggi_coach_2026-10-15.sql`). `docs/memoria/messaggi.md` |
 | `note_estratte` | ✅ **applicata il 09/10/2026**: i dati ricavati dalle note degli atleti (standard `VERSIONE` in `estrai-note/regole.ts`). Policy **solo admin** (`USING` e `WITH CHECK`), l'atleta non la legge. La scrive solo `estrai-note`. `main` non la conosce |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
