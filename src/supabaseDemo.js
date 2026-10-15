@@ -268,6 +268,9 @@ const UTENTE = {
   id: import.meta.env.VITE_DEMO_ATLETA || '0118e43f-8791-4fd6-8032-bee028334c99',
   email: 'coaching@federicoleo.it',
   user_metadata: { first_name: 'Federico' },
+  // Iscritto da 20 giorni: serve alla regola «dalla tua iscrizione» della
+  // bacheca «Dal coach» (i semi hanno un avviso di 30 giorni fa).
+  created_at: new Date(Date.now() - 20 * 86400000).toISOString(),
 }
 const SESSIONE = { user: UTENTE, access_token: 'demo', refresh_token: 'demo' }
 
@@ -325,6 +328,11 @@ export function clientDemo() {
         if (nome === 'risultato-hyrox' && opzioni?.body?.azione === 'gare') return { data: { gare: garePassateFinte() }, error: null }
         if (nome === 'risultato-hyrox' && opzioni?.body?.azione === 'dettaglio') return { data: { stato: 'trovato', dettaglio: dettaglioFinto(opzioni.body) }, error: null }
         if (nome === 'risultato-hyrox') return { data: risultatoFinto(opzioni?.body), error: null }
+        // «Messaggio a tutti»: nessuna push vera, ma l'esito è quello del server.
+        if (nome === 'send-reminders' && opzioni?.body?.mode === 'broadcast') {
+          const atleti = (db().athletes ?? []).filter(a => !a.deleted_at).length
+          return { data: { success: true, sent: atleti, saltati: 0 }, error: null }
+        }
         if (nome === 'estrai-note') return { data: { estratte: 0, restano: 0, sospesa: false }, error: null }
         console.info('[demo] Edge Function non chiamata:', nome, opzioni?.body)
         return { data: { ok: true }, error: null }

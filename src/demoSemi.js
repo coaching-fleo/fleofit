@@ -24,7 +24,7 @@ import {
   VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
 } from '../supabase/functions/estrai-note/regole.ts'
 
-export const VERSIONE_SEME = 10
+export const VERSIONE_SEME = 11
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -418,6 +418,18 @@ const come_stai = () => {
   return righe
 }
 
+// «Dal coach» (15/10/2026): quattro messaggi con date relative a oggi. L'utente
+// demo risulta iscritto 20 giorni fa (`created_at` in supabaseDemo.js): l'avviso
+// di 30 giorni fa è PRECEDENTE all'iscrizione e non fissato, quindi la bacheca
+// dell'atleta lo nasconde (il fissato resta visibile a tutti).
+const fa = (giorni, ore = 0) => new Date(Date.now() - (giorni * 24 + ore) * 3600000).toISOString()
+const messaggi_coach = () => [
+  { id: 'mc-1', testo: 'Benvenuti nella bacheca «Dal coach»: qui trovate gli avvisi per tutti. Le gare del mese sono in calendario, controllate sempre l\'orario di ritrovo.', fissato: true, autore: COACH, creato_at: fa(28), modificato_at: null },
+  { id: 'mc-2', testo: 'Avviso di una volta: la palestra resta chiusa per lavori fino a fine mese. Gli allenamenti si fanno all\'aperto.', fissato: false, autore: COACH, creato_at: fa(30), modificato_at: null },
+  { id: 'mc-3', testo: 'Questa settimana si cambia: lunedì ripetute corte, giovedì lungo lento. Dormite, mangiate, e scrivetemi se qualcosa non torna.', fissato: false, autore: COACH, creato_at: fa(6), modificato_at: null },
+  { id: 'mc-4', testo: 'Ottimo lavoro a tutti nella simulazione di sabato. Domani riposo vero: niente corsetta «per sicurezza».', fissato: false, autore: COACH, creato_at: fa(0, 5), modificato_at: fa(0, 2) },
+]
+
 /** Il database iniziale. Chiamata a ogni azzeramento, così le date si rifanno. */
 export function semi() {
   // Una volta sola: gli id delle assegnazioni avanzano a ogni chiamata, e gli
@@ -434,6 +446,7 @@ export function semi() {
     invitation_codes: invitation_codes.map(c => ({ ...c })),
     personal_records: personal_records.map(p => ({ ...p })),
     come_stai: come_stai(),
+    messaggi_coach: messaggi_coach(),
     push_subscriptions: [],
     tv_sessions: [],
   }

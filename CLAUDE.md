@@ -322,6 +322,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `workouts` | `title` (mai vuoto, con il codice in coda), `date`, `sections` jsonb (§5), `coach_notes` |
 | `athlete_workouts` | qui sta lo **stato** (`status`, `completed_date`). `notes` porta `[RPE: n/10]` e `[GRADIMENTO: …]`: solo con `src/lib/rpe.js` e `gradimento.js`. `voice_note_url` si cancella con `#deleted=`. **Nessun `created_at`** |
 | `come_stai` | «Come stai oggi»: una riga per atleta per GIORNO, quattro risposte 1–5 tutte con **5 = la cosa buona** (sonno, energia, dolori, stress). Policy come `athlete_workouts` (l'atleta le sue, gli admin tutte). ✅ **applicata il 14/10/2026** (`supabase/schema/come_stai_2026-10-13.sql`), nel backup notturno |
+| `messaggi_coach` | «Messaggio a tutti»: la bacheca «Dal coach». Lettura per tutti gli autenticati, scrittura **solo admin e senza `demo@fleofit.it`** (unica tabella con quella differenza). ⏳ **NON applicata**: manca il sì esplicito (`supabase/schema/messaggi_coach_2026-10-15.sql`). `docs/memoria/messaggi.md` |
 | `note_estratte` | ✅ **applicata il 09/10/2026**: i dati ricavati dalle note degli atleti (standard `VERSIONE` in `estrai-note/regole.ts`). Policy **solo admin** (`USING` e `WITH CHECK`), l'atleta non la legge. La scrive solo `estrai-note`. `main` non la conosce |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
@@ -330,7 +331,7 @@ staging, **schema congelato** (§0, 0-bis).
   sia `WITH CHECK`. Una lista disallineata è la causa del rifiuto App Store 2.3.1(a).
 - 🔴 **Cancellare un atleta distrugge tutta la sua storia** (chiavi in CASCADE), col cron
   delle 00:00 UTC; il backup gira prima, alle 22:30.
-- **Edge Function**: `send-reminders` (5 modalità), `ai-workout` (Gemini, riserva Groq), `ricerca-coach` (Groq, riserva Gemini: la ricerca del coach) ed `estrai-note` (**solo Groq**, con Zero Data Retention: le note degli atleti diventano dati, `docs/memoria/scheda-atleta.md`). ⚠️ Gemini gratuito = **20 richieste al giorno**, condivise da tutte le funzioni con la stessa chiave. `main` chiama solo `send-reminders`. Un deploy
+- **Edge Function**: `send-reminders` (5 modalità, più `broadcast` per «Messaggio a tutti», ⏳ non ancora pubblicato), `ai-workout` (Gemini, riserva Groq), `ricerca-coach` (Groq, riserva Gemini: la ricerca del coach) ed `estrai-note` (**solo Groq**, con Zero Data Retention: le note degli atleti diventano dati, `docs/memoria/scheda-atleta.md`). ⚠️ Gemini gratuito = **20 richieste al giorno**, condivise da tutte le funzioni con la stessa chiave. `main` chiama solo `send-reminders`. Un deploy
   colpisce anche la web app. Più `segnalazione` (la mail «Segnala un problema» via Resend):
   la usa solo l'app, quindi pubblicarla non tocca la web app. E `gare-hyrox` (il calendario delle
   gare HYROX, letto da hyrox.com) e `risultato-hyrox` (il tempo dopo la gara, da
@@ -554,6 +555,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_cache_gare_hyrox`, `fleofit_gare_senza_risultato`, `fleofit_cache_gare_passate`,
   `fleofit_cache_risultato_<stagione>_<idp>`,
   `fleofit_come_stai_saltato` (il giorno in cui l'atleta ha scelto «Salta»: memoria del dispositivo),
+  `fleofit_messaggio_bozza`, `fleofit_messaggi_visto_fino` (bacheca «Dal coach»),
   `adminRoleOverride`.
   ⚠️ `fleofit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
   dice «l'hai esportato da qui», e su un telefono nuovo semplicemente non c'è (§9-duoetvicies).
@@ -653,6 +655,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |
 | `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |
 | `Calendar.jsx`, `CalendarioUI`, `rigaCalendario.js`, `NuovoEvento`, `gareHyrox.js`, `RisultatoGara`, `InvitoRisultato`, `GarePassate`, `risultatoGara.js`, Edge Function `gare-hyrox` e `risultato-hyrox` | `calendario.md` |
+| `Messaggi.jsx`, `MessaggiUI`, `FoglioMessaggio`, `messaggiCoach.js`, Edge Function `send-reminders/broadcast.ts` | `messaggi.md` |
 | `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js`, `Analisi.jsx`, `AnalisiUI.jsx`, `analisi.js`, `components/grafici/`, `storicoEsercizio.js`, `StoricoEsercizio.jsx`, `esportaCsv.js`, `ReportDesktop.jsx` | `report.md` |
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute` | `accesso.md` |

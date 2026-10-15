@@ -269,6 +269,14 @@ aggiungila anche lì.**
   colonna che non esiste fa rispondere HTTP 400, e il job fallisce **intero**, non solo su quella
   tabella. Per questo `TABLES` accetta `tabella:colonna`. Chi aggiunge una tabella senza `id`
   usa quella forma.
+- ⏳ **15/10/2026: aggiunta `messaggi_coach`** a `TABLES` («Messaggio a tutti»). Tabella **non ancora
+  applicata** (manca il sì del committente): finché non esiste il job la salta con un avviso.
+  Policy: lettura per tutti gli autenticati; scrittura `ALL` con la lista admin **senza
+  `demo@fleofit.it`** (USING e WITH CHECK allineati) — l'unica tabella dove la lista di scrittura
+  differisce. Dettagli in `messaggi.md`.
+- ⏳ **`send-reminders`, modo `broadcast`** (15/10/2026, non ancora pubblicato): il coach invia un
+  messaggio a tutti gli atleti (notifiche in `notifications` col testo intero + push), 403 al demo,
+  dedup per `notifications.route`.
 - ✅ **L'esportazione dalle Impostazioni** (`src/lib/backup.js`, 13/10/2026) salva
   `athletes workouts athlete_workouts come_stai` e legge **a pagine**: prima usava
   `.limit(10000)`, ma il server restituisce al massimo 1000 righe e il file usciva troncato senza

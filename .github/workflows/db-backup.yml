@@ -44,11 +44,15 @@ jobs:
       # come_stai (13/10/2026): «Come stai oggi». Finché la sua migrazione non è
       # applicata la REST API risponde 404 e il job la salta con un avviso.
       #
+      # messaggi_coach (15/10/2026): «Messaggio a tutti». Stessa regola: finché la
+      # sua migrazione non è applicata (sì del committente in attesa) il job la
+      # salta con un avviso.
+      #
       # ⚠️ Le pagine si ordinano per `id`. Una tabella SENZA colonna `id` va scritta
       # `tabella:colonna`, con la sua chiave: ordinare per una colonna che non
       # esiste fa rispondere HTTP 400 e fallire TUTTO il backup, non solo lei.
       # note_estratte (13/10/2026) ha come chiave athlete_workout_id.
-      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai note_estratte:athlete_workout_id'
+      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai messaggi_coach note_estratte:athlete_workout_id'
 
       # Tabelle che non devono MAI essere vuote o mancanti:
       # se lo sono, il backup viene considerato non valido e il job fallisce.

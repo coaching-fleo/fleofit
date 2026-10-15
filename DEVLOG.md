@@ -49,6 +49,11 @@ Le modifiche fatte dopo la versione **1.2.0**, in vendita sullo Store: build `1.
 
 ---
 
+## Messaggio a tutti (1.2.2)
+- Nuova bacheca **«Dal coach»**: il coach scrive un messaggio a tutti gli atleti (con notifica), può fissarlo, correggerlo ed eliminarlo. L'atleta lo trova in Home, anche al primo giorno, e in una pagina Messaggi; toccando la notifica si apre il messaggio evidenziato.
+- Chi si iscrive vede i messaggi fissati e quelli scritti da quando è iscritto.
+- ⏳ Serve prima il sì alla nuova tabella e la pubblicazione di `send-reminders` (BACKLOG).
+
 ## Testo per App Store Connect — «Novità di questa versione» (1.2.1)
 
 > Scritto il 14/10/2026: solo ciò che non era nella 1.2.0. Limite di Apple: 4000 caratteri.
