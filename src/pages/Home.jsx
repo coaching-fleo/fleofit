@@ -39,6 +39,8 @@ import { atletiFermi, allenamentiScaduti, copertura, feedbackNuovi, squadraDelGi
 import { leggiComeStaiFra } from '../lib/comeStai'
 import { leggiEstrattiDal } from '../lib/noteEstratte'
 import { COACHING_ID } from '../lib/constants'
+import { visibiliPer, daMostrareInHome, CHIAVE_VISTO } from '../lib/messaggiCoach'
+import { CardDalCoach } from '../components/MessaggiUI'
 import { daRiaprire } from '../lib/ricercaSospesa'
 // Pigro: la ricerca è solo del coach, e il chunk d'ingresso non deve portarsela
 // dietro per ogni atleta che apre l'app (CLAUDE.md §2, peso di `index`).
@@ -176,6 +178,26 @@ export default function Home() {
   // sul badge scriverebbe badge_count = 0 al montaggio, prima di sapere quante ce
   // ne sono davvero.
   const notificheCaricate = useRef(false)
+
+  // «Dal coach»: letto DOPO i workout, fuori dal percorso del primo fotogramma.
+  // Un errore lascia la Home com'era (nessuna card, nessun avviso).
+  const [messaggioDalCoach, setMessaggioDalCoach] = useState(null)
+  useEffect(() => {
+    if (role !== 'athlete' || !user?.id || loading) return undefined
+    let attivo = true
+    ;(async () => {
+      try {
+        const { data, error } = await supabase.from('messaggi_coach')
+          .select('id, testo, fissato, autore, creato_at, modificato_at')
+          .order('creato_at', { ascending: false })
+          .limit(50)
+        if (error || !Array.isArray(data) || !attivo) return
+        const visti = visibiliPer(data, { iscrittoIl: user.created_at, coach: false })
+        setMessaggioDalCoach(daMostrareInHome(visti, leggiJson(CHIAVE_VISTO, null)))
+      } catch { /* la card è un di più */ }
+    })()
+    return () => { attivo = false }
+  }, [role, user?.id, user?.created_at, loading])
 
   // L'UNICO punto in cui si scrive il badge. Prima erano cinque in questo file,
   // sette contando App.jsx e WorkoutDetail.jsx, tutti da tenere allineati a mano.
@@ -1171,6 +1193,7 @@ setNotifications(prev => {
             onApriAtleta={(a) => navigate(`/athletes/${a.id}`)}
             onApriScaduto={apriSeduta}
             onApriSeduta={apriSeduta}
+            onMessaggio={() => navigate('/messaggi?scrivi=1')}
           />
         </Suspense>
       )}
@@ -1288,7 +1311,8 @@ setNotifications(prev => {
               onApriScaduto={apriSeduta}
               onApriSeduta={apriSeduta}
               onReport={() => navigate('/report')}
-              onArchivio={() => navigate('/archive')} />
+              onArchivio={() => navigate('/archive')}
+              onMessaggio={() => navigate('/messaggi?scrivi=1')} />
           </Suspense>
         </div>
       )}
@@ -1412,6 +1436,10 @@ setNotifications(prev => {
               })()}
               <RigaFattoComunque onAggiungi={() => setAutonomousModalOpen(true)} />
             </>
+          )}
+
+          {messaggioDalCoach && (
+            <CardDalCoach messaggio={messaggioDalCoach} onApri={() => navigate('/messaggi')} />
           )}
 
           {/* Il bento. La settimana non è più nascosta dietro uno swipe non

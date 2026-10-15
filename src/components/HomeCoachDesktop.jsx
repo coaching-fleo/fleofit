@@ -13,7 +13,7 @@
 // sono quelli del telefono (CruscottoCoachUI.jsx). Si carica pigra: il telefono
 // non la scarica mai.
 
-import { Plus, Bell, Radio } from 'lucide-react'
+import { Plus, Bell, Radio, Megaphone } from 'lucide-react'
 import { cosaGuardare } from '../lib/cosaGuardare'
 import { useCruscottoCoach } from '../useCruscottoCoach'
 import { PolsoTeam, CardOggi, CardSegnali, CardSmaltire, CardPiano, CardGare } from './CruscottoCoachUI'
@@ -38,7 +38,7 @@ export default function HomeCoachDesktop({
   feedback, fermi, scaduti, squadra,
   live = [], caricamento, notificheDaLeggere = 0,
   onNotifiche, onNuovoWorkout, onCalendario, onGuardaLive,
-  onApriFeedback, onApriAtleta, onApriScaduto, onApriSeduta,
+  onApriFeedback, onApriAtleta, onApriScaduto, onApriSeduta, onMessaggio,
 }) {
   const { gare, polso, oggi, segnali, piano, notaPiano } = useCruscottoCoach({
     atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura, settimana: true,
@@ -81,6 +81,12 @@ export default function HomeCoachDesktop({
                          flex items-center justify-center transition hover:text-white">
               <Bell size={18} aria-hidden="true" />
               {notificheDaLeggere > 0 && <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-brand" />}
+            </button>
+            <button type="button" onClick={onMessaggio}
+              aria-label="Scrivi un messaggio a tutti gli atleti"
+              className="inline-flex items-center gap-2 h-11 px-[18px] rounded-xl bg-[#1e1e1e] border border-[#2a2a2a] text-gray-200 text-sm font-bold
+                         transition hover:text-white hover:border-brand/40">
+              <Megaphone size={18} aria-hidden="true" />Messaggio a tutti
             </button>
             <button type="button" onClick={onNuovoWorkout}
               className="inline-flex items-center gap-2 h-11 px-[18px] rounded-xl bg-brand text-black text-sm font-extrabold
