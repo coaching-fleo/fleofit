@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
 import { ADMIN_EMAILS } from "../_shared/admin.ts"
+import { TITOLO_BROADCAST, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast } from "./broadcast.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -187,10 +188,19 @@ serve(async (req) => {
     const APPLICA_CONTROLLO_CRON = true;
     const APPLICA_CONTROLLO_ADMIN = true;
     const chiamante = await identificaChiamante(req);
-    const soloAdmin = ['immediate', 'voice_note'];
+    const soloAdmin = ['immediate', 'voice_note', 'broadcast'];
     const modiCron = ['morning', 'evening'];
 
     console.log(`send-reminders: mode='${mode}' ruolo=${chiamante.ruolo ?? 'nessuno'} email=${chiamante.email ?? 'nessuna'} admin=${chiamante.admin}`);
+
+    // 'broadcast' è più stretto: l'account demo è admin ma non deve notificare tutti.
+    if (mode === 'broadcast' && !puoInviareBroadcast(chiamante.email)) {
+      console.warn(`send-reminders: 'broadcast' NON autorizzata per ${chiamante.email ?? 'anonimo'}`);
+      return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (soloAdmin.includes(mode) && !chiamante.admin) {
       console.warn(`send-reminders: '${mode}' NON autorizzata per ${chiamante.email ?? 'anonimo'} (blocco attivo: ${APPLICA_CONTROLLO_ADMIN})`);
@@ -347,6 +357,60 @@ serve(async (req) => {
       }
       await Promise.all(notifications);
       return new Response(JSON.stringify({ success: true, sent: notifications.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ==========================================
+    // MODALITÀ BROADCAST (Messaggio a tutti)
+    // ==========================================
+    if (mode === 'broadcast' && body.record_id) {
+      const { data: messaggio, error: msgErr } = await supabase
+        .from('messaggi_coach')
+        .select('id, testo, autore')
+        .eq('id', body.record_id)
+        .maybeSingle();
+      if (msgErr) throw msgErr;
+      if (!messaggio) {
+        return new Response(JSON.stringify({ error: 'Messaggio non trovato' }), {
+          status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const route = routeMessaggio(messaggio.id);
+      const { data: atleti, error: atlErr } = await supabase.from('athletes').select('id, deleted_at');
+      if (atlErr) throw atlErr;
+      // Chi ha già la notifica di questo messaggio (rinvio dopo un errore): non la riceve due volte.
+      const { data: gia, error: giaErr } = await supabase.from('notifications').select('user_id').eq('route', route);
+      if (giaErr) throw giaErr;
+
+      const destinatari = destinatariBroadcast(atleti || [], {
+        mittenteId: messaggio.autore,
+        // Account nascosto del coach: stesso id di COACHING_ID in src/lib/constants.js
+        // (index.ts non può importare da src).
+        coachingId: '0118e43f-8791-4fd6-8032-bee028334c99',
+        giaNotificati: (gia || []).map((r: any) => r.user_id),
+      });
+      const saltati = (atleti || []).length - destinatari.length;
+      if (destinatari.length === 0) {
+        return new Response(JSON.stringify({ success: true, sent: 0, saltati }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Una riga per atleta, anche senza dispositivo iscritto: la bacheca la legge da qui.
+      const { data: dbNotifs, error: dbErr } = await supabase.from('notifications').insert(
+        destinatari.map((user_id) => ({ user_id, title: TITOLO_BROADCAST, message: messaggio.testo, route })),
+      ).select();
+      if (dbErr) console.error("Errore DB (broadcast):", dbErr);
+      const idPerUtente = new Map<string, string>((dbNotifs || []).map((n: any) => [n.user_id, n.id]));
+
+      const { data: subscriptions, error: subError } = await supabase
+        .from('push_subscriptions')
+        .select('*')
+        .in('user_id', destinatari);
+      if (subError) throw subError;
+
+      const testoPush = anteprima(messaggio.testo);
+      await Promise.all((subscriptions || []).map((sub: any) =>
+        sendPush(sub, TITOLO_BROADCAST, testoPush, route, idPerUtente.get(sub.user_id))));
+      return new Response(JSON.stringify({ success: true, sent: destinatari.length, saltati }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // ==========================================
