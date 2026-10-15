@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   CHIAVE_BOZZA, CHIAVE_VISTO, MAX_CARATTERI, visibiliPer, ordina, daMostrareInHome, testoValido,
-  anteprima, routeMessaggio, puoInviareBroadcast, esitoProva,
+  anteprima, routeMessaggio, puoInviareBroadcast, esitoProva, nuovaProva, proveValide, CHIAVE_PROVE,
 } from '../messaggiCoach'
 
 // Perché questi test esistono
@@ -102,5 +102,19 @@ describe('esitoProva', () => {
   })
   it('un server di prima senza `consegnate`: conta i dispositivi', () => {
     expect(esitoProva({ success: true, sent: 2 })).toEqual({ errore: false, testo: 'Prova mandata ai tuoi dispositivi (2)' })
+  })
+})
+
+describe('prove in bacheca (temporaneo)', () => {
+  it('nuovaProva ha la forma di un messaggio, segnata come prova', () => {
+    const p = nuovaProva({ testo: '  Ciao  ', fissato: true }, new Date('2026-10-15T10:00:00Z'))
+    expect(p.id).toMatch(/^prova-[a-z0-9]+$/)
+    expect(p).toMatchObject({ testo: 'Ciao', fissato: true, creato_at: '2026-10-15T10:00:00.000Z', modificato_at: null, prova: true })
+  })
+  it('proveValide scarta ciò che non è una prova', () => {
+    const buona = nuovaProva({ testo: 'x', fissato: false })
+    expect(proveValide([buona, { id: 'm1', testo: 'vero' }, null, 'x'])).toEqual([buona])
+    expect(proveValide(null)).toEqual([])
+    expect(CHIAVE_PROVE).toBe('fleofit_messaggi_prova')
   })
 })

@@ -62,3 +62,11 @@ export function motivoFcm(stato: number, corpo: string): string {
   const m = String(corpo ?? '').match(/"errorCode"\s*:\s*"([A-Z_]+)"/) || String(corpo ?? '').match(/"status"\s*:\s*"([A-Z_]+)"/)
   return m ? m[1] : `HTTP_${stato}`
 }
+
+// ⏳ TEMPORANEO (15/10/2026, finché il committente non ha verificato la funzione):
+// la prova compare nella bacheca del coach, solo sul suo telefono, con un id
+// `prova-…`. La notifica di prova punta lì, così si prova anche l'evidenza.
+// Un id che non ha quella forma porta alla bacheca e basta.
+export function routeProva(id: unknown): string {
+  return typeof id === 'string' && /^prova-[a-z0-9]{1,40}$/.test(id) ? `${ROUTE_BACHECA}?m=${id}` : ROUTE_BACHECA
+}

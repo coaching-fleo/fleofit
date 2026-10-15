@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, waitFor, fireEvent, within, render } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthContext } from '../../App'
-import { CHIAVE_BOZZA } from '../../lib/messaggiCoach'
+import { CHIAVE_BOZZA, CHIAVE_PROVE } from '../../lib/messaggiCoach'
 import { COACHING_ID } from '../../lib/constants'
 
 // «Messaggio a tutti»: la pagina di scrittura (era un foglio dal basso).
@@ -14,6 +14,8 @@ const finto = await vi.hoisted(async () => {
   return { dati, errori, ...fintoSupabase(() => dati, { erroreSu: () => errori.tabelle }) }
 })
 vi.mock('../../supabaseClient', () => ({ supabase: finto.supabase }))
+vi.mock('../../lib/alert', () => ({ mostraErrore: vi.fn(), mostraSuccesso: vi.fn() }))
+const alert = await import('../../lib/alert')
 
 const NuovoMessaggio = (await import('../NuovoMessaggio')).default
 
@@ -56,6 +58,8 @@ beforeEach(() => {
   finto.dati.messaggi_coach = [{ ...ESISTENTE }]
   finto.dati.athletes = ATLETI
   finto.supabase.functions.invoke.mockReset()
+  alert.mostraErrore.mockClear()
+  alert.mostraSuccesso.mockClear()
   finto.supabase.functions.invoke.mockResolvedValue({ data: { success: true, sent: 2, saltati: 0 }, error: null })
   localStorage.clear()
 })
@@ -242,43 +246,65 @@ describe('Nuovo messaggio — correggere', () => {
 // «Prova su di me»: la push solo ai dispositivi del coach, senza salvare il
 // messaggio (nessun atleta vede niente) e senza lasciare la pagina.
 describe('Nuovo messaggio — prova su di me', () => {
-  it('manda il testo ripulito in modo prova, senza insert, senza conferma, e resta qui con la bozza', async () => {
+  it('manda in modo prova senza insert né conferma, poi torna alla bacheca sulla prova, con la bozza vuota', async () => {
     monta()
     fireEvent.change(campo(), { target: { value: 'Sabato ritrovo alle 8\n\n' } })
+    fireEvent.click(pillola())
     fireEvent.click(prova())
-    await waitFor(() => expect(finto.supabase.functions.invoke).toHaveBeenCalledTimes(1))
-    expect(finto.supabase.functions.invoke).toHaveBeenCalledWith('send-reminders', { body: { mode: 'broadcast_prova', testo: 'Sabato ritrovo alle 8' } })
+    expect(await screen.findByTestId('dove')).toHaveTextContent(/^\/messaggi\?m=prova-[a-z0-9]+$/)
+    const [, { body }] = finto.supabase.functions.invoke.mock.calls[0]
+    expect(body.mode).toBe('broadcast_prova')
+    expect(body.testo).toBe('Sabato ritrovo alle 8')
+    expect(screen.getByTestId('dove').textContent).toBe(`/messaggi?m=${body.prova_id}`)
     expect(finto.chiamateA('messaggi_coach', 'insert')).toHaveLength(0)
     expect(screen.queryByRole('dialog', { name: /Mandare a/ })).toBeNull()
-    expect(await screen.findByText('Prova mandata ai tuoi dispositivi (2)')).toBeTruthy()
-    expect(campo().value).toBe('Sabato ritrovo alle 8\n\n')
-    expect(JSON.parse(localStorage.getItem(CHIAVE_BOZZA))?.testo).toBe('Sabato ritrovo alle 8\n\n')
-    expect(screen.queryByTestId('dove')).toBeNull()
+    expect(alert.mostraSuccesso).toHaveBeenCalledWith('Prova mandata ai tuoi dispositivi (2)', 'Prova mandata')
+    // La bozza è vuota: premendo «Nuovo» si riparte da zero.
+    expect(JSON.parse(localStorage.getItem(CHIAVE_BOZZA))).toBeNull()
+    // ⏳ La prova resta su questo telefono, con il suo fissato, per la bacheca.
+    const prove = JSON.parse(localStorage.getItem(CHIAVE_PROVE))
+    expect(prove).toHaveLength(1)
+    expect(prove[0]).toMatchObject({ id: body.prova_id, testo: 'Sabato ritrovo alle 8', fissato: true, prova: true })
   })
 
-  it('nessun dispositivo iscritto: lo dice', async () => {
-    finto.supabase.functions.invoke.mockResolvedValueOnce({ data: { success: true, sent: 0 }, error: null })
-    monta()
-    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+  it('rientrando dopo una prova, la pagina è vuota', async () => {
+    const { unmount } = monta()
+    fireEvent.change(campo(), { target: { value: 'Una prova' } })
     fireEvent.click(prova())
-    expect(await screen.findByText('Nessun tuo dispositivo ha le notifiche attive')).toBeTruthy()
+    await screen.findByTestId('dove')
+    unmount()
+    monta()
+    expect(campo().value).toBe('')
   })
 
-  it('Firebase rifiuta (build di sviluppo): non dice «mandata», dice perché', async () => {
+  it('Firebase rifiuta (build di sviluppo): torna alla bacheca e dice perché, non «mandata»', async () => {
     finto.supabase.functions.invoke.mockResolvedValueOnce({ data: { success: true, sent: 1, consegnate: 0, motivi: ['THIRD_PARTY_AUTH_ERROR'] }, error: null })
     monta()
     fireEvent.change(campo(), { target: { value: 'Ciao' } })
     fireEvent.click(prova())
-    expect(await screen.findByText(/Xcode in modalità sviluppo/)).toBeTruthy()
-    expect(screen.queryByText(/Prova mandata/)).toBeNull()
+    await screen.findByTestId('dove')
+    expect(alert.mostraErrore).toHaveBeenCalledWith(expect.stringMatching(/Xcode in modalità sviluppo/), 'Push non arrivata')
+    expect(alert.mostraSuccesso).not.toHaveBeenCalled()
   })
 
-  it('prova fallita: lo dice', async () => {
+  it('nessun dispositivo iscritto: torna alla bacheca e lo dice', async () => {
+    finto.supabase.functions.invoke.mockResolvedValueOnce({ data: { success: true, sent: 0 }, error: null })
+    monta()
+    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+    fireEvent.click(prova())
+    await screen.findByTestId('dove')
+    expect(alert.mostraErrore).toHaveBeenCalledWith('Nessun tuo dispositivo ha le notifiche attive', 'Push non arrivata')
+  })
+
+  it('chiamata fallita: resta qui con il testo, e lo dice', async () => {
     finto.supabase.functions.invoke.mockResolvedValueOnce({ data: null, error: { message: 'rete' } })
     monta()
     fireEvent.change(campo(), { target: { value: 'Ciao' } })
     fireEvent.click(prova())
     expect(await screen.findByText('La prova non è partita. Controlla la connessione e riprova.')).toBeTruthy()
+    expect(campo().value).toBe('Ciao')
+    expect(screen.queryByTestId('dove')).toBeNull()
+    expect(localStorage.getItem(CHIAVE_PROVE)).toBeNull()
   })
 
   it('testo vuoto: spento, e non parte niente', async () => {

@@ -23,6 +23,12 @@ export function RigaMessaggio({ messaggio, evidenziato = false, coach = false, o
         {fissato && <Pin size={14} className="text-brand shrink-0" aria-label="Fissato" />}
         <span>{quando(creato_at)}</span>
         {modificato_at && <span>· modificato</span>}
+        {/* ⏳ TEMPORANEO: una «Prova su di me», solo su questo telefono. */}
+        {messaggio.prova && (
+          <span className="ml-auto shrink-0 rounded-full border border-[#444] px-2 py-0.5 text-[11px] font-bold text-gray-300">
+            Prova · la vedi solo tu
+          </span>
+        )}
         {coach && (
           <button
             type="button"

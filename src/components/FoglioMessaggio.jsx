@@ -62,12 +62,17 @@ export function MenuMessaggio({ messaggio, onChiudi, demo = false, notificaInVol
           {messaggio.fissato ? <PinOff size={18} aria-hidden="true" /> : <Pin size={18} aria-hidden="true" />}
           {messaggio.fissato ? 'Togli dai fissati' : 'Fissa'}
         </button>
-        <button type="button" onClick={() => scegli('modifica')} disabled={demo} className={`${voce} text-white`}>
-          <Pencil size={18} aria-hidden="true" />Modifica
-        </button>
-        <button type="button" onClick={() => { if (!notificaInVolo) scegli('notifica') }} disabled={demo || notificaInVolo} className={`${voce} text-white`}>
-          <BellRing size={18} aria-hidden="true" />{notificaInVolo ? 'Invio…' : 'Manda la notifica'}
-        </button>
+        {/* ⏳ Una prova (solo su questo telefono) si fissa e si elimina, nient'altro. */}
+        {!messaggio.prova && (
+          <>
+            <button type="button" onClick={() => scegli('modifica')} disabled={demo} className={`${voce} text-white`}>
+              <Pencil size={18} aria-hidden="true" />Modifica
+            </button>
+            <button type="button" onClick={() => { if (!notificaInVolo) scegli('notifica') }} disabled={demo || notificaInVolo} className={`${voce} text-white`}>
+              <BellRing size={18} aria-hidden="true" />{notificaInVolo ? 'Invio…' : 'Manda la notifica'}
+            </button>
+          </>
+        )}
         <button type="button" onClick={() => scegli('elimina')} disabled={demo} className={`${voce} text-red-500`}>
           <Trash2 size={18} aria-hidden="true" />Elimina
         </button>

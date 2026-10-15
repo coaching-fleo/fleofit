@@ -3,9 +3,11 @@
 // basso: su iPhone arrivava in ritardo rispetto alla tastiera, e «Fissa in cima»
 // chiudeva la tastiera al primo tocco senza cambiare. Ora è una pagina intera.
 //
-// Layout: `fixed inset-0` sopra la tab bar. Con `Keyboard.resize` 'native' la
-// webview si accorcia quando sale la tastiera, quindi la barra in fondo (Prova ·
-// Invia) resta incollata sopra la tastiera senza animazioni da rincorrere.
+// Layout: `fixed inset-0` sopra la tab bar. La barra in fondo (Prova · Invia) sale
+// INSIEME alla tastiera: su iOS la pagina ferma il ridimensionamento della webview
+// e usa l'altezza di `keyboardWillShow` (useTastieraIOS) — con 'native' la barra
+// restava giù e poi «si teletrasportava» sopra (15/10/2026); su Android usa
+// quanta tastiera copre la pagina (useTastieraCheCopre).
 //
 // Il viaggio di un invio (spec, «Il viaggio»):
 //   1. `insert` in `messaggi_coach` — da qui il messaggio è in bacheca;
@@ -23,7 +25,8 @@
 // ⚠️ «Fissato in cima» e i bottoni della barra fermano il `pointerdown`: così il
 // campo non perde il fuoco, la tastiera resta su e il tocco non va a vuoto.
 // ⚠️ «Prova su di me» (`broadcast_prova`): la push solo ai dispositivi di chi la
-// manda, senza insert. Nessun atleta vede niente.
+// manda, senza insert. Nessun atleta vede niente. ⏳ Finché il committente la
+// verifica, la prova compare nella bacheca di questo telefono (CHIAVE_PROVE).
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -34,9 +37,11 @@ import { useAuth } from '../App'
 import { CustomConfirm } from '../components/CustomModals'
 import { leggiJson, scriviJson } from '../lib/offlineQueue'
 import { vibraScelta, vibraSuccesso, vibraErrore } from '../lib/aptica'
-import { testoValido, MAX_CARATTERI, CHIAVE_BOZZA, puoInviareBroadcast, esitoProva as leggiEsitoProva } from '../lib/messaggiCoach'
+import { testoValido, MAX_CARATTERI, CHIAVE_BOZZA, puoInviareBroadcast, esitoProva as leggiEsitoProva, CHIAVE_PROVE, nuovaProva, proveValide } from '../lib/messaggiCoach'
+import { mostraErrore, mostraSuccesso } from '../lib/alert'
 import { COACHING_ID } from '../lib/constants'
 import { useIndietro } from '../useIndietro'
+import { useTastieraIOS, useTastieraCheCopre } from '../useTastiera'
 
 const atleti = (n) => `${n} ${n === 1 ? 'atleta' : 'atleti'}`
 
@@ -73,6 +78,9 @@ export default function NuovoMessaggio() {
   const [esitoProva, setEsitoProva] = useState(null) // { testo, errore }
   const [daRiprovare, setDaRiprovare] = useState(null) // id del messaggio già in bacheca
   const inVoloRef = useRef(false)
+  const tastieraIOS = useTastieraIOS()
+  const tastieraAndroid = useTastieraCheCopre()
+  const sottoTastiera = tastieraIOS || tastieraAndroid
 
   // Solo il coach scrive: un atleta che arriva qui torna alla bacheca.
   useEffect(() => { if (role === 'athlete') navigate('/messaggi', { replace: true }) }, [role, navigate])
@@ -170,19 +178,29 @@ export default function NuovoMessaggio() {
     navigate(`/messaggi?m=${iniziale.id}`, { replace: true })
   })
 
+  // «Prova su di me» → si torna alla bacheca, come dopo un invio vero, con la
+  // bozza svuotata (premendo «Nuovo» si riparte da zero) e l'esito in un avviso.
+  // ⏳ TEMPORANEO: la prova entra nella bacheca di QUESTO telefono (CHIAVE_PROVE),
+  // con il suo fissato, e la notifica punta lì. Solo se la chiamata non è
+  // partita affatto si resta qui, col testo, a riprovare.
   const provaSuDiMe = () => inEsclusiva(async () => {
     if (!valido || demo) return
     setEsitoProva(null)
+    const prova = nuovaProva({ testo, fissato })
     let risposta
     try {
-      const { data, error } = await supabase.functions.invoke('send-reminders', { body: { mode: 'broadcast_prova', testo: testo.trim() } })
+      const { data, error } = await supabase.functions.invoke('send-reminders', { body: { mode: 'broadcast_prova', testo: prova.testo, prova_id: prova.id } })
       risposta = error || data?.success === false ? null : data
     } catch {
       risposta = null
     }
     const esito = leggiEsitoProva(risposta)
-    if (esito.errore) vibraErrore(); else vibraSuccesso()
-    setEsitoProva(esito)
+    if (!risposta) { vibraErrore(); setEsitoProva(esito); return }
+    scriviJson(CHIAVE_PROVE, [prova, ...proveValide(leggiJson(CHIAVE_PROVE, []))])
+    cancellaBozza()
+    if (esito.errore) { vibraErrore(); mostraErrore(esito.testo, 'Push non arrivata') }
+    else { vibraSuccesso(); mostraSuccesso(esito.testo, 'Prova mandata') }
+    navigate(`/messaggi?m=${prova.id}`, { replace: true })
   })
 
   const chiediConferma = () => {
@@ -256,7 +274,12 @@ export default function NuovoMessaggio() {
             </div>
           )}
 
-          <footer className="shrink-0 flex gap-2 px-4 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] border-t border-[#222] bg-[#141414]">
+          <footer className="shrink-0 flex gap-2 px-4 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] border-t border-[#222] bg-[#141414]"
+            style={{
+              ...(sottoTastiera ? { paddingBottom: sottoTastiera + 12 } : null),
+              // La curva e la durata della tastiera di iOS: la barra sale con lei, non dopo.
+              transition: 'padding-bottom 250ms cubic-bezier(0.17, 0.59, 0.4, 0.77)',
+            }}>
             {modifica ? (
               <button type="button" onPointerDown={tieniTastiera} onMouseDown={tieniTastiera} onClick={salvaModifica} disabled={spento || !iniziale}
                 className="flex-1 min-h-[48px] rounded-2xl bg-brand text-black text-[15px] font-black disabled:opacity-40">

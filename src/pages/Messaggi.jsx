@@ -15,13 +15,13 @@ import { useAuth } from '../App'
 import { ListaMessaggi } from '../components/MessaggiUI'
 import { MenuMessaggio } from '../components/FoglioMessaggio'
 import { CustomConfirm } from '../components/CustomModals'
-import { visibiliPer, ordina, CHIAVE_VISTO, puoInviareBroadcast } from '../lib/messaggiCoach'
+import { visibiliPer, ordina, CHIAVE_VISTO, puoInviareBroadcast, CHIAVE_PROVE, proveValide } from '../lib/messaggiCoach'
 import { mostraErrore, mostraSuccesso } from '../lib/alert'
 import { vibraSuccesso, vibraErrore } from '../lib/aptica'
 import { VETRO } from '../lib/stiliCard'
 import { useIndietro } from '../useIndietro'
 import { sincronizzaBadge } from '../lib/badge'
-import { scriviJson } from '../lib/offlineQueue'
+import { leggiJson, scriviJson } from '../lib/offlineQueue'
 
 const DURATA_EVIDENZA_MS = 2000
 
@@ -43,6 +43,10 @@ export default function Messaggi() {
   const [erroreCaricamento, setErroreCaricamento] = useState(false)
   const [evidenzaSpentaPer, setEvidenzaSpentaPer] = useState(null)
   const [menu, setMenu] = useState(null)
+  // ⏳ TEMPORANEO (15/10/2026): le «Prova su di me» di questo telefono, in bacheca
+  // solo per il coach, finché il committente non ha verificato la funzione.
+  const [prove, setProve] = useState(() => (coach ? proveValide(leggiJson(CHIAVE_PROVE, [])) : []))
+  const salvaProve = (nuove) => { setProve(nuove); scriviJson(CHIAVE_PROVE, nuove) }
   const [conferma, setConferma] = useState(null)
   const [notificaInVolo, setNotificaInVolo] = useState(false)
   const notificaInVoloRef = useRef(false)
@@ -66,7 +70,7 @@ export default function Messaggi() {
   // un messaggio che la lista caricata non ha: si rilegge UNA volta per quell'id.
   // Il ref chiude il giro: se nemmeno la seconda lettura lo trova, ci si ferma.
   useEffect(() => {
-    if (!caricato || !idRichiesto || lettaPer.current === idRichiesto) return
+    if (!caricato || !idRichiesto || lettaPer.current === idRichiesto || idRichiesto.startsWith('prova-')) return
     lettaPer.current = idRichiesto
     if (messaggi.some(m => m.id === idRichiesto)) return
     leggiBacheca()
@@ -133,6 +137,12 @@ export default function Messaggi() {
     const m = menu
     setMenu(null)
     if (!m) return
+    // Una prova vive solo su questo telefono: si fissa e si elimina qui, senza database.
+    if (m.prova) {
+      if (scelta === 'fissa') salvaProve(prove.map(p => (p.id === m.id ? { ...p, fissato: !p.fissato } : p)))
+      if (scelta === 'elimina') salvaProve(prove.filter(p => p.id !== m.id))
+      return
+    }
     if (scelta === 'fissa') fissa(m)
     if (scelta === 'modifica') navigate(`/messaggi/nuovo?modifica=${m.id}`)
     if (scelta === 'notifica') rimandaNotifica(m)
@@ -145,8 +155,8 @@ export default function Messaggi() {
   }
 
   const visibili = useMemo(
-    () => ordina(visibiliPer(messaggi, { iscrittoIl: user?.created_at ?? null, coach })),
-    [messaggi, user?.created_at, coach]
+    () => ordina([...(coach ? prove : []), ...visibiliPer(messaggi, { iscrittoIl: user?.created_at ?? null, coach })]),
+    [messaggi, prove, user?.created_at, coach]
   )
 
   // Notifiche dei messaggi: lette all'apertura, poi il badge si riallinea.
@@ -210,7 +220,7 @@ export default function Messaggi() {
       </div>
       {coach && (
         <>
-          {menu && <MenuMessaggio messaggio={menu} onChiudi={dopoMenu} demo={demo} notificaInVolo={notificaInVolo} />}
+          {menu && <MenuMessaggio messaggio={menu} onChiudi={dopoMenu} demo={demo && !menu.prova} notificaInVolo={notificaInVolo} />}
           {createPortal(<CustomConfirm info={conferma} onClose={() => setConferma(null)} />, document.body)}
         </>
       )}

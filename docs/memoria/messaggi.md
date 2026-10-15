@@ -111,6 +111,23 @@ già consegnati. È accettato; non si cancellano le notifiche.
   Scheme → Run → Build Configuration: Release), oppure TestFlight. ⚠️ La Release ha lo stesso
   bundle id dell'app di App Store e la **sostituisce** sul telefono.
 
+- **Dopo «Prova su di me» si torna alla bacheca** (15/10/2026, richiesta del committente) con la
+  bozza svuotata: premendo «Nuovo» la pagina riparte vuota. L'esito arriva come avviso
+  (`mostraSuccesso` / `mostraErrore`). Solo se la chiamata non parte affatto si resta sulla pagina
+  con il testo.
+- ⏳ **TEMPORANEO — le prove in bacheca.** Il committente vuole vedere anche le prove in bacheca
+  (fissato compreso) per verificare la funzione; **poi si toglie**. Vivono solo sul telefono del
+  coach, in `fleofit_messaggi_prova` (`CHIAVE_PROVE`, `nuovaProva`, `proveValide` in
+  messaggiCoach.js): nessun atleta le vede, il database non le conosce. Etichetta «Prova · la vedi
+  solo tu»; menu ridotto a Fissa ed Elimina, che lavorano sul telefono. La notifica di prova porta
+  a `/messaggi?m=prova-…` (`routeProva` in broadcast.ts, `prova_id` nel body). Per toglierle:
+  `grep -rn "TEMPORANEO" src supabase/functions/send-reminders`.
+- **La barra in fondo sale con la tastiera** (iOS). Con `Keyboard.resize` 'native' restava giù e
+  poi «si teletrasportava» sopra la tastiera: la webview si accorcia solo a tastiera arrivata. La
+  pagina usa `useTastieraIOS` (useTastiera.js): `setResizeMode('none')` finché è aperta, l'altezza
+  da `keyboardWillShow` come `padding-bottom` della barra, transizione di 250 ms sulla curva di
+  iOS, e `'native'` di nuovo all'uscita. Su Android `useTastieraCheCopre`.
+
 ## La pagina
 - **Freccia indietro** in testata (`useIndietro('/')`, `aria-label="Torna indietro"`, come l'Archivio):
   aperta da una notifica è la prima pagina della sessione, e senza ripiego la freccia non farebbe niente.

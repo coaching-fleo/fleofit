@@ -98,3 +98,41 @@ export const chiudiTastieraSuInvio = (e) => {
     e.currentTarget.blur()
   }
 }
+
+/**
+ * Su iOS: l'altezza della tastiera **mentre sale**, per una pagina che sposta da
+ * sé ciò che sta in fondo. Nato il 15/10/2026 per «Nuovo messaggio» (segnalato
+ * dal committente): con `Keyboard.resize: 'native'` la webview si accorcia solo
+ * quando la tastiera ha FINITO di salire, quindi la barra in fondo restava giù e
+ * poi «si teletrasportava» sopra la tastiera.
+ *
+ * Per tutta la vita della pagina che lo usa, la webview non si ridimensiona più
+ * (`setResizeMode('none')`): la pagina riceve l'altezza da `keyboardWillShow`,
+ * che arriva all'INIZIO dell'animazione, e alza il fondo insieme alla tastiera.
+ * All'uscita torna `'native'`, come nel resto dell'app (capacitor.config.ts).
+ *
+ * ⚠️ Fuori da iOS torna sempre 0 e non tocca niente: su Android la webview non si
+ * accorcia comunque, e lì serve `useTastieraCheCopre`. `setResizeMode` esiste
+ * solo su iOS: chiamato altrove rifiuterebbe, da qui il `.catch`.
+ */
+export function useTastieraIOS() {
+  const [altezza, setAltezza] = useState(0)
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') return
+    Promise.resolve(Keyboard.setResizeMode?.({ mode: 'none' })).catch(() => {})
+    const handles = []
+    const registra = (evento, fn) => {
+      const r = Keyboard.addListener(evento, fn)
+      Promise.resolve(r).then(h => h && handles.push(h)).catch(() => {})
+    }
+    registra('keyboardWillShow', (info) => setAltezza(Math.max(0, Math.round(info?.keyboardHeight || 0))))
+    registra('keyboardWillHide', () => setAltezza(0))
+    return () => {
+      handles.forEach(h => h.remove && h.remove())
+      Promise.resolve(Keyboard.setResizeMode?.({ mode: 'native' })).catch(() => {})
+    }
+  }, [])
+
+  return altezza
+}

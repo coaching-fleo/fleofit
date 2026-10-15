@@ -69,3 +69,22 @@ export function esitoProva(risposta) {
   if (consegnate < iscritti) return { errore: false, testo: `Prova mandata a ${consegnate} dei tuoi ${iscritti} dispositivi` }
   return { errore: false, testo: `Prova mandata ai tuoi dispositivi (${consegnate})` }
 }
+
+// ⏳ TEMPORANEO (15/10/2026) — le prove in bacheca. Il committente vuole vedere
+// in bacheca anche ciò che manda con «Prova su di me» (fissato compreso), per
+// verificare la funzione; poi si toglie. Vivono SOLO sul telefono del coach
+// (localStorage): nessun atleta le vede, il database non le conosce.
+export const CHIAVE_PROVE = 'fleofit_messaggi_prova'
+
+/** Una prova nuova, nella forma di una riga di `messaggi_coach` più `prova: true`. */
+export function nuovaProva({ testo, fissato }, adesso = new Date()) {
+  const id = 'prova-' + adesso.getTime().toString(36) + Math.random().toString(36).slice(2, 6)
+  return { id, testo: String(testo).trim(), fissato: !!fissato, creato_at: adesso.toISOString(), modificato_at: null, prova: true }
+}
+
+/** L'elenco salvato, ripulito da ciò che non ha la forma di una prova. */
+export function proveValide(salvate) {
+  return Array.isArray(salvate)
+    ? salvate.filter((p) => p && p.prova === true && typeof p.id === 'string' && p.id.startsWith('prova-') && typeof p.testo === 'string')
+    : []
+}

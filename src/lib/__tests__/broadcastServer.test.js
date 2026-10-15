@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   TITOLO_BROADCAST, EMAIL_DEMO, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast,
-  TITOLO_PROVA, ROUTE_BACHECA, testoAccettabile, motivoFcm,
+  TITOLO_PROVA, ROUTE_BACHECA, testoAccettabile, motivoFcm, routeProva,
 } from '../../../supabase/functions/send-reminders/broadcast.ts'
 import { COACHING_ID } from '../constants'
 
@@ -101,5 +101,15 @@ describe('motivoFcm', () => {
     expect(motivoFcm(401, apns)).toBe('THIRD_PARTY_AUTH_ERROR')
     expect(motivoFcm(400, '{"error":{"code":400,"status":"INVALID_ARGUMENT"}}')).toBe('INVALID_ARGUMENT')
     expect(motivoFcm(503, 'Service Unavailable')).toBe('HTTP_503')
+  })
+})
+
+describe('routeProva (temporaneo)', () => {
+  it('un id di prova porta a quella prova; il resto alla bacheca', () => {
+    expect(routeProva('prova-abc123')).toBe('/messaggi?m=prova-abc123')
+    expect(routeProva(undefined)).toBe('/messaggi')
+    expect(routeProva('xyz')).toBe('/messaggi')
+    expect(routeProva('prova-../../admin')).toBe('/messaggi')
+    expect(routeProva('prova-' + 'a'.repeat(41))).toBe('/messaggi')
   })
 })

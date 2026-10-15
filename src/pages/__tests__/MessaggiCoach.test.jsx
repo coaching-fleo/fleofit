@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthContext } from '../../App'
 import { montaPagina } from '../../test/montaPagina'
 import { COACHING_ID } from '../../lib/constants'
+import { CHIAVE_PROVE, nuovaProva } from '../../lib/messaggiCoach'
 
 // `dati` ed `errori` si cambiano a metà test: il finto li rilegge a ogni from().
 const finto = await vi.hoisted(async () => {
@@ -214,5 +215,46 @@ describe('Messaggi — caricamento fallito', () => {
     montaPagina(<Messaggi />, { user: COACH, role })
     expect(await screen.findByText('Non riesco a caricare i messaggi.')).toBeTruthy()
     expect(screen.queryByText('Qui troverai i messaggi del coach')).toBeNull()
+  })
+})
+
+// ⏳ TEMPORANEO: le «Prova su di me» compaiono nella bacheca di questo telefono.
+describe('Messaggi — le prove in bacheca (temporaneo)', () => {
+  const metti = (prove) => localStorage.setItem(CHIAVE_PROVE, JSON.stringify(prove))
+
+  it('il coach vede la prova con l\'etichetta, e fissata sta in cima', async () => {
+    const p = nuovaProva({ testo: 'Una prova fissata', fissato: true }) // più recente del fissato vero
+    metti([p])
+    const { container } = montaPagina(<Messaggi />, { user: COACH, role: 'admin' })
+    await screen.findByText('Una prova fissata')
+    expect(within(document.getElementById('messaggio-' + p.id)).getByText('Prova · la vedi solo tu')).toBeTruthy()
+    expect(ordineRighe(container)[0]).toBe(p.id)
+  })
+
+  it('l\'atleta non vede le prove, anche se sul telefono ce ne sono', async () => {
+    metti([nuovaProva({ testo: 'Una prova', fissato: false })])
+    montaPagina(<Messaggi />, { user: { id: 'a1', email: 'a@x.it', created_at: '2026-01-01T00:00:00Z' }, role: 'athlete' })
+    await screen.findByText('Messaggio nuovo')
+    expect(screen.queryByText('Una prova')).toBeNull()
+  })
+
+  it('il menu di una prova ha solo Fissa ed Elimina, e lavora sul telefono, non sul database', async () => {
+    const p = nuovaProva({ testo: 'Una prova', fissato: false })
+    metti([p])
+    montaPagina(<Messaggi />, { user: COACH, role: 'admin' })
+    await screen.findByText('Una prova')
+    const riga = document.getElementById('messaggio-' + p.id)
+    fireEvent.click(within(riga).getByLabelText('Azioni messaggio'))
+    await screen.findByRole('button', { name: 'Fissa' })
+    expect(screen.queryByRole('button', { name: 'Modifica' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Manda la notifica' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Fissa' }))
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(CHIAVE_PROVE))[0].fissato).toBe(true))
+
+    await apriMenu(p.id, 'Elimina')
+    await waitFor(() => expect(screen.queryByText('Una prova')).toBeNull())
+    expect(JSON.parse(localStorage.getItem(CHIAVE_PROVE))).toEqual([])
+    expect(finto.chiamateA('messaggi_coach', 'update')).toHaveLength(0)
+    expect(finto.chiamateA('messaggi_coach', 'delete')).toHaveLength(0)
   })
 })

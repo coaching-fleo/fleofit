@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
 import { ADMIN_EMAILS } from "../_shared/admin.ts"
-import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm } from "./broadcast.ts"
+import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm, routeProva } from "./broadcast.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -386,15 +386,16 @@ serve(async (req) => {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      const route = routeProva(body.prova_id);
       const { data: notif, error: dbErr } = await supabase.from('notifications')
-        .insert({ user_id: chiamante.id, title: TITOLO_PROVA, message: testo, route: ROUTE_BACHECA })
+        .insert({ user_id: chiamante.id, title: TITOLO_PROVA, message: testo, route })
         .select().maybeSingle();
       if (dbErr) throw dbErr;
       const { data: subscriptions, error: subError } = await supabase
         .from('push_subscriptions').select('*').eq('user_id', chiamante.id);
       if (subError) throw subError;
       const esiti = await Promise.all((subscriptions || []).map((sub: any) =>
-        sendPush(sub, TITOLO_PROVA, anteprima(testo), ROUTE_BACHECA, notif?.id)));
+        sendPush(sub, TITOLO_PROVA, anteprima(testo), route, notif?.id)));
       // sent = dispositivi iscritti (0 = nessuno); consegnate = accettate da FCM / Web Push;
       // motivi = i rifiuti, senza doppioni, per dire al coach PERCHÉ non è arrivata.
       const consegnate = esiti.filter((e) => e.ok).length;
