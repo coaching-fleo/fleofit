@@ -1,12 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
-import { MonitorUp, Timer, Flag, FlagOff, Dumbbell, BicepsFlexed, RotateCw, Volume2, VolumeX, Activity } from 'lucide-react'
 import { Capacitor } from '@capacitor/core'
 import { KeepAwake } from '@capacitor-community/keep-awake'
 import { blockHint } from '../lib/blockHints'
 import { ERGOMETERS } from '../lib/constants'
-import { TYPE_COLORS } from '../lib/blockColors'
 import { etichetteStazioni } from '../lib/stazioniEmom'
+import { coloreCategoria } from '../lib/colori'
+import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
+import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
+import { esercizioInCorso } from '../lib/esercizioInCorso'
+import {
+  AttesaTV, CaricamentoTV, ErroreTV, TestataTV, TimerTV, BloccoTV, EsercizioTV,
+  NotaBloccoTV, CorsaTV, CartaCorsaTV, NotaCoachTV,
+} from '../components/TVDashboardUI'
 
 // --- AUDIO GENERATOR HELPER ---
 const writeString = (view, offset, string) => {
@@ -60,58 +66,6 @@ if (typeof window !== 'undefined') {
 const isErgo = (name) => ERGOMETERS.includes(name)
 
 
-const timeToSeconds = (timeStr) => {
-  if (!timeStr) return 0;
-  const str = String(timeStr);
-  const parts = str.split(':')
-  if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
-  return 0
-}
-
-const formatTime = (totalSeconds) => {
-  const m = Math.floor(totalSeconds / 60)
-  const s = totalSeconds % 60
-  if (s === 0) return `${m} min`
-  return `${m}:${s.toString().padStart(2, '0')} min`
-}
-
-const getBlockTitle = (block) => {
-  const formatVal = v => (v && !v.includes('min') && !v.includes('sec')) ? `${v} min` : (v || '1:00 min')
-
-  if (['WarmUp', 'Rest'].includes(block.type)) return block.type
-  if (block.type === 'ON/OFF') {
-    const onSec = timeToSeconds(block.params?.on || '1:00') || 60
-    const offSec = timeToSeconds(block.params?.off || '1:00') || 60
-    let rounds = parseInt(block.params?.rounds, 10)
-    if (isNaN(rounds) && block.params?.total) {
-      rounds = Math.ceil(timeToSeconds(block.params.total) / (onSec + offSec))
-    }
-    rounds = rounds || 10
-    // I round sono giri del circuito: ogni giro fa tutti gli esercizi (`durataBlocco`).
-    const intervalli = rounds * Math.max(block.exercises?.length || 0, 1)
-    return `ON/OFF · ${formatVal(block.params?.on)} ON / ${formatVal(block.params?.off)} OFF · ${rounds} rounds · ${formatTime((onSec + offSec) * intervalli)}`
-  }
-  if (block.type === 'EMOM') {
-    const intervalSec = timeToSeconds(block.params?.interval || '1:00') || 60
-    const rounds = parseInt(block.params?.rounds || '10', 10) || 10
-    return `EMOM · ${formatVal(block.params?.interval)} x ${rounds} rounds · ${formatTime(intervalSec * rounds)}`
-  }
-  if (block.type === 'AMRAP') {
-     const dur = block.params?.duration || '10:00'
-     return dur.includes('min') ? `AMRAP · ${dur}` : `AMRAP · ${dur} min`
-  }
-  if (block.type === 'For Time') return `For Time · ${block.params?.rounds || '1'} rounds`
-  if (block.type === 'Interval') return `Interval · ${block.params?.rounds || '1'} rounds`
-
-  if (['Cash In', 'Cash Out'].includes(block.type)) {
-    const rounds = block.params?.rounds || '1';
-    const rest = (parseInt(rounds, 10) > 1 && block.params?.rest && block.params.rest !== '-') ? ` · ${block.params.rest} rest` : '';
-    return rounds !== '1' ? `${block.type} · ${rounds} rounds${rest}` : block.type;
-  }
-  return block.type
-}
-
-
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
   if (isNaN(num)) return 'text-muted';
@@ -119,124 +73,6 @@ const getIntensityColor = (val) => {
   if (num <= 6) return 'text-yellow-400';
   if (num <= 8) return 'text-orange-500';
   return 'text-red-500';
-}
-
-function Section({ icon, label, hint, color, stepNumber, className = "", isActive, children }) {
-  return (
-    <div className={`bg-[#1e1e1e] border-4 ${isActive ? 'border-brand shadow-[0_0_40px] shadow-brand/30 scale-[1.02]' : color} rounded-[2rem] p-6 flex flex-col gap-4 shadow-2xl relative transition-all duration-500 ${className}`}>
-      {stepNumber && (
-        <div className="absolute top-4 right-6 w-14 h-14 bg-[#111] border-4 border-[#333] text-brand font-black text-2xl flex items-center justify-center rounded-full z-10 shadow-lg">
-          {stepNumber}
-        </div>
-      )}
-      <div className="flex items-start gap-4 border-b-2 border-[#333] pb-4 shrink-0 pr-16">
-        <div className="mt-1 shrink-0">{icon}</div>
-        <span className="flex-1 min-w-0">
-          <span className="block text-white font-black text-3xl uppercase tracking-wider leading-tight break-words">{label}</span>
-          {hint && <span className="block text-muted font-medium text-lg normal-case tracking-normal mt-1">{hint}</span>}
-        </span>
-      </div>
-      <div className="flex-1 flex flex-col justify-center gap-4">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function ExList({ exercises, showMinute, typeColor, tipo }) {
-  // In un EMOM il numero sono i minuti, anche «2–3» (src/lib/stazioniEmom.js).
-  const etichette = etichetteStazioni(exercises, tipo)
-  return (
-    <div className="flex flex-col w-full gap-3">
-      {exercises.map((ex, i) => {
-        const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
-        const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
-
-        return (
-        <div key={ex.id || i} className="flex items-start gap-4 bg-[#111] px-5 py-4 rounded-2xl border-2 border-[#333]">
-          {showMinute && (
-            <div className="min-w-10 h-10 px-2 rounded-full bg-[#222] border-2 border-[#333] flex items-center justify-center shrink-0 mt-1">
-              <span className={`text-lg font-black tabular-nums whitespace-nowrap ${typeColor}`}>{etichette[i]}</span>
-            </div>
-          )}
-      <div className="flex-1 flex flex-col justify-center min-w-0">
-            <span className="text-white text-3xl font-black leading-tight break-words">{ex.name}</span>
-            <span className="text-gray-400 text-2xl font-bold mt-1 break-words">
-              {[detail, paceStr, ex.kg ? `${ex.kg}kg` : ''].filter(Boolean).join(' · ')}
-              {ex.notes && <span className="text-muted font-medium ml-2">· {ex.notes}</span>}
-            </span>
-          </div>
-          {ex.intensity && (
-            <div className="flex items-center gap-2 shrink-0 bg-[#222] px-4 py-2 rounded-2xl border-2 border-[#444] mt-1">
-               <span className={`text-xl font-black ${getIntensityColor(ex.intensity)}`}>{ex.intensity}/10</span>
-               <BicepsFlexed size={28} className={getIntensityColor(ex.intensity)} />
-            </div>
-          )}
-        </div>
-      )})}
-    </div>
-  )
-}
-
-function RunningList({ steps, activeIdx }) {
-  const getTypeLabel = (t) => {
-    switch(t) {
-      case 'warmup': return 'Riscaldamento'
-      case 'run': return 'Corsa'
-      case 'recover': return 'Recupero'
-      case 'cooldown': return 'Defaticamento'
-      case 'repeat': return 'Ripetute'
-      default: return ''
-    }
-  }
-
-  const getTypeColor = (t) => {
-    switch(t) {
-      case 'warmup': return 'text-orange-400'
-      case 'run': return 'text-running'
-      case 'recover': return 'text-green-400'
-      case 'cooldown': return 'text-gray-400'
-      case 'repeat': return 'text-purple-400'
-      default: return 'text-white'
-    }
-  }
-
-  return (
-    <div className="flex flex-col w-full gap-4">
-      {steps.map((step, i) => (
-        <div key={step.id || i} className={`flex flex-col justify-center border-l-[8px] ${i === activeIdx ? 'border-running bg-running/10 shadow-[inset_0_0_20px] shadow-running/20 rounded-r-2xl py-4' : 'border-[#333] py-2'} pl-6 transition-all duration-500`}>
-          <div className="flex items-center gap-4 mb-2">
-            <span className={`text-3xl font-black uppercase tracking-wider ${getTypeColor(step.type)}`}>
-              {getTypeLabel(step.type)}
-            </span>
-            {step.type === 'repeat' && <span className="text-3xl font-black bg-[#0B0B0B] px-5 py-1.5 rounded-full border-2 border-[#333]">x{step.rounds}</span>}
-          </div>
-          {step.type === 'repeat' ? (
-            <div className="text-3xl font-bold flex flex-col gap-4 mt-2">
-              <div className="flex items-start justify-between bg-[#111] px-6 py-5 rounded-3xl border-2 border-[#333]">
-            <div className="flex-1 min-w-0 break-words pr-4"><span className="text-muted mr-3">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-running ml-3 whitespace-nowrap">@{step.runPace}</span>}</div>
-                {step.runIntensity && <div className="flex items-center gap-2 shrink-0 mt-1"><span className={`text-3xl font-black ${getIntensityColor(step.runIntensity)}`}>{step.runIntensity}/10</span><BicepsFlexed size={36} className={getIntensityColor(step.runIntensity)} /></div>}
-              </div>
-              <div className="flex items-start justify-between bg-[#111] px-6 py-5 rounded-3xl border-2 border-[#333]">
-            <div className="flex-1 min-w-0 break-words pr-4"><span className="text-muted mr-3">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-green-500 ml-3 whitespace-nowrap">@{step.recPace}</span>}</div>
-                {step.recIntensity && <div className="flex items-center gap-2 shrink-0 mt-1"><span className={`text-3xl font-black ${getIntensityColor(step.recIntensity)}`}>{step.recIntensity}/10</span><BicepsFlexed size={36} className={getIntensityColor(step.recIntensity)} /></div>}
-              </div>
-              {step.notes && <p className="text-muted text-2xl font-medium mt-1 break-words">"{step.notes}"</p>}
-            </div>
-          ) : (
-            <div className="flex items-start justify-between text-4xl font-bold mt-2">
-            <div className="flex-1 min-w-0 break-words pr-4">
-                {step.duration && <span className="font-semibold text-white">{step.duration}</span>}
-                {step.pace && <span className="ml-4 text-gray-400 whitespace-nowrap">@{step.pace}</span>}
-                {step.notes && <p className="text-muted text-2xl font-medium mt-3 break-words">"{step.notes}"</p>}
-              </div>
-              {step.intensity && <div className="flex items-center gap-2 shrink-0 bg-[#111] px-5 py-2.5 rounded-2xl border-2 border-[#333] mt-1"><span className={`text-3xl font-black ${getIntensityColor(step.intensity)}`}>{step.intensity}/10</span><BicepsFlexed size={36} className={getIntensityColor(step.intensity)} /></div>}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  )
 }
 
 export default function TVDashboard() {
@@ -481,40 +317,15 @@ export default function TVDashboard() {
 
   const renderContent = () => {
     if (error) {
-      return <div className="flex h-full items-center justify-center text-red-500 font-bold text-2xl p-10 text-center">{error}</div>
+      return <ErroreTV messaggio={error} />
     }
 
     if (status === 'waiting') {
-      return (
-        <div className="flex flex-col items-center justify-center flex-1 h-full text-white p-10 relative w-full">
-          <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-            <MonitorUp size={rotated ? 800 : 600} className="text-brand" />
-          </div>
-          <div className="absolute top-8 right-8 z-50 flex items-center gap-4">
-            <div className={`p-4 bg-[#111] border-2 border-[#333] rounded-full transition shadow-2xl ${audioUnlocked ? 'text-brand' : 'text-red-500 animate-pulse'}`} title="Suoni TV">
-              {audioUnlocked ? <Volume2 size={32} /> : <VolumeX size={32} />}
-            </div>
-            <button aria-label="Ruota lo schermo" onClick={() => setRotated(!rotated)} className="p-4 bg-[#111] border-2 border-[#333] rounded-full text-gray-400 hover:text-white transition shadow-2xl">
-              <RotateCw size={32} />
-            </button>
-          </div>
-          <div className="relative z-10 flex flex-col items-center justify-center flex-1 animate-in fade-in zoom-in duration-500 text-center">
-            <h1 className="text-[120px] font-black tracking-tight mb-8 leading-none">FLEO<span className="text-brand">FIT</span> TV</h1>
-            <p className="text-5xl text-gray-400 mb-6">Apri l'app sul tuo telefono e clicca sull'icona della TV.</p>
-            <p className="text-4xl text-muted mb-12">Inserisci questo codice per avviare la trasmissione:</p>
-            <div className="bg-[#1e1e1e] border-4 border-[#333] rounded-[3rem] px-32 py-16 shadow-2xl">
-              <span className="text-[150px] font-black tracking-[0.3em] ml-[0.3em] text-brand drop-shadow-2xl leading-none">{code || '...'}</span>
-            </div>
-            {!audioUnlocked && (
-              <p className="text-red-400 mt-12 animate-pulse font-bold text-3xl">Premi "OK" sul telecomando per attivare l'audio</p>
-            )}
-          </div>
-        </div>
-      )
+      return <AttesaTV codice={code} audioAttivo={audioUnlocked} ruotato={rotated} onRuota={() => setRotated(!rotated)} />
     }
 
     if (status === 'loading') {
-      return <div className="flex h-full items-center justify-center text-brand text-6xl font-bold animate-pulse">Trasmissione in corso...</div>
+      return <CaricamentoTV />
     }
 
     const s = workout?.sections || {}
@@ -535,7 +346,6 @@ export default function TVDashboard() {
 
     const mainBlock = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type)) || blocks[0] || { type: 'Hyrox' }
     const type = isEvent ? 'Event' : (isAuto ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
-    const c = TYPE_COLORS[type] || TYPE_COLORS['Hyrox'] || { text: 'text-gray-200', bg: 'bg-[#222]', border: 'border-[#333]', hex: '#e5e5e5' }
 
     let activeIdx = -1;
     if (timerState?.step?.id) {
@@ -552,7 +362,7 @@ export default function TVDashboard() {
       return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
-    const totalItems = (isRunning ? 1 : blocks.length) + (workout.coach_notes ? 1 : 0) + (type !== 'Event' && type !== 'Custom' ? 1 : 0);
+    const totalItems = (isRunning ? 1 : blocks.length) + (workout.coach_notes ? 1 : 0);
     
     let cols = 1;
     let rows = 1;
@@ -566,64 +376,47 @@ export default function TVDashboard() {
       else { cols = Math.ceil(totalItems / 2); rows = 2; }
     }
 
-    const getSectionClass = () => {
-      return "";
-    }
-
-    const getIconForType = (t) => {
-      const sz = 40;
-      if (t === 'WarmUp' || t === 'Rest') return <Timer size={sz} className={TYPE_COLORS[t]?.text} />
-      if (t === 'Cash In') return <Flag size={sz} className={TYPE_COLORS[t]?.text} />
-      if (t === 'Cash Out') return <FlagOff size={sz} className={TYPE_COLORS[t]?.text} />
-      return <Dumbbell size={sz} className={TYPE_COLORS[t]?.text} />
-    }
+    // Solo lettura dello stato che arriva dal telefono: nessun conto sul tempo,
+    // solo come mostrarlo. Gli step a cronometro (duration 0) non hanno una fine,
+    // quindi niente barra.
+    const passo = lastTimerState?.step
+    const avanzamento = passo?.duration > 0 && lastTimerState
+      ? (passo.duration - lastTimerState.timeLeft) / passo.duration
+      : null
+    const etichettaCategoria = category === 'Event' ? 'Gara / Evento'
+      : category === 'Custom' ? 'Allenamento libero'
+      : isRunning ? 'Allenamento di corsa'
+      : category === 'Gym' ? 'Allenamento Gym'
+      : 'Allenamento Hyrox'
 
     return (
-      <div className="w-full min-h-full p-10 flex flex-col gap-8 relative">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-6 shrink-0 bg-[#1e1e1e] p-8 rounded-[2.5rem] border-4 border-[#333] shadow-2xl">
-          <div className="flex flex-col gap-4 flex-1 min-w-0">
-            <h1 className="text-6xl font-black text-white tracking-tight leading-none break-words">{workout.title}</h1>
-            <div className="flex flex-wrap items-center gap-4">
-              <span className={`text-3xl font-black px-6 py-2.5 rounded-2xl uppercase tracking-wider shrink-0 ${type === 'Event' ? 'bg-white text-black border-white' : `${c.bg} ${c.text} border-2 ${c.border}`}`}>
-                {type === 'Event' ? 'Gara / Evento' : (isRunning ? 'Allenamento Corsa' : 'Allenamento Hyrox')}
-              </span>
-              {workout.sections?.intensity && (
-                <div className="flex items-center gap-3 bg-[#111] border-2 border-[#333] px-6 py-2.5 rounded-2xl shrink-0">
-                  <span className={`text-3xl font-black ${getIntensityColor(workout.sections.intensity)}`}>
-                    Intensità {workout.sections.intensity}/10
-                  </span>
-                  <BicepsFlexed size={36} className={getIntensityColor(workout.sections.intensity)} />
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-col items-end shrink-0">
-            <div className="flex flex-wrap items-center justify-end gap-4 mb-2">
-              <div className={`p-4 bg-[#111] border-2 border-[#333] rounded-full transition shadow-2xl ${audioUnlocked ? 'text-brand' : 'text-red-500 animate-pulse'}`} title="Suoni TV">
-                {audioUnlocked ? <Volume2 size={36} /> : <VolumeX size={36} />}
-              </div>
-              <button aria-label="Ruota lo schermo" onClick={() => setRotated(!rotated)} className="p-4 bg-[#111] border-2 border-[#333] rounded-full text-gray-400 hover:text-white transition" title="Ruota Orientamento">
-                <RotateCw size={36} />
-              </button>
-              <h1 className="text-6xl font-black text-white tracking-tight">FLEO<span className="text-brand">FIT</span> TV</h1>
-            </div>
-            <p className="text-3xl text-muted font-bold">@FLEOFIT</p>
-          </div>
-        </div>
+      <div className={`w-full min-h-full flex flex-col relative ${rotated ? 'px-10 pt-10 pb-10 gap-7' : 'px-14 pt-12 pb-14 gap-10'}`}>
+        <TestataTV
+          coloreCategoria={coloreCategoria(category)}
+          etichettaCategoria={etichettaCategoria}
+          titolo={workout.title}
+          intensita={workout.sections?.intensity}
+          classeIntensita={getIntensityColor(workout.sections?.intensity)}
+          audioAttivo={audioUnlocked}
+          onRuota={() => setRotated(!rotated)}
+          stretto={rotated}
+        />
 
         <div className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${timerState ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
           <div className="overflow-hidden">
-              <div className={`bg-[#111] border-4 border-[#333] rounded-[3rem] px-12 py-6 flex items-center justify-between min-w-[1000px] shadow-[0_30px_80px_rgba(0,0,0,0.9)] transition-all duration-500 mb-8 ${timerState ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8'}`}>
-                 <div className="flex flex-col flex-1 pr-8 min-w-0">
-                   <span className="text-brand font-bold text-3xl uppercase tracking-widest">{lastTimerState?.step?.title}</span>
-                   <span className="text-white font-bold text-5xl truncate mt-2">{lastTimerState?.step?.task}</span>
-                 </div>
-                 <div className="w-1 h-24 bg-[#333] rounded-full mx-8"></div>
-                 <span className="text-[120px] font-black text-white tabular-nums tracking-tighter leading-none shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                   {lastTimerState ? formatT(lastTimerState.timeLeft) : '0:00'}
-                 </span>
-              </div>
+            <div className={`transition-all duration-500 pb-2 ${timerState ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8'}`}>
+              <TimerTV
+                titolo={passo?.title}
+                sottotitolo={passo?.subtitle}
+                compito={passo?.task}
+                poi={passo?.nextTask}
+                tempo={lastTimerState ? formatT(lastTimerState.timeLeft) : '0:00'}
+                avanzamento={avanzamento}
+                tema={passo?.theme}
+                inPausa={!!lastTimerState && !lastTimerState.isRunning && passo?.type !== 'done'}
+                stretto={rotated}
+              />
+            </div>
           </div>
         </div>
 
@@ -636,43 +429,48 @@ export default function TVDashboard() {
                gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`
              } : undefined}
            >
-             {/* AVVISO RISCALDAMENTO (TV) */}
-             {type !== 'Event' && type !== 'Custom' && (
-               <div className="bg-[#1e1e1e] border-4 border-orange-500/30 rounded-[2rem] p-6 flex flex-col gap-4 shadow-2xl relative transition-all duration-500">
-                 <div className="flex items-start gap-4 border-b-2 border-[#333] pb-4 shrink-0 pr-8">
-                   <div className="mt-1 shrink-0 text-orange-400"><Activity size={40} /></div>
-                   <span className="text-orange-400 font-black text-3xl uppercase tracking-wider leading-tight flex-1 min-w-0 break-words">Prima di iniziare</span>
-                 </div>
-                 <div className="flex-1 flex flex-col justify-center gap-4">
-                   <p className="text-gray-300 text-3xl font-medium leading-relaxed">
-                     Esegui sempre 5-10 minuti di mobilità articolare. Approccia l'allenamento in modo graduale per preparare il corpo allo sforzo e prevenire infortuni. Non partire mai a freddo!
-                   </p>
-                 </div>
-               </div>
-             )}
-
              {!isRunning && type !== 'Custom' && type !== 'Event' ? (
-                blocks.map((block, idx) => (
-                  <Section key={block.id || idx} icon={getIconForType(block.type)} label={getBlockTitle(block)} hint={blockHint(block.type)} color={TYPE_COLORS[block.type]?.border} stepNumber={blocks.length > 1 ? idx + 1 : null} className={getSectionClass(block.type)} isActive={idx === activeIdx}>
-                      {['WarmUp', 'Rest'].includes(block.type) ? (
-                        <p className="text-gray-300 text-4xl font-bold">{block.params?.duration} {block.notes ? <span className="text-muted text-3xl block mt-4">· {block.notes}</span> : ''}</p>
-                      ) : (
-                        <ExList exercises={block.exercises || []} tipo={block.type} showMinute={block.type === 'EMOM' || block.type === 'ON/OFF'} typeColor={TYPE_COLORS[block.type]?.text} />
-                      )}
-                  </Section>
-                ))
+                blocks.map((block, idx) => {
+                  const esercizi = block.exercises || []
+                  const riposo = ['WarmUp', 'Rest'].includes(block.type)
+                  const numerato = block.type === 'EMOM' || block.type === 'ON/OFF'
+                  // In un EMOM il numero sono i minuti, anche «2–3» (src/lib/stazioniEmom.js).
+                  const etichette = etichetteStazioni(esercizi, block.type)
+                  const durata = mmss(durataBlocco(block))
+                  // EMOM e ON/OFF: l'esercizio che sta girando, letto dall'id dello step.
+                  const corrente = timerState ? esercizioInCorso(block, idx, timerState.step?.id) : null
+                  return (
+                    <BloccoTV key={block.id || idx}
+                      tipo={block.type}
+                      hint={blockHint(block.type)}
+                      sottotitolo={sottotitoloBlocco(block)}
+                      durata={durata !== '0:00' ? durata : null}
+                      lavoro={BLOCCHI_DI_LAVORO.has(block.type)}
+                      numero={blocks.length > 1 ? idx + 1 : null}
+                      attivo={idx === activeIdx}>
+                      {riposo ? (
+                        block.notes ? <NotaBloccoTV>{block.notes}</NotaBloccoTV> : null
+                      ) : esercizi.map((ex, i) => (
+                        <EsercizioTV key={ex.id || i}
+                          numero={numerato ? etichette[i] : null}
+                          nome={ex.name}
+                          specifiche={specificheEsercizio(ex, isErgo)}
+                          note={ex.notes}
+                          intensita={ex.intensity}
+                          classeIntensita={getIntensityColor(ex.intensity)}
+                          attivo={i === corrente} />
+                      ))}
+                    </BloccoTV>
+                  )
+                })
               ) : isRunning ? (
-                  <Section icon={<Timer size={40} className={c.text} />} label="Allenamento Corsa" color={c.border}>
-                    <RunningList steps={s?.steps || s?.main?.steps || []} activeIdx={activeIdx} />
-                  </Section>
+                  <CartaCorsaTV>
+                    <CorsaTV passi={s?.steps || s?.main?.steps || []} attivo={activeIdx} classeIntensita={getIntensityColor} />
+                  </CartaCorsaTV>
               ) : null}
 
               {/* Note Coach */}
-              {workout.coach_notes && (
-                <Section icon={<span className="text-brand text-5xl">📋</span>} label="Note Coach" color="border-brand/40">
-                  <p className="text-gray-300 text-4xl leading-relaxed font-semibold italic">"{workout.coach_notes}"</p>
-                </Section>
-              )}
+              {workout.coach_notes && <NotaCoachTV>{workout.coach_notes}</NotaCoachTV>}
            </div>
         </div>
       </div>

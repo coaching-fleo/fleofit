@@ -168,7 +168,7 @@ src/
    ├─ WeeklyReport.jsx         # /report — il report settimanale del coach (§9-vicies).
    │                           #   🔒 L'UNICA pagina senza una versione atleta: rimanda alla Home
    ├─ Settings.jsx             # notifiche, backup/restore JSON, codici invito, BLE, password
-   ├─ TVDashboard.jsx          # /tv — dashboard fullscreen per TV/Chromecast, codice a 4 cifre
+   ├─ TVDashboard.jsx          # /tv — dashboard fullscreen per TV/Chromecast, codice a 4 cifre (grafica in components/TVDashboardUI.jsx)
    ├─ motivations.js           # 15 frasi motivazionali + getDailyMotivation() con anti-ripetizione
    └─ __tests__/               # 157 test su componenti e pagine montate (§9 punto 11)
 tools/                            # non entra nell'app: serve alle verifiche pre-submission

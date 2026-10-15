@@ -471,3 +471,48 @@ Dove compare:
 
 Backup: `come_stai` è nell'esportazione in-app e nel backup notturno (vedi `database.md`).
 Non fatto (da decidere): nessun avviso al coach quando qualcuno sta male.
+
+---
+
+## 9-tv-grafica. La TV in linea con il resto dell'app (15/10/2026)
+
+`/tv` era l'ultima schermata di prima del redesign: bordi da 4px, `#1e1e1e` piatto, il logo
+due volte, il giallo ovunque. Rifatta **solo la grafica**, su richiesta esplicita del
+committente: «non toccare il codice per il timer».
+
+- 🔴 **La grafica sta in `src/components/TVDashboardUI.jsx`**, sola presentazione (stesso patto
+  degli altri `*UI.jsx`). In `pages/TVDashboard.jsx` restano, **identici byte per byte**, i beep
+  WAV, il wake lock, lo sblocco dell'audio, il canale realtime (`tv_sessions`, `timer_state`,
+  `timer_close`), la scala del canvas 1920×1080 e la griglia `cols`/`rows`. Verificato col
+  diff contro `1d800ac`. Chi rimette mano alla TV per la grafica tocca solo il file UI.
+- Il linguaggio è quello della scheda: `CARTA_TV` (la carta sollevata in scala TV), la spina
+  colorata del blocco da `TYPE_COLORS`, la sovrascritta con il pallino della corsia
+  (`coloreCategoria`), il vetro per audio e rotazione. Il blocco in corso è l'**unica cosa
+  ambra della griglia**.
+- I dati dei blocchi vengono dalle stesse funzioni della scheda: `sottotitoloBlocco`,
+  `specificheEsercizio`, `durataBlocco` + `mmss`. È sparita la `getBlockTitle` della TV, che
+  era una copia (le altre stanno ancora in `WorkoutDetail`, BACKLOG del debito).
+- La fascia del timer **legge** il `timer_state` che il telefono già manda e non calcola
+  niente: colore dal `theme` dello step (stessa mappa dei `SCHEMES` del telefono), «Poi» da
+  `nextTask`, barra da `(duration − timeLeft) / duration` (nessuna barra sugli step a
+  cronometro, `duration` 0), «In pausa» da `isRunning === false`.
+- 🔴 **Sulla TV l'avviso «Prima di iniziare» NON c'è**, per scelta del committente
+  (15/10/2026): prima carta della griglia, poi fascia sottile in fondo — «veramente
+  invasivo» in entrambe le forme. Resta nella scheda workout (`AvvisoRiscaldamento`, testo
+  intero). Non va rimesso sulla TV, né conta più in `totalItems`.
+- Il bottone di rotazione **non è una freccia circolare** (sembrava «ricarica la pagina»): è
+  `RotateCcwSquare`, il quadrato con la freccia curva di Foto su iOS, scelto dal committente.
+  Una pillola con scritta «Verticale» è stata provata e scartata.
+- **L'esercizio in corso si accende** dentro EMOM e ON/OFF (richiesta del committente,
+  15/10/2026): `src/lib/esercizioInCorso.js` lo ricava dall'id dello step che il telefono
+  manda (`blk-<blocco>-<round>` per l'EMOM, convertito con `fasiEmom`, la stessa funzione del
+  timer; `blk-<blocco>-<giro>-<k>-on|off` per l'ON/OFF, acceso **solo nell'ON**). 🔴 Se cambia
+  il formato degli id in `buildTimerSequence`, la riga accesa sbaglia senza errori:
+  `esercizioInCorso.test.js` costruisce la sequenza vera e lo verifica.
+- ⚠️ **TV ruotata**: il contenuto deve stare nei 1920px di altezza, o la cornice di scala lo
+  sposta e lo taglia a sinistra (succedeva già prima, è la logica di scala, non toccata).
+  Per questo con `stretto` testata e timer si compattano (il tempo va sopra il compito, il
+  marchio sparisce). Un workout molto lungo può ancora superarli, come prima.
+- Provato nell'ambiente di prova iniettando workout e `timer_state` finti nel browser
+  (Hyrox con EMOM in corso, corsa in pausa, verticale). **Non provato su una TV vera.**
+- Non fatto, come prima: la TV non mostra i gruppi Gym (`crea-workout.md`, 9-gym punto 8).
