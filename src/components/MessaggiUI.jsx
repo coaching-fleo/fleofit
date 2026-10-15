@@ -5,7 +5,11 @@ import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { anteprima } from '../lib/messaggiCoach'
 
-const quando = (d) => format(new Date(d), 'd MMM · HH:mm', { locale: it })
+// Una data mancante o illeggibile non deve mai far cadere la pagina: si omette.
+const quando = (d) => {
+  const data = d ? new Date(d) : null
+  return data && !Number.isNaN(data.getTime()) ? format(data, 'd MMM · HH:mm', { locale: it }) : ''
+}
 
 export function RigaMessaggio({ messaggio, evidenziato = false, coach = false, onMenu }) {
   const { id, testo, fissato, creato_at, modificato_at } = messaggio

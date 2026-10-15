@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ListaMessaggi, CardDalCoach } from '../MessaggiUI'
+import { ListaMessaggi, CardDalCoach, RigaMessaggio } from '../MessaggiUI'
 
 const msg = (o = {}) => ({
   id: 'm1', testo: 'Ciao a tutti', fissato: false, autore: 'c', creato_at: '2026-10-14T09:30:00', modificato_at: null, ...o,
@@ -60,5 +60,10 @@ describe('MessaggiUI', () => {
     expect(screen.queryByText('x'.repeat(300))).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button'))
     expect(onApri).toHaveBeenCalled()
+  })
+
+  it('RigaMessaggio senza creato_at non va in crash: mostra il testo', () => {
+    render(<RigaMessaggio messaggio={msg({ creato_at: undefined })} />)
+    expect(screen.getByText('Ciao a tutti')).toBeInTheDocument()
   })
 })

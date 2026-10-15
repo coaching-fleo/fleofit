@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { clientDemo, azzeraDemo } from '../supabaseDemo'
 import { semi, VERSIONE_SEME } from '../demoSemi'
 import { visibiliPer, ordina } from '../lib/messaggiCoach'
 
@@ -29,5 +30,21 @@ describe('i messaggi della demo', () => {
 
   it('la versione dei semi è salita a 11', () => {
     expect(VERSIONE_SEME).toBe(11)
+  })
+})
+
+describe('demo: insert su messaggi_coach', () => {
+  beforeEach(() => { vi.spyOn(console, 'info').mockImplementation(() => {}); azzeraDemo() })
+
+  it('applica i default del database: creato_at, fissato, modificato_at', async () => {
+    const { data } = await clientDemo().from('messaggi_coach').insert({ testo: 'Prova', autore: 'c' }).select().single()
+    expect(new Date(data.creato_at).getTime()).not.toBeNaN()
+    expect(data.fissato).toBe(false)
+    expect(data.modificato_at).toBeNull()
+  })
+
+  it('i valori passati vincono sui default', async () => {
+    const { data } = await clientDemo().from('messaggi_coach').insert({ testo: 'x', fissato: true }).select().single()
+    expect(data.fissato).toBe(true)
   })
 })
