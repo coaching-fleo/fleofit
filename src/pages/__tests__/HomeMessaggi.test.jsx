@@ -9,13 +9,13 @@ import { CHIAVE_VISTO } from '../../lib/messaggiCoach'
 // «Dal coach» in Home: la card compare solo per un messaggio arrivato dopo
 // l'ultima volta che l'atleta ha guardato, visibile per la sua data d'iscrizione,
 // e un errore di lettura lascia la Home com'era.
-const ctrl = vi.hoisted(() => ({ messaggi: [], errore: false }))
+const ctrl = vi.hoisted(() => ({ messaggi: [], errore: false, vuota: false }))
 
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
   const oggi = new Date().toISOString().split('T')[0]
   return fintoSupabase(() => ({
-    athlete_workouts: [{
+    athlete_workouts: ctrl.vuota ? [] : [{
       id: 'aw1', completed_date: oggi, status: 'pending', notes: null,
       workouts: { id: 'w1', title: 'Hyrox Forza', sections: { category: 'Hyrox', blocks: [] } },
     }],
@@ -56,6 +56,7 @@ beforeEach(() => {
   window.localStorage.clear()
   ctrl.messaggi = []
   ctrl.errore = false
+  ctrl.vuota = false
 })
 
 describe('Dal coach in Home atleta', () => {
@@ -73,6 +74,14 @@ describe('Dal coach in Home atleta', () => {
     await screen.findByText('Hyrox Forza')
     await waitFor(() => expect(finto.chiamate.some(c => c.tabella === 'messaggi_coach')).toBe(true))
     expect(screen.queryByText('Dal coach')).not.toBeInTheDocument()
+  })
+
+  it('al giorno 1, senza workout, la card c\'è comunque', async () => {
+    ctrl.vuota = true
+    ctrl.messaggi = [msg('m1', '2026-10-10T10:00:00Z')]
+    monta()
+    await userEvent.click(await screen.findByText('Domani niente sessione'))
+    expect(await screen.findByTestId('dove')).toHaveTextContent('/messaggi')
   })
 
   it('senza messaggi non c\'è card', async () => {

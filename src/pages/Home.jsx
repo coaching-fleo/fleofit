@@ -198,6 +198,9 @@ export default function Home() {
     })()
     return () => { attivo = false }
   }, [role, user?.id, user?.created_at, loading])
+  const cardDalCoach = messaggioDalCoach
+    ? <CardDalCoach messaggio={messaggioDalCoach} onApri={() => navigate('/messaggi')} />
+    : null
 
   // L'UNICO punto in cui si scrive il badge. Prima erano cinque in questo file,
   // sette contando App.jsx e WorkoutDetail.jsx, tutti da tenere allineati a mano.
@@ -1345,6 +1348,7 @@ setNotifications(prev => {
           ) : vuoto ? (
             <>
               <BenvenutoCoach coach={COACH} onProfilo={() => navigate('/profile')} />
+              {cardDalCoach}
               {/* `onFissa` apre «Nuovo evento», la stessa modale del
                   calendario: l'obiettivo nasce come workout `Event` e compare
                   nel calendario e nel `BannerObiettivo` (fino al 12/10/2026
@@ -1438,9 +1442,7 @@ setNotifications(prev => {
             </>
           )}
 
-          {messaggioDalCoach && (
-            <CardDalCoach messaggio={messaggioDalCoach} onApri={() => navigate('/messaggi')} />
-          )}
+          {cardDalCoach}
 
           {/* Il bento. La settimana non è più nascosta dietro uno swipe non
               segnalato: l'anello dice quanto manca, i sette punti sotto sono
