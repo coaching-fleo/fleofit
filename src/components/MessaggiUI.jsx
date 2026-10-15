@@ -24,7 +24,7 @@ export function RigaMessaggio({ messaggio, evidenziato = false, coach = false, o
             type="button"
             aria-label="Azioni messaggio"
             onClick={() => onMenu?.(messaggio)}
-            className="ml-auto w-8 h-8 -mr-2 flex items-center justify-center rounded-full text-gray-400 hover:text-white"
+            className="ml-auto w-11 h-11 -mr-3.5 -my-1.5 flex items-center justify-center rounded-full text-gray-400 hover:text-white"
           >
             <MoreHorizontal size={18} />
           </button>

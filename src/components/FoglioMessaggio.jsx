@@ -1,5 +1,6 @@
 // FoglioMessaggio.jsx — «Messaggio a tutti»: il coach scrive, invia, corregge
-// (15/10/2026). E il menu di un messaggio già mandato (Fissa · Modifica · Elimina).
+// (15/10/2026). E il menu di un messaggio già mandato (Fissa · Modifica ·
+// Manda la notifica · Elimina).
 //
 // Il viaggio di un invio (spec, «Il viaggio»):
 //   1. `insert` in `messaggi_coach` — da qui il messaggio è in bacheca;
@@ -20,7 +21,7 @@
 
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Pin, PinOff, Pencil, Trash2 } from 'lucide-react'
+import { X, Pin, PinOff, Pencil, Trash2, BellRing } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useBottomSheet } from '../useBottomSheet'
 import { CustomConfirm } from './CustomModals'
@@ -228,14 +229,18 @@ function Contenuto({ onChiudi, numeroAtleti = null, demo = false, iniziale = nul
 
 /**
  * Il menu di un messaggio. `onChiudi(scelta)` arriva a uscita FINITA, con
- * 'fissa' | 'modifica' | 'elimina' | null: un foglio che si apre mentre questo
+ * 'fissa' | 'modifica' | 'notifica' | 'elimina' | null: un foglio che si apre mentre questo
  * sta ancora uscendo si troverebbe lo scorrimento della pagina già bloccato, e
  * alla fine lo lascerebbe bloccato per sempre (useScorrimentoBloccato).
+ *
+ * «Manda la notifica» rifà il passo 2 dell'invio dopo che il foglio è stato
+ * chiuso (Riprova non c'è più): il server salta chi l'ha già ricevuta.
+ * @param notificaInVolo  una notifica di questo menu sta già partendo: voce spenta.
  */
-export function MenuMessaggio({ messaggio, onChiudi, demo = false }) {
+export function MenuMessaggio({ messaggio, onChiudi, demo = false, notificaInVolo = false }) {
   const scelta = useRef(null)
   const sheet = useBottomSheet(() => onChiudi(scelta.current))
-  // Il demo non scrive (RLS): le tre voci si vedono, spente, con il perché.
+  // Il demo non scrive (RLS): le voci si vedono, spente, con il perché.
   const scegli = (s) => { if (demo) return; scelta.current = s; sheet.chiudi() }
   const voce = 'w-full min-h-[52px] flex items-center gap-3 px-4 rounded-2xl bg-[#222] border border-[#333] text-left text-[15px] font-bold transition hover:border-[#444] disabled:opacity-40 disabled:pointer-events-none'
   return (
@@ -248,6 +253,9 @@ export function MenuMessaggio({ messaggio, onChiudi, demo = false }) {
         </button>
         <button type="button" onClick={() => scegli('modifica')} disabled={demo} className={`${voce} text-white`}>
           <Pencil size={18} aria-hidden="true" />Modifica
+        </button>
+        <button type="button" onClick={() => { if (!notificaInVolo) scegli('notifica') }} disabled={demo || notificaInVolo} className={`${voce} text-white`}>
+          <BellRing size={18} aria-hidden="true" />{notificaInVolo ? 'Invio…' : 'Manda la notifica'}
         </button>
         <button type="button" onClick={() => scegli('elimina')} disabled={demo} className={`${voce} text-red-500`}>
           <Trash2 size={18} aria-hidden="true" />Elimina

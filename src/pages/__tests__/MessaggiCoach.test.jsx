@@ -244,6 +244,36 @@ describe('Messaggi — il coach', () => {
   })
 })
 
+describe('Messaggi — rimandare la notifica e tornare indietro', () => {
+  it('«Manda la notifica» richiama send-reminders con lo stesso id (il server salta chi l\'ha già)', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    montaPagina(<Messaggi />, { user: COACH, role: 'admin' })
+    await screen.findByText('Avviso vecchio')
+    await apriMenu('vecchio', 'Manda la notifica')
+    await waitFor(() => expect(finto.supabase.functions.invoke).toHaveBeenCalledTimes(1))
+    expect(finto.supabase.functions.invoke).toHaveBeenCalledWith('send-reminders', { body: { mode: 'broadcast', record_id: 'vecchio' } })
+  })
+
+  it('mentre la notifica parte, «Manda la notifica» è spenta', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    let sblocca
+    finto.supabase.functions.invoke.mockImplementationOnce(() => new Promise(r => { sblocca = r }))
+    montaPagina(<Messaggi />, { user: COACH, role: 'admin' })
+    await screen.findByText('Avviso vecchio')
+    await apriMenu('vecchio', 'Manda la notifica')
+    await waitFor(() => expect(finto.supabase.functions.invoke).toHaveBeenCalledTimes(1))
+    fireEvent.click(within(document.getElementById('messaggio-nuovo')).getByLabelText('Azioni messaggio'))
+    const menu = await screen.findByRole('dialog', { name: 'Messaggio' })
+    expect(within(menu).getByRole('button', { name: /Manda la notifica|Invio…/ }).disabled).toBe(true)
+    sblocca({ data: { success: true, sent: 1 }, error: null })
+  })
+
+  it('ha la freccia per tornare indietro', async () => {
+    montaPagina(<Messaggi />, { user: COACH, role: 'admin' })
+    expect(await screen.findByRole('button', { name: 'Torna indietro' })).toBeTruthy()
+  })
+})
+
 describe('Messaggi — scritture rifiutate e account di prova', () => {
   it('«Fissa» che non tocca nessuna riga (RLS, senza errore) torna giù', async () => {
     const { container } = montaPagina(<Messaggi />, { user: COACH, role: 'admin' })
@@ -301,7 +331,7 @@ describe('Messaggi — scritture rifiutate e account di prova', () => {
     fireEvent.click(within(document.getElementById('messaggio-nuovo')).getByLabelText('Azioni messaggio'))
     const menu = await screen.findByRole('dialog', { name: 'Messaggio' })
     expect(within(menu).getByText("Nell'account di prova i messaggi non partono")).toBeTruthy()
-    for (const voce of ['Fissa', 'Modifica', 'Elimina']) {
+    for (const voce of ['Fissa', 'Modifica', 'Manda la notifica', 'Elimina']) {
       const b = within(menu).getByRole('button', { name: voce })
       expect(b.disabled).toBe(true)
       fireEvent.click(b)
@@ -310,6 +340,7 @@ describe('Messaggi — scritture rifiutate e account di prova', () => {
     expect(screen.queryByLabelText('Testo del messaggio')).toBeNull()
     expect(screen.queryByRole('dialog', { name: 'Eliminare il messaggio?' })).toBeNull()
     expect(finto.chiamateA('messaggi_coach', 'update')).toHaveLength(0)
+    expect(finto.supabase.functions.invoke).not.toHaveBeenCalled()
   })
 })
 
