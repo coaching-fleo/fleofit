@@ -66,7 +66,7 @@ spostare, sostituire ${parti} o esercizi), oppure un'aggiunta.
 - Restituisci l'allenamento COMPLETO dopo la modifica: l'intero elenco di ${parti}, comprese le parti che non cambiano.
 - Tutto ciò che la richiesta non tocca resta IDENTICO: stesso elenco di ${parti} nello stesso ordine,
   stessi esercizi, stessi campi e valori (reps, meters, kg, ergoPace, speed, exTime, intensity,
-  intervals, notes, params, duration, pace, serie, recupero, durata, rir, cadenza, dettaglio). Non aggiungere, togliere o riscrivere campi di tua iniziativa.
+  intervals, incremento, aumento, timecap, notes, params, duration, pace, serie, recupero, durata, rir, cadenza, dettaglio). Non aggiungere, togliere o riscrivere campi di tua iniziativa.
 - Se la richiesta aggiunge qualcosa senza dire dove, mettilo in fondo.
 - Se la richiesta indica una parte per posizione ("il secondo", "l'ultimo") contali nell'ordine dell'array.
 `
@@ -123,6 +123,23 @@ con il campo "intervals" = quanti intervalli dura, come stringa ("2", "3"…, ma
 ON/OFF: "rounds" sono i GIRI DEL CIRCUITO, non gli intervalli. Ogni giro fa TUTTI gli esercizi
 del blocco, un ON + un OFF ciascuno: con 7 esercizi e "rounds": "4" sono 28 intervalli.
 Esempio: "50 on 10 off, 4 giri di 7 esercizi" → "params": { "on": "0:50", "off": "0:10", "rounds": "4" }.
+
+FOR TIME: è sempre a TEMPO (time cap): si dice solo quanti minuti si lavora, MAI i round.
+"params": { "timecap": "20:00" } (stringa m:ss). Se il tempo non è detto, usa "20:00". Non scrivere "rounds".
+
+INCREMENTO A OGNI GIRO (solo "For Time" e "AMRAP"): si lavora per un tempo fisso; finito il giro
+di esercizi si ricomincia dal primo con le quantità aumentate, fino allo scadere del tempo
+(es. "for time 20 minuti: 200 metri di ski e 20 wall ball, ogni giro +100 metri e +10 ripetizioni").
+NON è un numero di giri: non scrivere i giri successivi, scrivi SOLO il primo giro.
+- Sul blocco metti "incremento": true.
+- Ogni esercizio che sale ha "aumento" = di quanto sale a ogni giro, stringa intera nella sua unità:
+  metri se l'esercizio è in "meters", ripetizioni se è in "reps" ("100", "10"; negativo se scende).
+  Un esercizio che resta uguale non ha "aumento".
+- Il tempo è quello del blocco: "timecap" nel "For Time", "duration" nell'"AMRAP".
+Esempio: { "type": "For Time", "incremento": true, "params": { "timecap": "20:00" },
+  "exercises": [
+    { "name": "SkiErg", "meters": "200m", "intensity": "8", "aumento": "100" },
+    { "name": "Wall Balls", "reps": "20", "kg": "6", "intensity": "8", "aumento": "10" } ] }
 
 Esempio di struttura richiesta:
 [

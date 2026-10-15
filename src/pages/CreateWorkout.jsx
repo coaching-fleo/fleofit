@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback, memo, lazy, Suspense
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText, Repeat2 } from 'lucide-react'
+import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText, Repeat2, TrendingUp, Minus } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
@@ -40,6 +40,7 @@ import { scriviJson } from '../lib/offlineQueue'
 import { preparaBlocchiIA } from '../lib/blocchiIA'
 import { iaDellaCategoria, haGiaContenuto } from '../lib/iaCategorie'
 import { intervalliDi, etichetteStazioni, MASSIMO_INTERVALLI } from '../lib/stazioniEmom'
+import { TIPI_CON_INCREMENTO, haIncremento, attivaIncremento, disattivaIncremento, campoIncremento, aumentoDi, testoAumento, esercizioAlGiro, giriDiEsempio, testoTimeCap, TIME_CAP_PREDEFINITO } from '../lib/incremento'
 import { parseDuration } from '../lib/timerSequence'
 import { riepilogoGym } from '../lib/gym'
 import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
@@ -100,6 +101,8 @@ const RAPIDI_ROUNDS = ['3', '5', '8', '10']
 // Qui sì un peso per esercizio: è legato al nome, non proposto a tutti.
 const STANDARD_ESERCIZIO = [
   { nome: /^wall balls?$/i, kg: ['4 kg', '6 kg', '9 kg', '12 kg', '15 kg'] },
+  // Le distanze dello SkiErg sono pari (richiesta del committente, 15/10/2026).
+  { nome: /^skierg$/i, meters: ['200m', '400m', '500m', '1000m'] },
   { nome: /lunge/i, kg: ['10 kg', '20 kg', '30 kg'] },
   { nome: /^(sled |prowler )/i, kg: ['100 kg', '150 kg', '200 kg'] },
 ]
@@ -984,7 +987,134 @@ function AiGenerationModal({ onClose, onGenerate, categoria = 'Hyrox', attuali =
 }
 
 // ─── EXERCISE PICKER MODAL ────────────────────────────────────
-function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initialExercise, intervalloBlocco }) {
+/**
+ * «A ogni giro»: di quanto sale l'esercizio quando il giro ricomincia
+ * (src/lib/incremento.js).
+ * Tre scorciatoie per i passi più usati, e − / + per tutti gli altri — anche
+ * sotto lo zero, per le scale che scendono (21-15-9).
+ */
+const PASSI_METRI = [50, 100, 200]
+const PASSI_REPS = [5, 10, 20]
+
+/**
+ * Il numero dell'aumento, da scrivere a mano (richiesta del committente):
+ * i passi rapidi e − / + non bastano per un «+35» o un «+150 m». Si scrive
+ * il numero senza unità; il segno «+» è facoltativo, «-» lo fa scendere.
+ * Mentre si scrive il testo è libero (un «-» da solo è legittimo); fuori dal
+ * campo segue il valore, così i bottoni lo aggiornano.
+ */
+const testoAumentoCampo = (n) => (n > 0 ? `+${n}` : n < 0 ? `-${Math.abs(n)}` : '')
+
+function CampoAumento({ valore, onChange, unita }) {
+  const [testo, setTesto] = useState(() => testoAumentoCampo(valore))
+  const [scrivendo, setScrivendo] = useState(false)
+  const mostrato = scrivendo ? testo : testoAumentoCampo(valore)
+  return (
+    <label className="flex-1 min-w-0 flex items-baseline justify-center gap-1 cursor-text">
+      <input
+        type="text" inputMode="numeric" enterKeyHint="done" aria-label="Aumento a ogni giro"
+        value={mostrato} placeholder="Uguale"
+        onFocus={() => { setTesto(testoAumentoCampo(valore)); setScrivendo(true) }}
+        onBlur={() => setScrivendo(false)}
+        onKeyDown={chiudiTastieraSuInvio}
+        onChange={(e) => {
+          const t = e.target.value.replace(/\s/g, '').replace('−', '-')
+          if (!/^[+-]?\d{0,5}$/.test(t)) return
+          setTesto(t)
+          const n = parseInt(t, 10)
+          onChange(Number.isFinite(n) ? n : 0)
+        }}
+        className={`w-[7ch] bg-transparent text-center text-[20px] font-extrabold tabular-nums outline-none rounded-lg
+                    border-b border-dashed border-white/25 focus:border-brand placeholder:text-muted ${valore ? 'text-brand' : 'text-white'}`}
+      />
+      {unita && valore !== 0 && <span className="text-[15px] font-extrabold text-brand">{unita}</span>}
+    </label>
+  )
+}
+
+function CardAumento({ campo, valore, onChange, quantita }) {
+  if (!campo) {
+    return (
+      <div className={`${CARD} px-4 py-[15px] flex flex-col gap-1.5`}>
+        <span className={LABEL}>A ogni giro</span>
+        <p className="text-[12.5px] text-muted leading-snug">
+          Resta uguale a ogni giro. Per farlo salire scrivi un numero di metri o di ripetizioni (non «Max»).
+        </p>
+      </div>
+    )
+  }
+  const metri = campo === 'meters'
+  const passo = metri ? 10 : 1
+  const unita = metri ? 'm' : ''
+  const anteprima = [1, 2, 3].map(g => esercizioAlGiro({ ...quantita, aumento: String(valore) }, g)[campo])
+  return (
+    <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
+      <div className="flex items-center justify-between gap-3">
+        <span className={LABEL}>A ogni giro</span>
+        <span className="text-[12.5px] font-bold text-muted tabular-nums truncate">{anteprima.join(' → ')} …</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button type="button" aria-label="Aumento più piccolo" onClick={() => { battito(); onChange(valore - passo) }}
+          className="w-11 h-11 shrink-0 rounded-xl border bg-white/[.055] border-white/10 text-white flex items-center justify-center active:scale-95">
+          <Minus size={18} />
+        </button>
+        <CampoAumento valore={valore} onChange={onChange} unita={unita} />
+        <button type="button" aria-label="Aumento più grande" onClick={() => { battito(); onChange(valore + passo) }}
+          className="w-11 h-11 shrink-0 rounded-xl border bg-white/[.055] border-white/10 text-white flex items-center justify-center active:scale-95">
+          <Plus size={18} />
+        </button>
+      </div>
+      <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Aumenti rapidi">
+        {[0, ...(metri ? PASSI_METRI : PASSI_REPS)].map(n => {
+          const attivo = valore === n
+          return (
+            <button key={n} type="button" aria-pressed={attivo}
+              onClick={() => { if (!attivo) vibraScelta(); onChange(n) }}
+              className={`min-h-11 rounded-xl border text-[13px] font-extrabold tabular-nums transition active:scale-95 ${
+                attivo ? 'bg-brand/15 border-brand/45 text-brand' : 'bg-white/[.055] border-white/10 text-[#c9ccd4] hover:border-white/20'
+              }`}>
+              {n ? `+${n}${unita}` : 'Uguale'}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * «Di quanto sale?» aperto dalla riga dell'esercizio, senza passare dal
+ * foglio intero: con l'incremento acceso è la domanda che si fa a ogni
+ * esercizio, e dentro il foglio stava sotto il righello, fuori vista.
+ */
+function FoglioAumento({ ex, onSalva, onClose }) {
+  const [valore, setValore] = useState(() => aumentoDi(ex))
+  return createPortal(
+    <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={`Aumento di ${ex.name}`}
+        className={`${CARTA_MODALE} text-left`} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
+          <h2 className={`${TITOLO_MODALE} flex-1 min-w-0 truncate`}>{ex.name}</h2>
+          <button type="button" aria-label="Chiudi" onClick={onClose}
+            className="w-11 h-11 -mr-2 flex items-center justify-center text-muted hover:text-white shrink-0">
+            <X size={20} />
+          </button>
+        </div>
+        <CardAumento campo={campoIncremento(ex)} valore={valore} onChange={setValore} quantita={ex} />
+        <div className="flex gap-3 mt-1">
+          <button type="button" onClick={onClose} className={BOTTONE_QUIETO}>Annulla</button>
+          <button type="button" onClick={() => { vibraScelta(); onSalva(valore ? String(valore) : ''); onClose() }}
+            className={BOTTONE_BRAND} disabled={!campoIncremento(ex)}>
+            Fatto
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initialExercise, intervalloBlocco, conAumento = false }) {
   const [search, setSearch] = useState(initialExercise?.name || '')
   const [selected, setSelected] = useState(initialExercise?.name || null)
   const [hybridMode, setHybridMode] = useState(initialExercise?.meters && initialExercise.meters !== '-' ? 'distance' : 'reps')
@@ -1003,6 +1133,9 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   // esercizio ripetuto due volte — src/lib/stazioniEmom.js.
   const [intervalli, setIntervalli] = useState(() => intervalliDi(initialExercise))
   const secondiIntervallo = parseDuration(intervalloBlocco || '1:00') || 60
+  // Solo con l'incremento acceso (src/lib/incremento.js): di quanto sale
+  // l'esercizio a ogni giro. 0 = resta uguale (lo sled, un peso fisso).
+  const [aumento, setAumento] = useState(() => aumentoDi(initialExercise))
 
   // Quale scheda del foglio misure è aperta. Se non c'è più (l'esercizio ibrido
   // è passato da ripetizioni a distanza) si torna alla prima.
@@ -1243,14 +1376,21 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   // nome, e la lista mostrava solo quello.
   const tornaAllaLista = () => { setSelected(null); if (initialExercise) setSearch('') }
 
-  const handleConfirm = () => {
-    if (!selected) return
+  // Quale numero conta per l'esercizio scelto: le stesse regole della conferma.
+  const quantita = () => {
     const isDist = isDistance(selected)
     const isHyb = isHybrid(selected)
-    
-    let finalMeters = (isDist || (isHyb && hybridMode === 'distance') || selected === 'Rest') ? meters : ''
-    let finalReps = (!isDist && !isHyb && selected !== 'Rest') || (isHyb && hybridMode === 'reps') ? reps : ''
-    
+    return {
+      meters: (isDist || (isHyb && hybridMode === 'distance') || selected === 'Rest') ? meters : '',
+      reps: (!isDist && !isHyb && selected !== 'Rest') || (isHyb && hybridMode === 'reps') ? reps : '',
+    }
+  }
+  const campoAumento = selected && conAumento && selected !== 'Rest' ? campoIncremento(quantita()) : null
+
+  const handleConfirm = () => {
+    if (!selected) return
+    const { meters: finalMeters, reps: finalReps } = quantita()
+
     onAdd({
       id: initialExercise ? initialExercise.id : Math.random(),
       name: selected,
@@ -1262,6 +1402,11 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
       kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) || selected === 'Run' || selected === 'Rest' ? '' : kg.replace(' kg', ''),
       intensity: selected === 'Rest' ? undefined : intensity,
       intervals: workoutType === 'EMOM' && intervalli > 1 ? String(intervalli) : undefined,
+      // Con l'incremento spento l'aumento non si mostra ma si tiene, per
+      // quando lo si riaccende (src/lib/incremento.js, `disattivaIncremento`).
+      ...(conAumento
+        ? { aumento: campoAumento && aumento ? String(aumento) : '' }
+        : (initialExercise?.aumento ? { aumento: initialExercise.aumento } : {})),
       notes
     })
     onClose()
@@ -1373,6 +1518,10 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
                 </div>
               )}
 
+              {conAumento && selected !== 'Rest' && (
+                <CardAumento campo={campoAumento} valore={aumento} onChange={setAumento} quantita={quantita()} />
+              )}
+
               {selected !== 'Rest' && (
                 <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
                   <div className="flex items-center justify-between">
@@ -1412,7 +1561,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
 }
 
 // ─── BLOCCO ESERCIZIO ─────────────────────────────────────────
-function ExerciseRow({ ex, index, total, etichetta, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onEdit, touchHandlers, onDuplicate }) {
+function ExerciseRow({ ex, index, total, etichetta, aumento, onAumento, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onEdit, touchHandlers, onDuplicate }) {
 
   // Il numero c'è sempre, non solo su EMOM e ON/OFF: lì è il minuto, altrove è
   // l'ordine — e l'ordine di un blocco è un'informazione, non un dettaglio.
@@ -1462,6 +1611,17 @@ function ExerciseRow({ ex, index, total, etichetta, onRemove, onMoveUp, onMoveDo
         <p className="mt-0.5 text-[11.5px] font-semibold tracking-[.02em] text-muted truncate">
           {[dettaglio, ex.notes].filter(Boolean).join(' · ') || '—'}
         </p>
+        {/* L'incremento a ogni giro (src/lib/incremento.js), su una riga sua: è
+            l'informazione nuova, e in coda alle misure finiva troncata. */}
+        {onAumento && (
+          <button type="button" data-aumento-riga aria-label={aumento ? `Aumento: ${aumento}` : 'Scegli di quanto sale a ogni giro'}
+            onClick={(e) => { e.stopPropagation(); battito(); onAumento(ex) }}
+            className={`mt-1 self-start max-w-full truncate rounded-full px-2.5 py-1 text-[11.5px] font-extrabold tracking-[.02em] transition active:scale-95 ${
+              aumento ? 'bg-brand/15 text-brand border border-brand/40' : 'text-muted border border-dashed border-white/25 hover:border-white/40'
+            }`}>
+            {aumento || '+ Aumento a ogni giro'}
+          </button>
+        )}
       </div>
 
       {ex.intensity && (
@@ -1509,8 +1669,11 @@ const parametriDelBlocco = (block) => {
       return [{ chiave: 'interval', etichetta: 'Ogni', scala: 'tempo', rapidi: RAPIDI_INTERVALLO, ripiego: '1:00' }, round('10')]
     case 'AMRAP':
       return [{ chiave: 'duration', etichetta: 'Durata', scala: 'tempo', rapidi: RAPIDI_AMRAP, ripiego: '10:00' }]
+    // Il For Time è a tempo (decisione del committente, 15/10/2026): si dice
+    // solo quanti minuti si lavora, niente round. Un For Time vecchio senza
+    // time cap mostra «—» e resta stimato a giri finché non lo si sceglie.
     case 'For Time':
-      return [round('3')]
+      return [{ chiave: 'timecap', etichetta: 'Time cap', scala: 'tempo', rapidi: RAPIDI_AMRAP, ripiego: '-' }]
     case 'Interval':
       return [round('1')]
     case 'Cash In':
@@ -1521,6 +1684,34 @@ const parametriDelBlocco = (block) => {
     default:
       return []
   }
+}
+
+/**
+ * I primi tre giri scritti per intero, sotto la lista: fanno VEDERE che il giro
+ * ricomincia più lungo. Non sono i giri da fare — quelli li decide il tempo.
+ */
+function AnteprimaIncremento({ block }) {
+  const giri = giriDiEsempio(block)
+  if (!giri) return null
+  const corto = (ex) => {
+    const campo = campoIncremento(ex)
+    return campo ? `${ex[campo]} ${ex.name}` : ex.name
+  }
+  return (
+    <div className={`${CARD} px-4 py-3 flex flex-col gap-1.5`} data-anteprima-incremento>
+      <span className={LABEL}>Come sale</span>
+      {giri.map(({ giro, esercizi }) => (
+        <p key={giro} className="text-[12.5px] leading-snug text-[#c9ccd4]">
+          <span className="font-extrabold text-white tabular-nums">{giro}° giro</span>
+          <span className="text-muted"> · </span>
+          {esercizi.map(corto).join(' · ')}
+        </p>
+      ))}
+      <p className="text-[12px] text-muted leading-snug">
+        …e così via fino allo scadere {block.type === 'For Time' ? `del time cap (${block.params?.timecap || TIME_CAP_PREDEFINITO})` : `dei ${block.params?.duration || '10:00'}`}.
+      </p>
+    </div>
+  )
 }
 
 // ⚠️ Memoizzato (BACKLOG #15). Ogni blocco aperto contiene scroll picker da 102
@@ -1539,6 +1730,8 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
   const [cambioTipo, setCambioTipo] = useState(false)
   const [editingExercise, setEditingExercise] = useState(null)
   const [draggedExIdx, setDraggedExIdx] = useState(null)
+  // L'esercizio di cui si sta scegliendo l'aumento a ogni giro, o `null`.
+  const [esercizioAumento, setEsercizioAumento] = useState(null)
 
   // Hook touch per riordinare gli ESERCIZI dentro questo blocco
   const { getTouchHandlers: getExTouchHandlers } = useTouchDrag({
@@ -1557,6 +1750,13 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
   // aperti sopra gli esercizi, cioè sopra la cosa che si è venuti a comporre.
   const [foglio, setFoglio] = useState(null)
 
+  // L'incremento a ogni giro (src/lib/incremento.js): la lista è il primo
+  // giro, e ogni esercizio dice di quanto sale quando il giro ricomincia.
+  const incremento = haIncremento(block)
+  const incrementoPossibile = TIPI_CON_INCREMENTO.includes(block.type)
+  const esercizi = block.exercises || []
+  const aggiornaEsercizi = (nuovi) => onUpdate({ ...block, exercises: nuovi })
+
   const parametri = parametriDelBlocco(block).map(p => ({
     chiave: p.chiave, etichetta: p.etichetta, scala: p.scala, rapidi: p.rapidi,
     valore: block.params?.[p.chiave] ?? p.ripiego,
@@ -1566,9 +1766,9 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
   const c = TYPE_COLORS[block.type] || { text: 'text-gray-200', border: 'border-[#444]', bg: 'bg-[#222]' }
   const lavoro = BLOCCHI_DI_LAVORO.has(block.type)
   const conEsercizi = !['WarmUp', 'Rest'].includes(block.type)
-  const quantiEsercizi = (block.exercises || []).length
+  const quantiEsercizi = esercizi.length
   // In un EMOM il numero accanto all'esercizio sono i suoi minuti, anche «2–3».
-  const etichette = etichetteStazioni(block.exercises || [], block.type)
+  const etichette = etichetteStazioni(esercizi, block.type)
 
   // ⚠️ Per WarmUp, Rest e AMRAP il riepilogo È la durata, e la durata sta già
   // in testa alla riga: ripeterla a sinistra vorrebbe dire scrivere due volte
@@ -1585,7 +1785,7 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
     } else if (block.type === 'AMRAP') {
       return `${block.params?.duration || '10:00'}`
     } else if (block.type === 'For Time') {
-      return `${block.params?.rounds || '1'} rounds`
+      return [block.params?.timecap ? testoTimeCap(block) : `${block.params?.rounds || '1'} rounds`, incremento ? 'con incremento' : null].filter(Boolean).join(' · ')
        } else if (block.type === 'Interval') {
       return `${block.params?.rounds || '1'} rounds`
     } else if (['Cash In', 'Cash Out'].includes(block.type)) {
@@ -1670,7 +1870,7 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
           {[
             blockHint(block.type),
             conEsercizi ? `${quantiEsercizi} eserciz${quantiEsercizi === 1 ? 'io' : 'i'}` : null,
-            riepilogoRipeteLaDurata ? null : getBlockRecap(),
+            riepilogoRipeteLaDurata ? (block.type === 'AMRAP' && incremento ? 'con incremento' : null) : getBlockRecap(),
             !conEsercizi ? block.notes : null,
           ].filter(Boolean).map((pezzo, i, tutti) => (
             <span key={i}>{pezzo}{i < tutti.length - 1 ? ' · ' : ''}</span>
@@ -1697,6 +1897,24 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
                 if (tipo !== block.type) { vibraScelta(); onUpdate(cambiaTipoBlocco(block, tipo)) }
               }}
             />
+          )}
+
+          {/* Finito il giro si ricomincia dal primo esercizio, con più metri o ripetizioni. */}
+          {incrementoPossibile && (
+            <button type="button" aria-pressed={incremento}
+              onClick={() => { vibraScelta(); onUpdate(incremento ? disattivaIncremento(block) : attivaIncremento(block)) }}
+              className={`min-h-11 rounded-2xl px-4 flex items-center gap-3 text-left ${VETRO} hover:border-white/25 transition`}>
+              <TrendingUp size={18} className="text-brand shrink-0" aria-hidden="true" />
+              <span className="flex-1 min-w-0">
+                <span className="block text-[14px] font-extrabold text-white">Incremento a ogni giro</span>
+                <span className="block text-[11.5px] font-medium text-muted truncate">
+                  Il giro riparte aumentando
+                </span>
+              </span>
+              <span className={`shrink-0 relative w-[42px] h-[25px] rounded-full transition ${incremento ? 'bg-brand' : 'bg-white/15'}`} aria-hidden="true">
+                <span className={`absolute top-[3px] w-[19px] h-[19px] rounded-full bg-white transition-all ${incremento ? 'left-[20px]' : 'left-[3px]'}`} />
+              </span>
+            </button>
           )}
 
           {parametri.length > 0 && (
@@ -1740,17 +1958,19 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
           {!['WarmUp', 'Rest'].includes(block.type) && (
             <>
               <div className="flex flex-col gap-2" data-drag-container>
-                {(block.exercises || []).map((ex, i) => (
+                {esercizi.map((ex, i) => (
                   <ExerciseRow 
-                    key={ex.id} ex={ex} index={i} total={block.exercises.length}
+                    key={ex.id} ex={ex} index={i} total={esercizi.length}
                     etichetta={etichette[i]}
-                    onRemove={(id) => onUpdate({ ...block, exercises: block.exercises.filter(e => e.id !== id) })}
-                    onMoveUp={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx - 1) })}
-                    onMoveDown={(idx) => onUpdate({ ...block, exercises: moveElement(block.exercises, idx, idx + 1) })}
+                    aumento={incremento ? testoAumento(ex) : ''}
+                    onAumento={incremento ? setEsercizioAumento : null}
+                    onRemove={(id) => aggiornaEsercizi(esercizi.filter(e => e.id !== id))}
+                    onMoveUp={(idx) => aggiornaEsercizi(moveElement(esercizi, idx, idx - 1))}
+                    onMoveDown={(idx) => aggiornaEsercizi(moveElement(esercizi, idx, idx + 1))}
                     onDragStartIndex={(idx) => setDraggedExIdx(idx)} // Passa al componente ExerciseRow
                     onDragEnterIndex={(idx) => { // Gestisce il riordino in tempo reale
                       if (draggedExIdx !== null && draggedExIdx !== idx) {
-                        onUpdate({ ...block, exercises: moveElement(block.exercises, draggedExIdx, idx) })
+                        aggiornaEsercizi(moveElement(esercizi, draggedExIdx, idx))
                         setDraggedExIdx(idx) // Aggiorna l'indice dell'elemento trascinato
                       }
                     }}
@@ -1769,21 +1989,31 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
                            flex items-center justify-center gap-2 hover:bg-brand/10 transition">
                 <Plus size={16} aria-hidden="true" /> Esercizio
               </button>
+              {incremento && <AnteprimaIncremento block={block} />}
             </>
+          )}
+
+          {esercizioAumento && (
+            <FoglioAumento
+              ex={esercizioAumento}
+              onClose={() => setEsercizioAumento(null)}
+              onSalva={(aumento) => aggiornaEsercizi(esercizi.map(e => (e.id === esercizioAumento.id ? { ...e, aumento } : e)))}
+            />
           )}
 
           {pickerOpen && (
             <ExercisePicker 
               workoutType={block.type}
               intervalloBlocco={block.params?.interval}
-              existingNames={(block.exercises || []).map(e => e.name)}
+              existingNames={esercizi.map(e => e.name)}
               initialExercise={editingExercise}
+              conAumento={incremento}
               onClose={() => { setPickerOpen(false); setEditingExercise(null); }}
               onAdd={ex => {
                 if (editingExercise) {
-                  onUpdate({ ...block, exercises: block.exercises.map(e => e.id === ex.id ? ex : e) })
+                  aggiornaEsercizi(esercizi.map(e => e.id === ex.id ? ex : e))
                 } else {
-                  onUpdate({ ...block, exercises: [...(block.exercises || []), ex] })
+                  aggiornaEsercizi([...esercizi, ex])
                 }
               }}
             />
@@ -3049,7 +3279,7 @@ export default function CreateWorkout() {
     if (type === 'ON/OFF') { newBlock.params.on = '1:00'; newBlock.params.off = '1:00'; newBlock.params.rounds = '10' }
     if (type === 'EMOM') { newBlock.params.interval = '1:00'; newBlock.params.rounds = '10' }
     if (type === 'AMRAP') { newBlock.params.duration = '10:00' }
-    if (type === 'For Time') { newBlock.params.rounds = '1' }
+    if (type === 'For Time') { newBlock.params.timecap = TIME_CAP_PREDEFINITO }
     if (type === 'Interval') { newBlock.params.rounds = '1' }
 
     if (type === 'Cash In' || type === 'Cash Out') { newBlock.params.rounds = '1' }

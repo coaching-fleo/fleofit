@@ -56,6 +56,12 @@ Le modifiche fatte dopo la versione **1.2.0**, in vendita sullo Store: build `1.
 - Chi ha ancora la 1.2.1 riceve la notifica ma, nel centro notifiche, legge solo le prime due righe del messaggio.
 - ⏳ Serve prima il sì alla nuova tabella e la pubblicazione di `send-reminders` (BACKLOG): **prima di allora niente `app:main` e niente archive della 1.2.2**.
 
+## For Time a tempo e incremento a ogni giro (1.2.2)
+- Il **For Time** ora chiede solo **quanti minuti** si lavora (time cap), niente round. Il timer è un conto alla rovescia lungo il time cap. I For Time già salvati a round restano come prima.
+- Nei **For Time** e negli **AMRAP** c'è **«Incremento a ogni giro»**: si lavora per il tempo del blocco e, finito il giro, si riparte dal primo esercizio con più metri o ripetizioni, fino allo scadere. Ogni esercizio ha il suo aumento, scelto toccando la riga dell'esercizio: +5/+10/+20 ripetizioni, +50/+100/+200 m, o qualunque altro con − / +; si può anche scendere. Spegnendo l'incremento gli aumenti restano in memoria, e riaccendendolo tornano. Il builder mostra come sale nei primi giri, e la scheda, il PDF, la TV e il timer dicono l'aumento accanto a ogni esercizio. «Genera con IA» lo conosce (`ai-workout` pubblicata il 15/10/2026).
+- Sullo **SkiErg** le distanze rapide sotto il righello sono 200, 400, 500 e 1000 m.
+- Chi ha ancora la 1.2.0 o la 1.2.1 vede il primo giro, senza gli aumenti, e un For Time nuovo come «1 round» stimato a 15′ (il time cap non lo legge).
+
 ## Testo per App Store Connect — «Novità di questa versione» (1.2.1)
 
 > Scritto il 14/10/2026: solo ciò che non era nella 1.2.0. Limite di Apple: 4000 caratteri.

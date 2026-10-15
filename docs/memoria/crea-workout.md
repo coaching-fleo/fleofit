@@ -1506,3 +1506,98 @@ e cambiarlo voleva dire eliminarlo, rifarlo e trascinarlo al suo posto.
   dell'elenco. Una superserie si sposta intera.
 - Test: `CreaWorkoutBuilder.test.jsx`, `Gym.test.jsx`, `gym.test.js`,
   `cambiaTipoBlocco.test.js`, visti fallire rompendo il codice.
+
+## L'incremento a ogni giro di For Time e AMRAP (15/10/2026)
+
+Richiesta del committente: un For Time **a time cap** (o un AMRAP) in cui si fa
+il giro — 200 m di ski, 20 wall ball, 200 m di row, 20 affondi — e, finito, si
+riparte dal primo esercizio con le quantità aumentate (300, 30…), fino allo
+scadere. L'aumento cambia ogni volta (non sempre +100 m e +10).
+
+🔴 **Non è un numero di giri.** La prima versione dello stesso giorno («Scala
+crescente») chiedeva quanti giri e li scriveva tutti per intero: il committente
+l'ha rifiutata — «non è una questione di giri, il for time è un time cap». I
+giri sono quanti l'atleta riesce a farne nel tempo. Non rimettere un campo
+«Giri» né liste espanse.
+
+### Il For Time è SOLO a time cap (secondo giro dello stesso giorno)
+Il committente: «il for time di base non devi scegliere i round, dici soltanto
+quanti minuti bisogna lavorare». Da allora:
+- `parametriDelBlocco` dà al For Time solo **«Time cap»** (`params.timecap`);
+  un blocco nuovo nasce con 20:00 e **senza `rounds`**.
+- `durataBlocco` = il time cap; il timer fa una fase sola a scendere.
+- I For Time **vecchi** (solo `rounds`) restano leggibili: sottotitolo «3
+  round», stima a forfait, cronometro. Nel builder la pillola dice «—» finché
+  non si sceglie un time cap.
+- `cambiaTipoBlocco`: AMRAP → For Time porta la durata nel time cap, For Time →
+  AMRAP il contrario; da qualunque altro tipo il For Time prende 20:00.
+- L'IA: «FOR TIME: è sempre a TEMPO», mai `rounds`; `preparaBlocchiIA` toglie
+  `rounds` e mette un time cap. ✅ `ai-workout` versione 29.
+- ⚠️ Le app 1.2.0/1.2.1 non leggono `timecap`: un For Time nuovo lì appare «1
+  round» stimato a 15′. Non si rimedia senza scrivere `rounds`, che è proprio
+  quello che il committente non vuole.
+- ⚠️ `leggiWorkout` («Da un testo scritto») scrive ancora il For Time a round
+  e il time cap nelle note: da allineare se il committente lo usa.
+
+### Cosa c'è ora
+- Nel blocco **For Time** o **AMRAP** aperto, sotto «Cambia tipo di blocco»,
+  l'interruttore **«Incremento a ogni giro»**. Il tempo è quello del blocco.
+- La lista è **il primo giro**. Sotto ogni esercizio c'è una pillola: «+
+  Aumento a ogni giro» (tratteggiata) o «+10 ogni giro» (gialla). Toccandola si
+  apre `FoglioAumento`, una carta con «Uguale», **+5/+10/+20** ripetizioni o
+  **+50/+100/+200 m** e − / + per il resto (anche negativi, mai sotto 1). Il
+  numero si può anche **scrivere a mano** (`CampoAumento`: «35», «+150», «-6»;
+  lettere rifiutate; il testo è libero solo mentre si scrive, fuori segue il
+  valore così i bottoni lo aggiornano; tastiera numerica, che su iPhone non ha
+  il meno: per scendere c'è il −). La
+  prima versione aveva la scelta solo dentro il foglio dell'esercizio, sotto il
+  righello: il committente non l'ha vista. La card c'è ancora anche lì
+  (`CardAumento`). Senza un numero da far salire («Max») la card lo dice e
+  «Fatto» è spento.
+- Sotto la lista **«Come sale»** (`AnteprimaIncremento`): i primi tre giri
+  scritti per intero, «…e così via fino allo scadere del time cap (20:00)».
+- Scheda e PDF: l'aumento accanto alle misure e una riga «Finito il giro,
+  riparti dal primo esercizio…»; sottotitolo «time cap 20:00 · con incremento».
+  TV: l'aumento accanto alle misure. Timer: For Time = **una fase sola** lunga il
+  time cap (a scendere, non cronometro); AMRAP come prima. Il task elenca il
+  primo giro con gli aumenti.
+- `durataBlocco`: un For Time con `params.timecap` dura il suo time cap (prima
+  era sempre il forfait da 15′ a giro). Vale per ogni For Time con time cap.
+
+### Il dato
+`block.incremento = true`, `exercise.aumento = "10"` (nell'unità del campo che
+sale: metri se `meters` è «200m», sennò ripetizioni), nel For Time
+`params.timecap`. Logica in `src/lib/incremento.js`. Niente migrazioni (jsonb).
+⚠️ Le versioni 1.2.0 e 1.2.1 vedono il primo giro senza aumenti e il For Time
+come «1 round»: il campo nuovo lo ignorano.
+
+### ⚠️ Da sapere prima di rimetterci mano
+1. `cambiaTipoBlocco` tiene l'incremento fra For Time e AMRAP; verso gli altri
+   tipi toglie spia e aumenti.
+2. Spegnere toglie **solo la spia**: aumenti e time cap restano sugli
+   esercizi, così chi spegne per sbaglio e riaccende li ritrova (richiesta del
+   committente). Spenti non contano: tutto li legge passando da `haIncremento`.
+   Anche modificando un esercizio a incremento spento l'aumento resta
+   (`handleConfirm` lo ricopia da `initialExercise`).
+3. **IA** (`regole.ts`, «INCREMENTO A OGNI GIRO»): solo il primo giro, con
+   `incremento: true` e `aumento`. `preparaBlocchiIA` scarta spia e aumenti
+   fuori da For Time/AMRAP. ✅ Ripubblicata il 15/10/2026: versione 29 (la 27
+   aveva le regole dei giri, la 28 il For Time ancora a round).
+4. Non c'è in «Da un testo scritto» (`leggiWorkout`).
+5. `reportAtleta.movimentiDi` conta il primo giro: non sa quanti giri sono
+   stati fatti, e non lo può sapere.
+
+Test: `incremento.test.js` (16), due test del builder in più («chiede solo il
+time cap», «l aumento si sceglie dalla riga»: mutazioni prese, 2 rossi
+ciascuna), più in `cambiaTipoBlocco`, `blocchiIA`,
+`timerSequence`, `rigaBlocco`, `stimaWorkout` e `CreaWorkoutBuilder.test.jsx`
+(«l incremento a ogni giro»). Mutazioni prese: aumento ignorato (3 rossi), For
+Time senza round a 1 (1), time cap ignorato nella durata (1 — il primo test usava
+15:00, uguale al forfait, e passava lo stesso: ora 25:00).
+
+### Le distanze rapide dello SkiErg (15/10/2026)
+Richiesta del committente: distanze pari. `STANDARD_ESERCIZIO` in
+`CreateWorkout.jsx` dà allo SkiErg **200 · 400 · 500 · 1000 m** sotto il
+righello, al posto dei valori più usati dallo storico (o del ripiego 100 /
+250 / 500 / 1000). Gli altri ergometri non cambiano. Test: «lo SkiErg propone
+distanze pari» (mutazione presa).

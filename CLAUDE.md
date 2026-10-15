@@ -361,7 +361,9 @@ Quattro categorie principali (Hyrox, Running, Gym, Custom) + l'Evento.
     "on": "1:00", "off": "1:00",   // ON/OFF
     "interval": "1:00",            // EMOM
     "rounds": "10",                // ON/OFF, EMOM, For Time, Interval, Cash In/Out
-    "rest": "1:00"                 // Cash In/Out con rounds > 1
+    "rest": "1:00",                // Cash In/Out con rounds > 1
+    "timecap": "20:00"             // For Time: dal 15/10/2026 è SOLO a time cap, niente round (i vecchi
+                                   //   a `rounds` restano leggibili e stimati a giri)
   },
   "notes": "…",
   "exercises": [{
@@ -375,11 +377,10 @@ Quattro categorie principali (Hyrox, Running, Gym, Custom) + l'Evento.
     "intensity": "8", "notes": "…",
     "intervals": "2"               // solo EMOM: stazione continua su 2 intervalli (dal 09/10/2026,
                                    //   src/lib/stazioniEmom.js, uguale su app e main)
+    "aumento": "10"                // solo con "incremento": di quanto sale a ogni giro (src/lib/incremento.js)
   }],
-  "scala": {                       // solo For Time e AMRAP (dal 15/10/2026, src/lib/scala.js):
-    "giri": "4",                   //   la REGOLA; i giri stanno ANCHE scritti per intero in `exercises`,
-    "esercizi": [{ "…": "…", "aumento": "100" }]  // che vince se non coincidono
-  }
+  "incremento": true               // For Time/AMRAP (dal 15/10/2026): finito il giro si riparte aumentando,
+                                   //   fino allo scadere (src/lib/incremento.js)
 }
 ```
 Tassonomie esercizi in `src/lib/esercizi.js` (dal 12/10/2026, le legge anche `leggiWorkout.js`; `ERGOMETERS` in `src/lib/constants.js`): `SLED_EXERCISES`, `CARRY_EXERCISES`,
@@ -656,7 +657,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 |---|---|
 | `Home.jsx` (ramo atleta), `HomeAtletaUI`, `HomeAtletaVuotiUI`, `statistiche.js` | `home-atleta.md` |
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `HomeCoachTelefono`, `HomeCoachDesktop`, `CruscottoCoachUI`, `cruscottoCoach.js`, `useCruscottoCoach.js`, `statisticheCoach.js`, `pausa.js` | `home-coach.md` |
-| `CreateWorkout.jsx`, `CreaWorkoutUI`, `CreaGym`, `SchedaGymUI`, `gym.js`, `eserciziGym.js`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `scala.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza | `crea-workout.md` |
+| `CreateWorkout.jsx`, `CreaWorkoutUI`, `CreaGym`, `SchedaGymUI`, `gym.js`, `eserciziGym.js`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `incremento.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza | `crea-workout.md` |
 | `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF, `comeStai.js`, `FoglioComeStai`, `TVDashboard.jsx`, `TVDashboardUI` | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |

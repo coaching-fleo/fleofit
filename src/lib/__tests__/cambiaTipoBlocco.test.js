@@ -44,6 +44,40 @@ describe('«Cambia tipo di blocco»', () => {
     const dopo = cambiaTipoBlocco(warmup, 'For Time')
     expect(dopo.exercises.map(e => e.name)).toEqual(['Mobilità anche', 'Burpees'])
     expect(dopo.exercises[1].reps).toBe('10')
-    expect(dopo.params).toEqual({})
+    // Il For Time è a time cap: prende quello di un blocco nuovo, non i 10′ del riscaldamento.
+    expect(dopo.params).toEqual({ timecap: '20:00' })
+  })
+
+  it('il For Time è a tempo: da AMRAP prende la durata, e non porta round', () => {
+    const amrap = { id: 1, type: 'AMRAP', params: { duration: '14:00' }, exercises: [ex('Burpees')] }
+    expect(cambiaTipoBlocco(amrap, 'For Time').params).toEqual({ timecap: '14:00' })
+    const ft = { id: 1, type: 'For Time', params: { timecap: '18:00', rounds: '3' }, exercises: [] }
+    expect(cambiaTipoBlocco(ft, 'AMRAP').params).toEqual({ duration: '18:00' })
+  })
+})
+
+describe('«Cambia tipo di blocco» con l incremento a ogni giro (src/lib/incremento.js)', () => {
+  const amrap = () => ({
+    id: 1, type: 'AMRAP', incremento: true, params: { duration: '12:00' },
+    exercises: [{ id: 7, name: 'Burpees', reps: '10', aumento: '5' }],
+  })
+
+  it('da AMRAP a For Time l incremento resta, e la durata diventa il time cap', () => {
+    const dopo = cambiaTipoBlocco(amrap(), 'For Time')
+    expect(dopo.incremento).toBe(true)
+    expect(dopo.params).toEqual({ timecap: '12:00' })
+    expect(dopo.exercises[0].aumento).toBe('5')
+  })
+
+  it('da For Time ad AMRAP il time cap diventa la durata', () => {
+    const ft = { id: 1, type: 'For Time', incremento: true, params: { timecap: '18:00' }, exercises: [] }
+    expect(cambiaTipoBlocco(ft, 'AMRAP').params).toEqual({ duration: '18:00' })
+  })
+
+  it('in un tipo senza incremento se ne vanno la spia e gli aumenti', () => {
+    const dopo = cambiaTipoBlocco(amrap(), 'EMOM')
+    expect(dopo).not.toHaveProperty('incremento')
+    expect(dopo.exercises[0]).not.toHaveProperty('aumento')
+    expect(dopo.exercises[0].reps).toBe('10')
   })
 })

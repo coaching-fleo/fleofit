@@ -11,6 +11,7 @@
  */
 
 import { intervalliDi } from './stazioniEmom'
+import { TIPI_CON_INCREMENTO, TIME_CAP_PREDEFINITO } from './incremento'
 import { basso, passoCorsa, quantoCorsa, trovaEsercizio } from './leggiWorkout'
 
 /** Lo stesso valore da cui parte il cursore nel picker dell'esercizio. */
@@ -63,22 +64,37 @@ export function preparaBlocchiIA(blocchi) {
   if (!Array.isArray(blocchi)) return []
   return blocchi
     .filter(b => b && typeof b === 'object')
-    .map(b => ({
-      ...b,
-      id: Math.random(),
-      exercises: (Array.isArray(b.exercises) ? b.exercises : []).map(ex => {
-        const { intensity, intervals: _intervals, ...resto } = ex || {}
-        const valore = senzaIntensita(ex) ? undefined : (intensitaValida(intensity) ?? INTENSITA_PREDEFINITA)
-        const intervalli = intervalliValidi(b.type, ex)
-        return {
-          ...resto,
-          ...(resto.name !== undefined ? { name: nomeCanonico(resto.name) } : {}),
-          ...(valore ? { intensity: valore } : {}),
-          ...(intervalli ? { intervals: intervalli } : {}),
-          id: Math.random(),
-        }
-      }),
-    }))
+    .map(b => {
+      // L'incremento a ogni giro (src/lib/incremento.js) esiste solo in For
+      // Time e AMRAP; altrove la spia e gli aumenti si tolgono.
+      const conIncremento = b.incremento === true && TIPI_CON_INCREMENTO.includes(b.type)
+      const blocco = {
+        ...b,
+        id: Math.random(),
+        exercises: (Array.isArray(b.exercises) ? b.exercises : []).map(ex => {
+          const { intensity, intervals: _intervals, aumento, ...resto } = ex || {}
+          const valore = senzaIntensita(ex) ? undefined : (intensitaValida(intensity) ?? INTENSITA_PREDEFINITA)
+          const intervalli = intervalliValidi(b.type, ex)
+          const n = parseInt(aumento, 10)
+          return {
+            ...resto,
+            ...(resto.name !== undefined ? { name: nomeCanonico(resto.name) } : {}),
+            ...(valore ? { intensity: valore } : {}),
+            ...(intervalli ? { intervals: intervalli } : {}),
+            ...(conIncremento && Number.isFinite(n) && n !== 0 ? { aumento: String(n) } : {}),
+            id: Math.random(),
+          }
+        }),
+      }
+      delete blocco.incremento
+      // Il For Time è a time cap, senza round (dal 15/10/2026).
+      if (b.type === 'For Time') {
+        const params = { ...(b.params || {}), timecap: b.params?.timecap || TIME_CAP_PREDEFINITO }
+        delete params.rounds
+        blocco.params = params
+      }
+      return conIncremento ? { ...blocco, incremento: true } : blocco
+    })
 }
 
 /**

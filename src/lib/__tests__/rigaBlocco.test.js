@@ -109,3 +109,15 @@ describe('le specifiche di un esercizio', () => {
     expect(specificheEsercizio({ exTime: '-', meters: '-', reps: '-', kg: '-' })).toBe('')
   })
 })
+
+describe('l incremento a ogni giro nel sottotitolo (src/lib/incremento.js)', () => {
+  const exercises = [{ name: 'Burpees', reps: '10', aumento: '5' }, { name: 'Row', meters: '200m' }]
+  it('For Time: il time cap al posto dei round', () => {
+    expect(sottotitoloBlocco({ type: 'For Time', incremento: true, params: { rounds: '1', timecap: '15:00' }, exercises }))
+      .toBe('2 esercizi · time cap 15:00 · con incremento')
+  })
+  it('AMRAP: la durata e «con incremento»', () => {
+    expect(sottotitoloBlocco({ type: 'AMRAP', incremento: true, params: { duration: '12:00' }, exercises }))
+      .toBe('2 esercizi · in 12:00 · con incremento')
+  })
+})

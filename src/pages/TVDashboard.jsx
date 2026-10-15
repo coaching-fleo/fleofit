@@ -5,6 +5,7 @@ import { KeepAwake } from '@capacitor-community/keep-awake'
 import { blockHint } from '../lib/blockHints'
 import { ERGOMETERS } from '../lib/constants'
 import { etichetteStazioni } from '../lib/stazioniEmom'
+import { haIncremento, testoAumento } from '../lib/incremento'
 import { coloreCategoria } from '../lib/colori'
 import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
@@ -454,7 +455,7 @@ export default function TVDashboard() {
                         <EsercizioTV key={ex.id || i}
                           numero={numerato ? etichette[i] : null}
                           nome={ex.name}
-                          specifiche={specificheEsercizio(ex, isErgo)}
+                          specifiche={[specificheEsercizio(ex, isErgo), haIncremento(block) ? testoAumento(ex) : ''].filter(Boolean).join(' · ')}
                           note={ex.notes}
                           intensita={ex.intensity}
                           classeIntensita={getIntensityColor(ex.intensity)}

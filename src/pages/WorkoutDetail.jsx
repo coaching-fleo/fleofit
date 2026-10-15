@@ -62,6 +62,7 @@ import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { recapStoria } from '../lib/recapStoria'
 import { riepilogoGym, righeTestoGym, gruppiPerElenco } from '../lib/gym'
 import { etichetteStazioni } from '../lib/stazioniEmom'
+import { haIncremento, testoAumento, testoTimeCap } from '../lib/incremento'
 import { daChiedere, leggiIgnorate, tempoDallaNota, senzaRisultato, conRisultatoDi } from '../lib/risultatoGara'
 // «Com'è andata?» sulle gare HYROX già corse: pigro, perché compare solo lì
 // e il chunk della scheda ha un peso da rispettare (CLAUDE.md §2).
@@ -141,9 +142,15 @@ const getBlockTitle = (block) => {
   }
   if (block.type === 'AMRAP') {
      const dur = block.params?.duration || '10:00'
-     return dur.includes('min') ? `AMRAP · ${dur}` : `AMRAP · ${dur} min`
+     // L'incremento a ogni giro (src/lib/incremento.js) si dice nel titolo.
+     const conIncremento = haIncremento(block) ? ' · con incremento' : ''
+     return dur.includes('min') ? `AMRAP · ${dur}${conIncremento}` : `AMRAP · ${dur} min${conIncremento}`
   }
-  if (block.type === 'For Time') return `For Time · ${block.params?.rounds || '1'} rounds`
+  if (block.type === 'For Time') {
+    // Il For Time è a time cap (dal 15/10/2026); i vecchi restano a round.
+    const tempo = block.params?.timecap ? testoTimeCap(block) : `${block.params?.rounds || '1'} rounds`
+    return `For Time · ${tempo}${haIncremento(block) ? ' · con incremento' : ''}`
+  }
     if (block.type === 'Interval') return `Interval · ${block.params?.rounds || '1'} rounds`
 
   if (['Cash In', 'Cash Out'].includes(block.type)) {
@@ -1047,9 +1054,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
              const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
              const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? ` @ ${ex.ergoPace}` : ''
              const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
+             const aumentoStr = haIncremento(block) && testoAumento(ex) ? `  (${testoAumento(ex)})` : ''
              
              let cx = 25
-             let baseStr = `${prefix}${ex.name}  ${detail}${paceStr}${kgStr}`
+             let baseStr = `${prefix}${ex.name}  ${detail}${paceStr}${kgStr}${aumentoStr}`
              doc.text(baseStr, cx, y)
              cx += doc.getTextWidth(baseStr)
 
@@ -1731,6 +1739,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             const numerato = block.type === 'EMOM' || block.type === 'ON/OFF'
             // In un EMOM il numero sono i minuti, anche «2–3» (src/lib/stazioniEmom.js).
             const etichette = etichetteStazioni(esercizi, block.type)
+            const incremento = haIncremento(block)
             return (
               <BloccoScheda
                 key={block.id || idx}
@@ -1750,12 +1759,18 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                     key={ex.id || i}
                     numero={numerato ? etichette[i] : null}
                     nome={ex.name}
-                    specifiche={specificheEsercizio(ex, isErgo)}
+                    specifiche={[specificheEsercizio(ex, isErgo), incremento ? testoAumento(ex) : ''].filter(Boolean).join(' · ')}
                     note={ex.notes}
                     intensita={ex.intensity}
                     classeIntensita={getIntensityColor(ex.intensity)}
                   />
                 ))}
+                {/* L'incremento a ogni giro (src/lib/incremento.js): la lista è il primo giro. */}
+                {incremento && (
+                  <p className="px-[3px] text-[11.5px] font-semibold text-muted text-pretty" data-nota-incremento>
+                    Finito il giro, riparti dal primo esercizio aumentando come indicato. Continua fino allo scadere del tempo.
+                  </p>
+                )}
               </BloccoScheda>
             )
           })}
@@ -2068,7 +2083,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 if (b.type === 'EMOM') shortTitle = `EMOM ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
                 else if (b.type === 'AMRAP') shortTitle = `AMRAP ${b.params?.duration || ''}`;
                 else if (b.type === 'ON/OFF') shortTitle = `ON/OFF ${b.params?.rounds ? b.params.rounds + 'x ' : ''}• ${b.params?.on || ''}/${b.params?.off || ''}`;
-                else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
+                else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.timecap ? '• ' + b.params.timecap : (b.params?.rounds ? b.params.rounds + 'x' : '')}`;
                                 else if (b.type === 'Interval') shortTitle = `INTERVAL ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
 
                 else if (b.type === 'WarmUp') shortTitle = `WARM UP ${b.params?.duration ? '• ' + b.params.duration : ''}`;

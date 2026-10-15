@@ -277,3 +277,21 @@ describe('getNormalizedBlocks — i workout vecchi devono ancora aprirsi', () =>
     expect(seq.length).toBeGreaterThan(2)
   })
 })
+
+describe('l incremento a ogni giro nel timer (src/lib/incremento.js)', () => {
+  const exercises = [{ id: 1, name: 'Burpees', reps: '20', aumento: '10' }, { id: 2, name: 'Sled Push', meters: '50m' }]
+
+  it('For Time: una fase sola lunga il time cap, con gli aumenti', () => {
+    const seq = buildTimerSequence(hyrox([{ id: 1, type: 'For Time', incremento: true, params: { rounds: '1', timecap: '15:00' }, exercises }]))
+    const fasi = seq.filter(s => s.title === 'FOR TIME')
+    expect(fasi).toHaveLength(1)
+    expect(fasi[0].duration).toBe(900)
+    expect(fasi[0].type).toBe('work')
+    expect(fasi[0].task).toBe('Burpees · 20 reps +10 ogni giro • Sled Push · 50m')
+  })
+
+  it('AMRAP: il primo giro con gli aumenti', () => {
+    const seq = buildTimerSequence(hyrox([{ id: 1, type: 'AMRAP', incremento: true, params: { duration: '12:00' }, exercises }]))
+    expect(seq.find(s => s.title === 'AMRAP').task).toBe('Burpees · 20 reps +10 ogni giro • Sled Push · 50m')
+  })
+})

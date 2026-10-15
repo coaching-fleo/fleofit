@@ -375,6 +375,122 @@ describe('le stazioni EMOM su più minuti', () => {
   })
 })
 
+describe('l incremento a ogni giro', () => {
+  // Richiesta del committente (15/10/2026): un For Time con time cap in cui,
+  // finito il giro, si riparte dal primo esercizio con più ripetizioni o
+  // metri, fino allo scadere. NON un numero di giri (src/lib/incremento.js).
+  const anteprima = () => document.querySelector('[data-anteprima-incremento]')?.textContent ?? ''
+
+  it('il For Time diventa a tempo e ogni esercizio dice di quanto sale', async () => {
+    await alPasso2()
+    await aggiungiBlocco('For Time')
+    await userEvent.click(screen.getByRole('button', { name: /Incremento a ogni giro/ }))
+    expect(screen.getByRole('button', { name: /^Time cap: 20:00/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Round:/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Giri:/ })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /^Esercizio$/ }))
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), 'Burpees')
+    await userEvent.click(await screen.findByRole('button', { name: 'Scegli Burpees' }))
+    await userEvent.click(await screen.findByRole('button', { name: '20' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Aumenti rapidi' })).getByRole('button', { name: '+10' }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+
+    // Nella lista c'è UN esercizio, il primo giro, con il suo aumento.
+    expect(screen.getAllByRole('button', { name: /Rimuovi l'esercizio/ })).toHaveLength(1)
+    expect(screen.getByText(/\+10 ogni giro/)).toBeInTheDocument()
+    expect(anteprima()).toContain('1° giro · 20 Burpees')
+    expect(anteprima()).toContain('2° giro · 30 Burpees')
+    expect(anteprima()).toMatch(/fino allo scadere del time cap \(20:00\)/)
+  })
+
+  it('c è solo in For Time e AMRAP', async () => {
+    await alPasso2()
+    await aggiungiBlocco('EMOM')
+    expect(screen.queryByRole('button', { name: /Incremento a ogni giro/ })).not.toBeInTheDocument()
+  })
+
+  it('il For Time chiede solo il time cap, mai i round', async () => {
+    await alPasso2()
+    await aggiungiBlocco('For Time')
+    expect(screen.getByRole('button', { name: /^Time cap: 20:00/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Round:/ })).not.toBeInTheDocument()
+  })
+
+  it('l aumento si sceglie dalla riga dell esercizio', async () => {
+    await alPasso2()
+    await aggiungiBlocco('For Time')
+    await userEvent.click(screen.getByRole('button', { name: /Incremento a ogni giro/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Esercizio$/ }))
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), 'Burpees')
+    await userEvent.click(await screen.findByRole('button', { name: 'Scegli Burpees' }))
+    await userEvent.click(await screen.findByRole('button', { name: '20' }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Scegli di quanto sale a ogni giro' }))
+    const foglio = screen.getByRole('dialog', { name: 'Aumento di Burpees' })
+    await userEvent.click(within(foglio).getByRole('button', { name: '+5' }))
+    await userEvent.click(within(foglio).getByRole('button', { name: 'Fatto' }))
+
+    expect(screen.getByRole('button', { name: 'Aumento: +5 ogni giro' })).toBeInTheDocument()
+    expect(anteprima()).toContain('2° giro · 25 Burpees')
+  })
+
+  it('spento e riacceso, gli aumenti non si perdono', async () => {
+    await alPasso2()
+    await aggiungiBlocco('For Time')
+    const interruttore = () => screen.getByRole('button', { name: /Incremento a ogni giro/ })
+    await userEvent.click(interruttore())
+    await userEvent.click(screen.getByRole('button', { name: /^Esercizio$/ }))
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), 'Burpees')
+    await userEvent.click(await screen.findByRole('button', { name: 'Scegli Burpees' }))
+    await userEvent.click(await screen.findByRole('button', { name: '20' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Aumenti rapidi' })).getByRole('button', { name: '+10' }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+    expect(screen.getByRole('button', { name: 'Aumento: +10 ogni giro' })).toBeInTheDocument()
+
+    await userEvent.click(interruttore())
+    expect(screen.queryByRole('button', { name: 'Aumento: +10 ogni giro' })).not.toBeInTheDocument()
+    await userEvent.click(interruttore())
+    expect(screen.getByRole('button', { name: 'Aumento: +10 ogni giro' })).toBeInTheDocument()
+  })
+
+  it('l aumento si può scrivere a mano', async () => {
+    await alPasso2()
+    await aggiungiBlocco('For Time')
+    await userEvent.click(screen.getByRole('button', { name: /Incremento a ogni giro/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Esercizio$/ }))
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), 'Burpees')
+    await userEvent.click(await screen.findByRole('button', { name: 'Scegli Burpees' }))
+    await userEvent.click(await screen.findByRole('button', { name: '20' }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Scegli di quanto sale a ogni giro' }))
+    const foglio = screen.getByRole('dialog', { name: 'Aumento di Burpees' })
+    const campo = within(foglio).getByRole('textbox', { name: 'Aumento a ogni giro' })
+    await userEvent.type(campo, '35')
+    // Le lettere non entrano.
+    await userEvent.type(campo, 'x')
+    expect(campo).toHaveValue('35')
+    await userEvent.click(within(foglio).getByRole('button', { name: 'Fatto' }))
+
+    expect(screen.getByRole('button', { name: 'Aumento: +35 ogni giro' })).toBeInTheDocument()
+    expect(anteprima()).toContain('2° giro · 55 Burpees')
+  })
+
+  it('lo SkiErg propone distanze pari: 200, 400, 500, 1000', async () => {
+    await alPasso2()
+    await aggiungiBlocco('For Time')
+    await userEvent.click(screen.getByRole('button', { name: /^Esercizio$/ }))
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), 'SkiErg')
+    await userEvent.click(await screen.findByRole('button', { name: 'Scegli SkiErg' }))
+    for (const m of ['200', '400', '500', '1000']) {
+      expect(await screen.findByRole('button', { name: `${m} m` })).toBeInTheDocument()
+    }
+    expect(screen.queryByRole('button', { name: '250 m' })).not.toBeInTheDocument()
+  })
+})
+
 describe('«ultima volta»', () => {
   it('ripropone i valori dell ultima assegnazione dello stesso esercizio', async () => {
     await alPasso2()

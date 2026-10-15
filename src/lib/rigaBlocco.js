@@ -11,6 +11,8 @@
 // sommare. Chi vuole la durata usa `durataBlocco` di src/lib/stimaWorkout.js,
 // che è l'unico punto che sa stimarla.
 
+import { haIncremento, testoTimeCap } from './incremento'
+
 /** «1 esercizio» / «3 esercizi». Zero non si scrive: un blocco vuoto lo dice da sé. */
 const esercizi = (n) => (n === 1 ? '1 esercizio' : `${n} esercizi`)
 
@@ -56,10 +58,15 @@ export const parametriBlocco = (block) => {
       return `ogni ${p.interval || '1:00'} × ${intero(p.rounds, 10)}`
     case 'ON/OFF':
       return `${p.on || '1:00'} on / ${p.off || '1:00'} off × ${intero(p.rounds, 10)}`
+    // L'incremento a ogni giro (src/lib/incremento.js): il blocco dura il
+    // suo tempo, e i giri sono quanti se ne fanno.
     case 'AMRAP':
-      return `in ${p.duration || '10:00'}`
-    case 'For Time':
-      return round(intero(p.rounds, 1))
+      return haIncremento(block) ? `in ${p.duration || '10:00'} · con incremento` : `in ${p.duration || '10:00'}`
+    // Il For Time è a time cap (dal 15/10/2026); i vecchi restano a round.
+    case 'For Time': {
+      const tempo = pieno(p.timecap) ? testoTimeCap(block) : round(intero(p.rounds, 1))
+      return haIncremento(block) ? `${tempo} · con incremento` : tempo
+    }
     case 'Interval':
       return round(intero(p.rounds, 1))
     case 'Cash In':

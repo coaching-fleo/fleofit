@@ -2055,7 +2055,7 @@ function AssignWorkoutModal({ athleteId, atleta, storico, onClose, onAssigned })
                     if (b.type === 'EMOM') shortTitle = `EMOM ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
                     else if (b.type === 'AMRAP') shortTitle = `AMRAP ${b.params?.duration || ''}`;
                     else if (b.type === 'ON/OFF') shortTitle = `ON/OFF ${b.params?.rounds ? b.params.rounds + 'x ' : ''}• ${b.params?.on || ''}/${b.params?.off || ''}`;
-                    else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
+                    else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.timecap ? '• ' + b.params.timecap : (b.params?.rounds ? b.params.rounds + 'x' : '')}`;
                                        else if (b.type === 'Interval') shortTitle = `INTERVAL ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
 
                     else if (b.type === 'WarmUp') shortTitle = `WARM UP ${b.params?.duration ? '• ' + b.params.duration : ''}`;

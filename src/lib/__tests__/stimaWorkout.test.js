@@ -253,3 +253,10 @@ describe('le tre formattazioni', () => {
     expect(decimale(8.2)).toBe('8,2')
   })
 })
+
+describe('For Time con time cap (src/lib/incremento.js)', () => {
+  it('dura il suo time cap, non il forfait per giro', () => {
+    const b = { type: 'For Time', incremento: true, params: { rounds: '1', timecap: '25:00' }, exercises: [{ reps: '10' }] }
+    expect(durataBlocco(b)).toBe(1500)
+  })
+})

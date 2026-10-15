@@ -102,3 +102,28 @@ describe('blocchiPerIA', () => {
     expect(blocchiPerIA([null, { type: 'Rest' }])).toEqual([{ type: 'Rest', exercises: [] }])
   })
 })
+
+describe('l incremento a ogni giro dall IA (src/lib/incremento.js)', () => {
+  it('tiene il primo giro con gli aumenti, e il For Time diventa a tempo', () => {
+    const [b] = preparaBlocchiIA([{
+      type: 'For Time', incremento: true, params: { rounds: '3', timecap: '15:00' },
+      exercises: [{ name: 'Ski Erg', meters: '200m', aumento: 100 }, { name: 'Sled Push', meters: '50m' }],
+    }])
+    expect(b.incremento).toBe(true)
+    expect(b.params).toEqual({ timecap: '15:00' })
+    expect(b.exercises).toHaveLength(2)
+    expect(b.exercises[0]).toMatchObject({ name: 'SkiErg', meters: '200m', aumento: '100' })
+    expect(b.exercises[1]).not.toHaveProperty('aumento')
+  })
+
+  it('senza time cap prende quello predefinito', () => {
+    const [b] = preparaBlocchiIA([{ type: 'For Time', incremento: true, exercises: [{ name: 'Burpees', reps: '10', aumento: '5' }] }])
+    expect(b.params.timecap).toBe('20:00')
+  })
+
+  it('fuori da For Time e AMRAP spia e aumenti si scartano', () => {
+    const [b] = preparaBlocchiIA([{ type: 'EMOM', incremento: true, exercises: [{ name: 'Burpees', reps: '10', aumento: '5' }] }])
+    expect(b).not.toHaveProperty('incremento')
+    expect(b.exercises[0]).not.toHaveProperty('aumento')
+  })
+})

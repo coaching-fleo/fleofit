@@ -25,6 +25,7 @@
 import { leggiEsercizio } from './leggiWorkout'
 import { HYROX_EXERCISES } from './esercizi'
 import { INTENSITA_PREDEFINITA } from './blocchiIA'
+import { TIPI_CON_INCREMENTO, TIME_CAP_PREDEFINITO, haIncremento } from './incremento'
 
 const PARAMETRI = {
   WarmUp: ['duration'],
@@ -32,7 +33,7 @@ const PARAMETRI = {
   'ON/OFF': ['on', 'off', 'rounds'],
   EMOM: ['interval', 'rounds'],
   AMRAP: ['duration'],
-  'For Time': ['rounds'],
+  'For Time': ['timecap'],
   Interval: ['rounds'],
   'Cash In': ['rounds', 'rest'],
   'Cash Out': ['rounds', 'rest'],
@@ -79,6 +80,27 @@ export const cambiaTipoBlocco = (block, tipo) => {
     if (block.params?.[k] != null && block.params[k] !== '') params[k] = block.params[k]
   }
   const fuori = { ...block, type: tipo, params }
+  // For Time e AMRAP sono entrambi a tempo: il time cap diventa la durata e
+  // viceversa. Un For Time senza un tempo da cui partire prende quello di un
+  // blocco nuovo (src/lib/incremento.js).
+  if (tipo === 'AMRAP' && block.params?.timecap) params.duration = block.params.timecap
+  if (tipo === 'For Time' && !params.timecap) {
+    params.timecap = (block.type === 'AMRAP' && block.params?.duration) || TIME_CAP_PREDEFINITO
+  }
+  // L'incremento a ogni giro passa fra For Time e AMRAP; negli altri blocchi
+  // non esiste: via la spia e gli aumenti.
+  if (haIncremento(block) && TIPI_CON_INCREMENTO.includes(tipo)) {
+    // resta com'è
+  } else if ('incremento' in block) {
+    delete fuori.incremento
+    if (Array.isArray(block.exercises)) {
+      fuori.exercises = block.exercises.map(ex => {
+        const senza = { ...ex }
+        delete senza.aumento
+        return senza
+      })
+    }
+  }
   const daTesto = SENZA_ESERCIZI.has(block.type)
   const aTesto = SENZA_ESERCIZI.has(tipo)
   if (aTesto && !daTesto && (block.exercises || []).length > 0) {

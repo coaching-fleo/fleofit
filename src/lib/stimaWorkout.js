@@ -161,6 +161,9 @@ export const durataBlocco = (block) => {
     // «Interval» no — lì ogni esercizio dichiara il proprio `exTime`, quindi
     // la somma è un dato e non una stima.
     case 'For Time':
+      // Dal 15/10/2026 il For Time è a time cap: dura il suo tempo, come un
+      // AMRAP. Il forfait qui sotto resta per i For Time vecchi, a round.
+      if (p.timecap && parseDuration(p.timecap) > 0) return parseDuration(p.timecap)
       // ⚠️ Il forfait vale solo su un blocco che contiene qualcosa. Un «For
       // Time» ancora vuoto NON dura 45 minuti: non è stimabile, e la scheda
       // deve poter scrivere «—» invece di «0:00» (CLAUDE.md §9-undecies

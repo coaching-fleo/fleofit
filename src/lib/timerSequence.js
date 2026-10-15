@@ -8,6 +8,7 @@
 
 import { ERGOMETERS } from './constants'
 import { fasiEmom } from './stazioniEmom'
+import { haIncremento, testoAumento } from './incremento'
 
 const isErgo = (name) => ERGOMETERS.includes(name)
 
@@ -97,6 +98,11 @@ export const buildTimerSequence = (workout) => {
     blocks.forEach((b, i) => {
       const exNames = (b.exercises || []).map(e => e.name).join(' • ');
       
+      // Il primo giro con l'aumento di ogni esercizio: «Burpees · 20 reps +10 ogni giro».
+      const conIncremento = (blocco) => haIncremento(blocco)
+        ? (blocco.exercises || []).map(ex => [taskDi(ex), testoAumento(ex)].filter(Boolean).join(' ')).join(' • ')
+        : '';
+
       const taskDi = (ex) => {
         if (!ex) return null;
         const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''));
@@ -135,7 +141,13 @@ export const buildTimerSequence = (workout) => {
         });
       } else if (b.type === 'AMRAP') {
         const sec = parseDuration(b.params?.duration || '10:00');
-        seq.push({ id: `blk-${i}`, title: 'AMRAP', subtitle: '', duration: sec, theme: 'emom', type: 'work', task: exNames || 'AMRAP' });
+        seq.push({ id: `blk-${i}`, title: 'AMRAP', subtitle: haIncremento(b) ? 'Con incremento' : '', duration: sec, theme: 'emom', type: 'work', task: conIncremento(b) || exNames || 'AMRAP' });
+      } else if (b.type === 'For Time' && parseDuration(b.params?.timecap || '0') > 0) {
+        // Il For Time è a time cap (dal 15/10/2026): una fase sola, a
+        // scendere, e i giri sono quanti se ne fanno. I vecchi, a round,
+        // restano il cronometro qui sotto.
+        const sec = parseDuration(b.params.timecap);
+        seq.push({ id: `blk-${i}-1`, title: 'FOR TIME', subtitle: haIncremento(b) ? 'Con incremento' : 'Time cap', duration: sec, theme: 'base', type: 'work', task: conIncremento(b) || exNames || 'FOR TIME' });
       } else if (b.type === 'For Time' || b.type === 'Interval') {
         const rounds = parseInt(b.params?.rounds, 10) || 1;
         const sec = parseDuration(b.params?.timecap || '0'); 
