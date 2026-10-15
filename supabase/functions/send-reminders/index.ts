@@ -398,7 +398,9 @@ serve(async (req) => {
       const { data: dbNotifs, error: dbErr } = await supabase.from('notifications').insert(
         destinatari.map((user_id) => ({ user_id, title: TITOLO_BROADCAST, message: messaggio.testo, route })),
       ).select();
-      if (dbErr) console.error("Errore DB (broadcast):", dbErr);
+      // Senza le righe il dedup non funziona: se l'insert fallisce ci si ferma (500) PRIMA di pushare,
+      // così un nuovo tentativo non rimanda la push a tutti.
+      if (dbErr) throw dbErr;
       const idPerUtente = new Map<string, string>((dbNotifs || []).map((n: any) => [n.user_id, n.id]));
 
       const { data: subscriptions, error: subError } = await supabase
@@ -410,6 +412,7 @@ serve(async (req) => {
       const testoPush = anteprima(messaggio.testo);
       await Promise.all((subscriptions || []).map((sub: any) =>
         sendPush(sub, TITOLO_BROADCAST, testoPush, route, idPerUtente.get(sub.user_id))));
+      // sent = notifiche scritte (righe); saltati = righe athletes non destinatarie.
       return new Response(JSON.stringify({ success: true, sent: destinatari.length, saltati }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 

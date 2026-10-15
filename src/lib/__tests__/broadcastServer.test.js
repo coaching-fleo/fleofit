@@ -26,11 +26,15 @@ describe('anteprima', () => {
     expect(anteprima('Ciao a tutti')).toBe('Ciao a tutti')
   })
   it('taglia all\'ultimo spazio e aggiunge i puntini', () => {
-    const lungo = Array.from({ length: 60 }, () => 'parola').join(' ')
+    const parole = ['a', 'casa', 'cammino', 'straordinariamente', 'sì', 'montagna']
+    const lungo = Array.from({ length: 60 }, (_, i) => parole[i % parole.length]).join(' ')
     const a = anteprima(lungo)
     expect(a.length).toBeLessThanOrEqual(121)
     expect(a.endsWith('…')).toBe(true)
-    expect(a.slice(0, -1).split(' ').every((p) => p === 'parola')).toBe(true)
+    expect(a.slice(0, -1).split(' ').every((p) => parole.includes(p))).toBe(true)
+  })
+  it('senza spazi taglia a 120 e aggiunge i puntini', () => {
+    expect(anteprima('x'.repeat(200))).toBe('x'.repeat(120) + '…')
   })
   it('comprime gli spazi e gli a capo', () => {
     expect(anteprima('riga uno\n\nriga  due')).toBe('riga uno riga due')
