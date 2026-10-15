@@ -61,4 +61,17 @@ describe('destinatariBroadcast', () => {
     expect(destinatariBroadcast(atleti, { mittenteId: 'm1', coachingId: COACHING_ID, giaNotificati: ['a3'] }))
       .toEqual(['a1', 'a4'])
   })
+  it('toglie anche gli account admin passati in escludi', () => {
+    const atleti = [
+      { id: 'a1', deleted_at: null },
+      { id: 'adm', deleted_at: null }, // un coach che ha anche una riga athletes
+      { id: 'a2', deleted_at: null },
+    ]
+    expect(destinatariBroadcast(atleti, { mittenteId: 'm1', coachingId: COACHING_ID, giaNotificati: [], escludi: ['adm'] }))
+      .toEqual(['a1', 'a2'])
+  })
+  it('senza escludi si comporta come prima', () => {
+    expect(destinatariBroadcast([{ id: 'a1', deleted_at: null }], { mittenteId: 'm1', coachingId: COACHING_ID, giaNotificati: [] }))
+      .toEqual(['a1'])
+  })
 })

@@ -28,14 +28,15 @@ export function routeMessaggio(id: string): string {
 }
 
 // Chi riceve il messaggio: gli atleti non eliminati, senza l'account nascosto
-// del coach, senza il mittente e senza chi l'ha già ricevuto (rinvio dopo un
-// errore a metà: nessuno vede due volte lo stesso messaggio).
+// del coach, senza il mittente, senza chi l'ha già ricevuto (rinvio dopo un
+// errore a metà: nessuno vede due volte lo stesso messaggio) e senza `escludi`
+// (gli account admin che hanno anche una riga athletes: il messaggio è per gli atleti).
 export function destinatariBroadcast(
   atleti: { id: string; deleted_at: number | null }[],
-  opz: { mittenteId: string; coachingId: string; giaNotificati: string[] },
+  opz: { mittenteId: string; coachingId: string; giaNotificati: string[]; escludi?: string[] },
 ): string[] {
-  const gia = new Set(opz.giaNotificati)
+  const fuori = new Set([...opz.giaNotificati, ...(opz.escludi ?? [])])
   return atleti
-    .filter((a) => !a.deleted_at && a.id !== opz.coachingId && a.id !== opz.mittenteId && !gia.has(a.id))
+    .filter((a) => !a.deleted_at && a.id !== opz.coachingId && a.id !== opz.mittenteId && !fuori.has(a.id))
     .map((a) => a.id)
 }

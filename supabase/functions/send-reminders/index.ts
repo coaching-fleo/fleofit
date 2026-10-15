@@ -382,8 +382,19 @@ serve(async (req) => {
       const { data: gia, error: giaErr } = await supabase.from('notifications').select('user_id').eq('route', route);
       if (giaErr) throw giaErr;
 
+      // Gli altri coach non sono destinatari, anche se hanno una riga athletes.
+      // Se listUsers fallisce si prosegue SENZA questo filtro (come i promemoria):
+      // meglio una notifica di troppo a un coach che nessuna agli atleti.
+      let idAdmin: string[] = [];
+      try {
+        idAdmin = await trovaIdAdmin();
+      } catch (e) {
+        console.error('Broadcast: lista admin non leggibile, invio SENZA escludere i coach.', e);
+      }
+
       const destinatari = destinatariBroadcast(atleti || [], {
         mittenteId: messaggio.autore,
+        escludi: idAdmin,
         // Account nascosto del coach: stesso id di COACHING_ID in src/lib/constants.js
         // (index.ts non può importare da src).
         coachingId: '0118e43f-8791-4fd6-8032-bee028334c99',
