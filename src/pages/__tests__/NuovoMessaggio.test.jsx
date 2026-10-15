@@ -264,6 +264,15 @@ describe('Nuovo messaggio — prova su di me', () => {
     expect(await screen.findByText('Nessun tuo dispositivo ha le notifiche attive')).toBeTruthy()
   })
 
+  it('Firebase rifiuta (build di sviluppo): non dice «mandata», dice perché', async () => {
+    finto.supabase.functions.invoke.mockResolvedValueOnce({ data: { success: true, sent: 1, consegnate: 0, motivi: ['THIRD_PARTY_AUTH_ERROR'] }, error: null })
+    monta()
+    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+    fireEvent.click(prova())
+    expect(await screen.findByText(/Xcode in modalità sviluppo/)).toBeTruthy()
+    expect(screen.queryByText(/Prova mandata/)).toBeNull()
+  })
+
   it('prova fallita: lo dice', async () => {
     finto.supabase.functions.invoke.mockResolvedValueOnce({ data: null, error: { message: 'rete' } })
     monta()

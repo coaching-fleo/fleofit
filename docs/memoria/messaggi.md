@@ -100,6 +100,17 @@ già consegnati. È accettato; non si cancellano le notifiche.
   vuoto. Il server rifà il controllo del testo con `testoAccettabile` (la prova non passa dal
   check della tabella).
 
+- **La prova dice la verità** (15/10/2026). La prima versione rispondeva «Prova mandata» contando
+  i dispositivi iscritti, e sul telefono non arrivava niente: il committente provava dalla build
+  **Debug** lanciata da Xcode (`it.federicoleo.fleofit.dev`), per cui Firebase risponde
+  `THIRD_PARTY_AUTH_ERROR` (`database.md`, «Le push NON funzionano su una build Debug»). Ora
+  `sendPush` torna `{ ok, motivo }`, `broadcast_prova` risponde `{ sent, consegnate, motivi }` e
+  `esitoProva` (messaggiCoach.js) dice «mandata» solo se FCM l'ha accettata; con
+  `THIRD_PARTY_AUTH_ERROR` spiega che dalla build di sviluppo le push non arrivano.
+  🔴 **Per provare la push su iPhone serve la build Release** (Xcode → Product → Scheme → Edit
+  Scheme → Run → Build Configuration: Release), oppure TestFlight. ⚠️ La Release ha lo stesso
+  bundle id dell'app di App Store e la **sostituisce** sul telefono.
+
 ## La pagina
 - **Freccia indietro** in testata (`useIndietro('/')`, `aria-label="Torna indietro"`, come l'Archivio):
   aperta da una notifica è la prima pagina della sessione, e senza ripiego la freccia non farebbe niente.

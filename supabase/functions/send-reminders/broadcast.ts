@@ -55,3 +55,10 @@ export function testoAccettabile(testo: unknown): string | null {
   const t = testo.trim()
   return t.length >= 1 && t.length <= MAX_CARATTERI ? t : null
 }
+
+// Il motivo di un rifiuto FCM, corto e riconoscibile: lo `status` del corpo JSON
+// di Google (THIRD_PARTY_AUTH_ERROR, INVALID_ARGUMENT, …) o, se manca, il codice HTTP.
+export function motivoFcm(stato: number, corpo: string): string {
+  const m = String(corpo ?? '').match(/"errorCode"\s*:\s*"([A-Z_]+)"/) || String(corpo ?? '').match(/"status"\s*:\s*"([A-Z_]+)"/)
+  return m ? m[1] : `HTTP_${stato}`
+}

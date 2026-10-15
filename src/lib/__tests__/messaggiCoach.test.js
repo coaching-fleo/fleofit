@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   CHIAVE_BOZZA, CHIAVE_VISTO, MAX_CARATTERI, visibiliPer, ordina, daMostrareInHome, testoValido,
-  anteprima, routeMessaggio, puoInviareBroadcast,
+  anteprima, routeMessaggio, puoInviareBroadcast, esitoProva,
 } from '../messaggiCoach'
 
 // Perché questi test esistono
@@ -80,5 +80,27 @@ describe('costanti e riesportazioni', () => {
     expect(typeof anteprima).toBe('function')
     expect(typeof routeMessaggio).toBe('function')
     expect(typeof puoInviareBroadcast).toBe('function')
+  })
+})
+
+describe('esitoProva', () => {
+  it('chiamata fallita o nessun dispositivo: errore', () => {
+    expect(esitoProva(null)).toEqual({ errore: true, testo: 'La prova non è partita. Controlla la connessione e riprova.' })
+    expect(esitoProva({ success: true, sent: 0 })).toEqual({ errore: true, testo: 'Nessun tuo dispositivo ha le notifiche attive' })
+  })
+  it('«mandata» solo se Firebase l\'ha accettata', () => {
+    expect(esitoProva({ sent: 1, consegnate: 1, motivi: [] })).toEqual({ errore: false, testo: 'Prova mandata ai tuoi dispositivi (1)' })
+    expect(esitoProva({ sent: 2, consegnate: 1, motivi: ['HTTP_500'] })).toEqual({ errore: false, testo: 'Prova mandata a 1 dei tuoi 2 dispositivi' })
+  })
+  it('rifiutata per la build di sviluppo: lo dice in chiaro', () => {
+    const e = esitoProva({ sent: 1, consegnate: 0, motivi: ['THIRD_PARTY_AUTH_ERROR'] })
+    expect(e.errore).toBe(true)
+    expect(e.testo).toMatch(/Xcode in modalità sviluppo/)
+  })
+  it('rifiutata per altro: riporta il motivo', () => {
+    expect(esitoProva({ sent: 1, consegnate: 0, motivi: ['INVALID_ARGUMENT'] })).toEqual({ errore: true, testo: 'Firebase ha rifiutato la notifica (INVALID_ARGUMENT)' })
+  })
+  it('un server di prima senza `consegnate`: conta i dispositivi', () => {
+    expect(esitoProva({ success: true, sent: 2 })).toEqual({ errore: false, testo: 'Prova mandata ai tuoi dispositivi (2)' })
   })
 })

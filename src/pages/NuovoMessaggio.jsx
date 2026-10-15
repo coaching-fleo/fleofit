@@ -34,7 +34,7 @@ import { useAuth } from '../App'
 import { CustomConfirm } from '../components/CustomModals'
 import { leggiJson, scriviJson } from '../lib/offlineQueue'
 import { vibraScelta, vibraSuccesso, vibraErrore } from '../lib/aptica'
-import { testoValido, MAX_CARATTERI, CHIAVE_BOZZA, puoInviareBroadcast } from '../lib/messaggiCoach'
+import { testoValido, MAX_CARATTERI, CHIAVE_BOZZA, puoInviareBroadcast, esitoProva as leggiEsitoProva } from '../lib/messaggiCoach'
 import { COACHING_ID } from '../lib/constants'
 import { useIndietro } from '../useIndietro'
 
@@ -173,23 +173,16 @@ export default function NuovoMessaggio() {
   const provaSuDiMe = () => inEsclusiva(async () => {
     if (!valido || demo) return
     setEsitoProva(null)
-    let esito
+    let risposta
     try {
       const { data, error } = await supabase.functions.invoke('send-reminders', { body: { mode: 'broadcast_prova', testo: testo.trim() } })
-      esito = error || data?.success === false ? null : data
+      risposta = error || data?.success === false ? null : data
     } catch {
-      esito = null
+      risposta = null
     }
-    if (!esito) {
-      vibraErrore()
-      setEsitoProva({ errore: true, testo: 'La prova non è partita. Controlla la connessione e riprova.' })
-    } else if (!esito.sent) {
-      vibraErrore()
-      setEsitoProva({ errore: true, testo: 'Nessun tuo dispositivo ha le notifiche attive' })
-    } else {
-      vibraSuccesso()
-      setEsitoProva({ errore: false, testo: `Prova mandata ai tuoi dispositivi (${esito.sent})` })
-    }
+    const esito = leggiEsitoProva(risposta)
+    if (esito.errore) vibraErrore(); else vibraSuccesso()
+    setEsitoProva(esito)
   })
 
   const chiediConferma = () => {

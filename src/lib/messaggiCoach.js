@@ -45,3 +45,27 @@ export function daMostrareInHome(messaggi, vistoFino) {
 export function testoValido(testo) {
   return testoAccettabile(testo) !== null
 }
+
+/**
+ * Il testo da mostrare dopo «Prova su di me», dalla risposta di `broadcast_prova`
+ * (`{ sent, consegnate, motivi }`; `null` = chiamata fallita). «Mandata» solo se
+ * Firebase l'ha accettata: contare i dispositivi non basta (15/10/2026, la prima
+ * prova diceva «mandata» e sul telefono non arrivava niente).
+ * @returns {{ errore: boolean, testo: string }}
+ */
+export function esitoProva(risposta) {
+  if (!risposta) return { errore: true, testo: 'La prova non è partita. Controlla la connessione e riprova.' }
+  const iscritti = Number(risposta.sent) || 0
+  if (!iscritti) return { errore: true, testo: 'Nessun tuo dispositivo ha le notifiche attive' }
+  // Un server di prima non manda `consegnate`: si torna a contare i dispositivi.
+  const consegnate = risposta.consegnate == null ? iscritti : Number(risposta.consegnate) || 0
+  const motivi = Array.isArray(risposta.motivi) ? risposta.motivi : []
+  if (!consegnate) {
+    if (motivi.includes('THIRD_PARTY_AUTH_ERROR')) {
+      return { errore: true, testo: 'Firebase ha rifiutato la notifica: con l\'app lanciata da Xcode in modalità sviluppo le push non arrivano. Prova con la build Release o con TestFlight.' }
+    }
+    return { errore: true, testo: `Firebase ha rifiutato la notifica${motivi.length ? ` (${motivi.join(', ')})` : ''}` }
+  }
+  if (consegnate < iscritti) return { errore: false, testo: `Prova mandata a ${consegnate} dei tuoi ${iscritti} dispositivi` }
+  return { errore: false, testo: `Prova mandata ai tuoi dispositivi (${consegnate})` }
+}

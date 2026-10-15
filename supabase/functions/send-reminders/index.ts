@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
 import { ADMIN_EMAILS } from "../_shared/admin.ts"
-import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile } from "./broadcast.ts"
+import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm } from "./broadcast.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -242,7 +242,11 @@ serve(async (req) => {
 
 
 // Helper per inviare la notifica in base al tipo di token (con ID notifica nascosto)
-    const sendPush = async (sub: any, title: string, bodyMsg: string, route: string = '/', notifId?: string) => {
+    // Torna l'esito della consegna a FCM / Web Push: { ok, motivo }. Gli altri modi
+    // lo ignorano; «Prova su di me» lo usa per dire la verità («mandata» solo se
+    // FCM l'ha accettata, altrimenti il perché — es. THIRD_PARTY_AUTH_ERROR delle
+    // build Debug `.dev`, docs/memoria/database.md).
+    const sendPush = async (sub: any, title: string, bodyMsg: string, route: string = '/', notifId?: string): Promise<{ ok: boolean; motivo?: string }> => {
       try {
         if (sub.auth === 'capacitor_ios') {
           if (firebaseServiceAccount.client_email && firebaseServiceAccount.private_key) {
@@ -295,18 +299,23 @@ serve(async (req) => {
               } else {
                 console.error(`FCM ${res.status} per sub ${sub.id} — token CONSERVATO: ${errorText}`);
               }
+              return { ok: false, motivo: motivoFcm(res.status, errorText) };
             }
-          } else console.error("Firebase Service Account mancante o non valido.");
-        } else {
-          const pushSubscription = { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } };
-          const payload = JSON.stringify({ title, body: bodyMsg, url: route });
-          await webpush.sendNotification(pushSubscription, payload);
+            return { ok: true };
+          }
+          console.error("Firebase Service Account mancante o non valido.");
+          return { ok: false, motivo: 'FIREBASE_NON_CONFIGURATO' };
         }
+        const pushSubscription = { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } };
+        const payload = JSON.stringify({ title, body: bodyMsg, url: route });
+        await webpush.sendNotification(pushSubscription, payload);
+        return { ok: true };
       } catch (error: any) {
         console.error('Errore invio notifica a', sub.endpoint, error);
         if (error.statusCode === 404 || error.statusCode === 410) {
           await supabase.from('push_subscriptions').delete().eq('id', sub.id);
         }
+        return { ok: false, motivo: String(error?.statusCode ?? error?.message ?? 'ERRORE') };
       }
     };
 
@@ -384,10 +393,13 @@ serve(async (req) => {
       const { data: subscriptions, error: subError } = await supabase
         .from('push_subscriptions').select('*').eq('user_id', chiamante.id);
       if (subError) throw subError;
-      await Promise.all((subscriptions || []).map((sub: any) =>
+      const esiti = await Promise.all((subscriptions || []).map((sub: any) =>
         sendPush(sub, TITOLO_PROVA, anteprima(testo), ROUTE_BACHECA, notif?.id)));
-      // sent = dispositivi del coach a cui è partita la push (0 = nessuno iscritto alle notifiche).
-      return new Response(JSON.stringify({ success: true, sent: (subscriptions || []).length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      // sent = dispositivi iscritti (0 = nessuno); consegnate = accettate da FCM / Web Push;
+      // motivi = i rifiuti, senza doppioni, per dire al coach PERCHÉ non è arrivata.
+      const consegnate = esiti.filter((e) => e.ok).length;
+      const motivi = [...new Set(esiti.filter((e) => !e.ok).map((e) => e.motivo || 'ERRORE'))];
+      return new Response(JSON.stringify({ success: true, sent: (subscriptions || []).length, consegnate, motivi }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // ==========================================

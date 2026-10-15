@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   TITOLO_BROADCAST, EMAIL_DEMO, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast,
-  TITOLO_PROVA, ROUTE_BACHECA, testoAccettabile,
+  TITOLO_PROVA, ROUTE_BACHECA, testoAccettabile, motivoFcm,
 } from '../../../supabase/functions/send-reminders/broadcast.ts'
 import { COACHING_ID } from '../constants'
 
@@ -92,5 +92,14 @@ describe('prova su di me', () => {
     expect(testoAccettabile('x'.repeat(2001))).toBeNull()
     expect(testoAccettabile(undefined)).toBeNull()
     expect(testoAccettabile(42)).toBeNull()
+  })
+})
+
+describe('motivoFcm', () => {
+  it('prende errorCode dai dettagli di FCM, poi status, poi il codice HTTP', () => {
+    const apns = '{"error":{"code":401,"message":"Auth error from APNS or Web Push Service","status":"UNAUTHENTICATED","details":[{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":"THIRD_PARTY_AUTH_ERROR"}]}}'
+    expect(motivoFcm(401, apns)).toBe('THIRD_PARTY_AUTH_ERROR')
+    expect(motivoFcm(400, '{"error":{"code":400,"status":"INVALID_ARGUMENT"}}')).toBe('INVALID_ARGUMENT')
+    expect(motivoFcm(503, 'Service Unavailable')).toBe('HTTP_503')
   })
 })
