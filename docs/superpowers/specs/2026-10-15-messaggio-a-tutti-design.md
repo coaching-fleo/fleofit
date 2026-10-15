@@ -170,9 +170,12 @@ e si controllano i log del primo promemoria del mattino successivo.
   fissato e uno più vecchio dell'iscrizione dell'atleta finto (per vedere la regola),
   così `npm run demo` e `demo:atleta` mostrano bacheca e card.
 - **Atleti con l'app 1.2.1**: ricevono la push, ma `/messaggi` lì non esiste e la rotta
-  `*` li porta in Home. Per questo il **testo intero** va nella riga di `notifications`:
-  si legge dal centro notifiche anche dalla versione vecchia. L'uso vero conviene dalla
-  **1.2.2** nei negozi; sul web arriva al primo `app:main`.
+  `*` li porta in Home. Il **testo intero** va comunque nella riga di `notifications`, ma
+  ⚠️ (correzione del 15/10/2026, revisione finale) il centro notifiche della 1.2.1 taglia
+  ogni messaggio a **due righe** (`line-clamp-2` in `Home.jsx`): dalla versione vecchia si
+  legge solo l'inizio di un messaggio lungo. L'uso vero comincia con la **1.2.2** nei
+  negozi; sul web arriva al primo `app:main`, che non si fa prima di tabella e funzione
+  pubblicate (`docs/memoria/messaggi.md`, «Cancello di rilascio»).
 - **App Store**: nessuna dichiarazione cambia. «Messaggistica e chat» è già SÌ; un
   messaggio che scrive solo il coach non è contenuto generato dagli utenti (BACKLOG #51).
 - **Privacy**: nessuna categoria di dati nuova; il testo è del coach.

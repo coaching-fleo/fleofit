@@ -55,6 +55,8 @@
 Codice scritto e committato su `app` (`docs/memoria/messaggi.md`). Restano, in ordine:
 1. 🔴 **Il sì esplicito del committente** alla tabella `messaggi_coach` (CLAUDE.md §0, 0-bis), poi applicare `supabase/schema/messaggi_coach_2026-10-15.sql` e verificare le due policy (SELECT e ALL).
 2. **Pubblicare `send-reminders`** (modo `broadcast`): colpisce anche la web app, quindi dopo la migrazione.
+   🔴 **Cancello di rilascio**: niente `git push origin app:main` e nessun archive della 1.2.2 finché la tabella non è applicata **e** `send-reminders` non è pubblicata. Le entrate del coach sono sempre visibili: prima di quei due passi mostrerebbero una funzione rotta.
+   ⚠️ Chi ha la **1.2.1** riceve la push, ma il centro notifiche taglia il messaggio a due righe (`line-clamp-2` in `Home.jsx`) e `/messaggi` lì non esiste: legge solo l'inizio di un messaggio lungo. L'uso vero comincia con la 1.2.2 nei negozi.
 3. **Prove sul telefono** (del committente): push vera su iOS e Android, tocco sulla notifica → messaggio evidenziato, badge a zero aprendo la bacheca, foglio chiuso col tasto indietro su Android.
 4. **Conferme di lettura**: rimandate di proposito.
 5. **Chat con il singolo atleta**: ancora aperta, non è questa funzione.

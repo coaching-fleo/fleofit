@@ -11,6 +11,13 @@
 - ⏳ **`send-reminders` col modo `broadcast` NON ancora pubblicata** (`supabase/functions/send-reminders/broadcast.ts`
   e il ramo in `index.ts`). Un deploy colpisce anche la web app su `main`: va fatto dopo la migrazione.
 - Il backup notturno ha già `messaggi_coach` in `TABLES`; finché la tabella non esiste il job la salta con un avviso.
+- 🔴 **Cancello di rilascio.** Finché la tabella non è applicata **e** `send-reminders` col modo
+  `broadcast` non è pubblicata: **niente `git push origin app:main`** e **nessun archive della 1.2.2**.
+  Le entrate del coach (riga in Home telefono, bottone sul desktop, voce «Messaggi» della barra
+  laterale) sono **sempre visibili**: pubblicate prima, mostrerebbero una funzione rotta (la bacheca
+  non carica, Invia fallisce). L'ordine è: sì del committente → tabella → deploy della funzione →
+  solo allora `app:main` e archive. E il deploy della funzione non va anticipato alla tabella:
+  il modo `broadcast` legge `messaggi_coach`.
 
 ## Dove sta cosa
 | File | Cosa fa |
@@ -44,10 +51,16 @@ Fissa, Modifica ed Elimina. Perché anche quelli: con RLS, un `UPDATE`/`DELETE` 
 **0 righe senza errore**, quindi il client chiede `.select('id')` e controlla che sia tornata una riga.
 Senza quel controllo il bottone «funzionerebbe» senza fare niente.
 
-## Il testo intero sta anche in `notifications.message`
-Le versioni vecchie dell'app non conoscono la bacheca: leggono solo il centro notifiche. Per questo
-la notifica porta il **testo intero**. Conseguenza: un messaggio **eliminato** dalla bacheca resta
-leggibile nei centri notifiche già consegnati. È accettato; non si cancellano le notifiche.
+## Il testo intero sta anche in `notifications.message` — ma la 1.2.1 ne mostra l'inizio
+La notifica porta il **testo intero** in `notifications.message`, così il centro notifiche ha
+qualcosa da mostrare anche nelle versioni che non conoscono la bacheca.
+⚠️ **Non vuol dire che dalla 1.2.1 si legga tutto.** Nella 1.2.1 il centro notifiche di `Home.jsx`
+taglia ogni messaggio a **due righe** (`line-clamp-2`) e `/messaggi` non esiste (la rotta `*` porta
+in Home): l'atleta con la 1.2.1 legge solo **l'inizio** di un messaggio lungo. L'uso vero comincia
+quando la **1.2.2** è nei negozi (sul web, al primo `app:main`). Il taglio di Home non si tocca per
+questo: nella 1.2.2 il messaggio intero si legge in bacheca, e la notifica ci porta.
+Conseguenza del testo intero: un messaggio **eliminato** dalla bacheca resta nei centri notifiche
+già consegnati. È accettato; non si cancellano le notifiche.
 
 ## Invio
 - Nuovo tentativo (retry) senza doppioni: la funzione deduplica con `notifications.route`
@@ -56,6 +69,24 @@ leggibile nei centri notifiche già consegnati. È accettato; non si cancellano 
   duplicherebbero le notifiche.
 - L'insert salva `testo.trim()`.
 - Esito: `{ success, sent, saltati }`.
+- **Destinatari**: atleti non eliminati, senza l'account nascosto, senza il mittente, senza chi
+  l'ha già ricevuto e **senza gli account admin** (`trovaIdAdmin`, passati come `escludi` a
+  `destinatariBroadcast`): un coach con una riga `athletes` non riceve il messaggio a tutti. Se
+  `listUsers` fallisce si invia **senza** quel filtro, con `console.error` — la stessa scelta dei
+  promemoria del mattino. Per questo «Arriverà a N atleti» nel foglio può **superare** i destinatari
+  veri: il client non legge la lista admin.
+- **«Manda la notifica»** nel menu di un messaggio: rifà il passo 2 (`send-reminders`, stesso
+  `record_id`) dopo che il foglio è stato chiuso e «Riprova» non c'è più. Sicuro grazie al dedup:
+  chi l'ha già ricevuta viene saltato, e l'esito dice a quanti è partita (o che l'avevano tutti).
+  Spenta nel demo e mentre una chiamata è in volo.
+
+## La pagina
+- **Freccia indietro** in testata (`useIndietro('/')`, `aria-label="Torna indietro"`, come l'Archivio):
+  aperta da una notifica è la prima pagina della sessione, e senza ripiego la freccia non farebbe niente.
+- **`?m=` cambiato a pagina aperta** (una notifica toccata mentre si è già in bacheca) verso un
+  messaggio che la lista caricata non ha: la bacheca si **rilegge una volta** per quell'id
+  (`lettaPer`, un ref), poi lo evidenzia. Il `?m=` con cui la pagina si apre non provoca una seconda
+  lettura: lo copre già la prima. Se nemmeno la seconda lo trova, ci si ferma — niente giri.
 
 ## Ambiente di prova
 `semi()` ha quattro messaggi (uno fissato, uno di 30 giorni fa); l'utente demo risulta iscritto da 20
