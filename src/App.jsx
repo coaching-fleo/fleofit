@@ -36,6 +36,7 @@ const AthleteReport = lazy(() => import('./pages/AthleteReport'))
 // Solo desktop coach: fuori dal desktop la pagina rimanda da sé a /report.
 const Analisi = lazy(() => import('./pages/Analisi'))
 const Settings = lazy(() => import('./pages/Settings'))
+const Messaggi = lazy(() => import('./pages/Messaggi'))
 const Login = lazy(() => import('./pages/Login'))
 // La barra laterale del desktop (solo coach, solo web, finestra ≥ 1024px): pigra,
 // così il chunk d'ingresso del telefono non cresce (CLAUDE.md §2).
@@ -675,6 +676,7 @@ function App() {
             <Route path="/report/:id" element={<AthleteReport />} />
             <Route path="/analisi" element={<Analisi />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/messaggi" element={<Messaggi />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
