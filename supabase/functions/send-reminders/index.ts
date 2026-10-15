@@ -1,6 +1,6 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
+import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
 import { ADMIN_EMAILS } from "../_shared/admin.ts"
 import { TITOLO_BROADCAST, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast } from "./broadcast.ts"

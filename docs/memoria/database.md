@@ -393,3 +393,11 @@ limitata al workout referenziato da una `tv_sessions` attiva.
 `(sections->>'isAutonomous')::boolean = true` (un utente non può inserirsi programmazione
 arbitraria), e `invitation_codes → Admins can create invitation codes` lega `created_by = auth.uid()`
 (nessuno può falsificare l'autore di un codice).
+
+### ⚠️ esm.sh non serve più `@supabase/supabase-js@2.39.3` (15/10/2026)
+Ripubblicando `send-reminders` il bundler ha risposto 400: `https://esm.sh/@supabase/supabase-js@2.39.3`
+chiede `@supabase/storage-js@^2.5.4`, che esm.sh oggi restituisce **404**. La versione già pubblicata
+continua a girare, ma **non si può più ripubblicare** una funzione con quell'import. In
+`send-reminders` è diventato `npm:@supabase/supabase-js@2.39.3` (stessa versione, come già `web-push`).
+🔴 `ai-workout`, `ricerca-coach`, `estrai-note` e `segnalazione` hanno ancora l'import da esm.sh:
+al prossimo deploy di una di loro va fatta la stessa sostituzione, o il deploy fallisce.

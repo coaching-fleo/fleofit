@@ -8,8 +8,9 @@
   sessione (CLAUDE.md §0, regola 0-bis), con `supabase db query --linked -f
   supabase/schema/messaggi_coach_2026-10-15.sql`. Verificata: due policy (SELECT e ALL) e i
   default delle colonne.
-- ⏳ **`send-reminders` col modo `broadcast` NON ancora pubblicata** (`supabase/functions/send-reminders/broadcast.ts`
-  e il ramo in `index.ts`). Un deploy colpisce anche la web app su `main`: va fatto dopo la migrazione.
+- ✅ **`send-reminders` col modo `broadcast` pubblicata il 15/10/2026** (versione 54). Prova a vuoto:
+  una richiesta `broadcast` con la chiave anonima risponde 403 «Non autorizzato». Da controllare la
+  mattina dopo nei log che il promemoria `morning` sia andato come sempre.
 - Il backup notturno ha `messaggi_coach` in `TABLES`: la salva davvero dal primo `app:main` (il workflow attivo è quello di `main`).
 - 🔴 **Cancello di rilascio.** Finché la tabella non è applicata **e** `send-reminders` col modo
   `broadcast` non è pubblicata: **niente `git push origin app:main`** e **nessun archive della 1.2.2**.
