@@ -386,7 +386,7 @@ serve(async (req) => {
     if (mode === 'broadcast' && body.record_id) {
       const { data: messaggio, error: msgErr } = await supabase
         .from('messaggi_coach')
-        .select('id, testo, autore, destinatari')
+        .select('*') // `*`: la colonna `destinatari` può non esistere ancora (= 'miei')
         .eq('id', body.record_id)
         .maybeSingle();
       if (msgErr) throw msgErr;

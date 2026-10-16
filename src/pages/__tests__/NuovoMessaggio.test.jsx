@@ -57,6 +57,7 @@ beforeEach(() => {
   finto.errori.tabelle = []
   finto.dati.messaggi_coach = [{ ...ESISTENTE }]
   finto.dati.athletes = ATLETI
+  finto.dati.coach_atleti = [{ coach_id: 'coach1', athlete_id: 'a1' }, { coach_id: 'coach1', athlete_id: 'a2' }]
   finto.supabase.functions.invoke.mockReset()
   alert.mostraErrore.mockClear()
   alert.mostraSuccesso.mockClear()
@@ -154,6 +155,34 @@ describe('Nuovo messaggio — scrivere', () => {
     await conferma()
     await screen.findByTestId('dove')
     expect(finto.chiamateA('messaggi_coach', 'insert')[0].args[0]).toEqual({ testo: 'Ciao', fissato: false, destinatari: 'tutti' })
+  })
+
+  it('il conteggio segue il toggle: «I miei atleti» conta coach_atleti, «Tutti gli atleti» tutti', async () => {
+    finto.dati.athletes = ['a1', 'a2', 'a3', 'a4', 'a5'].map(id => ({ id, deleted_at: null, notes: '' }))
+    monta({ role: 'admin' })
+    expect(await screen.findByRole('button', { name: 'Invia a 2' })).toBeTruthy()
+    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+    fireEvent.click(invia())
+    const dialogo = await screen.findByRole('dialog', { name: 'Mandare a 2 atleti?' })
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Annulla' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Tutti gli atleti' }))
+    expect(await screen.findByRole('button', { name: 'Invia a 5' })).toBeTruthy()
+  })
+
+  it('senza la tabella coach_atleti nessun numero: testo generico, mai uno sbagliato', async () => {
+    finto.errori.tabelle = ['coach_atleti']
+    monta({ role: 'coach' })
+    expect(await screen.findByRole('button', { name: 'Invia' })).toBeTruthy()
+    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+    fireEvent.click(invia())
+    expect(await screen.findByRole('dialog', { name: 'Mandarlo ai tuoi atleti?' })).toBeTruthy()
+  })
+
+  it('il testo segue i destinatari: «ai tuoi atleti» per i miei, «a tutti gli atleti» per tutti', async () => {
+    monta({ role: 'admin' })
+    expect(campo().getAttribute('placeholder')).toBe('Scrivi ai tuoi atleti…')
+    fireEvent.click(screen.getByRole('radio', { name: 'Tutti gli atleti' }))
+    expect(campo().getAttribute('placeholder')).toBe('Scrivi a tutti gli atleti…')
   })
 
   it('push fallita: lo dice, e Riprova usa lo stesso id senza un nuovo insert', async () => {

@@ -74,7 +74,7 @@ export default function NuovoMessaggio() {
   const [fissato, setFissato] = useState(() => (modifica ? false : bozzaIniziale().fissato))
   // Solo l'admin sceglie: il coach scrive sempre ai suoi atleti.
   const [aTutti, setATutti] = useState(false)
-  const [numeroAtleti, setNumeroAtleti] = useState(null)
+  const [conteggi, setConteggi] = useState(null) // { tutti, miei }
   const [conferma, setConferma] = useState(null)
   const [inVolo, setInVolo] = useState(false)
   const [errore, setErrore] = useState(null)
@@ -106,18 +106,29 @@ export default function NuovoMessaggio() {
   // compresi quelli in pausa, senza l'account nascosto e senza il mittente.
   // ⚠️ Può superare i destinatari veri: il server toglie anche gli altri account
   // admin che hanno una riga athletes, e qui la lista admin non si legge.
+  // «Miei» = gli atleti di `coach_atleti` per questo coach, fra quelli attivi. Se la
+  // tabella non c'è (migrazione non applicata) o non risponde: nessun numero, mai uno sbagliato.
   useEffect(() => {
     if (modifica) return
     let vivo = true
-    supabase.from('athletes').select('id, deleted_at').is('deleted_at', null)
-      .then(({ data, error }) => {
-        if (error) throw error
-        const n = (data || []).filter(a => a.deleted_at == null && a.id !== COACHING_ID && a.id !== user?.id).length
-        if (vivo) setNumeroAtleti(n)
-      })
-      .catch(e => console.warn('Atleti non contati:', e))
+    ;(async () => {
+      const { data, error } = await supabase.from('athletes').select('id, deleted_at').is('deleted_at', null)
+      if (error) throw error
+      const attivi = (data || []).filter(a => a.deleted_at == null && a.id !== COACHING_ID && a.id !== user?.id)
+      let miei = null
+      try {
+        const r = await supabase.from('coach_atleti').select('athlete_id').eq('coach_id', user?.id)
+        if (!r.error) {
+          const suoi = new Set((r.data || []).map(x => x.athlete_id))
+          miei = attivi.filter(a => suoi.has(a.id)).length
+        }
+      } catch { miei = null }
+      if (vivo) setConteggi({ tutti: attivi.length, miei })
+    })().catch(e => console.warn('Atleti non contati:', e))
     return () => { vivo = false }
   }, [modifica, user?.id])
+  const destinaTutti = eAdmin(role) && aTutti
+  const numeroAtleti = conteggi ? (destinaTutti ? conteggi.tutti : conteggi.miei) : null
 
   const lunghezza = testo.trim().length
   const troppo = lunghezza > MAX_CARATTERI
@@ -211,7 +222,7 @@ export default function NuovoMessaggio() {
   const chiediConferma = () => {
     if (!valido || demo || inVolo) return
     setConferma({
-      title: numeroAtleti == null ? 'Mandarlo a tutti gli atleti?' : `Mandare a ${atleti(numeroAtleti)}?`,
+      title: numeroAtleti == null ? (destinaTutti ? 'Mandarlo a tutti gli atleti?' : 'Mandarlo ai tuoi atleti?') : `Mandare a ${atleti(numeroAtleti)}?`,
       message: 'Ognuno riceverà una notifica.',
       confirmLabel: 'Manda',
       onConfirm: inviaDavvero,
@@ -250,7 +261,7 @@ export default function NuovoMessaggio() {
             value={testo}
             onChange={e => cambiaTesto(e.target.value)}
             autoFocus
-            placeholder="Scrivi a tutti gli atleti…"
+            placeholder={destinaTutti ? 'Scrivi a tutti gli atleti…' : 'Scrivi ai tuoi atleti…'}
             className="flex-1 min-h-0 w-full bg-transparent px-5 pt-3 text-[19px] leading-[1.45] font-medium text-white
                        placeholder:text-gray-600 resize-none focus:outline-none"
           />

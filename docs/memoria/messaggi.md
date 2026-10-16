@@ -135,11 +135,10 @@ già consegnati. È accettato; non si cancellano le notifiche.
   Il server manda a tutti solo se `destinatari === 'tutti'` **e** il chiamante è `admin`; altrimenti
   solo agli `atletiDi(autore)` (`ammessi` di `destinatariBroadcast`). Colonna assente = `'miei'`.
   Nessun atleta del coach: risposta `{ success: true, sent: 0, inviati: 0, motivo: 'nessun destinatario' }`.
-- 🔴 Il modo `broadcast` ora **seleziona `destinatari`**: pubblicare la funzione PRIMA della migrazione
-  la rompe (errore sulla colonna). Ordine: migrazione, poi deploy.
+- Il modo `broadcast` legge il messaggio con `select('*')`: senza la colonna `destinatari` si comporta come 'miei'.
 - `NuovoMessaggio`: solo per l'admin un toggle «I miei atleti» / «Tutti gli atleti» (default «I miei
   atleti»). Il client manda `destinatari` **solo** quando è `'tutti'`: l'insert dei coach non dipende
-  dalla colonna. ⚠️ «Invia a N» continua a contare tutti gli atleti attivi, anche per un coach.
+  dalla colonna. «Invia a N» segue il toggle: «miei» = `coach_atleti` del mittente ∩ attivi, «tutti» = tutti gli attivi; senza la tabella nessun numero (testo generico «ai tuoi atleti»).
 
 ## La pagina
 - **Freccia indietro** in testata (`useIndietro('/')`, `aria-label="Torna indietro"`, come l'Archivio):
