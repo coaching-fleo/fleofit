@@ -63,6 +63,12 @@ Codice scritto e committato su `app` (`docs/memoria/messaggi.md`). Restano, in o
 
 ---
 
+## 👥 Più coach — cosa resta (16/10/2026)
+
+- 🔴 **La Live Coach Cam è filtrata solo nella VISTA.** Il canale di presenza `global_live_workouts` è uno per tutta l'app e ogni client autenticato può entrarci: la Home di un coach mostra solo i suoi atleti (`liveVisibili` in `Home.jsx`), ma un client modificato vedrebbe chi si allena e il titolo della seduta di tutti. La correzione vera sono i **canali privati** con la **Realtime Authorization** di Supabase (policy su `realtime.messages`), da fare insieme a WorkoutDetail, che oggi fa `track` sul canale pubblico anche nelle versioni già sugli Store.
+
+---
+
 ## ⏸️ In stand-by — da ricordare al prossimo aggiornamento App Store
 
 > **Consenso privacy, policy nuova e mail automatica dei cambi di policy** (14/10/2026).

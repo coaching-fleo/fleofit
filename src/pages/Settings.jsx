@@ -577,10 +577,17 @@ export default function Settings() {
     try {
       const { data, error } = await supabase.rpc('elenco_staff')
       if (error || !Array.isArray(data)) throw error || new Error('elenco_staff vuoto')
-      const { data: coppie } = await supabase.from('coach_atleti').select('coach_id')
-      const conteggi = {}
-      for (const c of coppie || []) conteggi[c.coach_id] = (conteggi[c.coach_id] || 0) + 1
-      setConteggiCoach(conteggi)
+      // Se coach_atleti non si legge i numeri non si sanno: `null`, e il foglio
+      // scrive «—». Mai 0: «0 atleti» direbbe che si può togliere il coach.
+      const { data: coppie, error: erroreCoppie } = await supabase.from('coach_atleti').select('coach_id')
+      if (erroreCoppie || !Array.isArray(coppie)) {
+        if (erroreCoppie) console.error('Atleti dei coach non letti:', erroreCoppie)
+        setConteggiCoach(null)
+      } else {
+        const conteggi = {}
+        for (const c of coppie) conteggi[c.coach_id] = (conteggi[c.coach_id] || 0) + 1
+        setConteggiCoach(conteggi)
+      }
       setStaff(data)
       setErroreStaff(null)
     } catch (e) {

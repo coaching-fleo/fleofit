@@ -241,10 +241,6 @@ function ProtectedRoute() {
   const handleSession = async (session) => {
     setSession(session)
     if (session?.user) {
-      // Il ruolo viene dalla tabella `staff` (riserva: ADMIN_EMAILS), src/lib/ruoli.js.
-      const ruoloDb = await leggiRuolo(supabase, session.user.email)
-      const isAdmin = ruoloDb !== null
-
       // 🔴 UNA lettura sola della riga atleta, e sta in testa apposta.
       // Erano due `select` sulla STESSA riga, per due domande diverse —
       // «esiste?» e «come si chiama?» — e per giunta in FILA: la seconda
@@ -252,8 +248,15 @@ function ProtectedRoute() {
       // 100 ms per query, l'avvio spendeva ~5 giri di rete di cui 4 in serie
       // prima che la Home cominciasse a chiedere i suoi dati
       // (§9-noviesdecies). `select('id, name, surname')` risponde a entrambe.
-      const { data: rigaAtleta } = await supabase.from('athletes')
-        .select('id, name, surname').eq('id', session.user.id).maybeSingle()
+      // Il ruolo viene dalla tabella `staff` (riserva: ADMIN_EMAILS,
+      // src/lib/ruoli.js) e parte INSIEME alla riga atleta, non prima: le due
+      // letture non dipendono l'una dall'altra, e in fila sarebbero un giro di
+      // rete in più prima della Home — la stessa trappola di sopra.
+      const [ruoloDb, { data: rigaAtleta }] = await Promise.all([
+        leggiRuolo(supabase, session.user.email),
+        supabase.from('athletes').select('id, name, surname').eq('id', session.user.id).maybeSingle(),
+      ])
+      const isAdmin = ruoloDb !== null
 
       if (!isAdmin) {
         if (!rigaAtleta) {

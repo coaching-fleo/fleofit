@@ -380,3 +380,37 @@ describe('Desktop: il centro notifiche', () => {
     }
   })
 })
+
+describe('Live Coach Cam: solo gli atleti del coach', () => {
+  // La presenza «global_live_workouts» è un canale UNICO per tutta l'app: ci
+  // finiscono tutti gli atleti che si allenano, di qualunque coach. Senza un
+  // filtro, un coach vedeva (e poteva guardare in diretta) gli atleti di un altro.
+  const presenza = (stato) => {
+    const canale = finto.supabase.channel()
+    canale.presenceState.mockReturnValue(stato)
+    canale.on.mockImplementation((tipo, _filtro, cb) => {
+      if (tipo === 'presence') cb()
+      return canale
+    })
+  }
+  const STATO = {
+    a1: [{ athleteWorkoutId: 'aw-mio', athleteName: 'Luca Rossi', workoutTitle: 'Mio' }],
+    zz: [{ athleteWorkoutId: 'aw-altro', athleteName: 'Estraneo Bianchi', workoutTitle: 'Altro' }],
+  }
+
+  it('un coach vede in diretta solo il suo atleta', async () => {
+    ctrl.assegnazioni.valore = [riga('aw-mio', 'a1', 0)]
+    presenza(STATO)
+    montaPagina(<Home />, { role: 'coach' })
+    await screen.findByRole('button', { name: 'Guarda Luca Rossi in allenamento' })
+    expect(screen.queryByRole('button', { name: /Guarda Estraneo/ })).toBeNull()
+  })
+
+  it('un admin li vede tutti', async () => {
+    ctrl.assegnazioni.valore = [riga('aw-mio', 'a1', 0)]
+    presenza(STATO)
+    montaPagina(<Home />, { role: 'admin' })
+    await screen.findByRole('button', { name: 'Guarda Luca Rossi in allenamento' })
+    expect(screen.getByRole('button', { name: 'Guarda Estraneo Bianchi in allenamento' })).toBeInTheDocument()
+  })
+})

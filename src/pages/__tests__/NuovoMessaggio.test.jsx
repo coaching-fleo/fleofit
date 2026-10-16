@@ -145,8 +145,7 @@ describe('Nuovo messaggio — scrivere', () => {
 
   it('l\'admin vede il toggle (default «I miei atleti»); su «Tutti gli atleti» l\'insert porta destinatari: tutti', async () => {
     monta({ role: 'admin' })
-    await screen.findByRole('button', { name: /^Invia/ })
-    expect(screen.getByRole('radio', { name: 'I miei atleti' }).getAttribute('aria-checked')).toBe('true')
+    expect((await screen.findByRole('radio', { name: 'I miei atleti' })).getAttribute('aria-checked')).toBe('true')
     fireEvent.click(screen.getByRole('radio', { name: 'Tutti gli atleti' }))
     expect(screen.getByRole('radio', { name: 'Tutti gli atleti' }).getAttribute('aria-checked')).toBe('true')
     fireEvent.change(campo(), { target: { value: 'Ciao' } })
@@ -192,10 +191,42 @@ describe('Nuovo messaggio — scrivere', () => {
     expect(await screen.findByRole('dialog', { name: 'Mandarlo ai tuoi atleti?' })).toBeTruthy()
   })
 
+  it('prima della migrazione (coach_atleti assente) l\'admin NON vede «Tutti gli atleti»: l\'insert con `destinatari` fallirebbe', async () => {
+    finto.errori.tabelle = ['coach_atleti']
+    monta({ role: 'admin' })
+    // Il conteggio di «tutti» è arrivato: se il toggle dovesse comparire, sarebbe già qui.
+    await waitFor(() => expect(finto.chiamateA('coach_atleti', 'select').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.queryByText(/atleti? ·/)).toBeNull())
+    expect(screen.queryByRole('radio', { name: 'Tutti gli atleti' })).toBeNull()
+    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+    finto.dati.messaggi_coach = [{ ...NUOVA_RIGA }]
+    fireEvent.click(invia())
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Mandarlo ai tuoi atleti?' })).getByRole('button', { name: 'Manda' }))
+    await screen.findByTestId('dove')
+    expect(finto.chiamateA('messaggi_coach', 'insert')[0].args[0]).toEqual({ testo: 'Ciao', fissato: false })
+  })
+
+  it('un admin senza atleti suoi parte da «Tutti gli atleti»', async () => {
+    finto.dati.coach_atleti = []
+    monta({ role: 'admin' })
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Tutti gli atleti' }).getAttribute('aria-checked')).toBe('true'))
+    expect(await screen.findByRole('button', { name: 'Invia a 2' })).toBeTruthy()
+  })
+
+  it('zero atleti a cui mandarlo: Invia spento, e dice perché', async () => {
+    finto.dati.coach_atleti = []
+    monta({ role: 'coach' })
+    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+    expect(await screen.findByText('Non hai atleti a cui mandarlo')).toBeTruthy()
+    expect(invia().disabled).toBe(true)
+    fireEvent.click(invia())
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('il testo segue i destinatari: «ai tuoi atleti» per i miei, «a tutti gli atleti» per tutti', async () => {
     monta({ role: 'admin' })
     expect(campo().getAttribute('placeholder')).toBe('Scrivi ai tuoi atleti…')
-    fireEvent.click(screen.getByRole('radio', { name: 'Tutti gli atleti' }))
+    fireEvent.click(await screen.findByRole('radio', { name: 'Tutti gli atleti' }))
     expect(campo().getAttribute('placeholder')).toBe('Scrivi a tutti gli atleti…')
   })
 

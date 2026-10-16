@@ -1,4 +1,4 @@
-import { eStaff } from '../lib/ruoli'
+import { eStaff, eAdmin } from '../lib/ruoli'
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
 import { useNavigate, useNavigationType } from 'react-router-dom'
 import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, WifiOff, RefreshCw, Megaphone } from 'lucide-react'
@@ -903,10 +903,34 @@ setNotifications(prev => {
    * distingua «non ha ancora finito» da «lo sta facendo in questo momento»:
    * senza, i due casi collassano su «da fare».
    */
+  /**
+   * Gli atleti in diretta che QUESTO coach può vedere.
+   *
+   * 🔴 Il canale di presenza `global_live_workouts` è uno solo per tutta l'app:
+   * ci entra ogni atleta che si allena, di qualunque coach. Un admin li vede
+   * tutti; un coach solo quelli la cui assegnazione è fra le sue (che il
+   * database, con la RLS multi-coach, già restringe ai suoi atleti) e il cui
+   * atleta è nella sua rubrica. La presenza porta solo `athleteWorkoutId`
+   * (WorkoutDetail fa `track` così, anche nelle versioni già sugli Store),
+   * quindi l'atleta si ricava dall'assegnazione.
+   * ⚠️ È un filtro di VISTA: il canale resta apribile da ogni client
+   * autenticato (BACKLOG, canali privati e Realtime Authorization).
+   */
+  const liveVisibili = useMemo(() => {
+    if (eAdmin(role)) return liveAthletes
+    const miei = new Set(atletiCoach.map(a => a.id))
+    const assegnazioniMie = new Set(assegnazioniCoach.filter(a => miei.has(a.athlete_id)).map(a => a.id))
+    return liveAthletes.filter(la => assegnazioniMie.has(la.athleteWorkoutId))
+  }, [role, liveAthletes, atletiCoach, assegnazioniCoach])
+  /** Apre la Live Coach Cam, ma solo su un atleta che questo coach può vedere. */
+  const guardaLive = (la) => {
+    if (liveVisibili.some(x => x.athleteWorkoutId === la?.athleteWorkoutId)) setSpectatingAthlete(la)
+  }
+
   const inCorsoOra = useMemo(() => {
     const perId = new Map(assegnazioniCoach.map(a => [a.id, a.athlete_id]))
-    return liveAthletes.map(la => perId.get(la.athleteWorkoutId)).filter(Boolean)
-  }, [liveAthletes, assegnazioniCoach])
+    return liveVisibili.map(la => perId.get(la.athleteWorkoutId)).filter(Boolean)
+  }, [liveVisibili, assegnazioniCoach])
 
   const squadra = useMemo(
     () => squadraDelGiorno(atletiCoach, assegnazioniCoach, { inCorso: inCorsoOra }),
@@ -1187,12 +1211,12 @@ setNotifications(prev => {
             fermi={fermiInHome}
             scaduti={scadutiConQuando}
             squadra={squadra}
-            live={liveAthletes}
+            live={liveVisibili}
             notificheDaLeggere={unreadCount}
             onNotifiche={openNotifications}
             onNuovoWorkout={() => navigate('/create')}
             onCalendario={() => navigate('/calendar')}
-            onGuardaLive={(la) => setSpectatingAthlete(la)}
+            onGuardaLive={guardaLive}
             onApriFeedback={apriFeedback}
             onApriAtleta={(a) => navigate(`/athletes/${a.id}`)}
             onApriScaduto={apriSeduta}
@@ -1302,10 +1326,10 @@ setNotifications(prev => {
 
           {/* La Live Coach Cam dura quanto un allenamento: è una barra, non una
               sezione con un titolo che per 23 ore al giorno sta sopra il vuoto. */}
-          {liveAthletes.map(la => (
+          {liveVisibili.map(la => (
             <BannerLive key={la.athleteWorkoutId}
               nome={la.athleteName} dettaglio={la.workoutTitle}
-              onGuarda={() => setSpectatingAthlete(la)} />
+              onGuarda={() => guardaLive(la)} />
           ))}
 
           {/* Il corpo: pigro, src/components/HomeCoachTelefono.jsx. */}

@@ -85,7 +85,7 @@ export default function FoglioCoach({ membri, correnti = [], onScegli, onChiudi 
 /**
  * La gestione dello staff.
  * @param staff     righe di `elenco_staff()`, o null mentre carica
- * @param conteggi  { [user_id]: numero di atleti }
+ * @param conteggi  { [user_id]: numero di atleti }, o null se non si sanno (si scrive «—»)
  * @param errore    testo se l'elenco non si legge (database non ancora aggiornato)
  */
 export function FoglioGestioneCoach({ staff, conteggi = {}, errore, occupato, onAggiungi, onTogli, onChiudi }) {
@@ -105,14 +105,15 @@ export function FoglioGestioneCoach({ staff, conteggi = {}, errore, occupato, on
         <>
           <p className={`${LABEL} pt-1`}>Staff · {staff.length}</p>
           {staff.map(m => {
-            const n = m.user_id ? (conteggi[m.user_id] || 0) : null
+            // `null` = non si sa (coach_atleti non letta): «—», mai uno 0 inventato.
+            const n = m.user_id && conteggi ? (conteggi[m.user_id] || 0) : null
             return (
               <div key={m.email} className="rounded-2xl bg-[#222] border border-[#333] px-4 py-2.5 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-bold text-white truncate">{nomeDi(m)}</p>
                   <p className="text-xs text-gray-400 truncate">
                     {m.ruolo === 'admin' ? 'Admin' : 'Coach'}
-                    {m.user_id ? ` · ${n} ${n === 1 ? 'atleta' : 'atleti'}` : ' · non ha ancora un account'}
+                    {m.user_id ? (n == null ? ' · — atleti' : ` · ${n} ${n === 1 ? 'atleta' : 'atleti'}`) : ' · non ha ancora un account'}
                     {m.nome ? ` · ${m.email}` : ''}
                   </p>
                 </div>

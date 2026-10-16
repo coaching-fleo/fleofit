@@ -74,7 +74,7 @@ export default function NuovoMessaggio() {
   const [fissato, setFissato] = useState(() => (modifica ? false : bozzaIniziale().fissato))
   // Solo l'admin sceglie: il coach scrive sempre ai suoi atleti.
   const [aTutti, setATutti] = useState(false)
-  const [conteggi, setConteggi] = useState(null) // { tutti, miei }
+  const [conteggi, setConteggi] = useState(null) // { tutti, miei } — `miei` null = migrazione non applicata
   const [conferma, setConferma] = useState(null)
   const [inVolo, setInVolo] = useState(false)
   const [errore, setErrore] = useState(null)
@@ -123,12 +123,22 @@ export default function NuovoMessaggio() {
           miei = attivi.filter(a => suoi.has(a.id)).length
         }
       } catch { miei = null }
-      if (vivo) setConteggi({ tutti: attivi.length, miei })
+      if (!vivo) return
+      setConteggi({ tutti: attivi.length, miei })
+      // Un admin senza atleti suoi scrive, di fatto, a tutti: si parte da lì.
+      if (eAdmin(role) && miei === 0) setATutti(true)
     })().catch(e => console.warn('Atleti non contati:', e))
     return () => { vivo = false }
-  }, [modifica, user?.id])
-  const destinaTutti = eAdmin(role) && aTutti
+  }, [modifica, user?.id, role])
+  // «Tutti gli atleti» esiste solo a migrazione multi-coach applicata: è lì che
+  // nasce la colonna `destinatari`, e prima l'insert che la porta fallirebbe.
+  // Lo dice la stessa lettura del conteggio: coach_atleti ha risposto (stessa
+  // transazione della colonna). Finché non si sa, il toggle non c'è.
+  const sceltaDestinatari = eAdmin(role) && !modifica && conteggi?.miei != null
+  const destinaTutti = sceltaDestinatari && aTutti
   const numeroAtleti = conteggi ? (destinaTutti ? conteggi.tutti : conteggi.miei) : null
+  // Un numero NOTO e pari a zero: non c'è nessuno a cui mandarlo.
+  const nessunDestinatario = !modifica && numeroAtleti === 0
 
   const lunghezza = testo.trim().length
   const troppo = lunghezza > MAX_CARATTERI
@@ -164,7 +174,7 @@ export default function NuovoMessaggio() {
     const { data: riga, error } = await supabase.from('messaggi_coach')
       // `destinatari` parte SOLO per 'tutti': il default 'miei' lo mette il database
       // (e così l'insert non dipende dalla colonna finché si scrive ai propri atleti).
-      .insert({ testo: testo.trim(), fissato, ...(eAdmin(role) && aTutti ? { destinatari: 'tutti' } : null) }).select().single()
+      .insert({ testo: testo.trim(), fissato, ...(destinaTutti ? { destinatari: 'tutti' } : null) }).select().single()
     if (error || !riga) {
       vibraErrore()
       setErrore('Messaggio non salvato. Controlla la connessione e riprova.')
@@ -220,7 +230,7 @@ export default function NuovoMessaggio() {
   })
 
   const chiediConferma = () => {
-    if (!valido || demo || inVolo) return
+    if (!valido || demo || inVolo || nessunDestinatario) return
     setConferma({
       title: numeroAtleti == null ? (destinaTutti ? 'Mandarlo a tutti gli atleti?' : 'Mandarlo ai tuoi atleti?') : (destinaTutti ? `Mandare a tutti i ${atleti(numeroAtleti)}?` : `Mandare ai tuoi ${atleti(numeroAtleti)}?`),
       message: 'Ognuno riceverà una notifica.',
@@ -266,7 +276,7 @@ export default function NuovoMessaggio() {
                        placeholder:text-gray-600 resize-none focus:outline-none"
           />
 
-          {eAdmin(role) && !modifica && (
+          {sceltaDestinatari && (
             <div role="radiogroup" aria-label="Destinatari"
               className="shrink-0 mx-4 mb-2 grid grid-cols-2 bg-[#111] p-1.5 rounded-2xl border border-[#333] relative">
               <span aria-hidden="true"
@@ -298,9 +308,10 @@ export default function NuovoMessaggio() {
             </span>
           </div>
 
-          {(demo || errore || esitoProva) && (
+          {(demo || errore || esitoProva || nessunDestinatario) && (
             <div className="shrink-0 px-4 pb-2 text-xs">
               {demo && <p className="text-gray-400">Nell'account di prova i messaggi non partono</p>}
+              {!demo && nessunDestinatario && <p className="text-gray-400">Non hai atleti a cui mandarlo</p>}
               {errore && <p role="alert" className="text-red-500">{errore}</p>}
               {esitoProva && <p role="status" className={esitoProva.errore ? 'text-red-500' : 'text-gray-300'}>{esitoProva.testo}</p>}
             </div>
@@ -323,7 +334,7 @@ export default function NuovoMessaggio() {
                   className="shrink-0 min-h-[48px] rounded-2xl bg-[#2a2a2a] border border-[#333] px-4 text-[14px] font-bold text-white disabled:opacity-40">
                   Prova su di me
                 </button>
-                <button type="button" onPointerDown={tieniTastiera} onMouseDown={tieniTastiera} onClick={chiediConferma} disabled={spento}
+                <button type="button" onPointerDown={tieniTastiera} onMouseDown={tieniTastiera} onClick={chiediConferma} disabled={spento || nessunDestinatario}
                   className="flex-1 min-h-[48px] rounded-2xl bg-brand text-black text-[15px] font-black inline-flex items-center justify-center gap-2 disabled:opacity-40">
                   <Send size={17} aria-hidden="true" />
                   {inVolo ? 'Invio…' : numeroAtleti == null ? 'Invia' : `Invia a ${numeroAtleti}`}

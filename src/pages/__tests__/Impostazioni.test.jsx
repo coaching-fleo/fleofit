@@ -423,4 +423,22 @@ describe('La voce «Coach» (multi-coach, solo admin)', () => {
     expect(await screen.findByText('Federico Leo')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /^Togli/ })).toHaveLength(1)
   })
+
+  it('se coach_atleti non si legge il numero di atleti è «—», mai 0', async () => {
+    finto.supabase.rpc = vi.fn(() => Promise.resolve({ data: [
+      { email: 'federico_leo@hotmail.it', ruolo: 'coach', user_id: 'u-c', nome: 'Federico' },
+    ], error: null }))
+    const fromVero = finto.supabase.from
+    finto.supabase.from = vi.fn((t) => t === 'coach_atleti'
+      ? { select: () => Promise.resolve({ data: null, error: { message: 'rete assente' } }) }
+      : fromVero(t))
+    try {
+      montaRuolo('admin')
+      await userEvent.click(await screen.findByRole('button', { name: /^Coach/ }))
+      expect(await screen.findByText(/Coach · — atleti/)).toBeInTheDocument()
+      expect(screen.queryByText(/0 atleti/)).toBeNull()
+    } finally {
+      finto.supabase.from = fromVero
+    }
+  })
 })

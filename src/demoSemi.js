@@ -135,8 +135,8 @@ const A = (id, name, surname, extra = {}) => ({
 })
 
 const atleti = () => [
-  A(COACH, 'Federico', 'Leo'),
-  A('coach-demo', 'Coach', 'Demo'),                          // il coach finto (VITE_DEMO_RUOLO=coach): fuori dalle rubriche, ma ProtectedRoute vuole la riga                               // il coach, nascosto dalla rubrica
+  A(COACH, 'Federico', 'Leo'),                               // il coach, nascosto dalla rubrica
+  A('coach-demo', 'Coach', 'Demo'),                          // il coach finto (VITE_DEMO_RUOLO=coach): fuori dalle rubriche, ma ProtectedRoute vuole la riga
   A('at-marco', 'Marco', 'Rossi'),                           // → salto di carico su un workout pesante
   A('at-luca', 'Luca', 'Bianchi'),                           // → seduta dura il giorno prima/dopo
   A('at-giulia', 'Giulia', 'Neri'),                          // → bias: segna 8 dove il coach prevede 6
