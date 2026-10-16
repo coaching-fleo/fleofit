@@ -47,6 +47,9 @@ jobs:
       # messaggi_coach (15/10/2026): «Messaggio a tutti». Applicata il
       # 15/10/2026; se un giorno mancasse, il job la salterebbe con un avviso.
       #
+      # modelli_blocco (16/10/2026): «Modelli di blocco». Applicata il
+      # 16/10/2026; se un giorno mancasse, il job la salterebbe con un avviso.
+      #
       # ⚠️ Le pagine si ordinano per `id`. Una tabella SENZA colonna `id` va scritta
       # `tabella:colonna`, con la sua chiave: ordinare per una colonna che non
       # esiste fa rispondere HTTP 400 e fallire TUTTO il backup, non solo lei.
@@ -56,7 +59,7 @@ jobs:
       # lo script aggiunge `.asc` in coda, e ordinare per una colonna sola non
       # darebbe pagine stabili quando un atleta ha più coach. Finché la loro
       # migrazione non è applicata la REST API risponde 404 e il job le salta.
-      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai messaggi_coach note_estratte:athlete_workout_id staff:email coach_atleti:athlete_id.asc,coach_id'
+      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai messaggi_coach note_estratte:athlete_workout_id staff:email coach_atleti:athlete_id.asc,coach_id modelli_blocco'
 
       # Tabelle che non devono MAI essere vuote o mancanti:
       # se lo sono, il backup viene considerato non valido e il job fallisce.

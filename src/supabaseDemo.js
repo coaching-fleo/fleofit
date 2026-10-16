@@ -161,7 +161,9 @@ function query(tabella) {
       // I default delle colonne, come li applicherebbe Postgres: la riga passata vince.
       const predefiniti = tabella === 'messaggi_coach'
         ? { creato_at: new Date().toISOString(), fissato: false, modificato_at: null }
-        : {}
+        : tabella === 'modelli_blocco'
+          ? { creato_at: new Date().toISOString(), modificato_at: null }
+          : {}
       const nuove = (Array.isArray(dati) ? dati : [dati]).map(r => ({ id: uuid(), ...predefiniti, ...r }))
       const inserite = []
       for (const n of nuove) {

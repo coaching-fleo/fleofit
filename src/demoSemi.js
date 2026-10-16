@@ -24,7 +24,7 @@ import {
   VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
 } from '../supabase/functions/estrai-note/regole.ts'
 
-export const VERSIONE_SEME = 13
+export const VERSIONE_SEME = 14
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -431,6 +431,39 @@ const messaggi_coach = () => [
   { id: 'mc-4', testo: 'Ottimo lavoro a tutti nella simulazione di sabato. Domani riposo vero: niente corsetta «per sicurezza».', fissato: false, autore: COACH, creato_at: fa(0, 5), modificato_at: fa(0, 2) },
 ]
 
+// «Modelli di blocco» del coach: UN blocco, UNA fase o UN gruppo (CLAUDE.md §5),
+// senza nessun `id` interno e i gruppi Gym senza `fase`.
+const modelli_blocco = () => [
+  { id: 'mb-1', coach: COACH, categoria: 'Hyrox', nome: 'EMOM 10′ Wall Balls e Burpees',
+    contenuto: { type: 'EMOM', params: { interval: '1:00', rounds: '10' }, notes: '',
+      exercises: [
+        { name: 'Wall Balls', reps: '12', meters: '-', kg: '9', intensity: '7', notes: '' },
+        { name: 'Burpees', reps: '8', meters: '-', kg: '', intensity: '8', notes: '' },
+      ] },
+    creato_at: fa(20), modificato_at: null },
+  { id: 'mb-2', coach: COACH, categoria: 'Hyrox', nome: 'Riscaldamento 8 minuti',
+    contenuto: { type: 'WarmUp', params: { duration: '8:00' }, notes: 'Progressivo, senza arrivare a fiato corto.', exercises: [] },
+    creato_at: fa(18), modificato_at: null },
+  { id: 'mb-3', coach: COACH, categoria: 'Running', nome: 'Ripetute 8 × 400m',
+    contenuto: { type: 'repeat', rounds: '8', runDuration: '400m', runPace: 'Z4', runIntensity: '8',
+      recDuration: '1 min', recPace: 'Camminata', recIntensity: '3', notes: '' },
+    creato_at: fa(15), modificato_at: null },
+  { id: 'mb-4', coach: COACH, categoria: 'Running', nome: 'Riscaldamento 15 min',
+    contenuto: { type: 'warmup', duration: '15 min', pace: 'Z2', intensity: '4', notes: '' },
+    creato_at: fa(15), modificato_at: null },
+  { id: 'mb-5', coach: COACH, categoria: 'Gym', nome: 'Squat 4 × 8',
+    contenuto: { serie: '4', recupero: '2:00', note: '',
+      esercizi: [{ name: 'Squat con bilanciere', reps: '8', kg: '80 kg', rir: '2', notes: '' }] },
+    creato_at: fa(10), modificato_at: null },
+  { id: 'mb-6', coach: COACH, categoria: 'Gym', nome: 'Superserie panca e rematore',
+    contenuto: { serie: '3', recupero: '1:30', note: '',
+      esercizi: [
+        { name: 'Panca piana con bilanciere', reps: '10', kg: '60 kg', notes: '' },
+        { name: 'Rematore con bilanciere', reps: '10', kg: '50 kg', notes: '' },
+      ] },
+    creato_at: fa(9), modificato_at: null },
+]
+
 /** Chi è staff (D1 dello spec multi-coach) e il coach finto dell'ambiente di prova. */
 export const COACH_DEMO = { id: 'coach-demo', email: 'coach.demo@fleofit.it' }
 const staff = () => [
@@ -463,6 +496,7 @@ export function semi() {
     personal_records: personal_records.map(p => ({ ...p })),
     come_stai: come_stai(),
     messaggi_coach: messaggi_coach(),
+    modelli_blocco: modelli_blocco(),
     staff: staff(),
     coach_atleti: coach_atleti(),
     push_subscriptions: [],

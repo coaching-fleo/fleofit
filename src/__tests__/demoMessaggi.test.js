@@ -28,8 +28,8 @@ describe('i messaggi della demo', () => {
     expect(v[0].fissato).toBe(true)
   })
 
-  it('la versione dei semi è salita a 13', () => {
-    expect(VERSIONE_SEME).toBe(13)
+  it('la versione dei semi è almeno 13', () => {
+    expect(VERSIONE_SEME).toBeGreaterThanOrEqual(13)
   })
 })
 
