@@ -24,7 +24,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
-import { ADMIN_EMAILS } from "../_shared/admin.ts"
+import { atletiDi, ruoloStaff } from "../_shared/staff.ts"
 import { MODELLO_GROQ_PREDEFINITO, chatGroq } from "../_shared/groq.ts"
 import {
   GRUPPO, MAX_GRUPPI, VERSIONE, daCancellare, daEstrarre, eserciziDelWorkout, impronta,
@@ -43,24 +43,28 @@ const risposta = (corpo: unknown, status = 200) => new Response(JSON.stringify(c
   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
 });
 
-async function chiamanteAdmin(req: Request): Promise<boolean> {
+// Chi chiama: il ruolo (admin / coach) e il suo id, o null se non è staff.
+async function chiamanteStaff(req: Request): Promise<{ ruolo: "admin" | "coach"; id: string } | null> {
   const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  if (!token) return false;
+  if (!token) return null;
   try {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
     const { data, error } = await supabase.auth.getUser(token);
     const email = data?.user?.email?.trim().toLowerCase();
-    if (error || !email) return false;
-    return ADMIN_EMAILS.includes(email);
+    if (error || !email || !data.user) return null;
+    const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const ruolo = await ruoloStaff(db, email);
+    return ruolo ? { ruolo, id: data.user.id } : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  if (!(await chiamanteAdmin(req))) {
+  const chiamante = await chiamanteStaff(req);
+  if (!chiamante) {
     console.warn('estrai-note: chiamata non autorizzata rifiutata');
     return risposta({ error: 'Non autorizzato' }, 403);
   }
@@ -73,6 +77,12 @@ serve(async (req) => {
   if (!chiave) return risposta({ estratte: 0, restano: null, cancellate: 0, sospesa: true, errore: 'Nessuna chiave IA configurata.' });
 
   const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+  // Un coach legge le note solo dei SUOI atleti, e prima di qualunque lettura.
+  if (chiamante.ruolo === 'coach' && !(await atletiDi(db, chiamante.id)).includes(athleteId)) {
+    console.warn('estrai-note: coach su un atleta non suo, rifiutato');
+    return risposta({ error: 'Atleta non tuo' }, 403);
+  }
 
   const [{ data: righe, error: e1 }, { data: esistenti, error: e2 }] = await Promise.all([
     db.from('athlete_workouts').select('id, athlete_id, completed_date, status, notes, workouts(sections)').eq('athlete_id', athleteId),

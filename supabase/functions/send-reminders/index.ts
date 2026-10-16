@@ -2,7 +2,7 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
-import { ADMIN_EMAILS } from "../_shared/admin.ts"
+import { coachDi, destinatariNotificaCoach, idStaff, ruoloStaff } from "../_shared/staff.ts"
 import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm, routeProva } from "./broadcast.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -33,7 +33,7 @@ function leggiClaim(token: string): Record<string, any> | null {
   }
 }
 
-async function identificaChiamante(req: Request): Promise<{ admin: boolean; email: string | null; ruolo: string | null; servizio: boolean; id?: string | null }> {
+async function identificaChiamante(req: Request): Promise<{ admin: boolean; email: string | null; ruolo: string | null; servizio: boolean; id?: string | null; ruoloStaff?: "admin" | "coach" | null }> {
   const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
   if (!token) return { admin: false, email: null, ruolo: null, servizio: false };
   if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) return { admin: true, email: null, ruolo: 'service_role', servizio: true };
@@ -45,33 +45,10 @@ async function identificaChiamante(req: Request): Promise<{ admin: boolean; emai
   // `sub` è l'id dell'utente: serve a «Prova su di me» per sapere a chi mandarla.
   // La firma del token l'ha già verificata la piattaforma (verify_jwt).
   const id = typeof claim?.sub === 'string' ? claim.sub : null;
-  return { admin: !!email && ADMIN_EMAILS.includes(email), email, ruolo, servizio: false, id };
-}
-
-// Gli id degli utenti admin, ricavati scorrendo la lista di Supabase Auth.
-// Serve a due scopi opposti: mandare le notifiche AL coach (coach_notification)
-// e NON mandargliele (i promemoria mattina/sera, che sono roba da atleti).
-// Deve restare allineata a ADMIN_EMAILS in src/App.jsx e alle policy RLS.
-async function trovaIdAdmin(): Promise<string[]> {
-  const ids: string[] = [];
-  let page = 1;
-  while (true) {
-    const { data: authData, error: authErr } = await supabase.auth.admin.listUsers({ page, perPage: 50 });
-    if (authErr) {
-      console.error('Errore in listUsers:', authErr);
-      throw authErr;
-    }
-    const users = authData?.users || [];
-    if (users.length === 0) break;
-    ids.push(
-      ...users
-        .filter((u: any) => u.email && ADMIN_EMAILS.includes(u.email.trim().toLowerCase()))
-        .map((u: any) => u.id),
-    );
-    if (users.length < 50) break;
-    page++;
-  }
-  return ids;
+  // `admin` vale per tutto lo staff (admin E coach): è il cancello delle modalità
+  // riservate. Il ruolo vero viaggia a parte in `ruoloStaff`.
+  const ruoloDelloStaff = await ruoloStaff(supabase, email);
+  return { admin: ruoloDelloStaff !== null, email, ruolo, servizio: false, id, ruoloStaff: ruoloDelloStaff };
 }
 
 const corsHeaders = {
@@ -431,7 +408,7 @@ serve(async (req) => {
       // meglio una notifica di troppo a un coach che nessuna agli atleti.
       let idAdmin: string[] = [];
       try {
-        idAdmin = await trovaIdAdmin();
+        idAdmin = (await idStaff(supabase)).tutti;
       } catch (e) {
         console.error('Broadcast: lista admin non leggibile, invio SENZA escludere i coach.', e);
       }
@@ -532,8 +509,20 @@ serve(async (req) => {
     if (mode === 'coach_notification') {
       console.log(`Notifica al coach da ${body.athleteName} per ${body.action}`);
       
-      // 'demo@fleofit.it' è l'account fornito ad App Review: è dentro ADMIN_EMAILS.
-      const adminUserIds = await trovaIdAdmin();
+      // Va ai coach DELL'ATLETA; se non ne ha, agli admin (D7).
+      // 'demo@fleofit.it' è l'account fornito ad App Review: è admin anche lui.
+      // L'atleta: dal corpo, o dalla rotta (`?athlete_id=`, scritta da tutti i
+      // client), o è lo stesso chiamante quando è l'atleta a notificare.
+      let athleteId: string | null = typeof body.athleteId === 'string' ? body.athleteId : null;
+      if (!athleteId && typeof body.route === 'string') {
+        athleteId = new URLSearchParams(body.route.split('?')[1] || '').get('athlete_id');
+      }
+      if (!athleteId && !chiamante.ruoloStaff) athleteId = chiamante.id ?? null;
+      const staffIds = await idStaff(supabase);
+      const adminUserIds = destinatariNotificaCoach(
+        athleteId ? await coachDi(supabase, athleteId) : [],
+        staffIds.admin,
+      );
 
       console.log('Trovati ID Admin:', adminUserIds);
       
@@ -649,7 +638,7 @@ serve(async (req) => {
     // push di troppo al coach. L'errore finisce nei log, non è silenzioso.
     let idAdmin: string[] = [];
     try {
-      idAdmin = await trovaIdAdmin();
+      idAdmin = (await idStaff(supabase)).tutti;
     } catch (e) {
       console.error('Promemoria: lista admin non leggibile, invio SENZA escludere i coach.', e);
     }

@@ -21,7 +21,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
-import { ADMIN_EMAILS } from "../_shared/admin.ts"
+import { ruoloStaff } from "../_shared/staff.ts"
 import {
   daOpenAI, dettaglioErrore, estraiContenuto, inOpenAI, messaggioErrore, richiestaGemini,
   richiestaTrascrizione, validaCorpo,
@@ -56,7 +56,9 @@ async function chiamanteAdmin(req: Request): Promise<boolean> {
     const { data, error } = await supabase.auth.getUser(token);
     const email = data?.user?.email?.trim().toLowerCase();
     if (error || !email) return false;
-    return ADMIN_EMAILS.includes(email);
+    // Staff = admin o coach (tabella `staff`, riserva ADMIN_EMAILS).
+    const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    return (await ruoloStaff(db, email)) !== null;
   } catch {
     return false;
   }
