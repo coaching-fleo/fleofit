@@ -13,6 +13,21 @@
 -- Prima di applicare: il backup (`db-backup.yml`, o un export a mano).
 -- Si applica in UNA transazione: o passa tutto, o niente.
 --
+-- L'ordine, tutto nella stessa seduta (docs/memoria/database.md, «multi_coach»):
+--   1. backup (db-backup.yml a mano, o export);
+--   2. i controlli della sezione 0 (letture), confrontati a occhio;
+--   3. questa migrazione;
+--   4. i conteggi della sezione 6;
+--   5. deploy di ai-workout, ricerca-coach, estrai-note e send-reminders,
+--      uno dopo l'altro, SUBITO: le versioni di oggi leggono ancora la lista
+--      email e non conoscono coach_atleti;
+--   6. le prove sul telefono (coach e atleta);
+--   7. solo allora si aggiunge un secondo coach in `staff`.
+-- La web app (app:main) si può pubblicare anche PRIMA della migrazione: senza
+-- le tabelle nuove ricade sul comportamento di oggi. L'unica cosa che le
+-- servirebbe, «Tutti gli atleti» in Messaggio a tutti, resta nascosta finché la
+-- colonna `destinatari` non esiste.
+--
 -- Il modello
 --   staff         chi lavora nell'app: ruolo 'admin' (vede e fa tutto) o
 --                 'coach' (vede solo i suoi atleti). Chiave = email, così un
@@ -43,6 +58,29 @@ begin;
 -- select email, id from auth.users where lower(email) in
 --   ('coaching@federicoleo.it','alessandro.patrone@hotmail.it',
 --    'federico_leo@hotmail.it','federico.leo88@gmail.com','demo@fleofit.it');
+--
+-- Le policy che ci sono OGGI sulle tabelle toccate, da confrontare con le
+-- `drop policy` della sezione 5. Le policy permissive si sommano in OR: una
+-- policy in più, che qui non si toglie, RIAPRIREBBE l'accesso che le nuove
+-- chiudono, senza nessun errore. Se ne compare una che la sezione 5 non
+-- nomina, ci si ferma e si decide prima.
+-- select schemaname, tablename, policyname, cmd, roles, qual, with_check
+--   from pg_policies
+--  where (schemaname = 'public' and tablename in
+--          ('athletes','athlete_workouts','workouts','invitation_codes',
+--           'personal_records','come_stai','note_estratte','messaggi_coach',
+--           'workout_logs','athlete_photos'))
+--     or (schemaname = 'storage' and tablename = 'objects')
+--  order by 1, 2, 3;
+
+-- L'account a cui vanno atleti e workout di oggi deve esistere, ed essere UNO:
+-- senza, la sezione 2 non assegnerebbe niente a nessuno (o lo farebbe due volte).
+do $$
+begin
+  if (select count(*) from auth.users where lower(email) = 'federico_leo@hotmail.it') <> 1 then
+    raise exception 'account federico_leo@hotmail.it non trovato (o doppio)';
+  end if;
+end $$;
 
 
 -- ── 1. Tabelle nuove ───────────────────────────────────────────────────────
@@ -94,11 +132,22 @@ where a.id not in (
   select u.id from auth.users u join public.staff s on s.email = lower(u.email)
 );
 
--- Decisione D6: suoi anche i 214 workout di oggi, così la libreria non gli sparisce.
--- (Gli admin li vedono comunque tutti.)
+-- Decisione D6: suoi anche i workout di oggi, così la libreria non gli sparisce.
+-- (Gli admin li vedono comunque tutti.) Esclusi gli allenamenti liberi
+-- (isAutonomous): li ha scritti l'atleta, non sono di nessun coach, e il coach
+-- li vede comunque attraverso l'assegnazione all'atleta.
 update public.workouts
 set creato_da = (select id from auth.users where lower(email) = 'federico_leo@hotmail.it')
-where creato_da is null;
+where creato_da is null
+  and (sections ->> 'isAutonomous') is distinct from 'true';
+
+-- I messaggi già scritti da un admin parlavano a TUTTI gli atleti (la bacheca
+-- di oggi non ha destinatari): restano così, invece di restringersi ai 'miei'.
+update public.messaggi_coach m
+set destinatari = 'tutti'
+where exists (select 1 from auth.users u
+              join public.staff s on s.email = lower(u.email)
+              where u.id = m.autore and s.ruolo = 'admin');
 
 
 -- ── 3. Le funzioni che usano le policy ─────────────────────────────────────
@@ -288,19 +337,27 @@ create policy "workouts lettura" on public.workouts
   using (creato_da = auth.uid() or athlete_id = auth.uid() or public.vedo_workout(id));
 
 -- Lo staff crea workout a nome proprio; un atleta solo quelli autonomi.
+-- Un admin può inserire righe con un creato_da qualunque: è il ripristino da
+-- backup (Impostazioni), che riscrive i workout col loro autore originale.
 create policy "workouts creazione" on public.workouts
   for insert to authenticated
-  with check (creato_da = auth.uid()
-              and (public.e_staff() or (sections ->> 'isAutonomous')::boolean = true));
+  with check (public.e_admin()
+              or (creato_da = auth.uid()
+                  and (public.e_staff() or (sections ->> 'isAutonomous')::boolean = true)));
 
--- Modifica e cancellazione: come oggi solo lo staff, e solo sui workout che vede.
+-- Modifica e cancellazione: l'admin tutto, il coach SOLO i workout che ha creato.
+-- Non basta vederlo: un workout di un altro coach assegnato anche a un mio
+-- atleta lo vedo, ma non è mio da cambiare o cancellare (cancellarlo
+-- toglierebbe la seduta agli atleti dell'altro). `e_staff()` resta, come oggi:
+-- l'atleta che ha creato un allenamento libero (creato_da = lui) non lo
+-- modifica né lo cancella dalla tabella workouts.
 create policy "workouts modifica staff" on public.workouts
   for update to authenticated
-  using (public.e_staff() and (creato_da = auth.uid() or public.vedo_workout(id)))
+  using (public.e_admin() or (public.e_staff() and creato_da = auth.uid()))
   with check (public.e_staff());
 create policy "workouts cancellazione staff" on public.workouts
   for delete to authenticated
-  using (public.e_staff() and (creato_da = auth.uid() or public.vedo_workout(id)));
+  using (public.e_admin() or (public.e_staff() and creato_da = auth.uid()));
 
 -- La TV (senza login) legge SOLO un workout che è in onda su una sessione TV.
 -- Prima leggeva l'INTERA programmazione con la sola anon key.

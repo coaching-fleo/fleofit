@@ -51,7 +51,12 @@ jobs:
       # `tabella:colonna`, con la sua chiave: ordinare per una colonna che non
       # esiste fa rispondere HTTP 400 e fallire TUTTO il backup, non solo lei.
       # note_estratte (13/10/2026) ha come chiave athlete_workout_id.
-      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai messaggi_coach note_estratte:athlete_workout_id'
+      # staff e coach_atleti (multi-coach, 15/10/2026): chiave email, e la COPPIA
+      # athlete_id,coach_id. Per la coppia si scrive «athlete_id.asc,coach_id»:
+      # lo script aggiunge `.asc` in coda, e ordinare per una colonna sola non
+      # darebbe pagine stabili quando un atleta ha più coach. Finché la loro
+      # migrazione non è applicata la REST API risponde 404 e il job le salta.
+      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai messaggi_coach note_estratte:athlete_workout_id staff:email coach_atleti:athlete_id.asc,coach_id'
 
       # Tabelle che non devono MAI essere vuote o mancanti:
       # se lo sono, il backup viene considerato non valido e il job fallisce.

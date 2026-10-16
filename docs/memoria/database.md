@@ -401,3 +401,25 @@ continua a girare, ma **non si può più ripubblicare** una funzione con quell'i
 `send-reminders` è diventato `npm:@supabase/supabase-js@2.39.3` (stessa versione, come già `web-push`).
 🔴 `ai-workout`, `ricerca-coach`, `estrai-note` e `segnalazione` hanno ancora l'import da esm.sh:
 al prossimo deploy di una di loro va fatta la stessa sostituzione, o il deploy fallisce.
+✅ Il 16/10/2026 la sostituzione è fatta in `ai-workout`, `ricerca-coach` ed `estrai-note` (vanno
+ripubblicate col multi-coach, sezione sotto). Resta **`segnalazione`**.
+
+### 👥 Multi-coach: l'ordine di applicazione (`supabase/schema/multi_coach_2026-10-15.sql`)
+⛔ **Non applicata**: serve il sì esplicito del committente (regola 0-bis), e a differenza delle
+eccezioni precedenti **riscrive policy esistenti**. L'ordine, tutto nella stessa seduta (è scritto
+anche in testa al file SQL):
+1. **backup** (`db-backup.yml` lanciato a mano, o export dalle Impostazioni);
+2. i **controlli della sezione 0** (letture): gli account dello staff, e l'elenco di `pg_policies`
+   sulle tabelle toccate da confrontare con le `drop policy`. Una policy permissiva in più, che la
+   migrazione non toglie, si somma in OR e **riapre** l'accesso senza errori;
+3. la **migrazione** (una transazione; si ferma da sola se `federico_leo@hotmail.it` non c'è o è doppio);
+4. i **conteggi della sezione 6**, impersonando coach, coach nuovo e atleta;
+5. il **deploy di `ai-workout`, `ricerca-coach`, `estrai-note` e `send-reminders`**, uno dopo l'altro,
+   subito: le versioni pubblicate prima leggono ancora la lista email e non conoscono `coach_atleti`;
+6. le **prove sul telefono** (del committente), da coach e da atleta;
+7. solo allora si aggiunge un **secondo coach** in `staff`.
+
+La web app (`app:main`) si può pubblicare anche **prima** della migrazione: il ruolo ricade su
+`ADMIN_EMAILS` e le letture su `coach_atleti`/`staff` assenti non rompono niente. L'unica cosa che
+fallirebbe è l'insert di un messaggio con `destinatari`, e per questo in «Messaggio a tutti» la scelta
+«Tutti gli atleti» compare **solo** quando la lettura di `coach_atleti` risponde (cioè a migrazione fatta).

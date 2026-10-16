@@ -38,7 +38,18 @@ beforeEach(() => {
 
 describe('backup', () => {
   it('le tabelle, nell\'ordine in cui si ripristinano', () => {
-    expect(TABELLE_BACKUP).toEqual(['athletes', 'workouts', 'athlete_workouts', 'come_stai'])
+    expect(TABELLE_BACKUP).toEqual(['staff', 'athletes', 'coach_atleti', 'workouts', 'athlete_workouts', 'come_stai'])
+  })
+
+  it('staff e coach_atleti non hanno `id`: si ordinano e si ripristinano per la loro chiave', async () => {
+    ctrl.righe = { staff: [{ email: 'a@b.it', ruolo: 'coach' }], coach_atleti: [{ athlete_id: 'a1', coach_id: 'c1' }] }
+    await esportaTutto()
+    expect(finto.chiamateA('staff', 'order')[0].args[0]).toBe('email')
+    expect(finto.chiamateA('coach_atleti', 'order').map(c => c.args[0])).toEqual(['athlete_id', 'coach_id'])
+    finto.chiamate.length = 0
+    await ripristinaTutto({ type: 'full_backup', staff: [{ email: 'a@b.it' }], coach_atleti: [{ athlete_id: 'a1', coach_id: 'c1' }] })
+    expect(finto.chiamateA('staff', 'upsert')[0].args[1]).toEqual({ onConflict: 'email' })
+    expect(finto.chiamateA('coach_atleti', 'upsert')[0].args[1]).toEqual({ onConflict: 'athlete_id,coach_id' })
   })
 
   it('legge a pagine: oltre mille righe non se ne perde nessuna', async () => {
@@ -52,10 +63,10 @@ describe('backup', () => {
 
   it('una tabella che non esiste ancora non c\'è nel file, e lo dice', async () => {
     ctrl.righe = { athletes: righe(1), workouts: righe(1), athlete_workouts: righe(1) }
-    ctrl.assenti = ['come_stai']
+    ctrl.assenti = ['come_stai', 'staff', 'coach_atleti']
     const backup = await esportaTutto()
     expect(backup.come_stai).toBeUndefined()
-    expect(backup.tabelle_assenti).toEqual(['come_stai'])
+    expect(backup.tabelle_assenti).toEqual(['staff', 'coach_atleti', 'come_stai'])
   })
 
   it('il ripristino va in ordine, a blocchi, e salta la tabella che non esiste', async () => {

@@ -15,8 +15,20 @@
 
 import { supabase } from '../supabaseClient'
 
-/** Le tabelle del file, nell'ordine in cui si RIPRISTINANO: prima chi è puntato. */
-export const TABELLE_BACKUP = ['athletes', 'workouts', 'athlete_workouts', 'come_stai']
+/** Le tabelle del file, nell'ordine in cui si RIPRISTINANO: prima chi è puntato.
+ *  `staff` e `coach_atleti` (multi-coach) prima del resto: senza di loro, dopo
+ *  un ripristino, un coach non vedrebbe più nessuno dei suoi atleti. Prima che
+ *  la loro migrazione sia applicata non esistono e finiscono in `tabelle_assenti`. */
+export const TABELLE_BACKUP = ['staff', 'athletes', 'coach_atleti', 'workouts', 'athlete_workouts', 'come_stai']
+
+/** La chiave di ogni tabella che NON ha una colonna `id`: serve per ordinare le
+ *  pagine e come `onConflict` del ripristino. Ordinare per una colonna che non
+ *  esiste fa fallire la lettura. */
+const CHIAVI = {
+  staff: ['email'],
+  coach_atleti: ['athlete_id', 'coach_id'],
+}
+const chiaveDi = (tabella) => CHIAVI[tabella] || ['id']
 
 const PAGINA = 1000
 /** Righe per scrittura nel ripristino: una richiesta enorme può essere rifiutata. */
@@ -32,8 +44,9 @@ const tabellaAssente = (error) => error && (error.code === '42P01' || error.code
 export async function leggiTutta(tabella, filtra = (q) => q) {
   const righe = []
   for (let pagina = 0; ; pagina++) {
-    const { data, error } = await filtra(supabase.from(tabella).select('*'))
-      .order('id', { ascending: true })
+    let q = filtra(supabase.from(tabella).select('*'))
+    for (const colonna of chiaveDi(tabella)) q = q.order(colonna, { ascending: true })
+    const { data, error } = await q
       .range(pagina * PAGINA, pagina * PAGINA + PAGINA - 1)
     if (error) {
       if (tabellaAssente(error)) return { righe: [], assente: true }
@@ -58,7 +71,7 @@ export async function esportaTutto() {
 /** Scrive le righe a blocchi. Torna `false` se la tabella non esiste, lancia sugli altri errori. */
 export async function scriviTutta(tabella, righe = []) {
   for (let i = 0; i < righe.length; i += BLOCCO_SCRITTURA) {
-    const { error } = await supabase.from(tabella).upsert(righe.slice(i, i + BLOCCO_SCRITTURA), { onConflict: 'id' })
+    const { error } = await supabase.from(tabella).upsert(righe.slice(i, i + BLOCCO_SCRITTURA), { onConflict: chiaveDi(tabella).join(',') })
     if (error) {
       if (tabellaAssente(error)) return false
       throw new Error(`${tabella}: ${error.message}`)
