@@ -411,8 +411,9 @@ transazione; verifica impersonando gli utenti dentro un blocco `do $$` che finis
 `raise exception` (così ogni scrittura di prova si annulla). Risultati: coach nuovo → 0 atleti,
 assegnazioni, record, workout; `federico_leo` → 12 atleti più la sua scheda, e
 `insert … returning` del workout funziona; atleta → 1 atleta e 1 coach; admin → 16 atleti; TV
-anonima → solo i 6 workout in onda, 0 atleti. ⏳ **Passo 5 (deploy delle funzioni) in attesa** del
-sì del committente: finché c'è un solo coach le funzioni vecchie non rompono niente.
+anonima → solo i 6 workout in onda, 0 atleti. ✅ **Passo 5 fatto il 16/10/2026**: pubblicate
+`ai-workout`, `ricerca-coach`, `estrai-note`, `send-reminders` (sì del committente); tutte e quattro
+partono e rifiutano una chiamata con la sola anon key («Non autorizzato», 401/403).
 ⚠️ Fino all'app nuova: un messaggio scritto da un **admin** con l'app di oggi nasce `miei`, e gli
 atleti (tutti di `federico_leo`) **non lo vedono in bacheca** (la push parte lo stesso dalla funzione
 vecchia). I messaggi agli atleti, per ora, vanno scritti dall'account `federico_leo@hotmail.it`.

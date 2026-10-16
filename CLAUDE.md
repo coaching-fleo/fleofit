@@ -67,8 +67,8 @@
    («Messaggio a tutti»), additiva, ✅ **applicata il 15/10/2026** (`supabase/schema/messaggi_coach_2026-10-15.sql`).
    ✅ **Quarta eccezione** (16/10/2026, sì esplicito in sessione): **più coach**
    (`supabase/schema/multi_coach_2026-10-15.sql`), ✅ **applicata il 16/10/2026**. ⚠️ La prima
-   **non additiva**: riscrive le policy di quasi tutte le tabelle. Le Edge Function multi-coach
-   non sono ancora pubblicate (`docs/memoria/database.md`, «Multi-coach»).
+   **non additiva**: riscrive le policy di quasi tutte le tabelle. Edge Function multi-coach
+   pubblicate lo stesso giorno (`docs/memoria/database.md`, «Multi-coach»).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -340,7 +340,7 @@ staging, **schema congelato** (§0, 0-bis).
   Store, che decidono l'interfaccia da quella lista (rifiuto App Store 2.3.1(a)).
 - 🔴 **Cancellare un atleta distrugge tutta la sua storia** (chiavi in CASCADE), col cron
   delle 00:00 UTC; il backup gira prima, alle 22:30.
-- **Edge Function**: `send-reminders` (5 modalità, più `broadcast` per «Messaggio a tutti», ⏳ non ancora pubblicato), `ai-workout` (Gemini, riserva Groq), `ricerca-coach` (Groq, riserva Gemini: la ricerca del coach) ed `estrai-note` (**solo Groq**, con Zero Data Retention: le note degli atleti diventano dati, `docs/memoria/scheda-atleta.md`). ⚠️ Gemini gratuito = **20 richieste al giorno**, condivise da tutte le funzioni con la stessa chiave. `main` chiama solo `send-reminders`. Un deploy
+- **Edge Function**: `send-reminders` (5 modalità, più `broadcast` per «Messaggio a tutti»; dal 16/10/2026 tutte filtrano per coach con `_shared/staff.ts`), `ai-workout` (Gemini, riserva Groq), `ricerca-coach` (Groq, riserva Gemini: la ricerca del coach) ed `estrai-note` (**solo Groq**, con Zero Data Retention: le note degli atleti diventano dati, `docs/memoria/scheda-atleta.md`). ⚠️ Gemini gratuito = **20 richieste al giorno**, condivise da tutte le funzioni con la stessa chiave. `main` chiama solo `send-reminders`. Un deploy
   colpisce anche la web app. Più `segnalazione` (la mail «Segnala un problema» via Resend):
   la usa solo l'app, quindi pubblicarla non tocca la web app. E `gare-hyrox` (il calendario delle
   gare HYROX, letto da hyrox.com) e `risultato-hyrox` (il tempo dopo la gara, da

@@ -65,8 +65,8 @@ Codice scritto e committato su `app` (`docs/memoria/messaggi.md`). Restano, in o
 
 ## 👥 Più coach — cosa resta (16/10/2026)
 
-> ✅ Migrazione applicata il 16/10/2026. ⏳ Da fare: deploy di `ai-workout`, `ricerca-coach`,
-> `estrai-note`, `send-reminders` (prima di aggiungere un secondo coach), poi app nuova e prove sul telefono.
+> ✅ Migrazione applicata e le quattro Edge Function pubblicate il 16/10/2026. ⏳ Da fare: app
+> nuova (web e Store) e prove sul telefono, **poi** il secondo coach in `staff`.
 
 - 🟡 **Un coach può inserire una riga `athletes` con un `id` arbitrario** (`with check … or e_staff()`): se conoscesse l'id di un utente non ancora registrato, il trigger gli assegnerebbe quell'atleta. Teorico (gli id non sono esposti). Correzione: sul ramo staff, rifiutare un `id` che è in `auth.users`.
 - 🟡 **`immediate`/`voice_note` di `send-reminders`** accettano ogni coach su qualunque `record_id`: un coach potrebbe far ripartire una push su un record di un altro coach. Limitare a `mio_atleta`.
