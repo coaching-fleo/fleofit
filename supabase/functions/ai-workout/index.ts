@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
+import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import { ruoloStaff } from "../_shared/staff.ts"
 import { MODELLO_GROQ_PREDEFINITO, chatGroq, trascriviConWhisper } from "../_shared/groq.ts"
 import { CATEGORIE_IA, categoriaIA, daRipiegare, istruzioniModifica, messaggioErrore, promptCategoria, richiestaGroq, risultatoDaTesto } from "./regole.ts"

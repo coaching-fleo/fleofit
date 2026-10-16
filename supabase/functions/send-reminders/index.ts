@@ -2,8 +2,8 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
-import { atletiDi, coachDi, destinatariNotificaCoach, idStaff, ruoloStaff } from "../_shared/staff.ts"
-import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm, routeProva } from "./broadcast.ts"
+import { atletaNotificaCoach, atletiDi, coachDi, destinatariNotificaCoach, idStaff, ruoloStaff } from "../_shared/staff.ts"
+import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, puoInviareQuestoMessaggio, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm, routeProva } from "./broadcast.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -395,6 +395,14 @@ serve(async (req) => {
           status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      // Solo l'autore (o un admin) fa partire le push di un messaggio: il
+      // record_id viaggia nel corpo, e un coach non rilancia quello di un altro.
+      if (!puoInviareQuestoMessaggio(messaggio.autore ?? null, chiamante)) {
+        console.warn(`send-reminders: broadcast di un messaggio altrui rifiutato per ${chiamante.email ?? 'anonimo'}`);
+        return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
       const route = routeMessaggio(messaggio.id);
       const { data: atleti, error: atlErr } = await supabase.from('athletes').select('id, deleted_at');
@@ -416,9 +424,20 @@ serve(async (req) => {
       // Solo un admin può scrivere a tutti; il coach (e un admin che sceglie «i miei
       // atleti») raggiunge solo i suoi. Una riga senza `destinatari` (colonna non
       // ancora creata) vale 'miei': nel dubbio non si manda a tutti.
-      const ammessi = (messaggio.destinatari === 'tutti' && chiamante.ruoloStaff === 'admin')
-        ? 'tutti' as const
-        : await atletiDi(supabase, messaggio.autore);
+      // Se coach_atleti non si legge, NON si risponde «nessun destinatario» come se
+      // fosse andata bene: errore, e il client offre «Riprova» (il dedup sulle
+      // notifiche già scritte rende il nuovo tentativo sicuro).
+      let ammessi: string[] | 'tutti';
+      try {
+        ammessi = (messaggio.destinatari === 'tutti' && chiamante.ruoloStaff === 'admin')
+          ? 'tutti'
+          : await atletiDi(supabase, messaggio.autore);
+      } catch (e) {
+        console.error('Broadcast: atleti del coach non leggibili', e);
+        return new Response(JSON.stringify({ success: false, error: 'Atleti del coach non leggibili' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       if (Array.isArray(ammessi) && ammessi.length === 0) {
         return new Response(JSON.stringify({ success: true, sent: 0, inviati: 0, motivo: 'nessun destinatario' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
@@ -522,18 +541,21 @@ serve(async (req) => {
       
       // Va ai coach DELL'ATLETA; se non ne ha, agli admin (D7).
       // 'demo@fleofit.it' è l'account fornito ad App Review: è admin anche lui.
-      // L'atleta: dal corpo, o dalla rotta (`?athlete_id=`, scritta da tutti i
-      // client), o è lo stesso chiamante quando è l'atleta a notificare.
-      let athleteId: string | null = typeof body.athleteId === 'string' ? body.athleteId : null;
-      if (!athleteId && typeof body.route === 'string') {
-        athleteId = new URLSearchParams(body.route.split('?')[1] || '').get('athlete_id');
-      }
-      if (!athleteId && !chiamante.ruoloStaff) athleteId = chiamante.id ?? null;
+      // L'atleta: se chiama un atleta è SEMPRE lui (athleteId e rotta del corpo
+      // si ignorano); per staff e servizio dal corpo o dalla rotta (`?athlete_id=`).
+      const athleteId = atletaNotificaCoach(body, chiamante);
       const staffIds = await idStaff(supabase);
-      const adminUserIds = destinatariNotificaCoach(
-        athleteId ? await coachDi(supabase, athleteId) : [],
-        staffIds.admin,
-      );
+      // coach_atleti non leggibile: la notifica va agli admin (come per un atleta
+      // senza coach), invece di perdersi.
+      let suoiCoach: string[] = [];
+      if (athleteId) {
+        try {
+          suoiCoach = await coachDi(supabase, athleteId);
+        } catch (e) {
+          console.error('coach_notification: coach dell\'atleta non leggibili, vado agli admin', e);
+        }
+      }
+      const adminUserIds = destinatariNotificaCoach(suoiCoach, staffIds.admin);
 
       console.log('Trovati ID Admin:', adminUserIds);
       

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  ruoloStaff, atletiDi, coachDi, destinatariNotificaCoach, idStaff,
+  ruoloStaff, atletiDi, coachDi, destinatariNotificaCoach, idStaff, atletaNotificaCoach,
 } from '../../../supabase/functions/_shared/staff.ts'
 
 // Parte pura di «chi è staff» per le Edge Function: il client del database
@@ -68,10 +68,20 @@ describe('coachDi e atletiDi', () => {
     expect(await atletiDi(db, 'c1')).toEqual(['at1', 'at2'])
     expect(await atletiDi(db, 'c2')).toEqual(['at1'])
   })
-  it('se la lettura fallisce torna vuoto, mai un\'eccezione', async () => {
-    const rotto = fintoDb({}, { errore: { coach_atleti: { message: 'x' } } })
-    expect(await coachDi(rotto, 'at1')).toEqual([])
-    expect(await atletiDi(rotto, 'c1')).toEqual([])
+  // Una lettura fallita NON è «nessun atleta»: per il broadcast vorrebbe dire
+  // rispondere «nessun destinatario» come se fosse andata bene. Si lancia, e chi
+  // chiama decide (broadcast: errore e si riprova; estrai-note: rifiuta).
+  it('se la lettura fallisce lancia', async () => {
+    const rotto = fintoDb({}, { errore: { coach_atleti: { message: 'rete', code: '08006' } } })
+    await expect(coachDi(rotto, 'at1')).rejects.toThrow()
+    await expect(atletiDi(rotto, 'c1')).rejects.toThrow()
+  })
+  it('la tabella che non esiste ancora (migrazione non applicata) vale nessuno', async () => {
+    for (const code of ['42P01', 'PGRST205']) {
+      const assente = fintoDb({}, { errore: { coach_atleti: { message: 'non esiste', code } } })
+      expect(await coachDi(assente, 'at1')).toEqual([])
+      expect(await atletiDi(assente, 'c1')).toEqual([])
+    }
   })
 })
 
@@ -96,5 +106,28 @@ describe('idStaff', () => {
     const db = fintoDb({ utenti: [{ id: 'u9', email: 'coaching@federicoleo.it' }, { id: 'u3', email: 'atleta@x.it' }] },
       { errore: { staff: { message: 'x' } } })
     expect(await idStaff(db)).toEqual({ tutti: ['u9'], admin: ['u9'] })
+  })
+})
+
+describe('atletaNotificaCoach', () => {
+  // Un atleta notifica SOLO per sé: se potesse scegliere athleteId (o la rotta)
+  // manderebbe ai coach di un altro atleta una notifica a nome suo.
+  const ATLETA = { id: 'at1', ruoloStaff: null, servizio: false }
+  it('per un atleta conta solo chi chiama: athleteId e rotta del corpo si ignorano', () => {
+    expect(atletaNotificaCoach({ athleteId: 'at2' }, ATLETA)).toBe('at1')
+    expect(atletaNotificaCoach({ route: '/workout/w1?athlete_id=at2' }, ATLETA)).toBe('at1')
+    expect(atletaNotificaCoach({}, ATLETA)).toBe('at1')
+  })
+  it('per lo staff vale il corpo: athleteId, poi la rotta', () => {
+    const coach = { id: 'c1', ruoloStaff: 'coach', servizio: false }
+    expect(atletaNotificaCoach({ athleteId: 'at2' }, coach)).toBe('at2')
+    expect(atletaNotificaCoach({ route: '/workout/w1?athlete_id=at3' }, coach)).toBe('at3')
+    expect(atletaNotificaCoach({}, coach)).toBeNull()
+  })
+  it('per il servizio vale il corpo', () => {
+    expect(atletaNotificaCoach({ athleteId: 'at2' }, { id: null, ruoloStaff: null, servizio: true })).toBe('at2')
+  })
+  it('un atleta senza id: nessuno', () => {
+    expect(atletaNotificaCoach({ athleteId: 'at2' }, { id: null, ruoloStaff: null, servizio: false })).toBeNull()
   })
 })

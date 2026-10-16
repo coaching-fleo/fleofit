@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   TITOLO_BROADCAST, EMAIL_DEMO, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast,
-  TITOLO_PROVA, ROUTE_BACHECA, testoAccettabile, motivoFcm, routeProva,
+  TITOLO_PROVA, ROUTE_BACHECA, testoAccettabile, motivoFcm, routeProva, puoInviareQuestoMessaggio,
 } from '../../../supabase/functions/send-reminders/broadcast.ts'
 import { COACHING_ID } from '../constants'
 
@@ -125,5 +125,23 @@ describe('routeProva (temporaneo)', () => {
     expect(routeProva('xyz')).toBe('/messaggi')
     expect(routeProva('prova-../../admin')).toBe('/messaggi')
     expect(routeProva('prova-' + 'a'.repeat(41))).toBe('/messaggi')
+  })
+})
+
+describe('puoInviareQuestoMessaggio', () => {
+  // Il broadcast parte da un `record_id`: senza questo controllo un coach
+  // potrebbe far ripartire le push di un messaggio scritto da un altro coach.
+  it('l\'autore sì', () => {
+    expect(puoInviareQuestoMessaggio('c1', { id: 'c1', ruoloStaff: 'coach' })).toBe(true)
+  })
+  it('un altro coach no', () => {
+    expect(puoInviareQuestoMessaggio('c1', { id: 'c2', ruoloStaff: 'coach' })).toBe(false)
+  })
+  it('un admin sempre', () => {
+    expect(puoInviareQuestoMessaggio('c1', { id: 'a1', ruoloStaff: 'admin' })).toBe(true)
+  })
+  it('senza id né ruolo, no', () => {
+    expect(puoInviareQuestoMessaggio('c1', { id: null, ruoloStaff: null })).toBe(false)
+    expect(puoInviareQuestoMessaggio(null, { id: null, ruoloStaff: null })).toBe(false)
   })
 })

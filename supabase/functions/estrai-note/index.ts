@@ -23,7 +23,7 @@
 // La web app su `main` non la chiama: un deploy non tocca la produzione web.
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
+import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import { atletiDi, ruoloStaff } from "../_shared/staff.ts"
 import { MODELLO_GROQ_PREDEFINITO, chatGroq } from "../_shared/groq.ts"
 import {
@@ -79,9 +79,19 @@ serve(async (req) => {
   const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
   // Un coach legge le note solo dei SUOI atleti, e prima di qualunque lettura.
-  if (chiamante.ruolo === 'coach' && !(await atletiDi(db, chiamante.id)).includes(athleteId)) {
-    console.warn('estrai-note: coach su un atleta non suo, rifiutato');
-    return risposta({ error: 'Atleta non tuo' }, 403);
+  // Se coach_atleti non si legge si rifiuta lo stesso: nel dubbio, niente note.
+  if (chiamante.ruolo === 'coach') {
+    let suoi: string[];
+    try {
+      suoi = await atletiDi(db, chiamante.id);
+    } catch (e) {
+      console.error('estrai-note: atleti del coach non leggibili, rifiutato', e);
+      return risposta({ error: 'Atleti del coach non leggibili' }, 503);
+    }
+    if (!suoi.includes(athleteId)) {
+      console.warn('estrai-note: coach su un atleta non suo, rifiutato');
+      return risposta({ error: 'Atleta non tuo' }, 403);
+    }
   }
 
   const [{ data: righe, error: e1 }, { data: esistenti, error: e2 }] = await Promise.all([

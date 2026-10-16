@@ -27,26 +27,49 @@ export async function ruoloStaff(db: any, email: string | null): Promise<RuoloSt
   }
 }
 
-/** Gli `athlete_id` seguiti da quel coach. Lettura fallita = nessuno. */
-export async function atletiDi(db: any, coachId: string): Promise<string[]> {
-  try {
-    const { data, error } = await db.from('coach_atleti').select('athlete_id').eq('coach_id', coachId)
-    if (error) return []
-    return (data || []).map((r: any) => r.athlete_id)
-  } catch {
-    return []
+/** La tabella non esiste (migrazione non applicata): Postgres 42P01, o PostgREST PGRST205. */
+const tabellaAssente = (error: any) => error?.code === '42P01' || error?.code === 'PGRST205'
+
+/**
+ * Una colonna di `coach_atleti` filtrata per un'altra. Tabella assente = nessuno
+ * (prima della migrazione nessuno ha coach). Ogni ALTRO errore LANCIA: una
+ * lettura fallita non è «nessun atleta», e chi chiama decide cosa farne.
+ */
+async function leggiCoppie(db: any, colonna: string, filtro: string, valore: string): Promise<string[]> {
+  const { data, error } = await db.from('coach_atleti').select(colonna).eq(filtro, valore)
+  if (error) {
+    if (tabellaAssente(error)) return []
+    throw new Error(`coach_atleti: ${error.message ?? 'lettura fallita'}`)
   }
+  return (data || []).map((r: any) => r[colonna])
 }
 
-/** Tutti i `coach_id` di un atleta (può averne più d'uno). Lettura fallita = nessuno. */
-export async function coachDi(db: any, athleteId: string): Promise<string[]> {
-  try {
-    const { data, error } = await db.from('coach_atleti').select('coach_id').eq('athlete_id', athleteId)
-    if (error) return []
-    return (data || []).map((r: any) => r.coach_id)
-  } catch {
-    return []
+/** Gli `athlete_id` seguiti da quel coach. Lancia se la lettura fallisce. */
+export function atletiDi(db: any, coachId: string): Promise<string[]> {
+  return leggiCoppie(db, 'athlete_id', 'coach_id', coachId)
+}
+
+/** Tutti i `coach_id` di un atleta (può averne più d'uno). Lancia se la lettura fallisce. */
+export function coachDi(db: any, athleteId: string): Promise<string[]> {
+  return leggiCoppie(db, 'coach_id', 'athlete_id', athleteId)
+}
+
+/**
+ * Di quale atleta parla una `coach_notification`. Se chiama un ATLETA (non
+ * staff, non servizio) è sempre lui: `athleteId` e la rotta del corpo si
+ * ignorano, o potrebbe notificare i coach di un altro atleta a nome suo.
+ * Per staff e servizio: `athleteId`, poi `?athlete_id=` della rotta.
+ */
+export function atletaNotificaCoach(
+  body: { athleteId?: unknown; route?: unknown },
+  chiamante: { id?: string | null; ruoloStaff?: RuoloStaff; servizio?: boolean },
+): string | null {
+  if (!chiamante.ruoloStaff && !chiamante.servizio) return chiamante.id ?? null
+  if (typeof body.athleteId === 'string' && body.athleteId) return body.athleteId
+  if (typeof body.route === 'string') {
+    return new URLSearchParams(body.route.split('?')[1] || '').get('athlete_id')
   }
+  return null
 }
 
 /** Chi riceve la notifica «un atleta ha fatto qualcosa»: i suoi coach, e se non ne ha gli admin. */

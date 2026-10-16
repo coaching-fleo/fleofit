@@ -20,6 +20,17 @@ export function puoInviareBroadcast(email: string | null, ruolo: 'admin' | 'coac
   return ruolo === 'admin' || ruolo === 'coach'
 }
 
+// Chi può far partire le push di UN messaggio già in bacheca (`record_id`):
+// il suo autore, o un admin. Senza, un coach rilancerebbe il messaggio di un
+// altro coach (e ai destinatari di quello).
+export function puoInviareQuestoMessaggio(
+  autore: string | null,
+  chiamante: { id?: string | null; ruoloStaff?: 'admin' | 'coach' | null },
+): boolean {
+  if (chiamante.ruoloStaff === 'admin') return true
+  return !!autore && !!chiamante.id && autore === chiamante.id
+}
+
 // Il testo della push: spazi compressi; se supera `max`, tagliato all'ultimo
 // spazio entro `max` (senza spezzare una parola) più «…».
 export function anteprima(testo: string, max = 120): string {
