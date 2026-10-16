@@ -405,9 +405,20 @@ al prossimo deploy di una di loro va fatta la stessa sostituzione, o il deploy f
 ripubblicate col multi-coach, sezione sotto). Resta **`segnalazione`**.
 
 ### 👥 Multi-coach: l'ordine di applicazione (`supabase/schema/multi_coach_2026-10-15.sql`)
-⛔ **Non applicata**: serve il sì esplicito del committente (regola 0-bis), e a differenza delle
-eccezioni precedenti **riscrive policy esistenti**. L'ordine, tutto nella stessa seduta (è scritto
-anche in testa al file SQL):
+✅ **Applicata il 16/10/2026** (sì esplicito del committente in sessione), passi 1–4 fatti:
+backup manuale riuscito; nessuna policy in più rispetto alle `drop`; migrazione passata in una
+transazione; verifica impersonando gli utenti dentro un blocco `do $$` che finisce con
+`raise exception` (così ogni scrittura di prova si annulla). Risultati: coach nuovo → 0 atleti,
+assegnazioni, record, workout; `federico_leo` → 12 atleti più la sua scheda, e
+`insert … returning` del workout funziona; atleta → 1 atleta e 1 coach; admin → 16 atleti; TV
+anonima → solo i 6 workout in onda, 0 atleti. ⏳ **Passo 5 (deploy delle funzioni) in attesa** del
+sì del committente: finché c'è un solo coach le funzioni vecchie non rompono niente.
+⚠️ Fino all'app nuova: un messaggio scritto da un **admin** con l'app di oggi nasce `miei`, e gli
+atleti (tutti di `federico_leo`) **non lo vedono in bacheca** (la push parte lo stesso dalla funzione
+vecchia). I messaggi agli atleti, per ora, vanno scritti dall'account `federico_leo@hotmail.it`.
+ℹ️ Un messaggio `tutti` di un admin lo leggono tutti gli autenticati, coach compresi: voluto, è un avviso generale.
+
+L'ordine seguito (è scritto anche in testa al file SQL):
 1. **backup** (`db-backup.yml` lanciato a mano, o export dalle Impostazioni);
 2. i **controlli della sezione 0** (letture): gli account dello staff, e l'elenco di `pg_policies`
    sulle tabelle toccate da confrontare con le `drop policy`. Una policy permissiva in più, che la

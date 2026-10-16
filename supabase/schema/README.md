@@ -44,6 +44,9 @@ committente (CLAUDE.md §0, regola 0-bis).
 | File | Applicata | Cosa fa |
 |---|---|---|
 | `note_estratte_2026-10-09.sql` | 09/10/2026 | La tabella dei dati ricavati dalle note degli atleti («Dalle note»), policy solo admin. `main` non la conosce |
+| `come_stai_2026-10-13.sql` | 14/10/2026 | «Come stai oggi», una riga per atleta per giorno |
+| `messaggi_coach_2026-10-15.sql` | 15/10/2026 | La bacheca «Messaggio a tutti» |
+| `multi_coach_2026-10-15.sql` | 16/10/2026 | Più coach: tabelle `staff` e `coach_atleti`, colonne `workouts.creato_da` e `messaggi_coach.destinatari`, e **riscrive** le policy di 12 tabelle (più i vocali in storage). ⚠️ Le policy di questo file sostituiscono quelle della fotografia del 25/08 e dei due file sopra |
 
 ⚠️ La fotografia delle policy (`rls_snapshot_2026-08-25.sql`) è precedente: la policy
 `note_estratte solo admin` sta nel file della migrazione.

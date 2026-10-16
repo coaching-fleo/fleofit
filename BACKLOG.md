@@ -65,6 +65,14 @@ Codice scritto e committato su `app` (`docs/memoria/messaggi.md`). Restano, in o
 
 ## 👥 Più coach — cosa resta (16/10/2026)
 
+> ✅ Migrazione applicata il 16/10/2026. ⏳ Da fare: deploy di `ai-workout`, `ricerca-coach`,
+> `estrai-note`, `send-reminders` (prima di aggiungere un secondo coach), poi app nuova e prove sul telefono.
+
+- 🟡 **Un coach può inserire una riga `athletes` con un `id` arbitrario** (`with check … or e_staff()`): se conoscesse l'id di un utente non ancora registrato, il trigger gli assegnerebbe quell'atleta. Teorico (gli id non sono esposti). Correzione: sul ramo staff, rifiutare un `id` che è in `auth.users`.
+- 🟡 **`immediate`/`voice_note` di `send-reminders`** accettano ogni coach su qualunque `record_id`: un coach potrebbe far ripartire una push su un record di un altro coach. Limitare a `mio_atleta`.
+- 🟡 **Cache offline non legate all'utente** (`fleofit_cache_all_aw_<id>`, `fleofit_cache_aw_*` in WorkoutDetail): su un telefono condiviso da due coach, il secondo vedrebbe offline le assegnazioni del primo. Chiave con l'uid, o pulizia al logout.
+- 🟡 **Messaggi degli admin con l'app di oggi**: nascono `miei` e gli atleti non li vedono in bacheca, finché non esce l'app con la scelta «Tutti gli atleti».
+
 - 🔴 **La Live Coach Cam è filtrata solo nella VISTA.** Il canale di presenza `global_live_workouts` è uno per tutta l'app e ogni client autenticato può entrarci: la Home di un coach mostra solo i suoi atleti (`liveVisibili` in `Home.jsx`), ma un client modificato vedrebbe chi si allena e il titolo della seduta di tutti. La correzione vera sono i **canali privati** con la **Realtime Authorization** di Supabase (policy su `realtime.messages`), da fare insieme a WorkoutDetail, che oggi fa `track` sul canale pubblico anche nelle versioni già sugli Store.
 
 ---

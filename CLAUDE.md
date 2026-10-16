@@ -65,6 +65,10 @@
    («Come stai oggi»), additiva, ✅ **applicata il 14/10/2026** (`supabase/schema/come_stai_2026-10-13.sql`).
    ✅ **Terza eccezione** (15/10/2026, sì esplicito in sessione): la tabella `messaggi_coach`
    («Messaggio a tutti»), additiva, ✅ **applicata il 15/10/2026** (`supabase/schema/messaggi_coach_2026-10-15.sql`).
+   ✅ **Quarta eccezione** (16/10/2026, sì esplicito in sessione): **più coach**
+   (`supabase/schema/multi_coach_2026-10-15.sql`), ✅ **applicata il 16/10/2026**. ⚠️ La prima
+   **non additiva**: riscrive le policy di quasi tutte le tabelle. Le Edge Function multi-coach
+   non sono ancora pubblicate (`docs/memoria/database.md`, «Multi-coach»).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -177,9 +181,9 @@ differenze da iOS una per una: `docs/memoria/android.md`.
 ## 1.2 Ruoli
 | Ruolo | Come si ottiene | Cosa vede |
 |---|---|---|
-| `admin` (coach) | email in `ADMIN_EMAILS` (`src/App.jsx`, in cima al file) | Tutto: crea workout, gestisce atleti, codici invito, backup, Live Coach Cam |
-| `athlete` | registrazione con codice invito valido | Home personale, calendario, profilo, archivio |
-| `coach` | ruolo previsto nel codice ma **onboarding disattivato** (commentato in `App.jsx:109-112`) | come admin |
+| `admin` | riga `ruolo='admin'` nella tabella **`staff`** (dal 16/10/2026; `ADMIN_EMAILS` in `src/lib/ruoli.js` resta solo come riserva se la tabella non risponde) | Tutto, di tutti i coach: in più gestione coach, Backup/Ripristino, «Simula atleta», codici invito di tutti |
+| `coach` | riga `ruolo='coach'` in `staff`. Gli atleti suoi stanno in **`coach_atleti`** (dal codice invito che hanno usato, o assegnati da un admin) | Solo i suoi atleti, i suoi workout, i suoi codici; «Messaggio a tutti» solo ai suoi. Lo impone la RLS, non l'interfaccia |
+| `athlete` | registrazione con codice invito valido | Home personale, calendario, profilo, archivio; la bacheca del suo coach (e i messaggi `tutti` degli admin) |
 
 - Gli admin possono **simulare l'atleta**: `localStorage.adminRoleOverride = 'athlete'` (toggle in Settings).
 - L'account `coaching@federicoleo.it` ha ID `0118e43f-8791-4fd6-8032-bee028334c99` ed è **nascosto**
@@ -324,13 +328,16 @@ staging, **schema congelato** (§0, 0-bis).
 | `workouts` | `title` (mai vuoto, con il codice in coda), `date`, `sections` jsonb (§5), `coach_notes` |
 | `athlete_workouts` | qui sta lo **stato** (`status`, `completed_date`). `notes` porta `[RPE: n/10]` e `[GRADIMENTO: …]`: solo con `src/lib/rpe.js` e `gradimento.js`. `voice_note_url` si cancella con `#deleted=`. **Nessun `created_at`** |
 | `come_stai` | «Come stai oggi»: una riga per atleta per GIORNO, quattro risposte 1–5 tutte con **5 = la cosa buona** (sonno, energia, dolori, stress). Policy come `athlete_workouts` (l'atleta le sue, gli admin tutte). ✅ **applicata il 14/10/2026** (`supabase/schema/come_stai_2026-10-13.sql`), nel backup notturno |
-| `messaggi_coach` | «Messaggio a tutti»: la bacheca «Dal coach». Lettura per tutti gli autenticati, scrittura **solo admin e senza `demo@fleofit.it`** (unica tabella con quella differenza). ✅ **applicata il 15/10/2026** (`supabase/schema/messaggi_coach_2026-10-15.sql`). `docs/memoria/messaggi.md` |
+| `messaggi_coach` | «Messaggio a tutti»: la bacheca «Dal coach». Dal 16/10 con `destinatari` (`miei`/`tutti`, `tutti` solo admin): l'atleta legge quelli dei suoi coach e i `tutti` degli admin. Scrive lo staff **senza `demo@fleofit.it`**. `docs/memoria/messaggi.md` |
+| `staff` · `coach_atleti` | **Più coach** (16/10/2026, `supabase/schema/multi_coach_2026-10-15.sql`): chi è admin/coach (chiave email) e quale coach segue quale atleta (chiave la coppia). Scrivono solo gli admin e il trigger `athletes_assegna_coach`. Tutte le policy passano da `e_admin()`, `e_staff()`, `mio_atleta()`, `vedo_workout()` |
 | `note_estratte` | ✅ **applicata il 09/10/2026**: i dati ricavati dalle note degli atleti (standard `VERSIONE` in `estrai-note/regole.ts`). Policy **solo admin** (`USING` e `WITH CHECK`), l'atleta non la legge. La scrive solo `estrai-note`. `main` non la conosce |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
-- 🔴 **Gli admin sono TRE liste da tenere allineate**: `ADMIN_EMAILS` in `src/App.jsx`,
-  `supabase/functions/_shared/admin.ts` e le **policy RLS** — in queste ultime sia `USING`
-  sia `WITH CHECK`. Una lista disallineata è la causa del rifiuto App Store 2.3.1(a).
+- 🔴 **Dal 16/10/2026 lo staff si cambia in UN posto: la tabella `staff`** (admin e coach).
+  Le policy la leggono con `e_admin()`/`e_staff()`; app e Edge Function pure. `ADMIN_EMAILS`
+  (`src/lib/ruoli.js`, `supabase/functions/_shared/admin.ts`) resta solo come riserva se la tabella
+  non risponde — ma un admin nuovo va comunque aggiunto anche lì finché ci sono app vecchie sugli
+  Store, che decidono l'interfaccia da quella lista (rifiuto App Store 2.3.1(a)).
 - 🔴 **Cancellare un atleta distrugge tutta la sua storia** (chiavi in CASCADE), col cron
   delle 00:00 UTC; il backup gira prima, alle 22:30.
 - **Edge Function**: `send-reminders` (5 modalità, più `broadcast` per «Messaggio a tutti», ⏳ non ancora pubblicato), `ai-workout` (Gemini, riserva Groq), `ricerca-coach` (Groq, riserva Gemini: la ricerca del coach) ed `estrai-note` (**solo Groq**, con Zero Data Retention: le note degli atleti diventano dati, `docs/memoria/scheda-atleta.md`). ⚠️ Gemini gratuito = **20 richieste al giorno**, condivise da tutte le funzioni con la stessa chiave. `main` chiama solo `send-reminders`. Un deploy
