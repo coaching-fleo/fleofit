@@ -34,6 +34,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Pin, Send } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
+import { eAdmin } from '../lib/ruoli'
 import { CustomConfirm } from '../components/CustomModals'
 import { leggiJson, scriviJson } from '../lib/offlineQueue'
 import { vibraScelta, vibraSuccesso, vibraErrore } from '../lib/aptica'
@@ -66,11 +67,13 @@ export default function NuovoMessaggio() {
   const [params] = useSearchParams()
   const idModifica = params.get('modifica')
   const modifica = !!idModifica
-  const demo = !puoInviareBroadcast(user?.email ?? null)
+  const demo = !puoInviareBroadcast(user?.email ?? null, role)
 
   const [iniziale, setIniziale] = useState(null) // il messaggio da correggere, letto dal database
   const [testo, setTesto] = useState(() => (modifica ? '' : bozzaIniziale().testo))
   const [fissato, setFissato] = useState(() => (modifica ? false : bozzaIniziale().fissato))
+  // Solo l'admin sceglie: il coach scrive sempre ai suoi atleti.
+  const [aTutti, setATutti] = useState(false)
   const [numeroAtleti, setNumeroAtleti] = useState(null)
   const [conferma, setConferma] = useState(null)
   const [inVolo, setInVolo] = useState(false)
@@ -148,7 +151,9 @@ export default function NuovoMessaggio() {
   const inviaDavvero = () => inEsclusiva(async () => {
     setErrore(null)
     const { data: riga, error } = await supabase.from('messaggi_coach')
-      .insert({ testo: testo.trim(), fissato }).select().single()
+      // `destinatari` parte SOLO per 'tutti': il default 'miei' lo mette il database
+      // (e così l'insert non dipende dalla colonna finché si scrive ai propri atleti).
+      .insert({ testo: testo.trim(), fissato, ...(eAdmin(role) && aTutti ? { destinatari: 'tutti' } : null) }).select().single()
     if (error || !riga) {
       vibraErrore()
       setErrore('Messaggio non salvato. Controlla la connessione e riprova.')
@@ -249,6 +254,22 @@ export default function NuovoMessaggio() {
             className="flex-1 min-h-0 w-full bg-transparent px-5 pt-3 text-[19px] leading-[1.45] font-medium text-white
                        placeholder:text-gray-600 resize-none focus:outline-none"
           />
+
+          {eAdmin(role) && !modifica && (
+            <div role="radiogroup" aria-label="Destinatari"
+              className="shrink-0 mx-4 mb-2 grid grid-cols-2 bg-[#111] p-1.5 rounded-2xl border border-[#333] relative">
+              <span aria-hidden="true"
+                className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] rounded-xl bg-brand transition-transform duration-300 ease-out ${aTutti ? 'translate-x-full' : ''}`} />
+              {[['I miei atleti', false], ['Tutti gli atleti', true]].map(([etichetta, valore]) => (
+                <button key={etichetta} type="button" role="radio" aria-checked={aTutti === valore}
+                  onPointerDown={tieniTastiera} onMouseDown={tieniTastiera}
+                  onClick={() => { vibraScelta(); setATutti(valore) }}
+                  className={`relative z-10 min-h-[36px] rounded-xl text-[13px] font-bold ${aTutti === valore ? 'text-black' : 'text-gray-300'}`}>
+                  {etichetta}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="shrink-0 px-4 pb-2 flex items-center justify-between gap-3">
             {!modifica ? (

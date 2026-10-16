@@ -34,7 +34,7 @@ export default function Messaggi() {
   const { user, role } = useAuth()
   const indietro = useIndietro('/')
   const coach = role !== 'athlete'
-  const demo = !puoInviareBroadcast(user?.email ?? null)
+  const demo = !puoInviareBroadcast(user?.email ?? null, role)
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const idRichiesto = params.get('m')

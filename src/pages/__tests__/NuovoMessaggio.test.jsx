@@ -130,6 +130,32 @@ describe('Nuovo messaggio — scrivere', () => {
     expect(JSON.parse(localStorage.getItem(CHIAVE_BOZZA))).toBeNull()
   })
 
+  it('il coach non vede il toggle dei destinatari e manda senza `destinatari` (default «miei» dal database)', async () => {
+    monta({ role: 'coach' })
+    await screen.findByRole('button', { name: /^Invia/ })
+    expect(screen.queryByRole('radio', { name: 'Tutti gli atleti' })).toBeNull()
+    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+    finto.dati.messaggi_coach = [{ ...NUOVA_RIGA }]
+    fireEvent.click(invia())
+    await conferma()
+    await screen.findByTestId('dove')
+    expect(finto.chiamateA('messaggi_coach', 'insert')[0].args[0]).toEqual({ testo: 'Ciao', fissato: false })
+  })
+
+  it('l\'admin vede il toggle (default «I miei atleti»); su «Tutti gli atleti» l\'insert porta destinatari: tutti', async () => {
+    monta({ role: 'admin' })
+    await screen.findByRole('button', { name: /^Invia/ })
+    expect(screen.getByRole('radio', { name: 'I miei atleti' }).getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(screen.getByRole('radio', { name: 'Tutti gli atleti' }))
+    expect(screen.getByRole('radio', { name: 'Tutti gli atleti' }).getAttribute('aria-checked')).toBe('true')
+    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+    finto.dati.messaggi_coach = [{ ...NUOVA_RIGA }]
+    fireEvent.click(invia())
+    await conferma()
+    await screen.findByTestId('dove')
+    expect(finto.chiamateA('messaggi_coach', 'insert')[0].args[0]).toEqual({ testo: 'Ciao', fissato: false, destinatari: 'tutti' })
+  })
+
   it('push fallita: lo dice, e Riprova usa lo stesso id senza un nuovo insert', async () => {
     finto.supabase.functions.invoke.mockResolvedValueOnce({ data: null, error: { message: 'rete' } })
     monta()

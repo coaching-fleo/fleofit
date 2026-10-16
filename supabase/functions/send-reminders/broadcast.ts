@@ -1,7 +1,5 @@
 // «Messaggio a tutti»: la parte pura del modo `broadcast` di send-reminders.
 // Niente Deno e niente URL esterni: è importata anche dai test (vitest).
-import { isAdminEmail } from "../_shared/admin.ts"
-
 export const TITOLO_BROADCAST = 'Messaggio dal coach'
 // «Prova su di me»: la push va solo ai dispositivi del coach che la chiede, e il
 // messaggio NON entra in bacheca (nessun atleta vede niente). Per questo apre la
@@ -14,10 +12,12 @@ export const MAX_CARATTERI = 2000
 // notifiche vere a tutti gli atleti.
 export const EMAIL_DEMO = 'demo@fleofit.it'
 
-export function puoInviareBroadcast(email: string | null): boolean {
+// Il ruolo viene dallo staff (admin o coach), non più dalla sola lista email:
+// anche un coach scrive ai SUOI atleti. `null` = atleta o sconosciuto.
+export function puoInviareBroadcast(email: string | null, ruolo: 'admin' | 'coach' | null): boolean {
   if (!email) return false
   if (email.trim().toLowerCase() === EMAIL_DEMO) return false
-  return isAdminEmail(email)
+  return ruolo === 'admin' || ruolo === 'coach'
 }
 
 // Il testo della push: spazi compressi; se supera `max`, tagliato all'ultimo
@@ -40,11 +40,13 @@ export function routeMessaggio(id: string): string {
 // (gli account admin che hanno anche una riga athletes: il messaggio è per gli atleti).
 export function destinatariBroadcast(
   atleti: { id: string; deleted_at: number | null }[],
-  opz: { mittenteId: string; coachingId: string; giaNotificati: string[]; escludi?: string[] },
+  opz: { mittenteId: string; coachingId: string; giaNotificati: string[]; escludi?: string[]; ammessi?: string[] | 'tutti' },
 ): string[] {
   const fuori = new Set([...opz.giaNotificati, ...(opz.escludi ?? [])])
+  // `ammessi`: gli atleti del coach che scrive; 'tutti' (o assente) = nessun limite.
+  const ammessi = Array.isArray(opz.ammessi) ? new Set(opz.ammessi) : null
   return atleti
-    .filter((a) => !a.deleted_at && a.id !== opz.coachingId && a.id !== opz.mittenteId && !fuori.has(a.id))
+    .filter((a) => (!ammessi || ammessi.has(a.id)) && !a.deleted_at && a.id !== opz.coachingId && a.id !== opz.mittenteId && !fuori.has(a.id))
     .map((a) => a.id)
 }
 

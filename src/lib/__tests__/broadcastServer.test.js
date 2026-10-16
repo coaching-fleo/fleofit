@@ -10,15 +10,17 @@ import { COACHING_ID } from '../constants'
 // poter far partire push a tutti, e nessun atleta riceve lo stesso messaggio due volte.
 
 describe('puoInviareBroadcast', () => {
-  it('ammette gli admin, anche con spazi e maiuscole', () => {
-    expect(puoInviareBroadcast('coaching@federicoleo.it')).toBe(true)
-    expect(puoInviareBroadcast(' Federico.Leo88@gmail.com ')).toBe(true)
+  it('ammette admin e coach (il ruolo viene dallo staff), anche con email in maiuscolo', () => {
+    expect(puoInviareBroadcast('coaching@federicoleo.it', 'admin')).toBe(true)
+    expect(puoInviareBroadcast(' Federico.Leo88@gmail.com ', 'admin')).toBe(true)
+    expect(puoInviareBroadcast('x@y.it', 'coach')).toBe(true)
   })
-  it('esclude il demo, gli atleti e chi non ha email', () => {
+  it('esclude il demo, gli atleti (ruolo null) e chi non ha email', () => {
     expect(EMAIL_DEMO).toBe('demo@fleofit.it')
-    expect(puoInviareBroadcast('demo@fleofit.it')).toBe(false)
-    expect(puoInviareBroadcast('atleta@x.it')).toBe(false)
-    expect(puoInviareBroadcast(null)).toBe(false)
+    expect(puoInviareBroadcast('demo@fleofit.it', 'admin')).toBe(false)
+    expect(puoInviareBroadcast('x@y.it', null)).toBe(false)
+    expect(puoInviareBroadcast('coaching@federicoleo.it', null)).toBe(false)
+    expect(puoInviareBroadcast(null, 'admin')).toBe(false)
   })
 })
 
@@ -70,6 +72,18 @@ describe('destinatariBroadcast', () => {
     ]
     expect(destinatariBroadcast(atleti, { mittenteId: 'm1', coachingId: COACHING_ID, giaNotificati: [], escludi: ['adm'] }))
       .toEqual(['a1', 'a2'])
+  })
+  it('con ammessi limita agli id elencati (i miei atleti)', () => {
+    const atleti = ['a1', 'a2', 'a3'].map((id) => ({ id, deleted_at: null }))
+    const base = { mittenteId: 'm1', coachingId: COACHING_ID, giaNotificati: [] }
+    expect(destinatariBroadcast(atleti, { ...base, ammessi: ['a1', 'a2'] })).toEqual(['a1', 'a2'])
+    expect(destinatariBroadcast(atleti, { ...base, ammessi: [] })).toEqual([])
+    expect(destinatariBroadcast(atleti, { ...base, ammessi: 'tutti' })).toEqual(['a1', 'a2', 'a3'])
+  })
+  it('ammessi non toglie le altre esclusioni (già notificati, mittente, eliminati)', () => {
+    const atleti = [{ id: 'a1', deleted_at: null }, { id: 'a2', deleted_at: 1 }, { id: 'm1', deleted_at: null }, { id: 'a3', deleted_at: null }]
+    expect(destinatariBroadcast(atleti, { mittenteId: 'm1', coachingId: COACHING_ID, giaNotificati: ['a3'], ammessi: ['a1', 'a2', 'm1', 'a3'] }))
+      .toEqual(['a1'])
   })
   it('senza escludi si comporta come prima', () => {
     expect(destinatariBroadcast([{ id: 'a1', deleted_at: null }], { mittenteId: 'm1', coachingId: COACHING_ID, giaNotificati: [] }))

@@ -2,7 +2,7 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
-import { coachDi, destinatariNotificaCoach, idStaff, ruoloStaff } from "../_shared/staff.ts"
+import { atletiDi, coachDi, destinatariNotificaCoach, idStaff, ruoloStaff } from "../_shared/staff.ts"
 import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm, routeProva } from "./broadcast.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -175,7 +175,7 @@ serve(async (req) => {
 
     // 'broadcast' è più stretto: l'account demo è admin ma non deve notificare tutti.
     // 'broadcast_prova' segue la stessa regola: il demo non manda niente, nemmeno a sé.
-    if ((mode === 'broadcast' || mode === 'broadcast_prova') && !puoInviareBroadcast(chiamante.email)) {
+    if ((mode === 'broadcast' || mode === 'broadcast_prova') && !puoInviareBroadcast(chiamante.email, chiamante.ruoloStaff ?? null)) {
       console.warn(`send-reminders: '${mode}' NON autorizzata per ${chiamante.email ?? 'anonimo'}`);
       return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
         status: 403,
@@ -386,7 +386,7 @@ serve(async (req) => {
     if (mode === 'broadcast' && body.record_id) {
       const { data: messaggio, error: msgErr } = await supabase
         .from('messaggi_coach')
-        .select('id, testo, autore')
+        .select('id, testo, autore, destinatari')
         .eq('id', body.record_id)
         .maybeSingle();
       if (msgErr) throw msgErr;
@@ -413,7 +413,18 @@ serve(async (req) => {
         console.error('Broadcast: lista admin non leggibile, invio SENZA escludere i coach.', e);
       }
 
+      // Solo un admin può scrivere a tutti; il coach (e un admin che sceglie «i miei
+      // atleti») raggiunge solo i suoi. Una riga senza `destinatari` (colonna non
+      // ancora creata) vale 'miei': nel dubbio non si manda a tutti.
+      const ammessi = (messaggio.destinatari === 'tutti' && chiamante.ruoloStaff === 'admin')
+        ? 'tutti' as const
+        : await atletiDi(supabase, messaggio.autore);
+      if (Array.isArray(ammessi) && ammessi.length === 0) {
+        return new Response(JSON.stringify({ success: true, sent: 0, inviati: 0, motivo: 'nessun destinatario' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
       const destinatari = destinatariBroadcast(atleti || [], {
+        ammessi,
         mittenteId: messaggio.autore,
         escludi: idAdmin,
         // Account nascosto del coach: stesso id di COACHING_ID in src/lib/constants.js
