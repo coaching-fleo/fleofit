@@ -222,7 +222,7 @@ export default function NuovoMessaggio() {
   const chiediConferma = () => {
     if (!valido || demo || inVolo) return
     setConferma({
-      title: numeroAtleti == null ? (destinaTutti ? 'Mandarlo a tutti gli atleti?' : 'Mandarlo ai tuoi atleti?') : `Mandare a ${atleti(numeroAtleti)}?`,
+      title: numeroAtleti == null ? (destinaTutti ? 'Mandarlo a tutti gli atleti?' : 'Mandarlo ai tuoi atleti?') : (destinaTutti ? `Mandare a tutti i ${atleti(numeroAtleti)}?` : `Mandare ai tuoi ${atleti(numeroAtleti)}?`),
       message: 'Ognuno riceverà una notifica.',
       confirmLabel: 'Manda',
       onConfirm: inviaDavvero,

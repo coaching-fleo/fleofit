@@ -116,7 +116,7 @@ describe('Nuovo messaggio — scrivere', () => {
     expect(localStorage.getItem(CHIAVE_BOZZA)).toBeTruthy()
     fireEvent.click(invia())
 
-    const dialogo = await screen.findByRole('dialog', { name: 'Mandare a 2 atleti?' })
+    const dialogo = await screen.findByRole('dialog', { name: 'Mandare ai tuoi 2 atleti?' })
     expect(within(dialogo).getByText('Ognuno riceverà una notifica.')).toBeTruthy()
     expect(finto.chiamateA('messaggi_coach', 'insert')).toHaveLength(0)
 
@@ -163,10 +163,24 @@ describe('Nuovo messaggio — scrivere', () => {
     expect(await screen.findByRole('button', { name: 'Invia a 2' })).toBeTruthy()
     fireEvent.change(campo(), { target: { value: 'Ciao' } })
     fireEvent.click(invia())
-    const dialogo = await screen.findByRole('dialog', { name: 'Mandare a 2 atleti?' })
+    const dialogo = await screen.findByRole('dialog', { name: 'Mandare ai tuoi 2 atleti?' })
     fireEvent.click(within(dialogo).getByRole('button', { name: 'Annulla' }))
     fireEvent.click(screen.getByRole('radio', { name: 'Tutti gli atleti' }))
     expect(await screen.findByRole('button', { name: 'Invia a 5' })).toBeTruthy()
+  })
+
+  it('il confirm con il numero noto dice di chi sono gli atleti', async () => {
+    finto.dati.athletes = ['a1', 'a2', 'a3', 'a4', 'a5'].map(id => ({ id, deleted_at: null, notes: '' }))
+    monta({ role: 'admin' })
+    await screen.findByRole('button', { name: 'Invia a 2' })
+    fireEvent.change(campo(), { target: { value: 'Ciao' } })
+    fireEvent.click(invia())
+    const d = await screen.findByRole('dialog', { name: 'Mandare ai tuoi 2 atleti?' })
+    fireEvent.click(within(d).getByRole('button', { name: 'Annulla' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Tutti gli atleti' }))
+    await screen.findByRole('button', { name: 'Invia a 5' })
+    fireEvent.click(invia())
+    expect(await screen.findByRole('dialog', { name: 'Mandare a tutti i 5 atleti?' })).toBeTruthy()
   })
 
   it('senza la tabella coach_atleti nessun numero: testo generico, mai uno sbagliato', async () => {
