@@ -1,6 +1,8 @@
 // ⚠️ PRIMO import, apposta: legge `type=recovery` dall'indirizzo prima che
 // `createClient` lo cancelli (src/lib/recuperoPassword.js).
 import './lib/recuperoPassword'
+// Idem per l'errore di un link della mail (src/lib/esitoLink.js).
+import './lib/esitoLink'
 import { createClient } from '@supabase/supabase-js'
 import { clientDemo } from './supabaseDemo'
 

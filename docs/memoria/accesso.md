@@ -278,3 +278,27 @@ preso: è lo stesso genere di difetto del conto alla rovescia del cestino
 mutazione: sette mutazioni provate, sette prese.
 
 ---
+
+## Il link della mail che torna senza sessione (16/10/2026)
+
+Segnalazione: registrazione col codice → «Controlla la mail» → link della mail →
+l'app si riapre **e resta ferma, senza avvisi**. Al login dopo, con email e password,
+entra e chiede di creare il profilo.
+
+- La mail era **confermata**: è il ritorno nell'app che non portava i token. Supabase
+  rimanda `#error=…&error_code=otp_expired` quando il link è già stato aperto (un
+  secondo tocco, o l'antivirus della posta che lo visita prima e così conferma
+  l'indirizzo). DeeplinkHandler mandava a `/login` con quell'hash e il login non lo
+  guardava: nessun messaggio.
+- Non era il database: le policy dell'atleta su `invitation_codes` (riscatto) sono
+  rimaste uguali anche con la migrazione multi-coach.
+- Ora `src/lib/esitoLink.js` tiene l'errore finché il login non lo mostra
+  («Link scaduto o già usato» → entra con email e password, o rifai la
+  registrazione). Sull'app lo segnala DeeplinkHandler per ogni `fleofit://` che non
+  apre una sessione; sul web si legge dall'indirizzo al caricamento, **prima** di
+  `createClient` (stesso trucco di `recuperoPassword.js`). Se Supabase manda un
+  dettaglio diverso, l'avviso lo riporta tra parentesi: serve a capire la causa vera
+  alla prossima segnalazione.
+- ⚠️ Non verificato sul telefono. Resta da guardare, se ricapita con un link **mai
+  aperto prima**: gli URL di redirect ammessi in Supabase (Authentication → URL
+  Configuration) devono coprire `fleofit://login-callback?inviteCode=…`.

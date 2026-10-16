@@ -66,6 +66,7 @@ import { scriviJson } from './lib/offlineQueue'
 import { sincronizzaBadge } from './lib/badge'
 import { gestisciIndietro, puoTornareIndietro } from './lib/indietroAndroid'
 import { eUnLinkDiRecupero, recuperoInCorso, avviaRecupero, chiudiRecupero } from './lib/recuperoPassword'
+import { leggiErroreLink, segnalaLinkFallito } from './lib/esitoLink'
 
 function Onboarding({ user, onComplete }) {
   // L'onboarding del ruolo coach è disattivato: qui il ruolo è sempre 'athlete'.
@@ -534,7 +535,11 @@ function DeeplinkHandler() {
             if (!error) return vaiA.current(recupero ? '/login' : '/', { replace: true });
             if (recupero) chiudiRecupero();
           }
-          
+
+          // 🔴 Il link è tornato SENZA una sessione: prima il login si apriva
+          // muto e l'utente restava fermo sulla schermata di prima
+          // (src/lib/esitoLink.js). Ora il login lo dice, con cosa fare.
+          segnalaLinkFallito(leggiErroreLink(url.search, url.hash));
           vaiA.current(`/login${url.search}${url.hash}`, { replace: true });
         }
       }));

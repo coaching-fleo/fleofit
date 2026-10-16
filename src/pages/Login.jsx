@@ -9,6 +9,7 @@ import { SignInWithApple } from '@capacitor-community/apple-sign-in'
 import { generaNonce, nomeDaApple, annullatoDallUtente } from '../lib/appleLogin'
 import { leggiJson } from '../lib/offlineQueue'
 import { recuperoInCorso, avviaRecupero, chiudiRecupero } from '../lib/recuperoPassword'
+import { ascoltaErroreLink, messaggioErroreLink } from '../lib/esitoLink'
 import { vibraErrore, vibraSuccesso } from '../lib/aptica'
 import {
   normalizzaCodice, codiceCompleto, LUNGHEZZA_CODICE,
@@ -121,6 +122,13 @@ export default function Login() {
     setInvito(data.code)
     vibraSuccesso()
   }, [])
+
+  // Un link della mail tornato senza sessione: lo si dice, invece di restare
+  // muti sulla schermata di prima (src/lib/esitoLink.js).
+  useEffect(() => ascoltaErroreLink((errore) => {
+    vibraErrore()
+    setAlertInfo(messaggioErroreLink(errore))
+  }), [])
 
   useEffect(() => {
     // 🔴 Il recupero si legge da `recuperoInCorso()` e non dall'hash: sul web
