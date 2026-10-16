@@ -1,3 +1,4 @@
+import { eStaff } from '../lib/ruoli'
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
 import { useNavigate, useNavigationType } from 'react-router-dom'
 import { Settings, CheckCircle2, X, Edit, Trash2, AlertTriangle, Bell, BellRing, WifiOff, RefreshCw, Megaphone } from 'lucide-react'
@@ -591,7 +592,7 @@ export default function Home() {
         promises.push(fetchNotifications())
       }
 
-      if (role === 'admin' || role === 'coach') {
+      if (eStaff(role)) {
         // La finestra della Home coach: indietro fino a FINESTRA_STORICO per
         // sapere da quanto un atleta è fermo, avanti di GIORNI_COPERTURA per
         // sapere chi è già programmato. Attività di oggi e ieri, allenamenti
@@ -711,7 +712,7 @@ setNotifications(prev => {
 
        // Rende visibili gli atleti LIVE nella dashboard
     let presenceRoom;
-    if (role === 'admin' || role === 'coach') {
+    if (eStaff(role)) {
       presenceRoom = supabase.channel('global_live_workouts', {
         config: {
           presence: {
@@ -1228,7 +1229,7 @@ setNotifications(prev => {
 
         // ⚠️ Il ruolo che esiste davvero è `admin`: l'onboarding di `coach` è
         // disattivato in App.jsx. Fino al 28/08/2026 questo ramo guardava
-        // `role === 'athlete' || role === 'admin'`, quindi il coach vedeva la
+        // la coppia atleta/admin (solo quella), quindi il coach vedeva la
         // TESTATA DELL'ATLETA — «Buongiorno, Federico», la settimana ISO e la
         // frase motivazionale del giorno — sopra una pagina che parla di
         // dodici persone. `HeaderCoach` esisteva già, ed era codice

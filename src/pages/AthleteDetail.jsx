@@ -1,3 +1,4 @@
+import { eStaff } from '../lib/ruoli'
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
 import { leggiTutta } from '../lib/backup'
@@ -200,7 +201,7 @@ export default function AthleteDetail() {
     const { error } = await supabase.from('athlete_workouts').update({ voice_note_url: urlData.publicUrl }).eq('id', athleteWorkoutId)
     if (!error) {
       setWorkouts(workouts.map(w => w.id === athleteWorkoutId ? { ...w, voice_note_url: urlData.publicUrl } : w))
-      if (role === 'admin') {
+      if (eStaff(role)) {
         supabase.functions.invoke('send-reminders', {
           body: { mode: 'voice_note', record_id: athleteWorkoutId }
         }).catch(console.error)
@@ -1356,7 +1357,7 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
               <p className="text-brand text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Nota Vocale del Coach</p>
               <CustomAudioPlayer src={entry.voice_note_url} onDelete={() => onDeleteVoiceNote(entry.id)} role={role} />
             </div>
-          ) : role === 'admin' ? (
+          ) : eStaff(role) ? (
             <div className="mb-3">
               <p className="text-brand text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Invia Nota Vocale</p>
               <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />
@@ -1777,7 +1778,7 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
             <p className="text-brand text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Nota Vocale del Coach</p>
             <CustomAudioPlayer src={entry.voice_note_url} onDelete={() => onDeleteVoiceNote(entry.id)} role={role} />
           </div>
-        ) : role === 'admin' ? (
+        ) : eStaff(role) ? (
           <div className="mb-3">
             <p className="text-brand text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Invia Nota Vocale</p>
             <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />

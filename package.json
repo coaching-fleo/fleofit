@@ -13,6 +13,7 @@
     "ios": "npm run build && npx cap sync ios",
     "android": "npm run build && npx cap sync android",
     "demo": "VITE_DEMO=1 vite --host",
+    "demo:coach": "VITE_DEMO=1 VITE_DEMO_RUOLO=coach vite --host --port 5176 --strictPort",
     "demo:atleta": "VITE_DEMO=1 VITE_DEMO_ATLETA=${DEMO_ATLETA:-at-sara} vite --host --port 5175 --strictPort",
     "postinstall": "patch-package"
   },

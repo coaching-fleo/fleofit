@@ -25,7 +25,7 @@
 //     localStorage.removeItem('fleofit_demo_db')
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { semi, VERSIONE_SEME } from './demoSemi'
+import { semi, VERSIONE_SEME, COACH_DEMO } from './demoSemi'
 
 const CHIAVE = 'fleofit_demo_db'
 
@@ -268,10 +268,14 @@ function query(tabella) {
 // giorno 1. Con `VITE_DEMO_ATLETA=at-sara npm run demo` più l'anteprima
 // attiva, la Home è quella di Sara — storico, settimana, allenamento di oggi.
 // L'email resta quella admin, o si perde l'accesso alle schermate coach.
+//
+// `VITE_DEMO_RUOLO=coach` (npm run demo:coach) entra come il coach finto di
+// demoSemi.js (ruolo `coach` in `staff`): l'interfaccia senza le voci da admin.
+const COME_COACH = import.meta.env.VITE_DEMO_RUOLO === 'coach'
 const UTENTE = {
-  id: import.meta.env.VITE_DEMO_ATLETA || '0118e43f-8791-4fd6-8032-bee028334c99',
-  email: 'coaching@federicoleo.it',
-  user_metadata: { first_name: 'Federico' },
+  id: import.meta.env.VITE_DEMO_ATLETA || (COME_COACH ? COACH_DEMO.id : '0118e43f-8791-4fd6-8032-bee028334c99'),
+  email: COME_COACH ? COACH_DEMO.email : 'coaching@federicoleo.it',
+  user_metadata: { first_name: COME_COACH ? 'Coach' : 'Federico' },
   // Iscritto da 20 giorni: serve alla regola «dalla tua iscrizione» della
   // bacheca «Dal coach» (i semi hanno un avviso di 30 giorni fa).
   created_at: new Date(Date.now() - 20 * 86400000).toISOString(),

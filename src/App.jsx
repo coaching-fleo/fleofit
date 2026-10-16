@@ -56,10 +56,11 @@ export const useAuth = () => useContext(AuthContext)
 // l'app è in revisione, altrimenti il revisore vede solo la parte atleta.
 // ⚠️ La stessa lista è ri-hardcodata in supabase/functions/send-reminders/index.ts:
 // se aggiungi un indirizzo qui, aggiungilo anche lì e rideploya la function.
-export const ADMIN_EMAILS = ['coaching@federicoleo.it', 'alessandro.patrone@hotmail.it', 'federico_leo@hotmail.it', 'federico.leo88@gmail.com', 'demo@fleofit.it']
+export { ADMIN_EMAILS }
 import { User, Upload } from 'lucide-react'
 import { AlertHost } from './components/CustomModals'
 import { mostraErrore } from './lib/alert'
+import { ADMIN_EMAILS, leggiRuolo, eStaff } from './lib/ruoli'
 import { rinfrescaTokenPush } from './lib/pushToken'
 import { scriviJson } from './lib/offlineQueue'
 import { sincronizzaBadge } from './lib/badge'
@@ -240,7 +241,9 @@ function ProtectedRoute() {
   const handleSession = async (session) => {
     setSession(session)
     if (session?.user) {
-      const isAdmin = ADMIN_EMAILS.includes(session.user.email?.toLowerCase())
+      // Il ruolo viene dalla tabella `staff` (riserva: ADMIN_EMAILS), src/lib/ruoli.js.
+      const ruoloDb = await leggiRuolo(supabase, session.user.email)
+      const isAdmin = ruoloDb !== null
 
       // 🔴 UNA lettura sola della riga atleta, e sta in testa apposta.
       // Erano due `select` sulla STESSA riga, per due domande diverse —
@@ -324,12 +327,12 @@ function ProtectedRoute() {
 
       if (isAdmin) {
         const override = localStorage.getItem('adminRoleOverride')
-        if (override === 'athlete') {
+        if (override === 'athlete' && ruoloDb === 'admin') {
           r = 'athlete'
           setRole('athlete')
         } else {
-          r = 'admin'
-          setRole('admin')
+          r = ruoloDb
+          setRole(ruoloDb)
         }
       } else if (!r) {
         setNeedsOnboarding(true)
@@ -339,7 +342,7 @@ function ProtectedRoute() {
         setRole(r)
       }
 
-      if (r === 'athlete' || r === 'admin') {
+      if (r === 'athlete' || eStaff(r)) {
         // ⚠️ Nessuna seconda lettura: è la riga presa in testa. Resta `null`
         // anche dopo il riscatto di un codice invito — la riga `athletes` in
         // quel momento non esiste ancora — ed è ciò che manda all'onboarding,
@@ -389,8 +392,8 @@ function ProtectedRoute() {
 
   if (needsOnboarding) {
     return <>{apertura}<Onboarding user={session.user} onComplete={async (newRole) => {
-      const isAdmin = ADMIN_EMAILS.includes(session.user.email?.toLowerCase())
-      setRole(isAdmin ? 'admin' : newRole)
+      const ruoloDb = await leggiRuolo(supabase, session.user.email)
+      setRole(ruoloDb ?? newRole)
       setNeedsOnboarding(false)
     }} /></>
   }

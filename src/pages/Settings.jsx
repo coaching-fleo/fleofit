@@ -7,7 +7,8 @@ import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
-import { useAuth, ADMIN_EMAILS } from '../App'
+import { useAuth } from '../App'
+import { eStaff, eAdmin } from '../lib/ruoli'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
 import { esportaTutto, ripristinaTutto, scriviTutta } from '../lib/backup'
 import { Capacitor } from '@capacitor/core'
@@ -43,8 +44,11 @@ export default function Settings() {
   const { role, user, nome } = useAuth()
   // Sul desktop (solo coach, src/useDesktop.js) la pagina va su due colonne.
   const desktop = eDesktop(useSchermoLargo(), role)
-  const isAdminEmail = ADMIN_EMAILS.includes(user?.email?.toLowerCase())
   const isSimulatingAthlete = localStorage.getItem('adminRoleOverride') === 'athlete'
+  // Solo admin (D9). Mentre si simula l'atleta il ruolo è `athlete`, ma
+  // l'interruttore deve restare per tornare indietro: l'override lo applica
+  // `App.jsx` ai soli admin, quindi se c'è, chi guarda è un admin.
+  const adminReale = eAdmin(role) || (role === 'athlete' && isSimulatingAthlete)
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
   // Account nato da Apple o Google: niente password attuale da chiedere, e la
   // riga spiega a cosa serve sceglierne una (lib/rigaImpostazioni.js).
@@ -58,7 +62,7 @@ export default function Settings() {
   // Parte già a `true` per il coach: la lista si chiede al montaggio, e
   // accenderlo dentro `caricaCodici` renderebbe quella funzione un setState
   // sincrono dentro un effetto (react-hooks/set-state-in-effect).
-  const [codiciInCaricamento, setCodiciInCaricamento] = useState(role === 'admin')
+  const [codiciInCaricamento, setCodiciInCaricamento] = useState(eStaff(role))
   const [conteggi, setConteggi] = useState({ atleti: null, workout: null })
   const [ultimoExport, setUltimoExport] = useState(() => {
     try { return localStorage.getItem(CHIAVE_ULTIMO_EXPORT) } catch { return null }
@@ -106,7 +110,7 @@ export default function Settings() {
    * quindi nessuna riga scaricata.
    */
   useEffect(() => {
-    if (role !== 'admin') return
+    if (!eAdmin(role)) return
     let vivo = true
     Promise.all([
       supabase.from('athletes').select('id', { count: 'exact', head: true }),
@@ -155,7 +159,7 @@ export default function Settings() {
   }, [])
 
   useEffect(() => {
-    if (role === 'admin') caricaCodici()
+    if (eStaff(role)) caricaCodici()
   }, [role, caricaCodici])
   const handleExportFull = async () => {
     setOperazione('export')
@@ -601,7 +605,7 @@ export default function Settings() {
           dettaglio={primaPassword ? 'Per entrare anche dal computer, con email e password' : 'Aggiorna la password di accesso'}
           onClick={() => setPasswordModalOpen(true)} />
 
-        {isAdminEmail && (
+        {adminReale && (
           <>
             <Separatore />
             {/* Un interruttore e non un bottone: è uno stato del dispositivo,
@@ -620,12 +624,14 @@ export default function Settings() {
   const pCoach = (
     <>
       {/* ── Solo coach ───────────────────────────────────────────────────── */}
-      {role === 'admin' && (
+      {eStaff(role) && (
         <>
           <Sezione etichetta="Solo coach">
+            {/* Per un coach la lista porta solo i suoi codici: lo decide la RLS. */}
             <RigaAzione icona={Ticket} tono="brand" titolo="Codici invito"
               dettaglio={riassuntoCodici(codici) || 'Genera e condividi gli inviti'}
               onClick={() => setFoglioCodiciAperto(true)} />
+            {eAdmin(role) && (<>
             <Separatore />
             <RigaAzione icona={HardDriveDownload} titolo="Esporta database"
               dettaglio={riassuntoBackup({ ultimoExport, atleti: conteggi.atleti, workout: conteggi.workout })}
@@ -635,19 +641,23 @@ export default function Settings() {
               dettaglio="Un solo profilo da file .json. L'esportazione si fa dalla sua scheda."
               onClick={() => athleteImportRef.current?.click()}
               occupato={operazione === 'importAtleta'} />
+            </>)}
           </Sezione>
 
           {/* Fuori dal gruppo, rosso, e con la sua cornice: prima aveva lo
               stesso aspetto di «Esporta», cioè due righe grigie identiche di
               cui una può cancellare il lavoro di un anno. */}
-          <RigaPericolo icona={AlertTriangle} titolo="Ripristina database totale"
-            dettaglio="Sovrascrive tutti i dati esistenti"
-            onClick={() => fullImportRef.current?.click()}
-            occupato={operazione === 'importTotale'} />
+          {eAdmin(role) && (
+            <RigaPericolo icona={AlertTriangle} titolo="Ripristina database totale"
+              dettaglio="Sovrascrive tutti i dati esistenti"
+              onClick={() => fullImportRef.current?.click()}
+              occupato={operazione === 'importTotale'} />
+          )}
 
           {/* I test delle push non sono impostazioni: sono strumenti, e sono
               gli unici due comandi della pagina che spediscono qualcosa a
               tutti gli atleti. Stanno in fondo, chiusi. */}
+          {eAdmin(role) && (
           <Sezione>
             <RigaPieghevole piccola icona={Wrench} titolo="Strumenti sviluppo"
               aperto={sviluppoAperto} onToggle={() => setSviluppoAperto(v => !v)}>
@@ -665,6 +675,7 @@ export default function Settings() {
               </div>
             </RigaPieghevole>
           </Sezione>
+          )}
         </>
       )}
     </>
@@ -704,7 +715,7 @@ export default function Settings() {
 
       <TestataImpostazioni onIndietro={desktop ? null : indietro} />
 
-      {desktop && role === 'admin' ? (
+      {desktop && eStaff(role) ? (
         // Desktop: a sinistra chi sei e il tuo account, a destra gli strumenti
         // del coach (inviti, backup, ripristino), che sono il grosso del lavoro
         // da scrivania. Solo `admin` li ha: per gli altri la colonna è una.

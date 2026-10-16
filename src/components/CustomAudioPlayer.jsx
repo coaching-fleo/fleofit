@@ -4,6 +4,7 @@
 // riproduce le note vocali fra coach e atleta.
 
 
+import { eStaff } from '../lib/ruoli'
 import { useState, useRef } from 'react'
 import { Play, Pause, Trash2 } from 'lucide-react'
 import { BRAND } from '../lib/colori'
@@ -78,7 +79,7 @@ export default function CustomAudioPlayer({ src, onDelete, role }) {
             <span className="text-[11px] text-muted font-medium">{duration}</span>
          </div>
       </div>
-      {role === 'admin' && onDelete && (
+      {eStaff(role) && onDelete && (
         <button aria-label="Elimina la nota vocale" onClick={onDelete} className="w-11 h-11 flex items-center justify-center text-muted hover:text-red-500 transition shrink-0" title="Elimina vocale">
           <Trash2 size={18} />
         </button>

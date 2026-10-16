@@ -24,7 +24,7 @@ import {
   VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
 } from '../supabase/functions/estrai-note/regole.ts'
 
-export const VERSIONE_SEME = 11
+export const VERSIONE_SEME = 12
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -430,6 +430,21 @@ const messaggi_coach = () => [
   { id: 'mc-4', testo: 'Ottimo lavoro a tutti nella simulazione di sabato. Domani riposo vero: niente corsetta «per sicurezza».', fissato: false, autore: COACH, creato_at: fa(0, 5), modificato_at: fa(0, 2) },
 ]
 
+/** Chi è staff (D1 dello spec multi-coach) e il coach finto dell'ambiente di prova. */
+export const COACH_DEMO = { id: 'coach-demo', email: 'coach.demo@fleofit.it' }
+const staff = () => [
+  { email: 'coaching@federicoleo.it', ruolo: 'admin' },
+  { email: 'alessandro.patrone@hotmail.it', ruolo: 'admin' },
+  { email: 'federico.leo88@gmail.com', ruolo: 'admin' },
+  { email: 'demo@fleofit.it', ruolo: 'admin' },
+  { email: 'federico_leo@hotmail.it', ruolo: 'coach' },
+  { email: COACH_DEMO.email, ruolo: 'coach' },
+]
+// Al coach finto tre atleti. ⚠️ Il filtro RLS NON esiste nel finto database:
+// serve a vedere l'interfaccia del coach, non la sicurezza.
+const coach_atleti = () => ['at-sara', 'at-luca', 'at-giulia']
+  .map(athlete_id => ({ athlete_id, coach_id: COACH_DEMO.id, creato_at: fa(60) }))
+
 /** Il database iniziale. Chiamata a ogni azzeramento, così le date si rifanno. */
 export function semi() {
   // Una volta sola: gli id delle assegnazioni avanzano a ogni chiamata, e gli
@@ -447,6 +462,8 @@ export function semi() {
     personal_records: personal_records.map(p => ({ ...p })),
     come_stai: come_stai(),
     messaggi_coach: messaggi_coach(),
+    staff: staff(),
+    coach_atleti: coach_atleti(),
     push_subscriptions: [],
     tv_sessions: [],
   }

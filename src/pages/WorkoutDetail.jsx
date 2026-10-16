@@ -1,3 +1,4 @@
+import { eStaff } from '../lib/ruoli'
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
@@ -745,7 +746,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     
     if (!error) {
       setVoiceNoteUrl(urlData.publicUrl)
-      if (role === 'admin') {
+      if (eStaff(role)) {
         supabase.functions.invoke('send-reminders', {
           body: { mode: 'voice_note', record_id: athleteWorkoutId }
         }).catch(console.error)
@@ -1821,13 +1822,13 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const pVocale = (
     <>
       {/* NOTA VOCALE */}
-      {athleteWorkoutId && (role === 'admin' || voiceNoteUrl) && (
+      {athleteWorkoutId && (eStaff(role) || voiceNoteUrl) && (
         <CardNota
-          etichetta={role === 'admin' ? `Vocale per ${currentAthleteName || 'l’atleta'}` : 'Vocale del coach'}
+          etichetta={eStaff(role) ? `Vocale per ${currentAthleteName || 'l’atleta'}` : 'Vocale del coach'}
           icona={Mic} colore={BRAND}>
           {voiceNoteUrl ? (
             <CustomAudioPlayer src={voiceNoteUrl} onDelete={deleteVoiceNote} role={role} />
-          ) : role === 'admin' ? (
+          ) : eStaff(role) ? (
             <VoiceRecorder onSave={uploadVoiceNote} />
           ) : null}
         </CardNota>
@@ -1896,7 +1897,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 fatto={a.status === 'completed'}
                 selezionata={queryAthleteId === a.athletes?.id}
                 onApri={() => navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`, { replace: true })}
-                azione={role === 'admin' ? (
+                azione={eStaff(role) ? (
                   <button aria-label={`Rimuovi l'assegnazione di ${a.athletes?.name || 'atleta'}`}
                     onClick={() => handleRemoveAssignment(a.id)}
                     className="shrink-0 p-1.5 text-[#5b6070] hover:text-red-500 transition rounded-lg hover:bg-white/[.06]">
