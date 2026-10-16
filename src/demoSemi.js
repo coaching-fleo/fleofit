@@ -24,7 +24,7 @@ import {
   VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
 } from '../supabase/functions/estrai-note/regole.ts'
 
-export const VERSIONE_SEME = 12
+export const VERSIONE_SEME = 13
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -135,7 +135,8 @@ const A = (id, name, surname, extra = {}) => ({
 })
 
 const atleti = () => [
-  A(COACH, 'Federico', 'Leo'),                               // il coach, nascosto dalla rubrica
+  A(COACH, 'Federico', 'Leo'),
+  A('coach-demo', 'Coach', 'Demo'),                          // il coach finto (VITE_DEMO_RUOLO=coach): fuori dalle rubriche, ma ProtectedRoute vuole la riga                               // il coach, nascosto dalla rubrica
   A('at-marco', 'Marco', 'Rossi'),                           // → salto di carico su un workout pesante
   A('at-luca', 'Luca', 'Bianchi'),                           // → seduta dura il giorno prima/dopo
   A('at-giulia', 'Giulia', 'Neri'),                          // → bias: segna 8 dove il coach prevede 6

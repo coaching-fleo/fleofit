@@ -148,6 +148,7 @@ function query(tabella) {
   let dati = null
   let vuoleRisultato = false
   let conflitto = null
+  let perId = false
 
   const righeTabella = () => (db()[tabella] ||= [])
 
@@ -194,6 +195,10 @@ function query(tabella) {
     }
 
     let righe = filtrate()
+    // Il profilo del coach finto non è un atleta: ProtectedRoute lo legge per id
+    // (serve a non finire nell'onboarding), ma dalle rubriche resta fuori, come
+    // l'account COACHING_ID in produzione.
+    if (tabella === 'athletes' && !perId) righe = righe.filter(r => r.id !== COACH_DEMO.id)
     for (const o of [...ordinamenti].reverse()) {
       righe = righe.sort((a, b) => (o.crescente ? 1 : -1) * confronta(a[o.colonna], b[o.colonna]))
     }
@@ -212,7 +217,7 @@ function query(tabella) {
     upsert(v, opts) { azione = 'upsert'; dati = v; conflitto = opts?.onConflict || null; return q },
     delete() { azione = 'delete'; return q },
 
-    eq(c, v) { filtri.push(r => String(r[c]) === String(v)); return q },
+    eq(c, v) { if (c === 'id') perId = true; filtri.push(r => String(r[c]) === String(v)); return q },
     neq(c, v) { filtri.push(r => String(r[c]) !== String(v)); return q },
     gt(c, v) { filtri.push(r => r[c] != null && r[c] > v); return q },
     gte(c, v) { filtri.push(r => r[c] != null && r[c] >= v); return q },

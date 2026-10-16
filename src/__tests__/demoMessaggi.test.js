@@ -28,8 +28,8 @@ describe('i messaggi della demo', () => {
     expect(v[0].fissato).toBe(true)
   })
 
-  it('la versione dei semi è salita a 12', () => {
-    expect(VERSIONE_SEME).toBe(12)
+  it('la versione dei semi è salita a 13', () => {
+    expect(VERSIONE_SEME).toBe(13)
   })
 })
 
@@ -46,5 +46,16 @@ describe('demo: insert su messaggi_coach', () => {
   it('i valori passati vincono sui default', async () => {
     const { data } = await clientDemo().from('messaggi_coach').insert({ testo: 'x', fissato: true }).select().single()
     expect(data.fissato).toBe(true)
+  })
+})
+
+describe('demo: il coach finto', () => {
+  beforeEach(() => { vi.spyOn(console, 'info').mockImplementation(() => {}); azzeraDemo() })
+
+  it('ha la riga athletes (ProtectedRoute la vuole) ma non compare nelle rubriche', async () => {
+    const perId = await clientDemo().from('athletes').select('id, name').eq('id', 'coach-demo').maybeSingle()
+    expect(perId.data?.name).toBe('Coach')
+    const lista = await clientDemo().from('athletes').select('id')
+    expect(lista.data.some(a => a.id === 'coach-demo')).toBe(false)
   })
 })

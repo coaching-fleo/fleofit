@@ -33,12 +33,10 @@ describe('un coach senza dati', () => {
     expect(await screen.findByText('Nessun atleta ancora')).toBeTruthy()
   })
 
-  it('Home: si monta senza errori e senza chiamare «Buongiorno» da atleta', async () => {
-    const errori = vi.spyOn(console, 'error').mockImplementation(() => {})
+  it('Home: la testata dell\'atleta non c\'è, c\'è il cruscotto coach vuoto', async () => {
     montaPagina(<Home />, { role: 'coach' })
-    await waitFor(() => expect(document.body.textContent.length).toBeGreaterThan(0))
-    expect(errori).not.toHaveBeenCalled()
-    errori.mockRestore()
+    expect(await screen.findByText('Nessun atleta da programmare.')).toBeTruthy()
+    expect(screen.queryByText(/Buongiorno|Buon pomeriggio|Buonasera/)).toBeNull()
   })
 
   it('Messaggi: bacheca vuota, stato vuoto', async () => {
