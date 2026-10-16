@@ -385,3 +385,42 @@ describe('La password per chi è entrato con Apple', () => {
     expect(screen.queryByLabelText('La tua email di accesso')).not.toBeInTheDocument()
   })
 })
+
+describe('La voce «Coach» (multi-coach, solo admin)', () => {
+  const montaRuolo = (role) => montaPagina(<Settings />, {
+    role, user: { ...UTENTE, email: 'federico_leo@hotmail.it' },
+  })
+
+  it('🔴 un coach non vede «Coach» né il backup: sono dell\'admin', async () => {
+    montaRuolo('coach')
+    await screen.findByRole('button', { name: /Codici invito/i })
+    expect(screen.queryByRole('button', { name: /^Coach/ })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Esporta database/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Importa backup atleta/i)).not.toBeInTheDocument()
+  })
+
+  it('l\'admin la vede, accanto al backup', async () => {
+    montaRuolo('admin')
+    expect(await screen.findByRole('button', { name: /^Coach/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Esporta database/i })).toBeInTheDocument()
+  })
+
+  it('prima della migrazione il foglio lo dice e non rompe niente', async () => {
+    finto.supabase.rpc = vi.fn(() => Promise.resolve({ data: null, error: { message: 'function not found' } }))
+    montaRuolo('admin')
+    await userEvent.click(await screen.findByRole('button', { name: /^Coach/ }))
+    expect(await screen.findByText(/sarà disponibile dopo l'aggiornamento del database/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Chiudi' })).toBeInTheDocument()
+  })
+
+  it('con l\'elenco: ruolo, numero di atleti, e «Togli» solo per i coach', async () => {
+    finto.supabase.rpc = vi.fn(() => Promise.resolve({ data: [
+      { email: 'coaching@federicoleo.it', ruolo: 'admin', user_id: 'u-a', nome: 'Federico Leo' },
+      { email: 'federico_leo@hotmail.it', ruolo: 'coach', user_id: 'u-c', nome: null },
+    ], error: null }))
+    montaRuolo('admin')
+    await userEvent.click(await screen.findByRole('button', { name: /^Coach/ }))
+    expect(await screen.findByText('Federico Leo')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /^Togli/ })).toHaveLength(1)
+  })
+})

@@ -24,7 +24,7 @@ import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
 import { TestataReportDesktop } from '../components/ReportDesktop'
-import { COACHING_ID } from '../lib/constants'
+import { escludiDallaRubrica } from '../lib/constants'
 import { FINESTRA_STORICO } from '../lib/statisticheCoach'
 import {
   reportSettimanale, settimanaReport, SETTIMANE_CRONICO, FEEDBACK_IN_REPORT,
@@ -49,7 +49,7 @@ export default function WeeklyReport() {
   const [feedbackEspanso, setFeedbackEspanso] = useState(false)
   const navigate = useNavigate()
   const indietro = useIndietro('/')
-  const { role } = useAuth()
+  const { role, user } = useAuth()
   // Sul desktop (solo coach) la stessa pagina va su due colonne: i pezzi sono
   // gli stessi del telefono, cambia solo come sono disposti.
   const desktop = eDesktop(useSchermoLargo(), role)
@@ -98,7 +98,7 @@ export default function WeeklyReport() {
       // un atleta che si segue: se resta dentro compare fra chi «richiede
       // attenzione» ogni volta che il coach non si allena, e falsa aderenza,
       // carico e copertura. Stesso filtro di `Athletes` e della Home coach.
-      setAtleti((atletiRes.data || []).filter(x => x?.id && x.id !== COACHING_ID))
+      setAtleti(escludiDallaRubrica(atletiRes.data, user?.id).filter(x => x?.id))
       setAssegnazioni(assRes.data || [])
       // L'istante si fissa quando i dati arrivano, non durante il render: da
       // qui dipendono la settimana, chi è fermo e ogni finestra del report, e
@@ -109,7 +109,7 @@ export default function WeeklyReport() {
 
     carica()
     return () => { vivo = false }
-  }, [role, scarto])
+  }, [role, scarto, user?.id])
 
   const oggi = useMemo(() => new Date(caricatoIl), [caricatoIl])
 

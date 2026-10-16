@@ -39,7 +39,7 @@ import { atletiFermi, allenamentiScaduti, copertura, feedbackNuovi, squadraDelGi
          contaInPausa, FINESTRA_STORICO, GIORNI_COPERTURA, GIORNI_GARE, GIORNI_SEGNALI } from '../lib/statisticheCoach'
 import { leggiComeStaiFra } from '../lib/comeStai'
 import { leggiEstrattiDal } from '../lib/noteEstratte'
-import { COACHING_ID } from '../lib/constants'
+import { escludiDallaRubrica } from '../lib/constants'
 import { visibiliPer, daMostrareInHome, CHIAVE_VISTO } from '../lib/messaggiCoach'
 import { CardDalCoach } from '../components/MessaggiUI'
 import { daRiaprire } from '../lib/ricercaSospesa'
@@ -634,7 +634,7 @@ export default function Home() {
             // non è un atleta che si segue: se resta dentro, compare fra
             // "richiedono attenzione" ogni volta che il coach non si allena, e
             // falsa sia il totale sia la copertura. Stesso filtro di Athletes.jsx.
-            const atleti = (aRes.data || []).filter(a => a.id !== COACHING_ID)
+            const atleti = escludiDallaRubrica(aRes.data, user?.id)
             aCountCoach = atleti.length
             setAtletiCoach(atleti)
             setAssegnazioniCoach(awRes.data || [])

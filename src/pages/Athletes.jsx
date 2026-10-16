@@ -18,7 +18,7 @@ import { format, startOfDay, subDays } from 'date-fns'
 import { supabase } from '../supabaseClient'
 import { User } from 'lucide-react'
 import { useAuth } from '../App'
-import { COACHING_ID } from '../lib/constants'
+import { escludiDallaRubrica } from '../lib/constants'
 import { inPausa } from '../lib/pausa'
 import { mostraErrore, mostraSuccesso } from '../lib/alert'
 import { atletiFermi, GIORNI_FERMO, FINESTRA_STORICO } from '../lib/statisticheCoach'
@@ -94,7 +94,7 @@ export default function Athletes() {
 
     // Nascondiamo il profilo di coaching@federicoleo.it a TUTTI gli admin
     // usando il suo ID univoco.
-    const tutti = (atletiRes.data || []).filter(x => x?.id && x.id !== COACHING_ID)
+    const tutti = escludiDallaRubrica(atletiRes.data, user?.id).filter(x => x?.id)
 
     setAthletes(tutti.filter(x => x.deleted_at == null))
     // Gli atleti eliminati restano recuperabili per 7 giorni, poi il cron

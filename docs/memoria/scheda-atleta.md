@@ -182,3 +182,17 @@ motivazione, viaggio, lavoro, con una tacca sui giorni a RPE ≥ 8).
    `src/demoSemi.js`), passati dalla stessa `validaEstrazione`: Elena (tempi sulle
    wall balls), Giulia (sensazioni e burpees saltati), Luca (stanchezza). Una nota
    scritta durante la demo resta «in analisi»: lì non c'è IA.
+
+## 9-coach-dell-atleta. La riga «Coach: <nome>» (multi-coach, 16/10/2026)
+
+Solo per `eAdmin(role)` e solo sulla scheda di un altro (non sul proprio profilo): sotto
+l'identità, `RigaCoach` (`SchedaAtletaUI.jsx`) dice di chi è l'atleta e apre `FoglioCoach`
+con i membri di `elenco_staff()` che hanno un account. Scegliere un altro coach è uno
+**spostamento**: `assegnaAtleta` cancella la coppia vecchia in `coach_atleti` e inserisce la
+nuova (la chiave è `(athlete_id, coach_id)`: mai `onConflict: 'athlete_id'`). Se l'inserimento
+fallisce rimette il vecchio coach. Prima della migrazione la lettura fallisce e la riga non
+compare (nessun errore a schermo).
+- **Chi guarda non è un atleta da seguire.** Con più coach la RLS lascia a ognuno la propria
+  riga in `athletes`: tutte le rubriche (Athletes, Home coach, Analisi, report, messaggi,
+  calendario team, ricerca, assegnazione) passano da `escludiDallaRubrica(righe, idUtente)`
+  di `src/lib/constants.js`, che toglie anche `COACHING_ID`. Una rubrica nuova usa quella.

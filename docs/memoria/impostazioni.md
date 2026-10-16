@@ -290,3 +290,21 @@ Vale anche per chi è entrato solo con Google.
   sul telefono è da fare (salvare, poi entrare dal sito con l'indirizzo mostrato).
 Test: `senzaPassword` in `rigaImpostazioni.test.js`, «La password per chi è entrato con
 Apple» in `Impostazioni.test.jsx`.
+
+## 9-gestione-coach. La voce «Coach» (multi-coach, 16/10/2026)
+
+⏳ **Dipende dalla migrazione `supabase/schema/multi_coach_2026-10-15.sql`, NON applicata.**
+Solo `eAdmin(role)` vede «Coach» in «Solo coach» (insieme al backup); un coach no.
+La riga apre `FoglioGestioneCoach` (`src/components/FoglioCoach.jsx`): lo staff con
+ruolo e numero di atleti, il campo email con «Aggiungi coach», «Togli» con `CustomConfirm`.
+- **L'elenco viene da `supabase.rpc('elenco_staff')`**, non da `from('staff')`: il client
+  non legge `auth.users`, quindi da solo non saprebbe a che account (id, nome) corrisponde
+  un'email. La funzione (security definer, righe solo se `e_admin()`) sta nella migrazione.
+  Se la funzione non c'è ancora, il foglio dice «La gestione dei coach sarà disponibile dopo
+  l'aggiornamento del database» e il resto della pagina non cambia.
+- Le scritture sono in `src/lib/coachAtleti.js` (`aggiungiCoach`, `togliCoach`, `assegnaAtleta`,
+  `normalizzaEmail`); la RLS le permette ai soli admin. `togliCoach` rifiuta («Ha ancora
+  atleti») se `coach_atleti` ha righe per quell'id; il foglio lo blocca già dal conteggio.
+- ⚠️ Un coach si aggiunge per email PRIMA che abbia l'account: senza `user_id` non ha
+  conteggio e non compare nella scelta della scheda atleta.
+Test: «La voce «Coach»» in `Impostazioni.test.jsx`, `coachAtleti.test.js`.

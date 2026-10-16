@@ -19,7 +19,7 @@ import { it } from 'date-fns/locale'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
-import { COACHING_ID } from '../lib/constants'
+import { escludiDallaRubrica } from '../lib/constants'
 import { BRAND, coloreCategoria } from '../lib/colori'
 import {
   PERIODI, PERIODO_PREDEFINITO, CATEGORIE_ANALISI,
@@ -68,7 +68,7 @@ async function leggiAssegnazioni(da, a) {
 }
 
 export default function Analisi() {
-  const { role } = useAuth()
+  const { role, user } = useAuth()
   const desktop = eDesktop(useSchermoLargo(), role)
   const navigate = useNavigate()
   const [parametri, setParametri] = useSearchParams()
@@ -110,7 +110,7 @@ export default function Analisi() {
         return
       }
       // Il coach non è un atleta da seguire: stesso filtro del Report.
-      setAtleti((atletiRes.data || []).filter(x => x?.id && x.id !== COACHING_ID))
+      setAtleti(escludiDallaRubrica(atletiRes.data, user?.id).filter(x => x?.id))
       setAssegnazioni(assRes.data || [])
       setComeStai(risposte)
       setCaricatoIl(Date.now())
@@ -118,7 +118,7 @@ export default function Analisi() {
     }
     carica()
     return () => { vivo = false }
-  }, [desktop, periodo])
+  }, [desktop, periodo, user?.id])
 
   // I risultati che l'atleta ha scritto nelle note («Dalle note»), solo con un
   // atleta scelto: servono allo storico di un esercizio. Se la lettura fallisce

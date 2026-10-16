@@ -62,6 +62,15 @@ Le modifiche fatte dopo la versione **1.2.0**, in vendita sullo Store: build `1.
 - Sullo **SkiErg** le distanze rapide sotto il righello sono 200, 400, 500 e 1000 m.
 - Chi ha ancora la 1.2.0 o la 1.2.1 vede il primo giro, senza gli aumenti, e un For Time nuovo come «1 round» stimato a 15′ (il time cap non lo legge).
 
+## Gestire i coach (multi-coach) — prove sul telefono
+Da fare DOPO che il committente ha applicato `multi_coach_2026-10-15.sql`; prima il foglio dice che serve l'aggiornamento.
+- Impostazioni da admin: la voce «Coach» c'è; da coach non c'è (né il backup).
+- «Coach» elenca lo staff con ruolo e numero di atleti; «Aggiungi coach» con un'email valida lo mette in elenco, con una non valida avvisa.
+- «Togli» su un coach con atleti avvisa «Ha ancora atleti»; su uno senza atleti chiede conferma e lo toglie.
+- Scheda di un atleta da admin: «Coach: <nome>» apre la scelta; sceglierne un altro sposta l'atleta (la riga si aggiorna). Un coach non vede la riga.
+- Nessun coach compare fra i propri atleti (Atleti, Home, Analisi, report, messaggi).
+- Tasto indietro Android: chiude il foglio.
+
 ## Testo per App Store Connect — «Novità di questa versione» (1.2.1)
 
 > Scritto il 14/10/2026: solo ciò che non era nella 1.2.0. Limite di Apple: 4000 caratteri.

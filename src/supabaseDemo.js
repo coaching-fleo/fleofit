@@ -355,7 +355,21 @@ export function clientDemo() {
     },
     channel: canale,
     removeChannel: () => {},
-    rpc: async () => ({ data: null, error: null }),
+    rpc: async (nome) => {
+      // `elenco_staff` (multi-coach): lo staff con l'account e il nome, come
+      // lo darebbe il join su auth.users. Qui gli account noti sono due.
+      if (nome === 'elenco_staff') {
+        const ids = { 'coaching@federicoleo.it': '0118e43f-8791-4fd6-8032-bee028334c99', [COACH_DEMO.email]: COACH_DEMO.id }
+        const righe = (db().staff ?? []).map(s => {
+          const user_id = ids[s.email] ?? null
+          const a = user_id ? (db().athletes ?? []).find(x => x.id === user_id) : null
+          const nomeCompleto = a ? `${a.name || ''} ${a.surname || ''}`.trim() : ''
+          return { email: s.email, ruolo: s.ruolo, user_id, nome: nomeCompleto || null }
+        })
+        return { data: righe, error: null }
+      }
+      return { data: null, error: null }
+    },
   }
 }
 

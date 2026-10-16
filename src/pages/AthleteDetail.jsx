@@ -1,5 +1,5 @@
-import { eStaff } from '../lib/ruoli'
-import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
+import { eStaff, eAdmin } from '../lib/ruoli'
+import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
 import { leggiTutta } from '../lib/backup'
 import { createPortal } from 'react-dom'
@@ -33,8 +33,10 @@ import { TestataScheda, MenuScheda, IntestazioneSezione } from '../components/Wo
 import { BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import {
   IdentitaAtleta, IconaSocial, CardAndamento, CellaBento, Sparkline,
-  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa,
+  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa, RigaCoach,
 } from '../components/SchedaAtletaUI'
+import FoglioCoach from '../components/FoglioCoach'
+import { assegnaAtleta } from '../lib/coachAtleti'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
 import RecapAllenamento from '../components/RecapAllenamento'
@@ -112,6 +114,11 @@ export default function AthleteDetail() {
   // Gli estratti delle note (src/lib/noteEstratte.js) e lo stato dell'analisi:
   // 'caricamento' | 'assente' | 'pronto' | 'in_analisi' | 'sospesa' | 'errore'.
   // 'assente' = la tabella non esiste ancora: la sezione non si mostra affatto.
+  // Di chi è l'atleta (solo admin). `staffCoach` null = non si legge (database
+  // non ancora aggiornato, o non sei admin): la riga allora non compare.
+  const [staffCoach, setStaffCoach] = useState(null)
+  const [coachDi, setCoachDi] = useState([])
+  const [foglioCoachAperto, setFoglioCoachAperto] = useState(false)
   const [estrattiNote, setEstrattiNote] = useState([])
   const [statoNote, setStatoNote] = useState('caricamento')
 
@@ -192,6 +199,34 @@ export default function AthleteDetail() {
   // dentro, una TERZA copia del calcolo della durata, con il difetto delle
   // distanze (BACKLOG #30) — 400m contati come 400 minuti.
   const andamento = useMemo(() => andamentoAtleta(workouts), [workouts])
+
+  const caricaCoach = useCallback(async () => {
+    try {
+      const [st, co] = await Promise.all([
+        supabase.rpc('elenco_staff'),
+        supabase.from('coach_atleti').select('coach_id').eq('athlete_id', id),
+      ])
+      if (st.error || !Array.isArray(st.data) || co.error) throw st.error || co.error || new Error('elenco_staff vuoto')
+      setStaffCoach(st.data)
+      setCoachDi((co.data || []).map(r => r.coach_id))
+    } catch (e) {
+      console.error('Coach dell\'atleta non letti:', e)
+      setStaffCoach(null)
+    }
+  }, [id])
+
+  useEffect(() => {
+    if (!eAdmin(role) || isOwnProfile) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legge il database e poi imposta lo stato
+    caricaCoach()
+  }, [role, isOwnProfile, caricaCoach])
+
+  const sceltaCoach = async (nuovo) => {
+    setFoglioCoachAperto(false)
+    const { error } = await assegnaAtleta(supabase, id, nuovo.user_id, coachDi[0])
+    if (error) setAlertInfo({ title: 'Coach non cambiato', message: typeof error === 'string' ? error : (error.message || String(error)), type: 'error' })
+    caricaCoach()
+  }
 
   const uploadVoiceNote = async (athleteWorkoutId, audioBlob, ext) => {
     const fileName = `voice_${athleteWorkoutId}_${Date.now()}.${ext}`
@@ -615,6 +650,16 @@ export default function AthleteDetail() {
             : null} />
         ) : null}
         nota={pausaAtleta.testo} />
+      {eAdmin(role) && !isOwnProfile && staffCoach && (
+        <div className="mt-3">
+          <RigaCoach
+            nome={coachDi.length === 0 ? 'nessuno' : coachDi.map(c => {
+              const m = staffCoach.find(x => x.user_id === c)
+              return m ? (m.nome || m.email) : 'sconosciuto'
+            }).join(', ')}
+            onClick={() => setFoglioCoachAperto(true)} />
+        </div>
+      )}
     </>
   )
   const pAndamento = (
@@ -1012,6 +1057,11 @@ export default function AthleteDetail() {
       )}
 
       {/* MODAL ASSEGNA WORKOUT DA LISTA */}
+      {foglioCoachAperto && staffCoach && (
+        <FoglioCoach membri={staffCoach} correnti={coachDi}
+          onScegli={sceltaCoach} onChiudi={() => setFoglioCoachAperto(false)} />
+      )}
+
       {assignModalOpen && createPortal(
         <AssignWorkoutModal 
           athleteId={id}

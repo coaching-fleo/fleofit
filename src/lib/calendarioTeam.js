@@ -8,7 +8,7 @@ import { categoriaDi } from './categorie'
 import { separaCodice } from './codiceWorkout'
 import { rpeDichiarato } from './rpe'
 import { inPausa } from './pausa'
-import { COACHING_ID } from './constants'
+import { escludiDallaRubrica } from './constants'
 
 /** I sette giorni della settimana che contiene `giorno`. Comincia di lunedì (CLAUDE.md §9). */
 export const giorniSettimana = (giorno) => {
@@ -47,7 +47,7 @@ export const chipDi = (ass) => {
  *   assegnato per sbaglio a chi è in pausa deve restare visibile.
  * - `filtro` è una categoria (`Hyrox`, `Running`, `Custom`, `Event`) o null.
  */
-export function grigliaTeam(atleti = [], assegnazioni = [], giorni = [], { filtro = null } = {}) {
+export function grigliaTeam(atleti = [], assegnazioni = [], giorni = [], { filtro = null, idUtente = null } = {}) {
   const chiavi = giorni.map(chiave)
   const perAtleta = new Map()
   for (const ass of assegnazioni) {
@@ -60,8 +60,7 @@ export function grigliaTeam(atleti = [], assegnazioni = [], giorni = [], { filtr
     celle.get(ass.completed_date).push(chip)
   }
 
-  const righe = atleti
-    .filter(a => a && a.id !== COACHING_ID)
+  const righe = escludiDallaRubrica(atleti, idUtente)
     .map(a => {
       const celle = perAtleta.get(a.id) || new Map()
       return {

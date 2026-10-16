@@ -40,7 +40,7 @@ import { leggiJson, scriviJson } from '../lib/offlineQueue'
 import { vibraScelta, vibraSuccesso, vibraErrore } from '../lib/aptica'
 import { testoValido, MAX_CARATTERI, CHIAVE_BOZZA, puoInviareBroadcast, esitoProva as leggiEsitoProva, CHIAVE_PROVE, nuovaProva, proveValide } from '../lib/messaggiCoach'
 import { mostraErrore, mostraSuccesso } from '../lib/alert'
-import { COACHING_ID } from '../lib/constants'
+import { escludiDallaRubrica } from '../lib/constants'
 import { useIndietro } from '../useIndietro'
 import { useTastieraIOS, useTastieraCheCopre } from '../useTastiera'
 
@@ -114,7 +114,7 @@ export default function NuovoMessaggio() {
     ;(async () => {
       const { data, error } = await supabase.from('athletes').select('id, deleted_at').is('deleted_at', null)
       if (error) throw error
-      const attivi = (data || []).filter(a => a.deleted_at == null && a.id !== COACHING_ID && a.id !== user?.id)
+      const attivi = escludiDallaRubrica(data, user?.id).filter(a => a.deleted_at == null)
       let miei = null
       try {
         const r = await supabase.from('coach_atleti').select('athlete_id').eq('coach_id', user?.id)

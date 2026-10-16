@@ -170,12 +170,29 @@ language sql stable security definer set search_path = '' as $$
                    and (aw.athlete_id = auth.uid() or public.mio_atleta(aw.athlete_id)))
 $$;
 
+-- L'elenco dello staff per la schermata «Coach» (Impostazioni): il client non
+-- può leggere auth.users, quindi non saprebbe a quale account (id, nome)
+-- corrisponde un'email. Solo un admin ottiene righe; per tutti gli altri è vuota.
+create or replace function public.elenco_staff()
+returns table(email text, ruolo text, user_id uuid, nome text)
+language sql stable security definer set search_path = '' as $$
+  select s.email, s.ruolo, u.id,
+         nullif(btrim(coalesce(a.name, '') || ' ' || coalesce(a.surname, '')), '')
+  from public.staff s
+  left join auth.users u on lower(u.email) = s.email
+  left join public.athletes a on a.id = u.id
+  where public.e_admin()
+  order by s.ruolo, s.email
+$$;
+
 -- Il grant di default è a PUBLIC (cioè anche ad anon): si toglie e si dà
 -- solo agli utenti con account.
 revoke execute on function public.e_admin(), public.e_staff(), public.puo_scrivere_messaggi(),
-  public.mio_atleta(uuid), public.e_mio_coach(uuid), public.utente_admin(uuid), public.vedo_workout(uuid) from public, anon;
+  public.mio_atleta(uuid), public.e_mio_coach(uuid), public.utente_admin(uuid), public.vedo_workout(uuid),
+  public.elenco_staff() from public, anon;
 grant execute on function public.e_admin(), public.e_staff(), public.puo_scrivere_messaggi(),
-  public.mio_atleta(uuid), public.e_mio_coach(uuid), public.utente_admin(uuid), public.vedo_workout(uuid) to authenticated;
+  public.mio_atleta(uuid), public.e_mio_coach(uuid), public.utente_admin(uuid), public.vedo_workout(uuid),
+  public.elenco_staff() to authenticated;
 
 
 -- ── 4. Il coach si assegna da solo ─────────────────────────────────────────
@@ -435,7 +452,7 @@ commit;
 --   -- come_stai_2026-10-13.sql, note_estratte_2026-10-09.sql,
 --   -- messaggi_coach_2026-10-15.sql (stesso testo, stessi nomi)
 --   …le drop delle policy nuove, poi:
---   drop function public.vedo_workout(uuid), public.e_mio_coach(uuid), public.utente_admin(uuid), public.mio_atleta(uuid),
+--   drop function public.elenco_staff(), public.vedo_workout(uuid), public.e_mio_coach(uuid), public.utente_admin(uuid), public.mio_atleta(uuid),
 --     public.puo_scrivere_messaggi(), public.e_staff(), public.e_admin(),
 --     public.email_corrente(), public.assegna_coach();
 --   alter table public.workouts drop column creato_da;

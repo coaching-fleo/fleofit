@@ -41,7 +41,7 @@ const caricaGrafica = () => import('html-to-image')
 import { blockHint } from '../lib/blockHints'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
-import { ERGOMETERS, COACHING_ID } from '../lib/constants'
+import { ERGOMETERS, escludiDallaRubrica } from '../lib/constants'
 import { sincronizzaBadge } from '../lib/badge'
 import { isVoiceNoteValid } from '../lib/notaVocale'
 import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/timerSequence'
@@ -605,7 +605,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     // di assegnazione non ha modo di sapere chi ha chiesto di fermarsi — e
     // non darebbe nessun errore, si limiterebbe a non dirlo mai.
     const { data } = await supabase.from('athletes').select('id, name, surname, photo_url, notes').is('deleted_at', null).order('name')
-    setAthletes((data || []).filter(a => a.id !== COACHING_ID))
+    setAthletes(escludiDallaRubrica(data, user?.id))
   }
 
   const handleAssignMultiple = async () => {

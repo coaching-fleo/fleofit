@@ -24,7 +24,7 @@ import { atletiFermi } from './statisticheCoach'
 import { getNormalizedBlocks } from './timerSequence'
 import { durataWorkout } from './statistiche'
 import { separaCodice } from './codiceWorkout'
-import { COACHING_ID } from './constants'
+import { escludiDallaRubrica } from './constants'
 
 /** Quanto indietro si carica. Oltre, una domanda riceve «non ho dati così vecchi». */
 export const GIORNI_INDIETRO = 365
@@ -617,6 +617,9 @@ export async function caricaDatiRicerca(supabase, oggi = new Date()) {
     .select('id, name, surname, photo_url, notes')
     .is('deleted_at', null)
   if (atletiRes.error) throw new Error(atletiRes.error.message)
+  // Chi sta guardando non è un atleta da seguire (un coach ha la sua riga).
+  let idUtente = null
+  try { idUtente = (await supabase.auth?.getUser?.())?.data?.user?.id ?? null } catch { /* resta il solo filtro storico */ }
 
   // Tre letture a pagine, in parallelo:
   //  • i workout, TUTTI: anche quelli mai assegnati (le bozze, i modelli);
@@ -637,7 +640,7 @@ export async function caricaDatiRicerca(supabase, oggi = new Date()) {
   ])
 
   const perIdWorkout = new Map(workouts.map(w => [w.id, w]))
-  const atleti = (atletiRes.data || []).filter(a => a.id !== COACHING_ID)
+  const atleti = escludiDallaRubrica(atletiRes.data, idUtente)
   const ammessi = new Set(atleti.map(a => a.id))
   return {
     atleti,

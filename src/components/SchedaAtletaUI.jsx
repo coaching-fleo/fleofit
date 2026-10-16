@@ -11,7 +11,7 @@
 // con quanto carico, era nella terza tab, dietro due tocchi e quattro grafici
 // che non si parlavano. Ora è la prima cosa in pagina, e le tab non ci sono più.
 
-import { ChevronDown, ChevronRight, User } from 'lucide-react'
+import { ChevronDown, ChevronRight, User, UserCog } from 'lucide-react'
 import { CARD, LABEL, RIGA, VETRO } from '../lib/stiliCard'
 import { BRAND, RUNNING } from '../lib/colori'
 
@@ -295,5 +295,18 @@ export function PillolaPausa({ dal }) {
       <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-orange-400" />
       In pausa{dal ? ` dal ${dal}` : ''}
     </p>
+  )
+}
+
+/** «Coach: <nome>» — solo per gli admin; apre la scelta di chi segue l'atleta. */
+export function RigaCoach({ nome, onClick }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`${RIGA} w-full px-[15px] py-[13px] flex items-center gap-3 text-left
+                  hover:bg-white/[.055] transition`}>
+      <UserCog size={18} className="shrink-0 text-muted" aria-hidden="true" />
+      <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">Coach: {nome}</span>
+      <ChevronRight size={17} className="shrink-0 text-muted" aria-hidden="true" />
+    </button>
   )
 }

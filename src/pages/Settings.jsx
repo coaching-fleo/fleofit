@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, AlertTriangle, Trash2, LifeBuoy } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, AlertTriangle, Trash2, LifeBuoy, Users } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -24,6 +24,8 @@ import {
   RigaPericolo, RigaPieghevole, Separatore, Sezione, TestataImpostazioni,
 } from '../components/ImpostazioniUI'
 import FoglioSegnalazione from '../components/FoglioSegnalazione'
+import { FoglioGestioneCoach } from '../components/FoglioCoach'
+import { aggiungiCoach, togliCoach, normalizzaEmail } from '../lib/coachAtleti'
 import { datiTecnici } from '../lib/segnalazione'
 import { leggiCoda } from '../lib/offlineQueue'
 
@@ -59,6 +61,12 @@ export default function Settings() {
   const [foglioCodiciAperto, setFoglioCodiciAperto] = useState(false)
   const [foglioSegnalazioneAperto, setFoglioSegnalazioneAperto] = useState(false)
   const [codici, setCodici] = useState(null)
+  // Gestione dei coach (solo admin): `staff` è null finché non è letto.
+  const [foglioCoachAperto, setFoglioCoachAperto] = useState(false)
+  const [staff, setStaff] = useState(null)
+  const [conteggiCoach, setConteggiCoach] = useState({})
+  const [erroreStaff, setErroreStaff] = useState(null)
+  const [occupatoCoach, setOccupatoCoach] = useState(false)
   // Parte già a `true` per il coach: la lista si chiede al montaggio, e
   // accenderlo dentro `caricaCodici` renderebbe quella funzione un setState
   // sincrono dentro un effetto (react-hooks/set-state-in-effect).
@@ -560,6 +568,62 @@ export default function Settings() {
     }
   }
 
+  /**
+   * Lo staff con account e nome arriva da `elenco_staff()` (il client non legge
+   * auth.users). Prima della migrazione multi-coach la funzione non c'è: il
+   * foglio lo dice e il resto della pagina non cambia.
+   */
+  const caricaStaff = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.rpc('elenco_staff')
+      if (error || !Array.isArray(data)) throw error || new Error('elenco_staff vuoto')
+      const { data: coppie } = await supabase.from('coach_atleti').select('coach_id')
+      const conteggi = {}
+      for (const c of coppie || []) conteggi[c.coach_id] = (conteggi[c.coach_id] || 0) + 1
+      setConteggiCoach(conteggi)
+      setStaff(data)
+      setErroreStaff(null)
+    } catch (e) {
+      console.error('Elenco staff non letto:', e)
+      setErroreStaff('La gestione dei coach sarà disponibile dopo l\'aggiornamento del database')
+    }
+  }, [])
+
+  const apriGestioneCoach = () => { setFoglioCoachAperto(true); caricaStaff() }
+
+  const aggiungiUnCoach = async (email) => {
+    if (!normalizzaEmail(email)) {
+      return setAlertInfo({ title: 'Indirizzo non valido', message: 'Scrivi un indirizzo email completo.', type: 'error' })
+    }
+    setOccupatoCoach(true)
+    const { error } = await aggiungiCoach(supabase, email)
+    setOccupatoCoach(false)
+    if (error) {
+      const doppio = error?.code === '23505'
+      return setAlertInfo({ title: 'Coach non aggiunto', message: doppio ? 'Questo indirizzo è già nello staff.' : (error.message || String(error)), type: 'error' })
+    }
+    caricaStaff()
+  }
+
+  const toglieUnCoach = (membro, atleti) => {
+    if (atleti > 0) {
+      return setAlertInfo({ title: 'Ha ancora atleti', message: 'Prima sposta i suoi atleti a un altro coach dalla loro scheda.', type: 'error' })
+    }
+    setConfirmInfo({
+      title: 'Togliere il coach?',
+      message: `${membro.nome || membro.email} non potrà più accedere come coach.`,
+      onConfirm: async () => {
+        setOccupatoCoach(true)
+        const { error } = await togliCoach(supabase, membro.email, membro.user_id)
+        setOccupatoCoach(false)
+        if (error) {
+          return setAlertInfo({ title: 'Coach non tolto', message: typeof error === 'string' ? error : (error.message || String(error)), type: 'error' })
+        }
+        caricaStaff()
+      },
+    })
+  }
+
   const eliminaCodice = (codice) => {
     setConfirmInfo({
       title: 'Elimina codice',
@@ -632,6 +696,10 @@ export default function Settings() {
               dettaglio={riassuntoCodici(codici) || 'Genera e condividi gli inviti'}
               onClick={() => setFoglioCodiciAperto(true)} />
             {eAdmin(role) && (<>
+            <Separatore />
+            <RigaAzione icona={Users} titolo="Coach"
+              dettaglio="Chi lavora nell'app e di chi sono gli atleti"
+              onClick={apriGestioneCoach} />
             <Separatore />
             <RigaAzione icona={HardDriveDownload} titolo="Esporta database"
               dettaglio={riassuntoBackup({ ultimoExport, atleti: conteggi.atleti, workout: conteggi.workout })}
@@ -753,6 +821,13 @@ export default function Settings() {
             copiaTesto(`${base}/?invite=${c.code}`, 'Link')
           }}
           onElimina={eliminaCodice} />
+      )}
+
+      {foglioCoachAperto && eAdmin(role) && (
+        <FoglioGestioneCoach
+          staff={staff} conteggi={conteggiCoach} errore={erroreStaff} occupato={occupatoCoach}
+          onAggiungi={aggiungiUnCoach} onTogli={toglieUnCoach}
+          onChiudi={() => setFoglioCoachAperto(false)} />
       )}
 
       {foglioSegnalazioneAperto && (
