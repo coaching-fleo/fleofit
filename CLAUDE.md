@@ -34,7 +34,7 @@
   consenso privacy + policy nuova (BACKLOG, in cima).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint al 12/10/2026: `npm test` → **1748 test**; `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note» né di «Da un testo scritto») (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
+- Test e lint al 26/10/2026: `npm test` → **2247 test**; `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note», di «Da un testo scritto» né dei Modelli di blocco) (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---
@@ -106,6 +106,12 @@
    cambia, tenendo posizione e numeri finché hanno senso. Serve soprattutto dopo «Genera con
    IA». Oggi: «Cambia esercizio» (Hyrox e Gym), «Cambia tipo di blocco» (`cambiaTipoBlocco.js`),
    tipo di fase della corsa, «Fase» Gym (`spostaInFase`) — `docs/memoria/crea-workout.md`.
+5-quater. 📐 **OGNI CATEGORIA CON BLOCCHI HA I MODELLI** (decisione del committente, 16/10/2026):
+   Hyrox, Corsa, Gym **e quelle che verranno** (Custom no: non ha blocchi). Chi aggiunge una
+   categoria con blocchi la mette in `CATEGORIE_MODELLI` di `src/lib/modelliBlocco.js` e le dà
+   «Salva come modello», «I miei modelli» nel foglio di aggiunta e la modalità modello del
+   builder, nello stesso lavoro. Un test (`modelliBlocco.test.js`) fallisce finché manca.
+   ⚠️ Servirebbe anche cambiare il `check` della colonna `categoria`: una migrazione, quindi un sì.
 6. Prima di modificare un file grande (`WorkoutDetail.jsx` 2.938 righe, `AthleteDetail.jsx` 2.553,
    `CreateWorkout.jsx` 2.348, `Home.jsx` 2.010 — contate il 26/08/2026) leggere le sezioni
    rilevanti: c'è molta logica duplicata tra i file (vedi `docs/memoria/qualita-e-test.md`, §9 Debito tecnico).
@@ -254,7 +260,9 @@ npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 > (erano 76 fino al 15/09: **+15** di `thinking-orbs`, che porta tutti e nove i
 > modi anche usandone due — §9-untricies — **+64** di `border-beam`,
 > §9-duetricies, e **+22** del righello il 07/10, §9-sexquadragies).
-> `CreaWorkoutUI` deve restare intorno ai **18 KB** (24 fino al 07/10, quando ne
+> (Dal 26/10 è a **190 KB**: +3 dei Modelli di blocco.)
+> `CreaWorkoutUI` deve restare intorno ai **12 KB** (18 fino al 26/10, quando Vite ha
+> messo `previsione` in un chunk suo; 24 fino al 07/10, quando ne
 > sono usciti Stepper e ruota del passo): è un chunk
 > **condiviso con `WorkoutDetail`**, e una libreria di effetti importata lì
 > dentro la fa scaricare a ogni apertura di una scheda. E `WorkoutDetail` deve
@@ -679,7 +687,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 |---|---|
 | `Home.jsx` (ramo atleta), `HomeAtletaUI`, `HomeAtletaVuotiUI`, `statistiche.js` | `home-atleta.md` |
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `HomeCoachTelefono`, `HomeCoachDesktop`, `CruscottoCoachUI`, `cruscottoCoach.js`, `useCruscottoCoach.js`, `statisticheCoach.js`, `pausa.js` | `home-coach.md` |
-| `CreateWorkout.jsx`, `CreaWorkoutUI`, `CreaGym`, `SchedaGymUI`, `gym.js`, `eserciziGym.js`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `incremento.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza | `crea-workout.md` |
+| `CreateWorkout.jsx`, `CreaWorkoutUI`, `CreaGym`, `SchedaGymUI`, `gym.js`, `eserciziGym.js`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `incremento.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza, `modelliBlocco.js`, `modelliBloccoDb.js`, `useModelliBlocco.js`, `Modelli.jsx`, `ModelliUI`, `FoglioModello` | `crea-workout.md` |
 | `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF, `comeStai.js`, `FoglioComeStai`, `TVDashboard.jsx`, `TVDashboardUI` | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |

@@ -69,6 +69,13 @@ nuove vanno in fondo alla sezione della 1.2.2, sotto un titolo «1.2.3».
 - Il coach riceve la notifica «📅 Allenamento spostato» con la nuova data. `send-reminders` con l'azione `moved` ✅ **pubblicata il 26/10/2026** (versione 59).
 - Con la 1.2.1 non si sposta; l'allenamento spostato da un'app nuova si vede al giorno nuovo anche lì.
 
+## Modelli di blocco (1.2.3)
+- Il coach **salva un blocco come modello** e lo riusa: dall'icona accanto a «Duplica» su un blocco Hyrox, una fase di corsa o un gruppo Gym, con un nome proposto da cambiare se si vuole.
+- Nei fogli **«Aggiungi»** del builder compare **«I miei modelli»**: un tocco e il blocco entra nel workout con i suoi numeri (per la Gym nella fase da cui si è aperto il foglio).
+- Nuova pagina **Modelli** (icona nella testata di Crea workout, e nella barra laterale sul computer): i modelli per Hyrox, Corsa e Gym, da creare, modificare, rinominare ed eliminare. Per crearli e modificarli si usa il builder stesso, per un blocco solo.
+- Ogni coach vede solo i suoi modelli. Servono la connessione per salvarli.
+- Chi ha ancora la 1.2.2 non vede i modelli; i workout fatti con un modello si leggono uguale ovunque.
+
 ## Gestire i coach (multi-coach) — prove sul telefono
 Da fare DOPO che il committente ha applicato `multi_coach_2026-10-15.sql`; prima il foglio dice che serve l'aggiornamento.
 - Impostazioni da admin: la voce «Coach» c'è; da coach non c'è (né il backup).

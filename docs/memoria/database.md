@@ -449,3 +449,18 @@ l'app non filtra per `creato_da`, quindi non cambia niente lato client. L'accoun
 rifatta la funzione. Per annullare: rieseguire `vedo_workout` da `multi_coach_2026-10-15.sql`.
 **Da fare dopo l'applicazione:** entrare con quell'account e controllare che nella libreria compaiano
 anche i workout degli altri coach.
+
+### 📐 `modelli_blocco` — i modelli di blocco del coach (`supabase/schema/modelli_blocco_2026-10-16.sql`)
+✅ **Quinta eccezione** al congelamento (sì esplicito del 16/10/2026), **additiva**, applicata (al
+controllo del 26/10/2026 la tabella c'è). Un modello è un blocco Hyrox, una fase Corsa o un gruppo
+Gym nel formato di CLAUDE.md §5, **senza `id` interni**. Colonne: `coach` (default `auth.uid()`,
+`on delete cascade`), `categoria` (`Hyrox`/`Running`/`Gym`, gli `id` di `CATEGORIE`), `nome`
+(1–80 caratteri dopo il trim, lo stesso limite di `MAX_NOME`), `contenuto` jsonb, `creato_at`,
+`modificato_at`.
+- **Una policy sola**, `ALL`, uguale in `USING` e `WITH CHECK`: `coach = auth.uid() and e_staff()`.
+  Anche un admin vede solo i suoi. L'account demo è staff e può crearne: restano suoi e non
+  arrivano a nessun atleta, quindi non è escluso (a differenza di `messaggi_coach`).
+- **Backup**: in `TABLES` di `.github/workflows/db-backup.yml`. ⚠️ Diventa attivo al prossimo
+  `app:main`, come ogni workflow cambiato su `app`.
+- `main` non la conosce. Rollback: `drop table public.modelli_blocco` (cancella tutti i modelli).
+

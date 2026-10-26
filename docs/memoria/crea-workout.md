@@ -1622,3 +1622,71 @@ ripetuta era per forza tratto veloce + recupero; e la pausa da fermi non esistev
   tratto: è voluto, è il tratto che dà il nome alla seduta.
 - **IA**: `regole.ts` chiede `parti` in più dei campi di prima (le app vecchie restano
   servite), `preparaFasiIA` le usa se ci sono. ✅ `ai-workout` pubblicata il 26/10/2026 (versione 31).
+
+## Modelli di blocco (16/10/2026)
+
+Il coach salva **un** blocco Hyrox, **una** fase Corsa o **un** gruppo Gym come modello e lo
+rimette in un altro workout con un tocco. Spec: `docs/superpowers/specs/2026-10-16-modelli-blocco-design.md`,
+piano: `docs/superpowers/plans/2026-10-16-modelli-blocco.md`. Costruito il 26/10/2026.
+
+### Perché è fatto così
+- **Nel database** (`modelli_blocco`, quinta eccezione al congelamento): si vedono da telefono e
+  da computer. Scartati i «workout nascosti» con un segno nelle `sections`: `workouts` è letto in
+  decine di punti (archivio, calendario, TV, report, previsione, export) e il primo che non
+  imparava a ignorarli avrebbe mostrato un modello come un allenamento vero.
+- **Ogni coach vede solo i suoi**, admin compresi: una policy sola, uguale in `USING` e
+  `WITH CHECK`. Un admin con i modelli di tutti se li troverebbe mescolati nel foglio «Aggiungi».
+- **Il builder stesso fa da editor** («modalità modello», `/create?modello=…`). Un editor proprio
+  dentro `/modelli` sarebbe stato un secondo builder da tenere allineato.
+- **Niente «Genera con IA» né «Da un'immagine» nella modalità modello**: producono un workout
+  intero, cioè più blocchi, e un modello è un blocco solo.
+- **Senza rete non si salva** (`MESSAGGIO_SENZA_RETE`): niente coda offline, un modello non è un
+  dato dell'atleta.
+
+### Dove sta ogni pezzo
+- `src/lib/modelliBlocco.js` — la logica pura: `contenutoDaBlocco` (la copia da salvare, senza
+  nessun `id` e per Gym senza `fase`), `bloccoDaModello` (il blocco per il builder, `id` nuovi a
+  ogni livello e la fase del picker), `nomeProposto`, `anteprimaModello`, `modelloValido`,
+  `CATEGORIE_MODELLI`, `MAX_NOME`.
+- `src/lib/modelliBloccoDb.js` — `elencoModelli`, `leggiModello`, `salvaModello`,
+  `aggiornaModello`, `eliminaModello`. Tutto ciò che si legge passa da `modelloValido`.
+  `src/useModelliBlocco.js` — l'elenco di una categoria per i fogli.
+- `src/components/FoglioModello.jsx` — `FoglioSalvaModello` («Salva come modello» dai blocchi)
+  e `FoglioRinomina`.
+- `src/components/ModelliUI.jsx` — `CardModello`, `SezioneModelli` («I miei modelli» nei fogli
+  di aggiunta), `MenuModello`, `CampoNomeModello`.
+- `src/pages/Modelli.jsx` — la pagina `/modelli`, solo staff.
+- Nel builder: `bloccoSalvaModello`/`faseSalvaModello` (le callback stabili per i blocchi in
+  `memo`), `onModello` di `BlockPickerModal`, `RunningStepPicker` e `PickerGym`,
+  `salvaQuestoModello`, `bloccoModello`, `nomeDelModello`. In `CreaGym` la prop `modello`.
+
+### Le trappole
+- 🔴 **Gli `id`.** Un modello salvato con gli `id` del workout, inserito due volte, darebbe due
+  blocchi con lo stesso `id`: il builder li tratta come uno (apertura, riordino, modifica).
+  `contenutoDaBlocco` li toglie tutti, `bloccoDaModello` ne dà di nuovi a ogni livello.
+- 🔴 **La bozza del workout.** In modalità modello `fleofit_workout_draft` non si legge, non si
+  scrive e non si cancella: ogni effetto e ogni uscita del builder che la tocca ha una guardia
+  `modello`. Senza, aprire un modello cancellava il workout lasciato a metà (o lo riproponeva
+  dentro il modello). Il test è «la bozza del workout resta identica» in `CreaModello.test.jsx`.
+- **La fase Gym** non sta nel modello: la decide il punto da cui lo si inserisce (`picker.fase`).
+  Dentro una superserie e nel «Cambia» la sezione dei modelli non c'è.
+- **Un blocco solo.** Nella modalità modello spariscono anche Duplica, «Salva come modello» e
+  «Scollega» (Gym): ognuno creerebbe un secondo blocco.
+- **I fogli che servono ad altro restano identici** senza modelli, con la lettura in errore, in
+  «Cambia tipo di blocco» e nella modifica di una fase: `SezioneModelli` torna `null`.
+- **Un blocco da modello non chiede i numeri** (9-blocco-confermato): li ha già.
+
+### Pesi (26/10/2026)
+`CreateWorkout` 186,8 → 190,2 KB. `CreaWorkoutUI` 18,4 → 12,4 KB: Vite ha messo `previsione`
+in un chunk suo (6,6 KB), che `WorkoutDetail` scarica come prima. `ModelliUI` 11 KB e
+`FoglioMessaggio` 3,7 KB sono chunk nuovi, caricati da builder, `CreaGym` e `/modelli`. La
+pagina `Modelli` 5,2 KB, pigra. `index` 587,8 → 588,1 KB.
+
+### Prove
+Test: `ModelliSalva.test.jsx`, `ModelliInserisci.test.jsx`, `Modelli.test.jsx`,
+`CreaModello.test.jsx`, più `modelliBlocco.test.js` e `modelliBloccoDb.test.js`. Ognuno visto
+fallire rompendo il codice che copre. Provato nell'ambiente di prova su schermo da telefono
+(salvataggio da un blocco, inserimento dal foglio Hyrox, pagina, modifica di un modello Hyrox).
+⏳ **Da provare sul telefono** (iPhone e Android): i tre fogli, la pagina, il tasto indietro di
+Android su menu e fogli nuovi.
+
