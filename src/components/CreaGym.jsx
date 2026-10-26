@@ -57,7 +57,7 @@ const copiaGruppo = (g) => ({
  * @param {object[]} p.gruppi     `sections.gym`
  * @param {Function} p.setGruppi  il setState di React (accetta anche una funzione)
  */
-export default function CreaGym({ gruppi, setGruppi }) {
+export default function CreaGym({ gruppi, setGruppi, modello = false }) {
   // Dove aggiunge il picker: in una fase (un gruppo per esercizio) o dentro
   // una superserie esistente.
   const [picker, setPicker] = useState(null)
@@ -72,6 +72,13 @@ export default function CreaGym({ gruppi, setGruppi }) {
 
   const aggiungi = (nomi) => {
     if (!nomi.length || !picker) return
+    // Modalità modello: tutti gli scelti in UN gruppo (con più di uno è una superserie).
+    if (picker.unGruppo) {
+      const [primo, ...altri] = nomi
+      const g = nuovoGruppoGym(picker.fase, primo)
+      setGruppi([{ ...g, esercizi: [...g.esercizi, ...altri.map(n => nuovoEsercizioGym(n, picker.fase))] }])
+      return
+    }
     if (picker.gruppoId) {
       const fase = faseDi(gruppi.find(g => g.id === picker.gruppoId))
       aggiorna(picker.gruppoId, g => {
@@ -143,7 +150,14 @@ export default function CreaGym({ gruppi, setGruppi }) {
 
   return (
     <div className="flex flex-col gap-[18px]" data-builder-gym>
-      {FASI_GYM.map(f => {
+      {/* Modalità modello: un gruppo solo, e prima di averlo un bottone solo. */}
+      {modello && gruppi.length === 0 && (
+        <button type="button" onClick={() => setPicker({ fase: 'principale', titolo: 'Scegli gli esercizi', unGruppo: true })}
+          className="min-h-12 rounded-[16px] border border-dashed border-gym/40 text-gym text-[13.5px] font-extrabold flex items-center justify-center gap-2 transition hover:bg-gym/10">
+          <Plus size={16} aria-hidden="true" />Scegli gli esercizi
+        </button>
+      )}
+      {FASI_GYM.filter(f => !modello || gruppi.some(g => faseDi(g) === f.id)).map(f => {
         const della = gruppi.filter(g => faseDi(g) === f.id)
         const principale = f.id === 'principale'
         return (
@@ -168,22 +182,23 @@ export default function CreaGym({ gruppi, setGruppi }) {
                 onApriGruppo={() => { battito(); setEditorGruppo(g.id) }}
                 onSu={() => sposta(g.id, -1)}
                 onGiu={() => sposta(g.id, 1)}
-                onDuplica={() => duplica(g.id)}
-                onSalvaModello={() => setDaSalvare(g)}
+                onDuplica={modello ? null : () => duplica(g.id)}
+                onSalvaModello={modello ? null : () => setDaSalvare(g)}
                 onElimina={() => elimina(g.id)}
                 onUnisci={() => { vibraScelta(); unisci(g.id) }}
-                onScollega={(esercizioId) => { vibraScelta(); scollega(g.id, esercizioId) }}
+                // Scollegare farebbe due gruppi: un modello ne ha uno.
+                onScollega={modello ? null : (esercizioId) => { vibraScelta(); scollega(g.id, esercizioId) }}
                 onAggiungiQui={() => setPicker({ gruppoId: g.id, titolo: `Aggiungi alla ${NOME_TIPO_GRUPPO[tipoGruppo(g)].toLowerCase()}` })}
               />
             ))}
 
-            <button type="button"
+            {!modello && <button type="button"
               onClick={() => setPicker({ fase: f.id, titolo: principale ? 'Aggiungi esercizi' : `Aggiungi al ${f.nome.toLowerCase()}` })}
               className={`min-h-12 rounded-[16px] border border-dashed text-[13.5px] font-extrabold flex items-center justify-center gap-2 transition
                 ${principale ? 'border-gym/40 text-gym hover:bg-gym/10' : 'border-white/15 text-[#9aa0ad] hover:bg-white/[.04]'}`}>
               <Plus size={16} aria-hidden="true" />
               {principale ? (della.length ? 'Aggiungi esercizi' : 'Aggiungi il primo esercizio') : `Aggiungi al ${f.nome.toLowerCase()}`}
-            </button>
+            </button>}
           </section>
         )
       })}
@@ -191,7 +206,7 @@ export default function CreaGym({ gruppi, setGruppi }) {
       {picker && (
         <PickerGym titolo={picker.titolo} onAggiungi={aggiungi} onChiudi={() => setPicker(null)}
           // Solo aggiungendo a una fase: dentro una superserie un gruppo intero non entra.
-          onModello={picker.fase ? (m) => setGruppi(prev => [...prev, bloccoDaModello(m, { fase: picker.fase })]) : undefined} />
+          onModello={picker.fase && !modello ? (m) => setGruppi(prev => [...prev, bloccoDaModello(m, { fase: picker.fase })]) : undefined} />
       )}
 
       {gruppoInEditor && esercizioInEditor && (
@@ -266,8 +281,8 @@ function CardGruppo({ gruppo, etichette, primo, ultimo, onApri, onApriGruppo, on
     <div className="flex items-center shrink-0 -mr-1">
       <Azione etichetta="Sposta su" onClick={onSu} disabled={primo}><ChevronUp size={15} /></Azione>
       <Azione etichetta="Sposta giù" onClick={onGiu} disabled={ultimo}><ChevronDown size={15} /></Azione>
-      <Azione etichetta="Duplica" onClick={onDuplica}><Copy size={15} /></Azione>
-      <Azione etichetta="Salva come modello" onClick={onSalvaModello}><BookmarkPlus size={15} /></Azione>
+      {onDuplica && <Azione etichetta="Duplica" onClick={onDuplica}><Copy size={15} /></Azione>}
+      {onSalvaModello && <Azione etichetta="Salva come modello" onClick={onSalvaModello}><BookmarkPlus size={15} /></Azione>}
       <Azione etichetta="Elimina" onClick={onElimina} pericolo><Trash2 size={15} /></Azione>
     </div>
   )
@@ -302,7 +317,7 @@ function CardGruppo({ gruppo, etichette, primo, ultimo, onApri, onApriGruppo, on
                   <span className="block text-[14.5px] font-extrabold text-white leading-snug line-clamp-2">{ex.name}</span>
                   <span className="block text-[12px] font-semibold text-gray-400 truncate">{riassuntoEsercizio(gruppo, ex) || 'Tocca per i numeri'}</span>
                 </button>
-                <Azione etichetta={`Scollega ${ex.name}`} onClick={() => onScollega(ex.id)}><Unlink size={15} /></Azione>
+                {onScollega && <Azione etichetta={`Scollega ${ex.name}`} onClick={() => onScollega(ex.id)}><Unlink size={15} /></Azione>}
               </div>
             ))}
             <button type="button" onClick={onAggiungiQui}

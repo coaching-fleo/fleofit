@@ -32,7 +32,7 @@ import { useNumeroCheSale } from '../useNumeroCheSale'
 // si legge come «butto via tutto». E senza `onIndietro` non c'è affatto: è il
 // caso del builder aperto dalla tab bar, che è una destinazione come
 // Calendario e Atleti — e quelle non hanno un indietro.
-export function TestataCrea({ passo, onIndietro, titolo, codice, sottotitolo, onTitolo, onModelli }) {
+export function TestataCrea({ passo, onIndietro, titolo, codice, sottotitolo, onTitolo, onModelli, senzaPassi = false }) {
   return (
     <div className="flex items-center gap-3 min-h-10">
       {onIndietro && (
@@ -67,11 +67,12 @@ export function TestataCrea({ passo, onIndietro, titolo, codice, sottotitolo, on
         </button>
       )}
 
-      <div className="flex items-center gap-[7px] shrink-0" aria-label={`Passo ${passo} di 2`}>
+      {/* Il builder in modalità modello non ha passi. */}
+      {!senzaPassi && <div className="flex items-center gap-[7px] shrink-0" aria-label={`Passo ${passo} di 2`}>
         <span aria-hidden="true" className="w-[22px] h-[5px] rounded-full bg-brand" />
         <span aria-hidden="true" className={`w-[22px] h-[5px] rounded-full ${passo >= 2 ? 'bg-brand' : 'bg-white/[.14]'}`} />
         {passo === 1 && <span className={`${LABEL} pl-1 tracking-[.1em]`}>1 / 2</span>}
-      </div>
+      </div>}
     </div>
   )
 }

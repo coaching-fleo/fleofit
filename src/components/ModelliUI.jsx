@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom'
 import { ChevronRight, Pencil, TextCursorInput, Trash2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
-import { LABEL } from '../lib/stiliCard'
+import { CARD, LABEL } from '../lib/stiliCard'
+import { chiudiTastieraSuInvio } from '../useTastiera'
 import { useBottomSheet } from '../useBottomSheet'
 import { Foglio } from './FoglioMessaggio'
-import { anteprimaModello } from '../lib/modelliBlocco'
+import { anteprimaModello, MAX_NOME } from '../lib/modelliBlocco'
 import { useModelliBlocco } from '../useModelliBlocco'
 
 // «Modelli di blocco»: le card dei modelli, nei fogli «Aggiungi» del builder e
@@ -100,5 +101,27 @@ export function MenuModello({ modello, onChiudi }) {
         </button>
       </div>
     </Foglio>
+  )
+}
+
+/**
+ * Il nome del modello in cima al builder in modalità modello. Finché il coach
+ * non lo scrive mostra quello proposto dal blocco (chi lo usa decide quale).
+ */
+export function CampoNomeModello({ valore, onChange }) {
+  return (
+    <label className={`${CARD} px-4 py-3.5 flex flex-col gap-1.5`}>
+      <span className={LABEL}>Nome del modello</span>
+      <input
+        aria-label="Nome del modello"
+        enterKeyHint="done"
+        onKeyDown={chiudiTastieraSuInvio}
+        maxLength={MAX_NOME}
+        placeholder="Scegli prima il blocco"
+        value={valore}
+        onChange={e => onChange(e.target.value)}
+        className="w-full bg-transparent text-[15.5px] font-bold text-white placeholder-[#5b6070] focus:outline-none"
+      />
+    </label>
   )
 }

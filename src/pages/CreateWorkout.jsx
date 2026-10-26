@@ -51,8 +51,9 @@ import { useAuth } from '../App'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
 import CreaWorkoutDesktop from '../components/CreaWorkoutDesktop'
 import { FoglioSalvaModello } from '../components/FoglioModello'
-import { SezioneModelli } from '../components/ModelliUI'
-import { bloccoDaModello } from '../lib/modelliBlocco'
+import { SezioneModelli, CampoNomeModello } from '../components/ModelliUI'
+import { bloccoDaModello, contenutoDaBlocco, nomeProposto, nomeValido, CATEGORIE_MODELLI } from '../lib/modelliBlocco'
+import { leggiModello, salvaModello, aggiornaModello, MESSAGGIO_SENZA_RETE } from '../lib/modelliBloccoDb'
 
 // Il lettore dei workout scritti si scarica solo quando si apre il foglio.
 const FoglioDaTesto = lazy(() => import('../components/FoglioDaTesto'))
@@ -1867,12 +1868,12 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
           <DurataBlocco testo={mmss(durataBlocco(block))} acceso={isOpen} />
 
           <div className="flex items-center shrink-0 -mr-1" onClick={e => e.stopPropagation()}>
-            <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate(block.id)} className="text-[#5b6070] hover:text-brand transition p-1" title="Duplica">
+            {onDuplicate && <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate(block.id)} className="text-[#5b6070] hover:text-brand transition p-1" title="Duplica">
               <Copy size={15}/>
-            </button>
-            <button aria-label="Salva il blocco come modello" type="button" onClick={() => onSalvaModello(block)} className="text-[#5b6070] hover:text-brand transition p-1" title="Salva come modello">
+            </button>}
+            {onSalvaModello && <button aria-label="Salva il blocco come modello" type="button" onClick={() => onSalvaModello(block)} className="text-[#5b6070] hover:text-brand transition p-1" title="Salva come modello">
               <BookmarkPlus size={15}/>
-            </button>
+            </button>}
             <button aria-label="Sposta il blocco su" type="button" onClick={() => onMoveUp(block.id)} disabled={index===0} className="text-[#5b6070] hover:text-white disabled:opacity-25 p-1"><ChevronUp size={15}/></button>
             <button aria-label="Sposta il blocco giù" type="button" onClick={() => onMoveDown(block.id)} disabled={index===total-1} className="text-[#5b6070] hover:text-white disabled:opacity-25 p-1"><ChevronDown size={15}/></button>
             <button aria-label="Elimina il blocco" type="button" onClick={() => onRemove(block.id)} className="text-[#5b6070] hover:text-red-400 transition p-1"><Trash2 size={15}/></button>
@@ -2447,12 +2448,12 @@ export const RunningStepRow = memo(function RunningStepRow({ step, index, total,
         )}
       </div>
       <div className="flex items-center shrink-0 mt-1">
-        <button aria-label="Duplica la fase" type="button" onClick={() => onDuplicate && onDuplicate(step)} className="text-muted hover:text-running transition shrink-0 p-2" title="Duplica fase">
+        {onDuplicate && <button aria-label="Duplica la fase" type="button" onClick={() => onDuplicate(step)} className="text-muted hover:text-running transition shrink-0 p-2" title="Duplica fase">
           <Copy size={15} />
-        </button>
-        <button aria-label="Salva la fase come modello" type="button" onClick={() => onSalvaModello(step)} className="text-muted hover:text-running transition shrink-0 p-2" title="Salva come modello">
+        </button>}
+        {onSalvaModello && <button aria-label="Salva la fase come modello" type="button" onClick={() => onSalvaModello(step)} className="text-muted hover:text-running transition shrink-0 p-2" title="Salva come modello">
           <BookmarkPlus size={15} />
-        </button>
+        </button>}
         <button aria-label="Elimina la fase" type="button" onClick={() => onRemove(step.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
           <Trash2 size={15} />
         </button>
@@ -2529,6 +2530,12 @@ export default function CreateWorkout() {
   const awId = searchParams.get('aw_id')
   const athleteId = searchParams.get('athlete_id')
   const sourceId = editId || duplicateId
+  // «Modalità modello» (16/10/2026): il builder per UN blocco, da /modelli.
+  // `nuovo` con `categoria`, o l'id di un modello da modificare. Qui dentro la
+  // bozza del workout (`fleofit_workout_draft`) non si legge, non si scrive e
+  // non si cancella: aprire un modello non deve toccare un workout a metà.
+  const modello = searchParams.get('modello')
+  const categoriaModello = searchParams.get('categoria')
   // Da dove viene la bozza: una modifica salva SOPRA l'originale, una copia no.
   const modoBozza = editId ? 'modifica' : duplicateId ? 'copia' : 'nuovo'
   // Il workout è arrivato (o non c'era niente da caricare): da qui in poi un
@@ -2537,11 +2544,13 @@ export default function CreateWorkout() {
   const bozzaDiPartenza = useRef(null)
   const defaultDate = searchParams.get('date')
 
-  const [step, setStep] = useState(1) // 1=tipo, 2=build
+  const [step, setStep] = useState(modello ? 2 : 1) // 1=tipo, 2=build
   // Sul desktop il passo 1 non c'è: categoria, nome e data stanno nella
   // colonna di destra, accanto ai blocchi (src/components/CreaWorkoutDesktop.jsx).
-  const { role } = useAuth() || {}
-  const desktop = eDesktop(useSchermoLargo(), role)
+  const { role, user: utente } = useAuth() || {}
+  // Un modello è un blocco solo: anche sul desktop basta la colonna del telefono.
+  const schermoLargo = useSchermoLargo()
+  const desktop = !modello && eDesktop(schermoLargo, role)
   const passo = desktop ? 2 : step
   // Serve al fondo pagina: con la tastiera aperta la tab bar non c'è, e lo
   // spazio che le era riservato terrebbe la barra sospesa sopra un vuoto.
@@ -2557,7 +2566,7 @@ export default function CreateWorkout() {
   const nomeDiPartenza = useRef(null)
   const [date, setDate] = useState(defaultDate || format(new Date(), 'yyyy-MM-dd'))
   const [workoutIntensity, setWorkoutIntensity] = useState('5')
-  const [category, setCategory] = useState('Hyrox')
+  const [category, setCategory] = useState(modello === 'nuovo' && CATEGORIE_MODELLI.includes(categoriaModello) ? categoriaModello : 'Hyrox')
   const [blocks, setBlocks] = useState([])
   const [blockPickerOpen, setBlockPickerOpen] = useState(false)
   // Il blocco appena scelto nel picker, NON ancora nella lista (12/10/2026):
@@ -2629,7 +2638,14 @@ export default function CreateWorkout() {
   const [noteDiPartenza, setNoteDiPartenza] = useState('')
 
   const navigate = useNavigate()
-  const indietro = useIndietro('/')
+  const indietro = useIndietro(modello ? '/modelli' : '/')
+
+  // Modalità modello: il nome (vuoto = quello proposto dal blocco, come il nome
+  // generato del workout) e com'era il modello all'apertura, per sapere se
+  // uscendo c'è qualcosa da perdere.
+  const [nomeModello, setNomeModello] = useState(null) // null = non scritto: vale quello proposto
+  const [modelloDiPartenza, setModelloDiPartenza] = useState(null)
+  const [salvandoModello, setSalvandoModello] = useState(false)
 
   // Hook touch per riordinare i BLOCCHI HYROX
   // ⚠️ useTouchDrag memoizza getTouchHandlers su onReorder: con un'arrow inline
@@ -2822,6 +2838,8 @@ export default function CreateWorkout() {
 
   // Se editId o duplicateId sono presenti, carichiamo i dati del workout
   useEffect(() => {
+    // Modalità modello: niente workout da caricare e, soprattutto, niente bozza.
+    if (modello) return
     const fetchWorkoutToEdit = async () => {
       if (!sourceId) return
       const { data, error } = await supabase.from('workouts').select('*').eq('id', sourceId).single()
@@ -2949,6 +2967,44 @@ export default function CreateWorkout() {
     fetchWorkoutToEdit()
   }, [sourceId, duplicateId])
 
+  // Modalità modello: una categoria che non ha modelli, o un id che non c'è
+  // più (cancellato, o di un altro coach), riportano a /modelli.
+  useEffect(() => {
+    if (!modello) return undefined
+    if (modello === 'nuovo') {
+      if (!CATEGORIE_MODELLI.includes(categoriaModello)) navigate('/modelli', { replace: true })
+      return undefined
+    }
+    let vivo = true
+    leggiModello(modello)
+      .then(m => {
+        if (!vivo) return
+        if (!m) {
+          mostraErrore('Questo modello non c\'è più.')
+          navigate('/modelli', { replace: true })
+          return
+        }
+        const blocco = bloccoDaModello(m)
+        const b = m.categoria === 'Hyrox' ? [blocco] : []
+        const r = m.categoria === 'Running' ? [blocco] : []
+        const g = m.categoria === 'Gym' ? [blocco] : []
+        setCategory(m.categoria)
+        setBlocks(b)
+        setRunningSteps(r)
+        setGymGroups(g)
+        if (b.length) apriSolo([blocco.id])
+        setNomeModello(m.nome)
+        setModelloDiPartenza(JSON.stringify({ n: m.nome, b, r, g }))
+      })
+      .catch(e => {
+        console.warn('Modello non caricato:', e)
+        if (!vivo) return
+        mostraErrore('Non riesco a caricare il modello. Controlla la connessione e riprova.')
+        navigate('/modelli', { replace: true })
+      })
+    return () => { vivo = false }
+  }, [modello, categoriaModello, navigate, apriSolo])
+
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
@@ -2956,7 +3012,17 @@ export default function CreateWorkout() {
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
 
-  const hasUnsavedChanges = title.trim() !== '' || blocks.length > 0 || runningSteps.length > 0 || gymGroups.length > 0
+  // Modalità modello: il blocco unico, il nome che verrà salvato (scritto dal
+  // coach, o proposto dal blocco finché non lo scrive) e se c'è da perdere qualcosa.
+  const bloccoModello = !modello ? null
+    : category === 'Hyrox' ? blocks[0] : category === 'Running' ? runningSteps[0] : gymGroups[0]
+  const nomeDelModello = nomeModello ?? (bloccoModello ? nomeProposto(category, bloccoModello) : '')
+  const modelloCambiato = modello && (modelloDiPartenza === null
+    ? !!bloccoModello || nomeModello !== null
+    : JSON.stringify({ n: nomeModello, b: blocks, r: runningSteps, g: gymGroups }) !== modelloDiPartenza)
+
+  const hasUnsavedChanges = modello ? !!modelloCambiato
+    : title.trim() !== '' || blocks.length > 0 || runningSteps.length > 0 || gymGroups.length > 0
 
   // 0. Salvataggio automatico bozza in locale
   //
@@ -2966,7 +3032,7 @@ export default function CreateWorkout() {
   // lavoro che non esisteva — e la si ritrovava proposta la volta dopo.
   // Il riferimento è il primo stato completo dopo il caricamento.
   useEffect(() => {
-    if (!caricato || saved) return
+    if (modello || !caricato || saved) return
     const corpo = { title, date, workoutIntensity, category, blocks, runningSteps, gymGroups, coachNotes }
     const firma = JSON.stringify(corpo)
     if (bozzaDiPartenza.current === null) { bozzaDiPartenza.current = firma; return }
@@ -2978,11 +3044,11 @@ export default function CreateWorkout() {
     if (hasUnsavedChanges) {
       scriviJson('fleofit_workout_draft', { sourceId: sourceId || null, modo: modoBozza, ...corpo })
     }
-  }, [title, date, workoutIntensity, category, blocks, runningSteps, gymGroups, coachNotes, sourceId, modoBozza, hasUnsavedChanges, saved, caricato])
+  }, [title, date, workoutIntensity, category, blocks, runningSteps, gymGroups, coachNotes, sourceId, modoBozza, hasUnsavedChanges, saved, caricato, modello])
 
   useEffect(() => {
-    if (saved) localStorage.removeItem('fleofit_workout_draft')
-  }, [saved])
+    if (saved && !modello) localStorage.removeItem('fleofit_workout_draft')
+  }, [saved, modello])
 
   // Il gesto del dito in corso, per il blocco del «tira giù» qui sotto. In un
   // ref e non dentro l'effetto: se l'effetto si riregistra a metà gesto, il
@@ -3084,6 +3150,16 @@ export default function CreateWorkout() {
   }, [hasUnsavedChanges, saved])
 
   const handleBack = () => {
+    // Modalità modello: niente passo 1 e niente bozza da cancellare.
+    if (modello) {
+      if (hasUnsavedChanges && !saved) {
+        setPendingPath(INDIETRO)
+        setShowExitConfirm(true)
+      } else {
+        indietro()
+      }
+      return
+    }
     if (step === 2 && !sourceId) {
       // Con dei blocchi (o delle fasi) già composti la freccia chiede
       // conferma: si legge come «butto via tutto», anche se lo stato resta.
@@ -3404,6 +3480,27 @@ export default function CreateWorkout() {
   )
   useEffect(() => { salvaRef.current = handleSave })
 
+  const salvaQuestoModello = async () => {
+    if (!bloccoModello || !nomeValido(nomeDelModello) || salvandoModello) return
+    setSalvandoModello(true)
+    try {
+      if (!utente?.id) throw new Error('Nessun utente')
+      const contenuto = contenutoDaBlocco(category, bloccoModello)
+      if (modello === 'nuovo') {
+        await salvaModello({ coach: utente.id, categoria: category, nome: nomeDelModello, contenuto })
+      } else {
+        await aggiornaModello(modello, { nome: nomeDelModello, contenuto })
+      }
+      vibraSuccesso()
+      setSaved(true)
+      navigate(`/modelli?categoria=${category}`, { replace: true })
+    } catch (e) {
+      console.warn('Modello non salvato:', e)
+      mostraErrore(MESSAGGIO_SENZA_RETE)
+      setSalvandoModello(false)
+    }
+  }
+
   const colonnaDesktop = desktop && (
     <CreaWorkoutDesktop
       categorie={CATEGORIE} categoria={category} onCategoria={setCategory}
@@ -3455,12 +3552,15 @@ export default function CreateWorkout() {
       <TestataCrea
         passo={step}
         onIndietro={passo === 1 && daBarra && !sourceId ? null : handleBack}
-        titolo={passo === 2 ? nomeMostrato : null}
-        codice={passo === 2 ? codice : null}
-        sottotitolo={passo === 2 ? sottotitoloWorkout : null}
-        onTitolo={passo === 2 && !desktop ? () => setStep(1) : null}
-        onModelli={() => navigate('/modelli')}
+        titolo={modello ? (modello === 'nuovo' ? 'Nuovo modello' : 'Modifica modello') : passo === 2 ? nomeMostrato : null}
+        codice={passo === 2 && !modello ? codice : null}
+        sottotitolo={modello ? categoriaCorrente(category).nome : passo === 2 ? sottotitoloWorkout : null}
+        onTitolo={passo === 2 && !desktop && !modello ? () => setStep(1) : null}
+        onModelli={modello ? null : () => navigate('/modelli')}
+        senzaPassi={!!modello}
       />
+
+      {modello && <CampoNomeModello valore={nomeDelModello} onChange={setNomeModello} />}
 
       {/* ── STEP 1: LA CATEGORIA COME DOMANDA ────────────────────── */}
       {passo === 1 && (
@@ -3542,21 +3642,21 @@ export default function CreateWorkout() {
               dura la seduta. La barra sotto i tre numeri dice COME la durata è
               distribuita — un riscaldamento che si mangia metà seduta si vede a
               occhio, senza leggere un solo tempo. */}
-          {!desktop && <RiepilogoWorkout {...riepilogo} collocazione={collocazione} />}
+          {!desktop && !modello && <RiepilogoWorkout {...riepilogo} collocazione={collocazione} />}
 
-          {!desktop && <CardIntensita
+          {!desktop && !modello && <CardIntensita
             valore={workoutIntensity}
             onChange={setWorkoutIntensity}
             classeColore="bg-brand"
           />}
 
-          {cardIA}
+          {!modello && cardIA}
 
-          {conImmagine && (
+          {!modello && conImmagine && (
             <BottoneGhost icona={ScanText} onClick={() => inputImmagine.current?.click()}>Da un'immagine</BottoneGhost>
           )}
 
-          {fasciaIA}
+          {!modello && fasciaIA}
 
           <div className="flex flex-col gap-[11px]" data-drag-container>
             {blocks.map((block, idx) => (
@@ -3571,23 +3671,28 @@ export default function CreateWorkout() {
                 onDragStartIndex={bloccoDragStart}
                 onDragEnterIndex={bloccoDragEnter}
                 onDragEndIndex={bloccoDragEnd}
-                onDuplicate={bloccoDuplicate}
+                onDuplicate={modello ? null : bloccoDuplicate}
                 onDuplicateExerciseRequest={bloccoDuplicaEsercizio}
-                onSalvaModello={bloccoSalvaModello}
+                onSalvaModello={modello ? null : bloccoSalvaModello}
                 touchHandlers={getBlockTouchHandlers}
               />
             ))}
           </div>
 
-          <BottoneGhost onClick={() => setBlockPickerOpen(true)}>Aggiungi blocco</BottoneGhost>
+          {/* Un modello è un blocco solo: messo quello, non se ne aggiungono altri. */}
+          {!modello ? (
+            <BottoneGhost onClick={() => setBlockPickerOpen(true)}>Aggiungi blocco</BottoneGhost>
+          ) : blocks.length === 0 && (
+            <BottoneGhost onClick={() => setBlockPickerOpen(true)}>Scegli il blocco</BottoneGhost>
+          )}
 
-          <NoteCoach
+          {!modello && <NoteCoach
             valore={coachNotes}
             onChange={setCoachNotes}
             etichetta="Note coach"
             nota="Nel PDF"
             placeholder="Es: vai a cedimento sull'ultimo esercizio, tieni il ritmo sul row…"
-          />
+          />}
         </div>
       )}
 
@@ -3596,7 +3701,7 @@ export default function CreateWorkout() {
           onClose={() => setBlockPickerOpen(false)}
           onAdd={(type) => { setBlockPickerOpen(false); aggiungiTipo(type) }}
           // Un blocco da modello ha già i suoi numeri: entra senza FoglioParametri.
-          onModello={(m) => { setBlockPickerOpen(false); aggiungiBlocco(bloccoDaModello(m)) }}
+          onModello={modello ? undefined : (m) => { setBlockPickerOpen(false); aggiungiBlocco(bloccoDaModello(m)) }}
         />
       )}
 
@@ -3650,34 +3755,34 @@ export default function CreateWorkout() {
           e non il modo di comporre le fasi, che resta quello di prima. */}
       {passo === 2 && category === 'Running' && (
         <div className="flex flex-col gap-3.5 passo-entra">
-          {!desktop && <CardIntensita
+          {!desktop && !modello && <CardIntensita
             valore={workoutIntensity}
             onChange={setWorkoutIntensity}
             classeColore="bg-running"
           />}
 
-          {cardIA}
+          {!modello && cardIA}
 
-          {conImmagine && (
+          {!modello && conImmagine && (
             <BottoneGhost icona={ScanText} onClick={() => inputImmagine.current?.click()}>Da un'immagine</BottoneGhost>
           )}
 
-          {fasciaIA}
+          {!modello && fasciaIA}
 
           <div className={`${CARD} px-4 py-[15px] flex flex-col gap-3`}>
             <div className="flex items-center justify-between">
-              <span className={LABEL}>Fasi dell'allenamento</span>
-              <button aria-label="Aggiungi una fase di corsa" type="button" onClick={() => { setEditingStep(null); setRunningPickerOpen(true) }}
+              <span className={LABEL}>{modello ? 'La fase' : 'Fasi dell\'allenamento'}</span>
+              {!modello && <button aria-label="Aggiungi una fase di corsa" type="button" onClick={() => { setEditingStep(null); setRunningPickerOpen(true) }}
                 className="text-running hover:brightness-125 transition p-1 -m-1">
                 <Plus size={18} />
-              </button>
+              </button>}
             </div>
 
             {runningSteps.length === 0 ? (
               <button type="button" onClick={() => { setEditingStep(null); setRunningPickerOpen(true) }}
                 className="min-h-12 rounded-[14px] border border-dashed border-running/40 text-running text-[13.5px] font-extrabold
                            flex items-center justify-center gap-2 hover:bg-running/10 transition">
-                <Plus size={16} aria-hidden="true" /> Aggiungi la prima fase
+                <Plus size={16} aria-hidden="true" /> {modello ? 'Scegli la fase' : 'Aggiungi la prima fase'}
               </button>
             ) : (
               <div className="flex flex-col gap-2" data-drag-container>
@@ -3694,56 +3799,56 @@ export default function CreateWorkout() {
                     onDragEnterIndex={faseDragEnter}
                     onDragEndIndex={faseDragEnd}
                     onEdit={faseEdit}
-                    onDuplicate={faseDuplicate}
-                    onSalvaModello={faseSalvaModello}
+                    onDuplicate={modello ? null : faseDuplicate}
+                    onSalvaModello={modello ? null : faseSalvaModello}
                     touchHandlers={getStepTouchHandlers}
                   />
                 ))}
-                <button type="button" onClick={() => { setEditingStep(null); setRunningPickerOpen(true) }}
+                {!modello && <button type="button" onClick={() => { setEditingStep(null); setRunningPickerOpen(true) }}
                   className="min-h-11 rounded-[14px] border border-dashed border-running/40 text-running text-[13.5px] font-extrabold
                              flex items-center justify-center gap-2 hover:bg-running/10 transition mt-1">
                   <Plus size={16} aria-hidden="true" /> Aggiungi fase
-                </button>
+                </button>}
               </div>
             )}
           </div>
 
-          <NoteCoach
+          {!modello && <NoteCoach
             valore={coachNotes}
             onChange={setCoachNotes}
             etichetta="Note coach"
             nota="Nel PDF"
             placeholder="Es: parti tranquillo, chiudi progressivo…"
-          />
+          />}
         </div>
       )}
 
       {/* ── STEP 2: LA SCHEDA DA PALESTRA (13/10/2026) ─────────────── */}
       {passo === 2 && category === 'Gym' && (
         <div className="flex flex-col gap-3.5 passo-entra">
-          {!desktop && riepilogoGymCard}
+          {!desktop && !modello && riepilogoGymCard}
 
-          {!desktop && <CardIntensita
+          {!desktop && !modello && <CardIntensita
             valore={workoutIntensity}
             onChange={setWorkoutIntensity}
             classeColore="bg-gym"
           />}
 
-          {cardIA}
+          {!modello && cardIA}
 
-          {fasciaIA}
+          {!modello && fasciaIA}
 
           <Suspense fallback={<div className={`${CARD} h-40 animate-pulse`} />}>
-            <CreaGym gruppi={gymGroups} setGruppi={setGymGroups} />
+            <CreaGym gruppi={gymGroups} setGruppi={setGymGroups} modello={!!modello} />
           </Suspense>
 
-          <NoteCoach
+          {!modello && <NoteCoach
             valore={coachNotes}
             onChange={setCoachNotes}
             etichetta="Note coach"
             nota="Nel PDF"
             placeholder="Es: scarico la settimana prossima, tieni 2 ripetizioni in riserva…"
-          />
+          />}
         </div>
       )}
 
@@ -3785,6 +3890,10 @@ export default function CreateWorkout() {
           <CtaPrimaria onClick={() => setStep(2)} iconaCoda={ArrowRight}>
             Costruisci l'allenamento
           </CtaPrimaria>
+        ) : modello ? (
+          <CtaPrimaria onClick={salvaQuestoModello} disabled={!bloccoModello || !nomeValido(nomeDelModello)} attesa={salvandoModello}>
+            Salva modello
+          </CtaPrimaria>
         ) : (
           azioniSalva
         )}
@@ -3795,7 +3904,7 @@ export default function CreateWorkout() {
       {runningPickerOpen && (
         <RunningStepPicker
           initialStep={editingStep}
-          onModello={editingStep ? undefined : (m) => setRunningSteps(prev => [...prev, bloccoDaModello(m)])}
+          onModello={editingStep || modello ? undefined : (m) => setRunningSteps(prev => [...prev, bloccoDaModello(m)])}
           onAdd={step => {
             if (editingStep) {
               setRunningSteps(runningSteps.map(s => s.id === step.id ? step : s))
@@ -3905,7 +4014,7 @@ export default function CreateWorkout() {
               </button>
               <button 
                 onClick={() => {
-                  localStorage.removeItem('fleofit_workout_draft')
+                  if (!modello) localStorage.removeItem('fleofit_workout_draft')
                   // ⚠️ `pendingPath` è o una rotta intercettata (una stringa)
                   // o la sentinella del tasto indietro, che NON è una rotta:
                   // passarla a `navigate` porterebbe su `/-1`.
