@@ -69,9 +69,12 @@
    (`supabase/schema/multi_coach_2026-10-15.sql`), ✅ **applicata il 16/10/2026**. ⚠️ La prima
    **non additiva**: riscrive le policy di quasi tutte le tabelle. Edge Function multi-coach
    pubblicate lo stesso giorno (`docs/memoria/database.md`, «Multi-coach»).
-   ⏳ **Quinta eccezione** (26/10/2026, sì esplicito in sessione): `federico_leo@hotmail.it` legge
+   ✅ **Quinta eccezione** (16/10/2026, sì esplicito in sessione): la tabella `modelli_blocco`
+   («Modelli di blocco»), additiva, ✅ **applicata** — c'è nel database al controllo del 26/10/2026
+   (`supabase/schema/modelli_blocco_2026-10-16.sql`).
+   ✅ **Sesta eccezione** (26/10/2026, sì esplicito in sessione): `federico_leo@hotmail.it` legge
    **tutti** i workout, solo in lettura (ridefinisce la funzione `vedo_workout`, nessuna tabella).
-   **Scritta, non ancora applicata** (`supabase/schema/workout_tutti_hotmail_2026-10-26.sql`,
+   ✅ **Applicata** — controllata il 26/10/2026 (`supabase/schema/workout_tutti_hotmail_2026-10-26.sql`,
    `docs/memoria/database.md`).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
@@ -335,6 +338,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `messaggi_coach` | «Messaggio a tutti»: la bacheca «Dal coach». Dal 16/10 con `destinatari` (`miei`/`tutti`, `tutti` solo admin): l'atleta legge quelli dei suoi coach e i `tutti` degli admin. Scrive lo staff **senza `demo@fleofit.it`**. `docs/memoria/messaggi.md` |
 | `staff` · `coach_atleti` | **Più coach** (16/10/2026, `supabase/schema/multi_coach_2026-10-15.sql`): chi è admin/coach (chiave email) e quale coach segue quale atleta (chiave la coppia). Scrivono solo gli admin e il trigger `athletes_assegna_coach`. Tutte le policy passano da `e_admin()`, `e_staff()`, `mio_atleta()`, `vedo_workout()` |
 | `note_estratte` | ✅ **applicata il 09/10/2026**: i dati ricavati dalle note degli atleti (standard `VERSIONE` in `estrai-note/regole.ts`). Policy **solo admin** (`USING` e `WITH CHECK`), l'atleta non la legge. La scrive solo `estrai-note`. `main` non la conosce |
+| `modelli_blocco` | ✅ **applicata** (`supabase/schema/modelli_blocco_2026-10-16.sql`): i blocchi (Hyrox), le fasi (Running) e i gruppi (Gym) salvati dal coach per riusarli, nel formato del §5 senza `id` interni. Policy unica: solo il coach proprietario, se è staff — **anche un admin vede solo i suoi**. Nel backup notturno. `main` non la conosce |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
 - 🔴 **Dal 16/10/2026 lo staff si cambia in UN posto: la tabella `staff`** (admin e coach).

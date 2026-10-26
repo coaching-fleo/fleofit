@@ -437,7 +437,9 @@ fallirebbe è l'insert di un messaggio con `destinatari`, e per questo in «Mess
 «Tutti gli atleti» compare **solo** quando la lettura di `coach_atleti` risponde (cioè a migrazione fatta).
 
 ### 👁️ Eccezione: `federico_leo@hotmail.it` legge tutti i workout (`supabase/schema/workout_tutti_hotmail_2026-10-26.sql`)
-⏳ **Scritta il 26/10/2026 (sì esplicito del committente in sessione), NON ancora applicata né provata.**
+✅ **Scritta il 26/10/2026 (sì esplicito del committente in sessione) e applicata**: al controllo
+del 26/10/2026 la `vedo_workout` nel database contiene la riga dell'email. ⏳ Non ancora provata
+dall'app (vedi «Da fare dopo l'applicazione» qui sotto).
 Un coach vede solo i workout che ha creato o assegnati ai suoi atleti, giustamente; questo account
 li vede **tutti**, come un admin, ma **solo in lettura**. Si ridefinisce `vedo_workout(uuid)` con una riga
 in più (`email_corrente() = 'federico_leo@hotmail.it'`): nessuna tabella e nessuna policy toccate, e
