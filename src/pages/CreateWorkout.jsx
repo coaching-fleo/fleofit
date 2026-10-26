@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback, memo, lazy, Suspense
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText, Repeat2, TrendingUp, Minus } from 'lucide-react'
+import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText, Repeat2, TrendingUp, Minus, BookmarkPlus } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
@@ -50,6 +50,7 @@ import { fotoDisponibile } from '../lib/lettoreTesto'
 import { useAuth } from '../App'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
 import CreaWorkoutDesktop from '../components/CreaWorkoutDesktop'
+import { FoglioSalvaModello } from '../components/FoglioModello'
 
 // Il lettore dei workout scritti si scarica solo quando si apre il foglio.
 const FoglioDaTesto = lazy(() => import('../components/FoglioDaTesto'))
@@ -1728,7 +1729,7 @@ function AnteprimaIncremento({ block }) {
 // lo cattura src/pages/__tests__/HyroxBlockMemo.test.jsx.
 //
 // `onUpdate` fa eccezione e riceve il blocco intero: l'id è già lì dentro.
-export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate, touchHandlers, onDuplicateExerciseRequest }) {
+export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, onDuplicate, touchHandlers, onDuplicateExerciseRequest, onSalvaModello }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [cambioTipo, setCambioTipo] = useState(false)
   const [editingExercise, setEditingExercise] = useState(null)
@@ -1862,6 +1863,9 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
           <div className="flex items-center shrink-0 -mr-1" onClick={e => e.stopPropagation()}>
             <button aria-label="Duplica il blocco" type="button" onClick={() => onDuplicate(block.id)} className="text-[#5b6070] hover:text-brand transition p-1" title="Duplica">
               <Copy size={15}/>
+            </button>
+            <button aria-label="Salva il blocco come modello" type="button" onClick={() => onSalvaModello(block)} className="text-[#5b6070] hover:text-brand transition p-1" title="Salva come modello">
+              <BookmarkPlus size={15}/>
             </button>
             <button aria-label="Sposta il blocco su" type="button" onClick={() => onMoveUp(block.id)} disabled={index===0} className="text-[#5b6070] hover:text-white disabled:opacity-25 p-1"><ChevronUp size={15}/></button>
             <button aria-label="Sposta il blocco giù" type="button" onClick={() => onMoveDown(block.id)} disabled={index===total-1} className="text-[#5b6070] hover:text-white disabled:opacity-25 p-1"><ChevronDown size={15}/></button>
@@ -2339,7 +2343,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
 // onRemove, lo step intero a onEdit/onDuplicate), quindi bastava stabilizzare
 // i gestori. L'asimmetria fra i due componenti è quindi VOLUTA e va mantenuta:
 // uniformarli romperebbe il riordino delle fasi. Vedi CLAUDE.md §9-quinquies.
-export const RunningStepRow = memo(function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, touchHandlers, onEdit, onDuplicate }) {
+export const RunningStepRow = memo(function RunningStepRow({ step, index, total, onRemove, onMoveUp, onMoveDown, onDragStartIndex, onDragEnterIndex, onDragEndIndex, touchHandlers, onEdit, onDuplicate, onSalvaModello }) {
 
   const getTypeLabel = (t) => {
     switch(t) {
@@ -2435,6 +2439,9 @@ export const RunningStepRow = memo(function RunningStepRow({ step, index, total,
       <div className="flex items-center shrink-0 mt-1">
         <button aria-label="Duplica la fase" type="button" onClick={() => onDuplicate && onDuplicate(step)} className="text-muted hover:text-running transition shrink-0 p-2" title="Duplica fase">
           <Copy size={15} />
+        </button>
+        <button aria-label="Salva la fase come modello" type="button" onClick={() => onSalvaModello(step)} className="text-muted hover:text-running transition shrink-0 p-2" title="Salva come modello">
+          <BookmarkPlus size={15} />
         </button>
         <button aria-label="Elimina la fase" type="button" onClick={() => onRemove(step.id)} className="text-gray-700 hover:text-red-400 transition shrink-0 p-2">
           <Trash2 size={15} />
@@ -2592,6 +2599,7 @@ export default function CreateWorkout() {
 
   // Gym: i gruppi della scheda da palestra (`sections.gym`, src/lib/gym.js)
   const [gymGroups, setGymGroups] = useState([])
+  const [daSalvare, setDaSalvare] = useState(null) // { categoria, blocco } per «Salva come modello»
 
   // Note + pause
   const [coachNotes, setCoachNotes] = useState('')
@@ -2784,6 +2792,12 @@ export default function CreateWorkout() {
   const faseDuplicate = useCallback((fase) => {
     setRunningSteps(prev => [...prev, { ...fase, id: Math.random() }])
   }, [])
+
+  // «Salva come modello»: un foglio solo per Hyrox e Corsa. Le callback hanno
+  // dipendenze vuote, o HyroxBlock e RunningStepRow (memo) si ridisegnerebbero
+  // tutti a ogni tasto (HyroxBlockMemo.test, RunningStepRowMemo.test).
+  const bloccoSalvaModello = useCallback((blocco) => setDaSalvare({ categoria: 'Hyrox', blocco }), [])
+  const faseSalvaModello = useCallback((fase) => setDaSalvare({ categoria: 'Running', blocco: fase }), [])
 
   const faseDragStart = useCallback((i) => { draggedStepIdx.current = i }, [])
   const faseDragEnter = useCallback((i) => {
@@ -3548,6 +3562,7 @@ export default function CreateWorkout() {
                 onDragEndIndex={bloccoDragEnd}
                 onDuplicate={bloccoDuplicate}
                 onDuplicateExerciseRequest={bloccoDuplicaEsercizio}
+                onSalvaModello={bloccoSalvaModello}
                 touchHandlers={getBlockTouchHandlers}
               />
             ))}
@@ -3667,6 +3682,7 @@ export default function CreateWorkout() {
                     onDragEndIndex={faseDragEnd}
                     onEdit={faseEdit}
                     onDuplicate={faseDuplicate}
+                    onSalvaModello={faseSalvaModello}
                     touchHandlers={getStepTouchHandlers}
                   />
                 ))}
@@ -3892,6 +3908,10 @@ export default function CreateWorkout() {
         document.body
       )}
       
+      {daSalvare && (
+        <FoglioSalvaModello categoria={daSalvare.categoria} blocco={daSalvare.blocco} onChiudi={() => setDaSalvare(null)} />
+      )}
+
       {createPortal(
         <>
           <CustomAlert info={alertInfo} onClose={() => setAlertInfo(null)} />

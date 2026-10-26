@@ -25,12 +25,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, X, Copy, ChevronUp, ChevronDown, Trash2, Link2, Unlink, Search, Check, ListOrdered, Repeat2 } from 'lucide-react'
+import { Plus, X, Copy, ChevronUp, ChevronDown, Trash2, Link2, Unlink, Search, Check, ListOrdered, Repeat2, BookmarkPlus } from 'lucide-react'
 import { CARD, LABEL, VETRO } from '../lib/stiliCard'
 import { useBottomSheet } from '../useBottomSheet'
 import { vibraScelta, battito } from '../lib/aptica'
 import { chiudiTastieraSuInvio } from '../useTastiera'
 import { FoglioMisure } from './FoglioMisure'
+import { FoglioSalvaModello } from './FoglioModello'
 import { MUSCOLI, cercaEserciziGym, voceGym } from '../lib/eserciziGym'
 import {
   FASI_GYM, faseDi, nuovoGruppoGym, nuovoEsercizioGym, tipoGruppo, conDettaglio, serieDi,
@@ -62,6 +63,7 @@ export default function CreaGym({ gruppi, setGruppi }) {
   const [editorGruppo, setEditorGruppo] = useState(null) // id di un gruppo con più esercizi
   // Il picker a scelta singola sopra il foglio dell'esercizio: «Cambia».
   const [cambio, setCambio] = useState(false)
+  const [daSalvare, setDaSalvare] = useState(null) // il gruppo di «Salva come modello»
   const etichette = useMemo(() => etichetteGym(gruppi), [gruppi])
 
   const aggiorna = (id, fn) => setGruppi(prev => prev.map(g => (g.id === id ? fn(g) : g)))
@@ -165,6 +167,7 @@ export default function CreaGym({ gruppi, setGruppi }) {
                 onSu={() => sposta(g.id, -1)}
                 onGiu={() => sposta(g.id, 1)}
                 onDuplica={() => duplica(g.id)}
+                onSalvaModello={() => setDaSalvare(g)}
                 onElimina={() => elimina(g.id)}
                 onUnisci={() => { vibraScelta(); unisci(g.id) }}
                 onScollega={(esercizioId) => { vibraScelta(); scollega(g.id, esercizioId) }}
@@ -221,6 +224,10 @@ export default function CreaGym({ gruppi, setGruppi }) {
           onChiudi={() => setEditorGruppo(null)}
         />
       )}
+
+      {daSalvare && (
+        <FoglioSalvaModello categoria="Gym" blocco={daSalvare} onChiudi={() => setDaSalvare(null)} />
+      )}
     </div>
   )
 }
@@ -246,7 +253,7 @@ function Azione({ etichetta, onClick, disabled, children, pericolo }) {
   )
 }
 
-function CardGruppo({ gruppo, etichette, primo, ultimo, onApri, onApriGruppo, onSu, onGiu, onDuplica, onElimina, onUnisci, onScollega, onAggiungiQui }) {
+function CardGruppo({ gruppo, etichette, primo, ultimo, onApri, onApriGruppo, onSu, onGiu, onDuplica, onSalvaModello, onElimina, onUnisci, onScollega, onAggiungiQui }) {
   const multi = gruppo.esercizi.length > 1
   const principale = faseDi(gruppo) === 'principale'
   const rec = testoTempo(gruppo.recupero)
@@ -256,6 +263,7 @@ function CardGruppo({ gruppo, etichette, primo, ultimo, onApri, onApriGruppo, on
       <Azione etichetta="Sposta su" onClick={onSu} disabled={primo}><ChevronUp size={15} /></Azione>
       <Azione etichetta="Sposta giù" onClick={onGiu} disabled={ultimo}><ChevronDown size={15} /></Azione>
       <Azione etichetta="Duplica" onClick={onDuplica}><Copy size={15} /></Azione>
+      <Azione etichetta="Salva come modello" onClick={onSalvaModello}><BookmarkPlus size={15} /></Azione>
       <Azione etichetta="Elimina" onClick={onElimina} pericolo><Trash2 size={15} /></Azione>
     </div>
   )
