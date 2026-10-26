@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, useLocation, Link } from 'react-router-dom'
 import { MESSAGGIO_SENZA_RETE } from '../../lib/modelliBloccoDb'
 
 // Perché questi test esistono
@@ -184,5 +184,31 @@ describe('il builder in modalità modello', () => {
   it('una categoria che non ha modelli riporta ai modelli', async () => {
     monta('/create?modello=nuovo&categoria=Custom')
     expect(await screen.findByTestId('posizione')).toHaveTextContent(/^\/modelli$/)
+  })
+
+  it('passando dal modello al builder dei workout la schermata riparte, e la bozza non si tocca', async () => {
+    // È la stessa rotta (/create): senza ripartire, il blocco del modello restava
+    // lì come un workout, e al primo ritocco sovrascriveva la bozza a metà.
+    const bozza = JSON.stringify({
+      sourceId: null, modo: 'nuovo', title: 'Workout lasciato a metà', date: '2026-10-26', workoutIntensity: '7',
+      category: 'Hyrox', blocks: [{ id: 0.5, type: 'AMRAP', params: { duration: '12:00' }, exercises: [] }],
+      runningSteps: [], gymGroups: [], coachNotes: '',
+    })
+    localStorage.setItem('fleofit_workout_draft', bozza)
+    render(
+      <AuthContext.Provider value={{ user: { id: 'u1' }, role: 'admin' }}>
+        <MemoryRouter initialEntries={['/create?modello=m1']}>
+          <Link to="/create">Workout</Link>
+          <Routes><Route path="/create" element={<CreateWorkout />} /></Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    )
+    await screen.findByLabelText('Nome del modello')
+    await userEvent.click(screen.getByRole('link', { name: 'Workout' }))
+    // Il builder dei workout, da capo: propone la bozza, e del modello non resta niente.
+    expect(await screen.findByRole('dialog', { name: 'Bozza Trovata' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Nome del modello')).toBeNull()
+    expect(screen.queryByText('5 km')).toBeNull()
+    expect(localStorage.getItem('fleofit_workout_draft')).toBe(bozza)
   })
 })

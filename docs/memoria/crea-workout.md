@@ -1668,6 +1668,12 @@ piano: `docs/superpowers/plans/2026-10-16-modelli-blocco.md`. Costruito il 26/10
   scrive e non si cancella: ogni effetto e ogni uscita del builder che la tocca ha una guardia
   `modello`. Senza, aprire un modello cancellava il workout lasciato a metà (o lo riproponeva
   dentro il modello). Il test è «la bozza del workout resta identica» in `CreaModello.test.jsx`.
+- 🔴 **Stessa rotta, due builder.** `/create` e `/create?modello=…` montano lo stesso
+  componente: passando dall'uno all'altro (la tab «Workout» dal builder di un modello) React lo
+  teneva montato, con il blocco del modello in pagina come un workout, e il primo ritocco
+  sovrascriveva la bozza. Il `CreateWorkout` esportato ora è un guscio che monta `Costruttore`
+  con una `key` sul parametro `modello`: a ogni cambio la schermata riparte da capo. Trovato
+  nella revisione finale del 26/10 (test «…la schermata riparte, e la bozza non si tocca»).
 - **La fase Gym** non sta nel modello: la decide il punto da cui lo si inserisce (`picker.fase`).
   Dentro una superserie e nel «Cambia» la sezione dei modelli non c'è.
 - **Un blocco solo.** Nella modalità modello spariscono anche Duplica, «Salva come modello» e

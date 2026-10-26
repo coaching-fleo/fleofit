@@ -2520,7 +2520,19 @@ function NoteCoach({ valore, onChange, etichetta, nota, placeholder, righe = 3 }
  */
 const INDIETRO = Symbol('indietro')
 
+/**
+ * Il builder dei workout e quello dei modelli stanno sulla stessa rotta
+ * (`/create` e `/create?modello=…`), e passando dall'uno all'altro React
+ * terrebbe montata la stessa schermata: il blocco del modello restava lì come un
+ * workout, e al primo ritocco sovrascriveva la bozza a metà. La chiave la fa
+ * ripartire da capo a ogni cambio (CreaModello.test.jsx).
+ */
 export default function CreateWorkout() {
+  const [searchParams] = useSearchParams()
+  return <Costruttore key={searchParams.get('modello') ? `modello-${searchParams.get('modello')}` : 'workout'} />
+}
+
+function Costruttore() {
   const [searchParams] = useSearchParams()
   // Aperto dalla tab bar il builder è una destinazione, non una pagina in cui
   // si è entrati: al passo 1 niente tasto indietro, come Calendario e Atleti.
