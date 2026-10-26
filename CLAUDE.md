@@ -22,10 +22,13 @@
 - **Schema del database congelato** (§0, regola 0-bis): l'approvazione è arrivata, ma lo
   sblocco resta una decisione del committente. **Un'eccezione**, il 09/10/2026: la tabella
   `note_estratte` («Dalle note», `docs/memoria/scheda-atleta.md`).
-- **App Store**: in vendita la **1.2.0** — build `1.2.0 (3)`, commit `799b119` del
-  09/10/2026 (la 1.1.0 (6) era stata approvata il 29/09). ⏳ **La 1.2.1 è in revisione dal
-  14/10/2026** (archivio delle 11:39, codice di `c315006` + versione 1.2.1): novità in
-  [DEVLOG.md](DEVLOG.md), contate da `799b119`. Il prossimo aggiornamento sarà la **1.2.2**.
+- **App Store**: ⏳ **la 1.2.2 è in revisione dal 26/10/2026** (codice di `261a8e4` + versione
+  1.2.2, build 1 nel `pbxproj`; il task 4 dei Modelli di blocco era fuori, nello stash). Prima
+  c'erano la 1.2.0 (`799b119`, 09/10) e la 1.2.1 (`c315006`, inviata il 14/10: il suo esito non è
+  stato registrato qui, da confermare su App Store Connect). Novità in [DEVLOG.md](DEVLOG.md),
+  contate da `c315006`. Il prossimo aggiornamento sarà la **1.2.3**.
+  ⚠️ Rischio noto, accettato il 26/10: `demo@fleofit.it` è admin e dalla 1.2.2 può aggiungere e
+  togliere coach e spostare atleti (Impostazioni → Coach).
   ⚠️ Prima di archiviare si controlla lo stato della versione su App Store Connect
   (`docs/memoria/app-store.md`). ⏸️ In stand-by e da ricordare al prossimo aggiornamento:
   consenso privacy + policy nuova (BACKLOG, in cima).

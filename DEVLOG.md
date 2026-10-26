@@ -1,7 +1,9 @@
 # Dev log — prossimo aggiornamento su App Store
 
 Le modifiche fatte dopo la versione **1.2.0**, in vendita sullo Store: build `1.2.0 (3)`, archiviata il
-09/10/2026 alle 10:40 dal commit `799b119`. Il prossimo aggiornamento è la **1.2.1**.
+09/10/2026 alle 10:40 dal commit `799b119`. La **1.2.1** è stata inviata il 14/10/2026 dal codice di
+`c315006`; la **1.2.2** il 26/10/2026 da `261a8e4`. Il prossimo aggiornamento è la **1.2.3**: le voci
+nuove vanno in fondo alla sezione della 1.2.2, sotto un titolo «1.2.3».
 
 > ⚠️ Fino al 14/10/2026 questo file contava dalla 1.1.0 e credeva la 1.2.0 mai caricata: era
 > stata caricata e approvata. Le voci già uscite con la 1.2.0 stanno in fondo, per storia.
@@ -75,6 +77,19 @@ Da fare DOPO che il committente ha applicato `multi_coach_2026-10-15.sql`; prima
 - Scheda di un atleta da admin: «Coach: <nome>» apre la scelta; sceglierne un altro sposta l'atleta (la riga si aggiorna). Un coach non vede la riga.
 - Nessun coach compare fra i propri atleti (Atleti, Home, Analisi, report, messaggi).
 - Tasto indietro Android: chiude il foglio.
+
+## Testo per App Store Connect — «Novità di questa versione» (1.2.2)
+
+> Inviato il 26/10/2026: solo ciò che non era nella 1.2.1.
+
+```
+• Messaggi dal coach: la bacheca «Dal coach» in Home, con notifica.
+• Non puoi allenarti oggi? Sposta da solo l'allenamento a un altro giorno.
+• For Time a time cap e incremento a ogni giro anche negli AMRAP.
+• Corsa: ripetute a tratti liberi e recupero da fermo.
+• Per i coach: più coach nella stessa app, ognuno con i suoi atleti.
+• Correzioni e miglioramenti.
+```
 
 ## Testo per App Store Connect — «Novità di questa versione» (1.2.1)
 

@@ -64,6 +64,16 @@
   Se arriva quel rilievo la risposta è già progettata: `docs/superpowers/specs/2026-10-14-consenso-privacy-design.md`,
   in stand-by finché non sono scelti nome e dominio. Nascondere l'IA nelle note sarebbe stato
   peggio: il revisore la vede comunque con l'account coach.
+- **26 ott 2026** — `MARKETING_VERSION` 1.2.1 → **1.2.2**, `CURRENT_PROJECT_VERSION` → 1.
+  Archiviata dal codice di `261a8e4` (il task 4 dei Modelli di blocco, a metà, era nello stash) e
+  ✅ **inviata in revisione il 26/10/2026**. Prerequisiti verificati nel database lo stesso giorno:
+  `demo@fleofit.it` admin in `staff`, `messaggi_coach` e `come_stai` presenti, `send-reminders`
+  versione 59 (con `broadcast` e `moved`), i tre codici invito delle note attivi e mai usati.
+  «Novità» brevi in `DEVLOG.md`. Note per il revisore in quattro punti: bacheca «Dal coach» (il
+  demo legge ma non scrive), «Sposta» dell'atleta, For Time a time cap e incremento, più coach;
+  «AI and data», permessi e codici invariati dalla 1.2.1.
+  ⚠️ **Rischio noto, accettato**: il demo è admin e può togliere coach o spostare atleti dalla
+  voce «Coach» di Impostazioni. Se servisse chiuderlo: solo interfaccia, o policy con un nuovo sì.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non
