@@ -43,6 +43,7 @@ import { intervalliDi, etichetteStazioni, MASSIMO_INTERVALLI } from '../lib/staz
 import { TIPI_CON_INCREMENTO, haIncremento, attivaIncremento, disattivaIncremento, campoIncremento, aumentoDi, testoAumento, esercizioAlGiro, giriDiEsempio, testoTimeCap, TIME_CAP_PREDEFINITO } from '../lib/incremento'
 import { parseDuration } from '../lib/timerSequence'
 import { riepilogoGym } from '../lib/gym'
+import { partiRipetuta, campiVecchiRipetuta, intensitaRipetuta, etichettaParte, MAX_PARTI } from '../lib/ripetute'
 import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
 import { SCALE, grandezza, testoMisura } from '../lib/scaleMisura'
 import { fotoDisponibile } from '../lib/lettoreTesto'
@@ -62,7 +63,9 @@ const CreaGym = lazy(() => import('../components/CreaGym'))
 
 // ─── COSTANTI RUNNING ─────────────────────────────────────────
 const RUN_PACE_OPTIONS = [
-  'Libero', 'Camminata', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out', 'Gara',
+  // «Da fermo» (26/10/2026): la pausa senza correre né camminare, in
+  // qualunque fase e in qualunque tratto delle ripetute.
+  'Libero', 'Camminata', 'Da fermo', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'All out', 'Gara',
   ...Array.from({ length: 96 }, (_, i) => {
     const s = 120 + i * 5;
     return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')} /km`;
@@ -2121,32 +2124,45 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
   const [intensity, setIntensity] = useState(initialStep?.intensity || '5')
   const [notes, setNotes] = useState(initialStep?.notes || '')
   const [rounds, setRounds] = useState(initialStep?.rounds || '8')
-  const [runDuration, setRunDuration] = useState(initialStep?.runDuration || '1 min')
-  const [runPace, setRunPace] = useState(initialStep?.runPaceMin || parseMin(initialStep?.runPace))
-  const [runPaceMax, setRunPaceMax] = useState(initialStep?.runPaceMax || parseMax(initialStep?.runPace))
-  const [runIntensity, setRunIntensity] = useState(initialStep?.runIntensity || '8')
-  const [recDuration, setRecDuration] = useState(initialStep?.recDuration || '1 min')
-  const [recPace, setRecPace] = useState(initialStep?.recPaceMin || parseMin(initialStep?.recPace))
-  const [recPaceMax, setRecPaceMax] = useState(initialStep?.recPaceMax || parseMax(initialStep?.recPace))
-  const [recIntensity, setRecIntensity] = useState(initialStep?.recIntensity || '3')
+  // Le ripetute sono una sequenza di tratti, quanti se ne vogliono (26/10/2026):
+  // «3 × (4′ Z3 + 3′ Z2)» non ha un recupero, e prima era obbligatorio.
+  // Nello stato il passo sta come nel tratto singolo, `paceMin` + `paceMax`.
+  const trattoInStato = (p) => ({
+    id: p.id, tipo: p.tipo, duration: p.duration || '1 min',
+    paceMin: p.paceMin || parseMin(p.pace), paceMax: p.paceMax || parseMax(p.pace),
+    intensity: p.intensity || (p.tipo === 'recover' ? '3' : '8'),
+  })
+  const [parti, setParti] = useState(() => initialStep?.type === 'repeat'
+    ? partiRipetuta(initialStep).map(trattoInStato)
+    : [
+        trattoInStato({ id: Math.random(), tipo: 'run', duration: '1 min', intensity: '8' }),
+        trattoInStato({ id: Math.random(), tipo: 'recover', duration: '1 min', intensity: '3' }),
+      ])
+  const cambiaParte = (id, campi) => setParti(ps => ps.map(p => (p.id === id ? { ...p, ...campi } : p)))
+  const aggiungiParte = () => {
+    vibraScelta()
+    setParti(ps => [...ps, trattoInStato({ id: Math.random(), tipo: 'run', duration: '1 min', intensity: '5' })])
+  }
+  const togliParte = (id) => setParti(ps => (ps.length > 1 ? ps.filter(p => p.id !== id) : ps))
 
-  // Le schede aperte: una per il tratto singolo, due per le ripetute (il
-  // tratto veloce e il recupero hanno ciascuno il proprio foglio).
+  // Le schede aperte: «Volte» più una per ogni tratto (ciascuno ha il suo
+  // foglio), oppure quella del tratto singolo.
   const [attiva, setAttiva] = useState(initialStep?.type === 'repeat' ? 'volte' : 'quanto')
-  const [attivaRec, setAttivaRec] = useState('rec-quanto')
+  const [attivePerParte, setAttivePerParte] = useState({})
 
   // Cambiare il tipo di una fase già messa (l'IA ha fatto «Corsa» dove andava
   // «Ripetute», o il contrario) tiene i numeri: il tratto singolo diventa il
-  // tratto veloce delle ripetute e viceversa. Prima si ripartiva dai valori di
+  // primo tratto delle ripetute e viceversa. Prima si ripartiva dai valori di
   // partenza, e conveniva eliminarla e rifarla.
   const cambiaTipo = (nuovo) => {
     if (nuovo === type) return
     vibraScelta()
     setAttiva(nuovo === 'repeat' ? 'volte' : 'quanto')
     if (nuovo === 'repeat' && type !== 'repeat') {
-      setRunDuration(duration); setRunPace(pace); setRunPaceMax(paceMax); setRunIntensity(intensity)
+      setParti(([prima, ...resto]) => [{ ...prima, duration, paceMin: pace, paceMax, intensity }, ...resto])
     } else if (nuovo !== 'repeat' && type === 'repeat') {
-      setDuration(runDuration); setPace(runPace); setPaceMax(runPaceMax); setIntensity(runIntensity)
+      const prima = parti[0]
+      setDuration(prima.duration); setPace(prima.paceMin); setPaceMax(prima.paceMax); setIntensity(prima.intensity)
     }
     setType(nuovo)
   }
@@ -2161,13 +2177,20 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
   }
 
   const handleAdd = () => {
-    onAdd({
+    const base = {
       id: initialStep ? initialStep.id : Math.random(),
       type,
       duration, pace: formatPace(pace, paceMax), paceMin: pace, paceMax, intensity, notes,
-      rounds, runDuration, runPace: formatPace(runPace, runPaceMax), runPaceMin: runPace, runPaceMax, runIntensity,
-      recDuration, recPace: formatPace(recPace, recPaceMax), recPaceMin: recPace, recPaceMax, recIntensity
-    })
+    }
+    if (type !== 'repeat') { onAdd(base); onClose(); return }
+    const salvate = parti.map(p => ({
+      id: p.id, tipo: p.tipo, duration: p.duration,
+      pace: formatPace(p.paceMin, p.paceMax), paceMin: p.paceMin, paceMax: p.paceMax, intensity: p.intensity,
+    }))
+    const ripetuta = { ...base, rounds, parti: salvate, ...campiVecchiRipetuta(salvate) }
+    // L'intensità della fase è quella del tratto più duro: è quella che la
+    // riga del builder e le statistiche mostrano.
+    onAdd({ ...ripetuta, intensity: String(intensitaRipetuta(ripetuta) ?? intensity) })
     onClose()
   }
 
@@ -2176,19 +2199,14 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
     passo: pace, setPasso: setPace, passoMax: paceMax, setPassoMax: setPaceMax,
   })
 
-  // Le ripetute: «Volte» sta nel foglio del tratto veloce, perché è la prima
-  // cosa che si dice di una seduta di ripetute («8 per 400»).
-  const misureVeloce = [
-    { chiave: 'volte', etichetta: 'Volte', scala: 'ripetute', valore: rounds, onChange: setRounds, rapidi: ['4', '6', '8', '10'] },
-    ...tratto({
-      quanto: runDuration, setQuanto: setRunDuration,
-      passo: runPace, setPasso: setRunPace, passoMax: runPaceMax, setPassoMax: setRunPaceMax,
-    }),
+  // «Volte» è la prima cosa che si dice di una seduta di ripetute («8 per 400»).
+  const misureVolte = [
+    { chiave: 'volte', etichetta: 'Volte', scala: 'ripetute', valore: rounds, onChange: setRounds, rapidi: ['3', '4', '6', '8'] },
   ]
-  const misureRecupero = tratto({
-    prefisso: 'rec-',
-    quanto: recDuration, setQuanto: setRecDuration,
-    passo: recPace, setPasso: setRecPace, passoMax: recPaceMax, setPassoMax: setRecPaceMax,
+  const misureParte = (p) => tratto({
+    quanto: p.duration, setQuanto: (v) => cambiaParte(p.id, { duration: v }),
+    passo: p.paceMin, setPasso: (v) => cambiaParte(p.id, { paceMin: v }),
+    passoMax: p.paceMax, setPassoMax: (v) => cambiaParte(p.id, { paceMax: v }),
   })
 
   return createPortal(
@@ -2232,14 +2250,51 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
         <div className="flex flex-col gap-4 passo-entra" key={type === 'repeat' ? 'ripetute' : 'singola'}>
           {type === 'repeat' ? (
             <>
-              <p className={`${LABEL} text-running -mb-1`}>Tratto veloce</p>
-              <FoglioMisure misure={misureVeloce} attiva={misureVeloce.some(m => m.chiave === attiva) ? attiva : 'volte'}
-                onAttiva={setAttiva} accento="running" />
-              <IntensitaCorsa valore={runIntensity} onChange={setRunIntensity} />
+              <FoglioMisure misure={misureVolte} attiva="volte" onAttiva={() => {}} accento="running" />
 
-              <p className={`${LABEL} text-green-400 -mb-1 mt-2`}>Recupero</p>
-              <FoglioMisure misure={misureRecupero} attiva={attivaRec} onAttiva={setAttivaRec} accento="running" />
-              <IntensitaCorsa valore={recIntensity} onChange={setRecIntensity} />
+              {parti.map((p, i) => {
+                const misure = misureParte(p)
+                const aperta = attivePerParte[p.id]
+                return (
+                  <div key={p.id} className="flex flex-col gap-3" role="group" aria-label={`Tratto ${i + 1}`}>
+                    <div className="flex items-center gap-2 px-1 mt-2">
+                      <p className={`${LABEL} ${p.tipo === 'recover' ? 'text-green-400' : 'text-running'} flex-1`}>
+                        Tratto {i + 1} · {etichettaParte(p)}
+                      </p>
+                      {/* Corsa o recupero: decide il nome e il colore, non i numeri. */}
+                      {['run', 'recover'].map(t => {
+                        const on = p.tipo === t
+                        return (
+                          <button key={t} type="button" aria-pressed={on}
+                            onClick={() => { if (!on) { vibraScelta(); cambiaParte(p.id, { tipo: t }) } }}
+                            className={`min-h-8 px-3 rounded-full text-[12px] font-extrabold border transition active:scale-95 ${
+                              on ? 'bg-running/15 border-running/45 text-running' : 'bg-white/[.055] border-white/10 text-[#c9ccd4]'
+                            }`}>
+                            {t === 'recover' ? 'Recupero' : 'Corsa'}
+                          </button>
+                        )
+                      })}
+                      {parti.length > 1 && (
+                        <button type="button" aria-label={`Togli il tratto ${i + 1}`} onClick={() => { vibraScelta(); togliParte(p.id) }}
+                          className="w-9 h-9 -mr-2 flex items-center justify-center text-muted hover:text-red-400 shrink-0">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                    <FoglioMisure misure={misure} attiva={misure.some(m => m.chiave === aperta) ? aperta : 'quanto'}
+                      onAttiva={(c) => setAttivePerParte(a => ({ ...a, [p.id]: c }))} accento="running" />
+                    <IntensitaCorsa valore={p.intensity} onChange={(v) => cambiaParte(p.id, { intensity: v })} />
+                  </div>
+                )
+              })}
+
+              {parti.length < MAX_PARTI && (
+                <button type="button" onClick={aggiungiParte}
+                  className="min-h-12 rounded-2xl border border-dashed border-running/40 text-running text-[14px] font-extrabold
+                             flex items-center justify-center gap-2 hover:bg-running/10 active:scale-[.99] transition">
+                  <Plus size={17} aria-hidden="true" /> Aggiungi tratto
+                </button>
+              )}
             </>
           ) : (
             <>
@@ -2252,7 +2307,7 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
           <RigaTesto
             icona={FileText}
             etichetta="Note della fase"
-            placeholder={type === 'repeat' ? 'Es: recupero da fermo, ultima tirata a tutta…' : 'Es: corsa leggera, focus tecnica…'}
+            placeholder={type === 'repeat' ? 'Es: ultima tirata a tutta…' : 'Es: corsa leggera, focus tecnica…'}
             valore={notes}
             onChange={setNotes}
           />
@@ -2355,14 +2410,13 @@ export const RunningStepRow = memo(function RunningStepRow({ step, index, total,
         </div>
         {step.type === 'repeat' ? (
           <div className="text-sm mt-2 flex flex-col gap-1.5 ml-1 border-l-2 border-[#333] pl-3">
-            <div>
-              <span className="text-gray-300 font-medium">Corsa:</span> <span className="text-white">{step.runDuration}</span>
-              {step.runPace && <span className="text-muted text-xs ml-1">@{step.runPace}</span>}
-            </div>
-            <div>
-              <span className="text-muted font-medium">Recupero:</span> <span className="text-gray-400">{step.recDuration}</span>
-              {step.recPace && <span className="text-muted text-xs ml-1">@{step.recPace}</span>}
-            </div>
+            {partiRipetuta(step).map(p => (
+              <div key={p.id}>
+                <span className={`${p.tipo === 'recover' ? 'text-muted' : 'text-gray-300'} font-medium`}>{etichettaParte(p)}:</span>{' '}
+                <span className={p.tipo === 'recover' ? 'text-gray-400' : 'text-white'}>{p.duration}</span>
+                {p.pace && <span className="text-muted text-xs ml-1">@{p.pace}</span>}
+              </div>
+            ))}
             {step.intensity && (
               <div className="flex items-center gap-1">
                 <span className={`text-xs font-bold ${getIntensityColor(step.intensity)}`}>{step.intensity}/10</span><BicepsFlexed size={14} className={getIntensityColor(step.intensity)} />
@@ -2751,18 +2805,23 @@ export default function CreateWorkout() {
 
       // Il codice in coda al titolo non sta nel campo: si rigenera al
       // salvataggio. Un nome generato non sta nel campo nemmeno lui: in
-      // modifica resta quello, in una copia se ne sceglie un altro.
+      // modifica resta quello. Una copia parte SEMPRE senza nome, e al
+      // salvataggio ne prende uno nuovo dai blocchi, diverso dall'originale —
+      // anche se l'originale aveva un nome scritto a mano. Niente più
+      // «(Copia)» (richiesta del committente, 26/10/2026).
       const { nome } = separaCodice(data.title)
       const sezioni = data.sections || {}
       const candidati = candidatiNome({
         category: sezioni.category || (sezioni.steps ? 'Running' : 'Hyrox'),
         blocks: sezioni.blocks || [], steps: sezioni.steps || [], gym: sezioni.gym || [],
       })
-      if (eNomeGenerato(nome, candidati)) {
+      if (duplicateId) {
         setTitle('')
-        if (!duplicateId) { setNomeFissato(nome); nomeDiPartenza.current = nome }
+      } else if (eNomeGenerato(nome, candidati)) {
+        setTitle('')
+        setNomeFissato(nome); nomeDiPartenza.current = nome
       } else {
-        setTitle(duplicateId && nome ? `${nome} (Copia)` : nome)
+        setTitle(nome)
       }
       // Una copia parte SENZA le note del coach (richiesta del committente,
       // 12/10/2026): erano scritte per gli atleti dell'originale. Tranne in

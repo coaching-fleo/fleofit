@@ -796,10 +796,11 @@ quale usare.
 3. 🔴 **Un nome generato si riconosce perché sta fra i candidati del SUO workout**
    (`eNomeGenerato`). Riaperto in **modifica** resta quello (`nomeFissato`) finché i
    blocchi lo giustificano, e sovrascrivendo il workout non conta il proprio nome come
-   «già usato» (`nomeDiPartenza`); in una **copia** o in «Salva come nuovo» se ne
-   prende un altro. Un nome scritto a mano si tiene, con «(Copia)» nelle copie.
-   ⚠️ Cambiare gli elenchi rende «scritti a mano» i nomi già salvati che non vi
-   compaiono più: le copie li erediterebbero con «(Copia)».
+   «già usato» (`nomeDiPartenza`); in «Salva come nuovo» se ne prende un altro.
+   ✏️ **Dal 26/10/2026 una copia («Duplica») parte SEMPRE senza nome** e al
+   salvataggio ne prende uno nuovo dai blocchi, diverso dall'originale — anche se
+   l'originale aveva un nome scritto a mano. **«(Copia)» non esiste più**
+   (richiesta del committente). Il nome resta modificabile a mano prima di salvare.
 4. I nomi salvati fra il 05 e il 07/10 (esercizi, o le parole casuali bocciate) non
    sono candidati: riaperti valgono come scritti a mano. Basta svuotare il campo.
 5. `candidatiNome` torna i candidati **sempre nello stesso ordine**: è il seme a dare
@@ -1601,3 +1602,23 @@ Richiesta del committente: distanze pari. `STANDARD_ESERCIZIO` in
 righello, al posto dei valori più usati dallo storico (o del ripiego 100 /
 250 / 500 / 1000). Gli altri ergometri non cambiano. Test: «lo SkiErg propone
 distanze pari» (mutazione presa).
+
+## Ripetute a tratti liberi e pausa «Da fermo» (26/10/2026)
+
+Richiesta del committente: «3 × (4′ Z3 + 3′ Z2)» non si poteva scrivere, perché una
+ripetuta era per forza tratto veloce + recupero; e la pausa da fermi non esisteva.
+
+- **«Da fermo»** è una zona in più di `RUN_PACE_OPTIONS`: compare nel Passo di ogni fase e
+  di ogni tratto. `passoCorsa` la riconosce nel testo («da fermo», «fermi», «standing»).
+- **Le ripetute sono una lista di tratti** (`parti`, fino a `MAX_PARTI` = 6), ognuno con il
+  suo tipo Corsa/Recupero, durata, passo e intensità. Nel foglio: «Volte», poi un blocco per
+  tratto con il cestino, poi «Aggiungi tratto».
+- 🔴 **Si leggono solo con `partiRipetuta`** (`src/lib/ripetute.js`): capisce anche il
+  formato di prima. Lo usano riga del builder, scheda, PDF, story, TV, anteprima in
+  AthleteDetail, `durataWorkout`, `rpeAtteso`, `riepilogoCorsa`, recap, ricerca.
+- 🔴 **Chi salva scrive ANCHE `run*`/`rec*`** (`campiVecchiRipetuta`), dalle prime due parti
+  per posizione: le app 1.2.0/1.2.1 leggono solo quelli. Una terza parte lì non si vede.
+- `nomeCasuale` e `codiceWorkout` leggono ancora `runDuration`/`runIntensity`, cioè il primo
+  tratto: è voluto, è il tratto che dà il nome alla seduta.
+- **IA**: `regole.ts` chiede `parti` in più dei campi di prima (le app vecchie restano
+  servite), `preparaFasiIA` le usa se ci sono. ✅ `ai-workout` pubblicata il 26/10/2026 (versione 31).

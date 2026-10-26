@@ -834,6 +834,25 @@ describe('le fasi di corsa', () => {
     expect(screen.getByRole('slider', { name: 'Volte' })).toBeInTheDocument()
   })
 
+  it('le ripetute non obbligano al recupero: 4′ Z3 + 3′ Z2, più un tratto da fermo', async () => {
+    // Richiesta del committente (26/10/2026): «3 × (4′ Z3 + 3′ Z2)» prima non
+    // si poteva scrivere, il secondo tratto era per forza un recupero.
+    await apriFase()
+    await userEvent.click(screen.getByRole('button', { name: 'Ripetute' }))
+    const secondo = screen.getByRole('group', { name: 'Tratto 2' })
+    await userEvent.click(within(secondo).getByRole('button', { name: 'Corsa' }))
+    expect(within(secondo).getByText(/Tratto 2 · Corsa/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi tratto/ }))
+    const terzo = screen.getByRole('group', { name: 'Tratto 3' })
+    await userEvent.click(within(terzo).getByRole('button', { name: /^Passo:/ }))
+    await userEvent.click(within(terzo).getByRole('button', { name: 'Da fermo' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Nuova fase' })).getByRole('button', { name: 'Aggiungi fase' }))
+
+    expect(screen.getAllByText('Corsa:')).toHaveLength(3)
+    expect(screen.getByText('@Da fermo')).toBeInTheDocument()
+  })
+
   it('cambiare tipo a una fase già messa tiene i numeri', async () => {
     // Richiesta del committente (14/10/2026): l'IA fa «Corsa» dove andavano
     // le ripetute. Il tratto singolo diventa il tratto veloce, non riparte da 1 min.

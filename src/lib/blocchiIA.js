@@ -13,6 +13,7 @@
 import { intervalliDi } from './stazioniEmom'
 import { TIPI_CON_INCREMENTO, TIME_CAP_PREDEFINITO } from './incremento'
 import { basso, passoCorsa, quantoCorsa, trovaEsercizio } from './leggiWorkout'
+import { campiVecchiRipetuta, intensitaRipetuta, MAX_PARTI } from './ripetute'
 
 /** Lo stesso valore da cui parte il cursore nel picker dell'esercizio. */
 export const INTENSITA_PREDEFINITA = '5'
@@ -157,6 +158,23 @@ export function preparaFasiIA(fasi) {
     .map(f => {
       const type = TIPI_FASE.has(f.type) ? f.type : 'run'
       const note = testo(f.notes)
+      if (type === 'repeat' && Array.isArray(f.parti) && f.parti.some(p => p && typeof p === 'object')) {
+        // Una sequenza di tratti (26/10/2026): «3 × (4′ Z3 + 3′ Z2)». I campi
+        // di prima si riscrivono dalle parti, per le app già sugli Store.
+        const parti = f.parti.filter(p => p && typeof p === 'object').slice(0, MAX_PARTI).map(p => {
+          const tipo = p.tipo === 'recover' ? 'recover' : 'run'
+          return {
+            id: Math.random(), tipo, duration: quanto(p.duration), ...passo(p.pace ?? p.paceMin, p.paceMax),
+            intensity: intensitaValida(p.intensity) ?? (tipo === 'recover' ? '3' : '8'),
+          }
+        })
+        const ripetuta = {
+          id: Math.random(), type,
+          rounds: String(parseInt(f.rounds, 10) > 0 ? parseInt(f.rounds, 10) : 1),
+          parti, ...campiVecchiRipetuta(parti), notes: note,
+        }
+        return { ...ripetuta, intensity: String(intensitaRipetuta(ripetuta) ?? 8) }
+      }
       if (type === 'repeat') {
         const veloce = passo(f.runPace ?? f.runPaceMin, f.runPaceMax)
         const recupero = passo(f.recPace ?? f.recPaceMin, f.recPaceMax)

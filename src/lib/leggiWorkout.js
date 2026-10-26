@@ -540,7 +540,8 @@ export const passoCorsa = (t) => {
     : /\ball\s*out\b|\bmax\b/.test(t) ? 'All out'
       : /\bgara\b|\brace\s*pace\b|\brp\b/.test(t) ? 'Gara'
         : /\bcammin|\bwalk\b/.test(t) ? 'Camminata'
-          : 'Libero'
+          : /\bfermo\b|\bfermi\b|\bstanding\b/.test(t) ? 'Da fermo'
+            : 'Libero'
   return { pace: zona, paceMin: zona, paceMax: '-' }
 }
 

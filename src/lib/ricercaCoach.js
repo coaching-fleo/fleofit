@@ -25,6 +25,7 @@ import { getNormalizedBlocks } from './timerSequence'
 import { durataWorkout } from './statistiche'
 import { separaCodice } from './codiceWorkout'
 import { escludiDallaRubrica } from './constants'
+import { partiRipetuta } from './ripetute'
 
 /** Quanto indietro si carica. Oltre, una domanda riceve «non ho dati così vecchi». */
 export const GIORNI_INDIETRO = 365
@@ -141,7 +142,8 @@ function testoCercabile(workout) {
     for (const ex of b?.exercises || []) pezzi.push(ex?.notes)
   }
   for (const st of s.steps || []) {
-    pezzi.push(st?.notes, st?.duration, st?.runDuration, st?.pace, st?.runPace)
+    pezzi.push(st?.notes, st?.duration, st?.pace)
+    if (st?.type === 'repeat') for (const p of partiRipetuta(st)) pezzi.push(p.duration, p.pace)
   }
   return normalizza(pezzi.filter(Boolean).join(' '))
 }

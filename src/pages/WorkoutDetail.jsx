@@ -81,6 +81,7 @@ import {
 // dello step 2 del builder: il coach deve ritrovare in lettura ciò che ha
 // visto in scrittura, e due copie divergerebbero al primo ritocco.
 import { RiepilogoWorkout, BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
+import { partiRipetuta, etichettaParte } from '../lib/ripetute'
 import {
   TestataScheda, IconaStato, MenuScheda, TitoloScheda, AvvisoRiscaldamento,
   BloccoScheda, RigaEsercizio, IntestazioneSezione, CardNota, EsitoCompletato,
@@ -964,37 +965,23 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         doc.setFont('helvetica', 'normal')
         if (step.type === 'repeat') {
            doc.setTextColor(200, 200, 200)
-           let cx = 30
-           let r1 = `  Corsa: ${step.runDuration} ${step.runPace ? '@'+step.runPace : ''}`
-           doc.text(r1, cx, y)
-           cx += doc.getTextWidth(r1)
-           if (step.runIntensity) {
-             let itxt = `   [Int: ${step.runIntensity}/10 `
-             doc.setTextColor(...getPdfIntensityColor(step.runIntensity))
-             doc.text(itxt, cx, y)
-             cx += doc.getTextWidth(itxt)
-             doc.addImage(getEmojiDataURL('💪'), 'PNG', cx, y - 3.2, 4, 4)
-             cx += 4.5
-             doc.text(']', cx, y)
-             doc.setTextColor(200, 200, 200)
-           }
-           y += 5
-           
-           cx = 30
-           let r2 = `  Recupero: ${step.recDuration} ${step.recPace ? '@'+step.recPace : ''}`
-           doc.text(r2, cx, y)
-           cx += doc.getTextWidth(r2)
-           if (step.recIntensity) {
-             let itxt = `   [Int: ${step.recIntensity}/10 `
-             doc.setTextColor(...getPdfIntensityColor(step.recIntensity))
-             doc.text(itxt, cx, y)
-             cx += doc.getTextWidth(itxt)
-             doc.addImage(getEmojiDataURL('💪'), 'PNG', cx, y - 3.2, 4, 4)
-             cx += 4.5
-             doc.text(']', cx, y)
-             doc.setTextColor(200, 200, 200)
-           }
-           y += 5
+           partiRipetuta(step).forEach((parte) => {
+             let cx = 30
+             const riga = `  ${etichettaParte(parte)}: ${parte.duration} ${parte.pace ? '@' + parte.pace : ''}`
+             doc.text(riga, cx, y)
+             cx += doc.getTextWidth(riga)
+             if (parte.intensity) {
+               const itxt = `   [Int: ${parte.intensity}/10 `
+               doc.setTextColor(...getPdfIntensityColor(parte.intensity))
+               doc.text(itxt, cx, y)
+               cx += doc.getTextWidth(itxt)
+               doc.addImage(getEmojiDataURL('💪'), 'PNG', cx, y - 3.2, 4, 4)
+               cx += 4.5
+               doc.text(']', cx, y)
+               doc.setTextColor(200, 200, 200)
+             }
+             y += 5
+           })
 
            if (step.notes) {
              doc.setTextColor(180, 180, 180)
@@ -2126,7 +2113,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 else if (step.type === 'cooldown') { title = `COOL DOWN ${step.duration ? '• ' + step.duration : ''}`; desc = step.pace ? `@ ${step.pace}` : ''; }
                 else if (step.type === 'repeat') { 
                   title = `REPEAT • ${step.rounds}x`; 
-                  desc = `${step.runDuration} ON / ${step.recDuration} OFF`; 
+                  desc = partiRipetuta(step).map(p => p.duration).join(' + '); 
                 }
 
                 return (
@@ -2134,14 +2121,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                      <div style={{ fontSize: '15px', fontWeight: 900, color: RUNNING, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</div>
                      {step.type === 'repeat' ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontSize: '17px', fontWeight: 700, color: '#fff' }}>Run: {step.runDuration}</span>
-                              {step.runPace && <span style={{ fontSize: '15px', fontWeight: 600, color: '#888' }}>@ {step.runPace}</span>}
-                           </div>
-                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontSize: '17px', fontWeight: 700, color: '#ccc' }}>Recover: {step.recDuration}</span>
-                              {step.recPace && <span style={{ fontSize: '15px', fontWeight: 600, color: '#888' }}>@ {step.recPace}</span>}
-                           </div>
+                           {partiRipetuta(step).map(p => (
+                             <div key={p.id} style={{ display: 'flex', flexDirection: 'column' }}>
+                               <span style={{ fontSize: '17px', fontWeight: 700, color: p.tipo === 'recover' ? '#ccc' : '#fff' }}>{p.tipo === 'recover' ? 'Recover' : 'Run'}: {p.duration}</span>
+                               {p.pace && <span style={{ fontSize: '15px', fontWeight: 600, color: '#888' }}>@ {p.pace}</span>}
+                             </div>
+                           ))}
                         </div>
                      ) : (
                        desc && <div style={{ fontSize: '17px', fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{desc}</div>
@@ -2994,14 +2979,12 @@ function RunningList({ steps }) {
           </div>
           {step.type === 'repeat' ? (
             <div className="text-sm flex flex-col gap-1 mt-1">
-              <div className="flex items-center justify-between pr-2">
-                <div><span className="text-gray-400">Corsa:</span> <span className="text-white">{step.runDuration}</span> {step.runPace && <span className="text-muted text-xs">@{step.runPace}</span>}</div>
-                {step.runIntensity && <div className="flex items-center gap-1"><span className={`text-xs font-bold ${getIntensityColor(step.runIntensity)}`}>{step.runIntensity}/10</span><BicepsFlexed size={12} className={getIntensityColor(step.runIntensity)} /></div>}
-              </div>
-              <div className="flex items-center justify-between pr-2">
-                <div><span className="text-gray-400">Recupero:</span> <span className="text-white">{step.recDuration}</span> {step.recPace && <span className="text-muted text-xs">@{step.recPace}</span>}</div>
-                {step.recIntensity && <div className="flex items-center gap-1"><span className={`text-xs font-bold ${getIntensityColor(step.recIntensity)}`}>{step.recIntensity}/10</span><BicepsFlexed size={12} className={getIntensityColor(step.recIntensity)} /></div>}
-              </div>
+              {partiRipetuta(step).map(p => (
+                <div key={p.id} className="flex items-center justify-between pr-2">
+                  <div><span className="text-gray-400">{etichettaParte(p)}:</span> <span className="text-white">{p.duration}</span> {p.pace && <span className="text-muted text-xs">@{p.pace}</span>}</div>
+                  {p.intensity && <div className="flex items-center gap-1"><span className={`text-xs font-bold ${getIntensityColor(p.intensity)}`}>{p.intensity}/10</span><BicepsFlexed size={12} className={getIntensityColor(p.intensity)} /></div>}
+                </div>
+              ))}
               {step.notes && <p className="text-muted text-xs mt-0.5">{step.notes}</p>}
             </div>
           ) : (

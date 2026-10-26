@@ -35,6 +35,7 @@ import { parametriBlocco, specificheEsercizio } from './rigaBlocco'
 import { ERGOMETERS } from './constants'
 import { riepilogoWorkout, minutiStimati, decimale } from './stimaWorkout'
 import { gruppiPerElenco, riepilogoGym } from './gym'
+import { partiRipetuta, etichettaParte } from './ripetute'
 
 /**
  * Quante righe l'elenco può occupare prima di dover dire «e altri N».
@@ -103,10 +104,9 @@ const gruppiCorsa = (steps = []) => steps.map(step => {
     const volte = Number.isFinite(giri) && giri > 0 ? giri : 1
     return {
       intestazione: { genere: 'blocco', titolo: 'Ripetute', dettaglio: `${volte}×` },
-      esercizi: [
-        { genere: 'esercizio', nome: 'Corsa', specifiche: misura(step?.runDuration, step?.runPace) },
-        { genere: 'esercizio', nome: 'Recupero', specifiche: misura(step?.recDuration, step?.recPace) },
-      ],
+      esercizi: partiRipetuta(step).map(p => ({
+        genere: 'esercizio', nome: etichettaParte(p), specifiche: misura(p.duration, p.pace),
+      })),
     }
   }
   return {

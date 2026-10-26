@@ -19,6 +19,7 @@ import { getNormalizedBlocks } from './timerSequence'
 import { riepilogoWorkout, minutiStimati, decimale } from './stimaWorkout'
 import { categoriaDi, corsia } from './categorie'
 import { riepilogoGym } from './gym'
+import { partiRipetuta } from './ripetute'
 
 /** L'ordine in cui le corsie compaiono nei filtri. Hyrox prima: è la specialità. */
 export const ORDINE_CORSIE = ['Hyrox', 'Running', 'Gym', 'Custom', 'Event']
@@ -85,7 +86,7 @@ export const riepilogoCorsa = (steps = []) => {
     const ripetuta = step?.type === 'repeat'
     const giriGrezzi = parseInt(step?.rounds, 10)
     const giri = ripetuta && Number.isFinite(giriGrezzi) && giriGrezzi > 0 ? giriGrezzi : 1
-    const gambe = ripetuta ? [step?.runDuration, step?.recDuration] : [step?.duration]
+    const gambe = ripetuta ? partiRipetuta(step).map(p => p.duration) : [step?.duration]
 
     for (const gamba of gambe) {
       if (gamba === undefined || gamba === null || String(gamba).trim() === '') continue
@@ -184,7 +185,8 @@ export const testoCercabile = (workout) => {
     for (const esercizio of gruppo?.esercizi || []) parti.push(esercizio?.name, esercizio?.notes)
   }
   for (const step of sezioni.steps || []) {
-    parti.push(step?.type, step?.notes, step?.pace, step?.runPace)
+    parti.push(step?.type, step?.notes, step?.pace)
+    if (step?.type === 'repeat') for (const p of partiRipetuta(step)) parti.push(p.pace)
   }
 
   return parti.filter(Boolean).join(' ').toLowerCase()

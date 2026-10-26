@@ -88,8 +88,22 @@ describe('il nome generato dai blocchi', () => {
 })
 
 describe('il codice nel titolo salvato', () => {
-  it('un nome scritto si tiene, perde il codice vecchio e prende quello nuovo', async () => {
+  // Richiesta del committente (26/10/2026): una copia non si chiama mai
+  // «… (Copia)», nemmeno se l'originale aveva un nome scritto a mano.
+  it('una copia di un nome scritto ne prende uno generato, senza «(Copia)»', async () => {
     await duplica('Gambe dure · AM 10′ @3')
-    expect(await titoloSalvato()).toBe('Gambe dure (Copia) · EM 30′ @8')
+    const titolo = await titoloSalvato()
+    const { nome, codice } = separaCodice(titolo)
+    expect(titolo).not.toMatch(/Copia/)
+    expect(eNomeGenerato(nome, CANDIDATI)).toBe(true)
+    expect(codice).toBe('EM 30′ @8')
+  })
+
+  it('in modifica un nome scritto si tiene, perde il codice vecchio e prende quello nuovo', async () => {
+    await apri('Gambe dure · AM 10′ @3', 'edit')
+    await userEvent.click(screen.getByRole('button', { name: /Salva workout/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Sovrascrivi esistente' }))
+    await waitFor(() => expect(finto.chiamateA('workouts', 'update')).toHaveLength(1))
+    expect(finto.chiamateA('workouts', 'update')[0].args[0].title).toBe('Gambe dure · EM 30′ @8')
   })
 })

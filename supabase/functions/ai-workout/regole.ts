@@ -165,7 +165,8 @@ Tipi di fase ammessi ("type"): "warmup" (riscaldamento), "run" (corsa), "recover
 FASE SEMPLICE (warmup, run, recover, cooldown):
 - "duration": un tempo ("10 min", "30 sec") OPPURE una distanza ("400m", "5 km", "1.5 km").
 - "pace": un ritmo "m:ss /km" (da "2:00 /km" a "10:00 /km") oppure una zona fra
-  "Libero", "Camminata", "Z1", "Z2", "Z3", "Z4", "Z5", "All out", "Gara".
+  "Libero", "Camminata", "Da fermo", "Z1", "Z2", "Z3", "Z4", "Z5", "All out", "Gara".
+  "Da fermo" è la pausa senza correre né camminare ("recupero da fermo", "pausa ferma").
 - "paceMax": solo se il ritmo è una forbice (es. 4:30-4:40 → "pace": "4:30 /km", "paceMax": "4:40 /km").
 - "intensity": stringa con un intero da "1" a "10".
 - "notes": facoltativo.
@@ -175,6 +176,10 @@ RIPETUTE ("type": "repeat"), es. "8 x 400 metri a 3:45 recupero 1 minuto":
 - "runDuration", "runPace", "runPaceMax", "runIntensity": il tratto veloce, stesse regole di sopra.
 - "recDuration", "recPace", "recPaceMax", "recIntensity": il recupero. Se l'utente non dice il
   recupero, "recDuration" resta "" (non inventarlo).
+- "parti": SEMPRE, tutti i tratti di UNA ripetizione in ordine, anche più di due e anche senza
+  recupero: es. "3 volte 4 minuti in Z3 e 3 minuti in Z2" → due tratti di corsa.
+  Ogni tratto: { "tipo": "run" | "recover", "duration", "pace", "paceMax", "intensity" }.
+  "run*" e "rec*" restano comunque i primi due tratti (il secondo anche se è una corsa).
 
 INTENSITÀ: se l'utente non la dice, stimala: riscaldamento e defaticamento 3-4, corsa lenta/Z2 4-5,
 medio/soglia 6-7, ripetute veloci 8-9, all out 10, recuperi 2-3.
@@ -185,7 +190,11 @@ Esempio di struttura richiesta:
 [
   { "type": "warmup", "duration": "15 min", "pace": "Z1", "intensity": "3" },
   { "type": "repeat", "rounds": "8", "runDuration": "400m", "runPace": "3:45 /km", "runIntensity": "8",
-    "recDuration": "1 min", "recPace": "Camminata", "recIntensity": "2" },
+    "recDuration": "1 min", "recPace": "Da fermo", "recIntensity": "2",
+    "parti": [
+      { "tipo": "run", "duration": "400m", "pace": "3:45 /km", "intensity": "8" },
+      { "tipo": "recover", "duration": "1 min", "pace": "Da fermo", "intensity": "2" }
+    ] },
   { "type": "run", "duration": "5 km", "pace": "4:30 /km", "paceMax": "4:40 /km", "intensity": "6" },
   { "type": "cooldown", "duration": "10 min", "pace": "Libero", "intensity": "3" }
 ]

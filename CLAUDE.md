@@ -69,6 +69,10 @@
    (`supabase/schema/multi_coach_2026-10-15.sql`), ✅ **applicata il 16/10/2026**. ⚠️ La prima
    **non additiva**: riscrive le policy di quasi tutte le tabelle. Edge Function multi-coach
    pubblicate lo stesso giorno (`docs/memoria/database.md`, «Multi-coach»).
+   ⏳ **Quinta eccezione** (26/10/2026, sì esplicito in sessione): `federico_leo@hotmail.it` legge
+   **tutti** i workout, solo in lettura (ridefinisce la funzione `vedo_workout`, nessuna tabella).
+   **Scritta, non ancora applicata** (`supabase/schema/workout_tutti_hotmail_2026-10-26.sql`,
+   `docs/memoria/database.md`).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -405,10 +409,14 @@ ordinati alfabeticamente). Si possono aggiungere esercizi **custom** scrivendoli
   // step "repeat" (ripetute):
   "rounds": "8",
   "runDuration": "400m", "runPace": "…", "runPaceMin/Max": "…", "runIntensity": "8",
-  "recDuration": "1 min", "recPace": "…", "recPaceMin/Max": "…", "recIntensity": "3"
+  "recDuration": "1 min", "recPace": "…", "recPaceMin/Max": "…", "recIntensity": "3",
+  // dal 26/10/2026: la sequenza libera di una ripetizione, «3 × (4′ Z3 + 3′ Z2)»
+  "parti": [{ "id": 0.1, "tipo": "run"|"recover", "duration": "4 min", "pace": "Z3", "paceMin": "Z3", "paceMax": "-", "intensity": "7" }]
 }
 ```
-Ritmi ammessi: `Libero`, `Camminata`, `Z1`–`Z5`, `All out`, `Gara`, oppure `m:ss /km` da 2:00 a 10:00.
+🔴 Le ripetute si leggono **solo** con `partiRipetuta` di `src/lib/ripetute.js` (capisce i due
+formati); chi salva riscrive anche `run*`/`rec*` dalle prime due parti, per le app già sugli Store.
+Ritmi ammessi: `Libero`, `Camminata`, `Da fermo`, `Z1`–`Z5`, `All out`, `Gara`, oppure `m:ss /km` da 2:00 a 10:00.
 
 ### Gym → `sections.gym[]` (dal 13/10/2026)
 ```jsonc

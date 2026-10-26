@@ -41,6 +41,7 @@ import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
 import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
+import { partiRipetuta, etichettaParte } from '../lib/ripetute'
 
 const getRpeColorText = (val) => {
   if (val <= 3) return 'text-green-500';
@@ -2090,8 +2091,9 @@ function AssignWorkoutModal({ athleteId, atleta, storico, onClose, onAssigned })
                       <p className="text-running font-bold text-xs uppercase mb-1">{step.type === 'repeat' ? `Ripetute (${step.rounds}x)` : step.type}</p>
                       {step.type === 'repeat' ? (
                         <div className="text-sm text-white flex flex-col gap-1">
-                          <p><span className="text-gray-400">Corsa:</span> {step.runDuration} {step.runPace ? <span className="text-muted text-xs">@{step.runPace}</span> : ''}</p>
-                          <p><span className="text-gray-400">Recupero:</span> {step.recDuration} {step.recPace ? <span className="text-muted text-xs">@{step.recPace}</span> : ''}</p>
+                          {partiRipetuta(step).map(p => (
+                            <p key={p.id}><span className="text-gray-400">{etichettaParte(p)}:</span> {p.duration} {p.pace ? <span className="text-muted text-xs">@{p.pace}</span> : ''}</p>
+                          ))}
                         </div>
                       ) : (
                         <p className="text-sm text-white">{step.duration} {step.pace ? <span className="text-muted text-xs ml-1">@{step.pace}</span> : ''}</p>

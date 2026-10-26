@@ -17,6 +17,7 @@ import { Volume2, VolumeX, RotateCcwSquare, ClipboardList, Pause, MonitorUp } fr
 import { VETRO } from '../lib/stiliCard'
 import { TYPE_COLORS } from '../lib/blockColors'
 import { BRAND, RUNNING, CUSTOM } from '../lib/colori'
+import { partiRipetuta, etichettaParte } from '../lib/ripetute'
 
 /**
  * La carta sollevata (`CARD_BASE` di stiliCard) in scala TV: stesso gradiente,
@@ -399,10 +400,11 @@ export function CorsaTV({ passi, attivo, classeIntensita }) {
 
             {step.type === 'repeat' ? (
               <div className="flex flex-col gap-3">
-                <MezzaRipetuta etichetta="Corsa" durata={step.runDuration} passo={step.runPace} colorePasso={RUNNING}
-                  intensita={step.runIntensity} classeIntensita={classeIntensita} />
-                <MezzaRipetuta etichetta="Recupero" durata={step.recDuration} passo={step.recPace} colorePasso="#4ade80"
-                  intensita={step.recIntensity} classeIntensita={classeIntensita} />
+                {partiRipetuta(step).map(parte => (
+                  <MezzaRipetuta key={parte.id} etichetta={etichettaParte(parte)} durata={parte.duration} passo={parte.pace}
+                    colorePasso={parte.tipo === 'recover' ? '#4ade80' : RUNNING}
+                    intensita={parte.intensity} classeIntensita={classeIntensita} />
+                ))}
                 {step.notes && <p className="text-[26px] text-muted text-pretty break-words">{step.notes}</p>}
               </div>
             ) : (

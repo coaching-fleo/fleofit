@@ -5,6 +5,7 @@ import { categoriaDi } from './categorie'
 // Prima ce n'erano due e dicevano 58 e 24 minuti sullo stesso allenamento.
 import { durataBlocco } from './stimaWorkout'
 import { minutiGym } from './gym'
+import { partiRipetuta, intensitaRipetuta } from './ripetute'
 
 // Statistiche della scheda atleta, estratte da AthleteDetail.jsx il 26/08/2026.
 //
@@ -93,7 +94,7 @@ export const durataWorkout = (sections) => {
     for (const step of s.steps || s.main?.steps || []) {
       if (step.type === 'repeat') {
         const rounds = parseInt(step.rounds) || 1
-        minuti += (parseTime(step.runDuration) + parseTime(step.recDuration)) * rounds
+        minuti += partiRipetuta(step).reduce((t, p) => t + parseTime(p.duration), 0) * rounds
       } else {
         minuti += parseTime(step.duration)
       }
@@ -234,7 +235,7 @@ export const rpeAtteso = (sections) => {
   const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
   if (cat === 'Running') {
     const fasi = (s.steps || s.main?.steps || [])
-      .map(p => parseFloat(p.type === 'repeat' ? p.runIntensity : p.intensity))
+      .map(p => (p.type === 'repeat' ? intensitaRipetuta(p) : parseFloat(p.intensity)))
       .filter(v => Number.isFinite(v) && v >= 1 && v <= 10)
     if (fasi.length === 0) return null
     return Math.round(fasi.reduce((a, b) => a + b, 0) / fasi.length)

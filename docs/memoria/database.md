@@ -435,3 +435,15 @@ La web app (`app:main`) si può pubblicare anche **prima** della migrazione: il 
 `ADMIN_EMAILS` e le letture su `coach_atleti`/`staff` assenti non rompono niente. L'unica cosa che
 fallirebbe è l'insert di un messaggio con `destinatari`, e per questo in «Messaggio a tutti» la scelta
 «Tutti gli atleti» compare **solo** quando la lettura di `coach_atleti` risponde (cioè a migrazione fatta).
+
+### 👁️ Eccezione: `federico_leo@hotmail.it` legge tutti i workout (`supabase/schema/workout_tutti_hotmail_2026-10-26.sql`)
+⏳ **Scritta il 26/10/2026 (sì esplicito del committente in sessione), NON ancora applicata né provata.**
+Un coach vede solo i workout che ha creato o assegnati ai suoi atleti, giustamente; questo account
+li vede **tutti**, come un admin, ma **solo in lettura**. Si ridefinisce `vedo_workout(uuid)` con una riga
+in più (`email_corrente() = 'federico_leo@hotmail.it'`): nessuna tabella e nessuna policy toccate, e
+l'app non filtra per `creato_da`, quindi non cambia niente lato client. L'account resta `coach` in
+`staff`: i suoi atleti sono quelli di `coach_atleti`, e modifica/cancella solo i workout con
+`creato_da` suo. ⚠️ L'email è scritta nella funzione, non in `staff`: se l'account cambia indirizzo va
+rifatta la funzione. Per annullare: rieseguire `vedo_workout` da `multi_coach_2026-10-15.sql`.
+**Da fare dopo l'applicazione:** entrare con quell'account e controllare che nella libreria compaiano
+anche i workout degli altri coach.
