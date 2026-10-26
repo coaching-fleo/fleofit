@@ -11,7 +11,7 @@
 // barra-corsia sotto, colorata per categoria e verde se l'allenamento è
 // chiuso: il mese si legge come un pattern di carico invece che come puntini.
 
-import { ChevronLeft, ChevronRight, Plus, Search, Check } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Search, Check, CalendarClock } from 'lucide-react'
 import { CARD, CARTA_RIGA, CARTA_RIGA_BASE, LABEL, RIGA, VETRO, META } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 import { coloreCategoria } from '../lib/colori'
@@ -294,7 +294,11 @@ export function IntestazioneGiorno({ data, riepilogo }) {
  * quel bordo doveva distinguere. Dove nessuno stato esiste, nessuna riga si
  * distingue: è la risposta giusta, non l'assenza di una risposta.
  */
-export function RigaSessione({ categoria, etichetta, titolo, meta, stato, onApri }) {
+// `onSposta` (facoltativo): il bottone «Sposta» accanto alla freccia, per
+// l'atleta su ciò che è ancora da fare (src/lib/spostaAllenamento.js).
+// ⚠️ È un FRATELLO del bottone della riga, non un figlio: un bottone dentro
+// un bottone non è HTML valido, e il tocco aprirebbe anche la scheda.
+export function RigaSessione({ categoria, etichetta, titolo, meta, stato, onApri, onSposta }) {
   const c = corsia(categoria)
   const chiuso = stato === 'fatto'
   const daFare = stato === 'da fare'
@@ -309,9 +313,11 @@ export function RigaSessione({ categoria, etichetta, titolo, meta, stato, onApri
       ? `${CARTA_RIGA_BASE} border border-brand/25 hover:border-brand/45`
       : `${CARTA_RIGA} hover:border-white/[.14]`
 
-  return (
+  const riga = (
     <button onClick={onApri}
-      className={`w-full text-left px-4 py-[15px] flex items-center gap-3 transition ${superficie}`}>
+      className={onSposta
+        ? 'flex-1 min-w-0 text-left pl-4 pr-1 py-[15px] flex items-center gap-3'
+        : `w-full text-left px-4 py-[15px] flex items-center gap-3 transition ${superficie}`}>
       <span className={`w-[3px] self-stretch rounded-full shrink-0 ${chiuso ? 'bg-green-500' : c.bg}`} />
       <span className="flex-1 min-w-0">
         <span className="flex items-center gap-1.5 mb-[5px]">
@@ -339,8 +345,20 @@ export function RigaSessione({ categoria, etichetta, titolo, meta, stato, onApri
           </span>
         )}
       </span>
-      <ChevronRight size={17} className="text-[#5b6070] shrink-0" aria-hidden="true" />
+      {!onSposta && <ChevronRight size={17} className="text-[#5b6070] shrink-0" aria-hidden="true" />}
     </button>
+  )
+  if (!onSposta) return riga
+
+  return (
+    <div className={`w-full flex items-center transition ${superficie}`}>
+      {riga}
+      <button type="button" onClick={onSposta} aria-label={`Sposta ${titolo} a un altro giorno`}
+        className="shrink-0 mr-2 h-9 px-2.5 rounded-full flex items-center gap-1.5 bg-white/[.06]
+                   text-gray-300 text-[11.5px] font-bold hover:text-white hover:bg-white/[.1] active:scale-95 transition">
+        <CalendarClock size={14} aria-hidden="true" /> Sposta
+      </button>
+    </div>
   )
 }
 

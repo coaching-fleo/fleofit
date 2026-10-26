@@ -48,6 +48,8 @@ import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/
 import { BRAND, RUNNING, GYM, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
+import FoglioSposta from '../components/FoglioSposta'
+import { puoSpostare, spostaAssegnazione, avvisaCoachSpostamento } from '../lib/spostaAllenamento'
 import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
@@ -302,6 +304,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // caricato deve mostrare i propri esercizi senza un tocco — la scheda si
   // legge mentre ci si allena.
   const [menuOpen, setMenuOpen] = useState(false)
+  // «Sposta l'allenamento»: l'atleta sceglie un altro giorno (src/lib/spostaAllenamento.js).
+  const [spostaAperto, setSpostaAperto] = useState(false)
 
   // La grafica da mettere sopra una storia. `storiaSfondo` parte a false —
   // cioè sullo sticker TRASPARENTE — perché è quello il gesto richiesto: la
@@ -1489,11 +1493,33 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // Il menu delle tre puntine: i cinque bottoncini che stavano sotto il titolo
   // più i quattro export che stavano in fondo alla pagina, tutti dello stesso
   // peso l'uno dell'altro. Sono comandi che si usano una volta.
+  // Sposta SOLO la propria assegnazione: `workout.date` qui è già il suo
+  // `completed_date` (lo riscrive il fetch), e si aggiorna sul posto.
+  const spostaQui = async (data) => {
+    const { error } = await spostaAssegnazione(supabase, athleteWorkoutId, data)
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: "Non sono riuscito a spostare l'allenamento. Controlla la connessione e riprova.", type: 'error' })
+      return false
+    }
+    setWorkout(w => ({ ...w, date: data }))
+    setSpostaAperto(false)
+    vibraSuccesso()
+    if (role === 'athlete') {
+      avvisaCoachSpostamento(supabase, {
+        athleteName: currentAthleteName || user?.user_metadata?.first_name || 'Atleta',
+        workoutTitle: workout.title, data,
+        route: `/workout/${id}?athlete_id=${queryAthleteId || user.id}`,
+      })
+    }
+    return true
+  }
+
   const vociMenu = [
     puoAssegnare && { etichetta: 'Duplica', icona: Copy, onClick: () => navigate(`/create?duplicate=${id}`) },
     puoAssegnare && !isAuto && { etichetta: 'Modifica', icona: Edit, onClick: apriModifica },
     isAuto && { etichetta: 'Modifica', icona: Edit, onClick: openEditAutonomous },
     eAtleta && completato && { etichetta: 'Segna come da fare', icona: Undo2, onClick: toggleStatus },
+    eAtleta && puoSpostare({ status: workoutStatus, evento: isEvent }) && { etichetta: 'Sposta a un altro giorno', icona: CalendarDays, onClick: () => setSpostaAperto(true) },
     type !== 'Event' && { etichetta: 'Esporta PDF', icona: Download, onClick: exportPDF },
     { etichetta: 'Condividi come storia', icona: Share2, onClick: apriStoria },
     // ⚠️ Le due voci qui sotto esportano la SCHEDA (il programma, blocco per
@@ -1967,6 +1993,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       )}
 
       {menuOpen && <MenuScheda onChiudi={() => setMenuOpen(false)} voci={vociMenu} />}
+      {spostaAperto && (
+        <FoglioSposta titolo={workout.title} dataAttuale={workout.date}
+          onChiudi={() => setSpostaAperto(false)} onConferma={spostaQui} />
+      )}
 
       {/* La grafica del recap. Il foglio ne mostra una copia RISCALATA; il nodo
           che html-to-image rasterizza è quello qui sotto, a misura vera e fuori

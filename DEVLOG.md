@@ -62,6 +62,11 @@ Le modifiche fatte dopo la versione **1.2.0**, in vendita sullo Store: build `1.
 - Sullo **SkiErg** le distanze rapide sotto il righello sono 200, 400, 500 e 1000 m.
 - Chi ha ancora la 1.2.0 o la 1.2.1 vede il primo giro, senza gli aumenti, e un For Time nuovo come «1 round» stimato a 15′ (il time cap non lo legge).
 
+## L'atleta sposta un allenamento (1.2.2)
+- Se un giorno non può allenarsi, l'atleta **sposta da solo** l'allenamento a un altro giorno: dal **calendario** (bottone «Sposta» sulla riga di ciò che è ancora da fare) o dalla **scheda** (menu ⋯ → «Sposta a un altro giorno»). Sceglie fra i prossimi sette giorni o un'altra data; non nel passato. Si sposta solo il suo allenamento, non quello degli altri atleti a cui è assegnato. Gli allenamenti già fatti e le gare non si spostano.
+- Il coach riceve la notifica «📅 Allenamento spostato» con la nuova data. `send-reminders` con l'azione `moved` ✅ **pubblicata il 26/10/2026** (versione 59).
+- Con la 1.2.1 non si sposta; l'allenamento spostato da un'app nuova si vede al giorno nuovo anche lì.
+
 ## Gestire i coach (multi-coach) — prove sul telefono
 Da fare DOPO che il committente ha applicato `multi_coach_2026-10-15.sql`; prima il foglio dice che serve l'aggiornamento.
 - Impostazioni da admin: la voce «Coach» c'è; da coach non c'è (né il backup).

@@ -516,3 +516,8 @@ committente: «non toccare il codice per il timer».
 - Provato nell'ambiente di prova iniettando workout e `timer_state` finti nel browser
   (Hyrox con EMOM in corso, corsa in pausa, verticale). **Non provato su una TV vera.**
 - Non fatto, come prima: la TV non mostra i gruppi Gym (`crea-workout.md`, 9-gym punto 8).
+
+## 9-sposta. «Sposta a un altro giorno» dal menu (26/10/2026)
+L'atleta sposta la sua assegnazione da qui (voce del menu ⋯, solo da fare e non gara) o dal
+calendario: stesso foglio `FoglioSposta`, stessa logica. `spostaQui` aggiorna `workout.date` sul
+posto, perché per l'atleta è già il suo `completed_date`. Tutta la storia: `calendario.md`, 9-sposta.

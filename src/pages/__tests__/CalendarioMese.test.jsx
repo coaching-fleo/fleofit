@@ -280,7 +280,8 @@ describe('Calendario — la riga di una sessione', () => {
     const { unmount } = montaAtleta()
     const chiusa = await screen.findByRole('button', { name: /Sessione chiusa/ })
     expect(within(chiusa).getByText('Fatto')).toBeInTheDocument()
-    const aperta = screen.getByRole('button', { name: /Sessione aperta/ })
+    // La riga aperta ha accanto «Sposta …», che porta lo stesso titolo.
+    const aperta = screen.getByRole('button', { name: /^(?!Sposta).*Sessione aperta/ })
     expect(within(aperta).getByText('Da fare')).toBeInTheDocument()
     unmount()
 
@@ -303,7 +304,8 @@ describe('Calendario — la riga di una sessione', () => {
   it('il bordo ambra marca il «da fare», e non convive con quello neutro', async () => {
     dati.assegnazioni = [assegnata(hyrox(1, 'Da chiudere', '2026-08-22'))]
     const { unmount } = montaAtleta()
-    const daFare = await screen.findByRole('button', { name: /Da chiudere/ })
+    // Con «Sposta» accanto, la superficie è del contenitore dei due bottoni.
+    const daFare = (await screen.findByRole('button', { name: /^(?!Sposta).*Da chiudere/ })).parentElement
     expect(daFare).toHaveClass('border-brand/25')
     expect(daFare).not.toHaveClass('border-white/[.07]')
     unmount()
@@ -313,6 +315,26 @@ describe('Calendario — la riga di una sessione', () => {
     const riga = await screen.findByRole('button', { name: /Lungo del coach/ })
     expect(riga).not.toHaveClass('border-brand/25')
     expect(riga).toHaveClass('border-white/[.07]')
+  })
+
+  // L'atleta sposta da solo ciò che è ancora da fare (src/lib/spostaAllenamento.js):
+  // non ciò che ha già fatto, non una gara, e il coach qui non sposta niente.
+  it("«Sposta» solo all'atleta, solo su ciò che è da fare, e apre il foglio", async () => {
+    dati.assegnazioni = [
+      assegnata(hyrox(1, 'Sessione chiusa', '2026-08-22'), { status: 'completed' }),
+      assegnata(hyrox(2, 'Sessione aperta', '2026-08-22')),
+    ]
+    const { unmount } = montaAtleta()
+    const sposta = await screen.findByRole('button', { name: 'Sposta Sessione aperta a un altro giorno' })
+    expect(screen.queryByRole('button', { name: /Sposta Sessione chiusa/ })).toBeNull()
+    await userEvent.setup().click(sposta)
+    expect(screen.getByRole('dialog', { name: "Sposta l'allenamento" })).toBeInTheDocument()
+    unmount()
+
+    dati.workouts = [hyrox(1, 'Full Body', '2026-08-22')]
+    montaCoach()
+    await screen.findByText('Full Body')
+    expect(screen.queryByRole('button', { name: /^Sposta/ })).toBeNull()
   })
 
   it('regge un titolo nullo invece di portarsi via la pagina', async () => {

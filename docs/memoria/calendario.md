@@ -453,3 +453,22 @@ Logica in `copiaSettimana` di `src/lib/calendarioTeam.js`, con test.
   settimana prende anche `workouts.coach_notes`.
 - 🔴 **Una copia alla volta** (`copiaInCorso`): la finestra si chiude prima della scrittura,
   e un secondo clic nel frattempo raddoppierebbe la settimana.
+
+## 9-sposta — L'atleta sposta da solo un allenamento (26/10/2026)
+Richiesta del committente: «un giorno non può fare l'allenamento, sceglie una nuova data, sia da
+calendario che da scheda del workout».
+- 🔴 **Si sposta l'ASSEGNAZIONE, mai il workout**: si scrive solo `athlete_workouts.completed_date`
+  (`spostaAssegnazione` di `src/lib/spostaAllenamento.js`). `workouts.date` è condiviso con tutti
+  gli atleti a cui è assegnato. La policy di `athlete_workouts` lo lascia già scrivere all'atleta
+  sulle righe sue: **nessuna migrazione**.
+- Si sposta solo ciò che è **da fare** e **non è una gara** (`puoSpostare`). Solo da oggi in avanti:
+  un recupero nel passato non è un recupero (`eNelPassato`).
+- Un foglio solo, `FoglioSposta`, aperto dal calendario (bottone «Sposta» in `RigaSessione`,
+  prop `onSposta`) e dalla scheda (voce del menu). ⚠️ Il bottone è un **fratello** del bottone della
+  riga, non un figlio: con `onSposta` la superficie (bordo ambra del «da fare») passa al contenitore.
+- Niente «Domani» fra i sette giorni proposti: in 375px si tronca in «DOM…», che si legge domenica.
+- Dopo lo spostamento il calendario va al giorno nuovo (anche cambiando mese).
+- Il coach riceve una push: `send-reminders`, `coach_notification` con `action: 'moved'` e `newDate`
+  già scritta («gio 29 ott»). ✅ **Pubblicata il 26/10/2026** (versione 59). Se la push non
+  parte, lo spostamento resta fatto lo stesso.
+

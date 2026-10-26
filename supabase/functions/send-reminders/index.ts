@@ -581,7 +581,7 @@ serve(async (req) => {
       // Un'action non riconosciuta produceva una notifica con titolo generico e
       // corpo VUOTO, spedita a tutti gli admin. Meglio rifiutare: una push senza
       // testo non serve a nessuno e non deve poter nascere da un typo.
-      const azioniValide = ['note', 'completed', 'custom_workout'];
+      const azioniValide = ['note', 'completed', 'custom_workout', 'moved'];
       if (!azioniValide.includes(body.action)) {
         console.warn(`coach_notification: action '${body.action}' non riconosciuta, ignorata.`);
         return new Response(JSON.stringify({ error: `action non valida: ${body.action}` }), {
@@ -602,6 +602,11 @@ serve(async (req) => {
       } else if (body.action === 'custom_workout') {
         title = `🏃‍♂️ Nuovo allenamento libero`;
         bodyMsg = `${body.athleteName} ha aggiunto: ${body.workoutTitle}`;
+      } else if (body.action === 'moved') {
+        // L'atleta ha spostato da solo un allenamento (src/lib/spostaAllenamento.js).
+        // `newDate` arriva già scritta per esteso («mer 28 ott»): qui non si formatta.
+        title = `📅 Allenamento spostato`;
+        bodyMsg = `${body.athleteName} ha spostato ${body.workoutTitle}${body.newDate ? ` a ${body.newDate}` : ''}`;
       }
 
       const notifInserts = adminUserIds.map(adminId => ({

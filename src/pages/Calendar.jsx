@@ -2,11 +2,15 @@ import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { format, startOfMonth, endOfMonth, isSameDay, isToday } from 'date-fns'
+import { format, startOfMonth, endOfMonth, isSameDay, isSameMonth, isToday, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useAuth } from '../App'
 import { useRipresa, useRicorda } from '../useRipresa'
 import NuovoEvento from '../components/NuovoEvento'
+import FoglioSposta from '../components/FoglioSposta'
+import { puoSpostare, spostaAssegnazione, avvisaCoachSpostamento, nomeAtleta } from '../lib/spostaAllenamento'
+import { mostraErrore } from '../lib/alert'
+import { vibraSuccesso } from '../lib/aptica'
 import { categoriaDi, corsia } from '../lib/categorie'
 import { coloreCategoria } from '../lib/colori'
 import { metaWorkout, conteggiPerCorsia } from '../lib/rigaArchivio'
@@ -44,6 +48,8 @@ export default function Calendar() {
   const [selectedDay, setSelectedDay] = useState(() => ripresa ? new Date(ripresa.giorno) : new Date())
   const [loading, setLoading] = useState(!ripresa)
   const [eventModalOpen, setEventModalOpen] = useState(false)
+  // L'allenamento che l'atleta sta spostando a un altro giorno (FoglioSposta).
+  const [daSpostare, setDaSpostare] = useState(null)
   useRicorda('calendario', user?.id, ripresa, {
     mese: currentMonth.getTime(), giorno: selectedDay.getTime(), workouts, caricato: !loading,
   })
@@ -155,6 +161,33 @@ export default function Calendar() {
 
   const dataSelezionata = format(selectedDay, 'yyyy-MM-dd')
 
+  // Sposta la SUA assegnazione (`aw_id`), non il workout: è condiviso con
+  // gli altri atleti. Il calendario va al giorno nuovo, che è dove l'atleta
+  // vuole vedere l'allenamento finire.
+  const sposta = async (data) => {
+    const w = daSpostare
+    const { error } = await spostaAssegnazione(supabase, w.aw_id, data)
+    if (error) {
+      mostraErrore("Non sono riuscito a spostare l'allenamento. Controlla la connessione e riprova.")
+      return false
+    }
+    setDaSpostare(null)
+    vibraSuccesso()
+    avvisaCoachSpostamento(supabase, {
+      athleteName: nomeAtleta(user),
+      workoutTitle: w.title, data,
+      route: `/workout/${w.id}?athlete_id=${user.id}`,
+    })
+    const nuovo = parseISO(data)
+    setSelectedDay(nuovo)
+    if (isSameMonth(nuovo, currentMonth)) {
+      setWorkouts(lista => lista.map(x => (x.aw_id === w.aw_id ? { ...x, date: data } : x)))
+    } else {
+      setCurrentMonth(nuovo)
+    }
+    return true
+  }
+
   if (desktop && !vistaMese) {
     return (
       <Suspense fallback={<div className="min-h-screen" />}>
@@ -244,6 +277,8 @@ export default function Calendar() {
                 // assegnazione (nota, stato, RPE, tempo di gara) e mostra il workout
                 // nudo (corretto il 13/10/2026). Il coach qui vede la programmazione.
                 onApri={() => navigate(isAtleta ? `/workout/${w.id}?athlete_id=${user.id}` : `/workout/${w.id}`)}
+                onSposta={isAtleta && w.aw_id && puoSpostare({ status: w.status, evento: eEvento(w) })
+                  ? () => setDaSpostare(w) : undefined}
               />
             )
           })}
@@ -254,6 +289,11 @@ export default function Calendar() {
             />
           )}
         </div>
+      )}
+
+      {daSpostare && (
+        <FoglioSposta titolo={daSpostare.title} dataAttuale={daSpostare.date}
+          onChiudi={() => setDaSpostare(null)} onConferma={sposta} />
       )}
 
       {/* MODAL NUOVO EVENTO */}
