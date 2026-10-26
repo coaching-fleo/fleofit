@@ -162,3 +162,14 @@ describe('regola delle categorie', () => {
     }
   })
 })
+
+describe('blocchi mancanti', () => {
+  // Chi chiama passa da modelloValido, ma un null non deve far cadere la pagina.
+  it('contenutoDaBlocco e bloccoDaModello tornano null invece di lanciare', () => {
+    expect(contenutoDaBlocco('Gym', null)).toBeNull()
+    expect(contenutoDaBlocco('Hyrox', undefined)).toBeNull()
+    expect(bloccoDaModello({ categoria: 'Gym', contenuto: null })).toBeNull()
+    expect(bloccoDaModello(null)).toBeNull()
+  })
+})
+

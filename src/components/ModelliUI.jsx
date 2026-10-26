@@ -64,7 +64,8 @@ export function SezioneModelli({ categoria, onScegli }) {
       {modelli.map(m => (
         <CardModello key={m.id} modello={m} onClick={() => onScegli(m)} />
       ))}
-      <Link to={`/modelli?categoria=${categoria}`}
+      {/* data-tiene-bozza: il builder non chiede conferma, la bozza conserva il workout. */}
+      <Link to={`/modelli?categoria=${categoria}`} data-tiene-bozza
         className="self-start min-h-9 px-1 flex items-center gap-1 text-[12.5px] font-bold text-muted hover:text-white">
         Gestisci i modelli <ChevronRight size={14} aria-hidden="true" />
       </Link>

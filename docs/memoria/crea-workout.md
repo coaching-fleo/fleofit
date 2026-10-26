@@ -1674,6 +1674,17 @@ piano: `docs/superpowers/plans/2026-10-16-modelli-blocco.md`. Costruito il 26/10
   sovrascriveva la bozza. Il `CreateWorkout` esportato ora è un guscio che monta `Costruttore`
   con una `key` sul parametro `modello`: a ogni cambio la schermata riparte da capo. Trovato
   nella revisione finale del 26/10 (test «…la schermata riparte, e la bozza non si tocca»).
+- **Andare a Modelli dal builder tiene la bozza** (spec §4): l'icona della testata e il
+  collegamento «Gestisci i modelli» escono senza «Sei sicuro?», perché quella conferma, accettata,
+  cancellerebbe proprio la bozza. Il collegamento porta `data-tiene-bozza`, che il controllo dei
+  link in uscita del builder lascia passare.
+- **Un modello da leggere** (`/create?modello=<id>`) mostra un segnaposto finché non arriva
+  (`inAttesaModello`): prima si vedeva per un attimo il builder Hyrox vuoto, anche per un modello
+  di corsa.
+- **Elimina nella pagina Modelli** rimette, se fallisce, solo quella card al suo posto: rimettere
+  la lista di prima faceva ricomparire una card eliminata nel frattempo.
+- `useModelliBlocco` ricorda per quale categoria ha letto: cambiando categoria torna vuoto finché
+  arriva la lista nuova, invece di mostrare quella di prima.
 - **La fase Gym** non sta nel modello: la decide il punto da cui lo si inserisce (`picker.fase`).
   Dentro una superserie e nel «Cambia» la sezione dei modelli non c'è.
 - **Un blocco solo.** Nella modalità modello spariscono anche Duplica, «Salva come modello» e

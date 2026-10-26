@@ -29,7 +29,7 @@ export async function salvaModello({ coach, categoria, nome, contenuto }) {
   if (!nomeValido(nome)) throw new Error('Il nome del modello non è valido.')
   const { data, error } = await supabase
     .from(TABELLA)
-    .insert({ coach, categoria, nome: nome.trim(), contenuto })
+    .insert({ coach, categoria, nome: String(nome).trim(), contenuto })
     .select()
     .single()
   if (error) throw error
@@ -40,7 +40,7 @@ export async function aggiornaModello(id, { nome, contenuto } = {}) {
   const dati = { modificato_at: new Date().toISOString() }
   if (nome !== undefined) {
     if (!nomeValido(nome)) throw new Error('Il nome del modello non è valido.')
-    dati.nome = nome.trim()
+    dati.nome = String(nome).trim()
   }
   if (contenuto !== undefined) dati.contenuto = contenuto
   const { data, error } = await supabase.from(TABELLA).update(dati).eq('id', id).select().single()

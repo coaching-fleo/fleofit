@@ -13,7 +13,7 @@ import { MESSAGGIO_SENZA_RETE } from '../../lib/modelliBloccoDb'
 // come uno nuovo (un doppione invece di una correzione); e un id che non c'è
 // più, che lascerebbe un builder vuoto senza dire perché.
 
-const stato = await vi.hoisted(async () => ({ chiamate: [], modelli: [], erroreScrittura: false }))
+const stato = await vi.hoisted(async () => ({ chiamate: [], modelli: [], erroreScrittura: false, letturaSospesa: null }))
 
 vi.mock('../../supabaseClient', () => {
   const generica = {
@@ -34,7 +34,8 @@ vi.mock('../../supabaseClient', () => {
       insert: (r) => { scritto = r; stato.chiamate.push({ metodo: 'insert', args: [r] }); return c },
       update: (r) => { scritto = r; stato.chiamate.push({ metodo: 'update', args: [r] }); return c },
       single: () => Promise.resolve(errore() ?? { data: { id: 'nuovo-id', ...scritto }, error: null }),
-      maybeSingle: () => Promise.resolve({ data: stato.modelli.find(m => m.id === filtri.id) ?? null, error: null }),
+      maybeSingle: () => (stato.letturaSospesa ?? Promise.resolve())
+        .then(() => ({ data: stato.modelli.find(m => m.id === filtri.id) ?? null, error: null })),
       then: (ok, ko) => Promise.resolve({ data: stato.modelli, error: null }).then(ok, ko),
     }
     return c
@@ -90,6 +91,7 @@ beforeEach(() => {
   stato.chiamate.length = 0
   stato.modelli = [CORSA]
   stato.erroreScrittura = false
+  stato.letturaSospesa = null
   alert.mostraErrore.mockClear()
   localStorage.clear()
 })
@@ -211,4 +213,18 @@ describe('il builder in modalità modello', () => {
     expect(screen.queryByText('5 km')).toBeNull()
     expect(localStorage.getItem('fleofit_workout_draft')).toBe(bozza)
   })
+
+  it('finché il modello non arriva non mostra un builder vuoto da riempire', async () => {
+    let sblocca
+    stato.letturaSospesa = new Promise(r => { sblocca = r })
+    monta('/create?modello=m1')
+    await screen.findByText('Modifica modello')
+    // Prima mostrava il builder Hyrox vuoto: «Scegli il blocco», per un modello di corsa.
+    expect(screen.queryByRole('button', { name: 'Scegli il blocco' })).toBeNull()
+    expect(screen.queryByLabelText('Nome del modello')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Salva modello' })).toBeNull()
+    sblocca()
+    expect(await screen.findByLabelText('Nome del modello')).toHaveValue('Ripetute del martedì')
+  })
 })
+

@@ -12,7 +12,7 @@ import { AuthContext } from '../../App'
 // c'è ancora (o di averlo rinominato). E la scheda aperta sta nell'URL, perché
 // tornando dal builder si deve ritrovare la stessa.
 
-const stato = await vi.hoisted(async () => ({ inErrore: false, chiamate: [] }))
+const stato = await vi.hoisted(async () => ({ inErrore: false, chiamate: [], cancellazioneSospesa: null }))
 const MODELLI = [
   { id: 'h1', coach: 'u1', categoria: 'Hyrox', nome: 'EMOM vecchio', creato_at: '2026-10-01T10:00:00Z', modificato_at: null,
     contenuto: { type: 'EMOM', params: { interval: '1:00', rounds: '10' }, exercises: [{ name: 'Wall Balls', reps: '15' }] } },
@@ -40,7 +40,15 @@ vi.mock('../../supabaseClient', () => {
       delete: () => { metodo = 'delete'; stato.chiamate.push({ metodo, args: [] }); return c },
       eq: (col, v) => { filtri[col] = v; return c },
       single: () => Promise.resolve(stato.inErrore ? risposta() : { data: risposta().data[0] ?? null, error: null }),
-      then: (ok, ko) => Promise.resolve(risposta()).then(ok, ko),
+      // Una cancellazione può restare in volo (cancellazioneSospesa: { id, promessa })
+      // e poi fallire: serve a provare due eliminazioni sovrapposte.
+      then: (ok, ko) => {
+        const s = stato.cancellazioneSospesa
+        if (metodo === 'delete' && s && filtri.id === s.id) {
+          return s.promessa.then(() => ({ data: null, error: { message: 'rete assente' } })).then(ok, ko)
+        }
+        return Promise.resolve(risposta()).then(ok, ko)
+      },
     }
     return c
   }
@@ -73,6 +81,7 @@ const nomiCard = () => screen.getAllByTestId('card-modello').map(c => c.querySel
 beforeEach(() => {
   stato.inErrore = false
   stato.chiamate.length = 0
+  stato.cancellazioneSospesa = null
   alert.mostraErrore.mockClear()
   vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
@@ -154,4 +163,26 @@ describe('la pagina Modelli', () => {
     monta({ role: 'athlete' })
     expect(await screen.findByTestId('posizione')).toHaveTextContent(/^\/$/)
   })
+
+  it('se una eliminazione fallisce mentre un\'altra riesce, torna solo la prima', async () => {
+    let fallisci
+    stato.cancellazioneSospesa = { id: 'h1', promessa: new Promise(r => { fallisci = r }) }
+    monta()
+    const elimina = async (nome) => {
+      await userEvent.click(await screen.findByRole('button', { name: `Azioni per ${nome}` }))
+      await userEvent.click(await screen.findByRole('button', { name: 'Elimina' }))
+      const conferma = await screen.findByRole('dialog', { name: 'Eliminare il modello?' })
+      await userEvent.click(within(conferma).getByRole('button', { name: 'Elimina' }))
+      await waitFor(() => expect(screen.queryByText(nome)).toBeNull())
+    }
+    await elimina('EMOM vecchio')      // resta in volo
+    await elimina('Riscaldamento')     // riesce
+    fallisci()
+    await waitFor(() => expect(alert.mostraErrore).toHaveBeenCalled())
+    expect(await screen.findByText('EMOM vecchio')).toBeInTheDocument()
+    expect(screen.queryByText('Riscaldamento')).toBeNull()
+    // E torna al suo posto: dopo «AMRAP ritoccato», come prima.
+    expect(nomiCard()).toEqual(['AMRAP ritoccato', 'EMOM vecchio'])
+  })
 })
+

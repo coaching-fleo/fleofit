@@ -212,3 +212,46 @@ describe('l\'icona «Modelli» nella testata del builder', () => {
     expect(await screen.findByText('pagina dei modelli')).toBeInTheDocument()
   })
 })
+
+describe('andare ai modelli dal builder', () => {
+  // La spec: «se il workout ha modifiche non salvate, la bozza le conserva già».
+  // Il collegamento del foglio chiedeva «Sei sicuro?» e, confermando, cancellava
+  // la bozza; l'icona della testata invece usciva e la teneva. Ora tutti e due
+  // escono senza chiedere e la bozza resta.
+  const montaConModelli = () => render(
+    <AuthContext.Provider value={{ user: { id: 'u1' }, role: 'admin' }}>
+      <MemoryRouter initialEntries={['/create']}>
+        <Routes>
+          <Route path="/create" element={<CreateWorkout />} />
+          <Route path="/modelli" element={<p>pagina dei modelli</p>} />
+        </Routes>
+      </MemoryRouter>
+    </AuthContext.Provider>
+  )
+  const conBozzaRipresa = async () => {
+    localStorage.setItem('fleofit_workout_draft', JSON.stringify({
+      sourceId: null, modo: 'nuovo', title: 'A metà', date: '2026-10-26', workoutIntensity: '7',
+      category: 'Hyrox', blocks: [EMOM_NEL_WORKOUT], runningSteps: [], gymGroups: [], coachNotes: '',
+    }))
+    montaConModelli()
+    const d = await screen.findByRole('dialog', { name: 'Bozza Trovata' })
+    await userEvent.click(within(d).getByRole('button', { name: 'Conferma' }))
+  }
+
+  it('«Gestisci i modelli» esce senza chiedere e la bozza resta', async () => {
+    await conBozzaRipresa()
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
+    await userEvent.click(await screen.findByRole('link', { name: /Gestisci i modelli/ }))
+    expect(await screen.findByText('pagina dei modelli')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Sei sicuro?' })).toBeNull()
+    expect(JSON.parse(localStorage.getItem('fleofit_workout_draft')).blocks).toHaveLength(1)
+  })
+
+  it('l\'icona «Modelli» fa lo stesso', async () => {
+    await conBozzaRipresa()
+    await userEvent.click(screen.getByRole('button', { name: 'Modelli' }))
+    expect(await screen.findByText('pagina dei modelli')).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('fleofit_workout_draft')).blocks).toHaveLength(1)
+  })
+})
+

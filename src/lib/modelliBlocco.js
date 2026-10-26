@@ -43,6 +43,7 @@ const ripulisci = (v, togli) => {
  * toglie anche la `fase` del gruppo e degli esercizi.
  */
 export const contenutoDaBlocco = (categoria, blocco) => {
+  if (!blocco) return null
   const g = categoria === 'Gym'
   const pulito = ripulisci(blocco, ['id'])
   if (!g) return pulito
@@ -69,6 +70,7 @@ const conIdNuovi = (v, radice = false) => {
  * partenza): non se ne inventa uno.
  */
 export const bloccoDaModello = (modello, opzioni = {}) => {
+  if (!modello?.contenuto) return null
   const blocco = conIdNuovi(copia(modello.contenuto), true)
   if (modello.categoria === 'Gym') blocco.fase = opzioni.fase ?? 'principale'
   return blocco

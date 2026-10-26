@@ -3033,6 +3033,10 @@ function Costruttore() {
     ? !!bloccoModello || nomeModello !== null
     : JSON.stringify({ n: nomeModello, b: blocks, r: runningSteps, g: gymGroups }) !== modelloDiPartenza)
 
+  // Un modello da leggere (non `nuovo`) che non è ancora arrivato: fino ad allora
+  // la categoria non si sa, e un builder vuoto da riempire sarebbe una bugia.
+  const inAttesaModello = !!modello && modello !== 'nuovo' && modelloDiPartenza === null
+
   const hasUnsavedChanges = modello ? !!modelloCambiato
     : title.trim() !== '' || blocks.length > 0 || runningSteps.length > 0 || gymGroups.length > 0
 
@@ -3139,7 +3143,10 @@ function Costruttore() {
     const handleLinkClick = (e) => {
       if (hasUnsavedChanges && !saved) {
         const link = e.target.closest('a')
-        if (link && link.host === window.location.host && link.pathname !== window.location.pathname) {
+        // `data-tiene-bozza`: un'uscita che la bozza conserva già («Gestisci i
+        // modelli»), come l'icona Modelli della testata. Niente «Sei sicuro?»,
+        // che confermando cancellerebbe proprio quella bozza.
+        if (link && !link.hasAttribute('data-tiene-bozza') && link.host === window.location.host && link.pathname !== window.location.pathname) {
           e.preventDefault()
           e.stopPropagation()
           setPendingPath(link.pathname + link.search)
@@ -3572,7 +3579,8 @@ function Costruttore() {
         senzaPassi={!!modello}
       />
 
-      {modello && <CampoNomeModello valore={nomeDelModello} onChange={setNomeModello} />}
+      {modello && !inAttesaModello && <CampoNomeModello valore={nomeDelModello} onChange={setNomeModello} />}
+      {inAttesaModello && <div className={`${CARD} h-40 animate-pulse`} aria-label="Carico il modello" />}
 
       {/* ── STEP 1: LA CATEGORIA COME DOMANDA ────────────────────── */}
       {passo === 1 && (
@@ -3647,7 +3655,7 @@ function Costruttore() {
 
       <DueColonne attive={desktop} colonna={colonnaDesktop}>
       {/* ── STEP 2: IL BUILDER CON IL RIEPILOGO ──────────────────── */}
-      {passo === 2 && category === 'Hyrox' && (
+      {passo === 2 && !inAttesaModello && category === 'Hyrox' && (
         <div className="flex flex-col gap-3.5 passo-entra">
 
           {/* Il builder era cieco: si aggiungevano blocchi senza sapere quanto
@@ -3765,7 +3773,7 @@ function Costruttore() {
           «Crea Workout» copre lo step 1 (tutte e tre le categorie) e lo step 2
           Hyrox. Qui cambiano la cornice condivisa — testata, card, barra fissa —
           e non il modo di comporre le fasi, che resta quello di prima. */}
-      {passo === 2 && category === 'Running' && (
+      {passo === 2 && !inAttesaModello && category === 'Running' && (
         <div className="flex flex-col gap-3.5 passo-entra">
           {!desktop && !modello && <CardIntensita
             valore={workoutIntensity}
@@ -3836,7 +3844,7 @@ function Costruttore() {
       )}
 
       {/* ── STEP 2: LA SCHEDA DA PALESTRA (13/10/2026) ─────────────── */}
-      {passo === 2 && category === 'Gym' && (
+      {passo === 2 && !inAttesaModello && category === 'Gym' && (
         <div className="flex flex-col gap-3.5 passo-entra">
           {!desktop && !modello && riepilogoGymCard}
 
@@ -3902,7 +3910,7 @@ function Costruttore() {
           <CtaPrimaria onClick={() => setStep(2)} iconaCoda={ArrowRight}>
             Costruisci l'allenamento
           </CtaPrimaria>
-        ) : modello ? (
+        ) : inAttesaModello ? null : modello ? (
           <CtaPrimaria onClick={salvaQuestoModello} disabled={!bloccoModello || !nomeValido(nomeDelModello)} attesa={salvandoModello}>
             Salva modello
           </CtaPrimaria>

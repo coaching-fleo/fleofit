@@ -79,3 +79,23 @@ describe('aggiornaModello, eliminaModello, leggiModello', () => {
     expect((await leggiModello('z')).id).toBe('z')
   })
 })
+
+describe('i casi che mancavano', () => {
+  it('un nome numerico si salva come testo, senza TypeError', async () => {
+    ctrl.righe = [gym('x')]
+    await salvaModello({ coach: 'c1', categoria: 'Gym', nome: 5, contenuto: { esercizi: [] } })
+    expect(finto.chiamateA('modelli_blocco', 'insert')[0].args[0].nome).toBe('5')
+    await aggiornaModello('x', { nome: 7 })
+    expect(finto.chiamateA('modelli_blocco', 'update')[0].args[0].nome).toBe('7')
+  })
+  it('aggiornaModello con nome vuoto rifiuta senza chiamare update', async () => {
+    await expect(aggiornaModello('x', { nome: '  ' })).rejects.toBeTruthy()
+    expect(finto.chiamateA('modelli_blocco', 'update')).toHaveLength(0)
+  })
+  it('leggiModello ed eliminaModello rifiutano se il database risponde con un errore', async () => {
+    ctrl.guasti = ['modelli_blocco']
+    await expect(leggiModello('x')).rejects.toBeTruthy()
+    await expect(eliminaModello('x')).rejects.toBeTruthy()
+  })
+})
+

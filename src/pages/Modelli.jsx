@@ -84,13 +84,16 @@ export default function Modelli() {
   }
 
   const elimina = async (m) => {
-    const prima = modelli
+    // Il rollback rimette SOLO questa card, al suo posto: rimettere la lista di
+    // prima farebbe ricomparire anche una card eliminata nel frattempo.
+    const posto = modelli.findIndex(x => x.id === m.id)
     conModelli(ms => ms.filter(x => x.id !== m.id))
     try {
       await eliminaModello(m.id)
     } catch (e) {
       console.warn('Modello non eliminato:', e)
-      conModelli(() => prima)
+      conModelli(ms => (ms.some(x => x.id === m.id) ? ms
+        : [...ms.slice(0, Math.max(posto, 0)), m, ...ms.slice(Math.max(posto, 0))]))
       mostraErrore('Non sono riuscito a eliminarlo. Controlla la connessione e riprova.')
     }
   }
