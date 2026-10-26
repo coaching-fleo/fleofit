@@ -32,6 +32,8 @@ import { vibraScelta, battito } from '../lib/aptica'
 import { chiudiTastieraSuInvio } from '../useTastiera'
 import { FoglioMisure } from './FoglioMisure'
 import { FoglioSalvaModello } from './FoglioModello'
+import { SezioneModelli } from './ModelliUI'
+import { bloccoDaModello } from '../lib/modelliBlocco'
 import { MUSCOLI, cercaEserciziGym, voceGym } from '../lib/eserciziGym'
 import {
   FASI_GYM, faseDi, nuovoGruppoGym, nuovoEsercizioGym, tipoGruppo, conDettaglio, serieDi,
@@ -187,7 +189,9 @@ export default function CreaGym({ gruppi, setGruppi }) {
       })}
 
       {picker && (
-        <PickerGym titolo={picker.titolo} onAggiungi={aggiungi} onChiudi={() => setPicker(null)} />
+        <PickerGym titolo={picker.titolo} onAggiungi={aggiungi} onChiudi={() => setPicker(null)}
+          // Solo aggiungendo a una fase: dentro una superserie un gruppo intero non entra.
+          onModello={picker.fase ? (m) => setGruppi(prev => [...prev, bloccoDaModello(m, { fase: picker.fase })]) : undefined} />
       )}
 
       {gruppoInEditor && esercizioInEditor && (
@@ -386,7 +390,7 @@ const BOTTONE_FATTO = 'w-full min-h-[52px] rounded-2xl bg-gym text-black text-[1
  * Un nome che non c'è si aggiunge com'è scritto: diventa un esercizio custom.
  * Con `unico` (il «Cambia» del foglio) il primo tocco sceglie e chiude.
  */
-export function PickerGym({ titolo, onAggiungi, onChiudi, unico = false }) {
+export function PickerGym({ titolo, onAggiungi, onChiudi, unico = false, onModello }) {
   const [testo, setTesto] = useState('')
   const [muscolo, setMuscolo] = useState(null)
   const [scelti, setScelti] = useState([])
@@ -440,6 +444,13 @@ export function PickerGym({ titolo, onAggiungi, onChiudi, unico = false }) {
           })}
         </div>
       </div>
+
+      {/* I modelli solo a ricerca ferma: chi cerca un esercizio vuole quello. */}
+      {onModello && !unico && !scritto && !muscolo && (
+        <div className="mb-3">
+          <SezioneModelli categoria="Gym" onScegli={(m) => { vibraScelta(); onModello(m); chiusura?.() }} />
+        </div>
+      )}
 
       {nuovo && (
         <button type="button" onClick={() => { alterna(scritto); setTesto('') }}

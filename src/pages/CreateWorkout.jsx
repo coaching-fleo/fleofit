@@ -51,6 +51,8 @@ import { useAuth } from '../App'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
 import CreaWorkoutDesktop from '../components/CreaWorkoutDesktop'
 import { FoglioSalvaModello } from '../components/FoglioModello'
+import { SezioneModelli } from '../components/ModelliUI'
+import { bloccoDaModello } from '../lib/modelliBlocco'
 
 // Il lettore dei workout scritti si scarica solo quando si apre il foglio.
 const FoglioDaTesto = lazy(() => import('../components/FoglioDaTesto'))
@@ -235,12 +237,12 @@ const moveElement = (list, from, to) => {
 
 // Con `blocco` è il «Cambia tipo di blocco»: il tipo attuale è segnato
 // (src/lib/cambiaTipoBlocco.js).
-function BlockPickerModal({ onAdd, onClose, blocco }) {
+function BlockPickerModal({ onAdd, onClose, blocco, onModello }) {
     const blockTypes = ['WarmUp', 'Cash In', 'ON/OFF', 'EMOM', 'AMRAP', 'For Time', 'Interval', 'Rest', 'Cash Out']
 
   return createPortal(
     <div className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4 velo-in">
-      <div className={`${CARD} w-full max-w-sm p-5 modal-transition`}>
+      <div className={`${CARD} w-full max-w-sm p-5 modal-transition max-h-[85vh] overflow-y-auto hide-scrollbar`}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-white font-bold text-lg">{blocco ? 'Cambia tipo di blocco' : 'Aggiungi Blocco'}</h3>
           <button aria-label="Chiudi" onClick={onClose} className="text-muted hover:text-white"><X size={20}/></button>
@@ -263,6 +265,10 @@ function BlockPickerModal({ onAdd, onClose, blocco }) {
             Esercizi e note restano, e i numeri del blocco dove il tipo nuovo li usa.
             In WarmUp e Rest gli esercizi diventano il testo del blocco, una riga ciascuno.
           </p>
+        )}
+        {/* Solo in aggiunta: nel «Cambia tipo di blocco» un modello non c'entra. */}
+        {!blocco && onModello && (
+          <div className="mt-5"><SezioneModelli categoria="Hyrox" onScegli={onModello} /></div>
         )}
       </div>
     </div>,
@@ -2117,7 +2123,7 @@ function IntensitaCorsa({ valore, onChange }) {
  * una finestrella con sei rotelle. Stessa testata, stesso foglio misure,
  * stessa conferma fissa in basso — in azzurro, il colore della corsa.
  */
-function RunningStepPicker({ onAdd, onClose, initialStep }) {
+function RunningStepPicker({ onAdd, onClose, initialStep, onModello }) {
   const parseMin = (p) => p ? (p.includes(' - ') ? p.split(' - ')[0] + (p.includes('/km') ? ' /km' : '') : p) : 'Libero'
   const parseMax = (p) => p ? (p.includes(' - ') ? p.split(' - ')[1] : '-') : '-'
 
@@ -2225,6 +2231,10 @@ function RunningStepPicker({ onAdd, onClose, initialStep }) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+        {/* Solo in aggiunta: in modifica si cambia la fase che c'è. */}
+        {!initialStep && onModello && (
+          <SezioneModelli categoria="Running" onScegli={(m) => { onModello(m); onClose() }} />
+        )}
         {/* Che fase è: cinque voci da vedere tutte insieme. Su una fase già
             messa lo si dice: è da qui che si cambia, senza rifarla. */}
         {initialStep && (
@@ -3584,6 +3594,8 @@ export default function CreateWorkout() {
         <BlockPickerModal 
           onClose={() => setBlockPickerOpen(false)}
           onAdd={(type) => { setBlockPickerOpen(false); aggiungiTipo(type) }}
+          // Un blocco da modello ha già i suoi numeri: entra senza FoglioParametri.
+          onModello={(m) => { setBlockPickerOpen(false); aggiungiBlocco(bloccoDaModello(m)) }}
         />
       )}
 
@@ -3782,6 +3794,7 @@ export default function CreateWorkout() {
       {runningPickerOpen && (
         <RunningStepPicker
           initialStep={editingStep}
+          onModello={editingStep ? undefined : (m) => setRunningSteps(prev => [...prev, bloccoDaModello(m)])}
           onAdd={step => {
             if (editingStep) {
               setRunningSteps(runningSteps.map(s => s.id === step.id ? step : s))
