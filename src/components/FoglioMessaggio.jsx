@@ -11,8 +11,8 @@ import { X, Pin, PinOff, Pencil, Trash2, BellRing } from 'lucide-react'
 import { useBottomSheet } from '../useBottomSheet'
 import { VETRO } from '../lib/stiliCard'
 
-/** Il guscio del foglio: velo, maniglia, testata con la X. */
-function Foglio({ titolo, chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo, children }) {
+/** Il guscio del foglio: velo, maniglia, testata con la X. Lo usa anche il menu dei modelli (ModelliUI). */
+export function Foglio({ titolo, chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo, children }) {
   return createPortal(
     <div className="fixed inset-0 z-[100] flex flex-col justify-end">
       <div aria-hidden="true" onClick={chiudi} className={`absolute inset-0 bg-black/85 ${classeVelo}`} style={stileVelo} />

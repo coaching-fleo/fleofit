@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -193,5 +193,22 @@ describe('«I miei modelli» nel foglio degli esercizi Gym', () => {
     const foglio = await screen.findByRole('dialog', { name: /Aggiungi alla/ })
     await dopoIlCaricamento()
     expect(within(foglio).queryByText('I miei modelli')).toBeNull()
+  })
+})
+
+describe('l\'icona «Modelli» nella testata del builder', () => {
+  it('porta alla pagina dei modelli', async () => {
+    render(
+      <AuthContext.Provider value={{ user: { id: 'u1' }, role: 'admin' }}>
+        <MemoryRouter initialEntries={['/create']}>
+          <Routes>
+            <Route path="/create" element={<CreateWorkout />} />
+            <Route path="/modelli" element={<p>pagina dei modelli</p>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Modelli' }))
+    expect(await screen.findByText('pagina dei modelli')).toBeInTheDocument()
   })
 })

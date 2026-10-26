@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Home, Calendar, Users, Plus, ChartNoAxesColumn, ChartLine, FolderArchive, Settings, Search, Megaphone } from 'lucide-react'
+import { Home, Calendar, Users, Plus, ChartNoAxesColumn, ChartLine, FolderArchive, Settings, Search, Megaphone, LayoutTemplate } from 'lucide-react'
 import { useAuth } from '../App'
 
 // La barra laterale della versione desktop (docs/piano-web-desktop.md, fase 2):
@@ -17,6 +17,7 @@ const VOCI = [
   { a: '/calendar', icona: Calendar, etichetta: 'Calendario' },
   { a: '/athletes', icona: Users, etichetta: 'Atleti' },
   { a: '/create', icona: Plus, etichetta: 'Crea workout' },
+  { a: '/modelli', icona: LayoutTemplate, etichetta: 'Modelli' },
   { a: '/report', icona: ChartNoAxesColumn, etichetta: 'Report' },
   { a: '/analisi', icona: ChartLine, etichetta: 'Analisi' },
   { a: '/archive', icona: FolderArchive, etichetta: 'Archivio' },

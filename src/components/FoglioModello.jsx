@@ -79,3 +79,50 @@ export function FoglioSalvaModello({ categoria, blocco, onChiudi }) {
     document.body
   )
 }
+
+/**
+ * «Rinomina il modello»: solo il nome. Il salvataggio lo fa chi lo apre
+ * (`onSalva(nome)`, che torna true se è riuscito): qui si resta aperti finché
+ * non riesce.
+ */
+export function FoglioRinomina({ modello, onChiudi, onSalva }) {
+  const [nome, setNome] = useState(modello.nome)
+  const [salvando, setSalvando] = useState(false)
+  const salva = async () => {
+    if (!nomeValido(nome) || salvando) return
+    setSalvando(true)
+    const ok = await onSalva(nome.trim())
+    if (ok) onChiudi()
+    else setSalvando(false)
+  }
+  return createPortal(
+    <div className="fixed inset-0 bg-black/85 z-[110] flex items-center justify-center p-4 velo-in" onClick={onChiudi}>
+      <div role="dialog" aria-modal="true" aria-label="Rinomina il modello"
+        className={`${CARTA_MODALE} relative`} onClick={e => e.stopPropagation()}>
+        <button type="button" aria-label="Chiudi" onClick={onChiudi}
+          className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-white">
+          <X size={18} />
+        </button>
+        <h2 className={TITOLO_MODALE}>Rinomina il modello</h2>
+        <label className="flex flex-col gap-1.5 text-left">
+          <span className={LABEL}>Nome</span>
+          <input
+            aria-label="Nome del modello"
+            enterKeyHint="done"
+            onKeyDown={chiudiTastieraSuInvio}
+            maxLength={MAX_NOME}
+            value={nome}
+            onChange={e => setNome(e.target.value)}
+            className="w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-[15px] font-bold text-white
+                       placeholder-[#5b6070] focus:outline-none focus:border-brand"
+          />
+        </label>
+        <div className="flex gap-3 mt-2">
+          <button type="button" onClick={onChiudi} className={BOTTONE_QUIETO}>Annulla</button>
+          <CtaPrimaria onClick={salva} disabled={!nomeValido(nome)} attesa={salvando}>Salva</CtaPrimaria>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}

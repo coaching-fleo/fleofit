@@ -3459,6 +3459,7 @@ export default function CreateWorkout() {
         codice={passo === 2 ? codice : null}
         sottotitolo={passo === 2 ? sottotitoloWorkout : null}
         onTitolo={passo === 2 && !desktop ? () => setStep(1) : null}
+        onModelli={() => navigate('/modelli')}
       />
 
       {/* ── STEP 1: LA CATEGORIA COME DOMANDA ────────────────────── */}

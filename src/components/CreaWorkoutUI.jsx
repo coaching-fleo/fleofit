@@ -14,7 +14,7 @@
 // esporta anche una costante perde il Fast Refresh per intero
 // (react-refresh/only-export-components, CLAUDE.md §9-octies punto 3).
 
-import { ChevronLeft, Copy, Wand2, Plus, Clock, ChevronRight } from 'lucide-react'
+import { ChevronLeft, Copy, Wand2, Plus, Clock, ChevronRight, LayoutTemplate } from 'lucide-react'
 import { CARD, LABEL, VETRO } from '../lib/stiliCard'
 import { useTastieraAperta, chiudiTastieraSuInvio } from '../useTastiera'
 import { vibraScelta } from '../lib/aptica'
@@ -32,7 +32,7 @@ import { useNumeroCheSale } from '../useNumeroCheSale'
 // si legge come «butto via tutto». E senza `onIndietro` non c'è affatto: è il
 // caso del builder aperto dalla tab bar, che è una destinazione come
 // Calendario e Atleti — e quelle non hanno un indietro.
-export function TestataCrea({ passo, onIndietro, titolo, codice, sottotitolo, onTitolo }) {
+export function TestataCrea({ passo, onIndietro, titolo, codice, sottotitolo, onTitolo, onModelli }) {
   return (
     <div className="flex items-center gap-3 min-h-10">
       {onIndietro && (
@@ -57,6 +57,15 @@ export function TestataCrea({ passo, onIndietro, titolo, codice, sottotitolo, on
           {sottotitolo && <p className={`${LABEL} mt-[2px] tracking-[.07em] truncate`}>{sottotitolo}</p>}
         </button>
       ) : <div className="flex-1" />}
+
+      {/* «Modelli di blocco»: la pagina dove si gestiscono (/modelli). */}
+      {onModelli && (
+        <button type="button" aria-label="Modelli" title="Modelli" onClick={onModelli}
+          className={`w-10 h-10 rounded-full ${VETRO} flex items-center justify-center text-gray-200
+                      hover:text-white hover:border-white/25 transition shrink-0`}>
+          <LayoutTemplate size={18} aria-hidden="true" />
+        </button>
+      )}
 
       <div className="flex items-center gap-[7px] shrink-0" aria-label={`Passo ${passo} di 2`}>
         <span aria-hidden="true" className="w-[22px] h-[5px] rounded-full bg-brand" />
