@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient'
 import { Mail, Lock } from 'lucide-react'
 import { CustomAlert } from '../components/CustomModals'
 import { Browser } from '@capacitor/browser'
+import { apriInformativa } from '../lib/informativa'
 import { SignInWithApple } from '@capacitor-community/apple-sign-in'
 import { generaNonce, nomeDaApple, annullatoDallUtente } from '../lib/appleLogin'
 import { leggiJson } from '../lib/offlineQueue'
@@ -443,13 +444,18 @@ export default function Login() {
       <div className="flex flex-col gap-2.5">
         {modiPerEntrare()}
         <div className="mt-4"><NotaInvito /></div>
-        {/* ⚠️ Termini e Privacy sono TESTO, non collegamenti: il progetto non
-            ha una URL pubblica che li serva (privacy-policy.html sta in radice,
-            fuori da `public/`, e su Vercel non è raggiungibile). Un link che
-            porta a un 404 sulla schermata di accesso è peggio di una riga che
-            non promette una destinazione — voce in BACKLOG. */}
+        {/* Dal 27/10/2026 un link vero: l'informativa sta in
+            `public/privacy-policy.html`, servita da Vercel anche a `/privacy`.
+            «Termini» è uscito: non esistono, e promettere un documento che
+            non c'è è peggio che non nominarlo (BACKLOG #47). «Accetti» pure:
+            il consenso si chiede DOPO l'accesso, con le sue caselle
+            (src/components/Consenso.jsx), non con una riga in fondo. */}
         <p className="mt-3 text-center text-[11px] leading-[1.5] font-medium text-muted">
-          Continuando accetti i <span className="text-gray-300 font-semibold">Termini</span> e la <span className="text-gray-300 font-semibold">Privacy</span> di FLEOFIT
+          Come usiamo i tuoi dati:{' '}
+          <button type="button" onClick={apriInformativa}
+            className="text-gray-300 font-semibold underline underline-offset-2 hover:text-white">
+            informativa privacy
+          </button>
         </p>
       </div>
     </>

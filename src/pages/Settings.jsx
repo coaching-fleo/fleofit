@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, AlertTriangle, Trash2, LifeBuoy, Users } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, AlertTriangle, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -27,6 +27,8 @@ import FoglioSegnalazione from '../components/FoglioSegnalazione'
 import { FoglioGestioneCoach } from '../components/FoglioCoach'
 import { aggiungiCoach, togliCoach, normalizzaEmail } from '../lib/coachAtleti'
 import { datiTecnici } from '../lib/segnalazione'
+import { dataConsenso } from '../lib/consenso'
+import { apriInformativa } from '../lib/informativa'
 import { leggiCoda } from '../lib/offlineQueue'
 
 export default function Settings() {
@@ -333,6 +335,31 @@ export default function Settings() {
         setOperazione(null)
         if (error) {
           setAlertInfo({ title: 'Errore', message: "Eliminazione non riuscita: " + error.message, type: 'error' })
+          return
+        }
+        await supabase.auth.signOut()
+        navigate('/login')
+      }
+    })
+  }
+
+  /**
+   * Ritirare il consenso (GDPR art. 7.3: facile quanto darlo). Senza consenso
+   * nell'app non si entra, quindi si esce: al prossimo accesso `ProtectedRoute`
+   * ripropone la schermata. I dati restano — per cancellarli c'è «Elimina il
+   * mio account», ed è il messaggio a dirlo.
+   */
+  const ritiraConsenso = () => {
+    setConfirmInfo({
+      title: 'Ritirare il consenso?',
+      message: 'Senza consenso non puoi usare FLEOFIT: uscirai dall\'account, e al prossimo accesso ti verrà chiesto di nuovo. I tuoi dati restano finché non elimini l\'account.',
+      onConfirm: async () => {
+        setConfirmInfo(null)
+        setOperazione('consenso')
+        const { error } = await supabase.auth.updateUser({ data: { consenso: null } })
+        setOperazione(null)
+        if (error) {
+          setAlertInfo({ title: 'Errore', message: 'Non siamo riusciti a ritirare il consenso: ' + error.message, type: 'error' })
           return
         }
         await supabase.auth.signOut()
@@ -766,6 +793,25 @@ export default function Settings() {
       </Sezione>
     </>
   )
+  // L'informativa per tutti; il consenso solo per chi l'ha dato, cioè l'atleta
+  // vero (non l'admin in anteprima, che il consenso non lo dà: src/lib/consenso.js).
+  const atletaVero = role === 'athlete' && !isSimulatingAthlete
+  const quandoConsenso = atletaVero ? dataConsenso(user) : null
+  const pPrivacy = (
+    <>
+      <Sezione etichetta="Privacy">
+        <RigaAzione icona={ShieldCheck} titolo="Informativa privacy"
+          dettaglio={quandoConsenso ? `Consenso dato il ${quandoConsenso}` : 'Come trattiamo i dati'}
+          onClick={apriInformativa} />
+        {atletaVero && (<>
+          <Separatore />
+          <RigaAzione icona={ShieldOff} titolo="Ritira il consenso"
+            dettaglio="Senza consenso non puoi usare FLEOFIT"
+            onClick={ritiraConsenso} occupato={operazione === 'consenso'} />
+        </>)}
+      </Sezione>
+    </>
+  )
   const pElimina = (
     <>
       {/* Fuori da ogni gruppo e sopra l'uscita: è l'ultimo gesto della
@@ -802,7 +848,7 @@ export default function Settings() {
               <EtichettaSezione>Profilo</EtichettaSezione>
               {pCarta}
             </section>
-            {pAccount}{pAiuto}{pElimina}{pUscita}
+            {pAccount}{pAiuto}{pPrivacy}{pElimina}{pUscita}
           </div>
           <div data-colonna="destra" className="col-span-7 flex flex-col gap-3.5">
             {pCoach}
@@ -810,7 +856,7 @@ export default function Settings() {
         </div>
       ) : (
         <>
-          {pCarta}{pAccount}{pCoach}{pAiuto}{pElimina}{pUscita}
+          {pCarta}{pAccount}{pCoach}{pAiuto}{pPrivacy}{pElimina}{pUscita}
         </>
       )}
 

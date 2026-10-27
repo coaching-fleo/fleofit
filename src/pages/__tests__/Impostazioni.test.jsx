@@ -442,3 +442,33 @@ describe('La voce «Coach» (multi-coach, solo admin)', () => {
     }
   })
 })
+
+describe('Privacy e consenso', () => {
+  // L'informativa la deve poter aprire chiunque; il consenso lo può ritirare
+  // solo chi l'ha dato, cioè l'atleta (src/lib/consenso.js). Ritirarlo deve
+  // essere facile quanto darlo (GDPR art. 7.3).
+  const conConsenso = { ...UTENTE, user_metadata: { ...UTENTE.user_metadata, consenso: { versione: 1, il: '2026-10-27T09:30:00Z' } } }
+
+  it('all\'atleta dice quando ha dato il consenso e gli lascia ritirarlo', async () => {
+    montaPagina(<Settings />, { role: 'athlete', user: conConsenso })
+    expect(await screen.findByText('Consenso dato il 27 ott 2026')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Ritira il consenso/i })).toBeInTheDocument()
+  })
+
+  it('al coach mostra l\'informativa ma non un consenso che non ha dato', async () => {
+    montaCoach()
+    expect(await screen.findByRole('button', { name: /Informativa privacy/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Ritira il consenso/i })).not.toBeInTheDocument()
+  })
+
+  it('🔴 ritirare chiede conferma, azzera il consenso ed esce', async () => {
+    const utente = userEvent.setup()
+    montaPagina(<Settings />, { role: 'athlete', user: conConsenso })
+    await utente.click(await screen.findByRole('button', { name: /Ritira il consenso/i }))
+    expect(finto.supabase.auth.updateUser).not.toHaveBeenCalled()
+
+    await utente.click(await screen.findByRole('button', { name: 'Conferma' }))
+    await waitFor(() => expect(finto.supabase.auth.signOut).toHaveBeenCalled())
+    expect(finto.supabase.auth.updateUser).toHaveBeenCalledWith({ data: { consenso: null } })
+  })
+})

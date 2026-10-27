@@ -263,11 +263,8 @@ preso: è lo stesso genere di difetto del conto alla rovescia del cestino
   codice, e il suo `dv-next` dà il form email fra i prossimi pezzi di design:
   prende la cornice condivisa e niente di più. Stessa scelta dello step 2 della
   corsa nel builder (§9-undecies) e del pannello filtri dell'archivio.
-- **«Termini» e «Privacy» sono testo, non collegamenti.** `privacy-policy.html`
-  sta in radice, fuori da `public/`, e la riscrittura di `vercel.json` non lo
-  serve: non esiste una URL che funzioni. Un link a un 404 sulla schermata di
-  accesso è peggio di una riga che non promette una destinazione — voce in
-  BACKLOG.
+- ~~**«Termini» e «Privacy» sono testo, non collegamenti.**~~ ✅ Chiuso il
+  27/10/2026: vedi «Il consenso e l'informativa» in fondo.
 - **L'onboarding non è toccato.** Dopo il codice il percorso è quello di
   sempre: sessione → `ProtectedRoute` riscatta il codice → `Onboarding`.
 
@@ -302,3 +299,38 @@ entra e chiede di creare il profilo.
 - ⚠️ Non verificato sul telefono. Resta da guardare, se ricapita con un link **mai
   aperto prima**: gli URL di redirect ammessi in Supabase (Authentication → URL
   Configuration) devono coprire `fleofit://login-callback?inviteCode=…`.
+
+## Il consenso e l'informativa (27/10/2026)
+
+Spec: `docs/superpowers/specs/2026-10-14-consenso-privacy-design.md`, ripresa solo
+per il **primo** consenso (allenamento, salute e IA). Gli altri due che la policy
+promette arrivano con le loro funzioni: infortuni col questionario della
+programmazione IA, Garmin con l'integrazione.
+
+- **L'informativa** è `public/privacy-policy.html`, servita da Vercel anche a
+  `/privacy` (riscrittura in `vercel.json`, prima di quella della SPA). Pagina
+  statica: niente login, niente JavaScript, la leggono Apple e Garmin. Si apre
+  sempre con `apriInformativa()` di `src/lib/informativa.js` (Browser in-app sul
+  nativo, scheda nuova sul web) all'indirizzo **assoluto** `URL_INFORMATIVA`:
+  dentro l'app nativa `/privacy` non esiste. ⚠️ Punta al sito pubblicato, cioè a
+  `main`: una policy cambiata su `app` non si vede dall'app finché non va su `main`.
+- **Il cancello** sta in `ProtectedRoute`: DOPO il codice invito (chi non ha un
+  invito esce prima) e PRIMA dell'onboarding (peso e data di nascita sono già
+  dati di salute). Decide `serveConsenso(user, isAdmin)` di `src/lib/consenso.js`;
+  lo staff (admin e coach, anche l'admin in anteprima atleta) non la vede.
+- **Dove si registra**: `user_metadata.consenso = { versione, il }`, con
+  `supabase.auth.updateUser`. Nessuna tabella: schema congelato (0-bis).
+- 🔴 **`VERSIONE_CONSENSO` si alza solo se cambia ciò che l'atleta accetta** (il
+  testo della seconda casella in `src/components/Consenso.jsx`): rifà comparire la
+  schermata a TUTTI gli atleti. Una modifica della sola informativa no.
+- **Gli atleti già iscritti** la vedono una volta, alla prima apertura dopo
+  l'aggiornamento; la web app la mostra appena `app` va su `main`.
+- **Il ritiro** è in Impostazioni → Privacy → «Ritira il consenso» (solo atleta
+  vero): azzera `consenso` ed esce. I dati restano: per cancellarli c'è
+  «Elimina il mio account».
+- **Sul login** la riga è diventata «Come usiamo i tuoi dati: informativa
+  privacy», link vero. «Termini» è uscito (non esistono) e «accetti» pure: il
+  consenso si dà con le caselle, non con una riga in fondo.
+- ⚠️ L'ambiente di prova entra come admin già collegato: login e schermata del
+  consenso **non si vedono** con `npm run demo`. Li coprono
+  `ConsensoCancello.test.jsx`, `LoginInvito.test.jsx` e `Impostazioni.test.jsx`.

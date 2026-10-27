@@ -49,6 +49,17 @@ beforeEach(() => {
 })
 
 describe('Il benvenuto', () => {
+  // BACKLOG #47: «Termini» e «Privacy» erano testo senza destinazione. Ora
+  // l'informativa c'è e si apre; i Termini non esistono e non si nominano.
+  it('apre l\'informativa privacy, e non promette Termini che non esistono', async () => {
+    const apri = vi.spyOn(window, 'open').mockImplementation(() => null)
+    montaPagina(<Login />)
+    await userEvent.click(screen.getByRole('button', { name: /informativa privacy/i }))
+    expect(apri).toHaveBeenCalledWith('https://fleofit.vercel.app/privacy', '_blank', 'noopener')
+    expect(screen.queryByText(/Termini/)).not.toBeInTheDocument()
+    apri.mockRestore()
+  })
+
   // 🔴 È tutta la sostanza del rework: il bivio chiedeva all'utente una cosa
   // che l'utente non sa. Rimetterlo non romperebbe nient'altro.
   it('🔴 non chiede più di scegliere fra «Accedi» e «Nuovo Utente»', () => {

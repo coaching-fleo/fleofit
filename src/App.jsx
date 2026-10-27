@@ -10,6 +10,8 @@ import { PushNotifications } from '@capacitor/push-notifications'
 import Navbar from './components/Navbar'
 import { useSchermoLargo, eDesktop } from './useDesktop'
 import { Apertura } from './components/Apertura'
+import Consenso from './components/Consenso'
+import { serveConsenso, datiConsenso } from './lib/consenso'
 import Home from './pages/Home'
 
 // Caricate su richiesta: l'avvio non deve pagare PDF, IA, BLE e TV.
@@ -210,6 +212,7 @@ function ProtectedRoute() {
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState(null)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
+  const [needsConsenso, setNeedsConsenso] = useState(false)
   const [userName, setUserName] = useState('')
   // L'apertura si smonta da sé quando ha finito l'uscita: da lì in poi non
   // deve più tornare, nemmeno se questo componente si ri-renderizza.
@@ -324,6 +327,17 @@ function ProtectedRoute() {
         }
       }
 
+      // Il consenso viene DOPO il codice invito (chi non ha un invito esce
+      // prima, e non deve vedere una schermata che non lo riguarda) e PRIMA
+      // dell'onboarding: peso e data di nascita sono già dati di salute.
+      // Spec 2026-10-14-consenso-privacy-design.md.
+      if (serveConsenso(session.user, isAdmin)) {
+        setNeedsConsenso(true)
+        setLoading(false)
+        return
+      }
+      setNeedsConsenso(false)
+
       const meta = session.user.user_metadata || {}
       const name = localStorage.getItem(`fleofit_name_${session.user.id}`) || meta.first_name || meta.full_name?.split(' ')[0] || session.user.email?.split('@')[0] || ''
       setUserName(name)
@@ -393,6 +407,27 @@ function ProtectedRoute() {
     // ⚠️ Niente apertura qui: si sta uscendo verso il login, e un velo che si
     // dissolve sopra un redirect è un velo che nessuno vede.
     return <Navigate to={`/login${location.search}${location.hash}`} replace />
+  }
+
+  if (needsConsenso) {
+    return <>{apertura}<Consenso
+      onAccetta={async () => {
+        const consenso = datiConsenso()
+        const { data, error } = await supabase.auth.updateUser({ data: { consenso } })
+        if (error) {
+          mostraErrore('Non siamo riusciti a salvare il consenso. Controlla la connessione e riprova.')
+          return
+        }
+        // Si riparte dalla sessione con i metadati nuovi: il resto del
+        // cancello (ruolo, onboarding) va avanti da dove si era fermato.
+        const user = data?.user
+          ?? { ...session.user, user_metadata: { ...session.user.user_metadata, consenso } }
+        await handleSession({ ...session, user })
+      }}
+      onRifiuta={async () => {
+        await supabase.auth.signOut()
+        window.location.href = '/login'
+      }} /></>
   }
 
   if (needsOnboarding) {

@@ -30,11 +30,12 @@
   ⚠️ Rischio noto, accettato il 26/10: `demo@fleofit.it` è admin e dalla 1.2.2 può aggiungere e
   togliere coach e spostare atleti (Impostazioni → Coach).
   ⚠️ Prima di archiviare si controlla lo stato della versione su App Store Connect
-  (`docs/memoria/app-store.md`). ⏸️ In stand-by e da ricordare al prossimo aggiornamento:
-  consenso privacy + policy nuova (BACKLOG, in cima).
+  (`docs/memoria/app-store.md`). 🔒 Privacy (27/10/2026): policy nuova pubblicata a
+  `/privacy`, schermata del consenso fatta (nella 1.2.3); con la 1.2.3 va cambiato l'URL
+  privacy su App Store Connect. Resta in stand-by la mail dei cambi di policy (BACKLOG, in cima).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint al 26/10/2026: `npm test` → **2257 test**; `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note», di «Da un testo scritto» né dei Modelli di blocco) (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
+- Test e lint al 27/10/2026: `npm test` → **2274 test**; `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note», di «Da un testo scritto» né dei Modelli di blocco) (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---
@@ -696,7 +697,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Messaggi.jsx`, `NuovoMessaggio.jsx`, `MessaggiUI`, `FoglioMessaggio`, `messaggiCoach.js`, Edge Function `send-reminders/broadcast.ts` | `messaggi.md` |
 | `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js`, `Analisi.jsx`, `AnalisiUI.jsx`, `analisi.js`, `components/grafici/`, `storicoEsercizio.js`, `StoricoEsercizio.jsx`, `esportaCsv.js`, `ReportDesktop.jsx` | `report.md` |
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
-| `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute` | `accesso.md` |
+| `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute`, `consenso.js`, `Consenso.jsx`, `informativa.js`, `public/privacy-policy.html` | `accesso.md` |
 | `RicercaCoach.jsx`, `ricercaCoach.js`, `dialogoRicerca.js`, `useDettatura.js`, Edge Function `ricerca-coach` | `ricerca.md` |
 | `previsione.js`, `stimaWorkout.js`, ogni durata o carico | `carico-e-durata.md` |
 | `Recap*.jsx`, `recapAllenamento.js`, `gradimento.js` | `recap.md` |

@@ -31,8 +31,10 @@ const finto = await vi.hoisted(async () => {
     athlete_workouts: [],
     notifications: [],
   })
+  // Ha già dato il consenso: la sua schermata ha test suoi (ConsensoCancello.test.jsx).
+  const { datiConsenso } = await import('../lib/consenso')
   const sessione = {
-    user: { id: 'u1', email: 'atleta@fleofit.it', user_metadata: { first_name: 'Marco', role: 'athlete' } },
+    user: { id: 'u1', email: 'atleta@fleofit.it', user_metadata: { first_name: 'Marco', role: 'athlete', consenso: datiConsenso() } },
   }
   f.supabase.auth.getSession = v.fn(() => Promise.resolve({ data: { session: sessione } }))
   f.supabase.auth.onAuthStateChange = v.fn(() => ({ data: { subscription: { unsubscribe: v.fn() } } }))
