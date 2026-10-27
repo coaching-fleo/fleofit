@@ -83,6 +83,13 @@ Codice scritto e committato su `app` (`docs/memoria/messaggi.md`). Restano, in o
 > Progetto scritto e approvato nella sostanza: `docs/superpowers/specs/2026-10-14-consenso-privacy-design.md`.
 > Fermo per decisione del committente finché non sono scelti **nome e dominio** (servono a
 > mittente Resend, indirizzo della policy, registrazione Apple per il relay delle email).
+> ✍️ **27/10/2026: la policy è scritta** (`public/privacy-policy.html`, anche a `/privacy`; italiano più
+> inglese per il Garmin Connect Developer Program, con IA sui dati di salute). Sul sito solo dopo
+> `app:main`. Scritta già per la **programmazione automatica con IA** (design del 26/10:
+> questionario, infortuni con consenso separato, metodo del coach, allarmi, fornitori Claude /
+> Gemini a pagamento / Groq, mai piani gratuiti). Prima di pubblicarla vanno rese vere le
+> promesse: niente Gemini gratuito con dati veri (`ai-workout`, riserva di `ricerca-coach`, #62),
+> i tre consensi in app, la regione UE di Supabase.
 > 🔴 Motivo per cui conta: linea guida Apple **5.1.2(i)** — note degli atleti mandate a IA di
 > terze parti (Groq, Gemini) senza informativa né permesso esplicito. Chiude anche la #47.
 

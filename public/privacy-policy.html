@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Cambia a ogni modifica della policy: il workflow dell'avviso via mail la
+     confronta fra prima e dopo il push (docs/superpowers/specs/2026-10-14-consenso-privacy-design.md §3). -->
+<meta name="versione-policy" content="2026-10-27">
+<title>Informativa privacy · FLEOFIT</title>
+<meta name="description" content="Come FLEOFIT tratta i tuoi dati: allenamento, salute, Garmin Connect e intelligenza artificiale.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png">
+<style>
+  /* Pagina statica: niente JavaScript, niente librerie, niente font esterni.
+     La leggono anche Apple e Garmin, e deve aprirsi anche dove l'app non parte.
+     I colori sono quelli del §6 di CLAUDE.md. */
+  :root {
+    --brand: #f1ba17;
+    --sfondo: #0B0B0B;
+    --card: #1e1e1e;
+    --pozzetto: #111111;
+    --bordo: #2a2a2a;
+    --bordo-forte: #383838;
+    --testo: #ffffff;
+    --testo-2: #d1d5db;
+    --testo-3: #9ca3af;
+    --ia: #a855f7;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--sfondo);
+    color: var(--testo-2);
+    font: 16px/1.65 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .pagina {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: calc(env(safe-area-inset-top) + 32px) 16px calc(env(safe-area-inset-bottom) + 64px);
+  }
+  .logo { font-weight: 900; letter-spacing: -0.02em; font-size: 20px; color: var(--testo); }
+  .logo span { color: var(--brand); }
+  h1 {
+    color: var(--testo);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    font-size: clamp(30px, 7vw, 42px);
+    line-height: 1.1;
+    margin: 28px 0 8px;
+  }
+  .meta { color: var(--testo-3); font-size: 14px; margin: 0; }
+  .lingue { margin: 20px 0 0; display: flex; gap: 8px; flex-wrap: wrap; }
+  .lingue a {
+    font-size: 13px; font-weight: 700; text-decoration: none;
+    color: var(--testo-2); background: var(--pozzetto);
+    border: 1px solid var(--bordo-forte); border-radius: 999px; padding: 6px 14px;
+  }
+  .lingue a:hover { border-color: var(--brand); color: var(--testo); }
+  h2 {
+    color: var(--testo);
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    font-size: 21px;
+    line-height: 1.3;
+    margin: 48px 0 12px;
+    scroll-margin-top: 16px;
+  }
+  h3 { color: var(--testo); font-size: 16px; font-weight: 700; margin: 24px 0 6px; }
+  p, ul, ol { margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  li::marker { color: var(--testo-3); }
+  strong { color: var(--testo); font-weight: 700; }
+  a { color: var(--brand); text-underline-offset: 3px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--bordo);
+    border-radius: 24px;
+    padding: 20px 22px;
+    margin: 28px 0 0;
+  }
+  .card > :last-child { margin-bottom: 0; }
+  .card h2 { margin-top: 0; }
+  .card.ia { border-color: rgba(168, 85, 247, 0.45); }
+  .etichetta {
+    display: inline-block;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    border-radius: 999px; padding: 3px 10px; margin-bottom: 10px;
+    color: var(--brand); background: rgba(241, 186, 23, 0.1); border: 1px solid rgba(241, 186, 23, 0.3);
+  }
+  .card.ia .etichetta { color: var(--ia); background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3); }
+  nav.indice ol { columns: 2; column-gap: 28px; padding-left: 20px; font-size: 15px; }
+  nav.indice a { color: var(--testo-2); text-decoration: none; }
+  nav.indice a:hover { color: var(--brand); }
+  .tabella { overflow-x: auto; margin: 0 0 14px; border: 1px solid var(--bordo); border-radius: 16px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 520px; }
+  th, td { text-align: left; vertical-align: top; padding: 11px 14px; border-bottom: 1px solid var(--bordo); }
+  tr:last-child td { border-bottom: 0; }
+  th { color: var(--testo); background: var(--pozzetto); font-weight: 700; }
+  td:first-child { color: var(--testo); font-weight: 600; }
+  .salute { color: var(--brand); font-weight: 700; white-space: nowrap; }
+  hr { border: 0; border-top: 1px solid var(--bordo); margin: 64px 0 0; }
+  footer { color: var(--testo-3); font-size: 14px; margin-top: 48px; }
+  @media (max-width: 560px) { nav.indice ol { columns: 1; } }
+</style>
+</head>
+<body>
+<main class="pagina">
+
+<div class="logo">FLEO<span>FIT</span></div>
+<h1>Informativa privacy</h1>
+<p class="meta">Versione del 27 ottobre 2026 · in vigore dal 27 ottobre 2026</p>
+<div class="lingue"><a href="#it">Italiano</a><a href="#en">English</a></div>
+
+<div id="it"></div>
+
+<section class="card">
+  <span class="etichetta">In breve</span>
+  <ul>
+    <li><strong>FLEOFIT è un'app di coaching.</strong> Serve al tuo coach per programmare i tuoi allenamenti e seguirti, e a te per eseguirli e raccontare come sono andati.</li>
+    <li><strong>Trattiamo dati sulla tua salute</strong>: fatica percepita, sensazioni, sonno, peso, note sugli allenamenti, gli infortuni che scegli di dichiarare e, se colleghi Garmin, i dati del tuo dispositivo. Lo facciamo solo con il tuo <strong>consenso esplicito</strong>, che puoi ritirare.</li>
+    <li><strong>L'intelligenza artificiale prepara le proposte di programmazione</strong>: legge il tuo profilo e i tuoi feedback e scrive le sedute nello stile del tuo coach. <strong>Nessuna seduta ti arriva senza che il coach l'abbia letta e approvata.</strong> <a href="#ia">Leggi come</a>.</li>
+    <li><strong>All'IA non diamo il tuo nome</strong>, la tua email o la tua foto, e usiamo solo fornitori che non tengono i dati e non li usano per addestrare i loro modelli.</li>
+    <li><strong>Non vendiamo i tuoi dati</strong>, non facciamo pubblicità e non ti tracciamo.</li>
+    <li>Puoi chiedere in ogni momento di vedere, correggere, scaricare o cancellare i tuoi dati scrivendo a <a href="mailto:coaching@federicoleo.it">coaching@federicoleo.it</a>.</li>
+  </ul>
+</section>
+
+<nav class="indice card" aria-label="Indice">
+  <span class="etichetta">Indice</span>
+  <ol>
+    <li><a href="#titolare">Chi tratta i tuoi dati e il ruolo dei coach</a></li>
+    <li><a href="#dati">Quali dati raccogliamo</a></li>
+    <li><a href="#garmin">Garmin Connect</a></li>
+    <li><a href="#ia">Intelligenza artificiale</a></li>
+    <li><a href="#finalita">Perché e su quale base</a></li>
+    <li><a href="#consenso">I tuoi consensi</a></li>
+    <li><a href="#accesso">Chi vede i tuoi dati</a></li>
+    <li><a href="#coach">Se sei un coach</a></li>
+    <li><a href="#fornitori">I fornitori</a></li>
+    <li><a href="#estero">Dati fuori dall'Unione europea</a></li>
+    <li><a href="#conservazione">Per quanto tempo</a></li>
+    <li><a href="#sicurezza">Sicurezza</a></li>
+    <li><a href="#diritti">I tuoi diritti</a></li>
+    <li><a href="#cookie">Cookie e tracciamento</a></li>
+    <li><a href="#minori">Minori</a></li>
+    <li><a href="#modifiche">Modifiche</a></li>
+  </ol>
+</nav>
+
+<h2 id="titolare">1. Chi tratta i tuoi dati e il ruolo dei coach</h2>
+<p>Questa informativa vale per l'app FLEOFIT per iPhone e Android e per la sua versione web (<a href="https://fleofit.vercel.app">fleofit.vercel.app</a>), insieme chiamate «l'app». In questa pagina «FLEOFIT» e «noi» indicano chi gestisce l'app.</p>
+<h3>Chi gestisce l'app</h3>
+<p>FLEOFIT è gestita da Federico Leo, Via Altaguardia 3, 20135 Milano (MI), Italia, P. IVA 12721740962, che è <strong>titolare del trattamento</strong> per tutto ciò che riguarda l'app in sé: il tuo account, il funzionamento del servizio, l'intelligenza artificiale, il collegamento con Garmin, la sicurezza e le copie di sicurezza. Per qualunque domanda o richiesta sulla privacy: <a href="mailto:coaching@federicoleo.it">coaching@federicoleo.it</a>.</p>
+<h3>I coach sono indipendenti</h3>
+<p>I coach che usano FLEOFIT sono <strong>professionisti indipendenti</strong>: non lavorano per FLEOFIT e non la rappresentano. Ognuno decide come allenare i propri atleti. Per i dati che il coach usa per seguirti (programmazione, valutazione, sedute, note e feedback) il tuo coach è <strong>titolare del trattamento</strong> in modo autonomo, e FLEOFIT li tratta per suo conto, come fornitore dello strumento (responsabile del trattamento, art. 28 GDPR), sulla base di un accordo con ciascun coach.</p>
+<p>Per esercitare i tuoi diritti puoi rivolgerti sia al tuo coach sia a noi: se la richiesta riguarda dati che decide il coach, gliela inoltriamo e ti aiutiamo a ottenere risposta.</p>
+
+<h2 id="dati">2. Quali dati raccogliamo</h2>
+<p>Raccogliamo i dati che inserisci tu, quelli che il tuo coach inserisce su di te e, se lo scegli, quelli che arrivano da Garmin Connect. Le righe segnate <span class="salute">salute</span> sono dati relativi alla salute ai sensi dell'art. 9 del GDPR.</p>
+<div class="tabella"><table>
+  <thead><tr><th>Categoria</th><th>Cosa contiene</th></tr></thead>
+  <tbody>
+    <tr><td>Account</td><td>Indirizzo email, nome e cognome, foto profilo, il metodo con cui accedi (email e password, Apple o Google), il codice invito che hai usato, il tuo ruolo (atleta o coach).</td></tr>
+    <tr><td>Profilo fisico <span class="salute">salute</span></td><td>Data di nascita, sesso, peso, altezza.</td></tr>
+    <tr><td>Questionario</td><td>Le risposte che dai al questionario iniziale: disciplina e obiettivo (una gara, un tempo, la forma, la forza, il dimagrimento), la gara e il tempo a cui punti, quanti giorni e quanti minuti hai per allenarti, l'attrezzatura che hai, gli anni di allenamento, le gare fatte, i tuoi tempi e i carichi abituali.</td></tr>
+    <tr><td>Infortuni e condizioni <span class="salute">salute</span></td><td>Solo se dai il consenso apposito (<a href="#consenso">sezione 6</a>): infortuni attuali o passati, dolori, condizioni di salute che il coach deve conoscere, movimenti da evitare.</td></tr>
+    <tr><td>Allenamenti <span class="salute">salute</span></td><td>Gli allenamenti che il coach ti assegna e quelli che aggiungi tu; quando li completi o li salti; la fatica percepita (RPE) e il gradimento; le note scritte e vocali tue e del coach; i record personali; la nota del coach sul tuo profilo e gli eventuali periodi di pausa.</td></tr>
+    <tr><td>«Come stai oggi» <span class="salute">salute</span></td><td>Le risposte da 1 a 5 su sonno, energia, dolori e stress, una volta al giorno.</td></tr>
+    <tr><td>Dati Garmin <span class="salute">salute</span></td><td>Solo se colleghi il tuo account Garmin Connect: vedi la <a href="#garmin">sezione 3</a>.</td></tr>
+    <tr><td>Programmazione</td><td>Il piano verso il tuo obiettivo (le fasi settimana per settimana), le sedute proposte e approvate con il motivo di ciascuna («RPE più alto del previsto: volume ridotto»), le proposte di modifica nate dai controlli quotidiani e la decisione del coach su ognuna.</td></tr>
+    <tr><td>Valutazione del coach</td><td>Il livello che il coach ti attribuisce, le priorità, i vincoli («niente salti per 3 settimane») e le sue indicazioni per l'IA. Non la vedi nell'app, ma puoi sempre chiederne copia (<a href="#diritti">sezione 13</a>).</td></tr>
+    <tr><td>Dati ricavati <span class="salute">salute</span></td><td>Statistiche e andamenti calcolati dall'app (aderenza, carico settimanale, RPE medio, medie di «Come stai») e i dati che l'IA estrae dalle tue note, come un fastidio a un ginocchio.</td></tr>
+    <tr><td>Gare</td><td>Le gare che segni nel calendario e, per le gare HYROX, il tuo risultato, che leggiamo dalla classifica pubblica di results.hyrox.com quando lo chiedi tu o il tuo coach.</td></tr>
+    <tr><td>Comunicazioni</td><td>I messaggi del coach in bacheca, le notifiche che ricevi, le segnalazioni di problemi che ci mandi.</td></tr>
+    <tr><td>Dati tecnici</td><td>Il codice del dispositivo per le notifiche push, il numero del badge, lo stato «allenamento in corso» quando il coach ti segue dal vivo, e i registri tecnici dei server (indirizzo IP, data e ora delle richieste) tenuti dai fornitori per sicurezza e funzionamento.</td></tr>
+  </tbody>
+</table></div>
+<p>L'app <strong>non</strong> raccoglie la tua posizione, i contatti, le foto della galleria (salvo quella che scegli per il profilo) e non legge Apple Salute o Health Connect. Il microfono si usa solo mentre registri una nota vocale o detti un testo, e la fotocamera solo quando la usi tu.</p>
+
+<section class="card" id="garmin">
+  <span class="etichetta">Garmin Connect</span>
+  <h2>3. Se colleghi il tuo account Garmin</h2>
+  <p>Collegare Garmin Connect è <strong>facoltativo</strong>. Lo fai tu dalle Impostazioni, accedendo direttamente a Garmin: FLEOFIT non vede mai la tua password Garmin e riceve solo i dati che autorizzi nella schermata di Garmin.</p>
+  <h3>Cosa riceviamo</h3>
+  <ul>
+    <li><strong>Attività</strong>: tipo, data, durata, distanza, passo o velocità, dislivello, frequenza cardiaca media e massima, potenza, cadenza, calorie, zone di intensità. Non riceviamo le tracce GPS dei percorsi.</li>
+    <li><strong>Recupero</strong>: sonno (durata e fasi), variabilità della frequenza cardiaca (HRV), frequenza cardiaca a riposo, stress, Body Battery.</li>
+    <li><strong>Giornata</strong>: passi, calorie, minuti di attività intensa, peso e composizione corporea se li registri su Garmin.</li>
+  </ul>
+  <h3>Per cosa li usiamo</h3>
+  <ul>
+    <li>Mostrare a te e al tuo coach gli allenamenti fatti e come stai recuperando, accanto a quelli programmati.</li>
+    <li>Preparare la programmazione e le proposte di modifica con l'intelligenza artificiale (<a href="#ia">sezione 4</a>): all'IA arrivano come numeri riassunti (per esempio «sonno medio 6 ore e 10, HRV in calo»), senza dati che ti identifichino.</li>
+  </ul>
+  <p>Non usiamo i dati Garmin per pubblicità, non li vendiamo, non li cediamo a terzi se non ai fornitori tecnici della <a href="#fornitori">sezione 9</a>, e non li usiamo per addestrare modelli di intelligenza artificiale.</p>
+  <h3>Come scollegarlo</h3>
+  <p>Puoi scollegare Garmin in ogni momento dalle Impostazioni dell'app o dal tuo account Garmin Connect. Da quel momento non riceviamo più nulla, e cancelliamo i dati arrivati da Garmin <strong>entro 30 giorni</strong>, salvo quelli già entrati nelle copie di sicurezza, che scadono da sole (<a href="#conservazione">sezione 11</a>).</p>
+  <p>Garmin e Garmin Connect sono marchi di Garmin Ltd. o delle sue consociate. Il trattamento dei dati sul tuo account Garmin resta regolato dall'informativa di Garmin.</p>
+</section>
+
+<section class="card ia" id="ia">
+  <span class="etichetta">Intelligenza artificiale</span>
+  <h2>4. Come usiamo l'intelligenza artificiale</h2>
+  <p>FLEOFIT usa modelli di intelligenza artificiale per aiutare il coach a programmare e a seguirti. Alcune di queste funzioni ricevono <strong>dati sulla tua salute</strong>. Te lo diciamo qui per esteso perché tu possa decidere con cognizione di causa.</p>
+
+  <h3>Cosa fa l'IA</h3>
+  <ul>
+    <li><strong>Propone la programmazione.</strong> Partendo dal tuo questionario, dalla valutazione del coach e dal suo metodo di lavoro, prepara il percorso fino al tuo obiettivo, fase per fase.</li>
+    <li><strong>Scrive le sedute di ogni settimana</strong>, nello stile del tuo coach, tenendo conto di come è andata la settimana prima: aderenza, RPE, gradimento, «Come stai oggi», dati Garmin, gli estratti delle tue note e i vincoli di salute che hai dichiarato.</li>
+    <li><strong>Controlla ogni mattina se qualcosa non va</strong>: due giorni di fila con «Come stai» molto basso, una seduta saltata, uno sforzo molto più alto del previsto, una nota che parla di dolore. Se succede, prepara per il coach una proposta di modifica delle sedute rimaste.</li>
+    <li><strong>Legge le tue note</strong> scritte (e, quando sarà attiva, la trascrizione delle note vocali) e ne ricava dati ordinati, come un fastidio a un ginocchio o un esercizio troppo facile.</li>
+    <li><strong>Aiuta il coach</strong> a scrivere singoli allenamenti da una sua descrizione, scritta, dettata o fotografata, e risponde alle sue domande sugli atleti che segue.</li>
+  </ul>
+  <p>Queste attività valutano in modo automatico il tuo stato di forma e di recupero: in termini di legge sono una forma di <strong>profilazione</strong> (art. 4 GDPR), che facciamo solo per il coaching e solo con il tuo consenso.</p>
+
+  <h3>Le decisioni restano al coach</h3>
+  <ul>
+    <li><strong>Niente ti arriva senza il coach.</strong> Le sedute scritte dall'IA restano bozze che vede solo il coach: le legge, le cambia e le approva. Lo stesso vale per le proposte di modifica. Non esistono decisioni prese solo in modo automatico che abbiano effetti su di te (art. 22 GDPR).</li>
+    <li><strong>I numeri li controlla il codice.</strong> Durate, carichi e progressione vengono verificati dall'app rispetto al metodo del coach e ai tuoi vincoli; una seduta che non li rispetta viene rifatta o segnalata al coach.</li>
+    <li><strong>Non fa diagnosi.</strong> FLEOFIT non è un dispositivo medico: quello che l'IA scrive su dolori, sonno o recupero è un'indicazione per l'allenamento, non un parere medico, e può essere sbagliato.</li>
+  </ul>
+
+  <h3>Cosa riceve l'IA, e da chi</h3>
+  <ul>
+    <li><strong>Un profilo senza nome.</strong> All'IA non arrivano il tuo nome, la tua email, la tua foto o il tuo identificativo: l'età arriva come fascia, la gara come «tra 11 settimane», i feedback come numeri riassunti e brevi citazioni delle note, non le note intere.</li>
+    <li><strong>Solo fornitori che non tengono e non riusano i dati.</strong> Usiamo servizi a pagamento o con conservazione zero dei dati (Zero Data Retention), che per contratto non tengono i dati oltre il tempo della risposta e non li usano per addestrare i loro modelli. <strong>Mai piani gratuiti</strong>, che quella garanzia non la danno.</li>
+    <li><strong>Fornitori intercambiabili.</strong> Stiamo confrontando più modelli per scegliere il migliore, e ne teniamo sempre uno di riserva. Quelli che possono ricevere dati sono elencati alla <a href="#fornitori">sezione 9</a> e tutti rispettano le regole qui sopra. Potremmo anche usare un modello eseguito su un computer nostro o su un server in affitto nell'Unione europea: in quel caso i dati non escono verso altri fornitori.</li>
+    <li><strong>Le prove si fanno su dati inventati.</strong> Per confrontare i modelli e provare le funzioni nuove usiamo atleti e allenamenti inventati, mai i tuoi dati.</li>
+  </ul>
+
+  <h3>Addestramento</h3>
+  <p><strong>Non usiamo i tuoi dati per addestrare modelli di intelligenza artificiale</strong>, né nostri né dei fornitori. Se un giorno volessimo farlo, te lo chiederemo prima con un consenso a parte, e senza il tuo sì i tuoi dati resteranno fuori.</p>
+</section>
+
+<h2 id="finalita">5. Perché trattiamo i dati e su quale base</h2>
+<div class="tabella"><table>
+  <thead><tr><th>Finalità</th><th>Base giuridica</th></tr></thead>
+  <tbody>
+    <tr><td>Creare il tuo account e farti accedere</td><td>Esecuzione del servizio che hai chiesto (art. 6.1.b GDPR)</td></tr>
+    <tr><td>Programmare gli allenamenti, eseguirli, registrarli e seguirti: il servizio di coaching</td><td>Esecuzione del servizio (art. 6.1.b) e, per i dati sulla salute, il tuo consenso esplicito (art. 9.2.a)</td></tr>
+    <tr><td>Programmazione, analisi e controlli quotidiani con l'intelligenza artificiale, anche su dati di salute</td><td>Consenso esplicito (art. 9.2.a)</td></tr>
+    <tr><td>Tenere conto di infortuni e condizioni di salute dichiarati</td><td>Consenso esplicito e separato (art. 9.2.a)</td></tr>
+    <tr><td>Ricevere e usare i dati Garmin Connect</td><td>Consenso esplicito (art. 9.2.a), che dai collegando l'account</td></tr>
+    <tr><td>Notifiche push e messaggi del coach</td><td>Esecuzione del servizio (art. 6.1.b). Puoi spegnere le notifiche dal telefono</td></tr>
+    <tr><td>Rispondere alle tue segnalazioni</td><td>Esecuzione del servizio (art. 6.1.b)</td></tr>
+    <tr><td>Misurare la qualità delle proposte dell'IA e il loro costo</td><td>Legittimo interesse a offrire un servizio che funzioni e sostenibile (art. 6.1.f); si usano dati aggregati e i dati dei coach, non i tuoi dati di salute</td></tr>
+    <tr><td>Copie di sicurezza, protezione da abusi, registri tecnici</td><td>Legittimo interesse a tenere il servizio sicuro e a non perdere i tuoi dati (art. 6.1.f)</td></tr>
+    <tr><td>Obblighi di legge (per esempio fiscali o richieste dell'autorità)</td><td>Obbligo legale (art. 6.1.c)</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="consenso">6. I tuoi consensi</h2>
+<p>Ti chiediamo consensi distinti, ognuno per una cosa precisa:</p>
+<ol>
+  <li><strong>Dati di allenamento e intelligenza artificiale</strong> — necessario per usare l'app. Copre fatica percepita, «Come stai oggi», note, peso e i dati ricavati, e il loro uso con l'IA come descritto alla sezione 4. Il coaching di FLEOFIT si basa su questi dati: senza, il coach non può seguirti nell'app.</li>
+  <li><strong>Infortuni e condizioni di salute</strong> — facoltativo. Se non lo dai, il questionario non ti chiede nulla su infortuni e condizioni, e all'IA arrivano solo i vincoli che il coach stabilisce lui.</li>
+  <li><strong>Garmin Connect</strong> — facoltativo, lo dai collegando l'account.</li>
+</ol>
+<p>Puoi <strong>ritirare ciascun consenso</strong> in ogni momento dalle Impostazioni dell'app o scrivendo a <a href="mailto:coaching@federicoleo.it">coaching@federicoleo.it</a>. Il ritiro non rende illecito quello che è stato fatto prima. Ritirando il consenso sugli infortuni li cancelliamo; scollegando Garmin vale la sezione 3; ritirando il primo non possiamo più offrirti il coaching nell'app, e i tuoi dati restano finché non chiedi di cancellarli o non elimini l'account.</p>
+
+<h2 id="accesso">7. Chi vede i tuoi dati</h2>
+<ul>
+  <li><strong>Tu</strong> vedi i tuoi dati, le sedute approvate e i riepiloghi che ti riguardano.</li>
+  <li><strong>Il tuo coach</strong> vede i dati degli atleti che segue, comprese le bozze dell'IA, e non quelli degli altri coach.</li>
+  <li><strong>Gli amministratori di FLEOFIT</strong> possono accedere ai dati solo quando serve a gestire il servizio, a darti assistenza o a rispondere a una tua richiesta.</li>
+  <li><strong>Gli altri atleti e gli altri coach non vedono nulla di te.</strong></li>
+  <li>I <strong>fornitori</strong> della sezione 9 trattano i dati solo per farci funzionare, secondo le nostre istruzioni.</li>
+  <li>Le <strong>autorità</strong>, solo se la legge lo impone.</li>
+</ul>
+<p>Non vendiamo, non affittiamo e non scambiamo i tuoi dati con nessuno.</p>
+
+<h2 id="coach">8. Se sei un coach</h2>
+<p>Se usi FLEOFIT come coach, oltre ai dati dell'account trattiamo:</p>
+<ul>
+  <li><strong>il tuo metodo</strong>: la settimana tipo per ogni profilo di atleta, la periodizzazione, i volumi, le preferenze e i divieti, gli allenamenti che indichi come modello e le regole che confermi;</li>
+  <li><strong>i tuoi allenamenti</strong>, che l'IA usa come esempi per scrivere nel tuo stile;</li>
+  <li><strong>come correggi le proposte</strong> (nessuna modifica, piccola, rifatta), da cui l'app ti propone regole nuove che diventano tali solo con il tuo sì;</li>
+  <li><strong>il tuo uso dell'IA</strong>: quante richieste, con quale modello, quanti dati elaborati e il costo stimato.</li>
+</ul>
+<p>Il tuo metodo e i tuoi allenamenti sono <strong>privati</strong>: nessun altro coach li vede e l'IA non li usa per gli atleti di altri coach. Li leggono solo gli amministratori. Tutto quello che l'IA sa di te è visibile in chiaro nelle tue impostazioni, e puoi modificarlo o cancellarlo. Questi dati servono a fornirti il servizio (art. 6.1.b) e, per l'uso e i costi, al nostro legittimo interesse a tenerlo sostenibile (art. 6.1.f).</p>
+
+<h2 id="fornitori">9. I fornitori</h2>
+<p>Per far funzionare l'app ci appoggiamo a questi fornitori, che agiscono come responsabili del trattamento (art. 28 GDPR), salvo dove indicato.</p>
+<div class="tabella"><table>
+  <thead><tr><th>Fornitore</th><th>Per cosa</th><th>Dove</th></tr></thead>
+  <tbody>
+    <tr><td>Supabase, Inc.</td><td>Database, accesso, file (foto profilo e note vocali), funzioni sul server</td><td>Server nell'UE; società negli USA</td></tr>
+    <tr><td>Vercel, Inc.</td><td>Pubblicazione della versione web</td><td>USA e UE</td></tr>
+    <tr><td>Anthropic, PBC – Claude</td><td>Intelligenza artificiale: programmazione e sedute settimanali</td><td>USA</td></tr>
+    <tr><td>Google LLC – Gemini (piano a pagamento)</td><td>Intelligenza artificiale e trascrizione dell'audio</td><td>USA</td></tr>
+    <tr><td>Groq, Inc.</td><td>Intelligenza artificiale (con conservazione zero dei dati) e trascrizione dell'audio</td><td>USA</td></tr>
+    <tr><td>Google LLC – Firebase Cloud Messaging</td><td>Invio delle notifiche push</td><td>USA</td></tr>
+    <tr><td>Resend, Inc.</td><td>Invio delle email di servizio e delle segnalazioni</td><td>USA</td></tr>
+    <tr><td>GitHub, Inc. (Microsoft)</td><td>Conservazione delle copie di sicurezza notturne</td><td>USA</td></tr>
+    <tr><td>Garmin</td><td>Fonte dei dati Garmin Connect, se li colleghi. Titolare autonomo dei dati del tuo account Garmin</td><td>—</td></tr>
+    <tr><td>Apple e Google</td><td>Accesso con Apple o con Google, se lo scegli; notifiche sui loro sistemi. Titolari autonomi</td><td>—</td></tr>
+  </tbody>
+</table></div>
+<p>Non tutti i fornitori di intelligenza artificiale sono usati sempre: alcuni lavorano di riserva quando un altro non risponde. Se ne aggiungiamo uno, aggiorniamo questa tabella prima che riceva dati.</p>
+
+<h2 id="estero">10. Dati fuori dall'Unione europea</h2>
+<p>Alcuni fornitori hanno sede negli Stati Uniti. I trasferimenti avvengono solo con le garanzie previste dal GDPR: l'adesione del fornitore all'EU-US Data Privacy Framework, dove c'è, oppure le clausole contrattuali tipo approvate dalla Commissione europea (art. 46 GDPR). Ai fornitori di intelligenza artificiale, in più, il profilo arriva senza nome né contatti. Puoi chiederci copia delle garanzie a <a href="mailto:coaching@federicoleo.it">coaching@federicoleo.it</a>.</p>
+
+<h2 id="conservazione">11. Per quanto tempo teniamo i dati</h2>
+<ul>
+  <li><strong>Finché il tuo account è attivo</strong>, teniamo i dati che servono a seguirti, compresa la storia degli allenamenti e delle programmazioni: è la base su cui il coach lavora.</li>
+  <li><strong>Infortuni e condizioni di salute</strong>: finché li tieni nel profilo; li cancelliamo se li togli o se ritiri il consenso apposito.</li>
+  <li><strong>Se elimini l'account</strong> (Impostazioni → Elimina il mio account) o il coach ti toglie dall'app, il profilo viene nascosto subito e <strong>cancellato definitivamente dopo 7 giorni</strong>, con tutti i tuoi allenamenti, note, programmazioni e dati collegati. Nei 7 giorni puoi chiedere di ripristinarlo.</li>
+  <li><strong>Dati Garmin</strong>: cancellati entro 30 giorni da quando scolleghi l'account.</li>
+  <li><strong>Presso i fornitori di IA</strong>: nessuna conservazione oltre il tempo della risposta, salvo i registri tecnici che la legge o la sicurezza impongono, per il tempo indicato nei loro contratti.</li>
+  <li><strong>Copie di sicurezza</strong>: si fanno ogni notte e ciascuna si cancella da sola dopo <strong>90 giorni</strong>. Fino ad allora un dato cancellato può restare in una copia, che non viene usata se non per recuperare il servizio dopo un guasto.</li>
+  <li><strong>Segnalazioni</strong>: il tempo che serve a risolvere il problema.</li>
+  <li><strong>Dati per obblighi di legge</strong>: il tempo che la legge richiede.</li>
+</ul>
+
+<h2 id="sicurezza">12. Sicurezza</h2>
+<p>I dati viaggiano cifrati (HTTPS) fra l'app e i server. L'accesso al database è regolato da permessi lato server: ogni utente legge solo ciò che il suo ruolo gli consente, un coach solo i suoi atleti, e le bozze dell'IA e la valutazione del coach non sono visibili all'atleta finché il coach non le approva. Infortuni e condizioni di salute stanno separati dal resto, così si possono cancellare da soli e vederli meno persone. Le foto profilo e le note vocali sono salvate con indirizzi lunghi e non indovinabili, che l'app mostra solo a chi ha accesso alla scheda. Nessun sistema è sicuro al cento per cento: se un incidente mettesse a rischio i tuoi dati, ti avviseremo e avviseremo il Garante come prevede la legge.</p>
+
+<h2 id="diritti">13. I tuoi diritti</h2>
+<p>In ogni momento puoi chiedere di:</p>
+<ul>
+  <li><strong>accedere</strong> ai tuoi dati e averne copia, compresa la valutazione del coach e il motivo delle proposte dell'IA;</li>
+  <li><strong>correggerli</strong> se sono sbagliati;</li>
+  <li><strong>cancellarli</strong> (puoi anche eliminare l'account da solo, dalle Impostazioni);</li>
+  <li><strong>limitarne</strong> il trattamento;</li>
+  <li><strong>riceverli</strong> in un formato leggibile da un computer, per portarli altrove (portabilità);</li>
+  <li><strong>opporti</strong> ai trattamenti basati sul legittimo interesse;</li>
+  <li><strong>ritirare un consenso</strong>, senza conseguenze su quanto fatto prima;</li>
+  <li><strong>parlare con una persona</strong> di una proposta dell'IA che ti riguarda: il tuo coach, che è sempre chi decide.</li>
+</ul>
+<p>Scrivi al tuo coach o a <a href="mailto:coaching@federicoleo.it">coaching@federicoleo.it</a>: rispondiamo entro un mese. Se pensi che i tuoi dati siano trattati in modo non corretto, puoi presentare reclamo al <strong>Garante per la protezione dei dati personali</strong> (<a href="https://www.garanteprivacy.it">garanteprivacy.it</a>) o all'autorità del Paese in cui vivi.</p>
+
+<h2 id="cookie">14. Cookie e tracciamento</h2>
+<p>FLEOFIT <strong>non usa cookie pubblicitari né strumenti di analisi o di tracciamento</strong>, non usa l'identificativo pubblicitario del telefono e non ti segue su altre app o siti. Sul tuo dispositivo salva solo quello che serve a farla funzionare: la sessione di accesso, le preferenze e una copia degli allenamenti per usarli senza connessione. Questi dati tecnici non richiedono consenso e si cancellano uscendo dall'account o disinstallando l'app.</p>
+
+<h2 id="minori">15. Minori</h2>
+<p>FLEOFIT non è pensata per chi ha meno di 14 anni, che non può iscriversi. Per un atleta fra i 14 e i 18 anni chiediamo che l'iscrizione avvenga con l'accordo di chi esercita la responsabilità genitoriale, che può esercitare i diritti della sezione 13.</p>
+
+<h2 id="modifiche">16. Modifiche a questa informativa</h2>
+<p>Se cambiamo questa informativa aggiorniamo la versione e la data in cima alla pagina. Se il cambiamento riguarda quello che fai con i tuoi dati (un dato nuovo, uno scopo nuovo, un nuovo fornitore di intelligenza artificiale), te lo diciamo via email e, se serve, ti chiediamo di nuovo il consenso nell'app.</p>
+
+<hr>
+
+<div id="en"></div>
+<section class="card" lang="en">
+  <span class="etichetta">English</span>
+  <h2>Privacy policy — English version</h2>
+  <p class="meta">Version of 27 October 2026. In case of doubt, the Italian version prevails.</p>
+
+  <h3>Who we are</h3>
+  <p>FLEOFIT is a coaching app (iOS, Android and web) that lets coaches program workouts for their athletes and follow their progress. It is operated by Federico Leo, Via Altaguardia 3, 20135 Milan, Italy, VAT no. 12721740962 («FLEOFIT», «we»), the data controller for the app itself: accounts, service operation, AI features, the Garmin connection, security and backups. Contact: <a href="mailto:coaching@federicoleo.it">coaching@federicoleo.it</a>.</p>
+  <p>Coaches using FLEOFIT are <strong>independent professionals</strong>: they do not work for FLEOFIT or represent it. For the data a coach uses to coach you (training plans, assessments, sessions, notes and feedback), your coach is an independent controller and FLEOFIT processes that data on the coach's behalf as a processor (Art. 28 GDPR), under an agreement with each coach. You can exercise your rights with your coach or with us; we forward requests concerning a coach's data and help you get an answer.</p>
+
+  <h3>Data we collect</h3>
+  <ul>
+    <li><strong>Account</strong>: email, first and last name, profile photo, sign-in method (email, Apple or Google), invitation code, role.</li>
+    <li><strong>Onboarding questionnaire</strong>: discipline and goal, target race and time, availability, equipment, training history, recent times and usual loads.</li>
+    <li><strong>Health and fitness data</strong> (special category data under Art. 9 GDPR): date of birth, sex, weight, height; workouts, completion, perceived exertion (RPE), ratings, written and voice notes, personal records; daily check-in answers on sleep, energy, soreness and stress; data derived from them; and, only with a separate consent, injuries, pain, health conditions and movements to avoid.</li>
+    <li><strong>Garmin Connect data</strong>, only if you connect your account: activities (type, date, duration, distance, pace/speed, elevation, heart rate, power, cadence, calories, intensity zones — no GPS tracks); recovery (sleep, HRV, resting heart rate, stress, Body Battery); daily summaries (steps, calories, intensity minutes, weight and body composition).</li>
+    <li><strong>Training plans</strong>: the phased plan towards your goal, proposed and approved sessions with their rationale, daily-check adjustment proposals and the coach's decisions; the coach's assessment of you (level, priorities, constraints), which you can request at any time.</li>
+    <li><strong>Race data</strong>: races you add and, for HYROX races, your result from the public results.hyrox.com rankings.</li>
+    <li><strong>Technical data</strong>: push notification token, live workout status, server logs kept by our providers.</li>
+  </ul>
+  <p>We do not collect location, contacts or advertising identifiers, and we do not read Apple Health or Health Connect.</p>
+
+  <h3>Garmin Connect</h3>
+  <p>Connecting Garmin is optional and done through Garmin's own authorization screen; we never see your Garmin password. Garmin data is used only to show you and your coach your training and recovery, and to prepare training plans and adjustment proposals with the AI features below, where it is sent as summarized figures without identifying information. We do not sell Garmin data, use it for advertising, share it with third parties other than the technical providers listed below, or use it to train any AI model. You can disconnect at any time from the app settings or from Garmin Connect; we then stop receiving data and delete the data received from Garmin within 30 days (backups expire within 90 days).</p>
+
+  <h3>Artificial intelligence</h3>
+  <p><strong>FLEOFIT uses third-party AI models, including on health data.</strong></p>
+  <ul>
+    <li>AI drafts a <strong>training plan</strong> towards the athlete's goal from the questionnaire, the coach's assessment and the coach's own method, and writes each week's sessions in the coach's style, taking into account the previous week's adherence, RPE, ratings, daily check-ins, Garmin data, note extracts and declared health constraints.</li>
+    <li>A <strong>daily automated check</strong> looks for warning signs (very low check-ins two days in a row, a skipped session, much higher effort than planned, a note mentioning pain) and, if found, AI drafts an adjustment proposal for the coach.</li>
+    <li>AI turns athletes' notes into structured data, helps the coach write single workouts from text, dictation or a photo, and answers the coach's questions about their own athletes.</li>
+  </ul>
+  <p>This is profiling of fitness and recovery, done only for coaching and only with consent. <strong>Nothing reaches the athlete without the coach</strong>: AI sessions and proposals are drafts that only the coach sees, edits and approves, so there is no solely automated decision affecting the athlete (Art. 22 GDPR). Durations, loads and progression are checked by code against the coach's method and the athlete's constraints. FLEOFIT is not a medical device and AI output may be wrong.</p>
+  <p>AI providers receive a <strong>pseudonymized profile</strong>: no name, email, photo or identifier; age as a range; feedback as summarized figures and short note excerpts. We only use paid or Zero Data Retention services that contractually do not retain data beyond the response and do not use it for training — <strong>never free tiers</strong>. Providers that may receive data: Anthropic (Claude), Google Gemini (paid tier) and Groq, some of them only as fallback; we may also run a model on our own hardware or on rented servers in the EU. New providers are added to this policy before they receive any data. Model comparisons and new features are tested on invented data only. <strong>We never use your data to train AI models</strong>; if we ever wished to, we would first ask for a separate consent.</p>
+
+  <h3>Legal bases and consents</h3>
+  <p>Account and coaching service: performance of the service (Art. 6.1.b GDPR). Health data and AI processing: explicit consent (Art. 9.2.a), in three separate consents: (1) training data and AI, required to use the app; (2) injuries and health conditions, optional; (3) Garmin Connect, optional, given by connecting the account. Each consent can be withdrawn at any time in the app settings or by email. Service quality and AI cost measurement, backups and security: legitimate interest (Art. 6.1.f).</p>
+
+  <h3>Who sees your data</h3>
+  <p>You; your coach (only for athletes they follow, including AI drafts); FLEOFIT administrators, only when needed to run the service, provide support or answer your request; our processors, only on our instructions; authorities where required by law. Other athletes and other coaches see nothing about you. <strong>We never sell your data.</strong></p>
+
+  <h3>Coaches</h3>
+  <p>For coaches we also process their training method, their workouts (used as style examples for the AI), how they edit AI proposals, the rules they confirm, and their AI usage and estimated cost. A coach's method and workouts are private: no other coach sees them and the AI never uses them for other coaches' athletes.</p>
+
+  <h3>Processors and transfers</h3>
+  <p>Supabase (database, authentication, files — EU servers), Vercel (web hosting), Anthropic, Google Gemini and Groq (AI, transcription), Google Firebase Cloud Messaging (push notifications), Resend (email), GitHub (nightly backups). Apple, Google and Garmin act as independent controllers for sign-in and for your own accounts. Transfers to the USA rely on the EU-US Data Privacy Framework where applicable, or on the European Commission's Standard Contractual Clauses.</p>
+
+  <h3>Retention</h3>
+  <p>Data is kept while your account is active. Injuries and health conditions are deleted when you remove them or withdraw that consent. When you delete your account it is hidden immediately and permanently deleted after 7 days. Garmin data is deleted within 30 days of disconnection. AI providers keep no data beyond the response. Nightly backups expire after 90 days.</p>
+
+  <h3>Your rights</h3>
+  <p>Access (including the coach's assessment and the rationale of AI proposals), rectification, erasure, restriction, portability, objection, withdrawal of consent, and discussing any AI proposal with a human — your coach. Write to your coach or to <a href="mailto:coaching@federicoleo.it">coaching@federicoleo.it</a> (reply within one month). You can lodge a complaint with the Italian Data Protection Authority (<a href="https://www.garanteprivacy.it">garanteprivacy.it</a>) or your local authority.</p>
+
+  <h3>Cookies and tracking</h3>
+  <p>No advertising or analytics cookies, no tracking across apps or websites. Only technical storage needed for sign-in, preferences and offline use.</p>
+
+  <h3>Children and changes</h3>
+  <p>Not intended for children under 14; athletes aged 14–17 need the agreement of a parent or guardian. Material changes to this policy are announced by email and, where needed, consent is asked again in the app.</p>
+</section>
+
+<footer>
+  <div class="logo">FLEO<span>FIT</span></div>
+  <p>Privacy: <a href="mailto:coaching@federicoleo.it">coaching@federicoleo.it</a> · <a href="#titolare">chi gestisce l'app</a></p>
+</footer>
+
+</main>
+</body>
+</html>
