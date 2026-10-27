@@ -530,16 +530,27 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           message: 'Questo allenamento è programmato per una data futura. Vuoi davvero segnarlo come completato oggi?',
           onConfirm: () => { 
             setConfirmInfo(null);
-            setRpeNotes(editingNote);
-            setShowRpeModal(true); 
+            chiediPrimaDiRpe();
           }
         })
         return
       }
     }
     
+    chiediPrimaDiRpe();
+  }
+
+  // «Come stai oggi» si chiede quando l'atleta segna l'allenamento come
+  // completato, prima del «Com'è andata?» — mai all'avvio del timer o del
+  // telecomando TV (richiesta del committente, 27/10/2026). Rispondere o
+  // saltare porta comunque all'RPE: la domanda non blocca mai.
+  const apriRpe = () => {
     setRpeNotes(editingNote);
     setShowRpeModal(true);
+  }
+  const chiediPrimaDiRpe = () => {
+    if (chiediComeStai) { setFoglioComeStai({ poi: apriRpe }); return }
+    apriRpe();
   }
 
   const handleRpeSubmit = async () => {
@@ -1419,10 +1430,6 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   }
 
   const apriTimer = () => {
-    if (!timerOpen && chiediComeStai) { setFoglioComeStai({ poi: avviaTimer }); return }
-    avviaTimer()
-  }
-  const avviaTimer = () => {
     if (timerOpen && !timerMinimized) { setTimerMinimized(true); return }
     if (timerOpen && timerMinimized) { setTimerMinimized(false); return }
     setTimerSequence(buildTimerSequence(workout))

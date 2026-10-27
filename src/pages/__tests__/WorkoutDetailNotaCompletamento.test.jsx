@@ -68,6 +68,9 @@ const scritture = () => finto.chiamateA('athlete_workouts', 'update').map(c => c
 
 beforeEach(() => {
   finto.chiamate.length = 0
+  // «Come stai oggi» si chiede segnando come completato, prima dell'RPE: qui
+  // non è il soggetto, quindi oggi risulta già saltato.
+  window.localStorage.setItem('fleofit_come_stai_saltato', JSON.stringify(new Date().toLocaleDateString('sv-SE')))
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })

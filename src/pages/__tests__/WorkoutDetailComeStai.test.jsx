@@ -4,9 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 
 // «Come stai oggi» nella scheda workout (13/10/2026).
-// I casi: all'atleta la domanda arriva PRIMA del timer e non lo blocca mai
-// (saltare fa partire il timer lo stesso), una volta al giorno; al coach si
-// mostra la risposta del giorno della seduta.
+// I casi: all'atleta la domanda arriva quando segna l'allenamento come
+// completato, prima del «Com'è andata?», e non lo blocca mai (saltare apre
+// l'RPE lo stesso), una volta al giorno. Mai all'avvio del timer o del
+// telecomando TV (27/10/2026). Al coach si mostra la risposta del giorno della seduta.
 
 const ctrl = await vi.hoisted(async () => ({ comeStai: [], salva: null }))
 
@@ -57,20 +58,31 @@ beforeEach(() => {
   window.localStorage.clear()
 })
 
+const completa = async (user) =>
+  user.click((await screen.findAllByRole('button', { name: /Segna come completato/i }))[0])
+
 describe('Come stai oggi — atleta', () => {
-  it('la domanda arriva prima del timer, e «Salta» lo fa partire lo stesso', async () => {
+  it('«Avvia allenamento» fa partire il timer senza chiedere niente', async () => {
     apri()
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: /Avvia allenamento/i }))
+    expect(await screen.findByRole('button', { name: /Minimizza timer/i })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Come stai oggi?' })).toBeNull()
+  })
+
+  it('la domanda arriva segnando come completato, e «Salta» apre l\'RPE lo stesso', async () => {
+    apri()
+    const user = userEvent.setup()
+    await completa(user)
     expect(await screen.findByRole('dialog', { name: 'Come stai oggi?' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Salta' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Come stai oggi?' })).toBeNull())
-    expect(await screen.findByRole('button', { name: /Minimizza timer/i })).toBeInTheDocument()
+    expect(await screen.findByText("Com'è andata?")).toBeInTheDocument()
     // Saltato oggi: non si richiede, né col bottone né con l'invito.
     expect(screen.queryByText('Come stai oggi?')).toBeNull()
   })
 
-  it('rispondere salva il giorno con le risposte date, e poi parte il timer', async () => {
+  it('rispondere salva il giorno con le risposte date', async () => {
     apri()
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: /Rispondi/ }))
@@ -80,28 +92,28 @@ describe('Come stai oggi — atleta', () => {
     const [riga, opzioni] = finto.chiamateA('come_stai', 'upsert')[0].args
     expect(riga).toMatchObject({ athlete_id: 'u1', energia: 5, sonno: null })
     expect(opzioni).toEqual({ onConflict: 'athlete_id,giorno' })
-    // Dall'invito, non dal timer: dopo la risposta non parte niente.
-    expect(screen.queryByRole('button', { name: /Minimizza timer/i })).toBeNull()
+    // Dall'invito, non dal completamento: dopo la risposta non si apre l'RPE.
+    expect(screen.queryByText("Com'è andata?")).toBeNull()
   })
 
-  it('con la rete lenta il timer parte subito, senza aspettare il salvataggio', async () => {
+  it('con la rete lenta l\'RPE si apre subito, senza aspettare il salvataggio', async () => {
     ctrl.salva = () => new Promise(() => {}) // non risponde mai
     apri()
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: /Avvia allenamento/i }))
+    await completa(user)
     await user.click(await screen.findByRole('radio', { name: 'Sonno: Così così' }))
     await user.click(screen.getByRole('button', { name: 'Fatto' }))
-    expect(await screen.findByRole('button', { name: /Minimizza timer/i })).toBeInTheDocument()
+    expect(await screen.findByText("Com'è andata?")).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'Come stai oggi?' })).toBeNull()
   })
 
-  it('la X (e il tasto indietro di Android) chiude senza far partire il timer, e si richiede', async () => {
+  it('la X (e il tasto indietro di Android) chiude senza aprire l\'RPE, e si richiede', async () => {
     apri()
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: /Avvia allenamento/i }))
+    await completa(user)
     await user.click(await screen.findByRole('button', { name: 'Chiudi' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Come stai oggi?' })).toBeNull())
-    expect(screen.queryByRole('button', { name: /Minimizza timer/i })).toBeNull()
+    expect(screen.queryByText("Com'è andata?")).toBeNull()
     // Chiudere non è saltare: l'invito resta.
     expect(screen.getByText('Come stai oggi?')).toBeInTheDocument()
   })
@@ -110,8 +122,8 @@ describe('Come stai oggi — atleta', () => {
     ctrl.comeStai = [{ id: 'c1', athlete_id: 'u1', giorno: '2026-08-26', sonno: 4, energia: 4, dolori: 4, stress: 4 }]
     apri()
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: /Avvia allenamento/i }))
-    expect(await screen.findByRole('button', { name: /Minimizza timer/i })).toBeInTheDocument()
+    await completa(user)
+    expect(await screen.findByText("Com'è andata?")).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'Come stai oggi?' })).toBeNull()
   })
 })

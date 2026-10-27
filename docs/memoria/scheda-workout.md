@@ -431,8 +431,11 @@ congelamento dello schema, sì del committente il 13/10). Logica e rete in
 
 Dove compare:
 - **Atleta**, nella scheda di un allenamento non ancora fatto: un invito «Come stai oggi?
-  Rispondi» sotto il titolo, e il foglio che si apre da solo premendo «Avvia allenamento».
-  Rispondere o saltare fa partire il timer lo stesso: **la domanda non blocca mai**.
+  Rispondi» sotto il titolo, e il foglio che si apre da solo premendo **«Segna come
+  completato»**, prima del «Com'è andata?» (RPE). Rispondere o saltare apre l'RPE lo stesso:
+  **la domanda non blocca mai**.
+  🔴 **Mai all'avvio del timer né del telecomando TV** (richiesta del committente, 27/10/2026:
+  fino ad allora si apriva premendo «Avvia allenamento» / «Avvia telecomando TV»).
 - **Coach**, nella scheda dell'atleta su quel workout: «Come stava» quel giorno, con la media
   e le quattro risposte. In **Analisi**: la colonna «Come sta» (media del periodo) e il
   grafico settimana per settimana.
@@ -453,14 +456,14 @@ Dove compare:
 3. `leggiComeStai` torna `undefined` quando non può sapere (tabella assente, rete giù): in quel
    caso **non si chiede**. Un foglio a sproposito davanti al timer è peggio di una risposta persa.
 4. «Salta» si ricorda per il giorno in `fleofit_come_stai_saltato` (memoria del dispositivo).
-   🔴 «Fatto» chiude e fa partire il timer SUBITO, e salva dopo, in sottofondo: con il
+   🔴 «Fatto» chiude e apre l'RPE SUBITO (fino al 27/10 era il timer), e salva dopo, in sottofondo: con il
    segnale scarso un upsert senza risposta terrebbe fermo il timer (trovato dalla revisione
    del 13/10). Se il salvataggio fallisce, il giorno si segna come saltato: chi ha risposto
    non deve rispondere due volte.
 5. Si chiede per il giorno di OGGI, non per la data della seduta: è com'è l'atleta quando si
    allena. Il coach invece legge la risposta del giorno della seduta (`workout.date`).
 6. La X del foglio ha `aria-label="Chiudi"`: è ciò che fa funzionare il tasto indietro di
-   Android. ⚠️ Chiudere NON è saltare: niente timer, niente «saltato oggi», l'invito resta.
+   Android. ⚠️ Chiudere NON è saltare: niente RPE, niente «saltato oggi», l'invito resta.
    Chi preme indietro vuole annullare, non partire.
 8. La risposta letta si tiene insieme alla sua chiave (atleta + giorno) e vale solo finché la
    chiave è quella: una lettura vecchia non decide se chiedere oggi.
