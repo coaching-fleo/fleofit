@@ -93,6 +93,7 @@ describe('L\'eroe: account e stato del dispositivo', () => {
       },
     })
     montaCoach()
+    await apriStrumenti()
     const riga = await screen.findByRole('button', { name: /Esporta database/i })
     try {
       finto.supabase.from.mockImplementation(() => appesa)
@@ -134,6 +135,11 @@ describe('La fascia cardio non c\'è più', () => {
   })
 })
 
+// Export e import atleta stanno dentro «Strumenti sviluppo», chiuso (27/10/2026).
+async function apriStrumenti() {
+  await userEvent.click(await screen.findByRole('button', { name: /Strumenti sviluppo/i }))
+}
+
 describe('Le righe del coach', () => {
   it('🔴 i codici invito sono una RIGA con il numero, non la prima card della pagina', async () => {
     // Erano una card con due accordion dentro — un pozzetto dentro un pozzetto
@@ -156,25 +162,37 @@ describe('Le righe del coach', () => {
 
   it('la riga dell\'export dice cosa finirebbe nel file', async () => {
     montaCoach()
+    await apriStrumenti()
     // 3 righe in `athletes` e 2 in `workouts` nel finto Supabase.
     expect(await screen.findByText('3 atleti · 2 workout')).toBeInTheDocument()
   })
 
   it('🔴 un export riuscito lascia la data, e la riga la ricorda', async () => {
     montaCoach()
+    await apriStrumenti()
     await userEvent.click(await screen.findByRole('button', { name: /Esporta database/i }))
     await waitFor(() => expect(window.localStorage.getItem(CHIAVE_ULTIMO_EXPORT)).toBeTruthy())
     expect(await screen.findByText(/Ultimo export/)).toBeInTheDocument()
   })
 
-  it('🔴 il ripristino totale è fuori dal gruppo e DICE che sovrascrive', async () => {
-    // Prima aveva lo stesso aspetto di «Esporta»: due righe grigie identiche
-    // di cui una può cancellare il lavoro di un anno. La conferma esisteva
-    // già; quello che mancava era che il rischio si vedesse prima del tocco.
+  it('🔴 il ripristino totale non c\'è più, nemmeno fra gli strumenti', async () => {
+    // Tolto il 27/10/2026 su richiesta del committente: sovrascriveva da un
+    // file l'unico database, condiviso da web, iOS e Android.
     montaCoach()
-    const riga = screen.getByRole('button', { name: /Ripristina database totale/i })
-    expect(within(riga).getByText('Sovrascrive tutti i dati esistenti')).toBeInTheDocument()
-    expect(riga.className).toMatch(/red/)
+    await apriStrumenti()
+    expect(screen.queryByText(/Ripristina database totale/i)).not.toBeInTheDocument()
+    // Resta un solo selettore di file: quello del backup atleta.
+    expect(document.querySelectorAll('input[type="file"]')).toHaveLength(1)
+  })
+
+  it('🔴 export e import atleta stanno chiusi sotto «Strumenti sviluppo»', async () => {
+    montaCoach()
+    await screen.findByRole('button', { name: /Codici invito/i })
+    expect(screen.queryByText(/Esporta database/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Importa backup atleta/i)).not.toBeInTheDocument()
+    await apriStrumenti()
+    expect(screen.getByRole('button', { name: /Esporta database/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Importa backup atleta/i })).toBeInTheDocument()
   })
 
   it('🔴 i test mattina/sera sono chiusi in fondo, non fra le impostazioni', async () => {
@@ -318,7 +336,7 @@ describe('Impostazioni — versione desktop', () => {
     const destra = container.querySelector('[data-disposizione="desktop"] [data-colonna="destra"]')
     expect(destra).not.toBeNull()
     expect(within(destra).getByText('Codici invito')).toBeInTheDocument()
-    expect(within(destra).getByText('Ripristina database totale')).toBeInTheDocument()
+    expect(within(destra).getByRole('button', { name: /Strumenti sviluppo/i })).toBeInTheDocument()
     const sinistra = container.querySelector('[data-colonna="sinistra"]')
     expect(within(sinistra).getByText('Modifica password')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Torna indietro' })).toBeNull()
@@ -402,6 +420,7 @@ describe('La voce «Coach» (multi-coach, solo admin)', () => {
   it('l\'admin la vede, accanto al backup', async () => {
     montaRuolo('admin')
     expect(await screen.findByRole('button', { name: /^Coach/ })).toBeInTheDocument()
+    await apriStrumenti()
     expect(screen.getByRole('button', { name: /Esporta database/i })).toBeInTheDocument()
   })
 

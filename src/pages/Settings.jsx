@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, AlertTriangle, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -10,7 +10,7 @@ import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { useAuth } from '../App'
 import { eStaff, eAdmin } from '../lib/ruoli'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
-import { esportaTutto, ripristinaTutto, scriviTutta } from '../lib/backup'
+import { esportaTutto, scriviTutta } from '../lib/backup'
 import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
 import { PushNotifications } from '@capacitor/push-notifications'
@@ -43,7 +43,6 @@ export default function Settings() {
   const loading = operazione !== null
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
-  const fullImportRef = useRef(null)
   const athleteImportRef = useRef(null)
   const { role, user, nome } = useAuth()
   // Sul desktop (solo coach, src/useDesktop.js) la pagina va su due colonne.
@@ -212,38 +211,6 @@ export default function Settings() {
       setAlertInfo({ title: 'Errore', message: "Errore esportazione: " + e.message, type: 'error' })
     }
     setOperazione(null)
-  }
-
-  const handleImportFull = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    
-    setConfirmInfo({
-      title: "Attenzione",
-      message: "Questa operazione caricherà l'intero database e sovrascriverà i dati esistenti. Vuoi procedere?",
-      onConfirm: async () => {
-        setOperazione('importTotale')
-        try {
-          const text = await file.text()
-          const data = JSON.parse(text)
-          const { saltate } = await ripristinaTutto(data)
-          setAlertInfo({
-            title: 'Completato',
-            message: saltate.length
-              ? `Ripristino completato. Non ripristinate perché il database non le ha ancora: ${saltate.join(', ')}.`
-              : 'Ripristino totale completato con successo!',
-            type: 'success',
-          })
-        } catch (err) {
-          setAlertInfo({ title: 'Errore', message: "Errore importazione: " + err.message, type: 'error' })
-        }
-        setOperazione(null)
-        if (fullImportRef.current) fullImportRef.current.value = ''
-      },
-      onCancel: () => {
-        if (fullImportRef.current) fullImportRef.current.value = ''
-      }
-    })
   }
 
   const handleImportAthlete = async (e) => {
@@ -734,35 +701,30 @@ export default function Settings() {
             <RigaAzione icona={Users} titolo="Coach"
               dettaglio="Chi lavora nell'app e di chi sono gli atleti"
               onClick={apriGestioneCoach} />
-            <Separatore />
-            <RigaAzione icona={HardDriveDownload} titolo="Esporta database"
-              dettaglio={riassuntoBackup({ ultimoExport, atleti: conteggi.atleti, workout: conteggi.workout })}
-              onClick={handleExportFull} occupato={operazione === 'export'} />
-            <Separatore />
-            <RigaAzione icona={UserCheck} tono="verde" titolo="Importa backup atleta"
-              dettaglio="Un solo profilo da file .json. L'esportazione si fa dalla sua scheda."
-              onClick={() => athleteImportRef.current?.click()}
-              occupato={operazione === 'importAtleta'} />
             </>)}
           </Sezione>
 
-          {/* Fuori dal gruppo, rosso, e con la sua cornice: prima aveva lo
-              stesso aspetto di «Esporta», cioè due righe grigie identiche di
-              cui una può cancellare il lavoro di un anno. */}
-          {eAdmin(role) && (
-            <RigaPericolo icona={AlertTriangle} titolo="Ripristina database totale"
-              dettaglio="Sovrascrive tutti i dati esistenti"
-              onClick={() => fullImportRef.current?.click()}
-              occupato={operazione === 'importTotale'} />
-          )}
-
           {/* I test delle push non sono impostazioni: sono strumenti, e sono
               gli unici due comandi della pagina che spediscono qualcosa a
-              tutti gli atleti. Stanno in fondo, chiusi. */}
+              tutti gli atleti. Stanno in fondo, chiusi, insieme a export e
+              import del backup atleta. «Ripristina database totale» è stato
+              tolto il 27/10/2026 (richiesta del committente): il backup
+              notturno resta la via di ritorno. */}
           {eAdmin(role) && (
           <Sezione>
             <RigaPieghevole piccola icona={Wrench} titolo="Strumenti sviluppo"
               aperto={sviluppoAperto} onToggle={() => setSviluppoAperto(v => !v)}>
+              {/* -mx-3.5: le righe hanno già il loro margine, il pieghevole il suo. */}
+              <div className="-mx-3.5 mb-3">
+                <RigaAzione icona={HardDriveDownload} titolo="Esporta database"
+                  dettaglio={riassuntoBackup({ ultimoExport, atleti: conteggi.atleti, workout: conteggi.workout })}
+                  onClick={handleExportFull} occupato={operazione === 'export'} />
+                <Separatore />
+                <RigaAzione icona={UserCheck} tono="verde" titolo="Importa backup atleta"
+                  dettaglio="Un solo profilo da file .json. L'esportazione si fa dalla sua scheda."
+                  onClick={() => athleteImportRef.current?.click()}
+                  occupato={operazione === 'importAtleta'} />
+              </div>
               <div className="flex gap-2.5">
                 <button type="button" onClick={testMorningReminder} disabled={loading}
                   className="flex-1 py-2.5 rounded-xl bg-white/[.06] border border-white/[.1]
@@ -860,7 +822,6 @@ export default function Settings() {
         </>
       )}
 
-      <input type="file" accept=".json" className="hidden" ref={fullImportRef} onChange={handleImportFull} />
       <input type="file" accept=".json" className="hidden" ref={athleteImportRef} onChange={handleImportAthlete} />
 
       {foglioCodiciAperto && (
