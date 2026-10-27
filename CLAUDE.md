@@ -690,10 +690,10 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `HomeCoachTelefono`, `HomeCoachDesktop`, `CruscottoCoachUI`, `cruscottoCoach.js`, `useCruscottoCoach.js`, `statisticheCoach.js`, `pausa.js` | `home-coach.md` |
 | `CreateWorkout.jsx`, `CreaWorkoutUI`, `CreaGym`, `SchedaGymUI`, `gym.js`, `eserciziGym.js`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `incremento.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza, `modelliBlocco.js`, `modelliBloccoDb.js`, `useModelliBlocco.js`, `Modelli.jsx`, `ModelliUI`, `FoglioModello` | `crea-workout.md` |
 | `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF, `comeStai.js`, `FoglioComeStai`, `TVDashboard.jsx`, `TVDashboardUI` | `scheda-workout.md` |
-| `AthleteDetail.jsx`, `SchedaAtletaUI`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
+| `AthleteDetail.jsx`, `SchedaAtletaUI`, `CalendarioAtleta`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |
 | `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |
-| `Calendar.jsx`, `CalendarioUI`, `rigaCalendario.js`, `NuovoEvento`, `gareHyrox.js`, `RisultatoGara`, `InvitoRisultato`, `GarePassate`, `risultatoGara.js`, Edge Function `gare-hyrox` e `risultato-hyrox` | `calendario.md` |
+| `Calendar.jsx`, `CalendarioUI`, `useSwipeOrizzontale.js`, `rigaCalendario.js`, `NuovoEvento`, `gareHyrox.js`, `RisultatoGara`, `InvitoRisultato`, `GarePassate`, `risultatoGara.js`, Edge Function `gare-hyrox` e `risultato-hyrox` | `calendario.md` |
 | `Messaggi.jsx`, `NuovoMessaggio.jsx`, `MessaggiUI`, `FoglioMessaggio`, `messaggiCoach.js`, Edge Function `send-reminders/broadcast.ts` | `messaggi.md` |
 | `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js`, `Analisi.jsx`, `AnalisiUI.jsx`, `analisi.js`, `components/grafici/`, `storicoEsercizio.js`, `StoricoEsercizio.jsx`, `esportaCsv.js`, `ReportDesktop.jsx` | `report.md` |
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |

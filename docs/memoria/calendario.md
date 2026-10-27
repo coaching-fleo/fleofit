@@ -472,3 +472,27 @@ calendario che da scheda del workout».
   già scritta («gio 29 ott»). ✅ **Pubblicata il 26/10/2026** (versione 59). Se la push non
   parte, lo spostamento resta fatto lo stesso.
 
+
+## 9-swipe-mese — Lo swipe cambia mese (27/10/2026)
+
+Richiesta del committente: «su mobile se faccio swipe voglio che cambi mese»,
+nel calendario generale **e** in quello della scheda atleta.
+
+- Il gesto è di **`CardMese`** (`CalendarioUI.jsx`): con `onPrecedente` /
+  `onSuccessivo` la carta ascolta il dito. Un posto solo, e i due calendari lo
+  hanno insieme. Dito **a sinistra = mese dopo**, a destra = mese prima, come si
+  sfoglia. Le frecce restano.
+- Il riconoscimento sta in **`src/useSwipeOrizzontale.js`**, che non sa niente
+  di mesi. Si decide **a dito alzato**: almeno `SOGLIA_SWIPE` (50px) in
+  orizzontale e |dx| > 1,5 × |dy|. Sotto la soglia è un tocco (sceglie il
+  giorno), un gesto storto è lo scorrimento della pagina.
+- La carta ha `touch-action: pan-y`: lo scorrimento verticale resta al browser.
+- **Niente vibrazione**: è navigazione (`movimento-e-aptica.md`).
+- Niente animazione di scorrimento della griglia: il mese cambia di colpo, come
+  con le frecce. Se servirà, è il prossimo pezzo.
+- ⚠️ Sul telefono vero non è ancora provato (prove in jsdom e con eventi touch
+  sintetici nel browser): su Android il gesto «indietro» dal bordo dello
+  schermo resta del sistema, e la carta parte a 16px dal bordo.
+- Test: `CardMeseSwipe.test.jsx` (il gesto), più un caso in
+  `CalendarioMese.test.jsx` e uno in `CalendarioAtleta.test.jsx` (il
+  collegamento).

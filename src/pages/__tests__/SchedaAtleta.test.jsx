@@ -60,6 +60,11 @@ const comeCoach = () => montaPagina(<AthleteDetail />, {
 })
 const comeAtleta = () => montaPagina(<AthleteDetail />, { role: 'athlete', user: { id: 'a1', email: 'a@f.it' } })
 const attendi = () => waitFor(() => expect(screen.getByRole('heading', { name: /Marco Ferrero/ })).toBeInTheDocument())
+// Dal 27/10/2026 il calendario dell'atleta ripete in pagina testi che stanno
+// anche altrove (il workout di oggi, «Volume» nella fascia, «Assegna il …»):
+// i test che parlano di un'altra sezione guardano fuori da lui.
+const fuoriDalCalendario = (testo) => screen.getAllByText(testo)
+  .filter(el => !el.closest('section[aria-label^="Calendario"]'))
 const apriMenu = async () => {
   await userEvent.click(screen.getByLabelText('Altre azioni'))
   return screen.findByRole('menu')
@@ -113,7 +118,7 @@ describe('Le tre tab', () => {
     expect(screen.queryByRole('button', { name: /^Statistiche$/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Diario$/ })).not.toBeInTheDocument()
     // I quattro grafici della tab sono diventati l'anello e le due celle.
-    expect(screen.getByText('Volume')).toBeInTheDocument()
+    expect(fuoriDalCalendario('Volume')).toHaveLength(1)
     expect(screen.getByText('Sforzo')).toBeInTheDocument()
   })
 
@@ -128,15 +133,37 @@ describe('Le tre tab', () => {
 
     await userEvent.click(riga)
     expect(riga).toHaveAttribute('aria-expanded', 'true')
-    await waitFor(() => expect(screen.getByRole('button', { name: /Elenco/ })).toBeInTheDocument())
+    // Dal 27/10/2026 lo storico è solo l'elenco: il calendario ha una sezione
+    // sua, e due calendari nella stessa pagina sarebbero uno di troppo.
+    await waitFor(() => expect(screen.getAllByText('Hyrox Strength')).toHaveLength(2))
+    expect(screen.queryByRole('button', { name: /^Elenco$/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('Il calendario dell\'atleta', () => {
+  it('il coach lo trova chiuso, e si apre a tendina', async () => {
+    // Il committente, 27/10/2026: «non lo voglio sempre aperto».
+    comeCoach()
+    await attendi()
+    const calendario = screen.getByRole('region', { name: /Calendario di Marco/ })
+    expect(within(calendario).queryByRole('group', { name: 'Riepilogo del mese' })).not.toBeInTheDocument()
+    await userEvent.click(within(calendario).getByRole('button', { name: /^Calendario/ }))
+    expect(within(calendario).getByRole('group', { name: 'Riepilogo del mese' })).toBeInTheDocument()
   })
 
-  it('l\'atleta non ha il calendario dentro lo storico', async () => {
-    // È una vista di programmazione, e l'atleta non programma.
+  it('«Assegna il …» apre la finestra di assegnazione', async () => {
+    comeCoach()
+    await attendi()
+    const calendario = screen.getByRole('region', { name: /Calendario di Marco/ })
+    await userEvent.click(within(calendario).getByRole('button', { name: /^Calendario/ }))
+    await userEvent.click(within(calendario).getByRole('button', { name: /^Assegna il / }))
+    expect(await screen.findByText('Assegna Workout')).toBeInTheDocument()
+  })
+
+  it('l\'atleta sul proprio profilo non lo vede: ha la sua pagina Calendario', async () => {
     comeAtleta()
     await attendi()
-    await userEvent.click(screen.getByRole('button', { name: /Storico allenamenti/ }))
-    expect(screen.queryByRole('button', { name: /Calendario/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Calendario/ })).not.toBeInTheDocument()
   })
 })
 
@@ -168,7 +195,7 @@ describe('La barra fissa', () => {
   it('porta Assegna e Crea al coach', async () => {
     comeCoach()
     await attendi()
-    expect(screen.getByRole('button', { name: /Assegna/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Assegna$/ })).toBeInTheDocument()
     expect(screen.getByLabelText(/Crea un workout per questo atleta/)).toBeInTheDocument()
   })
 
@@ -199,7 +226,7 @@ describe('Quello che il redesign NON toglie', () => {
     comeCoach()
     await attendi()
     expect(screen.getByText('Oggi')).toBeInTheDocument()
-    expect(screen.getByText('Hyrox Strength #4')).toBeInTheDocument()
+    expect(fuoriDalCalendario('Hyrox Strength #4')).toHaveLength(1)
   })
 })
 

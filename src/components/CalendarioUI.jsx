@@ -16,6 +16,7 @@ import { CARD, CARTA_RIGA, CARTA_RIGA_BASE, LABEL, RIGA, VETRO, META } from '../
 import { corsia } from '../lib/categorie'
 import { coloreCategoria } from '../lib/colori'
 import { vibraScelta } from '../lib/aptica'
+import { useSwipeOrizzontale } from '../useSwipeOrizzontale'
 
 /**
  * Il verde di «fatto».
@@ -67,9 +68,22 @@ export function TestataCalendario({ mese, anno, onCerca, onNuovo }) {
 
 // ── La carta del mese ─────────────────────────────────────────────────────
 
-/** La carta che tiene insieme navigazione, legenda, griglia e sintesi. */
-export function CardMese({ children }) {
-  return <div className={`${CARD} p-4 pb-[18px]`}>{children}</div>
+/**
+ * La carta che tiene insieme navigazione, legenda, griglia e sintesi.
+ *
+ * Con `onPrecedente`/`onSuccessivo` un colpo di dito cambia mese (27/10/2026):
+ * a sinistra il mese dopo, a destra quello prima, come si sfoglia. Le frecce
+ * restano: lo swipe è una scorciatoia, non l'unica strada.
+ * `touch-action: pan-y` lascia al browser lo scorrimento verticale della
+ * pagina e a noi l'orizzontale.
+ */
+export function CardMese({ children, onPrecedente, onSuccessivo }) {
+  const swipe = useSwipeOrizzontale({ onSinistra: onSuccessivo, onDestra: onPrecedente })
+  return (
+    <div {...swipe} className={`${CARD} p-4 pb-[18px] ${onPrecedente || onSuccessivo ? 'touch-pan-y' : ''}`}>
+      {children}
+    </div>
+  )
 }
 
 /**

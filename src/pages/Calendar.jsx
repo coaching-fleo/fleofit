@@ -11,14 +11,13 @@ import FoglioSposta from '../components/FoglioSposta'
 import { puoSpostare, spostaAssegnazione, avvisaCoachSpostamento, nomeAtleta } from '../lib/spostaAllenamento'
 import { mostraErrore } from '../lib/alert'
 import { vibraSuccesso } from '../lib/aptica'
-import { categoriaDi, corsia } from '../lib/categorie'
-import { coloreCategoria } from '../lib/colori'
-import { metaWorkout, conteggiPerCorsia } from '../lib/rigaArchivio'
+import { categoriaDi } from '../lib/categorie'
+import { metaWorkout } from '../lib/rigaArchivio'
 import { rpeDichiarato } from '../lib/rpe'
 import {
   griglia, indicizzaPerGiorno, chiaveGiorno, segnoGiorno, riepilogoMese,
-  riepilogoGiorno, formattaVolume, etichettaSessione, etichettaGiorno,
-  etichettaMese, eMeseCorrente, eEvento,
+  riepilogoGiorno, etichettaSessione, etichettaGiorno, etichettaMese,
+  eMeseCorrente, eEvento, etichettaCella, vociLegenda, celleSintesi,
 } from '../lib/rigaCalendario'
 import {
   TestataCalendario, CardMese, NavMese, LegendaCorsie, GrigliaMese, CellaGiorno,
@@ -119,41 +118,8 @@ export default function Calendar() {
     [workouts, isAtleta]
   )
 
-  const corsie = useMemo(() => conteggiPerCorsia(workouts), [workouts])
-
-  // La legenda esiste solo per i colori che sono davvero nel mese, «Fatto»
-  // compreso.
-  //
-  // ⚠️ La regola è sui DATI, non sul ruolo: la voce compare se qualcosa è
-  // chiuso davvero. Un `isAtleta &&` in più qui sarebbe ridondante — la query
-  // del coach legge `workouts`, che non ha nessuna colonna di stato, quindi
-  // per lui il conteggio è zero comunque — e un guardiano che nessun caso può
-  // giustificare è il modo in cui la regola vera smette di essere leggibile
-  // (§9-quinquies, sul controllo di bordo tolto da `faseMoveUp`).
-  const vociLegenda = useMemo(() => {
-    const voci = corsie.map(({ categoria }) => ({
-      chiave: categoria,
-      etichetta: corsia(categoria).etichetta,
-      colore: coloreCategoria(categoria),
-    }))
-    // Le gare chiuse restano bianche (eEvento): da sole non accendono la voce.
-    if (workouts.some(w => w.status === 'completed' && !eEvento(w))) {
-      voci.push({ chiave: 'fatto', etichetta: 'Fatto', colore: '#22c55e' })
-    }
-    return voci
-  }, [corsie, workouts])
-
-  const volume = formattaVolume(sintesi.minuti, sintesi.ignote, sintesi.misurate)
-
-  const celleSintesi = [
-    isAtleta
-      ? { etichetta: 'Completati', valore: String(sintesi.completati), suffisso: `/${sintesi.totale}` }
-      : { etichetta: 'Programmati', valore: String(sintesi.totale) },
-    { etichetta: 'Volume', valore: volume.valore, suffisso: volume.unita },
-    sintesi.gara
-      ? { etichetta: 'Gara', valore: sintesi.gara.giorno, evidenzia: true }
-      : { etichetta: 'Gara', valore: '—' },
-  ]
+  const legenda = useMemo(() => vociLegenda(workouts), [workouts])
+  const celle = celleSintesi(sintesi, { soloCompletati: isAtleta })
 
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
@@ -215,14 +181,14 @@ export default function Calendar() {
       />
 
       <div className="mt-3.5">
-        <CardMese>
+        <CardMese onPrecedente={prevMonth} onSuccessivo={nextMonth}>
           <NavMese
             onPrecedente={prevMonth}
             onSuccessivo={nextMonth}
             onOggi={vaiAOggi}
             mostraOggi={!eMeseCorrente(currentMonth)}
           />
-          <LegendaCorsie voci={vociLegenda} />
+          <LegendaCorsie voci={legenda} />
           <GrigliaMese
             vuote={vuote}
             celle={giorni.map(giorno => {
@@ -241,7 +207,7 @@ export default function Calendar() {
               )
             })}
           />
-          <StrisciaMese celle={celleSintesi} />
+          <StrisciaMese celle={celle} />
         </CardMese>
       </div>
 
@@ -313,19 +279,3 @@ export default function Calendar() {
   )
 }
 
-/**
- * Cosa dice una cella a chi la legge con VoiceOver.
- *
- * ⚠️ Porta il numero VERO delle sessioni, non quello dei segmenti disegnati:
- * la barra si ferma a `MASSIMO_SEGMENTI`, e senza questa riga un giorno con
- * cinque allenamenti e uno con tre sarebbero indistinguibili anche a chi la
- * barra non la vede affatto.
- */
-function etichettaCella(giorno, segno, lista) {
-  const data = format(giorno, 'd MMMM', { locale: it })
-  if (segno.n === 0) return `${data}, nessun allenamento`
-  const fatti = lista.filter(w => w.status === 'completed').length
-  const parti = [`${segno.n} ${segno.n === 1 ? 'allenamento' : 'allenamenti'}`]
-  if (fatti > 0) parti.push(`${fatti} ${fatti === 1 ? 'completato' : 'completati'}`)
-  return `${data}, ${parti.join(', ')}`
-}

@@ -19,7 +19,8 @@ import { getNormalizedBlocks } from './timerSequence'
 import { riepilogoWorkout, minutiStimati, decimale } from './stimaWorkout'
 import { categoriaDi, corsia } from './categorie'
 import { riepilogoGym } from './gym'
-import { dataValida, riepilogoCorsa } from './rigaArchivio'
+import { dataValida, riepilogoCorsa, conteggiPerCorsia } from './rigaArchivio'
+import { coloreCategoria } from './colori'
 
 /**
  * Quanti segni entrano in una cella da 43px prima che diventino schegge.
@@ -241,3 +242,65 @@ export const etichettaMese = (mese) => {
 
 /** Il mese mostrato è quello corrente? Decide se «Oggi» serve a qualcosa. */
 export const eMeseCorrente = (mese, adesso = new Date()) => isSameMonth(mese, adesso)
+
+/**
+ * Cosa dice una cella a chi la legge con VoiceOver.
+ *
+ * ⚠️ Porta il numero VERO delle sessioni, non quello dei segmenti disegnati:
+ * la barra si ferma a `MASSIMO_SEGMENTI`, e senza questa riga un giorno con
+ * cinque allenamenti e uno con tre sarebbero indistinguibili anche a chi la
+ * barra non la vede affatto.
+ */
+export const etichettaCella = (giorno, segno, lista = []) => {
+  const data = format(giorno, 'd MMMM', { locale: it })
+  if (segno.n === 0) return `${data}, nessun allenamento`
+  const fatti = lista.filter(fatto).length
+  const parti = [`${segno.n} ${segno.n === 1 ? 'allenamento' : 'allenamenti'}`]
+  if (fatti > 0) parti.push(`${fatti} ${fatti === 1 ? 'completato' : 'completati'}`)
+  return `${data}, ${parti.join(', ')}`
+}
+
+/**
+ * Le voci della legenda: solo i colori che sono davvero nel mese, «Fatto»
+ * compreso.
+ *
+ * ⚠️ La regola è sui DATI, non sul ruolo: la voce «Fatto» compare se qualcosa
+ * è chiuso davvero. Il calendario del coach legge `workouts`, che non ha
+ * nessuna colonna di stato, quindi per lui il conteggio è zero comunque; un
+ * guardiano sul ruolo sarebbe ridondante, e un guardiano che nessun caso può
+ * giustificare è il modo in cui la regola vera smette di essere leggibile
+ * (§9-quinquies, sul controllo di bordo tolto da `faseMoveUp`).
+ * Le gare chiuse restano bianche (`eEvento`): da sole non accendono la voce.
+ */
+export const vociLegenda = (workouts = []) => {
+  const voci = conteggiPerCorsia(workouts).map(({ categoria }) => ({
+    chiave: categoria,
+    etichetta: corsia(categoria).etichetta,
+    colore: coloreCategoria(categoria),
+  }))
+  if (workouts.some(w => fatto(w) && !eEvento(w))) {
+    voci.push({ chiave: 'fatto', etichetta: 'Fatto', colore: '#22c55e' })
+  }
+  return voci
+}
+
+/**
+ * Le tre celle della fascia sotto la griglia.
+ *
+ * 🔴 `soloCompletati` deve essere lo stesso passato a `riepilogoMese`: è lui a
+ * tenere le prime due celle sullo STESSO orizzonte («14 di 18 fatti» e le ore
+ * di quei 14, oppure «18 programmati» e le ore di quei 18). Chi ha lo stato
+ * (l'atleta, la scheda atleta) conta i completati; il calendario del coach no.
+ */
+export const celleSintesi = (sintesi, { soloCompletati = false } = {}) => {
+  const volume = formattaVolume(sintesi.minuti, sintesi.ignote, sintesi.misurate)
+  return [
+    soloCompletati
+      ? { etichetta: 'Completati', valore: String(sintesi.completati), suffisso: `/${sintesi.totale}` }
+      : { etichetta: 'Programmati', valore: String(sintesi.totale) },
+    { etichetta: 'Volume', valore: volume.valore, suffisso: volume.unita },
+    sintesi.gara
+      ? { etichetta: 'Gara', valore: sintesi.gara.giorno, evidenzia: true }
+      : { etichetta: 'Gara', valore: '—' },
+  ]
+}

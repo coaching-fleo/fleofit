@@ -75,6 +75,7 @@ di anagrafica. Nessun dato è andato perso: i quattro grafici della tab
 Statistiche sono l'anello, le barre del carico, lo sparkline del volume e la
 barra delle fasce RPE. Il **calendario** (solo coach) è dentro «Storico
 allenamenti», con il toggle Elenco/Calendario dov'era.
+> ⚠️ Dal 27/10/2026 non più: ha una sezione sua (§9-calendario-atleta).
 
 **Non** sono stati ridisegnati `WorkoutEntryCard` e `TodayAthleteWorkoutCard`:
 l'artboard disegna righe compatte, ma quelle card portano la modifica della
@@ -196,3 +197,47 @@ compare (nessun errore a schermo).
   riga in `athletes`: tutte le rubriche (Athletes, Home coach, Analisi, report, messaggi,
   calendario team, ricerca, assegnazione) passano da `escludiDallaRubrica(righe, idUtente)`
   di `src/lib/constants.js`, che toglie anche `COACHING_ID`. Una rubrica nuova usa quella.
+
+
+## 9-calendario-atleta. Il calendario dell'atleta, una sezione sua (27/10/2026)
+
+Richiesta del committente: «sulla scheda atleta vedere un calendario dedicato
+con i workout assegnati al singolo atleta». C'era già, ma **non l'aveva mai
+trovato**: stava dentro «Storico allenamenti» (chiuso sul telefono), dietro un
+selettore Elenco/Calendario, ed era ancora coi pallini di prima del rework del
+calendario (§9-octodecies).
+
+### Cosa c'è ora
+- `src/components/CalendarioAtleta.jsx`: una **riga «Calendario» che si apre a
+  tendina** (`RigaApribile`, come storico e record), **chiusa all'apertura della
+  scheda**. Prima versione sempre aperta, corretta lo stesso giorno dal
+  committente: «non lo voglio sempre aperto». La riga porta il mese mostrato
+  («Ottobre 2026»), e il mese scelto resta se la si chiude e riapre. Dentro, gli
+  stessi pezzi della pagina Calendario (`CalendarioUI.jsx`): corsie per
+  categoria, verde quando è fatto, la fascia del mese, il giorno scelto con le
+  righe. Sul telefono sta fra «Oggi» e «Prossimi allenamenti»; sul desktop nella
+  colonna di sinistra, sotto le note.
+- **Qui lo stato c'è**: la fascia dice «Completati 11/16» e le righe «da fare» /
+  «fatto», come nel calendario dell'atleta — non «Programmati» come in quello
+  del coach, che legge `workouts` e lo stato non ce l'ha.
+- In fondo al giorno **«Assegna il 29 ottobre»** apre la finestra Assegna con
+  quella data già messa (`dataIniziale` di `AssignWorkoutModal`). Il bottone
+  «Assegna» della barra parte ancora da oggi.
+- Lo storico è tornato solo elenco: il selettore e il vecchio calendario sono
+  usciti da `AthleteDetail.jsx`, con il loro stato (`workoutView`,
+  `currentMonth`, `selectedDay`).
+
+### ⚠️ Da sapere prima di rimetterci mano
+1. **Nessuna lettura propria**: riceve lo storico che la scheda ha già caricato
+   (righe di `athlete_workouts` col workout annidato) e lo traduce nella forma
+   del calendario dell'atleta (`aw_id`, `status`, `notes`, `date` =
+   `completed_date`). Un'assegnazione col workout cancellato si salta.
+2. **L'atleta sul proprio profilo NON la vede**: ha la pagina Calendario nella
+   navbar, e due calendari sarebbero uno di troppo. C'è un test.
+3. `etichettaCella`, `vociLegenda` e `celleSintesi` sono usciti da
+   `Calendar.jsx` e stanno in `src/lib/rigaCalendario.js`: i due calendari li
+   condividono. `celleSintesi` vuole lo **stesso** `soloCompletati` passato a
+   `riepilogoMese`, o le due celle misurano due orizzonti diversi.
+4. Il calendario ripete in pagina testi che stanno anche altrove (il workout di
+   oggi, «Volume», «Assegna il …»): in `SchedaAtleta.test.jsx` i test delle
+   altre sezioni cercano con `fuoriDalCalendario`.

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { screen, within, waitFor } from '@testing-library/react'
+import { screen, within, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { montaPagina } from '../../test/montaPagina'
 
@@ -144,6 +144,24 @@ describe('Calendario — la fascia di sintesi', () => {
 })
 
 // ── La griglia ────────────────────────────────────────────────────────────
+
+describe('Calendario — lo swipe cambia mese', () => {
+  // 27/10/2026: sul telefono si sfoglia col dito. Il gesto è di `CardMese`
+  // (CardMeseSwipe.test.jsx): qui si prende che la pagina lo colleghi.
+  it('a sinistra il mese dopo, a destra quello prima', async () => {
+    montaCoach()
+    const carta = (await screen.findByRole('group', { name: 'Riepilogo del mese' })).parentElement
+    const scorri = (x0, x1) => {
+      fireEvent.touchStart(carta, { touches: [{ clientX: x0, clientY: 300 }] })
+      fireEvent.touchEnd(carta, { changedTouches: [{ clientX: x1, clientY: 300 }] })
+    }
+    scorri(300, 150)
+    expect(await screen.findByText('Settembre')).toBeInTheDocument()
+    scorri(100, 250)
+    scorri(100, 250)
+    expect(await screen.findByText('Luglio')).toBeInTheDocument()
+  })
+})
 
 describe('Calendario — la griglia del mese', () => {
   // ⚠️ La barra si ferma a tre segmenti, ma il numero VERO deve restare

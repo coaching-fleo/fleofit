@@ -6,9 +6,9 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
-import { ChevronLeft, User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, ChevronRight, Copy, Activity, CalendarDays, LayoutList, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
-import { vibraScelta, vibraSuccesso } from '../lib/aptica'
-import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, eachDayOfInterval, startOfMonth, endOfMonth, differenceInDays } from 'date-fns'
+import { User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, Copy, Activity, CalendarDays, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
+import { vibraSuccesso } from '../lib/aptica'
+import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import CustomDatePicker from '../components/CustomDatePicker'
@@ -26,7 +26,6 @@ import { leggiEstratti, estraiMancanti } from '../lib/noteEstratte'
 import { copertura } from '../lib/dalleNote'
 import { previsioneWorkout } from '../lib/previsione'
 import { RigaAvviso, AvvisoEsteso } from '../components/PrevisioneUI'
-import { coloreCategoria } from '../lib/colori'
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
          RIGA, TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
 import { TestataScheda, MenuScheda, IntestazioneSezione } from '../components/WorkoutDetailUI'
@@ -36,6 +35,7 @@ import {
   BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa, RigaCoach,
 } from '../components/SchedaAtletaUI'
 import FoglioCoach from '../components/FoglioCoach'
+import CalendarioAtleta from '../components/CalendarioAtleta'
 import { assegnaAtleta } from '../lib/coachAtleti'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
@@ -81,7 +81,6 @@ export default function AthleteDetail() {
   const [athlete, setAthlete] = useState(null)
   const [workouts, setWorkouts] = useState([])
   const [prs, setPrs] = useState([])
-  const [workoutView, setWorkoutView] = useState('list') // 'list' | 'calendar'
   // Le tre tab sono diventate due sezioni che si aprono in pagina, più un menu
   // per i comandi che erano tre bottoni in testata (CLAUDE.md §9-terdecies).
   const [menuAperto, setMenuAperto] = useState(false)
@@ -92,6 +91,9 @@ export default function AthleteDetail() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [socialModalType, setSocialModalType] = useState(null)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
+  // Il giorno da cui parte la finestra Assegna: quello scelto nel calendario,
+  // altrimenti oggi (null).
+  const [dataAssegnazione, setDataAssegnazione] = useState(null)
   const [prModalOpen, setPrModalOpen] = useState(false)
   const [editingPr, setEditingPr] = useState(null)
   const [alertInfo, setAlertInfo] = useState(null)
@@ -109,8 +111,6 @@ export default function AthleteDetail() {
   const [rpeNotes, setRpeNotes] = useState('')
   const [savingRpe, setSavingRpe] = useState(false)
 
-  const [currentMonth, setCurrentMonth] = useState(new Date())
-  const [selectedDay, setSelectedDay] = useState(new Date())
 
   // Gli estratti delle note (src/lib/noteEstratte.js) e lo stato dell'analisi:
   // 'caricamento' | 'assente' | 'pronto' | 'in_analisi' | 'sospesa' | 'errore'.
@@ -559,14 +559,6 @@ export default function AthleteDetail() {
     countdownDays = differenceInDays(parseISO(nextEvent.completed_date), startOfDay(new Date()))
   }
 
-  const days = eachDayOfInterval({
-    start: startOfMonth(currentMonth),
-    end: endOfMonth(currentMonth)
-  })
-  const firstDayOfMonth = startOfMonth(currentMonth).getDay()
-  const offset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1
-  const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
-  const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
 
   // L'anagrafica erano quattro celle da 22px — mezzo schermo per dati che si
   // inseriscono una volta e non si consultano. I campi vuoti spariscono invece
@@ -785,6 +777,17 @@ export default function AthleteDetail() {
       )}
     </>
   )
+  // Il calendario dell'atleta (27/10/2026): una sezione sua, sempre aperta,
+  // solo per chi programma. L'atleta sul proprio profilo ha la pagina
+  // Calendario nella navbar, e due calendari sarebbero uno di troppo.
+  const pCalendario = role !== 'athlete' && !isOwnProfile && (
+    <CalendarioAtleta
+      nome={athlete?.name}
+      assegnazioni={workouts}
+      onApri={(workoutId) => navigate(`/workout/${workoutId}?athlete_id=${id}`)}
+      onAssegna={(data) => { setDataAssegnazione(data); setAssignModalOpen(true) }}
+    />
+  )
   const pStoricoRecord = (
     <>
       {/* Le due tab che restavano diventano due righe che si aprono in pagina.
@@ -797,105 +800,7 @@ export default function AthleteDetail() {
 
         {storicoAperto && (
           <div className="flex flex-col gap-3 pb-1">
-            {role !== 'athlete' && (
-              <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333]">
-                <div
-                  className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
-                    workoutView === 'list' ? 'translate-x-0' : 'translate-x-full'
-                  }`}
-                />
-                <button
-                  onClick={() => { if (workoutView !== 'list') vibraScelta(); setWorkoutView('list') }}
-                  className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'list' ? 'text-white' : 'text-muted hover:text-gray-300'}`}
-                >
-                  <LayoutList size={18} /> Elenco
-                </button>
-                <button
-                  onClick={() => { if (workoutView !== 'calendar') vibraScelta(); setWorkoutView('calendar') }}
-                  className={`relative z-10 flex-1 flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 ${workoutView === 'calendar' ? 'text-brand' : 'text-muted hover:text-gray-300'}`}
-                >
-                  <CalendarDays size={18} /> Calendario
-                </button>
-              </div>
-            )}
-
-            {role !== 'athlete' && workoutView === 'calendar' ? (
-              <div className={`${CARD} flex flex-col p-5`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-white capitalize">
-                    {format(currentMonth, 'MMMM yyyy', { locale: it })}
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <button aria-label="Mese precedente" onClick={prevMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
-                      <ChevronLeft size={18} />
-                    </button>
-                    <button onClick={() => { setCurrentMonth(new Date()); setSelectedDay(new Date()); }} className="px-3 py-1.5 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white text-sm transition">
-                      Oggi
-                    </button>
-                    <button aria-label="Mese successivo" onClick={nextMonth} className="p-2 rounded-xl bg-[#222] hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition">
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-7 mb-2">
-                  {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => (
-                    <div key={i} className="text-center text-gray-400 text-xs font-medium py-1">{d}</div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-7 gap-1 mb-6">
-                  {Array.from({ length: offset }).map((_, i) => <div key={`empty-${i}`} />)}
-                  {days.map(day => {
-                    const dayStr = format(day, 'yyyy-MM-dd')
-                    const dayWorkoutsList = workouts.filter(w => w.completed_date === dayStr)
-                    const hasWorkout = dayWorkoutsList.length > 0
-                    const selected = format(selectedDay, 'yyyy-MM-dd') === dayStr
-                    const today = format(new Date(), 'yyyy-MM-dd') === dayStr
-
-                    return (
-                      <button
-                        key={day.toISOString()}
-                        onClick={() => setSelectedDay(day)}
-                        className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 rounded-xl aspect-square transition ${selected ? 'bg-brand' : today ? 'bg-[#2a2a2a]' : 'bg-[#111] hover:bg-[#2a2a2a] border border-[#222]'}`}
-                      >
-                        <span className={`text-sm font-medium leading-none ${selected ? 'text-black' : today ? 'text-brand' : 'text-white'}`}>
-                          {format(day, 'd')}
-                        </span>
-                        {hasWorkout && (
-                          <div className="flex gap-0.5 mt-1">
-                            {dayWorkoutsList.slice(0, 3).map((w, i) => {
-                              const cat = w.workouts?.sections?.category || 'Hyrox'
-                              const isCustom = cat === 'Custom' || cat === 'Autonomo' || w.workouts?.sections?.isAutonomous === true
-                              const isEvent = cat === 'Event' || w.workouts?.sections?.isEvent === true
-                              const color = coloreCategoria(isEvent ? 'Event' : (cat === 'Running' || cat === 'Gym' ? cat : (isCustom ? 'Custom' : 'Hyrox')))
-                              return <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selected ? '#000' : color }} />
-                            })}
-                          </div>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <div className="pt-4 border-t border-[#2a2a2a]">
-                  <h3 className="text-white font-semibold mb-3">
-                    {format(selectedDay, 'EEEE d MMMM', { locale: it })}
-                  </h3>
-                  {workouts.filter(w => w.completed_date === format(selectedDay, 'yyyy-MM-dd')).length === 0 ? (
-                    <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-6 text-center">
-                      <p className="text-gray-400 text-sm">Nessun workout in questa data.</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      {workouts.filter(w => w.completed_date === format(selectedDay, 'yyyy-MM-dd')).map(w => (
-                        <WorkoutEntryCard key={w.id} entry={w} onToggleStatus={toggleWorkoutStatus} onUpdateNote={updateWorkoutNote} onRemove={requestRemoveWorkout} navigate={navigate} athleteId={id} role={role} onEditAutonomous={openEditAutonomous} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : pastWorkoutsList.length > 0 ? (
+            {pastWorkoutsList.length > 0 ? (
               pastWorkoutsList.map(entry => (
                 <WorkoutEntryCard
                   key={entry.id}
@@ -1000,6 +905,7 @@ export default function AthleteDetail() {
               {pAndamento}
               {pBento}
               {pNote}
+              {pCalendario}
               {pStoricoRecord}
             </div>
             <div className="flex flex-col gap-[14px] min-w-0 sticky top-6">
@@ -1018,6 +924,7 @@ export default function AthleteDetail() {
           {pNote}
           {pObiettivo}
           {pOggi}
+          {pCalendario}
           {pProssimi}
           {pStoricoRecord}
           {pBarra}
@@ -1068,11 +975,13 @@ export default function AthleteDetail() {
           athleteId={id}
           atleta={athlete}
           storico={workouts}
-          onClose={() => setAssignModalOpen(false)}
+          dataIniziale={dataAssegnazione}
+          onClose={() => { setAssignModalOpen(false); setDataAssegnazione(null) }}
           onAssigned={() => {
             // Il foglio si chiude senza un alert: l'esito lo dice il dito.
             vibraSuccesso()
             setAssignModalOpen(false)
+            setDataAssegnazione(null)
             fetchAthleteData(true)
           }}
         />,
@@ -1873,13 +1782,13 @@ function WorkoutEntryCard({ entry, onToggleStatus, onUpdateNote, onRemove, navig
  * scheda li ha già caricati per l'eroe «come sta andando», e una `select` qui
  * dentro sarebbe la seconda copia degli stessi dati a due secondi di distanza.
  */
-function AssignWorkoutModal({ athleteId, atleta, storico, onClose, onAssigned }) {
+function AssignWorkoutModal({ athleteId, atleta, storico, dataIniziale, onClose, onAssigned }) {
   const [workouts, setWorkouts] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [assigning, setAssigning] = useState(false)
   const [alertInfo, setAlertInfo] = useState(null)
-  const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [assignDate, setAssignDate] = useState(() => dataIniziale || format(new Date(), 'yyyy-MM-dd'))
   const [selectedWorkouts, setSelectedWorkouts] = useState([])
   const [assignStep, setAssignStep] = useState(1)
   const [previewWorkout, setPreviewWorkout] = useState(null)
