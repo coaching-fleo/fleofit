@@ -92,6 +92,9 @@ async function gestisci(admin: Admin, a: AttivitaGarmin): Promise<'salvata' | 'c
 
   await salva(admin, coll.athleteId, a);
   if (!coll.collegatoAt) return 'salvata';
+  // Il backfill (prima del collegamento) non completa mai: si risparmiano due letture.
+  // L'autorità resta scegliAbbinamento, che fa lo stesso controllo.
+  if (Date.parse(a.inizio) < Date.parse(coll.collegatoAt)) return 'salvata';
 
   // Riletta: abbinamento e athlete_workout_id sono quelli veri della riga.
   const { data: riga, error: eRiga } = await admin.from('garmin_attivita')
@@ -126,10 +129,12 @@ async function gestisci(admin: Admin, a: AttivitaGarmin): Promise<'salvata' | 'c
   if (eUp) throw new Error(`completamento: ${eUp.message}`);
   if (!toccate?.length) return 'salvata';
 
-  const { error: eAbb } = await admin.from('garmin_attivita')
+  const { data: abbinate, error: eAbb } = await admin.from('garmin_attivita')
     .update({ athlete_workout_id: scelto, abbinamento: 'auto' })
-    .eq('garmin_id', a.garmin_id).is('athlete_workout_id', null);
+    .eq('garmin_id', a.garmin_id).is('athlete_workout_id', null).is('abbinamento', null)
+    .select('garmin_id');
   if (eAbb) console.error(`garmin-webhook: ${scelto} completato ma abbinamento non salvato:`, eAbb.message);
+  else if (!abbinate?.length) console.warn(`garmin-webhook: attività ${a.garmin_id} già abbinata altrove, workout ${scelto} completato senza attività collegata`);
   console.log(`garmin-webhook: ${scelto} completato da un'attività Garmin`);
 
   const assegnazione = assegnazioni.find((r) => r.id === scelto);
