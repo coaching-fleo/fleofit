@@ -162,6 +162,37 @@ peso e composizione corporea, aggiunta la voce «Cosa mandiamo a Garmin», in it
 
 ---
 
+## Fase 1 · formato verificato (28/10/2026)
+
+Letto dalla documentazione Swagger del portale (`apis.garmin.com/tools/apiDocs`, Wellness API,
+server `https://apis.garmin.com/wellness-api`), con la sessione del committente.
+
+- **Riepilogo di un'attività** = schema `ClientActivity`. Campi che usiamo: `userId`,
+  `summaryId` (stringa, è l'id che salviamo in `garmin_id`), `activityId`, `activityType`,
+  `startTimeInSeconds` (epoch UTC), `startTimeOffsetInSeconds` (scostamento locale),
+  `durationInSeconds`, `distanceInMeters`, `averageHeartRateInBeatsPerMinute`,
+  `maxHeartRateInBeatsPerMinute`, `averageSpeedInMetersPerSecond`,
+  `averagePaceInMinutesPerKilometer`, `totalElevationGainInMeters`, `activeKilocalories`,
+  `deviceName`, `manual`. **Non** salviamo `startingLatitude/LongitudeInDegree` (posizione)
+  né `activityName`/`activityDescription` (testo libero dell'atleta).
+- **Due tipi di riepilogo**: `activities` (dall'orologio) e `manuallyUpdatedActivities`
+  (create o modificate a mano su Connect, `manual = true`). Nel portale, *Endpoint
+  Configuration*, ci sono «ACTIVITY - Activities» e «ACTIVITY - Manually Updated Activities».
+  ⚠️ DA VERIFICARE al primo Push vero: che il corpo sia `{ "activities": [...] }` /
+  `{ "manuallyUpdatedActivities": [...] }` (formato standard dei Push Garmin, non scritto nello
+  Swagger).
+- ⚠️ DA VERIFICARE: **l'elenco dei valori di `activityType`** non è nello Swagger (è una
+  stringa senza enum). I valori della tabella di `abbinaGarmin.ts` sono quelli noti di Garmin
+  (`RUNNING`, `TREADMILL_RUNNING`, `TRAIL_RUNNING`, `TRACK_RUNNING`, `INDOOR_CARDIO`, `HIIT`,
+  `STRENGTH_TRAINING`, `INDOOR_ROWING`, `OTHER`): al primo test si legge `tipo` in
+  `garmin_attivita` e si corregge la tabella. Lo strumento *Data Viewer* del portale mostra i
+  riepiloghi arrivati; *Data Generator* e *Summary Resender* servono per le prove.
+- **Backfill**: `GET /rest/backfill/activities?summaryStartTimeInSeconds=…&summaryEndTimeInSeconds=…`
+  (epoch UTC, tutti e due obbligatori), risposta **202**: i dati arrivano poi col Push, non
+  nella risposta. Esistono gli stessi backfill per `dailies`, `sleeps`, `hrv` (Fase 2).
+- Payload di esempio **inventato** (nessun dato vero) per i test:
+  `src/lib/__tests__/fixtures/garminAttivita.json`.
+
 ## Fase 3 · Corsa all'orologio
 > Scritta il 28/10/2026. Piano: `docs/superpowers/plans/2026-10-28-garmin-fase-3-corsa.md`,
 > spec: `docs/superpowers/specs/2026-10-27-garmin-design.md` §5, §7, §9. ✍️ **Codice scritto, in

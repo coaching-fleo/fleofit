@@ -1,0 +1,56 @@
+{
+  "activities": [
+    {
+      "userId": "utente-garmin-finto-1",
+      "summaryId": "1000000001",
+      "activityId": 1000000001,
+      "activityName": "Corsa finta",
+      "durationInSeconds": 2520,
+      "startTimeInSeconds": 1793212200,
+      "startTimeOffsetInSeconds": 3600,
+      "activityType": "RUNNING",
+      "averageHeartRateInBeatsPerMinute": 152,
+      "maxHeartRateInBeatsPerMinute": 171,
+      "averageSpeedInMetersPerSecond": 3.25,
+      "averagePaceInMinutesPerKilometer": 5.13,
+      "activeKilocalories": 540,
+      "deviceName": "forerunner 265",
+      "distanceInMeters": 8190.5,
+      "totalElevationGainInMeters": 42.0,
+      "startingLatitudeInDegree": 45.0,
+      "startingLongitudeInDegree": 7.6,
+      "steps": 7400
+    },
+    {
+      "userId": "utente-garmin-finto-1",
+      "summaryId": "1000000002",
+      "activityId": 1000000002,
+      "durationInSeconds": 3300,
+      "startTimeInSeconds": 1793300400,
+      "startTimeOffsetInSeconds": 3600,
+      "activityType": "STRENGTH_TRAINING",
+      "averageHeartRateInBeatsPerMinute": 118,
+      "activeKilocalories": 310,
+      "deviceName": "forerunner 265"
+    },
+    {
+      "summaryId": "1000000003",
+      "durationInSeconds": 600,
+      "startTimeInSeconds": 1793300400,
+      "activityType": "RUNNING"
+    }
+  ],
+  "manuallyUpdatedActivities": [
+    {
+      "userId": "utente-garmin-finto-2",
+      "summaryId": "1000000004",
+      "activityId": 1000000004,
+      "durationInSeconds": 1800,
+      "startTimeInSeconds": 1793230000,
+      "startTimeOffsetInSeconds": 3600,
+      "activityType": "TREADMILL_RUNNING",
+      "distanceInMeters": 5000,
+      "manual": true
+    }
+  ]
+}
