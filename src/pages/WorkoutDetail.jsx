@@ -65,7 +65,7 @@ import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { recapStoria } from '../lib/recapStoria'
 import { riepilogoGym, righeTestoGym, gruppiPerElenco } from '../lib/gym'
 import { etichetteStazioni } from '../lib/stazioniEmom'
-import { haIncremento, testoAumento, testoTimeCap } from '../lib/incremento'
+import { haIncremento, testoAumento, testoForTime, giriForTime } from '../lib/incremento'
 import { daChiedere, leggiIgnorate, tempoDallaNota, senzaRisultato, conRisultatoDi } from '../lib/risultatoGara'
 // «Com'è andata?» sulle gare HYROX già corse: pigro, perché compare solo lì
 // e il chunk della scheda ha un peso da rispettare (CLAUDE.md §2).
@@ -151,8 +151,9 @@ const getBlockTitle = (block) => {
      return dur.includes('min') ? `AMRAP · ${dur}${conIncremento}` : `AMRAP · ${dur} min${conIncremento}`
   }
   if (block.type === 'For Time') {
-    // Il For Time è a time cap (dal 15/10/2026); i vecchi restano a round.
-    const tempo = block.params?.timecap ? testoTimeCap(block) : `${block.params?.rounds || '1'} rounds`
+    // Il For Time è a time cap (dal 15/10/2026), con i suoi giri se ne ha
+    // (dal 28/10/2026); i vecchi restano a round.
+    const tempo = block.params?.timecap ? testoForTime(block) : `${block.params?.rounds || '1'} rounds`
     return `For Time · ${tempo}${haIncremento(block) ? ' · con incremento' : ''}`
   }
     if (block.type === 'Interval') return `Interval · ${block.params?.rounds || '1'} rounds`
@@ -1766,7 +1767,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 key={block.id || idx}
                 tipo={block.type}
                 hint={blockHint(block.type)}
-                sottotitolo={sottotitoloBlocco(block) || (
+                giri={giriForTime(block)}
+                sottotitolo={sottotitoloBlocco(block, { senzaGiri: true }) || (
                   ['WarmUp', 'Rest'].includes(block.type) ? (block.notes || '') : ''
                 )}
                 durata={mmss(durataBlocco(block))}
@@ -2108,7 +2110,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 if (b.type === 'EMOM') shortTitle = `EMOM ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
                 else if (b.type === 'AMRAP') shortTitle = `AMRAP ${b.params?.duration || ''}`;
                 else if (b.type === 'ON/OFF') shortTitle = `ON/OFF ${b.params?.rounds ? b.params.rounds + 'x ' : ''}• ${b.params?.on || ''}/${b.params?.off || ''}`;
-                else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.timecap ? '• ' + b.params.timecap : (b.params?.rounds ? b.params.rounds + 'x' : '')}`;
+                else if (b.type === 'For Time') shortTitle = `FOR TIME ${b.params?.timecap ? (giriForTime(b) ? `• ${giriForTime(b)}x ` : '') + '• ' + b.params.timecap : (b.params?.rounds ? b.params.rounds + 'x' : '')}`;
                                 else if (b.type === 'Interval') shortTitle = `INTERVAL ${b.params?.rounds ? b.params.rounds + 'x' : ''}`;
 
                 else if (b.type === 'WarmUp') shortTitle = `WARM UP ${b.params?.duration ? '• ' + b.params.duration : ''}`;

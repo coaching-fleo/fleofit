@@ -17,7 +17,10 @@
 //     dell'esercizio (metri se è in `meters`, ripetizioni se è in `reps`);
 //     vuoto o assente = resta uguale;
 //   - il tempo è quello del blocco: `params.timecap` del For Time (che dal
-//     15/10/2026 è SEMPRE a time cap, senza round), `duration` dell'AMRAP.
+//     15/10/2026 è SEMPRE a time cap), `duration` dell'AMRAP.
+//   ⚠️ Dal 28/10/2026 un For Time SENZA incremento può avere anche i giri
+//     (`params.rounds`, «4 giri entro 20:00»): con l'incremento no, lì i giri
+//     li decide il tempo (`giriForTime`).
 // `exercises` resta il PRIMO giro: le versioni 1.2.0 e 1.2.1 lo mostrano
 // com'è, senza sapere dell'aumento.
 
@@ -93,12 +96,12 @@ const senzaCampo = (oggetto, chiave) => {
 }
 
 /**
- * Accende l'incremento. Un For Time vecchio, ancora a round, diventa a tempo:
- * prende il time cap e perde i round, perché i giri li decide il tempo.
+ * Accende l'incremento. Un For Time perde i giri, perché li decide il tempo, e
+ * se è uno vecchio, ancora a round, prende il time cap.
  */
 export const attivaIncremento = (block) => {
-  const params = block.type === 'For Time' && !pieno(block.params?.timecap)
-    ? { ...senzaCampo(block.params || {}, 'rounds'), timecap: TIME_CAP_PREDEFINITO }
+  const params = block.type === 'For Time'
+    ? { ...senzaCampo(block.params || {}, 'rounds'), timecap: pieno(block.params?.timecap) ? block.params.timecap : TIME_CAP_PREDEFINITO }
     : block.params
   return { ...block, incremento: true, params }
 }
@@ -113,3 +116,23 @@ export const disattivaIncremento = (block) => senzaCampo(block, 'incremento')
 
 /** «time cap 20:00», per i riepiloghi del For Time. */
 export const testoTimeCap = (block) => `time cap ${block?.params?.timecap || TIME_CAP_PREDEFINITO}`
+
+/**
+ * Quante volte un For Time a time cap ripete i suoi esercizi (28/10/2026):
+ * «4 giri entro 20:00». Richiesta del committente: il For Time resta a time
+ * cap, ma il coach vuole poter dire quante volte si fa la lista. `null` quando
+ * non c'è niente da dire: un giro solo, un For Time vecchio senza time cap
+ * (lì `rounds` era tutto il blocco, e lo dice il riepilogo di sempre), o con
+ * l'incremento, dove i giri li decide il tempo.
+ */
+export const giriForTime = (block) => {
+  if (block?.type !== 'For Time' || haIncremento(block) || !pieno(block.params?.timecap)) return null
+  const n = parseInt(block.params?.rounds, 10)
+  return Number.isFinite(n) && n > 1 ? n : null
+}
+
+/** «4 giri · time cap 20:00», o solo «time cap 20:00» con un giro. */
+export const testoForTime = (block) => {
+  const giri = giriForTime(block)
+  return giri ? `${giri} giri · ${testoTimeCap(block)}` : testoTimeCap(block)
+}

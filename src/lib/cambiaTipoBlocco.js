@@ -33,7 +33,7 @@ const PARAMETRI = {
   'ON/OFF': ['on', 'off', 'rounds'],
   EMOM: ['interval', 'rounds'],
   AMRAP: ['duration'],
-  'For Time': ['timecap'],
+  'For Time': ['timecap', 'rounds'],
   Interval: ['rounds'],
   'Cash In': ['rounds', 'rest'],
   'Cash Out': ['rounds', 'rest'],
@@ -87,6 +87,10 @@ export const cambiaTipoBlocco = (block, tipo) => {
   if (tipo === 'For Time' && !params.timecap) {
     params.timecap = (block.type === 'AMRAP' && block.params?.duration) || TIME_CAP_PREDEFINITO
   }
+  // I giri del For Time (28/10/2026) sono giri della lista, come quelli di un
+  // ON/OFF o di un Cash In; i round di un EMOM sono MINUTI, e 10 minuti non
+  // diventano 10 giri. Con l'incremento i giri li decide il tempo.
+  if (tipo === 'For Time' && (block.type === 'EMOM' || haIncremento(block))) delete params.rounds
   // L'incremento a ogni giro passa fra For Time e AMRAP; negli altri blocchi
   // non esiste: via la spia e gli aumenti.
   if (haIncremento(block) && TIPI_CON_INCREMENTO.includes(tipo)) {

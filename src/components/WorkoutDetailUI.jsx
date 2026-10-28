@@ -17,7 +17,7 @@
 // lettura la stessa cosa che ha visto in scrittura.
 
 import { createPortal } from 'react-dom'
-import { ChevronLeft, MoreHorizontal, ChevronDown, Activity, Check, User, ThumbsUp, ThumbsDown, Minus } from 'lucide-react'
+import { ChevronLeft, MoreHorizontal, ChevronDown, Activity, Check, User, ThumbsUp, ThumbsDown, Minus, Repeat } from 'lucide-react'
 import { CARD, LABEL, RIGA, VETRO } from '../lib/stiliCard'
 import { useBottomSheet } from '../useBottomSheet'
 import { SpinaBlocco, DurataBlocco, NumeroEsercizio } from './CreaWorkoutUI'
@@ -205,8 +205,14 @@ export function AvvisoRiscaldamento() {
  * Su 393px, accanto al nome e alla durata, «Blocco di apertura» finiva
  * troncata a «Blocco di apert…» — ed è la risposta al rilievo 3.2.1(viii) di
  * Apple (CLAUDE.md §9-ter), non un ornamento.
+ *
+ * `giri` (For Time, 28/10/2026): quante volte si ripete la lista. Stava in
+ * piccolo nel sottotitolo e non si notava. Ora è la LINGUETTA di una
+ * cartellina, «4x», attaccata in alto a sinistra della card: stesso fondo e
+ * stesso bordo, così si legge che i giri sono DEL blocco (richiesta del
+ * committente: «proprio un file folder label»).
  */
-export function BloccoScheda({ tipo, hint, sottotitolo, durata, lavoro, apribile, aperto, onToggle, children }) {
+export function BloccoScheda({ tipo, hint, sottotitolo, durata, lavoro, apribile, aperto, onToggle, giri, children }) {
   const intestazione = (
     <>
       <SpinaBlocco tipo={tipo} aperto={false} lavoro={lavoro} />
@@ -228,8 +234,8 @@ export function BloccoScheda({ tipo, hint, sottotitolo, durata, lavoro, apribile
     </>
   )
 
-  return (
-    <div className={`${CARD} overflow-hidden`}>
+  const card = (
+    <div className={`${CARD} overflow-hidden ${giri ? 'rounded-tl-none' : ''}`}>
       {apribile ? (
         <button type="button" onClick={onToggle} aria-expanded={aperto}
           className="relative w-full flex items-center gap-[11px] pl-[14px] pr-[13px] py-3 text-left
@@ -242,6 +248,22 @@ export function BloccoScheda({ tipo, hint, sottotitolo, durata, lavoro, apribile
       {apribile && aperto && (
         <div className="px-3 pb-3 pl-[14px] flex flex-col gap-[7px]">{children}</div>
       )}
+    </div>
+  )
+
+  if (!giri) return card
+  // ⚠️ La linguetta scende di 1px sopra la card (`-mb-px`, `z-[1]`) e senza
+  // bordo sotto: copre la hairline della card e le due superfici diventano
+  // una. Il fondo è il colore ALTO del gradiente di CARD_BASE.
+  return (
+    <div className="flex flex-col items-start">
+      <div className="relative z-[1] -mb-px flex items-center gap-1.5 h-[30px] pl-3 pr-3.5 rounded-t-[13px]
+                      bg-[#1c1c1f] border border-b-0 border-white/[.07] text-brand"
+        data-giri-blocco aria-label={`Ripeti ${giri} volte`}>
+        <Repeat size={14} strokeWidth={3} aria-hidden="true" />
+        <span className="text-[15px] font-black tracking-[-.01em] tabular-nums">{giri}x</span>
+      </div>
+      <div className="self-stretch">{card}</div>
     </div>
   )
 }

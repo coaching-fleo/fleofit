@@ -8,7 +8,7 @@
 
 import { ERGOMETERS } from './constants'
 import { fasiEmom } from './stazioniEmom'
-import { haIncremento, testoAumento } from './incremento'
+import { haIncremento, testoAumento, giriForTime } from './incremento'
 
 const isErgo = (name) => ERGOMETERS.includes(name)
 
@@ -145,9 +145,11 @@ export const buildTimerSequence = (workout) => {
       } else if (b.type === 'For Time' && parseDuration(b.params?.timecap || '0') > 0) {
         // Il For Time è a time cap (dal 15/10/2026): una fase sola, a
         // scendere, e i giri sono quanti se ne fanno. I vecchi, a round,
-        // restano il cronometro qui sotto.
+        // restano il cronometro qui sotto. I giri (dal 28/10/2026) li conta
+        // l'atleta: la fase resta una, e il sottotitolo dice quanti sono.
         const sec = parseDuration(b.params.timecap);
-        seq.push({ id: `blk-${i}-1`, title: 'FOR TIME', subtitle: haIncremento(b) ? 'Con incremento' : 'Time cap', duration: sec, theme: 'base', type: 'work', task: conIncremento(b) || exNames || 'FOR TIME' });
+        const giri = giriForTime(b);
+        seq.push({ id: `blk-${i}-1`, title: 'FOR TIME', subtitle: haIncremento(b) ? 'Con incremento' : giri ? `${giri} giri · Time cap` : 'Time cap', duration: sec, theme: 'base', type: 'work', task: conIncremento(b) || exNames || 'FOR TIME' });
       } else if (b.type === 'For Time' || b.type === 'Interval') {
         const rounds = parseInt(b.params?.rounds, 10) || 1;
         const sec = parseDuration(b.params?.timecap || '0'); 

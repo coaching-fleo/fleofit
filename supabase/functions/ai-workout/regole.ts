@@ -124,8 +124,11 @@ ON/OFF: "rounds" sono i GIRI DEL CIRCUITO, non gli intervalli. Ogni giro fa TUTT
 del blocco, un ON + un OFF ciascuno: con 7 esercizi e "rounds": "4" sono 28 intervalli.
 Esempio: "50 on 10 off, 4 giri di 7 esercizi" → "params": { "on": "0:50", "off": "0:10", "rounds": "4" }.
 
-FOR TIME: è sempre a TEMPO (time cap): si dice solo quanti minuti si lavora, MAI i round.
-"params": { "timecap": "20:00" } (stringa m:ss). Se il tempo non è detto, usa "20:00". Non scrivere "rounds".
+FOR TIME: è sempre a TEMPO (time cap): "params": { "timecap": "20:00" } (stringa m:ss). Se il tempo
+non è detto, usa "20:00". Se la richiesta dice quante volte ripetere gli esercizi ("4 giri", "3 rounds
+for time", "RFT x5"), aggiungi "rounds" = quel numero: "params": { "timecap": "20:00", "rounds": "4" },
+e scrivi gli esercizi UNA volta sola. Senza un numero di giri detto, non scrivere "rounds".
+Con "incremento" non scrivere mai "rounds".
 
 INCREMENTO A OGNI GIRO (solo "For Time" e "AMRAP"): si lavora per un tempo fisso; finito il giro
 di esercizi si ricomincia dal primo con le quantità aumentate, fino allo scadere del tempo

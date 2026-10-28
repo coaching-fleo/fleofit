@@ -103,6 +103,18 @@ describe('blocchiPerIA', () => {
   })
 })
 
+describe('i giri del For Time dall IA (28/10/2026)', () => {
+  it('«4 giri for time»: i giri restano accanto al time cap', () => {
+    const [b] = preparaBlocchiIA([{ type: 'For Time', params: { timecap: '20:00', rounds: 4 }, exercises: [{ name: 'Burpees', reps: '10' }] }])
+    expect(b.params).toEqual({ timecap: '20:00', rounds: '4' })
+  })
+
+  it('un giro solo non si scrive', () => {
+    const [b] = preparaBlocchiIA([{ type: 'For Time', params: { timecap: '20:00', rounds: '1' }, exercises: [] }])
+    expect(b.params).toEqual({ timecap: '20:00' })
+  })
+})
+
 describe('l incremento a ogni giro dall IA (src/lib/incremento.js)', () => {
   it('tiene il primo giro con gli aumenti, e il For Time diventa a tempo', () => {
     const [b] = preparaBlocchiIA([{

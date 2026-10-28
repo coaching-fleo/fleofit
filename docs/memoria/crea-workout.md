@@ -1707,3 +1707,35 @@ fallire rompendo il codice che copre. Provato nell'ambiente di prova su schermo 
 ⏳ **Da provare sul telefono** (iPhone e Android): i tre fogli, la pagina, il tasto indietro di
 Android su menu e fogli nuovi.
 
+
+
+## I giri del For Time (28/10/2026)
+
+Richiesta del committente: «il for time è praticamente un timecap però io voglio
+dire che gli esercizi devo ripeterli 4 volte», e che si capisca a colpo d'occhio.
+Il For Time resta **a time cap**; accanto c'è **«Giri»** (`params.rounds`), solo
+se l'incremento è spento (lì i giri li decide il tempo).
+
+- `giriForTime` / `testoForTime` in `src/lib/incremento.js`: `null` con un giro,
+  con l'incremento o su un For Time vecchio senza time cap. «4 giri · time cap 20:00».
+- Builder (`parametriDelBlocco`): pillole «Time cap» e «Giri» (rapidi 2–5). Con
+  più di un giro, sopra la lista una pillola gialla «↻ ×4 · Ripeti questi
+  esercizi 4 volte» (tocca e apre il foglio dei giri) e la lista prende una
+  parentesi gialla a sinistra.
+- **Scheda** (`BloccoScheda`, prop `giri`): una **linguetta da cartellina**
+  «↻ 4x» attaccata in alto a sinistra della card (stesso fondo e bordo, angolo
+  della card squadrato sotto). Richiesta del committente: nel sottotitolo «era
+  scritto troppo piccolo»; una prima pillola gialla «4 GIRI» sopra il nome è
+  stata rifiutata — «4x», e «proprio un file folder label». Lì il sottotitolo non li ripete
+  (`sottotitoloBlocco(block, { senzaGiri: true })`).
+- Riga del blocco, titoletti di AthleteDetail/WorkoutDetail e timer
+  (sottotitolo «4 giri · Time cap») lo dicono; il timer resta **una fase sola**
+  lunga il time cap.
+- `durataBlocco` = il time cap; `giriBlocco` = i giri (il conteggio dei
+  movimenti del report li moltiplica, ed è giusto).
+- `attivaIncremento` toglie i giri; `cambiaTipoBlocco` li porta da Cash In/Out,
+  Interval, ON/OFF (giri della lista) ma **non da un EMOM** (lì sono minuti).
+- IA: `preparaBlocchiIA` tiene `rounds` > 1 senza incremento; `regole.ts`
+  aggiornato. ✅ `ai-workout` ripubblicata il 28/10/2026: versione 32 (verify_jwt attivo).
+- ⚠️ Le app già sugli Store leggono un For Time con `timecap` come prima: il
+  numero di giri lì non compare.

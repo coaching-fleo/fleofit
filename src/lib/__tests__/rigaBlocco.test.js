@@ -112,6 +112,16 @@ describe('le specifiche di un esercizio', () => {
 
 describe('l incremento a ogni giro nel sottotitolo (src/lib/incremento.js)', () => {
   const exercises = [{ name: 'Burpees', reps: '10', aumento: '5' }, { name: 'Row', meters: '200m' }]
+  it('For Time con i giri: quante volte, entro quanto', () => {
+    expect(sottotitoloBlocco({ type: 'For Time', params: { rounds: '4', timecap: '20:00' }, exercises }))
+      .toContain('4 giri · time cap 20:00')
+  })
+
+  it('nella scheda i giri hanno un etichetta loro: il sottotitolo non li ripete', () => {
+    expect(sottotitoloBlocco({ type: 'For Time', params: { rounds: '4', timecap: '20:00' }, exercises }, { senzaGiri: true }))
+      .toBe('2 esercizi · time cap 20:00')
+  })
+
   it('For Time: il time cap al posto dei round', () => {
     expect(sottotitoloBlocco({ type: 'For Time', incremento: true, params: { rounds: '1', timecap: '15:00' }, exercises }))
       .toBe('2 esercizi · time cap 15:00 · con incremento')

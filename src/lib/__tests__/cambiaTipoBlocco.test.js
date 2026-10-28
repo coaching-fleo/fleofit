@@ -56,6 +56,15 @@ describe('«Cambia tipo di blocco»', () => {
   })
 })
 
+describe('i giri del For Time (28/10/2026)', () => {
+  it('da un circuito a giri li porta, da un EMOM no (lì sono minuti)', () => {
+    const cash = { id: 1, type: 'Cash In', params: { rounds: '3', rest: '1:00' }, exercises: [ex('Burpees')] }
+    expect(cambiaTipoBlocco(cash, 'For Time').params).toEqual({ rounds: '3', timecap: '20:00' })
+    const emom = { id: 1, type: 'EMOM', params: { interval: '1:00', rounds: '10' }, exercises: [ex('Burpees')] }
+    expect(cambiaTipoBlocco(emom, 'For Time').params).toEqual({ timecap: '20:00' })
+  })
+})
+
 describe('«Cambia tipo di blocco» con l incremento a ogni giro (src/lib/incremento.js)', () => {
   const amrap = () => ({
     id: 1, type: 'AMRAP', incremento: true, params: { duration: '12:00' },

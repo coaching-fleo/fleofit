@@ -88,10 +88,14 @@ export function preparaBlocchiIA(blocchi) {
         }),
       }
       delete blocco.incremento
-      // Il For Time è a time cap, senza round (dal 15/10/2026).
+      // Il For Time è a time cap (dal 15/10/2026); i giri restano se ce ne
+      // sono più d'uno e non c'è l'incremento, dove li decide il tempo
+      // (dal 28/10/2026).
       if (b.type === 'For Time') {
         const params = { ...(b.params || {}), timecap: b.params?.timecap || TIME_CAP_PREDEFINITO }
-        delete params.rounds
+        const giri = parseInt(params.rounds, 10)
+        if (conIncremento || !(giri > 1)) delete params.rounds
+        else params.rounds = String(giri)
         blocco.params = params
       }
       return conIncremento ? { ...blocco, incremento: true } : blocco

@@ -11,7 +11,7 @@
 // sommare. Chi vuole la durata usa `durataBlocco` di src/lib/stimaWorkout.js,
 // che è l'unico punto che sa stimarla.
 
-import { haIncremento, testoTimeCap } from './incremento'
+import { haIncremento, testoForTime, testoTimeCap } from './incremento'
 
 /** «1 esercizio» / «3 esercizi». Zero non si scrive: un blocco vuoto lo dice da sé. */
 const esercizi = (n) => (n === 1 ? '1 esercizio' : `${n} esercizi`)
@@ -43,7 +43,7 @@ const pieno = (v) => v != null && v !== '' && v !== '-'
  * perché gli esercizi li elenca subito sotto — ed è la ragione per cui questa
  * funzione è separata invece di essere il corpo di quella.
  */
-export const parametriBlocco = (block) => {
+export const parametriBlocco = (block, { senzaGiri = false } = {}) => {
   if (!block) return null
   const p = block.params || {}
 
@@ -62,9 +62,11 @@ export const parametriBlocco = (block) => {
     // suo tempo, e i giri sono quanti se ne fanno.
     case 'AMRAP':
       return haIncremento(block) ? `in ${p.duration || '10:00'} · con incremento` : `in ${p.duration || '10:00'}`
-    // Il For Time è a time cap (dal 15/10/2026); i vecchi restano a round.
+    // Il For Time è a time cap (dal 15/10/2026), con i suoi giri se ne ha
+    // (dal 28/10/2026); i vecchi restano a round.
     case 'For Time': {
-      const tempo = pieno(p.timecap) ? testoTimeCap(block) : round(intero(p.rounds, 1))
+      // `senzaGiri`: la scheda i giri li dice con un'etichetta sua, grande.
+      const tempo = pieno(p.timecap) ? (senzaGiri ? testoTimeCap(block) : testoForTime(block)) : round(intero(p.rounds, 1))
       return haIncremento(block) ? `${tempo} · con incremento` : tempo
     }
     case 'Interval':
@@ -90,12 +92,12 @@ export const parametriBlocco = (block) => {
  * durata, che nella scheda sta già a destra del nome. Ripeterla qui darebbe
  * due volte lo stesso numero sulla stessa riga.
  */
-export const sottotitoloBlocco = (block) => {
+export const sottotitoloBlocco = (block, opzioni) => {
   if (!block) return ''
   if (block.type === 'WarmUp' || block.type === 'Rest') return ''
 
   const n = (block.exercises || []).length
-  const parametri = parametriBlocco(block)
+  const parametri = parametriBlocco(block, opzioni)
   // Di un blocco che non conosciamo resta il solo conteggio — e su zero non si
   // scrive niente, perché un blocco vuoto e sconosciuto non ha una riga.
   if (parametri === null) return n > 0 ? esercizi(n) : ''

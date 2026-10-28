@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback, memo, lazy, Suspense
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText, Repeat2, TrendingUp, Minus, BookmarkPlus } from 'lucide-react'
+import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText, Repeat2, Repeat, TrendingUp, Minus, BookmarkPlus } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
@@ -40,7 +40,7 @@ import { scriviJson } from '../lib/offlineQueue'
 import { preparaBlocchiIA } from '../lib/blocchiIA'
 import { iaDellaCategoria, haGiaContenuto } from '../lib/iaCategorie'
 import { intervalliDi, etichetteStazioni, MASSIMO_INTERVALLI } from '../lib/stazioniEmom'
-import { TIPI_CON_INCREMENTO, haIncremento, attivaIncremento, disattivaIncremento, campoIncremento, aumentoDi, testoAumento, esercizioAlGiro, giriDiEsempio, testoTimeCap, TIME_CAP_PREDEFINITO } from '../lib/incremento'
+import { TIPI_CON_INCREMENTO, haIncremento, attivaIncremento, disattivaIncremento, campoIncremento, aumentoDi, testoAumento, esercizioAlGiro, giriDiEsempio, testoForTime, giriForTime, TIME_CAP_PREDEFINITO } from '../lib/incremento'
 import { parseDuration } from '../lib/timerSequence'
 import { riepilogoGym } from '../lib/gym'
 import { partiRipetuta, campiVecchiRipetuta, intensitaRipetuta, etichettaParte, MAX_PARTI } from '../lib/ripetute'
@@ -101,6 +101,8 @@ const RAPIDI_LAVORO = ['0:20', '0:30', '0:40', '1:00']
 const RAPIDI_INTERVALLO = ['0:30', '1:00', '1:30', '2:00']
 const RAPIDI_AMRAP = ['8:00', '10:00', '12:00', '20:00']
 const RAPIDI_ROUNDS = ['3', '5', '8', '10']
+// I giri di un For Time stanno dentro un time cap: pochi.
+const RAPIDI_GIRI = ['2', '3', '4', '5']
 
 // Gli STANDARD di alcuni movimenti (richiesta del committente, 13/10/2026):
 // valori fissi che vengono PRIMA dello storico, perché sono quelli che il
@@ -1680,11 +1682,15 @@ const parametriDelBlocco = (block) => {
       return [{ chiave: 'interval', etichetta: 'Ogni', scala: 'tempo', rapidi: RAPIDI_INTERVALLO, ripiego: '1:00' }, round('10')]
     case 'AMRAP':
       return [{ chiave: 'duration', etichetta: 'Durata', scala: 'tempo', rapidi: RAPIDI_AMRAP, ripiego: '10:00' }]
-    // Il For Time è a tempo (decisione del committente, 15/10/2026): si dice
-    // solo quanti minuti si lavora, niente round. Un For Time vecchio senza
-    // time cap mostra «—» e resta stimato a giri finché non lo si sceglie.
-    case 'For Time':
-      return [{ chiave: 'timecap', etichetta: 'Time cap', scala: 'tempo', rapidi: RAPIDI_AMRAP, ripiego: '-' }]
+    // Il For Time è a tempo (decisione del committente, 15/10/2026). Un For
+    // Time vecchio senza time cap mostra «—» e resta stimato a giri finché
+    // non lo si sceglie. Dal 28/10/2026 ha anche i GIRI: quante volte si
+    // ripete la lista entro il time cap («4 giri entro 20:00»). Con
+    // l'incremento no: lì i giri li decide il tempo.
+    case 'For Time': {
+      const cap = { chiave: 'timecap', etichetta: 'Time cap', scala: 'tempo', rapidi: RAPIDI_AMRAP, ripiego: '-' }
+      return haIncremento(block) ? [cap] : [cap, { ...round('1'), etichetta: 'Giri', rapidi: RAPIDI_GIRI }]
+    }
     case 'Interval':
       return [round('1')]
     case 'Cash In':
@@ -1778,6 +1784,8 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
   const lavoro = BLOCCHI_DI_LAVORO.has(block.type)
   const conEsercizi = !['WarmUp', 'Rest'].includes(block.type)
   const quantiEsercizi = esercizi.length
+  // I giri di un For Time (28/10/2026), o `null` con un giro solo.
+  const giriFT = giriForTime(block)
   // In un EMOM il numero accanto all'esercizio sono i suoi minuti, anche «2–3».
   const etichette = etichetteStazioni(esercizi, block.type)
 
@@ -1796,7 +1804,7 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
     } else if (block.type === 'AMRAP') {
       return `${block.params?.duration || '10:00'}`
     } else if (block.type === 'For Time') {
-      return [block.params?.timecap ? testoTimeCap(block) : `${block.params?.rounds || '1'} rounds`, incremento ? 'con incremento' : null].filter(Boolean).join(' · ')
+      return [block.params?.timecap ? testoForTime(block) : `${block.params?.rounds || '1'} rounds`, incremento ? 'con incremento' : null].filter(Boolean).join(' · ')
        } else if (block.type === 'Interval') {
       return `${block.params?.rounds || '1'} rounds`
     } else if (['Cash In', 'Cash Out'].includes(block.type)) {
@@ -1971,7 +1979,22 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
           {/* Exercises */}
           {!['WarmUp', 'Rest'].includes(block.type) && (
             <>
-              <div className="flex flex-col gap-2" data-drag-container>
+              {/* Più giri: la lista sta dentro una parentesi gialla con il
+                  numero in testa, così si legge «questi esercizi, 4 volte». */}
+              {giriFT && (
+                <button type="button" onClick={() => setFoglio('rounds')} data-giri-for-time
+                  aria-label={`Ripeti questi esercizi ${giriFT} volte, entro ${block.params?.timecap}. Cambia i giri`}
+                  className="-mb-1 self-start flex items-center gap-2 rounded-full bg-brand/10 border border-brand/30 pl-1.5 pr-3 py-1.5
+                             hover:bg-brand/15 transition active:scale-[.98]">
+                  <span className="flex items-center gap-1 rounded-full bg-brand text-black px-2 py-0.5 text-[13px] font-black tabular-nums">
+                    <Repeat size={13} strokeWidth={3} aria-hidden="true" />×{giriFT}
+                  </span>
+                  <span className="text-[12.5px] font-bold text-brand">
+                    Ripeti questi esercizi {giriFT} volte
+                  </span>
+                </button>
+              )}
+              <div className={`flex flex-col gap-2 ${giriFT ? 'border-l-2 border-brand/50 pl-2.5 ml-1.5' : ''}`} data-drag-container>
                 {esercizi.map((ex, i) => (
                   <ExerciseRow 
                     key={ex.id} ex={ex} index={i} total={esercizi.length}

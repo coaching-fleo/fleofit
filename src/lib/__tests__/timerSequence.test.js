@@ -295,3 +295,13 @@ describe('l incremento a ogni giro nel timer (src/lib/incremento.js)', () => {
     expect(seq.find(s => s.title === 'AMRAP').task).toBe('Burpees · 20 reps +10 ogni giro • Sled Push · 50m')
   })
 })
+
+describe('For Time con i giri (28/10/2026)', () => {
+  it('una fase sola lunga il time cap, e il sottotitolo dice i giri', () => {
+    const seq = buildTimerSequence(hyrox([{ type: 'For Time', params: { timecap: '20:00', rounds: '4' }, exercises: [{ name: 'Burpees', reps: '10' }] }]))
+    const ft = seq.filter(s => s.title === 'FOR TIME')
+    expect(ft).toHaveLength(1)
+    expect(ft[0].duration).toBe(1200)
+    expect(ft[0].subtitle).toBe('4 giri · Time cap')
+  })
+})

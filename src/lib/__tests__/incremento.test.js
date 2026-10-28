@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import {
   haIncremento, campoIncremento, testoAumento, esercizioAlGiro, giriDiEsempio,
-  attivaIncremento, disattivaIncremento, testoTimeCap,
+  attivaIncremento, disattivaIncremento, testoTimeCap, giriForTime, testoForTime,
 } from '../incremento'
 
 // L'incremento a ogni giro: un For Time a tempo (o un AMRAP) in cui il giro
@@ -91,5 +91,33 @@ describe('attivaIncremento / disattivaIncremento', () => {
   it('spento e riacceso per sbaglio, gli aumenti sono ancora lì', () => {
     const prima = { type: 'For Time', incremento: true, params: { timecap: '15:00' }, exercises: [ski, wb] }
     expect(attivaIncremento(disattivaIncremento(prima))).toEqual(prima)
+  })
+})
+
+// I giri di un For Time a time cap (28/10/2026): «4 giri entro 20:00».
+describe('giriForTime e testoForTime', () => {
+  it('quattro giri entro il time cap', () => {
+    const b = { type: 'For Time', params: { timecap: '20:00', rounds: '4' }, exercises: [ski] }
+    expect(giriForTime(b)).toBe(4)
+    expect(testoForTime(b)).toBe('4 giri · time cap 20:00')
+  })
+
+  it('un giro solo non si nomina', () => {
+    const b = { type: 'For Time', params: { timecap: '20:00', rounds: '1' } }
+    expect(giriForTime(b)).toBeNull()
+    expect(testoForTime(b)).toBe('time cap 20:00')
+  })
+
+  it('con l incremento i giri li decide il tempo', () => {
+    expect(giriForTime({ type: 'For Time', incremento: true, params: { timecap: '20:00', rounds: '4' } })).toBeNull()
+  })
+
+  it('un For Time vecchio, senza time cap, non ha giri «dentro» un tempo', () => {
+    expect(giriForTime({ type: 'For Time', params: { rounds: '3' } })).toBeNull()
+  })
+
+  it('accendere l incremento toglie i giri e tiene il time cap', () => {
+    const b = attivaIncremento({ type: 'For Time', params: { timecap: '18:00', rounds: '4' }, exercises: [] })
+    expect(b.params).toEqual({ timecap: '18:00' })
   })
 })
