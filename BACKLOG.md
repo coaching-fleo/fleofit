@@ -77,6 +77,15 @@ Codice scritto e committato su `app` (`docs/memoria/messaggi.md`). Restano, in o
 
 ---
 
+## ⌚ Garmin — cosa resta (28/10/2026)
+
+Fase 0 (collegamento) scritta e committata su `app`, **non attiva**: `docs/memoria/garmin.md`.
+1. **I passi del committente** (verifica degli URL e dei campi nel portale Garmin come passo 0, sì sul SQL, Vault, secret, deploy delle due funzioni, portale Garmin, prova sul telefono): elencati in ordine in `docs/memoria/garmin.md`.
+2. **Policy pubblicata prima di aprire agli atleti**: `git push origin app:main` (la policy è già modificata), più etichette privacy e note per il revisore nella versione App Store che porta Garmin.
+3. **Fase 1**: ricevere attività, recupero e giornate (e il backfill dei 30 giorni, rimandato dalla Fase 0). **Fase 2**: abbinare le attività ai workout e mostrarle. **Fase 3**: mandare i workout all'orologio (interruttore «Manda i workout all'orologio» + attivare i due trigger, oggi disattivati).
+
+---
+
 ## ⏸️ In stand-by — da ricordare al prossimo aggiornamento App Store
 
 > **Consenso privacy, policy nuova e mail automatica dei cambi di policy** (14/10/2026).
