@@ -10,8 +10,8 @@
   `garmin-auth` pubblicate, `garmin_fase3_2026-10-28.sql` **applicato dal committente** (prima del
   SQL i due trigger erano `D` e la colonna `firma` mancava: la corsa assegnata non partiva).
   **Prima corsa arrivata sul Garmin del committente** con l'atleta di prova, spegnendo e
-  riaccendendo l'interruttore. Ancora da provare: cambio di ritmo, spostamento del giorno,
-  assegnazione tolta, «assegna e sposta subito». `net._http_response` al 28/10: le ultime cinque
+  riaccendendo l'interruttore. ✅ Provati dal committente il 28/10, tutti a posto: cambio di
+  ritmo, spostamento del giorno, assegnazione tolta, «assegna e sposta subito». `net._http_response` al 28/10: le ultime cinque
   chiamate dei trigger tutte `200`, nessun timeout (la risposta subito con `waitUntil` funziona).
   Sezione «Fase 3 · Corsa all'orologio» in fondo.
 - ✅ La migrazione è **applicata il 28/10/2026** (sì esplicito in sessione, CLAUDE.md §0-bis):
