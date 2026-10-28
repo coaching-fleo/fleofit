@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   GARMIN, PERMESSI_NOTI, MOTIVI_ERRORE, generaPkce, sfidaPkce, generaState, urlAutorizzazione,
   ritornoValido, urlRitorno, esitoCallback, cifra, decifra, leggiNotifiche, pianoScollegamento, scaduto,
+  stessoSegreto, atletaEliminato,
 } from '../../../supabase/functions/_shared/garminRegole.ts'
 
 // Perché questi test esistono
@@ -158,5 +159,35 @@ describe('scaduto', () => {
     expect(scaduto(null, ADESSO)).toBe(true)
     expect(scaduto(new Date(ADESSO.getTime() + 10 * MIN).toISOString(), ADESSO)).toBe(false)
     expect(scaduto(new Date(ADESSO.getTime() + 4 * MIN).toISOString(), ADESSO)).toBe(true)
+  })
+})
+
+describe('stessoSegreto', () => {
+  it('vale solo per lo stesso segreto', () => {
+    expect(stessoSegreto('abc123', 'abc123')).toBe(true)
+    expect(stessoSegreto('abc124', 'abc123')).toBe(false)
+    expect(stessoSegreto('abc12', 'abc123')).toBe(false)
+    expect(stessoSegreto('abc1234', 'abc123')).toBe(false)
+  })
+  it('un segreto vuoto o mancante non vale mai', () => {
+    expect(stessoSegreto('', '')).toBe(false)
+    expect(stessoSegreto('', undefined)).toBe(false)
+    expect(stessoSegreto('x', '')).toBe(false)
+    expect(stessoSegreto(null, 'x')).toBe(false)
+  })
+})
+
+describe('atletaEliminato', () => {
+  const corpo = { type: 'UPDATE', table: 'athletes', record: { id: 'a1', deleted_at: 1730000000000 }, old_record: { id: 'a1', deleted_at: null } }
+  it('legge l\'atleta dal corpo del trigger', () => {
+    expect(atletaEliminato(corpo)).toBe('a1')
+  })
+  it('null per tutto il resto', () => {
+    expect(atletaEliminato(null)).toBeNull()
+    expect(atletaEliminato({ ...corpo, type: 'INSERT' })).toBeNull()
+    expect(atletaEliminato({ ...corpo, table: 'workouts' })).toBeNull()
+    expect(atletaEliminato({ ...corpo, record: { id: 'a1', deleted_at: null } })).toBeNull()
+    expect(atletaEliminato({ ...corpo, record: { id: '', deleted_at: 1 } })).toBeNull()
+    expect(atletaEliminato({ ...corpo, record: null })).toBeNull()
   })
 })

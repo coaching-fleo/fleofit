@@ -157,3 +157,31 @@ export function scaduto(scadeAt: string | null, adesso: Date, margineS = 300): b
   const t = new Date(scadeAt).getTime();
   return !Number.isFinite(t) || t - adesso.getTime() < margineS * 1000;
 }
+
+// ── Le chiamate interne (trigger del database) ────────────────────────────
+/**
+ * Confronto di un segreto in tempo costante (non si ferma al primo carattere
+ * diverso). Un segreto vuoto non vale MAI: il trigger manda `''` se il Vault
+ * non ha il segreto, e `''` non deve combaciare con un secret non impostato.
+ */
+export function stessoSegreto(ricevuto: unknown, atteso: string | null | undefined): boolean {
+  if (typeof ricevuto !== 'string' || !ricevuto || !atteso) return false;
+  const a = new TextEncoder().encode(ricevuto);
+  const b = new TextEncoder().encode(atteso);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < b.length; i++) diff |= (a[i] ?? 0) ^ b[i];
+  return diff === 0;
+}
+
+/**
+ * L'atleta di cui parla il trigger `garmin_atleta_eliminato`, o `null` se il
+ * corpo non è quello: UPDATE su `athletes` con `deleted_at` valorizzato.
+ */
+export function atletaEliminato(corpo: unknown): string | null {
+  if (!corpo || typeof corpo !== 'object') return null;
+  const c = corpo as { type?: unknown; table?: unknown; record?: unknown };
+  if (c.type !== 'UPDATE' || c.table !== 'athletes') return null;
+  const r = c.record as { id?: unknown; deleted_at?: unknown } | null;
+  if (!r || !eStringa(r.id) || r.deleted_at == null) return null;
+  return r.id;
+}

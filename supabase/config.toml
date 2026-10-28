@@ -451,3 +451,13 @@ enabled = true
 # results.hyrox.com, e la funzione limita anche per utente (12 l'ora).
 verify_jwt = true
 entrypoint = "./functions/risultato-hyrox/index.ts"
+
+[functions.garmin-auth]
+enabled = true
+# false perché il callback arriva da Garmin nel browser dell'atleta, e il trigger
+# `garmin_atleta_eliminato` dal database: nessuno dei due porta un JWT. L'identità
+# dell'atleta (inizia, scollega) si verifica a mano con auth.getUser, come in
+# `segnalazione`; il trigger col segreto x-garmin-interno.
+verify_jwt = false
+import_map = "./functions/garmin-auth/deno.json"
+entrypoint = "./functions/garmin-auth/index.ts"
