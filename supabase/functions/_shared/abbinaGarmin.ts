@@ -16,6 +16,12 @@ export const TIPI_PER_CATEGORIA: Record<'Running' | 'Hyrox' | 'Gym', string[]> =
 
 export const MINUTI_MINIMI = 10;
 export const FRAZIONE_STIMA = 0.5;
+/**
+ * Un'attività più vecchia di così, quando arriva, non completa niente: è il
+ * backfill di un RIcollegamento (che tiene il `collegato_at` di prima) o una
+ * sincronizzazione molto tardiva. Una settimana copre il viaggio senza telefono.
+ */
+export const GIORNI_MASSIMI = 7;
 
 export type Candidato = {
   id: string;
@@ -36,13 +42,14 @@ type RigaAttivita = {
 
 /** L'id dell'assegnazione che l'attività completa, o null se non se ne può scegliere una sola. */
 export function scegliAbbinamento(
-  x: { attivita: RigaAttivita; candidati: Candidato[]; collegatoAt: string },
+  x: { attivita: RigaAttivita; candidati: Candidato[]; collegatoAt: string; adesso?: string },
 ): string | null {
-  const { attivita: a, candidati, collegatoAt } = x;
+  const { attivita: a, candidati, collegatoAt, adesso } = x;
   // Già abbinata, o rifiutata con «Non era questo» (abbinamento valorizzato, id nullo).
   if (a.athlete_workout_id || a.abbinamento) return null;
   // Il backfill si mostra ma non completa. Confronto fra istanti, non fra stringhe.
   if (Date.parse(a.inizio) < Date.parse(collegatoAt)) return null;
+  if (adesso && Date.parse(a.inizio) < Date.parse(adesso) - GIORNI_MASSIMI * 86400_000) return null;
   if (a.durata_s == null || a.durata_s < MINUTI_MINIMI * 60) return null;
   const durata = a.durata_s;
 

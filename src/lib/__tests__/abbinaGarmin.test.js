@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  TIPI_PER_CATEGORIA, MINUTI_MINIMI, FRAZIONE_STIMA, scegliAbbinamento,
+  TIPI_PER_CATEGORIA, MINUTI_MINIMI, FRAZIONE_STIMA, GIORNI_MASSIMI, scegliAbbinamento,
 } from '../../../supabase/functions/_shared/abbinaGarmin.ts'
 
 const COLLEGATO = '2026-10-01T00:00:00Z'
@@ -69,4 +69,12 @@ describe('esclusioni', () => {
   it('«Non era questo» (abbinamento atleta, id nullo) -> null', () => {
     expect(scegli({ abbinamento: 'atleta', athlete_workout_id: null })).toBeNull()
   })
+})
+
+describe('attività arrivata tardi (backfill di un ricollegamento)', () => {
+  const conAdesso = (adesso) => scegliAbbinamento({ attivita: attivita(), candidati: [cand()], collegatoAt: COLLEGATO, adesso })
+  it('una settimana è il limite', () => expect(GIORNI_MASSIMI).toBe(7))
+  it('arrivata il giorno dopo completa', () => expect(conAdesso('2026-10-29T07:00:00Z')).toBe('aw1'))
+  it('arrivata 7 giorni dopo, esatti, completa', () => expect(conAdesso('2026-11-04T07:00:00Z')).toBe('aw1'))
+  it('arrivata più di 7 giorni dopo non completa', () => expect(conAdesso('2026-11-04T07:00:01Z')).toBe(null))
 })

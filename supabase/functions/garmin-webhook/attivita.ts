@@ -117,7 +117,7 @@ async function gestisci(admin: Admin, a: AttivitaGarmin): Promise<'salvata' | 'c
     durataStimataMin: durataStimata(r.workouts?.sections),
   }));
 
-  const scelto = scegliAbbinamento({ attivita: riga, candidati, collegatoAt: coll.collegatoAt });
+  const scelto = scegliAbbinamento({ attivita: riga, candidati, collegatoAt: coll.collegatoAt, adesso: new Date().toISOString() });
   if (!scelto) return 'salvata';
 
   // Solo se ancora da fare (Review Focus 4): un update che non tocca niente =
