@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
 import { atletaNotificaCoach, atletiDi, coachDi, destinatariNotificaCoach, idStaff, ruoloStaff } from "../_shared/staff.ts"
+import { testoNotificaCoach, testoGarminRegistrato } from "./testi.ts"
 import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, puoInviareQuestoMessaggio, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm, routeProva } from "./broadcast.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -534,6 +535,46 @@ serve(async (req) => {
     }
 
     // ==========================================
+    // MODALITÀ GARMIN REGISTRATO (all'atleta: «com'è andata?»)
+    // Solo il chiamante di servizio: la manda il webhook Garmin.
+    // ==========================================
+    if (mode === 'garmin_registrato') {
+      if (!chiamante.servizio) {
+        console.warn(`send-reminders: 'garmin_registrato' NON autorizzata per ${chiamante.email ?? 'anonimo'}`);
+        return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const { data: assegnazione, error: awError } = await supabase
+        .from('athlete_workouts')
+        .select(`athlete_id, workout_id, workouts(title)`)
+        .eq('id', body.athlete_workout_id)
+        .maybeSingle();
+      if (awError) throw awError;
+      if (!assegnazione) {
+        console.warn(`garmin_registrato: assegnazione ${body.athlete_workout_id} non trovata.`);
+        return new Response(JSON.stringify({ skipped: 'assegnazione non trovata' }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const { data: iscrizioni, error: subError } = await supabase
+        .from('push_subscriptions').select('*').eq('user_id', assegnazione.athlete_id);
+      if (subError) throw subError;
+
+      const titolo = (assegnazione.workouts as any)?.title || 'Allenamento';
+      const { title, bodyMsg, route } = testoGarminRegistrato(titolo, assegnazione.workout_id, assegnazione.athlete_id);
+      const { data: dbNotifs, error: dbErr } = await supabase.from('notifications').insert({
+        user_id: assegnazione.athlete_id, title, message: bodyMsg, route,
+      }).select();
+      if (dbErr) console.error("Errore DB (garmin_registrato):", dbErr);
+      const notifId = dbNotifs && dbNotifs.length > 0 ? dbNotifs[0].id : undefined;
+
+      const invii = (iscrizioni || []).map((sub: any) => sendPush(sub, title, bodyMsg, route, notifId));
+      await Promise.all(invii);
+      return new Response(JSON.stringify({ success: true, sent: invii.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ==========================================
     // MODALITÀ COACH NOTIFICATION
     // ==========================================
     if (mode === 'coach_notification') {
@@ -589,25 +630,8 @@ serve(async (req) => {
         });
       }
 
-      let title = "Aggiornamento Atleta";
-      let bodyMsg = "";
+      const { title, bodyMsg } = testoNotificaCoach(body);
       const route = body.route || "/";
-
-      if (body.action === 'note') {
-        title = `📝 Nota da ${body.athleteName}`;
-        bodyMsg = `${body.workoutTitle}: "${body.noteText}"`;
-      } else if (body.action === 'completed') {
-        title = `✅ Workout completato!`;
-        bodyMsg = `${body.athleteName} ha completato: ${body.workoutTitle}`;
-      } else if (body.action === 'custom_workout') {
-        title = `🏃‍♂️ Nuovo allenamento libero`;
-        bodyMsg = `${body.athleteName} ha aggiunto: ${body.workoutTitle}`;
-      } else if (body.action === 'moved') {
-        // L'atleta ha spostato da solo un allenamento (src/lib/spostaAllenamento.js).
-        // `newDate` arriva già scritta per esteso («mer 28 ott»): qui non si formatta.
-        title = `📅 Allenamento spostato`;
-        bodyMsg = `${body.athleteName} ha spostato ${body.workoutTitle}${body.newDate ? ` a ${body.newDate}` : ''}`;
-      }
 
       const notifInserts = adminUserIds.map(adminId => ({
         user_id: adminId,
