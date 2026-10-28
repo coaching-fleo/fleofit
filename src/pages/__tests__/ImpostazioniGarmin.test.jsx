@@ -149,6 +149,22 @@ describe('La riga Garmin in Impostazioni', () => {
     expect(within(foglio).getByText('Quelle già mandate per i prossimi giorni vengono tolte')).toBeInTheDocument()
   })
 
+  it('🔴 un doppio tocco chiama garmin-training una volta sola', async () => {
+    ctrl.stato.valore = COLLEGATO
+    let rispondi
+    finto.supabase.functions.invoke.mockImplementation(() => new Promise(r => { rispondi = () => r({ data: { ok: true }, error: null }) }))
+    const utente = userEvent.setup()
+    montaAtleta()
+    await utente.click(await screen.findByRole('button', { name: /Garmin Connect/ }))
+    const foglio = await screen.findByRole('dialog', { name: 'Garmin Connect' })
+    const sw = within(foglio).getByRole('switch', { name: 'Manda i workout all\'orologio' })
+    await utente.click(sw)
+    await utente.click(sw)
+    expect(finto.supabase.functions.invoke).toHaveBeenCalledTimes(1)
+    rispondi()
+    await waitFor(() => expect(sw).toBeEnabled())
+  })
+
   it('non collegato: nessun interruttore', async () => {
     const utente = userEvent.setup()
     montaAtleta()

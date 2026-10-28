@@ -89,6 +89,8 @@ export default function Settings() {
   // e per sempre se `stato_garmin` non esiste ancora: la riga semplicemente non c'è.
   const [garmin, setGarmin] = useState({ disponibile: false, stato: null, dal: null, permessi: [], inviaWorkout: false })
   const [foglioGarminAperto, setFoglioGarminAperto] = useState(false)
+  const inviaInCorso = useRef(false)
+  const [inviaOccupato, setInviaOccupato] = useState(false)
 
   useEffect(() => {
     if (!atletaVero || !user?.id) return
@@ -443,15 +445,22 @@ export default function Settings() {
    * se non risponde bene si torna indietro e si avvisa.
    */
   const cambiaInviaWorkout = async (acceso) => {
+    // Una chiamata alla volta: il ref è sincrono, lo state no (doppio tocco).
+    if (inviaInCorso.current) return
+    inviaInCorso.current = true
+    setInviaOccupato(true)
     const prima = garmin.inviaWorkout
     setGarmin(g => ({ ...g, inviaWorkout: acceso }))
     const { data, error } = await supabase.functions.invoke('garmin-training', { body: { azione: 'invia_workout', acceso } })
       .catch(e => ({ data: null, error: e }))
     if (error || !data?.ok) {
       console.error('Interruttore workout Garmin non salvato:', error ?? data)
-      setGarmin(g => ({ ...g, inviaWorkout: prima }))
+      // Se nel frattempo l'atleta ha scollegato Garmin, non si riporta in vita lo stato.
+      setGarmin(g => (g.stato === 'attivo' ? { ...g, inviaWorkout: prima } : g))
       setAlertInfo({ title: 'Errore', message: 'Non siamo riusciti a cambiare l\'impostazione: riprova fra qualche minuto.', type: 'error' })
     }
+    inviaInCorso.current = false
+    setInviaOccupato(false)
   }
 
   const handleEnableNotifications = async () => {
@@ -982,7 +991,7 @@ export default function Settings() {
       {foglioGarminAperto && atletaVero && garmin.disponibile && (
         <FoglioGarmin
           stato={garmin.stato} dal={garmin.dal} permessi={garmin.permessi}
-          inviaWorkout={garmin.inviaWorkout} onInviaWorkout={cambiaInviaWorkout}
+          inviaWorkout={garmin.inviaWorkout} inviaOccupato={inviaOccupato} onInviaWorkout={cambiaInviaWorkout}
           occupato={operazione === 'garmin'}
           onCollega={collegaGarmin} onScollega={scollegaGarmin} onInformativa={apriInformativa}
           onChiudi={() => setFoglioGarminAperto(false)} />

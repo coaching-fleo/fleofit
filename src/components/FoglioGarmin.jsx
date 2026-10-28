@@ -20,7 +20,7 @@ import { VETRO } from '../lib/stiliCard'
 import { Interruttore } from './ImpostazioniUI'
 import { TESTO_CONSENSO_GARMIN, dataCollegamento, etichettePermessi, permessiMancanti } from '../lib/garmin'
 
-export default function FoglioGarmin({ stato, permessi, dal, inviaWorkout = true, occupato = false, onInviaWorkout, onCollega, onScollega, onInformativa, onChiudi }) {
+export default function FoglioGarmin({ stato, permessi, dal, inviaWorkout = true, inviaOccupato = false, occupato = false, onInviaWorkout, onCollega, onScollega, onInformativa, onChiudi }) {
   const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
   const [acconsento, setAcconsento] = useState(false)
   const collegato = stato === 'attivo'
@@ -48,7 +48,7 @@ export default function FoglioGarmin({ stato, permessi, dal, inviaWorkout = true
 
         <div className="overflow-y-auto overscroll-contain hide-scrollbar flex flex-col gap-3 pb-2">
           {collegato ? (
-            <Collegato dal={dal} permessi={permessi} inviaWorkout={inviaWorkout} occupato={occupato}
+            <Collegato dal={dal} permessi={permessi} inviaWorkout={inviaWorkout} inviaOccupato={inviaOccupato} occupato={occupato}
               onInviaWorkout={onInviaWorkout} onScollega={onScollega} />
           ) : (
             <>
@@ -89,7 +89,7 @@ export default function FoglioGarmin({ stato, permessi, dal, inviaWorkout = true
   )
 }
 
-function Collegato({ dal, permessi, inviaWorkout, occupato, onInviaWorkout, onScollega }) {
+function Collegato({ dal, permessi, inviaWorkout, inviaOccupato, occupato, onInviaWorkout, onScollega }) {
   const data = dataCollegamento(dal)
   const concessi = etichettePermessi(permessi)
   const mancanti = permessiMancanti(permessi)
@@ -115,7 +115,7 @@ function Collegato({ dal, permessi, inviaWorkout, occupato, onInviaWorkout, onSc
               : 'Quelle già mandate per i prossimi giorni vengono tolte'}
           </p>
         </div>
-        <Interruttore attivo={inviaWorkout} etichetta="Manda i workout all'orologio"
+        <Interruttore attivo={inviaWorkout} etichetta="Manda i workout all'orologio" occupato={inviaOccupato}
           onCambia={() => onInviaWorkout?.(!inviaWorkout)} />
       </div>
       <button type="button" onClick={onScollega} disabled={occupato}
