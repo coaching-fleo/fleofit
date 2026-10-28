@@ -14,8 +14,8 @@
 -- ancora spenti, quindi il danno è poco. Applicare il file SUBITO dopo aver
 -- pubblicato la funzione.
 -- ⚠️ PRIMA ancora: verificare il nome del vincolo con la query di controllo in
--- fondo (punto 1). Se non è `garmin_invii_athlete_workout_id_fkey`, correggere
--- la riga del punto 3 prima di lanciarla.
+-- fondo («Prima, per verificare»). Se non è `garmin_invii_athlete_workout_id_fkey`, correggere
+-- la riga della sezione 2 prima di lanciarla.
 --
 -- Cosa fa, in breve:
 --  1. `firma` su garmin_invii: l'impronta del workout come è andato all'orologio,
