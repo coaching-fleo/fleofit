@@ -9,10 +9,10 @@
 --
 -- ⚠️ PRIMA: la Edge Function `garmin-training` deve essere già pubblicata (i
 -- trigger accesi la chiamano a ogni modifica di un'assegnazione o di un workout).
--- ⚠️ `garmin-training` legge GIÀ la colonna `firma`: finché questo file non è
--- applicato, «Riprova» e l'interruttore rispondono con un errore. I trigger sono
--- ancora spenti, quindi il danno è poco. Applicare il file SUBITO dopo aver
--- pubblicato la funzione.
+-- `garmin-training` legge GIÀ la colonna `firma`, ma tra il deploy e questo file
+-- non si rompe niente: l'interruttore funziona, e «Riprova» non compare perché
+-- righe in garmin_invii non ce ne sono ancora (i trigger sono spenti). L'ordine
+-- deploy → questo file è sicuro.
 -- ⚠️ PRIMA ancora: verificare il nome del vincolo con la query di controllo in
 -- fondo («Prima, per verificare»). Se non è `garmin_invii_athlete_workout_id_fkey`, correggere
 -- la riga della sezione 2 prima di lanciarla.

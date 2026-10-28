@@ -197,6 +197,11 @@ peso e composizione corporea, aggiunta la voce «Cosa mandiamo a Garmin», in it
   riceve 403, come in `garmin-auth`).
 - Regola 3 di `decidiInvio`: il workout si toglie se è passata la data dell'invio **o**
   quella dell'assegnazione. Un workout spostato indietro a ieri resta quindi sull'orologio.
+- **Due cambi a 100 ms** (il builder salva workout e poi assegnazione; «assegna e sposta
+  subito»): chi arriva secondo trova l'invio «in corso» e non fa niente. Per questo, dopo un
+  `crea`/`rifai`/`sposta` riusciti, `sincronizza` ripassa **una** volta e si riallinea.
+- **Ripristino di un backup**: i trigger accesi mandano una chiamata per riga ripristinata;
+  tutte finiscono in `niente` (atleti senza Garmin, giorni passati), ma sono tante.
 - Altri minori parcheggiati: unità come «min.»/«minuti» finiscono come obiettivo aperto;
   `.slice(0,100)` può spezzare una emoji; una ripetuta senza parti dà un figlio aperto.
 
@@ -209,8 +214,9 @@ Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
 
 ### Passi del committente, in ordine
 1. `supabase functions deploy garmin-training --no-verify-jwt`.
-   ⚠️ Tra il deploy e il SQL, «Riprova» e l'interruttore rispondono con un errore (la funzione
-   legge già `firma`): applicare il SQL subito dopo. I trigger sono ancora spenti.
+   Tra il deploy e il SQL non si rompe niente: l'interruttore funziona, e «Riprova» non compare
+   perché righe in `garmin_invii` non ce ne sono ancora (i trigger sono spenti). L'ordine
+   deploy → SQL è sicuro.
 2. **Sì esplicito** su `supabase/schema/garmin_fase3_2026-10-28.sql` (CLAUDE.md §0-bis), poi la
    query del nome del vincolo (in cima al file: deve stampare `garmin_invii_athlete_workout_id_fkey`),
    poi il file nel SQL editor, poi le tre verifiche in fondo (trigger attivi, colonna `firma`,
@@ -219,5 +225,7 @@ Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
    ripetute e defaticamento, e controllare in Garmin Connect (Allenamenti e Calendario) e
    sull'orologio dopo la sincronizzazione. Poi: cambiare un ritmo (deve rifarlo); spostare il
    giorno (deve spostarlo); **togliere l'assegnazione** (deve sparire); **assegnare e spostare
-   subito il giorno** (deve restare un solo workout su Garmin).
+   subito il giorno** (deve restare un solo workout su Garmin, e nel giorno NUOVO).
+   Guardare anche `net._http_response` dopo aver cambiato un workout assegnato a più atleti:
+   non devono esserci timeout (la funzione risponde subito e lavora in sottofondo).
 4. Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.

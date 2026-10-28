@@ -128,10 +128,10 @@ const INTENSITA_PASSO: Record<string, Intensita> = {
   warmup: 'WARMUP', run: 'ACTIVE', recover: 'RECOVERY', cooldown: 'COOLDOWN',
 }
 
-/** La Corsa di un workout nel formato Garmin; `null` se non è Corsa o non ha passi traducibili. */
+/** La Corsa di un workout nel formato Garmin; `null` se `category` non è `Running` (anche se manca) o non ha passi traducibili. */
 export function corsaVersoGarmin(w: { title: string; sections: unknown }): GarminWorkout | null {
   const sezioni = (w && w.sections && typeof w.sections === 'object' ? w.sections : {}) as Record<string, unknown>
-  if (sezioni.category && sezioni.category !== 'Running') return null
+  if (sezioni.category !== 'Running') return null
   if (!Array.isArray(sezioni.steps)) return null
 
   let ordine = 0

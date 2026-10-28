@@ -62,6 +62,8 @@ type Invio = {
 
 type Esito = { azione: DecisioneInvio, ok: boolean, errore?: string }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const COLONNE_INVIO = 'athlete_workout_id, athlete_id, garmin_workout_id, garmin_schedule_id, data, stato, firma, aggiornato_at';
 
 /** Il testo da salvare in `garmin_invii.errore`: lo status di Garmin, mai un messaggio con dati. */
@@ -72,8 +74,15 @@ const testoErrore = (e: unknown) => e instanceof ErroreGarmin ? `HTTP ${e.status
  * Rilegge assegnazione, collegamento e invio, decide (`decidiInvio`) e lo fa.
  * Non lancia per un errore di Garmin: lo scrive nella riga e risponde `ok: false`.
  * Lancia solo se il database non risponde.
+ *
+ * Dopo un `crea`, `rifai` o `sposta` riusciti si ripassa UNA volta (`giro`):
+ * due avvisi a 100 ms (il builder salva il workout e poi l'assegnazione, o
+ * «assegna e poi sposta il giorno») fanno perdere il secondo a chi lo trova «in
+ * corso», e la riga resterebbe `inviato` col giorno o il contenuto vecchi, senza
+ * «Riprova» nella scheda. Il ripasso rilegge e dà `sposta`/`rifai` se qualcosa
+ * è cambiato nel frattempo, `niente` altrimenti.
  */
-async function sincronizza(admin: Db, awId: string): Promise<Esito> {
+async function sincronizza(admin: Db, awId: string, giro = 0): Promise<Esito> {
   const adesso = new Date();
   const oggi = oggiItalia(adesso);
 
@@ -116,7 +125,12 @@ async function sincronizza(admin: Db, awId: string): Promise<Esito> {
     firma,
     oggi,
   });
-  if (azione === 'niente') return fine(awId, { azione, ok: true });
+  if (azione === 'niente') {
+    // Assegnazione sparita e invio di un giorno passato: sull'orologio resta
+    // nello storico, la riga invece non serve più a nessuno.
+    if (!aw && invio) await togliRiga(admin, awId);
+    return fine(awId, { azione, ok: true });
+  }
 
   // Da qui in poi c'è un invio (rifai, sposta, cancella) o un workout da creare.
   if (azione === 'cancella' && !coll) {
@@ -181,7 +195,7 @@ async function sincronizza(admin: Db, awId: string): Promise<Esito> {
       if (scheduleId && workoutId) await spostaProgrammaGarmin(access, scheduleId, workoutId, assegnazione!.data);
       else if (workoutId) scheduleId = await programmaGarmin(access, workoutId, assegnazione!.data);
       await aggiorna({ data: assegnazione!.data, garmin_schedule_id: scheduleId, errore: null });
-      return fine(awId, { azione, ok: true });
+      return await ripassa(admin, awId, giro, fine(awId, { azione, ok: true }));
     }
 
     // crea, rifai
@@ -201,7 +215,7 @@ async function sincronizza(admin: Db, awId: string): Promise<Esito> {
       // il workout appena creato non lo ricorderebbe nessuno, quindi si toglie.
       await cancellaWorkoutGarmin(access, workoutId);
     }
-    return fine(awId, { azione, ok: true });
+    return await ripassa(admin, awId, giro, fine(awId, { azione, ok: true }));
   } catch (e) {
     const errore = testoErrore(e);
     console.error(`garmin-training: ${azione} per ${awId} fallito (${errore}):`, (e as Error).message);
@@ -211,6 +225,22 @@ async function sincronizza(admin: Db, awId: string): Promise<Esito> {
       console.error(`garmin-training: errore non salvato per ${awId}:`, (e2 as Error).message);
     }
     return { azione, ok: false, errore };
+  }
+}
+
+/**
+ * Il ripasso dopo un invio riuscito (vedi `sincronizza`): al massimo uno. Se
+ * non c'era niente da rifare vale l'esito del primo giro; un ripasso che non
+ * legge il database non rovina il primo, già scritto.
+ */
+async function ripassa(admin: Db, awId: string, giro: number, primo: Esito): Promise<Esito> {
+  if (giro >= 1) return primo;
+  try {
+    const secondo = await sincronizza(admin, awId, giro + 1);
+    return secondo.azione === 'niente' ? primo : secondo;
+  } catch (e) {
+    console.error(`garmin-training: ripasso di ${awId} non riuscito:`, (e as Error).message);
+    return primo;
   }
 }
 
@@ -265,23 +295,35 @@ async function interno(req: Request): Promise<Response> {
     console.warn('garmin-training: chiamata interna con segreto sbagliato');
     return risposta({ error: 'Non autorizzato' }, 401);
   }
-  try {
-    let corpo: Record<string, unknown> | null = null;
-    try { corpo = await req.json(); } catch { /* corpo non JSON: si ignora */ }
-    const tabella = corpo?.table;
-    const admin = servizio();
+  let corpo: Record<string, unknown> | null = null;
+  try { corpo = await req.json(); } catch { /* corpo non JSON: si ignora */ }
 
-    if (tabella === 'athlete_workouts') {
-      const id = idDi(corpo?.record) ?? idDi(corpo?.old_record);
-      if (id) await sincronizzaTutte(admin, [id]);
-    } else if (tabella === 'workouts' && corpo?.type === 'UPDATE') {
-      // DELETE no: le assegnazioni cancellate in cascata arrivano col loro trigger.
-      const id = idDi(corpo?.record);
-      if (id) await sincronizzaTutte(admin, await assegnazioniDaRivedere(admin, id));
+  // Non lancia MAI: ogni riga ha il suo try/catch in sincronizzaTutte, e il
+  // resto sta in questo. Così può girare in sottofondo senza rifiuti non gestiti.
+  const lavoro = (async () => {
+    try {
+      const tabella = corpo?.table;
+      const admin = servizio();
+      if (tabella === 'athlete_workouts') {
+        const id = idDi(corpo?.record) ?? idDi(corpo?.old_record);
+        if (id) await sincronizzaTutte(admin, [id]);
+      } else if (tabella === 'workouts' && corpo?.type === 'UPDATE') {
+        // DELETE no: le assegnazioni cancellate in cascata arrivano col loro trigger.
+        const id = idDi(corpo?.record);
+        if (id) await sincronizzaTutte(admin, await assegnazioniDaRivedere(admin, id));
+      }
+    } catch (e) {
+      console.error('garmin-training: avviso non gestito:', (e as Error).message);
     }
-  } catch (e) {
-    console.error('garmin-training: avviso non gestito:', (e as Error).message);
-  }
+  })();
+
+  // pg_net aspetta 5 s (garmin_avvisa): un workout assegnato a molti atleti ci
+  // metterebbe di più. Si risponde subito e il lavoro continua in sottofondo,
+  // dove il runtime lo permette; altrimenti si aspetta come prima.
+  // deno-lint-ignore no-explicit-any
+  const runtime = (globalThis as any).EdgeRuntime;
+  if (typeof runtime?.waitUntil === 'function') runtime.waitUntil(lavoro);
+  else await lavoro;
   return risposta({ ok: true });
 }
 
@@ -307,7 +349,8 @@ async function azioneUtente(req: Request): Promise<Response> {
 
   if (corpo.azione === 'riprova') {
     const awId = corpo.athlete_workout_id;
-    if (typeof awId !== 'string' || !awId) return risposta({ error: 'Richiesta non valida' }, 400);
+    // Solo un uuid arriva alla query (e il valore non si logga).
+    if (typeof awId !== 'string' || !UUID.test(awId)) return risposta({ error: 'Richiesta non valida' }, 400);
     // L'assegnazione si legge come l'UTENTE: se la RLS non gliela fa vedere
     // (né sua né di un suo atleta), non può nemmeno farla rimandare.
     const comeUtente = createClient(url, anonKey, { global: { headers: { Authorization: `Bearer ${token}` } } });

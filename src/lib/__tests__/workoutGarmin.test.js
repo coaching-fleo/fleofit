@@ -72,19 +72,19 @@ describe('corsaVersoGarmin', () => {
     })
   })
   it('le note finiscono nella descrizione, tagliata a 100', () => {
-    const r = corsaVersoGarmin({ title: 'x', sections: { steps: [
+    const r = corsaVersoGarmin({ title: 'x', sections: { category: 'Running', steps: [
       { type: 'run', duration: '5 km', paceMin: 'Z3', paceMax: '-', notes: 'tieni il passo' },
       { type: 'run', duration: '5 km', paceMin: 'Z3', paceMax: '-', notes: 'a'.repeat(200) }] } })
     expect(r.steps[0].description).toBe('Z3 · tieni il passo')
     expect(r.steps[1].description).toHaveLength(100)
   })
   it('descrizione omessa se non c\'è niente da dire', () => {
-    const r = corsaVersoGarmin({ title: 'x', sections: { steps: [{ type: 'run', duration: '', paceMin: '', paceMax: '' }] } })
+    const r = corsaVersoGarmin({ title: 'x', sections: { category: 'Running', steps: [{ type: 'run', duration: '', paceMin: '', paceMax: '' }] } })
     expect(r.steps[0]).not.toHaveProperty('description')
     expect(r.steps[0]).toEqual({ type: 'WorkoutStep', stepOrder: 1, intensity: 'ACTIVE', durationType: 'OPEN', targetType: 'OPEN' })
   })
   it('ripetuta nel formato vecchio: due figli', () => {
-    const r = corsaVersoGarmin({ title: 'x', sections: { steps: [
+    const r = corsaVersoGarmin({ title: 'x', sections: { category: 'Running', steps: [
       { type: 'repeat', rounds: '6', runDuration: '400m', runPaceMin: 'Z4', recDuration: '1 min', recPaceMin: 'Z1' }] } })
     expect(r.steps[0].steps).toHaveLength(2)
     expect(r.steps[0].steps[0]).toMatchObject({ durationType: 'DISTANCE', durationValue: 400 })
@@ -92,11 +92,11 @@ describe('corsaVersoGarmin', () => {
   })
   it('rounds mancante o 0 vale 1', () => {
     const parti = [{ tipo: 'run', duration: '1 min' }]
-    expect(corsaVersoGarmin({ title: 'x', sections: { steps: [{ type: 'repeat', parti }] } }).steps[0].repeatValue).toBe(1)
-    expect(corsaVersoGarmin({ title: 'x', sections: { steps: [{ type: 'repeat', rounds: '0', parti }] } }).steps[0].repeatValue).toBe(1)
+    expect(corsaVersoGarmin({ title: 'x', sections: { category: 'Running', steps: [{ type: 'repeat', parti }] } }).steps[0].repeatValue).toBe(1)
+    expect(corsaVersoGarmin({ title: 'x', sections: { category: 'Running', steps: [{ type: 'repeat', rounds: '0', parti }] } }).steps[0].repeatValue).toBe(1)
   })
   it('ripetuta senza parti saltata, senza buchi nella numerazione', () => {
-    const r = corsaVersoGarmin({ title: 'x', sections: { steps: [
+    const r = corsaVersoGarmin({ title: 'x', sections: { category: 'Running', steps: [
       { type: 'warmup', duration: '10 min' },
       { type: 'repeat', rounds: '3', parti: [null, 3] },
       { type: 'cooldown', duration: '5 min' }] } })
@@ -104,17 +104,20 @@ describe('corsaVersoGarmin', () => {
     expect(r.steps.map(s => s.stepOrder)).toEqual([1, 2])
   })
   it('passi di tipo sconosciuto saltati', () => {
-    const r = corsaVersoGarmin({ title: 'x', sections: { steps: [{ type: 'boh' }, { type: 'run', duration: '1 km' }] } })
+    const r = corsaVersoGarmin({ title: 'x', sections: { category: 'Running', steps: [{ type: 'boh' }, { type: 'run', duration: '1 km' }] } })
     expect(r.steps).toHaveLength(1)
     expect(r.steps[0].stepOrder).toBe(1)
   })
   it('titolo lungo tagliato a 100', () => {
-    expect(corsaVersoGarmin({ title: 'T'.repeat(150), sections: { steps: [{ type: 'run' }] } }).workoutName).toHaveLength(100)
+    expect(corsaVersoGarmin({ title: 'T'.repeat(150), sections: { category: 'Running', steps: [{ type: 'run' }] } }).workoutName).toHaveLength(100)
   })
   it('null se non è Corsa o non ha passi', () => {
     expect(corsaVersoGarmin({ title: 'x', sections: { category: 'Hyrox', blocks: [] } })).toBeNull()
     expect(corsaVersoGarmin({ title: 'x', sections: { category: 'Running', steps: [] } })).toBeNull()
     expect(corsaVersoGarmin({ title: 'x', sections: null })).toBeNull()
-    expect(corsaVersoGarmin({ title: 'x', sections: { steps: [{ type: 'boh' }] } })).toBeNull()
+    expect(corsaVersoGarmin({ title: 'x', sections: { category: 'Running', steps: [{ type: 'boh' }] } })).toBeNull()
+  })
+  it('null senza categoria: solo `Running` va all\'orologio, anche se ci sono passi', () => {
+    expect(corsaVersoGarmin({ title: 'x', sections: { steps: [{ type: 'run', duration: '10 min' }] } })).toBeNull()
   })
 })
