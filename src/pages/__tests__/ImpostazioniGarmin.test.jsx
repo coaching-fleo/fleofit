@@ -85,6 +85,8 @@ describe('La riga Garmin in Impostazioni', () => {
     await waitFor(() => expect(finto.supabase.functions.invoke).toHaveBeenCalledWith('garmin-auth', {
       body: { azione: 'inizia', consenso: 1, ritorno: window.location.origin },
     }))
+    // Il finto risponde senza `url`: non si resta zitti, lo dice un CustomAlert.
+    expect(await screen.findByText(/Non siamo riusciti ad avviare il collegamento/)).toBeInTheDocument()
   })
 
   it('collegato: data, permessi, e «Scollega» chiede conferma', async () => {
@@ -100,10 +102,14 @@ describe('La riga Garmin in Impostazioni', () => {
 
     await utente.click(within(foglio).getByRole('button', { name: 'Scollega' }))
     expect(finto.supabase.functions.invoke).not.toHaveBeenCalled()
+    // Dopo lo scollegamento la lettura fallisce: la riga deve restare, «Non collegato».
+    ctrl.stato.valore = { error: { message: 'rete assente' } }
     await utente.click(await screen.findByRole('button', { name: 'Sì, scollega' }))
     await waitFor(() => expect(finto.supabase.functions.invoke).toHaveBeenCalledWith('garmin-auth', {
       body: { azione: 'scollega' },
     }))
+    expect(await screen.findByText('Garmin scollegato')).toBeInTheDocument()
+    expect(within(screen.getByRole('button', { name: /Garmin Connect/ })).getByText('Non collegato')).toBeInTheDocument()
   })
 
   it('da ricollegare: lo dice la riga, e il foglio offre «Collega di nuovo»', async () => {

@@ -388,7 +388,8 @@ export default function Settings() {
         body: { azione: 'inizia', consenso: VERSIONE_CONSENSO_GARMIN, ritorno: ritornoGarmin() },
       })
       if (error) throw error
-      if (!data?.url) return
+      // Senza indirizzo non c'è niente da aprire: lo si dice, come un errore.
+      if (!data?.url) throw new Error('garmin-auth senza url')
       if (Capacitor.isNativePlatform()) await Browser.open({ url: data.url })
       else window.location.assign(data.url)
     } catch (e) {
@@ -417,7 +418,9 @@ export default function Settings() {
           return
         }
         setFoglioGarminAperto(false)
-        setGarmin(await leggiStatoGarmin(supabase, user.id))
+        // Lo stato si scrive qui e non si rilegge: una rilettura fallita
+        // (`disponibile: false`) farebbe sparire la riga appena scollegata.
+        setGarmin({ disponibile: true, stato: null, dal: null, permessi: [] })
         setAlertInfo({ title: 'Garmin scollegato', message: 'Non riceviamo più i dati del tuo Garmin.', type: 'success' })
       }
     })

@@ -77,13 +77,21 @@ export function ritornoGarmin() {
  * `fleofit://garmin?esito=ok&motivo=x` → `/settings?garmin=ok&motivo=x`.
  * Qualunque altro indirizzo → `null`: tocca al resto di `DeeplinkHandler`.
  */
+//
+// 🔴 Si legge la STRINGA, non `new URL(...)`: Chromium prima della M130 (una
+// System WebView Android non aggiornata) leggeva `fleofit://garmin?…` come un
+// percorso opaco, con hostname vuoto. Con il parser il ritorno da Garmin
+// finiva nel ramo del login (Review Focus 1).
+const DEEP_LINK_GARMIN = /^fleofit:\/\/garmin(?:[/?#]|$)/i
+
 export function rottaDaDeepLinkGarmin(url) {
-  let u
-  try { u = new URL(url) } catch { return null }
-  if (u.protocol !== 'fleofit:' || u.hostname !== 'garmin') return null
+  if (typeof url !== 'string' || !DEEP_LINK_GARMIN.test(url)) return null
+  const senzaHash = url.split('#')[0]
+  const inizio = senzaHash.indexOf('?')
+  const letti = new URLSearchParams(inizio === -1 ? '' : senzaHash.slice(inizio + 1))
   const parametri = new URLSearchParams()
-  parametri.set('garmin', u.searchParams.get('esito') === 'ok' ? 'ok' : 'errore')
-  const motivo = u.searchParams.get('motivo')
+  parametri.set('garmin', letti.get('esito') === 'ok' ? 'ok' : 'errore')
+  const motivo = letti.get('motivo')
   if (motivo) parametri.set('motivo', motivo)
   return `/settings?${parametri.toString()}`
 }

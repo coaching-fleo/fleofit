@@ -66,10 +66,31 @@ describe('ritorno da Garmin', () => {
       .toBe('/settings?garmin=errore&motivo=altro_account')
   })
 
+  it('🔴 non dipende dal parser degli URL (WebView Android vecchie: host vuoto)', () => {
+    // Chromium prima della M130 legge `fleofit://garmin?…` come un percorso
+    // opaco: hostname '' e pathname '//garmin'. Qui si finge quel parser.
+    const Vero = globalThis.URL
+    class URLVecchio extends Vero {
+      get hostname() { return '' }
+      get host() { return '' }
+      get pathname() { return '//garmin' }
+    }
+    vi.stubGlobal('URL', URLVecchio)
+    try {
+      expect(rottaDaDeepLinkGarmin('fleofit://garmin?esito=ok&motivo=x')).toBe('/settings?garmin=ok&motivo=x')
+      expect(rottaDaDeepLinkGarmin('FLEOFIT://garmin/?esito=errore#x')).toBe('/settings?garmin=errore')
+      expect(rottaDaDeepLinkGarmin('fleofit://garmin')).toBe('/settings?garmin=errore')
+      expect(rottaDaDeepLinkGarmin('fleofit://garminx?esito=ok')).toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('🔴 il link del login e ogni altro indirizzo NON sono di Garmin', () => {
     expect(rottaDaDeepLinkGarmin('fleofit://login-callback#access_token=abc&refresh_token=def')).toBeNull()
     expect(rottaDaDeepLinkGarmin('https://x/garmin')).toBeNull()
     expect(rottaDaDeepLinkGarmin('non un url')).toBeNull()
+    expect(rottaDaDeepLinkGarmin(undefined)).toBeNull()
   })
 })
 
