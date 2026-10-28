@@ -32,6 +32,26 @@ import { ruoloStaff } from "../_shared/staff.ts"
 /** La versione del consenso Garmin che l'app mostra (VERSIONE_CONSENSO_GARMIN lato app). */
 const VERSIONE_CONSENSO_GARMIN = 1
 
+/**
+ * A collegamento riuscito, `garmin-training` manda all'orologio le Corse già
+ * assegnate da oggi in avanti (decisione del committente, 28/10/2026). Risponde
+ * subito (lavora in sottofondo); se non risponde, il collegamento resta valido
+ * e le Corse arrivano al primo cambio o con «Riprova»: si logga e basta.
+ */
+async function avvisaTraining(athleteId: string): Promise<void> {
+  try {
+    const r = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/garmin-training`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-garmin-interno': Deno.env.get('GARMIN_INTERNO_TOKEN') ?? '' },
+      body: JSON.stringify({ tipo: 'collegato', athlete_id: athleteId }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!r.ok) console.warn(`garmin-auth: garmin-training ha risposto ${r.status} per ${athleteId}`);
+  } catch (e) {
+    console.warn(`garmin-auth: garmin-training non avvisato per ${athleteId}:`, (e as Error).message);
+  }
+}
+
 /** Dove si torna quando non si sa da dove si veniva: mai verso un indirizzo non validato. */
 const RITORNO_DI_RISERVA = 'https://fleofit.vercel.app'
 
@@ -131,6 +151,7 @@ async function callback(url: URL): Promise<Response> {
     }
 
     console.log(`garmin-auth: ${riga.athlete_id} collegato (${permessi.join(',') || 'nessun permesso'})`);
+    await avvisaTraining(riga.athlete_id);
     return vaiA(urlRitorno(ritorno, 'ok'));
   } catch (e) {
     console.error(`garmin-auth: callback fallito per ${riga.athlete_id}:`, (e as Error).message);

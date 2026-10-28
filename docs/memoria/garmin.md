@@ -181,9 +181,15 @@ peso e composizione corporea, aggiunta la voce «Cosa mandiamo a Garmin», in it
   parità fa fallire la copia se l'originale cambia. Costo: due file da tenere uguali; il test
   toglie gli `id` interni, quindi non copre gli id fissi `corsa`/`recupero` (nessun codice server
   li usa oggi).
-- 🔴 **DECISIONE DI PRODOTTO ANCORA APERTA, per il committente**: accendere l'interruttore, o
-  collegarsi la prima volta, **non manda le Corse già assegnate**. Arrivano al prossimo cambio
-  (assegnazione, workout, giorno) o con «Riprova». La spec §5 non ha una riga per questo caso.
+- ✅ **Corse già assegnate** (decisione del committente, 28/10/2026: «Sì, mandale»): accendere
+  l'interruttore, o collegarsi a Garmin, manda all'orologio le Corse assegnate **da oggi in
+  avanti** (`futureDellAtleta` in `garmin-training`). Al collegamento è `garmin-auth`
+  (`avvisaTraining`) a chiamare `garmin-training` con `{ tipo:'collegato', athlete_id }` e il
+  segreto interno; il lavoro gira in sottofondo (`inSottofondo`), quindi né l'interruttore né il
+  ritorno da Garmin aspettano. Se l'avviso non parte, il collegamento resta valido e le Corse
+  arrivano al primo cambio o con «Riprova». ⚠️ Dopo il deploy di `garmin-training` va
+  ripubblicata anche `garmin-auth`. Nella prova: assegnare una Corsa **prima** di collegare (o
+  con l'interruttore spento), poi collegare o accendere, e controllare che arrivi.
 - **Righe orfane in `errore`**: tolta un'assegnazione, la riga di `garmin_invii` resta (via la
   cascata, serve per sapere cosa cancellare su Garmin). Se la cancellazione su Garmin fallisce,
   la riga resta in `errore` e il workout resta sull'orologio; nessuna scheda la mostra e
@@ -213,8 +219,8 @@ peso e composizione corporea, aggiunta la voce «Cosa mandiamo a Garmin», in it
 Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
 
 ### Passi del committente, in ordine
-1. `supabase functions deploy garmin-training --no-verify-jwt`.
-   Tra il deploy e il SQL non si rompe niente: l'interruttore funziona, e «Riprova» non compare
+1. `supabase functions deploy garmin-training --no-verify-jwt`, poi `supabase functions deploy garmin-auth --no-verify-jwt` (al collegamento avvisa `garmin-training`).
+   Tra il deploy e il SQL non si rompe niente: l'interruttore funziona (le Corse future non partono finché manca la colonna `firma`: solo un errore nei log), e «Riprova» non compare
    perché righe in `garmin_invii` non ce ne sono ancora (i trigger sono spenti). L'ordine
    deploy → SQL è sicuro.
 2. **Sì esplicito** su `supabase/schema/garmin_fase3_2026-10-28.sql` (CLAUDE.md §0-bis), poi la

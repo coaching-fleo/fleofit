@@ -10,7 +10,10 @@
 //  · POST {azione:'riprova', athlete_workout_id} con il JWT dell'utente — la
 //    «Riprova» della scheda (atleta o suo coach: lo decide la RLS).
 //  · POST {azione:'invia_workout', acceso} con il JWT dell'atleta — l'interruttore
-//    «Manda i workout all'orologio».
+//    «Manda i workout all'orologio» (acceso: manda le Corse già assegnate da
+//    oggi in avanti; spento: le toglie).
+//  Il primo ingresso riceve anche `{ tipo:'collegato', athlete_id }` da
+//  `garmin-auth`, a collegamento riuscito: stesse Corse future, all'orologio.
 //
 // Che cosa fare lo decide `decidiInvio` (garminTraining.ts, coperto dai test);
 // qui ci sono solo il database e la rete.
@@ -290,6 +293,30 @@ async function assegnazioniDaRivedere(admin: Db, workoutId: string): Promise<str
   return (aws as { id: string, athlete_id: string }[]).filter(a => conGarmin.has(a.athlete_id)).map(a => a.id);
 }
 
+/**
+ * Le assegnazioni di un atleta da oggi in avanti: quelle da mandare quando
+ * accende l'interruttore o collega Garmin per la prima volta. `decidiInvio`
+ * scarta da sé ciò che non è una Corsa o che è già sull'orologio.
+ */
+async function futureDellAtleta(admin: Db, athleteId: string): Promise<string[]> {
+  const { data, error } = await admin.from('athlete_workouts')
+    .select('id').eq('athlete_id', athleteId).gte('completed_date', oggiItalia(new Date()));
+  if (error) throw new Error(`assegnazioni future non lette: ${error.message}`);
+  return (data ?? []).map((r: { id: string }) => r.id);
+}
+
+/**
+ * Fa girare `lavoro` dopo la risposta, dove il runtime lo permette (pg_net
+ * aspetta 5 s; l'app non deve aspettare tante chiamate a Garmin); altrimenti
+ * lo aspetta. `lavoro` non deve mai rifiutare.
+ */
+async function inSottofondo(lavoro: Promise<void>): Promise<void> {
+  // deno-lint-ignore no-explicit-any
+  const runtime = (globalThis as any).EdgeRuntime;
+  if (typeof runtime?.waitUntil === 'function') runtime.waitUntil(lavoro);
+  else await lavoro;
+}
+
 async function interno(req: Request): Promise<Response> {
   if (!stessoSegreto(req.headers.get('x-garmin-interno'), Deno.env.get('GARMIN_INTERNO_TOKEN'))) {
     console.warn('garmin-training: chiamata interna con segreto sbagliato');
@@ -311,6 +338,13 @@ async function interno(req: Request): Promise<Response> {
         // DELETE no: le assegnazioni cancellate in cascata arrivano col loro trigger.
         const id = idDi(corpo?.record);
         if (id) await sincronizzaTutte(admin, await assegnazioniDaRivedere(admin, id));
+      } else if (corpo?.tipo === 'collegato') {
+        // Da `garmin-auth`, a collegamento appena riuscito: le Corse già
+        // assegnate da oggi in avanti vanno all'orologio.
+        const athleteId = corpo?.athlete_id;
+        if (typeof athleteId === 'string' && UUID.test(athleteId)) {
+          await sincronizzaTutte(admin, await futureDellAtleta(admin, athleteId));
+        }
       }
     } catch (e) {
       console.error('garmin-training: avviso non gestito:', (e as Error).message);
@@ -318,12 +352,8 @@ async function interno(req: Request): Promise<Response> {
   })();
 
   // pg_net aspetta 5 s (garmin_avvisa): un workout assegnato a molti atleti ci
-  // metterebbe di più. Si risponde subito e il lavoro continua in sottofondo,
-  // dove il runtime lo permette; altrimenti si aspetta come prima.
-  // deno-lint-ignore no-explicit-any
-  const runtime = (globalThis as any).EdgeRuntime;
-  if (typeof runtime?.waitUntil === 'function') runtime.waitUntil(lavoro);
-  else await lavoro;
+  // metterebbe di più. Si risponde subito e il lavoro continua in sottofondo.
+  await inSottofondo(lavoro);
   return risposta({ ok: true });
 }
 
@@ -384,7 +414,19 @@ async function azioneUtente(req: Request): Promise<Response> {
     }
     if (!righe?.length) return risposta({ error: 'Garmin non è collegato' }, 404);
 
-    if (!corpo.acceso) {
+    if (corpo.acceso) {
+      // Acceso: le Corse già assegnate da oggi in avanti vanno all'orologio
+      // (decisione del committente, 28/10/2026). In sottofondo: l'interruttore
+      // non aspetta le chiamate a Garmin.
+      const atleta = utente.id;
+      await inSottofondo((async () => {
+        try {
+          await sincronizzaTutte(admin, await futureDellAtleta(admin, atleta));
+        } catch (e) {
+          console.error(`garmin-training: corse future di ${atleta} non mandate:`, (e as Error).message);
+        }
+      })());
+    } else {
       // Spento: i workout di oggi in avanti si tolgono dall'orologio (la regola dà «cancella»).
       const { data: invii, error: errInvii } = await admin.from('garmin_invii')
         .select('athlete_workout_id').eq('athlete_id', utente.id).gte('data', oggiItalia(new Date()));
