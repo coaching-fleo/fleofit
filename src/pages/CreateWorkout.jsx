@@ -43,6 +43,7 @@ import { intervalliDi, etichetteStazioni, MASSIMO_INTERVALLI } from '../lib/staz
 import { TIPI_CON_INCREMENTO, haIncremento, attivaIncremento, disattivaIncremento, campoIncremento, aumentoDi, testoAumento, esercizioAlGiro, giriDiEsempio, testoForTime, giriForTime, TIME_CAP_PREDEFINITO } from '../lib/incremento'
 import { parseDuration } from '../lib/timerSequence'
 import { riepilogoGym } from '../lib/gym'
+import { durataStimataReale } from '../lib/statistiche'
 import { partiRipetuta, campiVecchiRipetuta, intensitaRipetuta, etichettaParte, MAX_PARTI } from '../lib/ripetute'
 import { FoglioMisure, FoglioParametri } from '../components/FoglioMisure'
 import { SCALE, grandezza, testoMisura } from '../lib/scaleMisura'
@@ -3411,6 +3412,10 @@ function Costruttore() {
       steps: category === 'Running' ? runningSteps : undefined,
       gym: category === 'Gym' ? gymGroups : undefined,
     }
+    // La durata stimata (minuti) la scrive il builder: il server non sa stimare
+    // Hyrox e Gym e l'abbinamento delle attività Garmin la legge da qui.
+    const durataStimata = durataStimataReale(sections)
+    if (durataStimata != null) sections.durataStimata = durataStimata
 
     // «Salva come nuovo» da una modifica: la copia non porta le note scritte
     // per l'originale, se il coach non le ha toccate. In Custom sì, sono il

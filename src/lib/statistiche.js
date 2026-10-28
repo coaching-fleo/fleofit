@@ -85,7 +85,7 @@ const blocchiDi = (s) => {
  * ⚠️ La corsa resta qui: `stimaWorkout.js` conosce solo i blocchi Hyrox, e le
  * fasi di corsa hanno un formato tutto loro (`sections.steps`).
  */
-export const durataWorkout = (sections) => {
+const minutiGrezzi = (sections) => {
   const s = sections || {}
   const cat = s.category || (s.steps ? 'Running' : 'Hyrox')
   let minuti = 0
@@ -105,8 +105,26 @@ export const durataWorkout = (sections) => {
     for (const b of blocchiDi(s)) minuti += durataBlocco(b) / 60
   }
 
+  return minuti
+}
+
+export const durataWorkout = (sections) => {
+  const minuti = minutiGrezzi(sections)
   // Un allenamento senza tempo dichiarato non vale zero: falserebbe le medie.
   return minuti === 0 ? MINUTI_PREDEFINITI : Math.round(minuti)
+}
+
+/**
+ * La durata stimata che il builder scrive in `sections.durataStimata` (serve
+ * al server per abbinare le attività Garmin: non sa stimare Hyrox e Gym).
+ * Come `durataWorkout`, ma `null` dove quella userebbe il ripiego (nessun tempo
+ * dichiarato) e per Custom, Event e allenamenti autonomi.
+ */
+export const durataStimataReale = (sections) => {
+  const s = sections || {}
+  if (s.category === 'Custom' || s.category === 'Event' || s.isAutonomous) return null
+  const minuti = minutiGrezzi(s)
+  return minuti === 0 ? null : Math.round(minuti)
 }
 
 /**

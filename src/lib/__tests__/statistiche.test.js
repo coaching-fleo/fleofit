@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { durataBlocco } from '../stimaWorkout'
-import { calcolaStatistiche, durataWorkout, parseTime } from '../statistiche'
+import { calcolaStatistiche, durataWorkout, durataStimataReale, parseTime } from '../statistiche'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -229,5 +229,31 @@ describe('la settimana corrente dentro le quattro', () => {
     // Su 393px, accanto all'anello, «11 ago - 17 ago» non ci sta in nessun modo.
     const { settimane } = calcolaStatistiche([], OGGI)
     expect(settimane.map(s => s.breve)).toEqual(['S32', 'S33', 'S34', 'S35'])
+  })
+})
+
+describe('durataStimataReale', () => {
+  const hyrox = { category: 'Hyrox', blocks: [{ type: 'ON/OFF', params: { on: '1:00', off: '0:30', rounds: '10' } }] }
+
+  it('Hyrox con blocchi: lo stesso numero di durataWorkout', () => {
+    expect(durataStimataReale(hyrox)).toBe(15)
+    expect(durataStimataReale(hyrox)).toBe(durataWorkout(hyrox))
+  })
+
+  it('Running con tempi dichiarati', () => {
+    const run = { category: 'Running', steps: [{ type: 'run', duration: '30 min' }] }
+    expect(durataStimataReale(run)).toBe(durataWorkout(run))
+  })
+
+  it('senza tempi dichiarati è null, dove durataWorkout dà il ripiego', () => {
+    const vuoto = { category: 'Hyrox', blocks: [] }
+    expect(durataWorkout(vuoto)).toBe(45)
+    expect(durataStimataReale(vuoto)).toBeNull()
+  })
+
+  it('Custom, Event e autonomo sono null', () => {
+    expect(durataStimataReale({ category: 'Custom' })).toBeNull()
+    expect(durataStimataReale({ category: 'Event' })).toBeNull()
+    expect(durataStimataReale({ ...hyrox, isAutonomous: true })).toBeNull()
   })
 })
