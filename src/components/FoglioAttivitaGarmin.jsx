@@ -10,8 +10,8 @@ import { dataBreve } from '../lib/spostaAllenamento'
 
 /**
  * Un'attività dell'orologio che non è abbinata a niente: i suoi numeri (le
- * stesse righe della card «Da Garmin») e «Abbina a…», con le assegnazioni non
- * completate di quel giorno e dei due vicini (`candidatiAbbina`).
+ * stesse righe della card «Da Garmin») e «Abbina a…», con le assegnazioni di quel
+ * giorno e dei due vicini (anche già fatte, se senza attività) (`candidatiAbbina`).
  *
  * Non scrive niente da sé: `onAbbina(awId)` lo riceve la pagina, che sa cosa
  * ricaricare, e risponde `true` se è andata — allora il foglio si chiude. Se
@@ -80,7 +80,7 @@ export default function FoglioAttivitaGarmin({ attivita, candidati = [], onAbbin
                     {separaCodice(w.title || '').nome || 'Allenamento'}
                   </span>
                   <span className="block text-[12px] text-muted truncate">
-                    {inCorso === w.aw_id ? 'Un attimo…' : dataBreve(String(w.date).slice(0, 10))}
+                    {inCorso === w.aw_id ? 'Un attimo…' : `${dataBreve(String(w.date).slice(0, 10))}${w.status === 'completed' ? ' · fatto' : ''}`}
                   </span>
                 </span>
                 <ChevronRight size={17} className="text-[#5b6070] shrink-0" aria-hidden="true" />

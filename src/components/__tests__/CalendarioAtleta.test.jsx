@@ -134,9 +134,10 @@ describe('CalendarioAtleta · attività Garmin libere', () => {
     const foglio = await screen.findByRole('dialog', { name: 'Garmin · Corsa' })
     expect(within(foglio).getByText(/Forerunner 265/)).toBeInTheDocument()
     expect(within(foglio).getByText('42′')).toBeInTheDocument()
-    // aw2 è pending il giorno stesso; aw1 è completato il giorno prima: escluso.
+    // aw2 è pending il giorno stesso; aw1 è completato il giorno prima, senza
+    // attività: si offre lo stesso, dopo, con «fatto».
     const candidato = within(foglio).getByRole('button', { name: /Long Run/ })
-    expect(within(foglio).queryByRole('button', { name: /Hyrox Strength/ })).not.toBeInTheDocument()
+    expect(within(foglio).getByRole('button', { name: /Hyrox Strength.*fatto/ })).toBeInTheDocument()
     await userEvent.click(candidato)
     expect(onAbbina).toHaveBeenCalledWith(libera, 'aw2')
     expect(leggiLibere).toHaveBeenCalledTimes(2)

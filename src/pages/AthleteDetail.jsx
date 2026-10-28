@@ -38,7 +38,7 @@ import FoglioCoach from '../components/FoglioCoach'
 import CalendarioAtleta from '../components/CalendarioAtleta'
 import { assegnaAtleta } from '../lib/coachAtleti'
 import { leggiStatoGarmin } from '../lib/garmin'
-import { leggiAttivitaLibere, abbinaA } from '../lib/attivitaGarmin'
+import { leggiAttivitaPeriodo, abbinaA } from '../lib/attivitaGarmin'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
 import RecapAllenamento from '../components/RecapAllenamento'
@@ -200,7 +200,7 @@ export default function AthleteDetail() {
   // Garmin: le attività libere del mese mostrato nel calendario dell'atleta.
   // ⚠️ `useCallback`: CalendarioAtleta rilegge quando cambia, e una funzione
   // nuova a ogni render vorrebbe dire una lettura a ogni render.
-  const leggiLibere = useCallback((da, a) => leggiAttivitaLibere(supabase, id, da, a), [id])
+  const leggiLibere = useCallback((da, a) => leggiAttivitaPeriodo(supabase, id, da, a), [id])
 
   // «Abbina a…» dal foglio dell'attività: l'assegnazione si completa, e lo
   // storico si ricarica in silenzio come dopo le altre modifiche.

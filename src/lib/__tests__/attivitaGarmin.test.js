@@ -18,6 +18,15 @@ describe('giornoLocale', () => {
   })
 })
 
+describe('giornoLocale con l\'ora legale', () => {
+  it('23:30 CEST del 15/07 (21:30 UTC, +7200) resta il 15', () => {
+    expect(giornoLocale(Date.UTC(2026, 6, 15, 21, 30) / 1000, 7200)).toBe('2026-07-15')
+  })
+  it('00:30 CEST del 16/07 (22:30 UTC del 15, +7200) è il 16', () => {
+    expect(giornoLocale(Date.UTC(2026, 6, 15, 22, 30) / 1000, 7200)).toBe('2026-07-16')
+  })
+})
+
 describe('leggiAttivita', () => {
   const r = leggiAttivita(fixture)
   it('legge entrambe le chiavi di lotto e scarta la voce senza userId', () => {

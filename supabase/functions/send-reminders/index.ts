@@ -630,7 +630,9 @@ serve(async (req) => {
         });
       }
 
-      const { title, bodyMsg } = testoNotificaCoach(body);
+      // «· da Garmin» lo dice solo il webhook (chiamante di servizio): da un atleta o da
+      // un coach il flag si ignora, il testo direbbe un dato verificato che non lo è.
+      const { title, bodyMsg } = testoNotificaCoach({ ...body, daGarmin: body.daGarmin === true && chiamante.servizio });
       const route = body.route || "/";
 
       const notifInserts = adminUserIds.map(adminId => ({

@@ -41,8 +41,9 @@ it('l\'atleta vede la voce grigia e la abbina all\'allenamento del giorno prima'
   await utente.click(within(foglio).getByRole('button', { name: /Lungo lento/ }))
   await waitFor(() => expect(finto.chiamateA('athlete_workouts', 'update')).toHaveLength(1))
   expect(finto.chiamateA('garmin_attivita', 'update')[0].args[0]).toEqual({ athlete_workout_id: 'aw1', abbinamento: 'atleta' })
-  // Il mese si rilegge: due letture di attività, una all'apertura e una dopo.
-  await waitFor(() => expect(finto.chiamateA('garmin_attivita', 'select')).toHaveLength(2))
+  // Il mese si rilegge: due letture di attività (quelle con il periodo, `gte`), una
+  // all'apertura e una dopo. Il `select` dell'update di «Abbina a…» non è una lettura.
+  await waitFor(() => expect(finto.chiamateA('garmin_attivita', 'gte')).toHaveLength(2))
 })
 
 it('il coach non vede voci Garmin, e non le legge', async () => {

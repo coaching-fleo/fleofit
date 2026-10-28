@@ -97,34 +97,45 @@ export async function annullaAbbinamento(supabase, attivita) {
   return { error: eAw || null, tornaDaFare: !eAw, fallito: eAw ? 'workout' : null }
 }
 
-/** «Abbina a…»: l'attività va su quel workout, che si completa. */
+/**
+ * «Abbina a…»: l'attività va su quel workout, che si completa (se lo era già,
+ * resta com'è: lo stato non si riscrive).
+ * ⚠️ Si prende solo un'attività ANCORA LIBERA (`athlete_workout_id` nullo): un
+ * foglio rimasto aperto, o un altro dispositivo, non deve spostare un
+ * abbinamento fatto nel frattempo. Se non si aggiorna nessuna riga: errore.
+ */
 export async function abbinaA(supabase, attivita, athleteWorkoutId) {
-  const { error } = await supabase.from('garmin_attivita')
+  const { data, error } = await supabase.from('garmin_attivita')
     .update({ athlete_workout_id: athleteWorkoutId, abbinamento: 'atleta' })
     .eq('garmin_id', attivita.garmin_id)
+    .is('athlete_workout_id', null)
+    .select('garmin_id')
   if (error) return { error }
+  if (!data || data.length === 0) return { error: { message: 'attività già abbinata' } }
   // Solo lo stato, come «Segna come completato»: RPE e note restano all'atleta.
+  // `.neq`: su un workout già completato non si scrive niente.
   const { error: eAw } = await supabase.from('athlete_workouts')
-    .update({ status: 'completed' }).eq('id', athleteWorkoutId)
+    .update({ status: 'completed' }).eq('id', athleteWorkoutId).neq('status', 'completed')
   return { error: eAw || null }
 }
 
 // ── Le attività libere nel calendario ───────────────────────────────────────
 
 /**
- * Le attività dell'orologio che NON sono abbinate a nessun allenamento, di un
- * atleta e di un periodo: UNA lettura per il mese mostrato. La RLS le fa
+ * Le attività dell'orologio di un atleta e di un periodo, abbinate o no: UNA
+ * lettura per il mese mostrato. Le libere diventano le voci grigie
+ * (`vociLibere`), le abbinate dicono a `candidatiAbbina` quali workout hanno
+ * già la loro attività. La RLS le fa
  * leggere all'atleta e al suo coach. Un errore (rete, tabella che non c'è,
  * un'app senza Garmin) vale come «nessuna attività»: il calendario resta
  * quello di sempre, mai una pagina rotta per un dato in più.
  */
-export async function leggiAttivitaLibere(supabase, athleteId, da, a) {
+export async function leggiAttivitaPeriodo(supabase, athleteId, da, a) {
   if (!supabase || !athleteId) return []
   try {
     const { data, error } = await supabase.from('garmin_attivita')
       .select('garmin_id, giorno, tipo, durata_s, distanza_m, dati, athlete_workout_id, abbinamento')
       .eq('athlete_id', athleteId)
-      .is('athlete_workout_id', null)
       .gte('giorno', da)
       .lte('giorno', a)
     return error ? [] : (data || [])
@@ -151,15 +162,20 @@ const giorniFra = (da, a) => Math.round(
   (Date.parse(`${a.slice(0, 10)}T12:00:00Z`) - Date.parse(`${da.slice(0, 10)}T12:00:00Z`)) / 86400000)
 
 /**
- * «Abbina a…»: le assegnazioni non completate del giorno dell'attività e dei
- * due vicini (spec Garmin §3), quello stesso giorno per primo. Le righe sono
- * nella forma del calendario (il workout più `aw_id`, `status`, `date`).
+ * «Abbina a…»: le assegnazioni del giorno dell'attività e dei due vicini (spec
+ * Garmin §3), quello stesso giorno per primo, le da fare prima delle fatte.
+ * Anche quelle già completate (l'atleta ha spuntato «fatto» prima che
+ * l'orologio sincronizzasse), purché non abbiano già un'attività: `attivita`
+ * sono le righe lette del periodo, abbinate comprese. Le righe sono nella
+ * forma del calendario (il workout più `aw_id`, `status`, `date`).
  */
-export function candidatiAbbina(assegnazioni, giorno) {
+export function candidatiAbbina(assegnazioni, giorno, attivita = []) {
+  const occupate = new Set((attivita || []).map(a => a?.athlete_workout_id).filter(Boolean))
+  const fatto = (w) => w.status === 'completed'
   return (assegnazioni || [])
-    .filter(w => w?.aw_id && w.status !== 'completed' && typeof w.date === 'string')
+    .filter(w => w?.aw_id && typeof w.date === 'string' && !(fatto(w) && occupate.has(w.aw_id)))
     .map(w => ({ w, scarto: giorniFra(giorno, w.date) }))
     .filter(({ scarto }) => Math.abs(scarto) <= 1)
-    .sort((x, y) => Math.abs(x.scarto) - Math.abs(y.scarto) || x.scarto - y.scarto)
+    .sort((x, y) => (fatto(x.w) - fatto(y.w)) || Math.abs(x.scarto) - Math.abs(y.scarto) || x.scarto - y.scarto)
     .map(({ w }) => w)
 }

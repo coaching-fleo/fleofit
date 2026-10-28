@@ -65,7 +65,7 @@ async function salva(admin: Admin, athleteId: string, a: AttivitaGarmin): Promis
   const { error: e1 } = await admin.from('garmin_attivita')
     .upsert([{ garmin_id: a.garmin_id, athlete_id: athleteId, ...daGarmin }], { onConflict: 'garmin_id', ignoreDuplicates: true });
   if (e1) throw new Error(`insert: ${e1.message}`);
-  const { error: e2 } = await admin.from('garmin_attivita').update(daGarmin).eq('garmin_id', a.garmin_id);
+  const { error: e2 } = await admin.from('garmin_attivita').update(daGarmin).eq('garmin_id', a.garmin_id).eq('athlete_id', athleteId); // un vecchio account Garmin passato ad altri non tocca le righe del primo
   if (e2) throw new Error(`update: ${e2.message}`);
 }
 
@@ -99,7 +99,7 @@ async function gestisci(admin: Admin, a: AttivitaGarmin): Promise<'salvata' | 'c
   // Riletta: abbinamento e athlete_workout_id sono quelli veri della riga.
   const { data: riga, error: eRiga } = await admin.from('garmin_attivita')
     .select('giorno, tipo, durata_s, inizio, abbinamento, athlete_workout_id')
-    .eq('garmin_id', a.garmin_id).maybeSingle();
+    .eq('garmin_id', a.garmin_id).eq('athlete_id', coll.athleteId).maybeSingle();
   if (eRiga || !riga) throw new Error(`riga non riletta: ${eRiga?.message ?? 'assente'}`);
 
   const { data: righe, error: eCand } = await admin.from('athlete_workouts')

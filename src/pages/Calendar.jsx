@@ -14,7 +14,7 @@ import { vibraSuccesso } from '../lib/aptica'
 import { categoriaDi } from '../lib/categorie'
 import { metaWorkout } from '../lib/rigaArchivio'
 import { rpeDichiarato } from '../lib/rpe'
-import { leggiAttivitaLibere, vociLibere, candidatiAbbina, abbinaA } from '../lib/attivitaGarmin'
+import { leggiAttivitaPeriodo, vociLibere, candidatiAbbina, abbinaA } from '../lib/attivitaGarmin'
 import {
   griglia, indicizzaPerGiorno, chiaveGiorno, segnoGiorno, riepilogoMese,
   riepilogoGiorno, etichettaSessione, etichettaGiorno, etichettaMese,
@@ -83,7 +83,7 @@ export default function Calendar() {
       // un allenamento chiuso non può dire com'è andato — che è l'unica cosa
       // per cui si riapre il calendario di ieri.
       // Le attività Garmin libere viaggiano con le assegnazioni: una lettura
-      // per mese, e un errore vale come «nessuna» (leggiAttivitaLibere).
+      // per mese, e un errore vale come «nessuna» (leggiAttivitaPeriodo).
       const [{ data }, attivita] = await Promise.all([
         supabase
           .from('athlete_workouts')
@@ -91,7 +91,7 @@ export default function Calendar() {
           .eq('athlete_id', user.id)
           .gte('completed_date', from)
           .lte('completed_date', to),
-        leggiAttivitaLibere(supabase, user.id, from, to),
+        leggiAttivitaPeriodo(supabase, user.id, from, to),
       ])
       setLibere(attivita)
       const mapped = (data || []).filter(aw => aw.workouts).map(aw => ({
@@ -302,7 +302,7 @@ export default function Calendar() {
         <Suspense fallback={null}>
         <FoglioAttivitaGarmin
           attivita={attivitaAperta}
-          candidati={candidatiAbbina(workouts, String(attivitaAperta.giorno).slice(0, 10))}
+          candidati={candidatiAbbina(workouts, String(attivitaAperta.giorno).slice(0, 10), libere)}
           onAbbina={abbina}
           onChiudi={() => setAttivitaAperta(null)} />
         </Suspense>

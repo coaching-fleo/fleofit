@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   righeDaGarmin, nomeTipoAttivita, TIPI_ATTIVITA, durataGarmin, minutiVeri,
-  annullaAbbinamento, abbinaA, vociLibere, candidatiAbbina, dispositivoGarmin, leggiAttivitaLibere,
+  annullaAbbinamento, abbinaA, vociLibere, candidatiAbbina, dispositivoGarmin, leggiAttivitaPeriodo,
 } from '../attivitaGarmin'
 import { fintoSupabase } from '../../test/fintoSupabase'
 
@@ -105,12 +105,24 @@ describe('annullaAbbinamento', () => {
 })
 
 describe('abbinaA', () => {
-  it('abbina con «atleta» e completa il workout', async () => {
-    const f = fintoSupabase()
-    const r = await abbinaA(f.supabase, { ...corsa, athlete_workout_id: null, abbinamento: 'atleta' }, 'aw2')
+  const libera = { ...corsa, athlete_workout_id: null, abbinamento: 'atleta' }
+
+  it('abbina con «atleta» solo se ancora libera, e completa il workout', async () => {
+    const f = fintoSupabase({ garmin_attivita: [{ garmin_id: 'g1' }] })
+    const r = await abbinaA(f.supabase, libera, 'aw2')
     expect(r).toEqual({ error: null })
     expect(f.chiamateA('garmin_attivita', 'update')[0].args[0]).toEqual({ athlete_workout_id: 'aw2', abbinamento: 'atleta' })
+    expect(f.chiamateA('garmin_attivita', 'is')[0].args).toEqual(['athlete_workout_id', null])
     expect(f.chiamateA('athlete_workouts', 'update')[0].args[0]).toEqual({ status: 'completed' })
+    // su un workout già completato lo stato non si riscrive
+    expect(f.chiamateA('athlete_workouts', 'neq')[0].args).toEqual(['status', 'completed'])
+  })
+
+  it('un\'attività già abbinata nel frattempo: errore, il workout non è toccato', async () => {
+    const f = fintoSupabase({ garmin_attivita: [] })
+    const r = await abbinaA(f.supabase, libera, 'aw2')
+    expect(r.error).toBeTruthy()
+    expect(f.chiamateA('athlete_workouts', 'update')).toHaveLength(0)
   })
 })
 
@@ -153,9 +165,15 @@ describe('candidatiAbbina', () => {
     expect(candidatiAbbina(lista, '2027-01-01').map(w => w.aw_id)).toEqual(['a', 'b'])
   })
 
-  it('i completati e le righe senza assegnazione sono esclusi', () => {
-    const lista = [aw('a', '2026-10-28', 'completed'), { id: 'w', date: '2026-10-28', status: 'pending' }, aw('b', '2026-10-28')]
+  it('le righe senza assegnazione sono escluse', () => {
+    const lista = [{ id: 'w', date: '2026-10-28', status: 'pending' }, aw('b', '2026-10-28')]
     expect(candidatiAbbina(lista, '2026-10-28').map(w => w.aw_id)).toEqual(['b'])
+  })
+
+  it('i completati si offrono, dopo i da fare, se non hanno già un\'attività', () => {
+    const lista = [aw('a', '2026-10-28', 'completed'), aw('b', '2026-10-28'), aw('c', '2026-10-28', 'completed'), aw('d', '2026-10-27')]
+    const attivita = [{ garmin_id: 'g1', athlete_workout_id: 'c' }, { garmin_id: 'g2', athlete_workout_id: null }]
+    expect(candidatiAbbina(lista, '2026-10-28', attivita).map(w => w.aw_id)).toEqual(['b', 'd', 'a'])
   })
 
   it('niente assegnazioni, nessun candidato', () => {
@@ -171,21 +189,21 @@ describe('dispositivoGarmin', () => {
   })
 })
 
-describe('leggiAttivitaLibere', () => {
-  it('una sola lettura: l\'atleta, le libere, il periodo', async () => {
+describe('leggiAttivitaPeriodo', () => {
+  it('una sola lettura: l\'atleta, il periodo, abbinate comprese', async () => {
     const f = fintoSupabase({ garmin_attivita: [{ garmin_id: 'g1' }] })
-    const righe = await leggiAttivitaLibere(f.supabase, 'at1', '2026-10-01', '2026-10-31')
+    const righe = await leggiAttivitaPeriodo(f.supabase, 'at1', '2026-10-01', '2026-10-31')
     expect(righe).toEqual([{ garmin_id: 'g1' }])
     expect(f.chiamateA('garmin_attivita', 'select')).toHaveLength(1)
     expect(f.chiamateA('garmin_attivita', 'eq')[0].args).toEqual(['athlete_id', 'at1'])
-    expect(f.chiamateA('garmin_attivita', 'is')[0].args).toEqual(['athlete_workout_id', null])
+    expect(f.chiamateA('garmin_attivita', 'is')).toHaveLength(0)
     expect(f.chiamateA('garmin_attivita', 'gte')[0].args).toEqual(['giorno', '2026-10-01'])
     expect(f.chiamateA('garmin_attivita', 'lte')[0].args).toEqual(['giorno', '2026-10-31'])
   })
 
   it('un errore di lettura vale come nessuna attività', async () => {
     const f = fintoSupabase({}, { erroreSu: ['garmin_attivita'] })
-    expect(await leggiAttivitaLibere(f.supabase, 'at1', '2026-10-01', '2026-10-31')).toEqual([])
-    expect(await leggiAttivitaLibere(null, 'at1', '2026-10-01', '2026-10-31')).toEqual([])
+    expect(await leggiAttivitaPeriodo(f.supabase, 'at1', '2026-10-01', '2026-10-31')).toEqual([])
+    expect(await leggiAttivitaPeriodo(null, 'at1', '2026-10-01', '2026-10-31')).toEqual([])
   })
 })

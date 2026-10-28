@@ -162,7 +162,7 @@ export default function CalendarioAtleta({ nome, assegnazioni = [], onApri, onAs
         <FoglioAttivitaGarmin
           attivita={attivitaAperta}
           // Dallo storico intero: a cavallo del mese il giorno vicino c'è.
-          candidati={candidatiAbbina(tutti, String(attivitaAperta.giorno).slice(0, 10))}
+          candidati={candidatiAbbina(tutti, String(attivitaAperta.giorno).slice(0, 10), libere)}
           onAbbina={abbina}
           onChiudi={() => setAttivitaAperta(null)} />
         </Suspense>

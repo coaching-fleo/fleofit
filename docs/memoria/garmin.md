@@ -259,6 +259,15 @@ server `https://apis.garmin.com/wellness-api`), con la sessione del committente.
     la prima, «Impossibile staccare l'attività di Garmin» e il workout non è toccato;
   - abbinamento: l'attività risulta abbinata ma il workout resta «da fare»; la pagina mostra
     l'errore e ricarica, quindi la voce grigia sparisce e il completamento va fatto a mano.
+- **Un'attività che arriva mentre il collegamento non è `attivo` NON si salva** (voluto, privacy:
+  un collegamento in pausa o revocato vuol dire che non vogliamo i dati). Il backfill di 30 giorni
+  al ricollegamento li recupera, come attività precedenti al collegamento (non completano niente).
+- **«Abbina a…» offre anche i workout già completati** senza un'attività (ruling 28/10/2026): l'atleta
+  spunta «fatto» e l'orologio sincronizza dopo. Abbinare a uno completato non cambia lo stato.
+  `abbinaA` prende solo un'attività ancora libera (`athlete_workout_id` nullo). Il webhook filtra
+  per `athlete_id` quando aggiorna e rilegge una riga (un vecchio account Garmin passato ad un altro
+  atleta non tocca le righe del primo). Il «da Garmin» della notifica al coach conta solo se il
+  chiamante è di servizio.
 - **«Non era questo allenamento»** libera l'attività con `abbinamento: 'atleta'`: il webhook non
   riabbina MAI una riga con `abbinamento` non nullo. Il workout torna da fare solo se l'aveva
   completato Garmin (`'auto'`).
