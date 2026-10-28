@@ -23,8 +23,8 @@ export const GARMIN = {
 
 export const PERMESSI_NOTI = ['ACTIVITY_EXPORT', 'HEALTH_EXPORT', 'WORKOUT_IMPORT'];
 
-/** Le origini del sito sempre ammesse come ritorno; le altre (localhost) arrivano da `extra`. */
-const ORIGINI_FISSE = ['https://fleofit.vercel.app'];
+/** Le origini web sempre ammesse come ritorno (sito e sviluppo locale); altre arrivano da `extra` (GARMIN_ORIGINI_EXTRA). */
+const ORIGINI_FISSE = ['https://fleofit.vercel.app', 'http://localhost:5173'];
 
 export const MOTIVI_ERRORE = ['annullato', 'scaduto', 'altro_account', 'garmin'];
 
@@ -71,6 +71,7 @@ export function ritornoValido(ritorno: unknown, extra: string[] = []): boolean {
   return ritorno === 'app' || ORIGINI_FISSE.includes(ritorno) || extra.includes(ritorno);
 }
 
+/** ⚠️ NON valida `ritorno`: chi chiama deve prima passare da `ritornoValido`. */
 export function urlRitorno(ritorno: string, esito: 'ok' | 'errore', motivo?: string): string {
   const m = motivo ? `&motivo=${encodeURIComponent(motivo)}` : '';
   if (ritorno === 'app') return `fleofit://garmin?esito=${esito}${m}`;
@@ -97,6 +98,7 @@ export function esitoCallback(
 const chiaveAes = (chiaveB64: string) =>
   crypto.subtle.importKey('raw', daBase64(chiaveB64), 'AES-GCM', false, ['encrypt', 'decrypt']);
 
+/** `chiaveB64`: base64 standard di 32 byte (`GARMIN_TOKEN_KEY`). */
 export async function cifra(testo: string, chiaveB64: string): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const dati = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await chiaveAes(chiaveB64), new TextEncoder().encode(testo));
@@ -106,6 +108,7 @@ export async function cifra(testo: string, chiaveB64: string): Promise<string> {
   return btoa(String.fromCharCode(...tutto));
 }
 
+/** Stessa chiave di `cifra` (base64 standard di 32 byte, `GARMIN_TOKEN_KEY`); con una chiave sbagliata lancia. */
 export async function decifra(cifrato: string, chiaveB64: string): Promise<string> {
   const tutto = daBase64(cifrato);
   const dati = await crypto.subtle.decrypt(

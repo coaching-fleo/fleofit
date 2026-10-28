@@ -68,12 +68,14 @@ describe('ritornoValido', () => {
   it('app e origini esatte sì', () => {
     expect(ritornoValido('app', [])).toBe(true)
     expect(ritornoValido('https://fleofit.vercel.app', [])).toBe(true)
-    expect(ritornoValido('http://localhost:5173', ['http://localhost:5173'])).toBe(true)
+    expect(ritornoValido('http://localhost:5173', [])).toBe(true)
+    expect(ritornoValido('https://staging.esempio.it', ['https://staging.esempio.it'])).toBe(true)
   })
   it('imitazioni e indirizzi no', () => {
     expect(ritornoValido('https://fleofit.vercel.app.evil.com', [])).toBe(false)
     expect(ritornoValido('https://fleofit.vercel.app/settings', [])).toBe(false)
-    expect(ritornoValido('http://localhost:5173', [])).toBe(false)
+    expect(ritornoValido('http://localhost:5174', [])).toBe(false)
+    expect(ritornoValido('https://staging.esempio.it', [])).toBe(false)
     expect(ritornoValido('', [])).toBe(false)
     expect(ritornoValido(undefined, [])).toBe(false)
   })
