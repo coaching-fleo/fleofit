@@ -60,6 +60,7 @@ import { rpeDichiarato } from '../lib/rpe'
 import { gradimentoDi, riepilogoGradimento } from '../lib/gradimento'
 import { durataBlocco, mmss, minutiStimati, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { caricoPrevisto, previsioneSquadra, finestraPrevisione, testoAvviso } from '../lib/previsione'
+import RigaOrologio from '../components/RigaOrologio'
 import { RigaAvviso, AvvisoEsteso, PrevisioneNonDisponibile } from '../components/PrevisioneUI'
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { recapStoria } from '../lib/recapStoria'
@@ -1843,6 +1844,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   )
   const pVocale = (
     <>
+      {/* SULL'OROLOGIO (Garmin): solo corsa, con l'assegnazione di un atleta in primo piano */}
+      {isRunning && athleteWorkoutId && <RigaOrologio awId={athleteWorkoutId} />}
       {/* NOTA VOCALE */}
       {athleteWorkoutId && (eStaff(role) || voiceNoteUrl) && (
         <CardNota
