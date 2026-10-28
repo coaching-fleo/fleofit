@@ -6,8 +6,13 @@
 > il coach vede chi è collegato. Nessun dato Garmin viene usato.
 
 ## 🟡 Stato: attivo in prova (28/10/2026)
-- ✍️ **Fase 3 (Corsa all'orologio) scritta il 28/10/2026, in attesa di deploy e SQL**: vedi la sezione
-  «Fase 3 · Corsa all'orologio» in fondo. Nulla è ancora pubblicato né applicato.
+- ✅ **Fase 3 (Corsa all'orologio) attiva in prova dal 28/10/2026**: `garmin-training` e
+  `garmin-auth` pubblicate, `garmin_fase3_2026-10-28.sql` **applicato dal committente** (prima del
+  SQL i due trigger erano `D` e la colonna `firma` mancava: la corsa assegnata non partiva).
+  **Prima corsa arrivata sul Garmin del committente** con l'atleta di prova, spegnendo e
+  riaccendendo l'interruttore. Ancora da provare: cambio di ritmo, spostamento del giorno,
+  assegnazione tolta, «assegna e sposta subito», timeout in `net._http_response`.
+  Sezione «Fase 3 · Corsa all'orologio» in fondo.
 - ✅ La migrazione è **applicata il 28/10/2026** (sì esplicito in sessione, CLAUDE.md §0-bis):
   4 policy, 3 trigger (`garmin_atleta_eliminato` attivo, gli altri due spenti) e il segreto del
   Vault controllati con le query in fondo al file.

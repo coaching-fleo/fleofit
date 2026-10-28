@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- garmin fase 3 — la Corsa all'orologio: colonna `firma`, via la cascata, trigger accesi
--- Scritta il 28/10/2026 · ⏳ NON APPLICATA.
+-- Scritta il 28/10/2026 · ✅ APPLICATA il 28/10/2026 dal committente.
 -- Piano: docs/superpowers/specs/2026-10-27-garmin-design.md (fase dei workout).
 --
 -- 🔒 CLAUDE.md §0, regola 0-bis: lo schema è congelato. Questo file si scrive e
