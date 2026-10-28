@@ -529,8 +529,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     try {
       const { data, error } = await supabase.from('garmin_attivita')
         .select('garmin_id, tipo, durata_s, distanza_m, dati, athlete_workout_id, abbinamento')
-        .eq('athlete_workout_id', awId).maybeSingle()
-      return error ? null : data
+        // ⚠️ Non `maybeSingle`: due attività sulla stessa assegnazione la
+        // farebbero fallire, e la card sparirebbe. Si mostra la più recente.
+        .eq('athlete_workout_id', awId).order('ricevuto_at', { ascending: false }).limit(1)
+      return error ? null : (data?.[0] ?? null)
     } catch {
       return null
     }
@@ -559,7 +561,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       confirmLabel: 'Stacca',
       onConfirm: async () => {
         setAnnullaGarminInCorso(true)
-        const { error, tornaDaFare } = await annullaAbbinamento(supabase, attivita)
+        const { error, tornaDaFare, fallito } = await annullaAbbinamento(supabase, attivita)
         // Come «Segna come da fare» (toggleStatus): lo stato della pagina.
         if (tornaDaFare) setWorkoutStatus('pending')
         // Si rilegge: se la seconda scrittura è fallita l'attività è comunque
@@ -567,7 +569,13 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         const awId = athleteWorkoutId
         setGarmin({ awId, attivita: await leggiAttivitaGarmin(awId) })
         setAnnullaGarminInCorso(false)
-        if (error) setAlertInfo({ title: 'Errore', message: 'Impossibile staccare l’attività di Garmin', type: 'error' })
+        if (error) setAlertInfo({
+          title: 'Errore',
+          message: fallito === 'workout'
+            ? 'L’attività è staccata, ma l’allenamento non è tornato da fare: riprova dal tasto dello stato'
+            : 'Impossibile staccare l’attività di Garmin',
+          type: 'error',
+        })
       },
     })
   }

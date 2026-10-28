@@ -69,7 +69,7 @@ describe('annullaAbbinamento', () => {
   it('completato da Garmin: l\'attività si libera e il workout torna da fare', async () => {
     const f = fintoSupabase()
     const r = await annullaAbbinamento(f.supabase, corsa)
-    expect(r).toEqual({ error: null, tornaDaFare: true })
+    expect(r).toEqual({ error: null, tornaDaFare: true, fallito: null })
     const att = f.chiamateA('garmin_attivita', 'update')
     expect(att).toHaveLength(1)
     expect(att[0].args[0]).toEqual({ athlete_workout_id: null, abbinamento: 'atleta' })
@@ -82,7 +82,7 @@ describe('annullaAbbinamento', () => {
   it('abbinata dall\'atleta: l\'attività si libera, il workout resta com\'è', async () => {
     const f = fintoSupabase()
     const r = await annullaAbbinamento(f.supabase, { ...corsa, abbinamento: 'atleta' })
-    expect(r).toEqual({ error: null, tornaDaFare: false })
+    expect(r).toEqual({ error: null, tornaDaFare: false, fallito: null })
     expect(f.chiamateA('garmin_attivita', 'update')[0].args[0]).toEqual({ athlete_workout_id: null, abbinamento: 'atleta' })
     expect(f.chiamateA('athlete_workouts', 'update')).toHaveLength(0)
   })
@@ -91,7 +91,16 @@ describe('annullaAbbinamento', () => {
     const f = fintoSupabase({}, { erroreSu: ['garmin_attivita'] })
     const r = await annullaAbbinamento(f.supabase, corsa)
     expect(r.error).toBeTruthy()
+    expect(r.fallito).toBe('attivita')
     expect(f.chiamateA('athlete_workouts', 'update')).toHaveLength(0)
+  })
+
+  it('attività staccata ma workout non rimesso: dice che è fallito il workout', async () => {
+    const f = fintoSupabase({}, { erroreSu: ['athlete_workouts'] })
+    const r = await annullaAbbinamento(f.supabase, corsa)
+    expect(r.error).toBeTruthy()
+    expect(r).toMatchObject({ tornaDaFare: false, fallito: 'workout' })
+    expect(f.chiamateA('garmin_attivita', 'update')).toHaveLength(1)
   })
 })
 

@@ -78,15 +78,17 @@ export async function annullaAbbinamento(supabase, attivita) {
   const { error } = await supabase.from('garmin_attivita')
     .update({ athlete_workout_id: null, abbinamento: 'atleta' })
     .eq('garmin_id', attivita.garmin_id)
-  if (error) return { error, tornaDaFare: false }
+  // `fallito`: quale scrittura non è andata ('attivita' o 'workout'), così la
+  // pagina dice il vero quando l'attività è staccata ma il workout no.
+  if (error) return { error, tornaDaFare: false, fallito: 'attivita' }
 
   const tornaDaFare = attivita.abbinamento === 'auto' && !!attivita.athlete_workout_id
-  if (!tornaDaFare) return { error: null, tornaDaFare: false }
+  if (!tornaDaFare) return { error: null, tornaDaFare: false, fallito: null }
 
   // Gli stessi campi di «Segna come da fare» (`toggleStatus` in WorkoutDetail).
   const { error: eAw } = await supabase.from('athlete_workouts')
     .update({ status: 'pending' }).eq('id', attivita.athlete_workout_id)
-  return { error: eAw || null, tornaDaFare: !eAw }
+  return { error: eAw || null, tornaDaFare: !eAw, fallito: eAw ? 'workout' : null }
 }
 
 /** «Abbina a…»: l'attività va su quel workout, che si completa. */

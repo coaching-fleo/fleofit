@@ -91,7 +91,7 @@ describe('la card «Da Garmin»', () => {
     ctrl.stato.erroreSu = ['garmin_attivita']
     apri()
     await attendi()
-    await waitFor(() => expect(finto.chiamateA('garmin_attivita', 'maybeSingle')).toHaveLength(1))
+    await waitFor(() => expect(finto.chiamateA('garmin_attivita', 'limit')).toHaveLength(1))
     expect(screen.queryByText('Da Garmin')).not.toBeInTheDocument()
   })
 
@@ -106,6 +106,44 @@ describe('la card «Da Garmin»', () => {
     await waitFor(() => expect(finto.chiamateA('athlete_workouts', 'update')).toHaveLength(1))
     expect(finto.chiamateA('athlete_workouts', 'update')[0].args[0]).toEqual({ status: 'pending' })
     expect(await screen.findByRole('button', { name: /Segna come completato/ })).toBeInTheDocument()
+  })
+})
+
+describe('«Non era questo» che non riesce', () => {
+  const stacca = async () => {
+    const utente = userEvent.setup()
+    apri()
+    await attendi()
+    await utente.click(await screen.findByRole('button', { name: 'Non era questo allenamento' }))
+    return utente
+  }
+
+  it('se si stacca a metà, lo dice', async () => {
+    const utente = await stacca()
+    ctrl.stato.erroreSu = ['athlete_workouts']
+    await utente.click(await screen.findByRole('button', { name: 'Stacca' }))
+    expect(await screen.findByText(/L’attività è staccata, ma l’allenamento non è tornato da fare/)).toBeInTheDocument()
+  })
+
+  it('se non si stacca affatto, il messaggio di sempre', async () => {
+    const utente = await stacca()
+    ctrl.stato.erroreSu = ['garmin_attivita']
+    await utente.click(await screen.findByRole('button', { name: 'Stacca' }))
+    expect(await screen.findByText('Impossibile staccare l’attività di Garmin')).toBeInTheDocument()
+    expect(finto.chiamateA('athlete_workouts', 'update')).toHaveLength(0)
+  })
+})
+
+describe('due attività sulla stessa assegnazione', () => {
+  it('una card sola, la più recente', async () => {
+    ctrl.stato.garmin = [ATTIVITA, { ...ATTIVITA, garmin_id: 'g0', durata_s: 600 }]
+    apri()
+    await attendi()
+    expect(await screen.findByText('Da Garmin')).toBeInTheDocument()
+    expect(screen.getAllByText('Da Garmin')).toHaveLength(1)
+    expect(screen.getByText('42′')).toBeInTheDocument()
+    const ordine = finto.chiamateA('garmin_attivita', 'order')
+    expect(ordine[0].args).toEqual(['ricevuto_at', { ascending: false }])
   })
 })
 
