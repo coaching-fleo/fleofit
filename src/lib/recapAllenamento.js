@@ -303,7 +303,9 @@ export function costruisciRecap({ aw, storico = [], totaleCompletati = null, ogg
     // dichiarato che non ripiega su 5, la corsa mista che non dichiara un
     // totale. Riscriverle qui vorrebbe dire due recap dello stesso allenamento
     // con due numeri diversi, uno nell'app e uno nell'immagine condivisa.
-    celle: celleStoria(aw?.workouts, { rpe: dichiarato }),
+    // `minutiGarmin`: i minuti veri dell'attività dell'orologio, se c'è
+    // (src/lib/attivitaGarmin.js) — al posto del `≈` della stima.
+    celle: celleStoria(aw?.workouts, { rpe: dichiarato, minutiVeri: aw?.minutiGarmin ?? null }),
     ordinale: Number.isFinite(totaleCompletati) && totaleCompletati > 0 ? totaleCompletati : null,
   }
 

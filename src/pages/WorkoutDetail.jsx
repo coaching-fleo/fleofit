@@ -61,6 +61,10 @@ import { gradimentoDi, riepilogoGradimento } from '../lib/gradimento'
 import { durataBlocco, mmss, minutiStimati, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { caricoPrevisto, previsioneSquadra, finestraPrevisione, testoAvviso } from '../lib/previsione'
 import RigaOrologio from '../components/RigaOrologio'
+// Pigra: la card serve solo dove c'è un'attività dell'orologio, e il chunk
+// della scheda deve restare leggero (CLAUDE.md §2).
+const CardDaGarmin = lazy(() => import('../components/CardDaGarmin'))
+import { annullaAbbinamento, minutiVeri } from '../lib/attivitaGarmin'
 import { RigaAvviso, AvvisoEsteso, PrevisioneNonDisponibile } from '../components/PrevisioneUI'
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { recapStoria } from '../lib/recapStoria'
@@ -245,7 +249,7 @@ export default function WorkoutDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const indietro = useIndietro('/')
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryAthleteId = searchParams.get('athlete_id')
   const { role, user } = useAuth()
   // Sul desktop (solo coach, src/useDesktop.js) la scheda va su due colonne:
@@ -272,6 +276,15 @@ export default function WorkoutDetail() {
   const [athleteWorkoutId, setAthleteWorkoutId] = useState(null)
   // «Aggiungi le statistiche della gara»: rifà la ricerca su un tempo già salvato senza link.
   const [rifaiRicerca, setRifaiRicerca] = useState(false)
+  // «Da Garmin»: l'attività dell'orologio legata a questa assegnazione
+  // (src/lib/attivitaGarmin.js). La tiene la pagina, non la card: serve anche
+  // al recap, per la durata vera al posto della stima.
+  // ⚠️ Si tiene con l'assegnazione a cui appartiene: cambiata l'assegnazione,
+  // l'attività di prima non vale più, senza azzerarla a mano in un effetto.
+  const [garmin, setGarmin] = useState({ awId: null, attivita: null })
+  const attivitaGarmin = garmin.awId === athleteWorkoutId ? garmin.attivita : null
+  const [annullaGarminInCorso, setAnnullaGarminInCorso] = useState(false)
+  const rpeDaLinkFatto = useRef(false)
   const [workoutStatus, setWorkoutStatus] = useState('pending')
 const [selectedAthletes, setSelectedAthletes] = useState([])
   const [assignStep, setAssignStep] = useState(1)
@@ -509,6 +522,56 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     setLoading(false)
   }
 
+  // Una lettura che fallisce (tabella assente, niente permesso) vale nessuna
+  // attività: la card semplicemente non c'è.
+  const leggiAttivitaGarmin = useCallback(async (awId) => {
+    if (!awId) return null
+    try {
+      const { data, error } = await supabase.from('garmin_attivita')
+        .select('garmin_id, tipo, durata_s, distanza_m, dati, athlete_workout_id, abbinamento')
+        .eq('athlete_workout_id', awId).maybeSingle()
+      return error ? null : data
+    } catch {
+      return null
+    }
+  }, [])
+
+  useEffect(() => {
+    let vivo = true
+    if (athleteWorkoutId) {
+      leggiAttivitaGarmin(athleteWorkoutId)
+        .then(attivita => { if (vivo) setGarmin({ awId: athleteWorkoutId, attivita }) })
+    }
+    return () => { vivo = false }
+  }, [athleteWorkoutId, leggiAttivitaGarmin])
+
+  // «Non era questo allenamento»: l'attività si stacca (e resta libera), il
+  // workout torna da fare solo se l'aveva completato Garmin.
+  const chiediAnnullaGarmin = () => {
+    const attivita = attivitaGarmin
+    if (!attivita) return
+    const daGarmin = attivita.abbinamento === 'auto'
+    setConfirmInfo({
+      title: 'Non era questo allenamento?',
+      message: daGarmin
+        ? 'L’attività di Garmin si stacca da questo allenamento, che torna da fare.'
+        : 'L’attività di Garmin si stacca da questo allenamento.',
+      confirmLabel: 'Stacca',
+      onConfirm: async () => {
+        setAnnullaGarminInCorso(true)
+        const { error, tornaDaFare } = await annullaAbbinamento(supabase, attivita)
+        // Come «Segna come da fare» (toggleStatus): lo stato della pagina.
+        if (tornaDaFare) setWorkoutStatus('pending')
+        // Si rilegge: se la seconda scrittura è fallita l'attività è comunque
+        // libera, e la card deve sparire lo stesso.
+        const awId = athleteWorkoutId
+        setGarmin({ awId, attivita: await leggiAttivitaGarmin(awId) })
+        setAnnullaGarminInCorso(false)
+        if (error) setAlertInfo({ title: 'Errore', message: 'Impossibile staccare l’attività di Garmin', type: 'error' })
+      },
+    })
+  }
+
   const toggleStatus = async () => {
     if (!athleteWorkoutId) return
     
@@ -554,6 +617,20 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     if (chiediComeStai) { setFoglioComeStai({ poi: apriRpe }); return }
     apriRpe();
   }
+
+  // `?rpe=1`: il link della push «Com'è andata?» dopo un completamento di
+  // Garmin. Apre l'RPE una volta, quando l'assegnazione è caricata, solo
+  // all'atleta stesso e solo se l'RPE non è ancora dichiarato; poi il
+  // parametro se ne va, così tornare indietro non lo riapre.
+  const chiedeRpe = searchParams.get('rpe') === '1'
+  useEffect(() => {
+    if (!chiedeRpe || loading || rpeDaLinkFatto.current) return
+    rpeDaLinkFatto.current = true
+    // Al giro dopo, come le altre aperture dal ciclo della pagina.
+    if (athleteWorkoutId && isOwnProfile && athleteNote?.dichiarato == null) setTimeout(apriRpe, 0)
+    setSearchParams(p => { const n = new URLSearchParams(p); n.delete('rpe'); return n }, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chiedeRpe, loading, athleteWorkoutId])
 
   const handleRpeSubmit = async () => {
     setSavingNote(true)
@@ -606,6 +683,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           // cui il workout era in programma.
           completed_date: workout?.date,
           workouts: { id: workout?.id, title: workout?.title, sections: workout?.sections },
+          // La durata vera dell'orologio, se c'è (src/lib/attivitaGarmin.js).
+          minutiGarmin: minutiVeri(attivitaGarmin),
         })
       }
 
@@ -1846,6 +1925,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     <>
       {/* SULL'OROLOGIO (Garmin): solo corsa, con l'assegnazione di un atleta in primo piano */}
       {isRunning && athleteWorkoutId && <RigaOrologio key={athleteWorkoutId} awId={athleteWorkoutId} />}
+      {/* DA GARMIN: ogni categoria, anche Hyrox e Gym si completano dall'orologio */}
+      {athleteWorkoutId && attivitaGarmin && (
+        <Suspense fallback={null}>
+          <CardDaGarmin attivita={attivitaGarmin} onNonEraQuesto={chiediAnnullaGarmin} inCorso={annullaGarminInCorso} />
+        </Suspense>
+      )}
       {/* NOTA VOCALE */}
       {athleteWorkoutId && (eStaff(role) || voiceNoteUrl) && (
         <CardNota

@@ -295,3 +295,24 @@ describe('la scheda del gradimento', () => {
     expect(r.slide.map(s => s.tipo)).not.toContain('gradimento')
   })
 })
+
+describe('costruisciRecap con la durata di Garmin', () => {
+  const durata = (r) => r.slide[0].celle.find(c => c.chiave === 'durata')
+
+  it('senza Garmin la durata è la stima, col ≈', () => {
+    const aw = riga('2026-09-22', 'completed', { sections: HYROX })
+    expect(durata(costruisciRecap({ aw, oggi: OGGI }))).toMatchObject({ valore: '10', circa: true })
+  })
+
+  it('con l\'attività di Garmin, i minuti veri e niente ≈', () => {
+    const aw = { ...riga('2026-09-22', 'completed', { sections: HYROX }), minutiGarmin: 42 }
+    const cella = durata(costruisciRecap({ aw, oggi: OGGI }))
+    expect(cella.valore).toBe('42')
+    expect(cella.circa).toBeFalsy()
+  })
+
+  it('una corsa a tempo prende i minuti veri', () => {
+    const aw = { ...riga('2026-09-22', 'completed', { sections: CORSA(30) }), minutiGarmin: 33 }
+    expect(durata(costruisciRecap({ aw, oggi: OGGI })).valore).toBe('33')
+  })
+})

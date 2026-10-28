@@ -206,7 +206,10 @@ const intensitaDichiarata = (v) => {
  * dichiarato da qualcuno, sotto la sua etichetta. Se manca anche quella, le
  * celle diventano due.
  */
-export const celleStoria = (workout, { rpe = null } = {}) => {
+// `minutiVeri`: la durata misurata dall'orologio (Garmin), quando c'è. Prende
+// il posto della stima nella cella della durata, senza il `≈`; non aggiunge
+// una cella dove la stima non ne aveva una.
+export const celleStoria = (workout, { rpe = null, minutiVeri = null } = {}) => {
   const sections = workout?.sections || {}
   const categoria = categoriaDi(sections)
   const celle = []
@@ -241,6 +244,11 @@ export const celleStoria = (workout, { rpe = null } = {}) => {
     celle.push({ chiave: 'rpe', valore: String(dichiarato), unita: '/10', etichetta: 'RPE' })
   } else if (intensita !== null) {
     celle.push({ chiave: 'intensita', valore: String(intensita), unita: '/10', etichetta: 'Intensità' })
+  }
+
+  if (Number.isFinite(minutiVeri) && minutiVeri > 0) {
+    const i = celle.findIndex(c => c.chiave === 'durata')
+    if (i >= 0) celle[i] = { chiave: 'durata', valore: String(minutiVeri), unita: 'min', etichetta: 'Durata' }
   }
 
   return celle.slice(0, 3)
