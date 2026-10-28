@@ -6,6 +6,8 @@
 > il coach vede chi è collegato. Nessun dato Garmin viene usato.
 
 ## 🟡 Stato: attivo in prova (28/10/2026)
+- ✍️ **Fase 3 (Corsa all'orologio) scritta il 28/10/2026, in attesa di deploy e SQL**: vedi la sezione
+  «Fase 3 · Corsa all'orologio» in fondo. Nulla è ancora pubblicato né applicato.
 - ✅ La migrazione è **applicata il 28/10/2026** (sì esplicito in sessione, CLAUDE.md §0-bis):
   4 policy, 3 trigger (`garmin_atleta_eliminato` attivo, gli altri due spenti) e il segreto del
   Vault controllati con le query in fondo al file.
@@ -151,3 +153,71 @@ bundle. Il ritorno nativo è `fleofit://garmin`.
 
 La policy (`public/privacy-policy.html`, sezione 3, versione del 28/10/2026) ha già: tolti
 peso e composizione corporea, aggiunta la voce «Cosa mandiamo a Garmin», in italiano e inglese.
+
+---
+
+## Fase 3 · Corsa all'orologio
+> Scritta il 28/10/2026. Piano: `docs/superpowers/plans/2026-10-28-garmin-fase-3-corsa.md`,
+> spec: `docs/superpowers/specs/2026-10-27-garmin-design.md` §5, §7, §9. ✍️ **Codice scritto, in
+> attesa di deploy e SQL** (⏳ il file SQL NON è applicato). Si manda solo la Corsa
+> (`sections.category === 'Running'`), da oggi in avanti (giorno `Europe/Rome`), se
+> l'assegnazione non è completata e il collegamento è `attivo` con `invia_workout` vero e il
+> permesso `WORKOUT_IMPORT`. Hyrox, Gym, Custom ed Event non si mandano.
+
+### Cosa c'è, dove
+| Cosa | Dove |
+|---|---|
+| Copia server di `partiRipetuta` (le ripetute si leggono solo da qui o dall'originale) | `supabase/functions/_shared/ripetute.ts`, con test di parità in `src/lib/__tests__/` |
+| Traduzione di una Corsa nel workout Garmin (`corsaVersoGarmin`, tipo `GarminWorkout`) | `supabase/functions/_shared/workoutGarmin.ts` |
+| Regole pure dell'invio: `decidiInvio`, `firmaWorkout`, `oggiItalia`, `idDaRisposta`, indirizzi `GARMIN_TRAINING` | `supabase/functions/_shared/garminTraining.ts` |
+| Chiamate di rete: `creaWorkoutGarmin`, `programmaGarmin`, `spostaProgrammaGarmin`, `cancellaWorkoutGarmin` | `supabase/functions/_shared/garmin.ts` |
+| Edge Function `garmin-training`, **tre ingressi**: (1) i trigger, con l'header `x-garmin-interno`; (2) `{azione:'riprova', athlete_workout_id}` col JWT di atleta o coach (la RLS decide); (3) `{azione:'invia_workout', acceso}` col JWT dell'atleta, l'interruttore | `supabase/functions/garmin-training/index.ts` |
+| Colonna `firma`, via la chiave esterna di `garmin_invii`, trigger `garmin_invii_assegnazioni` e `garmin_invii_workout` accesi. ⏳ **NON applicato** | `supabase/schema/garmin_fase3_2026-10-28.sql` |
+| Interruttore «Manda i workout all'orologio» | `Settings.jsx`, `FoglioGarmin.jsx` |
+| Riga «Sull'orologio» nella scheda, con «Riprova» | `src/lib/rigaOrologio.js` (`rigaOrologio`), `src/components/RigaOrologio.jsx` |
+
+### Decisioni e costi
+- **`partiRipetuta` è copiata, non importata**: le Edge Function non vedono `src/`. Il test di
+  parità fa fallire la copia se l'originale cambia. Costo: due file da tenere uguali; il test
+  toglie gli `id` interni, quindi non copre gli id fissi `corsa`/`recupero` (nessun codice server
+  li usa oggi).
+- 🔴 **DECISIONE DI PRODOTTO ANCORA APERTA, per il committente**: accendere l'interruttore, o
+  collegarsi la prima volta, **non manda le Corse già assegnate**. Arrivano al prossimo cambio
+  (assegnazione, workout, giorno) o con «Riprova». La spec §5 non ha una riga per questo caso.
+- **Righe orfane in `errore`**: tolta un'assegnazione, la riga di `garmin_invii` resta (via la
+  cascata, serve per sapere cosa cancellare su Garmin). Se la cancellazione su Garmin fallisce,
+  la riga resta in `errore` e il workout resta sull'orologio; nessuna scheda la mostra e
+  «Riprova» risponde 403. Si pulisce spegnendo l'interruttore, altrimenti a mano.
+- **Finestra breve prima di `rifai`**: tra la prenotazione dell'invio e la cancellazione del
+  vecchio workout un crash può lasciare un doppione sull'orologio. Raro, accettato (un workout
+  creato ma non programmato si toglie al prossimo `rifai`).
+- **Nessun feedback dopo un «Riprova» che non cambia nulla**: la riga resta com'è. Costo: tocchi
+  senza capire. Parcheggiato.
+- Un coach non può spegnere `invia_workout` per l'atleta: lo cambia solo l'atleta (lo staff
+  riceve 403, come in `garmin-auth`).
+- Regola 3 di `decidiInvio`: il workout si toglie se è passata la data dell'invio **o**
+  quella dell'assegnazione. Un workout spostato indietro a ieri resta quindi sull'orologio.
+- Altri minori parcheggiati: unità come «min.»/«minuti» finiscono come obiettivo aperto;
+  `.slice(0,100)` può spezzare una emoji; una ripetuta senza parti dà un figlio aperto.
+
+### ⚠️ DA VERIFICARE alla prima prova (28/10/2026)
+- Gli **URL della Training API** (`GARMIN_TRAINING.workout` e `.schedule` in `garminTraining.ts`).
+- Il **corpo del PUT** di `spostaProgrammaGarmin` (qui `scheduleId`, `workoutId`, `date`).
+- Unità `PACE` (m/s), zona e descrizione in `workoutGarmin.ts`; permessi in `garminRegole.ts` e
+  `garmin.ts` (note già presenti dalla Fase 0).
+Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
+
+### Passi del committente, in ordine
+1. `supabase functions deploy garmin-training --no-verify-jwt`.
+   ⚠️ Tra il deploy e il SQL, «Riprova» e l'interruttore rispondono con un errore (la funzione
+   legge già `firma`): applicare il SQL subito dopo. I trigger sono ancora spenti.
+2. **Sì esplicito** su `supabase/schema/garmin_fase3_2026-10-28.sql` (CLAUDE.md §0-bis), poi la
+   query del nome del vincolo (in cima al file: deve stampare `garmin_invii_athlete_workout_id_fkey`),
+   poi il file nel SQL editor, poi le tre verifiche in fondo (trigger attivi, colonna `firma`,
+   vincolo assente).
+3. Prova con l'atleta di prova: assegnargli una Corsa per **oggi o domani** con riscaldamento,
+   ripetute e defaticamento, e controllare in Garmin Connect (Allenamenti e Calendario) e
+   sull'orologio dopo la sincronizzazione. Poi: cambiare un ritmo (deve rifarlo); spostare il
+   giorno (deve spostarlo); **togliere l'assegnazione** (deve sparire); **assegnare e spostare
+   subito il giorno** (deve restare un solo workout su Garmin).
+4. Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.

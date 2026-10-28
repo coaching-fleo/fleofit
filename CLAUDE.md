@@ -270,7 +270,7 @@ npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 > sono usciti Stepper e ruota del passo): è un chunk
 > **condiviso con `WorkoutDetail`**, e una libreria di effetti importata lì
 > dentro la fa scaricare a ogni apertura di una scheda. E `WorkoutDetail` deve
-> restare intorno ai **79 KB** — 83 fino al 22/09, quando il chunk del recap si è
+> restare intorno ai **79 KB** (dal 28/10/2026 è a **89 KB**: la riga «Sull'orologio» ne pesa circa 1, il resto era già cresciuto prima, non misurato) — 83 fino al 22/09, quando il chunk del recap si è
 > portato via un po' di logica condivisa (erano 68 fino al 01/09, poi 82 con `StoriaUI` + `recapStoria`
 > §9-unetvicies, e 84 dal 02/09 con `previsione` + `PrevisioneUI` §9-quatervicies). Se risale sopra i 400, qualcuno ha rimesso `jspdf` o `html-to-image`
 > fra gli import in testa (§9-noviesdecies).
@@ -703,7 +703,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute`, `consenso.js`, `Consenso.jsx`, `informativa.js`, `public/privacy-policy.html` | `accesso.md` |
 | `RicercaCoach.jsx`, `ricercaCoach.js`, `dialogoRicerca.js`, `useDettatura.js`, Edge Function `ricerca-coach` | `ricerca.md` |
-| `garmin.js`, `FoglioGarmin`, Edge Function `garmin-auth` e `garmin-webhook`, `_shared/garmin*.ts`, il ramo `fleofit://garmin` di `DeeplinkHandler` | `garmin.md` |
+| `garmin.js`, `FoglioGarmin`, Edge Function `garmin-auth` e `garmin-webhook`, `_shared/garmin*.ts`, `workoutGarmin.ts`, `garminTraining.ts`, Edge Function `garmin-training`, `rigaOrologio.js`, `RigaOrologio`, il ramo `fleofit://garmin` di `DeeplinkHandler` | `garmin.md` |
 | `previsione.js`, `stimaWorkout.js`, ogni durata o carico | `carico-e-durata.md` |
 | `Recap*.jsx`, `recapAllenamento.js`, `gradimento.js` | `recap.md` |
 | animazioni, `index.css`, `Apertura.jsx`, modali, `Navbar.jsx`, `aptica.js` | `movimento-e-aptica.md` |
