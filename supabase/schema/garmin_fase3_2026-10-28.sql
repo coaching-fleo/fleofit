@@ -9,6 +9,10 @@
 --
 -- ⚠️ PRIMA: la Edge Function `garmin-training` deve essere già pubblicata (i
 -- trigger accesi la chiamano a ogni modifica di un'assegnazione o di un workout).
+-- ⚠️ `garmin-training` legge GIÀ la colonna `firma`: finché questo file non è
+-- applicato, «Riprova» e l'interruttore rispondono con un errore. I trigger sono
+-- ancora spenti, quindi il danno è poco. Applicare il file SUBITO dopo aver
+-- pubblicato la funzione.
 -- ⚠️ PRIMA ancora: verificare il nome del vincolo con la query di controllo in
 -- fondo (punto 1). Se non è `garmin_invii_athlete_workout_id_fkey`, correggere
 -- la riga del punto 3 prima di lanciarla.
@@ -21,7 +25,9 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- ── 1. La firma dell'invio ─────────────────────────────────────────────────
-alter table public.garmin_invii add column firma text;
+begin;
+
+alter table public.garmin_invii add column if not exists firma text;
 
 -- ── 2. Via la cascata ──────────────────────────────────────────────────────
 -- Con `on delete cascade` la riga di garmin_invii sparisce NELLO STESSO istante
@@ -30,18 +36,26 @@ alter table public.garmin_invii add column firma text;
 -- (garmin_workout_id e garmin_schedule_id stavano in quella riga) e l'allenamento
 -- resterebbe sull'orologio dell'atleta. Senza vincolo la riga resta, la funzione
 -- legge gli id, cancella presso Garmin e poi toglie la riga da sé.
--- Conseguenza accettata: una riga può restare orfana se la funzione non gira
--- (la scheda la mostra «Non inviato · Riprova»); non c'è più la pulizia automatica.
+-- Conseguenza accettata: se la funzione fallisce, la riga resta in 'errore' e il
+-- workout resta sull'orologio (l'assegnazione non c'è più, quindi nessuna scheda e
+-- «Riprova» risponde 403). Si pulisce solo se l'atleta spegne «Manda i workout
+-- all'orologio» (quel percorso sincronizza le righe per athlete_id e dà `cancella`);
+-- altrimenti si toglie a mano.
+-- Il `drop constraint` è SENZA `if exists` di proposito: se il nome è sbagliato
+-- deve fallire forte e, dentro la transazione, impedire che i trigger si accendano.
 alter table public.garmin_invii drop constraint garmin_invii_athlete_workout_id_fkey;
 
 -- ── 3. Si accende l'invio ──────────────────────────────────────────────────
 alter table public.athlete_workouts enable trigger garmin_invii_assegnazioni;
 alter table public.workouts enable trigger garmin_invii_workout;
 
+commit;
+
 -- ── Prima, per verificare il nome del vincolo (deve stampare una riga) ─────
 --   select conname from pg_constraint
---    where conrelid = 'public.garmin_invii'::regclass and contype = 'f';
---   -- atteso: garmin_invii_athlete_workout_id_fkey (e garmin_invii_athlete_id_fkey, che resta)
+--    where conrelid = 'public.garmin_invii'::regclass and contype = 'f'
+--      and conname = 'garmin_invii_athlete_workout_id_fkey';
+--   -- atteso: una sola riga, garmin_invii_athlete_workout_id_fkey
 
 -- ── Dopo, per verificare ───────────────────────────────────────────────────
 -- Tutti e tre i trigger `garmin_%` attivi (tgenabled = 'O' per ciascuno):
