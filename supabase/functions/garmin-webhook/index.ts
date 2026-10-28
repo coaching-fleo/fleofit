@@ -2,22 +2,23 @@
 // ha tolto FLEOFIT da Garmin Connect) e cambi di permessi.
 // Spec: docs/superpowers/specs/2026-10-27-garmin-design.md.
 //
-// Indirizzo da registrare nel portale Garmin:
-//   https://riyqtcssllupakjtoehj.supabase.co/functions/v1/garmin-webhook?t=<GARMIN_WEBHOOK_TOKEN>
+// Indirizzo da registrare nel portale Garmin, col token NEL PERCORSO (Garmin
+// toglie la query quando chiama: visto nei log il 28/10/2026):
+//   https://riyqtcssllupakjtoehj.supabase.co/functions/v1/garmin-webhook/<GARMIN_WEBHOOK_TOKEN>
 //
 // `verify_jwt = false` (config.toml): Garmin chiama senza JWT Supabase. La
-// protezione è il token `t` nell'indirizzo, confrontato in tempo costante.
+// protezione è il token nel percorso dell'indirizzo, confrontato in tempo costante.
 // Le Fasi 1–2 aggiungono qui gli altri tipi di notifica.
 //
 // Risponde SEMPRE 200 a vuoto: Garmin non deve ritentare, e le voci sono
 // indipendenti (una che fallisce non ferma le altre). Con `t` sbagliato non
-// si tocca niente. Il token e l'indirizzo con la query non si loggano mai.
+// si tocca niente. Il token e l'indirizzo completo non si loggano mai.
 //
 // Secret: GARMIN_WEBHOOK_TOKEN.
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
-import { leggiNotifiche, stessoSegreto } from "../_shared/garminRegole.ts"
+import { leggiNotifiche, stessoSegreto, tokenWebhook } from "../_shared/garminRegole.ts"
 import { scollegaAtleta } from "../_shared/garmin.ts"
 
 const ok = () => new Response(null, { status: 200 });
@@ -26,16 +27,25 @@ serve(async (req) => {
   try {
     if (req.method !== 'POST') return ok();
 
-    const token = new URL(req.url).searchParams.get('t');
+    const token = tokenWebhook(req.url);
     if (!stessoSegreto(token, Deno.env.get('GARMIN_WEBHOOK_TOKEN'))) {
-      console.warn('garmin-webhook: chiamata con token sbagliato, ignorata');
+      // Solo presenza e lunghezze, mai il valore: bastano a distinguere un token
+      // ricopiato male da un indirizzo a cui Garmin ha tolto la query.
+      const atteso = Deno.env.get('GARMIN_WEBHOOK_TOKEN') ?? '';
+      console.warn(`garmin-webhook: chiamata con token sbagliato, ignorata (t ${token === null ? 'assente' : `di ${token.length} caratteri`}, atteso di ${atteso.length})`);
       return ok();
     }
 
     let corpo: unknown = null;
     try { corpo = await req.json(); } catch { /* corpo non JSON: leggiNotifiche non trova niente */ }
     const { revoche, permessi } = leggiNotifiche(corpo);
-    if (!revoche.length && !permessi.length) return ok();
+    if (!revoche.length && !permessi.length) {
+      // Solo i NOMI dei campi, mai i valori: dicono che cosa manda Garmin senza esporre dati.
+      const chiavi = corpo && typeof corpo === 'object' ? Object.keys(corpo).join(',') : typeof corpo;
+      console.warn(`garmin-webhook: nessuna voce riconosciuta (campi: ${chiavi || 'nessuno'})`);
+      return ok();
+    }
+    console.log(`garmin-webhook: ${revoche.length} revoche, ${permessi.length} cambi di permessi`);
 
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 

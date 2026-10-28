@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   GARMIN, PERMESSI_NOTI, MOTIVI_ERRORE, generaPkce, sfidaPkce, generaState, urlAutorizzazione,
   ritornoValido, urlRitorno, esitoCallback, cifra, decifra, leggiNotifiche, pianoScollegamento, scaduto,
-  stessoSegreto, atletaEliminato, ammessoAllaProva,
+  stessoSegreto, atletaEliminato, ammessoAllaProva, permessiDaRisposta, tokenWebhook,
 } from '../../../supabase/functions/_shared/garminRegole.ts'
 
 // Perché questi test esistono
@@ -143,6 +143,42 @@ describe('leggiNotifiche', () => {
     expect(leggiNotifiche('ciao')).toEqual(vuoto)
     expect(leggiNotifiche({ activities: [{ userId: 'u' }] })).toEqual(vuoto)
     expect(leggiNotifiche({ deregistrations: 'no', userPermissionsChange: [null, { userId: 5 }] })).toEqual(vuoto)
+  })
+})
+
+describe('permessiDaRisposta', () => {
+  // Verificato il 28/10/2026 nella documentazione del portale (schema
+  // ClientConsumerPermissions): Garmin risponde con un OGGETTO, non con una lista.
+  it('legge la lista dentro l\'oggetto di Garmin', () => {
+    expect(permessiDaRisposta({ userId: 'g1', permissions: ['ACTIVITY_EXPORT', 'HEALTH_EXPORT'] }))
+      .toEqual(['ACTIVITY_EXPORT', 'HEALTH_EXPORT'])
+  })
+  it('accetta anche una lista nuda e scarta ciò che non è una stringa', () => {
+    expect(permessiDaRisposta(['WORKOUT_IMPORT', '', 3, null])).toEqual(['WORKOUT_IMPORT'])
+  })
+  it('una risposta senza permessi è una lista vuota', () => {
+    expect(permessiDaRisposta({ userId: 'g1' })).toEqual([])
+    expect(permessiDaRisposta(null)).toEqual([])
+  })
+})
+
+describe('tokenWebhook', () => {
+  // Visto il 28/10/2026 nei log: Garmin chiama il webhook TOGLIENDO la query
+  // (`t assente`). Il token deve stare nel percorso.
+  const base = 'https://x.supabase.co/functions/v1/garmin-webhook'
+  it('legge il token dall\'ultimo pezzo del percorso', () => {
+    expect(tokenWebhook(`${base}/abc123`)).toBe('abc123')
+    expect(tokenWebhook(`${base}/abc123/`)).toBe('abc123')
+  })
+  it('accetta ancora il vecchio ?t= se c\'è', () => {
+    expect(tokenWebhook(`${base}?t=abc123`)).toBe('abc123')
+  })
+  it('senza token, o col solo nome della funzione, è null', () => {
+    expect(tokenWebhook(base)).toBeNull()
+    expect(tokenWebhook(`${base}/`)).toBeNull()
+    // Dentro la funzione Supabase a volte passa il percorso senza /functions/v1.
+    expect(tokenWebhook('http://localhost:9999/garmin-webhook')).toBeNull()
+    expect(tokenWebhook('http://localhost:9999/garmin-webhook/abc123')).toBe('abc123')
   })
 })
 

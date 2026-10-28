@@ -5,13 +5,43 @@
 > invio dei workout all'orologio) **non esistono ancora**: oggi l'atleta collega e scollega, e
 > il coach vede chi è collegato. Nessun dato Garmin viene usato.
 
-## 🔴 Stato: scritto, NON attivo
-- La migrazione **non è applicata** (serve il sì esplicito del committente, CLAUDE.md §0-bis).
-- Le Edge Function **non sono pubblicate** e nessun comando `supabase` è mai stato eseguito:
-  deploy e secret li fa il committente.
-- 🔴 **Tutti gli URL di Garmin, i nomi dei campi della risposta dei token e quelli del webhook
-  sono NON VERIFICATI**: scritti da conoscenza generale, segnati `⚠️ DA VERIFICARE nel portale
-  Garmin` in `_shared/garminRegole.ts` e `_shared/garmin.ts`. Verificarli è il **passo 0**.
+## 🟡 Stato: attivo in prova (28/10/2026)
+- ✅ La migrazione è **applicata il 28/10/2026** (sì esplicito in sessione, CLAUDE.md §0-bis):
+  4 policy, 3 trigger (`garmin_atleta_eliminato` attivo, gli altri due spenti) e il segreto del
+  Vault controllati con le query in fondo al file.
+- Le Edge Function le ha pubblicate il committente; Claude non esegue comandi `supabase` sul
+  progetto remoto.
+- Si collega **solo** l'atleta di `GARMIN_ATLETI_PROVA`; gli altri atleti con una build che contiene
+  questo codice vedono la riga «Dispositivi» con «Garmin in arrivo».
+- ✅ **Passo 0 fatto il 28/10/2026** nel portale (`apis.garmin.com/tools`, app «FLEOFIT» creata
+  lo stesso giorno, prodotto Starter, API Health + Activity + Training): i **cinque URL** e i
+  parametri dell'autorizzazione (PKCE S256) coincidono; `user/id` risponde `{ userId }`.
+  🔴 **Trovato un errore**: `user/permissions` risponde con un **oggetto** `{ userId, permissions }`,
+  non con una lista — il codice avrebbe letto sempre zero permessi. Corretto con
+  `permessiDaRisposta` (test in `garminServer.test.js`).
+- ✅ **Primo collegamento vero riuscito il 28/10/2026** (atleta di prova, da `localhost:5173`):
+  `stato_garmin` torna `attivo` con i tre permessi `ACTIVITY_EXPORT`, `HEALTH_EXPORT`,
+  `WORKOUT_IMPORT` — quindi lo scambio del codice, `access_token`, `user/id` e la correzione dei
+  permessi funzionano. L'atleta che legge `garmin_collegamenti` direttamente riceve 403 (42501),
+  come voluto. Durante l'autorizzazione Garmin mostra **«unverified app»**: è normale finché
+  l'app non ha l'approvazione di produzione (passo 7).
+- ✅ **Revoca da Garmin Connect riuscita il 28/10/2026**, al secondo tentativo (il primo era
+  fallito per la query tolta, vedi «Limiti»): log «1 revoche, 0 cambi di permessi», atleta
+  scollegato e dati cancellati. Il campo `deregistrations[].userId` è quindi giusto.
+  ⚠️ Non ancora visti all'opera: il **rinnovo** del token (`refresh_token`, `expires_in`) e la
+  notifica **`userPermissionsChange`** (si prova togliendo un permesso da Garmin Connect).
+- ⚠️ **Restano da vedere alla prima prova vera** (il portale non li documenta): i nomi dei campi
+  della risposta dei token (`access_token`, `refresh_token`, `expires_in`,
+  `refresh_token_expires_in`, segnati `⚠️ DA VERIFICARE` in `garmin.ts`) e quelli delle notifiche
+  `deregistrations` / `userPermissionsChange` del webhook (in `garminRegole.ts`). Se il collegamento
+  fallisce con «risposta senza access token», o una revoca da Garmin Connect non scollega
+  l'atleta, si guarda qui per primo.
+- ✅ **Passi 1–3 fatti il 28/10/2026** dal committente: secret e Vault, deploy di `garmin-auth` e
+  `garmin-webhook` (rispondono 302 e 200), webhook di Deregistrations e User Permissions Change nel
+  portale. `GARMIN_ATLETI_PROVA` = l'atleta di prova `015215b7-f93f-4bc0-a0d5-9e5db6c0c3f8`
+  (account dedicato, non staff): da togliere quando Garmin approva.
+- Nel portale, «Endpoint Configuration» (gli indirizzi delle notifiche) **non si compila ora**:
+  è il passo 3, dopo il deploy.
 - Il codice funziona anche prima della migrazione: senza `stato_garmin` (`PGRST202`) la riga
   Garmin non compare, senza errori.
 
@@ -74,9 +104,8 @@ bundle. Il ritorno nativo è `fleofit://garmin`.
 > Riscritti il 28/10/2026 dopo la revisione dell'intero ramo. L'ordine conta: **il SQL è
 > l'interruttore** e viene quasi in fondo.
 
-0. **Verificare nel portale Garmin** URL di autorizzazione, di scambio dei token e di
-   scollegamento, nomi dei campi della risposta dei token e dei campi del webhook: correggere
-   i punti `⚠️ DA VERIFICARE` in `garminRegole.ts` e `garmin.ts` **prima di tutto il resto**.
+0. ✅ **Verifica nel portale fatta il 28/10/2026** (vedi «Stato»): restano solo i campi dei token
+   e del webhook, da guardare alla prima prova.
 1. **Segreto del Vault e secret delle Edge Function.**
    - Vault: `select vault.create_secret('<GARMIN_INTERNO_TOKEN>', 'garmin_interno');` (stesso
      valore del secret `GARMIN_INTERNO_TOKEN`, mai scritto in un file).
@@ -90,7 +119,7 @@ bundle. Il ritorno nativo è `fleofit://garmin`.
 4. **Pubblicare la policy** con `git push origin app:main` — **solo su richiesta esplicita del
    committente** (CLAUDE.md §0, regola 0). Ricordare la mail dei cambi di policy, in stand-by
    nel BACKLOG.
-5. **Sì esplicito sul file `supabase/schema/garmin_2026-10-27.sql`**, poi applicarlo dal SQL
+5. ✅ (28/10/2026) **Sì esplicito sul file `supabase/schema/garmin_2026-10-27.sql`**, poi applicarlo dal SQL
    editor e lanciare le query di verifica in fondo al file.
    ⚠️ **Applicare il SQL è l'interruttore**: da quel momento ogni atleta con una build che
    contiene questo codice vede la riga «Dispositivi». Finché `GARMIN_ATLETI_PROVA` non si
@@ -109,9 +138,12 @@ bundle. Il ritorno nativo è `fleofit://garmin`.
 - ⚠️ **Nessun nuovo tentativo se l'avviso del trigger di soft delete fallisce**: `pg_net` è
   fire-and-forget (timeout 5 s). Accettato per la Fase 0; **prima della Fase 1 serve un giro
   di recupero** (collegamenti di atleti eliminati ancora presenti).
-- ⚠️ **Il token del webhook viaggia nella query dell'URL** e può comparire nei log delle Edge
-  Function di Supabase: se quei log si condividono, **ruotarlo** (`GARMIN_WEBHOOK_TOKEN` e
-  l'indirizzo nel portale Garmin).
+- 🔴 **Il token del webhook sta nel PERCORSO dell'indirizzo, non nella query**:
+  `…/functions/v1/garmin-webhook/<GARMIN_WEBHOOK_TOKEN>`. Il 28/10/2026 la prima revoca vera è
+  stata ignorata col log «t assente»: **Garmin chiama togliendo la query**. Lo legge
+  `tokenWebhook` di `garminRegole.ts` (il vecchio `?t=` resta accettato). Il percorso compare
+  nei log delle Edge Function di Supabase: se quei log si condividono, **ruotarlo**
+  (`GARMIN_WEBHOOK_TOKEN` e le due righe del portale).
 - ⚠️ **Ricollegarsi con un ALTRO account Garmin lascia orfana la registrazione vecchia**
   presso Garmin (non viene cancellata). Da sistemare prima della Fase 1.
 - Il trigger manda solo identificatori (`{ id }`, più `athlete_id` per `athlete_workouts`),

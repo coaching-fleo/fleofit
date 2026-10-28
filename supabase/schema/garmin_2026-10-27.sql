@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- garmin — il collegamento con Garmin Connect: token, attività, giornate, invii
--- Scritta il 27/10/2026 · NON APPLICATA.
+-- Scritta il 27/10/2026 · ✅ APPLICATA il 28/10/2026 (sì esplicito in sessione).
 -- Spec: docs/superpowers/specs/2026-10-27-garmin-design.md (§7).
 --
 -- 🔒 CLAUDE.md §0, regola 0-bis: lo schema è congelato. Il committente ha dato

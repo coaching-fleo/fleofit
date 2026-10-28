@@ -177,7 +177,7 @@ git commit -m "Garmin: garmin-auth, collegamento OAuth lato server e scollegamen
 
 **Interfaces:**
 - Consumes: `leggiNotifiche`, `pianoScollegamento` (Task 2); `scollegaAtleta` (Task 3).
-- Produces: indirizzo da registrare nel portale Garmin per **deregistrazioni** e **cambi di permessi**: `https://riyqtcssllupakjtoehj.supabase.co/functions/v1/garmin-webhook?t=<GARMIN_WEBHOOK_TOKEN>`. Le Fasi 1–2 aggiungono qui gli altri tipi.
+- Produces: indirizzo da registrare nel portale Garmin per **deregistrazioni** e **cambi di permessi**: `https://riyqtcssllupakjtoehj.supabase.co/functions/v1/garmin-webhook/<GARMIN_WEBHOOK_TOKEN>` (⚠️ corretto il 28/10/2026: Garmin toglie la query, il token va nel percorso). Le Fasi 1–2 aggiungono qui gli altri tipi.
 
 - [ ] **Step 1: Implementare.**
   - Con `t` sbagliato → `200` vuoto e un log. Garmin non deve ritentare, ma niente viene toccato.

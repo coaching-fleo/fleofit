@@ -6,18 +6,14 @@
 // btoa/atob.
 
 // ── Indirizzi di Garmin ───────────────────────────────────────────────────
-// ⚠️ DA VERIFICARE nel portale Garmin (scritto il 28/10/2026 da conoscenza
-// generale: la documentazione pubblica non li riporta). Ognuno è marcato.
+// ✅ Verificati il 28/10/2026 nel portale (apis.garmin.com/tools): i primi due
+// negli strumenti OAuth2 («User Authorization», «Refresh Token»), gli altri tre
+// nella documentazione della Health API (server `wellness-api`).
 export const GARMIN = {
-  // ⚠️ DA VERIFICARE nel portale Garmin (scritto il 28/10/2026 da conoscenza generale della Connect Developer Program)
   autorizza: 'https://connect.garmin.com/oauth2Confirm',
-  // ⚠️ DA VERIFICARE nel portale Garmin (scritto il 28/10/2026 da conoscenza generale della Connect Developer Program)
   token: 'https://diauth.garmin.com/di-oauth2-service/oauth/token',
-  // ⚠️ DA VERIFICARE nel portale Garmin (scritto il 28/10/2026 da conoscenza generale della Connect Developer Program)
   utenteId: 'https://apis.garmin.com/wellness-api/rest/user/id',
-  // ⚠️ DA VERIFICARE nel portale Garmin (scritto il 28/10/2026 da conoscenza generale della Connect Developer Program)
   permessi: 'https://apis.garmin.com/wellness-api/rest/user/permissions',
-  // ⚠️ DA VERIFICARE nel portale Garmin (scritto il 28/10/2026 da conoscenza generale della Connect Developer Program)
   registrazione: 'https://apis.garmin.com/wellness-api/rest/user/registration',
 };
 
@@ -144,6 +140,30 @@ export function leggiNotifiche(corpo: unknown): { revoche: string[]; permessi: {
     }
   }
   return out;
+}
+
+/**
+ * I permessi dalla risposta di `GARMIN.permessi`. Verificato il 28/10/2026 nel
+ * portale (schema ClientConsumerPermissions): è un oggetto `{ userId, permissions }`;
+ * una lista nuda resta accettata, per prudenza.
+ */
+export function permessiDaRisposta(j: unknown): string[] {
+  const lista = Array.isArray(j) ? j : (j as { permissions?: unknown } | null)?.permissions;
+  return Array.isArray(lista) ? lista.filter(eStringa) : [];
+}
+
+/**
+ * Il token del webhook dall'indirizzo chiamato. Visto il 28/10/2026 nei log:
+ * Garmin chiama TOGLIENDO la query, quindi il token sta nel percorso
+ * (`…/garmin-webhook/<token>`). Il vecchio `?t=` resta accettato.
+ */
+export function tokenWebhook(indirizzo: string): string | null {
+  const url = new URL(indirizzo);
+  const t = url.searchParams.get('t');
+  if (t) return t;
+  const pezzi = url.pathname.split('/').filter(Boolean);
+  const i = pezzi.lastIndexOf('garmin-webhook');
+  return i >= 0 && pezzi[i + 1] ? pezzi[i + 1] : null;
 }
 
 /** Garmin va avvisato di uno scollegamento tranne quando è stato lui a comunicarcelo. */

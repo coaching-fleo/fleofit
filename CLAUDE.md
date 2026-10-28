@@ -80,6 +80,9 @@
    **tutti** i workout, solo in lettura (ridefinisce la funzione `vedo_workout`, nessuna tabella).
    ✅ **Applicata** — controllata il 26/10/2026 (`supabase/schema/workout_tutti_hotmail_2026-10-26.sql`,
    `docs/memoria/database.md`).
+   ✅ **Settima eccezione** (28/10/2026, sì esplicito in sessione): le quattro tabelle **Garmin**,
+   additive, ✅ **applicate il 28/10/2026** (`supabase/schema/garmin_2026-10-27.sql`,
+   `docs/memoria/garmin.md`).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -351,7 +354,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `staff` · `coach_atleti` | **Più coach** (16/10/2026, `supabase/schema/multi_coach_2026-10-15.sql`): chi è admin/coach (chiave email) e quale coach segue quale atleta (chiave la coppia). Scrivono solo gli admin e il trigger `athletes_assegna_coach`. Tutte le policy passano da `e_admin()`, `e_staff()`, `mio_atleta()`, `vedo_workout()` |
 | `note_estratte` | ✅ **applicata il 09/10/2026**: i dati ricavati dalle note degli atleti (standard `VERSIONE` in `estrai-note/regole.ts`). Policy **solo admin** (`USING` e `WITH CHECK`), l'atleta non la legge. La scrive solo `estrai-note`. `main` non la conosce |
 | `modelli_blocco` | ✅ **applicata** (`supabase/schema/modelli_blocco_2026-10-16.sql`): i blocchi (Hyrox), le fasi (Running) e i gruppi (Gym) salvati dal coach per riusarli, nel formato del §5 senza `id` interni. Policy unica: solo il coach proprietario, se è staff — **anche un admin vede solo i suoi**. Nel backup notturno. `main` non la conosce |
-| `garmin_collegamenti` · `garmin_attivita` · `garmin_giornate` · `garmin_invii` | ⏳ **da applicare** (serve il sì esplicito, `supabase/schema/garmin_2026-10-27.sql`; `docs/memoria/garmin.md`): il collegamento Garmin dell'atleta e i dati dell'orologio. `garmin_collegamenti` porta i token cifrati, **senza policy** e **fuori dal backup**; le altre tre le legge l'atleta o il suo coach. Le scrivono solo le Edge Function. `main` non le conosce |
+| `garmin_collegamenti` · `garmin_attivita` · `garmin_giornate` · `garmin_invii` | ✅ **applicata il 28/10/2026** (`supabase/schema/garmin_2026-10-27.sql`; `docs/memoria/garmin.md`): il collegamento Garmin dell'atleta e i dati dell'orologio. `garmin_collegamenti` porta i token cifrati, **senza policy** e **fuori dal backup**; le altre tre le legge l'atleta o il suo coach. Le scrivono solo le Edge Function. `main` non le conosce |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
 - 🔴 **Dal 16/10/2026 lo staff si cambia in UN posto: la tabella `staff`** (admin e coach).

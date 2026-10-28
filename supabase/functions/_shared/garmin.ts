@@ -9,7 +9,7 @@
 //
 // 🔒 Nessun token, codice, verifier o segreto finisce mai in un log o in un
 // messaggio d'errore: gli errori portano solo lo status HTTP.
-import { GARMIN, cifra, decifra, pianoScollegamento, scaduto } from './garminRegole.ts'
+import { GARMIN, cifra, decifra, permessiDaRisposta, pianoScollegamento, scaduto } from './garminRegole.ts'
 
 /** Il redirect URI registrato sul portale Garmin: il GET di `garmin-auth` è il callback. */
 export const REDIRECT_URI = 'https://riyqtcssllupakjtoehj.supabase.co/functions/v1/garmin-auth'
@@ -87,7 +87,7 @@ export function rinnova(refreshToken: string): Promise<Token> {
 
 const autorizzato = (access: string) => ({ Authorization: `Bearer ${access}`, Accept: 'application/json' })
 
-/** L'id dell'utente Garmin. ⚠️ DA VERIFICARE nel portale Garmin: il campo `userId`. */
+/** L'id dell'utente Garmin (verificato il 28/10/2026: il campo `userId`). */
 export async function leggiUtenteId(access: string): Promise<string> {
   const r = await chiama('utente', GARMIN.utenteId, { headers: autorizzato(access) })
   const j = await r.json() as { userId?: unknown }
@@ -95,11 +95,10 @@ export async function leggiUtenteId(access: string): Promise<string> {
   return j.userId
 }
 
-/** I permessi concessi. ⚠️ DA VERIFICARE nel portale Garmin: un array di stringhe. */
+/** I permessi concessi (verificato il 28/10/2026: un oggetto con `permissions`). */
 export async function leggiPermessi(access: string): Promise<string[]> {
   const r = await chiama('permessi', GARMIN.permessi, { headers: autorizzato(access) })
-  const j = await r.json()
-  return Array.isArray(j) ? j.filter((p): p is string => typeof p === 'string' && p.length > 0) : []
+  return permessiDaRisposta(await r.json())
 }
 
 /** Toglie la registrazione dell'utente presso Garmin (lancia se Garmin non risponde 2xx). */
