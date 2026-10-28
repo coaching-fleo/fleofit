@@ -6,6 +6,9 @@
 > il coach vede chi è collegato. Nessun dato Garmin viene usato.
 
 ## 🟡 Stato: attivo in prova (28/10/2026)
+- ✍️ **Fase 1 (Attività dall'orologio) scritta il 28/10/2026, in attesa di portale e deploy**:
+  nel portale mancano gli endpoint *ACTIVITY*, e vanno pubblicate `garmin-webhook`, `garmin-auth`
+  e `send-reminders`. Sezione «Fase 1 · Attività» più sotto, con i passi in ordine.
 - ✅ **Fase 3 (Corsa all'orologio) attiva in prova dal 28/10/2026**: `garmin-training` e
   `garmin-auth` pubblicate, `garmin_fase3_2026-10-28.sql` **applicato dal committente** (prima del
   SQL i due trigger erano `D` e la colonna `firma` mancava: la corsa assegnata non partiva).
@@ -210,6 +213,121 @@ server `https://apis.garmin.com/wellness-api`), con la sessione del committente.
   `abbinaA` e poi la ricarica del mese (o dello storico, nella scheda).
 - ⚠️ Nella pagina Calendario i candidati vengono dal mese caricato: un'attività del 1° non
   vede un allenamento del 31 del mese prima. Nella scheda atleta sì (lo storico è intero).
+
+## Fase 1 · Attività
+> Scritta il 28/10/2026. Piano: `docs/superpowers/plans/2026-10-28-garmin-fase-1-attivita.md`,
+> spec: `docs/superpowers/specs/2026-10-27-garmin-design.md`. ✍️ **Codice scritto, in attesa del
+> portale e del deploy.** Le attività dell'orologio arrivano al webhook, si salvano in
+> `garmin_attivita` e, se c'è un solo allenamento compatibile quel giorno, lo completano da sole.
+> Niente migrazioni: i campi nuovi stanno dentro `dati` (jsonb).
+
+### Cosa c'è, dove
+| Cosa | Dove |
+|---|---|
+| Lettura di un riepilogo Garmin (`leggiAttivita`): solo i campi che usiamo, mai posizione né nome/descrizione | `supabase/functions/_shared/attivitaGarmin.ts` |
+| Regole dell'abbinamento (`scegliAbbinamento`, `TIPI_PER_CATEGORIA`, `GIORNI_MASSIMI`) | `supabase/functions/_shared/abbinaGarmin.ts` |
+| Salvataggio, abbinamento, completamento, notifiche, backfill | `supabase/functions/garmin-webhook/attivita.ts` (chiamata da `index.ts`) |
+| Testi delle notifiche («· da Garmin» al coach, la push all'atleta che apre l'RPE) | `supabase/functions/send-reminders/testi.ts` |
+| Lato app: tipi in italiano, righe della card, `annullaAbbinamento`, `abbinaA`, `leggiAttivitaLibere`, `vociLibere`, `candidatiAbbina` | `src/lib/attivitaGarmin.js` |
+| Card «Da Garmin» nella scheda, con «Non era questo allenamento» | `src/components/CardDaGarmin.jsx`, `WorkoutDetail.jsx` |
+| Le righe (card e foglio) e il foglio della voce grigia con «Abbina a…» | `RigheGarmin.jsx`, `FoglioAttivitaGarmin.jsx`; la voce in `CalendarioUI.jsx` |
+| Durata stimata del workout, scritta dal builder | `sections.durataStimata` (minuti), in `CreateWorkout.jsx` |
+| Semi dell'ambiente di prova (due attività INVENTATE per Sara) | `src/demoSemi.js` (`garmin_attivita`), `src/__tests__/demoGarmin.test.js` |
+
+### Decisioni e costi
+- **Le regole stanno in `_shared/abbinaGarmin.ts`, non in `src/lib/`** (deviazione dal piano
+  iniziale): le Edge Function non vedono `src/`. Vitest le prova lo stesso, come `garminRegole.ts`.
+- **`sections.durataStimata` la scrive il builder** (decisione del committente, 28/10/2026): il
+  server non ha lo stimatore (`durataBlocco` sta in `src/lib`). Costo: i workout vecchi non ce
+  l'hanno e l'abbinamento li tratta come senza durata attesa.
+- **Un solo candidato, contato dopo i filtri di tipo e durata**: una Corsa e una Gym lo stesso
+  giorno, l'attività di corsa completa la Corsa. Due Corse compatibili → nessun abbinamento
+  (voluto): si sceglie a mano con «Abbina a…».
+- **`GIORNI_MASSIMI = 7`**: un'attività che arriva più di 7 giorni dopo il suo inizio non completa
+  mai niente da sola. Perché: al **ricollegamento** `collegato_at` conserva la data vecchia, e il
+  backfill di 30 giorni avrebbe completato allenamenti saltati da settimane, con notifiche.
+  Costo: una sincronizzazione ritardata di oltre 7 giorni chiede «Abbina a…».
+- **Dopo un completamento automatico l'RPE resta vuoto** e `athlete_workouts.completed_date` NON
+  si tocca (è il giorno programmato). La push all'atleta apre l'RPE (`?rpe=1`, senza «Come stai
+  oggi» prima).
+- **La push all'atleta tiene il titolo intero, con il codice in coda**, come le altre push
+  all'atleta: un solo contratto per la regex del codice. Costo: un suffisso nel testo.
+- **`abbinaA` e `annullaAbbinamento` scrivono due volte** (prima l'attività, poi il workout) e
+  non sono atomiche. Se la seconda scrittura fallisce:
+  - annullamento: l'attività è staccata ma il workout non torna da fare, e l'app dice «L'attività
+    è staccata, ma l'allenamento non è tornato da fare: riprova dal tasto dello stato»; se fallisce
+    la prima, «Impossibile staccare l'attività di Garmin» e il workout non è toccato;
+  - abbinamento: l'attività risulta abbinata ma il workout resta «da fare»; la pagina mostra
+    l'errore e ricarica, quindi la voce grigia sparisce e il completamento va fatto a mano.
+- **«Non era questo allenamento»** libera l'attività con `abbinamento: 'atleta'`: il webhook non
+  riabbina MAI una riga con `abbinamento` non nullo. Il workout torna da fare solo se l'aveva
+  completato Garmin (`'auto'`).
+- **Un «Segna come da fare» a mano NON stacca l'attività** (parcheggiato): la card resta su un
+  workout da fare, e il suo tasto «Non era questo allenamento» copre il caso.
+- **«Abbina a…» nella pagina Calendario è limitato al mese caricato**: un'attività del 1° non vede
+  un allenamento del 31 del mese prima. Nella scheda atleta sì (lo storico è intero).
+  Il calendario del team (desktop) non mostra le voci grigie.
+- Un Event non è escluso dai candidati manuali (una gara si può abbinare a mano).
+- **Limiti della Fase 0 chiusi**: un'attività di un atleta **eliminato** non si salva e chiude il
+  collegamento (origine `'eliminato'`, deregistra anche presso Garmin); **ricollegandosi con un
+  altro account Garmin** la registrazione vecchia viene cancellata presso Garmin
+  (`togliRegistrazioneVecchia` in `garmin-auth`). Al collegamento parte un backfill di 30 giorni.
+
+### ⚠️ DA VERIFICARE alla prima prova
+- I nomi dei valori di `activityType` (`TIPI_PER_CATEGORIA` in `abbinaGarmin.ts`).
+- Le chiavi del Push: `activities` e `manuallyUpdatedActivities` (formato standard, non nello Swagger).
+- Che `athlete_workouts.completed_date` sia un `date` (o testo `yyyy-MM-dd`).
+- Che `send-reminders` accetti come «service» le chiamate del webhook (Bearer service role): nei
+  log, dopo la prima push.
+
+### Passi del committente, in ordine
+1. Nel portale Garmin, *Endpoint Configuration*: attivare **«ACTIVITY - Activities»** e
+   **«ACTIVITY - Manually Updated Activities»**, con lo **stesso indirizzo** del webhook delle
+   Deregistrations (token nel percorso).
+2. Deploy, con `--no-verify-jwt` per `garmin-webhook` e `garmin-auth` e nulla di speciale per
+   `send-reminders`:
+   - `supabase functions deploy garmin-webhook --no-verify-jwt`
+   - `supabase functions deploy garmin-auth --no-verify-jwt`
+   - `supabase functions deploy send-reminders`
+
+   ⚠️ `send-reminders` serve **anche la web app**: le modifiche sono solo additive (modi nuovi e
+   testi nuovi), ma è un deploy che la tocca.
+3. Controlli di sola lettura:
+   - `select data_type from information_schema.columns where table_name='athlete_workouts' and column_name='completed_date';`
+     deve dare `date` (o un testo `yyyy-MM-dd`);
+   - dopo la prima push, nei log di `send-reminders` le chiamate del webhook risultano accettate
+     come service.
+4. Prova vera con l'atleta di prova (collegato, `attivo`). Usare *Data Generator* / *Summary
+   Resender* del portale, o `curl` sull'indirizzo del webhook con un corpo `{ "activities": [ … ] }`
+   costruito sul fixture `src/lib/__tests__/fixtures/garminAttivita.json`:
+   1. **Completamento**: una Corsa assegnata per oggi, non completata; si corre con l'orologio (o
+      si manda una `RUNNING` di 30 minuti con inizio dopo `collegato_at`). Atteso: riga in
+      `garmin_attivita` con `abbinamento = 'auto'` e l'id dell'assegnazione; workout completato,
+      note e RPE vuoti, `completed_date` invariato; notifica al coach «· da Garmin»; push
+      all'atleta che apre l'RPE; card «Da Garmin» nella scheda.
+   2. **Doppio Push**: rimandare la stessa attività (stesso `summaryId`, durata cambiata). Atteso:
+      `durata_s` aggiornata, abbinamento invariato, nessuna seconda notifica.
+   3. **Annullato**: sulla riga `athlete_workout_id = null`, `abbinamento` valorizzato, workout
+      riportato a `pending`; rimandare. Atteso: non si riabbina.
+   4. **Già segnato a mano**: segnare la Corsa completata dall'app, poi mandare un'attività nuova.
+      Atteso: attività salvata senza abbinamento; RPE e note dell'atleta intatti; nessuna notifica.
+   5. **Atleta eliminato**: su un atleta di prova soft-deleted con collegamento ancora presente,
+      mandare un'attività. Atteso: niente in `garmin_attivita`, collegamento cancellato.
+   6. **Revoche e permessi** ancora funzionanti: un corpo `{ "deregistrations": [...] }` scollega.
+   7. **«Non era questo allenamento»** dalla card su un completamento automatico → l'attività si
+      libera, il workout **torna da fare** e non si riabbina al prossimo aggiornamento. ⚠️ Il
+      coach che lo preme scrive `athlete_workouts.status`: stessa RLS di «Segna come da fare»,
+      da confermare nella prova.
+   8. **Attività in un giorno senza workout** → voce grigia nel calendario (atleta e scheda
+      atleta); toccandola, «Abbina a…» sceglie un allenamento non completato e lo completa.
+   9. **Ricollegamento**: collegarsi con un altro account Garmin toglie la registrazione vecchia, e
+      parte il backfill dei 30 giorni (le attività più vecchie di 7 giorni NON completano niente).
+   10. In ogni caso il webhook risponde 200 subito; nei log solo id e conteggi.
+5. Dopo la prima attività vera, leggere `tipo`:
+   `select tipo, count(*) from garmin_attivita group by tipo;` e, se i nomi differiscono,
+   correggere `TIPI_PER_CATEGORIA` in `abbinaGarmin.ts` e ripubblicare `garmin-webhook`.
+6. Strumenti del portale per le prove: *Data Viewer* (i riepiloghi arrivati), *Data Generator*
+   (ne crea di finti) e *Summary Resender* (rimanda quelli già arrivati).
 
 ## Fase 3 · Corsa all'orologio
 > Scritta il 28/10/2026. Piano: `docs/superpowers/plans/2026-10-28-garmin-fase-3-corsa.md`,

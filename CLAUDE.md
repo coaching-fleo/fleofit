@@ -83,6 +83,7 @@
    ✅ **Settima eccezione** (28/10/2026, sì esplicito in sessione): le quattro tabelle **Garmin**,
    additive, ✅ **applicate il 28/10/2026** (`supabase/schema/garmin_2026-10-27.sql`,
    `docs/memoria/garmin.md`).
+   ✅ **Ottava eccezione** (28/10/2026, applicata dal committente): `garmin_fase3_2026-10-28.sql` — colonna `firma` su `garmin_invii`, tolta la chiave esterna verso `athlete_workouts`, accesi i due trigger della Fase 3 (`docs/memoria/garmin.md`).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -703,7 +704,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute`, `consenso.js`, `Consenso.jsx`, `informativa.js`, `public/privacy-policy.html` | `accesso.md` |
 | `RicercaCoach.jsx`, `ricercaCoach.js`, `dialogoRicerca.js`, `useDettatura.js`, Edge Function `ricerca-coach` | `ricerca.md` |
-| `garmin.js`, `FoglioGarmin`, Edge Function `garmin-auth` e `garmin-webhook`, `_shared/garmin*.ts`, `workoutGarmin.ts`, `garminTraining.ts`, Edge Function `garmin-training`, `rigaOrologio.js`, `RigaOrologio`, il ramo `fleofit://garmin` di `DeeplinkHandler` | `garmin.md` |
+| `garmin.js`, `FoglioGarmin`, Edge Function `garmin-auth` e `garmin-webhook`, `_shared/garmin*.ts`, `workoutGarmin.ts`, `garminTraining.ts`, Edge Function `garmin-training`, `rigaOrologio.js`, `RigaOrologio`, `attivitaGarmin.ts`, `abbinaGarmin.ts`, `garmin-webhook/attivita.ts`, `attivitaGarmin.js`, `CardDaGarmin`, `RigheGarmin`, `FoglioAttivitaGarmin`, `send-reminders/testi.ts`, il ramo `fleofit://garmin` di `DeeplinkHandler` | `garmin.md` |
 | `previsione.js`, `stimaWorkout.js`, ogni durata o carico | `carico-e-durata.md` |
 | `Recap*.jsx`, `recapAllenamento.js`, `gradimento.js` | `recap.md` |
 | animazioni, `index.css`, `Apertura.jsx`, modali, `Navbar.jsx`, `aptica.js` | `movimento-e-aptica.md` |

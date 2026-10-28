@@ -24,7 +24,7 @@ import {
   VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
 } from '../supabase/functions/estrai-note/regole.ts'
 
-export const VERSIONE_SEME = 14
+export const VERSIONE_SEME = 15
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -277,6 +277,8 @@ const assegnazioni = () => conSettimanaPiena([
   ...regolare('at-sara', 'w-forte', 8),
   AW('at-sara', 'w-forte', nellaSettimana(0, 0), 'completed', 8),
   AW('at-sara', 'w-corsa', giorno(0), 'pending'),
+  // Una corsa di ieri, già chiusa: l'attività Garmin di `attivitaGarmin` le si abbina.
+  AW('at-sara', 'w-corsa', giorno(-1), 'completed', null),
   AW('at-sara', 'w-medio', giorno(2), 'pending'),
   AW('at-sara', 'w-gara-torino', giorno(-3), 'pending'),
 
@@ -479,6 +481,26 @@ const staff = () => [
 const coach_atleti = () => ['at-sara', 'at-luca', 'at-giulia']
   .map(athlete_id => ({ athlete_id, coach_id: COACH_DEMO.id, creato_at: fa(60) }))
 
+// «Da Garmin» (Fase 1, 28/10/2026): due attività INVENTATE per Sara, quella del
+// `demo:atleta` di default. Una abbinata da sola alla corsa di ieri (card «Da
+// Garmin» nella scheda) e una libera in un sabato senza allenamento (voce grigia
+// nel calendario, con «Abbina a…»). Nessun dato vero.
+const garmin_attivita = (aws) => {
+  const corsaDiIeri = aws.find(a => a.athlete_id === 'at-sara' && a.workout_id === 'w-corsa' && a.completed_date === giorno(-1))
+  const sabato = nellaSettimana(-1, 5)
+  const base = { athlete_id: 'at-sara', creato_at: new Date().toISOString() }
+  return [
+    { ...base, id: 'ga-1', garmin_id: 'demo-1', giorno: giorno(-1), inizio: `${giorno(-1)}T07:10:00Z`,
+      tipo: 'RUNNING', durata_s: 2700, distanza_m: 8400,
+      dati: { dispositivo: 'Forerunner 265', fc_media: 158, fc_max: 176, velocita_media_ms: 3.11, dislivello_m: 42, calorie: 590, manuale: false },
+      athlete_workout_id: corsaDiIeri?.id ?? null, abbinamento: 'auto' },
+    { ...base, id: 'ga-2', garmin_id: 'demo-2', giorno: sabato, inizio: `${sabato}T08:30:00Z`,
+      tipo: 'RUNNING', durata_s: 1800, distanza_m: 5000,
+      dati: { dispositivo: 'Forerunner 265', fc_media: 142, fc_max: 158, velocita_media_ms: 2.78, calorie: 380, manuale: false },
+      athlete_workout_id: null, abbinamento: null },
+  ]
+}
+
 /** Il database iniziale. Chiamata a ogni azzeramento, così le date si rifanno. */
 export function semi() {
   // Una volta sola: gli id delle assegnazioni avanzano a ogni chiamata, e gli
@@ -495,6 +517,7 @@ export function semi() {
     invitation_codes: invitation_codes.map(c => ({ ...c })),
     personal_records: personal_records.map(p => ({ ...p })),
     come_stai: come_stai(),
+    garmin_attivita: garmin_attivita(aws),
     messaggi_coach: messaggi_coach(),
     modelli_blocco: modelli_blocco(),
     staff: staff(),
