@@ -1845,7 +1845,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const pVocale = (
     <>
       {/* SULL'OROLOGIO (Garmin): solo corsa, con l'assegnazione di un atleta in primo piano */}
-      {isRunning && athleteWorkoutId && <RigaOrologio awId={athleteWorkoutId} />}
+      {isRunning && athleteWorkoutId && <RigaOrologio key={athleteWorkoutId} awId={athleteWorkoutId} />}
       {/* NOTA VOCALE */}
       {athleteWorkoutId && (eStaff(role) || voiceNoteUrl) && (
         <CardNota
