@@ -37,6 +37,7 @@ import {
 import FoglioCoach from '../components/FoglioCoach'
 import CalendarioAtleta from '../components/CalendarioAtleta'
 import { assegnaAtleta } from '../lib/coachAtleti'
+import { leggiStatoGarmin } from '../lib/garmin'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
 import RecapAllenamento from '../components/RecapAllenamento'
@@ -222,6 +223,18 @@ export default function AthleteDetail() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- legge il database e poi imposta lo stato
     caricaCoach()
   }, [role, isOwnProfile, caricaCoach])
+
+  // Garmin: lo vede solo lo staff (l'atleta ha la sua riga in Impostazioni).
+  // `null` = non collegato, o la funzione SQL non c'è ancora: nessuna scritta.
+  const [garmin, setGarmin] = useState(null)
+  useEffect(() => {
+    if (role === 'athlete') return
+    let vivo = true
+    leggiStatoGarmin(supabase, id)
+      .then(r => { if (vivo) setGarmin(r.disponibile && r.stato ? r : null) })
+      .catch(() => { if (vivo) setGarmin(null) })
+    return () => { vivo = false }
+  }, [role, id])
 
   const sceltaCoach = async (nuovo) => {
     setFoglioCoachAperto(false)
@@ -570,6 +583,13 @@ export default function AthleteDetail() {
     athlete.height && `${athlete.height} cm`,
     athlete.weight && `${athlete.weight} kg`,
     `${workouts.length} workout`,
+    // Come la pausa: «d MMM», l'anno solo se non è questo.
+    role !== 'athlete' && garmin && (garmin.stato === 'da_ricollegare' ? 'Garmin da ricollegare' : (() => {
+      const d = garmin.dal ? parseISO(garmin.dal) : null
+      return d && isValid(d)
+        ? `Garmin dal ${format(d, d.getFullYear() === new Date().getFullYear() ? 'd MMM' : 'd MMM yyyy', { locale: it })}`
+        : 'Garmin collegato'
+    })()),
   ].filter(Boolean).join(' · ')
 
   // Lo scarto del volume si dice in MINUTI e non in percentuale: «+50 min» si

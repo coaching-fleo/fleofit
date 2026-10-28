@@ -20,13 +20,14 @@ import { CARTA_MODALE } from '../../lib/stiliCard'
 //  · i comandi del menu, che devono restare FUORI dalla pagina finché non lo
 //    si apre, altrimenti il menu non ha tolto niente.
 
-const dati = await vi.hoisted(async () => ({ atleta: null, assegnazioni: [], pr: [] }))
+const dati = await vi.hoisted(async () => ({ atleta: null, assegnazioni: [], pr: [], garmin: [] }))
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
   return fintoSupabase(() => ({
     athletes: [dati.atleta],
     athlete_workouts: dati.assegnazioni,
     personal_records: dati.pr,
+    'rpc:stato_garmin': dati.garmin,
   }))
 })
 vi.mock('../../supabaseClient', () => ({ supabase: finto.supabase }))
@@ -74,6 +75,7 @@ beforeEach(() => {
   seq = 0
   dati.atleta = { ...ATLETA }
   dati.pr = []
+  dati.garmin = []
   dati.assegnazioni = [
     riga(giorno(-2), 'completed', { rpe: 8 }),
     riga(giorno(-4), 'pending'),                       // saltato: pesa sull'aderenza
@@ -245,6 +247,45 @@ describe('L\'anagrafica', () => {
     await attendi()
     expect(screen.getByText('4 workout')).toBeInTheDocument()
     expect(screen.queryByText(/N\/A/)).not.toBeInTheDocument()
+  })
+})
+
+describe('Garmin in anagrafica', () => {
+  const anno = new Date().getFullYear()
+  it('il coach legge «Garmin dal 3 nov» in coda alla riga', async () => {
+    dati.garmin = [{ stato: 'attivo', collegato_at: `${anno}-11-03T10:00:00Z`, permessi: [] }]
+    comeCoach()
+    await attendi()
+    expect(await screen.findByText(/4 workout · Garmin dal 3 nov$/)).toBeInTheDocument()
+  })
+
+  it('con un anno diverso da quello corrente lo scrive', async () => {
+    dati.garmin = [{ stato: 'attivo', collegato_at: '2025-11-03T10:00:00Z', permessi: [] }]
+    comeCoach()
+    await attendi()
+    expect(await screen.findByText(/Garmin dal 3 nov 2025/)).toBeInTheDocument()
+  })
+
+  it('da ricollegare lo dice', async () => {
+    dati.garmin = [{ stato: 'da_ricollegare', collegato_at: `${anno}-11-03T10:00:00Z`, permessi: [] }]
+    comeCoach()
+    await attendi()
+    expect(await screen.findByText(/Garmin da ricollegare/)).toBeInTheDocument()
+  })
+
+  it('non collegato, o funzione SQL assente: nessun «Garmin»', async () => {
+    comeCoach()
+    await attendi()
+    await waitFor(() => expect(finto.supabase.rpc).toHaveBeenCalledWith('stato_garmin', { atleta: 'a1' }))
+    expect(screen.queryByText(/Garmin/)).not.toBeInTheDocument()
+  })
+
+  it('l\'atleta sul suo profilo non lo vede (ce l\'ha in Impostazioni)', async () => {
+    dati.garmin = [{ stato: 'attivo', collegato_at: `${anno}-11-03T10:00:00Z`, permessi: [] }]
+    comeAtleta()
+    await attendi()
+    expect(screen.queryByText(/Garmin/)).not.toBeInTheDocument()
+    expect(finto.supabase.rpc).not.toHaveBeenCalledWith('stato_garmin', expect.anything())
   })
 })
 
