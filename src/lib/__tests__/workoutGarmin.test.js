@@ -95,6 +95,14 @@ describe('corsaVersoGarmin', () => {
     expect(corsaVersoGarmin({ title: 'x', sections: { steps: [{ type: 'repeat', parti }] } }).steps[0].repeatValue).toBe(1)
     expect(corsaVersoGarmin({ title: 'x', sections: { steps: [{ type: 'repeat', rounds: '0', parti }] } }).steps[0].repeatValue).toBe(1)
   })
+  it('ripetuta senza parti saltata, senza buchi nella numerazione', () => {
+    const r = corsaVersoGarmin({ title: 'x', sections: { steps: [
+      { type: 'warmup', duration: '10 min' },
+      { type: 'repeat', rounds: '3', parti: [null, 3] },
+      { type: 'cooldown', duration: '5 min' }] } })
+    expect(r.steps.map(s => s.type)).toEqual(['WorkoutStep', 'WorkoutStep'])
+    expect(r.steps.map(s => s.stepOrder)).toEqual([1, 2])
+  })
   it('passi di tipo sconosciuto saltati', () => {
     const r = corsaVersoGarmin({ title: 'x', sections: { steps: [{ type: 'boh' }, { type: 'run', duration: '1 km' }] } })
     expect(r.steps).toHaveLength(1)

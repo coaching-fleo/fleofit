@@ -140,8 +140,10 @@ export function corsaVersoGarmin(w: { title: string; sections: unknown }): Garmi
     if (!raw || typeof raw !== 'object') continue
     const s = raw as Record<string, unknown>
     if (s.type === 'repeat') {
+      const parti = partiRipetuta(s)
+      if (parti.length === 0) continue // una ripetuta vuota farebbe rifiutare il workout
       const passoRipetuta = ++ordine
-      const figli = partiRipetuta(s).map((p) =>
+      const figli = parti.map((p) =>
         passoSemplice(p, p.tipo === 'recover' ? 'RECOVERY' : 'INTERVAL', ++ordine))
       const giri = parseInt(testo(s.rounds), 10)
       steps.push({
