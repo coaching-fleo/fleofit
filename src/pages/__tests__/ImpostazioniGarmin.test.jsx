@@ -130,6 +130,46 @@ describe('La riga Garmin in Impostazioni', () => {
     expect(within(screen.getByRole('button', { name: /Garmin Connect/ })).getByText('Non collegato')).toBeInTheDocument()
   })
 
+  it('collegato: l\'interruttore dei workout c\'è; spegnerlo chiama garmin-training', async () => {
+    ctrl.stato.valore = COLLEGATO
+    finto.supabase.functions.invoke.mockImplementation(() => Promise.resolve({ data: { ok: true, invia_workout: false }, error: null }))
+    const utente = userEvent.setup()
+    montaAtleta()
+    await utente.click(await screen.findByRole('button', { name: /Garmin Connect/ }))
+    const foglio = await screen.findByRole('dialog', { name: 'Garmin Connect' })
+    expect(within(foglio).getByText('Le corse che ti assegna il coach compaiono nel calendario di Garmin')).toBeInTheDocument()
+    const sw = within(foglio).getByRole('switch', { name: 'Manda i workout all\'orologio' })
+    expect(sw).toHaveAttribute('aria-checked', 'true')
+
+    await utente.click(sw)
+    await waitFor(() => expect(finto.supabase.functions.invoke).toHaveBeenCalledWith('garmin-training', {
+      body: { azione: 'invia_workout', acceso: false },
+    }))
+    await waitFor(() => expect(sw).toHaveAttribute('aria-checked', 'false'))
+    expect(within(foglio).getByText('Quelle già mandate per i prossimi giorni vengono tolte')).toBeInTheDocument()
+  })
+
+  it('non collegato: nessun interruttore', async () => {
+    const utente = userEvent.setup()
+    montaAtleta()
+    await utente.click(await screen.findByRole('button', { name: /Garmin Connect/ }))
+    const foglio = await screen.findByRole('dialog', { name: 'Garmin Connect' })
+    expect(within(foglio).queryByRole('switch')).not.toBeInTheDocument()
+  })
+
+  it('🔴 se garmin-training fallisce l\'interruttore torna acceso e un avviso lo dice', async () => {
+    ctrl.stato.valore = COLLEGATO
+    finto.supabase.functions.invoke.mockImplementation(() => Promise.resolve({ data: null, error: new Error('500') }))
+    const utente = userEvent.setup()
+    montaAtleta()
+    await utente.click(await screen.findByRole('button', { name: /Garmin Connect/ }))
+    const foglio = await screen.findByRole('dialog', { name: 'Garmin Connect' })
+    const sw = within(foglio).getByRole('switch', { name: 'Manda i workout all\'orologio' })
+    await utente.click(sw)
+    expect(await screen.findByText(/Non siamo riusciti a cambiare l'impostazione/)).toBeInTheDocument()
+    expect(sw).toHaveAttribute('aria-checked', 'true')
+  })
+
   it('da ricollegare: lo dice la riga, e il foglio offre «Collega di nuovo»', async () => {
     ctrl.stato.valore = [{ ...COLLEGATO[0], stato: 'da_ricollegare' }]
     const utente = userEvent.setup()

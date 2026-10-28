@@ -9,17 +9,18 @@
 // SOLA PRESENTAZIONE: le chiamate a `garmin-auth` le fa la pagina.
 // ⚠️ La X ha aria-label «Chiudi»: è così che il tasto indietro di Android
 // trova il foglio (src/lib/indietroAndroid.js).
-// ⚠️ L'interruttore «Manda i workout all'orologio» NON c'è: arriva con la
-// Fase 3, e un interruttore che non fa niente direbbe una cosa falsa.
+// L'interruttore «Manda i workout all'orologio» (Fase 3) c'è solo da collegato;
+// la pagina lo salva chiamando `garmin-training`.
 
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Check, Activity, Moon } from 'lucide-react'
 import { useBottomSheet } from '../useBottomSheet'
 import { VETRO } from '../lib/stiliCard'
+import { Interruttore } from './ImpostazioniUI'
 import { TESTO_CONSENSO_GARMIN, dataCollegamento, etichettePermessi, permessiMancanti } from '../lib/garmin'
 
-export default function FoglioGarmin({ stato, permessi, dal, occupato = false, onCollega, onScollega, onInformativa, onChiudi }) {
+export default function FoglioGarmin({ stato, permessi, dal, inviaWorkout = true, occupato = false, onInviaWorkout, onCollega, onScollega, onInformativa, onChiudi }) {
   const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
   const [acconsento, setAcconsento] = useState(false)
   const collegato = stato === 'attivo'
@@ -47,7 +48,8 @@ export default function FoglioGarmin({ stato, permessi, dal, occupato = false, o
 
         <div className="overflow-y-auto overscroll-contain hide-scrollbar flex flex-col gap-3 pb-2">
           {collegato ? (
-            <Collegato dal={dal} permessi={permessi} occupato={occupato} onScollega={onScollega} />
+            <Collegato dal={dal} permessi={permessi} inviaWorkout={inviaWorkout} occupato={occupato}
+              onInviaWorkout={onInviaWorkout} onScollega={onScollega} />
           ) : (
             <>
               {stato === 'da_ricollegare' && (
@@ -87,7 +89,7 @@ export default function FoglioGarmin({ stato, permessi, dal, occupato = false, o
   )
 }
 
-function Collegato({ dal, permessi, occupato, onScollega }) {
+function Collegato({ dal, permessi, inviaWorkout, occupato, onInviaWorkout, onScollega }) {
   const data = dataCollegamento(dal)
   const concessi = etichettePermessi(permessi)
   const mancanti = permessiMancanti(permessi)
@@ -103,6 +105,18 @@ function Collegato({ dal, permessi, occupato, onScollega }) {
             Non autorizzato: {mancanti.join(', ')}. Puoi cambiarlo dalle impostazioni di Garmin Connect.
           </p>
         )}
+      </div>
+      <div className="rounded-2xl bg-white/[.05] border border-white/[.08] p-3.5 flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-[15px] font-bold text-white">Manda i workout all'orologio</p>
+          <p className="mt-0.5 text-xs text-muted leading-relaxed">
+            {inviaWorkout
+              ? 'Le corse che ti assegna il coach compaiono nel calendario di Garmin'
+              : 'Quelle già mandate per i prossimi giorni vengono tolte'}
+          </p>
+        </div>
+        <Interruttore attivo={inviaWorkout} etichetta="Manda i workout all'orologio"
+          onCambia={() => onInviaWorkout?.(!inviaWorkout)} />
       </div>
       <button type="button" onClick={onScollega} disabled={occupato}
         className="w-full py-3 rounded-xl bg-white/[.06] border border-white/[.1] text-[15px] font-bold text-red-500

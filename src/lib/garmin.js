@@ -29,7 +29,7 @@ const ETICHETTE_PERMESSI = [
   ['WORKOUT_IMPORT', 'workout all\'orologio'],
 ]
 
-const NON_DISPONIBILE = { disponibile: false, stato: null, dal: null, permessi: [] }
+const NON_DISPONIBILE = { disponibile: false, stato: null, dal: null, permessi: [], inviaWorkout: false }
 
 /**
  * Lo stato del collegamento di un atleta.
@@ -44,12 +44,14 @@ export async function leggiStatoGarmin(supabase, atletaId) {
     const { data, error } = await supabase.rpc('stato_garmin', { atleta: atletaId })
     if (error) return NON_DISPONIBILE
     const riga = Array.isArray(data) ? data[0] : data
-    if (!riga) return { disponibile: true, stato: null, dal: null, permessi: [] }
+    if (!riga) return { disponibile: true, stato: null, dal: null, permessi: [], inviaWorkout: false }
     return {
       disponibile: true,
       stato: riga.stato ?? null,
       dal: riga.collegato_at ?? null,
       permessi: Array.isArray(riga.permessi) ? riga.permessi : [],
+      // Acceso salvo che la colonna dica falso (default del database: vero).
+      inviaWorkout: riga.invia_workout !== false,
     }
   } catch {
     return NON_DISPONIBILE

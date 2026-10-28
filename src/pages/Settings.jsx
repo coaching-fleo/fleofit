@@ -87,7 +87,7 @@ export default function Settings() {
   const [versione, setVersione] = useState(null)
   // Garmin Connect (src/lib/garmin.js). `disponibile: false` finché non è letto,
   // e per sempre se `stato_garmin` non esiste ancora: la riga semplicemente non c'è.
-  const [garmin, setGarmin] = useState({ disponibile: false, stato: null, dal: null, permessi: [] })
+  const [garmin, setGarmin] = useState({ disponibile: false, stato: null, dal: null, permessi: [], inviaWorkout: false })
   const [foglioGarminAperto, setFoglioGarminAperto] = useState(false)
 
   useEffect(() => {
@@ -431,10 +431,27 @@ export default function Settings() {
         setFoglioGarminAperto(false)
         // Lo stato si scrive qui e non si rilegge: una rilettura fallita
         // (`disponibile: false`) farebbe sparire la riga appena scollegata.
-        setGarmin({ disponibile: true, stato: null, dal: null, permessi: [] })
+        setGarmin({ disponibile: true, stato: null, dal: null, permessi: [], inviaWorkout: false })
         setAlertInfo({ title: 'Garmin scollegato', message: 'Non riceviamo più i dati del tuo Garmin.', type: 'success' })
       }
     })
+  }
+
+  /**
+   * L'interruttore «Manda i workout all'orologio»: aggiornamento ottimistico.
+   * Lo salva `garmin-training` (l'atleta non ha policy di scrittura sulla tabella):
+   * se non risponde bene si torna indietro e si avvisa.
+   */
+  const cambiaInviaWorkout = async (acceso) => {
+    const prima = garmin.inviaWorkout
+    setGarmin(g => ({ ...g, inviaWorkout: acceso }))
+    const { data, error } = await supabase.functions.invoke('garmin-training', { body: { azione: 'invia_workout', acceso } })
+      .catch(e => ({ data: null, error: e }))
+    if (error || !data?.ok) {
+      console.error('Interruttore workout Garmin non salvato:', error ?? data)
+      setGarmin(g => ({ ...g, inviaWorkout: prima }))
+      setAlertInfo({ title: 'Errore', message: 'Non siamo riusciti a cambiare l\'impostazione: riprova fra qualche minuto.', type: 'error' })
+    }
   }
 
   const handleEnableNotifications = async () => {
@@ -965,6 +982,7 @@ export default function Settings() {
       {foglioGarminAperto && atletaVero && garmin.disponibile && (
         <FoglioGarmin
           stato={garmin.stato} dal={garmin.dal} permessi={garmin.permessi}
+          inviaWorkout={garmin.inviaWorkout} onInviaWorkout={cambiaInviaWorkout}
           occupato={operazione === 'garmin'}
           onCollega={collegaGarmin} onScollega={scollegaGarmin} onInformativa={apriInformativa}
           onChiudi={() => setFoglioGarminAperto(false)} />

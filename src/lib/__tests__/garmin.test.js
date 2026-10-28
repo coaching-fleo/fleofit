@@ -31,14 +31,21 @@ describe('leggiStatoGarmin', () => {
   it('nessuna riga → disponibile, non collegato', async () => {
     const supabase = finto({ data: [], error: null })
     expect(await leggiStatoGarmin(supabase, 'a1'))
-      .toEqual({ disponibile: true, stato: null, dal: null, permessi: [] })
+      .toEqual({ disponibile: true, stato: null, dal: null, permessi: [], inviaWorkout: false })
     expect(supabase.rpc).toHaveBeenCalledWith('stato_garmin', { atleta: 'a1' })
   })
 
   it('una riga → i suoi campi', async () => {
     const riga = { stato: 'attivo', collegato_at: '2026-11-03T10:00:00Z', permessi: ['ACTIVITY_EXPORT'], invia_workout: true }
     expect(await leggiStatoGarmin(finto({ data: [riga], error: null }), 'a1'))
-      .toEqual({ disponibile: true, stato: 'attivo', dal: '2026-11-03T10:00:00Z', permessi: ['ACTIVITY_EXPORT'] })
+      .toEqual({ disponibile: true, stato: 'attivo', dal: '2026-11-03T10:00:00Z', permessi: ['ACTIVITY_EXPORT'], inviaWorkout: true })
+  })
+
+  it('invia_workout falso → inviaWorkout falso; colonna assente → vero', async () => {
+    const riga = { stato: 'attivo', collegato_at: null, permessi: [], invia_workout: false }
+    expect((await leggiStatoGarmin(finto({ data: [riga], error: null }), 'a1')).inviaWorkout).toBe(false)
+    const senza = { stato: 'attivo', collegato_at: null, permessi: [] }
+    expect((await leggiStatoGarmin(finto({ data: [senza], error: null }), 'a1')).inviaWorkout).toBe(true)
   })
 })
 
