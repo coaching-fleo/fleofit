@@ -62,7 +62,7 @@ describe('esclusioni', () => {
   })
   it('prima del collegamento -> null (confronto come istanti)', () => {
     expect(scegli({ inizio: '2026-09-30T23:59:59Z' })).toBeNull()
-    expect(scegli({ inizio: '2026-10-01T02:00:00+02:00' })).toBeNull()
+    expect(scegli({ inizio: '2026-10-01T01:59:59+02:00' })).toBeNull()
     expect(scegli({ inizio: '2026-10-01T00:00:00Z' })).toBe('aw1')
   })
   it('già abbinata -> null', () => expect(scegli({ athlete_workout_id: 'x', abbinamento: 'auto' })).toBeNull())
