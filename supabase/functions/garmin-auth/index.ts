@@ -25,7 +25,7 @@ import {
   urlAutorizzazione, urlRitorno,
 } from "../_shared/garminRegole.ts"
 import {
-  REDIRECT_URI, leggiPermessi, leggiUtenteId, scambiaCodice, scollegaAtleta, scriviConsensoGarmin,
+  REDIRECT_URI, accessValido, cancellaRegistrazione, chiediBackfillAttivita, leggiPermessi, leggiUtenteId, scambiaCodice, scollegaAtleta, scriviConsensoGarmin,
 } from "../_shared/garmin.ts"
 import { ruoloStaff } from "../_shared/staff.ts"
 
@@ -49,6 +49,43 @@ async function avvisaTraining(athleteId: string): Promise<void> {
     if (!r.ok) console.warn(`garmin-auth: garmin-training ha risposto ${r.status} per ${athleteId}`);
   } catch (e) {
     console.warn(`garmin-auth: garmin-training non avvisato per ${athleteId}:`, (e as Error).message);
+  }
+}
+
+/**
+ * Ricollegamento con un ALTRO account Garmin: la registrazione vecchia presso
+ * Garmin si toglie PRIMA di sovrascrivere i token. Non cancella dati locali.
+ * Qualunque errore si logga (solo id e status) e il nuovo collegamento va avanti.
+ */
+// deno-lint-ignore no-explicit-any
+async function togliRegistrazioneVecchia(admin: any, athleteId: string, nuovoUserId: string): Promise<void> {
+  try {
+    const { data: vecchia, error } = await admin.from('garmin_collegamenti')
+      .select('athlete_id, garmin_user_id, access_cifrato, refresh_cifrato, access_scade_at')
+      .eq('athlete_id', athleteId).maybeSingle();
+    if (error) throw new Error(`collegamento non letto: ${error.message}`);
+    if (!vecchia?.garmin_user_id || vecchia.garmin_user_id === nuovoUserId) return;
+    const access = await accessValido(admin, vecchia);
+    if (!access) {
+      console.warn(`garmin-auth: nessun token valido per ${athleteId}, registrazione vecchia non tolta`);
+      return;
+    }
+    await cancellaRegistrazione(access);
+    console.log(`garmin-auth: registrazione vecchia di ${athleteId} tolta presso Garmin`);
+  } catch (e) {
+    const status = (e as { status?: number }).status;
+    console.warn(`garmin-auth: registrazione vecchia di ${athleteId} non tolta${status ? ` (HTTP ${status})` : ''}`);
+  }
+}
+
+/** Dopo il collegamento si chiedono a Garmin gli ultimi 30 giorni; un errore non rompe il collegamento. */
+async function chiediBackfill(access: string, athleteId: string): Promise<void> {
+  try {
+    const aSec = Math.floor(Date.now() / 1000);
+    await chiediBackfillAttivita(access, aSec - 30 * 86400, aSec);
+  } catch (e) {
+    const status = (e as { status?: number }).status;
+    console.warn(`garmin-auth: backfill non richiesto per ${athleteId}${status ? ` (HTTP ${status})` : ''}`);
   }
 }
 
@@ -126,6 +163,7 @@ async function callback(url: URL): Promise<Response> {
     const permessi = await leggiPermessi(token.access);
     const chiave = Deno.env.get('GARMIN_TOKEN_KEY');
     if (!chiave) throw new Error('GARMIN_TOKEN_KEY non impostata');
+    await togliRegistrazioneVecchia(admin, riga.athlete_id, garminUserId);
     const { error: errSalva } = await admin.from('garmin_collegamenti').update({
       garmin_user_id: garminUserId,
       access_cifrato: await cifra(token.access, chiave),
@@ -152,6 +190,7 @@ async function callback(url: URL): Promise<Response> {
 
     console.log(`garmin-auth: ${riga.athlete_id} collegato (${permessi.join(',') || 'nessun permesso'})`);
     await avvisaTraining(riga.athlete_id);
+    await chiediBackfill(token.access, riga.athlete_id);
     return vaiA(urlRitorno(ritorno, 'ok'));
   } catch (e) {
     console.error(`garmin-auth: callback fallito per ${riga.athlete_id}:`, (e as Error).message);

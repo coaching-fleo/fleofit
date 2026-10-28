@@ -117,6 +117,18 @@ export async function cancellaRegistrazione(access: string): Promise<boolean> {
   return true
 }
 
+/**
+ * Chiede a Garmin le attività di un intervallo (epoch UTC, in secondi): Garmin
+ * risponde 202 e i dati arrivano poi dal Push, non da questa risposta.
+ * Verificato sullo Swagger il 28/10/2026 (entrambi i parametri obbligatori).
+ */
+export async function chiediBackfillAttivita(access: string, daSec: number, aSec: number): Promise<void> {
+  const url = `https://apis.garmin.com/wellness-api/rest/backfill/activities`
+    + `?summaryStartTimeInSeconds=${Math.floor(daSec)}&summaryEndTimeInSeconds=${Math.floor(aSec)}`
+  const r = await chiama('backfill attività', url, { headers: autorizzato(access) })
+  await r.body?.cancel().catch(() => {})
+}
+
 // ── Training API: i workout sull'orologio ─────────────────────────────────
 // Gli indirizzi stanno in GARMIN_TRAINING (garminTraining.ts), da verificare
 // alla prima prova. Come sopra: nei messaggi d'errore solo lo status.
