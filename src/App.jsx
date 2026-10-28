@@ -70,6 +70,7 @@ import { sincronizzaBadge } from './lib/badge'
 import { gestisciIndietro, puoTornareIndietro } from './lib/indietroAndroid'
 import { eUnLinkDiRecupero, recuperoInCorso, avviaRecupero, chiudiRecupero } from './lib/recuperoPassword'
 import { leggiErroreLink, segnalaLinkFallito } from './lib/esitoLink'
+import { rottaDaDeepLinkGarmin } from './lib/garmin'
 
 function Onboarding({ user, onComplete }) {
   // L'onboarding del ruolo coach è disattivato: qui il ruolo è sempre 'athlete'.
@@ -544,6 +545,15 @@ function DeeplinkHandler() {
 
     if (isNative) {
       ascolti.push(CapacitorApp.addListener('appUrlOpen', async (event) => {
+        // 🔴 Il ritorno da Garmin PRIMA di tutto il resto: senza token
+        // nell'hash il ramo sotto lo manderebbe a /login con un errore
+        // (src/lib/garmin.js, rottaDaDeepLinkGarmin).
+        const rotta = rottaDaDeepLinkGarmin(event.url);
+        if (rotta) {
+          Browser.close().catch(() => {});
+          return vaiA.current(rotta, { replace: true });
+        }
+
         const url = new URL(event.url);
         if (url.protocol === 'fleofit:') {
           Browser.close().catch(() => {});

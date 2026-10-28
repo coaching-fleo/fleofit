@@ -22,6 +22,11 @@ import { vi } from 'vitest'
  * @param opzioni.codiceErrore  il `code` dell'errore (es. 'PGRST205', tabella
  *                          che non esiste): serve a chi distingue «manca la
  *                          tabella» da «la lettura è fallita».
+ * @param risposte['rpc:<nome>']  la risposta di `supabase.rpc(nome)`: un array
+ *                          di righe, oppure `{ error }` per farla fallire (es.
+ *                          `{ error: { code: 'PGRST202' } }`, la funzione SQL
+ *                          che non esiste ancora). Senza voce torna
+ *                          `{ data: [], error: null }`.
  */
 export function fintoSupabase(risposte = {}, { erroreSu = [], codiceErrore } = {}) {
   const chiamate = []
@@ -79,6 +84,13 @@ export function fintoSupabase(risposte = {}, { erroreSu = [], codiceErrore } = {
         updateUser: vi.fn(() => Promise.resolve({ error: null })),
         signOut: vi.fn(() => Promise.resolve({ error: null })),
       },
+      rpc: vi.fn((nome) => {
+        const tutte = typeof risposte === 'function' ? risposte() : risposte
+        const r = tutte['rpc:' + nome]
+        if (r === undefined) return Promise.resolve({ data: [], error: null })
+        if (!Array.isArray(r) && r?.error) return Promise.resolve({ data: null, error: r.error })
+        return Promise.resolve({ data: r, error: null })
+      }),
       functions: { invoke: vi.fn(() => Promise.resolve({ data: null, error: null })) },
       storage: { from: vi.fn(() => ({
         upload: vi.fn(() => Promise.resolve({ error: null })),

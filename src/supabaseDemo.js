@@ -370,6 +370,8 @@ export function clientDemo() {
         })
         return { data: righe, error: null }
       }
+      // `stato_garmin`: nella demo nessuno ha collegato Garmin.
+      if (nome === 'stato_garmin') return { data: [], error: null }
       return { data: null, error: null }
     },
   }

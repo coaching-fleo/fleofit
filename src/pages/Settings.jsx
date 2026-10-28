@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -17,6 +17,7 @@ import { PushNotifications } from '@capacitor/push-notifications'
 import { FCM } from '@capacitor-community/fcm'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
+import { Browser } from '@capacitor/browser'
 import { CHIAVE_ULTIMO_EXPORT, etichettaRuolo, riassuntoBackup, riassuntoCodici, senzaPassword } from '../lib/rigaImpostazioni'
 import { CARD } from '../lib/stiliCard'
 import {
@@ -24,15 +25,18 @@ import {
   RigaPericolo, RigaPieghevole, Separatore, Sezione, TestataImpostazioni,
 } from '../components/ImpostazioniUI'
 import FoglioSegnalazione from '../components/FoglioSegnalazione'
+import FoglioGarmin from '../components/FoglioGarmin'
 import { FoglioGestioneCoach } from '../components/FoglioCoach'
 import { aggiungiCoach, togliCoach, normalizzaEmail } from '../lib/coachAtleti'
 import { datiTecnici } from '../lib/segnalazione'
 import { dataConsenso } from '../lib/consenso'
 import { apriInformativa } from '../lib/informativa'
 import { leggiCoda } from '../lib/offlineQueue'
+import { VERSIONE_CONSENSO_GARMIN, dataCollegamento, leggiStatoGarmin, messaggioEsito, ritornoGarmin } from '../lib/garmin'
 
 export default function Settings() {
   const navigate = useNavigate()
+  const location = useLocation()
   const indietro = useIndietro('/')
   // ⚠️ Un solo stato per «cosa sta girando», e NON un booleano: è ciò che
   // permette alla rotella di stare nella riga che l'ha causata invece che nel
@@ -52,6 +56,10 @@ export default function Settings() {
   // l'interruttore deve restare per tornare indietro: l'override lo applica
   // `App.jsx` ai soli admin, quindi se c'è, chi guarda è un admin.
   const adminReale = eAdmin(role) || (role === 'athlete' && isSimulatingAthlete)
+  // L'informativa per tutti; il consenso e Garmin solo per l'atleta vero (non
+  // l'admin in anteprima, che il consenso non lo dà: src/lib/consenso.js, e
+  // che non deve collegare il proprio Garmin a un atleta per sbaglio).
+  const atletaVero = role === 'athlete' && !isSimulatingAthlete
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
   // Account nato da Apple o Google: niente password attuale da chiedere, e la
   // riga spiega a cosa serve sceglierne una (lib/rigaImpostazioni.js).
@@ -77,6 +85,39 @@ export default function Settings() {
     try { return localStorage.getItem(CHIAVE_ULTIMO_EXPORT) } catch { return null }
   })
   const [versione, setVersione] = useState(null)
+  // Garmin Connect (src/lib/garmin.js). `disponibile: false` finché non è letto,
+  // e per sempre se `stato_garmin` non esiste ancora: la riga semplicemente non c'è.
+  const [garmin, setGarmin] = useState({ disponibile: false, stato: null, dal: null, permessi: [] })
+  const [foglioGarminAperto, setFoglioGarminAperto] = useState(false)
+
+  useEffect(() => {
+    if (!atletaVero || !user?.id) return
+    let vivo = true
+    leggiStatoGarmin(supabase, user.id).then(s => { if (vivo) setGarmin(s) })
+    return () => { vivo = false }
+  }, [atletaVero, user?.id])
+
+  /**
+   * Il ritorno da Garmin: `/settings?garmin=ok|errore[&motivo=…]`, dal sito
+   * direttamente o dal deep link `fleofit://garmin` (App.jsx, DeeplinkHandler).
+   * Si pulisce subito l'indirizzo (`replace`: un «indietro» non deve rimostrare
+   * l'esito), si rilegge lo stato e POI si mostra il messaggio.
+   * ⚠️ Niente `vivo` qui: pulire l'indirizzo rifà girare l'effetto, e un
+   * cleanup che spegne la promessa farebbe sparire il messaggio.
+   */
+  const parametri = new URLSearchParams(location.search)
+  const esitoGarmin = parametri.get('garmin')
+  const motivoGarmin = parametri.get('motivo')
+  useEffect(() => {
+    if (!esitoGarmin) return
+    const info = messaggioEsito(esitoGarmin, motivoGarmin)
+    navigate('/settings', { replace: true })
+    const rilettura = atletaVero && user?.id ? leggiStatoGarmin(supabase, user.id) : Promise.resolve(null)
+    rilettura.then(s => {
+      if (s) setGarmin(s)
+      setAlertInfo(info)
+    })
+  }, [esitoGarmin, motivoGarmin, atletaVero, user?.id, navigate])
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -331,6 +372,53 @@ export default function Settings() {
         }
         await supabase.auth.signOut()
         navigate('/login')
+      }
+    })
+  }
+
+  /**
+   * «Collega»: `garmin-auth` / `inizia` prepara il PKCE lato server e risponde
+   * con l'indirizzo di Garmin. Sul nativo si apre nel browser in-app (il ritorno
+   * è il deep link `fleofit://garmin`), sul web nella stessa scheda.
+   */
+  const collegaGarmin = async () => {
+    setOperazione('garmin')
+    try {
+      const { data, error } = await supabase.functions.invoke('garmin-auth', {
+        body: { azione: 'inizia', consenso: VERSIONE_CONSENSO_GARMIN, ritorno: ritornoGarmin() },
+      })
+      if (error) throw error
+      if (!data?.url) return
+      if (Capacitor.isNativePlatform()) await Browser.open({ url: data.url })
+      else window.location.assign(data.url)
+    } catch (e) {
+      console.error('Collegamento Garmin non avviato:', e)
+      setAlertInfo({ title: 'Garmin non collegato', message: 'Non siamo riusciti ad avviare il collegamento con Garmin: riprova fra qualche minuto.', type: 'error' })
+    } finally {
+      setOperazione(null)
+    }
+  }
+
+  /** «Scollega»: il server avvisa Garmin e cancella i dati arrivati (policy, sezione 3). */
+  const scollegaGarmin = () => {
+    setConfirmInfo({
+      title: 'Scollegare Garmin?',
+      message: 'FLEOFIT smetterà di ricevere i dati del tuo Garmin e cancellerà quelli già arrivati. Puoi ricollegarlo quando vuoi.',
+      confirmLabel: 'Sì, scollega',
+      onConfirm: async () => {
+        setConfirmInfo(null)
+        setOperazione('garmin')
+        const { error } = await supabase.functions.invoke('garmin-auth', { body: { azione: 'scollega' } })
+          .catch(e => ({ error: e }))
+        setOperazione(null)
+        if (error) {
+          console.error('Scollegamento Garmin non riuscito:', error)
+          setAlertInfo({ title: 'Errore', message: 'Non siamo riusciti a scollegare Garmin: riprova fra qualche minuto.', type: 'error' })
+          return
+        }
+        setFoglioGarminAperto(false)
+        setGarmin(await leggiStatoGarmin(supabase, user.id))
+        setAlertInfo({ title: 'Garmin scollegato', message: 'Non riceviamo più i dati del tuo Garmin.', type: 'success' })
       }
     })
   }
@@ -755,12 +843,19 @@ export default function Settings() {
       </Sezione>
     </>
   )
-  // L'informativa per tutti; il consenso solo per chi l'ha dato, cioè l'atleta
-  // vero (non l'admin in anteprima, che il consenso non lo dà: src/lib/consenso.js).
-  const atletaVero = role === 'athlete' && !isSimulatingAthlete
   const quandoConsenso = atletaVero ? dataConsenso(user) : null
+  const dettaglioGarmin = garmin.stato === 'attivo'
+    ? (dataCollegamento(garmin.dal) ? `Collegato · dal ${dataCollegamento(garmin.dal)}` : 'Collegato')
+    : garmin.stato === 'da_ricollegare' ? 'Da ricollegare' : 'Non collegato'
   const pPrivacy = (
     <>
+      {/* ── Dispositivi: solo l'atleta vero, e solo se `stato_garmin` esiste ── */}
+      {atletaVero && garmin.disponibile && (
+        <Sezione etichetta="Dispositivi">
+          <RigaAzione icona={Watch} titolo="Garmin Connect" dettaglio={dettaglioGarmin}
+            onClick={() => setFoglioGarminAperto(true)} occupato={operazione === 'garmin'} />
+        </Sezione>
+      )}
       <Sezione etichetta="Privacy">
         <RigaAzione icona={ShieldCheck} titolo="Informativa privacy"
           dettaglio={quandoConsenso ? `Consenso dato il ${quandoConsenso}` : 'Come trattiamo i dati'}
@@ -851,6 +946,14 @@ export default function Settings() {
           tecnici={tecniciSegnalazione()}
           notificheSpente={!notificationsEnabled}
           onAttivaNotifiche={toggleNotifiche} />
+      )}
+
+      {foglioGarminAperto && atletaVero && garmin.disponibile && (
+        <FoglioGarmin
+          stato={garmin.stato} dal={garmin.dal} permessi={garmin.permessi}
+          occupato={operazione === 'garmin'}
+          onCollega={collegaGarmin} onScollega={scollegaGarmin} onInformativa={apriInformativa}
+          onChiudi={() => setFoglioGarminAperto(false)} />
       )}
 
       {passwordModalOpen && createPortal(
