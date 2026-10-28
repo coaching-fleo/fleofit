@@ -461,3 +461,11 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/garmin-auth/deno.json"
 entrypoint = "./functions/garmin-auth/index.ts"
+
+[functions.garmin-webhook]
+enabled = true
+# false perché Garmin chiama senza un JWT Supabase: la protezione è il token `t`
+# nell'indirizzo (GARMIN_WEBHOOK_TOKEN), confrontato in tempo costante.
+verify_jwt = false
+import_map = "./functions/garmin-webhook/deno.json"
+entrypoint = "./functions/garmin-webhook/index.ts"
