@@ -114,6 +114,16 @@ export const MESSAGGI_ESITO = {
   },
 }
 
+/**
+ * Prima che Garmin approvi l'app in produzione, `garmin-auth` lascia collegare
+ * solo gli atleti di prova (GARMIN_ATLETI_PROVA) e agli altri risponde 403
+ * `non_ancora`. Non è un errore: la funzione arriva, e si dice così.
+ */
+export const GARMIN_IN_ARRIVO = {
+  titolo: 'Garmin in arrivo',
+  testo: 'Il collegamento con Garmin sarà disponibile a breve.',
+}
+
 /** L'esito come `alertInfo` di `CustomAlert`. */
 export function messaggioEsito(esito, motivo) {
   if (esito === 'ok') {

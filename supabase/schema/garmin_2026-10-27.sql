@@ -15,9 +15,9 @@
 -- Servono anche le estensioni `pg_net` e `supabase_vault` (su Supabase sono già
 -- disponibili; se non attive: Database → Extensions).
 --
--- Migrazione ADDITIVA: quattro tabelle nuove, due funzioni, tre trigger. Una
--- sola tabella esistente riceve trigger (athletes, athlete_workouts, workouts):
--- nessuna sua colonna cambia, nessuna sua policy cambia. `main` non conosce
+-- Migrazione ADDITIVA: quattro tabelle nuove, due funzioni, tre trigger. Tre
+-- tabelle esistenti ricevono un trigger ciascuna (athletes, athlete_workouts,
+-- workouts): nessuna loro colonna cambia, nessuna loro policy cambia. `main` non conosce
 -- niente di tutto questo.
 --
 -- Chi scrive e chi legge, in breve:
@@ -63,6 +63,9 @@ create table public.garmin_collegamenti (
 
 -- RLS attiva e nessuna policy: per authenticated e anon la tabella è chiusa.
 alter table public.garmin_collegamenti enable row level security;
+-- In più, niente privilegi: la RLS bastava già, ma così la tabella sparisce
+-- anche dall'introspezione di pg_graphql. La service role non ne risente.
+revoke all on public.garmin_collegamenti from anon, authenticated;
 
 -- ── 2. garmin_attivita ─────────────────────────────────────────────────────
 create table public.garmin_attivita (
@@ -96,7 +99,16 @@ grant update (athlete_workout_id, abbinamento) on public.garmin_attivita to auth
 create policy "garmin_attivita abbinamento" on public.garmin_attivita
   as permissive for update to authenticated
   using      (athlete_id = auth.uid() or public.mio_atleta(athlete_id))
-  with check (athlete_id = auth.uid() or public.mio_atleta(athlete_id));
+  with check (
+    (athlete_id = auth.uid() or public.mio_atleta(athlete_id))
+    -- L'allenamento abbinato deve essere dello STESSO atleta dell'attività.
+    and (
+      athlete_workout_id is null
+      or exists (select 1 from public.athlete_workouts aw
+                 where aw.id = athlete_workout_id
+                   and aw.athlete_id = garmin_attivita.athlete_id)
+    )
+  );
 
 -- ── 3. garmin_giornate ─────────────────────────────────────────────────────
 create table public.garmin_giornate (
@@ -154,12 +166,36 @@ grant  execute on function public.stato_garmin(uuid) to authenticated;
 -- TG_ARGV[0] è il nome della funzione: 'garmin-auth' o 'garmin-training'.
 -- Il segreto sta nel Vault (`garmin_interno`, vedi in cima), mai nel codice.
 -- net.http_post (pg_net) è asincrono: non rallenta né fa fallire la scrittura.
--- Il corpo ha la stessa forma di un database webhook di Supabase.
+-- ⚠️ Fire-and-forget: se la chiamata fallisce, nessuno riprova (accettato per
+-- la Fase 0; prima della Fase 1 serve un giro di recupero).
+-- Il corpo ha la forma di un database webhook di Supabase, ma porta SOLO gli
+-- identificatori (mai la riga intera): `{ id }`, più `athlete_id` per
+-- athlete_workouts. La Fase 3 rileggerà le righe lato server.
 create or replace function public.garmin_avvisa() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare
   segreto text;
+  nuovo   jsonb;
+  vecchio jsonb;
 begin
+  -- In INSERT `old` è null, in DELETE `new` è null. IF e non CASE: plpgsql
+  -- risolve tutti i campi di un'espressione, e `new.athlete_id` su `athletes`
+  -- o `workouts` (che non ce l'hanno) farebbe fallire il trigger.
+  if TG_OP <> 'DELETE' then
+    if TG_TABLE_NAME = 'athlete_workouts' then
+      nuovo := jsonb_build_object('id', new.id, 'athlete_id', new.athlete_id);
+    else
+      nuovo := jsonb_build_object('id', new.id);
+    end if;
+  end if;
+  if TG_OP <> 'INSERT' then
+    if TG_TABLE_NAME = 'athlete_workouts' then
+      vecchio := jsonb_build_object('id', old.id, 'athlete_id', old.athlete_id);
+    else
+      vecchio := jsonb_build_object('id', old.id);
+    end if;
+  end if;
+
   select ds.decrypted_secret into segreto
   from vault.decrypted_secrets ds
   where ds.name = 'garmin_interno';
@@ -169,13 +205,14 @@ begin
     body    := jsonb_build_object(
                  'type',       TG_OP,
                  'table',      TG_TABLE_NAME,
-                 'record',     case when TG_OP = 'DELETE' then null else to_jsonb(new) end,
-                 'old_record', case when TG_OP = 'INSERT' then null else to_jsonb(old) end
+                 'record',     nuovo,
+                 'old_record', vecchio
                ),
     headers := jsonb_build_object(
                  'Content-Type',     'application/json',
                  'x-garmin-interno', coalesce(segreto, '')
-               )
+               ),
+    timeout_milliseconds := 5000
   );
   return null; -- trigger AFTER: il valore di ritorno è ignorato
 end

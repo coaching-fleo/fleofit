@@ -13,13 +13,15 @@
 // come in `segnalazione`.
 //
 // Secret: GARMIN_CLIENT_ID, GARMIN_CLIENT_SECRET, GARMIN_TOKEN_KEY,
-// GARMIN_INTERNO_TOKEN. Facoltativo: GARMIN_ORIGINI_EXTRA (origini web in più
-// ammesse come ritorno, separate da virgola).
+// GARMIN_INTERNO_TOKEN. Facoltativi: GARMIN_ORIGINI_EXTRA (origini web in più
+// ammesse come ritorno, separate da virgola) e GARMIN_ATLETI_PROVA (id degli
+// atleti che possono collegarsi prima dell'approvazione di Garmin, separati da
+// virgola; vuoto = tutti — gli altri ricevono 403 `non_ancora`).
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import {
-  atletaEliminato, cifra, esitoCallback, generaPkce, generaState, ritornoValido, stessoSegreto,
+  ammessoAllaProva, atletaEliminato, cifra, esitoCallback, generaPkce, generaState, ritornoValido, stessoSegreto,
   urlAutorizzazione, urlRitorno,
 } from "../_shared/garminRegole.ts"
 import {
@@ -178,6 +180,11 @@ async function azioneAtleta(req: Request): Promise<Response> {
   }
 
   if (corpo.azione === 'inizia') {
+    // Prima dell'approvazione di Garmin si collegano solo gli atleti di prova:
+    // l'app mostra «Garmin in arrivo» a tutti gli altri.
+    if (!ammessoAllaProva(utente.id, Deno.env.get('GARMIN_ATLETI_PROVA'))) {
+      return risposta({ error: 'non_ancora' }, 403);
+    }
     if (corpo.consenso !== VERSIONE_CONSENSO_GARMIN) return risposta({ error: 'Serve il consenso' }, 400);
     if (!ritornoValido(corpo.ritorno, originiExtra())) return risposta({ error: 'Ritorno non valido' }, 400);
 

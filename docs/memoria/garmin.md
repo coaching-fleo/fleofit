@@ -63,27 +63,59 @@ policy**: l'app non li vede mai, legge solo `stato_garmin`.
 
 ## Secret
 `GARMIN_CLIENT_ID`, `GARMIN_CLIENT_SECRET`, `GARMIN_WEBHOOK_TOKEN`, `GARMIN_INTERNO_TOKEN`,
-`GARMIN_TOKEN_KEY` (**base64 standard di 32 byte**, per AES-GCM) e, facoltativo,
+`GARMIN_TOKEN_KEY` (**base64 standard di 32 byte**, per AES-GCM), `GARMIN_ATLETI_PROVA` (id
+degli atleti che possono collegarsi prima dell'approvazione di Garmin, separati da virgola;
+**vuoto = tutti**, gli altri ricevono 403 `non_ancora` → «Garmin in arrivo») e, facoltativo,
 `GARMIN_ORIGINI_EXTRA` (origini web ammesse oltre a `https://fleofit.vercel.app` e
 `http://localhost:5173`, separate da virgola). Solo nei secret di Supabase e nel Vault, mai nel
 bundle. Il ritorno nativo è `fleofit://garmin`.
 
 ## Passi del committente, in ordine
+> Riscritti il 28/10/2026 dopo la revisione dell'intero ramo. L'ordine conta: **il SQL è
+> l'interruttore** e viene quasi in fondo.
+
 0. **Verificare nel portale Garmin** URL di autorizzazione, di scambio dei token e di
    scollegamento, nomi dei campi della risposta dei token e dei campi del webhook: correggere
    i punti `⚠️ DA VERIFICARE` in `garminRegole.ts` e `garmin.ts` **prima di tutto il resto**.
-1. Sì esplicito sul file `supabase/schema/garmin_2026-10-27.sql`.
-2. `select vault.create_secret('<GARMIN_INTERNO_TOKEN>', 'garmin_interno');`
-3. Applicare il SQL dal SQL editor, poi le query di verifica in fondo al file.
-4. `supabase secrets set` per i cinque secret (più l'eventuale `GARMIN_ORIGINI_EXTRA`).
-5. `supabase functions deploy garmin-auth` e `supabase functions deploy garmin-webhook`.
-6. Nel portale Garmin: redirect URI (la funzione `garmin-auth`) e indirizzo del webhook per
-   deregistrazioni e permessi.
-7. Prova con il proprio account Garmin sul telefono (`npm run ios`).
-7-bis. Nella versione App Store che porta Garmin agli atleti: etichette privacy (salute e
+1. **Segreto del Vault e secret delle Edge Function.**
+   - Vault: `select vault.create_secret('<GARMIN_INTERNO_TOKEN>', 'garmin_interno');` (stesso
+     valore del secret `GARMIN_INTERNO_TOKEN`, mai scritto in un file).
+   - Secret delle Edge Function: `GARMIN_CLIENT_ID`, `GARMIN_CLIENT_SECRET`,
+     `GARMIN_WEBHOOK_TOKEN`, `GARMIN_INTERNO_TOKEN`, `GARMIN_TOKEN_KEY` e
+     **`GARMIN_ATLETI_PROVA` = l'id (UUID) dell'atleta di prova** (più di uno: separati da
+     virgola). Facoltativo: `GARMIN_ORIGINI_EXTRA`.
+2. **Pubblicare le funzioni**: `garmin-auth` e `garmin-webhook`.
+3. **Portale Garmin**: redirect URI (la funzione `garmin-auth`) e indirizzo del webhook per
+   deregistrazioni e cambi di permessi.
+4. **Pubblicare la policy** con `git push origin app:main` — **solo su richiesta esplicita del
+   committente** (CLAUDE.md §0, regola 0). Ricordare la mail dei cambi di policy, in stand-by
+   nel BACKLOG.
+5. **Sì esplicito sul file `supabase/schema/garmin_2026-10-27.sql`**, poi applicarlo dal SQL
+   editor e lanciare le query di verifica in fondo al file.
+   ⚠️ **Applicare il SQL è l'interruttore**: da quel momento ogni atleta con una build che
+   contiene questo codice vede la riga «Dispositivi». Finché `GARMIN_ATLETI_PROVA` non si
+   svuota, possono collegarsi davvero solo gli atleti elencati; gli altri ricevono
+   «Garmin in arrivo» (403 `non_ancora` da `garmin-auth`).
+6. **Prova sul telefono con un account ATLETA DEDICATO** — non staff, non `demo@fleofit.it`:
+   lo staff non vede la riga e `garmin-auth` lo rifiuta con 403.
+7. **Approvazione di Garmin in produzione** → svuotare `GARMIN_ATLETI_PROVA`: il collegamento
+   si apre a tutti.
+8. Nella versione App Store che porta Garmin agli atleti: etichette privacy (salute e
    fitness) e note per il revisore (`demo@fleofit.it` è staff e non vede la riga).
-8. `git push origin app:main` per la policy **prima** di aprire agli atleti (e ricordare la
-   mail dei cambi di policy, in stand-by nel BACKLOG).
+
+## Limiti accettati per la Fase 0 (da chiudere prima della Fase 1)
+- ⚠️ **Le modifiche a `db-backup.yml` sono attive solo dopo `app:main`**: il backup notturno
+  gira da `main` (CLAUDE.md §1.1).
+- ⚠️ **Nessun nuovo tentativo se l'avviso del trigger di soft delete fallisce**: `pg_net` è
+  fire-and-forget (timeout 5 s). Accettato per la Fase 0; **prima della Fase 1 serve un giro
+  di recupero** (collegamenti di atleti eliminati ancora presenti).
+- ⚠️ **Il token del webhook viaggia nella query dell'URL** e può comparire nei log delle Edge
+  Function di Supabase: se quei log si condividono, **ruotarlo** (`GARMIN_WEBHOOK_TOKEN` e
+  l'indirizzo nel portale Garmin).
+- ⚠️ **Ricollegarsi con un ALTRO account Garmin lascia orfana la registrazione vecchia**
+  presso Garmin (non viene cancellata). Da sistemare prima della Fase 1.
+- Il trigger manda solo identificatori (`{ id }`, più `athlete_id` per `athlete_workouts`),
+  mai la riga intera: la Fase 3 rileggerà le righe lato server.
 
 La policy (`public/privacy-policy.html`, sezione 3, versione del 28/10/2026) ha già: tolti
 peso e composizione corporea, aggiunta la voce «Cosa mandiamo a Garmin», in italiano e inglese.

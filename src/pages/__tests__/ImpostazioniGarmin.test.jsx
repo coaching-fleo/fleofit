@@ -3,7 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import { montaPagina, UTENTE } from '../../test/montaPagina'
-import { TESTO_CONSENSO_GARMIN, MESSAGGI_ESITO } from '../../lib/garmin'
+import { TESTO_CONSENSO_GARMIN, MESSAGGI_ESITO, GARMIN_IN_ARRIVO } from '../../lib/garmin'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -87,6 +87,24 @@ describe('La riga Garmin in Impostazioni', () => {
     }))
     // Il finto risponde senza `url`: non si resta zitti, lo dice un CustomAlert.
     expect(await screen.findByText(/Non siamo riusciti ad avviare il collegamento/)).toBeInTheDocument()
+  })
+
+  it('🔴 prima dell\'approvazione di Garmin (403 non_ancora): «Garmin in arrivo», non un errore', async () => {
+    // Come supabase-js: un FunctionsHttpError con la Response in `context`.
+    const errore = Object.assign(new Error('Edge Function returned a non-2xx status code'), {
+      context: { status: 403, json: () => Promise.resolve({ error: 'non_ancora' }) },
+    })
+    finto.supabase.functions.invoke.mockImplementation(() => Promise.resolve({ data: null, error: errore }))
+    const utente = userEvent.setup()
+    montaAtleta()
+    await utente.click(await screen.findByRole('button', { name: /Garmin Connect/ }))
+    const foglio = await screen.findByRole('dialog', { name: 'Garmin Connect' })
+    await utente.click(within(foglio).getByRole('checkbox', { name: TESTO_CONSENSO_GARMIN }))
+    await utente.click(within(foglio).getByRole('button', { name: 'Collega' }))
+
+    expect(await screen.findByText(GARMIN_IN_ARRIVO.titolo)).toBeInTheDocument()
+    expect(screen.getByText(GARMIN_IN_ARRIVO.testo)).toBeInTheDocument()
+    expect(screen.queryByText(/Non siamo riusciti ad avviare il collegamento/)).not.toBeInTheDocument()
   })
 
   it('collegato: data, permessi, e «Scollega» chiede conferma', async () => {

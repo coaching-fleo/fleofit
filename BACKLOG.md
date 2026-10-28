@@ -80,8 +80,8 @@ Codice scritto e committato su `app` (`docs/memoria/messaggi.md`). Restano, in o
 ## ⌚ Garmin — cosa resta (28/10/2026)
 
 Fase 0 (collegamento) scritta e committata su `app`, **non attiva**: `docs/memoria/garmin.md`.
-1. **I passi del committente** (verifica degli URL e dei campi nel portale Garmin come passo 0, sì sul SQL, Vault, secret, deploy delle due funzioni, portale Garmin, prova sul telefono): elencati in ordine in `docs/memoria/garmin.md`.
-2. **Policy pubblicata prima di aprire agli atleti**: `git push origin app:main` (la policy è già modificata), più etichette privacy e note per il revisore nella versione App Store che porta Garmin.
+1. **I passi del committente**, in ordine in `docs/memoria/garmin.md`: verifica nel portale Garmin → Vault e secret (con `GARMIN_ATLETI_PROVA` = l'atleta di prova) → deploy delle due funzioni → portale Garmin → policy con `app:main` (su richiesta) → **sì e SQL, che è l'interruttore** → prova con un atleta dedicato → approvazione Garmin e `GARMIN_ATLETI_PROVA` svuotato → etichette e note per App Store.
+2. **Prima della Fase 1**: giro di recupero per gli avvisi di soft delete persi (pg_net senza nuovi tentativi) e registrazione orfana quando ci si ricollega con un altro account Garmin (`docs/memoria/garmin.md`, «Limiti accettati»).
 3. **Fase 1**: ricevere attività, recupero e giornate (e il backfill dei 30 giorni, rimandato dalla Fase 0). **Fase 2**: abbinare le attività ai workout e mostrarle. **Fase 3**: mandare i workout all'orologio (interruttore «Manda i workout all'orologio» + attivare i due trigger, oggi disattivati).
 
 ---

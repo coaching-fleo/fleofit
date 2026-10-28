@@ -32,7 +32,7 @@ import { datiTecnici } from '../lib/segnalazione'
 import { dataConsenso } from '../lib/consenso'
 import { apriInformativa } from '../lib/informativa'
 import { leggiCoda } from '../lib/offlineQueue'
-import { VERSIONE_CONSENSO_GARMIN, dataCollegamento, leggiStatoGarmin, messaggioEsito, ritornoGarmin } from '../lib/garmin'
+import { GARMIN_IN_ARRIVO, VERSIONE_CONSENSO_GARMIN, dataCollegamento, leggiStatoGarmin, messaggioEsito, ritornoGarmin } from '../lib/garmin'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -387,7 +387,18 @@ export default function Settings() {
       const { data, error } = await supabase.functions.invoke('garmin-auth', {
         body: { azione: 'inizia', consenso: VERSIONE_CONSENSO_GARMIN, ritorno: ritornoGarmin() },
       })
-      if (error) throw error
+      if (error) {
+        // Prima dell'approvazione di Garmin il server lascia passare solo gli
+        // atleti di prova; agli altri risponde 403 `non_ancora`. Il corpo sta
+        // nella Response di `error.context` (FunctionsHttpError).
+        let motivo = null
+        try { motivo = (await error.context?.json?.())?.error ?? null } catch { /* resta l'errore generico */ }
+        if (motivo === 'non_ancora') {
+          setAlertInfo({ title: GARMIN_IN_ARRIVO.titolo, message: GARMIN_IN_ARRIVO.testo, type: 'success' })
+          return
+        }
+        throw error
+      }
       // Senza indirizzo non c'è niente da aprire: lo si dice, come un errore.
       if (!data?.url) throw new Error('garmin-auth senza url')
       if (Capacitor.isNativePlatform()) await Browser.open({ url: data.url })

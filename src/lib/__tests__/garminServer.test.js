@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   GARMIN, PERMESSI_NOTI, MOTIVI_ERRORE, generaPkce, sfidaPkce, generaState, urlAutorizzazione,
   ritornoValido, urlRitorno, esitoCallback, cifra, decifra, leggiNotifiche, pianoScollegamento, scaduto,
-  stessoSegreto, atletaEliminato,
+  stessoSegreto, atletaEliminato, ammessoAllaProva,
 } from '../../../supabase/functions/_shared/garminRegole.ts'
 
 // Perché questi test esistono
@@ -178,16 +178,38 @@ describe('stessoSegreto', () => {
 })
 
 describe('atletaEliminato', () => {
-  const corpo = { type: 'UPDATE', table: 'athletes', record: { id: 'a1', deleted_at: 1730000000000 }, old_record: { id: 'a1', deleted_at: null } }
-  it('legge l\'atleta dal corpo del trigger', () => {
+  // Il trigger manda SOLO identificatori (niente righe intere): per `athletes`
+  // record e old_record sono `{ id }`. Che deleted_at sia passato da null a un
+  // valore lo garantisce la clausola WHEN del trigger, non il corpo.
+  const corpo = { type: 'UPDATE', table: 'athletes', record: { id: 'a1' }, old_record: { id: 'a1' } }
+  it('legge l\'atleta dal corpo minimo del trigger', () => {
     expect(atletaEliminato(corpo)).toBe('a1')
   })
   it('null per tutto il resto', () => {
     expect(atletaEliminato(null)).toBeNull()
     expect(atletaEliminato({ ...corpo, type: 'INSERT' })).toBeNull()
     expect(atletaEliminato({ ...corpo, table: 'workouts' })).toBeNull()
-    expect(atletaEliminato({ ...corpo, record: { id: 'a1', deleted_at: null } })).toBeNull()
-    expect(atletaEliminato({ ...corpo, record: { id: '', deleted_at: 1 } })).toBeNull()
+    expect(atletaEliminato({ ...corpo, record: { id: '' } })).toBeNull()
     expect(atletaEliminato({ ...corpo, record: null })).toBeNull()
+  })
+})
+
+describe('ammessoAllaProva', () => {
+  // GARMIN_ATLETI_PROVA: finché Garmin non approva l'app in produzione, solo gli
+  // atleti elencati possono avviare il collegamento. Vuoto o assente = tutti.
+  it('senza elenco (o elenco vuoto) sono ammessi tutti', () => {
+    expect(ammessoAllaProva('a1', undefined)).toBe(true)
+    expect(ammessoAllaProva('a1', '')).toBe(true)
+    expect(ammessoAllaProva('a1', '  , ,')).toBe(true)
+  })
+  it('con un elenco, solo chi ci sta', () => {
+    expect(ammessoAllaProva('a1', 'a1')).toBe(true)
+    expect(ammessoAllaProva('a2', ' a1 , a2 ')).toBe(true)
+    expect(ammessoAllaProva('a3', 'a1,a2')).toBe(false)
+  })
+  it('niente confronti a pezzi', () => {
+    expect(ammessoAllaProva('a', 'a1')).toBe(false)
+    expect(ammessoAllaProva('a1', 'a12')).toBe(false)
+    expect(ammessoAllaProva('', 'a1')).toBe(false)
   })
 })

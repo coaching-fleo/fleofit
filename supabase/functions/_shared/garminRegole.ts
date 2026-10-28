@@ -175,13 +175,27 @@ export function stessoSegreto(ricevuto: unknown, atteso: string | null | undefin
 
 /**
  * L'atleta di cui parla il trigger `garmin_atleta_eliminato`, o `null` se il
- * corpo non è quello: UPDATE su `athletes` con `deleted_at` valorizzato.
+ * corpo non è quello: UPDATE su `athletes` con `record.id`. Il trigger manda
+ * solo identificatori (`{ id }`): che `deleted_at` sia passato da null a un
+ * valore lo garantisce la sua clausola WHEN, non il corpo.
  */
 export function atletaEliminato(corpo: unknown): string | null {
   if (!corpo || typeof corpo !== 'object') return null;
   const c = corpo as { type?: unknown; table?: unknown; record?: unknown };
   if (c.type !== 'UPDATE' || c.table !== 'athletes') return null;
-  const r = c.record as { id?: unknown; deleted_at?: unknown } | null;
-  if (!r || !eStringa(r.id) || r.deleted_at == null) return null;
+  const r = c.record as { id?: unknown } | null;
+  if (!r || !eStringa(r.id)) return null;
   return r.id;
+}
+
+// ── La prova prima dell'approvazione di Garmin ────────────────────────────
+/**
+ * Può avviare il collegamento? `elenco` è GARMIN_ATLETI_PROVA: id di atleti
+ * separati da virgola. Vuoto o assente = tutti (dopo l'approvazione di Garmin
+ * in produzione si svuota). Confronto esatto, mai a pezzi.
+ */
+export function ammessoAllaProva(atletaId: string, elenco: string | undefined): boolean {
+  const ammessi = (elenco || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!ammessi.length) return true;
+  return !!atletaId && ammessi.includes(atletaId);
 }

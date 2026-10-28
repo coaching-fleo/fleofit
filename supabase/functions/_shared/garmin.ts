@@ -198,7 +198,10 @@ export async function scollegaAtleta(admin: any, athleteId: string, origine: 'ap
   }
 
   const falliti: string[] = []
-  // Il collegamento per ultimo: se qualcosa prima fallisce, resta la traccia per riprovare.
+  // Si prova a cancellare TUTTE le tabelle, anche se una fallisce (il
+  // collegamento per ultimo, dopo i dati); le tabelle non cancellate finiscono
+  // in `falliti` e alla fine si lancia, perché chi chiama lo logghi e risponda
+  // con un errore. Nessun nuovo tentativo automatico.
   for (const tabella of ['garmin_invii', 'garmin_attivita', 'garmin_giornate', 'garmin_collegamenti']) {
     try {
       const { error } = await admin.from(tabella).delete().eq('athlete_id', athleteId)
