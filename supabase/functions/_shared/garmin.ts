@@ -10,6 +10,8 @@
 // 🔒 Nessun token, codice, verifier o segreto finisce mai in un log o in un
 // messaggio d'errore: gli errori portano solo lo status HTTP.
 import { GARMIN, cifra, decifra, permessiDaRisposta, pianoScollegamento, scaduto } from './garminRegole.ts'
+import { GARMIN_TRAINING, idDaRisposta } from './garminTraining.ts'
+import type { GarminWorkout } from './workoutGarmin.ts'
 
 /** Il redirect URI registrato sul portale Garmin: il GET di `garmin-auth` è il callback. */
 export const REDIRECT_URI = 'https://riyqtcssllupakjtoehj.supabase.co/functions/v1/garmin-auth'
@@ -27,12 +29,19 @@ function env(nome: string): string {
   return v
 }
 
+/** Una risposta non 2xx di Garmin: porta lo status (chi chiama lo salva), mai il corpo. */
+export class ErroreGarmin extends Error {
+  constructor(cosa: string, readonly status: number) {
+    super(`Garmin ${cosa}: HTTP ${status}`)
+  }
+}
+
 /** Ogni risposta non 2xx diventa un errore con lo status (mai il corpo: potrebbe contenere dati). */
 async function chiama(cosa: string, url: string, init: RequestInit): Promise<Response> {
   const r = await fetch(url, init)
   if (!r.ok) {
     await r.body?.cancel().catch(() => {})
-    throw new Error(`Garmin ${cosa}: HTTP ${r.status}`)
+    throw new ErroreGarmin(cosa, r.status)
   }
   return r
 }
@@ -106,6 +115,58 @@ export async function cancellaRegistrazione(access: string): Promise<boolean> {
   const r = await chiama('registrazione', GARMIN.registrazione, { method: 'DELETE', headers: autorizzato(access) })
   await r.body?.cancel().catch(() => {})
   return true
+}
+
+// ── Training API: i workout sull'orologio ─────────────────────────────────
+// Gli indirizzi stanno in GARMIN_TRAINING (garminTraining.ts), da verificare
+// alla prima prova. Come sopra: nei messaggi d'errore solo lo status.
+
+/** Il corpo di una risposta come JSON, o `null` se è vuoto o non è JSON (Garmin può mandare un numero nudo). */
+async function jsonOppureNull(r: Response): Promise<unknown> {
+  const t = await r.text()
+  if (!t) return null
+  try { return JSON.parse(t) } catch { return t.trim() }
+}
+
+const conJson = (access: string) => ({ ...autorizzato(access), 'Content-Type': 'application/json' })
+
+/** Crea il workout nella libreria Garmin dell'atleta e ne restituisce l'id. */
+export async function creaWorkoutGarmin(access: string, w: GarminWorkout): Promise<string> {
+  const r = await chiama('crea workout', GARMIN_TRAINING.workout, {
+    method: 'POST', headers: conJson(access), body: JSON.stringify(w),
+  })
+  const id = idDaRisposta(await jsonOppureNull(r), 'workoutId')
+  if (!id) throw new Error('Garmin crea workout: risposta senza workoutId')
+  return id
+}
+
+/** Toglie il workout (e con lui il suo programma). 404 = già tolto: non è un errore. */
+export async function cancellaWorkoutGarmin(access: string, id: string): Promise<void> {
+  const r = await fetch(`${GARMIN_TRAINING.workout}/${encodeURIComponent(id)}`, {
+    method: 'DELETE', headers: autorizzato(access),
+  })
+  await r.body?.cancel().catch(() => {})
+  if (!r.ok && r.status !== 404) throw new ErroreGarmin('cancella workout', r.status)
+}
+
+/** Mette il workout nel calendario Garmin in quel giorno (`YYYY-MM-DD`); restituisce l'id del programma. */
+export async function programmaGarmin(access: string, workoutId: string, data: string): Promise<string> {
+  const r = await chiama('programma', GARMIN_TRAINING.schedule, {
+    method: 'POST', headers: conJson(access), body: JSON.stringify({ workoutId: Number(workoutId), date: data }),
+  })
+  const id = idDaRisposta(await jsonOppureNull(r), 'scheduleId')
+  if (!id) throw new Error('Garmin programma: risposta senza scheduleId')
+  return id
+}
+
+/** Sposta un programma esistente in un altro giorno. */
+export async function spostaProgrammaGarmin(access: string, scheduleId: string, workoutId: string, data: string): Promise<void> {
+  // ⚠️ DA VERIFICARE alla prima prova (28/10/2026): il corpo del PUT (qui con scheduleId, workoutId e date).
+  const r = await chiama('sposta programma', `${GARMIN_TRAINING.schedule}/${encodeURIComponent(scheduleId)}`, {
+    method: 'PUT', headers: conJson(access),
+    body: JSON.stringify({ scheduleId: Number(scheduleId), workoutId: Number(workoutId), date: data }),
+  })
+  await r.body?.cancel().catch(() => {})
 }
 
 type RigaToken = {

@@ -469,3 +469,13 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/garmin-webhook/deno.json"
 entrypoint = "./functions/garmin-webhook/index.ts"
+
+[functions.garmin-training]
+enabled = true
+# false perché i trigger `garmin_invii_assegnazioni` e `garmin_invii_workout`
+# arrivano dal database senza JWT: si riconoscono dal segreto x-garmin-interno.
+# Le azioni dell'utente (riprova, invia_workout) verificano il JWT a mano con
+# auth.getUser, come `garmin-auth`.
+verify_jwt = false
+import_map = "./functions/garmin-training/deno.json"
+entrypoint = "./functions/garmin-training/index.ts"
