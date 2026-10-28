@@ -114,3 +114,50 @@ describe('CalendarioAtleta', () => {
     expect(screen.getByRole('button', { name: /Mese dopo/ })).toBeInTheDocument()
   })
 })
+
+// Garmin (28/10/2026): un'attività dell'orologio libera è una voce grigia nel
+// giorno; toccandola, il foglio con «Abbina a…» e i candidati di quel giorno e
+// dei vicini. La lettura è della scheda (`leggiLibere`), la scrittura pure.
+describe('CalendarioAtleta · attività Garmin libere', () => {
+  const libera = { garmin_id: 'g1', giorno: chiave(addDays(inizio, 1)), tipo: 'RUNNING', durata_s: 2520,
+    athlete_workout_id: null, dati: { dispositivo: 'Forerunner 265' } }
+
+  it('la voce nel suo giorno, il foglio, e «Abbina a…» sull\'assegnazione vicina', async () => {
+    const leggiLibere = vi.fn(() => Promise.resolve([libera]))
+    const onAbbina = vi.fn(() => Promise.resolve(true))
+    await monta({ leggiLibere, onAbbina })
+    expect(leggiLibere).toHaveBeenCalledTimes(1)
+    expect(leggiLibere.mock.calls[0]).toEqual([chiave(inizio), expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)])
+    await userEvent.click(cella(addDays(inizio, 1)))
+    const voce = await screen.findByRole('button', { name: /Garmin · Corsa 42′/ })
+    await userEvent.click(voce)
+    const foglio = await screen.findByRole('dialog', { name: 'Garmin · Corsa' })
+    expect(within(foglio).getByText(/Forerunner 265/)).toBeInTheDocument()
+    expect(within(foglio).getByText('42′')).toBeInTheDocument()
+    // aw2 è pending il giorno stesso; aw1 è completato il giorno prima: escluso.
+    const candidato = within(foglio).getByRole('button', { name: /Long Run/ })
+    expect(within(foglio).queryByRole('button', { name: /Hyrox Strength/ })).not.toBeInTheDocument()
+    await userEvent.click(candidato)
+    expect(onAbbina).toHaveBeenCalledWith(libera, 'aw2')
+    expect(leggiLibere).toHaveBeenCalledTimes(2)
+  })
+
+  it('senza candidati lo dice', async () => {
+    const lontana = { ...libera, giorno: chiave(addDays(inizio, 10)) }
+    await monta({ leggiLibere: () => Promise.resolve([lontana]), onAbbina: vi.fn() })
+    await userEvent.click(cella(addDays(inizio, 10)))
+    await userEvent.click(await screen.findByRole('button', { name: /Garmin · Corsa/ }))
+    expect(await screen.findByText('Nessun allenamento da abbinare in questi giorni')).toBeInTheDocument()
+  })
+
+  it('una voce abbinata non compare, e il giorno con la sola voce non è «vuoto»', async () => {
+    const giorno = addDays(inizio, 12)
+    await monta({ leggiLibere: () => Promise.resolve([
+      { ...libera, garmin_id: 'g2', giorno: chiave(giorno) },
+      { ...libera, garmin_id: 'g3', giorno: chiave(giorno), tipo: 'HIIT', athlete_workout_id: 'aw9' },
+    ]), onAbbina: vi.fn() })
+    await userEvent.click(cella(giorno))
+    expect(await screen.findAllByRole('button', { name: /Garmin ·/ })).toHaveLength(1)
+    expect(screen.queryByText('Nessun allenamento')).not.toBeInTheDocument()
+  })
+})

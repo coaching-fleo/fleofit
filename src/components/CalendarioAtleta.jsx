@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { format, isSameDay, isSameMonth, isToday } from 'date-fns'
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react'
+import { format, isSameDay, isSameMonth, isToday, startOfMonth, endOfMonth } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { categoriaDi } from '../lib/categorie'
 import { metaWorkout, dataValida } from '../lib/rigaArchivio'
@@ -11,10 +11,15 @@ import {
 } from '../lib/rigaCalendario'
 import {
   CardMese, NavMese, LegendaCorsie, GrigliaMese, CellaGiorno, StrisciaMese,
-  IntestazioneGiorno, RigaSessione, AggiungiGiorno, VuotoGiorno,
+  IntestazioneGiorno, RigaSessione, AggiungiGiorno, VuotoGiorno, RigaGarmin,
 } from './CalendarioUI'
+import { vociLibere, candidatiAbbina } from '../lib/attivitaGarmin'
 import { CalendarDays } from 'lucide-react'
 import { RigaApribile } from './SchedaAtletaUI'
+
+// Pigro: il foglio serve solo a chi tocca una voce Garmin, e porta con sé
+// le righe e il foglio a scomparsa (~4 KB) che il calendario non usa.
+const FoglioAttivitaGarmin = lazy(() => import('./FoglioAttivitaGarmin'))
 
 /**
  * Il calendario di UN atleta, nella sua scheda (27/10/2026).
@@ -37,11 +42,29 @@ import { RigaApribile } from './SchedaAtletaUI'
  *
  * 🔴 Qui lo stato c'è, a differenza del calendario del coach: la fascia conta
  * i completati e le righe dicono «da fare» / «fatto», come per l'atleta.
+ *
+ * Garmin (28/10/2026): le attività dell'orologio non abbinate sono voci grigie
+ * nel giorno. L'UNICA lettura che parte da qui, e solo a calendario aperto: la
+ * fa `leggiLibere(da, a)` della scheda, una per mese mostrato, così questo
+ * file resta senza `supabase`. «Abbina a…» lo scrive `onAbbina(attivita, awId)`
+ * della scheda, che ricarica lo storico; qui si rilegge il mese.
  */
-export default function CalendarioAtleta({ nome, assegnazioni = [], onApri, onAssegna }) {
+export default function CalendarioAtleta({ nome, assegnazioni = [], onApri, onAssegna, leggiLibere, onAbbina }) {
   const [aperto, setAperto] = useState(false)
   const [mese, setMese] = useState(() => new Date())
   const [giornoScelto, setGiornoScelto] = useState(() => new Date())
+  const [libere, setLibere] = useState([])
+  const [attivitaAperta, setAttivitaAperta] = useState(null)
+  const [rilettura, setRilettura] = useState(0)
+
+  useEffect(() => {
+    if (!aperto || !leggiLibere) return
+    let vivo = true
+    leggiLibere(format(startOfMonth(mese), 'yyyy-MM-dd'), format(endOfMonth(mese), 'yyyy-MM-dd'))
+      .then(righe => { if (vivo) setLibere(righe || []) })
+      .catch(() => { if (vivo) setLibere([]) })
+    return () => { vivo = false }
+  }, [aperto, mese, leggiLibere, rilettura])
 
   const tutti = useMemo(() => assegnazioni
     .filter(aw => aw?.workouts)
@@ -55,6 +78,13 @@ export default function CalendarioAtleta({ nome, assegnazioni = [], onApri, onAs
   const { giorni, vuote } = useMemo(() => griglia(mese), [mese])
   const perGiorno = useMemo(() => indicizzaPerGiorno(delMese), [delMese])
   const delGiorno = perGiorno.get(chiaveGiorno(giornoScelto)) || []
+  const vociGarmin = vociLibere(libere, chiaveGiorno(giornoScelto))
+
+  const abbina = async (awId) => {
+    const ok = await onAbbina(attivitaAperta, awId)
+    setRilettura(n => n + 1)
+    return ok
+  }
   const legenda = useMemo(() => vociLegenda(delMese), [delMese])
   const celle = celleSintesi(riepilogoMese(delMese, { soloCompletati: true }), { soloCompletati: true })
 
@@ -98,7 +128,7 @@ export default function CalendarioAtleta({ nome, assegnazioni = [], onApri, onAs
 
         <IntestazioneGiorno data={etichettaGiorno(giornoScelto)} riepilogo={riepilogoGiorno(delGiorno)} />
         <div className="flex flex-col gap-2.5">
-          {delGiorno.length === 0 && <VuotoGiorno atleta={false} />}
+          {delGiorno.length === 0 && vociGarmin.length === 0 && <VuotoGiorno atleta={false} />}
           {delGiorno.map(w => {
             // 🔴 `rpeDichiarato`, non `parseNotesAndRpe`: il secondo torna 5
             // quando il marcatore manca (§9-octies).
@@ -118,12 +148,25 @@ export default function CalendarioAtleta({ nome, assegnazioni = [], onApri, onAs
               />
             )
           })}
+          {vociGarmin.map(v => (
+            <RigaGarmin key={v.id} testo={v.testo} onApri={() => setAttivitaAperta(v.attivita)} />
+          ))}
           <AggiungiGiorno
             etichetta={`Assegna il ${format(giornoScelto, 'd MMMM', { locale: it })}`}
             onClick={() => onAssegna(chiaveGiorno(giornoScelto))}
           />
         </div>
       </>)}
+      {attivitaAperta && (
+        <Suspense fallback={null}>
+        <FoglioAttivitaGarmin
+          attivita={attivitaAperta}
+          // Dallo storico intero: a cavallo del mese il giorno vicino c'è.
+          candidati={candidatiAbbina(tutti, String(attivitaAperta.giorno).slice(0, 10))}
+          onAbbina={abbina}
+          onChiudi={() => setAttivitaAperta(null)} />
+        </Suspense>
+      )}
     </section>
   )
 }

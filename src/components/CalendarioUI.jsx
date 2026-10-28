@@ -11,7 +11,7 @@
 // barra-corsia sotto, colorata per categoria e verde se l'allenamento è
 // chiuso: il mese si legge come un pattern di carico invece che come puntini.
 
-import { ChevronLeft, ChevronRight, Plus, Search, Check, CalendarClock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Search, Check, CalendarClock, Watch } from 'lucide-react'
 import { CARD, CARTA_RIGA, CARTA_RIGA_BASE, LABEL, RIGA, VETRO, META } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 import { coloreCategoria } from '../lib/colori'
@@ -373,6 +373,24 @@ export function RigaSessione({ categoria, etichetta, titolo, meta, stato, onApri
         <CalendarClock size={14} aria-hidden="true" /> Sposta
       </button>
     </div>
+  )
+}
+
+/**
+ * Un'attività dell'orologio che non è abbinata a nessun allenamento:
+ * «Garmin · Corsa 42′». GRIGIA e piatta (`RIGA`, come una riga chiusa), senza
+ * corsia colorata né pillola: sono dati, non una categoria (spec Garmin §6), e
+ * non deve leggersi come un allenamento in programma. Toccandola si apre il
+ * foglio con i numeri e «Abbina a…».
+ */
+export function RigaGarmin({ testo, onApri }) {
+  return (
+    <button type="button" onClick={onApri}
+      className={`w-full text-left px-4 py-3 flex items-center gap-3 transition ${RIGA} hover:bg-white/[.06]`}>
+      <Watch size={16} className="text-gray-500 shrink-0" aria-hidden="true" />
+      <span className="flex-1 min-w-0 text-[13.5px] font-bold text-gray-400 truncate">{testo}</span>
+      <ChevronRight size={17} className="text-[#5b6070] shrink-0" aria-hidden="true" />
+    </button>
   )
 }
 

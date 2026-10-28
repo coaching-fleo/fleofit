@@ -25,6 +25,12 @@ const CORSA = new Set(['RUNNING', 'TREADMILL_RUNNING', 'TRAIL_RUNNING', 'TRACK_R
 
 const positivo = (n) => Number.isFinite(n) && n > 0
 
+/** L'orologio che l'ha registrata, per «Garmin · Forerunner 265»; vuoto se manca. */
+export function dispositivoGarmin(attivita) {
+  const d = attivita?.dati?.dispositivo
+  return typeof d === 'string' ? d.trim() : ''
+}
+
 /** `42′`, oppure `1 h 05′` oltre l'ora. */
 export function durataGarmin(secondi) {
   if (!positivo(secondi)) return null
@@ -101,4 +107,59 @@ export async function abbinaA(supabase, attivita, athleteWorkoutId) {
   const { error: eAw } = await supabase.from('athlete_workouts')
     .update({ status: 'completed' }).eq('id', athleteWorkoutId)
   return { error: eAw || null }
+}
+
+// ── Le attività libere nel calendario ───────────────────────────────────────
+
+/**
+ * Le attività dell'orologio che NON sono abbinate a nessun allenamento, di un
+ * atleta e di un periodo: UNA lettura per il mese mostrato. La RLS le fa
+ * leggere all'atleta e al suo coach. Un errore (rete, tabella che non c'è,
+ * un'app senza Garmin) vale come «nessuna attività»: il calendario resta
+ * quello di sempre, mai una pagina rotta per un dato in più.
+ */
+export async function leggiAttivitaLibere(supabase, athleteId, da, a) {
+  if (!supabase || !athleteId) return []
+  try {
+    const { data, error } = await supabase.from('garmin_attivita')
+      .select('garmin_id, giorno, tipo, durata_s, distanza_m, dati, athlete_workout_id, abbinamento')
+      .eq('athlete_id', athleteId)
+      .is('athlete_workout_id', null)
+      .gte('giorno', da)
+      .lte('giorno', a)
+    return error ? [] : (data || [])
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Le voci grigie di un giorno (`yyyy-MM-dd`): «Garmin · Corsa 42′». Solo le
+ * attività libere: quelle abbinate stanno già nel loro allenamento.
+ */
+export function vociLibere(attivita, giorno) {
+  return (attivita || [])
+    .filter(a => a && !a.athlete_workout_id && String(a.giorno || '').slice(0, 10) === giorno)
+    .map(a => {
+      const durata = durataGarmin(a.durata_s)
+      return { id: a.garmin_id, testo: `Garmin · ${nomeTipoAttivita(a.tipo)}${durata ? ` ${durata}` : ''}`, attivita: a }
+    })
+}
+
+// I giorni fra due date `yyyy-MM-dd`, a mezzogiorno UTC: niente ora legale.
+const giorniFra = (da, a) => Math.round(
+  (Date.parse(`${a.slice(0, 10)}T12:00:00Z`) - Date.parse(`${da.slice(0, 10)}T12:00:00Z`)) / 86400000)
+
+/**
+ * «Abbina a…»: le assegnazioni non completate del giorno dell'attività e dei
+ * due vicini (spec Garmin §3), quello stesso giorno per primo. Le righe sono
+ * nella forma del calendario (il workout più `aw_id`, `status`, `date`).
+ */
+export function candidatiAbbina(assegnazioni, giorno) {
+  return (assegnazioni || [])
+    .filter(w => w?.aw_id && w.status !== 'completed' && typeof w.date === 'string')
+    .map(w => ({ w, scarto: giorniFra(giorno, w.date) }))
+    .filter(({ scarto }) => Math.abs(scarto) <= 1)
+    .sort((x, y) => Math.abs(x.scarto) - Math.abs(y.scarto) || x.scarto - y.scarto)
+    .map(({ w }) => w)
 }

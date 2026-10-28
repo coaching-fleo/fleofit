@@ -193,6 +193,24 @@ server `https://apis.garmin.com/wellness-api`), con la sessione del committente.
 - Payload di esempio **inventato** (nessun dato vero) per i test:
   `src/lib/__tests__/fixtures/garminAttivita.json`.
 
+## Fase 1 · le attività libere nel calendario (28/10/2026)
+
+- Un'attività con `athlete_workout_id` nullo è una **voce grigia** «Garmin · Corsa 42′»
+  (`vociLibere` di `src/lib/attivitaGarmin.js`, `RigaGarmin` di `CalendarioUI.jsx`): nel
+  giorno della pagina Calendario **solo per l'atleta** (quella del coach è la programmazione)
+  e nel calendario della scheda atleta. Non compare nella griglia del mese, solo nella lista
+  del giorno; e un giorno con la sola voce non dice più «Nessun allenamento».
+- **Una lettura per mese**, `leggiAttivitaLibere`, insieme alle assegnazioni; un errore vale
+  come nessuna attività. In `CalendarioAtleta` la lettura parte solo a calendario aperto, e
+  la funzione arriva dalla scheda (`leggiLibere`, in `useCallback`: una funzione nuova a ogni
+  render rileggerebbe a ogni render). È l'unica eccezione al suo «nessuna lettura propria».
+- Toccando la voce, `FoglioAttivitaGarmin` (pigro: ~3,5 KB): le righe di `RigheGarmin` — le
+  stesse della card «Da Garmin» — e **«Abbina a…»** con `candidatiAbbina`: le assegnazioni
+  non completate del giorno e dei due vicini, quello stesso giorno per primo. Abbinando,
+  `abbinaA` e poi la ricarica del mese (o dello storico, nella scheda).
+- ⚠️ Nella pagina Calendario i candidati vengono dal mese caricato: un'attività del 1° non
+  vede un allenamento del 31 del mese prima. Nella scheda atleta sì (lo storico è intero).
+
 ## Fase 3 · Corsa all'orologio
 > Scritta il 28/10/2026. Piano: `docs/superpowers/plans/2026-10-28-garmin-fase-3-corsa.md`,
 > spec: `docs/superpowers/specs/2026-10-27-garmin-design.md` §5, §7, §9. ✍️ **Codice scritto, in

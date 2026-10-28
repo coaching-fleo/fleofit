@@ -14,6 +14,7 @@ import { vibraSuccesso } from '../lib/aptica'
 import { categoriaDi } from '../lib/categorie'
 import { metaWorkout } from '../lib/rigaArchivio'
 import { rpeDichiarato } from '../lib/rpe'
+import { leggiAttivitaLibere, vociLibere, candidatiAbbina, abbinaA } from '../lib/attivitaGarmin'
 import {
   griglia, indicizzaPerGiorno, chiaveGiorno, segnoGiorno, riepilogoMese,
   riepilogoGiorno, etichettaSessione, etichettaGiorno, etichettaMese,
@@ -22,9 +23,13 @@ import {
 import {
   TestataCalendario, CardMese, NavMese, LegendaCorsie, GrigliaMese, CellaGiorno,
   StrisciaMese, IntestazioneGiorno, RigaSessione, AggiungiGiorno, VuotoGiorno,
-  ScheletroGiorno,
+  ScheletroGiorno, RigaGarmin,
 } from '../components/CalendarioUI'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
+
+// Pigro: il foglio serve solo a chi tocca una voce Garmin, e porta con sé
+// le righe e il foglio a scomparsa (~4 KB) che il calendario non usa.
+const FoglioAttivitaGarmin = lazy(() => import('../components/FoglioAttivitaGarmin'))
 
 // La settimana del team sul desktop (src/useDesktop.js): pigra, il telefono
 // non la scarica mai.
@@ -49,6 +54,10 @@ export default function Calendar() {
   const [eventModalOpen, setEventModalOpen] = useState(false)
   // L'allenamento che l'atleta sta spostando a un altro giorno (FoglioSposta).
   const [daSpostare, setDaSpostare] = useState(null)
+  // Le attività dell'orologio non abbinate a niente, del mese mostrato
+  // (spec Garmin §3), e quella aperta nel foglio «Abbina a…».
+  const [libere, setLibere] = useState([])
+  const [attivitaAperta, setAttivitaAperta] = useState(null)
   useRicorda('calendario', user?.id, ripresa, {
     mese: currentMonth.getTime(), giorno: selectedDay.getTime(), workouts, caricato: !loading,
   })
@@ -73,12 +82,18 @@ export default function Calendar() {
       // che sta il marcatore `[RPE: n/10]`, non sul workout. Senza, la riga di
       // un allenamento chiuso non può dire com'è andato — che è l'unica cosa
       // per cui si riapre il calendario di ieri.
-      const { data } = await supabase
-        .from('athlete_workouts')
-        .select('id, completed_date, status, notes, workouts (id, title, date, sections)')
-        .eq('athlete_id', user.id)
-        .gte('completed_date', from)
-        .lte('completed_date', to)
+      // Le attività Garmin libere viaggiano con le assegnazioni: una lettura
+      // per mese, e un errore vale come «nessuna» (leggiAttivitaLibere).
+      const [{ data }, attivita] = await Promise.all([
+        supabase
+          .from('athlete_workouts')
+          .select('id, completed_date, status, notes, workouts (id, title, date, sections)')
+          .eq('athlete_id', user.id)
+          .gte('completed_date', from)
+          .lte('completed_date', to),
+        leggiAttivitaLibere(supabase, user.id, from, to),
+      ])
+      setLibere(attivita)
       const mapped = (data || []).filter(aw => aw.workouts).map(aw => ({
         ...aw.workouts,
         aw_id: aw.id,
@@ -126,6 +141,24 @@ export default function Calendar() {
   const vaiAOggi = () => { const o = new Date(); setCurrentMonth(o); setSelectedDay(o) }
 
   const dataSelezionata = format(selectedDay, 'yyyy-MM-dd')
+  // Solo l'atleta: il calendario del coach è la programmazione, non le
+  // giornate di un atleta (le sue le vede nella scheda atleta).
+  const vociGarmin = isAtleta ? vociLibere(libere, dataSelezionata) : []
+
+  // «Abbina a…»: l'attività va su quell'assegnazione, che si completa. Poi si
+  // ricarica il mese, come dopo un evento nuovo: la voce grigia sparisce e la
+  // riga diventa «fatto».
+  const abbina = async (awId) => {
+    const { error } = await abbinaA(supabase, attivitaAperta, awId)
+    if (error) {
+      mostraErrore("Non sono riuscito ad abbinare l'attività. Controlla la connessione e riprova.")
+      fetchWorkouts()
+      return false
+    }
+    vibraSuccesso()
+    fetchWorkouts()
+    return true
+  }
 
   // Sposta la SUA assegnazione (`aw_id`), non il workout: è condiviso con
   // gli altri atleti. Il calendario va al giorno nuovo, che è dove l'atleta
@@ -220,7 +253,7 @@ export default function Calendar() {
         <ScheletroGiorno />
       ) : (
         <div className="flex flex-col gap-2.5">
-          {dayWorkouts.length === 0 && <VuotoGiorno atleta={isAtleta} />}
+          {dayWorkouts.length === 0 && vociGarmin.length === 0 && <VuotoGiorno atleta={isAtleta} />}
           {dayWorkouts.map(w => {
             const categoria = categoriaDi(w.sections)
             // 🔴 L'RPE si legge con `rpeDichiarato`, non con `parseNotesAndRpe`:
@@ -248,6 +281,9 @@ export default function Calendar() {
               />
             )
           })}
+          {vociGarmin.map(v => (
+            <RigaGarmin key={v.id} testo={v.testo} onApri={() => setAttivitaAperta(v.attivita)} />
+          ))}
           {!isAtleta && (
             <AggiungiGiorno
               etichetta={`Aggiungi al ${format(selectedDay, 'd MMMM', { locale: it })}`}
@@ -260,6 +296,16 @@ export default function Calendar() {
       {daSpostare && (
         <FoglioSposta titolo={daSpostare.title} dataAttuale={daSpostare.date}
           onChiudi={() => setDaSpostare(null)} onConferma={sposta} />
+      )}
+
+      {attivitaAperta && (
+        <Suspense fallback={null}>
+        <FoglioAttivitaGarmin
+          attivita={attivitaAperta}
+          candidati={candidatiAbbina(workouts, String(attivitaAperta.giorno).slice(0, 10))}
+          onAbbina={abbina}
+          onChiudi={() => setAttivitaAperta(null)} />
+        </Suspense>
       )}
 
       {/* MODAL NUOVO EVENTO */}

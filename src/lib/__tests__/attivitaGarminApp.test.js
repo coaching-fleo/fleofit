@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   righeDaGarmin, nomeTipoAttivita, TIPI_ATTIVITA, durataGarmin, minutiVeri,
-  annullaAbbinamento, abbinaA,
+  annullaAbbinamento, abbinaA, vociLibere, candidatiAbbina, dispositivoGarmin, leggiAttivitaLibere,
 } from '../attivitaGarmin'
 import { fintoSupabase } from '../../test/fintoSupabase'
 
@@ -111,5 +111,81 @@ describe('abbinaA', () => {
     expect(r).toEqual({ error: null })
     expect(f.chiamateA('garmin_attivita', 'update')[0].args[0]).toEqual({ athlete_workout_id: 'aw2', abbinamento: 'atleta' })
     expect(f.chiamateA('athlete_workouts', 'update')[0].args[0]).toEqual({ status: 'completed' })
+  })
+})
+
+describe('vociLibere', () => {
+  const libera = { garmin_id: 'g9', giorno: '2026-10-28', tipo: 'RUNNING', durata_s: 2520, athlete_workout_id: null }
+
+  it('«Garmin · Corsa 42′», solo le attività libere di quel giorno', () => {
+    const attivita = [
+      libera,
+      { ...libera, garmin_id: 'g10', athlete_workout_id: 'aw1' },
+      { ...libera, garmin_id: 'g11', giorno: '2026-10-27' },
+    ]
+    expect(vociLibere(attivita, '2026-10-28')).toEqual([{ id: 'g9', testo: 'Garmin · Corsa 42′', attivita: libera }])
+  })
+
+  it('senza durata niente «0′», e un tipo sconosciuto è «Attività»', () => {
+    const a = { ...libera, tipo: 'PADEL', durata_s: null }
+    expect(vociLibere([a], '2026-10-28')[0].testo).toBe('Garmin · Attività')
+  })
+
+  it('niente attività, niente voci', () => {
+    expect(vociLibere(undefined, '2026-10-28')).toEqual([])
+    expect(vociLibere([], '2026-10-28')).toEqual([])
+  })
+})
+
+describe('candidatiAbbina', () => {
+  const aw = (aw_id, date, status = 'pending') => ({ id: 'w-' + aw_id, aw_id, title: 'Lavoro', date, status })
+
+  it('il giorno stesso, quello prima e quello dopo; fuori finestra no', () => {
+    const lista = [
+      aw('a', '2026-10-26'), aw('b', '2026-10-27'), aw('c', '2026-10-28'),
+      aw('d', '2026-10-29'), aw('e', '2026-10-30'),
+    ]
+    expect(candidatiAbbina(lista, '2026-10-28').map(w => w.aw_id)).toEqual(['c', 'b', 'd'])
+  })
+
+  it('a cavallo del mese e dell\'anno', () => {
+    const lista = [aw('a', '2026-12-31'), aw('b', '2027-01-02'), aw('c', '2026-12-30')]
+    expect(candidatiAbbina(lista, '2027-01-01').map(w => w.aw_id)).toEqual(['a', 'b'])
+  })
+
+  it('i completati e le righe senza assegnazione sono esclusi', () => {
+    const lista = [aw('a', '2026-10-28', 'completed'), { id: 'w', date: '2026-10-28', status: 'pending' }, aw('b', '2026-10-28')]
+    expect(candidatiAbbina(lista, '2026-10-28').map(w => w.aw_id)).toEqual(['b'])
+  })
+
+  it('niente assegnazioni, nessun candidato', () => {
+    expect(candidatiAbbina(undefined, '2026-10-28')).toEqual([])
+  })
+})
+
+describe('dispositivoGarmin', () => {
+  it('il nome dell\'orologio, o vuoto', () => {
+    expect(dispositivoGarmin({ dati: { dispositivo: ' Forerunner 265 ' } })).toBe('Forerunner 265')
+    expect(dispositivoGarmin({ dati: { dispositivo: 42 } })).toBe('')
+    expect(dispositivoGarmin(null)).toBe('')
+  })
+})
+
+describe('leggiAttivitaLibere', () => {
+  it('una sola lettura: l\'atleta, le libere, il periodo', async () => {
+    const f = fintoSupabase({ garmin_attivita: [{ garmin_id: 'g1' }] })
+    const righe = await leggiAttivitaLibere(f.supabase, 'at1', '2026-10-01', '2026-10-31')
+    expect(righe).toEqual([{ garmin_id: 'g1' }])
+    expect(f.chiamateA('garmin_attivita', 'select')).toHaveLength(1)
+    expect(f.chiamateA('garmin_attivita', 'eq')[0].args).toEqual(['athlete_id', 'at1'])
+    expect(f.chiamateA('garmin_attivita', 'is')[0].args).toEqual(['athlete_workout_id', null])
+    expect(f.chiamateA('garmin_attivita', 'gte')[0].args).toEqual(['giorno', '2026-10-01'])
+    expect(f.chiamateA('garmin_attivita', 'lte')[0].args).toEqual(['giorno', '2026-10-31'])
+  })
+
+  it('un errore di lettura vale come nessuna attività', async () => {
+    const f = fintoSupabase({}, { erroreSu: ['garmin_attivita'] })
+    expect(await leggiAttivitaLibere(f.supabase, 'at1', '2026-10-01', '2026-10-31')).toEqual([])
+    expect(await leggiAttivitaLibere(null, 'at1', '2026-10-01', '2026-10-31')).toEqual([])
   })
 })

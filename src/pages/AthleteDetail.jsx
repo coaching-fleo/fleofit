@@ -38,6 +38,7 @@ import FoglioCoach from '../components/FoglioCoach'
 import CalendarioAtleta from '../components/CalendarioAtleta'
 import { assegnaAtleta } from '../lib/coachAtleti'
 import { leggiStatoGarmin } from '../lib/garmin'
+import { leggiAttivitaLibere, abbinaA } from '../lib/attivitaGarmin'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
 import RecapAllenamento from '../components/RecapAllenamento'
@@ -194,6 +195,24 @@ export default function AthleteDetail() {
     else setPrs(prsData || [])
 
     if (!silent) setLoading(false)
+  }
+
+  // Garmin: le attività libere del mese mostrato nel calendario dell'atleta.
+  // ⚠️ `useCallback`: CalendarioAtleta rilegge quando cambia, e una funzione
+  // nuova a ogni render vorrebbe dire una lettura a ogni render.
+  const leggiLibere = useCallback((da, a) => leggiAttivitaLibere(supabase, id, da, a), [id])
+
+  // «Abbina a…» dal foglio dell'attività: l'assegnazione si completa, e lo
+  // storico si ricarica in silenzio come dopo le altre modifiche.
+  const abbinaAttivita = async (attivita, awId) => {
+    const { error } = await abbinaA(supabase, attivita, awId)
+    fetchAthleteData(true)
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: "Non sono riuscito ad abbinare l'attività. Controlla la connessione e riprova.", type: 'error' })
+      return false
+    }
+    vibraSuccesso()
+    return true
   }
 
   // I numeri dell'eroe: aderenza, carico, volume, sforzo — tutti sulla stessa
@@ -810,6 +829,8 @@ export default function AthleteDetail() {
       assegnazioni={workouts}
       onApri={(workoutId) => navigate(`/workout/${workoutId}?athlete_id=${id}`)}
       onAssegna={(data) => { setDataAssegnazione(data); setAssignModalOpen(true) }}
+      leggiLibere={leggiLibere}
+      onAbbina={abbinaAttivita}
     />
   )
   const pStoricoRecord = (
