@@ -226,15 +226,18 @@ export default function AthleteDetail() {
 
   // Garmin: lo vede solo lo staff (l'atleta ha la sua riga in Impostazioni).
   // `null` = non collegato, o la funzione SQL non c'è ancora: nessuna scritta.
-  const [garmin, setGarmin] = useState(null)
+  // Lo stato porta con sé l'id dell'atleta a cui appartiene: cambiando atleta
+  // quello vecchio non corrisponde più e non si mostra, senza azzerarlo a mano.
+  const [garminLetto, setGarminLetto] = useState(null)
   useEffect(() => {
-    if (role === 'athlete') return
+    if (role === 'athlete' || !id) return
     let vivo = true
     leggiStatoGarmin(supabase, id)
-      .then(r => { if (vivo) setGarmin(r.disponibile && r.stato ? r : null) })
-      .catch(() => { if (vivo) setGarmin(null) })
+      .then(r => { if (vivo) setGarminLetto(r.disponibile && r.stato ? { ...r, id } : null) })
+      .catch(() => { if (vivo) setGarminLetto(null) })
     return () => { vivo = false }
   }, [role, id])
+  const garmin = garminLetto?.id === id ? garminLetto : null
 
   const sceltaCoach = async (nuovo) => {
     setFoglioCoachAperto(false)

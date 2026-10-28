@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { render } from '@testing-library/react'
+import { AuthContext } from '../../App'
 import { montaPagina, oggi } from '../../test/montaPagina'
 import { CARTA_MODALE } from '../../lib/stiliCard'
 
@@ -278,6 +281,28 @@ describe('Garmin in anagrafica', () => {
     await attendi()
     await waitFor(() => expect(finto.supabase.rpc).toHaveBeenCalledWith('stato_garmin', { atleta: 'a1' }))
     expect(screen.queryByText(/Garmin/)).not.toBeInTheDocument()
+  })
+
+  it('passando a un altro atleta la scritta del precedente sparisce subito', async () => {
+    dati.garmin = [{ stato: 'attivo', collegato_at: `${anno}-11-03T10:00:00Z`, permessi: [] }]
+    const impl = finto.supabase.rpc.getMockImplementation()
+    // Per il secondo atleta la lettura resta in sospeso: lo stato del primo non deve restare.
+    finto.supabase.rpc.mockImplementation((nome, arg) =>
+      nome === 'stato_garmin' && arg?.atleta === 'a2' ? new Promise(() => {}) : impl(nome, arg))
+    const Va = () => { const nav = useNavigate(); return <button onClick={() => nav('/athletes/a2')}>vai-a2</button> }
+    render(
+      <MemoryRouter initialEntries={['/athletes/a1']}>
+        <AuthContext.Provider value={{ user: { id: 'coach', email: 'c@f.it' }, role: 'admin' }}>
+          <Va />
+          <Routes><Route path="/athletes/:id" element={<AthleteDetail />} /></Routes>
+        </AuthContext.Provider>
+      </MemoryRouter>
+    )
+    expect(await screen.findByText(/Garmin dal 3 nov/)).toBeInTheDocument()
+    await userEvent.click(screen.getByText('vai-a2'))
+    await waitFor(() => expect(finto.supabase.rpc).toHaveBeenCalledWith('stato_garmin', { atleta: 'a2' }))
+    expect(screen.queryByText(/Garmin/)).not.toBeInTheDocument()
+    finto.supabase.rpc.mockImplementation(impl)
   })
 
   it('l\'atleta sul suo profilo non lo vede (ce l\'ha in Impostazioni)', async () => {
