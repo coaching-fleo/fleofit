@@ -6,9 +6,12 @@
 > il coach vede chi è collegato. Nessun dato Garmin viene usato.
 
 ## 🟡 Stato: attivo in prova (28/10/2026)
-- ✍️ **Fase 2 (Recupero) scritta il 29/10/2026, in attesa di portale e deploy**: sonno, HRV e
-  giornata dell'orologio in `garmin_giornate`, tre segnali per il coach in «Da guardare», card
-  «Recupero» nella scheda atleta e nel profilo. Sezione «Fase 2 · Recupero» in fondo.
+- ✅ **Fase 2 (Recupero) attiva in prova dal 29/10/2026**: sonno, HRV e giornata dell'orologio in
+  `garmin_giornate`, tre segnali per il coach in «Da guardare», card «Recupero» nella scheda atleta
+  e nel profilo. Prima prova: arrivata la giornata di oggi (`dailies`), card visibile. ⚠️ Sonno, HRV
+  e lo storico di 30 giorni non ancora visti arrivare. ⚠️ **Trappola del portale**: le righe
+  *HEALTH* erano senza indirizzo e senza «enabled» (si erano accese solo le *ACTIVITY*); senza di
+  loro Garmin non manda niente e il webhook non lo sa. Sezione «Fase 2 · Recupero» in fondo.
 - ✅ **Fase 1 (Attività dall'orologio) attiva in prova dal 29/10/2026**: endpoint *ACTIVITY* nel
   portale, `garmin-webhook`, `garmin-auth` e `send-reminders` pubblicate. Provata dal committente con
   l'atleta di prova: una corsa da 1 minuto dall'orologio salvata e **non** abbinata (sotto i 10
@@ -469,7 +472,7 @@ Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
 - Il chunk `index` è ora ~598 KB (+4 KB): `recuperoGarmin` è importato in modo statico in `Home`. Accettato; la card, invece, è pigra.
 
 ### ⚠️ DA VERIFICARE al primo Push vero
-- Le **chiavi del corpo** `dailies`, `sleeps`, `hrv` (formato standard dei Push, non scritto nello Swagger). Se dopo il collegamento `garmin_giornate` resta vuota, guardare qui per prima cosa.
+- Le **chiavi del corpo**: ✅ `dailies` verificata il 29/10/2026; `sleeps` e `hrv` ancora da vedere. Se `garmin_giornate` resta vuota, guardare **prima** il portale (*Endpoint Configuration*: indirizzo ed «enabled» sulle righe *HEALTH*), poi i log di `garmin-webhook` («N di recupero»).
 
 ### Passi del committente, in ordine
 1. Portale, *Endpoint Configuration*: attivare «HEALTH - Dailies», «HEALTH - Sleeps», «HEALTH - HRV Summary», stesso indirizzo del webhook.
