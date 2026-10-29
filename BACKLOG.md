@@ -83,8 +83,11 @@ Fasi 0 (collegamento), 1 (attività), 2 (recupero) e 3 (Corsa all'orologio) **at
 provate dal committente con l'atleta di prova: `docs/memoria/garmin.md`.
 1. **Verifica del recupero** (30/10): sonno e HRV della notte e i 30 giorni di storico in
    `garmin_giornate`; se lo storico non arriva, log di `garmin-auth` al ricollegamento.
-2. **Uscire dalla prova**: *Partner Verification* nel portale Garmin («Run Tests», a endpoint
-   *HEALTH* aggiornati) → richiesta di produzione a Garmin → svuotare `GARMIN_ATLETI_PROVA` →
+2. **Uscire dalla prova**: *Partner Verification* nel portale Garmin. Prima prova il 29/10:
+   ✅ Endpoint Setup e HTTP; ❌ Endpoint Coverage (HRV e sonno senza dati nelle 24 ore: appena
+   accesi) e ❌ Active User (serve **2 utenti** con dati nelle ultime 24 ore, ce n'è 1) → serve un
+   **secondo atleta di prova** con il suo account Garmin, aggiunto a `GARMIN_ATLETI_PROVA` → rifare
+   «Refresh Tests» → richiesta di produzione a Garmin → svuotare `GARMIN_ATLETI_PROVA` →
    etichette privacy e note per il revisore nella versione App Store che porta Garmin (la 1.2.3?).
    La policy va su `main` (`app:main`, solo su richiesta) prima di aprire a tutti.
 3. ⏸️ **Hyrox e Gym all'orologio: IN PAUSA** (decisione del committente, 29/10/2026). Hyrox non

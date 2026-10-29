@@ -152,6 +152,12 @@ bundle. Il ritorno nativo è `fleofit://garmin`.
    lo staff non vede la riga e `garmin-auth` lo rifiuta con 403.
 7. **Approvazione di Garmin in produzione** → svuotare `GARMIN_ATLETI_PROVA`: il collegamento
    si apre a tutti.
+   Il primo gradino è *Partner Verification* nel portale («Run Tests», poi «Refresh Tests»), con
+   quattro prove: **Endpoint Setup**, **HTTP**, **Endpoint Coverage** (ogni tipo di dato acceso
+   deve aver ricevuto dati nelle ultime 24 ore) e **Active User** (almeno **2** utenti con dati
+   nelle ultime 24 ore). Al 29/10/2026: le prime due verdi; Coverage rossa per HRV e sonno (righe
+   *HEALTH* accese da poche ore); Active User rossa (1 utente su 2) → serve un secondo atleta di
+   prova con un account Garmin suo.
 8. Nella versione App Store che porta Garmin agli atleti: etichette privacy (salute e
    fitness) e note per il revisore (`demo@fleofit.it` è staff e non vede la riga).
 
