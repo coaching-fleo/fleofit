@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dynamic Island · Timer</title>
+<!--
+  Prototipo di design: il timer guidato FLEOFIT come Live Activity (Dynamic Island).
+  NON fa parte dell'app: è una pagina sola, senza dipendenze, servita in locale.
+  Misure in punti iOS, su un iPhone da 402 × 874 pt (la taglia dei Pro 17/18).
+  Riferimenti: Human Interface Guidelines → Live Activities; ActivityKit
+  (ActivityConfiguration, DynamicIsland { expanded / compactLeading / compactTrailing / minimal }).
+-->
+<style>
+:root{
+  --brand:#f1ba17; --running:#0094C6; --gym:#14B8A6; --rest:#4ade80; --done:#22c55e;
+  --bg:#0B0B0B; --card:#1e1e1e; --alt:#222; --bordo:#2a2a2a; --pozzetto:#111;
+  --slow:1;
+  --round: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+  --sans: -apple-system, "SF Pro Text", Inter, system-ui, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;display:grid;grid-template-columns:320px 1fr}
+@media (max-width:900px){body{grid-template-columns:1fr}}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+
+/* ───────── Pannello controlli ───────── */
+.pannello{background:#141414;border-right:1px solid var(--bordo);padding:22px 18px 40px;display:flex;flex-direction:column;gap:20px;overflow:auto;max-height:100vh;position:sticky;top:0}
+@media (max-width:900px){.pannello{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--bordo)}}
+.logo{font-weight:900;letter-spacing:-.02em;font-size:20px}.logo b{color:var(--brand)}
+.sotto{color:#9ca3af;font-size:12.5px;line-height:1.45;margin-top:4px}
+.gruppo{display:flex;flex-direction:column;gap:8px}
+.gruppo>label:not(.interruttore),.etichetta{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6b7280}
+.seg{display:flex;background:var(--pozzetto);border:1px solid #333;border-radius:14px;padding:4px;gap:2px}
+.seg button{flex:1;padding:8px 4px;border-radius:10px;font-size:12.5px;font-weight:600;color:#9ca3af;transition:background .2s,color .2s}
+.seg button[aria-pressed=true]{background:#2a2a2a;color:#fff}
+.seg button:active{transform:scale(.97)}
+.riga{display:flex;gap:8px}
+.btn{flex:1;background:#2a2a2a;border-radius:12px;padding:10px;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;transition:transform .1s,filter .2s}
+.btn:active{transform:scale(.97)}
+.btn.primario{background:var(--brand);color:#000}
+.interruttore{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:#d1d5db;cursor:pointer;padding:2px 0}
+.interruttore small{display:block;color:#6b7280;font-size:11.5px;margin-top:2px}
+.interruttore input{appearance:none;width:42px;height:25px;border-radius:99px;background:#333;position:relative;flex:none;transition:background .2s;cursor:pointer}
+.interruttore input::after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:#fff;transition:transform .25s cubic-bezier(.3,1.3,.5,1)}
+.interruttore input:checked{background:var(--brand)}
+.interruttore input:checked::after{transform:translateX(17px)}
+input[type=range]{width:100%;accent-color:var(--brand)}
+.stato{font-family:var(--round);font-variant-numeric:tabular-nums;font-size:12.5px;color:#9ca3af;display:flex;justify-content:space-between}
+.nota{font-size:12px;line-height:1.5;color:#9ca3af;background:var(--card);border:1px solid var(--bordo);border-radius:16px;padding:12px 14px}
+.nota b{color:#e5e7eb}
+
+/* ───────── Palco ───────── */
+.palco{padding:28px 24px 48px;display:flex;flex-direction:column;align-items:center;gap:22px;min-width:0}
+.telefoni{display:flex;gap:28px;justify-content:center;align-items:flex-start;flex-wrap:wrap;width:100%}
+.colonna{display:flex;flex-direction:column;align-items:center;gap:14px}
+.titolo-var{text-align:center}
+.titolo-var h2{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.titolo-var p{font-size:12px;color:#9ca3af;margin-top:2px}
+.cornice{position:relative}
+
+/* iPhone 18 Pro — mockup. 402 × 874 pt, bordo in titanio, angoli concentrici. */
+.iphone{width:426px;height:898px;border-radius:68px;padding:12px;position:relative;
+  background:linear-gradient(145deg,#5b5b5f,#2c2c2e 30%,#48484a 60%,#1c1c1e);
+  box-shadow:0 0 0 1.5px #0a0a0a inset,0 0 0 1px #6e6e73,0 40px 80px -20px rgba(0,0,0,.8);
+  transform-origin:top left}
+.iphone::before,.iphone::after{content:"";position:absolute;width:4px;border-radius:2px;background:#3a3a3c;left:-3px}
+.iphone::before{top:180px;height:60px}.iphone::after{top:260px;height:60px}
+.schermo{width:402px;height:874px;border-radius:56px;overflow:hidden;position:relative;background:#000;isolation:isolate}
+.sfondo{position:absolute;inset:0;background:
+  radial-gradient(120% 70% at 20% 110%,#7a3c12 0%,transparent 60%),
+  radial-gradient(90% 60% at 100% 20%,#3b2a63 0%,transparent 65%),
+  radial-gradient(80% 50% at 0% 0%,#1f4b5a 0%,transparent 60%),
+  linear-gradient(180deg,#1a1520,#0d0b10)}
+.blocco-ora{position:absolute;top:118px;left:0;right:0;text-align:center;pointer-events:none}
+.blocco-ora .data{font-size:20px;font-weight:600;color:rgba(255,255,255,.85)}
+.blocco-ora .ora{font-family:var(--round);font-size:98px;font-weight:700;letter-spacing:-.02em;line-height:1;color:rgba(255,255,255,.92);margin-top:2px}
+.barra-stato{position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:center;justify-content:space-between;padding:6px 34px 0 40px;font-size:16px;font-weight:600;z-index:1;transition:opacity .25s}
+.barra-stato .icone{display:flex;gap:6px;align-items:center;transition:opacity .25s}
+.batteria{width:26px;height:12.5px;border:1.5px solid rgba(255,255,255,.5);border-radius:4px;padding:1.5px;position:relative}
+.batteria::before{content:"";display:block;height:100%;width:78%;background:#fff;border-radius:1.5px}
+.home-ind{position:absolute;bottom:9px;left:50%;width:140px;height:5px;margin-left:-70px;border-radius:3px;background:rgba(255,255,255,.75)}
+.notifiche-fondo{position:absolute;bottom:44px;left:0;right:0;display:flex;justify-content:space-between;padding:0 50px}
+.notifiche-fondo span{width:50px;height:50px;border-radius:50%;background:rgba(40,40,40,.55);backdrop-filter:blur(14px)}
+
+/* ───────── Dynamic Island ───────── */
+.isola{position:absolute;top:11px;left:50%;background:#000;z-index:5;overflow:hidden;
+  will-change:width,height,border-radius;touch-action:none;user-select:none;-webkit-user-select:none;
+  box-shadow:0 0 0 .5px rgba(255,255,255,.04)}
+.isola.stacc{z-index:5}
+.lente{position:absolute;top:24px;left:50%;width:12px;height:12px;margin-left:39px;border-radius:50%;z-index:9;pointer-events:none;
+  background:radial-gradient(circle at 35% 35%,#2b3b58 0%,#0d1220 45%,#05070b 70%);box-shadow:0 0 0 1.5px #0b0b0d}
+.strato{position:absolute;inset:0;opacity:0;filter:blur(8px);transform:scale(.92);pointer-events:none;
+  transition:opacity calc(.22s*var(--slow)) ease,filter calc(.28s*var(--slow)) ease,transform calc(.36s*var(--slow)) cubic-bezier(.2,.9,.25,1)}
+.strato.attivo{opacity:1;filter:none;transform:none;pointer-events:auto;transition-delay:calc(.08s*var(--slow))}
+.tinta{color:var(--tint);transition:color .4s ease}
+.num{font-family:var(--round);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.01em}
+
+/* cifre che rotolano — come .contentTransition(.numericText(countsDown: true)) */
+.cifre{display:inline-flex;line-height:1.05}
+.d{display:inline-block;position:relative;overflow:hidden}
+.dc{display:block;transition:transform calc(.34s*var(--slow)) cubic-bezier(.2,.85,.25,1),opacity calc(.3s*var(--slow)),filter calc(.3s*var(--slow))}
+.dc.in{transform:translateY(-70%);opacity:0;filter:blur(2px)}
+.dc.out{position:absolute;inset:0;transform:translateY(70%);opacity:0;filter:blur(2px)}
+.ultimi .cifre{animation:battito calc(.5s*var(--slow)) ease-out}
+@keyframes battito{0%{transform:scale(1.12)}100%{transform:scale(1)}}
+
+/* regioni compatte: ai lati della fotocamera, MAI sotto */
+.lead,.trail{position:absolute;top:0;height:37px;display:flex;align-items:center}
+.lead{left:9px}.trail{right:12px}
+.anello{width:22px;height:22px;position:relative;flex:none}
+.anello svg{width:100%;height:100%;transform:rotate(-90deg)}
+.anello .rt{stroke:color-mix(in srgb,var(--tint) 25%,transparent);fill:none}
+.anello .rp{stroke:var(--tint);fill:none;stroke-linecap:round;transition:stroke .4s}
+.anello .glifo{position:absolute;inset:0;display:grid;place-items:center;color:var(--tint)}
+.capsula{font-size:12px;font-weight:800;letter-spacing:.04em;padding:4px 8px;border-radius:99px;color:var(--tint);background:color-mix(in srgb,var(--tint) 20%,transparent);transition:color .4s,background .4s}
+
+/* staccata (minimal): un cerchio da 37 pt */
+.cerchio{position:absolute;top:11px;width:37px;height:37px;border-radius:50%;background:#000;z-index:5;display:grid;place-items:center;opacity:0;transform:scale(.4);will-change:transform,opacity}
+.musica-min{position:absolute;left:9px;top:7.5px;width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#1db954,#0b6b31)}
+.onda{position:absolute;right:12px;top:12px;display:flex;gap:2px;align-items:center;height:13px}
+.onda i{width:2.5px;border-radius:2px;background:#1db954;animation:onda 1s ease-in-out infinite}
+.onda i:nth-child(2){animation-delay:-.3s}.onda i:nth-child(3){animation-delay:-.6s}.onda i:nth-child(4){animation-delay:-.15s}
+@keyframes onda{0%,100%{height:4px}50%{height:13px}}
+
+/* espansa: regioni leading / trailing (accanto alla fotocamera), center (sotto), bottom */
+.esp{position:absolute;inset:0;padding:14px 20px 16px}
+.esp .sopra{display:flex;justify-content:space-between;align-items:flex-start}
+.esp .piccolo{font-size:12px;font-weight:600;color:rgba(255,255,255,.55);letter-spacing:.01em}
+.esp .forte{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.tasto{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--tint) 22%,#1c1c1e);color:var(--tint);transition:transform .1s,background .4s,color .4s}
+.tasto:active{transform:scale(.9)}
+
+/* variazione B: barre della sequenza */
+.barre{display:flex;align-items:flex-end;gap:2px;height:34px}
+.barra{flex:var(--peso) 1 0;min-width:2px;border-radius:3px;background:rgba(255,255,255,.14);position:relative;overflow:hidden;transition:background .4s}
+.barra.fatta{background:color-mix(in srgb,var(--c) 45%,#000)}
+.barra.ora{background:color-mix(in srgb,var(--c) 28%,#000)}
+.barra.ora::after{content:"";position:absolute;left:0;bottom:0;top:0;width:var(--p);background:var(--c);border-radius:3px}
+.testina{position:absolute;top:-6px;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #fff;transform:translateX(-4px);transition:left .25s linear}
+.minibarra{width:5px;height:20px;border-radius:3px;background:color-mix(in srgb,var(--tint) 25%,transparent);position:relative;overflow:hidden}
+.minibarra i{position:absolute;left:0;right:0;bottom:0;background:var(--tint);border-radius:3px;transition:height .25s linear,background .4s}
+
+/* variazione C: tabellone */
+.giri{display:flex;gap:3px}
+.giri i{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.14);transition:background .4s}
+.giri i.fatto{background:color-mix(in srgb,var(--tint) 55%,#000)}
+.giri i.ora{background:var(--tint)}
+.anello-sottile{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;box-shadow:0 0 0 2px var(--tint) inset;transition:box-shadow .4s}
+
+.scheda{max-width:1100px;width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:1200px){.scheda{grid-template-columns:1fr}}
+.scheda .nota h3{font-size:13px;color:#fff;margin-bottom:6px}
+.suggerimento{font-size:12.5px;color:#9ca3af;text-align:center}
+@media (prefers-reduced-motion:reduce){.dc,.strato{transition-duration:.01s!important}.ultimi .cifre{animation:none}}
+</style>
+</head>
+<body>
+
+<aside class="pannello">
+  <div>
+    <div class="logo">FLEO<b>FIT</b> · Dynamic Island</div>
+    <p class="sotto">Il timer guidato come Live Activity. Tre variazioni, ognuna nelle tre presentazioni che chiede Apple: minimal, compact, expanded.</p>
+  </div>
+
+  <div class="gruppo">
+    <label>Variazione</label>
+    <div class="seg" id="segVar">
+      <button data-v="tutte" aria-pressed="true">Tutte</button>
+      <button data-v="A" aria-pressed="false">A Anello</button>
+      <button data-v="B" aria-pressed="false">B Barre</button>
+      <button data-v="C" aria-pressed="false">C Tabellone</button>
+    </div>
+  </div>
+
+  <div class="gruppo">
+    <label>Presentazione</label>
+    <div class="seg" id="segPres">
+      <button data-p="minimal" aria-pressed="false">Minimal</button>
+      <button data-p="compact" aria-pressed="true">Compact</button>
+      <button data-p="expanded" aria-pressed="false">Expanded</button>
+    </div>
+    <p class="sotto">Sul telefono: tieni premuta l'isola per espanderla, tocca fuori per richiuderla.</p>
+  </div>
+
+  <div class="gruppo">
+    <label>Allenamento</label>
+    <div class="seg" id="segSeq">
+      <button data-s="hyrox" aria-pressed="true">Hyrox</button>
+      <button data-s="corsa" aria-pressed="false">Corsa</button>
+      <button data-s="gym" aria-pressed="false">Gym</button>
+    </div>
+  </div>
+
+  <div class="gruppo">
+    <label>Timer</label>
+    <div class="riga">
+      <button class="btn primario" id="play">▶ Avvia</button>
+      <button class="btn" id="avanti" title="Passo successivo">⏭ Passo</button>
+      <button class="btn" id="reset" title="Da capo">↺</button>
+    </div>
+    <div class="riga">
+      <button class="btn" id="salta3" title="Vai agli ultimi 4 secondi del passo">Ultimi 3 secondi</button>
+    </div>
+    <input type="range" id="scorri" min="0" max="1000" value="0" aria-label="Posizione nell'allenamento">
+    <div class="stato"><span id="statoPasso">—</span><span id="statoTot">0:00</span></div>
+  </div>
+
+  <div class="gruppo">
+    <label>Velocità del timer</label>
+    <div class="seg" id="segVel">
+      <button data-x="1" aria-pressed="true">1×</button>
+      <button data-x="4" aria-pressed="false">4×</button>
+      <button data-x="16" aria-pressed="false">16×</button>
+    </div>
+  </div>
+
+  <div class="gruppo">
+    <label class="interruttore">
+      <span>Espandi a ogni cambio di passo<small>L'avviso di una Live Activity: l'isola si apre da sola qualche secondo.</small></span>
+      <input type="checkbox" id="avviso" checked>
+    </label>
+    <label class="interruttore">
+      <span>Rallentatore<small>Animazioni dell'isola quattro volte più lente, per guardarle bene.</small></span>
+      <input type="checkbox" id="lento">
+    </label>
+  </div>
+
+  <div class="nota"><b>Come leggere le misure.</b> L'isola a riposo è 126 × 37 pt. La compact resta alta 37 pt e mette il contenuto solo ai lati della fotocamera. La minimal è un cerchio da 37 pt, quando c'è un'altra Live Activity (qui la musica). La expanded arriva a 380 pt di larghezza e al massimo 160 di altezza, con angoli da 44 pt, concentrici con quelli dello schermo.</div>
+</aside>
+
+<main class="palco">
+  <div class="telefoni" id="telefoni"></div>
+  <p class="suggerimento" id="sugg">Tieni premuta un'isola per vederla espansa · i colori sono quelli delle categorie FLEOFIT, verde per il riposo</p>
+  <div class="scheda" id="scheda"></div>
+</main>
+
+<template id="tplTelefono">
+  <div class="colonna">
+    <div class="titolo-var"><h2></h2><p></p></div>
+    <div class="cornice">
+      <div class="iphone">
+        <div class="schermo">
+          <div class="sfondo"></div>
+          <div class="barra-stato"><span>TIM</span><span class="icone">
+            <svg width="18" height="12" viewBox="0 0 18 12" fill="#fff"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+            <span class="batteria"></span></span></div>
+          <div class="blocco-ora"><div class="data">mercoledì 29 ottobre</div><div class="ora">9:41</div></div>
+          <div class="notifiche-fondo"><span></span><span></span></div>
+          <div class="home-ind"></div>
+          <div class="isola"></div>
+          <div class="cerchio"></div>
+          <div class="lente"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+/* ═════════════ Allenamenti di prova ═════════════ */
+const CAT = { hyrox:'#f1ba17', corsa:'#0094C6', gym:'#14B8A6' }
+const RIPOSO = '#4ade80', FATTO = '#22c55e', PREP = '#ffffff'
+
+function sequenza(tipo){
+  const s = [{ type:'prep', label:'PRONTI', title:'Preparazione', task:'Preparati', dur:10 }]
+  if (tipo === 'hyrox'){
+    const st = [['20 Wall Balls','9 kg'],['250 m SkiErg','2:00 /500m'],['10 Burpee broad jump',''],['25 m Sled push','102 kg']]
+    for (let r=1;r<=8;r++){
+      const [t,d] = st[(r-1)%4]
+      s.push({ type:'work', label:'ON', title:'ON/OFF', task:t, detail:d, round:r, rounds:8, dur:40 })
+      s.push({ type:'rest', label:'OFF', title:'Riposo', task:'Recupera', round:r, rounds:8, dur:20 })
+    }
+  } else if (tipo === 'corsa'){
+    s.push({ type:'work', label:'RISC', title:'Riscaldamento', task:'Corsa lenta', detail:'Z2', dur:300 })
+    for (let r=1;r<=6;r++){
+      s.push({ type:'work', label:'RUN', title:'Ripetuta', task:'400 m', detail:'4:00 /km', round:r, rounds:6, dur:90 })
+      s.push({ type:'rest', label:'REC', title:'Recupero', task:'Camminata', round:r, rounds:6, dur:60 })
+    }
+    s.push({ type:'work', label:'DEF', title:'Defaticamento', task:'Corsa lenta', detail:'Z1', dur:180 })
+  } else {
+    for (let r=1;r<=4;r++){
+      s.push({ type:'work', label:'SERIE', title:'Panca piana', task:'10 ripetizioni', detail:'60 kg', round:r, rounds:4, dur:45 })
+      s.push({ type:'rest', label:'REC', title:'Recupero', task:'Respira', round:r, rounds:4, dur:90 })
+    }
+  }
+  s.push({ type:'done', label:'FATTO', title:'Completato', task:'Ottimo lavoro', dur:0 })
+  return s
+}
+
+/* ═════════════ Stato del timer ═════════════ */
+const S = { tipo:'hyrox', seq:sequenza('hyrox'), idx:0, left:10, running:false, speed:1,
+            pres:'compact', varianti:'tutte', avviso:true, lento:false }
+const totale = () => S.seq.reduce((a,p)=>a+p.dur,0)
+const passati = () => S.seq.slice(0,S.idx).reduce((a,p)=>a+p.dur,0) + (S.seq[S.idx].dur - S.left)
+const tinta = p => p.type==='rest' ? RIPOSO : p.type==='done' ? FATTO : p.type==='prep' ? PREP : CAT[S.tipo]
+const mmss = s => { s=Math.max(0,Math.ceil(s-1e-6)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0') }
+const prossimo = () => S.seq[S.idx+1]
+
+/* ═════════════ Glifi (SF Symbols, ridisegnati) ═════════════ */
+const G = {
+  work:'<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+  rest:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M3 9h11a3 3 0 1 0-3-3M3 15h15a3 3 0 1 1-3 3"/></svg>',
+  prep:'<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>',
+  done:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg>',
+  pausa:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/></svg>',
+  play:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>',
+  avanti:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM13 5v14l9-7z"/></svg>',
+}
+const anello = (taglia, spess) => {
+  const r = 18 - spess/2 - .5, c = 2*Math.PI*r
+  return `<div class="anello" style="width:${taglia}px;height:${taglia}px"><svg viewBox="0 0 36 36">
+    <circle class="rt" cx="18" cy="18" r="${r}" stroke-width="${spess}"/>
+    <circle class="rp" data-b="ring" data-c="${c}" cx="18" cy="18" r="${r}" stroke-width="${spess}" stroke-dasharray="${c}"/>
+  </svg><div class="glifo" data-b="glifo"></div></div>`
+}
+
+/* ═════════════ Le tre variazioni ═════════════
+   Ognuna dichiara: geometria dell'isola per presentazione, e l'HTML delle regioni.
+   Le regioni ricalcano DynamicIsland { expanded{leading,trailing,center,bottom},
+   compactLeading, compactTrailing, minimal }.                                   */
+const VAR = {
+  A: {
+    nome:'A · Anello', motto:'Il tempo che resta, come un anello che si svuota',
+    geo:{ compact:[226,37], expanded:[380,160] },
+    compact:`<div class="lead">${anello(22,3.2)}</div>
+      <div class="trail"><span class="num tinta" style="font-size:15px" data-b="timer"></span></div>`,
+    minimal:`${anello(25,3.4)}`,
+    expanded:`<div class="esp">
+      <div class="sopra" style="height:44px">
+        <div style="display:flex;gap:10px;align-items:center">
+          ${anello(44,3.2).replace('class="glifo" data-b="glifo"','class="glifo num" style="font-size:12px;font-weight:700" data-b="giroCorto"')}
+          <div><div class="piccolo" data-b="titolo"></div><div class="forte" data-b="giro"></div></div>
+        </div>
+        <div class="num tinta" style="font-size:40px;line-height:1;margin-top:2px" data-b="timer"></div>
+      </div>
+      <div style="margin-top:22px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
+        <div style="min-width:0">
+          <div style="font-size:18px;font-weight:700;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" data-b="compito"></div>
+          <div class="piccolo" style="margin-top:3px" data-b="poi"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex:none">
+          <button class="tasto" data-azione="play" aria-label="Pausa"></button>
+          <button class="tasto" data-azione="avanti" aria-label="Passo successivo">${G.avanti}</button>
+        </div>
+      </div></div>`,
+    spec:{
+      minimal:'Solo l\'anello: si svuota col passo e cambia colore con la fase. Nessun numero, perché in 25 pt un numero non si legge al volo.',
+      compact:'Sinistra: anello con il glifo della fase (fulmine lavoro, respiro riposo). Destra: il tempo, cifre a larghezza fissa che rotolano verso il basso.',
+      expanded:'Anello grande con il giro, il tempo a 40 pt in alto a destra, l\'esercizio in corso e il prossimo in basso. Pausa e Passo sono bottoni App Intents (iOS 17+).'
+    }
+  },
+  B: {
+    nome:'B · Barre', motto:'Tutta la seduta in una riga, e dove sei',
+    geo:{ compact:[244,37], expanded:[380,150] },
+    compact:`<div class="lead"><span class="capsula" data-b="etichetta"></span></div>
+      <div class="trail"><span class="num tinta" style="font-size:15px" data-b="timer"></span></div>`,
+    minimal:`<div style="display:flex;align-items:center;gap:3px"><div class="minibarra"><i data-b="fill"></i></div><span class="num tinta" style="font-size:12px;font-weight:700" data-b="secondi"></span></div>`,
+    expanded:`<div class="esp">
+      <div class="sopra">
+        <div><div class="piccolo" data-b="titoloCat"></div><div class="forte" data-b="giro"></div></div>
+        <div class="num tinta" style="font-size:36px;line-height:1" data-b="timer"></div>
+      </div>
+      <div style="position:relative;margin-top:16px"><div class="barre" data-b="barre"></div><div class="testina" data-b="testina"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:9px;gap:12px">
+        <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span class="tinta" data-b="etichettaTesto"></span> <span data-b="compito"></span></div>
+        <div class="piccolo" style="white-space:nowrap" data-b="poi"></div>
+      </div></div>`,
+    spec:{
+      minimal:'Una barretta che si svuota e i secondi del passo: il numero da solo dice «quanto manca», la barra «di cosa».',
+      compact:'Sinistra: la capsula della fase (ON, OFF, RUN, REC) nel colore della fase. Destra: il tempo. La fase si legge anche senza colori.',
+      expanded:'La sequenza intera come barre: alte il lavoro, basse il riposo, larghe quanto durano. La testina segna dove sei. Ispirata al grafico UV dello screenshot.'
+    }
+  },
+  C: {
+    nome:'C · Tabellone', motto:'Il tempo al centro, come un punteggio',
+    geo:{ compact:[230,37], expanded:[380,160] },
+    compact:`<div class="lead" style="left:14px"><span class="num" style="font-size:14px;font-weight:700"><span class="tinta" data-b="giroNum"></span><span style="color:rgba(255,255,255,.45)" data-b="giroDi"></span></span></div>
+      <div class="trail"><span class="num tinta" style="font-size:15px" data-b="timer"></span></div>`,
+    minimal:`<div class="anello-sottile"><span class="num tinta" style="font-size:13px;font-weight:800" data-b="giroCorto"></span></div>`,
+    expanded:`<div class="esp" style="padding-top:12px">
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-top:30px">
+        <div><div class="piccolo">GIRO</div><div class="num" style="font-size:22px;font-weight:700"><span data-b="giroNum"></span><span style="color:rgba(255,255,255,.4)" data-b="giroDi"></span></div></div>
+        <div style="text-align:center"><div class="capsula" style="display:inline-block;font-size:11px" data-b="etichetta"></div>
+          <div class="num tinta" style="font-size:48px;line-height:1;margin-top:3px" data-b="timer"></div></div>
+        <div style="text-align:right"><div class="piccolo">MANCANO</div><div class="num" style="font-size:22px;font-weight:700" data-b="restaTot"></div></div>
+      </div>
+      <div class="giri" style="margin-top:14px" data-b="giri"></div>
+      <div class="piccolo" style="margin-top:7px;text-align:center;color:rgba(255,255,255,.7)" data-b="compitoPieno"></div></div>`,
+    spec:{
+      minimal:'Il numero del giro dentro un anello sottile del colore della fase: con la musica in primo piano basta sapere a che giro sei.',
+      compact:'Sinistra: «3/8», il giro. Destra: il tempo. È la variante più sobria, la più vicina allo stile dei timer di sistema.',
+      expanded:'Il tempo grande al centro, il giro a sinistra e il totale che manca a destra, come il tabellone del tennis nello screenshot. Sotto, un trattino per giro.'
+    }
+  }
+}
+
+/* ═════════════ Molla (damping + response, come SwiftUI .spring) ═════════════ */
+class Molla{
+  constructor(v,{response=.42,damping=.86}={}){ this.v=v; this.t=v; this.vel=0; this.r=response; this.d=damping }
+  passo(dt){
+    const k=(2*Math.PI/this.r)**2, c=4*Math.PI*this.d/this.r
+    const a = -k*(this.v-this.t) - c*this.vel
+    this.vel += a*dt; this.v += this.vel*dt
+    if (Math.abs(this.v-this.t)<.01 && Math.abs(this.vel)<.01){ this.v=this.t; this.vel=0 }
+  }
+}
+
+/* ═════════════ Un telefono ═════════════ */
+const telefoni = []
+function creaTelefono(v){
+  const n = document.getElementById('tplTelefono').content.firstElementChild.cloneNode(true)
+  n.querySelector('h2').textContent = VAR[v].nome
+  n.querySelector('p').textContent = VAR[v].motto
+  const isola = n.querySelector('.isola'), cerchio = n.querySelector('.cerchio')
+  isola.innerHTML = `
+    <div class="strato" data-p="riposo"></div>
+    <div class="strato" data-p="minimal"><div class="musica-min"></div><div class="onda"><i></i><i></i><i></i><i></i></div></div>
+    <div class="strato" data-p="compact">${VAR[v].compact}</div>
+    <div class="strato" data-p="expanded">${VAR[v].expanded}</div>`
+  cerchio.innerHTML = VAR[v].minimal
+  const t = { v, n, isola, cerchio, stato:n.querySelector('.barra-stato'),
+    w:new Molla(126), h:new Molla(37), cs:new Molla(0,{response:.38,damping:.78}),
+    presLocale:null, avvisoFino:0 }
+  isola.addEventListener('click', e => {
+    const b = e.target.closest('[data-azione]'); if (!b) return
+    e.stopPropagation(); b.dataset.azione==='play' ? attivaPlay() : avanti()
+  })
+  // Pressione prolungata = expanded, come sul telefono vero (il tocco breve aprirebbe l'app).
+  let timer
+  isola.addEventListener('pointerdown', e => { if (e.target.closest('[data-azione]')) return; timer=setTimeout(()=>{ t.presLocale='expanded'; vibra() },380) })
+  ;['pointerup','pointerleave','pointercancel'].forEach(ev=>isola.addEventListener(ev,()=>clearTimeout(timer)))
+  n.querySelector('.schermo').addEventListener('click', e => { if (!isola.contains(e.target)) { t.presLocale=null; t.avvisoFino=0 } })
+  telefoni.push(t)
+  costruisciSequenza(t)
+  return n
+}
+const vibra = () => navigator.vibrate?.(10)
+
+function presDi(t){
+  if (t.presLocale) return t.presLocale
+  if (performance.now() < t.avvisoFino) return 'expanded'
+  return S.pres
+}
+
+function costruisciSequenza(t){
+  const tot = totale()
+  t.n.querySelectorAll('[data-b="barre"]').forEach(el => {
+    el.innerHTML = S.seq.filter(p=>p.dur>0).map((p,i)=>{
+      const h = p.type==='work' ? 100 : p.type==='rest' ? 45 : 65
+      return `<div class="barra" data-i="${S.seq.indexOf(p)}" style="--peso:${p.dur};height:${h}%;--c:${tinta(p)}"></div>`
+    }).join('')
+  })
+  const giri = S.seq.find(p=>p.rounds)?.rounds || 0
+  t.n.querySelectorAll('[data-b="giri"]').forEach(el => el.innerHTML = Array.from({length:giri},()=>'<i></i>').join(''))
+}
+
+/* cifre che rotolano: solo le cifre che cambiano si muovono */
+function scriviCifre(el, testo){
+  if (el._t === testo) return
+  const vecchio = el._t || ''; el._t = testo
+  if (!el.firstElementChild || vecchio.length !== testo.length){
+    el.innerHTML = `<span class="cifre">${[...testo].map(c=>`<span class="d"><span class="dc">${c}</span></span>`).join('')}</span>`
+    return
+  }
+  const slot = el.firstElementChild.children
+  ;[...testo].forEach((c,i) => {
+    if (vecchio[i] === c) return
+    const s = slot[i], cur = s.lastElementChild, nu = document.createElement('span')
+    nu.className='dc in'; nu.textContent=c; s.appendChild(nu); void nu.offsetHeight
+    nu.classList.remove('in'); cur.classList.add('out'); setTimeout(()=>cur.remove(), 400*S.slowF)
+  })
+}
+const scrivi = (root, chiave, testo) => root.querySelectorAll(`[data-b="${chiave}"]`).forEach(el => { if (el.textContent!==testo) el.textContent=testo })
+
+function aggiornaContenuto(t){
+  const p = S.seq[S.idx], col = tinta(p), root = t.n
+  root.style.setProperty('--tint', col)
+  const resta = p.dur ? S.left/p.dur : 1
+  root.querySelectorAll('[data-b="timer"]').forEach(el => scriviCifre(el, p.type==='done' ? mmss(totale()) : mmss(S.left)))
+  root.querySelectorAll('[data-b="ring"]').forEach(el => el.style.strokeDashoffset = el.dataset.c*(1-resta))
+  root.querySelectorAll('[data-b="glifo"]').forEach(el => { if (el._g!==p.type){ el._g=p.type; el.innerHTML=G[p.type] } })
+  const g = p.round ? `${p.round}/${p.rounds}` : ''
+  scrivi(root,'giro', p.round ? `Giro ${p.round} di ${p.rounds}` : p.title)
+  scrivi(root,'giroCorto', p.round ? String(p.round) : p.type==='done' ? '✓' : '–')
+  scrivi(root,'giroNum', p.round ? String(p.round) : p.type==='done' ? '✓' : '0')
+  scrivi(root,'giroDi', p.rounds ? '/'+p.rounds : '')
+  scrivi(root,'titolo', p.type==='rest' ? 'RIPOSO' : p.title.toUpperCase())
+  scrivi(root,'titoloCat', ({hyrox:'HYROX · ON/OFF',corsa:'CORSA · 6 × 400 m',gym:'GYM · 4 SERIE'})[S.tipo])
+  scrivi(root,'etichetta', p.label)
+  scrivi(root,'etichettaTesto', p.label)
+  scrivi(root,'compito', p.detail ? `${p.task} · ${p.detail}` : p.task)
+  scrivi(root,'compitoPieno', p.type==='done' ? 'Ottimo lavoro' : (p.detail ? `${p.task} · ${p.detail}` : p.task) + (prossimo() && prossimo().type!=='done' ? `  ·  poi ${prossimo().task}` : ''))
+  const nx = prossimo()
+  scrivi(root,'poi', nx ? (nx.type==='done' ? 'Poi: fine allenamento' : `Poi: ${nx.task} · ${mmss(nx.dur)}`) : '')
+  scrivi(root,'secondi', p.type==='done' ? '✓' : String(Math.ceil(S.left)))
+  root.querySelectorAll('[data-b="fill"]').forEach(el => el.style.height = (resta*100)+'%')
+  scrivi(root,'restaTot', mmss(totale()-passati()))
+  // barre
+  root.querySelectorAll('[data-b="barre"]').forEach(el => {
+    let x=0, xs=null
+    el.querySelectorAll('.barra').forEach(b => {
+      const i=+b.dataset.i
+      b.classList.toggle('fatta', i<S.idx); b.classList.toggle('ora', i===S.idx)
+      if (i===S.idx) b.style.setProperty('--p', ((1-resta)*100)+'%')
+    })
+    const cur = el.querySelector('.barra.ora'), testina = el.parentElement.querySelector('[data-b="testina"]')
+    if (testina) testina.style.left = cur ? (cur.offsetLeft + cur.offsetWidth*(1-resta))+'px' : (p.type==='done' ? el.offsetWidth+'px' : '0px')
+  })
+  root.querySelectorAll('[data-b="giri"]').forEach(el => [...el.children].forEach((g,i) => {
+    const r = p.round || (p.type==='done' ? 99 : 0)
+    g.classList.toggle('fatto', i+1 < r || p.type==='done'); g.classList.toggle('ora', i+1===r && p.type!=='done')
+  }))
+  root.querySelectorAll('[data-azione="play"]').forEach(el => { const k=S.running?'pausa':'play'; if (el._k!==k){ el._k=k; el.innerHTML=G[k] } })
+  // gli ultimi tre secondi: il numero batte una volta per secondo
+  const ultimi = S.running && p.type!=='done' && p.type!=='prep' && S.left<=3.0001 && S.left>0
+  const sec = Math.ceil(S.left)
+  if (ultimi && t._ultimo!==sec){ t._ultimo=sec; t.isola.classList.remove('ultimi'); void t.isola.offsetWidth; t.isola.classList.add('ultimi') }
+  if (!ultimi){ t.isola.classList.remove('ultimi'); t._ultimo=null }
+}
+
+function geometria(t, pres){
+  const g = VAR[t.v].geo
+  if (pres==='expanded') return g.expanded
+  if (pres==='compact') return g.compact
+  return [158,37]   // minimal: l'isola tiene la musica, noi il cerchio staccato
+}
+
+function disegna(t, dt){
+  const pres = presDi(t)
+  const [w,h] = geometria(t, pres)
+  // espandere ha un filo di rimbalzo; richiudere no (HIG: l'isola torna «a casa» pulita)
+  const apre = w > t.w.t + 1
+  t.w.t=w; t.h.t=h
+  if (apre){ t.w.d=.8; t.h.d=.78 } else if (w < t.w.v - 1){ t.w.d=1; t.h.d=1 }
+  t.cs.t = pres==='minimal' ? 1 : 0
+  const f = dt / S.slowF
+  t.w.passo(f); t.h.passo(f); t.cs.passo(f)
+  const W=t.w.v, H=t.h.v
+  const raggio = Math.min(H/2, 18.5 + (H-37)/(160-37)*(44-18.5))
+  Object.assign(t.isola.style, { width:W+'px', height:H+'px', marginLeft:(-W/2)+'px', borderRadius:raggio+'px' })
+  const c = t.cs.v
+  t.cerchio.style.left = (201 + W/2 + 6 - (1-c)*22) + 'px'
+  t.cerchio.style.opacity = Math.max(0,Math.min(1,c))
+  t.cerchio.style.transform = `scale(${.4+.6*c})`
+  t.stato.style.opacity = pres==='expanded' ? 0 : 1
+  // con il cerchio staccato iOS toglie le icone di destra della barra di stato
+  t.stato.querySelector('.icone').style.opacity = pres==='minimal' ? 0 : 1
+  t.isola.querySelectorAll('.strato').forEach(s => s.classList.toggle('attivo', s.dataset.p===pres))
+}
+
+/* ═════════════ Motore ═════════════ */
+S.slowF = 1
+function avanti(){
+  if (S.idx < S.seq.length-1){ S.idx++; S.left = S.seq[S.idx].dur; cambioPasso() }
+}
+function cambioPasso(){
+  if (S.seq[S.idx].type==='done') S.running=false
+  if (S.avviso && S.pres!=='expanded') telefoni.forEach(t => { if (!t.presLocale) t.avvisoFino = performance.now() + 3200*S.slowF })
+  telefoni.forEach(costruisciSequenza)
+}
+function attivaPlay(){
+  if (S.seq[S.idx].type==='done') reset()
+  S.running = !S.running
+}
+function reset(){ S.idx=0; S.left=S.seq[0].dur; S.running=false; telefoni.forEach(t=>{t.avvisoFino=0}) }
+
+let ultimo = performance.now()
+function ciclo(ora){
+  const dt = Math.min(.05,(ora-ultimo)/1000); ultimo = ora
+  if (S.running){
+    S.left -= dt*S.speed
+    while (S.left <= 0 && S.running){
+      if (S.idx < S.seq.length-1){ const resto=-S.left; S.idx++; S.left=S.seq[S.idx].dur-resto; cambioPasso() }
+      else { S.left=0; S.running=false }
+    }
+    if (S.seq[S.idx].type==='done') S.left=0
+  }
+  telefoni.forEach(t => { aggiornaContenuto(t); disegna(t, dt) })
+  aggiornaPannello()
+  requestAnimationFrame(ciclo)
+}
+
+/* ═════════════ Pannello ═════════════ */
+const $ = id => document.getElementById(id)
+function aggiornaPannello(){
+  const p = S.seq[S.idx]
+  $('play').textContent = S.running ? '❚❚ Pausa' : (p.type==='done' ? '↺ Ricomincia' : '▶ Avvia')
+  $('statoPasso').textContent = `${p.title}${p.round ? ' · '+p.round+'/'+p.rounds : ''} · ${mmss(S.left)}`
+  $('statoTot').textContent = `${mmss(passati())} / ${mmss(totale())}`
+  if (!$('scorri')._tiene) $('scorri').value = Math.round(passati()/totale()*1000)
+}
+function seg(id, attr, fn){
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return
+    $(id).querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x===b))
+    fn(b.dataset[attr])
+  })
+}
+seg('segVar','v', v => { S.varianti=v; montaTelefoni() })
+seg('segPres','p', p => { S.pres=p; telefoni.forEach(t=>{t.presLocale=null;t.avvisoFino=0}) })
+seg('segSeq','s', s => { S.tipo=s; S.seq=sequenza(s); reset(); telefoni.forEach(costruisciSequenza) })
+seg('segVel','x', x => { S.speed=+x })
+$('play').onclick = attivaPlay
+$('avanti').onclick = avanti
+$('reset').onclick = reset
+$('salta3').onclick = () => { const p=S.seq[S.idx]; if (p.type==='done') return; if (p.dur>4) S.left=4; S.running=true }
+$('avviso').onchange = e => S.avviso = e.target.checked
+$('lento').onchange = e => { S.slowF = e.target.checked ? 4 : 1; document.documentElement.style.setProperty('--slow', S.slowF) }
+const sc = $('scorri')
+sc.addEventListener('pointerdown', ()=>sc._tiene=true)
+sc.addEventListener('pointerup', ()=>sc._tiene=false)
+sc.addEventListener('input', () => {
+  let s = sc.value/1000*totale(), i=0
+  while (i < S.seq.length-1 && s >= S.seq[i].dur){ s -= S.seq[i].dur; i++ }
+  const cambia = i!==S.idx
+  S.idx=i; S.left = S.seq[i].dur - s
+  if (cambia) telefoni.forEach(costruisciSequenza)
+})
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input')) return
+  if (e.code==='Space'){ e.preventDefault(); attivaPlay() }
+  if (e.key==='ArrowRight') avanti()
+  if (e.key==='1') $('segPres').children[0].click()
+  if (e.key==='2') $('segPres').children[1].click()
+  if (e.key==='3') $('segPres').children[2].click()
+})
+
+function montaTelefoni(){
+  telefoni.length = 0
+  const box = $('telefoni'); box.innerHTML=''
+  const quali = S.varianti==='tutte' ? ['A','B','C'] : [S.varianti]
+  quali.forEach(v => box.appendChild(creaTelefono(v)))
+  const sch = $('scheda')
+  sch.innerHTML = quali.map(v => `<div class="nota"><h3>${VAR[v].nome}</h3>
+    <p><b>Minimal.</b> ${VAR[v].spec.minimal}</p><p style="margin-top:6px"><b>Compact.</b> ${VAR[v].spec.compact}</p>
+    <p style="margin-top:6px"><b>Expanded.</b> ${VAR[v].spec.expanded}</p></div>`).join('')
+  sch.style.gridTemplateColumns = quali.length===1 ? '1fr' : ''
+  scala()
+}
+function scala(){
+  const box = $('telefoni'), n = box.children.length || 1
+  const largh = box.clientWidth, alt = window.innerHeight - 90
+  const s = Math.min(1, (largh - (n-1)*28)/n/426, alt/898)
+  box.querySelectorAll('.cornice').forEach(c => {
+    c.style.width = 426*s+'px'; c.style.height = 898*s+'px'
+    c.querySelector('.iphone').style.transform = `scale(${s})`
+  })
+}
+window.addEventListener('resize', scala)
+montaTelefoni()
+requestAnimationFrame(ciclo)
+</script>
+</body>
+</html>

@@ -524,3 +524,89 @@ committente: «non toccare il codice per il timer».
 L'atleta sposta la sua assegnazione da qui (voce del menu ⋯, solo da fare e non gara) o dal
 calendario: stesso foglio `FoglioSposta`, stessa logica. `spostaQui` aggiorna `workout.date` sul
 posto, perché per l'atleta è già il suo `completed_date`. Tutta la storia: `calendario.md`, 9-sposta.
+
+## 9-tv-orologio. Musica che si fermava e TV ferma col telefono bloccato (29/10/2026)
+Due difetti segnalati dal committente, corretti insieme.
+1. **Spotify si fermava al primo beep** (anche su una cassa Bluetooth). Causa: l'audio muto in
+   loop che `initAudioAndPlay` faceva partire per far ignorare a iOS il tasto Silenzioso. Un audio
+   infinito si prende la sessione audio: su iPhone categoria «lettore multimediale», su Android il
+   focus audio pieno. **Tolto**. In più, aprendo il timer, `suonaSopraLaMusica`
+   (`src/lib/sessioneAudio.js`) chiede a WebKit `navigator.audioSession.type = 'ambient'`, e alla
+   chiusura torna `auto`.
+   ⚠️ Il prezzo, scelto: in «ambient» **iOS rispetta il tasto Silenzioso**, i beep col telefono in
+   silenzioso non si sentono (la vibrazione resta). ⚠️ L'API c'è da iOS **16.4**: sotto, su iPhone
+   i beep fermano ancora la musica. Se non bastasse, la strada è nativa: un plugin che metta
+   `AVAudioSession` in `.playback` con `.mixWithOthers` (e così anche col Silenzioso si sente).
+   **Non provato su un telefono vero** al momento della correzione.
+2. **La TV si fermava col telefono bloccato.** La TV mostrava solo i numeri che arrivavano dal
+   telefono, e iOS a schermo bloccato sospende la webview: niente più messaggi. Ora la TV
+   **conta da sola** (`statoTV` di `src/lib/avanzaTimer.js`) dall'ora in cui ha ricevuto l'ultimo
+   stato, sulla sequenza che costruisce con `buildTimerSequence` dallo stesso workout, e i suoi
+   beep seguono il suo orologio (`beepTV`). Se il passo all'indice ricevuto non coincide (workout
+   cambiato, app vecchia) non scavalca il passo: scende a zero e aspetta.
+   Anche il **telefono** al risveglio saltava solo al passo successivo, ripartendo dalla durata
+   piena: ora attraversa tutti i passi passati con `avanzaSequenza`, la stessa funzione della TV,
+   così i due coincidono. 🔴 Il ritmo è quello del tick: lo zero resta a schermo un secondo.
+   ⚠️ La TV gira da `main` (`fleofit.vercel.app/tv`): la correzione della TV arriva solo con
+   `app:main`; quella del telefono con la prossima versione sugli Store.
+   Il passo dopo — il timer sul blocca schermo e sulla Dynamic Island — è in BACKLOG, da valutare.
+
+## 9-live-activity. Il timer sul blocco schermo e nella Dynamic Island (29/10/2026)
+Design A «Anello», scelto dal committente fra tre (prototipi in `tools/design-dynamic-island/`,
+`index.html` le tre variazioni, `design-a.html` blocco schermo + Home + widget). Solo iPhone.
+- **Dove si accende**: switch «Live Activity» in Impostazioni, nella carta in cima (solo su iPhone
+  con un'app che porta il plugin). La **prima volta** che si apre il timer o il telecomando TV
+  compare `FoglioLiveActivity` («Attiva» / «Non ora»), poi il timer si apre comunque. Una volta
+  sola: poi decide lo switch. Preferenza in `fleofit_live_activity` (memoria del dispositivo).
+- **JS**: `src/lib/liveActivity.js`. `statoLiveActivity` traduce lo stato del timer in date
+  ASSOLUTE in millisecondi (fine del passo, fine dell'allenamento). In `WorkoutTimer` parte al
+  primo «Avvia», si aggiorna **solo** al cambio di passo e di pausa (non al secondo), si chiude
+  alla chiusura del timer: «Completato» resta 15 minuti, un timer chiuso a metà sparisce subito.
+- **Nativo**: plugin dell'app `LiveActivityPlugin.swift` (registrato in `FleoBridgeViewController`,
+  in `LettoreTesto.swift`), struttura condivisa `AttivitaTimer.swift` (🔴 in DUE target: app ed
+  estensione), estensione widget `ios/App/FleoTimer/` (`TimerLiveActivity.swift`: blocco schermo,
+  compact, minimal, expanded). Target `FleoTimer` aggiunto a mano al `pbxproj` (iOS 16.2, bundle
+  `…fleofit.FleoTimer` e `…fleofit.dev.FleoTimer`). L'app resta da iOS 15: ActivityKit è linkato
+  debole (`-weak_framework ActivityKit`) e il plugin risponde «non disponibile» sotto la 16.2.
+- 🔴 **Col telefono bloccato la webview è sospesa** e il JS non manda niente. Nella prima prova
+  sul telefono (29/10) la Live Activity restava sullo zero di «Preparati» finché non si riapriva
+  l'app. Ora il JS manda, a ogni avvio/cambio di passo/pausa, anche il **programma**
+  (`programmaLiveActivity`): ogni passo che verrà con l'ora in cui comincia, al ritmo di
+  `avanzaSequenza` (lo zero resta un secondo, il passo dopo comincia a fine + 1 s; un test
+  verifica che i due coincidano). In `LiveActivityPlugin.swift` la classe `Regia` lo mette in
+  onda con un orologio nativo da 0,2 s e suona i beep (corti a 3-2-1, lungo allo zero, come
+  l'app). Per restare sveglia in background l'app ha `UIBackgroundModes` → `audio` e, solo
+  mentre è in background con un programma in corso, una sessione `.playback` +
+  `.mixWithOthers` con un silenzio in loop (la musica dell'atleta non si ferma). Tornata davanti,
+  la sessione torna `ambient` e il timer lo guida di nuovo la webview; i beep della webview tacciono
+  quando la pagina è nascosta, per non sentirli doppi. A cronometro, in pausa e a «Completato» il
+  programma finisce e l'app torna a dormire. Toni generati in memoria (WAV), niente file.
+  🔴 **Tornando davanti l'audio va RESTITUITO alla webview** (terza prova, 29/10): il primo
+  `spegni()` chiedeva `ambient` + `mixWithOthers`, combinazione che iOS rifiuta in silenzio, e
+  riaprendo l'app dalla Live Activity la musica dell'atleta si fermava. Ora `setActive(false,
+  .notifyOthersOnDeactivation)` e `ambient` senza opzioni; la pagina del timer richiede di nuovo
+  «ambient» a ogni `visibilitychange`. Righe `[FLEOFIT audio]` nella console di Xcode per la diagnosi.
+  ⚠️ Se iOS chiude l'app comunque, la vista scade e dice «Apri FLEOFIT per il passo successivo».
+- 🔴 **Chiudendo l'app dal multitasking la Live Activity restava** (quarta prova, 29/10): il JS non
+  arriva a `termina`. `load()` del plugin ora le chiude su `willTerminate` (aspetta al massimo 2 s)
+  e all'avvio (dopo un riavvio il timer non riparte mai da solo, quindi sono orfane). ⚠️ Limite:
+  `willTerminate` arriva solo se l'app è sveglia, cioè col timer che scorre; chiusa mentre era in
+  pausa o a cronometro (app già addormentata) la Live Activity resta fino alla prossima apertura.
+- 🔴 **Il tempo ha una cornice di larghezza CALCOLATA** (`Tempo` in `TimerLiveActivity.swift`, 29/10):
+  `Text(timerInterval:)` non sa misurarsi. Due tentativi falliti sul telefono: cornice fissa da
+  46 pt + `minimumScaleFactor` (con Spotify accanto si leggeva «0:0»), poi modello `.hidden()` +
+  `.overlay` + `.fixedSize()` (il tempo spariva del tutto). Ora un testo solo in una
+  `frame(width:)` calcolata da cifre possibili × dimensione (cifra 0,6 em, due punti 0,3 em, misurati
+  sul Mac) + 25%, senza scala.
+  ⚠️ Con un'altra attività nell'isola (Spotify) la compatta finisce tutta a SINISTRA della
+  fotocamera e al tempo restano ~30 pt dopo l'anello: tagliato sempre allo stesso punto, a cornice
+  46 o 51. Per questo la compatta usa `ViewThatFits` fra 15, 13 e 11 pt, con l'anello a 20 pt.
+- 🔴 **Il tocco apre l'app con `fleofit://timer`** (`LINK_TIMER` di `src/lib/linkTimer.js`), e
+  `DeeplinkHandler` lo ignora: l'app torna davanti dov'era. Nella prima prova (29/10) il link era
+  `fleofit://` e basta: preso per un login fallito, mandava a `/login`, che ricaricava tutto e
+  chiudeva il timer. Ogni link nuovo verso l'app deve avere un indirizzo suo, per lo stesso motivo.
+- Non fatto nella prima versione: i bottoni Pausa/Passo (App Intents, iOS 17), l'avviso che apre
+  l'isola al cambio di passo (`AlertConfiguration` suonerebbe sopra i beep), il widget quadrato.
+- Compilato per il simulatore generico il 29/10 senza errori né avvisi; **non provato su un
+  iPhone** al momento della scrittura.
+

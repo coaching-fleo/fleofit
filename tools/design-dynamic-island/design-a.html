@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timer Anello · Live Activity</title>
+<!--
+  Prototipo di design, variazione A «Anello» (scelta dal committente il 29/10/2026).
+  Tre superfici dello stesso timer guidato:
+  - Live Activity sul blocco schermo (ActivityConfiguration, vista del Lock Screen);
+  - Dynamic Island sulla Home (compact / expanded / minimal);
+  - widget quadrato sulla Home (WidgetKit, famiglia .systemSmall).
+  NON fa parte dell'app: pagina sola, senza dipendenze, servita in locale.
+  Misure in punti iOS su un iPhone da 402 × 874 pt.
+-->
+<style>
+:root{
+  --brand:#f1ba17; --running:#0094C6; --gym:#14B8A6; --rest:#4ade80; --done:#22c55e;
+  --bg:#0B0B0B; --card:#1e1e1e; --bordo:#2a2a2a; --pozzetto:#111;
+  --slow:1;
+  --round: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+  --sans: -apple-system, "SF Pro Text", Inter, system-ui, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;display:grid;grid-template-columns:320px 1fr}
+@media (max-width:900px){body{grid-template-columns:1fr}}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+
+/* ───────── Pannello ───────── */
+.pannello{background:#141414;border-right:1px solid var(--bordo);padding:22px 18px 40px;display:flex;flex-direction:column;gap:18px;overflow:auto;max-height:100vh;position:sticky;top:0}
+@media (max-width:900px){.pannello{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--bordo)}}
+.logo{font-weight:900;letter-spacing:-.02em;font-size:20px}.logo b{color:var(--brand)}
+.sotto{color:#9ca3af;font-size:12.5px;line-height:1.45;margin-top:4px}
+.sotto a{color:var(--brand)}
+.gruppo{display:flex;flex-direction:column;gap:8px}
+.etichetta{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6b7280}
+.seg{display:flex;background:var(--pozzetto);border:1px solid #333;border-radius:14px;padding:4px;gap:2px}
+.seg button{flex:1;padding:8px 4px;border-radius:10px;font-size:12.5px;font-weight:600;color:#9ca3af;transition:background .2s,color .2s}
+.seg button[aria-pressed=true]{background:#2a2a2a;color:#fff}
+.seg button:active,.btn:active{transform:scale(.97)}
+.riga{display:flex;gap:8px}
+.btn{flex:1;background:#2a2a2a;border-radius:12px;padding:10px;font-weight:700;font-size:13px;transition:transform .1s}
+.btn.primario{background:var(--brand);color:#000}
+.interruttore{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:#d1d5db;cursor:pointer}
+.interruttore small{display:block;color:#6b7280;font-size:11.5px;margin-top:2px;line-height:1.35}
+.interruttore input{appearance:none;width:42px;height:25px;border-radius:99px;background:#333;position:relative;flex:none;transition:background .2s;cursor:pointer}
+.interruttore input::after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:#fff;transition:transform .25s cubic-bezier(.3,1.3,.5,1)}
+.interruttore input:checked{background:var(--brand)}
+.interruttore input:checked::after{transform:translateX(17px)}
+input[type=range]{width:100%;accent-color:var(--brand)}
+.stato{font-family:var(--round);font-variant-numeric:tabular-nums;font-size:12.5px;color:#9ca3af;display:flex;justify-content:space-between}
+
+/* ───────── Palco ───────── */
+.palco{padding:28px 24px 48px;display:flex;flex-direction:column;align-items:center;gap:22px;min-width:0}
+.telefoni{display:flex;gap:32px;justify-content:center;align-items:flex-start;flex-wrap:wrap;width:100%}
+.colonna{display:flex;flex-direction:column;align-items:center;gap:12px}
+.titolo-var{text-align:center}
+.titolo-var h2{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.titolo-var p{font-size:12px;color:#9ca3af;margin-top:2px}
+.scheda{max-width:1100px;width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:1200px){.scheda{grid-template-columns:1fr}}
+.nota{font-size:12px;line-height:1.5;color:#9ca3af;background:var(--card);border:1px solid var(--bordo);border-radius:16px;padding:12px 14px}
+.nota h3{font-size:13px;color:#fff;margin-bottom:6px}
+.nota li{margin-left:16px;margin-top:3px}
+.nota b{color:#e5e7eb}
+
+/* ───────── iPhone 18 Pro (mockup) ───────── */
+.iphone{width:426px;height:898px;border-radius:68px;padding:12px;position:relative;transform-origin:top left;
+  background:linear-gradient(145deg,#5b5b5f,#2c2c2e 30%,#48484a 60%,#1c1c1e);
+  box-shadow:0 0 0 1.5px #0a0a0a inset,0 0 0 1px #6e6e73,0 40px 80px -20px rgba(0,0,0,.8)}
+.iphone::before,.iphone::after{content:"";position:absolute;width:4px;border-radius:2px;background:#3a3a3c;left:-3px}
+.iphone::before{top:180px;height:60px}.iphone::after{top:260px;height:60px}
+.schermo{width:402px;height:874px;border-radius:56px;overflow:hidden;position:relative;background:#000;isolation:isolate}
+.sfondo{position:absolute;inset:0;transition:filter .6s ease,opacity .6s;background:
+  radial-gradient(120% 70% at 20% 110%,#7a3c12 0%,transparent 60%),
+  radial-gradient(90% 60% at 100% 20%,#3b2a63 0%,transparent 65%),
+  radial-gradient(80% 50% at 0% 0%,#1f4b5a 0%,transparent 60%),
+  linear-gradient(180deg,#1a1520,#0d0b10)}
+.barra-stato{position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:center;justify-content:space-between;padding:6px 34px 0 40px;font-size:16px;font-weight:600;z-index:1;transition:opacity .25s}
+.barra-stato .icone{display:flex;gap:6px;align-items:center;transition:opacity .25s}
+.batteria{width:26px;height:12.5px;border:1.5px solid rgba(255,255,255,.5);border-radius:4px;padding:1.5px}
+.batteria::before{content:"";display:block;height:100%;width:78%;background:#fff;border-radius:1.5px}
+.home-ind{position:absolute;bottom:9px;left:50%;width:140px;height:5px;margin-left:-70px;border-radius:3px;background:rgba(255,255,255,.75);z-index:3}
+.lente{position:absolute;top:24px;left:50%;width:12px;height:12px;margin-left:39px;border-radius:50%;z-index:9;pointer-events:none;
+  background:radial-gradient(circle at 35% 35%,#2b3b58 0%,#0d1220 45%,#05070b 70%);box-shadow:0 0 0 1.5px #0b0b0d}
+
+/* blocco schermo */
+.blocco-ora{position:absolute;top:118px;left:0;right:0;text-align:center;pointer-events:none;transition:opacity .6s}
+.blocco-ora .data{font-size:20px;font-weight:600;color:rgba(255,255,255,.85)}
+.blocco-ora .ora{font-family:var(--round);font-size:98px;font-weight:700;letter-spacing:-.02em;line-height:1;color:rgba(255,255,255,.92);margin-top:2px}
+.tasti-fondo{position:absolute;bottom:44px;left:0;right:0;display:flex;justify-content:space-between;padding:0 50px;transition:opacity .6s}
+.tasti-fondo span{width:50px;height:50px;border-radius:50%;background:rgba(40,40,40,.55);backdrop-filter:blur(14px);display:grid;place-items:center}
+/* Always-On: lo sfondo si spegne, la Live Activity resta (isLuminanceReduced) */
+.schermo.aod .sfondo{filter:brightness(.18) saturate(.6)}
+.schermo.aod .tasti-fondo{opacity:0}
+.schermo.aod .blocco-ora{opacity:.55}
+
+/* ───────── Live Activity sul blocco schermo ─────────
+   Margini 16 pt dal bordo dello schermo, come le notifiche; altezza ≤ 160 pt;
+   angoli 24 pt; fondo scuro semi-opaco (activityBackgroundTint). */
+.la{position:absolute;left:16px;right:16px;bottom:112px;border-radius:24px;padding:14px 16px 14px;
+  background:rgba(22,22,24,.72);backdrop-filter:blur(30px) saturate(160%);-webkit-backdrop-filter:blur(30px) saturate(160%);
+  box-shadow:0 0 0 .5px rgba(255,255,255,.08) inset,0 10px 30px rgba(0,0,0,.35);
+  transform-origin:50% 100%;transition:background .6s,box-shadow .6s;opacity:0;transform:translateY(30px) scale(.96)}
+.la.dentro{opacity:1;transform:none;transition:opacity calc(.35s*var(--slow)),transform calc(.55s*var(--slow)) cubic-bezier(.2,1.25,.35,1),background .6s}
+.la.salta{animation:salta calc(.6s*var(--slow)) cubic-bezier(.2,1.3,.35,1)}
+@keyframes salta{0%{transform:scale(1)}35%{transform:scale(1.035)}100%{transform:scale(1)}}
+.schermo.aod .la{background:rgba(0,0,0,.55);box-shadow:0 0 0 .5px rgba(255,255,255,.05) inset}
+.schermo.aod .la .tinta,.schermo.aod .la .rp{filter:brightness(.7) saturate(.75)}
+.schermo.aod .la .tasto{opacity:.0;pointer-events:none}
+.la .testa{display:flex;align-items:center;gap:12px}
+.la .centro{flex:1;min-width:0}
+.la .marchio{font-size:11px;font-weight:800;letter-spacing:.06em;color:rgba(255,255,255,.55)}
+.la .marchio b{color:var(--brand);font-weight:800}
+.la .compito{font-size:17px;font-weight:700;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.la .giro{font-size:12.5px;font-weight:600;color:rgba(255,255,255,.6);margin-top:1px}
+.la .piede{display:flex;align-items:center;gap:10px;margin-top:12px}
+.avanz{flex:1;min-width:0}
+.avanz .linea{height:5px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}
+.avanz .linea i{display:block;height:100%;border-radius:3px;background:var(--tint);transition:background .4s}
+.avanz .poi{font-size:12px;font-weight:600;color:rgba(255,255,255,.6);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ───────── Home ───────── */
+.home{position:absolute;inset:0}
+.griglia{position:absolute;inset:0}
+.app{position:absolute;width:64px;text-align:center}
+.app i{display:block;width:64px;height:64px;border-radius:15px;box-shadow:0 0 0 .5px rgba(255,255,255,.06) inset}
+.app span{display:block;font-size:11.5px;font-weight:500;margin-top:5px;color:rgba(255,255,255,.92);white-space:nowrap}
+.dock{position:absolute;left:12px;right:12px;bottom:12px;height:94px;border-radius:38px;background:rgba(60,60,64,.35);backdrop-filter:blur(26px) saturate(160%)}
+.dock .app{top:15px}
+.icona-fleo{background:#000;display:flex!important;align-items:center;justify-content:center;font-weight:900;font-size:13px;letter-spacing:-.03em;white-space:nowrap}
+.icona-fleo b{color:var(--brand)}
+
+/* ───────── Widget quadrato (.systemSmall) ─────────
+   162 × 162 pt su questa taglia di schermo, angoli concentrici, margini di contenuto 16 pt. */
+.widget{position:absolute;left:23px;top:70px;width:162px;height:162px;border-radius:24px;
+  background:#0f0f11;box-shadow:0 0 0 .5px rgba(255,255,255,.08) inset;overflow:hidden;cursor:pointer;transition:transform .12s}
+.widget:active{transform:scale(.96)}
+/* Uno strato per stato. Il bagliore del colore della fase sta nello strato, così cambiando
+   stato colore e contenuto passano insieme. Contenuto allineato a sinistra, come i widget di sistema. */
+.wstrato{position:absolute;inset:0;padding:16px;display:flex;flex-direction:column;justify-content:space-between;
+  opacity:0;transform:scale(.96);filter:blur(6px);
+  transition:opacity calc(.3s*var(--slow)),transform calc(.4s*var(--slow)) cubic-bezier(.2,.9,.25,1),filter calc(.3s*var(--slow))}
+.wstrato.attivo{opacity:1;transform:none;filter:none}
+.wstrato::before{content:"";position:absolute;inset:0;z-index:-1;transition:background .5s;
+  background:radial-gradient(120% 90% at 0% 0%,color-mix(in srgb,var(--tint) 26%,transparent) 0%,transparent 62%)}
+.wsopra{display:flex;justify-content:space-between;align-items:flex-start}
+.wsopra .lato{text-align:right;line-height:1.15}
+.wcaps{font-size:12px;font-weight:800;letter-spacing:.04em}
+.wgrigio{font-size:12px;font-weight:600;color:rgba(255,255,255,.55)}
+.wgrande{font-family:var(--round);font-variant-numeric:tabular-nums;font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.wriga{font-size:13px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+.wtitolo{font-size:16px;font-weight:700;letter-spacing:-.015em;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* Home in tinta (iOS 18): il widget si disegna in un colore solo, widgetRenderingMode == .accented */
+.schermo.tinto .sfondo{filter:brightness(.45) grayscale(.6)}
+.schermo.tinto .app i{filter:grayscale(1) sepia(1) saturate(2.6) hue-rotate(-12deg) brightness(.82)}
+.schermo.tinto .widget{background:rgba(40,30,10,.55);backdrop-filter:blur(20px)}
+.schermo.tinto .wstrato::before{display:none}
+.schermo.tinto .widget *{--tint:#f6c96a!important;color:#f6c96a}
+.schermo.tinto .widget .rt{stroke:rgba(246,201,106,.25)!important}
+
+/* ───────── Dynamic Island ───────── */
+.isola{position:absolute;top:11px;left:50%;background:#000;z-index:5;overflow:hidden;will-change:width,height,border-radius;touch-action:none;user-select:none;-webkit-user-select:none}
+.strato{position:absolute;inset:0;opacity:0;filter:blur(8px);transform:scale(.92);pointer-events:none;
+  transition:opacity calc(.22s*var(--slow)) ease,filter calc(.28s*var(--slow)) ease,transform calc(.36s*var(--slow)) cubic-bezier(.2,.9,.25,1)}
+.strato.attivo{opacity:1;filter:none;transform:none;pointer-events:auto;transition-delay:calc(.08s*var(--slow))}
+.cerchio{position:absolute;top:11px;width:37px;height:37px;border-radius:50%;background:#000;z-index:5;display:grid;place-items:center;opacity:0;transform:scale(.4)}
+.musica-min{position:absolute;left:9px;top:7.5px;width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#1db954,#0b6b31)}
+.onda{position:absolute;right:12px;top:12px;display:flex;gap:2px;align-items:center;height:13px}
+.onda i{width:2.5px;border-radius:2px;background:#1db954;animation:onda 1s ease-in-out infinite}
+.onda i:nth-child(2){animation-delay:-.3s}.onda i:nth-child(3){animation-delay:-.6s}.onda i:nth-child(4){animation-delay:-.15s}
+@keyframes onda{0%,100%{height:4px}50%{height:13px}}
+.lead,.trail{position:absolute;top:0;height:37px;display:flex;align-items:center}
+.lead{left:9px}.trail{right:12px}
+.esp{position:absolute;inset:0;padding:14px 20px 16px}
+.esp .piccolo{font-size:12px;font-weight:600;color:rgba(255,255,255,.55)}
+.esp .forte{font-size:15px;font-weight:700;letter-spacing:-.01em}
+
+/* ───────── Pezzi comuni ───────── */
+.tinta{color:var(--tint);transition:color .4s ease}
+.num{font-family:var(--round);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.01em}
+.anello{position:relative;flex:none}
+.anello>svg{width:100%;height:100%;transform:rotate(-90deg)}
+.anello .rt{stroke:color-mix(in srgb,var(--tint) 25%,transparent);fill:none;transition:stroke .4s}
+.anello .rp{stroke:var(--tint);fill:none;stroke-linecap:round;transition:stroke .4s}
+.anello .dentro{position:absolute;inset:0;display:grid;place-items:center;color:var(--tint)}
+.tasto{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--tint) 22%,#1c1c1e);color:var(--tint);transition:transform .1s,background .4s,color .4s,opacity .4s}
+.tasto:active{transform:scale(.9)}
+.cifre{display:inline-flex;line-height:1.05}
+.d{display:inline-block;position:relative;overflow:hidden}
+.dc{display:block;transition:transform calc(.34s*var(--slow)) cubic-bezier(.2,.85,.25,1),opacity calc(.3s*var(--slow)),filter calc(.3s*var(--slow))}
+.dc.in{transform:translateY(-70%);opacity:0;filter:blur(2px)}
+.dc.out{position:absolute;inset:0;transform:translateY(70%);opacity:0;filter:blur(2px)}
+.ultimi [data-b="timer"] .cifre{animation:battito calc(.5s*var(--slow)) ease-out}
+@keyframes battito{0%{transform:scale(1.12)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.dc,.strato,.wstrato,.la{transition-duration:.01s!important}.ultimi .cifre,.la.salta{animation:none!important}}
+</style>
+</head>
+<body>
+
+<aside class="pannello">
+  <div>
+    <div class="logo">FLEO<b>FIT</b> · Anello</div>
+    <p class="sotto">Il design A su tre superfici: Live Activity sul blocco schermo, Dynamic Island e widget quadrato sulla Home. <a href="index.html">← le tre variazioni</a></p>
+  </div>
+
+  <div class="gruppo">
+    <span class="etichetta">Vista</span>
+    <div class="seg" id="segVista">
+      <button data-v="entrambe" aria-pressed="true">Entrambe</button>
+      <button data-v="blocco" aria-pressed="false">Blocco</button>
+      <button data-v="home" aria-pressed="false">Home</button>
+    </div>
+  </div>
+
+  <div class="gruppo">
+    <span class="etichetta">Allenamento</span>
+    <div class="seg" id="segSeq">
+      <button data-s="hyrox" aria-pressed="true">Hyrox</button>
+      <button data-s="corsa" aria-pressed="false">Corsa</button>
+      <button data-s="gym" aria-pressed="false">Gym</button>
+    </div>
+  </div>
+
+  <div class="gruppo">
+    <span class="etichetta">Timer</span>
+    <div class="riga">
+      <button class="btn primario" id="play">▶ Avvia</button>
+      <button class="btn" id="avanti">⏭ Passo</button>
+      <button class="btn" id="reset" title="Da capo">↺</button>
+    </div>
+    <div class="riga">
+      <button class="btn" id="salta3">Ultimi 3 secondi</button>
+      <button class="btn" id="fine">Fine</button>
+    </div>
+    <input type="range" id="scorri" min="0" max="1000" value="0" aria-label="Posizione nell'allenamento">
+    <div class="stato"><span id="statoPasso">—</span><span id="statoTot">0:00</span></div>
+    <div class="seg" id="segVel">
+      <button data-x="1" aria-pressed="true">1×</button>
+      <button data-x="4" aria-pressed="false">4×</button>
+      <button data-x="16" aria-pressed="false">16×</button>
+    </div>
+  </div>
+
+  <div class="gruppo">
+    <span class="etichetta">Dynamic Island (Home)</span>
+    <div class="seg" id="segPres">
+      <button data-p="compact" aria-pressed="true">Compact</button>
+      <button data-p="expanded" aria-pressed="false">Expanded</button>
+      <button data-p="minimal" aria-pressed="false">Minimal</button>
+    </div>
+    <p class="sotto">Minimal = c'è anche la musica. Sul mockup: tieni premuta l'isola per espanderla.</p>
+  </div>
+
+  <div class="gruppo">
+    <span class="etichetta">Widget</span>
+    <div class="seg" id="segWidget">
+      <button data-w="auto" aria-pressed="true">Auto</button>
+      <button data-w="oggi" aria-pressed="false">Oggi</button>
+      <button data-w="corso" aria-pressed="false">In corso</button>
+      <button data-w="fatto" aria-pressed="false">Fatto</button>
+    </div>
+  </div>
+
+  <div class="gruppo">
+    <label class="interruttore"><span>Avviso al cambio di passo<small>Blocco: la Live Activity sobbalza e lo schermo si accende. Home: l'isola si apre da sola.</small></span><input type="checkbox" id="avviso" checked></label>
+    <label class="interruttore"><span>Schermo sempre acceso<small>Always-On: sfondo spento, Live Activity attenuata, niente bottoni.</small></span><input type="checkbox" id="aod"></label>
+    <label class="interruttore"><span>Home in tinta<small>Le icone e il widget in un colore solo (iOS 18).</small></span><input type="checkbox" id="tinto"></label>
+    <label class="interruttore"><span>Rallentatore<small>Animazioni quattro volte più lente.</small></span><input type="checkbox" id="lento"></label>
+  </div>
+</aside>
+
+<main class="palco">
+  <div class="telefoni" id="telefoni"></div>
+  <div class="scheda">
+    <div class="nota"><h3>Live Activity · blocco schermo</h3><ul>
+      <li>Stesso linguaggio dell'isola espansa: anello col giro, tempo nel colore della fase, esercizio in corso e prossimo.</li>
+      <li>Margini di 16 pt come le notifiche, altezza sotto i 160 pt, fondo scuro semi-trasparente.</li>
+      <li>Il tempo e la barra usano <b>Text(timerInterval:)</b> e <b>ProgressView(timerInterval:)</b>: scorrono da soli anche con l'app sospesa.</li>
+      <li>Pausa e Passo sono bottoni App Intents (iOS 17+). In Always-On spariscono e i colori si attenuano.</li>
+      <li>A fine allenamento resta lo stato «Completato» col tempo totale, poi si chiude da sola.</li></ul></div>
+    <div class="nota"><h3>Dynamic Island · Home</h3><ul>
+      <li>Sul blocco schermo l'isola resta vuota: lì la Live Activity si vede già per intero. Compact solo fuori dal blocco.</li>
+      <li>Compact: anello col simbolo della fase a sinistra, tempo a destra, solo ai lati della fotocamera.</li>
+      <li>Minimal: solo l'anello, nel cerchio staccato, quando c'è un'altra attività come la musica.</li></ul></div>
+    <div class="nota"><h3>Widget quadrato · .systemSmall</h3><ul>
+      <li>Un solo tocco, che apre la scheda del workout (niente bottoni: in un widget piccolo un solo scopo).</li>
+      <li>Stessa griglia nei tre stati: l'anello in alto a sinistra, il dato grande in basso, allineato a sinistra come i widget di sistema.</li>
+      <li><b>Oggi</b>: l'anello è la settimana (3 sedute su 5), il giorno in alto a destra, sotto il workout.</li>
+      <li><b>In corso</b>: l'anello è il passo che si svuota, il tempo grande conta da solo (stile <b>.timer</b>: un widget non si aggiorna ogni secondo), sotto l'esercizio e il prossimo.</li>
+      <li><b>Fatto</b>: anello pieno verde, il tempo totale e l'invito a segnare com'è andata. Funziona anche in tinta e in StandBy.</li></ul></div>
+  </div>
+</main>
+
+<template id="tplTelefono">
+  <div class="colonna">
+    <div class="titolo-var"><h2></h2><p></p></div>
+    <div class="cornice">
+      <div class="iphone"><div class="schermo">
+        <div class="sfondo"></div>
+        <div class="barra-stato"><span class="sx"></span><span class="icone">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="#fff"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+          <span class="batteria"></span></span></div>
+        <div class="contenuto"></div>
+        <div class="home-ind"></div>
+        <div class="isola"></div>
+        <div class="cerchio"></div>
+        <div class="lente"></div>
+      </div></div>
+    </div>
+  </div>
+</template>
+
+<script>
+/* ═════════════ Allenamenti di prova ═════════════ */
+const CAT = { hyrox:'#f1ba17', corsa:'#0094C6', gym:'#14B8A6' }
+const NOME = { hyrox:'HYROX · ON/OFF', corsa:'CORSA · 6 × 400 m', gym:'GYM · 4 SERIE' }
+const RIPOSO = '#4ade80', FATTO = '#22c55e', PREP = '#ffffff'
+function sequenza(tipo){
+  const s = [{ type:'prep', label:'PRONTI', title:'Preparazione', task:'Preparati', dur:10 }]
+  if (tipo === 'hyrox'){
+    const st = [['20 Wall Balls','9 kg'],['250 m SkiErg','2:00 /500m'],['10 Burpee broad jump',''],['25 m Sled push','102 kg']]
+    for (let r=1;r<=8;r++){ const [t,d]=st[(r-1)%4]
+      s.push({ type:'work', label:'ON', title:'ON/OFF', task:t, detail:d, round:r, rounds:8, dur:40 })
+      s.push({ type:'rest', label:'OFF', title:'Riposo', task:'Recupera', round:r, rounds:8, dur:20 }) }
+  } else if (tipo === 'corsa'){
+    s.push({ type:'work', label:'RISC', title:'Riscaldamento', task:'Corsa lenta', detail:'Z2', dur:300 })
+    for (let r=1;r<=6;r++){
+      s.push({ type:'work', label:'RUN', title:'Ripetuta', task:'400 m', detail:'4:00 /km', round:r, rounds:6, dur:90 })
+      s.push({ type:'rest', label:'REC', title:'Recupero', task:'Camminata', round:r, rounds:6, dur:60 }) }
+    s.push({ type:'work', label:'DEF', title:'Defaticamento', task:'Corsa lenta', detail:'Z1', dur:180 })
+  } else {
+    for (let r=1;r<=4;r++){
+      s.push({ type:'work', label:'SERIE', title:'Panca piana', task:'10 ripetizioni', detail:'60 kg', round:r, rounds:4, dur:45 })
+      s.push({ type:'rest', label:'REC', title:'Recupero', task:'Respira', round:r, rounds:4, dur:90 }) }
+  }
+  s.push({ type:'done', label:'FATTO', title:'Completato', task:'Ottimo lavoro', dur:0 })
+  return s
+}
+
+/* ═════════════ Stato ═════════════ */
+const S = { tipo:'hyrox', seq:sequenza('hyrox'), idx:0, left:10, running:false, partito:false, speed:1,
+            vista:'entrambe', pres:'compact', widget:'auto', avviso:true, slowF:1 }
+const totale = () => S.seq.reduce((a,p)=>a+p.dur,0)
+const passati = () => S.seq.slice(0,S.idx).reduce((a,p)=>a+p.dur,0) + (S.seq[S.idx].dur - S.left)
+const tinta = p => p.type==='rest' ? RIPOSO : p.type==='done' ? FATTO : p.type==='prep' ? PREP : CAT[S.tipo]
+const mmss = s => { s=Math.max(0,Math.ceil(s-1e-6)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0') }
+const prossimo = () => S.seq[S.idx+1]
+const finito = () => S.seq[S.idx].type==='done'
+
+/* ═════════════ Glifi ═════════════ */
+const G = {
+  work:s=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>`,
+  rest:s=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M3 9h11a3 3 0 1 0-3-3M3 15h15a3 3 0 1 1-3 3"/></svg>`,
+  prep:s=>`<svg width="${s*.8}" height="${s*.8}" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>`,
+  done:s=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg>`,
+  pausa:'<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/></svg>',
+  play:'<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>',
+  avanti:'<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM13 5v14l9-7z"/></svg>',
+}
+// L'anello: la parte piena è il tempo che RESTA del passo, si svuota in senso orario.
+const anello = (taglia, spess, dentro='', chiave='ring') => {
+  const r = 18 - spess/2 - .5, c = 2*Math.PI*r
+  return `<div class="anello" style="width:${taglia}px;height:${taglia}px"><svg viewBox="0 0 36 36">
+    <circle class="rt" cx="18" cy="18" r="${r}" stroke-width="${spess}"/>
+    <circle class="rp" data-b="${chiave}" data-c="${c}" cx="18" cy="18" r="${r}" stroke-width="${spess}" stroke-dasharray="${c}"/>
+  </svg><div class="dentro">${dentro}</div></div>`
+}
+
+/* ═════════════ Superfici ═════════════ */
+const ISOLA = {
+  compact:`<div class="lead">${anello(22,3.2,'<span data-b="glifo" data-s="11"></span>')}</div>
+    <div class="trail"><span class="num tinta" style="font-size:15px" data-b="timer"></span></div>`,
+  minimal:anello(25,3.4,'<span data-b="glifo" data-s="10"></span>'),
+  expanded:`<div class="esp">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;height:44px">
+      <div style="display:flex;gap:10px;align-items:center">
+        ${anello(44,3.2,'<span class="num" style="font-size:12px;font-weight:700" data-b="giroCorto"></span>')}
+        <div><div class="piccolo" data-b="titolo"></div><div class="forte" data-b="giro"></div></div>
+      </div>
+      <div class="num tinta" style="font-size:40px;line-height:1;margin-top:2px" data-b="timer"></div>
+    </div>
+    <div style="margin-top:22px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
+      <div style="min-width:0">
+        <div style="font-size:18px;font-weight:700;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" data-b="compito"></div>
+        <div class="piccolo" style="margin-top:3px" data-b="poi"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex:none">
+        <button class="tasto" data-azione="play" aria-label="Pausa"></button>
+        <button class="tasto" data-azione="avanti" aria-label="Passo successivo">${G.avanti}</button>
+      </div>
+    </div></div>`
+}
+
+const BLOCCO = `
+  <div class="blocco-ora"><div class="data">mercoledì 29 ottobre</div><div class="ora">9:41</div></div>
+  <div class="la" data-b="la">
+    <div class="testa">
+      ${anello(54,3,'<span class="num" style="font-size:13px;font-weight:700;color:#fff" data-b="giroCorto"></span>')}
+      <div class="centro">
+        <div class="marchio">FLEO<b>FIT</b> · <span data-b="titoloCat"></span></div>
+        <div class="compito" data-b="compito"></div>
+        <div class="giro" data-b="giro"></div>
+      </div>
+      <div class="num tinta" style="font-size:38px;line-height:1;align-self:flex-start;margin-top:2px" data-b="timer"></div>
+    </div>
+    <div class="piede">
+      <div class="avanz"><div class="linea"><i data-b="totBar"></i></div><div class="poi" data-b="poiLungo"></div></div>
+      <button class="tasto" data-azione="play" aria-label="Pausa"></button>
+      <button class="tasto" data-azione="avanti" aria-label="Passo successivo">${G.avanti}</button>
+    </div>
+  </div>
+  <div class="tasti-fondo">
+    <span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 2h6v5l-2 3v12h-2V10L9 7z"/></svg></span>
+    <span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8 7l2-3h4l2 3"/><circle cx="12" cy="13.5" r="3.5"/></svg></span>
+  </div>`
+
+const WIDGET = `
+  <div class="widget" title="Apre la scheda del workout">
+    <!-- OGGI: il workout del giorno, l'anello è la settimana (sedute fatte su previste) -->
+    <div class="wstrato" data-w="oggi" style="--tint:${CAT.hyrox}">
+      <div class="wsopra">
+        ${anello(56,3.4,'<span class="num" style="font-size:14px;font-weight:700;color:#fff">3/5</span>','settimana')}
+        <div class="lato"><div class="wcaps tinta">MER</div><div class="num" style="font-size:24px;font-weight:700">29</div></div>
+      </div>
+      <div>
+        <div class="wgrigio">Oggi</div>
+        <div class="wtitolo" data-b="wTitolo"></div>
+        <div class="wgrigio" style="margin-top:2px" data-b="wMeta"></div>
+      </div>
+    </div>
+    <!-- IN CORSO: l'anello è il passo che si svuota, il tempo conta da solo (Text .timer) -->
+    <div class="wstrato" data-w="corso">
+      <div class="wsopra">
+        ${anello(56,3.4,'<span data-b="glifo" data-s="18"></span>')}
+        <div class="lato"><div class="wcaps tinta" data-b="etichetta"></div><div class="wgrigio" data-b="giroBreve"></div></div>
+      </div>
+      <div>
+        <div class="wgrande tinta" data-b="timer"></div>
+        <div class="wriga" data-b="compitoBreve"></div>
+        <div class="wgrigio" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" data-b="poiBreve"></div>
+      </div>
+    </div>
+    <!-- FATTO: anello pieno, il tempo totale, e l'invito a dire com'è andata -->
+    <div class="wstrato" data-w="fatto" style="--tint:${FATTO}">
+      <div class="wsopra">
+        ${anello(56,3.4,G.done(22),'pieno')}
+        <div class="lato"><div class="wcaps tinta">FATTO</div><div class="wgrigio">oggi</div></div>
+      </div>
+      <div>
+        <div class="wgrande tinta" data-b="totale"></div>
+        <div class="wriga"><span data-b="wNome"></span> completato</div>
+        <div class="wgrigio">Com'è andata? Tocca</div>
+      </div>
+    </div>
+  </div>`
+
+function app(x, y, sfondo, nome, extra=''){
+  return `<div class="app" style="left:${x}px;top:${y}px"><i style="background:${sfondo}" ${extra}></i><span>${nome}</span></div>`
+}
+function HOME(){
+  const X = [23, 120.3, 217.6, 314.9], Y = [70, 168, 266, 364, 462]
+  const colori = ['linear-gradient(#5ac8fa,#007aff)','linear-gradient(#ffd60a,#ff9f0a)','linear-gradient(#ff6b6b,#ff2d55)','linear-gradient(#34c759,#248a3d)',
+    'linear-gradient(#bf5af2,#5e5ce6)','linear-gradient(#8e8e93,#48484a)','linear-gradient(#64d2ff,#0a84ff)','linear-gradient(#ff9f0a,#ff375f)',
+    'linear-gradient(#30d158,#0c7a3a)','linear-gradient(#ffffff,#d1d1d6)','linear-gradient(#ff453a,#b0181a)','linear-gradient(#5e5ce6,#1c1c9c)',
+    'linear-gradient(#ffcc00,#ff9500)','linear-gradient(#66d4cf,#1f8a85)']
+  const nomi = ['Meteo','Note','Musica','Messaggi','Podcast','Impostaz.','Mappe','Foto','Salute','Calendario','Notizie','Wallet','Promemoria','Fitness']
+  let h = '', k = 0
+  h += app(X[2],Y[0],'#000','FLEOFIT','class="icona-fleo"').replace('<i style="background:#000" class="icona-fleo">','<i class="icona-fleo">FLEO<b>FIT</b>')
+  h += app(X[3],Y[0],colori[k],nomi[k++])
+  h += app(X[2],Y[1],colori[k],nomi[k++]); h += app(X[3],Y[1],colori[k],nomi[k++])
+  for (let r=2;r<5;r++) for (let c=0;c<4;c++) h += app(X[c],Y[r],colori[k%colori.length],nomi[k++%nomi.length])
+  const dock = ['linear-gradient(#34c759,#248a3d)','linear-gradient(#5ac8fa,#007aff)','linear-gradient(#ffffff,#d1d1d6)','linear-gradient(#ff2d55,#ff375f)']
+  return `<div class="home"><div class="griglia">${h}</div>${WIDGET}
+    <div class="dock">${dock.map((c,i)=>`<div class="app" style="left:${11+i*93.5}px;top:15px"><i style="background:${c}"></i></div>`).join('')}</div></div>`
+}
+
+/* ═════════════ Molla (damping + response, come SwiftUI .spring) ═════════════ */
+class Molla{
+  constructor(v,{response=.42,damping=.86}={}){ this.v=v; this.t=v; this.vel=0; this.r=response; this.d=damping }
+  passo(dt){
+    const k=(2*Math.PI/this.r)**2, c=4*Math.PI*this.d/this.r
+    this.vel += (-k*(this.v-this.t) - c*this.vel)*dt; this.v += this.vel*dt
+    if (Math.abs(this.v-this.t)<.01 && Math.abs(this.vel)<.01){ this.v=this.t; this.vel=0 }
+  }
+}
+
+/* ═════════════ Telefoni ═════════════ */
+const telefoni = []
+function creaTelefono(tipo){
+  const n = document.getElementById('tplTelefono').content.firstElementChild.cloneNode(true)
+  n.querySelector('h2').textContent = tipo==='blocco' ? 'Blocco schermo' : 'Home'
+  n.querySelector('p').textContent = tipo==='blocco' ? 'Live Activity · l\'isola resta vuota' : 'Dynamic Island + widget quadrato'
+  n.querySelector('.sx').textContent = tipo==='blocco' ? 'TIM' : '9:41'
+  n.querySelector('.contenuto').innerHTML = tipo==='blocco' ? BLOCCO : HOME()
+  const isola = n.querySelector('.isola'), cerchio = n.querySelector('.cerchio'), schermo = n.querySelector('.schermo')
+  isola.innerHTML = `<div class="strato" data-p="riposo"></div>
+    <div class="strato" data-p="minimal"><div class="musica-min"></div><div class="onda"><i></i><i></i><i></i><i></i></div></div>
+    <div class="strato" data-p="compact">${ISOLA.compact}</div>
+    <div class="strato" data-p="expanded">${ISOLA.expanded}</div>`
+  cerchio.innerHTML = ISOLA.minimal
+  const t = { tipo, n, schermo, isola, cerchio, stato:n.querySelector('.barra-stato'), la:n.querySelector('.la'),
+    w:new Molla(126), h:new Molla(37), cs:new Molla(0,{response:.38,damping:.78}), presLocale:null, avvisoFino:0 }
+  n.addEventListener('click', e => {
+    const b = e.target.closest('[data-azione]'); if (!b) return
+    e.stopPropagation(); b.dataset.azione==='play' ? attivaPlay() : avanti()
+  })
+  let premuto
+  isola.addEventListener('pointerdown', e => { if (e.target.closest('[data-azione]') || tipo==='blocco') return; premuto=setTimeout(()=>{ t.presLocale='expanded' },380) })
+  ;['pointerup','pointerleave','pointercancel'].forEach(ev=>isola.addEventListener(ev,()=>clearTimeout(premuto)))
+  schermo.addEventListener('click', e => { if (!isola.contains(e.target)) { t.presLocale=null; t.avvisoFino=0 } })
+  telefoni.push(t)
+  return n
+}
+
+function scriviCifre(el, testo){
+  if (el._t === testo) return
+  const vecchio = el._t || ''; el._t = testo
+  if (!el.firstElementChild || vecchio.length !== testo.length){
+    el.innerHTML = `<span class="cifre">${[...testo].map(c=>`<span class="d"><span class="dc">${c}</span></span>`).join('')}</span>`; return
+  }
+  const slot = el.firstElementChild.children
+  ;[...testo].forEach((c,i) => {
+    if (vecchio[i] === c) return
+    const s = slot[i], cur = s.lastElementChild, nu = document.createElement('span')
+    nu.className='dc in'; nu.textContent=c; s.appendChild(nu); void nu.offsetHeight
+    nu.classList.remove('in'); cur.classList.add('out'); setTimeout(()=>cur.remove(), 400*S.slowF)
+  })
+}
+const scrivi = (root, k, testo) => root.querySelectorAll(`[data-b="${k}"]`).forEach(el => { if (el.textContent!==testo) el.textContent=testo })
+const anelloA = (root, k, pieno) => root.querySelectorAll(`[data-b="${k}"]`).forEach(el => el.style.strokeDashoffset = el.dataset.c*(1-pieno))
+
+function statoWidget(){
+  if (S.widget !== 'auto') return S.widget
+  return finito() ? 'fatto' : S.partito ? 'corso' : 'oggi'
+}
+
+function aggiornaContenuto(t){
+  const p = S.seq[S.idx], root = t.n
+  root.style.setProperty('--tint', tinta(p))
+  const resta = p.dur ? S.left/p.dur : (finito() ? 1 : 1)
+  root.querySelectorAll('[data-b="timer"]').forEach(el => scriviCifre(el, finito() ? mmss(totale()) : mmss(S.left)))
+  anelloA(root,'ring', resta); anelloA(root,'settimana', .6); anelloA(root,'pieno', 1)
+  root.querySelectorAll('[data-b="glifo"]').forEach(el => { if (el._g!==p.type){ el._g=p.type; el.innerHTML=G[p.type](+el.dataset.s) } })
+  scrivi(root,'giro', p.round ? `Giro ${p.round} di ${p.rounds}` : p.title)
+  scrivi(root,'giroCorto', p.round ? `${p.round}/${p.rounds}` : finito() ? '✓' : '–')
+  scrivi(root,'giroBreve', p.round ? `${p.round}/${p.rounds}` : '')
+  scrivi(root,'titolo', p.type==='rest' ? 'RIPOSO' : p.title.toUpperCase())
+  scrivi(root,'titoloCat', NOME[S.tipo])
+  scrivi(root,'etichetta', p.label)
+  scrivi(root,'compito', p.detail ? `${p.task} · ${p.detail}` : p.task)
+  scrivi(root,'compitoBreve', p.task)
+  scrivi(root,'poiBreve', prossimo() ? (prossimo().type==='done' ? 'poi fine' : `poi ${prossimo().task}`) : '')
+  const nx = prossimo()
+  scrivi(root,'poi', nx ? (nx.type==='done' ? 'Poi: fine allenamento' : `Poi: ${nx.task} · ${mmss(nx.dur)}`) : '')
+  scrivi(root,'poiLungo', finito() ? `Allenamento completato in ${mmss(totale())}` : nx ? (nx.type==='done' ? 'Poi: fine allenamento' : `Poi: ${nx.task} · ${mmss(nx.dur)}`) + `  ·  mancano ${mmss(totale()-passati())}` : '')
+  root.querySelectorAll('[data-b="totBar"]').forEach(el => el.style.width = (passati()/totale()*100)+'%')
+  scrivi(root,'totale', mmss(totale()))
+  scrivi(root,'wNome', ({hyrox:'Hyrox',corsa:'Corsa',gym:'Gym'})[S.tipo])
+  scrivi(root,'wTitolo', ({hyrox:'Hyrox · ON/OFF',corsa:'Corsa · 6 × 400 m',gym:'Gym · Panca'})[S.tipo])
+  scrivi(root,'wMeta', `${S.seq.find(x=>x.rounds)?.rounds || ''} giri · ${Math.round(totale()/60)} min`)
+  root.querySelectorAll('[data-azione="play"]').forEach(el => { const k=S.running?'pausa':'play'; if (el._k!==k){ el._k=k; el.innerHTML=G[k] } })
+  // widget: uno strato per stato
+  const sw = statoWidget()
+  root.querySelectorAll('.wstrato').forEach(s => s.classList.toggle('attivo', s.dataset.w===sw))
+  // Live Activity: c'è solo da quando il timer è partito
+  if (t.la) t.la.classList.toggle('dentro', S.partito)
+  // ultimi tre secondi
+  const ultimi = S.running && !finito() && p.type!=='prep' && S.left<=3.0001 && S.left>0
+  const sec = Math.ceil(S.left)
+  if (ultimi && t._ultimo!==sec){ t._ultimo=sec; root.classList.remove('ultimi'); void root.offsetWidth; root.classList.add('ultimi') }
+  if (!ultimi){ root.classList.remove('ultimi'); t._ultimo=null }
+}
+
+function presDi(t){
+  if (t.tipo==='blocco' || !S.partito) return 'riposo'
+  if (t.presLocale) return t.presLocale
+  if (performance.now() < t.avvisoFino) return 'expanded'
+  return S.pres
+}
+function disegna(t, dt){
+  const pres = presDi(t)
+  const [w,h] = pres==='expanded' ? [380,160] : pres==='compact' ? [226,37] : pres==='minimal' ? [158,37] : [126,37]
+  const apre = w > t.w.t + 1
+  t.w.t=w; t.h.t=h
+  if (apre){ t.w.d=.8; t.h.d=.78 } else if (w < t.w.v - 1){ t.w.d=1; t.h.d=1 }
+  t.cs.t = pres==='minimal' ? 1 : 0
+  const f = dt / S.slowF
+  t.w.passo(f); t.h.passo(f); t.cs.passo(f)
+  const W=t.w.v, H=t.h.v
+  Object.assign(t.isola.style, { width:W+'px', height:H+'px', marginLeft:(-W/2)+'px',
+    borderRadius:Math.min(H/2, 18.5 + (H-37)/(160-37)*(44-18.5))+'px' })
+  const c = t.cs.v
+  t.cerchio.style.left = (201 + W/2 + 6 - (1-c)*22) + 'px'
+  t.cerchio.style.opacity = Math.max(0,Math.min(1,c))
+  t.cerchio.style.transform = `scale(${.4+.6*c})`
+  t.stato.style.opacity = pres==='expanded' ? 0 : 1
+  t.stato.querySelector('.icone').style.opacity = pres==='minimal' ? 0 : 1
+  t.isola.querySelectorAll('.strato').forEach(s => s.classList.toggle('attivo', s.dataset.p===pres))
+}
+
+/* ═════════════ Motore ═════════════ */
+function avanti(){ if (S.idx < S.seq.length-1){ S.idx++; S.left=S.seq[S.idx].dur; S.partito=true; cambioPasso() } }
+function cambioPasso(){
+  if (finito()){ S.running=false; S.left=0 }
+  if (!S.avviso) return
+  telefoni.forEach(t => {
+    if (t.tipo==='home' && S.pres!=='expanded' && !t.presLocale) t.avvisoFino = performance.now() + 3200*S.slowF
+    if (t.la){
+      // Sul blocco schermo l'avviso accende lo schermo (anche da Always-On) e fa sobbalzare la Live Activity.
+      t.la.classList.remove('salta'); void t.la.offsetWidth; t.la.classList.add('salta')
+      if (t.schermo.classList.contains('aod')){ t.schermo.classList.remove('aod'); clearTimeout(t.riSpegni)
+        t.riSpegni = setTimeout(()=>{ if ($('aod').checked) t.schermo.classList.add('aod') }, 3200*S.slowF) }
+    }
+  })
+}
+function attivaPlay(){ if (finito()) reset(); S.running = !S.running; if (S.running) S.partito = true }
+function reset(){ S.idx=0; S.left=S.seq[0].dur; S.running=false; S.partito=false; telefoni.forEach(t=>{t.avvisoFino=0;t.presLocale=null}) }
+
+let ultimo = performance.now()
+function ciclo(ora){
+  const dt = Math.min(.05,(ora-ultimo)/1000); ultimo = ora
+  if (S.running){
+    S.left -= dt*S.speed
+    while (S.left <= 0 && S.running){
+      if (S.idx < S.seq.length-1){ const resto=-S.left; S.idx++; S.left=S.seq[S.idx].dur-resto; cambioPasso() }
+      else { S.left=0; S.running=false }
+    }
+  }
+  telefoni.forEach(t => { aggiornaContenuto(t); disegna(t, dt) })
+  aggiornaPannello()
+  requestAnimationFrame(ciclo)
+}
+
+/* ═════════════ Pannello ═════════════ */
+const $ = id => document.getElementById(id)
+function aggiornaPannello(){
+  const p = S.seq[S.idx]
+  $('play').textContent = S.running ? '❚❚ Pausa' : finito() ? '↺ Ricomincia' : '▶ Avvia'
+  $('statoPasso').textContent = `${p.title}${p.round ? ' · '+p.round+'/'+p.rounds : ''} · ${mmss(S.left)}`
+  $('statoTot').textContent = `${mmss(passati())} / ${mmss(totale())}`
+  if (!$('scorri')._tiene) $('scorri').value = Math.round(passati()/totale()*1000)
+}
+function seg(id, attr, fn){
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return
+    $(id).querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x===b)); fn(b.dataset[attr])
+  })
+}
+seg('segVista','v', v => { S.vista=v; monta() })
+seg('segSeq','s', s => { S.tipo=s; S.seq=sequenza(s); reset() })
+seg('segVel','x', x => S.speed=+x)
+seg('segPres','p', p => { S.pres=p; if (!S.partito){ S.partito=true } telefoni.forEach(t=>{t.presLocale=null;t.avvisoFino=0}) })
+seg('segWidget','w', w => S.widget=w)
+$('play').onclick = attivaPlay
+$('avanti').onclick = avanti
+$('reset').onclick = reset
+$('fine').onclick = () => { S.idx=S.seq.length-1; S.left=0; S.partito=true; cambioPasso() }
+$('salta3').onclick = () => { if (finito()) return; if (S.seq[S.idx].dur>4) S.left=4; S.running=true; S.partito=true }
+$('avviso').onchange = e => S.avviso = e.target.checked
+$('aod').onchange = e => telefoni.forEach(t => { if (t.tipo==='blocco') t.schermo.classList.toggle('aod', e.target.checked) })
+$('tinto').onchange = e => telefoni.forEach(t => { if (t.tipo==='home') t.schermo.classList.toggle('tinto', e.target.checked) })
+$('lento').onchange = e => { S.slowF = e.target.checked ? 4 : 1; document.documentElement.style.setProperty('--slow', S.slowF) }
+const sc = $('scorri')
+sc.addEventListener('pointerdown', ()=>sc._tiene=true)
+sc.addEventListener('pointerup', ()=>sc._tiene=false)
+sc.addEventListener('input', () => {
+  let s = sc.value/1000*totale(), i=0
+  while (i < S.seq.length-1 && s >= S.seq[i].dur){ s -= S.seq[i].dur; i++ }
+  S.idx=i; S.left=S.seq[i].dur-s; S.partito=true
+})
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input')) return
+  if (e.code==='Space'){ e.preventDefault(); attivaPlay() }
+  if (e.key==='ArrowRight') avanti()
+})
+
+function monta(){
+  telefoni.length = 0
+  const box = $('telefoni'); box.innerHTML=''
+  ;(S.vista==='entrambe' ? ['blocco','home'] : [S.vista]).forEach(v => box.appendChild(creaTelefono(v)))
+  telefoni.forEach(t => {
+    if (t.tipo==='blocco') t.schermo.classList.toggle('aod', $('aod').checked)
+    if (t.tipo==='home') t.schermo.classList.toggle('tinto', $('tinto').checked)
+  })
+  scala()
+}
+function scala(){
+  const box = $('telefoni'), n = box.children.length || 1
+  const s = Math.min(1, (box.clientWidth - (n-1)*32)/n/426, (window.innerHeight - 90)/898)
+  box.querySelectorAll('.cornice').forEach(c => {
+    c.style.width = 426*s+'px'; c.style.height = 898*s+'px'
+    c.querySelector('.iphone').style.transform = `scale(${s})`
+  })
+}
+window.addEventListener('resize', scala)
+monta()
+requestAnimationFrame(ciclo)
+</script>
+</body>
+</html>

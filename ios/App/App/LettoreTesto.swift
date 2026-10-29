@@ -85,5 +85,7 @@ public class LettoreTestoPlugin: CAPPlugin, CAPBridgedPlugin {
 class FleoBridgeViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(LettoreTestoPlugin())
+        // La Live Activity del timer (LiveActivityPlugin.swift, 29/10/2026).
+        bridge?.registerPluginInstance(LiveActivityPlugin())
     }
 }

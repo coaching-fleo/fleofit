@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -28,6 +28,7 @@ import FoglioSegnalazione from '../components/FoglioSegnalazione'
 import FoglioGarmin from '../components/FoglioGarmin'
 import { FoglioGestioneCoach } from '../components/FoglioCoach'
 import { aggiungiCoach, togliCoach, normalizzaEmail } from '../lib/coachAtleti'
+import { liveActivityPossibile, preferenzaLiveActivity, salvaPreferenzaLiveActivity, liveActivityConsentite } from '../lib/liveActivity'
 import { datiTecnici } from '../lib/segnalazione'
 import { dataConsenso } from '../lib/consenso'
 import { apriInformativa } from '../lib/informativa'
@@ -65,6 +66,18 @@ export default function Settings() {
   // riga spiega a cosa serve sceglierne una (lib/rigaImpostazioni.js).
   const primaPassword = senzaPassword(user)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  // La Live Activity del timer (blocco schermo e Dynamic Island): una scelta del
+  // dispositivo, come le notifiche. Solo su iPhone, solo con l'app che porta il
+  // plugin. `consentite` è false se iOS le ha spente per FLEOFIT.
+  const laPossibile = liveActivityPossibile()
+  const [laAttiva, setLaAttiva] = useState(() => preferenzaLiveActivity() === true)
+  const [laConsentite, setLaConsentite] = useState(null)
+  useEffect(() => { if (laPossibile) liveActivityConsentite().then(setLaConsentite) }, [laPossibile])
+  const cambiaLiveActivity = () => {
+    const nuovo = !laAttiva
+    salvaPreferenzaLiveActivity(nuovo)
+    setLaAttiva(nuovo)
+  }
 
   const [sviluppoAperto, setSviluppoAperto] = useState(false)
   const [foglioCodiciAperto, setFoglioCodiciAperto] = useState(false)
@@ -785,6 +798,19 @@ export default function Settings() {
           dettaglio={notificationsEnabled ? 'Promemoria mattina e sera · attive' : 'Spente su questo dispositivo'}
           attivo={notificationsEnabled} onCambia={toggleNotifiche}
           occupato={operazione === 'notifiche'} />
+
+        {laPossibile && (
+          <>
+            <Separatore />
+            <RigaInterruttore
+              icona={Timer} tono="brand"
+              titolo="Live Activity"
+              dettaglio={!laAttiva ? 'Spenta: il timer resta solo nell\'app'
+                : laConsentite === false ? 'Spenta da iOS: Impostazioni → FLEOFIT → Live Activity'
+                : 'Il timer sul blocco schermo e nella Dynamic Island'}
+              attivo={laAttiva} onCambia={cambiaLiveActivity} />
+          </>
+        )}
 
       </CartaAccount>
     </>

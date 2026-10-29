@@ -71,6 +71,7 @@ import { gestisciIndietro, puoTornareIndietro } from './lib/indietroAndroid'
 import { eUnLinkDiRecupero, recuperoInCorso, avviaRecupero, chiudiRecupero } from './lib/recuperoPassword'
 import { leggiErroreLink, segnalaLinkFallito } from './lib/esitoLink'
 import { rottaDaDeepLinkGarmin } from './lib/garmin'
+import { eLinkDelTimer } from './lib/linkTimer'
 
 function Onboarding({ user, onComplete }) {
   // L'onboarding del ruolo coach è disattivato: qui il ruolo è sempre 'athlete'.
@@ -545,6 +546,11 @@ function DeeplinkHandler() {
 
     if (isNative) {
       ascolti.push(CapacitorApp.addListener('appUrlOpen', async (event) => {
+        // 🔴 Il tocco sulla Live Activity del timer: l'app deve solo tornare
+        // davanti, dov'era. Senza questo il ramo sotto lo prendeva per un login
+        // fallito e mandava a /login, chiudendo il timer (src/lib/linkTimer.js).
+        if (eLinkDelTimer(event.url)) return;
+
         // 🔴 Il ritorno da Garmin PRIMA di tutto il resto: senza token
         // nell'hash il ramo sotto lo manderebbe a /login con un errore
         // (src/lib/garmin.js, rottaDaDeepLinkGarmin).

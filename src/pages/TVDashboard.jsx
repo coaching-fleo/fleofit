@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { KeepAwake } from '@capacitor-community/keep-awake'
@@ -10,6 +10,8 @@ import { coloreCategoria } from '../lib/colori'
 import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { esercizioInCorso } from '../lib/esercizioInCorso'
+import { buildTimerSequence } from '../lib/timerSequence'
+import { statoTV, beepTV } from '../lib/avanzaTimer'
 import {
   AttesaTV, CaricamentoTV, ErroreTV, TestataTV, TimerTV, BloccoTV, EsercizioTV,
   NotaBloccoTV, CorsaTV, CartaCorsaTV, NotaCoachTV,
@@ -183,29 +185,30 @@ export default function TVDashboard() {
     } catch { /* beep: WebAudio resta bloccato finché non c'è stato un tocco */ }
   }, []);
 
+  // La TV conta da sola fra un messaggio del telefono e l'altro: col telefono
+  // bloccato i messaggi smettono di arrivare, e fino al 29/10/2026 il timer qui
+  // si fermava sull'ultimo numero (src/lib/avanzaTimer.js).
+  const sequenza = useMemo(() => (workout ? buildTimerSequence(workout) : []), [workout])
+  const [adesso, setAdesso] = useState(() => Date.now())
   useEffect(() => {
-    if (timerState && timerState.isRunning && audioUnlocked) {
-      const pt = prevTimerStateRef.current;
-      const currentStep = timerState.step;
-      const tl = timerState.timeLeft;
-      
-      if (pt && pt.isRunning && tl !== pt.timeLeft) {
-        const stepType = currentStep?.type;
-        if (stepType !== 'stopwatch' && stepType !== 'done') {
-          if (tl === 0) {
-            if (currentStep?.nextTask === 'Workout terminato 🎉') {
-              playBeep(1200, 1.5);
-            } else {
-              playBeep(1200, 1.0);
-            }
-          } else if (tl <= 3 && tl > 0) {
-            playBeep(600, 0.2);
-          }
-        }
-      }
+    if (!timerState?.isRunning) return
+    const id = setInterval(() => setAdesso(Date.now()), 250)
+    return () => clearInterval(id)
+  }, [timerState])
+  const statoMostrato = useMemo(
+    () => statoTV(timerState, sequenza, Math.max(adesso, timerState?.ricevuto ?? 0)),
+    [timerState, sequenza, adesso],
+  )
+
+  useEffect(() => {
+    if (audioUnlocked) {
+      const beep = beepTV(prevTimerStateRef.current, statoMostrato);
+      if (beep === 'corto') playBeep(600, 0.2);
+      else if (beep === 'lungo') playBeep(1200, 1.0);
+      else if (beep === 'finale') playBeep(1200, 1.5);
     }
-    prevTimerStateRef.current = timerState;
-  }, [timerState, audioUnlocked, playBeep]);
+    prevTimerStateRef.current = statoMostrato;
+  }, [statoMostrato, audioUnlocked, playBeep]);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -214,10 +217,10 @@ export default function TVDashboard() {
   }, [status]);
 
   useEffect(() => {
-    if (timerState) {
-      setLastTimerState(timerState)
+    if (statoMostrato) {
+      setLastTimerState(statoMostrato)
     }
-  }, [timerState])
+  }, [statoMostrato])
 
   useEffect(() => {
     const updateScale = () => {
@@ -298,7 +301,8 @@ export default function TVDashboard() {
           }
         })
         .on('broadcast', { event: 'timer_state' }, (payload) => {
-          setTimerState(payload.payload)
+          // L'ora della TV in cui è arrivato: da lì conta da sola.
+          setTimerState({ ...payload.payload, ricevuto: Date.now() })
         })
         .on('broadcast', { event: 'timer_close' }, () => {
           setTimerState(null)
@@ -349,8 +353,8 @@ export default function TVDashboard() {
     const type = isEvent ? 'Event' : (isAuto ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
 
     let activeIdx = -1;
-    if (timerState?.step?.id) {
-      const parts = timerState.step.id.split('-');
+    if (statoMostrato?.step?.id) {
+      const parts = statoMostrato.step.id.split('-');
       if (parts[0] === 'blk' || parts[0] === 'run' || parts[0] === 'step') {
         activeIdx = parseInt(parts[1], 10);
       }
@@ -439,7 +443,7 @@ export default function TVDashboard() {
                   const etichette = etichetteStazioni(esercizi, block.type)
                   const durata = mmss(durataBlocco(block))
                   // EMOM e ON/OFF: l'esercizio che sta girando, letto dall'id dello step.
-                  const corrente = timerState ? esercizioInCorso(block, idx, timerState.step?.id) : null
+                  const corrente = statoMostrato ? esercizioInCorso(block, idx, statoMostrato.step?.id) : null
                   return (
                     <BloccoTV key={block.id || idx}
                       tipo={block.type}

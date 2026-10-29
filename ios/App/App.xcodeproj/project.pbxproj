@@ -18,7 +18,37 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		5CE9A1022B0000000000A002 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CE9A1012B0000000000A001 /* SceneDelegate.swift */; };
 		5CE9A1032B0000000000A003 /* LettoreTesto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CE9A1042B0000000000A004 /* LettoreTesto.swift */; };
+		7FA1A0012C00000000000002 /* AttivitaTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C00000000000001 /* AttivitaTimer.swift */; };
+		7FA1A0012C00000000000003 /* AttivitaTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C00000000000001 /* AttivitaTimer.swift */; };
+		7FA1A0012C00000000000005 /* LiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C00000000000004 /* LiveActivityPlugin.swift */; };
+		7FA1A0012C00000000000007 /* FleoTimerBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C00000000000006 /* FleoTimerBundle.swift */; };
+		7FA1A0012C00000000000009 /* TimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C00000000000008 /* TimerLiveActivity.swift */; };
+		7FA1A0012C0000000000000C /* FleoTimer.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C0000000000000B /* FleoTimer.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7FA1A0012C00000000000013 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7FA1A0012C0000000000000E;
+			remoteInfo = FleoTimer;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7FA1A0012C00000000000012 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				7FA1A0012C0000000000000C /* FleoTimer.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		122C52852FB4902F00036C76 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
@@ -34,6 +64,12 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		5CE9A1012B0000000000A001 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		5CE9A1042B0000000000A004 /* LettoreTesto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LettoreTesto.swift; sourceTree = "<group>"; };
+		7FA1A0012C00000000000001 /* AttivitaTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttivitaTimer.swift; sourceTree = "<group>"; };
+		7FA1A0012C00000000000004 /* LiveActivityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityPlugin.swift; sourceTree = "<group>"; };
+		7FA1A0012C00000000000006 /* FleoTimerBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleoTimerBundle.swift; sourceTree = "<group>"; };
+		7FA1A0012C00000000000008 /* TimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerLiveActivity.swift; sourceTree = "<group>"; };
+		7FA1A0012C0000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7FA1A0012C0000000000000B /* FleoTimer.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FleoTimer.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -46,6 +82,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7FA1A0012C00000000000010 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -54,6 +97,7 @@
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+				7FA1A0012C0000000000000D /* FleoTimer */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -62,6 +106,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				7FA1A0012C0000000000000B /* FleoTimer.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -74,6 +119,8 @@
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				5CE9A1012B0000000000A001 /* SceneDelegate.swift */,
 				5CE9A1042B0000000000A004 /* LettoreTesto.swift */,
+				7FA1A0012C00000000000001 /* AttivitaTimer.swift */,
+				7FA1A0012C00000000000004 /* LiveActivityPlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -83,6 +130,16 @@
 				122C528C2FB4C66F00036C76 /* GoogleService-Info.plist */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		7FA1A0012C0000000000000D /* FleoTimer */ = {
+			isa = PBXGroup;
+			children = (
+				7FA1A0012C00000000000006 /* FleoTimerBundle.swift */,
+				7FA1A0012C00000000000008 /* TimerLiveActivity.swift */,
+				7FA1A0012C0000000000000A /* Info.plist */,
+			);
+			path = FleoTimer;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -95,10 +152,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				7FA1A0012C00000000000012 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				7FA1A0012C00000000000014 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -107,6 +166,23 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		7FA1A0012C0000000000000E /* FleoTimer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7FA1A0012C00000000000015 /* Build configuration list for PBXNativeTarget "FleoTimer" */;
+			buildPhases = (
+				7FA1A0012C0000000000000F /* Sources */,
+				7FA1A0012C00000000000010 /* Frameworks */,
+				7FA1A0012C00000000000011 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FleoTimer;
+			productName = FleoTimer;
+			productReference = 7FA1A0012C0000000000000B /* FleoTimer.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -122,6 +198,9 @@
 						CreatedOnToolsVersion = 9.2;
 						LastSwiftMigration = 1100;
 						ProvisioningStyle = Automatic;
+					};
+					7FA1A0012C0000000000000E = {
+						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -142,6 +221,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				7FA1A0012C0000000000000E /* FleoTimer */,
 			);
 		};
 /* End PBXProject section */
@@ -161,6 +241,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7FA1A0012C00000000000011 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -171,10 +258,30 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				5CE9A1022B0000000000A002 /* SceneDelegate.swift in Sources */,
 				5CE9A1032B0000000000A003 /* LettoreTesto.swift in Sources */,
+				7FA1A0012C00000000000002 /* AttivitaTimer.swift in Sources */,
+				7FA1A0012C00000000000005 /* LiveActivityPlugin.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7FA1A0012C0000000000000F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7FA1A0012C00000000000007 /* FleoTimerBundle.swift in Sources */,
+				7FA1A0012C00000000000009 /* TimerLiveActivity.swift in Sources */,
+				7FA1A0012C00000000000003 /* AttivitaTimer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7FA1A0012C00000000000014 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7FA1A0012C0000000000000E /* FleoTimer */;
+			targetProxy = 7FA1A0012C00000000000013 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -336,6 +443,11 @@
 				);
 				MARKETING_VERSION = 1.2.2;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = it.federicoleo.fleofit.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
@@ -361,9 +473,64 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.2.2;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = it.federicoleo.fleofit;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		7FA1A0012C00000000000016 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FleoTimer/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FLEOFIT;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.2.2;
+				PRODUCT_BUNDLE_IDENTIFIER = it.federicoleo.fleofit.dev.FleoTimer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		7FA1A0012C00000000000017 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FleoTimer/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FLEOFIT;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.2.2;
+				PRODUCT_BUNDLE_IDENTIFIER = it.federicoleo.fleofit.FleoTimer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -386,6 +553,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7FA1A0012C00000000000015 /* Build configuration list for PBXNativeTarget "FleoTimer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7FA1A0012C00000000000016 /* Debug */,
+				7FA1A0012C00000000000017 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

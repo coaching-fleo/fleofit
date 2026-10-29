@@ -45,6 +45,10 @@ import { ERGOMETERS, escludiDallaRubrica } from '../lib/constants'
 import { sincronizzaBadge } from '../lib/badge'
 import { isVoiceNoteValid } from '../lib/notaVocale'
 import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/timerSequence'
+import { avanzaSequenza } from '../lib/avanzaTimer'
+import { suonaSopraLaMusica, ripristinaSessioneAudio } from '../lib/sessioneAudio'
+import { liveActivityDaChiedere, liveActivityAttiva, salvaPreferenzaLiveActivity, statoLiveActivity, programmaLiveActivity, avviaLiveActivity, aggiornaLiveActivity, chiudiLiveActivity } from '../lib/liveActivity'
+import FoglioLiveActivity from '../components/FoglioLiveActivity'
 import { BRAND, RUNNING, GYM, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
@@ -338,6 +342,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [timerOpen, setTimerOpen] = useState(false)
   const [timerMinimized, setTimerMinimized] = useState(false)
   const [timerSequence, setTimerSequence] = useState([])
+  // La domanda sulla Live Activity: una volta sola, all'apertura del timer o del telecomando.
+  const [domandaLiveActivity, setDomandaLiveActivity] = useState(false)
 
   useEffect(() => { fetchWorkout() }, [id, queryAthleteId])
 
@@ -1521,9 +1527,20 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const apriTimer = () => {
     if (timerOpen && !timerMinimized) { setTimerMinimized(true); return }
     if (timerOpen && timerMinimized) { setTimerMinimized(false); return }
+    // La prima volta su iPhone si chiede della Live Activity, poi si apre
+    // comunque: la domanda non blocca mai il timer.
+    if (liveActivityDaChiedere()) { setDomandaLiveActivity(true); return }
+    apriTimerDavvero()
+  }
+  const apriTimerDavvero = () => {
     setTimerSequence(buildTimerSequence(workout))
     setTimerOpen(true)
     setTimerMinimized(false)
+  }
+  const rispondiLiveActivity = (attiva) => {
+    salvaPreferenzaLiveActivity(attiva)
+    setDomandaLiveActivity(false)
+    apriTimerDavvero()
   }
   const apriAssegna = () => { setAssignModalOpen(true); setSelectedAthletes([]); setAssignStep(1) }
 
@@ -2540,7 +2557,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           athleteWorkoutId={athleteWorkoutId}
           athleteName={currentAthleteName || user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Atleta'}
           workoutTitle={workout.title}
+          coloreCategoria={coloreCategoria(category)}
+          categoriaLiveActivity={category === 'Custom' ? 'LIBERO' : String(category || 'Hyrox').toUpperCase()}
         />
+      )}
+      {domandaLiveActivity && (
+        <FoglioLiveActivity onAttiva={() => rispondiLiveActivity(true)} onNonOra={() => rispondiLiveActivity(false)} />
       )}
       {showRpeModal && createPortal(
         <RpeModal 
@@ -2591,7 +2613,7 @@ const SCHEMES = {
   custom: { bg: 'bg-[#0B0B0B]', text: 'text-custom', sub: 'text-custom/80', card: 'bg-[#1e1e1e] border-custom/20 text-custom', cardLabel: 'text-custom/60', icon: 'text-gray-400', btnBg: 'bg-custom text-white' }
 }
 
-function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle }) {
+function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle, coloreCategoria: coloreLA = BRAND, categoriaLiveActivity = 'HYROX' }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(sequence[0]?.duration || 0);
   const [isRunning, setIsRunning] = useState(false);
@@ -2605,7 +2627,7 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
   const shortBeepAudio = useRef(null);
   const longBeepAudio = useRef(null);
   const longerBeepAudio = useRef(null);
-  const silentAudioRef = useRef(null);
+  const audioSbloccatoRef = useRef(false);
   const tvChannelRef = useRef(null);
   const tvJoinedRef = useRef(false);
   const [tvJoined, setTvJoined] = useState(false);
@@ -2730,19 +2752,63 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
       }).catch(()=>{});
     }
   }, [currentIdx, timeLeft, isRunning, sequence, tvJoined, athleteWorkoutId]);
-  
+
+  // La Live Activity (blocco schermo e Dynamic Island, solo iPhone, se l'atleta
+  // l'ha attivata). Parte al primo «Avvia» e si aggiorna solo quando cambia il
+  // passo o la pausa: il conto alla rovescia lo fa iOS dalle date assolute, non
+  // serve un messaggio al secondo (src/lib/liveActivity.js).
+  const liveActivityRef = useRef({ avviata: false, idx: 0 });
   useEffect(() => {
+    if (!liveActivityAttiva()) return;
+    const la = liveActivityRef.current;
+    la.idx = currentIdx;
+    // Lo stato di adesso più i passi che verranno: col telefono bloccato li
+    // cambia il plugin da solo, all'ora giusta.
+    const programma = programmaLiveActivity({ sequence, idx: currentIdx, timeLeft: timeLeftRef.current, isRunning, colore: coloreLA });
+    if (!la.avviata) {
+      if (!isRunning) return;
+      la.avviata = true;
+      avviaLiveActivity({ titoloWorkout: workoutTitle || 'Allenamento', categoria: categoriaLiveActivity }, programma, { beep: !isMuted });
+    } else {
+      aggiornaLiveActivity(programma, { beep: !isMuted });
+    }
+  }, [currentIdx, isRunning, sequence, coloreLA, categoriaLiveActivity, workoutTitle, isMuted]);
+  // Alla chiusura del timer: a fine allenamento resta «Completato» un po',
+  // altrimenti sparisce subito (lo decide il plugin dalla fase).
+  useEffect(() => () => {
+    const la = liveActivityRef.current;
+    if (!la.avviata) return;
+    chiudiLiveActivity(statoLiveActivity({ sequence, idx: la.idx, timeLeft: timeLeftRef.current, isRunning: false, colore: coloreLA }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // Tornando davanti dal blocco schermo (o dalla Live Activity) si richiede di
+  // nuovo «ambient»: col telefono bloccato l'audio l'ha tenuto il plugin nativo,
+  // e la webview non deve ripartire con una sessione che ferma la musica.
+  useEffect(() => {
+    const riprendi = () => { if (!document.hidden) suonaSopraLaMusica(); };
+    document.addEventListener('visibilitychange', riprendi);
+    return () => document.removeEventListener('visibilitychange', riprendi);
+  }, []);
+
+  useEffect(() => {
+    // Prima di qualunque suono: i beep si mescolano alla musica dell'atleta
+    // invece di fermarla (src/lib/sessioneAudio.js).
+    suonaSopraLaMusica();
     shortBeepAudio.current = new Audio(shortBeepURI);
     longBeepAudio.current = new Audio(longBeepURI);
     longerBeepAudio.current = new Audio(longerBeepURI);
     
     // Avvia l'animazione di entrata "Slide-Up" 10 millisecondi dopo il rendering
     const t = setTimeout(() => setIsOpening(false), 10);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); ripristinaSessioneAudio(); };
   }, []);
 
   const playBeep = useCallback(async (freq, type, duration, isEnd) => {
     if (isMuted) return;
+    // Col telefono bloccato i beep li suona il plugin della Live Activity
+    // (src/lib/liveActivity.js): se anche la webview fosse ancora sveglia, qui
+    // si sentirebbero doppi.
+    if (document.hidden && liveActivityRef.current.avviata) return;
 
     // Vibrazione (più forte alla fine del round)
     try {
@@ -2769,11 +2835,14 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
   // Inizializza l'audio in modo sicuro al primo tocco
   const initAudioAndPlay = () => {
 
-    // HACK iOS: Riprodurre un audio HTML5 invisibile in loop forza WKWebView a ignorare il tasto Silenzioso
-    if (!silentAudioRef.current) {
-      silentAudioRef.current = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
-      silentAudioRef.current.loop = true;
-      
+    // Fino al 29/10/2026 qui partiva anche un audio muto in loop, per far
+    // ignorare a iOS il tasto Silenzioso. Ma un audio infinito si prende la
+    // sessione audio del telefono: Spotify (o qualunque musica, anche su una
+    // cassa Bluetooth) si fermava al primo beep, su iPhone e su Android.
+    // Tolto di proposito: la musica dell'atleta conta più del tasto Silenzioso.
+    if (!audioSbloccatoRef.current) {
+      audioSbloccatoRef.current = true;
+
       // Sblocca i suoni
       [shortBeepAudio.current, longBeepAudio.current, longerBeepAudio.current].forEach(a => {
         if (a) {
@@ -2785,12 +2854,6 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
           }).catch(()=>{});
         }
       });
-    }
-
-    if (!isRunning) {
-      silentAudioRef.current.play().catch(()=>{});
-    } else {
-      silentAudioRef.current.pause();
     }
 
     setIsRunning(!isRunning);
@@ -2861,19 +2924,13 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
         precedente = restante;
 
         if (restante < 0) {
-          if (currentIdx < sequence.length - 1) {
-            const nextStep = sequence[currentIdx + 1];
-            setCurrentIdx(currentIdx + 1);
-            setTimeLeft(nextStep.duration || 0);
-            if (nextStep.type === 'done') {
-              setIsRunning(false);
-              if (silentAudioRef.current) silentAudioRef.current.pause();
-            }
-          } else {
-            setIsRunning(false);
-            setTimeLeft(0);
-            if (silentAudioRef.current) silentAudioRef.current.pause();
-          }
+          // Si attraversano TUTTI i passi passati, non solo il successivo: dopo
+          // qualche minuto a schermo bloccato si riparte dove si è davvero, nello
+          // stesso punto in cui la TV è arrivata contando da sola.
+          const dopo = avanzaSequenza(sequence, currentIdx, secondiIniziali, trascorsi);
+          setCurrentIdx(dopo.idx);
+          setTimeLeft(dopo.timeLeft);
+          if (dopo.finito) setIsRunning(false);
           return;
         }
 
@@ -2922,9 +2979,6 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
   };
 
   const handleClose = () => {
-    if (silentAudioRef.current) {
-      silentAudioRef.current.pause();
-    }
     setIsClosing(true);
     setTimeout(onClose, 500); // Aspetta che finisca l'animazione
   };

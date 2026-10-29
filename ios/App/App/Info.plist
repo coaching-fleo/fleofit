@@ -47,6 +47,8 @@
 	<string>FLEOFIT necessita di questo permesso per salvare la grafica del tuo allenamento direttamente nella galleria fotografica.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>FLEOFIT necessita di questo permesso per salvare la grafica del tuo allenamento direttamente nella galleria fotografica.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -69,6 +71,7 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+		<string>audio</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

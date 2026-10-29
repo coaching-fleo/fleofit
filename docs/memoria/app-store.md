@@ -524,3 +524,19 @@ Arrivati con la fase 2 di «Da un testo scritto» (docs/memoria/crea-workout.md)
 - Verificato sul simulatore (iPhone 18 Pro, iOS 26) con una foto di prova
   aggiunta via `xcrun simctl addmedia`. Da riprovare su un iPhone vero, con una
   lavagna vera, prima del rilascio.
+
+## 9-live-activity-target. Il secondo target: l'estensione FleoTimer (29/10/2026)
+Dal 29/10/2026 il progetto ha **due target**: `App` e `FleoTimer` (estensione widget, la Live
+Activity del timer, `docs/memoria/scheda-workout.md` 9-live-activity). Cosa cambia per un archive:
+- 🔴 **`MARKETING_VERSION` va cambiato in QUATTRO posti, non due**: Debug e Release di `App` e di
+  `FleoTimer`. App Store rifiuta un'estensione con una versione diversa dall'app.
+- Firma automatica: Xcode crea da solo l'App ID `it.federicoleo.fleofit.FleoTimer` (e `.dev.` in
+  Debug) al primo build sul telefono, col team `584SHG94SM`.
+- `Info.plist` dell'app porta `NSSupportsLiveActivities = YES`.
+- `UIBackgroundModes` porta anche `audio` (dal 29/10/2026): tiene sveglio il timer col telefono
+  bloccato, che cambia passo sulla Live Activity e suona i beep. ⚠️ Rischio di revisione, linea
+  guida **2.5.4** (audio in background solo per il suo scopo): la difesa è che l'app suona
+  davvero, i beep del timer a ogni passo, come le app di interval timer. Se il revisore chiede,
+  si risponde con questo; la sessione è accesa solo mentre un timer scorre in background.
+- `tools/verifica-ipa.sh` controlla l'app, non l'estensione: guardare anche `PlugIns/FleoTimer.appex`.
+

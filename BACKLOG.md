@@ -99,6 +99,45 @@ provate dal committente con l'atleta di prova: `docs/memoria/garmin.md`.
 
 ---
 
+## ⏱️ Timer sul blocca schermo e Dynamic Island — PRIMA VERSIONE FATTA (29/10/2026)
+
+✅ Il 29/10 il committente ha scelto il design A «Anello» e ha chiesto la Live Activity vera:
+switch in Impostazioni, domanda la prima volta, estensione `FleoTimer`
+(`docs/memoria/scheda-workout.md`, 9-live-activity). **Da provare su iPhone via Xcode.** Resta:
+1. ✅ **Il passo successivo col telefono bloccato** (29/10, seconda prova): lo mette in onda il plugin
+   nativo da un programma mandato dal JS, con l'app sveglia in background via audio. Da riprovare
+   sul telefono. La push ActivityKit dal server (punto 2b qui sotto) resta l'alternativa se la
+   revisione App Store rifiutasse l'audio in background.
+2. I bottoni **Pausa / Passo** nella Live Activity (App Intents, iOS 17+).
+3. Il **widget quadrato** della Home (disegnato in `tools/design-dynamic-island/design-a.html`).
+4. **Android**: notifica fissa con cronometro (punto 3 qui sotto).
+
+La valutazione di partenza, per memoria:
+
+Cosa si sa già:
+1. **Cosa serve**: un *Widget Extension* nuovo in Xcode (SwiftUI + ActivityKit), la chiave
+   `NSSupportsLiveActivities` in `Info.plist` e un plugin dell'app (come `LettoreTesto.swift`) che il
+   timer chiama per aprire, aggiornare e chiudere l'attività. iOS **16.1+** (oggi l'app parte dalla
+   15.0: sotto la 16.1 semplicemente non c'è); la Dynamic Island solo da iPhone 14 Pro in su, sugli
+   altri si vede il riquadro del blocca schermo. È lavoro nativo vero: si prova solo su un iPhone.
+2. **Il legame col blocco**: la Live Activity **non tiene sveglia l'app**. Però un conto alla
+   rovescia scritto come «finisce alle 10:42:30» (`Text(timerInterval:)`) lo fa scorrere iOS da
+   solo, anche con la webview sospesa: il numero sul blocca schermo resta giusto. Il limite è il
+   **cambio di passo**: finito il passo, l'attività non sa passare al successivo finché qualcuno non
+   la aggiorna. Tre strade: (a) mostrare solo il passo in corso e, scaduto, «riapri l'app»;
+   (b) aggiornarla con delle **push ActivityKit** a ogni cambio di passo, mandate da una Edge
+   Function che conosce la sequenza (FCM le supporta; serve il token dell'attività, e il cron o
+   una coda per i tempi); (c) tenere viva l'app in sottofondo con la modalità `audio` — **da
+   scartare**: App Review la respinge se l'app non riproduce audio vero (2.5.4), e riaprirebbe il
+   problema della musica fermata.
+3. **Android** (regola dei tre bersagli): l'equivalente è una notifica fissa con cronometro alla
+   rovescia (`setUsesChronometer` + `setChronometerCountDown`) da un servizio in primo piano; su
+   Android 16 le «Live Updates». Stesso limite del cambio di passo.
+4. Dopo il 29/10 la **TV conta da sola** (`statoTV`): la Live Activity non serve più a non far
+   fermare la TV, serve all'atleta che guarda il telefono bloccato.
+
+---
+
 ## ⏸️ In stand-by — da ricordare al prossimo aggiornamento App Store
 
 > **Consenso privacy, policy nuova e mail automatica dei cambi di policy** (14/10/2026).
