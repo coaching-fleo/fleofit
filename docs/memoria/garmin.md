@@ -6,6 +6,9 @@
 > il coach vede chi è collegato. Nessun dato Garmin viene usato.
 
 ## 🟡 Stato: attivo in prova (28/10/2026)
+- ✍️ **Fase 2 (Recupero) scritta il 29/10/2026, in attesa di portale e deploy**: sonno, HRV e
+  giornata dell'orologio in `garmin_giornate`, tre segnali per il coach in «Da guardare», card
+  «Recupero» nella scheda atleta e nel profilo. Sezione «Fase 2 · Recupero» in fondo.
 - ✅ **Fase 1 (Attività dall'orologio) attiva in prova dal 29/10/2026**: endpoint *ACTIVITY* nel
   portale, `garmin-webhook`, `garmin-auth` e `send-reminders` pubblicate. Provata dal committente con
   l'atleta di prova: una corsa da 1 minuto dall'orologio salvata e **non** abbinata (sotto i 10
@@ -423,3 +426,51 @@ Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
    Guardare anche `net._http_response` dopo aver cambiato un workout assegnato a più atleti:
    non devono esserci timeout (la funzione risponde subito e lavora in sottofondo).
 4. Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
+
+## Fase 2 · Recupero
+> Scritta il 29/10/2026. Piano: `docs/superpowers/plans/2026-10-29-garmin-fase-2-recupero.md`,
+> spec: `docs/superpowers/specs/2026-10-27-garmin-design.md` §4. ✍️ **Codice scritto, in attesa del
+> portale e del deploy.** Niente migrazioni: la tabella `garmin_giornate` c'era già.
+
+### Cosa c'è, dove
+| Cosa | Dove |
+|---|---|
+| Lettura dei Push `dailies` / `sleeps` / `hrv` (`leggiGiornate`, `CHIAVI_GIORNATE`): solo i campi che usiamo | `supabase/functions/_shared/giornateGarmin.ts` |
+| Il webhook salva UNA colonna per invio (upsert su `athlete_id,giorno`) | `supabase/functions/garmin-webhook/giornate.ts` (`gestisciGiornate`, chiamata da `index.ts`) |
+| Backfill di 30 giorni dei quattro tipi al collegamento | `chiediBackfillGarmin` in `_shared/garmin.ts`, `urlBackfill` e `TipoBackfill` in `_shared/garminRegole.ts`, `chiediBackfill` di `garmin-auth` |
+| Segnali, serie a 28 giorni, letture | `src/lib/recuperoGarmin.js` |
+| Card «Recupero» (pigra, con `lazy()`) | `src/components/CardRecupero.jsx` |
+| I segnali in «Da guardare» | voce `recupero` di `cosaGuardare` |
+| Semi dell'ambiente di prova (38 giorni INVENTATI per Sara, ultime 3 notti storte fino a ieri) | `src/demoSemi.js` (`garmin_giornate`), `src/__tests__/demoGarmin.test.js` |
+
+### Formato verificato (Swagger del portale, 29/10/2026)
+- `ClientDaily`: `userId`, `summaryId`, `calendarDate` (`yyyy-MM-dd`), `steps`, `activeKilocalories`, `moderateIntensityDurationInSeconds`, `vigorousIntensityDurationInSeconds`, `restingHeartRateInBeatsPerMinute`, `averageStressLevel`, `bodyBatteryChargedValue`, `bodyBatteryDrainedValue`, `durationInSeconds`.
+- `ClientSleep`: `userId`, `summaryId`, `calendarDate`, `durationInSeconds`, `deepSleepDurationInSeconds`, `lightSleepDurationInSeconds`, `remSleepInSeconds`, `awakeDurationInSeconds`, `overallSleepScore` (`{ value, qualifierKey }`), `validation`.
+- `ClientHRVSummary`: `userId`, `summaryId`, `calendarDate`, `lastNightAvg`, `lastNight5MinHigh`. ⚠️ **Non c'è uno «stato HRV» di Garmin** (la spec lo nominava): non si salva.
+- Il **livello** di Body Battery sta solo in `ClientStress` (endpoint *Stress*): non lo prendiamo. Della giornata salviamo `carica`/`scarica` di `ClientDaily`.
+- Backfill: `GET /rest/backfill/dailies|sleeps|hrv?summaryStartTimeInSeconds=…&summaryEndTimeInSeconds=…`, risposta 202 (come `activities`).
+- Portale, *Endpoint Configuration*: «HEALTH - Dailies», «HEALTH - Sleeps», «HEALTH - HRV Summary».
+
+### Decisioni (rulings del piano)
+- **Giorno** = `calendarDate` di Garmin, così com'è (è già il giorno locale dell'atleta; per il sonno è il giorno del risveglio).
+- **Ore di sonno** = `deep + light + rem` (secondi → ore); se sono tutti assenti, `durationInSeconds`. Il sonno sveglio non conta.
+- **Più invii dello stesso giorno**: vince l'ultimo arrivato per quella colonna (Garmin rimanda la giornata man mano che si riempie); ogni invio tocca solo la sua colonna.
+- **Finestra del riferimento**: i 28 giorni **prima** dei 3 giorni del segnale (il calo non abbassa la sua stessa media). Con meno di 14 valori: niente segnale e «—».
+- **«Di fila»**: 3 giorni consecutivi che finiscono nell'ultimo giorno con un dato, e quell'ultimo giorno è **oggi o ieri**; un giorno senza dato rompe la fila. Se la fila è più lunga, il testo dice quanti giorni (fino a 14).
+- **Soglie**: HRV oltre il 10% sotto la media; FC a riposo oltre 5 battiti sopra; sonno sotto 6 ore (soglia fissa, senza riferimento).
+- **Si salva solo** con collegamento `attivo` e permesso `HEALTH_EXPORT`. Atleta eliminato → `scollegaAtleta`. Solo i campi elencati, nient'altro dal payload.
+- 🔴 **Mai peso né composizione corporea** (regola del committente): nessun Push `bodyComps`, nessun backfill `bodyComps`.
+- Nessuna push per i segnali: si leggono in «Da guardare». Il foglio «Come stai» non mostra numeri Garmin. Colori: nessuno nuovo, le voci Garmin sono grigie.
+
+### Trappole
+- 🔴 I test che importano file Deno usano un `import(/* @vite-ignore */ percorso)` con percorso **non letterale**, così `tsc -b` non li segue: una volta ha rotto `npm run build` (29/10/2026).
+- Il chunk `index` è ora ~598 KB (+4 KB): `recuperoGarmin` è importato in modo statico in `Home`. Accettato; la card, invece, è pigra.
+
+### ⚠️ DA VERIFICARE al primo Push vero
+- Le **chiavi del corpo** `dailies`, `sleeps`, `hrv` (formato standard dei Push, non scritto nello Swagger). Se dopo il collegamento `garmin_giornate` resta vuota, guardare qui per prima cosa.
+
+### Passi del committente, in ordine
+1. Portale, *Endpoint Configuration*: attivare «HEALTH - Dailies», «HEALTH - Sleeps», «HEALTH - HRV Summary», stesso indirizzo del webhook.
+2. `supabase functions deploy garmin-webhook --no-verify-jwt` e `supabase functions deploy garmin-auth --no-verify-jwt`.
+3. Scollegare e ricollegare Garmin sull'atleta di prova (parte il backfill di 30 giorni), poi: `select giorno, giornata is not null as g, sonno is not null as s, hrv is not null as h from garmin_giornate order by giorno desc limit 10;`
+4. Aprire la scheda dell'atleta di prova e il suo profilo: card «Recupero».

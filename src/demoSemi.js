@@ -24,7 +24,7 @@ import {
   VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
 } from '../supabase/functions/estrai-note/regole.ts'
 
-export const VERSIONE_SEME = 15
+export const VERSIONE_SEME = 16
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -501,6 +501,25 @@ const garmin_attivita = (aws) => {
   ]
 }
 
+// «Recupero» (Fase 2, 29/10/2026): 35 giorni INVENTATI per Sara, normali, poi le
+// ultime 3 notti storte (HRV -15%, sonno 5 h 30', FC a riposo +6) che finiscono
+// IERI: così nella demo si vedono la card «Recupero» e i segnali in «Da guardare».
+// Le date sono relative a oggi, quindi il segnale c'è a ogni azzeramento.
+const garmin_giornate = () => {
+  const righe = []
+  for (let i = 38; i >= 1; i--) {
+    const storta = i <= 3
+    const v = (i * 7) % 5 - 2 // piccola variazione, senza caso
+    righe.push({
+      athlete_id: 'at-sara', giorno: giorno(-i), aggiornato_at: new Date().toISOString(),
+      giornata: { passi: 8200 + v * 400, calorie: 520, minuti_intensi: 34, fc_riposo: storta ? 58 : 52 + (v > 0 ? 1 : 0), stress_medio: 31, body_battery_carica: 62, body_battery_scarica: 58 },
+      sonno: { ore: storta ? 5.5 : 7.4 + v * 0.1, profondo_min: 70, leggero_min: 230, rem_min: 95, sveglio_min: 20, punteggio: storta ? 58 : 81, qualita: storta ? 'POOR' : 'GOOD' },
+      hrv: { media_notte: storta ? 51 : 60 + v, picco_5min: storta ? 74 : 88 },
+    })
+  }
+  return righe
+}
+
 /** Il database iniziale. Chiamata a ogni azzeramento, così le date si rifanno. */
 export function semi() {
   // Una volta sola: gli id delle assegnazioni avanzano a ogni chiamata, e gli
@@ -518,6 +537,7 @@ export function semi() {
     personal_records: personal_records.map(p => ({ ...p })),
     come_stai: come_stai(),
     garmin_attivita: garmin_attivita(aws),
+    garmin_giornate: garmin_giornate(),
     messaggi_coach: messaggi_coach(),
     modelli_blocco: modelli_blocco(),
     staff: staff(),

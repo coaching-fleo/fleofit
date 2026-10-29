@@ -276,7 +276,7 @@ npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 > §9-unetvicies, e 84 dal 02/09 con `previsione` + `PrevisioneUI` §9-quatervicies). Se risale sopra i 400, qualcuno ha rimesso `jspdf` o `html-to-image`
 > fra gli import in testa (§9-noviesdecies).
 >
-> ⚠️ E `index` deve restare intorno ai **594 KB**: è il chunk d'ingresso, quello
+> ⚠️ E `index` deve restare intorno ai **594 KB** (≈598 KB dal 29/10/2026, recupero Garmin): è il chunk d'ingresso, quello
 > che gatekeepa il primo fotogramma. Se sale di colpo di qualche decina di KB,
 > qualcuno ha importato in modo NON pigro un pezzo montato da più pagine — è
 > esattamente quello che il recap avrebbe fatto (§9-quadragies punto 6).
@@ -704,7 +704,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute`, `consenso.js`, `Consenso.jsx`, `informativa.js`, `public/privacy-policy.html` | `accesso.md` |
 | `RicercaCoach.jsx`, `ricercaCoach.js`, `dialogoRicerca.js`, `useDettatura.js`, Edge Function `ricerca-coach` | `ricerca.md` |
-| `garmin.js`, `FoglioGarmin`, Edge Function `garmin-auth` e `garmin-webhook`, `_shared/garmin*.ts`, `workoutGarmin.ts`, `garminTraining.ts`, Edge Function `garmin-training`, `rigaOrologio.js`, `RigaOrologio`, `attivitaGarmin.ts`, `abbinaGarmin.ts`, `garmin-webhook/attivita.ts`, `attivitaGarmin.js`, `CardDaGarmin`, `RigheGarmin`, `FoglioAttivitaGarmin`, `send-reminders/testi.ts`, il ramo `fleofit://garmin` di `DeeplinkHandler` | `garmin.md` |
+| `garmin.js`, `FoglioGarmin`, Edge Function `garmin-auth` e `garmin-webhook`, `_shared/garmin*.ts`, `workoutGarmin.ts`, `garminTraining.ts`, Edge Function `garmin-training`, `rigaOrologio.js`, `RigaOrologio`, `attivitaGarmin.ts`, `abbinaGarmin.ts`, `garmin-webhook/attivita.ts`, `attivitaGarmin.js`, `CardDaGarmin`, `RigheGarmin`, `FoglioAttivitaGarmin`, `giornateGarmin.ts`, `garmin-webhook/giornate.ts`, `recuperoGarmin.js`, `CardRecupero`, `send-reminders/testi.ts`, il ramo `fleofit://garmin` di `DeeplinkHandler` | `garmin.md` |
 | `previsione.js`, `stimaWorkout.js`, ogni durata o carico | `carico-e-durata.md` |
 | `Recap*.jsx`, `recapAllenamento.js`, `gradimento.js` | `recap.md` |
 | animazioni, `index.css`, `Apertura.jsx`, modali, `Navbar.jsx`, `aptica.js` | `movimento-e-aptica.md` |

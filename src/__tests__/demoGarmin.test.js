@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { semi } from '../demoSemi'
+import { segnaliRecupero, serieRecupero } from '../lib/recuperoGarmin'
 import { righeDaGarmin, vociLibere } from '../lib/attivitaGarmin'
 
 // Le attività Garmin della demo (INVENTATE) servono a vedere, in
@@ -23,3 +24,26 @@ describe('le attività Garmin della demo', () => {
     expect(vociLibere(attivita.filter(a => !a.athlete_workout_id), libera.giorno)).toHaveLength(1)
   })
 })
+
+// Le giornate Garmin della demo (INVENTATE): 35 giorni normali e 3 notti storte
+// fino a ieri, così card «Recupero» e segnali si vedono in `npm run demo`.
+describe('le giornate Garmin della demo', () => {
+  const righe = semi().garmin_giornate
+
+  it('sono tutte di Sara e hanno le tre colonne', () => {
+    expect(righe.length).toBeGreaterThanOrEqual(35)
+    for (const r of righe) {
+      expect(r.athlete_id).toBe('at-sara')
+      expect(r.giornata).toBeTruthy()
+      expect(r.sonno.ore).toBeGreaterThan(0)
+      expect(r.hrv.media_notte).toBeGreaterThan(0)
+    }
+  })
+
+  it('le ultime 3 notti accendono i tre segnali, con un riferimento valido', () => {
+    const tipi = segnaliRecupero(righe).map(s => s.tipo).sort()
+    expect(tipi).toEqual(['fc', 'hrv', 'sonno'])
+    expect(serieRecupero(righe).hrv.media).not.toBeNull()
+  })
+})
+
