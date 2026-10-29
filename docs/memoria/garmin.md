@@ -6,9 +6,15 @@
 > il coach vede chi è collegato. Nessun dato Garmin viene usato.
 
 ## 🟡 Stato: attivo in prova (28/10/2026)
-- ✍️ **Fase 1 (Attività dall'orologio) scritta il 28/10/2026, in attesa di portale e deploy**:
-  nel portale mancano gli endpoint *ACTIVITY*, e vanno pubblicate `garmin-webhook`, `garmin-auth`
-  e `send-reminders`. Sezione «Fase 1 · Attività» più sotto, con i passi in ordine.
+- ✅ **Fase 1 (Attività dall'orologio) attiva in prova dal 29/10/2026**: endpoint *ACTIVITY* nel
+  portale, `garmin-webhook`, `garmin-auth` e `send-reminders` pubblicate. Provata dal committente con
+  l'atleta di prova: una corsa da 1 minuto dall'orologio salvata e **non** abbinata (sotto i 10
+  minuti, giusto); una corsa da 31 minuti inserita a mano su Connect arrivata in 37 s, abbinata
+  `auto`, workout completato, card «Da Garmin» nella scheda, le due righe in `notifications`
+  («· da Garmin» al coach, «Registrato da Garmin» all'atleta). La push sul telefono non era ancora
+  arrivata, con l'app compilata da Xcode: da riguardare (consegna, non server).
+  ⚠️ **Un'attività cancellata su Connect resta da noi** (il webhook non gestisce le cancellazioni).
+  Sezione «Fase 1 · Attività» più sotto.
 - ✅ **Fase 3 (Corsa all'orologio) attiva in prova dal 28/10/2026**: `garmin-training` e
   `garmin-auth` pubblicate, `garmin_fase3_2026-10-28.sql` **applicato dal committente** (prima del
   SQL i due trigger erano `D` e la colonna `firma` mancava: la corsa assegnata non partiva).
@@ -282,12 +288,12 @@ server `https://apis.garmin.com/wellness-api`), con la sessione del committente.
   altro account Garmin** la registrazione vecchia viene cancellata presso Garmin
   (`togliRegistrazioneVecchia` in `garmin-auth`). Al collegamento parte un backfill di 30 giorni.
 
-### ⚠️ DA VERIFICARE alla prima prova
-- I nomi dei valori di `activityType` (`TIPI_PER_CATEGORIA` in `abbinaGarmin.ts`).
-- Le chiavi del Push: `activities` e `manuallyUpdatedActivities` (formato standard, non nello Swagger).
-- Che `athlete_workouts.completed_date` sia un `date` (o testo `yyyy-MM-dd`).
-- Che `send-reminders` accetti come «service» le chiamate del webhook (Bearer service role): nei
-  log, dopo la prima push.
+### Verificato alla prima prova (29/10/2026)
+- ✅ `activityType` della corsa = `RUNNING`, sia dall'orologio sia inserita a mano. ⚠️ Restano da
+  vedere gli altri valori di `TIPI_PER_CATEGORIA` (Hyrox, Gym) alla prima attività di quel tipo.
+- ✅ Le chiavi del Push funzionano: arrivano sia l'attività dell'orologio sia quella manuale (`manual = true`).
+- ✅ `athlete_workouts.completed_date` è un `date`.
+- ✅ `send-reminders` accetta il webhook come «service»: la notifica «· da Garmin» è uscita.
 
 ### Passi del committente, in ordine
 1. Nel portale Garmin, *Endpoint Configuration*: attivare **«ACTIVITY - Activities»** e
