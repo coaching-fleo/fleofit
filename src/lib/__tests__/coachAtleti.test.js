@@ -94,14 +94,16 @@ describe('assegnaAtleta', () => {
 })
 
 describe('escludiDallaRubrica', () => {
-  it('toglie il profilo del coach storico e quello di chi guarda', () => {
-    const righe = [{ id: COACHING_ID }, { id: 'me' }, { id: 'a1' }, null, { id: 'a2' }]
-    expect(escludiDallaRubrica(righe, 'me').map(r => r.id)).toEqual(['a1', 'a2'])
+  it('toglie solo il profilo del coach storico', () => {
+    const righe = [{ id: COACHING_ID }, { id: 'a1' }, null, { id: 'a2' }]
+    expect(escludiDallaRubrica(righe).map(r => r.id)).toEqual(['a1', 'a2'])
   })
-  it('senza utente toglie solo il coach storico', () => {
-    expect(escludiDallaRubrica([{ id: COACHING_ID }, { id: 'a1' }], undefined).map(r => r.id)).toEqual(['a1'])
+  it('chi guarda resta: un coach può allenarsi anche lui', () => {
+    // federico_leo@hotmail.it è coach e si assegna i propri allenamenti: dal
+    // 16/10 al 28/10/2026 la sua scheda era sparita da tutte le liste.
+    expect(escludiDallaRubrica([{ id: 'me' }, { id: 'a1' }], 'me').map(r => r.id)).toEqual(['me', 'a1'])
   })
   it('lista vuota o assente: lista vuota', () => {
-    expect(escludiDallaRubrica(null, 'me')).toEqual([])
+    expect(escludiDallaRubrica(null)).toEqual([])
   })
 })

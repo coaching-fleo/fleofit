@@ -619,9 +619,6 @@ export async function caricaDatiRicerca(supabase, oggi = new Date()) {
     .select('id, name, surname, photo_url, notes')
     .is('deleted_at', null)
   if (atletiRes.error) throw new Error(atletiRes.error.message)
-  // Chi sta guardando non è un atleta da seguire (un coach ha la sua riga).
-  let idUtente = null
-  try { idUtente = (await supabase.auth?.getUser?.())?.data?.user?.id ?? null } catch { /* resta il solo filtro storico */ }
 
   // Tre letture a pagine, in parallelo:
   //  • i workout, TUTTI: anche quelli mai assegnati (le bozze, i modelli);
@@ -642,7 +639,7 @@ export async function caricaDatiRicerca(supabase, oggi = new Date()) {
   ])
 
   const perIdWorkout = new Map(workouts.map(w => [w.id, w]))
-  const atleti = escludiDallaRubrica(atletiRes.data, idUtente)
+  const atleti = escludiDallaRubrica(atletiRes.data)
   const ammessi = new Set(atleti.map(a => a.id))
   return {
     atleti,

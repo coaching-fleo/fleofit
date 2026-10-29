@@ -1739,3 +1739,23 @@ se l'incremento è spento (lì i giri li decide il tempo).
   aggiornato. ✅ `ai-workout` ripubblicata il 28/10/2026: versione 32 (verify_jwt attivo).
 - ⚠️ Le app già sugli Store leggono un For Time con `timecap` come prima: il
   numero di giri lì non compare.
+
+### Il tempo del righello va di 5 secondi (28/10/2026)
+Richiesta del committente: «righello cambia il tempo ogni 5 secondi». Le scale `tempo` e
+`recupero` di `scaleMisura.js` sono ora a scatti di **5″ su tutta la lunghezza** (fino a 2:00:00
+e a 15:00). Prima lo scatto cresceva con la durata (15″ sopra il minuto, 30″ sopra i dieci, 1′
+sopra la mezz'ora). Le tacche numerate sono rimaste dove stavano. Il formato salvato non cambia
+(`m:ss`). Non toccate `durataCorsa` (secondi fino a 55″, poi minuti) e i passi, già a 5″.
+⚠️ Ora `tempo` ha 1.440 voci: arrivare a un'ora col dito vuol dire scorrere parecchio; se il
+committente lo trova lento, la strada è scriverlo a mano toccando il numero.
+
+### ON/OFF: ripetizioni e distanza partono da Max (28/10/2026)
+Richiesta del committente: in un blocco ON/OFF, scegliendo un esercizio, la sua misura è
+**già a Max** (si lavora per tutto l'«on»): le ripetizioni, e la distanza per Run, ergometri,
+slitta e carry. Il peso e il passo restano vuoti. Sta in `inizioOnOff`, lo stato iniziale di
+`reps` e `meters` in `ExercisePicker` (`CreateWorkout.jsx`): vale solo per un esercizio nuovo,
+uno riaperto tiene i suoi numeri. Il Rest, che tiene la durata in `meters`, resta a 1:00
+(`handleSelect`).
+⚠️ La prima versione metteva Max solo sulle ripetizioni: il committente, provando sul telefono
+con una Run, l'ha trovata senza Max. Test: «ON/OFF: ripetizioni e distanza partono da Max» in
+`CreaWorkoutBuilder.test.jsx`.

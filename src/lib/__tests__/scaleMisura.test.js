@@ -121,8 +121,8 @@ describe('il righello si posa sul valore, o vicino', () => {
   })
 
   it('un «1:37» scritto a mano si posa sulla tacca vicina, non sullo zero', () => {
-    // Sopra il minuto la scala va di quindici secondi: 1:30 è la più vicina.
-    expect(SCALE.tempo.voci[indiceVicino(SCALE.tempo, '1:37')].valore).toBe('1:30')
+    // La scala va di cinque secondi: 1:35 è la più vicina.
+    expect(SCALE.tempo.voci[indiceVicino(SCALE.tempo, '1:37')].valore).toBe('1:35')
   })
 
   it('un valore che non è una misura apre sulla voce di partenza', () => {

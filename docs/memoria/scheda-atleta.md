@@ -193,10 +193,15 @@ con i membri di `elenco_staff()` che hanno un account. Scegliere un altro coach 
 nuova (la chiave è `(athlete_id, coach_id)`: mai `onConflict: 'athlete_id'`). Se l'inserimento
 fallisce rimette il vecchio coach. Prima della migrazione la lettura fallisce e la riga non
 compare (nessun errore a schermo).
-- **Chi guarda non è un atleta da seguire.** Con più coach la RLS lascia a ognuno la propria
-  riga in `athletes`: tutte le rubriche (Athletes, Home coach, Analisi, report, messaggi,
-  calendario team, ricerca, assegnazione) passano da `escludiDallaRubrica(righe, idUtente)`
-  di `src/lib/constants.js`, che toglie anche `COACHING_ID`. Una rubrica nuova usa quella.
+- **Chi guarda RESTA nella rubrica.** Tutte le rubriche (Athletes, Home coach, Analisi,
+  report, calendario team, ricerca, assegnazione) passano da `escludiDallaRubrica(righe)` di
+  `src/lib/constants.js`, che toglie **solo** `COACHING_ID`. Una rubrica nuova usa quella.
+  🔴 Dal 16 al 28/10/2026 toglieva anche chi stava guardando («un coach non è un atleta da
+  seguire»): sbagliato, perché `federico_leo@hotmail.it` è coach **e** si allena (11
+  allenamenti assegnati a sé stesso), e la sua scheda era sparita da tutte le liste. Le
+  policy erano giuste (`auth.uid() = id`): era solo l'app. L'unico posto che toglie il
+  mittente è il conteggio di «Messaggio a tutti» (`NuovoMessaggio.jsx`), perché il
+  messaggio a sé stesso non arriva.
 
 
 ## 9-calendario-atleta. Il calendario dell'atleta, una sezione sua (27/10/2026)

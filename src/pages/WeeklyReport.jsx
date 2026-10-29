@@ -98,7 +98,7 @@ export default function WeeklyReport() {
       // un atleta che si segue: se resta dentro compare fra chi «richiede
       // attenzione» ogni volta che il coach non si allena, e falsa aderenza,
       // carico e copertura. Stesso filtro di `Athletes` e della Home coach.
-      setAtleti(escludiDallaRubrica(atletiRes.data, user?.id).filter(x => x?.id))
+      setAtleti(escludiDallaRubrica(atletiRes.data).filter(x => x?.id))
       setAssegnazioni(assRes.data || [])
       // L'istante si fissa quando i dati arrivano, non durante il render: da
       // qui dipendono la settimana, chi è fermo e ogni finestra del report, e

@@ -22,8 +22,10 @@
 - **Schema del database congelato** (§0, regola 0-bis): l'approvazione è arrivata, ma lo
   sblocco resta una decisione del committente. **Un'eccezione**, il 09/10/2026: la tabella
   `note_estratte` («Dalle note», `docs/memoria/scheda-atleta.md`).
-- **App Store**: ⏳ **la 1.2.2 è in revisione dal 26/10/2026** (codice di `261a8e4` + versione
-  1.2.2, build 1 nel `pbxproj`; il task 4 dei Modelli di blocco era fuori, nello stash). Prima
+- **App Store**: ✅ **la 1.2.2 è approvata e rilasciata** (registrato il 28/10/2026; inviata il
+  26/10, codice di `261a8e4` + versione 1.2.2, build 1 nel `pbxproj`; il task 4 dei Modelli di
+  blocco era fuori, nello stash). ⚠️ Contiene l'errore della rubrica (chi guarda spariva dalle
+  liste atleti, `escludiDallaRubrica`, corretto il 28/10): la correzione arriva con la 1.2.3. Prima
   c'erano la 1.2.0 (`799b119`, 09/10) e la 1.2.1 (`c315006`, inviata il 14/10: il suo esito non è
   stato registrato qui, da confermare su App Store Connect). Novità in [DEVLOG.md](DEVLOG.md),
   contate da `c315006`. Il prossimo aggiornamento sarà la **1.2.3**.

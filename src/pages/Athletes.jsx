@@ -94,7 +94,7 @@ export default function Athletes() {
 
     // Nascondiamo il profilo di coaching@federicoleo.it a TUTTI gli admin
     // usando il suo ID univoco.
-    const tutti = escludiDallaRubrica(atletiRes.data, user?.id).filter(x => x?.id)
+    const tutti = escludiDallaRubrica(atletiRes.data).filter(x => x?.id)
 
     setAthletes(tutti.filter(x => x.deleted_at == null))
     // Gli atleti eliminati restano recuperabili per 7 giorni, poi il cron

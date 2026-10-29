@@ -710,7 +710,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     // di assegnazione non ha modo di sapere chi ha chiesto di fermarsi — e
     // non darebbe nessun errore, si limiterebbe a non dirlo mai.
     const { data } = await supabase.from('athletes').select('id, name, surname, photo_url, notes').is('deleted_at', null).order('name')
-    setAthletes(escludiDallaRubrica(data, user?.id))
+    setAthletes(escludiDallaRubrica(data))
   }
 
   const handleAssignMultiple = async () => {

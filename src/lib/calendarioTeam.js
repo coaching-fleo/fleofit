@@ -47,7 +47,7 @@ export const chipDi = (ass) => {
  *   assegnato per sbaglio a chi è in pausa deve restare visibile.
  * - `filtro` è una categoria (`Hyrox`, `Running`, `Custom`, `Event`) o null.
  */
-export function grigliaTeam(atleti = [], assegnazioni = [], giorni = [], { filtro = null, idUtente = null } = {}) {
+export function grigliaTeam(atleti = [], assegnazioni = [], giorni = [], { filtro = null } = {}) {
   const chiavi = giorni.map(chiave)
   const perAtleta = new Map()
   for (const ass of assegnazioni) {
@@ -60,7 +60,7 @@ export function grigliaTeam(atleti = [], assegnazioni = [], giorni = [], { filtr
     celle.get(ass.completed_date).push(chip)
   }
 
-  const righe = escludiDallaRubrica(atleti, idUtente)
+  const righe = escludiDallaRubrica(atleti)
     .map(a => {
       const celle = perAtleta.get(a.id) || new Map()
       return {

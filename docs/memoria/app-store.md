@@ -74,6 +74,9 @@
   «AI and data», permessi e codici invariati dalla 1.2.1.
   ⚠️ **Rischio noto, accettato**: il demo è admin e può togliere coach o spostare atleti dalla
   voce «Coach» di Impostazioni. Se servisse chiuderlo: solo interfaccia, o policy con un nuovo sì.
+  ✅ **Approvata e rilasciata** (registrato il 28/10/2026). ⚠️ Porta l'errore della rubrica:
+  chi guarda sparisce dalle liste atleti, quindi Federico (coach che si allena) non vede la sua
+  scheda. Corretto il 28/10 (`escludiDallaRubrica`, `scheda-atleta.md`), arriva con la **1.2.3**.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non

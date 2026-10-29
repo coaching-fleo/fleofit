@@ -19,6 +19,8 @@ import { leggiJson, scriviJson, leggiCoda, accodaSuStorage, chiaveCacheWorkout, 
 import { mostraErrore } from '../lib/alert'
 import { sincronizzaBadge } from '../lib/badge'
 import RpeModal from '../components/RpeModal'
+import RigaNotifica, { SuggerimentoSwipe } from '../components/RigaNotifica'
+import { prendiAccenno } from '../lib/accennoNotifiche'
 import NuovoEvento from '../components/NuovoEvento'
 import { InvitoRisultato } from '../components/InvitoRisultato'
 import { daChiedere, leggiIgnorate } from '../lib/risultatoGara'
@@ -38,9 +40,9 @@ import { HeaderCoach, BarraRicerca, BannerLive } from '../components/HomeCoachUI
 import { atletiFermi, allenamentiScaduti, copertura, feedbackNuovi, squadraDelGiorno,
          contaInPausa, FINESTRA_STORICO, GIORNI_COPERTURA, GIORNI_GARE, GIORNI_SEGNALI } from '../lib/statisticheCoach'
 import { leggiComeStaiFra } from '../lib/comeStai'
+import { leggiGiornateFra, segnaliTeam, oggiItalia } from '../lib/recuperoGarmin'
 import { leggiEstrattiDal } from '../lib/noteEstratte'
 import { escludiDallaRubrica } from '../lib/constants'
-import { leggiGiornateFra, segnaliTeam, oggiItalia } from '../lib/recuperoGarmin'
 import { visibiliPer, daMostrareInHome, CHIAVE_VISTO } from '../lib/messaggiCoach'
 import { CardDalCoach } from '../components/MessaggiUI'
 import { daRiaprire } from '../lib/ricercaSospesa'
@@ -637,11 +639,11 @@ export default function Home() {
               .limit(1000)
           ]).then(([wRes, aRes, awRes]) => {
             wCountCoach = wRes.count || 0
-            // ⚠️ L'account del coach è una riga di `athletes` come le altre, ma
-            // non è un atleta che si segue: se resta dentro, compare fra
-            // "richiedono attenzione" ogni volta che il coach non si allena, e
-            // falsa sia il totale sia la copertura. Stesso filtro di Athletes.jsx.
-            const atleti = escludiDallaRubrica(aRes.data, user?.id)
+            // ⚠️ Il profilo storico del coach (coaching@) è una riga di
+            // `athletes` come le altre, ma non è un atleta che si segue: se
+            // resta dentro falsa il totale e la copertura. Stesso filtro di
+            // Athletes.jsx (chi guarda resta: un coach può allenarsi anche lui).
+            const atleti = escludiDallaRubrica(aRes.data)
             aCountCoach = atleti.length
             setAtletiCoach(atleti)
             setAssegnazioniCoach(awRes.data || [])
@@ -772,7 +774,16 @@ setNotifications(prev => {
     return () => { document.body.style.overflow = 'auto' }
   }, [showNotifications])
 
+  // La prima non letta fa da sola un mezzo swipe, una volta per avvio: è
+  // così che si scopre che si può trascinare (components/RigaNotifica.jsx).
+  const [accennoNotifiche, setAccennoNotifiche] = useState(false)
+  const segnaNotificaLetta = async (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id)
+  }
+
   const openNotifications = () => {
+    setAccennoNotifiche(!desktop && unreadCount > 0 && prendiAccenno())
     setIsOpeningNotifications(true)
     setShowNotifications(true)
     setTimeout(() => {
@@ -1639,21 +1650,16 @@ setNotifications(prev => {
             <div className="overflow-y-auto p-4 flex flex-col gap-2 flex-1 hide-scrollbar">
               {notifications.length > 0 ? (
                                 <>
+                  {unreadCount > 0 && <SuggerimentoSwipe desktop={desktop} />}
                   {notifications.map(notif => (
-                    <div key={notif.id} onClick={async () => {
-                      if (!notif.is_read) {
-                        setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n))
-                      await supabase.from('notifications').update({ is_read: true }).eq('id', notif.id)
-                    }
-                    closeNotifications()
-                    if (notif.route) setTimeout(() => navigate(notif.route), 300)
-                  }} className={`p-4 rounded-2xl cursor-pointer transition border ${notif.is_read ? 'bg-[#111] border-[#333] opacity-70' : 'bg-[#2a2a2a] border-brand/30 hover:border-brand'}`}>
-                    <div className="flex justify-between items-start gap-2 mb-1">
-                      <p className={`font-bold text-base ${notif.is_read ? 'text-gray-300' : 'text-white'}`}>{notif.title}</p>
-                      <p className="text-[11px] text-muted whitespace-nowrap pt-1">{format(parseISO(notif.created_at), 'd MMM HH:mm', { locale: it })}</p>
-                    </div>
-                    <p className={`text-sm leading-snug line-clamp-2 break-words ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>{notif.message}</p>
- </div>
+                    <RigaNotifica key={notif.id} notifica={notif}
+                      accenna={accennoNotifiche && notif.id === notifications.find(n => !n.is_read)?.id}
+                      onLetta={() => segnaNotificaLetta(notif.id)}
+                      onApri={() => {
+                        if (!notif.is_read) segnaNotificaLetta(notif.id)
+                        closeNotifications()
+                        if (notif.route) setTimeout(() => navigate(notif.route), 300)
+                      }} />
                   ))}
                   <div className="mt-2 mb-2 flex justify-center">
                     <button onClick={() => {

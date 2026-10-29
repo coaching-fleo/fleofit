@@ -3,7 +3,7 @@
 // Una SCALA è l'elenco ordinato dei valori che un righello può prendere, con
 // gli scatti che hanno senso per quella misura: le ripetizioni vanno di uno,
 // il peso di mezzo chilo fin dove contano i manubri e poi di 2,5, il tempo di
-// cinque secondi sotto il minuto e di quindici fino a dieci minuti. È la
+// cinque secondi su tutta la scala. È la
 // ragione per cui il righello non chiede ottanta tocchi per arrivare a 80 kg,
 // che era il difetto del meno/più dentro le liste complete.
 //
@@ -69,15 +69,16 @@ const tempi = (tratti) => {
   return secondi
 }
 
-// Cinque secondi sotto il minuto, quindici fino a dieci minuti, trenta fino a
-// mezz'ora, un minuto fino a due ore: lo scatto cresce con la durata, come la
-// precisione che serve a un coach.
-const TEMPO = tempi([[5, 60, 5], [75, 600, 15], [630, 1800, 30], [1860, 7200, 60]])
+// Cinque secondi alla volta su tutta la scala, fino a due ore (decisione del
+// committente, 28/10/2026: prima lo scatto cresceva con la durata, 15″ sopra il
+// minuto, 30″ sopra i dieci, 1′ sopra la mezz'ora). Le tacche numerate restano
+// diradate come prima, per orientarsi.
+const TEMPO = tempi([[5, 7200, 5]])
   .map(s => voce(mmss(s), mmss(s),
     (s <= 60 ? s % 15 === 0 : s <= 600 ? s % 60 === 0 : s <= 1800 ? s % 150 === 0 : s % 300 === 0) ? mmss(s) : null))
 
-// Il recupero fra un esercizio e l'altro: più fitto, e si ferma a quindici minuti.
-const RECUPERO = tempi([[5, 60, 5], [75, 300, 15], [330, 900, 30]])
+// Il recupero fra un esercizio e l'altro: cinque secondi alla volta, fino a quindici minuti.
+const RECUPERO = tempi([[5, 900, 5]])
   .map(s => voce(mmss(s), mmss(s), (s <= 60 ? s % 15 === 0 : s <= 300 ? s % 60 === 0 : s % 150 === 0) ? mmss(s) : null))
 
 // Il passo: un'unica scala fitta, cinque secondi alla volta.

@@ -254,3 +254,28 @@ numerici non cambiano, cambia solo come si chiamano.
   voce in BACKLOG.
 
 ---
+
+## 9-notifica-letta. Segnare letta una sola notifica (29/10/2026)
+
+Nel centro notifiche (atleta e coach) una notifica non letta si segna come letta **senza
+aprirla**: trascinandola a sinistra oltre 80px (`SOGLIA_LETTA`) o con la spunta tonda a
+destra, che è l'unico modo sul desktop. Il tocco sulla riga resta quello di prima: segna
+letta e apre la rotta. Le già lette non hanno spunta e non si trascinano.
+
+- **Dove sta**: `src/components/RigaNotifica.jsx` (la riga e la frase d'istruzioni
+  `SuggerimentoSwipe`), `src/lib/accennoNotifiche.js`, test in
+  `src/components/__tests__/RigaNotifica.test.jsx`. In `Home.jsx`: `segnaNotificaLetta`.
+- **Come si scopre il gesto**: una riga d'istruzioni sopra la lista finché c'è qualcosa
+  da leggere, e la prima non letta che **fa da sola un mezzo swipe** (`.notifica-accenno`
+  in `index.css`) una volta per avvio dell'app, solo sul telefono. Niente localStorage:
+  è una variabile del modulo.
+- Aptica: `battito` quando il dito passa la soglia (in tutte e due le direzioni), niente
+  al rilascio.
+
+⚠️ Trappole:
+- **Finito l'accenno la classe va tolta** (`accennoFinito`): un'animazione CSS vince sullo
+  `style` in linea, e col suo `both` teneva la riga ferma a 0 sotto il dito.
+- **`touch-action: pan-y`** sulla riga: senza, il primo movimento orizzontale scorre la
+  lista invece di muovere la riga.
+- Dopo un trascinamento il `click` del dito alzato **si ignora** (`mosso`), altrimenti lo
+  swipe aprirebbe anche la notifica.

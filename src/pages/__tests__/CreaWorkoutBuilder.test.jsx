@@ -701,13 +701,13 @@ describe('i numeri del blocco stanno in un foglio dal basso', () => {
     const foglio = screen.getByRole('dialog', { name: 'EMOM' })
 
     within(foglio).getByRole('slider', { name: 'Ogni' }).focus()
-    await userEvent.keyboard('{ArrowRight}')           // 1:15 × 10 = 12:30
+    await userEvent.keyboard('{ArrowRight}')           // 1:05 × 10 = 10:50
 
     // La pillola nella card del blocco, non la scheda omonima nel foglio.
     const card = document.querySelector('[data-blocco-id]')
-    expect(within(card).getByRole('button', { name: 'Ogni: 1:15' })).toBeInTheDocument()
-    expect(within(foglio).getByText('Il blocco dura 12:30')).toBeInTheDocument()
-    expect(cella('Durata')).toBe('13min')
+    expect(within(card).getByRole('button', { name: 'Ogni: 1:05' })).toBeInTheDocument()
+    expect(within(foglio).getByText('Il blocco dura 10:50')).toBeInTheDocument()
+    expect(cella('Durata')).toBe('11min')
   })
 
   it('il rest dei Cash In compare solo con più di un round', async () => {
@@ -1026,13 +1026,13 @@ describe("un blocco nuovo chiede i suoi numeri, e si conferma", () => {
     await userEvent.click(screen.getByText('EMOM'))
     const foglio = screen.getByRole('dialog', { name: 'EMOM' })
     within(foglio).getByRole('slider', { name: 'Ogni' }).focus()
-    await userEvent.keyboard('{ArrowRight}')                 // 1:00 → 1:15
-    expect(within(foglio).getByText('Il blocco dura 12:30')).toBeInTheDocument()
+    await userEvent.keyboard('{ArrowRight}')                 // 1:00 → 1:05
+    expect(within(foglio).getByText('Il blocco dura 10:50')).toBeInTheDocument()
 
     await confermaBlocco()
     expect(blocchi()).toBe(1)
     const card = document.querySelector('[data-blocco-id]')
-    expect(within(card).getByRole('button', { name: 'Ogni: 1:15' })).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Ogni: 1:05' })).toBeInTheDocument()
   })
 
   it("chiudere il foglio senza confermare non crea il blocco", async () => {
@@ -1099,4 +1099,51 @@ describe('«Cambia esercizio» su un esercizio già messo', () => {
     expect(nomi).toEqual(['Thruster', 'Burpees'])
     expect(screen.getByText(/^15 reps/)).toBeInTheDocument()
   }, 15000)
+})
+
+// Richiesta del committente, 28/10/2026: in un ON/OFF si lavora per tutto
+// l'«on», quindi un esercizio appena scelto parte da Max: ripetizioni o distanza, il peso no.
+describe('ON/OFF: ripetizioni e distanza partono da Max', () => {
+  const scegli = async (nome) => {
+    await userEvent.click(screen.getByRole('button', { name: /^Esercizio$/ }))
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), nome)
+    await userEvent.click(await screen.findByRole('button', { name: `Scegli ${nome}` }))
+  }
+
+  it('in un ON/OFF Max è già scelto, il peso no', async () => {
+    await alPasso2()
+    await aggiungiBlocco('ON/OFF')
+    await scegli('Burpees')
+    expect(screen.getByRole('button', { name: 'Max' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+    expect(document.querySelector('[data-blocco-id]').textContent).toMatch(/Max/)
+    expect(document.querySelector('[data-blocco-id]').textContent).not.toMatch(/kg/)
+  })
+
+  // Trovato dal committente sul telefono: la Run si misura a distanza, e lì
+  // Max non era scelto.
+  it('anche la distanza: una Run parte da Max', async () => {
+    await alPasso2()
+    await aggiungiBlocco('ON/OFF')
+    await scegli('Run')
+    expect(screen.getByRole('button', { name: 'Max' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+    expect(document.querySelector('[data-blocco-id]').textContent).toMatch(/Max/)
+  })
+
+  it('il Rest resta a un minuto', async () => {
+    await alPasso2()
+    await aggiungiBlocco('ON/OFF')
+    await scegli('Rest')
+    expect(screen.queryByRole('button', { name: 'Max' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+    expect(document.querySelector('[data-blocco-id]').textContent).toMatch(/1:00/)
+  })
+
+  it('in un EMOM no', async () => {
+    await alPasso2()
+    await aggiungiBlocco('EMOM')
+    await scegli('Burpees')
+    expect(screen.getByRole('button', { name: 'Max' })).toHaveAttribute('aria-pressed', 'false')
+  })
 })

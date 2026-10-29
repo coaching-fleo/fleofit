@@ -176,7 +176,7 @@ export default function CalendarioTeam({ onVistaMese }) {
     return () => clearTimeout(t)
   }, [avviso])
 
-  const righe = useMemo(() => grigliaTeam(atleti, assegnazioni, giorni, { filtro, idUtente: user?.id }), [atleti, assegnazioni, giorni, filtro, user?.id])
+  const righe = useMemo(() => grigliaTeam(atleti, assegnazioni, giorni, { filtro }), [atleti, assegnazioni, giorni, filtro])
   const carico = useMemo(() => caricoGiorni(righe), [righe])
 
   const libreriaFiltrata = useMemo(() => {

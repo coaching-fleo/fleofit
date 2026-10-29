@@ -1133,10 +1133,13 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   const [selected, setSelected] = useState(initialExercise?.name || null)
   const [hybridMode, setHybridMode] = useState(initialExercise?.meters && initialExercise.meters !== '-' ? 'distance' : 'reps')
   const [runPaceMode, setRunPaceMode] = useState(initialExercise?.speed && initialExercise.speed !== '-' ? 'speed' : 'pace')
-  const [meters, setMeters] = useState(initialExercise?.meters || '-')
+  // In un ON/OFF si lavora per tutto il tempo «on»: ripetizioni e distanza
+  // partono da Max (richiesta del committente, 28/10/2026). Il peso e il passo no.
+  const inizioOnOff = workoutType === 'ON/OFF' ? 'Max' : '-'
+  const [meters, setMeters] = useState(initialExercise?.meters || inizioOnOff)
   const [ergoPace, setErgoPace] = useState(initialExercise?.ergoPace || '-')
   const [speed, setSpeed] = useState(initialExercise?.speed || '-')
-  const [reps, setReps] = useState(initialExercise?.reps || '-')
+  const [reps, setReps] = useState(initialExercise?.reps || inizioOnOff)
     const [exTime, setExTime] = useState(initialExercise?.exTime || '-')
 
   const [kg, setKg] = useState(initialExercise?.kg ? `${initialExercise.kg} kg` : '-')

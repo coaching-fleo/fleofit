@@ -114,7 +114,7 @@ export default function NuovoMessaggio() {
     ;(async () => {
       const { data, error } = await supabase.from('athletes').select('id, deleted_at').is('deleted_at', null)
       if (error) throw error
-      const attivi = escludiDallaRubrica(data, user?.id).filter(a => a.deleted_at == null)
+      const attivi = escludiDallaRubrica(data).filter(a => a.deleted_at == null && a.id !== user?.id)
       let miei = null
       try {
         const r = await supabase.from('coach_atleti').select('athlete_id').eq('coach_id', user?.id)

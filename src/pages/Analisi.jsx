@@ -110,7 +110,7 @@ export default function Analisi() {
         return
       }
       // Il coach non è un atleta da seguire: stesso filtro del Report.
-      setAtleti(escludiDallaRubrica(atletiRes.data, user?.id).filter(x => x?.id))
+      setAtleti(escludiDallaRubrica(atletiRes.data).filter(x => x?.id))
       setAssegnazioni(assRes.data || [])
       setComeStai(risposte)
       setCaricatoIl(Date.now())
