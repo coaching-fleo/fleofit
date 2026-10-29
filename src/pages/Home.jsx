@@ -40,6 +40,7 @@ import { atletiFermi, allenamentiScaduti, copertura, feedbackNuovi, squadraDelGi
 import { leggiComeStaiFra } from '../lib/comeStai'
 import { leggiEstrattiDal } from '../lib/noteEstratte'
 import { escludiDallaRubrica } from '../lib/constants'
+import { leggiGiornateFra, segnaliTeam, oggiItalia } from '../lib/recuperoGarmin'
 import { visibiliPer, daMostrareInHome, CHIAVE_VISTO } from '../lib/messaggiCoach'
 import { CardDalCoach } from '../components/MessaggiUI'
 import { daRiaprire } from '../lib/ricercaSospesa'
