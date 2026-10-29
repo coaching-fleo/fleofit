@@ -117,15 +117,23 @@ export async function cancellaRegistrazione(access: string): Promise<boolean> {
   return true
 }
 
-/**
- * Chiede a Garmin le attività di un intervallo (epoch UTC, in secondi): Garmin
- * risponde 202 e i dati arrivano poi dal Push, non da questa risposta.
- * Verificato sullo Swagger il 28/10/2026 (entrambi i parametri obbligatori).
- */
-export async function chiediBackfillAttivita(access: string, daSec: number, aSec: number): Promise<void> {
-  const url = `https://apis.garmin.com/wellness-api/rest/backfill/activities`
+/** I tipi di riepilogo che si possono chiedere in backfill. `bodyComps` NON c'è, di proposito (mai peso né composizione). */
+export type TipoBackfill = 'activities' | 'dailies' | 'sleeps' | 'hrv'
+
+/** L'indirizzo del backfill di un tipo, per un intervallo in secondi epoch UTC. */
+export function urlBackfill(tipo: TipoBackfill, daSec: number, aSec: number): string {
+  return `https://apis.garmin.com/wellness-api/rest/backfill/${tipo}`
     + `?summaryStartTimeInSeconds=${Math.floor(daSec)}&summaryEndTimeInSeconds=${Math.floor(aSec)}`
-  const r = await chiama('backfill attività', url, { headers: autorizzato(access) })
+}
+
+/**
+ * Chiede a Garmin i riepiloghi di un tipo in un intervallo (epoch UTC, in secondi):
+ * Garmin risponde 202 e i dati arrivano poi dal Push, non da questa risposta.
+ * Verificato sullo Swagger il 28/10/2026 (activities) e il 29/10/2026 (dailies, sleeps, hrv);
+ * entrambi i parametri sono obbligatori.
+ */
+export async function chiediBackfillGarmin(access: string, tipo: TipoBackfill, daSec: number, aSec: number): Promise<void> {
+  const r = await chiama(`backfill ${tipo}`, urlBackfill(tipo, daSec, aSec), { headers: autorizzato(access) })
   await r.body?.cancel().catch(() => {})
 }
 

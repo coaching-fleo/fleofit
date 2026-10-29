@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   GARMIN, PERMESSI_NOTI, MOTIVI_ERRORE, generaPkce, sfidaPkce, generaState, urlAutorizzazione,
   ritornoValido, urlRitorno, esitoCallback, cifra, decifra, leggiNotifiche, pianoScollegamento, scaduto,
@@ -247,5 +247,46 @@ describe('ammessoAllaProva', () => {
     expect(ammessoAllaProva('a', 'a1')).toBe(false)
     expect(ammessoAllaProva('a1', 'a12')).toBe(false)
     expect(ammessoAllaProva('', 'a1')).toBe(false)
+  })
+})
+
+describe('backfill Garmin', () => {
+  it('l\'indirizzo dei riepiloghi di recupero, con gli estremi interi', async () => {
+    const { urlBackfill } = await import('../../../supabase/functions/_shared/garmin.ts')
+    for (const tipo of ['activities', 'dailies', 'sleeps', 'hrv']) {
+      expect(urlBackfill(tipo, 100.9, 200.2)).toBe(
+        `https://apis.garmin.com/wellness-api/rest/backfill/${tipo}?summaryStartTimeInSeconds=100&summaryEndTimeInSeconds=200`)
+    }
+  })
+  it('chiediBackfillGarmin chiama l\'indirizzo del tipo con il token', async () => {
+    const { chiediBackfillGarmin } = await import('../../../supabase/functions/_shared/garmin.ts')
+    const fetchFinto = vi.fn(async () => new Response(null, { status: 202 }))
+    vi.stubGlobal('fetch', fetchFinto)
+    try {
+      await chiediBackfillGarmin('tok', 'dailies', 10, 20)
+      expect(fetchFinto.mock.calls[0][0]).toBe(
+        'https://apis.garmin.com/wellness-api/rest/backfill/dailies?summaryStartTimeInSeconds=10&summaryEndTimeInSeconds=20')
+      expect(fetchFinto.mock.calls[0][1].headers.Authorization).toBe('Bearer tok')
+    } finally { vi.unstubAllGlobals() }
+  })
+  it('un 4xx lancia con lo status (chi chiama lo logga e va avanti)', async () => {
+    const { chiediBackfillGarmin } = await import('../../../supabase/functions/_shared/garmin.ts')
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 403 })))
+    try {
+      await expect(chiediBackfillGarmin('tok', 'hrv', 10, 20)).rejects.toMatchObject({ status: 403 })
+    } finally { vi.unstubAllGlobals() }
+  })
+  it('bodyComps (peso e composizione) non si chiede mai', async () => {
+    const { readFileSync, readdirSync, statSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const visita = (d) => readdirSync(d).flatMap((n) => {
+      const p = join(d, n)
+      return statSync(p).isDirectory() ? visita(p) : p.endsWith('.ts') ? [p] : []
+    })
+    // Ammessi solo i commenti che lo vietano: nessun codice lo nomina.
+    const righe = visita('supabase/functions').flatMap((p) =>
+      readFileSync(p, 'utf8').split('\n').filter((r) => /bodyComps/.test(r)))
+    expect(righe.length).toBeGreaterThan(0)
+    for (const r of righe) expect(r.trim()).toMatch(/^(\/\/|\/\*|\*)/)
   })
 })

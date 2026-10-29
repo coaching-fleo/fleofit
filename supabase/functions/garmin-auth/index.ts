@@ -25,7 +25,7 @@ import {
   urlAutorizzazione, urlRitorno,
 } from "../_shared/garminRegole.ts"
 import {
-  REDIRECT_URI, accessValido, cancellaRegistrazione, chiediBackfillAttivita, leggiPermessi, leggiUtenteId, scambiaCodice, scollegaAtleta, scriviConsensoGarmin,
+  REDIRECT_URI, accessValido, cancellaRegistrazione, chiediBackfillGarmin, type TipoBackfill, leggiPermessi, leggiUtenteId, scambiaCodice, scollegaAtleta, scriviConsensoGarmin,
 } from "../_shared/garmin.ts"
 import { ruoloStaff } from "../_shared/staff.ts"
 
@@ -78,14 +78,19 @@ async function togliRegistrazioneVecchia(admin: any, athleteId: string, nuovoUse
   }
 }
 
-/** Dopo il collegamento si chiedono a Garmin gli ultimi 30 giorni; un errore non rompe il collegamento. */
+/** I tipi chiesti al collegamento: attività, e il recupero (giornata, sonno, HRV) per avere il riferimento di 14 giorni dal primo giorno. */
+const TIPI_BACKFILL: TipoBackfill[] = ['activities', 'dailies', 'sleeps', 'hrv'];
+
+/** Dopo il collegamento si chiedono a Garmin gli ultimi 30 giorni; un errore non rompe il collegamento, né ferma gli altri tipi. */
 async function chiediBackfill(access: string, athleteId: string): Promise<void> {
-  try {
-    const aSec = Math.floor(Date.now() / 1000);
-    await chiediBackfillAttivita(access, aSec - 30 * 86400, aSec);
-  } catch (e) {
-    const status = (e as { status?: number }).status;
-    console.warn(`garmin-auth: backfill non richiesto per ${athleteId}${status ? ` (HTTP ${status})` : ''}`);
+  const aSec = Math.floor(Date.now() / 1000);
+  for (const tipo of TIPI_BACKFILL) {
+    try {
+      await chiediBackfillGarmin(access, tipo, aSec - 30 * 86400, aSec);
+    } catch (e) {
+      const status = (e as { status?: number }).status;
+      console.warn(`garmin-auth: backfill ${tipo} non richiesto per ${athleteId}${status ? ` (HTTP ${status})` : ''}`);
+    }
   }
 }
 
