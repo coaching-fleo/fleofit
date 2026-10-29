@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
+import { leggiGiornate, oggiItalia } from '../lib/recuperoGarmin'
 import { User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, Copy, Activity, CalendarDays, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
 import { vibraSuccesso } from '../lib/aptica'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, differenceInDays } from 'date-fns'
@@ -70,6 +71,7 @@ const calculateAge = (dob) => {
 // «Dalle note» si carica solo quando la apre un coach: chi entra in `/profile`
 // non scarica né il componente né i suoi conti (spec dati-dalle-note §4).
 const DalleNoteUI = lazy(() => import('../components/DalleNoteUI'))
+const CardRecupero = lazy(() => import('../components/CardRecupero')) // Garmin · Recupero
 
 export default function AthleteDetail() {
   const { id: paramId } = useParams()
@@ -84,6 +86,16 @@ export default function AthleteDetail() {
   const [athlete, setAthlete] = useState(null)
   const [workouts, setWorkouts] = useState([])
   const [prs, setPrs] = useState([])
+  // Garmin · Recupero: le giornate degli ultimi 28 giorni di chi è mostrato. Un errore dà [].
+  const [giornate, setGiornate] = useState([])
+  useEffect(() => {
+    if (!id) return undefined
+    let vivo = true
+    const a = oggiItalia()
+    const da = new Date(Date.parse(`${a}T00:00:00Z`) - 27 * 86400000).toISOString().slice(0, 10)
+    leggiGiornate(supabase, id, da, a).then(r => { if (vivo) setGiornate(r || []) }).catch(() => {})
+    return () => { vivo = false }
+  }, [id])
   // Le tre tab sono diventate due sezioni che si aprono in pagina, più un menu
   // per i comandi che erano tre bottoni in testata (CLAUDE.md §9-terdecies).
   const [menuAperto, setMenuAperto] = useState(false)
@@ -715,6 +727,9 @@ export default function AthleteDetail() {
         dettaglio={andamento.frase.dettaglio} />
     </>
   )
+  const pRecupero = giornate.length > 0 && (
+    <Suspense fallback={null}><CardRecupero righe={giornate} /></Suspense>
+  )
   const pBento = (
     <>
       <div className="grid grid-cols-[1.05fr_1fr] gap-3">
@@ -948,6 +963,7 @@ export default function AthleteDetail() {
           <div className="grid grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] gap-6 items-start">
             <div className="flex flex-col gap-[14px] min-w-0">
               {pAndamento}
+              {pRecupero}
               {pBento}
               {pNote}
               {pCalendario}
@@ -965,6 +981,7 @@ export default function AthleteDetail() {
           {pTestata}
           {pIdentita}
           {pAndamento}
+          {pRecupero}
           {pBento}
           {pNote}
           {pObiettivo}
