@@ -9,7 +9,7 @@
 //
 // 🔒 Nessun token, codice, verifier o segreto finisce mai in un log o in un
 // messaggio d'errore: gli errori portano solo lo status HTTP.
-import { GARMIN, cifra, decifra, permessiDaRisposta, pianoScollegamento, scaduto } from './garminRegole.ts'
+import { GARMIN, cifra, decifra, permessiDaRisposta, pianoScollegamento, scaduto, urlBackfill, type TipoBackfill } from './garminRegole.ts'
 import { GARMIN_TRAINING, idDaRisposta } from './garminTraining.ts'
 import type { GarminWorkout } from './workoutGarmin.ts'
 
@@ -115,15 +115,6 @@ export async function cancellaRegistrazione(access: string): Promise<boolean> {
   const r = await chiama('registrazione', GARMIN.registrazione, { method: 'DELETE', headers: autorizzato(access) })
   await r.body?.cancel().catch(() => {})
   return true
-}
-
-/** I tipi di riepilogo che si possono chiedere in backfill. `bodyComps` NON c'è, di proposito (mai peso né composizione). */
-export type TipoBackfill = 'activities' | 'dailies' | 'sleeps' | 'hrv'
-
-/** L'indirizzo del backfill di un tipo, per un intervallo in secondi epoch UTC. */
-export function urlBackfill(tipo: TipoBackfill, daSec: number, aSec: number): string {
-  return `https://apis.garmin.com/wellness-api/rest/backfill/${tipo}`
-    + `?summaryStartTimeInSeconds=${Math.floor(daSec)}&summaryEndTimeInSeconds=${Math.floor(aSec)}`
 }
 
 /**

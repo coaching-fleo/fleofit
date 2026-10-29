@@ -219,3 +219,12 @@ export function ammessoAllaProva(atletaId: string, elenco: string | undefined): 
   if (!ammessi.length) return true;
   return !!atletaId && ammessi.includes(atletaId);
 }
+
+/** I tipi di riepilogo che si possono chiedere in backfill. `bodyComps` NON c'è, di proposito (mai peso né composizione). */
+export type TipoBackfill = 'activities' | 'dailies' | 'sleeps' | 'hrv';
+
+/** L'indirizzo del backfill di un tipo, per un intervallo in secondi epoch UTC. */
+export function urlBackfill(tipo: TipoBackfill, daSec: number, aSec: number): string {
+  return `https://apis.garmin.com/wellness-api/rest/backfill/${tipo}`
+    + `?summaryStartTimeInSeconds=${Math.floor(daSec)}&summaryEndTimeInSeconds=${Math.floor(aSec)}`;
+}

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   GARMIN, PERMESSI_NOTI, MOTIVI_ERRORE, generaPkce, sfidaPkce, generaState, urlAutorizzazione,
   ritornoValido, urlRitorno, esitoCallback, cifra, decifra, leggiNotifiche, pianoScollegamento, scaduto,
-  stessoSegreto, atletaEliminato, ammessoAllaProva, permessiDaRisposta, tokenWebhook,
+  stessoSegreto, atletaEliminato, ammessoAllaProva, permessiDaRisposta, tokenWebhook, urlBackfill,
 } from '../../../supabase/functions/_shared/garminRegole.ts'
 
 // Perché questi test esistono
@@ -250,16 +250,18 @@ describe('ammessoAllaProva', () => {
   })
 })
 
+// Percorso non letterale: tsc non segue l'import nel file Deno (usa `Deno`), vitest sì.
+const PERCORSO_GARMIN = '../../../supabase/functions/_shared/garmin.ts'
+
 describe('backfill Garmin', () => {
   it('l\'indirizzo dei riepiloghi di recupero, con gli estremi interi', async () => {
-    const { urlBackfill } = await import('../../../supabase/functions/_shared/garmin.ts')
     for (const tipo of ['activities', 'dailies', 'sleeps', 'hrv']) {
       expect(urlBackfill(tipo, 100.9, 200.2)).toBe(
         `https://apis.garmin.com/wellness-api/rest/backfill/${tipo}?summaryStartTimeInSeconds=100&summaryEndTimeInSeconds=200`)
     }
   })
   it('chiediBackfillGarmin chiama l\'indirizzo del tipo con il token', async () => {
-    const { chiediBackfillGarmin } = await import('../../../supabase/functions/_shared/garmin.ts')
+    const { chiediBackfillGarmin } = await import(/* @vite-ignore */ PERCORSO_GARMIN)
     const fetchFinto = vi.fn(async () => new Response(null, { status: 202 }))
     vi.stubGlobal('fetch', fetchFinto)
     try {
@@ -270,7 +272,7 @@ describe('backfill Garmin', () => {
     } finally { vi.unstubAllGlobals() }
   })
   it('un 4xx lancia con lo status (chi chiama lo logga e va avanti)', async () => {
-    const { chiediBackfillGarmin } = await import('../../../supabase/functions/_shared/garmin.ts')
+    const { chiediBackfillGarmin } = await import(/* @vite-ignore */ PERCORSO_GARMIN)
     vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 403 })))
     try {
       await expect(chiediBackfillGarmin('tok', 'hrv', 10, 20)).rejects.toMatchObject({ status: 403 })

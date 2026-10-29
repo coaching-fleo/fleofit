@@ -22,10 +22,10 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import {
   ammessoAllaProva, atletaEliminato, cifra, esitoCallback, generaPkce, generaState, ritornoValido, stessoSegreto,
-  urlAutorizzazione, urlRitorno,
+  urlAutorizzazione, urlRitorno, type TipoBackfill,
 } from "../_shared/garminRegole.ts"
 import {
-  REDIRECT_URI, accessValido, cancellaRegistrazione, chiediBackfillGarmin, type TipoBackfill, leggiPermessi, leggiUtenteId, scambiaCodice, scollegaAtleta, scriviConsensoGarmin,
+  REDIRECT_URI, accessValido, cancellaRegistrazione, chiediBackfillGarmin, leggiPermessi, leggiUtenteId, scambiaCodice, scollegaAtleta, scriviConsensoGarmin,
 } from "../_shared/garmin.ts"
 import { ruoloStaff } from "../_shared/staff.ts"
 

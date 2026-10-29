@@ -4,7 +4,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const scollega = vi.fn(async () => {})
 vi.mock('../../../supabase/functions/_shared/garmin.ts', () => ({ scollegaAtleta: (...a) => scollega(...a) }))
 
-const { gestisciGiornate } = await import('../../../supabase/functions/garmin-webhook/giornate.ts')
+// Percorso non letterale: tsc non deve seguirlo fino al file Deno.
+const PERCORSO = '../../../supabase/functions/garmin-webhook/giornate.ts'
+const { gestisciGiornate } = await import(/* @vite-ignore */ PERCORSO)
 
 // Un finto admin: collegamenti per garmin_user_id, atleti per id, e il registro degli upsert.
 function finto({ collegamenti = {}, atleti = {}, erroreUpsertSu = null } = {}) {
