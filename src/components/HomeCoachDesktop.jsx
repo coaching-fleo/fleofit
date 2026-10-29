@@ -35,7 +35,7 @@ function fraseDelGiorno({ oggi, segnali, voci }) {
 export default function HomeCoachDesktop({
   saluto, nome, dataOggi, intestazione,
   atleti, assegnazioni, comeStai, estratti, righeGare, copertura,
-  feedback, fermi, scaduti, squadra,
+  feedback, recupero, fermi, scaduti, squadra,
   live = [], caricamento, notificheDaLeggere = 0,
   onNotifiche, onNuovoWorkout, onCalendario, onGuardaLive,
   onApriFeedback, onApriAtleta, onApriScaduto, onApriSeduta, onMessaggio,
@@ -43,7 +43,7 @@ export default function HomeCoachDesktop({
   const { gare, polso, oggi, segnali, piano, notaPiano } = useCruscottoCoach({
     atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura, settimana: true,
   })
-  const voci = cosaGuardare({ feedback, fermi, scaduti })
+  const voci = cosaGuardare({ feedback, recupero, fermi, scaduti })
   const frase = fraseDelGiorno({ oggi, segnali, voci })
 
   // «Alleggerisci» apre l'allenamento di QUELL'atleta, dove il coach lo
@@ -52,7 +52,7 @@ export default function HomeCoachDesktop({
   const apriGara = (g) => { if (g.workoutId) onApriSeduta({ workoutId: g.workoutId, atletaId: g.atleti[0]?.id }) }
   const apri = (v) => {
     if (v.tipo === 'feedback') onApriFeedback(v.dato)
-    else if (v.tipo === 'fermo') onApriAtleta(v.dato)
+    else if (v.tipo === 'fermo' || v.tipo === 'recupero') onApriAtleta(v.dato)
     else onApriScaduto(v.dato)
   }
 

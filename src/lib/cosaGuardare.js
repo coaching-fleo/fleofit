@@ -2,10 +2,10 @@
 // Logica pura: riceve le righe già calcolate da src/lib/statisticheCoach.js.
 
 /**
- * Le cose da guardare, in UNA lista: feedback, atleti fermi, allenamenti
+ * Le cose da guardare, in UNA lista: feedback, segnali di recupero, atleti fermi, allenamenti
  * scaduti. Ogni riga ha un solo bottone, che dice cosa fa.
  */
-export function cosaGuardare({ feedback = [], fermi = [], scaduti = [] }) {
+export function cosaGuardare({ feedback = [], recupero = [], fermi = [], scaduti = [] }) {
   return [
     ...feedback.map(f => ({
       chiave: `f-${f.id}`, tipo: 'feedback', dato: f, nome: f.nome, foto: f.foto,
@@ -13,6 +13,12 @@ export function cosaGuardare({ feedback = [], fermi = [], scaduti = [] }) {
       rpe: f.rpe ?? null,
       azione: f.haVocale && !f.testo ? 'Ascolta' : 'Leggi',
     })),
+    // Garmin · Recupero: `recupero` è l'uscita di `segnaliTeam` (src/lib/recuperoGarmin.js),
+    // una voce per segnale. Grigia, senza avviso: nessuna push, si legge qui.
+    ...recupero.flatMap(a => (a.segnali || []).map(s => ({
+      chiave: `r-${a.id}-${s.tipo}`, tipo: 'recupero', dato: a, nome: a.nome, foto: a.foto ?? null,
+      riga: s.testo, avviso: false, rpe: null, azione: 'Scheda',
+    }))),
     ...fermi.map(a => ({
       chiave: `a-${a.id}`, tipo: 'fermo', dato: a, nome: a.nome, foto: a.foto,
       riga: `Non si allena da ${a.giorni}${a.oltre ? '+' : ''} giorni`, avviso: true,

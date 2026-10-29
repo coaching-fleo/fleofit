@@ -19,16 +19,16 @@ import { PolsoTeam, CardOggi, CardSegnali, CardSmaltire, CardPiano, CardGare } f
 
 export default function HomeCoachTelefono({
   atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura,
-  feedback, fermi, scaduti, caricamento, numeroWorkout,
+  feedback, recupero, fermi, scaduti, caricamento, numeroWorkout,
   onApriAtleta, onApriFeedback, onApriScaduto, onApriSeduta, onReport, onArchivio,
 }) {
   const { gare, polso, oggi, segnali, piano, notaPiano } = useCruscottoCoach({
     atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura, settimana: false,
   })
-  const voci = cosaGuardare({ feedback, fermi, scaduti })
+  const voci = cosaGuardare({ feedback, recupero, fermi, scaduti })
   const apri = (v) => {
     if (v.tipo === 'feedback') onApriFeedback(v.dato)
-    else if (v.tipo === 'fermo') onApriAtleta(v.dato)
+    else if (v.tipo === 'fermo' || v.tipo === 'recupero') onApriAtleta(v.dato)
     else onApriScaduto(v.dato)
   }
   const apriGara = (g) => { if (g.workoutId) onApriSeduta({ workoutId: g.workoutId, atletaId: g.atleti[0]?.id }) }

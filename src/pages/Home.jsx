@@ -140,6 +140,7 @@ export default function Home() {
   // finestra di `assegnazioniCoach`, e ciascuna che fallisce lascia `[]`: la
   // sezione che ne dipende si spegne, la Home no.
   const [comeStaiCoach, setComeStaiCoach] = useState([])
+  const [giornateCoach, setGiornateCoach] = useState([]) // Garmin · Recupero: righe di garmin_giornate, ultimi 31 giorni
   const [estrattiCoach, setEstrattiCoach] = useState([])
   const [gareCoach, setGareCoach] = useState([])
   // Si torna con il tasto indietro da un risultato della ricerca: il foglio si
@@ -171,6 +172,8 @@ export default function Home() {
   // Un caso lo faceva già: l'INSERT realtime deduplicava le notifiche ma
   // incrementava comunque il contatore, quindi un evento consegnato due volte
   // gonfiava il badge.
+  const recuperoCoach = useMemo(() => segnaliTeam(atletiCoach, giornateCoach), [atletiCoach, giornateCoach])
+
   const unreadCount = useMemo(
     () => notifications.filter(n => !n.is_read).length,
     [notifications]
@@ -606,6 +609,9 @@ export default function Home() {
         const oggiCoachStr = format(new Date(), 'yyyy-MM-dd')
         promises.push(
           leggiComeStaiFra(oggiCoachStr, oggiCoachStr).then(setComeStaiCoach),
+          // Garmin · Recupero: 31 giorni (28 di riferimento + la fila). Un errore dà [].
+          leggiGiornateFra(supabase, format(new Date(Date.now() - 31 * 86400000), 'yyyy-MM-dd'), oggiItalia())
+            .then(setGiornateCoach).catch(() => setGiornateCoach([])),
           leggiEstrattiDal(format(new Date(Date.now() - (GIORNI_SEGNALI - 1) * 86400000), 'yyyy-MM-dd')).then(setEstrattiCoach),
           // Le gare: tutte le assegnazioni dei prossimi due mesi, e il filtro sulla
           // categoria si fa qui. Due mesi di programmazione futura sono poche righe.
@@ -1207,7 +1213,7 @@ setNotifications(prev => {
             caricamento={loadingRecent}
             atleti={atletiCoach} assegnazioni={assegnazioniCoach} comeStai={comeStaiCoach}
             estratti={estrattiCoach} righeGare={gareCoach} copertura={coperturaTre}
-            feedback={feedback.elementi}
+            feedback={feedback.elementi} recupero={recuperoCoach}
             fermi={fermiInHome}
             scaduti={scadutiConQuando}
             squadra={squadra}
@@ -1339,7 +1345,7 @@ setNotifications(prev => {
               atleti={atletiCoach} assegnazioni={assegnazioniCoach} comeStai={comeStaiCoach}
               estratti={estrattiCoach} righeGare={gareCoach} copertura={coperturaTre}
               squadra={squadra}
-              feedback={feedback.elementi} fermi={fermiInHome} scaduti={scadutiConQuando}
+              feedback={feedback.elementi} recupero={recuperoCoach} fermi={fermiInHome} scaduti={scadutiConQuando}
               numeroWorkout={stats.workouts}
               onApriAtleta={(a) => navigate(`/athletes/${a.id}`)}
               onApriFeedback={apriFeedback}

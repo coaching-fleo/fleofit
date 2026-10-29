@@ -39,3 +39,26 @@ describe('cosaGuardare — la lista «Da guardare» del desktop', () => {
     expect(cosaGuardare({})).toEqual([])
   })
 })
+
+describe('cosaGuardare — segnali di recupero Garmin', () => {
+  const recupero = [{ id: 'x', nome: 'Anna', foto: null, segnali: [
+    { tipo: 'hrv', giorni: 3, testo: 'HRV sotto la sua media da 3 notti' },
+    { tipo: 'sonno', giorni: 4, testo: 'Dorme meno di 6 ore da 4 notti' },
+  ] }]
+
+  it('senza recupero la lista è quella di prima', () => {
+    const base = { feedback: [{ id: 1, nome: 'M', testo: 'ok' }], fermi: [{ id: 'a', nome: 'P', giorni: 9 }] }
+    expect(cosaGuardare({ ...base, recupero: [] })).toEqual(cosaGuardare(base))
+  })
+
+  it('una voce per segnale, dopo i feedback e prima di fermi e scaduti', () => {
+    const voci = cosaGuardare({
+      feedback: [{ id: 1, nome: 'M', testo: 'ok' }], recupero,
+      fermi: [{ id: 'a', nome: 'P', giorni: 9 }], scaduti: [{ id: 's', nome: 'S', titolo: 'T', quando: 'ieri' }],
+    })
+    expect(voci.map(v => v.tipo)).toEqual(['feedback', 'recupero', 'recupero', 'fermo', 'scaduto'])
+    const [, r] = voci
+    expect(r).toMatchObject({ chiave: 'r-x-hrv', riga: 'HRV sotto la sua media da 3 notti', avviso: false, rpe: null, azione: 'Scheda', nome: 'Anna' })
+    expect(r.dato.id).toBe('x')
+  })
+})
