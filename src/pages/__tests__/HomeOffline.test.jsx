@@ -271,7 +271,7 @@ describe('il conteggio delle notifiche non lette è DERIVATO, non tenuto a mano'
     await userEvent.click(screen.getByLabelText(/Apri il centro notifiche/i))
     await userEvent.click(await screen.findByRole('button', { name: /Segna come lette/i }))
 
-    await waitFor(() => expect(screen.queryByLabelText(/da leggere/i)).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByLabelText(/centro notifiche, \d+ da leggere/i)).not.toBeInTheDocument())
   })
 })
 

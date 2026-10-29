@@ -260,7 +260,14 @@ numerici non cambiano, cambia solo come si chiamano.
 Nel centro notifiche (atleta e coach) una notifica non letta si segna come letta **senza
 aprirla**: trascinandola a sinistra oltre 80px (`SOGLIA_LETTA`) o con la spunta tonda a
 destra, che è l'unico modo sul desktop. Il tocco sulla riga resta quello di prima: segna
-letta e apre la rotta. Le già lette non hanno spunta e non si trascinano.
+letta e apre la rotta.
+
+**Nell'altro senso** (29/10/2026, richiesta del committente): una già letta trascinata a
+**destra** torna da leggere (fascia «Da leggere» a sinistra). Sul desktop lo fa un bottone
+che compare solo al passaggio del mouse (`group-hover`, e `pointer-events-none` finché non
+c'è: sul telefono non si tocca per sbaglio). Ogni riga si muove in un senso solo, quello che
+cambia il suo stato. In `Home.jsx` è `segnaNotificaLetta(id, false)`. La riga d'istruzioni
+dice il gesto che serve: verso sinistra finché c'è qualcosa da leggere, poi verso destra.
 
 - **Dove sta**: `src/components/RigaNotifica.jsx` (la riga e la frase d'istruzioni
   `SuggerimentoSwipe`), `src/lib/accennoNotifiche.js`, test in
@@ -279,3 +286,7 @@ letta e apre la rotta. Le già lette non hanno spunta e non si trascinano.
   lista invece di muovere la riga.
 - Dopo un trascinamento il `click` del dito alzato **si ignora** (`mosso`), altrimenti lo
   swipe aprirebbe anche la notifica.
+- **`shrink-0` sul contenitore della riga**: la lista è una colonna flex che scorre, e un
+  figlio con `overflow-hidden` perde l'altezza minima. Con più notifiche di quante ne
+  stanno nel foglio, le righe venivano schiacciate e i testi si accavallavano (visto sul
+  telefono il 29/10/2026, non nel browser con le tre notifiche di prova).

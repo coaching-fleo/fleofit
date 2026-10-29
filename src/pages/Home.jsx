@@ -777,9 +777,10 @@ setNotifications(prev => {
   // La prima non letta fa da sola un mezzo swipe, una volta per avvio: è
   // così che si scopre che si può trascinare (components/RigaNotifica.jsx).
   const [accennoNotifiche, setAccennoNotifiche] = useState(false)
-  const segnaNotificaLetta = async (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
-    await supabase.from('notifications').update({ is_read: true }).eq('id', id)
+  // `letta = false` la rimette da leggere (swipe a destra su una già letta).
+  const segnaNotificaLetta = async (id, letta = true) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: letta } : n))
+    await supabase.from('notifications').update({ is_read: letta }).eq('id', id)
   }
 
   const openNotifications = () => {
@@ -1650,11 +1651,12 @@ setNotifications(prev => {
             <div className="overflow-y-auto p-4 flex flex-col gap-2 flex-1 hide-scrollbar">
               {notifications.length > 0 ? (
                                 <>
-                  {unreadCount > 0 && <SuggerimentoSwipe desktop={desktop} />}
+                  <SuggerimentoSwipe desktop={desktop} daLeggere={unreadCount > 0} />
                   {notifications.map(notif => (
                     <RigaNotifica key={notif.id} notifica={notif}
                       accenna={accennoNotifiche && notif.id === notifications.find(n => !n.is_read)?.id}
                       onLetta={() => segnaNotificaLetta(notif.id)}
+                      onDaLeggere={() => segnaNotificaLetta(notif.id, false)}
                       onApri={() => {
                         if (!notif.is_read) segnaNotificaLetta(notif.id)
                         closeNotifications()

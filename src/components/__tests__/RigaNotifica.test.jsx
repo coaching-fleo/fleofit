@@ -11,8 +11,9 @@ const NOTIFICA = { id: 7, title: 'Nuovo workout', message: 'Domani alle 8', crea
 const monta = (notifica = NOTIFICA) => {
   const onApri = vi.fn()
   const onLetta = vi.fn()
-  const { container } = render(<RigaNotifica notifica={notifica} onApri={onApri} onLetta={onLetta} />)
-  return { riga: container.querySelector('[data-riga-notifica]'), onApri, onLetta }
+  const onDaLeggere = vi.fn()
+  const { container } = render(<RigaNotifica notifica={notifica} onApri={onApri} onLetta={onLetta} onDaLeggere={onDaLeggere} />)
+  return { riga: container.querySelector('[data-riga-notifica]'), onApri, onLetta, onDaLeggere }
 }
 const trascina = (el, [x0, y0], [x1, y1]) => {
   fireEvent.touchStart(el, { touches: [{ clientX: x0, clientY: y0 }] })
@@ -56,10 +57,33 @@ describe('La riga di una notifica', () => {
     expect(onApri).toHaveBeenCalledTimes(1)
   })
 
-  it('una già letta non ha spunta e non si trascina', () => {
-    const { riga, onLetta } = monta({ ...NOTIFICA, is_read: true })
+  it('una già letta non ha la spunta e verso sinistra non si muove', () => {
+    const { riga, onLetta, onDaLeggere } = monta({ ...NOTIFICA, is_read: true })
     expect(screen.queryByRole('button', { name: 'Segna come letta' })).toBeNull()
     trascina(riga, [300, 100], [150, 100])
     expect(onLetta).not.toHaveBeenCalled()
+    expect(onDaLeggere).not.toHaveBeenCalled()
+  })
+
+  it('una già letta trascinata a DESTRA torna da leggere, senza aprirsi', () => {
+    const { riga, onApri, onLetta, onDaLeggere } = monta({ ...NOTIFICA, is_read: true })
+    trascina(riga, [100, 100], [220, 105])
+    expect(onDaLeggere).toHaveBeenCalledTimes(1)
+    expect(onLetta).not.toHaveBeenCalled()
+    expect(onApri).not.toHaveBeenCalled()
+  })
+
+  it('una non letta trascinata a destra non cambia', () => {
+    const { riga, onLetta, onDaLeggere } = monta()
+    trascina(riga, [100, 100], [250, 100])
+    expect(onLetta).not.toHaveBeenCalled()
+    expect(onDaLeggere).not.toHaveBeenCalled()
+  })
+
+  it('sul desktop il bottone rimette da leggere una già letta', () => {
+    const { onApri, onDaLeggere } = monta({ ...NOTIFICA, is_read: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Segna come da leggere' }))
+    expect(onDaLeggere).toHaveBeenCalledTimes(1)
+    expect(onApri).not.toHaveBeenCalled()
   })
 })

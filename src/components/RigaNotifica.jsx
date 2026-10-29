@@ -1,18 +1,18 @@
 import { useRef, useState } from 'react'
-import { Check, ChevronsLeft } from 'lucide-react'
+import { Check, ChevronsLeft, ChevronsRight, Dot } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { battito } from '../lib/aptica'
 
-/** Quanto va trascinata a sinistra una notifica perché diventi letta. */
+/** Quanto va trascinata una notifica perché cambi stato, nei due sensi. */
 export const SOGLIA_LETTA = 80
 /** Sotto questo spostamento il dito non ha ancora deciso la direzione. */
 const DECISIONE = 8
 /** Oltre la soglia la riga segue il dito sempre meno: si sente il fondo. */
 const elastico = (dx) => {
-  const sx = -dx
+  const sx = Math.abs(dx)
   if (sx <= SOGLIA_LETTA) return dx
-  return -(SOGLIA_LETTA + (sx - SOGLIA_LETTA) * 0.35)
+  return Math.sign(dx) * (SOGLIA_LETTA + (sx - SOGLIA_LETTA) * 0.35)
 }
 
 /**
@@ -24,6 +24,11 @@ const elastico = (dx) => {
  * - col bottone tondo con la spunta, a destra (l'unico modo sul desktop).
  * Il tocco sulla riga resta quello di sempre: segna letta e apre la rotta.
  *
+ * Nell'altro senso, una LETTA trascinata a DESTRA torna da leggere (fascia
+ * «Da leggere» a sinistra). Sul desktop lo fa il bottone che compare al
+ * passaggio del mouse. Ogni riga va in un senso solo, quello che cambia il
+ * suo stato: una non letta a destra non si muove, una letta a sinistra nemmeno.
+ *
  * ⚠️ `touch-action: pan-y`: lo scorrimento verticale della lista resta al
  * browser, quello orizzontale arriva qui. Senza, il primo spostamento
  * orizzontale farebbe scorrere la pagina invece della riga.
@@ -34,7 +39,7 @@ const elastico = (dx) => {
  * si può fare (`.notifica-accenno` in index.css). Home lo accende sulla prima
  * non letta, una volta per avvio dell'app.
  */
-export default function RigaNotifica({ notifica, onApri, onLetta, accenna = false }) {
+export default function RigaNotifica({ notifica, onApri, onLetta, onDaLeggere, accenna = false }) {
   const [dx, setDx] = useState(0)
   const [trascina, setTrascina] = useState(false)
   // ⚠️ Finito l'accenno la classe va tolta: un'animazione CSS vince sullo
@@ -43,10 +48,12 @@ export default function RigaNotifica({ notifica, onApri, onLetta, accenna = fals
   const gesto = useRef(null)
   const mosso = useRef(false)
   const letta = notifica.is_read
-  const oltre = -dx >= SOGLIA_LETTA
+  // Il senso in cui la riga si può trascinare: -1 a sinistra, +1 a destra.
+  const senso = letta ? 1 : -1
+  const oltre = dx * senso >= SOGLIA_LETTA
 
   const inizio = (e) => {
-    if (letta) return
+    if (letta && !onDaLeggere) return
     setAccennoFinito(true)
     const t = e.touches?.[0]
     if (!t) return
@@ -66,8 +73,8 @@ export default function RigaNotifica({ notifica, onApri, onLetta, accenna = fals
     }
     if (g.direzione !== 'orizzontale') return
     mosso.current = true
-    const nuovo = elastico(Math.min(0, mx))
-    const passata = -nuovo >= SOGLIA_LETTA
+    const nuovo = elastico(senso < 0 ? Math.min(0, mx) : Math.max(0, mx))
+    const passata = nuovo * senso >= SOGLIA_LETTA
     if (passata !== g.oltre) { g.oltre = passata; battito() }
     setDx(nuovo)
   }
@@ -75,12 +82,23 @@ export default function RigaNotifica({ notifica, onApri, onLetta, accenna = fals
     const g = gesto.current
     gesto.current = null
     setTrascina(false)
-    if (g?.direzione === 'orizzontale' && g.oltre) onLetta()
+    if (g?.direzione === 'orizzontale' && g.oltre) (letta ? onDaLeggere : onLetta)()
     setDx(0)
   }
 
   return (
-    <div className="relative rounded-2xl overflow-hidden">
+    // ⚠️ `shrink-0`: la lista è una colonna flex che scorre, e un figlio con
+    // `overflow-hidden` perde l'altezza minima del contenuto. Senza, con tante
+    // notifiche il browser schiaccia le righe invece di scorrere, e i testi si
+    // accavallano (successo il 29/10/2026 sul telefono).
+    <div className="group relative shrink-0 rounded-2xl overflow-hidden">
+      {letta && onDaLeggere && (
+        <div aria-hidden="true"
+          className={`absolute inset-0 flex items-center justify-start pl-4 gap-1 rounded-2xl transition-colors duration-150 ${oltre ? 'bg-brand text-black' : 'bg-brand/15 text-brand'}`}>
+          <Dot size={28} strokeWidth={6} className={`transition-transform duration-150 ${oltre ? 'scale-110' : 'scale-90'}`} />
+          <span className="text-sm font-bold">Da leggere</span>
+        </div>
+      )}
       {!letta && (
         <div aria-hidden="true"
           className={`absolute inset-0 flex items-center justify-end pr-5 gap-2 rounded-2xl transition-colors duration-150 ${oltre ? 'bg-brand text-black' : 'bg-brand/15 text-brand'}`}>
@@ -117,19 +135,33 @@ export default function RigaNotifica({ notifica, onApri, onLetta, accenna = fals
               <Check size={16} strokeWidth={3} />
             </button>
           )}
+          {/* Solo per chi ha un mouse: `group-hover` vale dove il passaggio
+              esiste, e sul telefono il bottone non c'è e non si tocca per sbaglio. */}
+          {letta && onDaLeggere && (
+            <button type="button" aria-label="Segna come da leggere" title="Segna come da leggere"
+              onClick={(e) => { e.stopPropagation(); onDaLeggere() }}
+              className="shrink-0 -mr-1 -mt-1 w-9 h-9 rounded-full border border-[#444] text-gray-400 flex items-center justify-center opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover:border-brand hover:text-brand transition">
+              <Dot size={22} strokeWidth={6} />
+            </button>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-/** La riga d'istruzioni sopra la lista, finché ci sono notifiche da leggere. */
-export function SuggerimentoSwipe({ desktop }) {
-  return (
-    <p className="flex items-center gap-1.5 text-[11px] text-muted px-1 pb-1">
-      {desktop
-        ? <><Check size={12} strokeWidth={3} className="text-brand" /> Tocca la spunta per segnare una notifica come letta</>
-        : <><ChevronsLeft size={14} className="text-brand" /> Scorri a sinistra una notifica per segnarla come letta</>}
-    </p>
-  )
+/**
+ * La riga d'istruzioni sopra la lista. Dice il gesto che serve adesso: finché
+ * c'è qualcosa da leggere quello verso sinistra, poi quello che torna indietro.
+ */
+export function SuggerimentoSwipe({ desktop, daLeggere }) {
+  let testo
+  if (desktop) testo = daLeggere
+    ? <><Check size={12} strokeWidth={3} className="text-brand" /> Tocca la spunta per segnare una notifica come letta</>
+    : null
+  else testo = daLeggere
+    ? <><ChevronsLeft size={14} className="text-brand" /> Scorri a sinistra una notifica per segnarla come letta</>
+    : <><ChevronsRight size={14} className="text-brand" /> Scorri a destra una notifica per rimetterla da leggere</>
+  if (!testo) return null
+  return <p className="flex items-center gap-1.5 text-[11px] text-muted px-1 pb-1">{testo}</p>
 }
