@@ -77,12 +77,22 @@ Codice scritto e committato su `app` (`docs/memoria/messaggi.md`). Restano, in o
 
 ---
 
-## ⌚ Garmin — cosa resta (28/10/2026)
+## ⌚ Garmin — cosa resta (29/10/2026)
 
-Fase 0 (collegamento) scritta e committata su `app`, **non attiva**: `docs/memoria/garmin.md`.
-1. **I passi del committente**, in ordine in `docs/memoria/garmin.md`: verifica nel portale Garmin → Vault e secret (con `GARMIN_ATLETI_PROVA` = l'atleta di prova) → deploy delle due funzioni → portale Garmin → policy con `app:main` (su richiesta) → **sì e SQL, che è l'interruttore** → prova con un atleta dedicato → approvazione Garmin e `GARMIN_ATLETI_PROVA` svuotato → etichette e note per App Store.
-2. **Prima della Fase 1**: giro di recupero per gli avvisi di soft delete persi (pg_net senza nuovi tentativi) e registrazione orfana quando ci si ricollega con un altro account Garmin (`docs/memoria/garmin.md`, «Limiti accettati»).
-3. **Fase 1**: ricevere attività, recupero e giornate (e il backfill dei 30 giorni, rimandato dalla Fase 0). **Fase 2**: abbinare le attività ai workout e mostrarle. **Fase 3**: mandare i workout all'orologio (interruttore «Manda i workout all'orologio» + attivare i due trigger, oggi disattivati).
+Fasi 0 (collegamento), 1 (attività), 2 (recupero) e 3 (Corsa all'orologio) **attive in prova** e
+provate dal committente con l'atleta di prova: `docs/memoria/garmin.md`.
+1. **Verifica del recupero** (30/10): sonno e HRV della notte e i 30 giorni di storico in
+   `garmin_giornate`; se lo storico non arriva, log di `garmin-auth` al ricollegamento.
+2. **Uscire dalla prova**: *Partner Verification* nel portale Garmin («Run Tests», a endpoint
+   *HEALTH* aggiornati) → richiesta di produzione a Garmin → svuotare `GARMIN_ATLETI_PROVA` →
+   etichette privacy e note per il revisore nella versione App Store che porta Garmin (la 1.2.3?).
+   La policy va su `main` (`app:main`, solo su richiesta) prima di aprire a tutti.
+3. ⏸️ **Hyrox e Gym all'orologio: IN PAUSA** (decisione del committente, 29/10/2026). Hyrox non
+   esiste come categoria su Garmin: va pensato bene come tradurre EMOM, AMRAP, For Time a time
+   cap, ON/OFF e le serie Gym nei passi di Garmin. Si riprende con brainstorming → spec → piano.
+4. Piccole: un'attività cancellata su Connect resta da noi (il webhook non gestisce le
+   cancellazioni); la push «Registrato da Garmin» non è arrivata sull'app di Xcode (da capire se
+   arrivano le altre); «punteggio» del sonno da aggiungere alla policy (testo pubblico: serve un sì).
 
 ---
 
