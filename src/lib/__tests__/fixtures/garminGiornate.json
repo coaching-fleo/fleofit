@@ -1,0 +1,65 @@
+{
+  "dailies": [
+    {
+      "userId": "utente-garmin-finto-1",
+      "summaryId": "d-1",
+      "calendarDate": "2026-10-28",
+      "durationInSeconds": 86400,
+      "steps": 9120,
+      "activeKilocalories": 610,
+      "moderateIntensityDurationInSeconds": 1800,
+      "vigorousIntensityDurationInSeconds": 900,
+      "restingHeartRateInBeatsPerMinute": 52,
+      "averageStressLevel": 31,
+      "bodyBatteryChargedValue": 74,
+      "bodyBatteryDrainedValue": 61,
+      "timeOffsetHeartRateSamples": { "0": 60, "15": 61 }
+    },
+    {
+      "userId": "utente-garmin-finto-1",
+      "summaryId": "d-2",
+      "calendarDate": "2026-10-27",
+      "steps": 4000,
+      "averageStressLevel": -1
+    },
+    { "summaryId": "d-3", "calendarDate": "2026-10-26", "steps": 100 },
+    { "userId": "utente-garmin-finto-1", "summaryId": "d-4", "calendarDate": "28/10/2026", "steps": 100 }
+  ],
+  "sleeps": [
+    {
+      "userId": "utente-garmin-finto-1",
+      "summaryId": "s-1",
+      "calendarDate": "2026-10-28",
+      "durationInSeconds": 30600,
+      "deepSleepDurationInSeconds": 5400,
+      "lightSleepDurationInSeconds": 14400,
+      "remSleepInSeconds": 7200,
+      "awakeDurationInSeconds": 3600,
+      "overallSleepScore": { "value": 81, "qualifierKey": "GOOD" },
+      "sleepLevelsMap": { "deep": [{ "startTimeInSeconds": 1, "endTimeInSeconds": 2 }] },
+      "validation": "ENHANCED_FINAL"
+    },
+    {
+      "userId": "utente-garmin-finto-2",
+      "summaryId": "s-2",
+      "calendarDate": "2026-10-28",
+      "durationInSeconds": 25200
+    }
+  ],
+  "hrv": [
+    {
+      "userId": "utente-garmin-finto-1",
+      "summaryId": "h-1",
+      "calendarDate": "2026-10-28",
+      "lastNightAvg": 58,
+      "lastNight5MinHigh": 94,
+      "hrvValues": { "300": 55 }
+    }
+  ],
+  "bodyComps": [
+    { "userId": "utente-garmin-finto-1", "summaryId": "b-1", "calendarDate": "2026-10-28", "weightInGrams": 70000 }
+  ],
+  "stressDetails": [
+    { "userId": "utente-garmin-finto-1", "summaryId": "t-1", "calendarDate": "2026-10-28" }
+  ]
+}
