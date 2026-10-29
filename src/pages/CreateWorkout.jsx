@@ -3393,7 +3393,9 @@ function Costruttore() {
     // Un nome scritto resta com'è. Quello casuale si ricontrolla qui contro
     // TUTTI i workout salvati — chi sovrascrive non conta il proprio — e se è
     // già preso se ne sceglie un altro. Custom prende la data, numerata.
-    const scritto = (saveAsNew ? newWorkoutName : title).trim()
+    // In modifica il nome arriva dalla finestra di salvataggio, dove si può
+    // cambiare anche sovrascrivendo (richiesta del committente, 29/10/2026).
+    const scritto = (saveAsNew || editId ? newWorkoutName : title).trim()
     let finalTitle
     if (scritto) {
       finalTitle = unisciCodice(scritto, codice)
@@ -3978,6 +3980,18 @@ function Costruttore() {
             
             {!isSavingAsNew ? (
               <>
+                {/* Il nome si cambia anche qui: dal passo 2 l'unica strada era
+                    toccare il titolo in cima, e non lo trovava nessuno. */}
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[12px] font-bold text-muted uppercase tracking-[.08em]">Nome</span>
+                  <input
+                    aria-label="Nome al salvataggio"
+                    className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand w-full text-base"
+                    value={newWorkoutName}
+                    onChange={(e) => setNewWorkoutName(e.target.value)}
+                    placeholder={nomeAutomatico || 'Facoltativo'}
+                  />
+                </label>
                 <p className="text-gray-400 text-sm">Vuoi salvarlo come un allenamento nuovo o sovrascrivere quello esistente?</p>
                 {/* ⚠️ «Salva come nuovo» è il bottone pieno e sta SOPRA: è la
                     scelta che non tocca nessun altro. Prima il giallo era

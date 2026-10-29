@@ -14,7 +14,7 @@
 // esporta anche una costante perde il Fast Refresh per intero
 // (react-refresh/only-export-components, CLAUDE.md §9-octies punto 3).
 
-import { ChevronLeft, Copy, Wand2, Plus, Clock, ChevronRight, LayoutTemplate } from 'lucide-react'
+import { ChevronLeft, Copy, Wand2, Plus, Clock, ChevronRight, LayoutTemplate, Pencil } from 'lucide-react'
 import { CARD, LABEL, VETRO } from '../lib/stiliCard'
 import { useTastieraAperta, chiudiTastieraSuInvio } from '../useTastiera'
 import { vibraScelta } from '../lib/aptica'
@@ -50,7 +50,12 @@ export function TestataCrea({ passo, onIndietro, titolo, codice, sottotitolo, on
         <button type="button" onClick={onTitolo} disabled={!onTitolo}
           aria-label="Modifica nome e data"
           className="flex-1 min-w-0 text-left rounded-xl px-1 py-0.5 -mx-1 hover:bg-white/[.04] transition disabled:hover:bg-transparent">
-          <p className="text-base font-extrabold tracking-[-.02em] text-white truncate">{titolo}</p>
+          {/* La matita dice che il titolo si tocca: è da qui che si cambiano
+              nome e data, anche in modifica. */}
+          <p className="flex items-center gap-1.5 min-w-0">
+            <span className="text-base font-extrabold tracking-[-.02em] text-white truncate">{titolo}</span>
+            {onTitolo && <Pencil size={13} aria-hidden="true" className="shrink-0 text-[#8a8f9c]" />}
+          </p>
           {/* Il codice che finirà in coda al titolo, ricalcolato a ogni blocco.
               Monospazio e un tono sotto: è un'etichetta, non parte del nome. */}
           {codice && <p data-codice className="text-[11.5px] font-bold text-brand/80 tracking-[.02em] truncate mt-[1px]">{codice}</p>}

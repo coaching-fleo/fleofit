@@ -100,6 +100,22 @@ describe('la scelta al salvataggio', () => {
   })
 })
 
+describe('il nome in modifica', () => {
+  // 29/10/2026: il nome si cambiava solo toccando il titolo in cima, e non lo
+  // trovava nessuno. Ora c'è anche nella finestra di salvataggio.
+  it('si cambia nella finestra e sovrascrivendo finisce nel titolo', async () => {
+    await apri('/create?edit=w1')
+    await userEvent.click(screen.getByRole('button', { name: /Salva workout/ }))
+    const campo = screen.getByLabelText('Nome al salvataggio')
+    expect(campo).toHaveValue('Originale')
+    await userEvent.clear(campo)
+    await userEvent.type(campo, 'Rinominato')
+    await userEvent.click(screen.getByRole('button', { name: 'Sovrascrivi esistente' }))
+    await waitFor(() => expect(finto.chiamateA('workouts', 'update')).toHaveLength(1))
+    expect(finto.chiamateA('workouts', 'update')[0].args[0].title).toMatch(/^Rinominato/)
+  })
+})
+
 describe('entrando da un atleta', () => {
   it('sovrascrivere NON sposta la data del workout per tutti', async () => {
     await apri('/create?edit=w1&aw_id=aw1')
