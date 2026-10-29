@@ -27,6 +27,8 @@ async function collegamentoDi(admin: Admin, garminUserId: string) {
 
 /** Una sola voce. Lancia: chi chiama logga. */
 async function gestisci(admin: Admin, v: VoceGiornata): Promise<'salvata' | 'saltata'> {
+  // Un riepilogo senza nessuno dei campi che teniamo non deve riscrivere la colonna con `{}`.
+  if (!v.valore || Object.keys(v.valore).length === 0) return 'saltata';
   const coll = await collegamentoDi(admin, v.garmin_user_id);
   if (!coll) { console.warn('garmin-webhook: giornata di un utente Garmin sconosciuto, saltata'); return 'saltata'; }
 

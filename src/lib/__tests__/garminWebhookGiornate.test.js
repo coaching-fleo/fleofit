@@ -56,6 +56,13 @@ describe('gestisciGiornate', () => {
     }
   })
 
+  it('una voce senza nessun campo ({}) non riscrive la colonna: saltata, nessun upsert', async () => {
+    const { admin, upserts } = finto({ collegamenti: { g1: attivo('a1') }, atleti: { a1: { deleted_at: null } } })
+    await gestisciGiornate(admin, [voce('hrv', {}), voce('sonno', { ore: 7 })])
+    expect(upserts).toHaveLength(1)
+    expect(upserts[0].righe[0]).toHaveProperty('sonno')
+  })
+
   it.each([
     ['collegamento sospeso', attivo('a1', ['HEALTH_EXPORT'], 'sospeso')],
     ['senza HEALTH_EXPORT', attivo('a1', ['ACTIVITY_EXPORT'])],

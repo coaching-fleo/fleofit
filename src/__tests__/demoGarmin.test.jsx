@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { semi } from '../demoSemi'
-import { segnaliRecupero, serieRecupero } from '../lib/recuperoGarmin'
+import { render, screen } from '@testing-library/react'
+import { CardSmaltire } from '../components/CruscottoCoachUI'
+import { cosaGuardare } from '../lib/cosaGuardare'
+import { segnaliRecupero, serieRecupero, segnaliTeam } from '../lib/recuperoGarmin'
 import { righeDaGarmin, vociLibere } from '../lib/attivitaGarmin'
 
 // Le attività Garmin della demo (INVENTATE) servono a vedere, in
@@ -45,5 +48,15 @@ describe('le giornate Garmin della demo', () => {
     expect(tipi).toEqual(['fc', 'hrv', 'sonno'])
     expect(serieRecupero(righe).hrv.media).not.toBeNull()
   })
-})
 
+  it('«Da guardare» della Home coach con i segnali di Sara si disegna (telefono e desktop)', () => {
+    const sara = { id: 'at-sara', name: 'Sara', surname: 'Demo' }
+    const voci = cosaGuardare({ recupero: segnaliTeam([sara], righe) })
+    expect(voci).toHaveLength(3)
+    for (const compatto of [true, false]) {
+      const { unmount } = render(<CardSmaltire voci={voci} compatto={compatto} onApri={() => {}} />)
+      expect(screen.getAllByText('Recupero')).toHaveLength(3)
+      unmount()
+    }
+  })
+})

@@ -293,10 +293,13 @@ const PILLOLA = {
   feedback: { testo: 'Feedback', classe: 'bg-brand/[.14] text-brand' },
   fermo: { testo: 'Fermo', classe: 'bg-[#2a2a2a] text-gray-300' },
   scaduto: { testo: 'Scaduto', classe: 'bg-[#2a2a2a] text-gray-300' },
+  recupero: { testo: 'Recupero', classe: 'bg-[#2a2a2a] text-gray-300' },
 }
+// Un tipo che qui non c'è non deve mai buttare giù la Home: pillola neutra.
+const pillolaDi = (tipo) => PILLOLA[tipo] ?? { testo: 'Da vedere', classe: 'bg-[#2a2a2a] text-gray-300' }
 const coloreRpe = (v) => (v <= 3 ? 'text-green-400' : v <= 6 ? 'text-brand' : v <= 8 ? 'text-orange-400' : 'text-red-400')
 
-/** Feedback, fermi e scaduti in UNA lista (`cosaGuardare`): ogni voce apre la cosa giusta. */
+/** Feedback, recupero, fermi e scaduti in UNA lista (`cosaGuardare`): ogni voce apre la cosa giusta. */
 export function CardSmaltire({ voci = [], caricamento, compatto = false, mostrate = compatto ? 4 : 6, onApri }) {
   const [tutte, setTutte] = useState(false)
   const visibili = tutte ? voci : voci.slice(0, mostrate)
@@ -317,7 +320,7 @@ export function CardSmaltire({ voci = [], caricamento, compatto = false, mostrat
               aria-label={`${v.azione}: ${v.nome}`}
               className={`w-full flex items-center gap-3 py-3 text-left group ${i > 0 ? 'border-t border-[#2a2a2a]' : ''}`}>
               {compatto
-                ? <span className={`shrink-0 px-2 py-[3px] rounded-full text-[11px] font-extrabold ${PILLOLA[v.tipo].classe}`}>{PILLOLA[v.tipo].testo}</span>
+                ? <span className={`shrink-0 px-2 py-[3px] rounded-full text-[11px] font-extrabold ${pillolaDi(v.tipo).classe}`}>{pillolaDi(v.tipo).testo}</span>
                 : <Volto foto={v.foto} nome={v.nome} piccolo />}
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-bold text-white group-hover:text-brand transition truncate">
@@ -326,7 +329,7 @@ export function CardSmaltire({ voci = [], caricamento, compatto = false, mostrat
                 </span>
                 <span className={`block text-[13px] mt-0.5 truncate ${v.avviso && !compatto ? 'text-orange-400' : 'text-gray-400'}`}>{v.riga}</span>
               </span>
-              {!compatto && <span className={`shrink-0 px-2 py-[3px] rounded-full text-[11px] font-extrabold ${PILLOLA[v.tipo].classe}`}>{PILLOLA[v.tipo].testo}</span>}
+              {!compatto && <span className={`shrink-0 px-2 py-[3px] rounded-full text-[11px] font-extrabold ${pillolaDi(v.tipo).classe}`}>{pillolaDi(v.tipo).testo}</span>}
             </button>
           ))}
         </div>

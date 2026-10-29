@@ -128,3 +128,41 @@ describe('letture', () => {
     expect(ranges).toEqual([[0, 999], [1000, 1999]])
   })
 })
+
+describe('bordi: mezzanotte italiana e finestre', () => {
+  const hrvAl = (giorni, v) => giorni.map(i => ({ athlete_id: 'a1', giorno: giorno(i), hrv: { media_notte: v } }))
+  const intervallo = (da, a) => Array.from({ length: a - da + 1 }, (_, i) => da + i)
+
+  it('alle 23:30 UTC del 28 a Roma è già il 29: la serie finisce il 29 e il 27 non è «ieri»', () => {
+    const mezzanotte = new Date('2026-10-28T23:30:00Z')
+    const serie = serieRecupero(righe('sonno', [7]), mezzanotte)
+    expect(serie.sonno.punti[27].giorno).toBe('2026-10-29')
+    expect(serie.sonno.punti[0].giorno).toBe('2026-10-02')
+    // tre notti storte che finiscono il 27: per Roma è l'altro ieri, nessun segnale
+    expect(segnaliRecupero(righe('sonno', [5, 5, 5], 2), mezzanotte)).toEqual([])
+    // se finiscono il 28 (ieri per Roma) sì
+    expect(segnaliRecupero(righe('sonno', [5, 5, 5], 1), mezzanotte)).toHaveLength(1)
+  })
+
+  it('la serie copre esattamente 28 giorni: il 28° giorno fa sì, il 29° no', () => {
+    const punti = serieRecupero(hrvAl([27, 28], 60), OGGI).hrv.punti
+    expect(punti).toHaveLength(28)
+    expect(punti[0]).toEqual({ giorno: giorno(27), valore: 60 })
+    expect(punti.some(p => p.giorno === giorno(28))).toBe(false)
+  })
+
+  it('la media nasce a 14 valori, non a 13 (un 14° fuori finestra non conta)', () => {
+    expect(serieRecupero(hrvAl(intervallo(1, 14), 60), OGGI).hrv.media).toBe(60)
+    expect(serieRecupero(hrvAl(intervallo(1, 13), 60), OGGI).hrv.media).toBeNull()
+    expect(serieRecupero(hrvAl([...intervallo(1, 13), 28], 60), OGGI).hrv.media).toBeNull()
+  })
+
+  it('il riferimento del segnale guarda i 28 giorni prima della fila: 14 valori bastano, 13 no, il 29° giorno non conta', () => {
+    const fila = hrvAl([1, 2, 3], 40)
+    // la fila va dal giorno(3) al giorno(1): il riferimento è giorno(4)…giorno(31)
+    expect(tipi([...fila, ...hrvAl(intervallo(18, 31), 60)])).toEqual(['hrv'])
+    expect(tipi([...fila, ...hrvAl(intervallo(19, 31), 60)])).toEqual([])
+    expect(tipi([...fila, ...hrvAl([...intervallo(19, 31), 32], 60)])).toEqual([])
+    expect(tipi([...fila, ...hrvAl(intervallo(32, 45), 60)])).toEqual([])
+  })
+})

@@ -26,9 +26,10 @@ function Linea28({ punti, media, etichetta }) {
   const validi = punti.map(p => p.valore).filter(v => v != null)
   const min = Math.min(...validi, media ?? Infinity)
   const max = Math.max(...validi, media ?? -Infinity)
-  const scala = max === min ? 1 : max - min
+  const piatta = max === min
+  const scala = piatta ? 1 : max - min
   const x = (i) => M + (i * (L - 2 * M)) / (punti.length - 1)
-  const y = (v) => M + (1 - (v - min) / scala) * (A - 2 * M)
+  const y = (v) => (piatta ? A / 2 : M + (1 - (v - min) / scala) * (A - 2 * M))
   const tratti = []
   let cur = []
   punti.forEach((p, i) => {
@@ -63,7 +64,7 @@ export default function CardRecupero({ righe, oggi = new Date() }) {
             </div>
             <Linea28 punti={s.punti} media={s.media} etichetta={`${m.etichetta}, ultimi 28 giorni`} />
             <p className="text-[11px] font-semibold text-gray-500">
-              media 4 sett. <span data-media-testo className="text-gray-300">{s.media == null ? '—' : m.chiave === 'sonno' ? oreEMinuti(s.media) : decimale(s.media)}</span>
+              media 4 sett. <span data-media-testo className="text-gray-300">{s.media == null ? '—' : m.chiave === 'sonno' ? oreEMinuti(s.media) : decimale(s.media) + (m.chiave === 'hrv' ? ' ms' : ' bpm')}</span>
             </p>
           </div>
         ))}

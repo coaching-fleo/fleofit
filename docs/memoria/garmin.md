@@ -241,7 +241,7 @@ server `https://apis.garmin.com/wellness-api`), con la sessione del committente.
 | Card «Da Garmin» nella scheda, con «Non era questo allenamento» | `src/components/CardDaGarmin.jsx`, `WorkoutDetail.jsx` |
 | Le righe (card e foglio) e il foglio della voce grigia con «Abbina a…» | `RigheGarmin.jsx`, `FoglioAttivitaGarmin.jsx`; la voce in `CalendarioUI.jsx` |
 | Durata stimata del workout, scritta dal builder | `sections.durataStimata` (minuti), in `CreateWorkout.jsx` |
-| Semi dell'ambiente di prova (due attività INVENTATE per Sara) | `src/demoSemi.js` (`garmin_attivita`), `src/__tests__/demoGarmin.test.js` |
+| Semi dell'ambiente di prova (due attività INVENTATE per Sara) | `src/demoSemi.js` (`garmin_attivita`), `src/__tests__/demoGarmin.test.jsx` |
 
 ### Decisioni e costi
 - **Le regole stanno in `_shared/abbinaGarmin.ts`, non in `src/lib/`** (deviazione dal piano
@@ -440,8 +440,9 @@ Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
 | Backfill di 30 giorni dei quattro tipi al collegamento | `chiediBackfillGarmin` in `_shared/garmin.ts`, `urlBackfill` e `TipoBackfill` in `_shared/garminRegole.ts`, `chiediBackfill` di `garmin-auth` |
 | Segnali, serie a 28 giorni, letture | `src/lib/recuperoGarmin.js` |
 | Card «Recupero» (pigra, con `lazy()`) | `src/components/CardRecupero.jsx` |
-| I segnali in «Da guardare» | voce `recupero` di `cosaGuardare` |
-| Semi dell'ambiente di prova (38 giorni INVENTATI per Sara, ultime 3 notti storte fino a ieri) | `src/demoSemi.js` (`garmin_giornate`), `src/__tests__/demoGarmin.test.js` |
+| I segnali in «Da guardare» | voce `recupero` di `cosaGuardare`; ⚠️ ogni `tipo` di voce vuole la sua pillola in `PILLOLA` di `CruscottoCoachUI` (senza, la Home coach andava in bianco: corretto il 29/10, ora c'è un ripiego neutro) |
+| Il cablaggio nelle pagine | `Home.jsx` (`leggiGiornateFra` 31 giorni + `segnaliTeam`) · `AthleteDetail.jsx` (28 giorni, `pRecupero`; `giornate` si svuota al cambio di atleta) |
+| Semi dell'ambiente di prova (38 giorni INVENTATI per Sara, ultime 3 notti storte fino a ieri) | `src/demoSemi.js` (`garmin_giornate`), `src/__tests__/demoGarmin.test.jsx` |
 
 ### Formato verificato (Swagger del portale, 29/10/2026)
 - `ClientDaily`: `userId`, `summaryId`, `calendarDate` (`yyyy-MM-dd`), `steps`, `activeKilocalories`, `moderateIntensityDurationInSeconds`, `vigorousIntensityDurationInSeconds`, `restingHeartRateInBeatsPerMinute`, `averageStressLevel`, `bodyBatteryChargedValue`, `bodyBatteryDrainedValue`, `durationInSeconds`.
@@ -455,7 +456,8 @@ Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
 - **Giorno** = `calendarDate` di Garmin, così com'è (è già il giorno locale dell'atleta; per il sonno è il giorno del risveglio).
 - **Ore di sonno** = `deep + light + rem` (secondi → ore); se sono tutti assenti, `durationInSeconds`. Il sonno sveglio non conta.
 - **Più invii dello stesso giorno**: vince l'ultimo arrivato per quella colonna (Garmin rimanda la giornata man mano che si riempie); ogni invio tocca solo la sua colonna.
-- **Finestra del riferimento**: i 28 giorni **prima** dei 3 giorni del segnale (il calo non abbassa la sua stessa media). Con meno di 14 valori: niente segnale e «—».
+- **Finestra del riferimento**: i 28 giorni **prima della fila** di giorni storti (il calo non abbassa la sua stessa media). Con meno di 14 valori: niente segnale e «—». ⚠️ La «media 4 sett.» della card è invece sui 28 giorni mostrati, notti storte comprese: è un po' più bassa del riferimento del segnale (1–2% per un calo di 3 giorni). In Home la lettura è di 31 giorni: per file lunghe il riferimento si accorcia (ne servono comunque 14).
+- **Voce vuota**: un riepilogo senza nessun campo che teniamo (`{}`) non riscrive la colonna, è «saltata».
 - **«Di fila»**: 3 giorni consecutivi che finiscono nell'ultimo giorno con un dato, e quell'ultimo giorno è **oggi o ieri**; un giorno senza dato rompe la fila. Se la fila è più lunga, il testo dice quanti giorni (fino a 14).
 - **Soglie**: HRV oltre il 10% sotto la media; FC a riposo oltre 5 battiti sopra; sonno sotto 6 ore (soglia fissa, senza riferimento).
 - **Si salva solo** con collegamento `attivo` e permesso `HEALTH_EXPORT`. Atleta eliminato → `scollegaAtleta`. Solo i campi elencati, nient'altro dal payload.

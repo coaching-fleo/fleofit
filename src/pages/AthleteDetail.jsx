@@ -89,11 +89,12 @@ export default function AthleteDetail() {
   // Garmin · Recupero: le giornate degli ultimi 28 giorni di chi è mostrato. Un errore dà [].
   const [giornate, setGiornate] = useState([])
   useEffect(() => {
+    setGiornate([]) // mai i dati dell'atleta di prima
     if (!id) return undefined
     let vivo = true
     const a = oggiItalia()
     const da = new Date(Date.parse(`${a}T00:00:00Z`) - 27 * 86400000).toISOString().slice(0, 10)
-    leggiGiornate(supabase, id, da, a).then(r => { if (vivo) setGiornate(r || []) }).catch(() => {})
+    leggiGiornate(supabase, id, da, a).then(r => { if (vivo) setGiornate(r || []) }).catch(() => { if (vivo) setGiornate([]) })
     return () => { vivo = false }
   }, [id])
   // Le tre tab sono diventate due sezioni che si aprono in pagina, più un menu
