@@ -9,7 +9,7 @@ import { haIncremento, testoAumento } from '../lib/incremento'
 import { coloreCategoria } from '../lib/colori'
 import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
-import { esercizioInCorso } from '../lib/esercizioInCorso'
+import { esercizioInCorso, esercizioInArrivo } from '../lib/esercizioInCorso'
 import { personePerEsercizio, bloccoAScaglioni } from '../lib/personeTV'
 import { buildTimerSequence } from '../lib/timerSequence'
 import { statoTV, beepTV } from '../lib/avanzaTimer'
@@ -394,9 +394,20 @@ export default function TVDashboard() {
     const persone = timerState && Array.isArray(timerState.persone) && timerState.persone.length > 0
       ? timerState.persone : null
     // Il blocco su cui stanno le persone: quello in corso, o il prossimo a scaglioni.
+    // Nel riposo di un ON/OFF restano qui, sull'esercizio che viene dopo; solo
+    // dopo l'ultimo riposo del blocco passano al prossimo EMOM o ON/OFF.
+    const idStep = statoMostrato?.step?.id
+    const bloccoAttivo = blocks[activeIdx]
+    const attivoFinito = !!persone && !!bloccoAttivo && bloccoAScaglioni(bloccoAttivo)
+      && esercizioInCorso(bloccoAttivo, activeIdx, idStep) == null
+      && esercizioInArrivo(bloccoAttivo, activeIdx, idStep) == null
     const bloccoPersone = persone
-      ? blocks.findIndex((b, i) => i >= activeIdx && bloccoAScaglioni(b))
+      ? blocks.findIndex((b, i) => (attivoFinito ? i > activeIdx : i >= activeIdx) && bloccoAScaglioni(b))
       : -1
+
+    // Con più persone il compito del timer («Wall Balls») vale per una sola:
+    // nel blocco a scaglioni la fascia rimanda ai colori delle righe.
+    const inGruppo = bloccoPersone >= 0 && bloccoPersone === activeIdx
 
     const etichettaCategoria = category === 'Event' ? 'Gara / Evento'
       : category === 'Custom' ? 'Allenamento libero'
@@ -423,8 +434,8 @@ export default function TVDashboard() {
               <TimerTV
                 titolo={passo?.title}
                 sottotitolo={passo?.subtitle}
-                compito={passo?.task}
-                poi={passo?.nextTask}
+                compito={inGruppo ? (passo?.type === 'rest' ? 'Riposo · poi al tuo colore' : 'Ognuno al suo colore') : passo?.task}
+                poi={inGruppo ? null : passo?.nextTask}
                 tempo={lastTimerState ? formatT(lastTimerState.timeLeft) : '0:00'}
                 avanzamento={avanzamento}
                 tema={passo?.theme}
@@ -455,11 +466,14 @@ export default function TVDashboard() {
                   const durata = mmss(durataBlocco(block))
                   // EMOM e ON/OFF: l'esercizio che sta girando, letto dall'id dello step.
                   const corrente = statoMostrato ? esercizioInCorso(block, idx, statoMostrato.step?.id) : null
-                  // Con le persone, il blocco in corso colora ogni riga di chi ci sta sopra;
-                  // prima del via (preparazione, riscaldamento) il prossimo EMOM o ON/OFF
-                  // mostra già da dove parte ognuno.
-                  const chiDove = persone && idx === bloccoPersone
-                    ? personePerEsercizio(idx === activeIdx ? corrente : 0, esercizi.length, persone) : null
+                  // Con le persone, il blocco in corso colora ogni riga di chi ci sta sopra.
+                  // Nel riposo e prima del via (preparazione, riscaldamento, Rest) le righe
+                  // dicono invece dove andrà ognuno, «in arrivo».
+                  const arrivo = idx === activeIdx ? esercizioInArrivo(block, idx, idStep) : null
+                  const posizione = idx !== activeIdx ? 0 : corrente ?? arrivo
+                  const inArrivo = idx !== activeIdx || corrente == null
+                  const chiDove = persone && idx === bloccoPersone && posizione != null
+                    ? personePerEsercizio(posizione, esercizi.length, persone) : null
                   return (
                     <BloccoTV key={block.id || idx}
                       tipo={block.type}
@@ -480,7 +494,8 @@ export default function TVDashboard() {
                           intensita={ex.intensity}
                           classeIntensita={getIntensityColor(ex.intensity)}
                           attivo={i === corrente}
-                          persone={chiDove ? chiDove[i] : null} />
+                          persone={chiDove ? chiDove[i] : null}
+                          inArrivo={inArrivo} />
                       ))}
                     </BloccoTV>
                   )

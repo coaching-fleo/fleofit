@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { esercizioInCorso } from '../esercizioInCorso'
+import { esercizioInCorso, esercizioInArrivo } from '../esercizioInCorso'
 import { buildTimerSequence } from '../timerSequence'
 
 const emom = {
@@ -38,5 +38,29 @@ describe('esercizioInCorso', () => {
     expect(emomSteps).toEqual([0, 1, 2, 0, 1]) // 7 round: a · b b · c · a · b b
     const onSteps = seq.filter(s => s.title === 'WORK (ON)').map(s => esercizioInCorso(onoff, 2, s.id))
     expect(onSteps).toEqual([0, 1, 0, 1])
+  })
+})
+
+describe('esercizioInArrivo', () => {
+  const tre = { ...onoff, exercises: [{ name: 'Row' }, { name: 'Lunges' }, { name: 'Burpees' }] }
+
+  it('nell’OFF dice l’esercizio dopo, e a fine giro riparte dal primo', () => {
+    expect(esercizioInArrivo(tre, 0, 'blk-0-1-0-off')).toBe(1)
+    expect(esercizioInArrivo(tre, 0, 'blk-0-1-2-off')).toBe(0)
+  })
+
+  it('dopo l’ultimo OFF dell’ultimo giro non c’è niente', () => {
+    expect(esercizioInArrivo(tre, 0, 'blk-0-2-2-off')).toBe(null)
+  })
+
+  it('nell’ON, su un altro blocco o su un EMOM non risponde', () => {
+    expect(esercizioInArrivo(tre, 0, 'blk-0-1-0-on')).toBe(null)
+    expect(esercizioInArrivo(tre, 1, 'blk-0-1-0-off')).toBe(null)
+    expect(esercizioInArrivo(emom, 1, 'blk-1-1')).toBe(null)
+  })
+
+  it('segue gli id veri del timer', () => {
+    const seq = buildTimerSequence({ sections: { blocks: [tre] } }).filter(s => s.id.endsWith('-off'))
+    expect(seq.map(s => esercizioInArrivo(tre, 0, s.id))).toEqual([1, 2, 0, 1, 2, null])
   })
 })

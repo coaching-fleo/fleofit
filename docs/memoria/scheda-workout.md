@@ -545,8 +545,17 @@ calcola l'app).
   dopo con le stesse persone). Per questo **non** stanno in localStorage.
 - **Viaggio**: dentro il `timer_state` che il telefono già manda (`persone`). Nessuna tabella,
   nessuna colonna.
-- **Prima del via** (preparazione, riscaldamento) la TV mostra già, sul prossimo EMOM/ON-OFF,
-  da dove parte ognuno: così il gruppo sa dove mettersi.
+- **«In arrivo»** (30/10/2026, segnalato dal committente: «sul riposo spariscono le persone»).
+  Nell'OFF di un ON/OFF nessuno lavora, ma spegnere tutto lasciava il gruppo a chiedersi cosa
+  fare dopo. Ora nel riposo ogni riga mostra chi ci andrà (`esercizioInArrivo` di
+  `esercizioInCorso.js`: l'esercizio dopo, a fine giro il primo, `null` dopo l'ultimo OFF del
+  blocco), con il disegno «in arrivo»: bordo **tratteggiato**, niente alone, numero vuoto,
+  pillole a contorno e «POI» davanti. Al lavoro torna pieno con l'alone. Stesso disegno prima
+  del via (preparazione, riscaldamento, Rest fra i blocchi) sul prossimo EMOM/ON-OFF, così il
+  gruppo sa dove mettersi. Dopo l'ultimo OFF le persone passano al prossimo blocco a scaglioni.
+- Con le persone, nel blocco a scaglioni la **fascia del timer** non scrive più l'esercizio
+  del telefono («Wall Balls» vale per una persona sola): «Ognuno al suo colore» al lavoro,
+  «Riposo · poi al tuo colore» nel riposo, e niente «Poi».
 - **TV**: leggenda sotto la fascia del timer; nel blocco in corso ogni riga prende il colore
   di chi ci sta sopra (bordo, fondo, numero, pillole con i nomi), al posto dell'ambra. Chi è
   dove lo calcola `personePerEsercizio` di `src/lib/personeTV.js` partendo dall'esercizio che

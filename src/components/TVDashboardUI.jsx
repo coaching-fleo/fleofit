@@ -315,26 +315,28 @@ const RIGA_TV = 'rounded-[28px] bg-white/[.035] border-2 border-white/[.06] shad
  * sotto e l'intensità in coda. `numero` è il minuto di un EMOM (anche «2–3»,
  * src/lib/stazioniEmom.js): `min-w` e non `w`, così il cerchio si allunga.
  */
-export function EsercizioTV({ numero, nome, specifiche, note, intensita, classeIntensita, attivo = false, persone = null }) {
+export function EsercizioTV({ numero, nome, specifiche, note, intensita, classeIntensita, attivo = false, persone = null, inArrivo = false }) {
   // `attivo`: l'esercizio che sta girando in un EMOM o nell'ON di un ON/OFF
   // (src/lib/esercizioInCorso.js). Bordo e fondo ambra, numero pieno: dentro un
   // blocco già acceso è l'unica riga gialla.
   // `persone`: con più persone sfasate (src/lib/personeTV.js) la riga prende il
   // colore di chi ci sta sopra, al posto dell'ambra, e i loro nomi in coda.
+  // `inArrivo`: nel riposo e prima del via la riga dice dove andrà ognuno — bordo
+  // tratteggiato, niente alone, «POI» davanti ai nomi: si legge come «prossimo»,
+  // non come «adesso».
   if (persone) {
     const colore = persone[0]?.colore
+    const stile = !colore ? undefined : inArrivo
+      ? { borderColor: colore, borderStyle: 'dashed', background: `${colore}14` }
+      : { borderColor: colore, background: `${colore}33`, boxShadow: `0 0 60px -6px ${colore}99` }
     return (
       <div className={`flex items-center gap-6 px-7 py-5 transition-all duration-500 ${colore ? 'rounded-[28px] border-[3px]' : RIGA_TV}`}
-        style={colore ? {
-          borderColor: colore,
-          background: `${colore}33`,
-          boxShadow: `0 0 60px -6px ${colore}99`,
-        } : undefined}>
+        style={stile}>
         {numero != null && (
           <span aria-hidden="true"
             className={`shrink-0 min-w-[58px] h-[58px] px-3 rounded-full border-2 flex items-center justify-center
-                       text-[26px] font-extrabold tabular-nums whitespace-nowrap ${colore ? 'text-black' : 'bg-white/[.06] border-white/15 text-gray-200'}`}
-            style={colore ? { background: colore, borderColor: colore } : undefined}>
+                       text-[26px] font-extrabold tabular-nums whitespace-nowrap ${colore && !inArrivo ? 'text-black' : 'bg-white/[.06] border-white/15 text-gray-200'}`}
+            style={colore ? (inArrivo ? { borderColor: colore, color: colore } : { background: colore, borderColor: colore }) : undefined}>
             {numero}
           </span>
         )}
@@ -346,11 +348,14 @@ export function EsercizioTV({ numero, nome, specifiche, note, intensita, classeI
           {note && <p className="mt-1.5 text-[24px] text-muted text-pretty break-words">{note}</p>}
         </div>
         {persone.length > 0 && (
-          <div className="shrink-0 flex flex-wrap justify-end gap-2.5 max-w-[45%]">
+          <div className="shrink-0 flex flex-wrap items-center justify-end gap-2.5 max-w-[50%]">
+            {inArrivo && (
+              <span className="text-[22px] font-extrabold uppercase tracking-[.14em] text-gray-300 mr-1">Poi</span>
+            )}
             {persone.map(p => (
               <span key={p.id ?? p.nome}
-                className="px-4 h-[52px] rounded-full flex items-center text-[26px] font-black text-black whitespace-nowrap"
-                style={{ background: p.colore }}>
+                className={`px-4 h-[52px] rounded-full flex items-center text-[26px] font-black whitespace-nowrap ${inArrivo ? 'border-[3px]' : 'text-black'}`}
+                style={inArrivo ? { borderColor: p.colore, color: p.colore, background: '#0b0b0b' } : { background: p.colore }}>
                 {p.nome}
               </span>
             ))}

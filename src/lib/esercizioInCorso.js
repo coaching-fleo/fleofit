@@ -42,3 +42,23 @@ export const esercizioInCorso = (block, indiceBlocco, stepId) => {
 
   return null
 }
+
+/**
+ * Nell'OFF di un ON/OFF: l'esercizio che viene DOPO il riposo, o `null` (non è
+ * un OFF, o è l'ultimo del blocco). Serve alla TV con più persone (30/10/2026):
+ * nel riposo nessuno lavora, ma ognuno deve vedere dove andare — spegnere tutto
+ * lasciava il gruppo a chiedersi «e adesso cosa faccio?».
+ */
+export const esercizioInArrivo = (block, indiceBlocco, stepId) => {
+  if (!block || block.type !== 'ON/OFF' || typeof stepId !== 'string') return null
+  const parti = stepId.split('-')
+  if (parti[0] !== 'blk' || parseInt(parti[1], 10) !== indiceBlocco || parti[4] !== 'off') return null
+  const n = (block.exercises || []).length
+  const giro = parseInt(parti[2], 10)
+  const k = parseInt(parti[3], 10)
+  if (!n || !Number.isFinite(giro) || !Number.isFinite(k)) return null
+  if (k + 1 < n) return k + 1
+  // Finito il giro si riparte dal primo, a meno che fosse l'ultimo giro.
+  const giri = parseInt(block.params?.rounds, 10) || 10
+  return giro < giri ? 0 : null
+}
