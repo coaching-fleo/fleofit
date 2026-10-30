@@ -525,14 +525,20 @@ Richiesta del committente: allenamenti in contemporanea a più persone, in un EM
 ON/OFF, fatte partire su esercizi diversi. Lo spostamento **lo sceglie il coach** (non lo
 calcola l'app).
 - **Telefono**: col telecomando TV attivo il timer mostra la pillola «Persone sulla TV»
-  (solo se il workout ha un EMOM o un ON/OFF con più di un esercizio). Apre il foglio
-  **«Chi parte da dove»** (`FoglioPersoneTV`), ridisegnato il 30/10/2026 dopo la prima prova:
-  si lavora sugli **esercizi**, come li vede la TV (quelli dell'EMOM/ON-OFF più lungo,
-  `bloccoPerPersone`). Si tocca un esercizio → ci compare una persona (A, B, C…, colore fisso);
-  si tocca una persona → la si sposta toccando un'altra riga (anelli tratteggiati del suo
-  colore), le si dà un nome o la si toglie. «Togli tutti» in fondo. Niente «Salva»: vale subito.
-  🔴 Scartato dal committente il primo disegno (lista di persone, «dal 2°» con −/+, «Aggiungi
-  persona» + «Fatto»): costringeva a tradurre posizioni in numeri. Non tornarci.
+  (solo se il workout ha un EMOM o un ON/OFF con più di un esercizio). Apre `FoglioPersoneTV`,
+  in **due passi, prima le persone e poi la partenza** (terzo disegno, 30/10/2026, voluto così
+  dal committente): l'elenco delle persone (pallino col colore e l'iniziale, nome, «Parte da
+  SkiErg») con «Aggiungi persona» in fondo; toccando una persona — o appena aggiunta — si apre
+  la sua scheda: nome, colore (otto, quelli già presi spenti), **«Parte da»** come elenco degli
+  esercizi per nome (quelli dell'EMOM/ON-OFF più lungo, `bloccoPerPersone`) con chi altro parte
+  da lì; in fondo «Togli» e **«Fatto»** (giallo: conferma e torna all'elenco — senza, una
+  persona appena creata si chiudeva solo con «Indietro», segnalato dal committente). Ogni
+  modifica vale subito sulla TV.
+  Una persona nuova parte dal primo esercizio ancora libero e prende la lettera del suo posto,
+  saltando quelle usate (con «Marco» già in lista la seconda è B, non A).
+  🔴 **Due disegni scartati dal committente, non tornarci**: (1) lista di persone con «dal 2°» e
+  −/+ e «Aggiungi persona» + «Fatto» (numeri al posto degli esercizi); (2) «tocca l'esercizio
+  per metterci una persona» (partiva dagli esercizi, il coach pensa prima alle persone).
 - **Memoria**: le persone restano **finché l'app è aperta**, workout per workout
   (`personeRicordate`/`ricordaPersone`, una `Map` in memoria in `personeTV.js`); chiusa l'app
   spariscono (richiesta del committente: un allenamento di gruppo non si ripete la settimana

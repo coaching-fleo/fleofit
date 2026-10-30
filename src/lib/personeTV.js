@@ -17,6 +17,15 @@ export const MAX_PERSONE = COLORI_PERSONE.length
 const coloreLibero = (persone) =>
   COLORI_PERSONE.find(c => !persone.some(p => p.colore === c)) || COLORI_PERSONE[persone.length % COLORI_PERSONE.length]
 
+const LETTERE = 'ABCDEFGH'
+const letteraLibera = (persone) => {
+  for (let k = 0; k < LETTERE.length; k++) {
+    const l = LETTERE[(persone.length + k) % LETTERE.length]
+    if (!persone.some(p => p.nome === l)) return l
+  }
+  return LETTERE[persone.length % LETTERE.length]
+}
+
 /**
  * Aggiunge una persona in coda: nome «A», «B»… e il primo colore libero. Parte
  * dall'esercizio dopo quello dell'ultima, così la scelta più comune (uno per
@@ -28,7 +37,9 @@ export const aggiungiPersona = (persone, maxEsercizi = 1) => {
   const partenza = ultima ? (ultima.partenza % Math.max(1, maxEsercizi)) + 1 : 1
   return [...persone, {
     id: Math.random(),
-    nome: String.fromCharCode(65 + persone.length),
+    // La lettera del suo posto (la terza è C), saltando quelle già usate: con
+    // «Marco» e «A» nella lista, la nuova non è una seconda A.
+    nome: letteraLibera(persone),
     colore: coloreLibero(persone),
     partenza,
   }]

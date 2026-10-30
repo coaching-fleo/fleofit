@@ -43,6 +43,12 @@ describe('aggiungiPersona', () => {
     expect(new Set(p.map(x => x.colore)).size).toBe(4)
   })
 
+  it('dà la lettera del posto, saltando quelle già usate', () => {
+    expect(aggiungiPersona([{ nome: 'Marco', colore: '#38bdf8' }], 4)[1].nome).toBe('B')
+    expect(aggiungiPersona([{ nome: 'Marco' }, { nome: 'B' }], 4)[2].nome).toBe('C')
+    expect(aggiungiPersona([{ nome: 'C' }, { nome: 'B' }], 4)[2].nome).toBe('D')
+  })
+
   it('non va oltre il numero di colori', () => {
     let p = []
     for (let i = 0; i < MAX_PERSONE + 3; i++) p = aggiungiPersona(p, 4)
