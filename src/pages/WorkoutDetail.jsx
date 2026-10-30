@@ -49,6 +49,8 @@ import { avanzaSequenza } from '../lib/avanzaTimer'
 import { suonaSopraLaMusica, ripristinaSessioneAudio } from '../lib/sessioneAudio'
 import { liveActivityDaChiedere, liveActivityAttiva, salvaPreferenzaLiveActivity, statoLiveActivity, programmaLiveActivity, avviaLiveActivity, aggiornaLiveActivity, chiudiLiveActivity } from '../lib/liveActivity'
 import FoglioLiveActivity from '../components/FoglioLiveActivity'
+import FoglioPersoneTV from '../components/FoglioPersoneTV'
+import { eserciziMassimi } from '../lib/personeTV'
 import { BRAND, RUNNING, GYM, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
@@ -347,6 +349,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [timerOpen, setTimerOpen] = useState(false)
   const [timerMinimized, setTimerMinimized] = useState(false)
   const [timerSequence, setTimerSequence] = useState([])
+  // Le persone sfasate sul telecomando TV (src/lib/personeTV.js): restano
+  // finché si sta sulla scheda, anche chiudendo e riaprendo il timer.
+  const [personeTV, setPersoneTV] = useState([])
+  const eserciziPerPersone = useMemo(() => (workout ? eserciziMassimi(getNormalizedBlocks(workout)) : 0), [workout])
   // La domanda sulla Live Activity: una volta sola, all'apertura del timer o del telecomando.
   const [domandaLiveActivity, setDomandaLiveActivity] = useState(false)
 
@@ -2586,6 +2592,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             setTimerMinimized(false);
           }}
           tvCode={connectedTvCode}
+          persone={personeTV}
+          onPersone={setPersoneTV}
+          eserciziPerPersone={eserciziPerPersone}
           isMinimized={timerMinimized}
           onMinimize={() => setTimerMinimized(true)}
           onMaximize={() => setTimerMinimized(false)}
@@ -2651,7 +2660,7 @@ const SCHEMES = {
   custom: { bg: 'bg-[#0B0B0B]', text: 'text-custom', sub: 'text-custom/80', card: 'bg-[#1e1e1e] border-custom/20 text-custom', cardLabel: 'text-custom/60', icon: 'text-gray-400', btnBg: 'bg-custom text-white' }
 }
 
-function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle, coloreCategoria: coloreLA = BRAND, categoriaLiveActivity = 'HYROX' }) {
+function WorkoutTimer({ sequence, onClose, tvCode, persone = [], onPersone, eserciziPerPersone = 0, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle, coloreCategoria: coloreLA = BRAND, categoriaLiveActivity = 'HYROX' }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(sequence[0]?.duration || 0);
   const [isRunning, setIsRunning] = useState(false);
@@ -2669,6 +2678,7 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
   const tvChannelRef = useRef(null);
   const tvJoinedRef = useRef(false);
   const [tvJoined, setTvJoined] = useState(false);
+  const [personeAperto, setPersoneAperto] = useState(false);
   const [reaction, setReaction] = useState(null);
   const [reactionType, setReactionType] = useState(null);
   const [reactionVisible, setReactionVisible] = useState(false);
@@ -2779,7 +2789,8 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
       tvChannelRef.current.send({
         type: 'broadcast',
         event: 'timer_state',
-        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx] }
+        // `persone`: chi fa l'allenamento insieme e da dove parte (src/lib/personeTV.js).
+        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx], persone }
       }).catch(()=>{});
     }
     if (liveChannelRef.current) {
@@ -2789,7 +2800,7 @@ function WorkoutTimer({ sequence, onClose, tvCode, isMinimized, onMinimize, onMa
         payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx] }
       }).catch(()=>{});
     }
-  }, [currentIdx, timeLeft, isRunning, sequence, tvJoined, athleteWorkoutId]);
+  }, [currentIdx, timeLeft, isRunning, sequence, tvJoined, athleteWorkoutId, persone]);
 
   // La Live Activity (blocco schermo e Dynamic Island, solo iPhone, se l'atleta
   // l'ha attivata). Parte al primo «Avvia» e si aggiorna solo quando cambia il
@@ -3129,6 +3140,25 @@ return createPortal(
             )}
           </div>
         </div>
+
+        {/* Telecomando TV: chi fa l'allenamento insieme e da dove parte (src/lib/personeTV.js). */}
+        {tvCode && eserciziPerPersone > 1 && onPersone && (
+          <div className="flex justify-center shrink-0">
+            <button onClick={() => setPersoneAperto(true)}
+              className={`h-11 px-5 rounded-full flex items-center gap-2.5 backdrop-blur-md font-bold text-sm ${currentTheme.card}`}>
+              <Users size={18} />
+              {persone.length > 0 ? (
+                <span className="flex items-center gap-1.5">
+                  {persone.map(p => <span key={p.id} aria-hidden="true" className="w-3 h-3 rounded-full" style={{ background: p.colore }} />)}
+                </span>
+              ) : 'Persone sulla TV'}
+            </button>
+          </div>
+        )}
+        {personeAperto && (
+          <FoglioPersoneTV persone={persone} maxEsercizi={eserciziPerPersone}
+            onCambia={onPersone} onChiudi={() => setPersoneAperto(false)} />
+        )}
 
         <div className="p-8 pb-16 flex items-center justify-center gap-6 shrink-0">
           <button aria-label="Passaggio precedente" onClick={handlePrev} disabled={currentIdx === 0} className={`w-16 h-16 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md disabled:opacity-30 ${currentTheme.icon}`}><StepBack size={28} /></button>

@@ -10,11 +10,12 @@ import { coloreCategoria } from '../lib/colori'
 import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { esercizioInCorso } from '../lib/esercizioInCorso'
+import { personePerEsercizio, bloccoAScaglioni } from '../lib/personeTV'
 import { buildTimerSequence } from '../lib/timerSequence'
 import { statoTV, beepTV } from '../lib/avanzaTimer'
 import {
   AttesaTV, CaricamentoTV, ErroreTV, TestataTV, TimerTV, BloccoTV, EsercizioTV,
-  NotaBloccoTV, CorsaTV, CartaCorsaTV, NotaCoachTV,
+  NotaBloccoTV, CorsaTV, CartaCorsaTV, NotaCoachTV, LeggendaTV,
 } from '../components/TVDashboardUI'
 
 // --- AUDIO GENERATOR HELPER ---
@@ -388,6 +389,10 @@ export default function TVDashboard() {
     const avanzamento = passo?.duration > 0 && lastTimerState
       ? (passo.duration - lastTimerState.timeLeft) / passo.duration
       : null
+    // Più persone sfasate sullo stesso timer: arrivano dal telefono insieme al
+    // `timer_state` (src/lib/personeTV.js). Senza, resta la riga ambra di sempre.
+    const persone = timerState && Array.isArray(timerState.persone) && timerState.persone.length > 0
+      ? timerState.persone : null
     const etichettaCategoria = category === 'Event' ? 'Gara / Evento'
       : category === 'Custom' ? 'Allenamento libero'
       : isRunning ? 'Allenamento di corsa'
@@ -421,6 +426,7 @@ export default function TVDashboard() {
                 inPausa={!!lastTimerState && !lastTimerState.isRunning && passo?.type !== 'done'}
                 stretto={rotated}
               />
+              {persone && <div className="mt-6"><LeggendaTV persone={persone} /></div>}
             </div>
           </div>
         </div>
@@ -444,6 +450,9 @@ export default function TVDashboard() {
                   const durata = mmss(durataBlocco(block))
                   // EMOM e ON/OFF: l'esercizio che sta girando, letto dall'id dello step.
                   const corrente = statoMostrato ? esercizioInCorso(block, idx, statoMostrato.step?.id) : null
+                  // Con le persone, il blocco in corso colora ogni riga di chi ci sta sopra.
+                  const chiDove = persone && idx === activeIdx && bloccoAScaglioni(block)
+                    ? personePerEsercizio(corrente, esercizi.length, persone) : null
                   return (
                     <BloccoTV key={block.id || idx}
                       tipo={block.type}
@@ -463,7 +472,8 @@ export default function TVDashboard() {
                           note={ex.notes}
                           intensita={ex.intensity}
                           classeIntensita={getIntensityColor(ex.intensity)}
-                          attivo={i === corrente} />
+                          attivo={i === corrente}
+                          persone={chiDove ? chiDove[i] : null} />
                       ))}
                     </BloccoTV>
                   )

@@ -520,6 +520,33 @@ committente: «non toccare il codice per il timer».
   (Hyrox con EMOM in corso, corsa in pausa, verticale). **Non provato su una TV vera.**
 - Non fatto, come prima: la TV non mostra i gruppi Gym (`crea-workout.md`, 9-gym punto 8).
 
+## 9-tv-persone. Più persone sfasate sulla TV, ognuna col suo colore (30/10/2026)
+Richiesta del committente: allenamenti in contemporanea a più persone, in un EMOM o in un
+ON/OFF, fatte partire su esercizi diversi. Lo spostamento **lo sceglie il coach** (non lo
+calcola l'app).
+- **Telefono**: col telecomando TV attivo il timer mostra la pillola «Persone sulla TV»
+  (solo se il workout ha un EMOM o un ON/OFF con più di un esercizio). Apre
+  `FoglioPersoneTV`: nome (A, B, C… modificabile), colore fisso, «dal N° esercizio» con − / +.
+  Le persone vivono nello stato di `WorkoutDetail` (`personeTV`): restano chiudendo e
+  riaprendo il timer, si perdono uscendo dalla scheda.
+- **Viaggio**: dentro il `timer_state` che il telefono già manda (`persone`). Nessuna tabella,
+  nessuna colonna.
+- **TV**: leggenda sotto la fascia del timer; nel blocco in corso ogni riga prende il colore
+  di chi ci sta sopra (bordo, fondo, numero, pillole con i nomi), al posto dell'ambra. Chi è
+  dove lo calcola `personePerEsercizio` di `src/lib/personeTV.js` partendo dall'esercizio che
+  accende `esercizioInCorso`: a ogni minuto (EMOM) o a ogni ON tutti avanzano di uno, e il giro
+  ricomincia. Nell'OFF nessuna riga è colorata.
+- ⚠️ Lo spostamento è **in esercizi**, non in minuti: in un EMOM con stazioni su più minuti
+  (`intervals`, 9-stazioni-emom) chi parte su una stazione da due minuti non resta allineato.
+  Accettato: con stazioni di lunghezza diversa non si possono far ruotare tutti insieme.
+- **Ambiente di prova**: `supabaseDemo.js` ora fa parlare due SCHEDE dello stesso browser
+  (BroadcastChannel): `/tv` in una, la scheda workout nell'altra, e il telecomando funziona.
+  `tv_sessions` si rilegge sempre da localStorage, perché la scrive l'altra scheda.
+- Provato così nell'ambiente di prova (EMOM a 4 esercizi, A dal 1°, B dal 2°, C dal 4°: al
+  minuto 2 A su SkiErg, B su Burpees, C torna al primo). **Non provato su una TV vera.**
+- ⚠️ La TV gira da `main`: arriva con `app:main`; il bottone sul telefono con la prossima
+  versione sugli Store (sul web subito con `app:main`).
+
 ## 9-sposta. «Sposta a un altro giorno» dal menu (26/10/2026)
 L'atleta sposta la sua assegnazione da qui (voce del menu ⋯, solo da fare e non gara) o dal
 calendario: stesso foglio `FoglioSposta`, stessa logica. `spostaQui` aggiorna `workout.date` sul

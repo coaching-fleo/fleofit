@@ -315,10 +315,50 @@ const RIGA_TV = 'rounded-[28px] bg-white/[.035] border-2 border-white/[.06] shad
  * sotto e l'intensità in coda. `numero` è il minuto di un EMOM (anche «2–3»,
  * src/lib/stazioniEmom.js): `min-w` e non `w`, così il cerchio si allunga.
  */
-export function EsercizioTV({ numero, nome, specifiche, note, intensita, classeIntensita, attivo = false }) {
+export function EsercizioTV({ numero, nome, specifiche, note, intensita, classeIntensita, attivo = false, persone = null }) {
   // `attivo`: l'esercizio che sta girando in un EMOM o nell'ON di un ON/OFF
   // (src/lib/esercizioInCorso.js). Bordo e fondo ambra, numero pieno: dentro un
   // blocco già acceso è l'unica riga gialla.
+  // `persone`: con più persone sfasate (src/lib/personeTV.js) la riga prende il
+  // colore di chi ci sta sopra, al posto dell'ambra, e i loro nomi in coda.
+  if (persone) {
+    const colore = persone[0]?.colore
+    return (
+      <div className={`flex items-center gap-6 px-7 py-5 transition-all duration-500 ${colore ? 'rounded-[28px] border-[3px]' : RIGA_TV}`}
+        style={colore ? {
+          borderColor: colore,
+          background: `${colore}33`,
+          boxShadow: `0 0 60px -6px ${colore}99`,
+        } : undefined}>
+        {numero != null && (
+          <span aria-hidden="true"
+            className={`shrink-0 min-w-[58px] h-[58px] px-3 rounded-full border-2 flex items-center justify-center
+                       text-[26px] font-extrabold tabular-nums whitespace-nowrap ${colore ? 'text-black' : 'bg-white/[.06] border-white/15 text-gray-200'}`}
+            style={colore ? { background: colore, borderColor: colore } : undefined}>
+            {numero}
+          </span>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-[36px] font-extrabold tracking-[-.015em] leading-[1.15] text-white break-words">{nome}</p>
+          {specifiche && (
+            <p className="mt-1.5 text-[28px] font-semibold tracking-[.01em] text-gray-300 break-words">{specifiche}</p>
+          )}
+          {note && <p className="mt-1.5 text-[24px] text-muted text-pretty break-words">{note}</p>}
+        </div>
+        {persone.length > 0 && (
+          <div className="shrink-0 flex flex-wrap justify-end gap-2.5 max-w-[45%]">
+            {persone.map(p => (
+              <span key={p.id ?? p.nome}
+                className="px-4 h-[52px] rounded-full flex items-center text-[26px] font-black text-black whitespace-nowrap"
+                style={{ background: p.colore }}>
+                {p.nome}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
   return (
     <div className={`flex items-center gap-6 px-7 py-5 transition-all duration-500 ${attivo
       ? 'rounded-[28px] bg-brand/[.10] border-2 border-brand/60 shadow-[0_0_40px_-12px_rgba(241,186,23,.45)]'
@@ -343,6 +383,20 @@ export function EsercizioTV({ numero, nome, specifiche, note, intensita, classeI
           {intensita}/10
         </span>
       )}
+    </div>
+  )
+}
+
+/** La leggenda delle persone sfasate: un pallino colorato e il nome per ognuna. */
+export function LeggendaTV({ persone }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-8 gap-y-3 px-2">
+      {persone.map(p => (
+        <span key={p.id ?? p.nome} className="flex items-center gap-3 text-[30px] font-extrabold text-white">
+          <span aria-hidden="true" className="w-[26px] h-[26px] rounded-full" style={{ background: p.colore }} />
+          {p.nome}
+        </span>
+      ))}
     </div>
   )
 }

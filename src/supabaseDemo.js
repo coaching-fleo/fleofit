@@ -68,6 +68,8 @@ function salvaDb(db) {
 
 let DB = null
 const db = () => (DB ||= caricaDb())
+// Un'altra scheda ha scritto (realtime fra schede, più sotto): si rilegge da localStorage.
+const riletturaDb = () => { DB = null }
 
 /**
  * Segna come «già letti» i feedback più vecchi di qualche giorno.
@@ -155,6 +157,8 @@ function query(tabella) {
   const filtrate = () => righeTabella().filter(r => filtri.every(f => f(r)))
 
   function esegui() {
+    // `tv_sessions` la scrive l'altra scheda (la TV): si legge sempre fresca.
+    if (tabella === 'tv_sessions') riletturaDb()
     const tab = righeTabella()
 
     if (azione === 'insert' || azione === 'upsert') {
@@ -185,6 +189,7 @@ function query(tabella) {
       const tocca = filtrate()
       for (const r of tocca) Object.assign(r, dati)
       salvaDb(db())
+      avvisaModifiche(tabella, 'UPDATE', tocca)
       return tocca
     }
 
@@ -193,6 +198,7 @@ function query(tabella) {
       const ids = new Set(tocca.map(r => r.id))
       db()[tabella] = tab.filter(r => !ids.has(r.id))
       salvaDb(db())
+      avvisaModifiche(tabella, 'DELETE', tocca)
       return tocca
     }
 
@@ -289,14 +295,45 @@ const UTENTE = {
 }
 const SESSIONE = { user: UTENTE, access_token: 'demo', refresh_token: 'demo' }
 
-const canale = () => {
+// Il realtime fra due SCHEDE dello stesso browser (30/10/2026): telefono in una,
+// `/tv` nell'altra, per provare il telecomando TV senza database. `broadcast`
+// passa su un BroadcastChannel col nome del canale; `postgres_changes` riceve
+// gli update/delete fatti dall'altra scheda (`avvisaModifiche`). Il resto tace.
+const BC = typeof BroadcastChannel !== 'undefined'
+const modifiche = BC ? new BroadcastChannel('fleofit_demo_modifiche') : null
+const avvisaModifiche = (tabella, eventType, righe) => {
+  for (const r of righe) modifiche?.postMessage({ tabella, eventType, new: eventType === 'DELETE' ? {} : { ...r }, old: { ...r } })
+}
+
+const canale = (nome) => {
+  const bc = BC ? new BroadcastChannel(`fleofit_demo_${nome}`) : null
+  const ascolti = []
   const c = {
-    on: () => c,
+    on: (tipo, filtro, cb) => {
+      if (tipo === 'broadcast' && bc) {
+        const f = (e) => { if (e.data?.event === filtro.event) cb({ payload: e.data.payload }) }
+        bc.addEventListener('message', f)
+      }
+      if (tipo === 'postgres_changes' && modifiche) {
+        const [colonna, valore] = (filtro.filter || '').split('=eq.')
+        const f = (e) => {
+          const m = e.data
+          if (m.tabella !== filtro.table) return
+          if (colonna && String(m.old?.[colonna]) !== valore) return
+          if (m.eventType === 'UPDATE') riletturaDb()
+          cb({ eventType: m.eventType, new: m.new, old: m.old })
+        }
+        modifiche.addEventListener('message', f)
+        ascolti.push(f)
+      }
+      return c
+    },
     subscribe: (cb) => { cb?.('SUBSCRIBED'); return c },
     track: async () => {},
-    send: async () => {},
+    send: async (m) => { bc?.postMessage({ event: m.event, payload: m.payload }) },
     unsubscribe: async () => {},
     presenceState: () => ({}),
+    chiudi: () => { bc?.close(); ascolti.forEach(f => modifiche?.removeEventListener('message', f)) },
   }
   return c
 }
@@ -356,7 +393,7 @@ export function clientDemo() {
       },
     },
     channel: canale,
-    removeChannel: () => {},
+    removeChannel: (c) => { c?.chiudi?.() },
     rpc: async (nome) => {
       // `elenco_staff` (multi-coach): lo staff con l'account e il nome, come
       // lo darebbe il join su auth.users. Qui gli account noti sono due.
