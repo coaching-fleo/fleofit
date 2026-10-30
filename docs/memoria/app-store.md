@@ -77,6 +77,15 @@
   ✅ **Approvata e rilasciata** (registrato il 28/10/2026). ⚠️ Porta l'errore della rubrica:
   chi guarda sparisce dalle liste atleti, quindi Federico (coach che si allena) non vede la sua
   scheda. Corretto il 28/10 (`escludiDallaRubrica`, `scheda-atleta.md`), arriva con la **1.2.3**.
+- **30 ott 2026** — `MARKETING_VERSION` 1.2.2 → **1.2.3** (quattro posti, `App` e `FleoTimer`).
+  Build **caricata su TestFlight** (non in revisione) per provare le push di Garmin: una build
+  lanciata da Xcode, anche in Release, registra un token sandbox e FCM risponde
+  `THIRD_PARTY_AUTH_ERROR`. Codice: `a764231` **più le modifiche non ancora salvate** di quel giorno
+  (marchio Garmin, push dei complimenti, soglia `GARMIN_MINUTI_MINIMI`). Il numero di build lo
+  assegna App Store Connect. `verifica-ipa.sh`: tutto verde tranne «Apple Health» nel bundle, che è
+  la frase della policy «we do not read Apple Health or Health Connect» (`public/privacy-policy.html`):
+  falso positivo del controllo, ma ⚠️ **da decidere prima dell'invio in revisione** (riformulare la
+  frase o accettarla). Estensione `FleoTimer` 1.2.3 (1), allineata.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non

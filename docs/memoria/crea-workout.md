@@ -1759,3 +1759,32 @@ uno riaperto tiene i suoi numeri. Il Rest, che tiene la durata in `meters`, rest
 ⚠️ La prima versione metteva Max solo sulle ripetizioni: il committente, provando sul telefono
 con una Run, l'ha trovata senza Max. Test: «ON/OFF: ripetizioni e distanza partono da Max» in
 `CreaWorkoutBuilder.test.jsx`.
+
+## La lista esercizi Hyrox: una famiglia alla volta (30/10/2026)
+
+Richiesta del committente: la lista di `ExercisePicker` era un elenco infinito
+di 130 nomi, con righe che non sembravano toccabili e non si separavano fra
+loro. Un primo giro (righe piatte come il picker Gym, stazioni in cima) è stato
+**rifiutato** per gli stessi motivi. Fra tre prototipi
+(`tools/design-lista-esercizi/`, `.claude/launch.json` → «lista-esercizi») ha
+scelto il **B · Schede per famiglia**:
+- Sotto la ricerca, una fila di **pillole**: «Tutti», «Stazioni Hyrox», le 11
+  famiglie di `FAMIGLIE_HYROX` (`src/lib/esercizi.js`). 🔴 **Si apre su
+  «Tutti»** (correzione del committente, stesso giorno: prima si apriva sulle
+  sole stazioni), con le **8 stazioni in cima** e poi il resto in ordine
+  alfabetico senza ripeterle. Le pillole restringono a una famiglia sola.
+  `ExercisePicker` si usa solo nel builder Hyrox, quindi le stazioni in cima
+  valgono sempre.
+- Le stazioni sono `STAZIONI_HYROX`, nell'ordine di gara (SkiErg, Sled Push,
+  Sled Pull, Burpees Broad Jumps, Rowing, Farmers Carry, Sandbag Lunges, Wall
+  Balls), numerate; nella pillola «Stazioni Hyrox» c'è anche il segno «1 KM RUN»
+  fra l'una e l'altra. Le stazioni
+  stanno anche nella loro famiglia.
+- Ogni esercizio è una **carta staccata** (`CartaEsercizio`, `CARTA_RIGA`) con
+  il numero di gara o un'icona della misura a sinistra, la misura in breve
+  sotto il nome (`misuraEsercizio`) e un **«+»** a destra.
+- Cercando, pillole via e lista unica alfabetica (limite 40, come prima).
+- ⚠️ Un esercizio nuovo in `HYROX_EXERCISES` va messo anche in una famiglia:
+  `esercizi.test.js` fallisce finché manca.
+- ⚠️ I test del builder cercano `placeholder /Cerca o scrivi/` e i bottoni
+  `Scegli <nome>`: il placeholder e l'`aria-label` vanno tenuti così.

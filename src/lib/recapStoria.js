@@ -208,8 +208,9 @@ const intensitaDichiarata = (v) => {
  */
 // `minutiVeri`: la durata misurata dall'orologio (Garmin), quando c'è. Prende
 // il posto della stima nella cella della durata, senza il `≈`; non aggiunge
-// una cella dove la stima non ne aveva una.
-export const celleStoria = (workout, { rpe = null, minutiVeri = null } = {}) => {
+// una cella dove la stima non ne aveva una. `fonte` («Garmin Forerunner 265»)
+// resta sulla cella: le linee guida di marchio Garmin la vogliono accanto al dato.
+export const celleStoria = (workout, { rpe = null, minutiVeri = null, fonte = null } = {}) => {
   const sections = workout?.sections || {}
   const categoria = categoriaDi(sections)
   const celle = []
@@ -248,7 +249,7 @@ export const celleStoria = (workout, { rpe = null, minutiVeri = null } = {}) => 
 
   if (Number.isFinite(minutiVeri) && minutiVeri > 0) {
     const i = celle.findIndex(c => c.chiave === 'durata')
-    if (i >= 0) celle[i] = { chiave: 'durata', valore: String(minutiVeri), unita: 'min', etichetta: 'Durata' }
+    if (i >= 0) celle[i] = { chiave: 'durata', valore: String(minutiVeri), unita: 'min', etichetta: 'Durata', ...(fonte ? { fonte } : {}) }
   }
 
   return celle.slice(0, 3)

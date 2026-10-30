@@ -4,7 +4,7 @@ import { X, ChevronRight } from 'lucide-react'
 import { useBottomSheet } from '../useBottomSheet'
 import { VETRO } from '../lib/stiliCard'
 import RigheGarmin from './RigheGarmin'
-import { nomeTipoAttivita, dispositivoGarmin } from '../lib/attivitaGarmin'
+import { nomeTipoAttivita, fonteGarmin } from '../lib/attivitaGarmin'
 import { separaCodice } from '../lib/codiceWorkout'
 import { dataBreve } from '../lib/spostaAllenamento'
 
@@ -24,7 +24,6 @@ import { dataBreve } from '../lib/spostaAllenamento'
 export default function FoglioAttivitaGarmin({ attivita, candidati = [], onAbbina, onChiudi }) {
   const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
   const [inCorso, setInCorso] = useState(null)
-  const dispositivo = dispositivoGarmin(attivita)
   const titolo = nomeTipoAttivita(attivita?.tipo)
   const giorno = dataBreve(String(attivita?.giorno || '').slice(0, 10))
 
@@ -53,7 +52,7 @@ export default function FoglioAttivitaGarmin({ attivita, candidati = [], onAbbin
           <div className="flex-1 min-w-0">
             <h2 className="text-[17px] font-extrabold tracking-[-.015em] text-white truncate">{titolo}</h2>
             <p className="text-[12px] text-gray-500 truncate">
-              Garmin{dispositivo ? ` · ${dispositivo}` : ''}{giorno ? ` · ${giorno}` : ''}
+              {fonteGarmin(attivita)}{giorno ? ` · ${giorno}` : ''}
             </p>
           </div>
           <button type="button" aria-label="Chiudi" onClick={chiudi}

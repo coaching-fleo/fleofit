@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback, memo, lazy, Suspense
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText, Repeat2, Repeat, TrendingUp, Minus, BookmarkPlus } from 'lucide-react'
+import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText, Repeat2, Repeat, TrendingUp, Minus, BookmarkPlus, Search, Route } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
@@ -16,12 +16,12 @@ import { it } from 'date-fns/locale'
 import { generaTitolo, titoliDelGiorno } from '../lib/workoutTitle'
 import { codiceWorkout, separaCodice, unisciCodice } from '../lib/codiceWorkout'
 import { candidatiNome, nuovoSeme, scegliNome, nomeLibero, eNomeGenerato, nomiGiaUsati } from '../lib/nomeCasuale'
-import { HYROX_EXERCISES, isErgo, isSled, isCarry, isHybrid, isDistance } from '../lib/esercizi'
+import { HYROX_EXERCISES, STAZIONI_HYROX, FAMIGLIE_HYROX, misuraEsercizio, isErgo, isSled, isCarry, isHybrid, isDistance } from '../lib/esercizi'
 import { mostraErrore } from '../lib/alert'
 import { battito, vibraPresa, vibraScelta, vibraSuccesso } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
 import { conVelo, coloreDaClasse, BRAND, RUNNING, CUSTOM, GYM, IA } from '../lib/colori'
-import { BOLLA_MODALE, BOTTONE_BRAND, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
+import { BOLLA_MODALE, BOTTONE_BRAND, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE, CARTA_RIGA,
          LABEL, TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA, VETRO } from '../lib/stiliCard'
 import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { caricoPrevisto, collocazioneCarico } from '../lib/previsione'
@@ -1128,6 +1128,51 @@ function FoglioAumento({ ex, onSalva, onClose }) {
   )
 }
 
+// Le pillole sopra la lista: tutto (si apre lì), le stazioni, le famiglie.
+const SCHEDE_ESERCIZI = [
+  { id: 'tutti', nome: 'Tutti' },
+  { id: 'stazioni', nome: 'Stazioni Hyrox' },
+  ...FAMIGLIE_HYROX,
+]
+
+/**
+ * Un esercizio della lista: una carta staccata dalle altre, con il «+» a
+ * destra. Le righe piatte di prima non sembravano toccabili e si fondevano
+ * fra loro (design B, scelto dal committente il 30/10/2026). A sinistra il
+ * numero di gara per le stazioni, per il resto un'icona di come si misura.
+ */
+function CartaEsercizio({ nome, onClick }) {
+  const stazione = STAZIONI_HYROX.indexOf(nome) + 1
+  const misura = misuraEsercizio(nome)
+  const Icona = misura === 'tempo' ? Timer : misura.startsWith('metri') ? Route : Dumbbell
+  return (
+    <button type="button" aria-label={`Scegli ${nome}`} onClick={onClick}
+      className={`group w-full min-h-16 pl-3 pr-2.5 py-2.5 ${CARTA_RIGA} flex items-center gap-3 text-left
+                  hover:border-brand/40 active:scale-[.98] transition`}>
+      {stazione ? (
+        <span aria-hidden="true"
+          className="shrink-0 w-[42px] h-[42px] rounded-[13px] bg-brand/[.12] border border-brand/30 text-brand text-[16px] font-black flex items-center justify-center tabular-nums">
+          {stazione}
+        </span>
+      ) : (
+        <span aria-hidden="true"
+          className="shrink-0 w-[42px] h-[42px] rounded-[13px] bg-white/[.05] border border-white/[.08] text-[#c9ccd4] flex items-center justify-center">
+          <Icona size={19} />
+        </span>
+      )}
+      <span className="flex-1 min-w-0">
+        <span className="block text-[15px] font-extrabold tracking-[-.01em] text-white truncate">{nome}</span>
+        <span className="block mt-[1px] text-[12px] font-semibold text-muted">{misura}</span>
+      </span>
+      <span aria-hidden="true"
+        className={`shrink-0 w-9 h-9 rounded-full ${VETRO} flex items-center justify-center text-white
+                    group-hover:bg-brand group-hover:border-brand group-hover:text-black transition`}>
+        <Plus size={17} strokeWidth={2.6} />
+      </span>
+    </button>
+  )
+}
+
 function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initialExercise, intervalloBlocco, conAumento = false }) {
   const [search, setSearch] = useState(initialExercise?.name || '')
   const [selected, setSelected] = useState(initialExercise?.name || null)
@@ -1371,9 +1416,25 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     )
   }, [search, existingNames, initialExercise?.name])
 
+  // Si apre su «Tutti», e le pillole restringono a una famiglia (richiesta del
+  // committente, 30/10/2026). In «Tutti» le otto stazioni stanno in cima, in
+  // ordine di gara, e il resto sotto in ordine alfabetico senza ripeterle.
+  // Cercando, la lista torna una sola: chi scrive sa già cosa vuole.
+  const [scheda, setScheda] = useState('tutti')
+  const corpoRef = useRef(null)
+  const disponibile = (ex) => !existingNames.includes(ex) || ex === initialExercise?.name
+  const listaScheda = scheda === 'stazioni' ? STAZIONI_HYROX.filter(disponibile)
+    : scheda === 'tutti' ? [...STAZIONI_HYROX, ...HYROX_EXERCISES.filter(ex => !STAZIONI_HYROX.includes(ex))].filter(disponibile)
+    : (FAMIGLIE_HYROX.find(f => f.id === scheda)?.voci || []).filter(disponibile)
   const LIMITE_LISTA = 40
-  const visibili = filtered.slice(0, LIMITE_LISTA)
-  const nascosti = filtered.length - visibili.length
+  const visibili = search ? filtered.slice(0, LIMITE_LISTA) : listaScheda
+  const nascosti = search ? filtered.length - visibili.length : 0
+  const scegliScheda = (id, bottone) => {
+    vibraScelta()
+    setScheda(id)
+    if (corpoRef.current) corpoRef.current.scrollTop = 0
+    bottone?.scrollIntoView?.({ inline: 'nearest', block: 'nearest', behavior: 'smooth' })
+  }
   const isCustom = search && !HYROX_EXERCISES.find(e => e.toLowerCase() === search.toLowerCase())
 
   // Il Rest apre già su un minuto: è il recupero che si programma quasi sempre,
@@ -1439,49 +1500,91 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   // generava zero CSS.
   return createPortal(
     <div className="fixed inset-0 z-[60] bg-[#0B0B0B] flex flex-col sheet-in">
-      <div className="shrink-0 flex items-center gap-2 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] border-b border-[#2a2a2a]">
+      <div className="shrink-0 flex items-center gap-2.5 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] border-b border-white/[.06]">
         {selected && (
-          <button aria-label="Torna alla lista degli esercizi" onClick={tornaAllaLista}
-            className="w-11 h-11 -ml-2 flex items-center justify-center text-muted hover:text-white shrink-0">
-            <ChevronLeft size={22} />
+          <button type="button" aria-label="Torna alla lista degli esercizi" onClick={tornaAllaLista}
+            className={`shrink-0 w-10 h-10 rounded-full ${VETRO} flex items-center justify-center text-gray-200 hover:text-white transition`}>
+            <ChevronLeft size={18} aria-hidden="true" />
           </button>
         )}
-        <p className="text-white font-bold text-lg flex-1 truncate">{selected || 'Scegli esercizio'}</p>
-        <button aria-label="Chiudi" onClick={onClose}
-          className="w-11 h-11 -mr-2 flex items-center justify-center text-muted hover:text-white shrink-0">
-          <X size={22} />
+        <div className="flex-1 min-w-0">
+          <p className="text-[17px] font-extrabold tracking-[-.015em] text-white truncate">{selected || 'Scegli esercizio'}</p>
+          {!selected && <p className="mt-[2px] text-[12.5px] font-medium text-muted truncate">Tocca il movimento da aggiungere</p>}
+        </div>
+        <button type="button" aria-label="Chiudi" onClick={onClose}
+          className={`shrink-0 w-10 h-10 rounded-full ${VETRO} flex items-center justify-center text-gray-200 hover:text-white transition`}>
+          <X size={18} aria-hidden="true" />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
-          {!selected && <input
-            className="bg-[#2a2a2a] border border-[#383838] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand text-base"
-            placeholder="Cerca o scrivi esercizio custom..."
-            value={search}
-            onChange={e => { setSearch(e.target.value); setSelected(null) }}
-            enterKeyHint="search"
-            onKeyDown={chiudiTastieraSuInvio}
-          />}
+      {!selected && (
+        <div className="shrink-0 px-4 pt-3">
+          <label className={`flex items-center gap-2.5 rounded-2xl px-3.5 min-h-12 ${VETRO}`}>
+            <Search size={17} className="text-muted shrink-0" aria-hidden="true" />
+            <input
+              className="flex-1 min-w-0 bg-transparent text-[15px] font-semibold text-white placeholder-[#5b6070] focus:outline-none"
+              aria-label="Cerca un esercizio"
+              placeholder="Cerca o scrivi un esercizio"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setSelected(null) }}
+              enterKeyHint="search"
+              onKeyDown={chiudiTastieraSuInvio}
+            />
+          </label>
+          {!search && (
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-4 px-4 pt-3" role="group" aria-label="Famiglia di esercizi">
+              {SCHEDE_ESERCIZI.map(s => {
+                const attiva = scheda === s.id
+                return (
+                  <button key={s.id} type="button" aria-pressed={attiva}
+                    onClick={e => scegliScheda(s.id, e.currentTarget)}
+                    className={`shrink-0 min-h-9 px-3.5 rounded-full text-[12.5px] font-extrabold whitespace-nowrap transition border
+                      ${attiva ? 'bg-brand text-black border-brand' : 'bg-white/[.06] border-white/[.1] text-[#c9ccd4] hover:border-white/25'}`}>
+                    {s.nome}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
+      <div ref={corpoRef} className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 hide-scrollbar">
           {!selected ? (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               {isCustom && (
-                <button onClick={() => handleSelect(search)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-brand/10 border border-brand/30 text-brand text-sm font-medium">
-                  <Plus size={16} /> Aggiungi "{search}" (custom)
+                <button type="button" onClick={() => { vibraScelta(); handleSelect(search) }}
+                  className="w-full min-h-12 rounded-2xl border border-dashed border-brand/40 text-brand text-[13.5px] font-extrabold
+                             flex items-center justify-center gap-2 hover:bg-brand/10">
+                  <Plus size={16} aria-hidden="true" /> Aggiungi «{search}»
                 </button>
               )}
-              {visibili.map(ex => (
-                <button aria-label={`Scegli ${ex}`} key={ex} onClick={() => handleSelect(ex)}
-                  className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#2a2a2a] hover:bg-[#333] text-white text-sm transition">
-                  <span>{ex}</span>
-                  {isErgo(ex) && <span className="text-xs text-blue-400 bg-blue-900/40 px-2 py-0.5 rounded-full">ergometro</span>}
-                  <ChevronRight size={16} className="text-muted" />
-                </button>
+              {visibili.map((ex, i) => (
+                <div key={ex} className="flex flex-col">
+                  {!search && scheda === 'tutti' && i === 0 && STAZIONI_HYROX.includes(ex) && (
+                    <p className={`${LABEL} px-1 pb-0.5`}>Stazioni Hyrox · ordine di gara</p>
+                  )}
+                  {!search && scheda === 'tutti' && !STAZIONI_HYROX.includes(ex) && (i === 0 || STAZIONI_HYROX.includes(visibili[i - 1])) && (
+                    <p className={`${LABEL} px-1 pt-3 pb-0.5`}>Tutti gli esercizi</p>
+                  )}
+                  {/* Fra due stazioni, in gara, c'è un chilometro di corsa. */}
+                  {!search && scheda === 'stazioni' && i > 0 && (
+                    <span aria-hidden="true" className="h-5 -mt-2 mb-0 ml-8 pl-2.5 border-l-2 border-dashed border-white/[.12]
+                                                        flex items-center text-[10.5px] font-bold tracking-[.06em] text-[#5b6070]">
+                      1 KM RUN
+                    </span>
+                  )}
+                  <CartaEsercizio nome={ex} onClick={() => { vibraScelta(); handleSelect(ex) }} />
+                </div>
               ))}
               {nascosti > 0 && (
-                <p className="text-muted text-xs text-center py-3">
+                <p className="text-muted text-[12.5px] font-medium text-center py-3">
                   Altri {nascosti} esercizi. Continua a scrivere per restringere.
+                </p>
+              )}
+              {visibili.length === 0 && !isCustom && (
+                <p className="text-center text-[13px] text-muted py-8">
+                  {search ? 'Nessun esercizio trovato.' : 'Sono già tutti in questo blocco.'}
                 </p>
               )}
             </div>

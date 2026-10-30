@@ -305,7 +305,7 @@ export function costruisciRecap({ aw, storico = [], totaleCompletati = null, ogg
     // con due numeri diversi, uno nell'app e uno nell'immagine condivisa.
     // `minutiGarmin`: i minuti veri dell'attività dell'orologio, se c'è
     // (src/lib/attivitaGarmin.js) — al posto del `≈` della stima.
-    celle: celleStoria(aw?.workouts, { rpe: dichiarato, minutiVeri: aw?.minutiGarmin ?? null }),
+    celle: celleStoria(aw?.workouts, { rpe: dichiarato, minutiVeri: aw?.minutiGarmin ?? null, fonte: aw?.fonteGarmin ?? null }),
     ordinale: Number.isFinite(totaleCompletati) && totaleCompletati > 0 ? totaleCompletati : null,
   }
 

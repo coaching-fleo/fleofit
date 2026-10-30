@@ -25,10 +25,22 @@ const CORSA = new Set(['RUNNING', 'TREADMILL_RUNNING', 'TRAIL_RUNNING', 'TRACK_R
 
 const positivo = (n) => Number.isFinite(n) && n > 0
 
-/** L'orologio che l'ha registrata, per «Garmin · Forerunner 265»; vuoto se manca. */
+/** L'orologio che l'ha registrata, «Forerunner 265»; vuoto se manca o è «unknown». */
 export function dispositivoGarmin(attivita) {
   const d = attivita?.dati?.dispositivo
-  return typeof d === 'string' ? d.trim() : ''
+  const nome = typeof d === 'string' ? d.trim() : ''
+  return /^unknown/i.test(nome) ? '' : nome
+}
+
+/**
+ * Da dove vengono i dati, come lo chiedono le linee guida di marchio Garmin
+ * (API Brand Guidelines, 30/06/2025): «Garmin [modello]», e solo «Garmin» se il
+ * modello non si sa. Va vicino al titolo della vista, mai in una nota in fondo.
+ */
+export function fonteGarmin(attivita) {
+  const d = dispositivoGarmin(attivita)
+  if (!d) return 'Garmin'
+  return /^garmin\b/i.test(d) ? d : `Garmin ${d}`
 }
 
 /** `42′`, oppure `1 h 05′` oltre l'ora. */
@@ -145,7 +157,8 @@ export async function leggiAttivitaPeriodo(supabase, athleteId, da, a) {
 }
 
 /**
- * Le voci grigie di un giorno (`yyyy-MM-dd`): «Garmin · Corsa 42′». Solo le
+ * Le voci grigie di un giorno (`yyyy-MM-dd`): «Garmin Forerunner 265 · Corsa 42′»
+ * («Garmin · Corsa 42′» senza modello). Solo le
  * attività libere: quelle abbinate stanno già nel loro allenamento.
  */
 export function vociLibere(attivita, giorno) {
@@ -153,7 +166,7 @@ export function vociLibere(attivita, giorno) {
     .filter(a => a && !a.athlete_workout_id && String(a.giorno || '').slice(0, 10) === giorno)
     .map(a => {
       const durata = durataGarmin(a.durata_s)
-      return { id: a.garmin_id, testo: `Garmin · ${nomeTipoAttivita(a.tipo)}${durata ? ` ${durata}` : ''}`, attivita: a }
+      return { id: a.garmin_id, testo: `${fonteGarmin(a)} · ${nomeTipoAttivita(a.tipo)}${durata ? ` ${durata}` : ''}`, attivita: a }
     })
 }
 

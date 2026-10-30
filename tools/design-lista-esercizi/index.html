@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lista esercizi · tre design</title>
+<!--
+  Prototipo di design: la lista «Scegli esercizio» del builder Hyrox in tre
+  versioni. NON fa parte dell'app: una pagina sola, servita in locale.
+  Colori e superfici sono quelli di src/index.css e src/lib/stiliCard.js
+  (CARD, CARTA_RIGA, VETRO, LABEL). Le famiglie stanno in famiglie.js.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#f1ba17; --bg:#0B0B0B; --muted:#8b8f99; --testo2:#c9ccd4;
+  --carta:linear-gradient(to bottom,#1c1c1f,#171719);
+  --ombra-carta:0 14px 28px -18px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.06);
+  --vetro-bg:rgba(255,255,255,.07); --vetro-bordo:rgba(255,255,255,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#050505;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;text-align:left}
+input{font:inherit}
+
+.pagina{max-width:1320px;margin:0 auto;padding:28px 16px 60px}
+.intestazione{margin-bottom:22px}
+.logo{font-weight:900;letter-spacing:-.02em;font-size:20px}.logo b{color:var(--brand)}
+.intestazione p{color:#9ca3af;font-size:13.5px;margin-top:6px;line-height:1.5;max-width:720px}
+.tre{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:start}
+@media (max-width:1180px){.tre{grid-template-columns:1fr;justify-items:center}}
+.colonna{display:flex;flex-direction:column;gap:12px;align-items:center}
+.didascalia{width:375px;max-width:100%}
+.didascalia h2{font-size:16px;font-weight:900;letter-spacing:-.01em}
+.didascalia h2 span{color:var(--brand)}
+.didascalia p{color:#9ca3af;font-size:12.5px;line-height:1.5;margin-top:4px}
+
+/* ── Il telefono ── */
+.telefono{width:375px;max-width:100%;height:760px;border-radius:44px;background:var(--bg);
+  border:1px solid #26262a;box-shadow:0 30px 60px -30px rgba(0,0,0,.9),0 0 0 8px #141416;
+  overflow:hidden;position:relative;display:flex;flex-direction:column}
+.stato{height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-size:14px;font-weight:700}
+.stato i{width:120px;height:30px;border-radius:20px;background:#000;display:block}
+.testa{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:6px 16px 12px}
+.testa .titoli{flex:1;min-width:0}
+.testa .t{font-size:17px;font-weight:800;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.testa .s{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:2px}
+.tondo{width:40px;height:40px;border-radius:999px;background:var(--vetro-bg);border:1px solid var(--vetro-bordo);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;color:#e5e7eb;flex-shrink:0}
+.corpo{flex:1;min-height:0;overflow-y:auto;padding:0 16px 24px;scrollbar-width:none}
+.corpo::-webkit-scrollbar{display:none}
+.cerca{display:flex;align-items:center;gap:10px;min-height:48px;border-radius:16px;padding:0 14px;
+  background:var(--vetro-bg);border:1px solid var(--vetro-bordo);box-shadow:inset 0 1px 0 rgba(255,255,255,.07);color:var(--muted)}
+.cerca input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#fff;font-size:15px;font-weight:600}
+.cerca input::placeholder{color:#5b6070}
+.label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.misura{font-size:12px;font-weight:600;color:var(--muted)}
+.num{flex-shrink:0;width:26px;height:26px;border-radius:999px;background:rgba(241,186,23,.15);color:var(--brand);
+  font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.vuoto{text-align:center;color:var(--muted);font-size:13px;padding:30px 0}
+.aggiungi{width:100%;min-height:48px;border-radius:16px;border:1px dashed rgba(241,186,23,.45);color:var(--brand);
+  font-size:13.5px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px}
+.premi{transition:transform .12s ease,background-color .15s,border-color .15s}
+.premi:active{transform:scale(.97)}
+
+/* Il toast «scelto» */
+.toast{position:absolute;left:16px;right:16px;bottom:22px;border-radius:16px;padding:13px 16px;background:#f1ba17;color:#000;
+  font-size:13.5px;font-weight:800;box-shadow:0 18px 30px -12px rgba(0,0,0,.8);transform:translateY(140%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+.toast.su{transform:none}
+.toast small{display:block;font-weight:600;font-size:12px;opacity:.75;margin-top:1px}
+
+/* ── A · Cartelle ── */
+.a-griglia{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.a-tessera{min-height:92px;border-radius:18px;background:var(--carta);border:1px solid rgba(255,255,255,.07);box-shadow:var(--ombra-carta);
+  padding:12px;display:flex;flex-direction:column;justify-content:space-between;gap:10px}
+.a-tessera:hover{border-color:rgba(241,186,23,.45)}
+.a-tessera .nome{font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
+.a-cartella{width:100%;min-height:66px;border-radius:18px;background:var(--carta);border:1px solid rgba(255,255,255,.07);box-shadow:var(--ombra-carta);
+  padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.a-cartella:hover{border-color:rgba(255,255,255,.2)}
+.a-cartella .conta{flex-shrink:0;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:var(--testo2)}
+.a-cartella .nome{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.a-cartella .anteprima{font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.a-riga{width:100%;min-height:58px;border-radius:16px;background:var(--carta);border:1px solid rgba(255,255,255,.07);box-shadow:var(--ombra-carta);
+  padding:10px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.a-riga:hover{border-color:rgba(255,255,255,.2)}
+.a-riga .nome{font-size:14.5px;font-weight:800}
+
+/* ── B · Schede ── */
+.b-chip{flex-shrink:0;min-height:36px;padding:0 14px;border-radius:999px;font-size:12.5px;font-weight:800;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--testo2);white-space:nowrap}
+.b-chip[aria-pressed=true]{background:var(--brand);border-color:var(--brand);color:#000}
+.b-chips{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:12px 16px 4px;scrollbar-width:none}
+.b-chips::-webkit-scrollbar{display:none}
+.b-carta{width:100%;min-height:64px;border-radius:18px;background:var(--carta);border:1px solid rgba(255,255,255,.07);box-shadow:var(--ombra-carta);
+  padding:10px 10px 10px 12px;display:flex;align-items:center;gap:12px}
+.b-carta:hover{border-color:rgba(241,186,23,.4)}
+.b-icona{flex-shrink:0;width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--testo2)}
+.b-icona.staz{background:rgba(241,186,23,.12);border-color:rgba(241,186,23,.3);color:var(--brand);font-weight:900;font-size:16px}
+.b-carta .nome{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.b-piu{flex-shrink:0;width:36px;height:36px;border-radius:999px;background:var(--vetro-bg);border:1px solid var(--vetro-bordo);
+  display:flex;align-items:center;justify-content:center;color:#fff}
+.b-carta:hover .b-piu{background:var(--brand);border-color:var(--brand);color:#000}
+.b-lista{display:flex;flex-direction:column;gap:8px}
+.b-run{display:flex;align-items:center;gap:8px;padding:0 0 0 32px;height:22px;color:#5b6070;font-size:11px;font-weight:700;letter-spacing:.04em}
+.b-run::before{content:"";width:2px;height:100%;background:repeating-linear-gradient(to bottom,#3a3a40 0 3px,transparent 3px 6px)}
+
+/* ── C · Gruppi ── */
+.c-gruppo{border-radius:22px;background:var(--carta);border:1px solid rgba(255,255,255,.07);
+  box-shadow:0 18px 34px -18px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.06);overflow:hidden;margin-bottom:10px}
+.c-testa{width:100%;min-height:58px;padding:0 16px;display:flex;align-items:center;gap:12px}
+.c-testa .nome{flex:1;font-size:15px;font-weight:800;letter-spacing:-.01em}
+.c-testa .conta{font-size:12.5px;font-weight:700;color:var(--muted)}
+.c-freccia{transition:transform .25s cubic-bezier(.16,1,.3,1);color:var(--muted)}
+.c-gruppo.aperto .c-freccia{transform:rotate(90deg)}
+.c-riga{width:100%;min-height:54px;padding:0 16px;display:flex;align-items:center;gap:12px;border-top:1px solid rgba(255,255,255,.06)}
+.c-gruppo>.c-riga:first-child{border-top:0}
+.c-riga:hover{background:rgba(255,255,255,.04)}
+.c-riga:active{background:rgba(255,255,255,.07)}
+.c-riga .nome{flex:1;min-width:0;font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-staz .c-testa .nome{color:var(--brand)}
+.c-sezione{padding:16px 4px 8px}
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="intestazione">
+    <div class="logo">FLEO<b>FIT</b> · Scegli esercizio</div>
+    <p>Tre modi di rendere la lista corta, separata e chiaramente toccabile. Sono veri: si può cercare, aprire, scorrere e toccare un esercizio. Le 8 stazioni Hyrox stanno in cima in tutti e tre, nell'ordine di gara. Gli altri 122 esercizi sono divisi in 11 famiglie.</p>
+  </div>
+  <div class="tre">
+    <div class="colonna">
+      <div class="didascalia"><h2><span>A</span> · Cartelle</h2><p>Le stazioni sono tessere grandi in griglia. Il resto sta in cartelle per famiglia: se ne apre una alla volta, a schermata piena. Niente scorrimento lungo.</p></div>
+      <div class="telefono" id="A"></div>
+    </div>
+    <div class="colonna">
+      <div class="didascalia"><h2><span>B</span> · Schede per famiglia</h2><p>Una fila di pillole in alto sceglie la famiglia: si vede sempre un gruppo solo. Ogni esercizio è una carta staccata con il «+». Sulle stazioni c'è anche il km di corsa fra l'una e l'altra.</p></div>
+      <div class="telefono" id="B"></div>
+    </div>
+    <div class="colonna">
+      <div class="didascalia"><h2><span>C</span> · Gruppi a fisarmonica</h2><p>Tutto in una pagina, ma chiuso: ogni famiglia è una carta che si apre col tocco, e se ne apre una alla volta. Le righe dentro sono separate da una linea, come nelle Impostazioni.</p></div>
+      <div class="telefono" id="C"></div>
+    </div>
+  </div>
+</div>
+
+<script src="famiglie.js"></script>
+<script>
+const I = {
+  x: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  indietro: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
+  dx: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
+  cerca: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  piu: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  // per la misura: metri, carico, tempo
+  metri: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>',
+  kg: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.4 14.4 9.6 9.6M18.66 21.51a2 2 0 1 1-2.83-2.82l-1.77 1.76a2 2 0 1 1-2.83-2.82l6.37-6.37a2 2 0 1 1 2.83 2.82l-1.77 1.77a2 2 0 1 1 2.83 2.83zM21.5 21.5l-1.4-1.4M3.9 3.9 2.5 2.5M6.4 12.77a2 2 0 1 1-2.82-2.83l1.76-1.77a2 2 0 1 1-2.82-2.83l2.82-2.82a2 2 0 1 1 2.83 2.82l1.77-1.76a2 2 0 1 1 2.83 2.82z"/></svg>',
+  tempo: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 2h4M12 14l3-3"/><circle cx="12" cy="14" r="8"/></svg>',
+}
+const iconaMisura = (n) => { const m = misuraDi(n); return m === 'tempo' ? I.tempo : m.startsWith('metri') ? I.metri : I.kg }
+const TUTTI = [...new Set(FAMIGLIE.flatMap(f => f.voci))].sort((a, b) => a.localeCompare(b))
+const ALTRE = (f) => f.voci  // le stazioni restano anche nella loro famiglia: chi apre «Ergometri» si aspetta lo SkiErg
+const cerca = (q) => TUTTI.filter(n => n.toLowerCase().includes(q.toLowerCase()))
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
+
+function telefono(id, stato, disegna) {
+  const el = document.getElementById(id)
+  const render = () => {
+    const corpo = el.querySelector('.corpo'); const sc = corpo ? corpo.scrollTop : 0
+    const fuoco = document.activeElement?.closest?.('#' + id) && document.activeElement.tagName === 'INPUT'
+    el.innerHTML = `<div class="stato"><span>9:41</span><i></i><span>100%</span></div>` + disegna(stato) +
+      `<div class="toast${stato.scelto ? ' su' : ''}">Scelto «${esc(stato.scelto || '')}»<small>Nell'app qui si aprono le misure</small></div>`
+    const nuovo = el.querySelector('.corpo'); if (nuovo && !stato.inCima) nuovo.scrollTop = sc
+    stato.inCima = false
+    // B: la pillola scelta resta in vista (la fila si ridisegna da capo)
+    const chips = el.querySelector('.b-chips'), attiva = el.querySelector('.b-chip[aria-pressed=true]')
+    if (chips && attiva) chips.scrollLeft = attiva.offsetLeft - chips.offsetLeft - 16
+    if (fuoco) { const i = el.querySelector('input'); i.focus(); i.setSelectionRange(i.value.length, i.value.length) }
+  }
+  el.addEventListener('input', e => { stato.q = e.target.value; render() })
+  el.addEventListener('click', e => {
+    const b = e.target.closest('[data-az]'); if (!b) return
+    const { az, v } = b.dataset
+    if (az === 'scegli') { stato.scelto = v; clearTimeout(stato.t); stato.t = setTimeout(() => { stato.scelto = null; render() }, 1600) }
+    else if (az === 'apri') { stato.aperta = stato.aperta === v ? null : v; stato.inCima = id !== 'C' }
+    else if (az === 'indietro') { stato.aperta = null; stato.inCima = true }
+    else if (az === 'scheda') { stato.scheda = v; stato.inCima = true }
+    else if (az === 'pulisci') { stato.q = '' }
+    render()
+  })
+  render()
+}
+
+const testa = (titolo, sotto, indietro) => `<div class="testa">
+  ${indietro ? `<button class="tondo premi" data-az="indietro" aria-label="Indietro">${I.indietro}</button>` : ''}
+  <div class="titoli"><div class="t">${titolo}</div>${sotto ? `<div class="s">${sotto}</div>` : ''}</div>
+  <button class="tondo premi" aria-label="Chiudi">${I.x}</button></div>`
+const campo = (q) => `<label class="cerca">${I.cerca}<input value="${esc(q || '')}" placeholder="Cerca o scrivi un esercizio"></label>`
+const custom = (q) => q && !TUTTI.some(n => n.toLowerCase() === q.toLowerCase())
+  ? `<button class="aggiungi premi" data-az="scegli" data-v="${esc(q)}">${I.piu} Aggiungi «${esc(q)}»</button>` : ''
+
+// ── A ──
+const rigaA = (n) => `<button class="a-riga premi" data-az="scegli" data-v="${esc(n)}">
+  ${STAZIONI.includes(n) ? `<span class="num">${STAZIONI.indexOf(n) + 1}</span>` : ''}
+  <span style="flex:1;min-width:0"><span class="nome">${n}</span><br><span class="misura">${misuraDi(n)}</span></span>
+  <span style="color:var(--muted)">${I.dx}</span></button>`
+telefono('A', { q: '', aperta: null }, (s) => {
+  if (s.aperta) {
+    const f = FAMIGLIE.find(x => x.id === s.aperta)
+    return testa(f.nome, `${f.voci.length} esercizi`, true) + `<div class="corpo" style="padding-top:4px">${ALTRE(f).map(rigaA).join('')}</div>`
+  }
+  if (s.q) {
+    const r = cerca(s.q)
+    return testa('Scegli esercizio', 'Tocca il movimento da aggiungere') + `<div class="corpo">${campo(s.q)}<div style="height:12px"></div>${custom(s.q)}${r.map(rigaA).join('') || (custom(s.q) ? '' : '<p class="vuoto">Nessun esercizio trovato.</p>')}</div>`
+  }
+  return testa('Scegli esercizio', 'Tocca il movimento da aggiungere') + `<div class="corpo">${campo('')}
+    <p class="label" style="padding:18px 4px 8px">Stazioni Hyrox · ordine di gara</p>
+    <div class="a-griglia">${STAZIONI.map((n, i) => `<button class="a-tessera premi" data-az="scegli" data-v="${esc(n)}">
+      <span class="num">${i + 1}</span><span><span class="nome">${n}</span><br><span class="misura">${misuraDi(n)}</span></span></button>`).join('')}</div>
+    <p class="label" style="padding:22px 4px 8px">Per famiglia</p>
+    ${FAMIGLIE.map(f => `<button class="a-cartella premi" data-az="apri" data-v="${f.id}">
+      <span class="conta">${f.voci.length}</span>
+      <span style="flex:1;min-width:0"><span class="nome">${f.nome}</span><div class="anteprima">${f.voci.slice(0, 4).join(' · ')}</div></span>
+      <span style="color:var(--muted)">${I.dx}</span></button>`).join('')}</div>`
+})
+
+// ── B ──
+const cartaB = (n) => {
+  const k = STAZIONI.indexOf(n)
+  return `<button class="b-carta premi" data-az="scegli" data-v="${esc(n)}">
+    <span class="b-icona${k >= 0 ? ' staz' : ''}">${k >= 0 ? k + 1 : iconaMisura(n)}</span>
+    <span style="flex:1;min-width:0"><span class="nome">${n}</span><br><span class="misura">${misuraDi(n)}</span></span>
+    <span class="b-piu">${I.piu}</span></button>`
+}
+telefono('B', { q: '', scheda: 'stazioni' }, (s) => {
+  const schede = [{ id: 'stazioni', nome: 'Stazioni Hyrox' }, ...FAMIGLIE.map(f => ({ id: f.id, nome: f.nome })), { id: 'tutti', nome: 'Tutti A–Z' }]
+  let lista
+  if (s.q) {
+    const r = cerca(s.q)
+    lista = custom(s.q) + (r.length ? `<div class="b-lista">${r.map(cartaB).join('')}</div>` : (custom(s.q) ? '' : '<p class="vuoto">Nessun esercizio trovato.</p>'))
+  } else if (s.scheda === 'stazioni') {
+    lista = `<div class="b-lista" style="gap:0">${STAZIONI.map((n, i) => cartaB(n) + (i < 7 ? '<div class="b-run">1 KM RUN</div>' : '')).join('')}</div>`
+  } else if (s.scheda === 'tutti') {
+    lista = `<div class="b-lista">${TUTTI.map(cartaB).join('')}</div>`
+  } else {
+    lista = `<div class="b-lista">${FAMIGLIE.find(f => f.id === s.scheda).voci.map(cartaB).join('')}</div>`
+  }
+  return testa('Scegli esercizio', 'Tocca il movimento da aggiungere') +
+    `<div style="padding:0 16px;flex-shrink:0">${campo(s.q)}
+      ${s.q ? '' : `<div class="b-chips">${schede.map(c => `<button class="b-chip premi" data-az="scheda" data-v="${c.id}" aria-pressed="${s.scheda === c.id}">${c.nome}</button>`).join('')}</div>`}</div>
+    <div class="corpo" style="padding-top:12px">${lista}</div>`
+})
+
+// ── C ──
+const rigaC = (n, numero) => `<button class="c-riga" data-az="scegli" data-v="${esc(n)}">
+  ${numero ? `<span class="num">${numero}</span>` : ''}
+  <span class="nome">${n}</span><span class="misura">${misuraDi(n)}</span><span style="color:var(--muted)">${I.dx}</span></button>`
+telefono('C', { q: '', aperta: null }, (s) => {
+  if (s.q) {
+    const r = cerca(s.q)
+    return testa('Scegli esercizio', 'Tocca il movimento da aggiungere') + `<div class="corpo">${campo(s.q)}<div style="height:12px"></div>${custom(s.q)}
+      ${r.length ? `<div class="c-gruppo">${r.map(n => rigaC(n)).join('')}</div>` : (custom(s.q) ? '' : '<p class="vuoto">Nessun esercizio trovato.</p>')}</div>`
+  }
+  return testa('Scegli esercizio', 'Tocca il movimento da aggiungere') + `<div class="corpo">${campo('')}
+    <div class="c-sezione"><span class="label">Stazioni Hyrox · ordine di gara</span></div>
+    <div class="c-gruppo c-staz">${STAZIONI.map((n, i) => rigaC(n, i + 1)).join('')}</div>
+    <div class="c-sezione"><span class="label">Per famiglia</span></div>
+    ${FAMIGLIE.map(f => `<div class="c-gruppo${s.aperta === f.id ? ' aperto' : ''}">
+      <button class="c-testa premi" data-az="apri" data-v="${f.id}"><span class="nome">${f.nome}</span><span class="conta">${f.voci.length}</span><span class="c-freccia">${I.dx}</span></button>
+      ${s.aperta === f.id ? f.voci.map(n => rigaC(n, STAZIONI.includes(n) ? STAZIONI.indexOf(n) + 1 : null)).join('') : ''}</div>`).join('')}</div>`
+})
+</script>
+</body>
+</html>

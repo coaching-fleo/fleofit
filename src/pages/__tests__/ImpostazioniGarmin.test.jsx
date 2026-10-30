@@ -3,7 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import { montaPagina, UTENTE } from '../../test/montaPagina'
-import { TESTO_CONSENSO_GARMIN, MESSAGGI_ESITO, GARMIN_IN_ARRIVO } from '../../lib/garmin'
+import { TESTO_CONSENSO_GARMIN, TILE_GARMIN_CONNECT, MESSAGGI_ESITO, GARMIN_IN_ARRIVO } from '../../lib/garmin'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -74,6 +74,11 @@ describe('La riga Garmin in Impostazioni', () => {
 
     await utente.click(riga)
     const foglio = await screen.findByRole('dialog', { name: 'Garmin Connect' })
+    // 🔴 Linee guida di marchio Garmin: il collegamento si mostra col nome intero e
+    // la tile ufficiale, dall'indirizzo di Garmin (mai una copia ritoccata).
+    const tile = within(foglio).getByRole('img', { name: 'Garmin Connect' })
+    expect(tile.getAttribute('src')).toBe(TILE_GARMIN_CONNECT)
+    expect(TILE_GARMIN_CONNECT).toMatch(/^https:\/\/static\.garmincdn\.com\//)
     const collega = within(foglio).getByRole('button', { name: 'Collega' })
     expect(collega).toBeDisabled()
 

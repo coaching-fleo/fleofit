@@ -68,7 +68,7 @@ import RigaOrologio from '../components/RigaOrologio'
 // Pigra: la card serve solo dove c'è un'attività dell'orologio, e il chunk
 // della scheda deve restare leggero (CLAUDE.md §2).
 const CardDaGarmin = lazy(() => import('../components/CardDaGarmin'))
-import { annullaAbbinamento, minutiVeri } from '../lib/attivitaGarmin'
+import { annullaAbbinamento, minutiVeri, fonteGarmin } from '../lib/attivitaGarmin'
 import { RigaAvviso, AvvisoEsteso, PrevisioneNonDisponibile } from '../components/PrevisioneUI'
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { recapStoria } from '../lib/recapStoria'
@@ -289,6 +289,11 @@ export default function WorkoutDetail() {
   const attivitaGarmin = garmin.awId === athleteWorkoutId ? garmin.attivita : null
   const [annullaGarminInCorso, setAnnullaGarminInCorso] = useState(false)
   const rpeDaLinkFatto = useRef(false)
+  // Il foglio RPE aperto dalla push di Garmin: chiuso con «Annulla», si va lo stesso al recap.
+  const rpeDaLink = useRef(false)
+  // Le note dell'assegnazione come stanno nel database: il recap le riscrive
+  // col gradimento (RecapDati), quindi deve partire da quelle vere, non da una ricostruzione.
+  const noteAw = useRef('')
   const [workoutStatus, setWorkoutStatus] = useState('pending')
 const [selectedAthletes, setSelectedAthletes] = useState([])
   const [assignStep, setAssignStep] = useState(1)
@@ -489,6 +494,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         setWorkoutStatus(awData[0].status)
         setVoiceNoteUrl(isVoiceNoteValid(awData[0].voice_note_url) ? awData[0].voice_note_url : null)
         setCurrentAthleteName(`${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim())
+        noteAw.current = awData[0].notes || ''
         if (awData[0].notes) {
           const parsed = parseNotesAndRpe(awData[0].notes);
           setAthleteNote({ text: parsed.text, rpe: parsed.rpe, dichiarato: rpeDichiarato(awData[0].notes), gradimento: parsed.gradimento, athleteName: `${awData[0].athletes?.name || ''} ${awData[0].athletes?.surname || ''}`.trim() })
@@ -636,15 +642,58 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // Garmin. Apre l'RPE una volta, quando l'assegnazione è caricata, solo
   // all'atleta stesso e solo se l'RPE non è ancora dichiarato; poi il
   // parametro se ne va, così tornare indietro non lo riapre.
+  // ⚠️ Il recap è solo di chi si è allenato. Da questa stessa pagina il
+  // coach può segnare completato l'allenamento di un atleta, e la
+  // schermata gli racconterebbe lo storico di qualcun altro come se fosse
+  // suo.
+  const apriRecap = (notes) => {
+    if (role !== 'athlete') return
+    setRecapAw({
+      id: athleteWorkoutId,
+      status: 'completed',
+      notes,
+      // Per l'atleta `workout.date` porta già il suo `completed_date` (lo
+      // riscrive il fetch): è il giorno in cui l'ha fatto, non quello in
+      // cui il workout era in programma.
+      completed_date: workout?.date,
+      workouts: { id: workout?.id, title: workout?.title, sections: workout?.sections },
+      // La durata vera dell'orologio, se c'è (src/lib/attivitaGarmin.js).
+      minutiGarmin: minutiVeri(attivitaGarmin),
+      fonteGarmin: attivitaGarmin ? fonteGarmin(attivitaGarmin) : null,
+    })
+  }
+
+  // Dal 30/10/2026 il link finisce SEMPRE sul recap, come i complimenti di Strava
+  // e Runna: con l'RPE già dichiarato ci va dritto, altrimenti dopo «Fatto!» o
+  // «Annulla». Aspetta la lettura dell'attività Garmin, che dà al recap la durata vera.
   const chiedeRpe = searchParams.get('rpe') === '1'
+  const garminLetto = garmin.awId === athleteWorkoutId
   useEffect(() => {
     if (!chiedeRpe || loading || rpeDaLinkFatto.current) return
+    const mio = athleteWorkoutId && isOwnProfile && role === 'athlete'
+    if (mio && !garminLetto) return
     rpeDaLinkFatto.current = true
-    // Al giro dopo, come le altre aperture dal ciclo della pagina.
-    if (athleteWorkoutId && isOwnProfile && athleteNote?.dichiarato == null) setTimeout(apriRpe, 0)
+    if (mio) {
+      // Al giro dopo, come le altre aperture dal ciclo della pagina.
+      if (athleteNote?.dichiarato == null) {
+        rpeDaLink.current = true
+        setTimeout(apriRpe, 0)
+      } else {
+        setTimeout(() => apriRecap(noteAw.current), 0)
+      }
+    }
     setSearchParams(p => { const n = new URLSearchParams(p); n.delete('rpe'); return n }, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chiedeRpe, loading, athleteWorkoutId])
+  }, [chiedeRpe, loading, athleteWorkoutId, garminLetto])
+
+  const annullaRpe = () => {
+    setShowRpeModal(false)
+    if (rpeDaLink.current) {
+      rpeDaLink.current = false
+      apriRecap(noteAw.current)
+    }
+  }
+
 
   const handleRpeSubmit = async () => {
     setSavingNote(true)
@@ -678,29 +727,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       setShowRpeModal(false)
       vibraSuccesso()
 
-      // ⚠️ Il recap è solo di chi si è allenato. Da questa stessa pagina il
-      // coach può segnare completato l'allenamento di un atleta, e la
-      // schermata gli racconterebbe lo storico di qualcun altro come se fosse
-      // suo.
-      // ⚠️ E si apre anche OFFLINE, fuori dal ramo `status.connected`: la
+      noteAw.current = finalNote
+      rpeDaLink.current = false
+      // ⚠️ Il recap si apre anche OFFLINE, fuori dal ramo `status.connected`: la
       // lettura che lo riempie fallirà, e il recap si fermerà alla scheda che
       // non ha bisogno di leggere niente. Legarlo alla rete vorrebbe dire
       // togliere il festeggiamento proprio a chi si è allenato in un posto
       // senza campo.
-      if (role === 'athlete') {
-        setRecapAw({
-          id: athleteWorkoutId,
-          status: newStatus,
-          notes: finalNote,
-          // Per l'atleta `workout.date` porta già il suo `completed_date` (lo
-          // riscrive il fetch): è il giorno in cui l'ha fatto, non quello in
-          // cui il workout era in programma.
-          completed_date: workout?.date,
-          workouts: { id: workout?.id, title: workout?.title, sections: workout?.sections },
-          // La durata vera dell'orologio, se c'è (src/lib/attivitaGarmin.js).
-          minutiGarmin: minutiVeri(attivitaGarmin),
-        })
-      }
+      apriRecap(finalNote)
 
       if (role === 'athlete' && status.connected) {
         supabase.functions.invoke('send-reminders', {
@@ -1714,6 +1748,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     setSavingNote(false)
     if (!success) return
 
+    noteAw.current = finalNote
     setAthleteNote({ text: testoCompleto, rpe: rpeScore, dichiarato: parseInt(rpeScore, 10), gradimento: athleteNote?.gradimento ?? null, athleteName: athleteNote?.athleteName || '' })
     if (role === 'athlete' && status.connected) {
       supabase.functions.invoke('send-reminders', {
@@ -2571,7 +2606,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           notes={rpeNotes} 
           onNotesChange={setRpeNotes} 
           onSave={handleRpeSubmit} 
-          onCancel={() => setShowRpeModal(false)} 
+          onCancel={annullaRpe} 
           saving={savingNote} 
         />,
         document.body
@@ -2583,7 +2618,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           onChiudi={() => setRecapAw(null)}
           // ⚠️ Senza, correggere la nota subito dopo il recap la riscriverebbe
           // con il gradimento di prima — cioè cancellerebbe quello appena dato.
-          onNote={(_, notes) => setAthleteNote(prev => prev ? { ...prev, gradimento: gradimentoDi(notes) } : prev)}
+          onNote={(_, notes) => {
+            noteAw.current = notes
+            setAthleteNote(prev => prev ? { ...prev, gradimento: gradimentoDi(notes) } : prev)
+          }}
           onApri={(passo) => {
             setRecapAw(null)
             if (passo.workoutId) navigate(`/workout/${passo.workoutId}?athlete_id=${queryAthleteId || user?.id}`)

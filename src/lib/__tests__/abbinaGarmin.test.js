@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  TIPI_PER_CATEGORIA, MINUTI_MINIMI, FRAZIONE_STIMA, GIORNI_MASSIMI, scegliAbbinamento,
+  TIPI_PER_CATEGORIA, MINUTI_MINIMI, FRAZIONE_STIMA, GIORNI_MASSIMI, scegliAbbinamento, minutiMinimi,
 } from '../../../supabase/functions/_shared/abbinaGarmin.ts'
 
 const COLLEGATO = '2026-10-01T00:00:00Z'
@@ -77,4 +77,26 @@ describe('attività arrivata tardi (backfill di un ricollegamento)', () => {
   it('arrivata il giorno dopo completa', () => expect(conAdesso('2026-10-29T07:00:00Z')).toBe('aw1'))
   it('arrivata 7 giorni dopo, esatti, completa', () => expect(conAdesso('2026-11-04T07:00:00Z')).toBe('aw1'))
   it('arrivata più di 7 giorni dopo non completa', () => expect(conAdesso('2026-11-04T07:00:01Z')).toBe(null))
+})
+
+describe('soglia regolabile (GARMIN_MINUTI_MINIMI, solo per le prove)', () => {
+  it('🔴 senza secret, o con un valore sbagliato, resta 10', () => {
+    for (const v of [undefined, '', 'abc', '0', '-3', '2.5', '61']) expect(minutiMinimi(v)).toBe(MINUTI_MINIMI)
+  })
+
+  it('un intero da 1 a 60 vale', () => {
+    expect(minutiMinimi('1')).toBe(1)
+    expect(minutiMinimi(' 5 ')).toBe(5)
+    expect(minutiMinimi('60')).toBe(60)
+  })
+
+  it('con la soglia a 1, una corsa da 1:06 completa; da 0:59 no', () => {
+    const con1 = (durata_s) => scegliAbbinamento({ attivita: attivita({ durata_s }), candidati: [cand()], collegatoAt: COLLEGATO, minutiMinimi: 1 })
+    expect(con1(66)).toBe('aw1')
+    expect(con1(59)).toBeNull()
+  })
+
+  it('senza minutiMinimi la regola è quella di sempre', () => {
+    expect(scegli({ durata_s: 66 })).toBeNull()
+  })
 })

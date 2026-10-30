@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   righeDaGarmin, nomeTipoAttivita, TIPI_ATTIVITA, durataGarmin, minutiVeri,
-  annullaAbbinamento, abbinaA, vociLibere, candidatiAbbina, dispositivoGarmin, leggiAttivitaPeriodo,
+  annullaAbbinamento, abbinaA, vociLibere, candidatiAbbina, dispositivoGarmin, fonteGarmin, leggiAttivitaPeriodo,
 } from '../attivitaGarmin'
 import { fintoSupabase } from '../../test/fintoSupabase'
 
@@ -138,6 +138,11 @@ describe('vociLibere', () => {
     expect(vociLibere(attivita, '2026-10-28')).toEqual([{ id: 'g9', testo: 'Garmin · Corsa 42′', attivita: libera }])
   })
 
+  it('🔴 con il modello noto la voce dice «Garmin Forerunner 265» (linee guida di marchio Garmin)', () => {
+    const a = { ...libera, dati: { dispositivo: 'Forerunner 265' } }
+    expect(vociLibere([a], '2026-10-28')[0].testo).toBe('Garmin Forerunner 265 · Corsa 42′')
+  })
+
   it('senza durata niente «0′», e un tipo sconosciuto è «Attività»', () => {
     const a = { ...libera, tipo: 'PADEL', durata_s: null }
     expect(vociLibere([a], '2026-10-28')[0].testo).toBe('Garmin · Attività')
@@ -186,6 +191,23 @@ describe('dispositivoGarmin', () => {
     expect(dispositivoGarmin({ dati: { dispositivo: ' Forerunner 265 ' } })).toBe('Forerunner 265')
     expect(dispositivoGarmin({ dati: { dispositivo: 42 } })).toBe('')
     expect(dispositivoGarmin(null)).toBe('')
+  })
+
+  it('«unknown» non è un orologio', () => {
+    expect(dispositivoGarmin({ dati: { dispositivo: 'unknown' } })).toBe('')
+    expect(dispositivoGarmin({ dati: { dispositivo: 'Unknown Device' } })).toBe('')
+  })
+})
+
+describe('fonteGarmin', () => {
+  it('🔴 «Garmin [modello]», o solo «Garmin» se il modello manca (linee guida di marchio Garmin)', () => {
+    expect(fonteGarmin({ dati: { dispositivo: 'Forerunner 265' } })).toBe('Garmin Forerunner 265')
+    expect(fonteGarmin({ dati: {} })).toBe('Garmin')
+    expect(fonteGarmin(null)).toBe('Garmin')
+  })
+
+  it('non raddoppia «Garmin» se il nome dell\'orologio lo porta già', () => {
+    expect(fonteGarmin({ dati: { dispositivo: 'Garmin Venu 3' } })).toBe('Garmin Venu 3')
   })
 })
 

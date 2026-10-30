@@ -79,10 +79,10 @@ describe('la card «Da Garmin»', () => {
   it('mostra i numeri dell\'orologio e chi li ha misurati, anche per Hyrox', async () => {
     apri()
     await attendi()
-    expect(await screen.findByText('Da Garmin')).toBeInTheDocument()
+    // 🔴 Linee guida di marchio Garmin: «Garmin [modello]» È il titolo della card.
+    expect(await screen.findByText('Garmin Forerunner 265')).toBeInTheDocument()
     expect(screen.getByText('42′')).toBeInTheDocument()
     expect(screen.getByText('141 bpm')).toBeInTheDocument()
-    expect(screen.getByText('Garmin · Forerunner 265')).toBeInTheDocument()
     // Niente distanza né passo: non ci sono.
     expect(screen.queryByText('Distanza')).not.toBeInTheDocument()
   })
@@ -92,7 +92,7 @@ describe('la card «Da Garmin»', () => {
     apri()
     await attendi()
     await waitFor(() => expect(finto.chiamateA('garmin_attivita', 'limit')).toHaveLength(1))
-    expect(screen.queryByText('Da Garmin')).not.toBeInTheDocument()
+    expect(screen.queryByText('Garmin Forerunner 265')).not.toBeInTheDocument()
   })
 
   it('«Non era questo allenamento»: chiede, stacca l\'attività e il workout torna da fare', async () => {
@@ -139,8 +139,8 @@ describe('due attività sulla stessa assegnazione', () => {
     ctrl.stato.garmin = [ATTIVITA, { ...ATTIVITA, garmin_id: 'g0', durata_s: 600 }]
     apri()
     await attendi()
-    expect(await screen.findByText('Da Garmin')).toBeInTheDocument()
-    expect(screen.getAllByText('Da Garmin')).toHaveLength(1)
+    expect(await screen.findByText('Garmin Forerunner 265')).toBeInTheDocument()
+    expect(screen.getAllByText('Garmin Forerunner 265')).toHaveLength(1)
     expect(screen.getByText('42′')).toBeInTheDocument()
     const ordine = finto.chiamateA('garmin_attivita', 'order')
     expect(ordine[0].args).toEqual(['ricevuto_at', { ascending: false }])
@@ -155,12 +155,33 @@ describe('il link «Com\'è andata?» (?rpe=1)', () => {
     await waitFor(() => expect(ultimoUrl).toBe('/workout/w1?athlete_id=u1'))
   })
 
-  it('con l\'RPE già dichiarato non si apre', async () => {
+  it('🔴 con l\'RPE già dichiarato salta il foglio e apre subito il recap', async () => {
     ctrl.stato.assegnazioni = assegnazione('[RPE: 7/10]\n')
     apri({ url: '/workout/w1?athlete_id=u1&rpe=1' })
     await attendi()
     await waitFor(() => expect(ultimoUrl).toBe('/workout/w1?athlete_id=u1'))
+    expect(await screen.findByRole('dialog', { name: /Recap/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Fatto!/ })).not.toBeInTheDocument()
+  })
+
+  it('🔴 «Annulla» sul foglio arrivato dalla push apre comunque il recap', async () => {
+    const utente = userEvent.setup()
+    apri({ url: '/workout/w1?athlete_id=u1&rpe=1' })
+    await attendi()
+    await screen.findByRole('button', { name: /Fatto!/ })
+    await utente.click(screen.getByRole('button', { name: 'Annulla' }))
+    expect(await screen.findByRole('dialog', { name: /Recap/ })).toBeInTheDocument()
+  })
+
+  it('senza la push, «Annulla» chiude e basta', async () => {
+    const utente = userEvent.setup()
+    ctrl.stato.assegnazioni = assegnazione(null, 'pending')
+    apri()
+    await attendi()
+    await utente.click(await screen.findByRole('button', { name: /Segna come completato/ }))
+    await utente.click(await screen.findByRole('button', { name: 'Annulla' }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Fatto!/ })).not.toBeInTheDocument())
+    expect(screen.queryByRole('dialog', { name: /Recap/ })).not.toBeInTheDocument()
   })
 
   it('al coach non si apre', async () => {
@@ -168,6 +189,7 @@ describe('il link «Com\'è andata?» (?rpe=1)', () => {
     await attendi()
     await waitFor(() => expect(ultimoUrl).toBe('/workout/w1?athlete_id=u1'))
     expect(screen.queryByRole('button', { name: /Fatto!/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: /Recap/ })).not.toBeInTheDocument()
   })
 })
 
@@ -176,7 +198,7 @@ describe('il recap con l\'attività di Garmin', () => {
     const utente = userEvent.setup()
     apri({ url: '/workout/w1?athlete_id=u1&rpe=1' })
     await attendi()
-    await screen.findByText('Da Garmin')
+    await screen.findByText('Garmin Forerunner 265')
     await utente.click(await screen.findByRole('button', { name: /Fatto!/ }))
     const recap = await screen.findByRole('dialog', { name: /Recap/ })
     await waitFor(() => expect(within(recap).getByText('42')).toBeInTheDocument())

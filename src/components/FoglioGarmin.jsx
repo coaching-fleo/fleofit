@@ -11,6 +11,8 @@
 // trova il foglio (src/lib/indietroAndroid.js).
 // L'interruttore «Manda i workout all'orologio» (Fase 3) c'è solo da collegato;
 // la pagina lo salva chiamando `garmin-training`.
+// La tile in testa è quella ufficiale di Garmin (TILE_GARMIN_CONNECT), a 88px:
+// niente bordi arrotondati né filtri nostri. Senza rete sparisce, il foglio resta.
 
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -18,7 +20,7 @@ import { X, Check, Activity, Moon } from 'lucide-react'
 import { useBottomSheet } from '../useBottomSheet'
 import { VETRO } from '../lib/stiliCard'
 import { Interruttore } from './ImpostazioniUI'
-import { TESTO_CONSENSO_GARMIN, dataCollegamento, etichettePermessi, permessiMancanti } from '../lib/garmin'
+import { TESTO_CONSENSO_GARMIN, TILE_GARMIN_CONNECT, dataCollegamento, etichettePermessi, permessiMancanti } from '../lib/garmin'
 
 export default function FoglioGarmin({ stato, permessi, dal, inviaWorkout = true, inviaOccupato = false, occupato = false, onInviaWorkout, onCollega, onScollega, onInformativa, onChiudi }) {
   const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
@@ -39,6 +41,9 @@ export default function FoglioGarmin({ stato, permessi, dal, inviaWorkout = true
         </button>
 
         <div className="flex items-center gap-3 pb-3 shrink-0">
+          <img src={TILE_GARMIN_CONNECT} alt="Garmin Connect" width={88} height={88}
+            className="shrink-0 w-[88px] h-[88px]" draggable={false}
+            onError={e => { e.currentTarget.style.display = 'none' }} />
           <h2 className="flex-1 min-w-0 text-[17px] font-extrabold tracking-[-.015em] text-white truncate">Garmin Connect</h2>
           <button type="button" aria-label="Chiudi" onClick={chiudi}
             className={`shrink-0 w-10 h-10 rounded-full ${VETRO} flex items-center justify-center text-gray-200 hover:text-white transition`}>

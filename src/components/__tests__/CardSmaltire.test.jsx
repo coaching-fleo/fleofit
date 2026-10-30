@@ -11,7 +11,7 @@ const voci = cosaGuardare({
 describe('CardSmaltire con un segnale di recupero', () => {
   it.each([[true, 'telefono'], [false, 'desktop']])('compatto=%s (%s): non si rompe e mostra la pillola grigia', (compatto) => {
     render(<CardSmaltire voci={voci} compatto={compatto} onApri={() => {}} />)
-    expect(screen.getByText('HRV sotto la sua media da 3 notti')).toBeTruthy()
+    expect(screen.getByText('Garmin · HRV sotto la sua media da 3 notti')).toBeTruthy()
     const pillola = screen.getByText('Recupero')
     expect(pillola.className).toContain('text-gray-300')
   })

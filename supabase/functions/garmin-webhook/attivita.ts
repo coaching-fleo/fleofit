@@ -7,7 +7,7 @@
 // 🔒 Nei log solo id e conteggi: mai tipo, durate, numeri o corpi di Garmin.
 
 import type { AttivitaGarmin } from "../_shared/attivitaGarmin.ts"
-import { scegliAbbinamento, type Candidato } from "../_shared/abbinaGarmin.ts"
+import { scegliAbbinamento, minutiMinimi, type Candidato } from "../_shared/abbinaGarmin.ts"
 import { scollegaAtleta } from "../_shared/garmin.ts"
 
 // deno-lint-ignore no-explicit-any
@@ -117,7 +117,11 @@ async function gestisci(admin: Admin, a: AttivitaGarmin): Promise<'salvata' | 'c
     durataStimataMin: durataStimata(r.workouts?.sections),
   }));
 
-  const scelto = scegliAbbinamento({ attivita: riga, candidati, collegatoAt: coll.collegatoAt, adesso: new Date().toISOString() });
+  const scelto = scegliAbbinamento({
+    attivita: riga, candidati, collegatoAt: coll.collegatoAt, adesso: new Date().toISOString(),
+    // Solo per le prove: GARMIN_MINUTI_MINIMI abbassa i 10 minuti (abbinaGarmin.ts).
+    minutiMinimi: minutiMinimi(Deno.env.get('GARMIN_MINUTI_MINIMI')),
+  });
   if (!scelto) return 'salvata';
 
   // Solo se ancora da fare (Review Focus 4): un update che non tocca niente =

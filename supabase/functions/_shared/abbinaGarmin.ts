@@ -15,6 +15,18 @@ export const TIPI_PER_CATEGORIA: Record<'Running' | 'Hyrox' | 'Gym', string[]> =
 };
 
 export const MINUTI_MINIMI = 10;
+
+/**
+ * La soglia in minuti dal secret GARMIN_MINUTI_MINIMI: SOLO per le prove (il 30/10/2026
+ * lo si mette a 1 per completare i workout da 1 minuto). Vale un intero da 1 a 60;
+ * assente o sbagliato = MINUTI_MINIMI. Prima della produzione il secret si cancella.
+ */
+export function minutiMinimi(valore: string | undefined): number {
+  const v = (valore ?? '').trim();
+  if (!/^\d+$/.test(v)) return MINUTI_MINIMI;
+  const n = Number(v);
+  return n >= 1 && n <= 60 ? n : MINUTI_MINIMI;
+}
 export const FRAZIONE_STIMA = 0.5;
 /**
  * Un'attività più vecchia di così, quando arriva, non completa niente: è il
@@ -42,15 +54,15 @@ type RigaAttivita = {
 
 /** L'id dell'assegnazione che l'attività completa, o null se non se ne può scegliere una sola. */
 export function scegliAbbinamento(
-  x: { attivita: RigaAttivita; candidati: Candidato[]; collegatoAt: string; adesso?: string },
+  x: { attivita: RigaAttivita; candidati: Candidato[]; collegatoAt: string; adesso?: string; minutiMinimi?: number },
 ): string | null {
-  const { attivita: a, candidati, collegatoAt, adesso } = x;
+  const { attivita: a, candidati, collegatoAt, adesso, minutiMinimi = MINUTI_MINIMI } = x;
   // Già abbinata, o rifiutata con «Non era questo» (abbinamento valorizzato, id nullo).
   if (a.athlete_workout_id || a.abbinamento) return null;
   // Il backfill si mostra ma non completa. Confronto fra istanti, non fra stringhe.
   if (Date.parse(a.inizio) < Date.parse(collegatoAt)) return null;
   if (adesso && Date.parse(a.inizio) < Date.parse(adesso) - GIORNI_MASSIMI * 86400_000) return null;
-  if (a.durata_s == null || a.durata_s < MINUTI_MINIMI * 60) return null;
+  if (a.durata_s == null || a.durata_s < minutiMinimi * 60) return null;
   const durata = a.durata_s;
 
   const giusti = candidati.filter((c) => {

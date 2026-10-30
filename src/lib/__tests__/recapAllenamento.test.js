@@ -311,6 +311,16 @@ describe('costruisciRecap con la durata di Garmin', () => {
     expect(cella.circa).toBeFalsy()
   })
 
+  it('🔴 la durata dell\'orologio porta la sua fonte, «Garmin [modello]» (linee guida di marchio Garmin)', () => {
+    const aw = { ...riga('2026-09-22', 'completed', { sections: HYROX }), minutiGarmin: 42, fonteGarmin: 'Garmin Forerunner 265' }
+    expect(durata(costruisciRecap({ aw, oggi: OGGI })).fonte).toBe('Garmin Forerunner 265')
+  })
+
+  it('la stima non ha fonte, anche se la fonte arriva senza minuti', () => {
+    const aw = { ...riga('2026-09-22', 'completed', { sections: HYROX }), fonteGarmin: 'Garmin' }
+    expect(durata(costruisciRecap({ aw, oggi: OGGI })).fonte).toBeUndefined()
+  })
+
   it('una corsa a tempo prende i minuti veri', () => {
     const aw = { ...riga('2026-09-22', 'completed', { sections: CORSA(30) }), minutiGarmin: 33 }
     expect(durata(costruisciRecap({ aw, oggi: OGGI })).valore).toBe('33')

@@ -15,6 +15,15 @@ import { it } from 'date-fns/locale'
  * d'errore del server abbia un messaggio in `MESSAGGI_ESITO`.
  */
 
+/**
+ * La tile ufficiale di Garmin Connect, dall'indirizzo che Garmin stessa indica
+ * (developer.garmin.com/brand-guidelines/connect, «Dynamic URLs»): così è sempre
+ * l'ultima versione, e non ne teniamo una copia. Le linee guida chiedono nome
+ * intero e tile dove si mostra il collegamento, alta almeno 88px, mai ritoccata.
+ */
+export const TILE_GARMIN_CONNECT =
+  'https://static.garmincdn.com/com.garmin.connect/content/images/developer/gc-app-tile/xhdpi/gc-app-tile_@240.png'
+
 /** Cambia solo se cambia ciò che l'atleta accetta con la casella. */
 export const VERSIONE_CONSENSO_GARMIN = 1
 

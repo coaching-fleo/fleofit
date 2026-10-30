@@ -6,6 +6,29 @@
 > il coach vede chi è collegato. Nessun dato Garmin viene usato.
 
 ## 🟡 Stato: attivo in prova (28/10/2026)
+- ⏳ **`GARMIN_MINUTI_MINIMI` (30/10/2026), solo per le prove**: secret di Supabase che abbassa i
+  10 minuti sotto cui un'attività non completa mai un workout (`minutiMinimi` di
+  `_shared/abbinaGarmin.ts`, letto da `garmin-webhook/attivita.ts`). Intero da 1 a 60; assente o
+  sbagliato = 10. 🔴 **Da cancellare prima della produzione**, insieme a `GARMIN_ATLETI_PROVA`.
+- ✅ **Partner Verification tutta verde il 30/10/2026** (Endpoint Setup, Endpoint Coverage, Active
+  User, HTTP), con il secondo atleta di prova `fleofit@proton.me` (account Garmin senza orologio,
+  un'attività inserita a mano). Prossimo passo: la mail di richiesta di produzione a
+  `connect-support@developer.garmin.com`, che manda il committente.
+- ✅ **Linee guida di marchio Garmin applicate il 30/10/2026** (*API Brand Guidelines*, V 6.30.2025:
+  `developer.garmin.com/downloads/brand/Garmin-Developer-API-Brand-Guidelines.pdf`). Le regole:
+  ogni vista con dati dell'orologio dice **«Garmin [modello]»** (solo «Garmin» se il modello non
+  c'è) **accanto al titolo**, mai in un tooltip o in una nota in fondo; i dati **derivati** (medie,
+  segnali) dicono che vengono da Garmin; export e immagini condivise la ripetono; il collegamento si
+  mostra col **nome intero «Garmin Connect» e la tile ufficiale** (≥ 88px, non ritoccata). Il logo
+  non è obbligatorio; se si usa, mai animato, mai in avatar o badge, mai dove non ci sono dati
+  Garmin. Garmin può controllare e sospendere l'accesso. Dove sta nel codice:
+  `fonteGarmin` di `attivitaGarmin.js` (il titolo della card «Da Garmin», le voci del calendario, il
+  foglio dell'attività), `Garmin · …` in testa alle voci di recupero di `cosaGuardare` (in testa
+  perché la riga si tronca), «Durata misurata da Garmin …» nel recap (`fonte` sulla cella di
+  `celleStoria`), `TILE_GARMIN_CONNECT` di `garmin.js` nel `FoglioGarmin` (indirizzo dinamico di
+  Garmin, nessuna copia nel progetto). La story Instagram **non** usa dati Garmin: se un giorno li
+  usa, la scritta va nell'immagine. ⚠️ Testi o screenshot di App Store che citano Garmin: badge
+  ufficiale (kit `Garmin-Connect-Branding-Assets.zip`, pagina *brand-guidelines/connect*).
 - ✅ **Fase 2 (Recupero) attiva in prova dal 29/10/2026**: sonno, HRV e giornata dell'orologio in
   `garmin_giornate`, tre segnali per il coach in «Da guardare», card «Recupero» nella scheda atleta
   e nel profilo. Prima prova: arrivata la giornata di oggi (`dailies`), card visibile. ⚠️ Sonno, HRV
@@ -267,7 +290,11 @@ server `https://apis.garmin.com/wellness-api`), con la sessione del committente.
   Costo: una sincronizzazione ritardata di oltre 7 giorni chiede «Abbina a…».
 - **Dopo un completamento automatico l'RPE resta vuoto** e `athlete_workouts.completed_date` NON
   si tocca (è il giorno programmato). La push all'atleta apre l'RPE (`?rpe=1`, senza «Come stai
-  oggi» prima).
+  oggi» prima). Dal 30/10/2026 la push fa i complimenti («🎉 Allenamento completato!», «Complimenti!
+  … · registrato da Garmin. Com'è andata?», `testoGarminRegistrato`) e il link finisce **sempre sul
+  recap**: dritto se l'RPE c'è già, altrimenti dopo «Fatto!» o anche dopo «Annulla» (`apriRecap` e
+  `annullaRpe` in WorkoutDetail). Il recap parte dalle note vere del database (`noteAw`), perché
+  le riscrive col gradimento.
 - **La push all'atleta tiene il titolo intero, con il codice in coda**, come le altre push
   all'atleta: un solo contratto per la regex del codice. Costo: un suffisso nel testo.
 - **`abbinaA` e `annullaAbbinamento` scrivono due volte** (prima l'attività, poi il workout) e

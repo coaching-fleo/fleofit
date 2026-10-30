@@ -22,8 +22,8 @@ describe('testoNotificaCoach', () => {
 describe('testoGarminRegistrato', () => {
   it('titolo, corpo e rotta', () => {
     expect(testoGarminRegistrato('Sled', 'w1', 'a1')).toEqual({
-      title: 'Registrato da Garmin',
-      bodyMsg: "Sled: com'è andata?",
+      title: '🎉 Allenamento completato!',
+      bodyMsg: "Complimenti! Sled · registrato da Garmin. Com'è andata?",
       route: '/workout/w1?athlete_id=a1&rpe=1',
     })
   })

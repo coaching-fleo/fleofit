@@ -117,6 +117,10 @@ function SchedaFatto({ dati, colore }) {
           ))}
         </div>
       )}
+      {/* Linee guida di marchio Garmin: la fonte sta attaccata ai numeri che misura. */}
+      {dati.celle.find(c => c.fonte) && (
+        <p className="text-[13px] text-gray-400 -mt-3">Durata misurata da {dati.celle.find(c => c.fonte).fonte}</p>
+      )}
     </div>
   )
 }

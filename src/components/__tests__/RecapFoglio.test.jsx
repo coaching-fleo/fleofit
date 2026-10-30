@@ -235,3 +235,17 @@ describe('la domanda sul gradimento', () => {
     expect(screen.getByRole('button', { name: 'Salta' })).toBeInTheDocument()
   })
 })
+
+describe('la fonte Garmin nel recap', () => {
+  it('🔴 con la durata dell\'orologio dice da quale Garmin viene (linee guida di marchio Garmin)', () => {
+    const celle = [{ chiave: 'durata', valore: '42', unita: 'min', etichetta: 'Durata', fonte: 'Garmin Forerunner 265' }]
+    render(<FoglioRecap recap={{ ...recap, slide: [{ ...SCHEDE[0], celle }] }} onChiudi={() => {}} />)
+    expect(screen.getByText('Durata misurata da Garmin Forerunner 265')).toBeTruthy()
+  })
+
+  it('senza dati dell\'orologio non nomina Garmin', () => {
+    const celle = [{ chiave: 'durata', valore: '10', unita: 'min', etichetta: 'Durata', circa: true }]
+    render(<FoglioRecap recap={{ ...recap, slide: [{ ...SCHEDE[0], celle }] }} onChiudi={() => {}} />)
+    expect(screen.queryByText(/Garmin/)).toBeNull()
+  })
+})

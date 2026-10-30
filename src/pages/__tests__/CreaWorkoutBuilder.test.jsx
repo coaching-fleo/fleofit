@@ -524,6 +524,53 @@ describe('la tastiera non deve comparire da sola', () => {
   })
 })
 
+describe('la lista esercizi per famiglie', () => {
+  // Design B, scelto dal committente il 30/10/2026: si apre su «Tutti», con
+  // le otto stazioni in cima in ordine di gara; le pillole restringono.
+  const apriLista = async () => {
+    await alPasso2()
+    await aggiungiBlocco('AMRAP')
+    await userEvent.click(screen.getByRole('button', { name: /Esercizio/ }))
+  }
+  const nomi = () => screen.getAllByRole('button', { name: /^Scegli / }).map(b => b.getAttribute('aria-label').slice(7))
+
+  const STAZIONI = ['SkiErg', 'Sled Push', 'Sled Pull', 'Burpees Broad Jumps',
+    'Rowing', 'Farmers Carry', 'Sandbag Lunges', 'Wall Balls']
+
+  it('si apre su «Tutti»: prima le stazioni in ordine di gara, poi il resto senza ripeterle', async () => {
+    await apriLista()
+    expect(screen.getByRole('button', { name: 'Tutti' })).toHaveAttribute('aria-pressed', 'true')
+    const lista = nomi()
+    expect(lista.slice(0, 8)).toEqual(STAZIONI)
+    expect(lista[8]).toBe('Assault Bike')
+    expect(lista.length).toBeGreaterThan(100)
+    expect(new Set(lista).size).toBe(lista.length)
+  })
+
+  it('una pillola restringe alla sua famiglia', async () => {
+    await apriLista()
+    await userEvent.click(screen.getByRole('button', { name: 'Ergometri' }))
+    expect(nomi()).toEqual(['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill'])
+    await userEvent.click(screen.getByRole('button', { name: 'Stazioni Hyrox' }))
+    expect(nomi()).toEqual(STAZIONI)
+  })
+
+  it('cercando, la lista torna una sola, alfabetica e senza pillole', async () => {
+    await apriLista()
+    await userEvent.type(screen.getByPlaceholderText(/Cerca o scrivi/), 'sled')
+    expect(nomi()).toEqual(['Sled Drag', 'Sled Pull', 'Sled Push'])
+    expect(screen.queryByRole('button', { name: 'Ergometri' })).not.toBeInTheDocument()
+  })
+
+  it('scegliere dalla famiglia apre le misure di quell esercizio', async () => {
+    await apriLista()
+    await userEvent.click(screen.getByRole('button', { name: 'Core' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Scegli Plank' }))
+    expect(screen.getByText('Plank')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Scegli / })).not.toBeInTheDocument()
+  })
+})
+
 describe('il blocco appena creato finisce sotto gli occhi', () => {
   // Aggiungere un blocco chiude quello aperto prima: la pagina si accorcia di
   // colpo e il blocco nuovo, che sta in fondo, esce dallo schermo. Il coach lo

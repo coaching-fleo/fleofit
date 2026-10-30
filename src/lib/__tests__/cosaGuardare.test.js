@@ -58,7 +58,12 @@ describe('cosaGuardare — segnali di recupero Garmin', () => {
     })
     expect(voci.map(v => v.tipo)).toEqual(['feedback', 'recupero', 'recupero', 'fermo', 'scaduto'])
     const [, r] = voci
-    expect(r).toMatchObject({ chiave: 'r-x-hrv', riga: 'HRV sotto la sua media da 3 notti', avviso: false, rpe: null, azione: 'Scheda', nome: 'Anna' })
+    expect(r).toMatchObject({ chiave: 'r-x-hrv', riga: 'Garmin · HRV sotto la sua media da 3 notti', avviso: false, rpe: null, azione: 'Scheda', nome: 'Anna' })
     expect(r.dato.id).toBe('x')
+  })
+
+  it('🔴 ogni segnale dice che viene da Garmin (linee guida di marchio Garmin: dati derivati)', () => {
+    const voci = cosaGuardare({ recupero })
+    expect(voci.every(v => v.riga.startsWith('Garmin · '))).toBe(true)
   })
 })

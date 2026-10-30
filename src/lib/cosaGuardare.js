@@ -15,9 +15,12 @@ export function cosaGuardare({ feedback = [], recupero = [], fermi = [], scaduti
     })),
     // Garmin · Recupero: `recupero` è l'uscita di `segnaliTeam` (src/lib/recuperoGarmin.js),
     // una voce per segnale. Grigia, senza avviso: nessuna push, si legge qui.
+    // «Garmin · …»: sono dati ricavati dall'orologio, e le linee guida di marchio
+    // Garmin vogliono la fonte su ogni voce (la lista è mista). In TESTA, perché la
+    // riga si tronca: in coda sparirebbe proprio la fonte.
     ...recupero.flatMap(a => (a.segnali || []).map(s => ({
       chiave: `r-${a.id}-${s.tipo}`, tipo: 'recupero', dato: a, nome: a.nome, foto: a.foto ?? null,
-      riga: s.testo, avviso: false, rpe: null, azione: 'Scheda',
+      riga: `Garmin · ${s.testo}`, avviso: false, rpe: null, azione: 'Scheda',
     }))),
     ...fermi.map(a => ({
       chiave: `a-${a.id}`, tipo: 'fermo', dato: a, nome: a.nome, foto: a.foto,
