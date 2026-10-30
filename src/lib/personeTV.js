@@ -57,3 +57,18 @@ export const bloccoAScaglioni = (block) =>
 /** Quanti esercizi ha il blocco a scaglioni più lungo: il limite di «Parte dal». */
 export const eserciziMassimi = (blocks) =>
   (blocks || []).filter(bloccoAScaglioni).reduce((m, b) => Math.max(m, b.exercises.length), 0)
+
+/** Il blocco a scaglioni più lungo: i suoi esercizi sono quelli del foglio «Chi parte da dove». */
+export const bloccoPerPersone = (blocks) =>
+  (blocks || []).filter(bloccoAScaglioni).reduce((m, b) => (!m || b.exercises.length > m.exercises.length ? b : m), null)
+
+// Le persone restano finché l'app è aperta, workout per workout, e spariscono
+// quando la si chiude (richiesta del committente, 30/10/2026): un allenamento di
+// gruppo si riapre spesso nella stessa mattina, non la settimana dopo. Per questo
+// stanno in memoria e non in localStorage.
+const memoria = new Map()
+export const personeRicordate = (workoutId) => memoria.get(workoutId) || []
+export const ricordaPersone = (workoutId, persone) => {
+  if (persone.length) memoria.set(workoutId, persone)
+  else memoria.delete(workoutId)
+}

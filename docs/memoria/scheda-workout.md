@@ -525,12 +525,22 @@ Richiesta del committente: allenamenti in contemporanea a più persone, in un EM
 ON/OFF, fatte partire su esercizi diversi. Lo spostamento **lo sceglie il coach** (non lo
 calcola l'app).
 - **Telefono**: col telecomando TV attivo il timer mostra la pillola «Persone sulla TV»
-  (solo se il workout ha un EMOM o un ON/OFF con più di un esercizio). Apre
-  `FoglioPersoneTV`: nome (A, B, C… modificabile), colore fisso, «dal N° esercizio» con − / +.
-  Le persone vivono nello stato di `WorkoutDetail` (`personeTV`): restano chiudendo e
-  riaprendo il timer, si perdono uscendo dalla scheda.
+  (solo se il workout ha un EMOM o un ON/OFF con più di un esercizio). Apre il foglio
+  **«Chi parte da dove»** (`FoglioPersoneTV`), ridisegnato il 30/10/2026 dopo la prima prova:
+  si lavora sugli **esercizi**, come li vede la TV (quelli dell'EMOM/ON-OFF più lungo,
+  `bloccoPerPersone`). Si tocca un esercizio → ci compare una persona (A, B, C…, colore fisso);
+  si tocca una persona → la si sposta toccando un'altra riga (anelli tratteggiati del suo
+  colore), le si dà un nome o la si toglie. «Togli tutti» in fondo. Niente «Salva»: vale subito.
+  🔴 Scartato dal committente il primo disegno (lista di persone, «dal 2°» con −/+, «Aggiungi
+  persona» + «Fatto»): costringeva a tradurre posizioni in numeri. Non tornarci.
+- **Memoria**: le persone restano **finché l'app è aperta**, workout per workout
+  (`personeRicordate`/`ricordaPersone`, una `Map` in memoria in `personeTV.js`); chiusa l'app
+  spariscono (richiesta del committente: un allenamento di gruppo non si ripete la settimana
+  dopo con le stesse persone). Per questo **non** stanno in localStorage.
 - **Viaggio**: dentro il `timer_state` che il telefono già manda (`persone`). Nessuna tabella,
   nessuna colonna.
+- **Prima del via** (preparazione, riscaldamento) la TV mostra già, sul prossimo EMOM/ON-OFF,
+  da dove parte ognuno: così il gruppo sa dove mettersi.
 - **TV**: leggenda sotto la fascia del timer; nel blocco in corso ogni riga prende il colore
   di chi ci sta sopra (bordo, fondo, numero, pillole con i nomi), al posto dell'ambra. Chi è
   dove lo calcola `personePerEsercizio` di `src/lib/personeTV.js` partendo dall'esercizio che

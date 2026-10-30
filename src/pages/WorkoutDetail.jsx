@@ -50,7 +50,7 @@ import { suonaSopraLaMusica, ripristinaSessioneAudio } from '../lib/sessioneAudi
 import { liveActivityDaChiedere, liveActivityAttiva, salvaPreferenzaLiveActivity, statoLiveActivity, programmaLiveActivity, avviaLiveActivity, aggiornaLiveActivity, chiudiLiveActivity } from '../lib/liveActivity'
 import FoglioLiveActivity from '../components/FoglioLiveActivity'
 import FoglioPersoneTV from '../components/FoglioPersoneTV'
-import { eserciziMassimi } from '../lib/personeTV'
+import { bloccoPerPersone, bloccoAScaglioni, personeRicordate, ricordaPersone } from '../lib/personeTV'
 import { BRAND, RUNNING, GYM, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
@@ -349,10 +349,20 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [timerOpen, setTimerOpen] = useState(false)
   const [timerMinimized, setTimerMinimized] = useState(false)
   const [timerSequence, setTimerSequence] = useState([])
-  // Le persone sfasate sul telecomando TV (src/lib/personeTV.js): restano
-  // finché si sta sulla scheda, anche chiudendo e riaprendo il timer.
-  const [personeTV, setPersoneTV] = useState([])
-  const eserciziPerPersone = useMemo(() => (workout ? eserciziMassimi(getNormalizedBlocks(workout)) : 0), [workout])
+  // Le persone sfasate sul telecomando TV (src/lib/personeTV.js): restano in
+  // memoria finché l'app è aperta, anche uscendo e rientrando nella scheda;
+  // chiusa l'app, spariscono.
+  // La memoria è l'unica fonte: lo stato serve solo a ridisegnare.
+  const [, ridisegnaPersone] = useState(0)
+  const personeTV = personeRicordate(id)
+  const cambiaPersoneTV = useCallback((p) => { ricordaPersone(id, p); ridisegnaPersone(n => n + 1) }, [id])
+  // Gli esercizi del foglio «Chi parte da dove»: quelli dell'EMOM o ON/OFF più lungo.
+  const eserciziPerPersone = useMemo(() => {
+    if (!workout) return null
+    const blocchi = getNormalizedBlocks(workout)
+    const b = bloccoPerPersone(blocchi)
+    return b ? { nomi: b.exercises.map(e => e.name), piuBlocchi: blocchi.filter(bloccoAScaglioni).length > 1 } : null
+  }, [workout])
   // La domanda sulla Live Activity: una volta sola, all'apertura del timer o del telecomando.
   const [domandaLiveActivity, setDomandaLiveActivity] = useState(false)
 
@@ -2593,7 +2603,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           }}
           tvCode={connectedTvCode}
           persone={personeTV}
-          onPersone={setPersoneTV}
+          onPersone={cambiaPersoneTV}
           eserciziPerPersone={eserciziPerPersone}
           isMinimized={timerMinimized}
           onMinimize={() => setTimerMinimized(true)}
@@ -2660,7 +2670,7 @@ const SCHEMES = {
   custom: { bg: 'bg-[#0B0B0B]', text: 'text-custom', sub: 'text-custom/80', card: 'bg-[#1e1e1e] border-custom/20 text-custom', cardLabel: 'text-custom/60', icon: 'text-gray-400', btnBg: 'bg-custom text-white' }
 }
 
-function WorkoutTimer({ sequence, onClose, tvCode, persone = [], onPersone, eserciziPerPersone = 0, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle, coloreCategoria: coloreLA = BRAND, categoriaLiveActivity = 'HYROX' }) {
+function WorkoutTimer({ sequence, onClose, tvCode, persone = [], onPersone, eserciziPerPersone = null, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle, coloreCategoria: coloreLA = BRAND, categoriaLiveActivity = 'HYROX' }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(sequence[0]?.duration || 0);
   const [isRunning, setIsRunning] = useState(false);
@@ -3142,9 +3152,9 @@ return createPortal(
         </div>
 
         {/* Telecomando TV: chi fa l'allenamento insieme e da dove parte (src/lib/personeTV.js). */}
-        {tvCode && eserciziPerPersone > 1 && onPersone && (
+        {tvCode && eserciziPerPersone && onPersone && (
           <div className="flex justify-center shrink-0">
-            <button onClick={() => setPersoneAperto(true)}
+            <button aria-label="Persone sulla TV" onClick={() => setPersoneAperto(true)}
               className={`h-11 px-5 rounded-full flex items-center gap-2.5 backdrop-blur-md font-bold text-sm ${currentTheme.card}`}>
               <Users size={18} />
               {persone.length > 0 ? (
@@ -3156,7 +3166,7 @@ return createPortal(
           </div>
         )}
         {personeAperto && (
-          <FoglioPersoneTV persone={persone} maxEsercizi={eserciziPerPersone}
+          <FoglioPersoneTV persone={persone} esercizi={eserciziPerPersone.nomi} piuBlocchi={eserciziPerPersone.piuBlocchi}
             onCambia={onPersone} onChiudi={() => setPersoneAperto(false)} />
         )}
 

@@ -393,6 +393,11 @@ export default function TVDashboard() {
     // `timer_state` (src/lib/personeTV.js). Senza, resta la riga ambra di sempre.
     const persone = timerState && Array.isArray(timerState.persone) && timerState.persone.length > 0
       ? timerState.persone : null
+    // Il blocco su cui stanno le persone: quello in corso, o il prossimo a scaglioni.
+    const bloccoPersone = persone
+      ? blocks.findIndex((b, i) => i >= activeIdx && bloccoAScaglioni(b))
+      : -1
+
     const etichettaCategoria = category === 'Event' ? 'Gara / Evento'
       : category === 'Custom' ? 'Allenamento libero'
       : isRunning ? 'Allenamento di corsa'
@@ -450,9 +455,11 @@ export default function TVDashboard() {
                   const durata = mmss(durataBlocco(block))
                   // EMOM e ON/OFF: l'esercizio che sta girando, letto dall'id dello step.
                   const corrente = statoMostrato ? esercizioInCorso(block, idx, statoMostrato.step?.id) : null
-                  // Con le persone, il blocco in corso colora ogni riga di chi ci sta sopra.
-                  const chiDove = persone && idx === activeIdx && bloccoAScaglioni(block)
-                    ? personePerEsercizio(corrente, esercizi.length, persone) : null
+                  // Con le persone, il blocco in corso colora ogni riga di chi ci sta sopra;
+                  // prima del via (preparazione, riscaldamento) il prossimo EMOM o ON/OFF
+                  // mostra già da dove parte ognuno.
+                  const chiDove = persone && idx === bloccoPersone
+                    ? personePerEsercizio(idx === activeIdx ? corrente : 0, esercizi.length, persone) : null
                   return (
                     <BloccoTV key={block.id || idx}
                       tipo={block.type}

@@ -1,85 +1,154 @@
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Plus, Minus, Trash2, Users } from 'lucide-react'
-import { aggiungiPersona, MAX_PERSONE } from '../lib/personeTV'
+import { X, Plus, Trash2, Pencil } from 'lucide-react'
+import { aggiungiPersona, personePerEsercizio, MAX_PERSONE } from '../lib/personeTV'
 import { vibraScelta } from '../lib/aptica'
 
-// Il foglio «Persone» del telecomando TV (30/10/2026): chi fa l'allenamento
-// insieme e da quale esercizio parte ognuno. Sulla TV ogni riga dell'EMOM o
-// dell'ON/OFF in corso prende il colore di chi ci sta sopra (src/lib/personeTV.js).
-export default function FoglioPersoneTV({ persone, maxEsercizi, onCambia, onChiudi }) {
-  const cambia = (id, campi) => onCambia(persone.map(p => (p.id === id ? { ...p, ...campi } : p)))
-  const sposta = (p, verso) => {
+// «Chi parte da dove» — il foglio delle persone del telecomando TV (30/10/2026).
+//
+// Si lavora sugli esercizi, come li vede la TV: si tocca un esercizio e ci
+// compare una persona (A, B, C…), si tocca una persona per spostarla, darle un
+// nome o toglierla. Il primo disegno (lista di persone con «dal 2°» e −/+) è
+// stato scartato dal committente: costringeva a tradurre posizioni in numeri.
+// Le modifiche valgono subito, sulla TV: niente «Salva».
+export default function FoglioPersoneTV({ persone, esercizi, piuBlocchi, onCambia, onChiudi }) {
+  const [sceltaId, setSceltaId] = useState(null)
+  const scelta = persone.find(p => p.id === sceltaId) || null
+  // Chi sta su quale esercizio PRIMA del via: è il punto di partenza.
+  const righe = personePerEsercizio(0, esercizi.length, persone)
+  const piene = persone.length >= MAX_PERSONE
+
+  const tocca = (i) => {
+    if (scelta) {
+      if (scelta.partenza !== i + 1) {
+        vibraScelta()
+        onCambia(persone.map(p => (p.id === scelta.id ? { ...p, partenza: i + 1 } : p)))
+      }
+      setSceltaId(null)
+      return
+    }
+    if (piene) return
     vibraScelta()
-    const n = Math.max(1, maxEsercizi)
-    cambia(p.id, { partenza: ((p.partenza - 1 + verso + n) % n) + 1 })
+    const nuove = aggiungiPersona(persone)
+    nuove[nuove.length - 1] = { ...nuove[nuove.length - 1], partenza: i + 1 }
+    onCambia(nuove)
   }
+
+  const togli = (id) => {
+    onCambia(persone.filter(p => p.id !== id))
+    setSceltaId(null)
+  }
+
+  const guida = scelta
+    ? `Tocca l'esercizio dove spostare ${scelta.nome || 'questa persona'}.`
+    : persone.length === 0
+      ? "Tocca l'esercizio da cui parte ognuno."
+      : 'A ogni cambio tutti avanzano di un esercizio.'
 
   return createPortal(
     <div className="fixed inset-0 z-[260] flex flex-col justify-end">
       <div className="absolute inset-0 bg-black/70 velo-in" onClick={onChiudi} />
-      <div className="relative bg-[#1e1e1e] border-t border-[#2a2a2a] rounded-t-3xl px-5 pt-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] max-h-[85dvh] overflow-y-auto sheet-in">
-        <div className="flex items-start justify-between gap-4 mb-1">
-          <div>
-            <h3 className="text-xl font-black tracking-tight text-white">Persone sulla TV</h3>
-            <p className="mt-1 text-sm text-gray-400 text-pretty">
-              Ognuno ha un colore. Negli EMOM e negli ON/OFF la TV colora l'esercizio di chi ci sta sopra,
-              e a ogni cambio tutti avanzano di uno.
-            </p>
+      <div className="relative bg-[#1e1e1e] border-t border-[#2a2a2a] rounded-t-3xl px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] max-h-[85dvh] overflow-y-auto sheet-in">
+        <div className="w-10 h-1 rounded-full bg-[#383838] mx-auto mb-4" aria-hidden="true" />
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h3 className="text-xl font-black tracking-tight text-white">Chi parte da dove</h3>
+            <p className="mt-1 text-sm text-muted text-pretty" aria-live="polite">{guida}</p>
           </div>
           <button aria-label="Chiudi" onClick={onChiudi}
-            className="shrink-0 w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300">
+            className="shrink-0 w-11 h-11 -mr-1 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300 hover:text-white">
             <X size={20} />
           </button>
         </div>
 
-        {persone.length === 0 ? (
-          <div className="mt-5 rounded-2xl border border-dashed border-[#383838] py-8 flex flex-col items-center gap-2 text-gray-500">
-            <Users size={28} />
-            <p className="text-sm">Nessuna persona: la TV accende l'esercizio in giallo, come sempre.</p>
-          </div>
-        ) : (
-          <div className="mt-5 flex flex-col gap-2.5">
-            {persone.map(p => (
-              <div key={p.id} className="flex items-center gap-3 rounded-2xl bg-[#111] border border-[#2a2a2a] p-2.5">
-                <span aria-hidden="true" className="shrink-0 w-4 h-4 rounded-full ml-1" style={{ background: p.colore }} />
-                <input
-                  aria-label="Nome"
-                  value={p.nome}
-                  maxLength={12}
-                  onChange={e => cambia(p.id, { nome: e.target.value })}
-                  className="flex-1 min-w-0 bg-transparent text-white font-bold text-base outline-none" />
-                <div className="shrink-0 flex items-center gap-1">
-                  <button aria-label="Parte da un esercizio prima" onClick={() => sposta(p, -1)}
-                    className="w-9 h-9 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300">
-                    <Minus size={16} />
-                  </button>
-                  <span className="w-[64px] text-center text-sm font-bold text-gray-200 tabular-nums">dal {p.partenza}°</span>
-                  <button aria-label="Parte da un esercizio dopo" onClick={() => sposta(p, 1)}
-                    className="w-9 h-9 rounded-full bg-[#2a2a2a] flex items-center justify-center text-gray-300">
-                    <Plus size={16} />
-                  </button>
-                </div>
-                <button aria-label={`Togli ${p.nome}`} onClick={() => onCambia(persone.filter(x => x.id !== p.id))}
-                  className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:text-red-500">
-                  <Trash2 size={16} />
+        <ol className="mt-5 rounded-2xl bg-[#111] border border-[#2a2a2a] overflow-hidden divide-y divide-[#2a2a2a]">
+          {esercizi.map((nome, i) => {
+            const qui = righe[i] || []
+            const colore = qui[0]?.colore
+            const destinazione = scelta && scelta.partenza !== i + 1
+            return (
+              <li key={i} className="relative">
+                <button
+                  onClick={() => tocca(i)}
+                  disabled={!scelta && piene}
+                  className="w-full min-h-[60px] flex items-center gap-3.5 pl-4 pr-3 py-2.5 text-left transition-colors duration-300 active:bg-white/[.04] disabled:active:bg-transparent"
+                  style={colore ? { background: `${colore}17` } : undefined}>
+                  <span aria-hidden="true"
+                    className="shrink-0 w-7 h-7 rounded-full bg-[#2a2a2a] flex items-center justify-center text-xs font-bold text-gray-300 tabular-nums">
+                    {i + 1}
+                  </span>
+                  <span className="flex-1 min-w-0 font-bold text-[15px] text-white truncate">{nome || 'Esercizio'}</span>
+                  {/* Lo spazio delle persone: vuoto mostra cosa succede toccando. */}
+                  {qui.length === 0 && !scelta && !piene && (
+                    <span aria-hidden="true" className="shrink-0 w-8 h-8 rounded-full border border-dashed border-[#444] flex items-center justify-center text-muted">
+                      <Plus size={14} />
+                    </span>
+                  )}
+                  {destinazione && (
+                    <span aria-hidden="true" className="shrink-0 w-8 h-8 rounded-full border-2 border-dashed opacity-70"
+                      style={{ borderColor: scelta.colore }} />
+                  )}
                 </button>
-              </div>
-            ))}
-          </div>
+                {/* Le persone stanno sopra il bottone della riga: toccarle le sceglie. */}
+                {qui.length > 0 && (
+                  <div className={`absolute inset-y-0 flex items-center gap-1.5 ${destinazione ? 'right-[52px]' : 'right-3'}`}>
+                    {qui.map(p => {
+                      const attiva = p.id === sceltaId
+                      return (
+                        <button key={p.id}
+                          aria-label={attiva ? `Deseleziona ${p.nome}` : `Scegli ${p.nome}`}
+                          aria-pressed={attiva}
+                          onClick={() => { vibraScelta(); setSceltaId(attiva ? null : p.id) }}
+                          className={`min-w-[34px] h-[34px] max-w-[96px] px-2.5 rounded-full text-sm font-black text-black truncate transition-transform duration-200 ${
+                            attiva ? 'scale-110 ring-2 ring-white ring-offset-2 ring-offset-[#111]' : ''} ${scelta && !attiva ? 'opacity-40' : ''}`}
+                          style={{ background: p.colore }}>
+                          {p.nome || '·'}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ol>
+
+        {piuBlocchi && (
+          <p className="mt-2.5 px-1 text-xs text-muted text-pretty">
+            Vale per ogni EMOM e ON/OFF del workout: conta la posizione dell'esercizio.
+          </p>
         )}
 
-        <div className="mt-4 flex gap-2.5">
-          <button
-            onClick={() => { vibraScelta(); onCambia(aggiungiPersona(persone, maxEsercizi)) }}
-            disabled={persone.length >= MAX_PERSONE}
-            className="flex-1 h-12 rounded-xl bg-[#2a2a2a] text-white font-bold flex items-center justify-center gap-2 disabled:opacity-40">
-            <Plus size={18} /> Aggiungi persona
-          </button>
-          <button onClick={onChiudi}
-            className="flex-1 h-12 rounded-xl bg-brand text-black font-bold hover:brightness-110">
-            Fatto
-          </button>
-        </div>
+        {scelta ? (
+          // La persona scelta: nome e «Togli». Spostarla è toccare un'altra riga.
+          <div className="mt-4 flex items-center gap-2.5 rounded-2xl bg-[#111] border p-2 pl-4"
+            style={{ borderColor: scelta.colore }}>
+            <span aria-hidden="true" className="shrink-0 w-3.5 h-3.5 rounded-full" style={{ background: scelta.colore }} />
+            <input
+              aria-label="Nome"
+              value={scelta.nome}
+              maxLength={10}
+              placeholder="Nome"
+              onChange={e => onCambia(persone.map(p => (p.id === scelta.id ? { ...p, nome: e.target.value } : p)))}
+              className="flex-1 min-w-0 bg-transparent text-white font-bold outline-none placeholder:text-muted" />
+            <Pencil size={15} aria-hidden="true" className="shrink-0 text-muted" />
+            <button onClick={() => togli(scelta.id)}
+              className="shrink-0 h-11 px-4 rounded-xl bg-[#2a2a2a] text-red-400 font-semibold text-sm flex items-center gap-1.5 hover:bg-[#333]">
+              <Trash2 size={16} /> Togli
+            </button>
+          </div>
+        ) : persone.length > 0 && (
+          <div className="mt-3 flex items-center justify-between gap-3 px-1">
+            <p className="text-xs text-muted">
+              {piene ? `Al massimo ${MAX_PERSONE} persone.` : 'Tocca una persona per spostarla o darle un nome.'}
+            </p>
+            <button onClick={() => onCambia([])}
+              className="shrink-0 h-11 px-2 text-sm font-semibold text-muted hover:text-white">
+              Togli tutti
+            </button>
+          </div>
+        )}
       </div>
     </div>,
     document.body

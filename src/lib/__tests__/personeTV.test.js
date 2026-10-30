@@ -64,3 +64,24 @@ describe('eserciziMassimi', () => {
     expect(eserciziMassimi([{ type: 'AMRAP', exercises: ex(5) }])).toBe(0)
   })
 })
+
+describe('memoria delle persone', () => {
+  it('ricorda per workout finché l\'app è aperta, e dimentica una lista vuota', async () => {
+    const { personeRicordate, ricordaPersone } = await import('../personeTV')
+    ricordaPersone('w1', [{ nome: 'A' }])
+    expect(personeRicordate('w1')).toEqual([{ nome: 'A' }])
+    expect(personeRicordate('w2')).toEqual([])
+    ricordaPersone('w1', [])
+    expect(personeRicordate('w1')).toEqual([])
+  })
+})
+
+describe('bloccoPerPersone', () => {
+  it('sceglie l\'EMOM o l\'ON/OFF con più esercizi', async () => {
+    const { bloccoPerPersone } = await import('../personeTV')
+    const a = { type: 'EMOM', exercises: [{}, {}] }
+    const b = { type: 'ON/OFF', exercises: [{}, {}, {}] }
+    expect(bloccoPerPersone([{ type: 'AMRAP', exercises: [{}, {}, {}, {}] }, a, b])).toBe(b)
+    expect(bloccoPerPersone([{ type: 'AMRAP', exercises: [{}, {}] }])).toBe(null)
+  })
+})
