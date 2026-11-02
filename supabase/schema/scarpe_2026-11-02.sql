@@ -1,0 +1,241 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Scarpe da corsa — catalogo, scarpe dell'atleta, uso per allenamento
+-- Scritta il 02/11/2026 · PROPOSTA: NON APPLICATA. Serve il sì ESPLICITO del
+-- committente (CLAUDE.md §0, regola 0-bis: lo schema è congelato).
+-- Va applicata a mano dal SQL editor di Supabase, dopo il sì.
+--
+-- Migrazione ADDITIVA: tre tabelle nuove che `main` (la web app di oggi) non
+-- conosce e non legge. Nessuna tabella o policy esistente cambia.
+--
+--  · scarpe_catalogo — i modelli di scarpa (marca, modello, tipo, drop). Li
+--    legge ogni utente autenticato; li scrive solo lo staff, MENO
+--    demo@fleofit.it: l'account del revisore Apple non deve cambiare il
+--    catalogo di tutti (stesso criterio di messaggi_coach).
+--  · scarpe_atleta — le scarpe di un atleta. Marca e modello sono COPIATI dal
+--    catalogo alla scelta, così la scarpa sopravvive se il modello viene tolto
+--    (catalogo_id va a null). Le scrive solo l'atleta; le legge lui e il suo coach.
+--  · scarpe_uso — con quale scarpa è stato fatto un allenamento. Chiave:
+--    athlete_workout_id (una scarpa per allenamento). Il with check esige che
+--    scarpa E allenamento siano dello stesso atleta (come l'abbinamento di
+--    garmin_attivita).
+--
+-- I km non si salvano: si calcolano dall'app (km_iniziali + allenamenti con
+-- questa scarpa).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+begin;
+
+-- ── 1. scarpe_catalogo ─────────────────────────────────────────────────────
+create table public.scarpe_catalogo (
+  id        uuid primary key default gen_random_uuid(),
+  marca     text not null,
+  modello   text not null,
+  tipo      text check (tipo in ('allenamento', 'gara', 'trail', 'ammortizzata')),
+  drop_mm   numeric,  -- facoltativo: solo dove il valore è certo
+  creato_da uuid default auth.uid(),
+  creato_at timestamptz default now()
+);
+
+create unique index scarpe_catalogo_nome
+  on public.scarpe_catalogo (lower(marca), lower(modello));
+
+alter table public.scarpe_catalogo enable row level security;
+
+create policy "scarpe_catalogo lettura" on public.scarpe_catalogo
+  as permissive for select to authenticated
+  using (true);
+
+create policy "scarpe_catalogo staff" on public.scarpe_catalogo
+  as permissive for all to authenticated
+  using      (public.e_staff() and (auth.jwt() ->> 'email') <> 'demo@fleofit.it')
+  with check (public.e_staff() and (auth.jwt() ->> 'email') <> 'demo@fleofit.it');
+
+-- ── 2. scarpe_atleta ───────────────────────────────────────────────────────
+create table public.scarpe_atleta (
+  id          uuid primary key default gen_random_uuid(),
+  athlete_id  uuid not null references public.athletes (id) on delete cascade,
+  catalogo_id uuid references public.scarpe_catalogo (id) on delete set null,
+  marca       text,
+  modello     text,
+  km_iniziali numeric not null default 0 check (km_iniziali >= 0),
+  soglia_km   numeric not null default 700 check (soglia_km > 0),
+  principale  boolean not null default false,
+  ritirata_at timestamptz,
+  creato_at   timestamptz default now(),
+  check (catalogo_id is not null or (marca is not null and modello is not null))
+);
+
+create index scarpe_atleta_atleta on public.scarpe_atleta (athlete_id);
+
+-- Una sola principale ATTIVA per atleta.
+create unique index scarpe_atleta_una_principale
+  on public.scarpe_atleta (athlete_id) where principale and ritirata_at is null;
+
+alter table public.scarpe_atleta enable row level security;
+
+create policy "scarpe_atleta lettura" on public.scarpe_atleta
+  as permissive for select to authenticated
+  using (athlete_id = auth.uid() or public.mio_atleta(athlete_id));
+
+create policy "scarpe_atleta proprie" on public.scarpe_atleta
+  as permissive for all to authenticated
+  using      (athlete_id = auth.uid())
+  with check (athlete_id = auth.uid());
+
+-- ── 3. scarpe_uso ──────────────────────────────────────────────────────────
+create table public.scarpe_uso (
+  athlete_workout_id uuid primary key references public.athlete_workouts (id) on delete cascade,
+  scarpa_id          uuid not null references public.scarpe_atleta (id) on delete cascade
+);
+
+create index scarpe_uso_scarpa on public.scarpe_uso (scarpa_id);
+
+alter table public.scarpe_uso enable row level security;
+
+-- Si vede l'uso se si vede la scarpa (la subquery passa dalla policy di lettura
+-- di scarpe_atleta: atleta stesso o suo coach).
+create policy "scarpe_uso lettura" on public.scarpe_uso
+  as permissive for select to authenticated
+  using (exists (select 1 from public.scarpe_atleta s where s.id = scarpa_id));
+
+-- Scrive solo l'atleta, e scarpa E allenamento devono essere suoi.
+create policy "scarpe_uso proprie" on public.scarpe_uso
+  as permissive for all to authenticated
+  using (exists (select 1 from public.scarpe_atleta s
+                 where s.id = scarpa_id and s.athlete_id = auth.uid()))
+  with check (
+    exists (select 1 from public.scarpe_atleta s
+            where s.id = scarpa_id and s.athlete_id = auth.uid())
+    and exists (select 1 from public.athlete_workouts aw
+                where aw.id = athlete_workout_id and aw.athlete_id = auth.uid())
+  );
+
+-- ── 4. Seed del catalogo ───────────────────────────────────────────────────
+-- Modelli attuali (linee 2024-2026). drop_mm solo dove il valore è certo, altrimenti
+-- null: un dato sbagliato è peggio di un dato vuoto. Rieseguibile: on conflict do nothing.
+insert into public.scarpe_catalogo (marca, modello, tipo, drop_mm) values
+  ('Nike', 'Pegasus 41', 'allenamento', 10),
+  ('Nike', 'Invincible 3', 'ammortizzata', 9),
+  ('Nike', 'Vomero 17', 'ammortizzata', null),
+  ('Nike', 'Structure 25', 'allenamento', null),
+  ('Nike', 'Infinity Run 4', 'allenamento', null),
+  ('Nike', 'Vaporfly 3', 'gara', 8),
+  ('Nike', 'Alphafly 3', 'gara', 4),
+  ('Nike', 'Zoom Fly 6', 'allenamento', null),
+  ('Nike', 'Zegama 2', 'trail', null),
+  ('Nike', 'Pegasus Trail 5', 'trail', null),
+  ('Adidas', 'Adizero Boston 12', 'allenamento', null),
+  ('Adidas', 'Adizero Adios Pro 3', 'gara', null),
+  ('Adidas', 'Adizero Adios Pro 4', 'gara', null),
+  ('Adidas', 'Adizero Evo SL', 'allenamento', null),
+  ('Adidas', 'Adizero SL2', 'allenamento', null),
+  ('Adidas', 'Adizero Takumi Sen 10', 'gara', null),
+  ('Adidas', 'Ultraboost 5', 'ammortizzata', null),
+  ('Adidas', 'Supernova Rise', 'allenamento', null),
+  ('Adidas', 'Adistar 3', 'ammortizzata', null),
+  ('Adidas', 'Terrex Agravic Speed Ultra', 'trail', null),
+  ('Asics', 'Gel-Nimbus 26', 'ammortizzata', 8),
+  ('Asics', 'Gel-Nimbus 27', 'ammortizzata', null),
+  ('Asics', 'Gel-Kayano 31', 'allenamento', 10),
+  ('Asics', 'Gel-Kayano 32', 'allenamento', null),
+  ('Asics', 'Novablast 4', 'allenamento', 8),
+  ('Asics', 'Novablast 5', 'allenamento', null),
+  ('Asics', 'Superblast 2', 'ammortizzata', 8),
+  ('Asics', 'Gel-Cumulus 27', 'allenamento', null),
+  ('Asics', 'Metaspeed Sky Paris', 'gara', null),
+  ('Asics', 'Metaspeed Edge Paris', 'gara', null),
+  ('Asics', 'Magic Speed 4', 'allenamento', null),
+  ('Asics', 'Glideride Max 3', 'ammortizzata', null),
+  ('Asics', 'Gel-Trabuco 13', 'trail', null),
+  ('Asics', 'Trabuco Max 3', 'trail', null),
+  ('Hoka', 'Clifton 9', 'allenamento', 5),
+  ('Hoka', 'Clifton 10', 'allenamento', null),
+  ('Hoka', 'Bondi 8', 'ammortizzata', 4),
+  ('Hoka', 'Bondi 9', 'ammortizzata', null),
+  ('Hoka', 'Mach 6', 'allenamento', null),
+  ('Hoka', 'Mach X 2', 'allenamento', null),
+  ('Hoka', 'Rocket X 3', 'gara', null),
+  ('Hoka', 'Cielo X1 2.0', 'gara', null),
+  ('Hoka', 'Arahi 7', 'allenamento', null),
+  ('Hoka', 'Gaviota 5', 'allenamento', null),
+  ('Hoka', 'Speedgoat 6', 'trail', null),
+  ('Hoka', 'Mafate 4', 'trail', null),
+  ('Hoka', 'Tecton X 3', 'trail', null),
+  ('Saucony', 'Endorphin Speed 4', 'allenamento', 8),
+  ('Saucony', 'Endorphin Speed 5', 'allenamento', null),
+  ('Saucony', 'Endorphin Pro 4', 'gara', null),
+  ('Saucony', 'Kinvara 15', 'allenamento', null),
+  ('Saucony', 'Ride 17', 'allenamento', null),
+  ('Saucony', 'Triumph 22', 'ammortizzata', null),
+  ('Saucony', 'Guide 17', 'allenamento', null),
+  ('Saucony', 'Hurricane 24', 'ammortizzata', null),
+  ('Saucony', 'Xodus Ultra 3', 'trail', null),
+  ('Brooks', 'Ghost 16', 'allenamento', 12),
+  ('Brooks', 'Ghost 17', 'allenamento', null),
+  ('Brooks', 'Glycerin 21', 'ammortizzata', null),
+  ('Brooks', 'Glycerin 22', 'ammortizzata', null),
+  ('Brooks', 'Adrenaline GTS 24', 'allenamento', null),
+  ('Brooks', 'Hyperion Max 2', 'allenamento', null),
+  ('Brooks', 'Hyperion Elite 4', 'gara', null),
+  ('Brooks', 'Launch 11', 'allenamento', null),
+  ('Brooks', 'Caldera 7', 'trail', null),
+  ('Brooks', 'Cascadia 18', 'trail', null),
+  ('New Balance', 'Fresh Foam X 1080v14', 'ammortizzata', null),
+  ('New Balance', 'Fresh Foam X 880v15', 'allenamento', null),
+  ('New Balance', 'Fresh Foam X More v5', 'ammortizzata', null),
+  ('New Balance', 'FuelCell SuperComp Elite v4', 'gara', null),
+  ('New Balance', 'FuelCell SC Trainer v3', 'allenamento', null),
+  ('New Balance', 'FuelCell Rebel v4', 'allenamento', null),
+  ('New Balance', 'FuelCell Propel v5', 'allenamento', null),
+  ('New Balance', 'Fresh Foam X Hierro v8', 'trail', null),
+  ('New Balance', 'Fresh Foam X Trail More v3', 'trail', null),
+  ('On', 'Cloudmonster 2', 'ammortizzata', null),
+  ('On', 'Cloudsurfer 7', 'allenamento', null),
+  ('On', 'Cloudsurfer Max', 'ammortizzata', null),
+  ('On', 'Cloudrunner 2', 'allenamento', null),
+  ('On', 'Cloudeclipse', 'ammortizzata', null),
+  ('On', 'Cloudboom Echo 3', 'gara', null),
+  ('On', 'Cloudboom Strike', 'gara', null),
+  ('On', 'Cloudflow 4', 'allenamento', null),
+  ('On', 'Cloudultra 2', 'trail', null),
+  ('Puma', 'Deviate Nitro 3', 'allenamento', null),
+  ('Puma', 'Deviate Nitro Elite 3', 'gara', null),
+  ('Puma', 'Fast-R Nitro Elite 3', 'gara', null),
+  ('Puma', 'Velocity Nitro 3', 'allenamento', null),
+  ('Puma', 'Magnify Nitro 2', 'ammortizzata', null),
+  ('Puma', 'ForeverRun Nitro', 'allenamento', null),
+  ('Mizuno', 'Wave Rider 28', 'allenamento', null),
+  ('Mizuno', 'Wave Rider 29', 'allenamento', null),
+  ('Mizuno', 'Wave Sky 8', 'ammortizzata', null),
+  ('Mizuno', 'Wave Inspire 20', 'allenamento', null),
+  ('Mizuno', 'Wave Rebellion Pro 2', 'gara', null),
+  ('Mizuno', 'Wave Rebellion Flash 2', 'allenamento', null),
+  ('Mizuno', 'Wave Daichi 8', 'trail', null),
+  ('Altra', 'Torin 7', 'ammortizzata', 0),
+  ('Altra', 'Escalante 4', 'allenamento', 0),
+  ('Altra', 'Rivera 4', 'allenamento', 0),
+  ('Altra', 'Experience Flow', 'allenamento', 0),
+  ('Altra', 'Vanish Carbon', 'gara', 0),
+  ('Altra', 'Provision 8', 'allenamento', 0),
+  ('Altra', 'Lone Peak 8', 'trail', 0),
+  ('Altra', 'Olympus 6', 'trail', 0),
+  ('Salomon', 'Aero Glide 3', 'allenamento', null),
+  ('Salomon', 'Aero Blaze 2', 'allenamento', null),
+  ('Salomon', 'S/Lab Phantasm 2', 'gara', null),
+  ('Salomon', 'Sonic 6', 'allenamento', null),
+  ('Salomon', 'Glide Max', 'ammortizzata', null),
+  ('Salomon', 'Speedcross 6', 'trail', null),
+  ('Salomon', 'Sense Ride 5', 'trail', null),
+  ('Salomon', 'Ultra Glide 3', 'trail', null),
+  ('Salomon', 'S/Lab Ultra 3', 'trail', null)
+on conflict do nothing;
+
+commit;
+
+-- Dopo, per verificare (deve stampare SEI policy: 2 + 2 + 2):
+-- select tablename, policyname, cmd from pg_policies
+--  where tablename in ('scarpe_catalogo', 'scarpe_atleta', 'scarpe_uso') order by 1, 2;
+-- e il seed: select count(*) from public.scarpe_catalogo;  -- 114
+
+-- Rollback (cancella tutte le scarpe e gli usi):
+-- DROP TABLE public.scarpe_uso, public.scarpe_atleta, public.scarpe_catalogo;

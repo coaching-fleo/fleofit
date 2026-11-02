@@ -50,6 +50,10 @@ jobs:
       # modelli_blocco (16/10/2026): «Modelli di blocco». Applicata il
       # 16/10/2026; se un giorno mancasse, il job la salterebbe con un avviso.
       #
+      # scarpe_catalogo, scarpe_atleta, scarpe_uso (02/11/2026): «Scarpe da corsa».
+      # Attivo dopo l'applicazione della migrazione e il prossimo app:main; finché
+      # non esistono il job le salta con un avviso.
+      #
       # ⚠️ Le pagine si ordinano per `id`. Una tabella SENZA colonna `id` va scritta
       # `tabella:colonna`, con la sua chiave: ordinare per una colonna che non
       # esiste fa rispondere HTTP 400 e fallire TUTTO il backup, non solo lei.
@@ -64,7 +68,7 @@ jobs:
       # NON garmin_collegamenti: contiene i token (cifrati) e non deve finire in un artifact.
       # Finché la loro migrazione non è applicata la REST API risponde 404 e il job
       # le salta con un avviso (`::warning::`), senza far fallire il backup.
-      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai messaggi_coach note_estratte:athlete_workout_id staff:email coach_atleti:athlete_id.asc,coach_id modelli_blocco garmin_attivita:garmin_id garmin_giornate:athlete_id.asc,giorno garmin_invii:athlete_workout_id'
+      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai messaggi_coach note_estratte:athlete_workout_id staff:email coach_atleti:athlete_id.asc,coach_id modelli_blocco garmin_attivita:garmin_id garmin_giornate:athlete_id.asc,giorno garmin_invii:athlete_workout_id scarpe_catalogo scarpe_atleta scarpe_uso:athlete_workout_id'
 
       # Tabelle che non devono MAI essere vuote o mancanti:
       # se lo sono, il backup viene considerato non valido e il job fallisce.
