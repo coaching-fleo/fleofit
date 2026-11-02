@@ -8,6 +8,9 @@ import { Foglio } from './FoglioMessaggio'
 import { statoScarpa, testoKm, TIPI_SCARPA, SOGLIA_PREDEFINITA } from '../lib/kmScarpe'
 import { numeroKm } from '../lib/scarpeDb'
 import { vibraScelta } from '../lib/aptica'
+import { separaCodice } from '../lib/codiceWorkout'
+import { format, parseISO } from 'date-fns'
+import { it } from 'date-fns/locale'
 
 // «Scarpe da corsa» (02/11/2026, spec §2): solo presentazione. La pagina
 // /scarpe, la card del profilo e (Task 7-8) il dettaglio e la scheda atleta
@@ -24,7 +27,8 @@ export function BarraKm({ km, soglia = SOGLIA_PREDEFINITA }) {
   const quota = soglia > 0 && Number.isFinite(Number(km)) ? Math.min(Number(km) / soglia, 1) : 0
   return (
     <div role="progressbar" aria-label="Km verso la soglia di cambio"
-      aria-valuemin={0} aria-valuemax={Math.round(soglia)} aria-valuenow={Math.round(Number(km) || 0)}
+      aria-valuemin={0} aria-valuemax={Math.round(soglia)}
+      aria-valuenow={km == null || !Number.isFinite(Number(km)) ? undefined : Math.round(Number(km))}
       data-stato={stato}
       className="h-1.5 w-full rounded-full bg-white/[.08] overflow-hidden">
       <div className={`h-full rounded-full ${COLORE_BARRA[stato] || COLORE_BARRA.ok}`} style={{ width: `${quota * 100}%` }} />
@@ -327,5 +331,72 @@ export function FoglioModelloCatalogo({ iniziale, onSalva, onChiudi }) {
         </div>
       </div>
     </Foglio>
+  )
+}
+
+const dataUso = (d) => {
+  try { return d ? format(parseISO(d), 'EEE d MMM', { locale: it }) : '' } catch { return '' }
+}
+
+/**
+ * Il dettaglio di una scarpa (spec §2 «/scarpe/:id»): km, soglia da cambiare,
+ * «Rendila principale», «Ritirala» e l'elenco degli usi. Presentazione pura:
+ * la pagina decide cosa fa ogni tocco. Un km sconosciuto è «—», mai 0.
+ */
+export function DettaglioScarpaUI({ scarpa, soglia, onSoglia, sogliaValida, salvandoSoglia, onSalvaSoglia, onPrincipale, onRitira }) {
+  const ritirata = !!scarpa.ritirata_at
+  return (
+    <div className="cascata max-w-2xl mx-auto flex flex-col gap-4 mt-2">
+      <section className={`${CARD} p-5 flex flex-col gap-3`}>
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <p className={LABEL}>{scarpa.marca}</p>
+            <h2 className="mt-0.5 text-[22px] font-black text-white truncate">{scarpa.modello}</h2>
+          </div>
+          {scarpa.principale && !ritirata && <Bollino />}
+        </div>
+        <p className={`text-[15px] font-bold ${scarpa.stato === 'oltre' ? 'text-red-500' : scarpa.stato === 'quasi' ? 'text-brand' : 'text-gray-300'}`}>
+          {`${testoKm(scarpa.km)} / ${testoKm(scarpa.soglia_km)} km`}
+        </p>
+        <BarraKm km={scarpa.km} soglia={scarpa.soglia_km} />
+        <p className="text-[13px] font-medium text-muted">
+          Km di partenza <span className="font-bold text-gray-300">{testoKm(scarpa.km_iniziali)}</span>
+        </p>
+        {ritirata && <p className="text-[13px] font-bold text-muted">Ritirata</p>}
+      </section>
+
+      {!ritirata && (
+        <section className={`${CARD} p-5 flex flex-col gap-3.5`}>
+          <Campo etichetta="Soglia di cambio (km)" valore={soglia} onChange={onSoglia} inputMode="decimal"
+            errore={sogliaValida ? null : 'Scrivi i km come numero maggiore di zero, per esempio 700.'} />
+          <button type="button" onClick={onSalvaSoglia} disabled={!sogliaValida || salvandoSoglia} className={BOTTONE_BRAND}>Salva</button>
+          {!scarpa.principale && (
+            <button type="button" onClick={onPrincipale} className={BOTTONE_QUIETO}>Rendila principale</button>
+          )}
+          <button type="button" onClick={onRitira} className={BOTTONE_QUIETO}>Ritirala</button>
+        </section>
+      )}
+
+      <section className="flex flex-col gap-2">
+        <h3 className={LABEL}>Usi</h3>
+        {scarpa.usi?.length ? (
+          <ul aria-label="Usi" className="flex flex-col gap-2">
+            {scarpa.usi.map(u => (
+              <li key={u.athlete_workout_id} className={`${CARD} px-4 py-3 flex items-center gap-3`}>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14.5px] font-bold text-white truncate">{separaCodice(u.titolo).nome || 'Corsa'}</span>
+                  <span className="block text-[12.5px] font-medium text-muted">
+                    {[dataUso(u.data), u.fonte === 'orologio' ? "dall'orologio" : 'stimato'].filter(Boolean).join(' · ')}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[14px] font-bold text-gray-300">{u.km == null ? '—' : `${testoKm(u.km)} km`}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-[13.5px] text-muted">Ancora nessuna corsa con questa scarpa.</p>
+        )}
+      </section>
+    </div>
   )
 }

@@ -26,6 +26,7 @@ import { mostraErrore } from '../lib/alert'
 import { vibraScelta, vibraSuccesso } from '../lib/aptica'
 import { LABEL, VETRO } from '../lib/stiliCard'
 import { useIndietro } from '../useIndietro'
+import { useNavigate } from 'react-router-dom'
 
 const SENZA_RETE = 'Controlla la connessione e riprova.'
 const chiave = (t) => String(t ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
@@ -38,6 +39,7 @@ export default function Scarpe() {
   const staff = role !== 'athlete'
   const uid = user?.id
   const indietro = useIndietro(staff ? '/settings' : '/profile')
+  const navigate = useNavigate()
 
   // stato: 'caricamento' | 'pronto' | 'assente' (tabelle mancanti) | 'errore'
   const [stato, setStato] = useState('caricamento')
@@ -199,7 +201,7 @@ export default function Scarpe() {
                 <p className="rounded-3xl border border-dashed border-[#333] px-5 py-6 text-[14px] text-gray-400 leading-relaxed text-center">
                   Nessuna scarpa. Scegli dal catalogo quella che usi, e i km si contano da soli.
                 </p>
-              ) : attive.map(s => <CardScarpa key={s.id} scarpa={s} />)}
+              ) : attive.map(s => <CardScarpa key={s.id} scarpa={s} onApri={() => navigate(`/scarpe/${s.id}`)} />)}
               {ritirate.length > 0 && (
                 <>
                   <button type="button" aria-expanded={ritirateAperte} onClick={() => setRitirateAperte(v => !v)}
@@ -207,7 +209,7 @@ export default function Scarpe() {
                     {`Ritirate (${ritirate.length})`}
                     <ChevronDown size={16} aria-hidden="true" className={`transition-transform ${ritirateAperte ? 'rotate-180' : ''}`} />
                   </button>
-                  {ritirateAperte && ritirate.map(s => <CardScarpa key={s.id} scarpa={s} />)}
+                  {ritirateAperte && ritirate.map(s => <CardScarpa key={s.id} scarpa={s} onApri={() => navigate(`/scarpe/${s.id}`)} />)}
                 </>
               )}
             </section>
