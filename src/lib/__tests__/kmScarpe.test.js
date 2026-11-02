@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { kmAllenamento, haCorsa, kmScarpa, statoScarpa, SOGLIA_PREDEFINITA } from '../kmScarpe'
+import { kmAllenamento, haCorsa, kmScarpa, statoScarpa, testoKm, SOGLIA_PREDEFINITA } from '../kmScarpe'
 
 const run = (steps) => ({ category: 'Running', steps })
 const hyrox = (blocks) => ({ category: 'Hyrox', blocks })
@@ -48,4 +48,14 @@ describe('statoScarpa', () => {
   it('la soglia predefinita e 700', () => expect(SOGLIA_PREDEFINITA).toBe(700))
   it.each([[559, 'ok'], [560, 'quasi'], [700, 'oltre']])('statoScarpa(%i, 700) = %s', (km, s) =>
     expect(statoScarpa(km, 700)).toBe(s))
+})
+
+describe('testoKm', () => {
+  it('interi, col punto delle migliaia; sconosciuto è «—», mai 0', () => {
+    expect(testoKm(412.4)).toBe('412')
+    expect(testoKm(1200)).toBe('1.200')
+    expect(testoKm(0)).toBe('0')
+    expect(testoKm(null)).toBe('—')
+    expect(testoKm(undefined)).toBe('—')
+  })
 })

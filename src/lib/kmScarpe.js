@@ -98,3 +98,17 @@ export const statoScarpa = (km, soglia) => {
   if (km >= soglia) return 'oltre'
   return km >= soglia * QUOTA_QUASI ? 'quasi' : 'ok'
 }
+
+/** I tipi del catalogo, nell'ordine dei filtri (il `check` della colonna `tipo`). */
+export const TIPI_SCARPA = [
+  { valore: 'allenamento', etichetta: 'Allenamento' },
+  { valore: 'gara', etichetta: 'Gara' },
+  { valore: 'trail', etichetta: 'Trail' },
+  { valore: 'ammortizzata', etichetta: 'Ammortizzata' },
+]
+
+/** «412», «1.200»: i km si mostrano interi. Sconosciuti → «—», mai 0. */
+export const testoKm = (km) => (km == null || !Number.isFinite(Number(km))
+  ? '—'
+  // A mano e non con toLocaleString: in italiano «1200» resterebbe senza punto.
+  : String(Math.round(Number(km))).replace(/\B(?=(\d{3})+(?!\d))/g, '.'))

@@ -7,6 +7,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
 import { leggiGiornate, oggiItalia } from '../lib/recuperoGarmin'
+import { leggiScarpeAtleta } from '../lib/scarpeDb'
 import { User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, Copy, Activity, CalendarDays, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
 import { vibraSuccesso } from '../lib/aptica'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, differenceInDays } from 'date-fns'
@@ -72,6 +73,8 @@ const calculateAge = (dob) => {
 // non scarica né il componente né i suoi conti (spec dati-dalle-note §4).
 const DalleNoteUI = lazy(() => import('../components/DalleNoteUI'))
 const CardRecupero = lazy(() => import('../components/CardRecupero')) // Garmin · Recupero
+// «Scarpe da corsa»: la card del profilo, pigra come le altre card che non tutti vedono.
+const CardProfiloScarpe = lazy(() => import('../components/ScarpeUI').then(m => ({ default: m.CardProfiloScarpe })))
 
 export default function AthleteDetail() {
   const { id: paramId } = useParams()
@@ -97,6 +100,20 @@ export default function AthleteDetail() {
     leggiGiornate(supabase, id, da, a).then(r => { if (vivo) setGiornate(r || []) }).catch(() => { if (vivo) setGiornate([]) })
     return () => { vivo = false }
   }, [id])
+  // «Le mie scarpe»: solo l'atleta sul proprio profilo. `null` = niente card:
+  // tabelle assenti (migrazione non applicata) o lettura fallita, senza alert.
+  // La lettura porta l'id per cui è stata fatta: mai le scarpe di un altro.
+  const [scarpeLette, setScarpeLette] = useState({ per: null, scarpe: null })
+  const conScarpe = role === 'athlete' && isOwnProfile
+  const scarpe = conScarpe && scarpeLette.per === id ? scarpeLette.scarpe : null
+  useEffect(() => {
+    if (!conScarpe || !id) return undefined
+    let vivo = true
+    leggiScarpeAtleta(id)
+      .then(r => { if (vivo) setScarpeLette({ per: id, scarpe: r?.disponibile ? r.scarpe : null }) })
+      .catch((e) => { console.warn('Scarpe non caricate:', e); if (vivo) setScarpeLette({ per: id, scarpe: null }) })
+    return () => { vivo = false }
+  }, [id, conScarpe])
   // Le tre tab sono diventate due sezioni che si aprono in pagina, più un menu
   // per i comandi che erano tre bottoni in testata (CLAUDE.md §9-terdecies).
   const [menuAperto, setMenuAperto] = useState(false)
@@ -785,6 +802,9 @@ export default function AthleteDetail() {
       )}
     </>
   )
+  const pScarpe = scarpe && (
+    <Suspense fallback={null}><CardProfiloScarpe scarpe={scarpe} /></Suspense>
+  )
   const pOggi = (
     <>
       {todayWorkoutsList.length > 0 && (
@@ -989,6 +1009,7 @@ export default function AthleteDetail() {
           {pOggi}
           {pCalendario}
           {pProssimi}
+          {pScarpe}
           {pStoricoRecord}
           {pBarra}
         </>

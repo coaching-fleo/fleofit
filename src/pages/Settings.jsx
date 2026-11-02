@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer, Footprints } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -850,6 +850,11 @@ export default function Settings() {
             <RigaAzione icona={Ticket} tono="brand" titolo="Codici invito"
               dettaglio={riassuntoCodici(codici) || 'Genera e condividi gli inviti'}
               onClick={() => setFoglioCodiciAperto(true)} />
+            <Separatore />
+            {/* «Scarpe da corsa»: per lo staff /scarpe non ha altri ingressi. */}
+            <RigaAzione icona={Footprints} titolo="Catalogo scarpe"
+              dettaglio="I modelli fra cui scelgono gli atleti"
+              onClick={() => navigate('/scarpe')} />
             {eAdmin(role) && (<>
             <Separatore />
             <RigaAzione icona={Users} titolo="Coach"
