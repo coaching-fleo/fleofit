@@ -7,7 +7,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
 import { leggiGiornate, oggiItalia } from '../lib/recuperoGarmin'
-import { leggiScarpeAtleta } from '../lib/scarpeDb'
+import { useScarpaCompletamento } from '../useScarpaCompletamento'
 import { User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, Copy, Activity, CalendarDays, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
 import { vibraSuccesso } from '../lib/aptica'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, differenceInDays } from 'date-fns'
@@ -100,20 +100,6 @@ export default function AthleteDetail() {
     leggiGiornate(supabase, id, da, a).then(r => { if (vivo) setGiornate(r || []) }).catch(() => { if (vivo) setGiornate([]) })
     return () => { vivo = false }
   }, [id])
-  // «Le mie scarpe»: solo l'atleta sul proprio profilo. `null` = niente card:
-  // tabelle assenti (migrazione non applicata) o lettura fallita, senza alert.
-  // La lettura porta l'id per cui è stata fatta: mai le scarpe di un altro.
-  const [scarpeLette, setScarpeLette] = useState({ per: null, scarpe: null })
-  const conScarpe = role === 'athlete' && isOwnProfile
-  const scarpe = conScarpe && scarpeLette.per === id ? scarpeLette.scarpe : null
-  useEffect(() => {
-    if (!conScarpe || !id) return undefined
-    let vivo = true
-    leggiScarpeAtleta(id)
-      .then(r => { if (vivo) setScarpeLette({ per: id, scarpe: r?.disponibile ? r.scarpe : null }) })
-      .catch((e) => { console.warn('Scarpe non caricate:', e); if (vivo) setScarpeLette({ per: id, scarpe: null }) })
-    return () => { vivo = false }
-  }, [id, conScarpe])
   // Le tre tab sono diventate due sezioni che si aprono in pagina, più un menu
   // per i comandi che erano tre bottoni in testata (CLAUDE.md §9-terdecies).
   const [menuAperto, setMenuAperto] = useState(false)
@@ -143,6 +129,13 @@ export default function AthleteDetail() {
   const [rpeScore, setRpeScore] = useState('5')
   const [rpeNotes, setRpeNotes] = useState('')
   const [savingRpe, setSavingRpe] = useState(false)
+  // «Scarpe da corsa»: solo l'atleta sul proprio profilo. Una lettura sola
+  // serve alla card «Le mie scarpe» e alla riga del foglio RPE (e si rifà dopo
+  // ogni completamento, così i km della card salgono). `scarpe` null = niente
+  // card: tabelle assenti (migrazione non applicata) o lettura fallita, senza alert.
+  const conScarpe = role === 'athlete' && isOwnProfile
+  const scarpaCompletamento = useScarpaCompletamento(conScarpe ? id : null, { setAlertInfo })
+  const scarpe = scarpaCompletamento.scarpe
 
 
   // Gli estratti delle note (src/lib/noteEstratte.js) e lo stato dell'analisi:
@@ -342,6 +335,8 @@ export default function AthleteDetail() {
       const { error } = await supabase.from('athlete_workouts').update({ status: 'pending' }).eq('id', id)
       if (!error) {
         setWorkouts(prev => prev.map(wk => wk.id === id ? { ...wk, status: 'pending' } : wk))
+        // Non conta più nei km della scarpa (non blocca, non rilancia).
+        scarpaCompletamento.annulla(id)
       }
       return
     }
@@ -387,6 +382,9 @@ export default function AthleteDetail() {
       setWorkouts(prev => prev.map(w => w.id === workoutToComplete.id ? { ...w, status: newStatus, notes: finalNote } : w))
       setShowRpeModal(false)
       vibraSuccesso()
+      // La scarpa scelta nel foglio (spec §5): dopo il completamento riuscito,
+      // e un suo errore non lo annulla. Fuori dal profilo proprio non fa niente.
+      scarpaCompletamento.registra(workoutToComplete.id, workoutToComplete.workouts?.sections)
 
       // ⚠️ Solo l'atleta, e questa pagina è anche `/profile`: il coach che
       // spunta un allenamento dalla scheda di qualcun altro non ha niente da
@@ -1198,6 +1196,7 @@ export default function AthleteDetail() {
           onSave={handleRpeSubmitAthleteDetail} 
           onCancel={() => { setShowRpeModal(false); setWorkoutToComplete(null); }} 
           saving={savingRpe} 
+          scarpa={scarpaCompletamento.propRiga(workoutToComplete?.workouts?.sections)}
         />,
         document.body
       )}

@@ -19,6 +19,7 @@ import { leggiJson, scriviJson, leggiCoda, accodaSuStorage, chiaveCacheWorkout, 
 import { mostraErrore } from '../lib/alert'
 import { sincronizzaBadge } from '../lib/badge'
 import RpeModal from '../components/RpeModal'
+import { useScarpaCompletamento } from '../useScarpaCompletamento'
 import RigaNotifica, { SuggerimentoSwipe } from '../components/RigaNotifica'
 import { prendiAccenno } from '../lib/accennoNotifiche'
 import NuovoEvento from '../components/NuovoEvento'
@@ -223,6 +224,9 @@ export default function Home() {
   const [currentY, setCurrentY] = useState(null)
   
   const [showRpeModal, setShowRpeModal] = useState(false)
+  // «Scarpe da corsa» (spec §5): la scarpa da legare a una corsa completata.
+  // Solo l'atleta, sui suoi allenamenti; il coach non ne sa niente.
+  const scarpaCompletamento = useScarpaCompletamento(role === 'athlete' ? user?.id : null, { setAlertInfo })
   // L'assegnazione appena chiusa, per il recap in stile storie che si apre
   // subito dopo la modale RPE. `null` = nessun recap aperto.
   const [recapAw, setRecapAw] = useState(null)
@@ -1050,7 +1054,10 @@ setNotifications(prev => {
     if (error) {
       applica(workout.status)
       mostraErrore(error.message)
+      return
     }
+    // Non conta più nei km della scarpa (non blocca, non rilancia).
+    scarpaCompletamento.annulla(workout.id)
   }
 
   const toggleTodayWorkout = async (e, workout) => {
@@ -1100,6 +1107,10 @@ setNotifications(prev => {
         setSavingRpe(false)
         return
       }
+      // La scarpa scelta nel foglio (spec §5), solo online: offline il
+      // completamento va in coda e la scarpa si assegna dopo dalla scheda.
+      // Un suo errore dà un avviso e non annulla il completamento.
+      scarpaCompletamento.registra(workoutToComplete.id, workoutToComplete.workouts?.sections)
     }
 
     setSavingRpe(false)
@@ -1797,6 +1808,7 @@ setNotifications(prev => {
           onSave={handleRpeSubmitHome} 
           onCancel={() => { setShowRpeModal(false); setWorkoutToComplete(null); }} 
           saving={savingRpe} 
+          scarpa={scarpaCompletamento.propRiga(workoutToComplete?.workouts?.sections)}
         />,
         document.body
       )}

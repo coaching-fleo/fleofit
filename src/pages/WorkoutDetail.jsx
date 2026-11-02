@@ -55,7 +55,8 @@ import FoglioPersoneTV from '../components/FoglioPersoneTV'
 import { bloccoPerPersone, bloccoAScaglioni, personeRicordate, ricordaPersone } from '../lib/personeTV'
 import { BRAND, RUNNING, GYM, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
-import RpeModal from '../components/RpeModal'
+import RpeModal, { RigaScarpa } from '../components/RpeModal'
+import { useScarpaCompletamento } from '../useScarpaCompletamento'
 import FoglioSposta from '../components/FoglioSposta'
 import { puoSpostare, spostaAssegnazione, avvisaCoachSpostamento } from '../lib/spostaAllenamento'
 import RecapAllenamento from '../components/RecapAllenamento'
@@ -280,6 +281,10 @@ export default function WorkoutDetail() {
   const [deleting, setDeleting] = useState(false)
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
+  // «Scarpe da corsa» (spec §2 e §5): la scarpa legata a una corsa completata.
+  // Solo l'atleta sui propri allenamenti; il coach che guarda o completa per
+  // conto di un atleta non legge e non scrive niente.
+  const scarpaCompletamento = useScarpaCompletamento(role === 'athlete' && isOwnProfile ? user?.id : null, { setAlertInfo })
   const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [athleteWorkoutId, setAthleteWorkoutId] = useState(null)
   // «Aggiungi le statistiche della gara»: rifà la ricerca su un tempo già salvato senza link.
@@ -601,7 +606,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         setAnnullaGarminInCorso(true)
         const { error, tornaDaFare, fallito } = await annullaAbbinamento(supabase, attivita)
         // Come «Segna come da fare» (toggleStatus): lo stato della pagina.
-        if (tornaDaFare) setWorkoutStatus('pending')
+        if (tornaDaFare) {
+          setWorkoutStatus('pending')
+          scarpaCompletamento.annulla(athleteWorkoutId)
+        }
         // Si rilegge: se la seconda scrittura è fallita l'attività è comunque
         // libera, e la card deve sparire lo stesso.
         const awId = athleteWorkoutId
@@ -628,6 +636,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       if (error) {
         setAlertInfo({ title: 'Errore', message: "Impossibile aggiornare lo stato", type: 'error' })
         setWorkoutStatus('completed')
+      } else {
+        // Non conta più nei km della scarpa (non blocca, non rilancia).
+        scarpaCompletamento.annulla(athleteWorkoutId)
       }
       return
     }
@@ -739,6 +750,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       if (error) {
         hasError = true;
         errorMessage = error.message;
+      } else {
+        // La scarpa scelta nel foglio (spec §5), solo online: offline il
+        // completamento va in coda e la scarpa si assegna dopo, qui sotto.
+        // Un suo errore dà un avviso e non annulla il completamento.
+        scarpaCompletamento.registra(athleteWorkoutId, workout?.sections)
       }
     }
 
@@ -1909,6 +1925,16 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       />
     </>
   )
+  // «Scarpe da corsa»: la scarpa di questa corsa, da correggere dopo (spec §2).
+  // Compare se c'è corsa nella scheda, se l'orologio ha misurato dei metri o
+  // se una scarpa è già legata; e solo con scarpe attive, o con quella legata.
+  const usoScarpa = athleteWorkoutId ? scarpaCompletamento.scarpaDiUso(athleteWorkoutId) : null
+  const conCorsa = scarpaCompletamento.conCorsa(workout.sections) || Number(attivitaGarmin?.distanza_m) > 0 || !!usoScarpa
+  const rigaScarpa = scarpaCompletamento.disponibile && conCorsa && workoutStatus === 'completed' &&
+    (scarpaCompletamento.attive.length > 0 || usoScarpa) ? (
+      <RigaScarpa attive={scarpaCompletamento.attive} sceltaId={usoScarpa?.id ?? null} scelta={usoScarpa}
+        vuoto="Aggiungi scarpa" onCambia={(id) => scarpaCompletamento.cambiaUso(athleteWorkoutId, id)} />
+    ) : null
   const pEsito = (
     <>
       {/* L'esito prima del contenuto: la domanda per cui si riapre la scheda di
@@ -1922,7 +1948,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           [riepilogo && `${minutiStimati(riepilogo.secondi)} min`,
            rpeAtletaDichiarato === null ? 'RPE non indicato' : `RPE ${rpeAtletaDichiarato}`]
             .filter(Boolean).join(' · ')
-        } />
+        }>
+          {rigaScarpa}
+        </EsitoCompletato>
       )}
     </>
   )
@@ -2677,6 +2705,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           onSave={handleRpeSubmit} 
           onCancel={annullaRpe} 
           saving={savingNote} 
+          scarpa={scarpaCompletamento.propRiga(workout?.sections)}
         />,
         document.body
       )}

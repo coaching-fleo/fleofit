@@ -6,12 +6,20 @@
 // perderlo.
 
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { Puntini } from './Puntini'
 import { CARD } from '../lib/stiliCard'
 import { battito } from '../lib/aptica'
+// Pigra: RpeModal sta nel chunk d'ingresso (Home), la riga serve solo a chi ha scarpe.
+const RigaScarpaPigra = lazy(() => import('./RigaScarpa'))
+/** La riga «Scarpa», pigra, per chi la monta fuori dal foglio (la scheda completata). */
+export function RigaScarpa(props) {
+  return <Suspense fallback={null}><RigaScarpaPigra {...props} /></Suspense>
+}
 
-export default function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving }) {
+// `scarpa` (facoltativa, «Scarpe da corsa»): `{ attive, sceltaId, onCambia }`
+// da `propRiga` di useScarpaCompletamento. Senza, il foglio è quello di sempre.
+export default function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving, scarpa = null }) {
   const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef(null);
   const isDragging = useRef(false);
@@ -129,6 +137,11 @@ export default function RpeModal({ score, onScoreChange, notes, onNotesChange, o
             }}
           />
         </div>
+        {scarpa && (
+          <div className="mb-6">
+            <RigaScarpa attive={scarpa.attive} sceltaId={scarpa.sceltaId} onCambia={scarpa.onCambia} />
+          </div>
+        )}
         <div className="flex gap-3">
           <button onClick={onCancel} disabled={saving} className="flex-1 py-3.5 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">Annulla</button>
           {/* ⚠️ Si contrae invece di spegnersi: il salvataggio passa per la rete

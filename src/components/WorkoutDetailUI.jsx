@@ -334,17 +334,21 @@ export function CardNota({ etichetta, icona: Icona, colore, children }) {
  * risposta era un bottone verde a metà schermo, cioè uno stato travestito da
  * comando.
  */
-export function EsitoCompletato({ dettaglio }) {
+export function EsitoCompletato({ dettaglio, children }) {
   return (
-    <div className="rounded-[20px] px-4 py-3.5 bg-green-500/[.09] border border-green-500/30 flex items-center gap-3">
-      <span aria-hidden="true"
-        className="shrink-0 w-[34px] h-[34px] rounded-full bg-green-400 text-[#04140d] flex items-center justify-center">
-        <Check size={19} strokeWidth={3} />
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="text-[14.5px] font-extrabold tracking-[-.01em] text-white">Allenamento completato</p>
-        <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[.06em] text-green-300">{dettaglio}</p>
+    <div className="rounded-[20px] px-4 py-3.5 bg-green-500/[.09] border border-green-500/30">
+      <div className="flex items-center gap-3">
+        <span aria-hidden="true"
+          className="shrink-0 w-[34px] h-[34px] rounded-full bg-green-400 text-[#04140d] flex items-center justify-center">
+          <Check size={19} strokeWidth={3} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[14.5px] font-extrabold tracking-[-.01em] text-white">Allenamento completato</p>
+          <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[.06em] text-green-300">{dettaglio}</p>
+        </div>
       </div>
+      {/* Ciò che si corregge dopo, dentro l'esito: oggi la scarpa della corsa. */}
+      {children && <div className="mt-3">{children}</div>}
     </div>
   )
 }
