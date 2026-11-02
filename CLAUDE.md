@@ -617,8 +617,8 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 - **Parametri di `/login`**: `?invite=<codice>` (il link del coach, salta le caselle),
   `?serve=invito` (ci manda `ProtectedRoute` a chi è autenticato senza profilo) e
   `?error=unauthorized` (la vecchia uscita, che nessuno produce più — §9-septvicies).
-- **Rotte**: `/`, `/login`, `/tv` (pubblica), `/calendar`, `/create`, `/athletes`, `/athletes/:id`,
-  `/profile`, `/workout/:id`, `/archive`, `/report` e `/report/:id` (**solo coach**, §9-vicies e §9-vicies-bis), `/settings`. Deep link workout:
+- **Rotte**: `/`, `/login`, `/tv` (pubblica), `/collega-tv/:codice` (privata; `?altro=1` = parte dalla lista), `/calendar`, `/create`, `/athletes`, `/athletes/:id`,
+  `/profile`, `/workout/:id` (con `?tv=<4 cifre>` collega la TV da sola; con `&chiedi=1` prima chiede — il QR inquadrato a scheda aperta), `/archive` (con `?tv=` sceglie soltanto: il tocco porta alla scheda con `?tv=`), `/report` e `/report/:id` (**solo coach**, §9-vicies e §9-vicies-bis), `/settings`. Deep link workout:
   `/workout/<workoutId>?athlete_id=<uid>` — è il formato usato anche in `notifications.route`.
 - **Aggiornamenti ottimistici**: si aggiorna lo state prima della chiamata Supabase e si fa rollback
   in caso di errore (pattern in `toggleTodayWorkout`, `toggleStatus`).
@@ -697,7 +697,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Home.jsx` (ramo atleta), `HomeAtletaUI`, `HomeAtletaVuotiUI`, `statistiche.js` | `home-atleta.md` |
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `HomeCoachTelefono`, `HomeCoachDesktop`, `CruscottoCoachUI`, `cruscottoCoach.js`, `useCruscottoCoach.js`, `statisticheCoach.js`, `pausa.js` | `home-coach.md` |
 | `CreateWorkout.jsx`, `CreaWorkoutUI`, `CreaGym`, `SchedaGymUI`, `gym.js`, `eserciziGym.js`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `incremento.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza, `modelliBlocco.js`, `modelliBloccoDb.js`, `useModelliBlocco.js`, `Modelli.jsx`, `ModelliUI`, `FoglioModello` | `crea-workout.md` |
-| `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF, `comeStai.js`, `FoglioComeStai`, `TVDashboard.jsx`, `TVDashboardUI`, `personeTV.js`, `FoglioPersoneTV`, `codiceTV.js`, `lettoreQR.js`, `FoglioCollegaTV`, `LettoreQR.swift`, `LettoreQRPlugin.java`, `avanzaTimer.js`, `sessioneAudio.js`, `liveActivity.js`, `FoglioLiveActivity`, `LiveActivityPlugin.swift`, `AttivitaTimer.swift`, `ios/App/FleoTimer/` | `scheda-workout.md` |
+| `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF, `comeStai.js`, `FoglioComeStai`, `TVDashboard.jsx`, `TVDashboardUI`, `personeTV.js`, `FoglioPersoneTV`, `codiceTV.js`, `lettoreQR.js`, `FoglioCollegaTV`, `FoglioChiediTV`, `sceltaTV.js`, `CollegaTV`, `LettoreQR.swift`, `LettoreQRPlugin.java`, `avanzaTimer.js`, `sessioneAudio.js`, `liveActivity.js`, `FoglioLiveActivity`, `LiveActivityPlugin.swift`, `AttivitaTimer.swift`, `ios/App/FleoTimer/` | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `CalendarioAtleta`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |
 | `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |

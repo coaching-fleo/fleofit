@@ -1,3 +1,5 @@
+import { codiceDaQR } from './codiceTV'
+
 // Il link che apre l'app dal tocco sulla Live Activity del timer
 // (ios/App/FleoTimer/TimerLiveActivity.swift, `widgetURL`).
 //
@@ -36,4 +38,24 @@ export function eLinkDellaTV(indirizzo) {
   } catch {
     return false
   }
+}
+
+// Dove porta il link della TV. Dal resto dell'app: la pagina
+// `/collega-tv/<codice>`, che fa scegliere il workout. 🔴 Da una scheda workout
+// invece si RESTA sulla scheda (stesso percorso, stessa query, `athlete_id`
+// compreso) con in più `tv=<codice>&chiedi=1`: la scheda chiede «Vuoi mandare in
+// TV questo?» sopra di sé. Andare altrove la smontava, e un timer in corso
+// ripartiva da zero (ruling 7 della spec 2026-11-02-tv-qr-scelta-workout).
+// Chi naviga lo fa con `replace` quando il percorso è lo stesso (DeeplinkHandler).
+// Senza codice valido: `null`, e l'app torna davanti e basta.
+export function rottaDaLinkTV(indirizzo, { pathname, search }) {
+  const codice = codiceDaQR(indirizzo)
+  if (!codice) return null
+  if (!/^\/workout\/[^/]+\/?$/.test(pathname || '')) return `/collega-tv/${codice}`
+  const parametri = new URLSearchParams(search || '')
+  parametri.delete('tv')
+  parametri.delete('chiedi')
+  parametri.set('tv', codice)
+  parametri.set('chiedi', '1')
+  return `${pathname}?${parametri}`
 }

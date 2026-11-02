@@ -206,7 +206,10 @@ export function CaselleCodice({ valore, onChange, errore = false, disabled = fal
             {i === GRUPPO_CODICE && (
               <span className={`w-2.5 h-0.5 rounded-sm shrink-0 ${errore ? 'bg-red-500/45' : 'bg-[#383838]'}`} />
             )}
-            <div className={`w-[33px] h-[46px] rounded-xl border flex items-center justify-center font-bold text-[19px] text-white ${bordo(cella)}`}>
+            {/* ⚠️ `flex-1 max-w` e non una larghezza fissa: otto caselle da 33 più
+                il trattino fanno 320px, più di quanto resta su un telefono
+                stretto, e uscivano dallo schermo. Ora si stringono. */}
+            <div className={`flex-1 min-w-0 max-w-[33px] h-[46px] rounded-xl border flex items-center justify-center font-bold text-[19px] text-white ${bordo(cella)}`}>
               {cella.carattere || (cella.attiva && !disabled ? <span className="w-0.5 h-[22px] rounded-sm bg-brand" /> : '')}
             </div>
           </div>

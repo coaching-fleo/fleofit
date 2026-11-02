@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useRipresa, useRicorda } from '../useRipresa'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../App'
-import { categoriaDi } from '../lib/categorie'
+import { categoriaDi, fuoriDallArchivioCoach } from '../lib/categorie'
 import { voce } from '../lib/cascata'
 import {
   metaWorkout, testoCercabile, raggruppaPerMese, conteggiPerCorsia,
@@ -13,7 +13,7 @@ import {
 } from '../lib/rigaArchivio'
 import {
   TestataArchivio, CampoRicerca, FiltriCorsia, IntestazioneSezione,
-  RigaWorkout, ScheletroArchivio, VuotoArchivio, FiltriTipo, FiltriEsercizio,
+  RigaWorkout, ScheletroArchivio, VuotoArchivio, FiltriTipo, FiltriEsercizio, StrisciaTV,
 } from '../components/ArchivioUI'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
 
@@ -38,6 +38,27 @@ export default function WorkoutsArchive() {
   const indietro = useIndietro('/')
   const isCoach = role !== 'athlete'
   const desktop = eDesktop(useSchermoLargo(), role)
+
+  // Modalità scelta per la TV (`/archive?tv=<codice>`, da «Cerca nell'archivio»
+  // di CollegaTV): il tocco su un workout lo manda in TV — la scheda si collega
+  // da sola con `?tv=`. Un `tv` che non è di quattro cifre non conta.
+  // In modalità TV il tocco naviga con `replace` (ruling 8): «indietro» dalla
+  // scheda torna a prima della scelta, non all'archivio.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const codiceTV = /^\d{4}$/.test(searchParams.get('tv') || '') ? searchParams.get('tv') : null
+  const esciDallaTV = () => setSearchParams(prima => {
+    const dopo = new URLSearchParams(prima)
+    dopo.delete('tv')
+    return dopo
+  }, { replace: true })
+  // ⚠️ Come nel calendario: all'atleta serve `athlete_id`, o la scheda non
+  // carica la sua assegnazione (13/10/2026).
+  const apri = (w) => {
+    const base = isCoach ? `/workout/${w.id}` : `/workout/${w.id}?athlete_id=${user.id}`
+    if (codiceTV) navigate(`${base}${isCoach ? '?' : '&'}tv=${codiceTV}`, { replace: true })
+    else navigate(base)
+  }
+  const striscia = codiceTV ? <StrisciaTV onEsci={esciDallaTV} /> : null
 
   useRicorda('archivio', user?.id, ripresa, { workouts, searchTerm, corsiaAttiva, tipiScelti, eserciziScelti, caricato: !loading })
 
@@ -84,12 +105,7 @@ export default function WorkoutsArchive() {
         .select('id, title, date, created_at, sections, athlete_workouts(id)')
         .order('created_at', { ascending: false })
       if (!error) {
-        const filtered = (data || []).filter(w => {
-           const s = w.sections || {}
-           const cat = s.category
-           if (cat === 'Event' || s.isEvent || cat === 'Custom' || cat === 'Autonomo' || s.isAutonomous) return false
-           return true
-        })
+        const filtered = (data || []).filter(w => !fuoriDallArchivioCoach(w.sections))
         setWorkouts(filtered)
       }
     }
@@ -157,6 +173,7 @@ export default function WorkoutsArchive() {
           gruppi={gruppi}
           vuoto={<VuotoArchivio conFiltri={conFiltri} onAzzera={azzera} />}
           filtri={<>
+            {striscia}
             <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
             {corsie.length > 1 && (
               <FiltriCorsia corsie={corsie} attiva={corsiaAttiva} totale={workouts.length}
@@ -179,7 +196,7 @@ export default function WorkoutsArchive() {
             meta: metaWorkout(w),
             assegnati: isCoach ? (w.athlete_workouts?.length ?? 0) : undefined,
             completato: !isCoach && w.status === 'completed',
-            onApri: () => navigate(isCoach ? `/workout/${w.id}` : `/workout/${w.id}?athlete_id=${user.id}`),
+            onApri: () => apri(w),
           })}
         />
       </Suspense>
@@ -197,6 +214,7 @@ export default function WorkoutsArchive() {
        scorre via con la pagina, quindi lì è contenuto e la sua voce ce l'ha. */
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
       <TestataArchivio onIndietro={indietro} dettaglio={dettaglio}>
+        {striscia}
         <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
         {corsie.length > 1 && (
           <FiltriCorsia corsie={corsie} attiva={corsiaAttiva} totale={workouts.length}
@@ -234,9 +252,7 @@ export default function WorkoutsArchive() {
                   meta={metaWorkout(w)}
                   assegnati={isCoach ? (w.athlete_workouts?.length ?? 0) : undefined}
                   completato={!isCoach && w.status === 'completed'}
-                  // ⚠️ Come nel calendario: all'atleta serve `athlete_id`, o la scheda
-                  // non carica la sua assegnazione (13/10/2026).
-                  onApri={() => navigate(isCoach ? `/workout/${w.id}` : `/workout/${w.id}?athlete_id=${user.id}`)}
+                  onApri={() => apri(w)}
                   // Tornando indietro le righe ci sono già: rifarle entrare
                   // sarebbe una pagina nuova, ed è proprio ciò che non è.
                   voce={ripresa ? undefined : voce(n++)}

@@ -146,6 +146,10 @@ Fatto e verde nei test (`docs/memoria/scheda-workout.md`, 9-tv-qr), ma **mai pro
 2. **`./gradlew assembleDebug` sul PC** (sul Mac non c'è JDK): conferma gli import dello scanner Google e il
    meta-data `com.google.mlkit.vision.DEPENDENCIES` = `barcode_ui` aggiunto al manifest (30/10, mai compilato).
 3. Far leggere al committente i testi nuovi di `FoglioCollegaTV` (elencati nel file di memoria).
+3-bis. **Scelta del workout dal QR (02/11/2026)**, da provare su un telefono vero: (a) **avvio a freddo con l'app chiusa**
+   (se il link non arriva a `/collega-tv/...`, riserva `App.getLaunchUrl()`); (b) app **in background**; (c) link
+   inquadrato **su una pagina workout** (`chiedi=1`: compare «Vuoi mandare in TV questo?»); (d) inquadrare il QR
+   con il timer in corso: il timer non si azzera. Ritorno: `docs/superpowers/plans/2026-11-02-tv-qr-scelta-workout-ritorno.md`.
 4. 🔴 **Decisione del committente: quando fare `app:main`.** Nelle app 1.2.2 già sugli Store il QR della TV
    inquadrato con la **fotocamera di sistema** apre l'app e la manda a `/login` con un errore falso (chiude
    anche un timer in corso): il rimedio (`eLinkDellaTV`) arriva solo con la 1.2.3. Pubblicare `/tv` con il

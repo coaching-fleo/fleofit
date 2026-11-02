@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { StrictMode } from 'react'
+import { MemoryRouter, Routes, Route, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 // Perché questo test esiste
 // ──────────────────────────
@@ -96,8 +97,10 @@ vi.mock('@capacitor/network', () => ({ Network: {
   addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
 } }))
 
+const { supabase } = await import('../../supabaseClient')
 const { AuthContext } = await import('../../App')
 const WorkoutDetail = (await import('../WorkoutDetail')).default
+const { rottaDaLinkTV } = await import('../../lib/linkTimer')
 
 function apriScheda() {
   return render(
@@ -108,6 +111,40 @@ function apriScheda() {
     </MemoryRouter>
   )
 }
+
+// L'indirizzo corrente, per vedere che `tv` sparisce (e `athlete_id` resta),
+// più `navigate` per fare da DeeplinkHandler (il QR inquadrato a scheda aperta).
+const indirizzo = { search: '', pathname: '', vai: null }
+function Indirizzo() {
+  const l = useLocation()
+  indirizzo.search = l.search
+  indirizzo.pathname = l.pathname
+  indirizzo.vai = useNavigate()
+  return null
+}
+// Come SchedaWorkout in App.jsx: la chiave è il solo id, quindi cambiare la
+// query (o aggiungere `tv`) non rimonta la scheda.
+function SchedaPerId() {
+  const { id } = useParams()
+  return <WorkoutDetail key={id} />
+}
+
+// La scheda aperta da un link con `?tv=` (spec 2026-11-02-tv-qr-scelta-workout, §4).
+function apriConTV(query, { strict = false } = {}) {
+  const albero = (
+    <MemoryRouter initialEntries={[`/workout/w1?${query}`]}>
+      <AuthContext.Provider value={{ user: { id: 'u1', email: 'a@b.it', user_metadata: {} }, role: 'athlete' }}>
+        <Routes>
+          <Route path="/workout/:id" element={<><SchedaPerId /><Indirizzo /></>} />
+          <Route path="/collega-tv/:codice" element={<Indirizzo />} />
+        </Routes>
+      </AuthContext.Provider>
+    </MemoryRouter>
+  )
+  return render(strict ? <StrictMode>{albero}</StrictMode> : albero)
+}
+
+const chiamateTV = () => supabase.from.mock.calls.filter(([t]) => t === 'tv_sessions').length
 
 async function apriFoglioTV() {
   apriScheda()
@@ -126,6 +163,11 @@ beforeEach(() => {
   qr.qrDisponibile.mockImplementation(() => false)
   qr.leggiQR.mockReset()
   qr.apriImpostazioni.mockImplementation(() => Promise.resolve())
+  supabase.from.mockClear()
+  localStorage.removeItem('fleofit_tv_code')
+  indirizzo.search = ''
+  indirizzo.pathname = ''
+  indirizzo.vai = null
 })
 
 describe('collegare la TV dal web', () => {
@@ -305,5 +347,163 @@ describe('dopo il collegamento', () => {
     expect(screen.getByRole('dialog', { name: /Trasmetti in TV/i })).toBeInTheDocument()
     expect(sequenza.costruita).toBe(0)
     expect(screen.queryByRole('button', { name: 'Avvia il timer' })).not.toBeInTheDocument()
+  })
+})
+
+describe('dal link con ?tv= (il QR della TV letto fuori dalla scheda)', () => {
+  it('si collega da solo, toglie tv dall indirizzo e apre il telecomando', async () => {
+    apriConTV('athlete_id=u1&tv=4321')
+
+    await waitFor(() => expect(tv.stato.aggiornamenti).toHaveLength(1))
+    expect(tv.stato.aggiornamenti[0]).toMatchObject({ code: '4321', workout_id: 'w1', athlete_id: 'u1' })
+    await waitFor(() => expect(indirizzo.search).not.toMatch(/tv=/))
+    expect(indirizzo.search).toMatch(/athlete_id=u1/)
+    expect(await screen.findAllByRole('button', { name: 'Avvia il timer' })).not.toHaveLength(0)
+    expect(screen.queryByText('Connesso!')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: /Trasmetti in TV/i })).not.toBeInTheDocument()
+  })
+
+  it('un codice che non esiste apre il foglio con il messaggio, senza timer', async () => {
+    apriConTV('tv=9999')
+
+    const foglio = await screen.findByRole('dialog', { name: /Trasmetti in TV/i })
+    expect(within(foglio).getByText('Codice TV non trovato o scaduto.')).toBeInTheDocument()
+    expect(campoCodice(foglio)).toBeInTheDocument()
+    await waitFor(() => expect(indirizzo.search).not.toMatch(/tv=/))
+    expect(tv.stato.aggiornamenti).toHaveLength(0)
+    expect(sequenza.costruita).toBe(0)
+    expect(screen.queryByRole('button', { name: 'Avvia il timer' })).not.toBeInTheDocument()
+  })
+
+  it('nell app (col QR) il codice sbagliato apre sul campo, non sulla scelta', async () => {
+    qr.qrDisponibile.mockImplementation(() => true)
+    apriConTV('tv=9999')
+
+    const foglio = await screen.findByRole('dialog', { name: /Trasmetti in TV/i })
+    expect(within(foglio).getByRole('alert')).toHaveTextContent('Codice TV non trovato o scaduto.')
+    expect(campoCodice(foglio)).toBeInTheDocument()
+  })
+
+  it('una corsa si collega, ma nessun timer si apre', async () => {
+    scheda.sections = RUNNING
+    apriConTV('tv=4321')
+
+    await waitFor(() => expect(tv.stato.aggiornamenti).toHaveLength(1))
+    await waitFor(() => expect(localStorage.getItem('fleofit_tv_code')).toBe('4321'))
+    expect(sequenza.costruita).toBe(0)
+    expect(screen.queryByRole('button', { name: 'Avvia il timer' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: /Trasmetti in TV/i })).not.toBeInTheDocument()
+  })
+
+  it('un codice che non è di quattro cifre si ignora', async () => {
+    apriConTV('tv=12a')
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Scheda di prova' })).toBeInTheDocument())
+    // Un giro in più, per dare all'effetto il tempo di (non) partire.
+    await new Promise(r => setTimeout(r, 50))
+    expect(chiamateTV()).toBe(0)
+    expect(screen.queryByRole('dialog', { name: /Trasmetti in TV/i })).not.toBeInTheDocument()
+  })
+
+  // Fissa la promessa «un collegamento solo», non la guardia `tvDaLinkTentato`:
+  // l'effetto toglie `tv` dall'indirizzo e StrictMode non lo ripete, quindi il
+  // test passa anche senza la guardia. La guardia resta come difesa (ruling 4).
+  it('in StrictMode si collega una volta sola', async () => {
+    apriConTV('tv=4321', { strict: true })
+
+    await waitFor(() => expect(tv.stato.aggiornamenti).toHaveLength(1))
+    await waitFor(() => expect(indirizzo.search).not.toMatch(/tv=/))
+    await new Promise(r => setTimeout(r, 50))
+    expect(tv.stato.aggiornamenti).toHaveLength(1)
+  })
+})
+
+// Il QR inquadrato con la fotocamera di sistema mentre la scheda è aperta
+// (ruling 7): DeeplinkHandler resta sulla scheda con `?tv=<c>&chiedi=1` e la
+// scheda chiede prima di collegare. Uscire verso /collega-tv la smontava, e un
+// timer in corso ripartiva da zero.
+describe('dal link con ?tv=…&chiedi=1 (il QR inquadrato a scheda aperta)', () => {
+  const domanda = () => screen.findByRole('dialog', { name: 'Vuoi mandare in TV questo?' })
+
+  it('chiede, col titolo della scheda, e non collega niente prima del «Sì»', async () => {
+    apriConTV('athlete_id=u1&tv=4321&chiedi=1')
+    const foglio = await domanda()
+    expect(within(foglio).getByText('Scheda di prova')).toBeInTheDocument()
+    await waitFor(() => expect(indirizzo.search).not.toMatch(/tv=|chiedi=/))
+    expect(indirizzo.search).toMatch(/athlete_id=u1/)
+    await new Promise(r => setTimeout(r, 50))
+    expect(chiamateTV()).toBe(0)
+    expect(sequenza.costruita).toBe(0)
+  })
+
+  it('«Sì» collega e apre il telecomando', async () => {
+    apriConTV('athlete_id=u1&tv=4321&chiedi=1')
+    await userEvent.click(within(await domanda()).getByRole('button', { name: 'Sì' }))
+
+    await waitFor(() => expect(tv.stato.aggiornamenti).toHaveLength(1))
+    expect(tv.stato.aggiornamenti[0]).toMatchObject({ code: '4321', workout_id: 'w1', athlete_id: 'u1' })
+    expect(await screen.findAllByRole('button', { name: 'Avvia il timer' })).not.toHaveLength(0)
+    expect(screen.queryByRole('dialog', { name: 'Vuoi mandare in TV questo?' })).not.toBeInTheDocument()
+  })
+
+  it('«Sì» con un codice che non esiste apre «Collega TV» con il messaggio', async () => {
+    apriConTV('tv=9999&chiedi=1')
+    await userEvent.click(within(await domanda()).getByRole('button', { name: 'Sì' }))
+
+    const foglio = await screen.findByRole('dialog', { name: /Trasmetti in TV/i })
+    expect(within(foglio).getByText('Codice TV non trovato o scaduto.')).toBeInTheDocument()
+    expect(sequenza.costruita).toBe(0)
+  })
+
+  it('«No, un altro» porta alla scelta, con la lista', async () => {
+    apriConTV('athlete_id=u1&tv=4321&chiedi=1')
+    await userEvent.click(within(await domanda()).getByRole('button', { name: 'No, un altro' }))
+
+    await waitFor(() => expect(indirizzo.pathname).toBe('/collega-tv/4321'))
+    expect(indirizzo.search).toBe('?altro=1')
+    expect(chiamateTV()).toBe(0)
+  })
+
+  it('la X chiude e basta', async () => {
+    apriConTV('tv=4321&chiedi=1')
+    await userEvent.click(within(await domanda()).getByRole('button', { name: 'Chiudi' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Vuoi mandare in TV questo?' })).not.toBeInTheDocument()
+    expect(indirizzo.pathname).toBe('/workout/w1')
+    expect(chiamateTV()).toBe(0)
+  })
+
+  it('lo stesso QR inquadrato una seconda volta richiede di nuovo', async () => {
+    apriConTV('tv=4321&chiedi=1')
+    await userEvent.click(within(await domanda()).getByRole('button', { name: 'Chiudi' }))
+    await waitFor(() => expect(indirizzo.search).not.toMatch(/tv=/))
+
+    const rotta = rottaDaLinkTV('fleofit://tv/4321', { pathname: indirizzo.pathname, search: indirizzo.search })
+    act(() => indirizzo.vai(rotta, { replace: true }))
+    expect(await domanda()).toBeInTheDocument()
+  })
+
+  it('con il timer in corso il timer resta lì: niente rimontaggio, e «Sì» lo porta a tutto schermo', async () => {
+    apriConTV('athlete_id=u1')
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Scheda di prova' })).toBeInTheDocument())
+    await userEvent.click(screen.getByRole('button', { name: /Avvia allenamento/i }))
+    const salta = screen.queryByRole('button', { name: 'Salta' })
+    if (salta) await userEvent.click(salta)
+    expect(await screen.findByRole('button', { name: /Minimizza timer/i })).toBeInTheDocument()
+    expect(sequenza.costruita).toBe(1)
+
+    // Quello che fa DeeplinkHandler col QR inquadrato.
+    const rotta = rottaDaLinkTV('fleofit://tv/4321', { pathname: indirizzo.pathname, search: indirizzo.search })
+    act(() => indirizzo.vai(rotta, { replace: true }))
+
+    const foglio = await domanda()
+    // Il timer è ancora quello di prima: non ricostruito, ancora aperto.
+    expect(screen.getByRole('button', { name: /Minimizza timer/i })).toBeInTheDocument()
+    expect(sequenza.costruita).toBe(1)
+
+    await userEvent.click(within(foglio).getByRole('button', { name: 'Sì' }))
+    await waitFor(() => expect(tv.stato.aggiornamenti).toHaveLength(1))
+    expect(await screen.findByRole('button', { name: /Minimizza telecomando/i })).toBeInTheDocument()
+    expect(sequenza.costruita).toBe(1)
   })
 })

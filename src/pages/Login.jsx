@@ -57,6 +57,9 @@ export default function Login() {
   const [avviso, setAvviso] = useState(null)
   const [verificando, setVerificando] = useState(false)
   const [aiutoAperto, setAiutoAperto] = useState(false)
+  // La mail di conferma è partita: da qui il passo 2 non crea più il profilo
+  // (rifarlo rimanda la mail e basta), ma fa entrare chi ha già confermato.
+  const [mailInviata, setMailInviata] = useState(false)
   const campoCodice = useRef(null)
 
   // Chi è, e come rientra: lo sa `ProtectedRoute` quando ci manda qui, e lo
@@ -364,13 +367,48 @@ export default function Login() {
     }
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: emailNota || email,
         password,
         options: { data: { role }, emailRedirectTo: `${baseUrl}?inviteCode=${codiceInvito}` },
       })
       if (error) throw error
-      setAlertInfo({ title: 'Controlla la mail', message: 'Ti abbiamo inviato un link per confermare la registrazione.', type: 'success' })
+      // ⚠️ Per un indirizzo GIÀ registrato Supabase non dà errore (difesa
+      // contro l'enumerazione): torna un utente senza identità e non manda
+      // nessuna mail. Dire «controlla la mail» lì è un'attesa senza fine.
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        setAlertInfo({
+          title: 'Questa email ha già un profilo',
+          message: 'Torna indietro ed entra con la tua password. Se non la ricordi, usa «Password dimenticata».',
+          type: 'error',
+        })
+        return
+      }
+      // Con la conferma via mail spenta la sessione arriva subito, e
+      // l'ascoltatore di `onAuthStateChange` porta già dentro.
+      if (data?.session) return
+      setMailInviata(true)
+      setAlertInfo({ title: 'Controlla la mail', message: 'Ti abbiamo inviato un link per confermare la registrazione. Aprilo da questo telefono, oppure torna qui e tocca «Ho confermato, entra».', type: 'success' })
+    } catch (error) {
+      setAlertInfo({ title: 'Errore di autenticazione', message: error.message, type: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /** Dopo la mail: chi ha confermato (anche da un altro dispositivo) entra da qui. */
+  const entraDopoConferma = async () => {
+    setLoading(true)
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: emailNota || email, password })
+      if (error) {
+        if (/not confirmed/i.test(error.message || '')) {
+          setAlertInfo({ title: 'Non ancora confermata', message: 'Apri il link della mail che ti abbiamo mandato, poi riprova. Controlla anche nello spam.', type: 'error' })
+          return
+        }
+        throw error
+      }
+      navigate('/')
     } catch (error) {
       setAlertInfo({ title: 'Errore di autenticazione', message: error.message, type: 'error' })
     } finally {
@@ -409,6 +447,7 @@ export default function Login() {
       // Tornare dalla card verde vuol dire rimettere in discussione il codice,
       // non uscire dal passo: le caselle tornano, il codice resta scritto.
       setInvito(null)
+      setMailInviata(false)
       return
     }
     setNonRiconosciuto(false)
@@ -536,7 +575,14 @@ export default function Login() {
                 />
                 <div className="flex-1 min-h-5" />
                 {ripresa === 'email'
-                  ? <CtaGialla etichetta={loading ? 'Attendere...' : 'Crea il profilo'} onClick={creaProfilo} disabled={loading} />
+                  ? (mailInviata
+                    ? (
+                      <>
+                        <p className="text-sm font-medium text-muted mb-3 text-center">Ti abbiamo mandato un link a <b className="text-gray-300 font-bold">{emailNota}</b>. Aprilo, poi entra da qui.</p>
+                        <CtaGialla etichetta={loading ? 'Attendere...' : 'Ho confermato, entra'} onClick={entraDopoConferma} disabled={loading} />
+                      </>
+                    )
+                    : <CtaGialla etichetta={loading ? 'Attendere...' : 'Crea il profilo'} onClick={creaProfilo} disabled={loading} />)
                   : (
                     <>
                       <p className="text-sm font-medium text-muted mb-3 text-center">Rientra con lo stesso accesso di prima: il codice è già collegato.</p>

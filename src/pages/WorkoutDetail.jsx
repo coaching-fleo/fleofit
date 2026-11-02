@@ -9,6 +9,7 @@ import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import FoglioCollegaTV from '../components/FoglioCollegaTV'
+import FoglioChiediTV from '../components/FoglioChiediTV'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
@@ -308,7 +309,13 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // Cambia a ogni apertura e chiusura del foglio TV: un collegamento partito da
   // un foglio che nel frattempo è stato chiuso non tocca più l'interfaccia.
   const giroFoglioTV = useRef(0)
-  const apriFoglioTV = () => { giroFoglioTV.current++; setTvModalOpen(true) }
+  // Il messaggio con cui il foglio si apre: solo quando lo apre il link con
+  // `?tv=` e il codice non va (spec 2026-11-02-tv-qr-scelta-workout §4).
+  const [erroreTVIniziale, setErroreTVIniziale] = useState(null)
+  // Il codice del QR inquadrato a scheda aperta (`?tv=<c>&chiedi=1`): finché c'è,
+  // la scheda chiede «Vuoi mandare in TV questo?» (FoglioChiediTV, ruling 7).
+  const [codiceDaChiedere, setCodiceDaChiedere] = useState(null)
+  const apriFoglioTV = () => { giroFoglioTV.current++; setErroreTVIniziale(null); setTvModalOpen(true) }
   const chiudiFoglioTV = () => { giroFoglioTV.current++; setTvModalOpen(false) }
   const [connectedTvCode, setConnectedTvCode] = useState(() => localStorage.getItem('fleofit_tv_code') || null)
 
@@ -1484,6 +1491,77 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     return () => { vivo = false }
   }, [chiComeStai, giornoComeStai])
 
+  // Il timer e il suo «dopo la TV» stanno prima del ritorno anticipato del
+  // caricamento: li chiama anche l'effetto del link con `?tv=` qui sotto.
+  const timerDisponibile = haTimerGuidato(workout)
+  const apriTimer = () => {
+    if (timerOpen && !timerMinimized) { setTimerMinimized(true); return }
+    if (timerOpen && timerMinimized) { setTimerMinimized(false); return }
+    // La prima volta su iPhone si chiede della Live Activity, poi si apre
+    // comunque: la domanda non blocca mai il timer.
+    if (liveActivityDaChiedere()) { setDomandaLiveActivity(true); return }
+    apriTimerDavvero()
+  }
+  const apriTimerDavvero = () => {
+    setTimerSequence(buildTimerSequence(workout))
+    setTimerOpen(true)
+    setTimerMinimized(false)
+  }
+  // Collegata la TV (dal foglio o dal link con `?tv=`): niente avviso, e il
+  // telecomando solo se il workout ha il timer guidato. Se il timer è già
+  // aperto lo si porta a tutto schermo: apriTimer, su un timer aperto, lo
+  // rimpicciolirebbe.
+  const dopoCollegamentoTV = () => {
+    if (!timerDisponibile) return
+    if (timerOpen) setTimerMinimized(false)
+    else apriTimer()
+  }
+  const rispondiLiveActivity = (attiva) => {
+    salvaPreferenzaLiveActivity(attiva)
+    setDomandaLiveActivity(false)
+    apriTimerDavvero()
+  }
+  // Collega col codice arrivato da un link (il `?tv=` della scelta, o il «Sì» di
+  // FoglioChiediTV): riuscito → telecomando; no → il foglio «Collega TV» con il
+  // messaggio. Se nel frattempo il foglio è stato aperto (o chiuso) a mano, non
+  // si salta. `sopraIlTimer`: a timer aperto il foglio va sopra il timer.
+  const collegaDaLink = async (codice) => {
+    const giro = giroFoglioTV.current
+    const esito = await collegaTV(codice)
+    if (giro !== giroFoglioTV.current) return
+    if (esito.ok) dopoCollegamentoTV()
+    else {
+      giroFoglioTV.current++
+      setErroreTVIniziale(esito.errore)
+      setTvModalOpen(true)
+    }
+  }
+  // Il link con `?tv=<4 cifre>` (il QR della TV letto dalla fotocamera di
+  // sistema, poi la scelta del workout): caricata la scheda si collega da solo,
+  // una volta. Con `&chiedi=1` (il QR inquadrato mentre la scheda era già
+  // aperta, rottaDaLinkTV) invece CHIEDE prima: FoglioChiediTV.
+  // La guardia `tvDaLinkTentato` è difesa: l'effetto toglie subito `tv` e
+  // `chiedi` dall'indirizzo, quindi nessun rendering lo ripete.
+  const codiceTVDaLink = searchParams.get('tv')
+  const chiediTVDaLink = searchParams.get('chiedi') === '1'
+  const tvDaLinkTentato = useRef(null)
+  useEffect(() => {
+    if (loading || !workout || !codiceTVDaLink) return
+    if (tvDaLinkTentato.current === codiceTVDaLink) return
+    tvDaLinkTentato.current = codiceTVDaLink
+    setSearchParams(p => { const n = new URLSearchParams(p); n.delete('tv'); n.delete('chiedi'); return n }, { replace: true })
+    if (!/^\d{4}$/.test(codiceTVDaLink)) return
+    // Il codice arriva dall'esterno (l'indirizzo del deep link) e si consuma una
+    // volta: qui lo stato è voluto, l'indirizzo è appena stato ripulito.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (chiediTVDaLink) setCodiceDaChiedere(codiceTVDaLink)
+    else collegaDaLink(codiceTVDaLink)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, workout, codiceTVDaLink])
+  // Un nuovo QR inquadrato più tardi sulla stessa scheda ha un codice diverso,
+  // o lo stesso: in quel caso la guardia va liberata quando `tv` sparisce.
+  useEffect(() => { if (!codiceTVDaLink) tvDaLinkTentato.current = null }, [codiceTVDaLink])
+
   if (loading) return <div className="p-6 text-muted">Caricamento...</div>
   if (!workout) return <div className="p-6 text-red-400">Workout non trovato</div>
 
@@ -1535,7 +1613,6 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const recap = storiaAperta ? recapStoria(workout, { rpe: rpeAtletaDichiarato, fatto: completato }) : null
   const apriStoria = () => setStoriaAperta(true)
 
-  const timerDisponibile = haTimerGuidato(workout)
   const puoAssegnare = role !== 'athlete'
 
   // Prima di avviare, una volta al giorno, «Come stai oggi?». Si risponde o si
@@ -1566,24 +1643,6 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     poi?.()
   }
 
-  const apriTimer = () => {
-    if (timerOpen && !timerMinimized) { setTimerMinimized(true); return }
-    if (timerOpen && timerMinimized) { setTimerMinimized(false); return }
-    // La prima volta su iPhone si chiede della Live Activity, poi si apre
-    // comunque: la domanda non blocca mai il timer.
-    if (liveActivityDaChiedere()) { setDomandaLiveActivity(true); return }
-    apriTimerDavvero()
-  }
-  const apriTimerDavvero = () => {
-    setTimerSequence(buildTimerSequence(workout))
-    setTimerOpen(true)
-    setTimerMinimized(false)
-  }
-  const rispondiLiveActivity = (attiva) => {
-    salvaPreferenzaLiveActivity(attiva)
-    setDomandaLiveActivity(false)
-    apriTimerDavvero()
-  }
   const apriAssegna = () => { setAssignModalOpen(true); setSelectedAthletes([]); setAssignStep(1) }
 
   const comandoTv = connectedTvCode ? 'telecomando' : 'timer'
@@ -2560,18 +2619,25 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           collegamento era per strada, la TV resta collegata ma l'interfaccia
           non salta: niente timer, e un foglio riaperto nel frattempo resta
           aperto (giroFoglioTV). */}
+      {codiceDaChiedere && (
+        <FoglioChiediTV
+          titolo={workout.title}
+          onChiudi={() => setCodiceDaChiedere(null)}
+          onSi={() => { const c = codiceDaChiedere; setCodiceDaChiedere(null); collegaDaLink(c) }}
+          onAltro={() => { const c = codiceDaChiedere; setCodiceDaChiedere(null); navigate(`/collega-tv/${c}?altro=1`) }}
+        />
+      )}
       {tvModalOpen && (
         <FoglioCollegaTV
+          sopraIlTimer={timerOpen && !timerMinimized}
+          erroreIniziale={erroreTVIniziale}
           onChiudi={chiudiFoglioTV}
           onCollega={async (codice) => {
             const giro = giroFoglioTV.current
             const esito = await collegaTV(codice)
             if (esito.ok && giro === giroFoglioTV.current) {
               chiudiFoglioTV()
-              if (timerDisponibile) {
-                if (timerOpen) setTimerMinimized(false)
-                else apriTimer()
-              }
+              dopoCollegamentoTV()
             }
             return esito
           }}

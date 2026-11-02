@@ -243,4 +243,43 @@ describe('Il passo 1 — l’email', () => {
     expect(inviato.email).toBe('marco.riva@gmail.com')
     expect(inviato.options.emailRedirectTo).toContain('inviteCode=7KQ2M4XB')
   })
+
+  /** Dal benvenuto alla card verde del percorso email, password scelta. */
+  const finoAlProfilo = async (utente) => {
+    montaPagina(<Login />)
+    await utente.click(screen.getByRole('button', { name: /Continua con email/i }))
+    await utente.type(screen.getByLabelText('Email'), 'marco.riva@gmail.com')
+    await utente.type(screen.getByLabelText('Password'), 'sbagliata')
+    await utente.click(screen.getByRole('button', { name: /Continua/i }))
+    await utente.click(await screen.findByRole('button', { name: /Ho un codice invito/i }))
+    await scrivi(utente, '7KQ2M4XB')
+    await utente.clear(await screen.findByLabelText('Scegli una password'))
+    await utente.type(screen.getByLabelText('Scegli una password'), 'nuova-password')
+  }
+
+  // Segnalazione del 02/11/2026: dopo «Controlla la mail» si restava sullo
+  // stesso bottone, e ritoccarlo rifaceva la registrazione. Ora il passo dopo
+  // è entrare, con la mail confermata.
+  it('dopo la mail il bottone fa entrare, e non rifà la registrazione', async () => {
+    const utente = userEvent.setup()
+    finto.supabase.auth.signUp.mockResolvedValueOnce({ data: { user: { id: 'n1', identities: [{ id: 'i' }] }, session: null }, error: null })
+    await finoAlProfilo(utente)
+    await utente.click(screen.getByRole('button', { name: /Crea il profilo/i }))
+    expect(await screen.findByText('Controlla la mail')).toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: 'Chiudi' }))
+
+    finto.supabase.auth.signInWithPassword.mockResolvedValueOnce({ data: {}, error: null })
+    await utente.click(await screen.findByRole('button', { name: /Ho confermato, entra/i }))
+    expect(finto.supabase.auth.signUp).toHaveBeenCalledTimes(1)
+    expect(finto.supabase.auth.signInWithPassword).toHaveBeenLastCalledWith({ email: 'marco.riva@gmail.com', password: 'nuova-password' })
+  })
+
+  it('un indirizzo già registrato non aspetta una mail che non arriverà', async () => {
+    const utente = userEvent.setup()
+    finto.supabase.auth.signUp.mockResolvedValueOnce({ data: { user: { id: 'n1', identities: [] }, session: null }, error: null })
+    await finoAlProfilo(utente)
+    await utente.click(screen.getByRole('button', { name: /Crea il profilo/i }))
+    expect(await screen.findByText('Questa email ha già un profilo')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Ho confermato/i })).not.toBeInTheDocument()
+  })
 })

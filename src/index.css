@@ -110,6 +110,14 @@ body {
   }
 }
 
+/* Il campo data di iOS: con `appearance: none` il valore si centra e un campo
+   vuoto non mostra niente. Allineato a sinistra come gli altri campi, e con
+   un'altezza sua anche da vuoto (onboarding, segnalazione del 02/11/2026). */
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.5em;
+}
+
 /* Animazione morbida dal basso verso l'alto per le pagine */
 @keyframes pageSlideIn {
   from {

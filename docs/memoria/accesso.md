@@ -334,3 +334,38 @@ programmazione IA, Garmin con l'integrazione.
 - ⚠️ L'ambiente di prova entra come admin già collegato: login e schermata del
   consenso **non si vedono** con `npm run demo`. Li coprono
   `ConsensoCancello.test.jsx`, `LoginInvito.test.jsx` e `Impostazioni.test.jsx`.
+
+## L'iscrizione: campi fuori schermo e «confermo e torna indietro» (02/11/2026)
+
+Segnalazione del committente: nell'iscrizione i campi uscivano dallo schermo, e
+confermato il profilo l'app tornava indietro.
+
+- 🔴 **Il «torna indietro» era una gara in `ProtectedRoute`.** `Onboarding` chiamava
+  `updateUser` PRIMA dell'upsert su `athletes`; `updateUser` fa partire
+  USER_UPDATED, e `handleSession` rileggeva la riga atleta quando non c'era ancora.
+  Il riscatto del codice gli costa due giri di rete in più della conferma, quindi
+  finiva DOPO di lei e rimetteva `needsOnboarding(true)`: la schermata tornava, coi
+  campi vuoti. Tre correzioni insieme: prima la riga e poi i metadati; `giro`
+  (un contatore) fa valere solo l'ultimo `handleSession` partito; e `onComplete`
+  rifà il cancello da capo con l'utente aggiornato, come dopo il consenso.
+  `src/__tests__/OnboardingCancello.test.jsx` prende il difetto solo perché rende
+  **lento** il riscatto del codice: col finto client che risponde all'istante la
+  gara non si vede (provato: col vecchio codice e senza lentezza il test passava).
+- **I campi fuori schermo**: su iOS `<input type="date">` ignora `w-full` e si
+  allarga quanto il valore, e nelle griglie a due colonne un campo senza `min-w-0`
+  non scende sotto la sua larghezza naturale. Ora `CAMPO_PROFILO` in `App.jsx`
+  (`min-w-0 appearance-none h-12`) più la regola `::-webkit-date-and-time-value` in
+  `index.css`. Le otto caselle del codice (`CaselleCodice`) sono `flex-1
+  max-w-[33px]`: a larghezza fissa facevano 320px e su un telefono stretto uscivano.
+- **Cosa si chiede**: nome, cognome e data di nascita obbligatori, controllati dal
+  codice (`erroreProfilo` di `src/lib/profiloAtleta.js`) e non da `required`, che
+  nella WebView non sempre risponde. Peso e altezza facoltativi, ma se scritti
+  devono essere plausibili (accettano la virgola). Un errore si vede in un riquadro
+  rosso sopra il bottone; un salvataggio fallito non lascia più il bottone su
+  «Salvataggio...» per sempre (`try/finally`).
+- **Dopo «Controlla la mail»** (percorso email) il bottone diventa «Ho confermato,
+  entra»: prima restava «Crea il profilo» e ritoccarlo rifaceva la registrazione.
+  E un indirizzo **già registrato** (Supabase torna un utente con `identities: []`
+  e non manda mail) ora lo dice, invece di far aspettare una mail che non arriva.
+- ⚠️ **Non provato sul telefono**: la larghezza della data su iOS va guardata lì.
+  L'ambiente di prova entra come admin e l'onboarding non si vede.

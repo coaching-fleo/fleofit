@@ -705,9 +705,54 @@ La TV (`/tv`) mostra, sotto le quattro cifre, un QR con `fleofit://tv/<codice>` 
   `/login` con un errore falso, chiudendo un timer in corso — la stessa trappola del link della Live
   Activity. Rimedio uguale: `eLinkDellaTV` (in `src/lib/linkTimer.js`, accanto a `eLinkDelTimer`, perché
   quel file è già nel chunk d'ingresso e `codiceTV.js` resta fuori da `index`) fa uscire subito
-  qualunque `fleofit://tv…`; l'app torna davanti e non collega nulla (si collega dal foglio). Nativo:
-  niente da aggiungere, lo schema `fleofit` è già in `Info.plist` e nel filtro del manifest, e
-  `SceneDelegate` passa ogni indirizzo a Capacitor.
+  qualunque `fleofit://tv…`. Dal 02/11/2026 il link **non si limita più a portare l'app davanti**: va a
+  `/collega-tv/<codice>` (`rottaDaLinkTV`). 🔴 **Ma se il telefono è su una scheda workout NON la lascia**:
+  `rottaDaLinkTV` dà la stessa scheda, con la sua query (`athlete_id` compreso), più `tv=<codice>&chiedi=1`,
+  e `DeeplinkHandler` naviga con `replace`. `SchedaWorkout` ha per chiave il solo id: niente rimontaggio,
+  il timer in corso resta dov'è. (Fino al giro finale del 02/11 andava a `/collega-tv/…?aperto=<id>`:
+  smontava la scheda e **azzerava un timer in corso**.) Nativo: niente da aggiungere, lo schema `fleofit` è già in `Info.plist` e nel filtro del
+  manifest, e `SceneDelegate` passa ogni indirizzo a Capacitor.
+- **Scegliere il workout da trasmettere (02/11/2026)**. Spec `docs/superpowers/specs/2026-11-02-tv-qr-scelta-workout-design.md`,
+  piano `docs/superpowers/plans/2026-11-02-tv-qr-scelta-workout.md`; **come tornare indietro**:
+  `docs/superpowers/plans/2026-11-02-tv-qr-scelta-workout-ritorno.md`.
+  - La pagina `CollegaTV` (`/collega-tv/:codice`, privata) decide con `sceltaTV` (`src/lib/sceltaTV.js`, pura).
+    **Atleta**: con un solo workout oggi lo propone («Vuoi aprire questo?» «Sì» / «No, un altro»); con più
+    workout oggi, o dopo «No, un altro» (`forzaLista`), la lista di oggi e degli ultimi 7 giorni; nessun
+    workout oggi: il messaggio «Oggi non hai workout assegnati» e gli ultimi 7 giorni.
+    Con `?altro=1` (il «No, un altro» della scheda) si parte già dalla lista.
+    **Staff**: un foglio corto con i recenti e «Cerca nell'archivio»; la lista esclude ciò che esclude
+    l'archivio del coach, con lo stesso predicato `fuoriDallArchivioCoach` (`src/lib/categorie.js`: Event,
+    Custom, autonomi).
+  - **Il QR inquadrato con una scheda aperta** (`?tv=<codice>&chiedi=1`): la scheda toglie i due parametri
+    (replace) e mostra `FoglioChiediTV` — «Vuoi mandare in TV questo?», il titolo (`separaCodice`), «Sì» e
+    «No, un altro» — a `z-[250]`, **sopra il timer a tutto schermo** (`z-[200]`). «Sì» = lo stesso percorso
+    del `?tv=` (`collegaDaLink`: `collegaTV` + `dopoCollegamentoTV`, o il foglio «Collega TV» con l'errore,
+    anch'esso sopra il timer con `sopraIlTimer`); «No, un altro» → `/collega-tv/<codice>?altro=1`; la X chiude
+    e basta. La guardia `tvDaLinkTentato` si libera quando `tv` sparisce, così lo stesso QR inquadrato una
+    seconda volta richiede di nuovo.
+  - 🔴 **Le scelte navigano con `replace`** (`scegli` e «Cerca nell'archivio» in `CollegaTV`, il tocco
+    dell'archivio in modalità TV): «indietro» dalla scheda torna dov'era l'app prima del QR, non alla scelta.
+  - La scelta porta a `/workout/:id?tv=<codice>`: la scheda **si collega da sola** con `dopoCollegamentoTV`,
+    la stessa funzione del foglio «Trasmetti in TV» (timer aperto o portato a tutto schermo solo se guidato),
+    poi toglie `tv` dall'indirizzo. Un `tv` che non sono quattro cifre si ignora.
+  - **Codice scaduto o sbagliato**: niente pagina bianca, il foglio con il messaggio «Codice TV non trovato o scaduto.».
+  - **Archivio con `?tv=`** (`/archive?tv=1234`): una striscia in testata dice che si sta scegliendo per la TV
+    (X con `aria-label="Esci dalla scelta per la TV"`, non «Chiudi»: non è una modale) e ogni riga apre
+    `/workout/:id?tv=`. Funziona anche per l'atleta (con `athlete_id`).
+  - ⚠️ `codiceTV` ora è anche in `index` (via `linkTimer`): pochi byte. `index` è salito a ~605,6 KB (2,0 KB
+    nel Task 3 sono di altre sessioni in `App.jsx`, non della pagina); `CollegaTV` è un chunk suo di ~7,4 KB,
+    `WorkoutDetail` ~107,7 KB. I testi nuovi non sono in `index` (verificato con grep).
+  - **Testi scritti oltre la spec** (da far leggere al committente): «Trasmetti in TV» come titolo del foglio,
+    sottotitolo «TV <codice>»; sezioni «Oggi» e «Ultimi 7 giorni»; «Nessun workout negli ultimi 7 giorni.»;
+    «Non riesco a leggere i workout. Controlla la connessione.»; «Caricamento…».
+  - Piccoli difetti noti, non chiusi: staff `.limit(100)` prima del filtro
+    degli autonomi; chiavi doppie se lo stesso workout è assegnato due volte; `athlete_id` dall'indirizzo senza
+    controllo (lo protegge la RLS); la guardia `tvDaLinkTentato` contro StrictMode non è coperta da un test
+    (è difesa: l'effetto toglie `tv` dall'indirizzo).  
+  - ⚠️ **NON provato su un telefono**: (1) **avvio a freddo con l'app chiusa**: se il link non arriva alla
+    pagina, la riserva è `App.getLaunchUrl()`; (2) app **in background** che riceve il link; (3) link
+    inquadrato mentre si è **su una pagina workout** (`chiedi=1`), **con il timer in corso**: il timer non
+    deve azzerarsi.
   ⚠️ **Le app 1.2.2 già sugli Store NON hanno il rimedio**: lì inquadrare il QR della TV con la fotocamera
   di sistema manda a `/login`. Pubblicare `/tv` con il QR (`app:main`) prima che la 1.2.3 sia diffusa
   espone questo difetto a chi usa la fotocamera: **decisione del committente** su quando fare `app:main`.

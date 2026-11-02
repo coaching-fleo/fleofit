@@ -13,10 +13,33 @@
 // sola e porta un numero, e sotto di essa i filtri restano fermi mentre la
 // lista scorre.
 
-import { ChevronLeft, ChevronRight, Search, Users, Check, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Users, Check, X, MonitorUp } from 'lucide-react'
 import { CARTA_RIGA, VETRO } from '../lib/stiliCard'
 import { corsia } from '../lib/categorie'
 import { vibraScelta } from '../lib/aptica'
+
+// ── Modalità scelta per la TV ──────────────────────────────────────────────
+
+/**
+ * La striscia di `/archive?tv=<codice>`: si è arrivati dal QR della TV
+ * («Cerca nell'archivio» di CollegaTV) e il tocco su un workout lo manda in
+ * TV invece di aprire la scheda e basta. La X esce dalla modalità: resta
+ * l'archivio normale, dove si era.
+ */
+export function StrisciaTV({ onEsci }) {
+  return (
+    <div className="mt-3 flex items-center gap-2.5 rounded-2xl border border-brand/30 bg-brand/10 pl-3.5 pr-1 py-1">
+      <MonitorUp size={17} className="text-brand shrink-0" aria-hidden="true" />
+      <p className="flex-1 min-w-0 text-sm font-bold text-white leading-tight">
+        Scegli il workout da mandare in TV
+      </p>
+      <button aria-label="Esci dalla scelta per la TV" onClick={onEsci}
+        className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-gray-300 hover:text-white">
+        <X size={18} />
+      </button>
+    </div>
+  )
+}
 
 // ── Testata ───────────────────────────────────────────────────────────────
 

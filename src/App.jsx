@@ -12,6 +12,7 @@ import { useSchermoLargo, eDesktop } from './useDesktop'
 import { Apertura } from './components/Apertura'
 import Consenso from './components/Consenso'
 import { serveConsenso, datiConsenso } from './lib/consenso'
+import { erroreProfilo } from './lib/profiloAtleta'
 import Home from './pages/Home'
 
 // Caricate su richiesta: l'avvio non deve pagare PDF, IA, BLE e TV.
@@ -33,6 +34,7 @@ function SchedaWorkout() {
   return <WorkoutDetail key={id} />
 }
 const WorkoutsArchive = lazy(() => import('./pages/WorkoutsArchive'))
+const CollegaTV = lazy(() => import('./pages/CollegaTV'))
 const WeeklyReport = lazy(() => import('./pages/WeeklyReport'))
 const AthleteReport = lazy(() => import('./pages/AthleteReport'))
 // Solo desktop coach: fuori dal desktop la pagina rimanda da sé a /report.
@@ -71,7 +73,15 @@ import { gestisciIndietro, puoTornareIndietro } from './lib/indietroAndroid'
 import { eUnLinkDiRecupero, recuperoInCorso, avviaRecupero, chiudiRecupero } from './lib/recuperoPassword'
 import { leggiErroreLink, segnalaLinkFallito } from './lib/esitoLink'
 import { rottaDaDeepLinkGarmin } from './lib/garmin'
-import { eLinkDelTimer, eLinkDellaTV } from './lib/linkTimer'
+import { eLinkDelTimer, eLinkDellaTV, rottaDaLinkTV } from './lib/linkTimer'
+
+// I campi del profilo. ⚠️ `min-w-0` e `appearance-none` non sono cosmetica: su
+// iOS un `<input type="date">` ignora `w-full` e si allarga quanto il suo
+// valore, e nella griglia a due colonne un campo senza `min-w-0` non scende
+// sotto la sua larghezza naturale — sui telefoni stretti uscivano dalla card
+// (segnalazione del 02/11/2026).
+const CAMPO_PROFILO = 'block w-full min-w-0 h-12 appearance-none bg-[#111] border border-[#333] text-white text-base px-4 rounded-xl text-left focus:outline-none focus:border-brand'
+const ETICHETTA_PROFILO = 'block text-gray-400 text-xs font-semibold pl-1 mb-1.5'
 
 function Onboarding({ user, onComplete }) {
   // L'onboarding del ruolo coach è disattivato: qui il ruolo è sempre 'athlete'.
@@ -84,8 +94,10 @@ function Onboarding({ user, onComplete }) {
   const [weight, setWeight] = useState('')
   const [height, setHeight] = useState('')
   const [saving, setSaving] = useState(false)
+  const [errore, setErrore] = useState(null)
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(meta.avatar_url || '')
+  const oggi = new Date().toISOString().slice(0, 10)
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0]
@@ -97,61 +109,79 @@ function Onboarding({ user, onComplete }) {
 
   const handleComplete = async (e) => {
     e.preventDefault()
+    const manca = erroreProfilo({ name, surname, dob, weight, height })
+    if (manca) return setErrore(manca)
+    setErrore(null)
     setSaving(true)
-    
-    let photoUrl = meta.avatar_url || null
 
-    if (photoFile) {
-      const ext = photoFile.name.split('.').pop()
-      const fileName = `${Date.now()}_${user.id}.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('athlete-photos')
-        .upload(fileName, photoFile, { contentType: photoFile.type })
-      
-      if (!uploadError) {
-        const { data: urlData } = supabase.storage.from('athlete-photos').getPublicUrl(fileName)
-        photoUrl = urlData.publicUrl
+    try {
+      let photoUrl = meta.avatar_url || null
+
+      if (photoFile) {
+        const ext = photoFile.name.split('.').pop()
+        const fileName = `${Date.now()}_${user.id}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('athlete-photos')
+          .upload(fileName, photoFile, { contentType: photoFile.type })
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('athlete-photos').getPublicUrl(fileName)
+          photoUrl = urlData.publicUrl
+        } else {
+          console.error('Foto profilo non caricata:', uploadError.message)
+        }
       }
-    }
 
-    await supabase.auth.updateUser({
-      data: { role, first_name: name, last_name: surname, avatar_url: photoUrl }
-    })
+      const nome = name.trim()
+      const cognome = surname.trim()
 
-    if (role === 'athlete') {
+      // 🔴 PRIMA la riga atleta, POI i metadati. `updateUser` fa partire
+      // USER_UPDATED, e `ProtectedRoute` a quel punto rilegge la riga: se non
+      // c'è ancora, rimette questa schermata — è il «confermo e torna
+      // indietro» del 02/11/2026. Nell'ordine opposto lo faceva quasi sempre.
       const { error: dbError } = await supabase.from('athletes').upsert({
         id: user.id,
-        name: name || user.email.split('@')[0],
-        surname: surname || '',
-        birth_date: dob || null,
-        weight: weight ? parseFloat(weight) : null,
-        height: height ? parseFloat(height) : null,
+        name: nome,
+        surname: cognome,
+        birth_date: dob,
+        weight: weight ? parseFloat(String(weight).replace(',', '.')) : null,
+        height: height ? parseFloat(String(height).replace(',', '.')) : null,
         photo_url: photoUrl
       }, { onConflict: 'id' })
 
       if (dbError) {
-        mostraErrore("Errore di salvataggio nel database: " + dbError.message)
-        setSaving(false)
+        setErrore('Non siamo riusciti a salvare il profilo: ' + dbError.message)
         return
       }
-      localStorage.setItem(`fleofit_name_${user.id}`, name || user.email.split('@')[0])
+      localStorage.setItem(`fleofit_name_${user.id}`, nome)
+
+      const { data, error: metaError } = await supabase.auth.updateUser({
+        data: { role, first_name: nome, last_name: cognome, avatar_url: photoUrl }
+      })
+      if (metaError) {
+        setErrore('Profilo salvato, ma non siamo riusciti a completare l\'accesso. Controlla la connessione e riprova.')
+        return
+      }
+
+      await onComplete(data?.user ?? { ...user, user_metadata: { ...meta, role, first_name: nome, last_name: cognome } })
+    } catch (err) {
+      setErrore('Qualcosa non ha funzionato. Controlla la connessione e riprova.' + (err?.message ? ` (${err.message})` : ''))
+    } finally {
+      setSaving(false)
     }
-    
-    setSaving(false)
-    onComplete(role)
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0B0B] flex flex-col items-center justify-center px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
-      <div className="w-full max-w-md bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 shadow-2xl">
+    <div className="min-h-[100dvh] bg-[#0B0B0B] flex flex-col items-center justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
+      <div className="w-full max-w-md min-w-0 bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 sm:p-6 shadow-2xl">
         <div className="flex flex-col items-center mb-6">
           <h1 className="text-4xl font-black text-white tracking-tight mb-3">FLEO<span className="text-brand">FIT</span></h1>
           <h2 className="text-2xl font-bold text-white text-center">Completiamo il profilo!</h2>
           <p className="text-gray-400 text-sm mt-1 text-center">Abbiamo bisogno di qualche informazione in più per iniziare.</p>
         </div>
 
-        <form onSubmit={handleComplete} className="flex flex-col gap-4">
-          <div className="flex flex-col items-center gap-2 mb-2 animate-in fade-in">
+        <form onSubmit={handleComplete} noValidate className="flex flex-col gap-4">
+          <div className="flex flex-col items-center gap-2 mb-2">
             <div className="relative shrink-0">
               <div className="w-20 h-20 rounded-full bg-[#2a2a2a] border-2 border-[#333] flex items-center justify-center overflow-hidden">
                 {photoPreview ? (
@@ -162,31 +192,49 @@ function Onboarding({ user, onComplete }) {
               </div>
               <label className="absolute bottom-0 right-0 bg-brand p-1.5 rounded-full cursor-pointer hover:brightness-110 shadow-lg">
                 <Upload size={14} className="text-black" />
-                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} aria-label="Foto profilo" />
               </label>
             </div>
             <p className="text-muted text-xs">Foto Profilo (opzionale)</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 animate-in fade-in">
-            <input required placeholder="Nome *" value={name} onChange={e => setName(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand" />
-            <input required placeholder="Cognome *" value={surname} onChange={e => setSurname(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label htmlFor="ob-nome" className={ETICHETTA_PROFILO}>Nome *</label>
+              <input id="ob-nome" aria-label="Nome" autoComplete="given-name" value={name} onChange={e => setName(e.target.value)} className={CAMPO_PROFILO} />
+            </div>
+            <div className="min-w-0">
+              <label htmlFor="ob-cognome" className={ETICHETTA_PROFILO}>Cognome *</label>
+              <input id="ob-cognome" aria-label="Cognome" autoComplete="family-name" value={surname} onChange={e => setSurname(e.target.value)} className={CAMPO_PROFILO} />
+            </div>
           </div>
 
           {role === 'athlete' && (
-            <div className="flex flex-col gap-4 animate-in fade-in">
-              <div className="flex flex-col gap-1">
-                <label className="text-gray-400 text-xs pl-1">Data di Nascita *</label>
-                <input type="date" required value={dob} onChange={e => setDob(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand text-sm" />
+            <>
+              <div className="min-w-0">
+                <label htmlFor="ob-nascita" className={ETICHETTA_PROFILO}>Data di nascita *</label>
+                <input id="ob-nascita" aria-label="Data di nascita" type="date" max={oggi} min="1910-01-01" value={dob} onChange={e => setDob(e.target.value)} className={CAMPO_PROFILO} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <input type="number" placeholder="Peso (kg)" value={weight} onChange={e => setWeight(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand" />
-                <input type="number" placeholder="Altezza (cm)" value={height} onChange={e => setHeight(e.target.value)} className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand" />
+                <div className="min-w-0">
+                  <label htmlFor="ob-peso" className={ETICHETTA_PROFILO}>Peso (kg)</label>
+                  <input id="ob-peso" aria-label="Peso" type="text" inputMode="decimal" placeholder="es. 70" value={weight} onChange={e => setWeight(e.target.value)} className={CAMPO_PROFILO} />
+                </div>
+                <div className="min-w-0">
+                  <label htmlFor="ob-altezza" className={ETICHETTA_PROFILO}>Altezza (cm)</label>
+                  <input id="ob-altezza" aria-label="Altezza" type="text" inputMode="numeric" placeholder="es. 175" value={height} onChange={e => setHeight(e.target.value)} className={CAMPO_PROFILO} />
+                </div>
               </div>
-            </div>
+            </>
           )}
 
-          <button type="submit" disabled={saving} className="w-full mt-4 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg flex justify-center items-center">
+          {errore && (
+            <p role="alert" className="rounded-xl bg-red-500/[.08] border border-red-500/30 text-red-400 text-sm font-medium px-3.5 py-2.5">
+              {errore}
+            </p>
+          )}
+
+          <button type="submit" disabled={saving} className="w-full mt-2 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg flex justify-center items-center">
             {saving ? 'Salvataggio...' : 'Inizia ad usare l\'app!'}
           </button>
         </form>
@@ -221,6 +269,12 @@ function ProtectedRoute() {
   const [aperturaFinita, setAperturaFinita] = useState(false)
   const location = useLocation()
   const desktop = eDesktop(useSchermoLargo(), role)
+  // 🔴 Conta i giri di `handleSession`: vale solo l'ULTIMO. Gli eventi di
+  // Supabase (INITIAL_SESSION, USER_UPDATED, TOKEN_REFRESHED…) ne fanno partire
+  // più d'uno insieme, e uno vecchio che finisce per ultimo riscriveva lo stato
+  // con dati letti prima — è così che l'onboarding tornava dopo la conferma
+  // (02/11/2026).
+  const giro = useRef(0)
 
   // `html.desktop` azzera l'altezza della tab bar (src/index.css): le pagine e
   // le barre `sticky` che la leggono si adattano da sole, senza saperlo.
@@ -246,6 +300,8 @@ function ProtectedRoute() {
   }, [])
 
   const handleSession = async (session) => {
+    const mio = ++giro.current
+    const superato = () => mio !== giro.current
     setSession(session)
     if (session?.user) {
       // 🔴 UNA lettura sola della riga atleta, e sta in testa apposta.
@@ -263,6 +319,7 @@ function ProtectedRoute() {
         leggiRuolo(supabase, session.user.email),
         supabase.from('athletes').select('id, name, surname').eq('id', session.user.id).maybeSingle(),
       ])
+      if (superato()) return
       const isAdmin = ruoloDb !== null
 
       if (!isAdmin) {
@@ -294,6 +351,8 @@ function ProtectedRoute() {
             const { data: usedCode } = await supabase.from('invitation_codes').select('id').eq('used_by', session.user.id).maybeSingle()
             if (usedCode) isAuthorized = true;
           }
+
+          if (superato()) return
 
           if (!isAuthorized) {
             // 🔴 Non è più un vicolo cieco (04/09/2026, rework del login).
@@ -433,11 +492,10 @@ function ProtectedRoute() {
   }
 
   if (needsOnboarding) {
-    return <>{apertura}<Onboarding user={session.user} onComplete={async (newRole) => {
-      const ruoloDb = await leggiRuolo(supabase, session.user.email)
-      setRole(ruoloDb ?? newRole)
-      setNeedsOnboarding(false)
-    }} /></>
+    // Finito il profilo si rifà il cancello da capo con l'utente aggiornato,
+    // come dopo il consenso: è il giro più recente, quindi vince su quelli
+    // partiti prima che la riga atleta esistesse.
+    return <>{apertura}<Onboarding user={session.user} onComplete={(user) => handleSession({ ...session, user })} /></>
   }
 
   return (
@@ -539,6 +597,10 @@ function DeeplinkHandler() {
   // da un ref e l'effetto ha un cleanup che li toglie.
   const vaiA = useRef(navigate);
   useEffect(() => { vaiA.current = navigate }, [navigate]);
+  // Dov'è l'app adesso, per il link della TV (stesso motivo: listener unico).
+  const posizione = useLocation();
+  const posizioneRef = useRef(posizione);
+  useEffect(() => { posizioneRef.current = posizione }, [posizione]);
 
   useEffect(() => {
     const isNative = typeof window !== 'undefined' && !!window?.Capacitor?.isNativePlatform?.();
@@ -550,9 +612,20 @@ function DeeplinkHandler() {
         // davanti, dov'era. Senza questo il ramo sotto lo prendeva per un login
         // fallito e mandava a /login, chiudendo il timer (src/lib/linkTimer.js).
         if (eLinkDelTimer(event.url)) return;
-        // 🔴 Lo stesso per il QR della TV letto con la fotocamera di sistema
-        // (fleofit://tv/<codice>): niente /login, l'app torna davanti e basta.
-        if (eLinkDellaTV(event.url)) return;
+        // 🔴 Il QR della TV letto con la fotocamera di sistema
+        // (fleofit://tv/<codice>): mai /login. Con un codice valido si apre
+        // /collega-tv/<codice> (pagina che sceglie il workout da mandare in TV);
+        // senza, l'app torna davanti e basta. Da una scheda si resta sulla
+        // scheda (`?tv=…&chiedi=1`) con `replace`: SchedaWorkout ha per chiave
+        // il solo id, quindi niente rimontaggio e il timer in corso resta.
+        if (eLinkDellaTV(event.url)) {
+          const rottaTV = rottaDaLinkTV(event.url, posizioneRef.current);
+          if (rottaTV) {
+            const stessaPagina = rottaTV.split('?')[0] === posizioneRef.current.pathname;
+            vaiA.current(rottaTV, stessaPagina ? { replace: true } : undefined);
+          }
+          return;
+        }
 
         // 🔴 Il ritorno da Garmin PRIMA di tutto il resto: senza token
         // nell'hash il ramo sotto lo manderebbe a /login con un errore
@@ -736,6 +809,7 @@ function App() {
             <Route path="/profile" element={<AthleteDetail />} />
             <Route path="/workout/:id" element={<SchedaWorkout />} />
             <Route path="/archive" element={<WorkoutsArchive />} />
+            <Route path="/collega-tv/:codice" element={<CollegaTV />} />
             {/* Riservata al coach: la pagina rimanda l'atleta alla Home da sé,
                 come fa /athletes. Non è una guardia di sicurezza — quella la
                 fanno le policy RLS — ma di interfaccia. */}

@@ -47,3 +47,15 @@ export const parolaPezzi = (categoria, n) => {
   if (categoria === 'Gym') return uno ? 'esercizio' : 'esercizi'
   return uno ? 'blocco' : 'blocchi'
 }
+
+/**
+ * I workout che l'archivio del COACH non mostra: le gare e gli allenamenti
+ * liberi/autonomi (quelli che l'atleta si scrive da sé, o i Custom). Lo stesso
+ * filtro vale per la scelta del workout da mandare in TV (CollegaTV), così le
+ * due liste del coach non divergono.
+ */
+export const fuoriDallArchivioCoach = (sections) => {
+  const s = sections || {}
+  const cat = s.category
+  return cat === 'Event' || !!s.isEvent || cat === 'Custom' || cat === 'Autonomo' || !!s.isAutonomous
+}

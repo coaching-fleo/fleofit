@@ -18,18 +18,24 @@ import { vibraSuccesso } from '../lib/aptica'
 // che non è della TV) · `permesso` (fotocamera negata). Sul web si parte da
 // `codice`, perché il lettore QR non c'è.
 //
+// `erroreIniziale`: il messaggio con cui il foglio si apre (dal link con `?tv=`).
+// `sopraIlTimer`: z-[250] invece di z-[100], per aprirsi sopra il timer a tutto
+// schermo (z-[200]) — il «Sì» di FoglioChiediTV a timer aperto.
+//
 // `onCollega(codice)` → `{ ok: true }` | `{ errore }`. A collegamento riuscito
 // il foglio lo chiude chi lo monta (e apre il telecomando).
 
 const MSG_QR_ESTRANEO = 'Questo non è il codice della TV FLEOFIT'
 const MSG_SENZA_FOTOCAMERA = 'La fotocamera non si è aperta: scrivi il codice che vedi sulla TV.'
 
-export default function FoglioCollegaTV({ onCollega, onChiudi }) {
+export default function FoglioCollegaTV({ onCollega, onChiudi, erroreIniziale = null, sopraIlTimer = false }) {
   // Se lo scanner non parte (plugin presente ma guasto) la strada del QR sparisce.
   const [conQR, setConQR] = useState(qrDisponibile)
-  const [stato, setStato] = useState(conQR ? 'scelta' : 'codice')
+  // Con `erroreIniziale` (il link con `?tv=` portava un codice che non va) si
+  // apre sul campo del codice, con il messaggio sotto.
+  const [stato, setStato] = useState(conQR && !erroreIniziale ? 'scelta' : 'codice')
   const [codice, setCodice] = useState('')
-  const [errore, setErrore] = useState(null)
+  const [errore, setErrore] = useState(erroreIniziale)
   const [attesa, setAttesa] = useState(false)
   const [leggendo, setLeggendo] = useState(false)
   // La guardia contro la doppia chiamata: l'incolla e il tasto Invio (o un
@@ -89,7 +95,7 @@ export default function FoglioCollegaTV({ onCollega, onChiudi }) {
   const bottoneGrande = 'w-full min-h-[60px] flex items-center justify-center gap-2.5 rounded-2xl font-bold text-[16px] transition active:scale-[.98] disabled:opacity-50'
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+    <div className={`fixed inset-0 ${sopraIlTimer ? 'z-[250]' : 'z-[100]'} flex flex-col justify-end`}>
       <div className="absolute inset-0 bg-black/70 velo-in" onClick={onChiudi} />
       <div role="dialog" aria-modal="true" aria-labelledby="foglio-tv-titolo"
         className="relative bg-[#1e1e1e] border-t border-[#2a2a2a] rounded-t-3xl px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] max-h-[85dvh] overflow-y-auto sheet-in">
