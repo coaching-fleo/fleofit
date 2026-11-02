@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
         // registrano qui, PRIMA di super.onCreate: dopo, il bridge è già nato e
         // la pagina non li vede. Il gemello iOS è FleoBridgeViewController.
         registerPlugin(LettoreTestoPlugin.class);
+        registerPlugin(LettoreQRPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

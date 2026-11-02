@@ -87,5 +87,7 @@ class FleoBridgeViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(LettoreTestoPlugin())
         // La Live Activity del timer (LiveActivityPlugin.swift, 29/10/2026).
         bridge?.registerPluginInstance(LiveActivityPlugin())
+        // Il lettore del QR della TV (LettoreQR.swift, 30/10/2026).
+        bridge?.registerPluginInstance(LettoreQRPlugin())
     }
 }

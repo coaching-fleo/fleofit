@@ -11,6 +11,8 @@ import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
 import { esercizioInCorso, esercizioInArrivo } from '../lib/esercizioInCorso'
 import { personePerEsercizio, bloccoAScaglioni } from '../lib/personeTV'
+import QRCode from 'qrcode'
+import { contenutoQR } from '../lib/codiceTV'
 import { buildTimerSequence } from '../lib/timerSequence'
 import { statoTV, beepTV } from '../lib/avanzaTimer'
 import {
@@ -81,10 +83,24 @@ const getIntensityColor = (val) => {
 
 export default function TVDashboard() {
   const [code, setCode] = useState(null)
+  const [qr, setQr] = useState(null)
   const [workout, setWorkout] = useState(null)
   const [status, setStatus] = useState('waiting') // 'waiting', 'loading', 'active'
   const [error, setError] = useState(null)
   const [rotated, setRotated] = useState(false)
+
+  // Il QR del codice: si rifà quando il codice cambia; se fallisce resta solo il codice.
+  // Senza margine (lo dà la carta bianca di AttesaTV, 4 moduli) e a 400px: il
+  // link è sempre un QR da 25 moduli, quindi 16px a modulo, il doppio esatto
+  // dei 200px a cui si mostra (TVDashboardQR.test.jsx).
+  useEffect(() => {
+    if (!code) return
+    let attivo = true
+    QRCode.toDataURL(contenutoQR(code), { margin: 0, width: 400, color: { dark: '#0b0b0b', light: '#ffffff' } })
+      .then(url => { if (attivo) setQr(url) })
+      .catch(() => { if (attivo) setQr(null) })
+    return () => { attivo = false }
+  }, [code])
   const [timerState, setTimerState] = useState(null)
   const [lastTimerState, setLastTimerState] = useState(null)
   
@@ -327,7 +343,7 @@ export default function TVDashboard() {
     }
 
     if (status === 'waiting') {
-      return <AttesaTV codice={code} audioAttivo={audioUnlocked} ruotato={rotated} onRuota={() => setRotated(!rotated)} />
+      return <AttesaTV codice={code} qr={qr} audioAttivo={audioUnlocked} ruotato={rotated} onRuota={() => setRotated(!rotated)} />
     }
 
     if (status === 'loading') {

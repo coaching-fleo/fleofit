@@ -138,6 +138,20 @@ Cosa si sa già:
 
 ---
 
+## 📷 TV con il QR — da provare (30/10/2026)
+
+Fatto e verde nei test (`docs/memoria/scheda-workout.md`, 9-tv-qr), ma **mai provato su un telefono vero**:
+1. **Fotocamera su iPhone** (`npm run ios`) e **su Android** (`npm run android`): inquadrare il QR di `/tv`,
+   QR estraneo, permesso negato.
+2. **`./gradlew assembleDebug` sul PC** (sul Mac non c'è JDK): conferma gli import dello scanner Google e il
+   meta-data `com.google.mlkit.vision.DEPENDENCIES` = `barcode_ui` aggiunto al manifest (30/10, mai compilato).
+3. Far leggere al committente i testi nuovi di `FoglioCollegaTV` (elencati nel file di memoria).
+4. 🔴 **Decisione del committente: quando fare `app:main`.** Nelle app 1.2.2 già sugli Store il QR della TV
+   inquadrato con la **fotocamera di sistema** apre l'app e la manda a `/login` con un errore falso (chiude
+   anche un timer in corso): il rimedio (`eLinkDellaTV`) arriva solo con la 1.2.3. Pubblicare `/tv` con il
+   QR sul sito prima che la 1.2.3 sia diffusa espone il difetto a chi inquadra con la fotocamera invece che
+   dal foglio «Trasmetti in TV».
+
 ## ⏸️ In stand-by — da ricordare al prossimo aggiornamento App Store
 
 > **Consenso privacy, policy nuova e mail automatica dei cambi di policy** (14/10/2026).

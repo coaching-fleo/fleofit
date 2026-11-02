@@ -8,6 +8,7 @@ import { ChevronUp, Download, Timer, Users, X, User, Send, Edit, Trash2, AlertTr
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
+import FoglioCollegaTV from '../components/FoglioCollegaTV'
 import CustomDatePicker from '../components/CustomDatePicker'
 import { useAuth } from '../App'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
@@ -304,9 +305,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
   // TV Sync
   const [tvModalOpen, setTvModalOpen] = useState(false)
-  const [tvCode, setTvCode] = useState('')
-  const [tvConnecting, setTvConnecting] = useState(false)
-  const [isTvInputFocused, setIsTvInputFocused] = useState(false)
+  // Cambia a ogni apertura e chiusura del foglio TV: un collegamento partito da
+  // un foglio che nel frattempo è stato chiuso non tocca più l'interfaccia.
+  const giroFoglioTV = useRef(0)
+  const apriFoglioTV = () => { giroFoglioTV.current++; setTvModalOpen(true) }
+  const chiudiFoglioTV = () => { giroFoglioTV.current++; setTvModalOpen(false) }
   const [connectedTvCode, setConnectedTvCode] = useState(() => localStorage.getItem('fleofit_tv_code') || null)
 
   // Voice Notes
@@ -936,48 +939,37 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     })
   }
 
-  const handleConnectTV = async () => {
-    if (!tvCode || tvCode.length !== 4) {
-      setAlertInfo({ title: 'Errore', message: 'Inserisci un codice valido a 4 cifre', type: 'error' })
-      return
-    }
-    setTvConnecting(true)
-    const { data, error: fetchErr } = await supabase.from('tv_sessions').select('*').eq('code', tvCode).single()
-    
-    if (fetchErr || !data) {
-      setTvConnecting(false)
-      setAlertInfo({ title: 'Errore', message: 'Codice TV non trovato o scaduto.', type: 'error' })
-      return
-    }
+  // Collega la TV con il suo codice (dal campo o dal QR di FoglioCollegaTV).
+  // Niente alert: l'errore lo mostra il foglio sotto il campo, e il successo è
+  // il telecomando che si apre (lo fa chi monta il foglio).
+  const collegaTV = async (codice) => {
+    try {
+      const { data, error: fetchErr } = await supabase.from('tv_sessions').select('*').eq('code', codice).single()
+      if (fetchErr || !data) return { errore: 'Codice TV non trovato o scaduto.' }
 
-    const { error } = await supabase.from('tv_sessions').update({ 
-      workout_id: id, 
-      athlete_id: queryAthleteId || user?.id,
-      updated_at: new Date().toISOString()
-    }).eq('code', tvCode)
+      const { error } = await supabase.from('tv_sessions').update({
+        workout_id: id,
+        athlete_id: queryAthleteId || user?.id,
+        updated_at: new Date().toISOString()
+      }).eq('code', codice)
+      if (error) return { errore: 'Collegamento non riuscito. Riprova.' }
 
-    setTvConnecting(false)
-    if (error) {
-      setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
-    } else {
-      setConnectedTvCode(tvCode)
-      localStorage.setItem('fleofit_tv_code', tvCode)
-      setTvModalOpen(false)
-      setTvCode('')
-      setAlertInfo({ title: 'Connesso!', message: 'Il workout è ora visibile sulla tua TV.', type: 'success' })
+      setConnectedTvCode(codice)
+      localStorage.setItem('fleofit_tv_code', codice)
+      return { ok: true }
+    } catch {
+      return { errore: 'Collegamento non riuscito. Controlla la connessione e riprova.' }
     }
   }
 
   const handleDisconnectTV = async () => {
     if (!connectedTvCode) return
-    setTvConnecting(true)
     const { error } = await supabase.from('tv_sessions').update({ 
       workout_id: null, 
       athlete_id: null,
       updated_at: new Date().toISOString()
     }).eq('code', connectedTvCode)
-    
-    setTvConnecting(false)
+
     if (error) {
       setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
     } else {
@@ -2118,7 +2110,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <IconaStato etichetta="Scollega TV" icona={MonitorUp} accesa colore="#ef4444"
             onClick={handleDisconnectTV} />
         ) : (
-          <IconaStato etichetta="TV" icona={MonitorUp} onClick={() => setTvModalOpen(true)} />
+          <IconaStato etichetta="TV" icona={MonitorUp} onClick={apriFoglioTV} />
         )}
       </TestataScheda>
       {desktop ? (
@@ -2559,39 +2551,31 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         document.body
       )}
 
-       {/* MODAL: TV SYNC */}
-      {tvModalOpen && createPortal(
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4 velo-in">
-          <div className={`${CARD} w-full max-w-sm p-6 flex flex-col gap-4 text-center modal-transition transition-transform ${isTvInputFocused ? '-translate-y-32' : ''}`}>
-            <div className="flex justify-between items-center mb-2">
-               <h2 className="text-xl font-bold text-white flex items-center gap-2"><MonitorUp size={24} className="text-brand" /> Trasmetti in TV</h2>
-               <button aria-label="Chiudi" onClick={() => setTvModalOpen(false)} className="text-muted hover:text-white"><X size={20} /></button>
-            </div>
-            <p className="text-gray-400 text-sm text-left">
-              Apri il browser della tua Fire Stick o Smart TV, vai su <strong className="text-white">fleofit.vercel.app/tv</strong> e inserisci qui sotto il codice che vedi a schermo.
-            </p>
-            <input 
-              type="tel"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={4}
-              className="bg-[#111] border border-[#333] rounded-xl px-4 py-4 text-white text-center text-3xl font-black tracking-[0.5em] focus:outline-none focus:border-brand w-full"
-              value={tvCode}
-              onChange={(e) => setTvCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-              onFocus={() => setIsTvInputFocused(true)}
-              onBlur={() => setIsTvInputFocused(false)}
-              placeholder="1234"
-            />
-            <button 
-              onClick={handleConnectTV}
-              disabled={tvConnecting || tvCode.length !== 4}
-              className="w-full mt-2 py-4 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 text-lg"
-            >
-              {tvConnecting ? 'Connessione...' : 'Trasmetti ora'}
-            </button>
-          </div>
-        </div>,
-        document.body
+      {/* FOGLIO: TV — codice o QR. A collegamento riuscito si apre il telecomando,
+          ma solo se il workout ha il timer guidato (una corsa o una scheda Gym
+          si collega e il foglio si chiude e basta): se il timer è già aperto lo
+          si porta a tutto schermo (apriTimer, su un timer aperto, lo
+          rimpicciolirebbe).
+          ⚠️ Se il foglio è stato chiuso (velo, X, tasto indietro) mentre il
+          collegamento era per strada, la TV resta collegata ma l'interfaccia
+          non salta: niente timer, e un foglio riaperto nel frattempo resta
+          aperto (giroFoglioTV). */}
+      {tvModalOpen && (
+        <FoglioCollegaTV
+          onChiudi={chiudiFoglioTV}
+          onCollega={async (codice) => {
+            const giro = giroFoglioTV.current
+            const esito = await collegaTV(codice)
+            if (esito.ok && giro === giroFoglioTV.current) {
+              chiudiFoglioTV()
+              if (timerDisponibile) {
+                if (timerOpen) setTimerMinimized(false)
+                else apriTimer()
+              }
+            }
+            return esito
+          }}
+        />
       )}
 
       {timerOpen && timerSequence.length > 0 && (

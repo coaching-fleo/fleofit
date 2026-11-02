@@ -35,6 +35,15 @@
 
         </activity>
 
+        <!-- Lo scanner di QR della TV (LettoreQRPlugin, play-services-code-scanner)
+             gira dentro Play Services e scarica il suo modulo al primo uso: così
+             Play Services lo scarica già all'installazione dell'app, e il primo
+             «Inquadra il QR» non fallisce mentre il modulo arriva. La lettura del
+             testo (text-recognition) ha il modello DENTRO l'app e qui non serve. -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

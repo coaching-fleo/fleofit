@@ -40,6 +40,9 @@ dependencies {
     // ⚠️ La versione con il modello DENTRO l'app, non `play-services-mlkit-…`, che
     // lo scarica al primo uso e offline non funziona.
     implementation "com.google.mlkit:text-recognition:$mlkitTextRecognitionVersion"
+    // Lo scanner di QR per collegare la TV (LettoreQRPlugin). Gira dentro Play
+    // Services e NON chiede il permesso CAMERA all'app.
+    implementation "com.google.android.gms:play-services-code-scanner:$playServicesCodeScannerVersion"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

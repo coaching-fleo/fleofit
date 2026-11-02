@@ -21,6 +21,7 @@
 		7FA1A0012C00000000000002 /* AttivitaTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C00000000000001 /* AttivitaTimer.swift */; };
 		7FA1A0012C00000000000003 /* AttivitaTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C00000000000001 /* AttivitaTimer.swift */; };
 		7FA1A0012C00000000000005 /* LiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C00000000000004 /* LiveActivityPlugin.swift */; };
+		7FA1A0022C00000000000005 /* LettoreQR.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA1A0022C00000000000004 /* LettoreQR.swift */; };
 		7FA1A0012C00000000000007 /* FleoTimerBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C00000000000006 /* FleoTimerBundle.swift */; };
 		7FA1A0012C00000000000009 /* TimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C00000000000008 /* TimerLiveActivity.swift */; };
 		7FA1A0012C0000000000000C /* FleoTimer.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7FA1A0012C0000000000000B /* FleoTimer.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -66,6 +67,7 @@
 		5CE9A1042B0000000000A004 /* LettoreTesto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LettoreTesto.swift; sourceTree = "<group>"; };
 		7FA1A0012C00000000000001 /* AttivitaTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttivitaTimer.swift; sourceTree = "<group>"; };
 		7FA1A0012C00000000000004 /* LiveActivityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityPlugin.swift; sourceTree = "<group>"; };
+		7FA1A0022C00000000000004 /* LettoreQR.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LettoreQR.swift; sourceTree = "<group>"; };
 		7FA1A0012C00000000000006 /* FleoTimerBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleoTimerBundle.swift; sourceTree = "<group>"; };
 		7FA1A0012C00000000000008 /* TimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerLiveActivity.swift; sourceTree = "<group>"; };
 		7FA1A0012C0000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -121,6 +123,7 @@
 				5CE9A1042B0000000000A004 /* LettoreTesto.swift */,
 				7FA1A0012C00000000000001 /* AttivitaTimer.swift */,
 				7FA1A0012C00000000000004 /* LiveActivityPlugin.swift */,
+				7FA1A0022C00000000000004 /* LettoreQR.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -260,6 +263,7 @@
 				5CE9A1032B0000000000A003 /* LettoreTesto.swift in Sources */,
 				7FA1A0012C00000000000002 /* AttivitaTimer.swift in Sources */,
 				7FA1A0012C00000000000005 /* LiveActivityPlugin.swift in Sources */,
+				7FA1A0022C00000000000005 /* LettoreQR.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

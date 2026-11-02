@@ -37,7 +37,7 @@
   privacy su App Store Connect. Resta in stand-by la mail dei cambi di policy (BACKLOG, in cima).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint al 27/10/2026: `npm test` → **2274 test**; `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note», di «Da un testo scritto» né dei Modelli di blocco) (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
+- Test e lint: `npm test` → **2704 test** (30/10/2026; erano 2274 al 27/10); al 27/10/2026 `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note», di «Da un testo scritto» né dei Modelli di blocco) (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---
@@ -273,12 +273,12 @@ npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 > sono usciti Stepper e ruota del passo): è un chunk
 > **condiviso con `WorkoutDetail`**, e una libreria di effetti importata lì
 > dentro la fa scaricare a ogni apertura di una scheda. E `WorkoutDetail` deve
-> restare intorno ai **79 KB** (dal 28/10/2026 è a **89 KB**: la riga «Sull'orologio» ne pesa circa 1, il resto era già cresciuto prima, non misurato) — 83 fino al 22/09, quando il chunk del recap si è
+> restare intorno ai **79 KB** (dal 28/10/2026 è a **89 KB**: la riga «Sull'orologio» ne pesa circa 1, il resto era già cresciuto prima, non misurato; dal 30/10/2026 è a **107 KB**, misurato dopo il foglio «Collega TV» con il QR, ma la crescita da 89 non è stata misurata passo per passo) — 83 fino al 22/09, quando il chunk del recap si è
 > portato via un po' di logica condivisa (erano 68 fino al 01/09, poi 82 con `StoriaUI` + `recapStoria`
 > §9-unetvicies, e 84 dal 02/09 con `previsione` + `PrevisioneUI` §9-quatervicies). Se risale sopra i 400, qualcuno ha rimesso `jspdf` o `html-to-image`
 > fra gli import in testa (§9-noviesdecies).
 >
-> ⚠️ E `index` deve restare intorno ai **594 KB** (≈598 KB dal 29/10/2026, recupero Garmin): è il chunk d'ingresso, quello
+> ⚠️ E `index` deve restare intorno ai **594 KB** (≈598 KB dal 29/10/2026, recupero Garmin; **602,78 KB al 30/10/2026**, già prima del QR della TV, che sta in `WorkoutDetail`/`TVDashboard`): è il chunk d'ingresso, quello
 > che gatekeepa il primo fotogramma. Se sale di colpo di qualche decina di KB,
 > qualcuno ha importato in modo NON pigro un pezzo montato da più pagine — è
 > esattamente quello che il recap avrebbe fatto (§9-quadragies punto 6).
@@ -697,7 +697,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Home.jsx` (ramo atleta), `HomeAtletaUI`, `HomeAtletaVuotiUI`, `statistiche.js` | `home-atleta.md` |
 | `Home.jsx` (ramo coach), `HomeCoachUI`, `HomeCoachTelefono`, `HomeCoachDesktop`, `CruscottoCoachUI`, `cruscottoCoach.js`, `useCruscottoCoach.js`, `statisticheCoach.js`, `pausa.js` | `home-coach.md` |
 | `CreateWorkout.jsx`, `CreaWorkoutUI`, `CreaGym`, `SchedaGymUI`, `gym.js`, `eserciziGym.js`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `incremento.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza, `modelliBlocco.js`, `modelliBloccoDb.js`, `useModelliBlocco.js`, `Modelli.jsx`, `ModelliUI`, `FoglioModello` | `crea-workout.md` |
-| `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF, `comeStai.js`, `FoglioComeStai`, `TVDashboard.jsx`, `TVDashboardUI`, `personeTV.js`, `FoglioPersoneTV`, `avanzaTimer.js`, `sessioneAudio.js`, `liveActivity.js`, `FoglioLiveActivity`, `LiveActivityPlugin.swift`, `AttivitaTimer.swift`, `ios/App/FleoTimer/` | `scheda-workout.md` |
+| `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF, `comeStai.js`, `FoglioComeStai`, `TVDashboard.jsx`, `TVDashboardUI`, `personeTV.js`, `FoglioPersoneTV`, `codiceTV.js`, `lettoreQR.js`, `FoglioCollegaTV`, `LettoreQR.swift`, `LettoreQRPlugin.java`, `avanzaTimer.js`, `sessioneAudio.js`, `liveActivity.js`, `FoglioLiveActivity`, `LiveActivityPlugin.swift`, `AttivitaTimer.swift`, `ios/App/FleoTimer/` | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `CalendarioAtleta`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |
 | `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |

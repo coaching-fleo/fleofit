@@ -74,7 +74,7 @@ function MarchioTV({ grande = false }) {
  * Lo schermo che la TV mostra finché un telefono non si collega. È una sola
  * cosa da fare, e il codice è l'unico punto giallo dello schermo.
  */
-export function AttesaTV({ codice, audioAttivo, onRuota, ruotato }) {
+export function AttesaTV({ codice, audioAttivo, onRuota, ruotato, qr = null }) {
   const cifre = (codice || '····').split('')
   return (
     <div className="relative flex-1 w-full flex flex-col items-center justify-center p-16 overflow-hidden">
@@ -109,6 +109,21 @@ export function AttesaTV({ codice, audioAttivo, onRuota, ruotato }) {
             </span>
           ))}
         </div>
+
+        {qr && (
+          <div className="flex flex-col items-center gap-4">
+            {/* Il margine bianco (la zona di rispetto, 4 moduli) lo dà la carta:
+                il QR arriva senza margine, 25 moduli × 8px = 200px. Il raggio
+                sta sulla carta e MAI sull'immagine, che tagliava gli angoli
+                vicino ai riquadri di posizione. Il PNG è a 400px, il doppio
+                esatto: `pixelated` tiene i moduli netti anche scalati sulla TV. */}
+            <div className="p-8 rounded-[24px] bg-white">
+              <img src={qr} alt="Codice QR per collegare il telefono"
+                className="block w-[200px] h-[200px] [image-rendering:pixelated]" />
+            </div>
+            <p className="text-[28px] font-semibold text-gray-300">oppure inquadralo con l'app FLEOFIT</p>
+          </div>
+        )}
 
         {!audioAttivo && (
           <p className="flex items-center gap-3 rounded-full px-8 py-4 bg-red-500/[.1] border-2 border-red-500/30

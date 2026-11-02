@@ -662,3 +662,72 @@ Design A «Anello», scelto dal committente fra tre (prototipi in `tools/design-
 - Compilato per il simulatore generico il 29/10 senza errori né avvisi; **non provato su un
   iPhone** al momento della scrittura.
 
+
+## 9-tv-qr. Collegare la TV con il QR (30/10/2026)
+
+Spec e piano: `docs/superpowers/specs/2026-10-30-tv-qr-design.md`, `docs/superpowers/plans/2026-10-30-tv-qr.md`.
+La TV (`/tv`) mostra, sotto le quattro cifre, un QR con `fleofit://tv/<codice>` (`contenutoQR` in
+`src/lib/codiceTV.js`, libreria `qrcode` 1.5.4, solo nel chunk di `TVDashboard`: tutto quel chunk, pagina TV compresa, pesa ~51 KB). Dal telefono,
+«Trasmetti in TV» è ora il foglio `FoglioCollegaTV`: due strade, inquadrare il QR o scrivere il codice.
+
+- 🔴 **Il difetto di prima, la causa.** La vecchia finestra «Trasmetti in TV» saliva di 128 px
+  (`-translate-y-32`) finché il campo aveva il fuoco. Toccando fuori la tastiera si chiudeva e la finestra
+  **riscendeva sotto il dito**: il tocco mancava «Trasmetti ora». Non era la tastiera in sé, era la
+  traslazione. Rimedio doppio: il tocco non serve più (**si collega da solo alla quarta cifra**) e il
+  foglio sta in basso senza nessuna traslazione. Chi rimette una finestra che si muove col fuoco rifà
+  lo stesso difetto.
+- 🔴 **Durante il collegamento il campo è `readOnly`, mai `disabled`**: un campo disabilitato perde il fuoco
+  e su iPhone chiude la tastiera, cioè il salto che qui si toglie. Guardia `inCorso` (ref) contro il
+  doppio invio (incolla + Invio): il test `WorkoutDetailTV.test.jsx` la copre (provato rompendola).
+- **A collegamento riuscito niente alert**: il foglio si chiude e, **solo se il workout ha il timer guidato**
+  (`timerDisponibile`, cioè `haTimerGuidato`), se il timer è già aperto lo si porta a tutto schermo
+  (`setTimerMinimized(false)`), altrimenti `apriTimer()`. 🔴 `apriTimer()` su un timer già aperto lo
+  **rimpicciolisce**: per questo i due rami. Una corsa o una scheda Gym si collega e il foglio si chiude e
+  basta (prima apriva un timer vuoto: `timerOpen` vero senza sequenza).
+- 🔴 **Foglio chiuso durante «Collegamento…»** (velo, X, tasto indietro): il collegamento al database può
+  finire lo stesso, ma l'interfaccia non salta. `giroFoglioTV` (ref in `WorkoutDetail`) cambia a ogni
+  apertura e chiusura del foglio; `onCollega` lo legge prima di `collegaTV` e, se dopo è cambiato, non
+  apre il timer e non chiude un foglio riaperto nel frattempo. Test in `WorkoutDetailTV.test.jsx`.
+- **Il QR si legge solo se è `fleofit://tv/` + quattro cifre** (`codiceDaQR`, regex ancorata e **sensibile
+  alle maiuscole**: `FLEOFIT://TV/1234` non passa — la TV scrive sempre in minuscolo). Un QR estraneo dice «Questo non è il codice della TV FLEOFIT» e lascia le due strade.
+- **Plugin `LettoreQR`** (`src/lib/lettoreQR.js`: `qrDisponibile`, `leggiQR`, `apriImpostazioni`). Sul web
+  non c'è e il foglio parte dal campo del codice. iPhone: `ios/App/App/LettoreQR.swift` (AVFoundation,
+  a tutto schermo, registrato in `FleoBridgeViewController` — che sta in `LettoreTesto.swift` —, quattro voci nel `pbxproj`;
+  **nessuna vibrazione nativa**: la dà `vibraSuccesso` nel foglio, l'aptica passa dai sei verbi di `aptica.js`). Android:
+  `LettoreQRPlugin.java` con **Google Code Scanner** via Play services, **nessun permesso CAMERA**,
+  versione in `variables.gradle`. Errore Android diverso da «permesso» → `non_disponibile` (la spec ne
+  prevedeva due soli). Un emulatore senza Google Play non ha lo scanner. Nel manifest, dentro
+  `<application>`, il meta-data `com.google.mlkit.vision.DEPENDENCIES` = `barcode_ui`: Play scarica il
+  modulo dello scanner all'installazione, così il primo «Inquadra il QR» non fallisce mentre arriva (la
+  lettura del testo ha il modello dentro l'app e non ne ha bisogno).
+- 🔴 **Il QR letto con la fotocamera di SISTEMA.** Il telefono apre FLEOFIT con `fleofit://tv/<codice>`,
+  che arriva a `DeeplinkHandler` (`App.jsx`): senza token lo prendeva per un login fallito e mandava a
+  `/login` con un errore falso, chiudendo un timer in corso — la stessa trappola del link della Live
+  Activity. Rimedio uguale: `eLinkDellaTV` (in `src/lib/linkTimer.js`, accanto a `eLinkDelTimer`, perché
+  quel file è già nel chunk d'ingresso e `codiceTV.js` resta fuori da `index`) fa uscire subito
+  qualunque `fleofit://tv…`; l'app torna davanti e non collega nulla (si collega dal foglio). Nativo:
+  niente da aggiungere, lo schema `fleofit` è già in `Info.plist` e nel filtro del manifest, e
+  `SceneDelegate` passa ogni indirizzo a Capacitor.
+  ⚠️ **Le app 1.2.2 già sugli Store NON hanno il rimedio**: lì inquadrare il QR della TV con la fotocamera
+  di sistema manda a `/login`. Pubblicare `/tv` con il QR (`app:main`) prima che la 1.2.3 sia diffusa
+  espone questo difetto a chi usa la fotocamera: **decisione del committente** su quando fare `app:main`.
+- **Testi scritti dall'implementatore oltre la spec** (in `FoglioCollegaTV`, da far leggere al
+  committente): sottotitolo con `fleofit.vercel.app/tv`; «Si collega da solo alla quarta cifra.»; il
+  testo del permesso negato con «Apri Impostazioni»; «La fotocamera non si è aperta: scrivi il codice che
+  vedi sulla TV.»; l'errore generico «Collegamento non riuscito. Riprova.» (prima era `error.message`
+  grezzo). Tolto «Fire Stick o Smart TV».
+- **Il QR sulla TV, leggibile da lontano**: generato **senza margine** a 400 px (il link è sempre un QR da
+  25 moduli, quindi 16 px a modulo) e mostrato a 200 px, il doppio esatto, con `[image-rendering:pixelated]`;
+  sta in una **carta bianca `p-8`** (32 px = 4 moduli di zona di rispetto) con il raggio di 24 px **sulla
+  carta**, mai sull'immagine — sull'immagine, con un solo modulo di margine, il raggio tagliava gli angoli
+  vicino ai riquadri di posizione. Test in `TVDashboardQR.test.jsx`.
+- Verifica: `npm test` 2704 verdi; build ok; in ambiente di prova (`npm run demo`) il QR stava a 220 px sotto
+  le cifre (prima della carta bianca del giro finale) e il foglio sul web apre il codice (9999 → «Codice TV non trovato o scaduto.»).
+  `xcodebuild` per iOS generico senza firma: BUILD SUCCEEDED (lo Swift compila).
+- ⚠️ **NON provato**: la fotocamera su un telefono vero (iPhone e Android: `npm run ios` / `npm run android`)
+  e `./gradlew assembleDebug` (nessun JDK/SDK sul Mac: da fare sul PC, `android.md` §A.1; gli import
+  `com.google.mlkit.vision.codescanner.*` sono da confermare in build).
+- Piccoli difetti noti, non chiusi: ogni errore di lettura (anche offline) dice «Codice TV non trovato o
+  scaduto.»; iOS senza fotocamera mostra uno schermo nero con solo Annulla. (Chiusi nel giro finale del
+  30/10: meta-data `barcode_ui`, foglio chiuso durante il collegamento, QR sfocato e senza margine, link
+  della fotocamera di sistema, timer aperto su workout senza timer guidato, vibrazione nativa doppia.)

@@ -549,3 +549,13 @@ Activity del timer, `docs/memoria/scheda-workout.md` 9-live-activity). Cosa camb
   si risponde con questo; la sessione è accesa solo mentre un timer scorre in background.
 - `tools/verifica-ipa.sh` controlla l'app, non l'estensione: guardare anche `PlugIns/FleoTimer.appex`.
 
+
+## 9-camera-qr. Testo della fotocamera cambiato (30/10/2026)
+
+`NSCameraUsageDescription` in `ios/App/App/Info.plist` ora dice: «FLEOFIT usa la fotocamera per
+fotografare un workout scritto, su una lavagna o un foglio, e trasformarlo in blocchi, per la foto del
+profilo e per inquadrare il codice QR della TV.» (prima nominava solo le prime due cose). Il testo
+nuovo **arriva con la prossima versione sullo Store**: il revisore, se chiede a cosa serve, trova il
+QR della TV nel testo. Android non chiede nessun permesso (Google Code Scanner). Dettagli:
+`scheda-workout.md`, 9-tv-qr. Prima di archiviare, controllare che `LettoreQR.swift` sia fra i file del
+target (quattro voci nel `pbxproj`).
