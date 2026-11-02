@@ -11,11 +11,7 @@ import { Puntini } from './Puntini'
 import { CARD } from '../lib/stiliCard'
 import { battito } from '../lib/aptica'
 // Pigra: RpeModal sta nel chunk d'ingresso (Home), la riga serve solo a chi ha scarpe.
-const RigaScarpaPigra = lazy(() => import('./RigaScarpa'))
-/** La riga «Scarpa», pigra, per chi la monta fuori dal foglio (la scheda completata). */
-export function RigaScarpa(props) {
-  return <Suspense fallback={null}><RigaScarpaPigra {...props} /></Suspense>
-}
+const RigaScarpa = lazy(() => import('./RigaScarpa'))
 
 // `scarpa` (facoltativa, «Scarpe da corsa»): `{ attive, sceltaId, onCambia }`
 // da `propRiga` di useScarpaCompletamento. Senza, il foglio è quello di sempre.
@@ -139,7 +135,7 @@ export default function RpeModal({ score, onScoreChange, notes, onNotesChange, o
         </div>
         {scarpa && (
           <div className="mb-6">
-            <RigaScarpa attive={scarpa.attive} sceltaId={scarpa.sceltaId} onCambia={scarpa.onCambia} />
+            <Suspense fallback={null}><RigaScarpa {...scarpa} /></Suspense>
           </div>
         )}
         <div className="flex gap-3">

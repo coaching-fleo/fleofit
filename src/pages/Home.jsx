@@ -1808,7 +1808,7 @@ setNotifications(prev => {
           onSave={handleRpeSubmitHome} 
           onCancel={() => { setShowRpeModal(false); setWorkoutToComplete(null); }} 
           saving={savingRpe} 
-          scarpa={scarpaCompletamento.propRiga(workoutToComplete?.workouts?.sections)}
+          scarpa={scarpaCompletamento.propRiga(workoutToComplete?.workouts?.sections, workoutToComplete?.id)}
         />,
         document.body
       )}

@@ -143,4 +143,35 @@ describe('useScarpaCompletamento', () => {
     await act(async () => { await result.current.cambiaUso('aw1', null) })
     expect(db.togliScarpa).toHaveBeenCalledWith('aw1')
   })
+
+  // R8: il foglio RPE riaperto su una corsa già completata (`?rpe=1`) parte
+  // dalla scarpa già legata, non dalla principale: salvare non deve
+  // riscrivere in silenzio una correzione fatta dalla scheda.
+  it('allenamento con una scarpa già legata: la scelta parte da quella', async () => {
+    dati.lettura = { disponibile: true, scarpe: [scarpa('s1', { usi: [{ athlete_workout_id: 'aw1' }] }), scarpa('s2', { principale: true })] }
+    const { result } = await monta()
+    expect(result.current.propRiga(CORSA, 'aw1').sceltaId).toBe('s1')
+    expect(result.current.propRiga(CORSA, 'aw2').sceltaId).toBe('s2')
+    await act(async () => { await result.current.registra('aw1', CORSA) })
+    expect(db.assegnaScarpa).toHaveBeenCalledWith('aw1', 's1')
+  })
+
+  // R8: annullato prima che la rilettura arrivi, l'uso appena scritto non
+  // risulta ancora: si cancella lo stesso (una query di delete).
+  it('ritorno a «da fare» senza uso noto: toglie comunque', async () => {
+    dati.lettura = { disponibile: true, scarpe: [scarpa('s1', { principale: true })] }
+    const { result } = await monta()
+    await act(async () => { await result.current.annulla('aw1') })
+    expect(db.togliScarpa).toHaveBeenCalledWith('aw1')
+  })
+
+  it('togliScarpa che fallisce: un avviso suo, e la promessa si risolve', async () => {
+    dati.lettura = { disponibile: true, scarpe: [scarpa('s1', { principale: true, usi: [{ athlete_workout_id: 'aw1' }] })] }
+    db.togliScarpa.mockRejectedValueOnce(new Error('rete assente'))
+    const { result, setAlertInfo } = await monta()
+    await act(async () => { await expect(result.current.annulla('aw1')).resolves.toBeUndefined() })
+    expect(setAlertInfo).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error', message: expect.stringMatching(/resta legata/),
+    }))
+  })
 })

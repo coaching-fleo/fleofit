@@ -55,7 +55,8 @@ import FoglioPersoneTV from '../components/FoglioPersoneTV'
 import { bloccoPerPersone, bloccoAScaglioni, personeRicordate, ricordaPersone } from '../lib/personeTV'
 import { BRAND, RUNNING, GYM, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
-import RpeModal, { RigaScarpa } from '../components/RpeModal'
+import RpeModal from '../components/RpeModal'
+import RigaScarpa from '../components/RigaScarpa'
 import { useScarpaCompletamento } from '../useScarpaCompletamento'
 import FoglioSposta from '../components/FoglioSposta'
 import { puoSpostare, spostaAssegnazione, avvisaCoachSpostamento } from '../lib/spostaAllenamento'
@@ -2705,7 +2706,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           onSave={handleRpeSubmit} 
           onCancel={annullaRpe} 
           saving={savingNote} 
-          scarpa={scarpaCompletamento.propRiga(workout?.sections)}
+          scarpa={scarpaCompletamento.propRiga(workout?.sections, athleteWorkoutId)}
         />,
         document.body
       )}
