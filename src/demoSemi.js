@@ -24,7 +24,7 @@ import {
   VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
 } from '../supabase/functions/estrai-note/regole.ts'
 
-export const VERSIONE_SEME = 16
+export const VERSIONE_SEME = 17
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -280,6 +280,13 @@ const assegnazioni = () => conSettimanaPiena([
   // Una corsa di ieri, già chiusa: l'attività Garmin di `attivitaGarmin` le si abbina.
   AW('at-sara', 'w-corsa', giorno(-1), 'completed', null),
   AW('at-sara', 'w-medio', giorno(2), 'pending'),
+  // Corse chiuse nelle settimane scorse (martedì e giovedì, giorni liberi dello
+  // storico regolare): servono alle scarpe, che sommano i km degli allenamenti.
+  AW('at-sara', 'w-corsa2', nellaSettimana(-4, 1), 'completed', 5),
+  AW('at-sara', 'w-corsa', nellaSettimana(-3, 1), 'completed', 7),
+  AW('at-sara', 'w-corsa2', nellaSettimana(-2, 1), 'completed', 5),
+  AW('at-sara', 'w-corsa', nellaSettimana(-2, 3), 'completed', 7),
+  AW('at-sara', 'w-corsa2', nellaSettimana(-1, 1), 'completed', 5),
   AW('at-sara', 'w-gara-torino', giorno(-3), 'pending'),
 
   // Paolo: due sole sedute, tutte nella stessa settimana.
@@ -481,6 +488,49 @@ const staff = () => [
 const coach_atleti = () => ['at-sara', 'at-luca', 'at-giulia']
   .map(athlete_id => ({ athlete_id, coach_id: COACH_DEMO.id, creato_at: fa(60) }))
 
+// «Scarpe da corsa» (02/11/2026): catalogo e scarpe INVENTATI. Sara (l'atleta di
+// `demo:atleta`) ne ha tre: la principale `ok`, una `quasi` (km di partenza alti)
+// e una ritirata. Sofia, atleta nuova, ne ha una scritta a mano e nessun uso.
+// I km non si salvano: si calcolano da km_iniziali + usi (kmScarpe.js).
+const scarpe_catalogo = () => [
+  ['Nike', 'Pegasus 41', 'allenamento'], ['Nike', 'Vaporfly 3', 'gara'],
+  ['Adidas', 'Adizero Boston 12', 'allenamento'], ['Asics', 'Novablast 4', 'allenamento'],
+  ['Asics', 'Gel-Nimbus 26', 'ammortizzata'], ['Hoka', 'Clifton 10', 'allenamento'],
+  ['Hoka', 'Speedgoat 6', 'trail'], ['Saucony', 'Endorphin Speed 4', 'allenamento'],
+  ['Brooks', 'Ghost 17', 'allenamento'], ['New Balance', 'Fresh Foam X 1080v14', 'ammortizzata'],
+  ['On', 'Cloudmonster 2', 'ammortizzata'], ['Puma', 'Deviate Nitro 3', 'allenamento'],
+].map(([marca, modello, tipo], i) => ({
+  id: `cat-${i + 1}`, marca, modello, tipo, drop_mm: null, creato_da: null, creato_at: fa(90),
+}))
+
+const scarpe_atleta = () => {
+  const dal = (id, athlete_id, cat, extra) => {
+    const c = scarpe_catalogo().find(x => x.id === cat)
+    return {
+      id, athlete_id, catalogo_id: cat, marca: c?.marca ?? null, modello: c?.modello ?? null,
+      km_iniziali: 0, soglia_km: 700, principale: false, ritirata_at: null, creato_at: fa(60), ...extra,
+    }
+  }
+  return [
+    dal('sc-sara-1', 'at-sara', 'cat-6', { km_iniziali: 120, principale: true, creato_at: fa(50) }),         // Hoka Clifton 10 → ok
+    dal('sc-sara-2', 'at-sara', 'cat-1', { km_iniziali: 548, creato_at: fa(40) }),                          // Nike Pegasus 41 → quasi
+    dal('sc-sara-3', 'at-sara', 'cat-4', { km_iniziali: 705, ritirata_at: fa(20), creato_at: fa(80) }),     // Asics Novablast 4 → ritirata, oltre soglia
+    { id: 'sc-sofia-1', athlete_id: 'at-sofia', catalogo_id: null, marca: 'Karhu', modello: 'Fusion 3.5',
+      km_iniziali: 0, soglia_km: 700, principale: true, ritirata_at: null, creato_at: fa(5) },
+  ]
+}
+
+// Gli usi: le corse completate di Sara, la più vecchia con la scarpa ritirata, le
+// due più recenti con la principale (compresa quella di ieri, con l'orologio), le
+// altre con la «quasi». Si pesca per data così non dipende dagli id.
+const scarpe_uso = (aws) => {
+  const corse = aws
+    .filter(a => a.athlete_id === 'at-sara' && a.status === 'completed' && ['w-corsa', 'w-corsa2'].includes(a.workout_id))
+    .sort((a, b) => a.completed_date.localeCompare(b.completed_date))
+  const scarpaDi = (i) => (i === 0 ? 'sc-sara-3' : i >= corse.length - 2 ? 'sc-sara-1' : 'sc-sara-2')
+  return corse.map((a, i) => ({ athlete_workout_id: a.id, scarpa_id: scarpaDi(i) }))
+}
+
 // «Da Garmin» (Fase 1, 28/10/2026): due attività INVENTATE per Sara, quella del
 // `demo:atleta` di default. Una abbinata da sola alla corsa di ieri (card «Da
 // Garmin» nella scheda) e una libera in un sabato senza allenamento (voce grigia
@@ -540,6 +590,9 @@ export function semi() {
     garmin_giornate: garmin_giornate(),
     messaggi_coach: messaggi_coach(),
     modelli_blocco: modelli_blocco(),
+    scarpe_catalogo: scarpe_catalogo(),
+    scarpe_atleta: scarpe_atleta(),
+    scarpe_uso: scarpe_uso(aws),
     staff: staff(),
     coach_atleti: coach_atleti(),
     push_subscriptions: [],
