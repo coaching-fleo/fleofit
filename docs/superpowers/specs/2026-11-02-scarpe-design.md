@@ -25,7 +25,8 @@ allenamenti completati. Lo scopo è sapere **quando una scarpa è da cambiare**.
 
 ### Fuori da questo lavoro
 Foto caricate dall'atleta, prezzi e link ai negozi, consigli automatici, statistiche
-per scarpa oltre ai km, voce nella tab bar.
+per scarpa oltre ai km, voce nella tab bar. (Le foto dei **modelli**, caricate dal coach,
+sono entrate il 03/11/2026: §9.)
 
 ## 2. Pagine e flusso
 
@@ -156,3 +157,112 @@ Scarpe, catalogo e usi finti in `src/demoSemi.js` (anche per `at-sofia`), così
 Nessun codice nativo: web, iOS e Android uguali. La pagina si importa **pigra** in
 `App.jsx` (il chunk `index` non deve crescere, CLAUDE.md §2). Memoria del lavoro in
 un file nuovo `docs/memoria/scarpe.md`, collegato dalla tabella del §11.
+
+## 9. Estensione del 03/11/2026 — banner in Home, scheda del modello, foto
+
+### Decisioni prese con il committente
+| Domanda | Scelta |
+|---|---|
+| Ingresso alla pagina | Un **banner in Home**, nello stile della card promozionale dello screenshot del committente (card a colore pieno, titolo grande, pulsante a pillola, soggetto scontornato che esce dal bordo) |
+| Chi vede il banner | **Atleta e coach** |
+| Foto | Le **foto ufficiali** dei marchi, **provvisorie**: «le sostituiremo in futuro» |
+| Per quali modelli foto e caratteristiche ora | Solo i **12 modelli dell'ambiente di prova**; gli altri restano con l'illustrazione del tipo |
+| Dove stanno le caratteristiche | **Colonne fisse** di `scarpe_catalogo` (strada A), uguali per tutte le scarpe |
+| Dove stanno le foto | **Sul server** (bucket Supabase), non dentro l'app: un modello nuovo o una foto nuova si vede **senza aggiornare l'app** |
+| Scontorno | Le foto arrivano **già scontornate** (le prepara chi le carica); il telefono le mostra soltanto. Niente codice nativo |
+
+⚠️ **Le foto ufficiali sono dei marchi** e sono state scelte come provvisorie dal committente:
+vanno sostituite prima di mandare ad App Store la versione che le mostra (voce nel BACKLOG).
+
+### Banner in Home — `BannerScarpe`
+- Card `bg-brand`, `rounded-3xl`, alta ~150 px. A sinistra titolo nero `font-black` su 2–3
+  righe e sotto un pulsante a pillola **nero, testo bianco**. A destra la foto scontornata,
+  leggermente ruotata, che **esce dal bordo superiore** della card. Al tocco si abbassa appena
+  (`vibraScelta`).
+- **Atleta** — sotto «Prossimo obiettivo» (al suo posto se non c'è gara):
+  - senza scarpe: «Tieni il conto dei km delle tue scarpe» · «Aggiungi la tua» → `/scarpe`;
+  - con una principale: «<modello> · <km> km» · «Le mie scarpe» → `/scarpe`;
+  - con una scarpa attiva `oltre`: «<modello> è da cambiare» · «Scegli la nuova» → `/scarpe`.
+  - Foto: quella del modello della principale; senza, l'illustrazione del tipo.
+- **Coach** — nella Home coach sotto il cruscotto: «Il catalogo scarpe · <N> modelli» ·
+  «Apri» → `/scarpe`. Foto: il primo modello del catalogo con foto, in ordine alfabetico
+  (stabile, mai a caso).
+- Tabelle assenti o errore di lettura → **nessun banner**.
+- Caricato **pigro** (`lazy`): il chunk `index` cresce al massimo di ~0,5 KB.
+
+### Scheda del modello — `/scarpe/modello/:id`
+- Si apre toccando un modello del catalogo; uguale per atleta e coach.
+- In alto: foto grande su fondo scuro, marca, modello, pillole **tipo** e **livello**
+  (principiante `green-500`, intermedio `brand`, avanzato `red-500`).
+- Griglia delle caratteristiche, **sempre tutte e nello stesso ordine**, «—» se manca il dato:
+  Ammortizzamento · Stabilità · Piastra · Drop · Peso · Altezza al tallone · Uso ideale ·
+  Vita stimata.
+- In fondo: «Pagina ufficiale ↗» (browser di sistema, `@capacitor/browser` su nativo);
+  atleta → «Ce l'ho» (foglio esistente, con `vita_km` del modello come soglia proposta);
+  coach → «Modifica» (foglio del modello con tutti i campi nuovi).
+- Nota piccola: «Foto: © del marchio» quando c'è una foto.
+- Modello inesistente → «Modello non trovato» con il tasto indietro.
+
+### Dati — modifiche alla migrazione (non ancora applicata)
+`scarpe_catalogo` riceve, tutte facoltative:
+| Colonna | Tipo e controllo |
+|---|---|
+| `livello` | `text` in (`principiante`,`intermedio`,`avanzato`) |
+| `ammortizzamento` | `text` in (`basso`,`medio`,`alto`,`massimo`) |
+| `stabilita` | `text` in (`neutra`,`sostegno`) |
+| `piastra` | `text` in (`nessuna`,`nylon_tpu`,`carbonio`) |
+| `drop_mm` | già presente; check 0–16 |
+| `peso_g` | `integer` 100–500 (taglia uomo US 9) |
+| `stack_mm` | `numeric` 10–60 (altezza al tallone) |
+| `uso` | `text[]`, ogni valore in (`lento`,`ritmo`,`ripetute`,`gara`,`trail`) |
+| `vita_km` | `integer` 200–2000 |
+| `url_ufficiale` | `text`, `like 'https://%'` |
+| `foto_url` | `text`, `like 'https://%'` — l'indirizzo pubblico nel bucket `scarpe` |
+
+- **Bucket `scarpe`** (Storage), **pubblico in lettura** come `athlete-photos`; scrittura,
+  modifica e cancellazione solo `public.e_staff() and public.email_corrente() <> 'demo@fleofit.it'`.
+- Il seed di 114 righe non cambia. In fondo al file, un blocco di `update` compila i **12
+  modelli** con i valori raccolti, ognuno con la fonte in commento. `foto_url` lì resta vuoto:
+  le foto si caricano dopo (sotto).
+- Nessuna caratteristica cambia `scarpe_atleta`: la soglia proposta all'aggiunta è
+  `vita_km` del modello se c'è, altrimenti 700.
+
+### Raccolta dei dati per i 12 modelli
+- Fonte **solo la pagina ufficiale** del modello; file di lavoro `tools/scarpe/schede.json`
+  (valori + URL per riga).
+- **Peso, drop, stack, piastra, vita**: solo se la pagina ufficiale li riporta; altrimenti
+  vuoti. Mai da siti di recensioni.
+- **Livello, ammortizzamento, uso**: sono una **valutazione FLEOFIT**, non un dato del marchio;
+  criterio scritto in `docs/memoria/scarpe.md` (es. carbonio e peso basso → avanzato;
+  sostegno o ammortizzamento massimo → principiante/intermedio). Il coach li corregge.
+
+### Foto
+- **Le carica il coach dall'app**, già scontornate (PNG/WebP con trasparenza), dal foglio
+  «Aggiungi/Modifica modello» → «Carica foto». L'app la riduce a lato lungo 800 px (WebP se il
+  browser lo sa codificare, altrimenti PNG, **conservando la trasparenza**), la mette in
+  `scarpe/<id-modello>.<est>` e salva l'indirizzo pubblico in `foto_url`.
+- Se gli angoli della foto non sono trasparenti, il foglio avvisa «Questa foto ha lo sfondo:
+  si vedrà in un riquadro» e la scheda/il banner la mostrano dentro un riquadro chiaro
+  arrotondato invece che scontornata.
+- **Le 12 foto ufficiali** le preparo io già scontornate in `tools/scarpe/foto/` (script
+  `tools/scarpe/scontorna.swift`, Vision di macOS, solo sul Mac). Si caricano **dopo il sì
+  alla migrazione**, dal foglio «Modifica modello» o con `tools/scarpe/carica-foto.sh`
+  lanciato dal committente. Io non scrivo sul server.
+- Dentro l'app restano solo **4 illustrazioni per tipo** (SVG), il ripiego quando un modello
+  non ha foto o la foto non si carica (`onError`): banner e catalogo non sono mai vuoti.
+- Le foto si vedono anche senza rete dopo la prima volta (cache del browser/WebView).
+
+### Ambiente di prova
+I 12 modelli finti prendono le stesse caratteristiche; `foto_url` punta a copie locali
+servite solo dalla demo (`public/demo-scarpe/`, mai nel build di produzione — controllo come
+quello di `at-sara` al §9 di CLAUDE.md).
+
+### Test
+- `BannerScarpe`: i tre casi atleta, il coach, assente con tabelle mancanti; foto assente →
+  illustrazione.
+- Scheda del modello: tutte le righe sempre presenti, «—» per i dati mancanti, tasti giusti
+  per ruolo, «Modello non trovato».
+- Foglio modello: campi nuovi con i loro limiti; «Carica foto» riduce, conserva la
+  trasparenza, avvisa se gli angoli non sono trasparenti; il demo non vede «Carica foto».
+- `aggiungiScarpa` propone `vita_km` come soglia.
+- Peso: `index` ≤ ~616,7 KB.
