@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within, waitFor } from '@testing-library/react'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { AuthContext } from '../../App'
 import userEvent from '@testing-library/user-event'
 import { montaPagina } from '../../test/montaPagina'
 
@@ -32,6 +34,7 @@ vi.mock('../../lib/scarpeDb', async (originale) => {
     salvaModelloCatalogo: vi.fn(async (m) => ({ id: 'cat-nuovo', ...m })),
     aggiornaModelloCatalogo: vi.fn(async (id, c) => ({ id, ...c })),
     eliminaModelloCatalogo: vi.fn(async () => {}),
+    caricaFotoModello: vi.fn(async () => 'https://esempio.invalid/f.webp'),
   }
 })
 vi.mock('../../lib/alert', () => ({ mostraErrore: vi.fn(), mostraSuccesso: vi.fn(), mostraAlert: vi.fn() }))
@@ -128,6 +131,27 @@ describe('/scarpe — atleta', () => {
     await userEvent.click(within(foglio).getByRole('button', { name: 'Salva' }))
     await waitFor(() => expect(alert.mostraErrore).toHaveBeenCalledWith(expect.stringMatching(/salvata.*principale/i), expect.anything()))
     expect(db.leggiScarpeAtleta).toHaveBeenCalledTimes(2)
+  })
+
+  it('toccare il nome di un modello apre la sua scheda; «Ce l\'ho» resta a parte e non naviga', async () => {
+    render(
+      <MemoryRouter initialEntries={['/scarpe']}>
+        <AuthContext.Provider value={{ user: { id: 'a1', email: 'a@f.it' }, role: 'athlete' }}>
+          <Routes>
+            <Route path="/scarpe" element={<Scarpe />} />
+            <Route path="/scarpe/modello/:id" element={<p>SCHEDA DEL MODELLO</p>} />
+          </Routes>
+        </AuthContext.Provider>
+      </MemoryRouter>
+    )
+    const lista = await catalogo()
+    const riga = within(lista).getByText('Speedgoat 6').closest('li')
+    await userEvent.click(within(riga).getByRole('button', { name: /Ce l'ho/ }))
+    expect(screen.queryByText('SCHEDA DEL MODELLO')).not.toBeInTheDocument()
+    await screen.findByRole('dialog', { name: 'Hoka Speedgoat 6' })
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Annulla' }))
+    await userEvent.click(within(riga).getByRole('button', { name: 'Apri Hoka Speedgoat 6' }))
+    expect(await screen.findByText('SCHEDA DEL MODELLO')).toBeInTheDocument()
   })
 
   it('il filtro per tipo «Trail» lascia solo i trail', async () => {

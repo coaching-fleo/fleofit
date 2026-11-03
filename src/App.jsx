@@ -45,6 +45,7 @@ const NuovoMessaggio = lazy(() => import('./pages/NuovoMessaggio'))
 const Modelli = lazy(() => import('./pages/Modelli'))
 const Scarpe = lazy(() => import('./pages/Scarpe'))
 const DettaglioScarpa = lazy(() => import('./pages/DettaglioScarpa'))
+const ModelloScarpa = lazy(() => import('./pages/ModelloScarpa'))
 const Login = lazy(() => import('./pages/Login'))
 // La barra laterale del desktop (solo coach, solo web, finestra ≥ 1024px): pigra,
 // così il chunk d'ingresso del telefono non cresce (CLAUDE.md §2).
@@ -824,6 +825,7 @@ function App() {
             {/* Solo staff: la pagina rimanda l'atleta alla Home da sé, come /analisi. */}
             <Route path="/modelli" element={<Modelli />} />
             <Route path="/scarpe" element={<Scarpe />} />
+            <Route path="/scarpe/modello/:id" element={<ModelloScarpa />} />
             <Route path="/scarpe/:id" element={<DettaglioScarpa />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

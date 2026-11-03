@@ -14,12 +14,13 @@ import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronDown, Footprints, Plus, PenLine } from 'lucide-react'
 import { useAuth } from '../App'
 import {
-  CardScarpa, Filtro, FoglioModelloCatalogo, FoglioScarpa, ListaCatalogo, ListaScritte,
+  CardScarpa, Filtro, FoglioScarpa, ListaCatalogo, ListaScritte,
 } from '../components/ScarpeUI'
+import { FoglioModelloCatalogo } from '../components/FoglioModelloCatalogo'
 import { TIPI_SCARPA } from '../lib/kmScarpe'
 import { CustomConfirm } from '../components/CustomModals'
 import {
-  aggiornaModelloCatalogo, aggiungiScarpa, elencoCatalogo, eliminaModelloCatalogo, leggiScarpeAtleta,
+  aggiornaModelloCatalogo, aggiungiScarpa, caricaFotoModello, elencoCatalogo, eliminaModelloCatalogo, leggiScarpeAtleta,
   rendiPrincipale, salvaModelloCatalogo, scritteDagliAtleti, tabelleAssenti,
 } from '../lib/scarpeDb'
 import { mostraErrore } from '../lib/alert'
@@ -245,6 +246,7 @@ export default function Scarpe() {
               <p className="px-1 text-[14px] text-gray-400">Nessun modello con questi filtri.</p>
             ) : (
               <ListaCatalogo modelli={filtrato} staff={staff}
+                onApri={(m) => navigate(`/scarpe/modello/${m.id}`)}
                 onCeLho={(m) => { vibraScelta(); setFoglioScarpa({ modello: m }) }}
                 onModifica={curaCatalogo ? (m) => setFoglioModello({ iniziale: m }) : null}
                 onElimina={curaCatalogo ? chiediElimina : null} />
@@ -276,6 +278,10 @@ export default function Scarpe() {
       {foglioModello && (
         <FoglioModelloCatalogo iniziale={foglioModello.iniziale}
           onSalva={(campi) => salvaModello(foglioModello.iniziale, campi)}
+          onCaricaFoto={foglioModello.iniziale?.id ? async (ridotta) => {
+            await caricaFotoModello(foglioModello.iniziale.id, ridotta)
+            carica()
+          } : undefined}
           onChiudi={() => setFoglioModello(null)} />
       )}
       {createPortal(<CustomConfirm info={conferma} onClose={() => setConferma(null)} />, document.body)}

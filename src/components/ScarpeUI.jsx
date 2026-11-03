@@ -7,6 +7,7 @@ import { useBottomSheet } from '../useBottomSheet'
 import { Foglio } from './FoglioMessaggio'
 import { statoScarpa, testoKm, TIPI_SCARPA, SOGLIA_PREDEFINITA } from '../lib/kmScarpe'
 import { numeroKm } from '../lib/scarpeDb'
+import FotoScarpa from './FotoScarpa'
 import { vibraScelta } from '../lib/aptica'
 import { separaCodice } from '../lib/codiceWorkout'
 import { format, parseISO } from 'date-fns'
@@ -149,22 +150,27 @@ export function Filtro({ attivo, onClick, children }) {
  * modello; lo staff ha Modifica ed Elimina, se gli si passano (senza, è in
  * sola lettura: l'account del revisore).
  */
-export function ListaCatalogo({ modelli, staff, onCeLho, onModifica, onElimina }) {
+export function ListaCatalogo({ modelli, staff, onCeLho, onModifica, onElimina, onApri }) {
   return (
     <ul aria-label="Catalogo" className="flex flex-col gap-2">
       {modelli.map(m => {
         const nome = `${m.marca} ${m.modello}`
         return (
-          <li key={m.id} className="rounded-[16px] border border-white/[.07] bg-white/[.035] flex items-center gap-2 pl-4 pr-1.5 min-h-14">
-            <span className="flex-1 min-w-0 py-2.5">
-              <span className="block text-[11.5px] font-bold text-muted">{m.marca}</span>
-              <span className="block text-[14.5px] font-extrabold text-white truncate">{m.modello}</span>
-              {(etichettaTipo(m.tipo) || m.drop_mm != null) && (
-                <span className="block text-[12px] font-medium text-muted mt-0.5">
-                  {[etichettaTipo(m.tipo), m.drop_mm != null ? `drop ${String(m.drop_mm).replace('.', ',')} mm` : null].filter(Boolean).join(' · ')}
-                </span>
-              )}
-            </span>
+          <li key={m.id} className="rounded-[16px] border border-white/[.07] bg-white/[.035] flex items-center gap-2 pl-3 pr-1.5 min-h-14">
+            {/* La riga apre la scheda del modello; i tasti a destra restano a parte (niente bottoni annidati). */}
+            <button type="button" aria-label={`Apri ${nome}`} onClick={() => onApri?.(m)} disabled={!onApri}
+              className="flex-1 min-w-0 flex items-center gap-3 py-2 text-left disabled:cursor-default">
+              <FotoScarpa url={m.foto_url} tipo={m.tipo} className="shrink-0 w-12 h-12 object-contain" />
+              <span className="flex-1 min-w-0">
+                <span className="block text-[11.5px] font-bold text-muted">{m.marca}</span>
+                <span className="block text-[14.5px] font-extrabold text-white truncate">{m.modello}</span>
+                {(etichettaTipo(m.tipo) || m.drop_mm != null) && (
+                  <span className="block text-[12px] font-medium text-muted mt-0.5">
+                    {[etichettaTipo(m.tipo), m.drop_mm != null ? `drop ${String(m.drop_mm).replace('.', ',')} mm` : null].filter(Boolean).join(' · ')}
+                  </span>
+                )}
+              </span>
+            </button>
             {staff ? (onModifica && onElimina && (
               <>
                 <button type="button" aria-label={`Modifica ${nome}`} onClick={() => onModifica(m)}
@@ -218,7 +224,7 @@ const CAMPO = 'w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-[
   'placeholder-[#5b6070] focus:outline-none focus:border-brand'
 
 /** Un campo di testo con etichetta, e l'errore sotto quando c'è. */
-function Campo({ etichetta, valore, onChange, errore, ...resto }) {
+export function Campo({ etichetta, valore, onChange, errore, ...resto }) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className={LABEL}>{etichetta}</span>
@@ -274,60 +280,6 @@ export function FoglioScarpa({ modello, principaleDiBase = false, onSalva, onChi
           </span>
           <Interruttore etichetta="Rendila principale" attivo={principale} onCambia={() => setPrincipale(v => !v)} />
         </div>
-        <div className="flex gap-3 mt-1">
-          <button type="button" onClick={sheet.chiudi} className={BOTTONE_QUIETO}>Annulla</button>
-          <button type="button" onClick={salva} disabled={!puoSalvare} className={BOTTONE_BRAND}>Salva</button>
-        </div>
-      </div>
-    </Foglio>
-  )
-}
-
-/**
- * Nuovo modello o modifica di uno del catalogo (solo staff). Il drop è
- * facoltativo, ma se è scritto deve essere un numero: un «zero» a parole non
- * diventa un vuoto in silenzio.
- * `iniziale`: il modello da modificare (con `id`) o i valori di partenza (da
- * «Scritte dagli atleti», senza `id`).
- */
-export function FoglioModelloCatalogo({ iniziale, onSalva, onChiudi }) {
-  const sheet = useBottomSheet(onChiudi)
-  const modifica = !!iniziale?.id
-  const [marca, setMarca] = useState(iniziale?.marca ?? '')
-  const [modello, setModello] = useState(iniziale?.modello ?? '')
-  const [tipo, setTipo] = useState(iniziale?.tipo ?? '')
-  const [drop, setDrop] = useState(iniziale?.drop_mm != null ? String(iniziale.drop_mm).replace('.', ',') : '')
-  const [salvando, setSalvando] = useState(false)
-  const dropVuoto = drop.trim() === ''
-  const dropNumero = dropVuoto ? null : numeroKm(drop)
-  const dropValido = dropVuoto || dropNumero !== null
-  const puoSalvare = marca.trim() && modello.trim() && dropValido && !salvando
-
-  const salva = async () => {
-    if (!puoSalvare) return
-    setSalvando(true)
-    const ok = await onSalva({ marca: marca.trim(), modello: modello.trim(), tipo: tipo || null, drop_mm: dropNumero })
-    if (ok) sheet.chiudi()
-    else setSalvando(false)
-  }
-
-  return (
-    <Foglio titolo={modifica ? 'Modifica modello' : 'Nuovo modello'} {...sheet}>
-      <div className="flex flex-col gap-3.5 pb-1">
-        <Campo etichetta="Marca" valore={marca} onChange={setMarca} maxLength={60} />
-        <Campo etichetta="Modello" valore={modello} onChange={setModello} maxLength={80} />
-        <div className="flex flex-col gap-1.5">
-          <span className={LABEL}>Tipo</span>
-          <div className="flex flex-wrap gap-2">
-            {TIPI_SCARPA.map(t => (
-              <Filtro key={t.valore} attivo={tipo === t.valore} onClick={() => setTipo(v => (v === t.valore ? '' : t.valore))}>
-                {t.etichetta}
-              </Filtro>
-            ))}
-          </div>
-        </div>
-        <Campo etichetta="Drop (mm)" valore={drop} onChange={setDrop} inputMode="decimal" placeholder="Facoltativo"
-          errore={dropValido ? null : 'Il drop è un numero di millimetri, per esempio 8.'} />
         <div className="flex gap-3 mt-1">
           <button type="button" onClick={sheet.chiudi} className={BOTTONE_QUIETO}>Annulla</button>
           <button type="button" onClick={salva} disabled={!puoSalvare} className={BOTTONE_BRAND}>Salva</button>
