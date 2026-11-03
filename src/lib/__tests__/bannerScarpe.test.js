@@ -51,6 +51,9 @@ describe('contenutoBanner — coach', () => {
     expect(contenutoBanner({ ruolo: 'coach', catalogo })).toEqual({
       titolo: 'Il catalogo scarpe · 114 modelli', bottone: 'Apri', foto: 'ua', tipo: 'trail' })
   })
+  it('un solo modello: singolare', () => {
+    expect(contenutoBanner({ ruolo: 'coach', catalogo: [mod('a', 'A', 'B', 'u')] }).titolo).toBe('Il catalogo scarpe · 1 modello')
+  })
   it('catalogo vuoto: null', () => {
     expect(contenutoBanner({ ruolo: 'coach', catalogo: [] })).toBeNull()
   })

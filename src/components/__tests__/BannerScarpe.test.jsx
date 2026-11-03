@@ -7,7 +7,8 @@ vi.mock('../../lib/scarpeDb', () => ({
   elencoCatalogo: mocks.elencoCatalogo,
   tabelleAssenti: (e) => !!e && (e.code === '42P01' || e.code === 'PGRST205'),
 }))
-vi.mock('../../lib/aptica', () => ({ vibraScelta: vi.fn() }))
+const vibra = vi.hoisted(() => vi.fn())
+vi.mock('../../lib/aptica', () => ({ vibraScelta: vibra }))
 
 import BannerScarpe from '../BannerScarpe'
 
@@ -30,12 +31,13 @@ describe('BannerScarpe', () => {
     expect(container.innerHTML).toBe('')
     expect(mocks.leggiScarpeAtleta).not.toHaveBeenCalled()
   })
-  it('con dati: titolo come intestazione, il tocco chiama onApri', async () => {
+  it('con dati: il pulsante ha il titolo per nome, il tocco vibra e chiama onApri', async () => {
     mocks.leggiScarpeAtleta.mockResolvedValue({ disponibile: true, scarpe: [scarpa] })
     const onApri = vi.fn()
     render(<BannerScarpe ruolo="atleta" uid="u" onApri={onApri} />)
-    expect(await screen.findByRole('heading', { name: 'Pegasus · 50 km' })).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Pegasus · 50 km' }))
+    const bottone = await screen.findByRole('button', { name: 'Pegasus · 50 km' })
+    fireEvent.click(bottone)
+    expect(vibra).toHaveBeenCalled()
     expect(onApri).toHaveBeenCalled()
     expect(screen.getByText('Le mie scarpe')).toBeTruthy()
   })
@@ -43,20 +45,20 @@ describe('BannerScarpe', () => {
     mocks.leggiScarpeAtleta.mockResolvedValue({ disponibile: true, scarpe: [scarpa] })
     mocks.elencoCatalogo.mockRejectedValue(new Error('boom'))
     const { container } = render(<BannerScarpe ruolo="atleta" uid="u" onApri={() => {}} />)
-    await screen.findByRole('heading')
+    await screen.findByRole('button')
     expect(container.querySelector('img[data-disegno]')).toBeTruthy()
   })
   it('foto rotta: resta il disegno', async () => {
     mocks.leggiScarpeAtleta.mockResolvedValue({ disponibile: true, scarpe: [scarpa] })
     const { container } = render(<BannerScarpe ruolo="atleta" uid="u" onApri={() => {}} />)
-    await screen.findByRole('heading')
+    await screen.findByRole('button')
     fireEvent.error(container.querySelector('img'))
     expect(container.querySelector('img[data-disegno]')).toBeTruthy()
   })
   it('coach: legge solo il catalogo', async () => {
     mocks.elencoCatalogo.mockResolvedValue([{ id: 'm', marca: 'Nike', modello: 'P', foto_url: 'u', tipo: 'gara' }])
     render(<BannerScarpe ruolo="coach" onApri={() => {}} />)
-    expect(await screen.findByRole('heading', { name: 'Il catalogo scarpe · 1 modelli' })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Il catalogo scarpe · 1 modello' })).toBeTruthy()
     expect(mocks.leggiScarpeAtleta).not.toHaveBeenCalled()
   })
 })

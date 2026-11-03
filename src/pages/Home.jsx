@@ -1565,10 +1565,6 @@ setNotifications(prev => {
             <BannerObiettivoVuoto onFissa={() => setEventoModalOpen(true)} />
           ) : null}
 
-          <Suspense fallback={null}>
-            <BannerScarpe ruolo="atleta" uid={user?.id} onApri={() => navigate('/scarpe')} />
-          </Suspense>
-
           {loading ? (
             <div className="flex flex-col gap-2.5">
               <div className="rounded-[18px] bg-white/[.035] border border-white/[.06] h-16 animate-pulse" />
@@ -1595,6 +1591,12 @@ setNotifications(prev => {
               }}
             />
           )}
+          {/* In fondo alla lista, non sopra: il banner compare dopo due letture,
+              e sopra la lista spingerebbe in basso gli allenamenti mentre
+              l'atleta li sta per toccare. Sotto non sposta niente di ciò che legge. */}
+          <Suspense fallback={null}>
+            <BannerScarpe ruolo="atleta" uid={user?.id} onApri={() => navigate('/scarpe')} />
+          </Suspense>
           </>
           )}
         </div>
