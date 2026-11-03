@@ -315,18 +315,23 @@ export function RigaCoach({ nome, onClick }) {
 /**
  * «Scarpe: Pegasus 41 · 412 km» — la principale dell'atleta, per il coach.
  * Solo lettura (nessun bottone: il coach non scrive le scarpe). Con una scarpa
- * attiva oltre la soglia aggiunge «da cambiare». Senza scarpe attive: niente.
+ * attiva oltre la soglia aggiunge «da cambiare». Senza principale, «Scarpe: 2
+ * attive» solo se c'è da avvisare. Senza scarpe attive: niente.
  */
 export function RigaScarpeCoach({ scarpe }) {
   const attive = (scarpe || []).filter(s => !s.ritirata_at)
   const principale = attive.find(s => s.principale)
-  if (!principale) return null
   const daCambiare = attive.some(s => s.stato === 'oltre')
+  // Senza principale la riga serve solo per l'avviso: allora dice quante sono attive.
+  if (!principale && !daCambiare) return null
+  const testo = principale
+    ? `Scarpe: ${principale.modello} · ${testoKm(principale.km)} km`
+    : `Scarpe: ${attive.length} ${attive.length === 1 ? 'attiva' : 'attive'}`
   return (
     <div className={`${RIGA} mt-3 px-[15px] py-[13px] flex items-center gap-3`}>
       <Footprints size={18} className="shrink-0 text-muted" aria-hidden="true" />
       <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">
-        {`Scarpe: ${principale.modello} · ${testoKm(principale.km)} km`}
+        {testo}
       </span>
       {daCambiare && <span className="shrink-0 text-[12px] font-bold text-red-500">da cambiare</span>}
     </div>

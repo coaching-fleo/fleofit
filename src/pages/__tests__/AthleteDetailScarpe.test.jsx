@@ -57,6 +57,17 @@ describe('La riga scarpe nella scheda atleta (coach)', () => {
     expect(await screen.findByText(/da cambiare/)).toBeInTheDocument()
   })
 
+  it('senza principale ma con una attiva oltre soglia: l\'avviso c\'è lo stesso', async () => {
+    dati.scarpe = { disponibile: true, scarpe: [
+      scarpa({ principale: false, km: 720, stato: 'oltre' }),
+      scarpa({ id: 's2', principale: false, modello: 'Clifton 10', km: 100, stato: 'ok' }),
+    ] }
+    monta(); await attendiScheda()
+    expect(await screen.findByText('Scarpe: 2 attive')).toBeInTheDocument()
+    expect(screen.getByText(/da cambiare/)).toBeInTheDocument()
+    expect(screen.getByText('Scarpe: 2 attive').closest('button')).toBeNull()
+  })
+
   it('una scarpa ritirata oltre soglia non fa avvisare', async () => {
     dati.scarpe = { disponibile: true, scarpe: [scarpa(), scarpa({ id: 's2', principale: false, ritirata_at: '2026-10-01', stato: 'oltre' })] }
     monta(); await attendiScheda()

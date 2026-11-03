@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, within, waitFor } from '@testing-library/react'
+import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { montaPagina } from '../../test/montaPagina'
 
@@ -50,6 +50,7 @@ vi.mock('../../supabaseClient', () => ({ supabase: finto.supabase }))
 const db = await import('../../lib/scarpeDb')
 const alert = await import('../../lib/alert')
 const Scarpe = (await import('../Scarpe')).default
+const { BarraKm } = await import('../../components/ScarpeUI')
 const AthleteDetail = (await import('../AthleteDetail')).default
 
 const CATALOGO = [
@@ -255,5 +256,17 @@ describe('Card «Le mie scarpe» nel profilo', () => {
     await waitFor(() => expect(db.leggiScarpeAtleta).toHaveBeenCalled())
     expect(screen.queryByRole('link', { name: /Le mie scarpe/ })).not.toBeInTheDocument()
     expect(alert.mostraErrore).not.toHaveBeenCalled()
+  })
+})
+
+describe('BarraKm', () => {
+  // Un km sconosciuto non è 0: la barra non deve annunciare un valore.
+  it('con km null non ha aria-valuenow', () => {
+    render(<BarraKm km={null} soglia={700} />)
+    expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow')
+  })
+  it('con i km li annuncia arrotondati', () => {
+    render(<BarraKm km={411.6} soglia={700} />)
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '412')
   })
 })
