@@ -42,7 +42,10 @@ export default function DettaglioScarpa() {
     }
   }, [atleta, uid, id])
 
-  useEffect(() => { carica() }, [carica])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- caricamento iniziale, come le altre pagine
+    carica()
+  }, [carica])
 
   const valore = numeroKm(soglia)
   const sogliaValida = valore !== null && valore > 0
@@ -69,6 +72,8 @@ export default function DettaglioScarpa() {
     } catch (e) {
       console.warn('Scarpa non resa principale:', e)
       mostraErrore(`Non sono riuscito a cambiarla. ${SENZA_RETE}`)
+      // La vecchia può essere già stata tolta: si rilegge quello che c'è davvero.
+      await carica()
     }
   }
 

@@ -61,8 +61,8 @@ describe('leggiScarpeAtleta', () => {
         { athlete_workout_id: 'a2', scarpa_id: 's1' },
       ],
       athlete_workouts: [
-        { id: 'a1', completed_date: '2026-10-01', workouts: { title: 'Lento · AB12', sections: corsa } },
-        { id: 'a2', completed_date: '2026-10-02', workouts: { title: 'Fondo', sections: corsa } },
+        { id: 'a1', status: 'completed', completed_date: '2026-10-01', workouts: { title: 'Lento · AB12', sections: corsa } },
+        { id: 'a2', status: 'completed', completed_date: '2026-10-02', workouts: { title: 'Fondo', sections: corsa } },
       ],
       garmin_attivita: [{ athlete_workout_id: 'a2', distanza_m: 10000 }],
     }
@@ -75,6 +75,28 @@ describe('leggiScarpeAtleta', () => {
     expect(s.stato).toBe('ok')
     expect(s.usi.find(u => u.athlete_workout_id === 'a1')).toMatchObject({ km: 5, fonte: 'stima', titolo: 'Lento · AB12', data: '2026-10-01' })
     expect(s.usi.find(u => u.athlete_workout_id === 'a2')).toMatchObject({ km: 10, fonte: 'orologio' })
+  })
+  it('un allenamento tornato «da fare» non conta: né negli usi né nei km', async () => {
+    // L'uso resta se l'annulla offline o del coach non l'ha tolto: lo stato vince.
+    ctrl.tabelle = {
+      scarpe_atleta: [{ id: 's1', km_iniziali: 100, soglia_km: 700 }],
+      scarpe_uso: [
+        { athlete_workout_id: 'a1', scarpa_id: 's1' },
+        { athlete_workout_id: 'a2', scarpa_id: 's1' },
+        { athlete_workout_id: 'a3', scarpa_id: 's1' },
+      ],
+      athlete_workouts: [
+        { id: 'a1', status: 'completed', completed_date: '2026-10-01', workouts: { title: 'Lento', sections: corsa } },
+        { id: 'a2', status: 'pending', completed_date: null, workouts: { title: 'Fondo', sections: corsa } },
+      ],
+      garmin_attivita: [],
+    }
+    const r = await leggiScarpeAtleta('at1')
+    const select = finto.chiamateA('athlete_workouts', 'select')[0].args[0]
+    expect(select).toMatch(/\bstatus\b/)
+    const s = r.scarpe[0]
+    expect(s.usi.map(u => u.athlete_workout_id)).toEqual(['a1'])
+    expect(s.km).toBe(105)
   })
   it('con tabelle assenti torna non disponibile senza lanciare', async () => {
     ctrl.guasti = ['scarpe_atleta']
@@ -125,6 +147,26 @@ describe('rendiPrincipale', () => {
     await rendiPrincipale('at1', 's2')
     const updates = finto.chiamateA('scarpe_atleta', 'update').map(c => c.args[0])
     expect(updates).toEqual([{ principale: false }, { principale: true }])
+  })
+  it('se la nuova non si scrive, rimette la vecchia e poi lancia', async () => {
+    // La prima update torna la vecchia principale (s1); la seconda fallisce.
+    ctrl.tabelle = { scarpe_atleta: [{ id: 's1' }] }
+    let volte = 0
+    ctrl.guasti = []
+    Object.defineProperty(ctrl, 'guasti', {
+      configurable: true,
+      get: () => (++volte === 2 ? ['scarpe_atleta'] : []),
+      set: () => {},
+    })
+    try {
+      await expect(rendiPrincipale('at1', 's2')).rejects.toBeTruthy()
+    } finally {
+      Object.defineProperty(ctrl, 'guasti', { configurable: true, writable: true, value: [] })
+    }
+    const updates = finto.chiamateA('scarpe_atleta', 'update').map(c => c.args[0])
+    expect(updates).toEqual([{ principale: false }, { principale: true }, { principale: true }])
+    const eq = finto.chiamateA('scarpe_atleta').filter(c => c.metodo === 'eq' || c.metodo === 'in').map(c => c.args)
+    expect(eq.at(-1)).toEqual(['id', 's1'])
   })
 })
 

@@ -93,6 +93,15 @@ describe('/scarpe/:id', () => {
     await waitFor(() => expect(db.rendiPrincipale).toHaveBeenCalledWith('a1', 's1'))
   })
 
+  it('«Rendila principale» fallita: errore e la scarpa si rilegge (lo stato può essere cambiato a metà)', async () => {
+    db.rendiPrincipale.mockRejectedValueOnce(new Error('rete'))
+    monta()
+    await userEvent.click(await screen.findByRole('button', { name: 'Rendila principale' }))
+    const alert = await import('../../lib/alert')
+    await waitFor(() => expect(alert.mostraErrore).toHaveBeenCalled())
+    await waitFor(() => expect(db.leggiScarpeAtleta).toHaveBeenCalledTimes(2))
+  })
+
   it('id che non è dell\'atleta: «Scarpa non trovata» e il tasto indietro', async () => {
     monta('inventata')
     expect(await screen.findByText('Scarpa non trovata')).toBeInTheDocument()

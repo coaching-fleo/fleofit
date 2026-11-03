@@ -108,7 +108,7 @@ export async function leggiScarpeAtleta(athleteId) {
   let attivita = []
   if (idAw.length) {
     const { data: aw, error: erroreAw } = await supabase
-      .from(ALLENAMENTI).select('id, completed_date, workouts(title, sections)').in('id', idAw)
+      .from(ALLENAMENTI).select('id, status, completed_date, workouts(title, sections)').in('id', idAw)
     if (erroreAw) throw erroreAw
     allenamenti = aw || []
     const { data: att, error: erroreAtt } = await supabase
@@ -117,14 +117,17 @@ export async function leggiScarpeAtleta(athleteId) {
       if (!tabelleAssenti(erroreAtt)) throw erroreAtt
     } else attivita = att || []
   }
-  const perAw = Object.fromEntries(allenamenti.map(a => [a.id, a]))
+  // Solo gli allenamenti COMPLETATI: un uso rimasto su uno tornato «da fare»
+  // (annulla offline, il coach che lo riapre, una togliScarpa fallita) non
+  // compare e non conta nei km.
+  const perAw = Object.fromEntries(allenamenti.filter(a => a.status === 'completed').map(a => [a.id, a]))
   const perAtt = Object.fromEntries(attivita.map(a => [a.athlete_workout_id, a]))
 
   return {
     disponibile: true,
     scarpe: scarpe.map((s) => {
       const suoi = (usi || [])
-        .filter(u => u.scarpa_id === s.id)
+        .filter(u => u.scarpa_id === s.id && perAw[u.athlete_workout_id])
         .map((u) => {
           const aw = perAw[u.athlete_workout_id]
           const k = kmAllenamento(aw?.workouts?.sections, perAtt[u.athlete_workout_id])
@@ -196,13 +199,24 @@ export async function ritiraScarpa(id) {
   if (error) throw error
 }
 
-/** Una sola principale attiva (indice unico): prima si toglie la vecchia, poi si mette la nuova. */
+/**
+ * Una sola principale attiva (indice unico): prima si toglie la vecchia, poi si
+ * mette la nuova. Se la seconda scrittura fallisce si prova a rimettere la
+ * vecchia (senza garanzie: è la stessa rete che ha appena fallito), poi si lancia.
+ */
 export async function rendiPrincipale(athleteId, id) {
-  const { error: e1 } = await supabase
-    .from(SCARPE).update({ principale: false }).eq('athlete_id', athleteId).eq('principale', true)
+  const { data: vecchie, error: e1 } = await supabase
+    .from(SCARPE).update({ principale: false }).eq('athlete_id', athleteId).eq('principale', true).select('id')
   if (e1) throw e1
   const { error: e2 } = await supabase.from(SCARPE).update({ principale: true }).eq('id', id)
-  if (e2) throw e2
+  if (e2) {
+    const vecchia = (vecchie || []).find(v => v.id !== id)?.id
+    if (vecchia) {
+      const { error: e3 } = await supabase.from(SCARPE).update({ principale: true }).eq('id', vecchia)
+      if (e3) console.warn('Principale di prima non rimessa:', e3)
+    }
+    throw e2
+  }
 }
 
 // ── Uso per allenamento ─────────────────────────────────────────────────────
