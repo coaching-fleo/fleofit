@@ -100,6 +100,75 @@ cresciuto di **0,48 KB** (misurato sui due build); il resto (~1,2 KB) è il hook
   `eslint-disable-next-line react-hooks/set-state-in-effect` motivato (caricamento iniziale, come
   le altre pagine): `npx eslint` sui file delle scarpe non segnala niente.
 
+
+## Banner, scheda del modello, caratteristiche e foto (03/11/2026)
+Tutto nel catalogo e nelle stesse tabelle: **la migrazione resta non applicata** (le colonne e il bucket
+sono nel `.sql` del 02/11, vedi sotto). Senza le tabelle il banner non compare.
+
+### Il banner in Home (`bannerScarpe.js`, `BannerScarpe.jsx`, pigro)
+- **Atleta**: sta **dopo `ListaInArrivo`**, non sotto «Prossimo obiettivo» come chiedeva la spec §9. Motivo: la
+  card carica in ritardo e, sopra la lista, spingerebbe giù voci già tappabili; un segnaposto riservato
+  collasserebbe quando le tabelle non ci sono. Costo: è meno in vista di quanto voluto.
+- **Coach**: dopo «Gare» nel telefono, in fondo alla colonna principale nel desktop.
+- Testi: atleta con una scarpa oltre soglia «`<modello>` è da cambiare» / «Scegli la nuova»; altrimenti la
+  principale (o la prima attiva) «`<modello>` · `<km>` km» / «Le mie scarpe»; senza scarpe «Tieni il conto dei km
+  delle tue scarpe» / «Aggiungi la tua». Coach: «Il catalogo scarpe · N modelli» / «Apri», **singolare** «1 modello».
+  Usa `scarpa.stato` se `leggiScarpeAtleta` lo dà, altrimenti `statoScarpa(km, soglia_km)`.
+- Foto del banner: quella della scarpa mostrata, altrimenti il primo modello del catalogo con foto; il disegno
+  di ripiego prende `tono="scuro"` sul giallo.
+
+### La scheda del modello (`/scarpe/modello/:id`, `ModelloScarpa.jsx`, `ModelloScarpaUI`)
+Uguale per atleta e coach. **8 righe fisse, sempre nello stesso ordine** (`righeCaratteristiche`):
+ammortizzamento, stabilità, piastra, drop, altezza al tallone, peso, uso, vita stimata. Un dato mancante è
+«—», mai 0 e mai riga nascosta (il drop 0 mm è un dato). Dopo «Ce l'ho» si va a `/scarpe`, dove c'è la scarpa
+nuova. Il coach modifica da `FoglioModelloCatalogo` (file suo: **non** si riesporta da `ScarpeUI`, giro
+circolare); `validaModello(campi, { parziale })` ignora le chiavi sconosciute e con `parziale` controlla
+solo i campi presenti. Un valore fuori elenco è errore; solo `uso` filtra in silenzio.
+La pagina ha anche «Carica foto» (oltre al foglio) e, per una foto con sfondo, un avviso e la proposta
+di renderla principale.
+
+### Colonne nuove di `scarpe_catalogo` (con i limiti)
+`livello` (principiante/intermedio/avanzato), `ammortizzamento` (basso/medio/alto/massimo), `stabilita`
+(neutra/sostegno), `piastra` (nessuna/nylon_tpu/carbonio), `peso_g` 100–500, `stack_mm` 10–60,
+`uso` text[] ⊂ {lento, ritmo, ripetute, gara, trail}, `vita_km` 200–2000, `url_ufficiale` e `foto_url`
+(entrambi `like 'https://%'`); `tipo` e `drop_mm` 0–16 c'erano già. Tutte facoltative.
+**Bucket `scarpe`**, pubblico, con **4 policy** su `storage.objects` (lettura, insert, update, delete): scrive
+solo lo staff, mai `demo@fleofit.it`.
+⚠️ **Prima del sì**: le policy globali «consenti update a tutti» / «consenti delete a tutti» su `storage.objects`
+(multi_coach §7), se esistono, annullano le restrizioni del bucket. Controllarle prima di caricare foto.
+
+### La foto (`fotoScarpa.js`, `FotoScarpa.jsx`, `scarpeDb.js`)
+- `foto_url` salvato = `<url pubblico>?v=<timestamp>` (così la cache non tiene la foto vecchia) e, se la foto
+  **non è scontornata**, il frammento `#sfondo` (stessa idea di `#deleted=`). `riduciFoto` porta il lato
+  lungo a 800 px, webp (png se il browser lo ignora); `angoliTrasparenti` guarda i 4 angoli (alpha < 16).
+  `fotoConSfondo(url)` = finisce con `#sfondo` → `FotoScarpa` la mette in un riquadro bianco.
+- Senza foto, o se non carica, `FotoScarpa` mostra il **disegno del tipo** (4 SVG in `src/assets/scarpe/`,
+  tratto fisso `#9ca3af`: `currentColor` non passa dentro un `<img>`). Prop `tono`: `'chiaro'` (default) o
+  `'scuro'` (`filter: brightness(0)`, solo sul disegno, per il banner giallo). Un url nuovo dopo un errore si riprova.
+
+### Valutazione FLEOFIT (`tools/scarpe/LEGGIMI.md`)
+- `ammortizzamento` da `stack_mm` (tallone): <30 basso, 30–35 medio, 36–40 alto, >40 massimo. Senza stack: tipo
+  `ammortizzata` → alto, altrimenti `null`.
+- `stabilita`: `sostegno` se il marchio la dichiara stabile/supportive, altrimenti `neutra`.
+- `livello`: `avanzato` se piastra carbonio o tipo `gara`; `principiante` se `sostegno` o ammortizzamento
+  massimo; altrimenti `intermedio`. Mai `null`.
+- `uso`: gara → gara, ripetute; allenamento con piastra nylon/TPU → ritmo, ripetute; allenamento → lento, ritmo
+  (anche con carbonio, come Puma); ammortizzata → lento; trail → trail.
+
+### Dati e foto dei 12 modelli di prova (`tools/scarpe/`)
+- `schede.json` (dati), `scontorna.swift` (Vision, toglie lo sfondo), `carica-foto.sh` (carica nel bucket,
+  **solo dopo il sì** alla migrazione), `foto/<slug>.png`.
+- **Solo 3 foto su 12** (Saucony, Puma, On): i siti dei marchi bloccano i download automatici (nessun
+  aggiramento tentato). Le altre 9 hanno il disegno; si caricano da «Carica foto». Le foto sono © dei marchi e
+  **provvisorie**: vanno sostituite prima della versione che le mostra (BACKLOG).
+- I dati di **6 marchi** (Nike, Adidas, Asics, Hoka, Brooks, New Balance) vengono da estratti dei domini
+  ufficiali, non dalle pagine: **da ricontrollare**. Puma, Saucony e On sono letti dalle pagine.
+- 🔴 **Trappola, demo**: `foto_url` nei semi di `demoSemi.js` è un percorso a mano `/tools/scarpe/foto/<slug>.png`,
+  buono solo con il server di sviluppo. Con `import.meta.glob` (in entrambe le varianti) i PNG finivano in `dist`.
+  Solo i 3 modelli con PNG hanno `foto_url`; gli altri 9 `null`.
+- Peso: `index` **616,77 KB** dopo il banner (+0,31 del banner, +0,28 della rotta pigra della scheda);
+  il limite d'avviso è 620, margine ~3 KB.
+
 ## Test
 - ⚠️ `demoGarmin.test.jsx` «una è libera, in un giorno senza allenamenti di Sara» **fallisce a
   seconda della data**, anche su `app` senza questi cambiamenti: non è dovuto alle scarpe.
