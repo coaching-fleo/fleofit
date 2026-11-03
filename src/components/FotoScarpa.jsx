@@ -6,6 +6,8 @@ import trail from '../assets/scarpe/trail.svg'
 import ammortizzata from '../assets/scarpe/ammortizzata.svg'
 
 // Il disegno di ripiego, uno per tipo (TIPI_SCARPA in lib/kmScarpe.js).
+// Il tratto degli SVG è fisso #9ca3af: currentColor non passa attraverso <img>;
+// per il banner giallo ci pensa `tono`.
 const DISEGNI = { allenamento, gara, trail, ammortizzata }
 
 /**
@@ -15,7 +17,8 @@ const DISEGNI = { allenamento, gara, trail, ammortizzata }
  * 'scuro' = tratto nero per il banner giallo (il filtro vale solo sul disegno).
  */
 export default function FotoScarpa({ url, tipo, alt = '', className = '', tono = 'chiaro' }) {
-  const [rotta, setRotta] = useState(false)
+  const [urlRotto, setUrlRotto] = useState(null)
+  const rotta = urlRotto === url // un url nuovo (foto ricaricata) si riprova
   const chiave = DISEGNI[tipo] ? tipo : 'allenamento'
   const disegno = DISEGNI[chiave]
 
@@ -40,7 +43,7 @@ export default function FotoScarpa({ url, tipo, alt = '', className = '', tono =
       className={fotoConSfondo(url) ? 'w-full h-full object-contain' : className}
       loading="lazy"
       decoding="async"
-      onError={() => setRotta(true)}
+      onError={() => setUrlRotto(url)}
     />
   )
   if (!fotoConSfondo(url)) return foto

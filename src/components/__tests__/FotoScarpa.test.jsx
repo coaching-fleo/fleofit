@@ -47,4 +47,20 @@ describe('FotoScarpa', () => {
     const { container } = render(<FotoScarpa url="https://x/y.webp" tipo="gara" alt="F" />)
     expect(container.querySelector('[data-sfondo]')).toBeNull()
   })
+
+  it('dopo un errore, un url nuovo viene riprovato', () => {
+    const { rerender } = render(<FotoScarpa url="https://x/a.webp" tipo="gara" alt="F" />)
+    fireEvent.error(screen.getByAltText('F'))
+    expect(screen.getByAltText('F').getAttribute('data-disegno')).toBe('gara')
+    rerender(<FotoScarpa url="https://x/b.webp" tipo="gara" alt="F" />)
+    expect(screen.getByAltText('F').getAttribute('src')).toBe('https://x/b.webp')
+  })
+
+  it('tono scuro: il disegno ha il filtro; chiaro o default no', () => {
+    const { unmount } = render(<FotoScarpa tipo="gara" alt="S" tono="scuro" />)
+    expect(screen.getByAltText('S').style.filter).toBe('brightness(0)')
+    unmount()
+    render(<FotoScarpa tipo="gara" alt="C" />)
+    expect(screen.getByAltText('C').style.filter).toBe('')
+  })
 })
