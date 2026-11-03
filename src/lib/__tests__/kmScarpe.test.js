@@ -17,7 +17,16 @@ describe('kmAllenamento', () => {
     expect(kmAllenamento(run([{ type: 'run', duration: '12 min', pace: 'Z2' }])).km).toBe(2))
   it('ripetute formato vecchio', () =>
     expect(kmAllenamento(run([{ type: 'repeat', rounds: '8', runDuration: '400m', recDuration: '1 min', recPace: 'Camminata' }])).km)
-      .toBeCloseTo(3.2 + 8 * (1 / 6), 2))
+      .toBeCloseTo(3.2 + 8 * (1 / 12), 2))
+  it('«Da fermo» a tempo vale 0 km: 8 × (400m + 1′ Da fermo) = 3,2', () => {
+    expect(kmAllenamento(run([{ type: 'repeat', rounds: '8', runDuration: '400m', recDuration: '1 min', recPace: 'Da fermo' }])).km).toBe(3.2)
+    expect(kmAllenamento(run([{ type: 'repeat', rounds: '8', parti: [
+      { tipo: 'run', duration: '400m' }, { tipo: 'recover', duration: '1 min', paceMin: 'da fermo', paceMax: '-' }] }])).km).toBe(3.2)
+  })
+  it('«Da fermo» da solo: nessuna corsa, null', () =>
+    expect(kmAllenamento(run([{ type: 'recover', duration: '3 min', pace: 'DA FERMO' }]))).toBeNull())
+  it('«Camminata» a tempo va a 12 min/km', () =>
+    expect(kmAllenamento(run([{ type: 'recover', duration: '24 min', paceMin: 'Camminata' }])).km).toBe(2))
   it('ripetute con parti', () =>
     expect(kmAllenamento(run([{ type: 'repeat', rounds: '3', parti: [
       { tipo: 'run', duration: '1 km' }, { tipo: 'recover', duration: '500m' }] }])).km).toBe(4.5))

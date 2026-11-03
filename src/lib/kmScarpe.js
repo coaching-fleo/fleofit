@@ -6,7 +6,8 @@
 // MAI 0: un numero inventato finirebbe nel totale della scarpa.
 //
 // Una fase senza unità di distanza si stima dai minuti (`parseTime`) divisi
-// per il ritmo; se il ritmo non è un `m:ss /km` vale `MINUTI_PER_KM`.
+// per il ritmo; se il ritmo non è un `m:ss /km` vale `MINUTI_PER_KM`, tranne
+// «Da fermo» (0 km) e «Camminata» (12 min/km).
 // Ripetute solo via `partiRipetuta`, blocchi Hyrox solo via `getNormalizedBlocks`.
 
 import { partiRipetuta } from './ripetute'
@@ -38,12 +39,23 @@ const minutiPerKmDa = (...ritmi) => {
   return MINUTI_PER_KM
 }
 
-/** I km di un tratto: a distanza si leggono, a tempo si stimano. */
+/** Camminare, a tempo: 12 min/km (il doppio del ritmo di base). */
+const MINUTI_PER_KM_CAMMINATA = 12
+
+/** Vero se uno dei ritmi scritti dice `parola` (senza badare alle maiuscole). */
+const ritmoE = (ritmi, parola) => ritmi.some(r => String(r ?? '').toLowerCase().includes(parola))
+
+/**
+ * I km di un tratto: a distanza si leggono, a tempo si stimano. A tempo,
+ * «Da fermo» non consuma la scarpa (0 km) e «Camminata» va a 12 min/km.
+ */
 const kmTratto = (duration, ...ritmi) => {
   const daDistanza = kmDaDistanza(duration)
   if (daDistanza !== null) return daDistanza
   const minuti = parseTime(duration)
   if (!(minuti > 0)) return 0
+  if (ritmoE(ritmi, 'da fermo')) return 0
+  if (ritmoE(ritmi, 'camminata')) return minuti / MINUTI_PER_KM_CAMMINATA
   // «paceMin paceMax» insieme sono un intervallo: la media dei due estremi.
   const intervallo = ritmi.slice(0, 2).join(' ')
   return minuti / minutiPerKmDa(intervallo, ritmi[2])
