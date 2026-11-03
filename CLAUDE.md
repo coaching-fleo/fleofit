@@ -37,7 +37,7 @@
   privacy su App Store Connect. Resta in stand-by la mail dei cambi di policy (BACKLOG, in cima).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint: `npm test` → **2848 test** (03/11/2026; 2704 al 30/10); al 27/10/2026 `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note», di «Da un testo scritto» né dei Modelli di blocco) (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
+- Test e lint: `npm test` → **2864 test** (03/11/2026; 2704 al 30/10); al 27/10/2026 `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note», di «Da un testo scritto» né dei Modelli di blocco) (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---

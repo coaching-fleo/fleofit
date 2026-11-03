@@ -53,8 +53,7 @@
 `supabase/schema/scarpe_2026-11-02.sql` è scritta e **non applicata** (nona eccezione, CLAUDE.md §0-bis). Dopo il sì,
 dal SQL editor, controllare con una lettura: 3 tabelle (`scarpe_catalogo`, `scarpe_atleta`, `scarpe_uso`), 6 policy,
 `select count(*) from scarpe_catalogo` = **114**. Poi prova sul telefono (la fa il committente) e ingresso nella 1.2.3.
-Da tracciare (`docs/memoria/scarpe.md`): annullare un completamento offline lascia l'uso; senza scarpa principale la riga
-coach sparisce (e con lei l'avviso «da cambiare»); `drop_mm` del catalogo tutti null, da compilare dall'app.
+Da tracciare (`docs/memoria/scarpe.md`): `drop_mm` del catalogo tutti null, da compilare dall'app.
 
 ---
 
