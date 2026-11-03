@@ -13,7 +13,10 @@
 //     la fa l'interfaccia.
 
 import { supabase } from '../supabaseClient'
-import { kmAllenamento, kmScarpa, statoScarpa, SOGLIA_PREDEFINITA } from './kmScarpe'
+import { kmAllenamento, kmScarpa, statoScarpa, SOGLIA_PREDEFINITA, numeroKm } from './kmScarpe'
+
+// `numeroKm` vive in kmScarpe.js (senza il client Supabase); da qui resta con lo stesso nome.
+export { numeroKm }
 
 const CATALOGO = 'scarpe_catalogo'
 const SCARPE = 'scarpe_atleta'
@@ -24,22 +27,6 @@ const ATTIVITA = 'garmin_attivita'
 /** La tabella non c'è (migrazione non applicata): non è un errore da mostrare. */
 export const tabelleAssenti = (error) =>
   !!error && (error.code === '42P01' || error.code === 'PGRST205')
-
-/**
- * Un numero di km scritto a mano: «350», «350,5», «1.200» (migliaia) → numero.
- * Vuoto = 0; negativo, testo o non finito = `null`.
- */
-export const numeroKm = (testo) => {
-  if (typeof testo === 'number') return Number.isFinite(testo) && testo >= 0 ? testo : null
-  const s = String(testo ?? '').trim().replace(/\s/g, '')
-  if (s === '') return 0
-  const normale = /^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)
-    ? s.replace(/\./g, '').replace(',', '.')   // «1.200», «1.200,5»
-    : s.replace(',', '.')                       // «350,5», «350.5»
-  if (!/^\d+(\.\d+)?$/.test(normale)) return null
-  const n = Number(normale)
-  return Number.isFinite(n) ? n : null
-}
 
 // ── Catalogo ────────────────────────────────────────────────────────────────
 

@@ -18,6 +18,22 @@ export const SOGLIA_PREDEFINITA = 700
 /** Da questa quota della soglia la scarpa è «quasi» da cambiare. */
 const QUOTA_QUASI = 0.8
 
+/**
+ * Un numero di km scritto a mano: «350», «350,5», «1.200» (migliaia) → numero.
+ * Vuoto = 0; negativo, testo o non finito = `null`.
+ */
+export const numeroKm = (testo) => {
+  if (typeof testo === 'number') return Number.isFinite(testo) && testo >= 0 ? testo : null
+  const s = String(testo ?? '').trim().replace(/\s/g, '')
+  if (s === '') return 0
+  const normale = /^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)
+    ? s.replace(/\./g, '').replace(',', '.')   // «1.200», «1.200,5»
+    : s.replace(',', '.')                       // «350,5», «350.5»
+  if (!/^\d+(\.\d+)?$/.test(normale)) return null
+  const n = Number(normale)
+  return Number.isFinite(n) ? n : null
+}
+
 const arrotonda = (km) => Math.round(km * 100) / 100
 
 /** I km di una distanza scritta («5 km», «800m»), o null se non è una distanza. */
