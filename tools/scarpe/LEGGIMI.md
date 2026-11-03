@@ -16,9 +16,14 @@
 - `livello`: `avanzato` se piastra carbonio o tipo `gara`; `principiante` se `sostegno` o
   ammortizzamento massimo; altrimenti `intermedio`. Mai `null`.
 - `uso`: gara → gara, ripetute; allenamento con piastra nylon/TPU → ritmo, ripetute; allenamento →
-  lento, ritmo; ammortizzata → lento; trail → trail.
+  lento, ritmo (anche con piastra carbonio, come per Puma); ammortizzata → lento; trail → trail.
+
+## Affidabilità dei dati
+Per Nike, Adidas, Asics, Hoka, Brooks e New Balance le pagine ufficiali non erano leggibili direttamente (403/404/406):
+i numeri vengono da estratti dei domini ufficiali e vanno **ricontrollati**. Puma, Saucony e On sono stati letti dalle pagine.
 
 ## Foto
+Ci sono solo 3 foto su 12 (Saucony, Puma, On): le altre 9 si caricheranno dopo dall'app.
 Le foto sono © dei marchi e sono **provvisorie** (scelte dal committente per la prova), non una licenza.
 Vanno sostituite prima di una pubblicazione vera.
 

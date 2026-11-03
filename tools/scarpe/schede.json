@@ -167,7 +167,7 @@
     "livello": "intermedio",
     "ammortizzamento": null,
     "stabilita": "neutra",
-    "piastra": null,
+    "piastra": "nylon_tpu",
     "drop_mm": 8,
     "peso_g": 233,
     "stack_mm": null,
@@ -177,11 +177,12 @@
     ],
     "vita_km": null,
     "url_ufficiale": "https://www.saucony.com/EE/en_EE/endorphin-speed-4/58852M.html",
-    "fonte_foto": null,
+    "fonte_foto": "https://thekit.wolverineworldwide.com/match/media_lookup/S20940-220_1/?preset=dw-large",
     "fonti": {
       "drop_mm": "https://www.saucony.com/EE/en_EE/endorphin-speed-4/58852M.html",
       "peso_g": "https://www.saucony.com/EE/en_EE/endorphin-speed-4/58852M.html (8,2 oz uomo = 233 g)",
-      "piastra": "https://www.saucony.com/EE/en_EE/endorphin-speed-4/58852M.html (winged nylon plate)"
+      "piastra": "https://www.saucony.com/EE/en_EE/endorphin-speed-4/58852M.html (winged nylon plate)",
+      "fonte_foto": "host media di Wolverine Worldwide, proprietario del marchio Saucony (og:image della pagina ufficiale)"
     }
   },
   {
@@ -244,7 +245,7 @@
     ],
     "vita_km": null,
     "url_ufficiale": "https://www.on.com/en-gr/products/cloudmonster-2-m-3me1012",
-    "fonte_foto": "https://images.ctfassets.net/hnk2vsx53n6l/5Djt5G367gJwPXINVW9duZ/a28cf7f734243e0fb1ed6897f7f1724d/cef0fe2d4195560075ae527a9da433e9540c9714.png",
+    "fonte_foto": "https://images.ctfassets.net/hnk2vsx53n6l/5Djt5G367gJwPXINVW9duZ/a28cf7f734243e0fb1ed6897f7f1724d/cef0fe2d4195560075ae527a9da433e9540c9714.png?w=1200&h=630&fit=pad&bg=rgb:ffffff&q=85&fm=webp",
     "fonti": {
       "drop_mm": "https://www.on.com/en-gr/products/cloudmonster-2-m-3me1012",
       "peso_g": "https://www.on.com/en-gr/products/cloudmonster-2-m-3me1012 (300 g, scheda UE, taglia non indicata)",
