@@ -34,7 +34,7 @@ import { TestataScheda, MenuScheda, IntestazioneSezione } from '../components/Wo
 import { BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import {
   IdentitaAtleta, IconaSocial, CardAndamento, CellaBento, Sparkline,
-  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa, RigaCoach,
+  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa, RigaCoach, RigaScarpeCoach,
 } from '../components/SchedaAtletaUI'
 import FoglioCoach from '../components/FoglioCoach'
 import CalendarioAtleta from '../components/CalendarioAtleta'
@@ -136,6 +136,21 @@ export default function AthleteDetail() {
   const conScarpe = role === 'athlete' && isOwnProfile
   const scarpaCompletamento = useScarpaCompletamento(conScarpe ? id : null, { setAlertInfo })
   const scarpe = scarpaCompletamento.scarpe
+
+  // Vista coach (spec §2): le scarpe dell'atleta che guarda, SOLO lettura. Non
+  // passa dall'hook del completamento (che scrive): una lettura pigra, con
+  // scarpeDb fuori dal chunk d'ingresso. Tabelle assenti o errore → niente riga.
+  const [scarpeAtleta, setScarpeAtleta] = useState(null)
+  const guardaScarpe = eStaff(role) && !isOwnProfile
+  useEffect(() => {
+    if (!guardaScarpe || !id) return undefined
+    let vivo = true
+    import('../lib/scarpeDb')
+      .then(m => m.leggiScarpeAtleta(id))
+      .then(r => { if (vivo) setScarpeAtleta(r?.disponibile ? r.scarpe : null) })
+      .catch(e => { console.warn('Scarpe non caricate:', e); if (vivo) setScarpeAtleta(null) })
+    return () => { vivo = false; setScarpeAtleta(null) }
+  }, [guardaScarpe, id])
 
 
   // Gli estratti delle note (src/lib/noteEstratte.js) e lo stato dell'analisi:
@@ -714,6 +729,7 @@ export default function AthleteDetail() {
             : null} />
         ) : null}
         nota={pausaAtleta.testo} />
+      {guardaScarpe && scarpeAtleta && <RigaScarpeCoach scarpe={scarpeAtleta} />}
       {eAdmin(role) && !isOwnProfile && staffCoach && (
         <div className="mt-3">
           <RigaCoach
