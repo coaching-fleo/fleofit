@@ -6,7 +6,7 @@
 //
 // Un dato mancante è «—», mai 0 e mai riga nascosta; lo zero (drop 0 mm) è un dato.
 
-import { numeroKm, SOGLIA_PREDEFINITA } from './kmScarpe'
+import { numeroKm, SOGLIA_PREDEFINITA, TIPI_SCARPA } from './kmScarpe'
 
 export const LIVELLI = [
   { valore: 'principiante', etichetta: 'Principiante', classe: 'text-green-500 border-green-500/30 bg-green-500/10' },
@@ -35,12 +35,11 @@ export const LIMITI = { drop_mm: [0, 16], peso_g: [100, 500], stack_mm: [10, 60]
 
 const NUMERICI = ['drop_mm', 'peso_g', 'stack_mm', 'vita_km']
 const INTERI = ['peso_g', 'vita_km']
-const ELENCHI = ['livello', 'ammortizzamento', 'stabilita', 'piastra']
-const TESTI = ['tipo']
+const ELENCHI = ['tipo', 'livello', 'ammortizzamento', 'stabilita', 'piastra']
 const URL = ['url_ufficiale', 'foto_url']
 const ETICHETTA_NUM = { drop_mm: 'Il drop', peso_g: 'Il peso', stack_mm: "L'altezza al tallone", vita_km: 'La vita stimata' }
 
-const valoriDi = (chiave) => (chiave === 'livello' ? LIVELLI : OPZIONI[chiave]).map(o => o.valore)
+const valoriDi = (chiave) => (chiave === 'tipo' ? TIPI_SCARPA : chiave === 'livello' ? LIVELLI : OPZIONI[chiave]).map(o => o.valore)
 const etichettaDi = (chiave, valore) =>
   (chiave === 'livello' ? LIVELLI : OPZIONI[chiave]).find(o => o.valore === valore)?.etichetta ?? null
 
@@ -83,10 +82,6 @@ export function validaModello(campi, { parziale = false } = {}) {
     const t = String(c[k] ?? '').trim()
     if (!t) errori[k] = k === 'marca' ? 'Scrivi la marca.' : 'Scrivi il modello.'
     else dati[k] = t
-  }
-  for (const k of TESTI) {
-    if (!presente(k)) continue
-    dati[k] = vuoto(c[k]) ? null : String(c[k]).trim()
   }
   for (const k of ELENCHI) {
     if (!presente(k)) continue

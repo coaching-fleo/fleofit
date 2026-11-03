@@ -71,6 +71,11 @@ describe('validaModello', () => {
     expect(r.errori).toEqual({})
     expect(r.dati.uso).toEqual(['lento'])
   })
+  it('tipo: solo i valori del catalogo, vuoto = null', () => {
+    expect(validaModello({ ...base, tipo: 'gara' }).dati.tipo).toBe('gara')
+    expect(validaModello({ ...base, tipo: '' }).dati.tipo).toBeNull()
+    expect(validaModello({ ...base, tipo: 'sprint' }).errori.tipo).toBeDefined()
+  })
   it('ignora le chiavi sconosciute', () => {
     const r = validaModello({ ...base, slug: 'x', fonti: {}, fonte_foto: 'y' })
     expect(Object.keys(r.dati)).not.toContain('slug')
