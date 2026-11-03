@@ -45,10 +45,12 @@ create policy "scarpe_catalogo lettura" on public.scarpe_catalogo
   as permissive for select to authenticated
   using (true);
 
+-- Lo staff cura il catalogo, MENO l'account del revisore. `email_corrente()`
+-- (multi_coach) normalizza minuscole e spazi: la mail grezza del JWT no.
 create policy "scarpe_catalogo staff" on public.scarpe_catalogo
   as permissive for all to authenticated
-  using      (public.e_staff() and (auth.jwt() ->> 'email') <> 'demo@fleofit.it')
-  with check (public.e_staff() and (auth.jwt() ->> 'email') <> 'demo@fleofit.it');
+  using      (public.e_staff() and public.email_corrente() <> 'demo@fleofit.it')
+  with check (public.e_staff() and public.email_corrente() <> 'demo@fleofit.it');
 
 -- ── 2. scarpe_atleta ───────────────────────────────────────────────────────
 create table public.scarpe_atleta (

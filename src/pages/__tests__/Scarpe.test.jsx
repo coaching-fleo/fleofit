@@ -196,6 +196,48 @@ describe('/scarpe — coach', () => {
   })
 })
 
+describe('/scarpe — account del revisore (demo@fleofit.it)', () => {
+  // È admin, ma la policy del catalogo lo esclude: i tasti di scrittura
+  // fallirebbero con un «controlla la connessione» che non è vero.
+  const comeRevisore = () => montaPagina(<Scarpe />, { role: 'admin', user: { id: 'd1', email: ' Demo@FleoFit.it ' } })
+
+  it('vede il catalogo ma nessun tasto per cambiarlo', async () => {
+    dati.scritte = [{ marca: 'Karhu', modello: 'Fusion 3.5', quante: 1 }]
+    comeRevisore()
+    const lista = await catalogo()
+    expect(within(lista).getAllByRole('listitem')).toHaveLength(4)
+    expect(screen.queryByRole('button', { name: /Aggiungi modello/ })).not.toBeInTheDocument()
+    expect(within(lista).queryByRole('button', { name: /Modifica/ })).not.toBeInTheDocument()
+    expect(within(lista).queryByRole('button', { name: /Elimina/ })).not.toBeInTheDocument()
+    expect(within(lista).queryByRole('button', { name: /Ce l'ho/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Aggiungi al catalogo/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('/scarpe — scrittura del catalogo negata (42501)', () => {
+  it('salvare un modello: lo dice chiaro, non «controlla la connessione»', async () => {
+    db.salvaModelloCatalogo.mockRejectedValueOnce({ code: '42501', message: 'row-level security' })
+    comeCoach()
+    await catalogo()
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi modello/ }))
+    const foglio = await screen.findByRole('dialog', { name: 'Nuovo modello' })
+    await userEvent.type(within(foglio).getByLabelText('Marca'), 'Altra')
+    await userEvent.type(within(foglio).getByLabelText('Modello'), 'Lone Peak 9')
+    await userEvent.click(within(foglio).getByRole('button', { name: 'Salva' }))
+    await waitFor(() => expect(alert.mostraErrore).toHaveBeenCalledWith('Il catalogo non si modifica da questo account.'))
+  })
+
+  it('eliminare un modello: lo stesso messaggio', async () => {
+    db.eliminaModelloCatalogo.mockRejectedValueOnce({ code: '42501', message: 'row-level security' })
+    comeCoach()
+    const lista = await catalogo()
+    await userEvent.click(within(lista).getByRole('button', { name: 'Elimina Nike Pegasus 41' }))
+    const conferma = await screen.findByRole('dialog', { name: /Togliere il modello/ })
+    await userEvent.click(within(conferma).getByRole('button', { name: 'Elimina' }))
+    await waitFor(() => expect(alert.mostraErrore).toHaveBeenCalledWith('Il catalogo non si modifica da questo account.'))
+  })
+})
+
 describe('Card «Le mie scarpe» nel profilo', () => {
   const profilo = () => montaPagina(<AthleteDetail />, { role: 'athlete', user: { id: 'a1', email: 'a@f.it' } })
 

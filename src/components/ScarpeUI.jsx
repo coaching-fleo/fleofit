@@ -146,7 +146,8 @@ export function Filtro({ attivo, onClick, children }) {
 
 /**
  * Il catalogo, già filtrato da chi lo usa. L'atleta ha «Ce l'ho» su ogni
- * modello; lo staff ha Modifica ed Elimina.
+ * modello; lo staff ha Modifica ed Elimina, se gli si passano (senza, è in
+ * sola lettura: l'account del revisore).
  */
 export function ListaCatalogo({ modelli, staff, onCeLho, onModifica, onElimina }) {
   return (
@@ -164,7 +165,7 @@ export function ListaCatalogo({ modelli, staff, onCeLho, onModifica, onElimina }
                 </span>
               )}
             </span>
-            {staff ? (
+            {staff ? (onModifica && onElimina && (
               <>
                 <button type="button" aria-label={`Modifica ${nome}`} onClick={() => onModifica(m)}
                   className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-muted hover:text-white">
@@ -175,7 +176,7 @@ export function ListaCatalogo({ modelli, staff, onCeLho, onModifica, onElimina }
                   <Trash2 size={17} aria-hidden="true" />
                 </button>
               </>
-            ) : (
+            )) : (
               <button type="button" aria-label={`Ce l'ho: ${nome}`} onClick={() => onCeLho(m)}
                 className="shrink-0 min-h-9 px-3.5 rounded-full bg-white/[.07] border border-white/[.12] text-[13px] font-bold text-white hover:border-white/25 transition">
                 Ce l'ho
@@ -188,7 +189,7 @@ export function ListaCatalogo({ modelli, staff, onCeLho, onModifica, onElimina }
   )
 }
 
-/** Le scarpe scritte a mano dagli atleti, per lo staff. */
+/** Le scarpe scritte a mano dagli atleti, per lo staff. Senza `onAggiungi`, solo da leggere. */
 export function ListaScritte({ gruppi, onAggiungi }) {
   return (
     <ul className="flex flex-col gap-2">
@@ -201,10 +202,12 @@ export function ListaScritte({ gruppi, onAggiungi }) {
               {`${g.modello} · ${g.quante} ${g.quante === 1 ? 'atleta' : 'atleti'}`}
             </span>
           </span>
-          <button type="button" onClick={() => onAggiungi(g)}
-            className="shrink-0 min-h-9 px-3 rounded-full bg-white/[.07] border border-white/[.12] text-[12.5px] font-bold text-white hover:border-white/25 transition inline-flex items-center gap-1">
-            <Plus size={15} aria-hidden="true" />Aggiungi al catalogo
-          </button>
+          {onAggiungi && (
+            <button type="button" onClick={() => onAggiungi(g)}
+              className="shrink-0 min-h-9 px-3 rounded-full bg-white/[.07] border border-white/[.12] text-[12.5px] font-bold text-white hover:border-white/25 transition inline-flex items-center gap-1">
+              <Plus size={15} aria-hidden="true" />Aggiungi al catalogo
+            </button>
+          )}
         </li>
       ))}
     </ul>

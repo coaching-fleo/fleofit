@@ -33,11 +33,21 @@ const chiave = (t) => String(t ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
 
 /** Un errore di Supabase per un modello che c'è già (indice unico su marca/modello). */
 const doppione = (e) => e?.code === '23505'
+/** La policy del catalogo ha detto no (42501): non è la rete, non va detto «riprova». */
+const negato = (e) => e?.code === '42501'
+const NEGATO = 'Il catalogo non si modifica da questo account.'
+/**
+ * L'account del revisore App Store: è admin, ma la policy «scarpe_catalogo staff»
+ * lo esclude dalle scritture. Niente tasti che fallirebbero.
+ */
+const ACCOUNT_REVISORE = 'demo@fleofit.it'
 
 export default function Scarpe() {
   const { role, user } = useAuth() || {}
   const staff = role !== 'athlete'
   const uid = user?.id
+  // Lo staff cura il catalogo, tranne l'account del revisore (sola lettura).
+  const curaCatalogo = staff && String(user?.email ?? '').trim().toLowerCase() !== ACCOUNT_REVISORE
   const indietro = useIndietro(staff ? '/settings' : '/profile')
   const navigate = useNavigate()
 
@@ -131,7 +141,8 @@ export default function Scarpe() {
       else await salvaModelloCatalogo(campi)
     } catch (e) {
       console.warn('Modello non salvato:', e)
-      mostraErrore(doppione(e) ? 'Questo modello c\'è già nel catalogo.' : `Non sono riuscito a salvarlo. ${SENZA_RETE}`)
+      mostraErrore(doppione(e) ? 'Questo modello c\'è già nel catalogo.'
+        : negato(e) ? NEGATO : `Non sono riuscito a salvarlo. ${SENZA_RETE}`)
       return false
     }
     vibraSuccesso()
@@ -151,7 +162,7 @@ export default function Scarpe() {
           setCatalogo(c => c.filter(x => x.id !== m.id))
         } catch (e) {
           console.warn('Modello non eliminato:', e)
-          mostraErrore(`Non sono riuscito a toglierlo. ${SENZA_RETE}`)
+          mostraErrore(negato(e) ? NEGATO : `Non sono riuscito a toglierlo. ${SENZA_RETE}`)
         }
       },
     })
@@ -167,7 +178,7 @@ export default function Scarpe() {
             <ChevronLeft size={19} />
           </button>
           <h1 className="flex-1 min-w-0 text-3xl font-black tracking-tight truncate">Scarpe</h1>
-          {staff && stato === 'pronto' && (
+          {curaCatalogo && stato === 'pronto' && (
             <button type="button" onClick={() => setFoglioModello({ iniziale: null })}
               className="shrink-0 min-h-[40px] inline-flex items-center gap-1 rounded-full bg-brand text-black px-4 text-[14px] font-extrabold hover:brightness-110 transition">
               <Plus size={17} aria-hidden="true" />Aggiungi modello
@@ -235,8 +246,8 @@ export default function Scarpe() {
             ) : (
               <ListaCatalogo modelli={filtrato} staff={staff}
                 onCeLho={(m) => { vibraScelta(); setFoglioScarpa({ modello: m }) }}
-                onModifica={(m) => setFoglioModello({ iniziale: m })}
-                onElimina={chiediElimina} />
+                onModifica={curaCatalogo ? (m) => setFoglioModello({ iniziale: m }) : null}
+                onElimina={curaCatalogo ? chiediElimina : null} />
             )}
             {!staff && (
               <button type="button" onClick={() => setFoglioScarpa({ modello: null })}
@@ -250,7 +261,7 @@ export default function Scarpe() {
             <section aria-label="Scritte dagli atleti" className="flex flex-col gap-2.5">
               <h2 className={`${LABEL} px-1`}>Scritte dagli atleti</h2>
               <ListaScritte gruppi={scritteNuove}
-                onAggiungi={(g) => setFoglioModello({ iniziale: { marca: g.marca, modello: g.modello } })} />
+                onAggiungi={curaCatalogo ? (g) => setFoglioModello({ iniziale: { marca: g.marca, modello: g.modello } }) : null} />
             </section>
           )}
         </div>
