@@ -68,8 +68,8 @@ describe('useScarpaCompletamento', () => {
   it('cambiando la scelta si registra quella', async () => {
     dati.lettura = { disponibile: true, scarpe: [scarpa('s1'), scarpa('s2', { principale: true })] }
     const { result } = await monta()
-    act(() => { result.current.propRiga(CORSA).onCambia('s1') })
-    expect(result.current.sceltaId).toBe('s1')
+    act(() => { result.current.propRiga(CORSA, 'aw1').onCambia('s1') })
+    expect(result.current.propRiga(CORSA, 'aw1').sceltaId).toBe('s1')
     await act(async () => { await result.current.registra('aw1', CORSA) })
     expect(db.assegnaScarpa).toHaveBeenCalledWith('aw1', 's1')
   })
@@ -173,5 +173,43 @@ describe('useScarpaCompletamento', () => {
     expect(setAlertInfo).toHaveBeenCalledWith(expect.objectContaining({
       type: 'error', message: expect.stringMatching(/resta legata/),
     }))
+  })
+  // R10: un foglio chiuso senza salvare non deve lasciare la sua scelta
+  // alla corsa successiva: la scelta vale solo per l'allenamento del foglio.
+  it('la scelta fatta su un allenamento non passa al successivo', async () => {
+    dati.lettura = { disponibile: true, scarpe: [scarpa('s1'), scarpa('s2', { principale: true })] }
+    const { result } = await monta()
+    act(() => { result.current.propRiga(CORSA, 'aw1').onCambia('s1') })
+    expect(result.current.propRiga(CORSA, 'aw1').sceltaId).toBe('s1')
+    expect(result.current.propRiga(CORSA, 'aw2').sceltaId).toBe('s2')
+    await act(async () => { await result.current.registra('aw2', CORSA) })
+    expect(db.assegnaScarpa).toHaveBeenCalledWith('aw2', 's2')
+  })
+
+  // R10: sul foglio riaperto, «Nessuna» scelta apposta toglie la scarpa legata.
+  it('«Nessuna» scelta su un allenamento con una scarpa legata la toglie', async () => {
+    dati.lettura = { disponibile: true, scarpe: [scarpa('s1', { usi: [{ athlete_workout_id: 'aw1' }] }), scarpa('s2', { principale: true })] }
+    const { result } = await monta()
+    act(() => { result.current.propRiga(CORSA, 'aw1').onCambia(null) })
+    await act(async () => { await result.current.registra('aw1', CORSA) })
+    expect(db.togliScarpa).toHaveBeenCalledWith('aw1')
+    expect(db.assegnaScarpa).not.toHaveBeenCalled()
+  })
+
+  it('«Nessuna» di partenza (nessuna principale) non cancella niente', async () => {
+    dati.lettura = { disponibile: true, scarpe: [scarpa('s1')] }
+    const { result } = await monta()
+    await act(async () => { await result.current.registra('aw1', CORSA) })
+    expect(db.togliScarpa).not.toHaveBeenCalled()
+  })
+
+  // R10: l'avviso «resta legata» solo se una scarpa era davvero legata.
+  it('togliScarpa che fallisce senza scarpa legata: nessun avviso', async () => {
+    dati.lettura = { disponibile: true, scarpe: [scarpa('s1', { principale: true })] }
+    db.togliScarpa.mockRejectedValueOnce(new Error('rete assente'))
+    const { result, setAlertInfo } = await monta()
+    await act(async () => { await expect(result.current.annulla('aw1')).resolves.toBeUndefined() })
+    expect(db.togliScarpa).toHaveBeenCalledWith('aw1')
+    expect(setAlertInfo).not.toHaveBeenCalled()
   })
 })
