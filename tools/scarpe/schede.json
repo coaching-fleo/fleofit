@@ -1,0 +1,279 @@
+[
+  {
+    "marca": "Nike",
+    "modello": "Pegasus 41",
+    "slug": "nike-pegasus-41",
+    "livello": "intermedio",
+    "ammortizzamento": null,
+    "stabilita": "neutra",
+    "piastra": null,
+    "drop_mm": 10,
+    "peso_g": 297,
+    "stack_mm": null,
+    "uso": [
+      "lento",
+      "ritmo"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://www.nike.com/t/pegasus-41-mens-road-running-shoes-LMhfRGdO/FD2722-102",
+    "fonte_foto": null,
+    "fonti": {
+      "drop_mm": "https://www.nike.com/t/pegasus-41-mens-road-running-shoes-LMhfRGdO/FD2722-102",
+      "peso_g": "https://www.nike.com/t/pegasus-41-mens-road-running-shoes-LMhfRGdO/FD2722-102 (297 g è la taglia US 10 uomo, non US 9)"
+    }
+  },
+  {
+    "marca": "Nike",
+    "modello": "Vaporfly 3",
+    "slug": "nike-vaporfly-3",
+    "livello": "avanzato",
+    "ammortizzamento": null,
+    "stabilita": "neutra",
+    "piastra": "carbonio",
+    "drop_mm": 8,
+    "peso_g": 200,
+    "stack_mm": null,
+    "uso": [
+      "gara",
+      "ripetute"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://www.nike.com/ph/t/vaporfly-3-road-racing-shoes-xsDgvM/DV4129-006",
+    "fonte_foto": null,
+    "fonti": {
+      "drop_mm": "https://www.nike.com/ph/t/vaporfly-3-road-racing-shoes-xsDgvM/DV4129-006",
+      "peso_g": "https://www.nike.com/ph/t/vaporfly-3-road-racing-shoes-xsDgvM/DV4129-006 (circa 200 g, uomo US 9)",
+      "piastra": "https://www.nike.com/ph/t/vaporfly-3-road-racing-shoes-xsDgvM/DV4129-006"
+    }
+  },
+  {
+    "marca": "Adidas",
+    "modello": "Adizero Boston 12",
+    "slug": "adidas-adizero-boston-12",
+    "livello": "intermedio",
+    "ammortizzamento": null,
+    "stabilita": "neutra",
+    "piastra": null,
+    "drop_mm": 7,
+    "peso_g": null,
+    "stack_mm": null,
+    "uso": [
+      "lento",
+      "ritmo"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://www.adidas.com/us/adizero-boston-12-running-shoes/ID4234.html",
+    "fonte_foto": null,
+    "fonti": {
+      "drop_mm": "https://www.adidas.com/us/adizero-boston-12-running-shoes/ID4234.html",
+      "note": "peso 267 g dichiarato per UK 8.5, non US 9: lasciato null; piastra ENERGYRODS in fibra di vetro, fuori dai valori ammessi: null"
+    }
+  },
+  {
+    "marca": "Asics",
+    "modello": "Novablast 4",
+    "slug": "asics-novablast-4",
+    "livello": "intermedio",
+    "ammortizzamento": null,
+    "stabilita": "neutra",
+    "piastra": null,
+    "drop_mm": 8,
+    "peso_g": 260,
+    "stack_mm": null,
+    "uso": [
+      "lento",
+      "ritmo"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://www.asics.com/us/en-us/novablast-4/c/aa50123894/men/shoes/",
+    "fonte_foto": null,
+    "fonti": {
+      "drop_mm": "https://outlet.asics.com/gb/en-gb/novablast-4/p/1011B693-750.html",
+      "peso_g": "https://outlet.asics.com/gb/en-gb/novablast-4/p/1011B693-750.html (260 g, taglia non indicata)"
+    }
+  },
+  {
+    "marca": "Asics",
+    "modello": "Gel-Nimbus 26",
+    "slug": "asics-gel-nimbus-26",
+    "livello": "intermedio",
+    "ammortizzamento": "alto",
+    "stabilita": "neutra",
+    "piastra": null,
+    "drop_mm": 8,
+    "peso_g": 304,
+    "stack_mm": null,
+    "uso": [
+      "lento"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://www.asics.com/us/en-us/gel-nimbus-26/p/ANA_1011B794-401.html",
+    "fonte_foto": null,
+    "fonti": {
+      "drop_mm": "https://www.asics.com/us/en-us/gel-nimbus-26/p/ANA_1011B794-401.html",
+      "peso_g": "https://www.asics.com/us/en-us/gel-nimbus-26/p/ANA_1011B794-401.html (10,7 oz = 304 g, taglia non indicata)"
+    }
+  },
+  {
+    "marca": "Hoka",
+    "modello": "Clifton 10",
+    "slug": "hoka-clifton-10",
+    "livello": "principiante",
+    "ammortizzamento": "massimo",
+    "stabilita": "neutra",
+    "piastra": null,
+    "drop_mm": 8,
+    "peso_g": 278,
+    "stack_mm": 42,
+    "uso": [
+      "lento",
+      "ritmo"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://www.hoka.com/en/hr/men-road/clifton-10/1162030.html",
+    "fonte_foto": null,
+    "fonti": {
+      "drop_mm": "https://au.hoka.com/blog/introducing-the-clifton-10",
+      "peso_g": "https://au.hoka.com/blog/introducing-the-clifton-10 (9,8 oz uomo = 278 g)",
+      "stack_mm": "https://au.hoka.com/blog/introducing-the-clifton-10 (42 mm tallone)"
+    }
+  },
+  {
+    "marca": "Hoka",
+    "modello": "Speedgoat 6",
+    "slug": "hoka-speedgoat-6",
+    "livello": "intermedio",
+    "ammortizzamento": null,
+    "stabilita": "neutra",
+    "piastra": null,
+    "drop_mm": 5,
+    "peso_g": 278,
+    "stack_mm": null,
+    "uso": [
+      "trail"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://www.hoka.com/en/us/mens-trail/speedgoat-6/1147791.html",
+    "fonte_foto": null,
+    "fonti": {
+      "drop_mm": "https://www.hoka.com/en/us/mens-trail/speedgoat-6/1147791.html",
+      "peso_g": "https://www.hoka.com/en/us/mens-trail/speedgoat-6/1147791.html (9,80 oz = 278 g)"
+    }
+  },
+  {
+    "marca": "Saucony",
+    "modello": "Endorphin Speed 4",
+    "slug": "saucony-endorphin-speed-4",
+    "livello": "intermedio",
+    "ammortizzamento": null,
+    "stabilita": "neutra",
+    "piastra": null,
+    "drop_mm": 8,
+    "peso_g": 233,
+    "stack_mm": null,
+    "uso": [
+      "ritmo",
+      "ripetute"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://www.saucony.com/EE/en_EE/endorphin-speed-4/58852M.html",
+    "fonte_foto": null,
+    "fonti": {
+      "drop_mm": "https://www.saucony.com/EE/en_EE/endorphin-speed-4/58852M.html",
+      "peso_g": "https://www.saucony.com/EE/en_EE/endorphin-speed-4/58852M.html (8,2 oz uomo = 233 g)",
+      "piastra": "https://www.saucony.com/EE/en_EE/endorphin-speed-4/58852M.html (winged nylon plate)"
+    }
+  },
+  {
+    "marca": "Brooks",
+    "modello": "Ghost 17",
+    "slug": "brooks-ghost-17",
+    "livello": "intermedio",
+    "ammortizzamento": null,
+    "stabilita": "neutra",
+    "piastra": null,
+    "drop_mm": 10,
+    "peso_g": 286,
+    "stack_mm": null,
+    "uso": [
+      "lento",
+      "ritmo"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://www.brooksrunning.com/en_us/mens/shoes/road-running-shoes/ghost-17/1104422E090.095.html",
+    "fonte_foto": null,
+    "fonti": {
+      "drop_mm": "https://www.brooksrunning.com/en_us/mens/shoes/road-running-shoes/ghost-17/1104422E090.095.html",
+      "peso_g": "https://www.brooksrunning.com/en_us/mens/shoes/road-running-shoes/ghost-17/1104422E090.095.html (10,1 oz uomo = 286 g)"
+    }
+  },
+  {
+    "marca": "New Balance",
+    "modello": "Fresh Foam X 1080v14",
+    "slug": "new-balance-fresh-foam-x-1080v14",
+    "livello": "intermedio",
+    "ammortizzamento": "alto",
+    "stabilita": "neutra",
+    "piastra": null,
+    "drop_mm": null,
+    "peso_g": 298,
+    "stack_mm": null,
+    "uso": [
+      "lento"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://www.newbalance.com/pd/fresh-foam-x-1080v14/M1080V14-47512-PMG-NA.html",
+    "fonte_foto": null,
+    "fonti": {
+      "peso_g": "https://www.newbalance.com/pd/fresh-foam-x-1080v14/M1080V14-47512-PMG-NA.html (298 g, taglia non indicata)"
+    }
+  },
+  {
+    "marca": "On",
+    "modello": "Cloudmonster 2",
+    "slug": "on-cloudmonster-2",
+    "livello": "intermedio",
+    "ammortizzamento": "alto",
+    "stabilita": "neutra",
+    "piastra": "nylon_tpu",
+    "drop_mm": 6,
+    "peso_g": 300,
+    "stack_mm": null,
+    "uso": [
+      "lento"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://www.on.com/en-gr/products/cloudmonster-2-m-3me1012",
+    "fonte_foto": "https://images.ctfassets.net/hnk2vsx53n6l/5Djt5G367gJwPXINVW9duZ/a28cf7f734243e0fb1ed6897f7f1724d/cef0fe2d4195560075ae527a9da433e9540c9714.png",
+    "fonti": {
+      "drop_mm": "https://www.on.com/en-gr/products/cloudmonster-2-m-3me1012",
+      "peso_g": "https://www.on.com/en-gr/products/cloudmonster-2-m-3me1012 (300 g, scheda UE, taglia non indicata)",
+      "piastra": "https://www.on.com/en-gr/products/cloudmonster-2-m-3me1012 (Speedboard in nylon)"
+    }
+  },
+  {
+    "marca": "Puma",
+    "modello": "Deviate Nitro 3",
+    "slug": "puma-deviate-nitro-3",
+    "livello": "avanzato",
+    "ammortizzamento": "alto",
+    "stabilita": "neutra",
+    "piastra": "carbonio",
+    "drop_mm": 10,
+    "peso_g": 250,
+    "stack_mm": 39,
+    "uso": [
+      "lento",
+      "ritmo"
+    ],
+    "vita_km": null,
+    "url_ufficiale": "https://us.puma.com/us/en/pd/deviate-nitro-3-mens-road-running-shoes/309707",
+    "fonte_foto": "https://images.puma.com/image/upload/f_auto,q_auto,b_rgb:fafafa,w_2000,h_2000/global/309707/06/sv01/fnd/PNA/fmt/png/Deviate-NITRO-3-Mens-Road-Running-Shoes",
+    "fonti": {
+      "drop_mm": "https://us.puma.com/us/en/pd/deviate-nitro-3-mens-road-running-shoes/309707",
+      "peso_g": "https://us.puma.com/us/en/pd/deviate-nitro-3-mens-road-running-shoes/309707",
+      "stack_mm": "https://us.puma.com/us/en/pd/deviate-nitro-3-mens-road-running-shoes/309707",
+      "piastra": "https://us.puma.com/us/en/pd/deviate-nitro-3-mens-road-running-shoes/309707"
+    }
+  }
+]
