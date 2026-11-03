@@ -11,17 +11,22 @@
 // Testata, barra di ricerca e Live Coach Cam restano in Home.jsx.
 
 import { ChartNoAxesColumn } from 'lucide-react'
+import { lazy, Suspense } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { cosaGuardare } from '../lib/cosaGuardare'
 import { GIORNI_COPERTURA } from '../lib/statisticheCoach'
 import { useCruscottoCoach } from '../useCruscottoCoach'
 import { RigaDestinazione } from './HomeCoachUI'
 import { PolsoTeam, CardOggi, CardSegnali, CardSmaltire, CardPiano, CardGare } from './CruscottoCoachUI'
 
+const BannerScarpe = lazy(() => import('./BannerScarpe'))
+
 export default function HomeCoachTelefono({
   atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura,
   feedback, recupero, fermi, scaduti, caricamento, numeroWorkout,
   onApriAtleta, onApriFeedback, onApriScaduto, onApriSeduta, onReport, onArchivio,
 }) {
+  const navigate = useNavigate()
   const { gare, polso, oggi, segnali, piano, notaPiano } = useCruscottoCoach({
     atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura, settimana: false,
   })
@@ -53,6 +58,10 @@ export default function HomeCoachTelefono({
       caricamento={caricamento} onApri={onApriSeduta} />
 
     <CardGare compatto gare={gare} onApri={apriGara} />
+
+    <Suspense fallback={null}>
+      <BannerScarpe ruolo="coach" onApri={() => navigate('/scarpe')} />
+    </Suspense>
 
     {/* Report e archivio restano, in fondo: materiale di lavoro che si apre
         sapendo già cosa si cerca, e sul telefono non hanno una voce nella tab bar. */}

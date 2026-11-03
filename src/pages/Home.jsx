@@ -50,6 +50,7 @@ import { daRiaprire } from '../lib/ricercaSospesa'
 // Pigro: la ricerca è solo del coach, e il chunk d'ingresso non deve portarsela
 // dietro per ogni atleta che apre l'app (CLAUDE.md §2, peso di `index`).
 const RicercaCoach = lazy(() => import('../components/RicercaCoach'))
+const BannerScarpe = lazy(() => import('../components/BannerScarpe'))
 // La Home del coach sulla versione desktop (src/useDesktop.js): pigra, il
 // telefono non la scarica mai.
 import { useSchermoLargo, eDesktop } from '../useDesktop'
@@ -1563,6 +1564,10 @@ setNotifications(prev => {
           ) : primaSettimana ? (
             <BannerObiettivoVuoto onFissa={() => setEventoModalOpen(true)} />
           ) : null}
+
+          <Suspense fallback={null}>
+            <BannerScarpe ruolo="atleta" uid={user?.id} onApri={() => navigate('/scarpe')} />
+          </Suspense>
 
           {loading ? (
             <div className="flex flex-col gap-2.5">
