@@ -13,7 +13,8 @@
 //     la fa l'interfaccia.
 
 import { supabase } from '../supabaseClient'
-import { kmAllenamento, kmScarpa, statoScarpa, SOGLIA_PREDEFINITA, numeroKm } from './kmScarpe'
+import { validaModello, sogliaProposta } from './caratteristicheScarpa'
+import { kmAllenamento, kmScarpa, statoScarpa, numeroKm } from './kmScarpe'
 
 // `numeroKm` vive in kmScarpe.js (senza il client Supabase); da qui resta con lo stesso nome.
 export { numeroKm }
@@ -41,24 +42,57 @@ export async function elencoCatalogo() {
   return data || []
 }
 
-export async function salvaModelloCatalogo({ marca, modello, tipo, drop_mm }) {
-  const m = String(marca ?? '').trim()
-  const mod = String(modello ?? '').trim()
-  if (!m || !mod) throw new Error('Marca e modello sono obbligatori.')
-  const drop = drop_mm === undefined || drop_mm === null || drop_mm === '' ? null : numeroKm(drop_mm)
-  const { data, error } = await supabase
-    .from(CATALOGO)
-    .insert({ marca: m, modello: mod, tipo: tipo || null, drop_mm: drop })
-    .select()
-    .single()
+/** Un modello per id; `null` se non c'è o se le tabelle non ci sono ancora. */
+export async function leggiModello(id) {
+  const { data, error } = await supabase.from(CATALOGO).select('*').eq('id', id).maybeSingle()
+  if (error) {
+    if (tabelleAssenti(error)) return null
+    throw error
+  }
+  return data || null
+}
+
+/** Valida con le regole del catalogo; al primo errore lancia, prima di ogni scrittura. */
+function datiValidi(campi, opzioni) {
+  const { dati, errori } = validaModello(campi, opzioni)
+  const primo = Object.values(errori)[0]
+  if (primo) throw new Error(primo)
+  return dati
+}
+
+export async function salvaModelloCatalogo(campi) {
+  const dati = datiValidi(campi)
+  const { data, error } = await supabase.from(CATALOGO).insert(dati).select().single()
   if (error) throw error
   return data
 }
 
 export async function aggiornaModelloCatalogo(id, campi = {}) {
-  const { data, error } = await supabase.from(CATALOGO).update(campi).eq('id', id).select().single()
+  const dati = datiValidi(campi, { parziale: true })
+  const { data, error } = await supabase.from(CATALOGO).update(dati).eq('id', id).select().single()
   if (error) throw error
   return data
+}
+
+// ── Foto del modello ────────────────────────────────────────────────────────
+// Bucket pubblico `scarpe`, un file per modello (`<id>.<est>`). L'URL salvato
+// porta `?v=` (la cache non tiene la foto vecchia) e, per le foto con lo sfondo
+// (non scontornate), il frammento `#sfondo` — stessa idea di `#deleted=` nelle
+// note vocali: l'interfaccia sa se mostrarla su un riquadro chiaro.
+
+const TIPO_FOTO = { webp: 'image/webp', png: 'image/png' }
+
+export const fotoConSfondo = (url) => typeof url === 'string' && url.endsWith('#sfondo')
+
+export async function caricaFotoModello(id, { blob, est, trasparente }) {
+  const percorso = `${id}.${est}`
+  const bucket = supabase.storage.from('scarpe')
+  const { error } = await bucket.upload(percorso, blob, { upsert: true, contentType: TIPO_FOTO[est] || 'image/png' })
+  if (error) throw error
+  const { data } = bucket.getPublicUrl(percorso)
+  const foto_url = `${data.publicUrl}?v=${Date.now()}${trasparente ? '' : '#sfondo'}`
+  await aggiornaModelloCatalogo(id, { foto_url })
+  return foto_url
 }
 
 export async function eliminaModelloCatalogo(id) {
@@ -151,7 +185,7 @@ export async function aggiungiScarpa({ athleteId, catalogo, marca, modello, kmIn
       marca: m,
       modello: mod,
       km_iniziali: km,
-      soglia_km: SOGLIA_PREDEFINITA,
+      soglia_km: sogliaProposta(catalogo),
       principale: false,
     })
     .select()

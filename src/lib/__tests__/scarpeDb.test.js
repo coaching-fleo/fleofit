@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Due finti: il `codiceErrore` si fissa alla costruzione, quindi uno per
 // l'errore generico e uno per «tabella assente» (42P01); `ctrl.codice` sceglie.
-const ctrl = await vi.hoisted(async () => ({ tabelle: {}, guasti: [], codice: undefined }))
+const ctrl = await vi.hoisted(async () => ({ tabelle: {}, guasti: [], codice: undefined, storage: null }))
 const finti = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
   const crea = (codiceErrore) => fintoSupabase(() => ctrl.tabelle, { erroreSu: () => ctrl.guasti, codiceErrore })
@@ -17,10 +17,14 @@ const finto = {
   get chiamate() { return attivo().chiamate },
   chiamateA: (t, m) => attivo().chiamateA(t, m),
 }
-vi.mock('../../supabaseClient', () => ({ supabase: { from: (t) => attivo().supabase.from(t) } }))
+vi.mock('../../supabaseClient', () => ({ supabase: {
+  from: (t) => attivo().supabase.from(t),
+  storage: { from: (b) => ctrl.storage.from(b) },
+} }))
 
 const db = await import('../scarpeDb')
-const { numeroKm, leggiScarpeAtleta, aggiungiScarpa, aggiornaScarpa, rendiPrincipale, scritteDagliAtleti, tabelleAssenti } = db
+const { numeroKm, leggiScarpeAtleta, aggiungiScarpa, aggiornaScarpa, rendiPrincipale, scritteDagliAtleti, tabelleAssenti,
+  salvaModelloCatalogo, aggiornaModelloCatalogo, leggiModello, caricaFotoModello, fotoConSfondo } = db
 
 const corsa = { steps: [{ type: 'run', duration: '5 km' }] }
 
@@ -28,6 +32,11 @@ beforeEach(() => {
   ctrl.tabelle = {}
   ctrl.guasti = []
   ctrl.codice = undefined
+  ctrl.storage = {
+    upload: vi.fn(() => Promise.resolve({ error: null })),
+    getPublicUrl: vi.fn((percorso) => ({ data: { publicUrl: `https://esempio/scarpe/${percorso}` } })),
+    from: vi.fn(() => ctrl.storage),
+  }
   finti.generico.chiamate.length = 0
   finti.assente.chiamate.length = 0
 })
@@ -182,5 +191,87 @@ describe('scritteDagliAtleti', () => {
     expect(r).toHaveLength(2)
     expect(r[0]).toMatchObject({ quante: 2 })
     expect(r[0].modello.toLowerCase()).toBe('pegasus 41')
+  })
+})
+
+describe('soglia dal catalogo', () => {
+  it('usa la vita stimata del modello, altrimenti 700', async () => {
+    ctrl.tabelle = { scarpe_atleta: [{ id: 'n' }] }
+    await aggiungiScarpa({ athleteId: 'at1', catalogo: { id: 'c1', marca: 'A', modello: 'B', vita_km: 900 }, kmIniziali: 0 })
+    await aggiungiScarpa({ athleteId: 'at1', catalogo: { id: 'c2', marca: 'A', modello: 'C' }, kmIniziali: 0 })
+    const ins = finto.chiamateA('scarpe_atleta', 'insert').map(c => c.args[0].soglia_km)
+    expect(ins).toEqual([900, 700])
+  })
+})
+
+describe('catalogo: validazione', () => {
+  it('salvaModelloCatalogo rifiuta un peso fuori limite senza chiamare insert', async () => {
+    await expect(salvaModelloCatalogo({ marca: 'X', modello: 'Y', peso_g: '50' })).rejects.toThrow(/peso/i)
+    expect(finto.chiamateA('scarpe_catalogo', 'insert')).toHaveLength(0)
+  })
+  it('salvaModelloCatalogo inserisce i dati normalizzati', async () => {
+    ctrl.tabelle = { scarpe_catalogo: [{ id: 'm1' }] }
+    await salvaModelloCatalogo({ marca: ' X ', modello: 'Y', peso_g: '250', altro: 1 })
+    const dati = finto.chiamateA('scarpe_catalogo', 'insert')[0].args[0]
+    expect(dati).toMatchObject({ marca: 'X', modello: 'Y', peso_g: 250 })
+    expect(dati.altro).toBeUndefined()
+  })
+  it('aggiornaModelloCatalogo valida in modo parziale', async () => {
+    await expect(aggiornaModelloCatalogo('m1', { drop_mm: 40 })).rejects.toThrow(/drop/i)
+    expect(finto.chiamateA('scarpe_catalogo', 'update')).toHaveLength(0)
+    ctrl.tabelle = { scarpe_catalogo: [{ id: 'm1' }] }
+    await aggiornaModelloCatalogo('m1', { foto_url: 'https://esempio/x.png' })
+    expect(finto.chiamateA('scarpe_catalogo', 'update')[0].args[0]).toEqual({ foto_url: 'https://esempio/x.png' })
+  })
+})
+
+describe('leggiModello', () => {
+  it('torna il modello', async () => {
+    ctrl.tabelle = { scarpe_catalogo: [{ id: 'm1', marca: 'Nike' }] }
+    expect(await leggiModello('m1')).toMatchObject({ id: 'm1' })
+    expect(finto.chiamateA('scarpe_catalogo', 'maybeSingle')).toHaveLength(1)
+  })
+  it('non trovato o tabelle assenti → null', async () => {
+    expect(await leggiModello('x')).toBeNull()
+    ctrl.guasti = ['scarpe_catalogo']
+    ctrl.codice = '42P01'
+    expect(await leggiModello('x')).toBeNull()
+  })
+  it('un altro errore lancia', async () => {
+    ctrl.guasti = ['scarpe_catalogo']
+    await expect(leggiModello('x')).rejects.toBeTruthy()
+  })
+})
+
+describe('caricaFotoModello', () => {
+  it('carica su <id>.<est>, e salva un URL con #sfondo se la foto ha lo sfondo', async () => {
+    ctrl.tabelle = { scarpe_catalogo: [{ id: 'm1' }] }
+    const blob = new Blob(['x'])
+    const url = await caricaFotoModello('m1', { blob, est: 'webp', trasparente: false })
+    expect(ctrl.storage.from).toHaveBeenCalledWith('scarpe')
+    expect(ctrl.storage.upload).toHaveBeenCalledWith('m1.webp', blob, { upsert: true, contentType: 'image/webp' })
+    expect(url).toMatch(/^https:\/\/esempio\/scarpe\/m1\.webp\?v=\d+#sfondo$/)
+    expect(finto.chiamateA('scarpe_catalogo', 'update')[0].args[0]).toEqual({ foto_url: url })
+    expect(fotoConSfondo(url)).toBe(true)
+  })
+  it('trasparente: niente #sfondo; png ha il suo contentType', async () => {
+    ctrl.tabelle = { scarpe_catalogo: [{ id: 'm1' }] }
+    const url = await caricaFotoModello('m1', { blob: new Blob(['x']), est: 'png', trasparente: true })
+    expect(ctrl.storage.upload.mock.calls[0][2]).toEqual({ upsert: true, contentType: 'image/png' })
+    expect(url).not.toMatch(/#/)
+    expect(fotoConSfondo(url)).toBe(false)
+  })
+  it('se upload fallisce lancia e non aggiorna foto_url', async () => {
+    ctrl.storage.upload.mockResolvedValueOnce({ error: new Error('no') })
+    await expect(caricaFotoModello('m1', { blob: new Blob(['x']), est: 'png', trasparente: true })).rejects.toThrow('no')
+    expect(finto.chiamateA('scarpe_catalogo', 'update')).toHaveLength(0)
+  })
+})
+
+describe('fotoConSfondo', () => {
+  it('true solo con #sfondo in coda', () => {
+    expect(fotoConSfondo('https://x/a.webp?v=1#sfondo')).toBe(true)
+    expect(fotoConSfondo('https://x/a.png?v=1')).toBe(false)
+    expect(fotoConSfondo(null)).toBe(false)
   })
 })

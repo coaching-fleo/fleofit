@@ -19,6 +19,9 @@
 --    scarpa E allenamento siano dello stesso atleta (come l'abbinamento di
 --    garmin_attivita).
 --
+--  · Bucket di storage `scarpe` (foto dei modelli) con tre policy limitate a quel
+--    bucket; e le caratteristiche dei 12 modelli di prova (sezione 5).
+--
 -- I km non si salvano: si calcolano dall'app (km_iniziali + allenamenti con
 -- questa scarpa).
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -31,7 +34,18 @@ create table public.scarpe_catalogo (
   marca     text not null,
   modello   text not null,
   tipo      text check (tipo in ('allenamento', 'gara', 'trail', 'ammortizzata')),
-  drop_mm   numeric,  -- facoltativo: nel seed è null, lo compila il coach
+  drop_mm   numeric check (drop_mm between 0 and 16),  -- facoltativo: lo compila il coach
+  -- Caratteristiche (tutte facoltative: un dato mancante è «—» nell'app)
+  livello         text check (livello in ('principiante','intermedio','avanzato')),
+  ammortizzamento text check (ammortizzamento in ('basso','medio','alto','massimo')),
+  stabilita       text check (stabilita in ('neutra','sostegno')),
+  piastra         text check (piastra in ('nessuna','nylon_tpu','carbonio')),
+  peso_g          integer check (peso_g between 100 and 500),
+  stack_mm        numeric check (stack_mm between 10 and 60),
+  uso             text[] check (uso <@ array['lento','ritmo','ripetute','gara','trail']),
+  vita_km         integer check (vita_km between 200 and 2000),
+  url_ufficiale   text,
+  foto_url        text,
   creato_da uuid default auth.uid(),
   creato_at timestamptz default now()
 );
@@ -51,6 +65,24 @@ create policy "scarpe_catalogo staff" on public.scarpe_catalogo
   as permissive for all to authenticated
   using      (public.e_staff() and public.email_corrente() <> 'demo@fleofit.it')
   with check (public.e_staff() and public.email_corrente() <> 'demo@fleofit.it');
+
+-- ── 1-bis. Bucket delle foto dei modelli ───────────────────────────────────
+-- Pubblico in lettura (le foto sono mostrate a ogni atleta). Scrive solo lo
+-- staff, MENO il revisore Apple. Le policy sono limitate al bucket 'scarpe':
+-- nessuna policy permissiva deve valere per ogni bucket (vedi multi_coach, §7).
+insert into storage.buckets (id, name, public) values ('scarpe', 'scarpe', true)
+  on conflict (id) do nothing;
+
+create policy "scarpe foto insert" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'scarpe' and public.e_staff() and public.email_corrente() <> 'demo@fleofit.it');
+create policy "scarpe foto update" on storage.objects
+  for update to authenticated
+  using      (bucket_id = 'scarpe' and public.e_staff() and public.email_corrente() <> 'demo@fleofit.it')
+  with check (bucket_id = 'scarpe' and public.e_staff() and public.email_corrente() <> 'demo@fleofit.it');
+create policy "scarpe foto delete" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'scarpe' and public.e_staff() and public.email_corrente() <> 'demo@fleofit.it');
 
 -- ── 2. scarpe_atleta ───────────────────────────────────────────────────────
 create table public.scarpe_atleta (
@@ -233,12 +265,146 @@ insert into public.scarpe_catalogo (marca, modello, tipo, drop_mm) values
   ('Salomon', 'S/Lab Ultra 3', 'trail', null)
 on conflict do nothing;
 
+-- ── 5. Caratteristiche dei 12 modelli di prova ─────────────────────────────
+-- Da tools/scarpe/schede.json (pagine ufficiali dei marchi; i campi non dati
+-- restano vuoti). ⚠️ Da ricontrollare: vedi tools/scarpe/LEGGIMI.md.
+-- fonte: https://www.nike.com/t/pegasus-41-mens-road-running-shoes-LMhfRGdO/FD2722-102
+update public.scarpe_catalogo set
+  livello = 'intermedio',
+  stabilita = 'neutra',
+  drop_mm = 10,
+  peso_g = 297,
+  uso = array['lento', 'ritmo'],
+  url_ufficiale = 'https://www.nike.com/t/pegasus-41-mens-road-running-shoes-LMhfRGdO/FD2722-102'
+ where lower(marca) = 'nike' and lower(modello) = 'pegasus 41';
+-- fonte: https://www.nike.com/ph/t/vaporfly-3-road-racing-shoes-xsDgvM/DV4129-006
+update public.scarpe_catalogo set
+  livello = 'avanzato',
+  stabilita = 'neutra',
+  piastra = 'carbonio',
+  drop_mm = 8,
+  peso_g = 200,
+  uso = array['gara', 'ripetute'],
+  url_ufficiale = 'https://www.nike.com/ph/t/vaporfly-3-road-racing-shoes-xsDgvM/DV4129-006'
+ where lower(marca) = 'nike' and lower(modello) = 'vaporfly 3';
+-- fonte: https://www.adidas.com/us/adizero-boston-12-running-shoes/ID4234.html
+update public.scarpe_catalogo set
+  livello = 'intermedio',
+  stabilita = 'neutra',
+  drop_mm = 7,
+  uso = array['lento', 'ritmo'],
+  url_ufficiale = 'https://www.adidas.com/us/adizero-boston-12-running-shoes/ID4234.html'
+ where lower(marca) = 'adidas' and lower(modello) = 'adizero boston 12';
+-- fonte: https://www.asics.com/us/en-us/novablast-4/c/aa50123894/men/shoes/
+update public.scarpe_catalogo set
+  livello = 'intermedio',
+  stabilita = 'neutra',
+  drop_mm = 8,
+  peso_g = 260,
+  uso = array['lento', 'ritmo'],
+  url_ufficiale = 'https://www.asics.com/us/en-us/novablast-4/c/aa50123894/men/shoes/'
+ where lower(marca) = 'asics' and lower(modello) = 'novablast 4';
+-- fonte: https://www.asics.com/us/en-us/gel-nimbus-26/p/ANA_1011B794-401.html
+update public.scarpe_catalogo set
+  livello = 'intermedio',
+  ammortizzamento = 'alto',
+  stabilita = 'neutra',
+  drop_mm = 8,
+  peso_g = 304,
+  uso = array['lento'],
+  url_ufficiale = 'https://www.asics.com/us/en-us/gel-nimbus-26/p/ANA_1011B794-401.html'
+ where lower(marca) = 'asics' and lower(modello) = 'gel-nimbus 26';
+-- fonte: https://www.hoka.com/en/hr/men-road/clifton-10/1162030.html
+update public.scarpe_catalogo set
+  livello = 'principiante',
+  ammortizzamento = 'massimo',
+  stabilita = 'neutra',
+  drop_mm = 8,
+  peso_g = 278,
+  stack_mm = 42,
+  uso = array['lento', 'ritmo'],
+  url_ufficiale = 'https://www.hoka.com/en/hr/men-road/clifton-10/1162030.html'
+ where lower(marca) = 'hoka' and lower(modello) = 'clifton 10';
+-- fonte: https://www.hoka.com/en/us/mens-trail/speedgoat-6/1147791.html
+update public.scarpe_catalogo set
+  livello = 'intermedio',
+  stabilita = 'neutra',
+  drop_mm = 5,
+  peso_g = 278,
+  uso = array['trail'],
+  url_ufficiale = 'https://www.hoka.com/en/us/mens-trail/speedgoat-6/1147791.html'
+ where lower(marca) = 'hoka' and lower(modello) = 'speedgoat 6';
+-- fonte: https://www.saucony.com/EE/en_EE/endorphin-speed-4/58852M.html
+update public.scarpe_catalogo set
+  livello = 'intermedio',
+  stabilita = 'neutra',
+  piastra = 'nylon_tpu',
+  drop_mm = 8,
+  peso_g = 233,
+  uso = array['ritmo', 'ripetute'],
+  url_ufficiale = 'https://www.saucony.com/EE/en_EE/endorphin-speed-4/58852M.html'
+ where lower(marca) = 'saucony' and lower(modello) = 'endorphin speed 4';
+-- fonte: https://www.brooksrunning.com/en_us/mens/shoes/road-running-shoes/ghost-17/1104422E090.095.html
+update public.scarpe_catalogo set
+  livello = 'intermedio',
+  stabilita = 'neutra',
+  drop_mm = 10,
+  peso_g = 286,
+  uso = array['lento', 'ritmo'],
+  url_ufficiale = 'https://www.brooksrunning.com/en_us/mens/shoes/road-running-shoes/ghost-17/1104422E090.095.html'
+ where lower(marca) = 'brooks' and lower(modello) = 'ghost 17';
+-- fonte: https://www.newbalance.com/pd/fresh-foam-x-1080v14/M1080V14-47512-PMG-NA.html
+update public.scarpe_catalogo set
+  livello = 'intermedio',
+  ammortizzamento = 'alto',
+  stabilita = 'neutra',
+  peso_g = 298,
+  uso = array['lento'],
+  url_ufficiale = 'https://www.newbalance.com/pd/fresh-foam-x-1080v14/M1080V14-47512-PMG-NA.html'
+ where lower(marca) = 'new balance' and lower(modello) = 'fresh foam x 1080v14';
+-- fonte: https://www.on.com/en-gr/products/cloudmonster-2-m-3me1012
+update public.scarpe_catalogo set
+  livello = 'intermedio',
+  ammortizzamento = 'alto',
+  stabilita = 'neutra',
+  piastra = 'nylon_tpu',
+  drop_mm = 6,
+  peso_g = 300,
+  uso = array['lento'],
+  url_ufficiale = 'https://www.on.com/en-gr/products/cloudmonster-2-m-3me1012'
+ where lower(marca) = 'on' and lower(modello) = 'cloudmonster 2';
+-- fonte: https://us.puma.com/us/en/pd/deviate-nitro-3-mens-road-running-shoes/309707
+update public.scarpe_catalogo set
+  livello = 'avanzato',
+  ammortizzamento = 'alto',
+  stabilita = 'neutra',
+  piastra = 'carbonio',
+  drop_mm = 10,
+  peso_g = 250,
+  stack_mm = 39,
+  uso = array['lento', 'ritmo'],
+  url_ufficiale = 'https://us.puma.com/us/en/pd/deviate-nitro-3-mens-road-running-shoes/309707'
+ where lower(marca) = 'puma' and lower(modello) = 'deviate nitro 3';
+
 commit;
 
--- Dopo, per verificare (deve stampare SEI policy: 2 + 2 + 2):
+-- Dopo, per verificare (deve stampare SEI policy sulle tabelle: 2 + 2 + 2):
 -- select tablename, policyname, cmd from pg_policies
 --  where tablename in ('scarpe_catalogo', 'scarpe_atleta', 'scarpe_uso') order by 1, 2;
 -- e il seed: select count(*) from public.scarpe_catalogo;  -- 114
+-- Le caratteristiche: select count(*) from public.scarpe_catalogo where livello is not null;  -- 12
+--
+-- Storage (sola lettura): devono comparire le tre policy «scarpe foto …», e
+-- nessuna policy permissiva deve valere per ogni bucket (senza bucket_id nella
+-- condizione), o annullerebbe le restrizioni:
+-- select policyname, cmd, qual, with_check from pg_policies
+--  where schemaname = 'storage' and tablename = 'objects';
+-- Il bucket: select id, public from storage.buckets where id = 'scarpe';
 
--- Rollback (cancella tutte le scarpe e gli usi):
+-- Rollback (cancella tutte le scarpe e gli usi, e le foto):
 -- DROP TABLE public.scarpe_uso, public.scarpe_atleta, public.scarpe_catalogo;
+-- DROP POLICY "scarpe foto insert" ON storage.objects;
+-- DROP POLICY "scarpe foto update" ON storage.objects;
+-- DROP POLICY "scarpe foto delete" ON storage.objects;
+-- delete from storage.objects where bucket_id = 'scarpe';
+-- delete from storage.buckets where id = 'scarpe';
