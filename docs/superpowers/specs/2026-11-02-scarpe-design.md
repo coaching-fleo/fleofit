@@ -253,9 +253,10 @@ vanno sostituite prima di mandare ad App Store la versione che le mostra (voce n
 - Le foto si vedono anche senza rete dopo la prima volta (cache del browser/WebView).
 
 ### Ambiente di prova
-I 12 modelli finti prendono le stesse caratteristiche; `foto_url` punta a copie locali
-servite solo dalla demo (`public/demo-scarpe/`, mai nel build di produzione — controllo come
-quello di `at-sara` al §9 di CLAUDE.md).
+I 12 modelli finti prendono le stesse caratteristiche; `foto_url` punta alle foto di
+`tools/scarpe/foto/`, importate **solo** nel ramo `VITE_DEMO` di `demoSemi.js` (non in
+`public/`, che finirebbe sempre nel build). Prima di un archive, `grep` sul bundle iOS che
+non ci siano (come per `at-sara`, CLAUDE.md §9).
 
 ### Test
 - `BannerScarpe`: i tre casi atleta, il coach, assente con tabelle mancanti; foto assente →
