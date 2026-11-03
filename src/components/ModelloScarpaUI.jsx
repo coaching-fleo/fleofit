@@ -25,7 +25,7 @@ export function TestataModello({ onIndietro }) {
 
 const PILLOLA = 'px-2.5 py-0.5 rounded-full border text-[12px] font-bold'
 
-export function SchedaModelloUI({ modello, staff, curaCatalogo, onCeLho, onModifica, onCaricaFoto, onPaginaUfficiale }) {
+export function SchedaModelloUI({ modello, staff, curaCatalogo, onCeLho, onModifica, onCaricaFoto, caricandoFoto, avvisoFoto, onPaginaUfficiale }) {
   const tipo = TIPI_SCARPA.find(t => t.valore === modello.tipo)
   const livello = LIVELLI.find(l => l.valore === modello.livello)
   return (
@@ -63,7 +63,8 @@ export function SchedaModelloUI({ modello, staff, curaCatalogo, onCeLho, onModif
             <button type="button" onClick={onModifica} className={`${BOTTONE_QUIETO} inline-flex items-center justify-center gap-2`}>
               <Pencil size={17} aria-hidden="true" />Modifica
             </button>
-            <BottoneFoto onScelta={onCaricaFoto} />
+            <BottoneFoto onScelta={onCaricaFoto} disabled={caricandoFoto}>{caricandoFoto ? 'Carico…' : 'Carica foto'}</BottoneFoto>
+            {avvisoFoto && <p role="status" className="text-[12.5px] font-medium text-muted">{avvisoFoto}</p>}
           </>
         )}
         {modello.url_ufficiale && (

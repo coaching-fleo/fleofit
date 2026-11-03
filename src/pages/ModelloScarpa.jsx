@@ -11,7 +11,7 @@ import { useAuth } from '../App'
 import { SchedaModelloUI, TestataModello } from '../components/ModelloScarpaUI'
 import { FoglioScarpa } from '../components/ScarpeUI'
 import { FoglioModelloCatalogo } from '../components/FoglioModelloCatalogo'
-import { aggiornaModelloCatalogo, aggiungiScarpa, caricaFotoModello, leggiModello } from '../lib/scarpeDb'
+import { aggiornaModelloCatalogo, aggiungiScarpa, caricaFotoModello, leggiModello, leggiScarpeAtleta } from '../lib/scarpeDb'
 import { riduciFoto } from '../lib/fotoScarpa'
 import { mostraErrore } from '../lib/alert'
 import { vibraSuccesso } from '../lib/aptica'
@@ -37,6 +37,9 @@ export default function ModelloScarpa() {
   const [modello, setModello] = useState(null)
   const [foglioScarpa, setFoglioScarpa] = useState(false)
   const [foglioModello, setFoglioModello] = useState(false)
+  const [caricandoFoto, setCaricandoFoto] = useState(false)
+  const [avvisoFoto, setAvvisoFoto] = useState(null)
+  const [haPrincipale, setHaPrincipale] = useState(false)
 
   useEffect(() => {
     let vivo = true
@@ -45,6 +48,16 @@ export default function ModelloScarpa() {
       .catch(e => { console.warn('Modello non caricato:', e); if (vivo) setStato('assente') })
     return () => { vivo = false }
   }, [id])
+
+  // Per «Rendila principale» di base: l'atleta non ne ha una attiva. Tabelle assenti = nessuna.
+  useEffect(() => {
+    if (staff || !user?.id) return undefined
+    let vivo = true
+    leggiScarpeAtleta(user.id)
+      .then(r => { if (vivo) setHaPrincipale(!!r?.disponibile && r.scarpe.some(x => !x.ritirata_at && x.principale)) })
+      .catch(() => {})
+    return () => { vivo = false }
+  }, [staff, user?.id])
 
   const aggiungi = async ({ kmIniziali, principale }) => {
     try {
@@ -81,12 +94,18 @@ export default function ModelloScarpa() {
     return foto_url
   }
   const caricaDallaScheda = async (file) => {
+    setCaricandoFoto(true)
+    setAvvisoFoto(null)
     try {
-      await caricaFoto(await riduciFoto(file))
+      const ridotta = await riduciFoto(file)
+      await caricaFoto(ridotta)
+      if (!ridotta.trasparente) setAvvisoFoto('Questa foto ha lo sfondo: si vedrà in un riquadro.')
       vibraSuccesso()
     } catch (e) {
       console.warn('Foto non caricata:', e)
       mostraErrore(`Non sono riuscito a caricare la foto. ${SENZA_RETE}`)
+    } finally {
+      setCaricandoFoto(false)
     }
   }
 
@@ -96,15 +115,18 @@ export default function ModelloScarpa() {
       {stato === 'assente' && (
         <p className="cascata max-w-2xl mx-auto mt-2 px-1 text-[14px] text-gray-400">Modello non trovato</p>
       )}
+      {stato === 'caricamento' && (
+        <div aria-hidden="true" className="max-w-2xl mx-auto mt-2 bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl h-24 animate-pulse" />
+      )}
       {stato === 'pronto' && modello && (
         <SchedaModelloUI modello={modello} staff={staff} curaCatalogo={curaCatalogo}
           onCeLho={() => setFoglioScarpa(true)}
           onModifica={() => setFoglioModello(true)}
-          onCaricaFoto={caricaDallaScheda}
+          onCaricaFoto={caricaDallaScheda} caricandoFoto={caricandoFoto} avvisoFoto={avvisoFoto}
           onPaginaUfficiale={() => apriUrl(modello.url_ufficiale)} />
       )}
       {foglioScarpa && modello && (
-        <FoglioScarpa modello={modello} onSalva={aggiungi} onChiudi={() => setFoglioScarpa(false)} />
+        <FoglioScarpa modello={modello} principaleDiBase={!haPrincipale} onSalva={aggiungi} onChiudi={() => setFoglioScarpa(false)} />
       )}
       {foglioModello && modello && (
         <FoglioModelloCatalogo iniziale={modello} onSalva={salvaModifica} onCaricaFoto={caricaFoto}

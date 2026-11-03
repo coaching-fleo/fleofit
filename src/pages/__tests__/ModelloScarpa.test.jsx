@@ -12,13 +12,14 @@ import { montaPagina } from '../../test/montaPagina'
 // errore a schermo: un dato mancante che sparisce invece di essere «—», una
 // soglia che non arriva da `vita_km`, un peso fuori scala che si salva.
 
-const dati = await vi.hoisted(async () => ({ modello: null }))
+const dati = await vi.hoisted(async () => ({ modello: null, mie: [] }))
 
 vi.mock('../../lib/scarpeDb', async (originale) => {
   const vero = await originale()
   return {
     tabelleAssenti: vero.tabelleAssenti,
     numeroKm: vero.numeroKm,
+    leggiScarpeAtleta: vi.fn(async () => ({ disponibile: true, scarpe: dati.mie })),
     leggiModello: vi.fn(async () => dati.modello),
     aggiornaModelloCatalogo: vi.fn(async (id, c) => ({ ...dati.modello, id, ...c })),
     caricaFotoModello: vi.fn(async () => 'https://esempio.invalid/f.webp?v=1'),
@@ -44,6 +45,7 @@ const monta = (user, role) => montaPagina(<ModelloScarpa />, { user, role, perco
 beforeEach(() => {
   vi.clearAllMocks()
   dati.modello = { ...MODELLO }
+  dati.mie = []
 })
 
 describe('scheda del modello', () => {
@@ -74,6 +76,32 @@ describe('scheda del modello', () => {
     await waitFor(() => expect(db.aggiungiScarpa).toHaveBeenCalledWith(expect.objectContaining({
       athleteId: 'a1', catalogo: expect.objectContaining({ id: 'm1', vita_km: 800 }),
     })))
+  })
+
+  it('«Ce l\'ho»: senza una principale l\'interruttore parte acceso, con una spenta', async () => {
+    monta(ATLETA, 'athlete')
+    await userEvent.click(await screen.findByRole('button', { name: /Ce l'ho/ }))
+    const f1 = await screen.findByRole('dialog', { name: 'Hoka Speedgoat 6' })
+    await waitFor(() => expect(within(f1).getByRole('switch', { name: 'Rendila principale' })).toHaveAttribute('aria-checked', 'true'))
+  })
+
+  it('«Ce l\'ho» con già una principale: interruttore spento', async () => {
+    dati.mie = [{ id: 's1', principale: true, ritirata_at: null }]
+    monta(ATLETA, 'athlete')
+    await waitFor(() => expect(db.leggiScarpeAtleta).toHaveBeenCalled())
+    await new Promise(r => setTimeout(r, 0))
+    await userEvent.click(await screen.findByRole('button', { name: /Ce l'ho/ }))
+    const f = await screen.findByRole('dialog', { name: 'Hoka Speedgoat 6' })
+    expect(within(f).getByRole('switch', { name: 'Rendila principale' })).toHaveAttribute('aria-checked', 'false')
+  })
+
+  it('«Carica foto» dalla scheda: con lo sfondo avvisa', async () => {
+    monta(COACH, 'admin')
+    await screen.findByRole('heading', { name: 'Speedgoat 6' })
+    const file = new File(['x'], 's.jpg', { type: 'image/jpeg' })
+    await userEvent.upload(document.querySelector('input[type="file"]'), file)
+    expect(await screen.findByRole('status')).toHaveTextContent('Questa foto ha lo sfondo: si vedrà in un riquadro')
+    expect(db.caricaFotoModello).toHaveBeenCalled()
   })
 
   it('coach: «Modifica» e «Carica foto», niente «Ce l\'ho»', async () => {
