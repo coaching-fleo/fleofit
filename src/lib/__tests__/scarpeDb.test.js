@@ -261,17 +261,13 @@ describe('caricaFotoModello', () => {
     expect(url).not.toMatch(/#/)
     expect(fotoConSfondo(url)).toBe(false)
   })
+  it('rifiuta un formato diverso da webp e png prima dell\'upload', async () => {
+    await expect(caricaFotoModello('m1', { blob: new Blob(['x']), est: 'gif', trasparente: true })).rejects.toThrow(/formato/i)
+    expect(ctrl.storage.upload).not.toHaveBeenCalled()
+  })
   it('se upload fallisce lancia e non aggiorna foto_url', async () => {
     ctrl.storage.upload.mockResolvedValueOnce({ error: new Error('no') })
     await expect(caricaFotoModello('m1', { blob: new Blob(['x']), est: 'png', trasparente: true })).rejects.toThrow('no')
     expect(finto.chiamateA('scarpe_catalogo', 'update')).toHaveLength(0)
-  })
-})
-
-describe('fotoConSfondo', () => {
-  it('true solo con #sfondo in coda', () => {
-    expect(fotoConSfondo('https://x/a.webp?v=1#sfondo')).toBe(true)
-    expect(fotoConSfondo('https://x/a.png?v=1')).toBe(false)
-    expect(fotoConSfondo(null)).toBe(false)
   })
 })

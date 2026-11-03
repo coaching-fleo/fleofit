@@ -2,6 +2,9 @@
 // 800 px) e dice se ha lo sfondo trasparente. Nessun Supabase qui.
 // `riduciFoto` usa il canvas e si prova a mano; i pezzi puri sono testati.
 
+/** La foto salvata ha lo sfondo (non scontornata): l'URL finisce con `#sfondo`. */
+export const fotoConSfondo = (url) => typeof url === 'string' && url.endsWith('#sfondo')
+
 /** I quattro pixel d'angolo hanno alpha < 16: la foto è già scontornata. */
 export function angoliTrasparenti(dati, larghezza, altezza) {
   const alpha = (x, y) => dati[(y * larghezza + x) * 4 + 3]

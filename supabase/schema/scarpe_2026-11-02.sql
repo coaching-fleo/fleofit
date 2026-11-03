@@ -44,8 +44,8 @@ create table public.scarpe_catalogo (
   stack_mm        numeric check (stack_mm between 10 and 60),
   uso             text[] check (uso <@ array['lento','ritmo','ripetute','gara','trail']),
   vita_km         integer check (vita_km between 200 and 2000),
-  url_ufficiale   text,
-  foto_url        text,
+  url_ufficiale   text check (url_ufficiale like 'https://%'),
+  foto_url        text check (foto_url like 'https://%'),
   creato_da uuid default auth.uid(),
   creato_at timestamptz default now()
 );
@@ -73,6 +73,11 @@ create policy "scarpe_catalogo staff" on public.scarpe_catalogo
 insert into storage.buckets (id, name, public) values ('scarpe', 'scarpe', true)
   on conflict (id) do nothing;
 
+-- Serve anche la SELECT: un upload con upsert:true la richiede per vedere se il
+-- file c'è già (il bucket pubblico serve le foto agli anonimi, ma non basta qui).
+create policy "scarpe foto lettura" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'scarpe');
 create policy "scarpe foto insert" on storage.objects
   for insert to authenticated
   with check (bucket_id = 'scarpe' and public.e_staff() and public.email_corrente() <> 'demo@fleofit.it');
@@ -394,15 +399,20 @@ commit;
 -- e il seed: select count(*) from public.scarpe_catalogo;  -- 114
 -- Le caratteristiche: select count(*) from public.scarpe_catalogo where livello is not null;  -- 12
 --
--- Storage (sola lettura): devono comparire le tre policy «scarpe foto …», e
--- nessuna policy permissiva deve valere per ogni bucket (senza bucket_id nella
+-- Storage (sola lettura): devono comparire le quattro policy «scarpe foto …»
+-- (lettura, insert, update, delete), e nessuna policy permissiva deve valere per ogni bucket (senza bucket_id nella
 -- condizione), o annullerebbe le restrizioni:
 -- select policyname, cmd, qual, with_check from pg_policies
 --  where schemaname = 'storage' and tablename = 'objects';
+-- ⚠️ Le due policy globali note (multi_coach_2026-10-15.sql §7), per `public` con
+-- `true`, su QUALUNQUE bucket: «consenti update a tutti» e «consenti delete a
+-- tutti». Se la query le elenca ancora, rendono inutili le restrizioni di
+-- `scarpe` (le permissive si sommano in OR): vanno risolte PRIMA del sì.
 -- Il bucket: select id, public from storage.buckets where id = 'scarpe';
 
 -- Rollback (cancella tutte le scarpe e gli usi, e le foto):
 -- DROP TABLE public.scarpe_uso, public.scarpe_atleta, public.scarpe_catalogo;
+-- DROP POLICY "scarpe foto lettura" ON storage.objects;
 -- DROP POLICY "scarpe foto insert" ON storage.objects;
 -- DROP POLICY "scarpe foto update" ON storage.objects;
 -- DROP POLICY "scarpe foto delete" ON storage.objects;

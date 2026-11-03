@@ -13,11 +13,12 @@
 //     la fa l'interfaccia.
 
 import { supabase } from '../supabaseClient'
+import { fotoConSfondo } from './fotoScarpa'
 import { validaModello, sogliaProposta } from './caratteristicheScarpa'
 import { kmAllenamento, kmScarpa, statoScarpa, numeroKm } from './kmScarpe'
 
 // `numeroKm` vive in kmScarpe.js (senza il client Supabase); da qui resta con lo stesso nome.
-export { numeroKm }
+export { numeroKm, fotoConSfondo }
 
 const CATALOGO = 'scarpe_catalogo'
 const SCARPE = 'scarpe_atleta'
@@ -82,12 +83,12 @@ export async function aggiornaModelloCatalogo(id, campi = {}) {
 
 const TIPO_FOTO = { webp: 'image/webp', png: 'image/png' }
 
-export const fotoConSfondo = (url) => typeof url === 'string' && url.endsWith('#sfondo')
 
 export async function caricaFotoModello(id, { blob, est, trasparente }) {
+  if (!TIPO_FOTO[est]) throw new Error('Formato della foto non ammesso.')
   const percorso = `${id}.${est}`
   const bucket = supabase.storage.from('scarpe')
-  const { error } = await bucket.upload(percorso, blob, { upsert: true, contentType: TIPO_FOTO[est] || 'image/png' })
+  const { error } = await bucket.upload(percorso, blob, { upsert: true, contentType: TIPO_FOTO[est] })
   if (error) throw error
   const { data } = bucket.getPublicUrl(percorso)
   const foto_url = `${data.publicUrl}?v=${Date.now()}${trasparente ? '' : '#sfondo'}`

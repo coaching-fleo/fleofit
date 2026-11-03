@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { angoliTrasparenti, estDelBlob } from '../fotoScarpa'
+import { angoliTrasparenti, estDelBlob, fotoConSfondo } from '../fotoScarpa'
 
 // Gli unici pezzi puri di fotoScarpa.js: riduciFoto usa il canvas, che jsdom non ha.
 
@@ -30,5 +30,13 @@ describe('estDelBlob', () => {
     expect(estDelBlob({ type: 'image/png' })).toBe('png')
     expect(estDelBlob({ type: '' })).toBe('png')
     expect(estDelBlob(null)).toBe('png')
+  })
+})
+
+describe('fotoConSfondo', () => {
+  it('true solo con #sfondo in coda', () => {
+    expect(fotoConSfondo('https://x/a.webp?v=1#sfondo')).toBe(true)
+    expect(fotoConSfondo('https://x/a.png?v=1')).toBe(false)
+    expect(fotoConSfondo(null)).toBe(false)
   })
 })
