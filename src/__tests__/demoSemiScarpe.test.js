@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { semi, VERSIONE_SEME } from '../demoSemi'
+import { validaModello } from '../lib/caratteristicheScarpa'
+import schede from '../../tools/scarpe/schede.json'
 import { kmAllenamento, kmScarpa, statoScarpa } from '../lib/kmScarpe'
 
 // Le scarpe della demo (INVENTATE) servono a vedere, in `npm run demo:atleta`
@@ -29,6 +31,19 @@ describe('le scarpe della demo', () => {
     for (const c of db.scarpe_catalogo) {
       expect(c.id && c.marca && c.modello).toBeTruthy()
     }
+  })
+
+  it('i modelli hanno le caratteristiche; la foto c\'è solo dove esiste la PNG', () => {
+    const conFoto = ['saucony-endorphin-speed-4', 'puma-deviate-nitro-3', 'on-cloudmonster-2']
+    const slugDi = (c) => schede.find(x => x.marca === c.marca && x.modello === c.modello)?.slug
+    for (const c of db.scarpe_catalogo) {
+      expect(c.livello).toBeTruthy()
+      const senzaFoto = { ...c }
+      delete senzaFoto.foto_url
+      expect(validaModello(senzaFoto).errori).toEqual({})
+    }
+    const slugFoto = db.scarpe_catalogo.filter(c => c.foto_url).map(slugDi).sort()
+    expect(slugFoto).toEqual([...conFoto].sort())
   })
 
   it('ogni scarpa ha marca e modello copiati, anche se viene dal catalogo', () => {

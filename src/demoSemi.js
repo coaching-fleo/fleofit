@@ -24,7 +24,15 @@ import {
   VERSIONE as VERSIONE_ESTRAZIONE, impronta, testoPulito, eserciziDelWorkout, validaEstrazione,
 } from '../supabase/functions/estrai-note/regole.ts'
 
-export const VERSIONE_SEME = 17
+// Le schede (caratteristiche) e le foto locali dei modelli: servono solo alla demo.
+import schedeScarpe from '../tools/scarpe/schede.json'
+// Le foto stanno in tools/scarpe/foto e la demo gira solo sul server di sviluppo (`npm run demo`),
+// che serve i file della radice così come sono: l'URL è scritto a mano. ⚠️ Niente
+// `import.meta.glob`/`new URL` verso le PNG: Vite le copierebbe in dist/assets anche nella
+// build vera (il modulo demo si pota, gli asset no). Sono le sole tre che esistono.
+const FOTO_SCARPE = ['saucony-endorphin-speed-4', 'puma-deviate-nitro-3', 'on-cloudmonster-2']
+
+export const VERSIONE_SEME = 18
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -501,7 +509,17 @@ const scarpe_catalogo = () => [
   ['On', 'Cloudmonster 2', 'ammortizzata'], ['Puma', 'Deviate Nitro 3', 'allenamento'],
 ].map(([marca, modello, tipo], i) => ({
   id: `cat-${i + 1}`, marca, modello, tipo, drop_mm: null, creato_da: null, creato_at: fa(90),
-}))
+})).map((c) => {
+  // Solo le colonne del catalogo (non slug/fonti/fonte_foto). La foto c'è dove esiste la PNG
+  // in tools/scarpe/foto; per gli altri modelli resta null e l'app mostra il disegno.
+  const sc = schedeScarpe.find(x => x.marca === c.marca && x.modello === c.modello)
+  if (!sc) return { ...c, foto_url: null }
+  const { slug, ...colonne } = sc
+  delete colonne.fonti
+  delete colonne.fonte_foto
+  const foto = FOTO_SCARPE.includes(slug) ? `/tools/scarpe/foto/${slug}.png` : null
+  return { ...c, ...colonne, marca: c.marca, modello: c.modello, foto_url: foto }
+})
 
 const scarpe_atleta = () => {
   const dal = (id, athlete_id, cat, extra) => {
