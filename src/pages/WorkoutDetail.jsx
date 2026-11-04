@@ -2060,7 +2060,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       {/* DA GARMIN: ogni categoria, anche Hyrox e Gym si completano dall'orologio */}
       {athleteWorkoutId && attivitaGarmin && (
         <Suspense fallback={null}>
-          <CardDaGarmin attivita={attivitaGarmin} onNonEraQuesto={chiediAnnullaGarmin} inCorso={annullaGarminInCorso} />
+          {/* Un allenamento libero nato da Garmin (`daGarmin`, garmin-webhook) È l'attività:
+              «Non era questo» lo lascerebbe vuoto e da fare. Si cancella come ogni libero. */}
+          <CardDaGarmin attivita={attivitaGarmin} onNonEraQuesto={s.daGarmin === true ? undefined : chiediAnnullaGarmin} inCorso={annullaGarminInCorso} />
         </Suspense>
       )}
       {/* NOTA VOCALE */}

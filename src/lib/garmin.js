@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { format, isValid, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
+import { leggiJson, scriviJson } from './offlineQueue'
 
 /**
  * Il collegamento Garmin Connect, lato app (Fase 0: collegare e scollegare).
@@ -149,4 +150,42 @@ export function dataCollegamento(iso) {
   if (!iso) return null
   const data = parseISO(iso)
   return isValid(data) ? format(data, 'd MMM yyyy', { locale: it }) : null
+}
+
+// ── Il recupero delle attività (04/11/2026) ─────────────────────────────────
+// Garmin manda le attività al server da solo, app aperta o no, login o no.
+// Ma un Push perso (server giù, collegamento da rinnovare) non torna più: al
+// login e alla prima apertura del giorno si chiede a `garmin-auth` di farsi
+// rimandare gli ultimi 7 giorni. Il webhook non duplica niente (`garmin_id`).
+
+const chiaveRecupero = (uid) => `fleofit_garmin_recupero_${uid}`
+
+/**
+ * Se chiedere il recupero: la prima volta, un giorno nuovo, o un login nuovo
+ * (`accesso` = `last_sign_in_at` dell'utente, che cambia a ogni accesso).
+ */
+export function serveRecupero(memo, oggi, accesso) {
+  return !memo || memo.giorno !== oggi || memo.accesso !== accesso
+}
+
+/**
+ * Chiede il recupero se serve. Vero se l'ha chiesto ed è andato. Non lancia
+ * mai: è un di più, e senza un collegamento attivo il server risponde ok e basta.
+ * Si segna solo se è andato: un errore riprova alla prossima apertura.
+ */
+export async function recuperaAttivitaGarmin(supabase, utente, adesso = new Date(), storage) {
+  if (!supabase || !utente?.id) return false
+  const oggi = format(adesso, 'yyyy-MM-dd')
+  const accesso = utente.last_sign_in_at ?? null
+  if (!serveRecupero(leggiJson(chiaveRecupero(utente.id), null, storage), oggi, accesso)) return false
+  try {
+    const { error } = await supabase.functions.invoke('garmin-auth', { body: { azione: 'sincronizza' } })
+    // 403 = staff (anche un admin in «Simula atleta»): non avrà mai Garmin, si
+    // segna come fatto per non richiederlo a ogni ritorno sull'app.
+    if (error && error.context?.status !== 403) return false
+  } catch {
+    return false
+  }
+  scriviJson(chiaveRecupero(utente.id), { giorno: oggi, accesso }, storage)
+  return true
 }

@@ -7,7 +7,7 @@
 // 🔒 Nei log solo id e conteggi: mai tipo, durate, numeri o corpi di Garmin.
 
 import type { AttivitaGarmin } from "../_shared/attivitaGarmin.ts"
-import { scegliAbbinamento, minutiMinimi, type Candidato } from "../_shared/abbinaGarmin.ts"
+import { scegliAbbinamento, diventaLibero, titoloLibero, minutiMinimi, type Candidato } from "../_shared/abbinaGarmin.ts"
 import { scollegaAtleta } from "../_shared/garmin.ts"
 
 // deno-lint-ignore no-explicit-any
@@ -70,7 +70,7 @@ async function salva(admin: Admin, athleteId: string, a: AttivitaGarmin): Promis
 }
 
 /** Una sola attività, dal Push al completamento. Lancia: chi chiama logga. */
-async function gestisci(admin: Admin, a: AttivitaGarmin): Promise<'salvata' | 'completata' | 'saltata'> {
+async function gestisci(admin: Admin, a: AttivitaGarmin): Promise<'salvata' | 'completata' | 'creata' | 'saltata'> {
   const coll = await collegamentoDi(admin, a.garminUserId);
   if (!coll) { console.warn('garmin-webhook: attività di un utente Garmin sconosciuto, saltata'); return 'saltata'; }
 
@@ -117,12 +117,29 @@ async function gestisci(admin: Admin, a: AttivitaGarmin): Promise<'salvata' | 'c
     durataStimataMin: durataStimata(r.workouts?.sections),
   }));
 
-  const scelto = scegliAbbinamento({
-    attivita: riga, candidati, collegatoAt: coll.collegatoAt, adesso: new Date().toISOString(),
+  const regole = {
+    attivita: riga, collegatoAt: coll.collegatoAt, adesso: new Date().toISOString(),
     // Solo per le prove: GARMIN_MINUTI_MINIMI abbassa i 10 minuti (abbinaGarmin.ts).
     minutiMinimi: minutiMinimi(Deno.env.get('GARMIN_MINUTI_MINIMI')),
-  });
-  if (!scelto) return 'salvata';
+  };
+  const scelto = scegliAbbinamento({ ...regole, candidati });
+  const athleteName = [atleta.name, atleta.surname].filter(Boolean).join(' ') || 'Atleta';
+  if (!scelto) {
+    // Le assegnazioni che hanno già la loro attività (la corsa del mattino non
+    // ferma la bici della sera): una lettura sola, sugli id del giorno.
+    const ids = assegnazioni.map((r) => r.id);
+    let conAttivita = new Set<string>();
+    if (ids.length) {
+      const { data: legate, error: eLeg } = await admin.from('garmin_attivita')
+        .select('athlete_workout_id').in('athlete_workout_id', ids);
+      if (eLeg) throw new Error(`attività legate non lette: ${eLeg.message}`);
+      conAttivita = new Set((legate ?? []).map((l: { athlete_workout_id: string }) => l.athlete_workout_id));
+    }
+    const conLegate = candidati.map((c) => ({ ...c, haAttivita: conAttivita.has(c.id) }));
+    if (!diventaLibero({ ...regole, candidati: conLegate })) return 'salvata';
+    const titoli = assegnazioni.map((r) => r.workouts?.title).filter(Boolean);
+    return await creaLibero(admin, a.garmin_id, coll.athleteId, athleteName, riga, titoli);
+  }
 
   // Solo se ancora da fare (Review Focus 4): un update che non tocca niente =
   // l'atleta l'ha già segnato, o un altro Push è arrivato prima. Nessuna notifica.
@@ -142,7 +159,6 @@ async function gestisci(admin: Admin, a: AttivitaGarmin): Promise<'salvata' | 'c
   console.log(`garmin-webhook: ${scelto} completato da un'attività Garmin`);
 
   const assegnazione = assegnazioni.find((r) => r.id === scelto);
-  const athleteName = [atleta.name, atleta.surname].filter(Boolean).join(' ') || 'Atleta';
   await avvisa({
     mode: 'coach_notification',
     action: 'completed',
@@ -156,9 +172,72 @@ async function gestisci(admin: Admin, a: AttivitaGarmin): Promise<'salvata' | 'c
   return 'completata';
 }
 
+/**
+ * L'allenamento libero da Garmin: un Custom completato, come l'«Aggiungi
+ * allenamento libero» della Home, con `sections.daGarmin` (la scheda non offre
+ * «Non era questo allenamento»: si cancella come ogni libero).
+ * Prima si PRENDE l'attività (`abbinamento = 'auto'` solo se ancora libera):
+ * due Push della stessa attività (orologio e Connect) non creano due allenamenti.
+ * Se workout o assegnazione non nascono, si torna indietro e l'attività resta
+ * voce grigia; il Push dopo ci riprova.
+ */
+async function creaLibero(
+  admin: Admin, garminId: string, athleteId: string, athleteName: string,
+  riga: { giorno: string; tipo: string }, titoli: string[],
+): Promise<'creata' | 'salvata'> {
+  const { data: presa, error: ePresa } = await admin.from('garmin_attivita')
+    .update({ abbinamento: 'auto' })
+    .eq('garmin_id', garminId).eq('athlete_id', athleteId)
+    .is('athlete_workout_id', null).is('abbinamento', null)
+    .select('garmin_id');
+  if (ePresa) throw new Error(`attività non presa: ${ePresa.message}`);
+  if (!presa?.length) return 'salvata';
+
+  const title = titoloLibero(riga.tipo, riga.giorno, titoli);
+  let workoutId: string | null = null;
+  let awId: string | null = null;
+  try {
+    const { data: w, error: eW } = await admin.from('workouts').insert({
+      title,
+      date: riga.giorno,
+      sections: { category: 'Custom', isAutonomous: true, daGarmin: true },
+      creato_da: athleteId, // come se l'avesse aggiunto l'atleta: la policy di lettura passa da lì
+    }).select('id').single();
+    if (eW) throw new Error(`workout: ${eW.message}`);
+    workoutId = w.id;
+    const { data: aw, error: eAw } = await admin.from('athlete_workouts').insert({
+      athlete_id: athleteId, workout_id: workoutId, completed_date: riga.giorno, status: 'completed', notes: '',
+    }).select('id').single();
+    if (eAw) throw new Error(`assegnazione: ${eAw.message}`);
+    awId = aw.id;
+    const { error: eLega } = await admin.from('garmin_attivita')
+      .update({ athlete_workout_id: aw.id }).eq('garmin_id', garminId).eq('athlete_id', athleteId);
+    if (eLega) throw new Error(`attività non legata: ${eLega.message}`);
+    console.log(`garmin-webhook: attività ${garminId} diventata l'allenamento libero ${aw.id}`);
+
+    await avvisa({
+      mode: 'coach_notification',
+      action: 'custom_workout',
+      athleteId,
+      athleteName,
+      workoutTitle: title,
+      route: `/workout/${workoutId}?athlete_id=${athleteId}`,
+    }, 'al coach', aw.id);
+    await avvisa({ mode: 'garmin_registrato', athlete_workout_id: aw.id }, "all'atleta", aw.id);
+    return 'creata';
+  } catch (e) {
+    // Indietro: assegnazione, workout e la presa dell'attività.
+    if (awId) await admin.from('athlete_workouts').delete().eq('id', awId);
+    if (workoutId) await admin.from('workouts').delete().eq('id', workoutId);
+    await admin.from('garmin_attivita').update({ abbinamento: null, athlete_workout_id: null })
+      .eq('garmin_id', garminId).eq('athlete_id', athleteId);
+    throw e;
+  }
+}
+
 /** Tutte le attività di un Push, una alla volta. Non lancia mai. */
 export async function gestisciAttivita(admin: Admin, attivita: AttivitaGarmin[]): Promise<void> {
-  const conti = { salvata: 0, completata: 0, saltata: 0, errore: 0 };
+  const conti = { salvata: 0, completata: 0, creata: 0, saltata: 0, errore: 0 };
   for (const a of attivita) {
     try {
       conti[await gestisci(admin, a)]++;
@@ -167,5 +246,5 @@ export async function gestisciAttivita(admin: Admin, attivita: AttivitaGarmin[])
       console.error(`garmin-webhook: attività ${a.garmin_id} non gestita:`, (e as Error).message);
     }
   }
-  console.log(`garmin-webhook: attività ${conti.completata} completano un workout, ${conti.salvata} solo salvate, ${conti.saltata} saltate, ${conti.errore} in errore`);
+  console.log(`garmin-webhook: attività ${conti.completata} completano un workout, ${conti.creata} diventano allenamenti liberi, ${conti.salvata} solo salvate, ${conti.saltata} saltate, ${conti.errore} in errore`);
 }

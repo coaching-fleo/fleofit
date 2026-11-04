@@ -78,6 +78,12 @@ async function togliRegistrazioneVecchia(admin: any, athleteId: string, nuovoUse
   }
 }
 
+/**
+ * Quanti giorni chiede «sincronizza»: gli stessi 7 oltre i quali un'attività
+ * non completa né crea più niente (`GIORNI_MASSIMI` di abbinaGarmin.ts).
+ */
+const GIORNI_RECUPERO = 7;
+
 /** I tipi chiesti al collegamento: attività, e il recupero (giornata, sonno, HRV) per avere il riferimento di 14 giorni dal primo giorno. */
 const TIPI_BACKFILL: TipoBackfill[] = ['activities', 'dailies', 'sleeps', 'hrv'];
 
@@ -288,6 +294,37 @@ async function azioneAtleta(req: Request): Promise<Response> {
       console.error(`garmin-auth: scollegamento di ${utente.id} incompleto:`, (e as Error).message);
       return risposta({ error: 'Scollegamento non riuscito. Riprova tra poco.' }, 500);
     }
+  }
+
+  if (corpo.azione === 'sincronizza') {
+    // Al login e all'apertura dell'app (al massimo una volta al giorno, lo
+    // decide l'app): Garmin rimanda le attività degli ultimi GIORNI_RECUPERO
+    // giorni. Quelle già salvate non si duplicano (`garmin_id`), quelle perse
+    // arrivano e, se serve, diventano allenamenti (garmin-webhook). Senza un
+    // collegamento attivo non si chiede niente: non è un errore.
+    const { data: riga, error } = await admin.from('garmin_collegamenti')
+      .select('athlete_id, stato, access_cifrato, refresh_cifrato, access_scade_at')
+      .eq('athlete_id', utente.id).maybeSingle();
+    if (error) {
+      console.error(`garmin-auth: sincronizza, collegamento di ${utente.id} non letto:`, error.message);
+      return risposta({ error: 'Garmin non è disponibile ora' }, 500);
+    }
+    if (!riga || riga.stato !== 'attivo') return risposta({ ok: true, collegato: false });
+    const access = await accessValido(admin, riga);
+    if (!access) return risposta({ ok: true, collegato: false });
+    const aSec = Math.floor(Date.now() / 1000);
+    try {
+      await chiediBackfillGarmin(access, 'activities', aSec - GIORNI_RECUPERO * 86400, aSec);
+    } catch (e) {
+      // 409 = lo stesso intervallo è già stato chiesto: per noi va bene così.
+      const status = (e as { status?: number }).status;
+      if (status !== 409) {
+        console.warn(`garmin-auth: recupero attività non chiesto per ${utente.id}${status ? ` (HTTP ${status})` : ''}`);
+        return risposta({ error: 'Garmin non ha risposto' }, 502);
+      }
+    }
+    console.log(`garmin-auth: recupero di ${GIORNI_RECUPERO} giorni chiesto per ${utente.id}`);
+    return risposta({ ok: true, collegato: true });
   }
 
   return risposta({ error: 'Azione sconosciuta' }, 400);
