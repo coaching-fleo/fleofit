@@ -45,6 +45,7 @@ nuove vanno in fondo alla sezione della 1.2.2, sotto un titolo «1.2.3».
 - Tornando indietro da un allenamento, **il calendario resta sul mese e sul giorno** da cui lo si era aperto.
 - La ricerca del tempo usa **solo il cognome** e mostra la lista di chi l'ha, **coppie dei Doubles comprese**: tocchi la tua riga, vedi tempo e split, e confermi.
 - Dalla Home, **«Hai una gara in programma?»** apre la stessa scelta della gara: prima apriva l'allenamento libero, e la gara non compariva né nel calendario né nel conto alla rovescia.
+- **«Nuovo evento» sceglie anche le gare di corsa italiane**: un interruttore Hyrox | Corsa; «Corsa» mostra le gare su strada, trail e montagna-trail dal calendario FIDAL (da questo mese a sei mesi avanti), con ricerca, filtro per regione e per distanza. Toccata la gara, nome e giorni si compilano da soli.
 
 ## Accesso
 - Chi è entrato con **Apple** può scegliere una password da **Impostazioni → «Password per il sito»**, senza che gli si chieda quella attuale (che non ha): così entra anche dal sito, dove Apple non c'è, con l'indirizzo mostrato nel foglio.

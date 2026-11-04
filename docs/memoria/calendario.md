@@ -496,3 +496,56 @@ nel calendario generale **e** in quello della scheda atleta.
 - Test: `CardMeseSwipe.test.jsx` (il gesto), più un caso in
   `CalendarioMese.test.jsx` e uno in `CalendarioAtleta.test.jsx` (il
   collegamento).
+
+
+## 9-gare-corsa — «Nuovo evento» sceglie anche le gare di corsa FIDAL (04/11/2026)
+
+In `NuovoEvento.jsx`, sopra la lista, un interruttore **Hyrox | Corsa**. «Corsa» apre
+`src/components/GareCorsa.jsx` (caricato pigro, chunk suo): le gare su strada, trail e
+montagna-trail d'Italia, dal mese in corso a sei mesi avanti. «Altro evento» resta il
+campo libero di prima.
+
+### Da dove arrivano
+- **Edge Function `gare-corsa`** (`supabase/functions/gare-corsa/`: `regole.ts` pura e
+  provata, `index.ts` la rete). Legge il **calendario FIDAL**: per ogni mese le pagine
+  nazionali (COD) e regionali (REG), 4 alla volta. Torna le gare già ripulite.
+  **Nessun secret, nessuna tabella.** `main` non la chiama.
+- ⚠️ **Non c'è un'interfaccia ufficiale**: si legge l'HTML delle pagine, come per HYROX.
+  Se un giorno si rompe: salvare la pagina nuova al posto della copia in
+  `src/lib/__tests__/fixtures/fidal-cod.html` / `fidal-reg.html` e guardare quale test
+  cade. Le copie sono **ridotte** (novembre 2026); l'unica riga MONTAGNA/TRAIL è di giugno
+  2026 (COD), spostata a Trento dentro il test.
+- **Si tiene**: STRADA, TRAIL, MONTAGNA-TRAIL. **Si scarta**: le gare annullate, le
+  categorie ragazzi, le sedi all'estero. La stessa gara che compare in più pagine è una
+  sola. Se una pagina non risponde le altre bastano; se tutte falliscono si serve la copia
+  vecchia, se non c'è risponde **502**.
+- **La distanza si ricava dal nome**, perché il calendario non la dà: **vince il numero**
+  («Maratona 42 km», «10K», «21,097») sulle parole («maratona», «mezza»). Senza numeri né
+  parole la gara resta senza distanza e non esce nei filtri per distanza.
+- **La regione si ricava dalla sigla di provincia** (`PROVINCE` in `regole.ts`; gli slug
+  sono quelli di `REGIONI` in `src/lib/gareCorsa.js`). ⚠️ **San Marino (SM) ha regione
+  `''`**: compare nella lista ma non sotto nessuna regione.
+- **Copie**: 6 ore in memoria nella funzione, **12 ore nel telefono**
+  (`fleofit_cache_gare_corsa`, con una `VERSIONE_CACHE` che sale se cambia la forma di una
+  gara). La regione scelta si ricorda in `fleofit_corsa_regione`.
+
+### Cosa si salva: `sections.corsa`, mai `sections.hyrox`
+`sectionsEventoCorsa(gara)` (`src/lib/gareCorsa.js`) scrive il workout Evento come sempre
+(`category: 'Event'`, `isEvent`, `isAutonomous`) più `corsa: { id, distanza, tipo, citta,
+provincia, regione, url, dal, al }`. 🔴 **Non si usa `hyrox`**: `RisultatoGara`,
+`InvitoRisultato` e `risultatoGara.js` leggono `sections.hyrox` per cercare il tempo su
+results.hyrox.com, e una corsa lì dentro farebbe chiedere «Com'è andata?» di una gara
+che HYROX non ha.
+
+### Il codice
+- `src/lib/gare.js`: le funzioni comuni a HYROX e corsa (`normalizza`, `gareFuture`,
+  `giorniGara`, `periodoGara`, `blocchettoData`, `quandoGara`, `perMese`, `giornoProposto`),
+  uscite da `gareHyrox.js`, che le **ri-esporta** (nessun import esistente è cambiato).
+- `src/lib/gareCorsa.js`: copia nel telefono, filtri (regione, distanza, ricerca),
+  `sectionsEventoCorsa`.
+- Demo (`npm run demo`): `gareCorsaFinte()` dà una lista finta, senza rete.
+- ⚠️ La funzione va **pubblicata**: `supabase functions deploy gare-corsa`. Non tocca il
+  sito (lo chiama solo l'app). Prima del deploy la scelta «Corsa» mostra l'errore di rete.
+- Test: `gareCorsaServer.test.js` (la lettura di `regole.ts` sulle copie in `fixtures/`),
+  `gareCorsa.test.js` (copia, filtri, `sectionsEventoCorsa`), più i casi in
+  `NuovoEvento.test.jsx`.

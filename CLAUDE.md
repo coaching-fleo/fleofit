@@ -37,7 +37,7 @@
   privacy su App Store Connect. Resta in stand-by la mail dei cambi di policy (BACKLOG, in cima).
 - **Android**: funziona sull'emulatore; restano tastiera, push con app chiusa, icona delle
   notifiche e tutta la pubblicazione sul Play Store (`docs/memoria/android.md` §A.4).
-- Test e lint: `npm test` → **2704 test** (30/10/2026; erano 2274 al 27/10); al 27/10/2026 `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note», di «Da un testo scritto» né dei Modelli di blocco) (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
+- Test e lint: `npm test` → **2856 test** (04/11/2026; erano 2704 al 30/10); al 27/10/2026 `npx eslint src` → **26 problemi** (nessuno nei file di «Dalle note», di «Da un testo scritto» né dei Modelli di blocco) (il lint del progetto intero oggi si ferma su una cartella di build Android senza permessi; l'ultimo conteggio completo era 42).
 - Le cose da fare stanno in **[BACKLOG.md](BACKLOG.md)**.
 
 ---
@@ -371,7 +371,7 @@ staging, **schema congelato** (§0, 0-bis).
   colpisce anche la web app. Più `segnalazione` (la mail «Segnala un problema» via Resend):
   la usa solo l'app, quindi pubblicarla non tocca la web app. E `gare-hyrox` (il calendario delle
   gare HYROX, letto da hyrox.com) e `risultato-hyrox` (il tempo dopo la gara, da
-  results.hyrox.com), anche queste solo dell'app.
+  results.hyrox.com), anche queste solo dell'app. E `gare-corsa` (le gare di corsa, dal calendario FIDAL): la chiama solo l'app, il deploy non tocca il sito.
 - Entrambi i bucket (`athlete-photos`, `voice-notes`) sono **pubblici**.
 
 ---
@@ -597,7 +597,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_offline_queue`, `fleofit_cache_workouts_<uid>`, `fleofit_cache_w_<id>`,
   `fleofit_cache_aw_<id>_<athleteId>`, `fleofit_cache_all_aw_<id>`, ~~`fleofit_tv_code`~~ (dal 04/11/2026 la TV collegata sta solo in memoria, `codiceTV.js`; la scheda la cancella se la trova),
   `fleofit_ultimo_export`, `fleofit_invito_atteso`, `fleofit_segnalazione_bozza`,
-  `fleofit_cache_gare_hyrox`, `fleofit_gare_senza_risultato`, `fleofit_cache_gare_passate`,
+  `fleofit_cache_gare_hyrox`, `fleofit_cache_gare_corsa`, `fleofit_corsa_regione`, `fleofit_gare_senza_risultato`, `fleofit_cache_gare_passate`,
   `fleofit_cache_risultato_<stagione>_<idp>`,
   `fleofit_come_stai_saltato` (il giorno in cui l'atleta ha scelto «Salta»: memoria del dispositivo),
   `fleofit_live_activity` (true/false: la Live Activity del timer; assente = la domanda non è ancora stata fatta),
@@ -703,7 +703,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `CalendarioAtleta`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |
 | `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |
-| `Calendar.jsx`, `CalendarioUI`, `useSwipeOrizzontale.js`, `rigaCalendario.js`, `NuovoEvento`, `gareHyrox.js`, `RisultatoGara`, `InvitoRisultato`, `GarePassate`, `risultatoGara.js`, Edge Function `gare-hyrox` e `risultato-hyrox` | `calendario.md` |
+| `Calendar.jsx`, `CalendarioUI`, `useSwipeOrizzontale.js`, `rigaCalendario.js`, `NuovoEvento`, `GareCorsa`, `gareCorsa.js`, `gare.js`, `gareHyrox.js`, `RisultatoGara`, `InvitoRisultato`, `GarePassate`, `risultatoGara.js`, Edge Function `gare-hyrox`, `gare-corsa` e `risultato-hyrox` | `calendario.md` |
 | `Messaggi.jsx`, `NuovoMessaggio.jsx`, `MessaggiUI`, `FoglioMessaggio`, `messaggiCoach.js`, Edge Function `send-reminders/broadcast.ts` | `messaggi.md` |
 | `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js`, `Analisi.jsx`, `AnalisiUI.jsx`, `analisi.js`, `components/grafici/`, `storicoEsercizio.js`, `StoricoEsercizio.jsx`, `esportaCsv.js`, `ReportDesktop.jsx` | `report.md` |
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
