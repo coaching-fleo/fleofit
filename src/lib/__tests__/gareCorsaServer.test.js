@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import cod from './fixtures/fidal-cod.html?raw'
 import reg from './fixtures/fidal-reg.html?raw'
 import {
-  leggiGareCorsa, distanzaDa, luogo, PROVINCE, mesiDaLeggere, unisci, urlMese,
+  leggiGareCorsa, distanzaDa, luogo, decodifica, PROVINCE, mesiDaLeggere, unisci, urlMese,
 } from '../../../supabase/functions/gare-corsa/regole.ts'
 
 // Perché questi test esistono
@@ -40,9 +40,23 @@ describe('leggiGareCorsa sulle pagine vere', () => {
 
   it('escono annullate, cross, ragazzi e gare fuori Italia', () => {
     const nomi = tutte.map(g => g.nome).join('|')
-    for (const via of ['Nuraghes', 'Valsugana', 'Kids', 'GIOCHI OLIMPICI', 'CASCINE', 'OFF-ROAD']) {
+    for (const via of ['Nuraghes', 'Valsugana', 'Kids', 'GIOCHI OLIMPICI', 'CASCINE', 'OFF-ROAD', 'Pecoraro', 'Balcone']) {
       expect(nomi).not.toContain(via)
     }
+  })
+
+  it('le annullate vere: «ANN: …» e «… - ANNULLATA» in coda, ma non «Annunziata»', () => {
+    // Le prime due sono righe vere di dicembre 2026, in fidal-reg.html.
+    expect(reg).toContain('ANN: 1° Memorial')
+    expect(reg).toContain('ANNULLATA - ANNULLATA - ANNULLATA')
+    const r = (nome, sotto = '') =>
+      `<table><tr><td></td><td><b>06/12</b></td><td><abbr>R</abbr></td><td><a href="https://www.fidal.it/calendario/x/REG1">${nome}</a><br><font>${sotto}</font></td><td>STRADA</td><td>Roma RM</td></tr></table>`
+    expect(leggiGareCorsa(r('Corsa X - ANNULLATA'), 2026)).toEqual([])
+    expect(leggiGareCorsa(r('Corsa X', 'annullata'), 2026)).toEqual([])
+    expect(leggiGareCorsa(r('Annullata - Corsa X'), 2026)).toEqual([])
+    expect(leggiGareCorsa(r('ANN : Corsa X'), 2026)).toEqual([])
+    expect(leggiGareCorsa(r('Corsa dell\'Annunziata'), 2026)).toHaveLength(1)
+    expect(leggiGareCorsa(r('Memorial Annalisa'), 2026)).toHaveLength(1)
   })
 
   it('quante gare restano', () => {
@@ -148,6 +162,18 @@ describe('mesi, date e unione', () => {
     expect(g).toMatchObject({ dal: '2026-12-30', al: '2027-01-02' })
   })
 
+  it('una data che non esiste o una fine prima dell\'inizio salta la riga', () => {
+    for (const d of ['31/11', '30-02/12', '29/02', '32/01', '10/13']) {
+      expect(leggiGareCorsa(`<table>${riga(d, 'COD1', 'Corsa')}</table>`, 2026), d).toEqual([])
+    }
+    expect(leggiGareCorsa(`<table>${riga('29/02', 'COD1', 'Corsa')}</table>`, 2028)).toHaveLength(1)
+    expect(leggiGareCorsa(`<table>${riga('21-22/11', 'COD1', 'Corsa')}</table>`, 2026)).toHaveLength(1)
+  })
+
+  it('junior è una gara per ragazzi', () => {
+    expect(leggiGareCorsa(`<table>${riga('08/11', 'COD1', 'Trofeo Junior')}</table>`, 2026)).toEqual([])
+  })
+
   it('unisci deduplica e ordina', () => {
     const a = leggiGareCorsa(`<table>${riga('08/11', 'COD2', 'Zeta')}${riga('01/11', 'COD3', 'Beta')}</table>`, 2026)
     const b = leggiGareCorsa(`<table>${riga('08/11', 'COD2', 'Zeta')}${riga('08/11', 'COD4', 'Alfa')}</table>`, 2026)
@@ -156,5 +182,11 @@ describe('mesi, date e unione', () => {
 
   it('urlMese', () => {
     expect(urlMese(2027, 1, 'REG')).toBe('https://www.fidal.it/calendario.php?anno=2027&mese=1&livello=REG&submit=Invia')
+  })
+})
+
+describe('decodifica', () => {
+  it('le entità con nome tengono la maiuscola', () => {
+    expect(decodifica('&Egrave; &egrave; &Agrave; &amp; &#8217;')).toBe('È è À & \u2019')
   })
 })

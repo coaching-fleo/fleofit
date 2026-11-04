@@ -66,7 +66,11 @@ export function decodifica(testo: string): string {
   return testo
     .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
     .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
-    .replace(/&([a-z]+);/gi, (t, n) => ENTITA[n.toLowerCase()] ?? t)
+    .replace(/&([a-z]+);/gi, (t, n) => {
+      const e = ENTITA[n.toLowerCase()]
+      // Il maiuscolo resta maiuscolo: «&Egrave;» è «È», non «è».
+      return e === undefined ? t : (n[0] !== n[0].toLowerCase() ? e.toUpperCase() : e)
+    })
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -126,7 +130,7 @@ export function distanzaDa(testo: string, tipo: string): Distanza {
   return 'altre'
 }
 
-const RAGAZZI = /\b(kids|giovan|esordient|ragazz|cadett|baby)/i
+const RAGAZZI = /\b(kids|giovan|junior|esordient|ragazz|cadett|baby)/i
 
 /** «08/11», «21-22/11», «30/12-02/01» → [dal, al] nell'anno della pagina (la fine può passare al successivo). */
 function leggiDate(testo: string, anno: number): [string, string] | null {
@@ -137,10 +141,16 @@ function leggiDate(testo: string, anno: number): [string, string] | null {
   else if ((m = /^(\d{1,2})\s*-\s*(\d{1,2})\/(\d{1,2})$/.exec(testo))) { [, g1, g2, m1] = m; m2 = m1 }
   else if ((m = /^(\d{1,2})\/(\d{1,2})$/.exec(testo))) { [, g1, m1] = m; g2 = g1; m2 = m1 }
   else return null
-  const dal = `${anno}-${due(m1)}-${due(g1)}`
-  let al = `${anno}-${due(m2)}-${due(g2)}`
-  if (al < dal) al = `${anno + 1}-${due(m2)}-${due(g2)}`
-  return [dal, al]
+  // Una data che non esiste («31/11») o una fine prima dell'inizio dentro lo
+  // stesso mese («30-02/12») è un errore di battitura di FIDAL: la riga salta.
+  const esiste = (a: number, m: string, g: string) => {
+    const d = new Date(Date.UTC(a, Number(m) - 1, Number(g)))
+    return d.getUTCFullYear() === a && d.getUTCMonth() === Number(m) - 1 && d.getUTCDate() === Number(g)
+  }
+  if (Number(m1) === Number(m2) && Number(g2) < Number(g1)) return null
+  const annoFine = Number(m2) < Number(m1) ? anno + 1 : anno
+  if (!esiste(anno, m1, g1) || !esiste(annoFine, m2, g2)) return null
+  return [`${anno}-${due(m1)}-${due(g1)}`, `${annoFine}-${due(m2)}-${due(g2)}`]
 }
 
 /**
@@ -162,7 +172,9 @@ export function leggiGareCorsa(html: string, anno: number): GaraCorsa[] {
     if (!date || !tipo) continue
     const nomeGrezzo = senzaTag(link[4])
     const sotto = senzaTag(/<font[^>]*>([\s\S]*?)<\/font>/.exec(celle[3])?.[1] || '')
-    if (/^annullata\b/i.test(nomeGrezzo) || RAGAZZI.test(`${nomeGrezzo} ${sotto}`)) continue
+    // Annullata si scrive in più modi: «Annullata - …» in testa, «ANN: …», «… - ANNULLATA»
+    // in coda o scritto sotto il nome. `\b` evita «Annunziata».
+    if (/^ann\s*:/i.test(nomeGrezzo) || /\bannullat[ao]\b/i.test(`${nomeGrezzo} ${sotto}`) || RAGAZZI.test(`${nomeGrezzo} ${sotto}`)) continue
     const { citta, provincia } = luogo(senzaTag(celle[5]))
     if (!provincia) continue
     const nome = nomeGrezzo.replace(/^[IVXLCDM]+\^?\s+/, '')
