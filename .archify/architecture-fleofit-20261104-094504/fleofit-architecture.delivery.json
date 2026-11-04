@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "d813392b-a612-4ee5-b28d-160ae2de4854",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/alessandropatrone/Desktop/FLEOFIT/fleofit-app/.archify/architecture-fleofit-20261104-094504/candidate.json",
+  "output": "/Users/alessandropatrone/Desktop/FLEOFIT/fleofit-app/.archify/architecture-fleofit-20261104-094504/fleofit-architecture.html",
+  "specification": {
+    "sha256": "e60a7f9255982274880305a7d97c8d7b5db8a04863b836f67959588792848f7f",
+    "bytes": 5919
+  },
+  "artifact": {
+    "sha256": "d4e263267e1e37e03b49dfba18114f869a73bdd8691b20eab4d75d125ac93721",
+    "bytes": 855070
+  }
+}

@@ -24,3 +24,18 @@ export const codiceDaQR = (testo) => {
   const trovato = testo.trim().match(LINK_TV)
   return trovato ? trovato[1] : null
 }
+
+// La TV collegata vive solo in memoria, come le persone di `personeTV.js`:
+// chiusa l'app, la scheda riparte scollegata (04/11/2026, segnalato dal
+// committente). Prima stava in localStorage (`fleofit_tv_code`) e alla
+// riapertura la scheda si diceva «collegata» a una TV che magari era spenta
+// da giorni, e su QUALUNQUE workout, non solo su quello mandato in TV.
+let collegata = null
+
+/** Il codice della TV collegata a questo workout, o `null`. */
+export const tvCollegata = (workoutId) =>
+  collegata && collegata.workoutId === workoutId ? collegata.codice : null
+
+export const ricordaTV = (workoutId, codice) => { collegata = { workoutId, codice } }
+
+export const dimenticaTV = () => { collegata = null }

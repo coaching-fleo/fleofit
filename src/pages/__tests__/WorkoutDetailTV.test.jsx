@@ -101,6 +101,7 @@ const { supabase } = await import('../../supabaseClient')
 const { AuthContext } = await import('../../App')
 const WorkoutDetail = (await import('../WorkoutDetail')).default
 const { rottaDaLinkTV } = await import('../../lib/linkTimer')
+const { tvCollegata, dimenticaTV, ricordaTV } = await import('../../lib/codiceTV')
 
 function apriScheda() {
   return render(
@@ -164,10 +165,32 @@ beforeEach(() => {
   qr.leggiQR.mockReset()
   qr.apriImpostazioni.mockImplementation(() => Promise.resolve())
   supabase.from.mockClear()
+  dimenticaTV()
   localStorage.removeItem('fleofit_tv_code')
   indirizzo.search = ''
   indirizzo.pathname = ''
   indirizzo.vai = null
+})
+
+describe('alla riapertura', () => {
+  // Segnalato dal committente il 04/11/2026: chiusa e riaperta l'app, la scheda
+  // si diceva ancora collegata alla TV dell'ultima volta.
+  it('un codice rimasto in localStorage da una vecchia sessione non collega niente, e va via', async () => {
+    localStorage.setItem('fleofit_tv_code', '4321')
+    apriScheda()
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Scheda di prova' })).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: /^TV$/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Scollega TV/i })).not.toBeInTheDocument()
+    expect(localStorage.getItem('fleofit_tv_code')).toBeNull()
+  })
+
+  it('la TV collegata a un altro workout non risulta collegata qui', async () => {
+    ricordaTV('w2', '4321')
+    apriScheda()
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Scheda di prova' })).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: /^TV$/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Scollega TV/i })).not.toBeInTheDocument()
+  })
 })
 
 describe('collegare la TV dal web', () => {
@@ -184,7 +207,7 @@ describe('collegare la TV dal web', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /Trasmetti in TV/i })).not.toBeInTheDocument())
     expect(tv.stato.aggiornamenti).toHaveLength(1)
     expect(tv.stato.aggiornamenti[0]).toMatchObject({ code: '4321', workout_id: 'w1', athlete_id: 'u1' })
-    expect(localStorage.getItem('fleofit_tv_code')).toBe('4321')
+    expect(tvCollegata('w1')).toBe('4321')
     expect(await screen.findAllByRole('button', { name: 'Avvia il timer' })).not.toHaveLength(0)
     expect(screen.queryByText('Connesso!')).not.toBeInTheDocument()
   })
@@ -299,7 +322,7 @@ describe('dopo il collegamento', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /Trasmetti in TV/i })).not.toBeInTheDocument())
     expect(tv.stato.aggiornamenti).toHaveLength(1)
-    expect(localStorage.getItem('fleofit_tv_code')).toBe('4321')
+    expect(tvCollegata('w1')).toBe('4321')
     expect(sequenza.costruita).toBe(0)
     expect(screen.queryByRole('button', { name: 'Avvia il timer' })).not.toBeInTheDocument()
   })
@@ -342,7 +365,7 @@ describe('dopo il collegamento', () => {
     apri()
     // Il collegamento al database si completa lo stesso…
     await waitFor(() => expect(tv.stato.aggiornamenti).toHaveLength(1))
-    await waitFor(() => expect(localStorage.getItem('fleofit_tv_code')).toBe('4321'))
+    await waitFor(() => expect(tvCollegata('w1')).toBe('4321'))
     // …ma l'interfaccia non salta: il foglio riaperto resta, nessun timer.
     expect(screen.getByRole('dialog', { name: /Trasmetti in TV/i })).toBeInTheDocument()
     expect(sequenza.costruita).toBe(0)
@@ -389,7 +412,7 @@ describe('dal link con ?tv= (il QR della TV letto fuori dalla scheda)', () => {
     apriConTV('tv=4321')
 
     await waitFor(() => expect(tv.stato.aggiornamenti).toHaveLength(1))
-    await waitFor(() => expect(localStorage.getItem('fleofit_tv_code')).toBe('4321'))
+    await waitFor(() => expect(tvCollegata('w1')).toBe('4321'))
     expect(sequenza.costruita).toBe(0)
     expect(screen.queryByRole('button', { name: 'Avvia il timer' })).not.toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: /Trasmetti in TV/i })).not.toBeInTheDocument()

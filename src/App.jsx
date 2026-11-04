@@ -44,6 +44,7 @@ const Messaggi = lazy(() => import('./pages/Messaggi'))
 const NuovoMessaggio = lazy(() => import('./pages/NuovoMessaggio'))
 const Modelli = lazy(() => import('./pages/Modelli'))
 const Login = lazy(() => import('./pages/Login'))
+const Landing = lazy(() => import('./pages/Landing'))
 // La barra laterale del desktop (solo coach, solo web, finestra ≥ 1024px): pigra,
 // così il chunk d'ingresso del telefono non cresce (CLAUDE.md §2).
 const BarraLaterale = lazy(() => import('./components/BarraLaterale'))
@@ -798,6 +799,8 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/tv" element={<TVDashboard />} />
+          {/* Landing pubblica, solo web: nessuno ci arriva dall'app nativa. */}
+          <Route path="/benvenuto" element={<Landing />} />
           {/* Un solo <ProtectedRoute> per tutte le pagine private: è la route
               di layout, e le pagine sono sue figlie. Non riavvolgerne nessuna. */}
           <Route element={<ProtectedRoute />}>

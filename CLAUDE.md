@@ -595,7 +595,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 - **Chiavi localStorage** (tutte con prefisso `fleofit_`, tranne `adminRoleOverride`):
   `fleofit_name_<uid>`, `fleofit_invite_code`, `fleofit_motivation`, `fleofit_workout_draft`,
   `fleofit_offline_queue`, `fleofit_cache_workouts_<uid>`, `fleofit_cache_w_<id>`,
-  `fleofit_cache_aw_<id>_<athleteId>`, `fleofit_cache_all_aw_<id>`, `fleofit_tv_code`,
+  `fleofit_cache_aw_<id>_<athleteId>`, `fleofit_cache_all_aw_<id>`, ~~`fleofit_tv_code`~~ (dal 04/11/2026 la TV collegata sta solo in memoria, `codiceTV.js`; la scheda la cancella se la trova),
   `fleofit_ultimo_export`, `fleofit_invito_atteso`, `fleofit_segnalazione_bozza`,
   `fleofit_cache_gare_hyrox`, `fleofit_gare_senza_risultato`, `fleofit_cache_gare_passate`,
   `fleofit_cache_risultato_<stagione>_<idp>`,
@@ -717,6 +717,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | un archive o una risposta ad App Store, `ios/`, `Info.plist`, entitlements | `app-store.md` |
 | test, lint, `src/test/`, ambiente di prova, navigazione e tasto indietro | `qualita-e-test.md` |
 | `useDesktop.js`, `BarraLaterale`, `HomeCoachDesktop`, `CalendarioTeam`, `calendarioTeam.js`, `cosaGuardare.js`, `CreaWorkoutDesktop`, `AtletiDesktop`, `ArchivioDesktop`, `tabellaAtleti.js`, ogni cosa della versione desktop (solo coach) | `../piano-web-desktop.md` |
+| `Landing.jsx`, `Landing.css`, `LandingApp.jsx`, `landingDati.js`, `src/assets/landing/`, `tools/landing-schermate/` | `landing.md` |
 | merge, `main`, Vercel | `branch.md` |
 | dove sta un file e a cosa serve | `struttura.md` |
 | le funzionalità per sommi capi | `funzionalita.md` |

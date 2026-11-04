@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "FLEOFIT system architecture",
+    "locale": "en",
+    "output": ".archify/architecture-fleofit-20261104-094504/fleofit-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/coaching-fleo/fleofit.git",
+      "provider": "github",
+      "revision": "12ec8613d9d5293226dcdac70a49199fa4e955f1"
+    }
+  },
+  "components": [
+    { "id": "users", "type": "external", "label": "Coach & athletes", "sublabel": "phone · browser · TV", "pos": [40, 202], "size": [130, 60] },
+    { "id": "vercel", "type": "cloud", "label": "Vercel", "sublabel": "static SPA, from main", "pos": [255, 40], "size": [140, 56],
+      "sources": [{ "path": "vercel.json", "line": 2, "label": "SPA rewrite" }] },
+    { "id": "app", "type": "frontend", "label": "React app", "sublabel": "web · iOS · Android", "tag": "Capacitor", "pos": [250, 198], "size": [150, 68],
+      "sources": [
+        { "path": "src/App.jsx", "line": 2, "label": "React Router" },
+        { "path": "capacitor.config.ts", "line": 4, "end_line": 6, "label": "native shell" },
+        { "path": "src/lib/pushToken.js", "line": 14, "label": "FCM token" }
+      ] },
+    { "id": "edge", "type": "backend", "label": "Edge Functions", "sublabel": "Deno · 10 functions", "tag": "AI · push · Garmin", "pos": [540, 172], "size": [170, 120],
+      "sources": [
+        { "path": "supabase/functions/send-reminders/index.ts", "line": 289, "label": "Web Push send" },
+        { "path": "supabase/functions/ai-workout/index.ts", "line": 95, "label": "Gemini call" },
+        { "path": "supabase/functions/garmin-webhook/index.ts", "line": 80, "label": "Garmin webhook" }
+      ] },
+    { "id": "db", "type": "database", "label": "Postgres + RLS", "sublabel": "Auth · Storage · Realtime", "pos": [545, 380], "size": [160, 60],
+      "sources": [
+        { "path": "src/supabaseClient.js", "line": 26, "label": "supabase-js client" },
+        { "path": "src/pages/TVDashboard.jsx", "line": 290, "end_line": 293, "label": "Realtime channel" },
+        { "path": "supabase/functions/garmin-webhook/attivita.ts", "line": 65, "label": "writes garmin_attivita" }
+      ] },
+    { "id": "backup", "type": "cloud", "label": "GitHub Actions", "sublabel": "nightly backup 22:30", "pos": [550, 510], "size": [150, 56],
+      "sources": [{ "path": ".github/workflows/db-backup.yml", "line": 19, "label": "cron" }] },
+    { "id": "ai", "type": "external", "label": "Gemini · Groq", "sublabel": "AI workouts, notes, search", "pos": [880, 60], "size": [160, 56],
+      "sources": [
+        { "path": "supabase/functions/ai-workout/index.ts", "line": 162, "label": "Gemini 2.5 Flash" },
+        { "path": "supabase/functions/_shared/groq.ts", "line": 12, "label": "Groq endpoint" },
+        { "path": "supabase/functions/estrai-note/index.ts", "line": 28, "label": "notes: Groq only" }
+      ] },
+    { "id": "push", "type": "external", "label": "FCM · Web Push", "sublabel": "notifications", "pos": [880, 165], "size": [160, 56],
+      "sources": [
+        { "path": "supabase/functions/send-reminders/index.ts", "line": 238, "label": "FCM v1" },
+        { "path": "supabase/functions/send-reminders/index.ts", "line": 60, "label": "VAPID" }
+      ] },
+    { "id": "garmin", "type": "external", "label": "Garmin Connect", "sublabel": "OAuth · wellness API", "pos": [880, 270], "size": [160, 56],
+      "sources": [{ "path": "supabase/functions/_shared/garminRegole.ts", "line": 13, "end_line": 17, "label": "Garmin endpoints" }] },
+    { "id": "misc", "type": "external", "label": "Resend · hyrox.com", "sublabel": "bug reports, races", "pos": [880, 375], "size": [160, 56],
+      "sources": [
+        { "path": "supabase/functions/segnalazione/index.ts", "line": 96, "label": "Resend email" },
+        { "path": "supabase/functions/gare-hyrox/index.ts", "line": 39, "label": "hyrox.com races" },
+        { "path": "supabase/functions/risultato-hyrox/regole.ts", "line": 18, "label": "race results" }
+      ] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Supabase project (shared, no staging)", "wraps": ["edge", "db"] }
+  ],
+  "connections": [
+    { "id": "users-app", "from": "users", "to": "app", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "vercel-app", "from": "vercel", "to": "app", "label": "web build", "variant": "dashed" },
+    { "id": "app-edge", "from": "app", "to": "edge", "label": "functions.invoke", "variant": "emphasis" },
+    { "id": "app-db", "from": "app", "to": "db", "label": "supabase-js · RLS", "variant": "security" },
+    { "id": "edge-db", "from": "edge", "to": "db", "label": "service role" },
+    { "id": "backup-db", "from": "backup", "to": "db", "label": "dump", "variant": "dashed" },
+    { "id": "edge-ai", "from": "edge", "to": "ai", "label": "generate" },
+    { "id": "edge-push", "from": "edge", "to": "push", "label": "send push" },
+    { "id": "edge-garmin", "from": "edge", "to": "garmin", "label": "OAuth · workouts" },
+    { "id": "garmin-edge", "from": "garmin", "to": "edge", "label": "webhook", "variant": "dashed" },
+    { "id": "edge-misc", "from": "edge", "to": "misc", "label": "fetch / email" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "One codebase", "items": ["Same React code ships as web (Vercel), iOS and Android", "Push to app = save; app:main = publish the site"] },
+    { "dot": "emerald", "title": "Data", "items": ["One Supabase project for web, iOS and Android", "Access enforced by RLS (admin / coach / athlete)", "TV dashboard follows tv_sessions via Realtime"] },
+    { "dot": "violet", "title": "AI", "items": ["Gemini 2.5 Flash with Groq as fallback", "Athlete notes go only to Groq (zero retention)"] },
+    { "dot": "cyan", "title": "Garmin", "items": ["Tokens stored encrypted, outside backups", "Activities and daily data arrive by webhook"] }
+  ]
+}

@@ -53,6 +53,7 @@ import { liveActivityDaChiedere, liveActivityAttiva, salvaPreferenzaLiveActivity
 import FoglioLiveActivity from '../components/FoglioLiveActivity'
 import FoglioPersoneTV from '../components/FoglioPersoneTV'
 import { bloccoPerPersone, bloccoAScaglioni, personeRicordate, ricordaPersone } from '../lib/personeTV'
+import { tvCollegata, ricordaTV, dimenticaTV } from '../lib/codiceTV'
 import { BRAND, RUNNING, GYM, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
@@ -317,7 +318,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [codiceDaChiedere, setCodiceDaChiedere] = useState(null)
   const apriFoglioTV = () => { giroFoglioTV.current++; setErroreTVIniziale(null); setTvModalOpen(true) }
   const chiudiFoglioTV = () => { giroFoglioTV.current++; setTvModalOpen(false) }
-  const [connectedTvCode, setConnectedTvCode] = useState(() => localStorage.getItem('fleofit_tv_code') || null)
+  const [tvQui, setTvQui] = useState(() => ({ workoutId: id, codice: tvCollegata(id) }))
+  // Un altro workout nella stessa pagina: la TV è collegata a quello di prima.
+  const connectedTvCode = tvQui.workoutId === id ? tvQui.codice : tvCollegata(id)
+  // La vecchia memoria permanente (fino al 04/11/2026): va via, se c'è ancora.
+  useEffect(() => { try { localStorage.removeItem('fleofit_tv_code') } catch { /* niente */ } }, [])
 
   // Voice Notes
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null)
@@ -961,8 +966,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       }).eq('code', codice)
       if (error) return { errore: 'Collegamento non riuscito. Riprova.' }
 
-      setConnectedTvCode(codice)
-      localStorage.setItem('fleofit_tv_code', codice)
+      setTvQui({ workoutId: id, codice })
+      ricordaTV(id, codice)
       return { ok: true }
     } catch {
       return { errore: 'Collegamento non riuscito. Controlla la connessione e riprova.' }
@@ -980,8 +985,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     if (error) {
       setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
     } else {
-      setConnectedTvCode(null)
-      localStorage.removeItem('fleofit_tv_code')
+      setTvQui({ workoutId: id, codice: null })
+      dimenticaTV()
       setAlertInfo({ title: 'Scollegato', message: 'La TV è tornata alla schermata iniziale.', type: 'success' })
       setTimerOpen(false)
       setTimerMinimized(false)
