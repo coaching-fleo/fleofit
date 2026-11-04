@@ -54,6 +54,13 @@ describe('caricaGareCorsa', () => {
     expect(salvata.gare).toEqual(GARE)
   })
 
+  it('una lista incompleta (completa: false) si mostra ma non si salva nel telefono', async () => {
+    const storage = memoria()
+    const s = supa({ data: { gare: GARE, completa: false }, error: null })
+    expect((await caricaGareCorsa(s, { adesso: ADESSO, storage })).gare).toEqual(GARE)
+    expect(storage.dati[CHIAVE_CACHE_GARE_CORSA]).toBeUndefined()
+  })
+
   it('server in errore: usa la copia anche vecchia', async () => {
     const storage = memoria({ [CHIAVE_CACHE_GARE_CORSA]: JSON.stringify({ versione: 1, salvate: ADESSO - 30 * 86_400_000, gare: GARE }) })
     const s = supa({ data: null, error: new Error('502') })
@@ -94,6 +101,11 @@ describe('formaAttuale', () => {
     expect(formaAttuale([])).toBe(false)
     expect(formaAttuale(null)).toBe(false)
     expect(formaAttuale([{ id: '1', dal: 'x', distanza: 'mezza' }])).toBe(false)
+  })
+  it('chiede anche al e nome come stringa', () => {
+    expect(formaAttuale([{ ...MILANO, al: undefined }])).toBe(false)
+    expect(formaAttuale([{ ...MILANO, nome: undefined }])).toBe(false)
+    expect(formaAttuale([{ ...MILANO, nome: 5 }])).toBe(false)
   })
 })
 

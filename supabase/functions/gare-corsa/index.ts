@@ -25,7 +25,9 @@ const risposta = (corpo: unknown, status = 200) => new Response(JSON.stringify(c
 
 // Il calendario cambia poco: sei ore bastano.
 const DURATA_COPIA = 6 * 3_600_000;
-let copia: { gare: GaraCorsa[], aggiornate: string, scade: number } | null = null;
+// Se qualche pagina non ha risposto la lista è incompleta: si tiene poco, per riprovare presto.
+const DURATA_COPIA_PARZIALE = 15 * 60_000;
+let copia: { gare: GaraCorsa[], aggiornate: string, scade: number, completa: boolean } | null = null;
 
 const INTESTAZIONI = {
   // ⚠️ Senza un User-Agent da browser il sito può rispondere 403.
@@ -73,7 +75,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST' && req.method !== 'GET') return risposta({ errore: 'Metodo non ammesso' }, 405);
 
-  if (copia && copia.scade > Date.now()) return risposta({ gare: copia.gare, aggiornate: copia.aggiornate });
+  if (copia && copia.scade > Date.now()) return risposta({ gare: copia.gare, aggiornate: copia.aggiornate, completa: copia.completa });
 
   try {
     const { gare, riuscite, totali } = await scarica();
@@ -82,14 +84,18 @@ serve(async (req) => {
     // per vera.
     if (riuscite === 0 || gare.length === 0) {
       console.error(`gare-corsa: ${riuscite}/${totali} pagine lette, ${gare.length} gare — il sito è cambiato?`);
-      if (copia) return risposta({ gare: copia.gare, aggiornate: copia.aggiornate });
+      if (copia) return risposta({ gare: copia.gare, aggiornate: copia.aggiornate, completa: copia.completa });
       return risposta({ errore: 'Calendario gare non raggiungibile' }, 502);
     }
-    copia = { gare, aggiornate: new Date().toISOString(), scade: Date.now() + DURATA_COPIA };
-    return risposta({ gare, aggiornate: copia.aggiornate });
+    const completa = riuscite === totali;
+    copia = {
+      gare, aggiornate: new Date().toISOString(), completa,
+      scade: Date.now() + (completa ? DURATA_COPIA : DURATA_COPIA_PARZIALE),
+    };
+    return risposta({ gare, aggiornate: copia.aggiornate, completa });
   } catch (e) {
     console.error('gare-corsa:', e);
-    if (copia) return risposta({ gare: copia.gare, aggiornate: copia.aggiornate });
+    if (copia) return risposta({ gare: copia.gare, aggiornate: copia.aggiornate, completa: copia.completa });
     return risposta({ errore: 'Calendario gare non raggiungibile' }, 502);
   }
 });

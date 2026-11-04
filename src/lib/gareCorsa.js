@@ -56,7 +56,7 @@ export const DISTANZE = [
  */
 export function formaAttuale(gare) {
   return Array.isArray(gare) && gare.length > 0 && gare.every(g =>
-    g && g.id && g.dal && g.distanza && typeof g.regione === 'string')
+    g && g.id && g.dal && g.al && typeof g.nome === 'string' && g.nome && g.distanza && typeof g.regione === 'string')
 }
 
 /**
@@ -72,7 +72,9 @@ export async function caricaGareCorsa(supabase, { adesso = Date.now(), storage =
   try {
     const { data, error } = await supabase.functions.invoke('gare-corsa', { body: {} })
     if (error || !Array.isArray(data?.gare) || data.gare.length === 0) throw error || new Error('lista vuota')
-    if (formaAttuale(data.gare)) {
+    // Una lista incompleta (qualche pagina FIDAL non ha risposto) si mostra ma non si tiene
+    // 12 ore nel telefono: alla prossima apertura si riprova.
+    if (data.completa !== false && formaAttuale(data.gare)) {
       scriviJson(CHIAVE_CACHE_GARE_CORSA, { versione: VERSIONE_CACHE, salvate: adesso, gare: data.gare }, storage)
     }
     return { gare: data.gare, errore: null }
