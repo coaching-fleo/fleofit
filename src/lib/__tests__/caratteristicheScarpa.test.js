@@ -23,6 +23,8 @@ describe('righeCaratteristiche', () => {
     expect(v['Uso ideale']).toBe('Lento · Ritmo')
     expect(v['Vita stimata']).toBe('700 km')
   })
+  it('i decimali hanno la virgola', () =>
+    expect(righeCaratteristiche({ stack_mm: 39.5 }).find(x => x.chiave === 'stack_mm').valore).toBe('39,5 mm'))
   it('zero è un dato', () =>
     expect(righeCaratteristiche({ drop_mm: 0 }).find(x => x.chiave === 'drop_mm').valore).toBe('0 mm'))
   it('uso: valori ignoti scartati, vuoto o null = «—»', () => {

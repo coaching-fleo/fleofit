@@ -70,7 +70,8 @@ create policy "scarpe_catalogo staff" on public.scarpe_catalogo
 -- Pubblico in lettura (le foto sono mostrate a ogni atleta). Scrive solo lo
 -- staff, MENO il revisore Apple. Le policy sono limitate al bucket 'scarpe':
 -- nessuna policy permissiva deve valere per ogni bucket (vedi multi_coach, §7).
-insert into storage.buckets (id, name, public) values ('scarpe', 'scarpe', true)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('scarpe', 'scarpe', true, 2097152, array['image/png','image/webp'])
   on conflict (id) do nothing;
 
 -- Serve anche la SELECT: un upload con upsert:true la richiede per vedere se il

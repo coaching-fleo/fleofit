@@ -48,8 +48,8 @@ export default function FotoScarpa({ url, tipo, alt = '', className = '', tono =
   )
   if (!fotoConSfondo(url)) return foto
   return (
-    <div data-sfondo="si" className={`bg-white rounded-2xl p-2 ${className}`}>
+    <span data-sfondo="si" className={`block bg-white rounded-2xl p-2 ${className}`}>
       {foto}
-    </div>
+    </span>
   )
 }

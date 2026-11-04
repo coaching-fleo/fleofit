@@ -85,14 +85,28 @@ describe('scheda del modello', () => {
     await waitFor(() => expect(within(f1).getByRole('switch', { name: 'Rendila principale' })).toHaveAttribute('aria-checked', 'true'))
   })
 
-  it('«Ce l\'ho» con già una principale: interruttore spento', async () => {
+  it('«Ce l\'ho» con già una principale: spento finché la lettura non risponde, poi interruttore spento', async () => {
     dati.mie = [{ id: 's1', principale: true, ritirata_at: null }]
+    let sblocca
+    db.leggiScarpeAtleta.mockImplementationOnce(() => new Promise(r => { sblocca = () => r({ disponibile: true, scarpe: dati.mie }) }))
     monta(ATLETA, 'athlete')
-    await waitFor(() => expect(db.leggiScarpeAtleta).toHaveBeenCalled())
-    await new Promise(r => setTimeout(r, 0))
-    await userEvent.click(await screen.findByRole('button', { name: /Ce l'ho/ }))
+    const tasto = await screen.findByRole('button', { name: /Ce l'ho/ })
+    expect(tasto).toBeDisabled()
+    sblocca()
+    await waitFor(() => expect(tasto).toBeEnabled())
+    await userEvent.click(tasto)
     const f = await screen.findByRole('dialog', { name: 'Hoka Speedgoat 6' })
     expect(within(f).getByRole('switch', { name: 'Rendila principale' })).toHaveAttribute('aria-checked', 'false')
+  })
+
+  it('«Ce l\'ho»: se la lettura fallisce si sblocca, interruttore acceso', async () => {
+    db.leggiScarpeAtleta.mockImplementationOnce(() => Promise.reject(new Error('rete')))
+    monta(ATLETA, 'athlete')
+    const tasto = await screen.findByRole('button', { name: /Ce l'ho/ })
+    await waitFor(() => expect(tasto).toBeEnabled())
+    await userEvent.click(tasto)
+    const f = await screen.findByRole('dialog', { name: 'Hoka Speedgoat 6' })
+    expect(within(f).getByRole('switch', { name: 'Rendila principale' })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('«Carica foto» dalla scheda: con lo sfondo avvisa', async () => {

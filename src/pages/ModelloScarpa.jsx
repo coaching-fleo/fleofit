@@ -39,7 +39,7 @@ export default function ModelloScarpa() {
   const [foglioModello, setFoglioModello] = useState(false)
   const [caricandoFoto, setCaricandoFoto] = useState(false)
   const [avvisoFoto, setAvvisoFoto] = useState(null)
-  const [haPrincipale, setHaPrincipale] = useState(false)
+  const [haPrincipale, setHaPrincipale] = useState(null) // null = non so ancora se ha una principale: «Ce l'ho» resta spento
 
   useEffect(() => {
     let vivo = true
@@ -55,7 +55,7 @@ export default function ModelloScarpa() {
     let vivo = true
     leggiScarpeAtleta(user.id)
       .then(r => { if (vivo) setHaPrincipale(!!r?.disponibile && r.scarpe.some(x => !x.ritirata_at && x.principale)) })
-      .catch(() => {})
+      .catch(() => { if (vivo) setHaPrincipale(false) })
     return () => { vivo = false }
   }, [staff, user?.id])
 
@@ -120,7 +120,7 @@ export default function ModelloScarpa() {
       )}
       {stato === 'pronto' && modello && (
         <SchedaModelloUI modello={modello} staff={staff} curaCatalogo={curaCatalogo}
-          onCeLho={() => setFoglioScarpa(true)}
+          onCeLho={() => setFoglioScarpa(true)} ceLhoDisabilitato={haPrincipale === null}
           onModifica={() => setFoglioModello(true)}
           onCaricaFoto={caricaDallaScheda} caricandoFoto={caricandoFoto} avvisoFoto={avvisoFoto}
           onPaginaUfficiale={() => apriUrl(modello.url_ufficiale)} />

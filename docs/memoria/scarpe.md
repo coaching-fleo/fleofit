@@ -113,19 +113,21 @@ sono nel `.sql` del 02/11, vedi sotto). Senza le tabelle il banner non compare.
 - Testi: atleta con una scarpa oltre soglia «`<modello>` è da cambiare» / «Scegli la nuova»; altrimenti la
   principale (o la prima attiva) «`<modello>` · `<km>` km» / «Le mie scarpe»; senza scarpe «Tieni il conto dei km
   delle tue scarpe» / «Aggiungi la tua». Coach: «Il catalogo scarpe · N modelli» / «Apri», **singolare** «1 modello».
-  Usa `scarpa.stato` se `leggiScarpeAtleta` lo dà, altrimenti `statoScarpa(km, soglia_km)`.
 - Foto del banner: quella della scarpa mostrata, altrimenti il primo modello del catalogo con foto; il disegno
   di ripiego prende `tono="scuro"` sul giallo.
 
 ### La scheda del modello (`/scarpe/modello/:id`, `ModelloScarpa.jsx`, `ModelloScarpaUI`)
 Uguale per atleta e coach. **8 righe fisse, sempre nello stesso ordine** (`righeCaratteristiche`):
-ammortizzamento, stabilità, piastra, drop, altezza al tallone, peso, uso, vita stimata. Un dato mancante è
+Ammortizzamento · Stabilità · Piastra · Drop · Peso · Altezza al tallone · Uso ideale · Vita stimata. Un dato mancante è
 «—», mai 0 e mai riga nascosta (il drop 0 mm è un dato). Dopo «Ce l'ho» si va a `/scarpe`, dove c'è la scarpa
 nuova. Il coach modifica da `FoglioModelloCatalogo` (file suo: **non** si riesporta da `ScarpeUI`, giro
 circolare); `validaModello(campi, { parziale })` ignora le chiavi sconosciute e con `parziale` controlla
 solo i campi presenti. Un valore fuori elenco è errore; solo `uso` filtra in silenzio.
-La pagina ha anche «Carica foto» (oltre al foglio) e, per una foto con sfondo, un avviso e la proposta
-di renderla principale.
+La pagina ha anche «Carica foto» (oltre al foglio); per una foto con sfondo mostra un avviso. «Ce l'ho»
+propone di renderla principale solo se l'atleta non ne ha già una, e resta spento finché la lettura delle sue
+scarpe non risponde (altrimenti avrebbe sostituito la principale senza saperlo; tabelle assenti o errore = nessuna).
+File orfani: nel bucket possono restare file vecchi (foto ricaricata con un'estensione diversa; eliminando un
+modello la sua foto non si cancella).
 
 ### Colonne nuove di `scarpe_catalogo` (con i limiti)
 `livello` (principiante/intermedio/avanzato), `ammortizzamento` (basso/medio/alto/massimo), `stabilita`

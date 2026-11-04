@@ -25,7 +25,7 @@ export function TestataModello({ onIndietro }) {
 
 const PILLOLA = 'px-2.5 py-0.5 rounded-full border text-[12px] font-bold'
 
-export function SchedaModelloUI({ modello, staff, curaCatalogo, onCeLho, onModifica, onCaricaFoto, caricandoFoto, avvisoFoto, onPaginaUfficiale }) {
+export function SchedaModelloUI({ modello, staff, curaCatalogo, onCeLho, ceLhoDisabilitato = false, onModifica, onCaricaFoto, caricandoFoto, avvisoFoto, onPaginaUfficiale }) {
   const tipo = TIPI_SCARPA.find(t => t.valore === modello.tipo)
   const livello = LIVELLI.find(l => l.valore === modello.livello)
   return (
@@ -54,7 +54,7 @@ export function SchedaModelloUI({ modello, staff, curaCatalogo, onCeLho, onModif
       </dl>
       <div className="flex flex-col gap-2.5">
         {!staff && (
-          <button type="button" onClick={onCeLho} className={`${BOTTONE_BRAND} inline-flex items-center justify-center gap-2`}>
+          <button type="button" onClick={onCeLho} disabled={ceLhoDisabilitato} className={`${BOTTONE_BRAND} inline-flex items-center justify-center gap-2`}>
             <Footprints size={17} aria-hidden="true" />Ce l'ho
           </button>
         )}

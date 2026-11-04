@@ -54,8 +54,8 @@
 dal SQL editor, controllare con una lettura: 3 tabelle (`scarpe_catalogo`, `scarpe_atleta`, `scarpe_uso`), 6 policy,
 `select count(*) from scarpe_catalogo` = **114**. Poi prova sul telefono (la fa il committente) e ingresso nella 1.2.3.
 Da tracciare (`docs/memoria/scarpe.md`): `drop_mm` del catalogo tutti null, da compilare dall'app.
-Dopo il sì, **prima** di caricare foto: controllare le due policy globali «consenti update a tutti» / «consenti delete a tutti»
-su `storage.objects` (multi_coach §7), che annullerebbero le restrizioni del bucket `scarpe`. Poi caricare le **12 foto**
+**Prima del sì alla migrazione**: controllare le due policy globali «consenti update a tutti» / «consenti delete a tutti»
+su `storage.objects` (multi_coach §7), che annullerebbero le restrizioni del bucket `scarpe`. Dopo il sì caricare le **12 foto**
 (9 ancora mancanti) da «Carica foto» o con `tools/scarpe/carica-foto.sh`.
 
 ## ⏳ Scarpe — sostituire le foto ufficiali dei marchi

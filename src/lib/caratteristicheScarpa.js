@@ -52,7 +52,7 @@ const trovaUso = (uso) =>
 /** Le 8 righe della scheda, sempre nello stesso ordine; il valore è già testo. */
 export function righeCaratteristiche(modello) {
   const m = modello || {}
-  const num = (chiave, unita) => (m[chiave] === null || m[chiave] === undefined || m[chiave] === '' ? '—' : `${m[chiave]} ${unita}`)
+  const num = (chiave, unita) => (m[chiave] === null || m[chiave] === undefined || m[chiave] === '' ? '—' : `${String(m[chiave]).replace('.', ',')} ${unita}`)
   const uso = trovaUso(m.uso)
   return [
     { chiave: 'ammortizzamento', etichetta: 'Ammortizzamento', valore: etichettaDi('ammortizzamento', m.ammortizzamento) ?? '—' },

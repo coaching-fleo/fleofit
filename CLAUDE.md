@@ -281,6 +281,8 @@ npx cap sync ios # solo la sincronizzazione, se il build è già fatto
 > §9-unetvicies, e 84 dal 02/09 con `previsione` + `PrevisioneUI` §9-quatervicies). Se risale sopra i 400, qualcuno ha rimesso `jspdf` o `html-to-image`
 > fra gli import in testa (§9-noviesdecies).
 >
+> ⚠️ Dal 03/11/2026, dopo il banner delle scarpe, `index` è ≈**616,77 KB** (misura finale, `docs/memoria/scarpe.md`).
+>
 > ⚠️ E `index` deve restare intorno ai **594 KB** (**616,18 KB al 03/11/2026**, scarpe: il locale `it` di date-fns è passato da un chunk già caricato all'avvio a `index`, carico reale all'avvio +0,5 KB misurato, più ~1,2 KB del hook pigro delle scarpe; margine dal `chunkSizeWarningLimit` 620 ora ~4 KB, `docs/memoria/scarpe.md`) (≈598 KB dal 29/10/2026, recupero Garmin; **602,78 KB al 30/10/2026**, già prima del QR della TV, che sta in `WorkoutDetail`/`TVDashboard`): è il chunk d'ingresso, quello
 > che gatekeepa il primo fotogramma. Se sale di colpo di qualche decina di KB,
 > qualcuno ha importato in modo NON pigro un pezzo montato da più pagine — è
