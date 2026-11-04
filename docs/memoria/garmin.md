@@ -423,6 +423,14 @@ server `https://apis.garmin.com/wellness-api`), con la sessione del committente.
   ultimi 7 giorni già salvate come voce grigia, al primo recupero diventano allenamenti liberi se
   rispettano le regole.
 
+- 🔴 **Trovato il 04/11/2026, subito dopo il deploy**: un'attività di lunedì 2/11, già salvata come
+  voce grigia **prima** del codice nuovo, non diventava allenamento. Il webhook decide solo quando
+  un'attività arriva, e Garmin **può non rimandare** un periodo già chiesto (al collegamento si
+  chiedono 30 giorni). Corretto: `sincronizza` prima **riesamina le attività già salvate** degli
+  ultimi 7 giorni, libere e mai rifiutate (`rivalutaSalvate` di `garmin-webhook/attivita.ts`, che
+  `garmin-auth` importa), poi chiede a Garmin. Risponde `{ nuovi }`; se Garmin non risponde, ok lo
+  stesso (`garmin: false`). ✅ Ripubblicate `garmin-auth` e `garmin-webhook` il 04/11/2026.
+
 ### Passi del committente
 1. ✅ (04/11/2026) `supabase functions deploy garmin-webhook --no-verify-jwt`
 2. ✅ (04/11/2026) `supabase functions deploy garmin-auth --no-verify-jwt`

@@ -7,7 +7,7 @@
 // 🔒 Nei log solo id e conteggi: mai tipo, durate, numeri o corpi di Garmin.
 
 import type { AttivitaGarmin } from "../_shared/attivitaGarmin.ts"
-import { scegliAbbinamento, diventaLibero, titoloLibero, minutiMinimi, type Candidato } from "../_shared/abbinaGarmin.ts"
+import { scegliAbbinamento, diventaLibero, titoloLibero, minutiMinimi, GIORNI_MASSIMI, type Candidato } from "../_shared/abbinaGarmin.ts"
 import { scollegaAtleta } from "../_shared/garmin.ts"
 
 // deno-lint-ignore no-explicit-any
@@ -91,10 +91,23 @@ async function gestisci(admin: Admin, a: AttivitaGarmin): Promise<'salvata' | 'c
   }
 
   await salva(admin, coll.athleteId, a);
+  return await decidi(admin, coll, atleta, a.garmin_id, a.inizio);
+}
+
+/**
+ * Dopo il salvataggio: completa un workout assegnato, o crea l'allenamento
+ * libero, o lascia la voce grigia. La usa il Push e `rivalutaSalvate` (il
+ * recupero dall'app), quindi legge tutto dalla riga salvata.
+ */
+async function decidi(
+  admin: Admin, coll: Atleta, atleta: { name?: string; surname?: string },
+  garminId: string, inizio: string,
+): Promise<'salvata' | 'completata' | 'creata'> {
+  const a = { garmin_id: garminId };
   if (!coll.collegatoAt) return 'salvata';
   // Il backfill (prima del collegamento) non completa mai: si risparmiano due letture.
   // L'autorità resta scegliAbbinamento, che fa lo stesso controllo.
-  if (Date.parse(a.inizio) < Date.parse(coll.collegatoAt)) return 'salvata';
+  if (Date.parse(inizio) < Date.parse(coll.collegatoAt)) return 'salvata';
 
   // Riletta: abbinamento e athlete_workout_id sono quelli veri della riga.
   const { data: riga, error: eRiga } = await admin.from('garmin_attivita')
@@ -233,6 +246,43 @@ async function creaLibero(
       .eq('garmin_id', garminId).eq('athlete_id', athleteId);
     throw e;
   }
+}
+
+/**
+ * Il recupero chiesto dall'app (`sincronizza` di garmin-auth): le attività già
+ * SALVATE degli ultimi GIORNI_MASSIMI giorni, ancora libere e mai rifiutate,
+ * ripassano da `decidi`. Serve per quelle arrivate prima di una regola nuova
+ * (il 04/11/2026: le voci grigie salvate prima degli allenamenti liberi) o
+ * quando Garmin non rimanda un periodo già chiesto. Non lancia mai.
+ */
+export async function rivalutaSalvate(admin: Admin, athleteId: string): Promise<number> {
+  let fatte = 0;
+  try {
+    const { data: c, error: eC } = await admin.from('garmin_collegamenti')
+      .select('athlete_id, collegato_at, stato').eq('athlete_id', athleteId).maybeSingle();
+    if (eC || !c || c.stato !== 'attivo') return 0;
+    const coll: Atleta = { athleteId, collegatoAt: c.collegato_at ?? null, stato: c.stato };
+    const { data: atleta, error: eAt } = await admin.from('athletes')
+      .select('name, surname, deleted_at').eq('id', athleteId).maybeSingle();
+    if (eAt || !atleta || atleta.deleted_at != null) return 0;
+    const da = new Date(Date.now() - GIORNI_MASSIMI * 86400_000).toISOString();
+    const { data: righe, error } = await admin.from('garmin_attivita')
+      .select('garmin_id, inizio').eq('athlete_id', athleteId)
+      .is('athlete_workout_id', null).is('abbinamento', null).gte('inizio', da)
+      .order('inizio');
+    if (error) throw new Error(error.message);
+    for (const r of righe ?? []) {
+      try {
+        if (await decidi(admin, coll, atleta, r.garmin_id, r.inizio) !== 'salvata') fatte++;
+      } catch (e) {
+        console.error(`garmin: rivalutazione di ${r.garmin_id} non riuscita:`, (e as Error).message);
+      }
+    }
+  } catch (e) {
+    console.error(`garmin: rivalutazione per ${athleteId} non riuscita:`, (e as Error).message);
+  }
+  console.log(`garmin: rivalutate le attività di ${athleteId}, ${fatte} diventano allenamenti`);
+  return fatte;
 }
 
 /** Tutte le attività di un Push, una alla volta. Non lancia mai. */

@@ -28,6 +28,7 @@ import {
   REDIRECT_URI, accessValido, cancellaRegistrazione, chiediBackfillGarmin, leggiPermessi, leggiUtenteId, scambiaCodice, scollegaAtleta, scriviConsensoGarmin,
 } from "../_shared/garmin.ts"
 import { ruoloStaff } from "../_shared/staff.ts"
+import { rivalutaSalvate } from "../garmin-webhook/attivita.ts"
 
 /** La versione del consenso Garmin che l'app mostra (VERSIONE_CONSENSO_GARMIN lato app). */
 const VERSIONE_CONSENSO_GARMIN = 1
@@ -310,8 +311,11 @@ async function azioneAtleta(req: Request): Promise<Response> {
       return risposta({ error: 'Garmin non è disponibile ora' }, 500);
     }
     if (!riga || riga.stato !== 'attivo') return risposta({ ok: true, collegato: false });
+    // Prima quelle già salvate: non dipende da Garmin, che può non rimandare un
+    // periodo già chiesto (al collegamento si chiedono 30 giorni).
+    const nuovi = await rivalutaSalvate(admin, utente.id);
     const access = await accessValido(admin, riga);
-    if (!access) return risposta({ ok: true, collegato: false });
+    if (!access) return risposta({ ok: true, collegato: false, nuovi });
     const aSec = Math.floor(Date.now() / 1000);
     try {
       await chiediBackfillGarmin(access, 'activities', aSec - GIORNI_RECUPERO * 86400, aSec);
@@ -320,11 +324,11 @@ async function azioneAtleta(req: Request): Promise<Response> {
       const status = (e as { status?: number }).status;
       if (status !== 409) {
         console.warn(`garmin-auth: recupero attività non chiesto per ${utente.id}${status ? ` (HTTP ${status})` : ''}`);
-        return risposta({ error: 'Garmin non ha risposto' }, 502);
+        return risposta({ ok: true, collegato: true, nuovi, garmin: false });
       }
     }
     console.log(`garmin-auth: recupero di ${GIORNI_RECUPERO} giorni chiesto per ${utente.id}`);
-    return risposta({ ok: true, collegato: true });
+    return risposta({ ok: true, collegato: true, nuovi });
   }
 
   return risposta({ error: 'Azione sconosciuta' }, 400);
