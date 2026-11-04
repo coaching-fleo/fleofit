@@ -24,18 +24,17 @@ const GareCorsa = lazy(() => import('./GareCorsa'))
  * «Nuovo evento / gara», a tutto schermo: dal calendario (bottone +) e dalla
  * Home dell'atleta («Hai una gara in programma?»).
  *
- * Tre modi: **Prossima gara**, **Già corsa** (GarePassate, i risultati HYROX
- * di gare passate) e **Altro**, il campo libero di sempre.
- *
- * In «Prossima gara» una levetta **Hyrox | Corsa** (all'apertura sempre Hyrox):
- * - Hyrox sceglie dal calendario ufficiale (Edge Function `gare-hyrox`,
- *   src/lib/gareHyrox.js) — card con la foto del sito, bandiera, paese e filtro
- *   per continente;
- * - Corsa sceglie una gara italiana dal calendario FIDAL (Edge Function
- *   `gare-corsa`, GareCorsa.jsx), con accento azzurro.
- * Giorno di gara, «Nome nel calendario» e salvataggio sono gli stessi per le
- * due. Se una lista non arriva, lo dice e porta al campo libero: un evento si
- * crea comunque.
+ * Tre schede, una per sport (all'apertura sempre Hyrox → Prossima gara):
+ * - **Hyrox**, con una levetta **Prossima gara | Già corsa**: la prima sceglie
+ *   dal calendario ufficiale (Edge Function `gare-hyrox`, src/lib/gareHyrox.js)
+ *   — card con la foto del sito, bandiera, paese e filtro per continente —, la
+ *   seconda è GarePassate (i risultati HYROX di gare passate);
+ * - **Corsa** sceglie una gara italiana dal calendario FIDAL (Edge Function
+ *   `gare-corsa`, GareCorsa.jsx), con accento azzurro;
+ * - **Altro**, il campo libero di sempre.
+ * Giorno di gara, «Nome nel calendario» e salvataggio sono gli stessi per
+ * Hyrox e Corsa. Se una lista non arriva, lo dice e porta al campo libero: un
+ * evento si crea comunque.
  *
  * ⚠️ Il workout salvato è lo stesso evento di prima (`category: 'Event'`):
  * la gara scelta aggiunge solo `sections.hyrox` o `sections.corsa`, che `main`
@@ -44,7 +43,8 @@ const GareCorsa = lazy(() => import('./GareCorsa'))
  */
 export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved }) {
   const oggi = format(new Date(), 'yyyy-MM-dd')
-  const [modo, setModo] = useState('hyrox')
+  const [modo, setModo] = useState('hyrox') // 'hyrox' | 'corsa' | 'altro'
+  const [fase, setFase] = useState('prossima') // solo Hyrox: 'prossima' | 'passata'
   const [title, setTitle] = useState('')
   // La data parte da quella SELEZIONATA nel calendario, non da oggi: si apre
   // questa modale dopo aver scelto un giorno (calendario.md).
@@ -57,7 +57,6 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
   const [ricerca, setRicerca] = useState('')
   const [continente, setContinente] = useState('')
   const [gara, setGara] = useState(null)
-  const [sport, setSport] = useState('hyrox') // 'hyrox' | 'corsa'
   const [garaCorsa, setGaraCorsa] = useState(null)
 
   useEffect(() => {
@@ -77,10 +76,22 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
     [future, continente, ricerca],
   )
 
+  // Ogni sport tiene la sua gara: tornando su una scheda la si ritrova, con
+  // il suo nome e il suo giorno. «Altro» tiene quello che c'è nel campo.
   const scegliModo = (nuovo) => {
     if (nuovo === modo) return
     vibraScelta()
     setModo(nuovo)
+    if (nuovo === 'altro') return
+    const g = nuovo === 'corsa' ? garaCorsa : gara
+    setTitle(g ? g.nome : '')
+    setDate(g ? giornoProposto(g, dataIniziale) : (dataIniziale || oggi))
+  }
+
+  const scegliFase = (nuova) => {
+    if (nuova === fase) return
+    vibraScelta()
+    setFase(nuova)
   }
 
   const scegliGara = (g) => {
@@ -109,20 +120,10 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
     setDate(dataIniziale || oggi)
   }
 
-  // Ogni sport tiene la sua gara: tornando indietro con la levetta la si
-  // ritrova, con il suo nome e il suo giorno.
-  const scegliSport = (nuovo) => {
-    if (nuovo === sport) return
-    vibraScelta()
-    setSport(nuovo)
-    const g = nuovo === 'corsa' ? garaCorsa : gara
-    setTitle(g ? g.nome : '')
-    setDate(g ? giornoProposto(g, dataIniziale) : (dataIniziale || oggi))
-  }
-
-  const corsa = sport === 'corsa'
-  const garaInUso = modo === 'hyrox' ? (corsa ? garaCorsa : gara) : null
-  const pronto = !!title.trim() && !!date && (modo !== 'hyrox' || !!garaInUso)
+  const corsa = modo === 'corsa'
+  const hyroxProssima = modo === 'hyrox' && fase === 'prossima'
+  const garaInUso = corsa ? garaCorsa : hyroxProssima ? gara : null
+  const pronto = !!title.trim() && !!date && (modo === 'altro' || !!garaInUso)
 
   const handleSave = async () => {
     if (!title.trim() || !date) return setAlertInfo({ title: 'Errore', message: 'Titolo e data obbligatori', type: 'error' })
@@ -130,7 +131,7 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
     const { data: newW, error: wError } = await supabase.from('workouts').insert({
       title: title.trim(),
       date,
-      sections: modo === 'hyrox' && corsa ? sectionsEventoCorsa(garaInUso) : sectionsEvento(garaInUso),
+      sections: corsa ? sectionsEventoCorsa(garaInUso) : sectionsEvento(garaInUso),
     }).select().single()
     if (wError) { setSaving(false); return setAlertInfo({ title: 'Errore', message: wError.message, type: 'error' }) }
     const { error: awError } = await supabase.from('athlete_workouts').insert({
@@ -141,7 +142,7 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
     onSaved()
   }
 
-  const mostraSalva = modo === 'altro' || (modo === 'hyrox' && !!garaInUso)
+  const mostraSalva = modo === 'altro' || !!garaInUso
   // Una gara passata si salva da sola (dentro GarePassate), e se ne possono
   // aggiungere più di una: il calendario si ricarica alla chiusura.
   const [passateSalvate, setPassateSalvate] = useState(false)
@@ -161,36 +162,30 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
         <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] shrink-0" role="tablist">
           <div
             className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc((100%-0.75rem)/3)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
-              modo === 'hyrox' ? 'translate-x-0' : modo === 'passata' ? 'translate-x-full' : 'translate-x-[200%]'
+              modo === 'hyrox' ? 'translate-x-0' : corsa ? 'translate-x-full' : 'translate-x-[200%]'
             }`}
           />
-          {[['hyrox', 'Prossima gara'], ['passata', 'Già corsa'], ['altro', 'Altro']].map(([m, testo]) => (
+          {[['hyrox', 'Hyrox'], ['corsa', 'Corsa'], ['altro', 'Altro']].map(([m, testo]) => (
             <button key={m} role="tab" aria-selected={modo === m} onClick={() => scegliModo(m)}
               className={`relative z-10 flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-colors duration-300 ${
-                modo === m ? (m === 'altro' ? 'text-white' : 'text-brand') : 'text-muted hover:text-gray-300'
+                modo === m ? (m === 'altro' ? 'text-white' : m === 'corsa' ? 'text-running' : 'text-brand') : 'text-muted hover:text-gray-300'
               }`}>
               {testo}
             </button>
           ))}
         </div>
 
-        {modo === 'passata' && (
-          <Suspense fallback={<div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl h-44 animate-pulse" />}>
-            <GarePassate athleteId={athleteId} onSalvato={() => setPassateSalvate(true)} />
-          </Suspense>
-        )}
-
         {modo === 'hyrox' && (
-          <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] shrink-0" role="group" aria-label="Sport">
+          <div className="relative flex bg-[#111] p-1.5 rounded-2xl border border-[#333] shrink-0" role="group" aria-label="Gara HYROX">
             <div
               className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc((100%-0.75rem)/2)] bg-[#2a2a2a] rounded-xl shadow-md transition-transform duration-300 ease-out ${
-                corsa ? 'translate-x-full' : 'translate-x-0'
+                fase === 'passata' ? 'translate-x-full' : 'translate-x-0'
               }`}
             />
-            {[['hyrox', 'Hyrox'], ['corsa', 'Corsa']].map(([s, testo]) => (
-              <button key={s} aria-pressed={sport === s} onClick={() => scegliSport(s)}
+            {[['prossima', 'Prossima gara'], ['passata', 'Già corsa']].map(([f, testo]) => (
+              <button key={f} aria-pressed={fase === f} onClick={() => scegliFase(f)}
                 className={`relative z-10 flex-1 py-2 rounded-xl text-[13px] font-bold transition-colors duration-300 ${
-                  sport === s ? (s === 'corsa' ? 'text-running' : 'text-brand') : 'text-muted hover:text-gray-300'
+                  fase === f ? 'text-brand' : 'text-muted hover:text-gray-300'
                 }`}>
                 {testo}
               </button>
@@ -198,7 +193,13 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
           </div>
         )}
 
-        {modo === 'hyrox' && corsa && (
+        {modo === 'hyrox' && fase === 'passata' && (
+          <Suspense fallback={<div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl h-44 animate-pulse" />}>
+            <GarePassate athleteId={athleteId} onSalvato={() => setPassateSalvate(true)} />
+          </Suspense>
+        )}
+
+        {corsa && (
           <Suspense fallback={
             <div className="flex flex-col gap-2.5">
               {[0, 1, 2].map(i => <div key={i} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-2xl h-16 animate-pulse" />)}
@@ -208,7 +209,7 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
           </Suspense>
         )}
 
-        {modo === 'hyrox' && !corsa && !gara && (
+        {hyroxProssima && !gara && (
           <ListaGare
             gare={gare} errore={erroreGare} elenco={elenco} ricerca={ricerca} onRicerca={setRicerca}
             continenti={continenti} continente={continente} onContinente={setContinente}
@@ -216,7 +217,7 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
           />
         )}
 
-        {modo === 'hyrox' && !corsa && gara && (
+        {hyroxProssima && gara && (
           <div className="flex flex-col gap-3">
             <CardGara gara={gara} oggi={oggi} alta />
             <div className="flex items-center justify-between px-1">
@@ -232,7 +233,7 @@ export default function NuovoEvento({ athleteId, dataIniziale, onClose, onSaved 
           </div>
         )}
 
-        {modo === 'hyrox' && garaInUso && (
+        {garaInUso && (
           <>
             {giorniGara(garaInUso).length > 1 && (
               <div>

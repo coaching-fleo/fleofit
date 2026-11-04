@@ -354,6 +354,7 @@ Due correzioni del committente sul giro precedente:
 
 1. **Le gare passate stanno nel calendario, non nei Personal record.** «Nuovo
    evento» ha ora tre scelte: **Prossima gara · Già corsa · Altro**.
+   (Dal 04/11/2026 «Già corsa» è una levetta sotto la scheda **Hyrox**: 9-gare-corsa.)
    `GarePassate` è il corpo della scelta «Già corsa» (caricato pigro dentro
    `NuovoEvento`, che si apre anche dalla Home). Se ne salvano più di una di
    fila; alla chiusura il calendario si ricarica (`onSaved`). Il bottone nei
@@ -500,10 +501,20 @@ nel calendario generale **e** in quello della scheda atleta.
 
 ## 9-gare-corsa — «Nuovo evento» sceglie anche le gare di corsa FIDAL (04/11/2026)
 
-In `NuovoEvento.jsx`, sopra la lista, un interruttore **Hyrox | Corsa**. «Corsa» apre
-`src/components/GareCorsa.jsx` (caricato pigro, chunk suo): le gare su strada, trail e
-montagna-trail d'Italia, dal mese in corso a sei mesi avanti. «Altro» resta il
-campo libero di prima.
+In `NuovoEvento.jsx` le schede in alto sono gli sport: **Hyrox · Corsa · Altro**
+(all'apertura Hyrox → Prossima gara). «Corsa» apre `src/components/GareCorsa.jsx`
+(caricato pigro, chunk suo): le gare su strada, trail e montagna-trail d'Italia, dal mese
+in corso a sei mesi avanti. «Altro» resta il campo libero di prima.
+
+> **Menu invertiti (04/11/2026, chiesto dal committente).** La prima stesura aveva in alto
+> **Prossima gara · Già corsa · Altro** e la levetta Hyrox | Corsa dentro «Prossima gara»:
+> ma «Già corsa» esiste solo per HYROX (i risultati vengono da results.hyrox.com), e stava
+> sopra la corsa come se valesse per entrambe. Ora la levetta **Prossima gara | Già corsa**
+> sta **solo sotto Hyrox**; Corsa va dritta alla lista FIDAL. Stato: `modo`
+> (`hyrox`/`corsa`/`altro`) più `fase` (`prossima`/`passata`, solo Hyrox). Ogni sport tiene
+> la sua gara scelta: tornando sulla scheda la si ritrova con nome e giorno. Test:
+> `NuovoEvento.test.jsx` («Già corsa» sta sotto Hyrox, e Corsa non ha la levetta) e
+> `CalendarioEventoHyrox.test.jsx`, dove «Già corsa» ora è un bottone, non una scheda.
 
 ### Da dove arrivano
 - **Edge Function `gare-corsa`** (`supabase/functions/gare-corsa/`: `regole.ts` pura e

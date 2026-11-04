@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event'
 
 // Perché questi test esistono
 // ────────────────────────────
-// «Nuovo evento» → «Prossima gara» ha la levetta Hyrox | Corsa. Con Corsa
+// «Nuovo evento» ha tre schede, Hyrox | Corsa | Altro; sotto Hyrox la levetta
+// Prossima gara | Già corsa (che per la corsa non c'è). Con Corsa
 // l'evento salvato porta `sections.corsa` e MAI `sections.hyrox`: la seconda
 // la leggono RisultatoGara e InvitoRisultato per cercare il tempo su
 // results.hyrox.com, e una maratona finirebbe a cercarlo lì.
@@ -52,7 +53,7 @@ beforeEach(() => {
 
 const apriCorsa = async () => {
   render(<NuovoEvento athleteId="u1" dataIniziale={giorno(0)} onClose={vi.fn()} onSaved={vi.fn()} />)
-  await userEvent.click(screen.getByRole('button', { name: 'Corsa' }))
+  await userEvent.click(screen.getByRole('tab', { name: 'Corsa' }))
   await screen.findByRole('button', { name: /Maratona di Venezia/ })
 }
 
@@ -67,7 +68,7 @@ describe('NuovoEvento → Corsa', () => {
   it('filtra per distanza, sceglie la gara e salva con sections.corsa, senza hyrox', async () => {
     const onSaved = vi.fn()
     render(<NuovoEvento athleteId="u1" dataIniziale={giorno(0)} onClose={vi.fn()} onSaved={onSaved} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Corsa' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Corsa' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Mezza' }))
     expect(screen.queryByRole('button', { name: /Maratona di Venezia/ })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Mezza di Monza/ }))
@@ -147,10 +148,10 @@ describe('NuovoEvento → Corsa', () => {
     conGareHyrox([GARA_HYROX])
     render(<NuovoEvento athleteId="u1" dataIniziale={giorno(0)} onClose={vi.fn()} onSaved={vi.fn()} />)
     await userEvent.click(await screen.findByRole('button', { name: /HYROX Valencia/ }))
-    await userEvent.click(screen.getByRole('button', { name: 'Corsa' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Corsa' }))
     await screen.findByRole('button', { name: /Maratona di Venezia/ })
     expect(screen.queryByDisplayValue('HYROX Valencia')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Hyrox' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Hyrox' }))
     expect(screen.getByDisplayValue('HYROX Valencia')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Aggiungi al Calendario' }))
     const [insert] = finto.chiamateA('workouts', 'insert')
@@ -159,10 +160,24 @@ describe('NuovoEvento → Corsa', () => {
     expect(insert.args[0].sections).not.toHaveProperty('corsa')
   })
 
-  it('con Hyrox, all\'apertura, non carica le gare di corsa', async () => {
+  it('si apre su Hyrox → Prossima gara e non carica le gare di corsa', async () => {
     render(<NuovoEvento athleteId="u1" dataIniziale={giorno(0)} onClose={vi.fn()} onSaved={vi.fn()} />)
-    expect(screen.getByRole('button', { name: 'Hyrox' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('tab', { name: 'Hyrox' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: 'Prossima gara' })).toHaveAttribute('aria-pressed', 'true')
     await screen.findByText(/Calendario HYROX non disponibile/)
     expect(finto.supabase.functions.invoke).not.toHaveBeenCalledWith('gare-corsa', expect.anything())
+  })
+
+  it('«Già corsa» sta sotto Hyrox, e Corsa non ha la levetta', async () => {
+    render(<NuovoEvento athleteId="u1" dataIniziale={giorno(0)} onClose={vi.fn()} onSaved={vi.fn()} />)
+    await screen.findByText(/Calendario HYROX non disponibile/)
+    await userEvent.click(screen.getByRole('button', { name: 'Già corsa' }))
+    expect(screen.getByRole('button', { name: 'Già corsa' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByText(/Calendario HYROX non disponibile/)).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Corsa' }))
+    await screen.findByRole('button', { name: /Maratona di Venezia/ })
+    expect(screen.queryByRole('button', { name: 'Già corsa' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Prossima gara' })).not.toBeInTheDocument()
   })
 })
