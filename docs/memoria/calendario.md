@@ -551,8 +551,12 @@ che HYROX non ha.
   `sectionsEventoCorsa` vive in `gare.js` (gareCorsa.js lo ri-esporta): NuovoEvento è nel
   chunk d'ingresso e importarlo da gareCorsa.js costava +4 kB a `index`.
 - Demo (`npm run demo`): `gareCorsaFinte()` dà una lista finta, senza rete.
-- ⚠️ La funzione va **pubblicata**: `supabase functions deploy gare-corsa`. Non tocca il
-  sito (lo chiama solo l'app). Prima del deploy la scelta «Corsa» mostra l'errore di rete.
+- ✅ **Pubblicata il 04/11/2026** (`supabase functions deploy gare-corsa`, con
+  `verify_jwt = true` in `supabase/config.toml`, come gare-hyrox). Non tocca il sito: la
+  chiama solo l'app. Prova dopo il deploy: 280 gare (167 regionali, 113 nazionali,
+  novembre–dicembre 2026: il 2027 FIDAL non l'aveva ancora pubblicato), `completa: true`,
+  senza regione solo le due di San Marino; senza chiave risponde 401. Distanze: 109
+  «Altre», 72 10 km, 52 mezze, 18 trail, 16 maratone, 13 5 km.
 - Test: `gareCorsaServer.test.js` (la lettura di `regole.ts` sulle copie in `fixtures/`),
   `gareCorsa.test.js` (copia, filtri, `sectionsEventoCorsa`), più i casi in
   `NuovoEvento.test.jsx`.
