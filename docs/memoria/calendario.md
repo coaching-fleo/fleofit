@@ -502,7 +502,7 @@ nel calendario generale **e** in quello della scheda atleta.
 
 In `NuovoEvento.jsx`, sopra la lista, un interruttore **Hyrox | Corsa**. «Corsa» apre
 `src/components/GareCorsa.jsx` (caricato pigro, chunk suo): le gare su strada, trail e
-montagna-trail d'Italia, dal mese in corso a sei mesi avanti. «Altro evento» resta il
+montagna-trail d'Italia, dal mese in corso a sei mesi avanti. «Altro» resta il
 campo libero di prima.
 
 ### Da dove arrivano
@@ -516,16 +516,22 @@ campo libero di prima.
   cade. Le copie sono **ridotte** (novembre 2026); l'unica riga MONTAGNA/TRAIL è di giugno
   2026 (COD), spostata a Trento dentro il test.
 - **Si tiene**: STRADA, TRAIL, MONTAGNA-TRAIL. **Si scarta**: le gare annullate, le
-  categorie ragazzi, le sedi all'estero. La stessa gara che compare in più pagine è una
-  sola. Se una pagina non risponde le altre bastano; se tutte falliscono si serve la copia
+  categorie ragazzi (compreso «junior»), le sedi all'estero, le date impossibili («31/11»,
+  «30-02/12»). ⚠️ **Annullata ha più forme** e le prende tutte: «Annullata - …» in testa,
+  «ANN: …» in testa, «… - ANNULLATA» in coda o scritto sotto il nome (`/\bannullat[ao]\b/`:
+  «Annunziata» resta). **Dedup per id e basta**: la stessa gara con lo stesso id su più pagine
+  è una sola, ma se FIDAL la elenca sia fra le nazionali sia fra le regionali con id diversi
+  (COD… e REG…) può comparire **due volte** — nessuna euristica fra livelli, per ora. Se una pagina non risponde le altre bastano; se tutte falliscono si serve la copia
   vecchia, se non c'è risponde **502**.
 - **La distanza si ricava dal nome**, perché il calendario non la dà: **vince il numero**
   («Maratona 42 km», «10K», «21,097») sulle parole («maratona», «mezza»). Senza numeri né
-  parole la gara resta senza distanza e non esce nei filtri per distanza.
+  parole la gara prende `'altre'` ed esce sotto il filtro «Altre».
 - **La regione si ricava dalla sigla di provincia** (`PROVINCE` in `regole.ts`; gli slug
   sono quelli di `REGIONI` in `src/lib/gareCorsa.js`). ⚠️ **San Marino (SM) ha regione
   `''`**: compare nella lista ma non sotto nessuna regione.
-- **Copie**: 6 ore in memoria nella funzione, **12 ore nel telefono**
+- **Copie**: 6 ore in memoria nella funzione (**15 minuti** se qualche pagina FIDAL non ha
+  risposto: la risposta porta `completa: false`, e il telefono la mostra ma **non la salva**),
+  **12 ore nel telefono**
   (`fleofit_cache_gare_corsa`, con una `VERSIONE_CACHE` che sale se cambia la forma di una
   gara). La regione scelta si ricorda in `fleofit_corsa_regione`.
 
