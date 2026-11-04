@@ -377,6 +377,8 @@ export function clientDemo() {
         // Il calendario HYROX della demo: tre gare finte, date relative a oggi,
         // così la lista non invecchia (la vera viene da hyrox.com).
         if (nome === 'gare-hyrox') return { data: { gare: gareFinte() }, error: null }
+        // Le gare di corsa della demo (la vera lista viene dal calendario FIDAL).
+        if (nome === 'gare-corsa') return { data: { gare: gareCorsaFinte() }, error: null }
         if (nome === 'risultato-hyrox' && opzioni?.body?.azione === 'gare') return { data: { gare: garePassateFinte() }, error: null }
         if (nome === 'risultato-hyrox' && opzioni?.body?.azione === 'dettaglio') return { data: { stato: 'trovato', dettaglio: dettaglioFinto(opzioni.body) }, error: null }
         if (nome === 'risultato-hyrox') return { data: risultatoFinto(opzioni?.body), error: null }
@@ -420,6 +422,22 @@ function gareFinte() {
     { id: 'd1', nome: 'HYROX Milano (demo)', codice: 'MIL', dal: giorno(10), al: giorno(13), url: 'https://hyrox.com/find-my-race/', continente: 'europe', citta: 'Milano (demo)', paese: 'IT', paeseNome: 'Italy', immagine: 'https://hyrox.com/wp-content/uploads/2026/10/pexels-giuseppe-di-maria-163888120-28884755-copia-scaled-3-640x960.jpg' },
     { id: 'd2', nome: 'HYROX São Paulo (demo)', codice: 'SPO', dal: giorno(20), al: giorno(21), url: 'https://hyrox.com/find-my-race/', continente: 'south-america', citta: 'São Paulo (demo)', paese: 'BR', paeseNome: 'Brazil', immagine: 'https://hyrox.com/wp-content/uploads/2026/03/Imagem-2-1274x960.jpg' },
     { id: 'd3', nome: 'HYROX Budapest (demo)', codice: 'BUD', dal: giorno(35), al: giorno(35), url: 'https://hyrox.com/find-my-race/', continente: 'europe', citta: 'Budapest (demo)', paese: 'HU', paeseNome: 'Hungary', immagine: '' },
+  ]
+}
+
+// Quattro gare di corsa finte, date relative a oggi come le HYROX: una maratona
+// e una mezza nazionali, una 10 km e un trail regionali.
+function gareCorsaFinte() {
+  const giorno = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10) }
+  const g = (id, nome, n, livello, citta, provincia, regione, distanza) => ({
+    id, nome, dal: giorno(n), al: giorno(n), tipo: distanza === 'trail' ? 'trail' : 'strada',
+    citta, provincia, regione, distanza, livello, url: 'https://www.fidal.it/calendario.php',
+  })
+  return [
+    g('dc1', 'Maratona di Venezia (demo)', 12, 'nazionale', 'Venezia', 'VE', 'veneto', 'maratona'),
+    g('dc2', 'Mezza Maratona di Monza (demo)', 25, 'nazionale', 'Monza', 'MB', 'lombardia', 'mezza'),
+    g('dc3', 'Corri Roma 10 km (demo)', 40, 'regionale', 'Roma', 'RM', 'lazio', '10k'),
+    g('dc4', 'Trail delle Dolomiti (demo)', 60, 'regionale', 'Trento', 'TN', 'trentino-alto-adige', 'trail'),
   ]
 }
 
