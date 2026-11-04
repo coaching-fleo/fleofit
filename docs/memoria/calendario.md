@@ -530,7 +530,7 @@ campo libero di prima.
   gara). La regione scelta si ricorda in `fleofit_corsa_regione`.
 
 ### Cosa si salva: `sections.corsa`, mai `sections.hyrox`
-`sectionsEventoCorsa(gara)` (`src/lib/gareCorsa.js`) scrive il workout Evento come sempre
+`sectionsEventoCorsa(gara)` (`src/lib/gare.js`) scrive il workout Evento come sempre
 (`category: 'Event'`, `isEvent`, `isAutonomous`) più `corsa: { id, distanza, tipo, citta,
 provincia, regione, url, dal, al }`. 🔴 **Non si usa `hyrox`**: `RisultatoGara`,
 `InvitoRisultato` e `risultatoGara.js` leggono `sections.hyrox` per cercare il tempo su
@@ -541,8 +541,9 @@ che HYROX non ha.
 - `src/lib/gare.js`: le funzioni comuni a HYROX e corsa (`normalizza`, `gareFuture`,
   `giorniGara`, `periodoGara`, `blocchettoData`, `quandoGara`, `perMese`, `giornoProposto`),
   uscite da `gareHyrox.js`, che le **ri-esporta** (nessun import esistente è cambiato).
-- `src/lib/gareCorsa.js`: copia nel telefono, filtri (regione, distanza, ricerca),
-  `sectionsEventoCorsa`.
+- `src/lib/gareCorsa.js`: copia nel telefono, filtri (regione, distanza, ricerca).
+  `sectionsEventoCorsa` vive in `gare.js` (gareCorsa.js lo ri-esporta): NuovoEvento è nel
+  chunk d'ingresso e importarlo da gareCorsa.js costava +4 kB a `index`.
 - Demo (`npm run demo`): `gareCorsaFinte()` dà una lista finta, senza rete.
 - ⚠️ La funzione va **pubblicata**: `supabase functions deploy gare-corsa`. Non tocca il
   sito (lo chiama solo l'app). Prima del deploy la scelta «Corsa» mostra l'errore di rete.

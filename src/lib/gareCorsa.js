@@ -121,21 +121,5 @@ export function scriviRegione(slug, storage = globalThis.localStorage) {
   return scriviJson(CHIAVE_REGIONE, slug || '', storage)
 }
 
-/**
- * Il campo `sections` di un evento nato da una gara di corsa. Resta un evento
- * normale, con in più `corsa`. ⚠️ Mai una chiave `hyrox`: RisultatoGara,
- * InvitoRisultato e risultatoGara.js la leggono per cercare il tempo su
- * results.hyrox.com.
- */
-export function sectionsEventoCorsa(gara) {
-  const base = { category: 'Event', isEvent: true, isAutonomous: true }
-  if (!gara) return base
-  return {
-    ...base,
-    corsa: {
-      id: gara.id, distanza: gara.distanza, tipo: gara.tipo, citta: gara.citta || '',
-      provincia: gara.provincia || '', regione: gara.regione || '', url: gara.url || '',
-      dal: gara.dal, al: gara.al,
-    },
-  }
-}
+// Sta in gare.js (già nel chunk d'ingresso): NuovoEvento la usa senza portarsi dietro questo file.
+export { sectionsEventoCorsa } from './gare'

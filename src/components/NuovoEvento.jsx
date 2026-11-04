@@ -11,7 +11,7 @@ import {
   continentiPresenti, filtraContinente, nomeContinente, bandiera, nomePaese,
   blocchettoData, quandoGara, perMese,
 } from '../lib/gareHyrox'
-import { sectionsEventoCorsa } from '../lib/gareCorsa'
+import { sectionsEventoCorsa } from '../lib/gare'
 import { LABEL } from '../lib/stiliCard'
 
 // «Gara già corsa»: pigra, perché porta con sé la ricerca dei risultati e la

@@ -1,6 +1,7 @@
 // Le funzioni delle gare che non sanno nulla di HYROX: date, testo e
 // raggruppamenti. Le usano sia le gare HYROX (`gareHyrox.js`) sia le gare di
-// corsa, che arrivano dopo. Niente rete, niente cache.
+// corsa, che arrivano dopo. Niente rete, niente cache. Qui sta anche
+// `sectionsEventoCorsa`, che deve restare nel chunk d'ingresso (NuovoEvento).
 
 import { format, parseISO, differenceInCalendarDays } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -99,4 +100,23 @@ export function perMese(gare) {
 export function giornoProposto(gara, selezionato) {
   const giorni = giorniGara(gara)
   return giorni.includes(selezionato) ? selezionato : giorni[0] || selezionato
+}
+
+/**
+ * Il campo `sections` di un evento nato da una gara di corsa. Resta un evento
+ * normale, con in più `corsa`. ⚠️ Mai una chiave `hyrox`: RisultatoGara,
+ * InvitoRisultato e risultatoGara.js la leggono per cercare il tempo su
+ * results.hyrox.com.
+ */
+export function sectionsEventoCorsa(gara) {
+  const base = { category: 'Event', isEvent: true, isAutonomous: true }
+  if (!gara) return base
+  return {
+    ...base,
+    corsa: {
+      id: gara.id, distanza: gara.distanza, tipo: gara.tipo, citta: gara.citta || '',
+      provincia: gara.provincia || '', regione: gara.regione || '', url: gara.url || '',
+      dal: gara.dal, al: gara.al,
+    },
+  }
 }
