@@ -86,6 +86,17 @@
   la frase della policy «we do not read Apple Health or Health Connect» (`public/privacy-policy.html`):
   falso positivo del controllo, ma ⚠️ **da decidere prima dell'invio in revisione** (riformulare la
   frase o accettarla). Estensione `FleoTimer` 1.2.3 (1), allineata.
+- **06 nov 2026** — **preparazione della 1.2.3 per la revisione**, dal codice unito con le Scarpe
+  (`355be71` e seguenti). `MARKETING_VERSION` era già 1.2.3 nei quattro posti; il numero di build
+  lo alza App Store Connect (c'è già la build di TestFlight del 30/10). `npm run ios` fatto, copia
+  di Xcode allineata a `dist`, i tre grep obbligatori a posto, `LettoreQR.swift` nel target.
+  🔒 **Le Scarpe escono spente**: si leggono da `funzioni_app` (`docs/memoria/scarpe.md`), e
+  senza la tabella o con la riga a `spenta` nessuno le vede. ⚠️ **Durante la revisione la riga
+  NON va messa ad `admin`**: `demo@fleofit.it` è admin, il revisore le vedrebbe. Prima `spenta`,
+  `tutti` (o `admin`) solo dopo l'approvazione. Restano da fare a mano: decidere la frase
+  «Apple Health» della policy (sopra, 30 ott), l'URL privacy `https://fleofit.vercel.app/privacy`,
+  le etichette privacy di Garmin se il collegamento è aperto a tutti (`garmin.md`, passo 8).
+  «Novità» in `DEVLOG.md`.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non

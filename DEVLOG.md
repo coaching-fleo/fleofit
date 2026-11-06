@@ -86,6 +86,22 @@ Da fare DOPO che il committente ha applicato `multi_coach_2026-10-15.sql`; prima
 - Nessun coach compare fra i propri atleti (Atleti, Home, Analisi, report, messaggi).
 - Tasto indietro Android: chiude il foglio.
 
+## Testo per App Store Connect — «Novità di questa versione» (1.2.3)
+
+> Preparato il 06/11/2026 dal codice unito con le Scarpe (`355be71` e seguenti): solo ciò che
+> non era nella 1.2.2. **Le Scarpe non ci sono**: escono spente (`funzioni_app`) e si accendono
+> dal database dopo l'approvazione. **Garmin** va aggiunto solo se, al momento dell'invio, il
+> collegamento è aperto a tutti (Garmin ha approvato la produzione e `GARMIN_ATLETI_PROVA` è vuoto).
+
+```
+• Timer sulla schermata di blocco: vedi il passo in corso anche col telefono bloccato.
+• TV: si collega inquadrando il codice QR.
+• Calendario: le gare di corsa italiane, dal calendario FIDAL.
+• L'archivio dei workout ha la sua voce nella barra in basso.
+• Per i coach: i modelli di blocco, da salvare e riusare.
+• Correzioni e miglioramenti.
+```
+
 ## Testo per App Store Connect — «Novità di questa versione» (1.2.2)
 
 > Inviato il 26/10/2026: solo ciò che non era nella 1.2.1.
