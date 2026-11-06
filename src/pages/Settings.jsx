@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer, Footprints } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer, Footprints, UsersRound } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -53,6 +53,8 @@ export default function Settings() {
   const { role, user, nome } = useAuth()
   // «Catalogo scarpe» c'è solo con l'interruttore acceso (funzioni_app).
   const scarpeAccese = useFunzione('scarpe')
+  // «Team» e «I miei team», con l'interruttore acceso (funzioni_app).
+  const teamAcceso = useFunzione('team')
   // Sul desktop (solo coach, src/useDesktop.js) la pagina va su due colonne.
   const desktop = eDesktop(useSchermoLargo(), role)
   const isSimulatingAthlete = localStorage.getItem('adminRoleOverride') === 'athlete'
@@ -860,6 +862,12 @@ export default function Settings() {
               dettaglio="I modelli fra cui scelgono gli atleti"
               onClick={() => navigate('/scarpe')} />
             </>)}
+            {teamAcceso && (<>
+            <Separatore />
+            <RigaAzione icona={UsersRound} titolo="Team"
+              dettaglio="Gruppi di atleti, inviti e sfide"
+              onClick={() => navigate('/team')} />
+            </>)}
             {eAdmin(role) && (<>
             <Separatore />
             <RigaAzione icona={Users} titolo="Coach"
@@ -925,6 +933,14 @@ export default function Settings() {
     : garmin.stato === 'da_ricollegare' ? 'Da ricollegare' : 'Non collegato'
   const pPrivacy = (
     <>
+      {/* ── Team: l'atleta, con l'interruttore acceso ── */}
+      {role === 'athlete' && teamAcceso && (
+        <Sezione etichetta="Allenarsi insieme">
+          <RigaAzione icona={UsersRound} titolo="I miei team"
+            dettaglio="Inviti, compagni e sfide"
+            onClick={() => navigate('/team')} />
+        </Sezione>
+      )}
       {/* ── Dispositivi: solo l'atleta vero, e solo se `stato_garmin` esiste ── */}
       {atletaVero && garmin.disponibile && (
         <Sezione etichetta="Dispositivi">

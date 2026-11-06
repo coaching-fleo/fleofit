@@ -46,6 +46,8 @@ const Modelli = lazy(() => import('./pages/Modelli'))
 const Scarpe = lazy(() => import('./pages/Scarpe'))
 const DettaglioScarpa = lazy(() => import('./pages/DettaglioScarpa'))
 const ModelloScarpa = lazy(() => import('./pages/ModelloScarpa'))
+const MieiTeam = lazy(() => import('./pages/MieiTeam'))
+const InvitoTeam = lazy(() => import('./pages/InvitoTeam'))
 const Login = lazy(() => import('./pages/Login'))
 const Landing = lazy(() => import('./pages/Landing'))
 // La barra laterale del desktop (solo coach, solo web, finestra ≥ 1024px): pigra,
@@ -894,6 +896,9 @@ function App() {
             <Route path="/scarpe" element={<SoloSeAccesa nome="scarpe"><Scarpe /></SoloSeAccesa>} />
             <Route path="/scarpe/modello/:id" element={<SoloSeAccesa nome="scarpe"><ModelloScarpa /></SoloSeAccesa>} />
             <Route path="/scarpe/:id" element={<SoloSeAccesa nome="scarpe"><DettaglioScarpa /></SoloSeAccesa>} />
+            {/* Il Team ha l'interruttore (funzioni_app): spento, il link porta alla Home. */}
+            <Route path="/team" element={<SoloSeAccesa nome="team"><MieiTeam /></SoloSeAccesa>} />
+            <Route path="/team/invito/:id" element={<SoloSeAccesa nome="team"><InvitoTeam /></SoloSeAccesa>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
