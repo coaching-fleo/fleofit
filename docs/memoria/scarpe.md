@@ -45,6 +45,11 @@ Com'è fatto:
 - ⚠️ **L'interruttore non porta il codice sui telefoni.** Le Scarpe arrivano su iOS e Android con la
   prima versione sugli Store che le contiene (la 1.2.3); da lì si accendono senza aggiornamenti.
 
+- ⚠️ **Peso all'avvio.** Unito ad `app` il 06/11/2026, `index` passa da **612,37 KB** (`app` da solo) a
+  **621,83 KB**, sopra la soglia di avviso di 620. Il grosso è `date-fns/locale/it`, che entra in `index`
+  (vedi la misura del 03/11: all'avvio veniva già caricato). Il resto, ~1,5 KB, è l'interruttore
+  (`funzioniApp`, `useFunzione`, `SoloSeAccesa`). Né il codice delle Scarpe né la demo finiscono in `index`.
+
 ## Il 3D (prova, 04/11/2026 — in pausa dal 06/11)
 - **Saucony Endorphin Speed 4.** Generata con TRELLIS (Hugging Face) da 5 viste ufficiali, poi
   ritoccata: materiale opaco, giallo tolto, suola vera stampata. Sta in

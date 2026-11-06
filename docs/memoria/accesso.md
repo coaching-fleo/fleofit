@@ -369,3 +369,20 @@ confermato il profilo l'app tornava indietro.
   e non manda mail) ora lo dice, invece di far aspettare una mail che non arriva.
 - ⚠️ **Non provato sul telefono**: la larghezza della data su iOS va guardata lì.
   L'ambiente di prova entra come admin e l'onboarding non si vede.
+
+## Avvio senza rete (04/11/2026)
+
+Segnalazione: senza Internet l'app restava sulla schermata iniziale. Due cause in `ProtectedRoute`:
+
+1. `supabase.auth.getSession()` con il token scaduto (dopo un'ora) riprova il rinnovo in rete con
+   backoff per ~25 s, **due volte** (inizializzazione + chiamata): quasi un minuto di apertura, poi
+   sessione `null` e login.
+2. Con il token ancora buono, `staff` e `athletes` falliscono: la riga atleta sembrava mancare, il
+   cancello andava al riscatto del codice invito e faceva `signOut()`.
+
+Correzione (`src/lib/avvioSenzaRete.js`): se c'è una sessione salvata (`supabase.auth.storageKey` in
+localStorage) e `navigator.onLine` è falso, o `getSession()` non risponde entro 5 s, o risponde con un
+`AuthRetryableFetchError`, si entra con quella. E se la riga atleta torna con un **errore** si entra col
+ruolo dell'ultimo accesso riuscito (`fleofit_ruolo_<uid>`; per chi non l'ha ancora salvato, basta
+`fleofit_name_<uid>`), senza consenso né onboarding. Test: `src/__tests__/AvvioSenzaRete.test.jsx`.
+⚠️ Non provato sul dispositivo: va provato in modalità aereo, con l'app chiusa da più di un'ora.

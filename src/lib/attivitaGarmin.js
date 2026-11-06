@@ -5,6 +5,8 @@
 
 // I tipi di attività di Garmin, in italiano. ⚠️ DA VERIFICARE: Garmin non
 // pubblica l'elenco dei valori di `activityType` (piano, Task 1).
+// ⚠️ Copiati in `NOMI_TIPI` di `_shared/abbinaGarmin.ts` (titolo dell'allenamento
+// libero creato dal webhook): `abbinaGarmin.test.js` controlla che coincidano.
 export const TIPI_ATTIVITA = {
   RUNNING: 'Corsa',
   TREADMILL_RUNNING: 'Tapis roulant',
@@ -14,6 +16,17 @@ export const TIPI_ATTIVITA = {
   INDOOR_CARDIO: 'Cardio indoor',
   HIIT: 'HIIT',
   INDOOR_ROWING: 'Vogatore',
+  CYCLING: 'Ciclismo',
+  ROAD_BIKING: 'Bici da strada',
+  MOUNTAIN_BIKING: 'Mountain bike',
+  INDOOR_CYCLING: 'Bici indoor',
+  LAP_SWIMMING: 'Nuoto in piscina',
+  OPEN_WATER_SWIMMING: 'Nuoto in acque libere',
+  WALKING: 'Camminata',
+  HIKING: 'Escursione',
+  ELLIPTICAL: 'Ellittica',
+  STAIR_CLIMBING: 'Scale',
+  YOGA: 'Yoga',
   OTHER: 'Altro',
 }
 

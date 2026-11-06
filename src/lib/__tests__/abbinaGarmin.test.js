@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import {
   TIPI_PER_CATEGORIA, MINUTI_MINIMI, FRAZIONE_STIMA, GIORNI_MASSIMI, scegliAbbinamento, minutiMinimi,
+  diventaLibero, titoloLibero, NOMI_TIPI,
 } from '../../../supabase/functions/_shared/abbinaGarmin.ts'
+import { generaTitolo } from '../workoutTitle'
+import { TIPI_ATTIVITA } from '../attivitaGarmin'
 
 const COLLEGATO = '2026-10-01T00:00:00Z'
 const attivita = (o = {}) => ({
@@ -98,5 +101,68 @@ describe('soglia regolabile (GARMIN_MINUTI_MINIMI, solo per le prove)', () => {
 
   it('senza minutiMinimi la regola è quella di sempre', () => {
     expect(scegli({ durata_s: 66 })).toBeNull()
+  })
+})
+
+describe('allenamento libero da Garmin (nessun workout assegnato)', () => {
+  const libero = (a = {}, c = [], extra = {}) => diventaLibero({
+    attivita: attivita(a), candidati: c, collegatoAt: COLLEGATO, adesso: '2026-10-28T12:00:00Z', ...extra,
+  })
+
+  it('un giorno senza assegnazioni: diventa un allenamento libero', () => {
+    expect(libero()).toBe(true)
+  })
+  it('sotto i 10 minuti no, e la soglia di prova vale anche qui', () => {
+    expect(libero({ durata_s: 9 * 60 })).toBe(false)
+    expect(libero({ durata_s: null })).toBe(false)
+    expect(libero({ durata_s: 2 * 60 }, [], { minutiMinimi: 1 })).toBe(true)
+  })
+  it('lo storico di prima del collegamento e le attività arrivate dopo 7 giorni no', () => {
+    expect(libero({ inizio: '2026-09-30T07:00:00Z', giorno: '2026-09-30' })).toBe(false)
+    expect(libero({}, [], { adesso: '2026-11-05T08:00:00Z' })).toBe(false)
+  })
+  it('già abbinata o rifiutata con «Non era questo»: no', () => {
+    expect(libero({ athlete_workout_id: 'aw9' })).toBe(false)
+    expect(libero({ abbinamento: 'atleta' })).toBe(false)
+  })
+  it('una corsa da fare quel giorno la blocca, anche se la durata non torna o sono due', () => {
+    expect(libero({}, [cand()])).toBe(false)
+    expect(libero({ durata_s: 12 * 60 }, [cand({ durataStimataMin: 60 })])).toBe(false)
+    expect(libero({}, [cand(), cand({ id: 'aw2' })])).toBe(false)
+  })
+  it('una corsa già segnata a mano, senza attività, la blocca: sarebbe un doppione', () => {
+    expect(libero({}, [cand({ completato: true })])).toBe(false)
+    expect(libero({}, [cand({ completato: true, haAttivita: true })])).toBe(true)
+  })
+  it('un Custom o una gara di quel giorno la bloccano: si abbina a mano', () => {
+    expect(libero({}, [cand({ categoria: 'Custom' })])).toBe(false)
+    expect(libero({}, [cand({ categoria: 'Event' })])).toBe(false)
+    expect(libero({}, [cand({ categoria: null })])).toBe(false)
+  })
+  it('un workout di un tipo che non c’entra non la blocca', () => {
+    expect(libero({ tipo: 'CYCLING' }, [cand({ categoria: 'Gym' })])).toBe(true)
+    expect(libero({ tipo: 'RUNNING' }, [cand({ categoria: 'Gym' })])).toBe(true)
+  })
+  it('un altro giorno non conta', () => {
+    expect(libero({}, [cand({ giorno: '2026-10-27' })])).toBe(true)
+  })
+})
+
+describe('titolo dell’allenamento libero da Garmin', () => {
+  it('nome del tipo e giorno, come «Allenamento libero · mar 28 ott»', () => {
+    expect(titoloLibero('RUNNING', '2026-10-28')).toBe('Corsa da Garmin · mer 28 ott')
+    expect(titoloLibero('CYCLING', '2026-11-01')).toBe('Ciclismo da Garmin · dom 1 nov')
+    expect(titoloLibero('QUALCOSA_DI_NUOVO', '2026-10-28')).toBe('Attività da Garmin · mer 28 ott')
+  })
+  it('stesso formato del giorno di generaTitolo (date-fns, it)', () => {
+    for (const g of ['2026-01-05', '2026-03-29', '2026-06-14', '2026-08-25', '2026-12-31']) {
+      expect(titoloLibero('RUNNING', g)).toBe(generaTitolo(g, [], 'Corsa da Garmin'))
+    }
+  })
+  it('un secondo uguale nello stesso giorno prende (2)', () => {
+    expect(titoloLibero('RUNNING', '2026-10-28', ['Corsa da Garmin · mer 28 ott'])).toBe('Corsa da Garmin · mer 28 ott (2)')
+  })
+  it('i nomi dei tipi sono gli stessi dell’app', () => {
+    for (const [tipo, nome] of Object.entries(TIPI_ATTIVITA)) expect(NOMI_TIPI[tipo]).toBe(nome)
   })
 })

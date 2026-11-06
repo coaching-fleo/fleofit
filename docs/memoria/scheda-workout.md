@@ -776,3 +776,36 @@ La TV (`/tv`) mostra, sotto le quattro cifre, un QR con `fleofit://tv/<codice>` 
   scaduto.»; iOS senza fotocamera mostra uno schermo nero con solo Annulla. (Chiusi nel giro finale del
   30/10: meta-data `barcode_ui`, foglio chiuso durante il collegamento, QR sfocato e senza margine, link
   della fotocamera di sistema, timer aperto su workout senza timer guidato, vibrazione nativa doppia.)
+
+## 9-tv-riapertura. La TV risultava collegata alla riapertura dell'app (04/11/2026)
+Segnalato dal committente: chiusa e riaperta l'app, la scheda diceva ancora «Scollega TV».
+Causa: il codice stava in localStorage (`fleofit_tv_code`) e la scheda lo rileggeva alla
+riapertura senza alcun controllo, e su **qualunque** workout, non solo su quello mandato in
+TV. Ora vive solo in memoria, come le persone (`tvCollegata`/`ricordaTV`/`dimenticaTV` di
+`src/lib/codiceTV.js`), legato al workout: chiusa l'app la scheda riparte scollegata. La
+vecchia chiave si cancella all'apertura della scheda. Test in `WorkoutDetailTV.test.jsx`
+(«alla riapertura»), visti fallire sul codice di prima.
+Non provato sul telefono.
+- **Stesso giorno, lato TV**: lo smontaggio di `TVDashboard` cancellava la sessione con il
+  `code` dello state, che dentro l'effetto restava `null`: la riga di `tv_sessions` non si
+  cancellava mai. Ora l'effetto tiene il codice in una variabile sua; se la TV si chiude
+  mentre la riga si sta scrivendo, la riga si toglie appena scritta e il canale non si apre
+  (`TVDashboardSessione.test.jsx`, visto fallire prima).
+  ⚠️ Lo smontaggio parte solo uscendo da `/tv` dentro l'app: **chiudere la scheda o spegnere
+  il browser della TV non lo fa partire**, e lì la riga resta. Arriva con `app:main`.
+
+## Ricerca nel foglio «Assegna Workout» (06/11/2026)
+
+Richiesta del committente: nel foglio «Assegna Workout» una barra di ricerca che filtra
+gli atleti mentre si scrive. Riusa `CampoRicerca` (`ArchivioUI.jsx`) e `filtraPerNome`
+(`rigaAtleta.js`), gli stessi della pagina Atleti: le parole si cercano una per una,
+quindi «bianchi sara» trova Sara Bianchi.
+- Il filtro cambia solo ciò che si vede: un atleta già scelto resta scelto anche se
+  esce dal filtro («Procedi (n)» lo conta).
+- «Seleziona tutti» / «Deseleziona tutti» agiscono **sui soli visibili**.
+- La ricerca si svuota a ogni apertura del foglio (`apriAssegna`).
+- `CampoRicerca` ora porta la classe `campo-ricerca`, che in `index.css` nasconde la X
+  nativa di WebKit: se ne vedevano due. ⚠️ Gli altri `type="search"` (gare, Gym, nuovo
+  evento) la tengono: non hanno una X loro.
+- Test: `WorkoutDetailScheda.test.jsx`, «il foglio «Assegna Workout»» (visti fallire
+  togliendo il filtro).

@@ -53,6 +53,7 @@ import { liveActivityDaChiedere, liveActivityAttiva, salvaPreferenzaLiveActivity
 import FoglioLiveActivity from '../components/FoglioLiveActivity'
 import FoglioPersoneTV from '../components/FoglioPersoneTV'
 import { bloccoPerPersone, bloccoAScaglioni, personeRicordate, ricordaPersone } from '../lib/personeTV'
+import { tvCollegata, ricordaTV, dimenticaTV } from '../lib/codiceTV'
 import { BRAND, RUNNING, GYM, coloreCategoria, conVelo } from '../lib/colori'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
@@ -99,6 +100,8 @@ import {
 // visto in scrittura, e due copie divergerebbero al primo ritocco.
 import { RiepilogoWorkout, BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import { partiRipetuta, etichettaParte } from '../lib/ripetute'
+import { filtraPerNome } from '../lib/rigaAtleta'
+import { CampoRicerca } from '../components/ArchivioUI'
 import {
   TestataScheda, IconaStato, MenuScheda, TitoloScheda, AvvisoRiscaldamento,
   BloccoScheda, RigaEsercizio, IntestazioneSezione, CardNota, EsitoCompletato,
@@ -307,6 +310,9 @@ export default function WorkoutDetail() {
   const [workoutStatus, setWorkoutStatus] = useState('pending')
 const [selectedAthletes, setSelectedAthletes] = useState([])
   const [assignStep, setAssignStep] = useState(1)
+  // La ricerca nel foglio «Assegna Workout»: filtra solo ciò che si vede,
+  // le scelte già fatte restano anche se l'atleta esce dal filtro.
+  const [cercaAtleta, setCercaAtleta] = useState('')
   const [assignments, setAssignments] = useState([])
   const [currentAthleteName, setCurrentAthleteName] = useState('')
 
@@ -323,7 +329,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [codiceDaChiedere, setCodiceDaChiedere] = useState(null)
   const apriFoglioTV = () => { giroFoglioTV.current++; setErroreTVIniziale(null); setTvModalOpen(true) }
   const chiudiFoglioTV = () => { giroFoglioTV.current++; setTvModalOpen(false) }
-  const [connectedTvCode, setConnectedTvCode] = useState(() => localStorage.getItem('fleofit_tv_code') || null)
+  const [tvQui, setTvQui] = useState(() => ({ workoutId: id, codice: tvCollegata(id) }))
+  // Un altro workout nella stessa pagina: la TV è collegata a quello di prima.
+  const connectedTvCode = tvQui.workoutId === id ? tvQui.codice : tvCollegata(id)
+  // La vecchia memoria permanente (fino al 04/11/2026): va via, se c'è ancora.
+  useEffect(() => { try { localStorage.removeItem('fleofit_tv_code') } catch { /* niente */ } }, [])
 
   // Voice Notes
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null)
@@ -978,8 +988,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       }).eq('code', codice)
       if (error) return { errore: 'Collegamento non riuscito. Riprova.' }
 
-      setConnectedTvCode(codice)
-      localStorage.setItem('fleofit_tv_code', codice)
+      setTvQui({ workoutId: id, codice })
+      ricordaTV(id, codice)
       return { ok: true }
     } catch {
       return { errore: 'Collegamento non riuscito. Controlla la connessione e riprova.' }
@@ -997,8 +1007,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     if (error) {
       setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
     } else {
-      setConnectedTvCode(null)
-      localStorage.removeItem('fleofit_tv_code')
+      setTvQui({ workoutId: id, codice: null })
+      dimenticaTV()
       setAlertInfo({ title: 'Scollegato', message: 'La TV è tornata alla schermata iniziale.', type: 'success' })
       setTimerOpen(false)
       setTimerMinimized(false)
@@ -1660,7 +1670,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     poi?.()
   }
 
-  const apriAssegna = () => { setAssignModalOpen(true); setSelectedAthletes([]); setAssignStep(1) }
+  const apriAssegna = () => { setAssignModalOpen(true); setSelectedAthletes([]); setAssignStep(1); setCercaAtleta('') }
 
   const comandoTv = connectedTvCode ? 'telecomando' : 'timer'
   const IconaTimer = timerOpen && !timerMinimized ? ChevronDown
@@ -2084,7 +2094,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       {/* DA GARMIN: ogni categoria, anche Hyrox e Gym si completano dall'orologio */}
       {athleteWorkoutId && attivitaGarmin && (
         <Suspense fallback={null}>
-          <CardDaGarmin attivita={attivitaGarmin} onNonEraQuesto={chiediAnnullaGarmin} inCorso={annullaGarminInCorso} />
+          {/* Un allenamento libero nato da Garmin (`daGarmin`, garmin-webhook) È l'attività:
+              «Non era questo» lo lascerebbe vuoto e da fare. Si cancella come ogni libero. */}
+          <CardDaGarmin attivita={attivitaGarmin} onNonEraQuesto={s.daGarmin === true ? undefined : chiediAnnullaGarmin} inCorso={annullaGarminInCorso} />
         </Suspense>
       )}
       {/* NOTA VOCALE */}
@@ -2446,18 +2458,34 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 {athletes.length === 0 ? (
                   <p className="text-muted text-center py-4 text-sm">Nessun atleta trovato.</p>
                 ) : (
-                  <>
+                  (() => {
+                  // «Seleziona tutti» agisce sugli atleti VISIBILI: con un filtro
+                  // attivo, selezionare tutti vuol dire «tutti questi».
+                  const visibili = filtraPerNome(athletes, cercaAtleta)
+                  const tuttiVisibiliScelti = visibili.length > 0 && visibili.every(v => selectedAthletes.some(sa => sa.id === v.id))
+                  return <>
+                    <div className="-mt-3.5">
+                      <CampoRicerca valore={cercaAtleta} onCambia={setCercaAtleta}
+                        etichetta="Cerca un atleta" placeholder="Cerca nome o cognome" />
+                    </div>
                     <div className="flex justify-between items-center mb-2 px-1">
                       <span className="text-gray-400 text-sm">Seleziona atleti:</span>
+                      {visibili.length > 0 && (
                       <button 
-                        onClick={() => setSelectedAthletes(selectedAthletes.length === athletes.length ? [] : [...athletes])}
+                        onClick={() => setSelectedAthletes(tuttiVisibiliScelti
+                          ? selectedAthletes.filter(sa => !visibili.some(v => v.id === sa.id))
+                          : [...selectedAthletes, ...visibili.filter(v => !selectedAthletes.some(sa => sa.id === v.id))])}
                         className="text-brand text-xs font-semibold hover:underline"
                       >
-                        {selectedAthletes.length === athletes.length ? 'Deseleziona tutti' : 'Seleziona tutti'}
+                        {tuttiVisibiliScelti ? 'Deseleziona tutti' : 'Seleziona tutti'}
                       </button>
+                      )}
                     </div>
                     {storicoFallito && <PrevisioneNonDisponibile />}
-                    {athletes.map(a => {
+                    {visibili.length === 0 && (
+                      <p className="text-muted text-center py-4 text-sm">Nessun atleta per «{cercaAtleta.trim()}».</p>
+                    )}
+                    {visibili.map(a => {
                       const isSelected = selectedAthletes.some(sa => sa.id === a.id);
                       return (
                         <button key={a.id} onClick={() => {
@@ -2488,6 +2516,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                       )
                     })}
                   </>
+                  })()
                 )}
                 {selectedAthletes.length > 0 && (
                   <button onClick={() => setAssignStep(2)} className="w-full mt-3 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition sticky bottom-0 shadow-lg">

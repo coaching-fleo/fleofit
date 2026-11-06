@@ -376,7 +376,12 @@ function Cella({ cella, compatto, onApri }) {
 }
 
 export function CardPiano({ piano, titolo, nota, caricamento, compatto = false, onApri, onCalendario }) {
-  const colonne = { gridTemplateColumns: `${compatto ? '92px' : '150px'} repeat(${piano.giorni.length}, minmax(0, 1fr))` }
+  // Telefono: colonne di larghezza fissa, così i giorni oltre i primi tre stanno a destra e si
+  // scorrono col dito (la colonna dei nomi resta ferma). Desktop: la settimana si divide la riga.
+  const colonne = { gridTemplateColumns: compatto
+    ? `92px repeat(${piano.giorni.length}, 68px)`
+    : `150px repeat(${piano.giorni.length}, minmax(0, 1fr))` }
+  const nomeFisso = compatto ? 'sticky left-0 z-10 bg-[#1e1e1e] pr-2 self-stretch flex items-center min-w-0' : ''
   return (
     <section aria-labelledby="c-piano" className={`${CARTA} ${compatto ? 'p-[18px]' : 'px-6 py-[22px]'}`}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -397,17 +402,17 @@ export function CardPiano({ piano, titolo, nota, caricamento, compatto = false, 
       {caricamento ? <div className="h-40 animate-pulse" /> : piano.righe.length === 0 ? (
         <p className="text-sm text-gray-400">Nessun atleta da programmare.</p>
       ) : (
-        <div className="overflow-x-auto hide-scrollbar">
-          <div className={`${compatto ? '' : 'min-w-[760px]'} flex flex-col gap-1.5`}>
+        <div className={`overflow-x-auto hide-scrollbar ${compatto ? 'snap-x snap-proximity overscroll-x-contain touch-pan-x scroll-smooth [-webkit-overflow-scrolling:touch]' : ''}`}>
+          <div className={`${compatto ? 'w-max' : 'min-w-[760px]'} flex flex-col gap-1.5`}>
             <div className="grid gap-1.5 text-xs font-bold" style={colonne}>
-              <span />
+              <span className={nomeFisso} />
               {piano.giorni.map(d => (
-                <span key={d.data} className={`text-center ${d.oggi ? 'text-brand' : 'text-gray-500'}`}>{d.etichetta}</span>
+                <span key={d.data} className={`text-center ${compatto ? 'snap-start' : ''} ${d.oggi ? 'text-brand' : 'text-gray-500'}`}>{d.etichetta}</span>
               ))}
             </div>
             {piano.righe.map(r => (
               <div key={r.id} className="grid gap-1.5 items-center" style={colonne}>
-                <span className={`${compatto ? 'text-[13px]' : 'text-sm'} font-bold text-white truncate`}>{r.nome}</span>
+                <span className={`${compatto ? 'text-[13px]' : 'text-sm'} font-bold text-white ${compatto ? nomeFisso : 'truncate'}`}><span className="truncate">{r.nome}</span></span>
                 {r.celle.map(c => <Cella key={c.data} cella={c} compatto={compatto} onApri={onApri} />)}
               </div>
             ))}

@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "/Users/alessandropatrone/Desktop/FLEOFIT/fleofit-app/.archify/architecture-fleofit-20261104-094504/candidate.json",
+    "sha256": "fdfadeeffad56d0e406866c5847e194b7620454d8e666180cc429fc0651859b7",
+    "bytes": 5919
+  },
+  "artifact": {
+    "path": "/Users/alessandropatrone/Desktop/FLEOFIT/fleofit-app/.archify/architecture-fleofit-20261104-094504/fleofit-architecture.html",
+    "sha256": "4001e3ec34e536f689dabfec37c99e97186f4730b286d2a7a6293902e0f3902b",
+    "bytes": 855080
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/Users/alessandropatrone/Desktop/FLEOFIT/fleofit-app/.archify/architecture-fleofit-20261104-094504/fleofit-architecture.finalize.json",
+    "summaryReceipt": "/Users/alessandropatrone/Desktop/FLEOFIT/fleofit-app/.archify/architecture-fleofit-20261104-094504/fleofit-architecture.finalize-summary.json",
+    "browserCheckReceipt": "/Users/alessandropatrone/Desktop/FLEOFIT/fleofit-app/.archify/architecture-fleofit-20261104-094504/fleofit-architecture.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-04T08:45:28.037Z",
+    "source": "network",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 8096,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 1
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "edge-db",
+            "from": "edge",
+            "to": "db",
+            "label": "service role",
+            "collectionIndex": 4,
+            "artifactIndex": 5
+          },
+          "right": {
+            "id": "edge-misc",
+            "from": "edge",
+            "to": "misc",
+            "label": "fetch / email",
+            "collectionIndex": 10,
+            "artifactIndex": 11
+          },
+          "point": [
+            632,
+            333.5
+          ],
+          "sharedNode": "edge"
+        }
+      ],
+      "detours": [],
+      "truncated": false
+    },
+    "hints": [
+      "edge → db and edge → misc cross next to edge: move node db or misc so the two reach edge from different sides (for example one level with it, one directly above or below it)."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

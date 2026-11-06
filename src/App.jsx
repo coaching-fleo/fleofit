@@ -47,6 +47,7 @@ const Scarpe = lazy(() => import('./pages/Scarpe'))
 const DettaglioScarpa = lazy(() => import('./pages/DettaglioScarpa'))
 const ModelloScarpa = lazy(() => import('./pages/ModelloScarpa'))
 const Login = lazy(() => import('./pages/Login'))
+const Landing = lazy(() => import('./pages/Landing'))
 // La barra laterale del desktop (solo coach, solo web, finestra ≥ 1024px): pigra,
 // così il chunk d'ingresso del telefono non cresce (CLAUDE.md §2).
 const BarraLaterale = lazy(() => import('./components/BarraLaterale'))
@@ -71,11 +72,13 @@ import { mostraErrore } from './lib/alert'
 import { ADMIN_EMAILS, leggiRuolo, eStaff } from './lib/ruoli'
 import { rinfrescaTokenPush } from './lib/pushToken'
 import { scriviJson } from './lib/offlineQueue'
+import { isAuthRetryableFetchError } from '@supabase/supabase-js'
+import { ATTESA_SESSIONE_MS, senzaRete, sessioneSalvata, entro, ruoloSalvato, salvaRuolo } from './lib/avvioSenzaRete'
 import { sincronizzaBadge } from './lib/badge'
 import { gestisciIndietro, puoTornareIndietro } from './lib/indietroAndroid'
 import { eUnLinkDiRecupero, recuperoInCorso, avviaRecupero, chiudiRecupero } from './lib/recuperoPassword'
 import { leggiErroreLink, segnalaLinkFallito } from './lib/esitoLink'
-import { rottaDaDeepLinkGarmin } from './lib/garmin'
+import { rottaDaDeepLinkGarmin, recuperaAttivitaGarmin } from './lib/garmin'
 import { eLinkDelTimer, eLinkDellaTV, rottaDaLinkTV } from './lib/linkTimer'
 import { impostaRuoloFunzioni } from './lib/funzioniApp'
 import SoloSeAccesa from './components/SoloSeAccesa'
@@ -287,11 +290,41 @@ function ProtectedRoute() {
     document.documentElement.classList.toggle('desktop', desktop)
   }, [desktop])
 
+  // Garmin: al login e alla prima apertura del giorno si fa rimandare a Garmin
+  // l'ultima settimana di attività, per quelle il cui invio si fosse perso
+  // (src/lib/garmin.js, `recuperaAttivitaGarmin`). Solo l'atleta; il giorno
+  // lo controlla la funzione, quindi tornare sull'app più volte non costa.
+  const utente = session?.user ?? null
+  useEffect(() => {
+    if (role !== 'athlete' || !utente) return
+    const prova = () => { recuperaAttivitaGarmin(supabase, utente) }
+    prova()
+    const quandoTorna = () => { if (document.visibilityState === 'visible') prova() }
+    document.addEventListener('visibilitychange', quandoTorna)
+    return () => document.removeEventListener('visibilitychange', quandoTorna)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- conta l'utente, non l'oggetto sessione rinnovato a ogni token
+  }, [role, utente?.id, utente?.last_sign_in_at])
+
   useEffect(() => {
     let sub;
     const initSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      await handleSession(session)
+      // 🔴 Senza rete `getSession()` può restare quasi un minuto a riprovare il
+      // rinnovo del token, con l'apertura ferma davanti (04/11/2026). Chi ha
+      // una sessione salvata sul dispositivo entra con quella, e la vera arriva
+      // dopo (src/lib/avvioSenzaRete.js).
+      const salvata = sessioneSalvata(supabase.auth)
+      const richiesta = supabase.auth.getSession()
+      const esito = !salvata ? { valore: await richiesta }
+        : senzaRete() ? { scaduto: true }
+        : await entro(richiesta, ATTESA_SESSIONE_MS)
+      const session = esito.valore?.data?.session ?? null
+      const reteCaduta = esito.scaduto || (!session && isAuthRetryableFetchError(esito.valore?.error))
+      if (salvata && reteCaduta) {
+        await handleSession(salvata, true)
+        if (esito.scaduto) richiesta.then(({ data }) => { if (data?.session) handleSession(data.session) }).catch(() => {})
+      } else {
+        await handleSession(session)
+      }
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
         if (event === 'PASSWORD_RECOVERY') avviaRecupero()
@@ -304,7 +337,7 @@ function ProtectedRoute() {
     return () => sub?.unsubscribe()
   }, [])
 
-  const handleSession = async (session) => {
+  const handleSession = async (session, senzaConnessione = false) => {
     const mio = ++giro.current
     const superato = () => mio !== giro.current
     setSession(session)
@@ -320,11 +353,32 @@ function ProtectedRoute() {
       // src/lib/ruoli.js) e parte INSIEME alla riga atleta, non prima: le due
       // letture non dipendono l'una dall'altra, e in fila sarebbero un giro di
       // rete in più prima della Home — la stessa trappola di sopra.
-      const [ruoloDb, { data: rigaAtleta }] = await Promise.all([
+      const [ruoloDb, { data: rigaAtleta, error: erroreAtleta }] = await Promise.all([
         leggiRuolo(supabase, session.user.email),
         supabase.from('athletes').select('id, name, surname').eq('id', session.user.id).maybeSingle(),
       ])
       if (superato()) return
+
+      // 🔴 Senza rete la riga atleta NON «manca»: non si è potuta leggere. Qui
+      // il cancello mandava l'atleta a riscattare un codice invito, cioè lo
+      // disconnetteva. Si entra col ruolo dell'ultimo accesso riuscito, e le
+      // pagine mostrano le loro copie in cache (src/lib/avvioSenzaRete.js).
+      // ⚠️ Chi è già entrato prima di questa versione non ha il ruolo salvato,
+      // ma ha il nome (`fleofit_name_<uid>`): vuol dire che il profilo c'è.
+      const nomeSalvato = localStorage.getItem(`fleofit_name_${session.user.id}`)
+      const metaRuolo = session.user.user_metadata?.role
+      const ricordato = ruoloSalvato(session.user.id)
+        ?? (nomeSalvato ? (ruoloDb ?? metaRuolo ?? 'athlete') : null)
+      if ((senzaConnessione || erroreAtleta) && ricordato) {
+        const meta = session.user.user_metadata || {}
+        const override = localStorage.getItem('adminRoleOverride')
+        setRole(ricordato === 'admin' && override === 'athlete' ? 'athlete' : ricordato)
+        setUserName(nomeSalvato || meta.first_name || session.user.email?.split('@')[0] || '')
+        setNeedsConsenso(false)
+        setNeedsOnboarding(false)
+        setLoading(false)
+        return
+      }
       const isAdmin = ruoloDb !== null
 
       if (!isAdmin) {
@@ -439,6 +493,9 @@ function ProtectedRoute() {
         }
         setUserName(rigaAtleta.name)
         localStorage.setItem(`fleofit_name_${session.user.id}`, rigaAtleta.name)
+        // Solo dopo un accesso completo con la rete: è ciò che l'avvio senza
+        // rete userà la prossima volta.
+        salvaRuolo(session.user.id, isAdmin ? ruoloDb : r)
         if (rigaAtleta.name !== meta.first_name) {
           supabase.auth.updateUser({ data: { first_name: rigaAtleta.name, last_name: rigaAtleta.surname } }).catch(()=>{})
         }
@@ -808,6 +865,8 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/tv" element={<TVDashboard />} />
+          {/* Landing pubblica, solo web: nessuno ci arriva dall'app nativa. */}
+          <Route path="/benvenuto" element={<Landing />} />
           {/* Un solo <ProtectedRoute> per tutte le pagine private: è la route
               di layout, e le pagine sono sue figlie. Non riavvolgerne nessuna. */}
           <Route element={<ProtectedRoute />}>

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   VERSIONE_CONSENSO_GARMIN, leggiStatoGarmin, etichettePermessi, permessiMancanti,
   ritornoGarmin, rottaDaDeepLinkGarmin, MESSAGGI_ESITO, messaggioEsito, dataCollegamento,
+  serveRecupero, recuperaAttivitaGarmin,
 } from '../garmin'
 import { MOTIVI_ERRORE } from '../../../supabase/functions/_shared/garminRegole.ts'
 
@@ -129,5 +130,61 @@ describe('varie', () => {
     expect(dataCollegamento('2026-11-03T10:00:00Z')).toBe('3 nov 2026')
     expect(dataCollegamento(null)).toBeNull()
     expect(dataCollegamento('non una data')).toBeNull()
+  })
+})
+
+describe('recupero delle attività Garmin (login e apertura)', () => {
+  const OGGI = new Date('2026-11-04T09:00:00')
+  const utente = { id: 'u1', last_sign_in_at: '2026-11-04T08:00:00Z' }
+  const memoria = () => {
+    const m = new Map()
+    return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)), m }
+  }
+  const finto = (risposta = { data: { ok: true }, error: null }) => {
+    const invoke = vi.fn(() => Promise.resolve(risposta))
+    return { functions: { invoke }, invoke }
+  }
+
+  it('serveRecupero: la prima volta, un giorno nuovo o un login nuovo sì; lo stesso giorno no', () => {
+    expect(serveRecupero(null, '2026-11-04', 'a')).toBe(true)
+    expect(serveRecupero({ giorno: '2026-11-03', accesso: 'a' }, '2026-11-04', 'a')).toBe(true)
+    expect(serveRecupero({ giorno: '2026-11-04', accesso: 'a' }, '2026-11-04', 'b')).toBe(true)
+    expect(serveRecupero({ giorno: '2026-11-04', accesso: 'a' }, '2026-11-04', 'a')).toBe(false)
+  })
+
+  it('chiede «sincronizza» una volta, poi più fino a domani', async () => {
+    const s = finto(); const st = memoria()
+    expect(await recuperaAttivitaGarmin(s, utente, OGGI, st)).toBe(true)
+    expect(s.invoke).toHaveBeenCalledWith('garmin-auth', { body: { azione: 'sincronizza' } })
+    expect(await recuperaAttivitaGarmin(s, utente, OGGI, st)).toBe(false)
+    expect(s.invoke).toHaveBeenCalledTimes(1)
+    expect(await recuperaAttivitaGarmin(s, utente, new Date('2026-11-05T07:00:00'), st)).toBe(true)
+  })
+
+  it('dopo un nuovo login lo richiede subito, anche lo stesso giorno', async () => {
+    const s = finto(); const st = memoria()
+    await recuperaAttivitaGarmin(s, utente, OGGI, st)
+    await recuperaAttivitaGarmin(s, { ...utente, last_sign_in_at: '2026-11-04T10:00:00Z' }, OGGI, st)
+    expect(s.invoke).toHaveBeenCalledTimes(2)
+  })
+
+  it('se fallisce non si segna: riprova alla prossima apertura', async () => {
+    const s = finto({ data: null, error: { message: 'giù' } }); const st = memoria()
+    expect(await recuperaAttivitaGarmin(s, utente, OGGI, st)).toBe(false)
+    await recuperaAttivitaGarmin(s, utente, OGGI, st)
+    expect(s.invoke).toHaveBeenCalledTimes(2)
+  })
+
+  it('un 403 (staff in «Simula atleta») si segna: non si richiede a ogni ritorno', async () => {
+    const s = finto({ data: null, error: { message: 'no', context: { status: 403 } } }); const st = memoria()
+    await recuperaAttivitaGarmin(s, utente, OGGI, st)
+    await recuperaAttivitaGarmin(s, utente, OGGI, st)
+    expect(s.invoke).toHaveBeenCalledTimes(1)
+  })
+
+  it('senza utente o con la rete che lancia non rompe niente', async () => {
+    expect(await recuperaAttivitaGarmin(finto(), null, OGGI, memoria())).toBe(false)
+    const s = { functions: { invoke: () => Promise.reject(new Error('rete')) } }
+    expect(await recuperaAttivitaGarmin(s, utente, OGGI, memoria())).toBe(false)
   })
 })

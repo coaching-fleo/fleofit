@@ -108,7 +108,7 @@ describe('Nuovo evento — gara HYROX', () => {
         : { data: { gare: GARE }, error: null },
     ))
     const u = await apri()
-    await u.click(screen.getByRole('tab', { name: 'Già corsa' }))
+    await u.click(screen.getByRole('button', { name: 'Già corsa' }))
     expect(await screen.findByText('Stagione 2025/26')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Turin 2026' })).toBeInTheDocument()
   })

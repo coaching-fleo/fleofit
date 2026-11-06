@@ -307,7 +307,7 @@ describe('La Home dell\'admin non è anche la Home di un atleta', () => {
     montaAdmin()
     await attendi('«Gambe pesanti»')
     expect(screen.getByRole('region', { name: 'Il polso del team' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Prossimi 3 giorni' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Prossimi giorni' })).toBeInTheDocument()
     expect(await screen.findByLabelText("Apri l'archivio dei workout")).toBeInTheDocument()
   })
 

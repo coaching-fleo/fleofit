@@ -383,6 +383,63 @@ server `https://apis.garmin.com/wellness-api`), con la sessione del committente.
 6. Strumenti del portale per le prove: *Data Viewer* (i riepiloghi arrivati), *Data Generator*
    (ne crea di finti) e *Summary Resender* (rimanda quelli già arrivati).
 
+## Fase 1 · allenamenti liberi da Garmin e recupero al login (04/11/2026)
+> Richiesta del committente: un'attività dell'orologio senza un workout assegnato diventa da sola
+> un allenamento **Custom completato**; e al login (o all'apertura) si recuperano le attività perse.
+> Decisioni prese in sessione, tutte quelle consigliate. ✅ **`garmin-webhook` e `garmin-auth`
+> pubblicate dal committente il 04/11/2026**; ⏳ prova vera ancora da fare. Niente migrazioni.
+
+- **Quando nasce** (`diventaLibero` di `_shared/abbinaGarmin.ts`): l'attività non ha completato un
+  workout (`scegliAbbinamento` nullo), è **dal collegamento in poi** (lo storico dei 30 giorni resta
+  voce grigia: niente 30 allenamenti e 30 notifiche in un colpo), arrivata entro **7 giorni**, dura
+  almeno **10 minuti** (o `GARMIN_MINUTI_MINIMI`), e quel giorno **nessuna assegnazione potrebbe
+  essere lei**: una da fare di tipo compatibile (anche se la durata non torna o sono due), una già
+  segnata a mano senza attività (sarebbe un doppione), un Custom o una gara. Quelle restano voce
+  grigia con «Abbina a…». Un'assegnazione che ha già la sua attività non blocca (corsa del mattino
+  abbinata, bici della sera → libero).
+- **Com'è fatto**: `workouts` con `sections: { category: 'Custom', isAutonomous: true, daGarmin: true }`,
+  `creato_da` = l'atleta (come l'«Aggiungi allenamento libero» della Home), titolo
+  **«Corsa da Garmin · mer 28 ott»** (`titoloLibero`, stesso giorno di `generaTitolo`; (2), (3)… se
+  quel giorno c'è già). Niente durata nel titolo: « · 42′» sembrerebbe un codice a `separaCodice`.
+  `athlete_workouts` completato, note vuote, RPE vuoto. L'attività prende `abbinamento = 'auto'`.
+- **Doppio Push**: prima si PRENDE l'attività (update condizionato a `abbinamento` nullo), poi si
+  crea; se workout o assegnazione falliscono si torna indietro e l'attività resta voce grigia.
+- **Notifiche**: al coach `custom_workout` («ha aggiunto: Corsa da Garmin · …»), all'atleta
+  `garmin_registrato` (apre l'RPE). Nessuna modifica a `send-reminders`.
+- **Nella scheda** un libero `daGarmin` non mostra «Non era questo allenamento» (lo lascerebbe vuoto
+  e da fare): si cancella come ogni libero. L'attività resta `auto` con id nullo → voce grigia, mai
+  ricreata.
+- **Tipi nuovi** in italiano (bici, nuoto, camminata, escursione, ellittica, scale, yoga):
+  `TIPI_ATTIVITA` dell'app e la sua copia `NOMI_TIPI` del server, controllate dal test. ⚠️ I nomi
+  Garmin di questi tipi sono quelli noti, non visti arrivare: un tipo sconosciuto dà «Attività da
+  Garmin».
+- **Login e logout non c'entrano col server**: Garmin manda al webhook app chiusa o no. Il rischio
+  vero è un Push perso. Per questo **`sincronizza`** (azione di `garmin-auth`): Garmin rimanda le
+  attività degli ultimi **7 giorni** (backfill `activities`; 409 = già chiesto, va bene). L'app la
+  chiede da `ProtectedRoute` (solo atleta) al **login nuovo** (`last_sign_in_at` cambiato) e alla
+  **prima apertura del giorno**, anche al ritorno in primo piano (`visibilitychange`):
+  `recuperaAttivitaGarmin` di `src/lib/garmin.js`, memoria in `fleofit_garmin_recupero_<uid>`. Si
+  segna solo se è andata (o 403, lo staff in «Simula atleta»). Effetto voluto: le attività degli
+  ultimi 7 giorni già salvate come voce grigia, al primo recupero diventano allenamenti liberi se
+  rispettano le regole.
+
+- 🔴 **Trovato il 04/11/2026, subito dopo il deploy**: un'attività di lunedì 2/11, già salvata come
+  voce grigia **prima** del codice nuovo, non diventava allenamento. Il webhook decide solo quando
+  un'attività arriva, e Garmin **può non rimandare** un periodo già chiesto (al collegamento si
+  chiedono 30 giorni). Corretto: `sincronizza` prima **riesamina le attività già salvate** degli
+  ultimi 7 giorni, libere e mai rifiutate (`rivalutaSalvate` di `garmin-webhook/attivita.ts`, che
+  `garmin-auth` importa), poi chiede a Garmin. Risponde `{ nuovi }`; se Garmin non risponde, ok lo
+  stesso (`garmin: false`). ✅ Ripubblicate `garmin-auth` e `garmin-webhook` il 04/11/2026.
+
+### Passi del committente
+1. ✅ (04/11/2026) `supabase functions deploy garmin-webhook --no-verify-jwt`
+2. ✅ (04/11/2026) `supabase functions deploy garmin-auth --no-verify-jwt`
+3. Prova con l'atleta di prova: un'attività (anche bici o camminata) da 10 minuti in un giorno
+   senza workout → allenamento «… da Garmin · …» completato nel calendario, notifica al coach, push
+   all'atleta. Poi: uscire dall'app, fare un'attività, rientrare col login → nei log di
+   `garmin-auth` «recupero di 7 giorni chiesto», e l'attività compare.
+4. `select tipo, count(*) from garmin_attivita group by tipo;` per correggere i nomi dei tipi nuovi.
+
 ## Fase 3 · Corsa all'orologio
 > Scritta il 28/10/2026. Piano: `docs/superpowers/plans/2026-10-28-garmin-fase-3-corsa.md`,
 > spec: `docs/superpowers/specs/2026-10-27-garmin-design.md` §5, §7, §9. ✍️ **Codice scritto, in

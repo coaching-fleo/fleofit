@@ -270,16 +270,27 @@ export default function TVDashboard() {
     window.addEventListener('resize', updateScale);
     
     let channel;
+    // Il codice di QUESTA esecuzione: lo state `code` qui dentro resta quello
+    // della prima esecuzione (null), e la riga non si cancellava mai (04/11/2026).
+    let codice = null
+    let spenta = false
     
     const initTV = async () => {
       // Genera un codice casuale di 4 cifre
       const newCode = Math.floor(1000 + Math.random() * 9000).toString()
+      codice = newCode
       setCode(newCode)
 
       const { error: insertErr } = await supabase.from('tv_sessions').upsert({
         code: newCode,
         updated_at: new Date().toISOString()
       }, { onConflict: 'code' })
+
+      // Chiusa mentre la riga si scriveva: la si toglie, e niente canale.
+      if (spenta) {
+        if (!insertErr) supabase.from('tv_sessions').delete().eq('code', newCode).then()
+        return
+      }
 
       if (insertErr) {
         setError("Errore connessione. Ricarica la pagina.")
@@ -330,8 +341,11 @@ export default function TVDashboard() {
     initTV()
 
     return () => {
-      if (channel) supabase.removeChannel(channel)
-      if (code) supabase.from('tv_sessions').delete().eq('code', code).then()
+      spenta = true
+      if (channel) {
+        supabase.removeChannel(channel)
+        supabase.from('tv_sessions').delete().eq('code', codice).then()
+      }
       window.removeEventListener('resize', updateScale);
       if (inner) resizeObserver.unobserve(inner);
     }

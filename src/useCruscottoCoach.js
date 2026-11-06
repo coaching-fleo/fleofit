@@ -13,6 +13,9 @@ import { aderenzaTeam, rpeTeam, comeStaTeam, gareInArrivo, oggiConComeSta, segna
 import { giorniSettimana } from './lib/calendarioTeam'
 import { GIORNI_COPERTURA } from './lib/statisticheCoach'
 
+/** Quanti giorni mostra la griglia del telefono (si scorre a destra). */
+const GIORNI_SCORRIMENTO = 14
+
 /**
  * @param atleti       la rubrica (senza l'account del coach)
  * @param assegnazioni le righe della finestra della Home
@@ -33,10 +36,14 @@ export function useCruscottoCoach({ atleti, assegnazioni, comeStai, estratti, ri
   }), [atleti, assegnazioni, comeStai, gare])
   const oggi = useMemo(() => oggiConComeSta(squadra.righe, comeStai), [squadra, comeStai])
   const segnali = useMemo(() => segnaliProgramma(atleti, assegnazioni, estratti), [atleti, assegnazioni, estratti])
-  const piano = useMemo(
-    () => pianoGiorni(atleti, assegnazioni, settimana ? giorniSettimana(new Date()) : prossimiGiorni(new Date(), GIORNI_COPERTURA)),
-    [atleti, assegnazioni, settimana]
-  )
+  // Telefono: due settimane di giorni da scorrere. Le assegnazioni oltre la finestra della Home
+  // stanno in `righeGare` (tutti i prossimi 60 giorni): si uniscono, senza doppioni.
+  const piano = useMemo(() => {
+    if (settimana) return pianoGiorni(atleti, assegnazioni, giorniSettimana(new Date()))
+    const viste = new Set(assegnazioni.map(a => a?.id))
+    const tutte = [...assegnazioni, ...(righeGare || []).filter(a => !viste.has(a?.id))]
+    return pianoGiorni(atleti, tutte, prossimiGiorni(new Date(), GIORNI_SCORRIMENTO))
+  }, [atleti, assegnazioni, righeGare, settimana])
   // Sotto la griglia, il numero che dice «devi programmare adesso»: chi non ha
   // niente nei prossimi tre giorni. È la copertura di prima, con le parole.
   const notaPiano = copertura.totale === 0 ? null : copertura.senza > 0
