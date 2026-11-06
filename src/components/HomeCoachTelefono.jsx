@@ -12,7 +12,6 @@
 
 import { ChartNoAxesColumn } from 'lucide-react'
 import { cosaGuardare } from '../lib/cosaGuardare'
-import { GIORNI_COPERTURA } from '../lib/statisticheCoach'
 import { useCruscottoCoach } from '../useCruscottoCoach'
 import { RigaDestinazione } from './HomeCoachUI'
 import { PolsoTeam, CardOggi, CardSegnali, CardSmaltire, CardPiano, CardGare } from './CruscottoCoachUI'
@@ -49,7 +48,7 @@ export default function HomeCoachTelefono({
 
     <CardSmaltire compatto voci={voci} caricamento={caricamento} onApri={apri} />
 
-    <CardPiano compatto piano={piano} titolo={`Prossimi ${GIORNI_COPERTURA} giorni`} nota={notaPiano}
+    <CardPiano compatto piano={piano} titolo="Prossimi giorni" nota={notaPiano}
       caricamento={caricamento} onApri={onApriSeduta} />
 
     <CardGare compatto gare={gare} onApri={apriGara} />
