@@ -103,7 +103,7 @@ export function CampoRicerca({
         placeholder={placeholder}
         value={valore}
         onChange={e => onCambia(e.target.value)}
-        className="w-full bg-black/50 border border-white/[.08] rounded-[14px] py-2.5 pl-10 pr-9
+        className="campo-ricerca w-full bg-black/50 border border-white/[.08] rounded-[14px] py-2.5 pl-10 pr-9
                    text-[15px] font-medium text-white placeholder:text-[#6b7080]
                    shadow-[inset_0_1px_0_rgba(255,255,255,.04)]
                    focus:outline-none focus:border-brand/60 transition"

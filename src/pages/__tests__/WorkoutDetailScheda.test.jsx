@@ -28,7 +28,7 @@ const finto = await vi.hoisted(async () => {
       coach_notes: '', sections: ctrl.stato.sections,
     }],
     athlete_workouts: ctrl.stato.assegnazioni,
-    athletes: [{ id: 'u1', name: 'Marco', surname: 'Rinaldi' }],
+    athletes: ctrl.stato.atleti ?? [{ id: 'u1', name: 'Marco', surname: 'Rinaldi' }],
   }))
 })
 
@@ -381,6 +381,55 @@ describe('la barra fissa in basso', () => {
     const rifallo = await screen.findByRole('button', { name: /Rifallo/i })
     expect(rifallo.className).not.toMatch(/bg-brand/)
     expect(screen.getByText('Allenamento completato')).toBeInTheDocument()
+  })
+})
+
+describe('il foglio «Assegna Workout»', () => {
+  const ATLETI = [
+    { id: 'u1', name: 'Marco', surname: 'Rinaldi' },
+    { id: 'u2', name: 'Sara', surname: 'Bianchi' },
+    { id: 'u3', name: 'Luca', surname: 'Bianco' },
+  ]
+  const apriFoglio = async () => {
+    ctrl.stato.atleti = ATLETI
+    apri({ ruolo: 'admin', utente: 'coach' })
+    await attendi()
+    await userEvent.click(screen.getByRole('button', { name: /Assegna ad atleta/i }))
+    await screen.findByRole('searchbox', { name: 'Cerca un atleta' })
+    await foglio().findByRole('button', { name: /^Sara Bianchi/ })
+  }
+  afterEach(() => { delete ctrl.stato.atleti })
+  // Il nome di un atleta compare anche fuori dal foglio (assegnazioni, intestazione):
+  // le domande si fanno dentro il foglio.
+  const foglio = () => within(screen.getByRole('searchbox', { name: 'Cerca un atleta' }).closest('.overflow-y-auto'))
+
+  it('la ricerca filtra gli atleti per nome o cognome, in qualsiasi ordine', async () => {
+    await apriFoglio()
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Cerca un atleta' }), 'bianc')
+    expect(foglio().getByRole('button', { name: /^Sara Bianchi/ })).toBeInTheDocument()
+    expect(foglio().getByRole('button', { name: /^Luca Bianco/ })).toBeInTheDocument()
+    expect(foglio().queryByRole('button', { name: /^Marco Rinaldi/ })).not.toBeInTheDocument()
+
+    await userEvent.clear(screen.getByRole('searchbox', { name: 'Cerca un atleta' }))
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Cerca un atleta' }), 'bianchi sara')
+    expect(foglio().getByRole('button', { name: /^Sara Bianchi/ })).toBeInTheDocument()
+    expect(foglio().queryByRole('button', { name: /^Luca Bianco/ })).not.toBeInTheDocument()
+  })
+
+  it('«Seleziona tutti» prende solo i visibili, e una scelta resta anche fuori dal filtro', async () => {
+    await apriFoglio()
+    await userEvent.click(foglio().getByRole('button', { name: /^Marco Rinaldi/ }))
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Cerca un atleta' }), 'bianc')
+    await userEvent.click(foglio().getByRole('button', { name: 'Seleziona tutti' }))
+    expect(foglio().getByRole('button', { name: /Procedi \(3\)/ })).toBeInTheDocument()
+    await userEvent.click(foglio().getByRole('button', { name: 'Deseleziona tutti' }))
+    expect(foglio().getByRole('button', { name: /Procedi \(1\)/ })).toBeInTheDocument()
+  })
+
+  it('senza risultati lo dice', async () => {
+    await apriFoglio()
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Cerca un atleta' }), 'zzz')
+    expect(screen.getByText('Nessun atleta per «zzz».')).toBeInTheDocument()
   })
 })
 

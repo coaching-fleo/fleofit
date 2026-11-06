@@ -793,3 +793,19 @@ Non provato sul telefono.
   (`TVDashboardSessione.test.jsx`, visto fallire prima).
   ⚠️ Lo smontaggio parte solo uscendo da `/tv` dentro l'app: **chiudere la scheda o spegnere
   il browser della TV non lo fa partire**, e lì la riga resta. Arriva con `app:main`.
+
+## Ricerca nel foglio «Assegna Workout» (06/11/2026)
+
+Richiesta del committente: nel foglio «Assegna Workout» una barra di ricerca che filtra
+gli atleti mentre si scrive. Riusa `CampoRicerca` (`ArchivioUI.jsx`) e `filtraPerNome`
+(`rigaAtleta.js`), gli stessi della pagina Atleti: le parole si cercano una per una,
+quindi «bianchi sara» trova Sara Bianchi.
+- Il filtro cambia solo ciò che si vede: un atleta già scelto resta scelto anche se
+  esce dal filtro («Procedi (n)» lo conta).
+- «Seleziona tutti» / «Deseleziona tutti» agiscono **sui soli visibili**.
+- La ricerca si svuota a ogni apertura del foglio (`apriAssegna`).
+- `CampoRicerca` ora porta la classe `campo-ricerca`, che in `index.css` nasconde la X
+  nativa di WebKit: se ne vedevano due. ⚠️ Gli altri `type="search"` (gare, Gym, nuovo
+  evento) la tengono: non hanno una X loro.
+- Test: `WorkoutDetailScheda.test.jsx`, «il foglio «Assegna Workout»» (visti fallire
+  togliendo il filtro).

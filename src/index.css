@@ -571,3 +571,13 @@ input[type="date"]::-webkit-date-and-time-value {
   }
   @page { margin: 12mm; }
 }
+
+/* CampoRicerca (ArchivioUI) ha la sua X «Cancella la ricerca»: quella nativa
+   di WebKit si aggiungeva accanto, e se ne vedevano due. ⚠️ Solo qui: gli altri
+   campi di ricerca (gare, Gym, nuovo evento) non hanno una X loro, e per loro
+   quella nativa è l'unico modo di svuotarli. */
+.campo-ricerca::-webkit-search-cancel-button,
+.campo-ricerca::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
