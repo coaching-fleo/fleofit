@@ -396,7 +396,7 @@ export function clientDemo() {
     },
     channel: canale,
     removeChannel: (c) => { c?.chiudi?.() },
-    rpc: async (nome) => {
+    rpc: async (nome, argomenti) => {
       // `elenco_staff` (multi-coach): lo staff con l'account e il nome, come
       // lo darebbe il join su auth.users. Qui gli account noti sono due.
       if (nome === 'elenco_staff') {
@@ -411,8 +411,31 @@ export function clientDemo() {
       }
       // `stato_garmin`: nella demo nessuno ha collegato Garmin.
       if (nome === 'stato_garmin') return { data: [], error: null }
+      // `team_scheda` (Team): come la funzione vera (team_2026-11-06.sql §4).
+      // Al coach (o all'admin, la sessione di default) tutti i membri; all'atleta
+      // invitato o dentro solo chi è invitato o dentro; a chiunque altro null.
+      if (nome === 'team_scheda') return { data: schedaTeamFinta(db(), argomenti?.t), error: null }
       return { data: null, error: null }
     },
+  }
+}
+
+function schedaTeamFinta(d, id) {
+  const x = (d.team ?? []).find(t => t.id === id)
+  if (!x) return null
+  const coach = !import.meta.env.VITE_DEMO_ATLETA || x.coach_id === UTENTE.id
+  const mio = (d.team_membri ?? []).find(m => m.team_id === id && m.atleta_id === UTENTE.id)
+  if (!coach && !['invitato', 'dentro'].includes(mio?.stato)) return null
+  const atleta = (aid) => (d.athletes ?? []).find(a => a.id === aid) || {}
+  const evento = (d.workouts ?? []).find(w => w.id === x.evento_id)
+  const c = atleta(x.coach_id)
+  return {
+    team: { ...x, evento: evento ? { titolo: evento.title, data: evento.date } : null },
+    coach: { nome: `${c.name || ''} ${c.surname || ''}`.trim() || 'Il tuo coach' },
+    membri: (d.team_membri ?? [])
+      .filter(m => m.team_id === id && (coach || ['invitato', 'dentro'].includes(m.stato)))
+      .map(m => ({ atleta_id: m.atleta_id, nome: atleta(m.atleta_id).name, cognome: atleta(m.atleta_id).surname,
+        foto: atleta(m.atleta_id).photo_url ?? null, stato: m.stato, invitato_il: m.invitato_il, risposto_il: m.risposto_il })),
   }
 }
 

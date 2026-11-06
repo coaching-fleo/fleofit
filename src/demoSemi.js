@@ -32,7 +32,7 @@ import schedeScarpe from '../tools/scarpe/schede.json'
 // build vera (il modulo demo si pota, gli asset no). Sono le sole tre che esistono.
 const FOTO_SCARPE = ['saucony-endorphin-speed-4', 'puma-deviate-nitro-3', 'on-cloudmonster-2']
 
-export const VERSIONE_SEME = 20
+export const VERSIONE_SEME = 21
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -386,6 +386,9 @@ const notifications = [
   { id: 'n3', user_id: COACH, title: 'Allenamento completato',
     message: 'Elena Moretti ha completato «Hyrox lungo · endurance»', route: '/athletes/at-elena',
     is_read: true, created_at: new Date(Date.now() - 86400000).toISOString() },
+  { id: 'n4', user_id: 'at-giulia', title: 'Invito in un team',
+    message: 'Coach Demo ti invita in «Doppia Hyrox Milano»', route: '/team/invito/t-doppia',
+    is_read: false, created_at: new Date(Date.now() - 2 * 86400000).toISOString() },
 ]
 
 const invitation_codes = [
@@ -495,6 +498,31 @@ const staff = () => [
 // serve a vedere l'interfaccia del coach, non la sicurezza.
 const coach_atleti = () => ['at-sara', 'at-luca', 'at-giulia']
   .map(athlete_id => ({ athlete_id, coach_id: COACH_DEMO.id, creato_at: fa(60) }))
+
+// «Team» (06/11/2026): un team INVENTATO del coach finto. Sara e Luca sono
+// dentro (testa a testa: una vittoria a testa), Giulia ha l'invito in attesa
+// (`DEMO_ATLETA=at-giulia npm run demo:atleta`). Due sfide chiuse e una aperta.
+const team = () => [
+  { id: 't-doppia', nome: 'Doppia Hyrox Milano', coach_id: COACH_DEMO.id, evento_id: 'w-gara',
+    classifica_visibile: true, creato_il: fa(20), chiuso_il: null },
+]
+const team_membri = () => [
+  { team_id: 't-doppia', atleta_id: 'at-sara', stato: 'dentro', invitato_il: fa(20), risposto_il: fa(19) },
+  { team_id: 't-doppia', atleta_id: 'at-luca', stato: 'dentro', invitato_il: fa(20), risposto_il: fa(20, -2) },
+  { team_id: 't-doppia', atleta_id: 'at-giulia', stato: 'invitato', invitato_il: fa(2), risposto_il: null },
+]
+const team_sfide = () => [
+  { id: 'ts-1', team_id: 't-doppia', workout_id: 'w-completo', metrica: 'tempo', verso: 'minore', data: giorno(-6), chiusa_il: fa(5) },
+  { id: 'ts-2', team_id: 't-doppia', workout_id: 'w-medio', metrica: 'ripetizioni', verso: 'maggiore', data: giorno(-5), chiusa_il: fa(4) },
+  { id: 'ts-3', team_id: 't-doppia', workout_id: 'w-scarico', metrica: 'kg', verso: 'maggiore', data: giorno(-1), chiusa_il: null },
+]
+const team_risultati = () => [
+  { sfida_id: 'ts-1', atleta_id: 'at-sara', valore: 4210, fonte: 'manuale', inserito_il: fa(6) },
+  { sfida_id: 'ts-1', atleta_id: 'at-luca', valore: 4385, fonte: 'manuale', inserito_il: fa(6) },
+  { sfida_id: 'ts-2', atleta_id: 'at-sara', valore: 142, fonte: 'manuale', inserito_il: fa(5) },
+  { sfida_id: 'ts-2', atleta_id: 'at-luca', valore: 156, fonte: 'manuale', inserito_il: fa(5) },
+  { sfida_id: 'ts-3', atleta_id: 'at-luca', valore: 3200, fonte: 'manuale', inserito_il: fa(1) },
+]
 
 // «Scarpe da corsa» (02/11/2026): catalogo e scarpe INVENTATI. Sara (l'atleta di
 // `demo:atleta`) ne ha tre: la principale `ok`, una `quasi` (km di partenza alti)
@@ -614,7 +642,11 @@ export function semi() {
     scarpe_atleta: scarpe_atleta(),
     scarpe_uso: scarpe_uso(aws),
     // Nella demo le Scarpe sono accese: l'interruttore vero (funzioni_app) parte spento.
-    funzioni_app: [{ nome: 'scarpe', stato: 'tutti', aggiornato_at: fa(1) }],
+    funzioni_app: [{ nome: 'scarpe', stato: 'tutti', aggiornato_at: fa(1) }, { nome: 'team', stato: 'tutti', aggiornato_at: fa(1) }],
+    team: team(),
+    team_membri: team_membri(),
+    team_sfide: team_sfide(),
+    team_risultati: team_risultati(),
     staff: staff(),
     coach_atleti: coach_atleti(),
     push_subscriptions: [],
