@@ -32,7 +32,7 @@ import schedeScarpe from '../tools/scarpe/schede.json'
 // build vera (il modulo demo si pota, gli asset no). Sono le sole tre che esistono.
 const FOTO_SCARPE = ['saucony-endorphin-speed-4', 'puma-deviate-nitro-3', 'on-cloudmonster-2']
 
-export const VERSIONE_SEME = 18
+export const VERSIONE_SEME = 20
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -518,7 +518,9 @@ const scarpe_catalogo = () => [
   delete colonne.fonti
   delete colonne.fonte_foto
   const foto = FOTO_SCARPE.includes(slug) ? `/tools/scarpe/foto/${slug}.png` : null
-  return { ...c, ...colonne, marca: c.marca, modello: c.modello, foto_url: foto }
+  // ⏳ PROVA 3D: per ora il modello 3D c'è solo per la Saucony (tools/scarpe/3d).
+  const modello3d = slug === 'saucony-endorphin-speed-4' ? `/tools/scarpe/3d/${slug}.glb` : null
+  return { ...c, ...colonne, marca: c.marca, modello: c.modello, foto_url: foto, modello_3d_url: modello3d }
 })
 
 const scarpe_atleta = () => {
@@ -611,6 +613,8 @@ export function semi() {
     scarpe_catalogo: scarpe_catalogo(),
     scarpe_atleta: scarpe_atleta(),
     scarpe_uso: scarpe_uso(aws),
+    // Nella demo le Scarpe sono accese: l'interruttore vero (funzioni_app) parte spento.
+    funzioni_app: [{ nome: 'scarpe', stato: 'tutti', aggiornato_at: fa(1) }],
     staff: staff(),
     coach_atleti: coach_atleti(),
     push_subscriptions: [],

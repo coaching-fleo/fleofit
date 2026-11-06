@@ -21,6 +21,8 @@
 --
 --  · Bucket di storage `scarpe` (foto dei modelli) con tre policy limitate a quel
 --    bucket; e le caratteristiche dei 12 modelli di prova (sezione 5).
+--  · funzioni_app — gli interruttori per accendere una funzione senza aggiornare
+--    l'app (sezione 6). Le Scarpe partono SPENTE.
 --
 -- I km non si salvano: si calcolano dall'app (km_iniziali + allenamenti con
 -- questa scarpa).
@@ -392,11 +394,42 @@ update public.scarpe_catalogo set
   url_ufficiale = 'https://us.puma.com/us/en/pd/deviate-nitro-3-mens-road-running-shoes/309707'
  where lower(marca) = 'puma' and lower(modello) = 'deviate nitro 3';
 
+-- ── 6. Interruttori delle funzioni (06/11/2026) ────────────────────────────
+-- Accendere o spegnere una funzione senza aggiornare l'app: l'app legge la riga
+-- all'avvio (src/lib/funzioniApp.js). Stati:
+--   'spenta' — nascosta a tutti · 'admin' — la vedono solo gli admin · 'tutti'.
+-- Riga assente o database che non risponde = spenta (in mancanza dell'ultima
+-- risposta salvata sul dispositivo): una funzione non annunciata non compare per sbaglio.
+-- ⚠️ demo@fleofit.it è admin: con 'admin' la vede anche l'account del revisore Apple.
+-- Si cambia dal Table editor di Supabase, o con:
+--   update public.funzioni_app set stato = 'tutti', aggiornato_at = now() where nome = 'scarpe';
+create table public.funzioni_app (
+  nome          text primary key,
+  stato         text not null default 'spenta' check (stato in ('spenta', 'admin', 'tutti')),
+  aggiornato_at timestamptz not null default now()
+);
+
+alter table public.funzioni_app enable row level security;
+
+create policy "funzioni_app lettura" on public.funzioni_app
+  as permissive for select to authenticated
+  using (true);
+
+-- Le scrivono solo gli admin, MENO l'account del revisore.
+create policy "funzioni_app admin" on public.funzioni_app
+  as permissive for all to authenticated
+  using      (public.e_admin() and public.email_corrente() <> 'demo@fleofit.it')
+  with check (public.e_admin() and public.email_corrente() <> 'demo@fleofit.it');
+
+-- Le Scarpe partono spente.
+insert into public.funzioni_app (nome, stato) values ('scarpe', 'spenta');
+
 commit;
 
--- Dopo, per verificare (deve stampare SEI policy sulle tabelle: 2 + 2 + 2):
+-- Dopo, per verificare (deve stampare OTTO policy sulle tabelle: 2 + 2 + 2 + 2):
 -- select tablename, policyname, cmd from pg_policies
---  where tablename in ('scarpe_catalogo', 'scarpe_atleta', 'scarpe_uso') order by 1, 2;
+--  where tablename in ('scarpe_catalogo', 'scarpe_atleta', 'scarpe_uso', 'funzioni_app') order by 1, 2;
+-- L'interruttore: select * from public.funzioni_app;  -- scarpe | spenta
 -- e il seed: select count(*) from public.scarpe_catalogo;  -- 114
 -- Le caratteristiche: select count(*) from public.scarpe_catalogo where livello is not null;  -- 12
 --
@@ -412,7 +445,7 @@ commit;
 -- Il bucket: select id, public from storage.buckets where id = 'scarpe';
 
 -- Rollback (cancella tutte le scarpe e gli usi, e le foto):
--- DROP TABLE public.scarpe_uso, public.scarpe_atleta, public.scarpe_catalogo;
+-- DROP TABLE public.scarpe_uso, public.scarpe_atleta, public.scarpe_catalogo, public.funzioni_app;
 -- DROP POLICY "scarpe foto lettura" ON storage.objects;
 -- DROP POLICY "scarpe foto insert" ON storage.objects;
 -- DROP POLICY "scarpe foto update" ON storage.objects;

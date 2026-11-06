@@ -87,8 +87,8 @@
    `docs/memoria/garmin.md`).
    ✅ **Ottava eccezione** (28/10/2026, applicata dal committente): `garmin_fase3_2026-10-28.sql` — colonna `firma` su `garmin_invii`, tolta la chiave esterna verso `athlete_workouts`, accesi i due trigger della Fase 3 (`docs/memoria/garmin.md`).
    ⏳ **Nona eccezione — PROPOSTA, in attesa del sì** (02/11/2026): le tre tabelle «Scarpe da corsa»
-   (`scarpe_catalogo`, `scarpe_atleta`, `scarpe_uso`), additive, scritte in
-   `supabase/schema/scarpe_2026-11-02.sql` e **NON applicate** (`docs/memoria/scarpe.md`).
+   (`scarpe_catalogo`, `scarpe_atleta`, `scarpe_uso`) più `funzioni_app` (gli interruttori, 06/11/2026),
+   additive, scritte in `supabase/schema/scarpe_2026-11-02.sql` e **NON applicate** (`docs/memoria/scarpe.md`).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -364,6 +364,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `modelli_blocco` | ✅ **applicata** (`supabase/schema/modelli_blocco_2026-10-16.sql`): i blocchi (Hyrox), le fasi (Running) e i gruppi (Gym) salvati dal coach per riusarli, nel formato del §5 senza `id` interni. Policy unica: solo il coach proprietario, se è staff — **anche un admin vede solo i suoi**. Nel backup notturno. `main` non la conosce |
 | `garmin_collegamenti` · `garmin_attivita` · `garmin_giornate` · `garmin_invii` | ✅ **applicata il 28/10/2026** (`supabase/schema/garmin_2026-10-27.sql`; `docs/memoria/garmin.md`): il collegamento Garmin dell'atleta e i dati dell'orologio. `garmin_collegamenti` porta i token cifrati, **senza policy** e **fuori dal backup**; le altre tre le legge l'atleta o il suo coach. Le scrivono solo le Edge Function. `main` non le conosce |
 | `scarpe_catalogo` · `scarpe_atleta` · `scarpe_uso` | ⏳ **scritta, NON applicata — serve il sì** (`supabase/schema/scarpe_2026-11-02.sql`; `docs/memoria/scarpe.md`): catalogo dei modelli (dal 03/11 con le colonne `livello`, `ammortizzamento`, `stabilita`, `piastra`, `peso_g`, `stack_mm`, `uso`, `vita_km`, `url_ufficiale`, `foto_url` e il bucket `scarpe`, pubblico, 4 policy su `storage.objects`), le scarpe dell'atleta, con quale scarpa è stato fatto un allenamento. I km **non si salvano**, si calcolano. Senza le tabelle l'app nasconde tutto. `main` non le conosce |
+| `funzioni_app` | ⏳ **nella stessa migrazione, NON applicata**: gli interruttori per accendere una funzione **senza aggiornare l'app** (`nome`, `stato` fra `spenta`/`admin`/`tutti`). La legge chiunque, la scrivono gli admin meno `demo@fleofit.it`. Si legge con `src/lib/funzioniApp.js` (una volta per avvio); riga assente o rete giù = ultima risposta salvata, se no **spenta**. Le Scarpe partono spente (`docs/memoria/scarpe.md`) |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
 - 🔴 **Dal 16/10/2026 lo staff si cambia in UN posto: la tabella `staff`** (admin e coach).
@@ -608,6 +609,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_come_stai_saltato` (il giorno in cui l'atleta ha scelto «Salta»: memoria del dispositivo),
   `fleofit_live_activity` (true/false: la Live Activity del timer; assente = la domanda non è ancora stata fatta),
   `fleofit_messaggio_bozza`, `fleofit_messaggi_visto_fino` (bacheca «Dal coach»),
+  `fleofit_funzioni` (l'ultimo stato letto degli interruttori di `funzioni_app`: serve all'avvio senza rete, `src/lib/funzioniApp.js`),
   ⏳ `fleofit_messaggi_prova` (TEMPORANEO: le «Prova su di me» nella bacheca del coach),
   `adminRoleOverride`.
   ⚠️ `fleofit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
@@ -713,7 +715,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute`, `consenso.js`, `Consenso.jsx`, `informativa.js`, `public/privacy-policy.html` | `accesso.md` |
 | `RicercaCoach.jsx`, `ricercaCoach.js`, `dialogoRicerca.js`, `useDettatura.js`, Edge Function `ricerca-coach` | `ricerca.md` |
-| `kmScarpe.js`, `scarpeDb.js`, `scarpaCompletamento.js`, `useScarpaCompletamento.js`, `Scarpe.jsx`, `DettaglioScarpa.jsx`, `ScarpeUI`, `RigaScarpa`, `RigaScarpeCoach`, `caratteristicheScarpa.js`, `fotoScarpa.js`, `bannerScarpe.js`, `BannerScarpe`, `FotoScarpa`, `ModelloScarpa.jsx`, `ModelloScarpaUI`, `FoglioModelloCatalogo`, `tools/scarpe/` | `scarpe.md` |
+| `kmScarpe.js`, `scarpeDb.js`, `scarpaCompletamento.js`, `useScarpaCompletamento.js`, `Scarpe.jsx`, `DettaglioScarpa.jsx`, `ScarpeUI`, `RigaScarpa`, `RigaScarpeCoach`, `caratteristicheScarpa.js`, `fotoScarpa.js`, `bannerScarpe.js`, `BannerScarpe`, `FotoScarpa`, `ModelloScarpa.jsx`, `ModelloScarpaUI`, `FoglioModelloCatalogo`, `Scarpa3D`, `funzioniApp.js`, `useFunzione.js`, `SoloSeAccesa`, `tools/scarpe/` | `scarpe.md` |
 | `garmin.js`, `FoglioGarmin`, Edge Function `garmin-auth` e `garmin-webhook`, `_shared/garmin*.ts`, `workoutGarmin.ts`, `garminTraining.ts`, Edge Function `garmin-training`, `rigaOrologio.js`, `RigaOrologio`, `attivitaGarmin.ts`, `abbinaGarmin.ts`, `garmin-webhook/attivita.ts`, `attivitaGarmin.js`, `CardDaGarmin`, `RigheGarmin`, `FoglioAttivitaGarmin`, `giornateGarmin.ts`, `garmin-webhook/giornate.ts`, `recuperoGarmin.js`, `CardRecupero`, `send-reminders/testi.ts`, il ramo `fleofit://garmin` di `DeeplinkHandler` | `garmin.md` |
 | `previsione.js`, `stimaWorkout.js`, ogni durata o carico | `carico-e-durata.md` |
 | `Recap*.jsx`, `recapAllenamento.js`, `gradimento.js` | `recap.md` |

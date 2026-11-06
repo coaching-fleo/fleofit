@@ -33,6 +33,7 @@ import { datiTecnici } from '../lib/segnalazione'
 import { dataConsenso } from '../lib/consenso'
 import { apriInformativa } from '../lib/informativa'
 import { leggiCoda } from '../lib/offlineQueue'
+import { useFunzione } from '../useFunzione'
 import { GARMIN_IN_ARRIVO, VERSIONE_CONSENSO_GARMIN, dataCollegamento, leggiStatoGarmin, messaggioEsito, ritornoGarmin } from '../lib/garmin'
 
 export default function Settings() {
@@ -50,6 +51,8 @@ export default function Settings() {
   const [confirmInfo, setConfirmInfo] = useState(null)
   const athleteImportRef = useRef(null)
   const { role, user, nome } = useAuth()
+  // «Catalogo scarpe» c'è solo con l'interruttore acceso (funzioni_app).
+  const scarpeAccese = useFunzione('scarpe')
   // Sul desktop (solo coach, src/useDesktop.js) la pagina va su due colonne.
   const desktop = eDesktop(useSchermoLargo(), role)
   const isSimulatingAthlete = localStorage.getItem('adminRoleOverride') === 'athlete'
@@ -850,11 +853,13 @@ export default function Settings() {
             <RigaAzione icona={Ticket} tono="brand" titolo="Codici invito"
               dettaglio={riassuntoCodici(codici) || 'Genera e condividi gli inviti'}
               onClick={() => setFoglioCodiciAperto(true)} />
-            <Separatore />
             {/* «Scarpe da corsa»: per lo staff /scarpe non ha altri ingressi. */}
+            {scarpeAccese && (<>
+            <Separatore />
             <RigaAzione icona={Footprints} titolo="Catalogo scarpe"
               dettaglio="I modelli fra cui scelgono gli atleti"
               onClick={() => navigate('/scarpe')} />
+            </>)}
             {eAdmin(role) && (<>
             <Separatore />
             <RigaAzione icona={Users} titolo="Coach"

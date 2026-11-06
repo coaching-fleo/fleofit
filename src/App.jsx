@@ -77,6 +77,8 @@ import { eUnLinkDiRecupero, recuperoInCorso, avviaRecupero, chiudiRecupero } fro
 import { leggiErroreLink, segnalaLinkFallito } from './lib/esitoLink'
 import { rottaDaDeepLinkGarmin } from './lib/garmin'
 import { eLinkDelTimer, eLinkDellaTV, rottaDaLinkTV } from './lib/linkTimer'
+import { impostaRuoloFunzioni } from './lib/funzioniApp'
+import SoloSeAccesa from './components/SoloSeAccesa'
 
 // I campi del profilo. ⚠️ `min-w-0` e `appearance-none` non sono cosmetica: su
 // iOS un `<input type="date">` ignora `w-full` e si allarga quanto il suo
@@ -501,6 +503,11 @@ function ProtectedRoute() {
     return <>{apertura}<Onboarding user={session.user} onComplete={(user) => handleSession({ ...session, user })} /></>
   }
 
+  // Gli interruttori delle funzioni (funzioni_app) chiedono il ruolo anche da
+  // fuori React (scarpeDb.js): si fissa qui, PRIMA che i figli lo leggano nei
+  // loro effetti (che partono prima di quelli di questo componente).
+  impostaRuoloFunzioni(role)
+
   return (
     // ⚠️ `nome` sta qui perché la Home lo rileggeva dal database una TERZA
     // volta (`athletes.select('name')`), per un dato che questo componente ha
@@ -824,9 +831,10 @@ function App() {
             <Route path="/messaggi/nuovo" element={<NuovoMessaggio />} />
             {/* Solo staff: la pagina rimanda l'atleta alla Home da sé, come /analisi. */}
             <Route path="/modelli" element={<Modelli />} />
-            <Route path="/scarpe" element={<Scarpe />} />
-            <Route path="/scarpe/modello/:id" element={<ModelloScarpa />} />
-            <Route path="/scarpe/:id" element={<DettaglioScarpa />} />
+            {/* Le Scarpe hanno l'interruttore (funzioni_app): spente, il link porta alla Home. */}
+            <Route path="/scarpe" element={<SoloSeAccesa nome="scarpe"><Scarpe /></SoloSeAccesa>} />
+            <Route path="/scarpe/modello/:id" element={<SoloSeAccesa nome="scarpe"><ModelloScarpa /></SoloSeAccesa>} />
+            <Route path="/scarpe/:id" element={<SoloSeAccesa nome="scarpe"><DettaglioScarpa /></SoloSeAccesa>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

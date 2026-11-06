@@ -12,6 +12,56 @@
   **Mai un alert** per una tabella assente.
 - Nessuna prova sul telefono: la fa il committente.
 
+## L'interruttore (06/11/2026)
+Il committente vuole unire le Scarpe e tenerle **nascoste**, per accenderle quando vuole **senza
+aggiornare l'app**. Per questo c'è la tabella `funzioni_app`, nella stessa migrazione (sezione 6),
+con la riga `scarpe` che parte **spenta**. Stati possibili:
+- `spenta` — nessuno le vede;
+- `admin` — solo gli admin. ⚠️ Anche `demo@fleofit.it`, che è admin;
+- `tutti`.
+
+Si cambia dal Table editor di Supabase. Vale dal **prossimo avvio** dell'app: lo stato si legge una
+volta e resta in memoria.
+
+Com'è fatto:
+- **Un cancello solo, in `scarpeDb.js`.** Con l'interruttore spento ogni lettura risponde come con le
+  tabelle assenti, e ogni scrittura lancia un errore con `code: 'PGRST205'`, senza toccare il database.
+  Così banner, card del profilo, riga nel foglio RPE e riga coach spariscono **senza saperlo**: usano
+  già `tabelleAssenti`.
+- **Le due cose che non passano da lì.**
+  - La voce «Catalogo scarpe» in Impostazioni usa `useFunzione('scarpe')` (`src/useFunzione.js`).
+  - Le tre rotte `/scarpe…` sono avvolte in `SoloSeAccesa`: spente, riportano alla Home.
+- **Il ruolo.**
+  - `App.jsx` lo passa a `funzioniApp.js` con `impostaRuoloFunzioni(role)` **durante il render**:
+    gli effetti dei figli, dove `scarpeDb` viene chiamato, partono prima di quelli del genitore.
+  - Un admin che simula l'atleta vede come un atleta.
+- **Nel dubbio, spenta.** Riga o tabella assente, o database giù, danno l'ultima risposta salvata
+  (`fleofit_funzioni`); senza quella, `spenta`.
+- **Nei test l'interruttore è acceso** (mock in `src/test/setup.js`), così i test delle Scarpe non
+  cambiano. Per provarlo spento: `globalThis.funzioniSpente = ['scarpe']`. La logica vera sta in
+  `funzioniApp.test.js`. Prima dei test espliciti, i 16 test di `scarpeDb` che fallivano col modulo
+  vero hanno confermato una cosa: riga assente = nascoste.
+- **Nella demo** il seme ha la riga `scarpe` a `tutti` (`VERSIONE_SEME` 20).
+- ⚠️ **L'interruttore non porta il codice sui telefoni.** Le Scarpe arrivano su iOS e Android con la
+  prima versione sugli Store che le contiene (la 1.2.3); da lì si accendono senza aggiornamenti.
+
+## Il 3D (prova, 04/11/2026 — in pausa dal 06/11)
+- **Saucony Endorphin Speed 4.** Generata con TRELLIS (Hugging Face) da 5 viste ufficiali, poi
+  ritoccata: materiale opaco, giallo tolto, suola vera stampata. Sta in
+  `tools/scarpe/3d/saucony-endorphin-speed-4.glb` (2 MB).
+- **Strumenti** in `tools/scarpe/3d/`:
+  - `genera.py`: serve `hf auth login`; la quota gratuita basta per ~1 scarpa al giorno;
+  - `ritocca.py`;
+  - `glb.py`.
+- **Trappola: TRELLIS non scrive `metallicFactor`**, che in glTF vale 1. Il visore tratta la scarpa
+  come metallo e i colori escono scuri e sbagliati (turchese → blu). `ritocca.py` lo mette a 0.
+- **Le viste non vanno mai specchiate**: le scritte escono al contrario.
+- **Visore** `Scarpa3D.jsx` (`@google/model-viewer`), importato **solo** con `React.lazy` da
+  `ModelloScarpaUI`: 254 KB compressi, che non toccano `index`. La card ha un gradiente da bianco a
+  grigio, scelto dal committente.
+- **Colonna `modello_3d_url`: per ora solo nella demo.** Non c'è ancora nella migrazione.
+- **In pausa** perché il committente probabilmente cambierà i modelli del catalogo.
+
 ## Cosa c'è
 | Cosa | Dove |
 |---|---|

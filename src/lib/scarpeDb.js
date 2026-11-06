@@ -10,12 +10,16 @@
 //   · ogni numero scritto dall'utente passa da `numeroKm`, e una soglia ≤ 0 si
 //     rifiuta PRIMA dell'update (`statoScarpa` non la guarda);
 //   · il titolo degli allenamenti torna com'è salvato: la pulizia (separaCodice)
-//     la fa l'interfaccia.
+//     la fa l'interfaccia;
+//   · con l'interruttore `scarpe` spento (funzioni_app, src/lib/funzioniApp.js)
+//     tutto si comporta come con le tabelle assenti: card, banner e righe spariscono
+//     da sole, senza che ogni schermata debba saperlo.
 
 import { supabase } from '../supabaseClient'
 import { fotoConSfondo } from './fotoScarpa'
 import { validaModello, sogliaProposta } from './caratteristicheScarpa'
 import { kmAllenamento, kmScarpa, statoScarpa, numeroKm } from './kmScarpe'
+import { funzioneAttiva } from './funzioniApp'
 
 // `numeroKm` vive in kmScarpe.js (senza il client Supabase); da qui resta con lo stesso nome.
 export { numeroKm, fotoConSfondo }
@@ -30,10 +34,18 @@ const ATTIVITA = 'garmin_attivita'
 export const tabelleAssenti = (error) =>
   !!error && (error.code === '42P01' || error.code === 'PGRST205')
 
+// L'interruttore spento si presenta come una tabella assente: chi sa già
+// nascondersi per quella si nasconde anche per questo.
+const SPENTA = Object.freeze({ code: 'PGRST205', message: 'Le scarpe sono spente (funzioni_app).' })
+const spenta = async () => !(await funzioneAttiva('scarpe'))
+/** Prima di ogni scrittura: con l'interruttore spento non si scrive niente. */
+async function cancello() { if (await spenta()) throw SPENTA }
+
 // ── Catalogo ────────────────────────────────────────────────────────────────
 
 /** Il catalogo, per marca poi modello. */
 export async function elencoCatalogo() {
+  await cancello()
   const { data, error } = await supabase
     .from(CATALOGO)
     .select('*')
@@ -45,6 +57,7 @@ export async function elencoCatalogo() {
 
 /** Un modello per id; `null` se non c'è o se le tabelle non ci sono ancora. */
 export async function leggiModello(id) {
+  if (await spenta()) return null
   const { data, error } = await supabase.from(CATALOGO).select('*').eq('id', id).maybeSingle()
   if (error) {
     if (tabelleAssenti(error)) return null
@@ -63,6 +76,7 @@ function datiValidi(campi, opzioni) {
 
 export async function salvaModelloCatalogo(campi) {
   const dati = datiValidi(campi)
+  await cancello()
   const { data, error } = await supabase.from(CATALOGO).insert(dati).select().single()
   if (error) throw error
   return data
@@ -70,6 +84,7 @@ export async function salvaModelloCatalogo(campi) {
 
 export async function aggiornaModelloCatalogo(id, campi = {}) {
   const dati = datiValidi(campi, { parziale: true })
+  await cancello()
   const { data, error } = await supabase.from(CATALOGO).update(dati).eq('id', id).select().single()
   if (error) throw error
   return data
@@ -86,6 +101,7 @@ const TIPO_FOTO = { webp: 'image/webp', png: 'image/png' }
 
 export async function caricaFotoModello(id, { blob, est, trasparente }) {
   if (!TIPO_FOTO[est]) throw new Error('Formato della foto non ammesso.')
+  await cancello()
   const percorso = `${id}.${est}`
   const bucket = supabase.storage.from('scarpe')
   const { error } = await bucket.upload(percorso, blob, { upsert: true, contentType: TIPO_FOTO[est] })
@@ -97,6 +113,7 @@ export async function caricaFotoModello(id, { blob, est, trasparente }) {
 }
 
 export async function eliminaModelloCatalogo(id) {
+  await cancello()
   const { error } = await supabase.from(CATALOGO).delete().eq('id', id)
   if (error) throw error
 }
@@ -109,6 +126,7 @@ export async function eliminaModelloCatalogo(id) {
  * assenti torna `{ disponibile: false, scarpe: [] }`; ogni altro errore lancia.
  */
 export async function leggiScarpeAtleta(athleteId) {
+  if (await spenta()) return { disponibile: false, scarpe: [] }
   const { data: righe, error } = await supabase
     .from(SCARPE).select('*').eq('athlete_id', athleteId).order('creato_at', { ascending: true })
   if (error) {
@@ -178,6 +196,7 @@ export async function aggiungiScarpa({ athleteId, catalogo, marca, modello, kmIn
   const m = String(catalogo?.marca ?? marca ?? '').trim()
   const mod = String(catalogo?.modello ?? modello ?? '').trim()
   if (!m || !mod) throw new Error('Marca e modello sono obbligatori.')
+  await cancello()
   const { data, error } = await supabase
     .from(SCARPE)
     .insert({
@@ -209,6 +228,7 @@ export async function aggiornaScarpa(id, { soglia_km, km_iniziali } = {}) {
     if (k === null) throw new Error('I km di partenza non sono validi.')
     dati.km_iniziali = k
   }
+  await cancello()
   const { data, error } = await supabase.from(SCARPE).update(dati).eq('id', id).select().single()
   if (error) throw error
   return data
@@ -216,6 +236,7 @@ export async function aggiornaScarpa(id, { soglia_km, km_iniziali } = {}) {
 
 /** Ritira la scarpa e, se era la principale, le toglie il ruolo. */
 export async function ritiraScarpa(id) {
+  await cancello()
   const { error } = await supabase
     .from(SCARPE).update({ ritirata_at: new Date().toISOString(), principale: false }).eq('id', id)
   if (error) throw error
@@ -227,6 +248,7 @@ export async function ritiraScarpa(id) {
  * vecchia (senza garanzie: è la stessa rete che ha appena fallito), poi si lancia.
  */
 export async function rendiPrincipale(athleteId, id) {
+  await cancello()
   const { data: vecchie, error: e1 } = await supabase
     .from(SCARPE).update({ principale: false }).eq('athlete_id', athleteId).eq('principale', true).select('id')
   if (e1) throw e1
@@ -244,6 +266,7 @@ export async function rendiPrincipale(athleteId, id) {
 // ── Uso per allenamento ─────────────────────────────────────────────────────
 
 export async function assegnaScarpa(athleteWorkoutId, scarpaId) {
+  await cancello()
   const { error } = await supabase
     .from(USI)
     .upsert({ athlete_workout_id: athleteWorkoutId, scarpa_id: scarpaId }, { onConflict: 'athlete_workout_id' })
@@ -251,6 +274,7 @@ export async function assegnaScarpa(athleteWorkoutId, scarpaId) {
 }
 
 export async function togliScarpa(athleteWorkoutId) {
+  await cancello()
   const { error } = await supabase.from(USI).delete().eq('athlete_workout_id', athleteWorkoutId)
   if (error) throw error
 }
@@ -264,6 +288,7 @@ const chiave = (t) => String(t ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
  * badare a maiuscole e spazi: serve al coach per decidere cosa aggiungere al catalogo.
  */
 export async function scritteDagliAtleti() {
+  await cancello()
   const { data, error } = await supabase.from(SCARPE).select('marca, modello').is('catalogo_id', null)
   if (error) throw error
   const gruppi = new Map()

@@ -271,3 +271,30 @@ describe('caricaFotoModello', () => {
     expect(finto.chiamateA('scarpe_catalogo', 'update')).toHaveLength(0)
   })
 })
+
+describe('interruttore spento (funzioni_app)', () => {
+  beforeEach(() => {
+    globalThis.funzioniSpente = ['scarpe']
+    ctrl.tabelle = { scarpe_atleta: [{ id: 's1', athlete_id: 'a1', marca: 'X', modello: 'Y', km_iniziali: 0 }], scarpe_catalogo: [{ id: 'm1', marca: 'X', modello: 'Y' }] }
+  })
+
+  it('le letture rispondono come con le tabelle assenti, senza chiedere niente al database', async () => {
+    expect(await leggiScarpeAtleta('a1')).toEqual({ disponibile: false, scarpe: [] })
+    expect(await leggiModello('m1')).toBeNull()
+    const e = await db.elencoCatalogo().catch(x => x)
+    expect(tabelleAssenti(e)).toBe(true)
+    expect(tabelleAssenti(await scritteDagliAtleti().catch(x => x))).toBe(true)
+    expect(finto.chiamate).toHaveLength(0)
+  })
+
+  it('nessuna scrittura arriva al database', async () => {
+    await expect(aggiungiScarpa({ athleteId: 'a1', marca: 'X', modello: 'Y', kmIniziali: '0' })).rejects.toMatchObject({ code: 'PGRST205' })
+    await expect(db.assegnaScarpa('aw1', 's1')).rejects.toMatchObject({ code: 'PGRST205' })
+    await expect(db.togliScarpa('aw1')).rejects.toMatchObject({ code: 'PGRST205' })
+    await expect(rendiPrincipale('a1', 's1')).rejects.toMatchObject({ code: 'PGRST205' })
+    await expect(aggiornaModelloCatalogo('m1', { drop_mm: 8 })).rejects.toMatchObject({ code: 'PGRST205' })
+    await expect(caricaFotoModello('m1', { blob: new Blob(['x']), est: 'png', trasparente: true })).rejects.toMatchObject({ code: 'PGRST205' })
+    expect(finto.chiamate).toHaveLength(0)
+    expect(ctrl.storage.upload).not.toHaveBeenCalled()
+  })
+})

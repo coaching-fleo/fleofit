@@ -1,9 +1,12 @@
-import { ChevronLeft, ExternalLink, Pencil, Footprints } from 'lucide-react'
+import { lazy, Suspense } from 'react'
+import { ChevronLeft, ExternalLink, Pencil, Footprints, Rotate3d } from 'lucide-react'
 import { LABEL, BOTTONE_BRAND, BOTTONE_QUIETO, VETRO } from '../lib/stiliCard'
 import { TIPI_SCARPA } from '../lib/kmScarpe'
 import { LIVELLI, righeCaratteristiche } from '../lib/caratteristicheScarpa'
 import FotoScarpa from './FotoScarpa'
 import { BottoneFoto } from './FoglioModelloCatalogo'
+
+const Scarpa3D = lazy(() => import('./Scarpa3D'))
 
 // La scheda di un modello del catalogo: presentazione pura. Uguale per tutti;
 // cambiano i tasti (atleta: «Ce l'ho», coach: «Modifica» e «Carica foto»).
@@ -30,10 +33,23 @@ export function SchedaModelloUI({ modello, staff, curaCatalogo, onCeLho, ceLhoDi
   const livello = LIVELLI.find(l => l.valore === modello.livello)
   return (
     <div className="cascata max-w-2xl mx-auto flex flex-col gap-4 mt-2">
-      <div className="rounded-3xl bg-[#1e1e1e] flex items-center justify-center p-4">
-        <FotoScarpa url={modello.foto_url} tipo={modello.tipo} alt={`${modello.marca} ${modello.modello}`}
-          className="h-[220px] w-full object-contain" />
-      </div>
+      {modello.modello_3d_url ? (
+        // Card chiara, da bianco a grigio: la scarpa sta come in vetrina.
+        <div className="relative rounded-3xl bg-gradient-to-b from-white to-[#c9c9c9] flex items-center justify-center overflow-hidden">
+          <Suspense fallback={<FotoScarpa url={modello.foto_url} tipo={modello.tipo} alt={`${modello.marca} ${modello.modello}`}
+            className="h-[260px] w-full object-contain p-4" />}>
+            <Scarpa3D url={modello.modello_3d_url} alt={`${modello.marca} ${modello.modello} in 3D`} />
+          </Suspense>
+          <span className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 text-[11.5px] font-bold text-gray-600 pointer-events-none whitespace-nowrap">
+            <Rotate3d size={14} aria-hidden="true" />Trascina per girarla
+          </span>
+        </div>
+      ) : (
+        <div className="rounded-3xl bg-[#1e1e1e] flex items-center justify-center p-4">
+          <FotoScarpa url={modello.foto_url} tipo={modello.tipo} alt={`${modello.marca} ${modello.modello}`}
+            className="h-[220px] w-full object-contain" />
+        </div>
+      )}
       <div>
         <p className="text-[13px] font-bold text-muted">{modello.marca}</p>
         <h2 className="font-black text-[28px] leading-tight text-white">{modello.modello}</h2>

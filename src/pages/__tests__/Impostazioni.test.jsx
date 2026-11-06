@@ -504,4 +504,11 @@ describe('La voce «Catalogo scarpe» (solo staff)', () => {
     montaAtleta()
     expect(screen.queryByRole('button', { name: /Catalogo scarpe/ })).not.toBeInTheDocument()
   })
+  it('con le Scarpe spente (funzioni_app) nemmeno il coach la vede', async () => {
+    globalThis.funzioniSpente = ['scarpe']
+    montaPagina(<Settings />, { role: 'coach', user: { ...UTENTE, email: 'federico_leo@hotmail.it' } })
+    expect(await screen.findByRole('button', { name: /Codici invito/ })).toBeInTheDocument()
+    await new Promise(r => setTimeout(r, 0))
+    expect(screen.queryByRole('button', { name: /Catalogo scarpe/ })).not.toBeInTheDocument()
+  })
 })
