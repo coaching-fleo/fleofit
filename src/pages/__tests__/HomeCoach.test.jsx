@@ -268,10 +268,10 @@ describe('Cosa è uscito dalla Home coach', () => {
     expect(screen.queryByText('Atleti')).not.toBeInTheDocument()
   })
 
-  it('l\'archivio resta, come riga, con il numero di workout', async () => {
+  it('l\'archivio non è più una riga in Home: ha la sua voce nella tab bar', async () => {
     montaCoach()
-    expect(await screen.findByLabelText("Apri l'archivio dei workout")).toBeInTheDocument()
-    expect(screen.getByText(/2 allenamenti · riusa e duplica/)).toBeInTheDocument()
+    expect(screen.queryByLabelText("Apri l'archivio dei workout")).not.toBeInTheDocument()
+    expect(screen.queryByText(/riusa e duplica/)).not.toBeInTheDocument()
   })
 })
 
@@ -308,7 +308,7 @@ describe('La Home dell\'admin non è anche la Home di un atleta', () => {
     await attendi('«Gambe pesanti»')
     expect(screen.getByRole('region', { name: 'Il polso del team' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Prossimi giorni' })).toBeInTheDocument()
-    expect(await screen.findByLabelText("Apri l'archivio dei workout")).toBeInTheDocument()
+    expect(screen.queryByLabelText("Apri l'archivio dei workout")).not.toBeInTheDocument()
   })
 
   it('la testata è quella del coach, non il saluto dell\'atleta', async () => {

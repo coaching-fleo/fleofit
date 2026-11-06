@@ -18,8 +18,8 @@ import { PolsoTeam, CardOggi, CardSegnali, CardSmaltire, CardPiano, CardGare } f
 
 export default function HomeCoachTelefono({
   atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura,
-  feedback, recupero, fermi, scaduti, caricamento, numeroWorkout,
-  onApriAtleta, onApriFeedback, onApriScaduto, onApriSeduta, onReport, onArchivio,
+  feedback, recupero, fermi, scaduti, caricamento,
+  onApriAtleta, onApriFeedback, onApriScaduto, onApriSeduta, onReport,
 }) {
   const { gare, polso, oggi, segnali, piano, notaPiano } = useCruscottoCoach({
     atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura, settimana: false,
@@ -53,13 +53,10 @@ export default function HomeCoachTelefono({
 
     <CardGare compatto gare={gare} onApri={apriGara} />
 
-    {/* Report e archivio restano, in fondo: materiale di lavoro che si apre
-        sapendo già cosa si cerca, e sul telefono non hanno una voce nella tab bar. */}
+    {/* Il report resta in fondo: materiale di lavoro che si apre sapendo già
+        cosa si cerca. L'archivio non c'è più: dal 06/11/2026 ha la sua voce nella tab bar. */}
     <RigaDestinazione icona={ChartNoAxesColumn} titolo="Report settimanale"
       sottotitolo="Aderenza, carico e chi richiede un'azione"
       label="Apri il report settimanale" onClick={onReport} />
-    <RigaDestinazione titolo="Archivio workout"
-      sottotitolo={`${numeroWorkout} allenamenti · riusa e duplica`}
-      label="Apri l'archivio dei workout" onClick={onArchivio} />
   </>)
 }

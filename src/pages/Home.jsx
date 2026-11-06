@@ -1359,13 +1359,11 @@ setNotifications(prev => {
               estratti={estrattiCoach} righeGare={gareCoach} copertura={coperturaTre}
               squadra={squadra}
               feedback={feedback.elementi} recupero={recuperoCoach} fermi={fermiInHome} scaduti={scadutiConQuando}
-              numeroWorkout={stats.workouts}
               onApriAtleta={(a) => navigate(`/athletes/${a.id}`)}
               onApriFeedback={apriFeedback}
               onApriScaduto={apriSeduta}
               onApriSeduta={apriSeduta}
-              onReport={() => navigate('/report')}
-              onArchivio={() => navigate('/archive')} />
+              onReport={() => navigate('/report')} />
           </Suspense>
         </div>
       )}

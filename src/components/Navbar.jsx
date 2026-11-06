@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Calendar, Users, User } from 'lucide-react'
+import { Home, Calendar, Users, User, FolderArchive } from 'lucide-react'
 import { useAuth } from '../App'
 import { useTastieraAperta } from '../useTastiera'
 
@@ -107,6 +107,8 @@ export default function Navbar() {
         {/* ⚠️ Manubrio, non un più: la voce porta al builder ma nomina la
             SEZIONE, non il gesto. È l'icona dell'artboard, in 2a e in 2b. */}
         {role !== 'athlete' && <Voce a="/create" icona={Manubrio}>Workout</Voce>}
+
+        <Voce a="/archive" icona={FolderArchive}>Archivio</Voce>
 
         <Voce a="/calendar" icona={Calendar}>Calendario</Voce>
 

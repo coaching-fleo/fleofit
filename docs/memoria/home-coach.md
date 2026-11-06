@@ -299,3 +299,9 @@ ma ha un fondo lento (avviso arancione). E c'è una **settimana piena**: `PIANO`
 `demoSemi.js` programma da oggi ai sei giorni dopo ogni atleta seguito, solo sedute da
 fare e senza raddoppiare un giorno già assegnato — il passato resta quello degli scenari
 delle altre schermate. Hyrox Milano ha quattro atleti, più una mezza maratona per Andrea.
+
+### 06/11/2026 — l'archivio esce dalla Home coach
+Su richiesta del committente la riga «Archivio workout» in fondo alla Home coach telefono è
+stata tolta: l'archivio ha ora la sua voce nella tab bar (`Navbar.jsx`). Chi ci arrivava da
+Home e poi toccava la voce vedeva sparire la freccia indietro (`daBarra`, `WorkoutsArchive.jsx`).
+Resta solo «Report settimanale». Le frasi sopra che dicono «l'archivio resta come riga» sono storiche.

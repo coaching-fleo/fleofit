@@ -144,10 +144,11 @@ tasto premuto: sono 171 workout da scandagliare nel jsonb.
   (`ESERCIZI_FILTRABILI` in `rigaArchivio.js`: SkiErg/Ski/Sky…, Rowing/Row/Vogatore/Remo…),
   mai «contiene»: «Bent Over Row» e «Skin the Cat» non sono ergometri. Per aggiungere un
   esercizio basta una voce in quell'elenco; il chip compare solo se qualche workout lo ha.
-- **La voce «Archivio» nella tab bar.** L'artboard 1b la disegna, ma è lo stesso
-  caso di `Scheda Atleta.dc.html`: il navbar dell'artboard è **sfondo di scena**,
-  non un pezzo di design. La navbar vera non ha quella voce (§9-quaterdecies),
-  e l'archivio si raggiunge dalla Home.
+- **La voce «Archivio» nella tab bar.** Fino al 06/11/2026 non c'era: l'artboard 1b la
+  disegna, ma il navbar dell'artboard era considerato **sfondo di scena** (§9-quaterdecies),
+  e l'archivio si raggiungeva dalla Home. **Il 06/11/2026 il committente l'ha voluta**:
+  ora `Navbar.jsx` ha «Archivio» (`FolderArchive`, `/archive`) per tutti i ruoli, **prima**
+  di Calendario (centrale per il coach). Coach: 5 voci; atleta: 4.
 
 ### I file nuovi
 `src/lib/rigaArchivio.js` (logica pura, 30 test) e

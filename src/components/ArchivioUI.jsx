@@ -61,11 +61,13 @@ export function TestataArchivio({ onIndietro, dettaglio, children }) {
     <div className="sticky top-0 z-30 -mx-4 px-4 pt-[calc(env(safe-area-inset-top)+0.875rem)] pb-3
                     bg-[#0B0B0B]/85 backdrop-blur-xl border-b border-white/[.06]">
       <div className="flex items-center gap-3">
-        <button aria-label="Torna indietro" onClick={onIndietro}
-          className={`w-10 h-10 rounded-full flex items-center justify-center text-gray-200
-                      hover:text-white transition shrink-0 ${VETRO}`}>
-          <ChevronLeft size={19} />
-        </button>
+        {onIndietro && (
+          <button aria-label="Torna indietro" onClick={onIndietro}
+            className={`w-10 h-10 rounded-full flex items-center justify-center text-gray-200
+                        hover:text-white transition shrink-0 ${VETRO}`}>
+            <ChevronLeft size={19} />
+          </button>
+        )}
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-black tracking-[-.03em] text-white leading-none">Archivio</h1>
           {dettaglio && (

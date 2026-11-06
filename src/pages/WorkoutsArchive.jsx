@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useRipresa, useRicorda } from '../useRipresa'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
@@ -36,6 +36,9 @@ export default function WorkoutsArchive() {
   const [eserciziScelti, setEserciziScelti] = useState(() => ripresa?.eserciziScelti ?? {})
   const navigate = useNavigate()
   const indietro = useIndietro('/')
+  // Arrivati dalla tab bar: è una destinazione di pari grado, dietro non c'è
+  // niente da cui «tornare» e la freccia non farebbe nulla. Come nel builder.
+  const daBarra = useLocation().state?.daBarra === true
   const isCoach = role !== 'athlete'
   const desktop = eDesktop(useSchermoLargo(), role)
 
@@ -213,7 +216,7 @@ export default function WorkoutsArchive() {
        tutte le pagine con una testata appiccicata; la testata della Home invece
        scorre via con la pagina, quindi lì è contenuto e la sua voce ce l'ha. */
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
-      <TestataArchivio onIndietro={indietro} dettaglio={dettaglio}>
+      <TestataArchivio onIndietro={daBarra ? null : indietro} dettaglio={dettaglio}>
         {striscia}
         <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
         {corsie.length > 1 && (
