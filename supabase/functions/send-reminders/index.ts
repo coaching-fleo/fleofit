@@ -4,6 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
 import { atletaNotificaCoach, atletiDi, coachDi, destinatariNotificaCoach, idStaff, ruoloStaff } from "../_shared/staff.ts"
 import { testoNotificaCoach, testoGarminRegistrato } from "./testi.ts"
+import { TITOLO_INVITO, routeInvito, testoInvito, destinatariInvito } from "./team.ts"
 import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, puoInviareQuestoMessaggio, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm, routeProva } from "./broadcast.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -176,7 +177,8 @@ serve(async (req) => {
 
     // 'broadcast' è più stretto: l'account demo è admin ma non deve notificare tutti.
     // 'broadcast_prova' segue la stessa regola: il demo non manda niente, nemmeno a sé.
-    if ((mode === 'broadcast' || mode === 'broadcast_prova') && !puoInviareBroadcast(chiamante.email, chiamante.ruoloStaff ?? null)) {
+    // 'team_invito' (Team, 06/11/2026) segue la stessa regola: staff, mai il demo.
+    if ((mode === 'broadcast' || mode === 'broadcast_prova' || mode === 'team_invito') && !puoInviareBroadcast(chiamante.email, chiamante.ruoloStaff ?? null)) {
       console.warn(`send-reminders: '${mode}' NON autorizzata per ${chiamante.email ?? 'anonimo'}`);
       return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
         status: 403,
@@ -477,6 +479,55 @@ serve(async (req) => {
         sendPush(sub, TITOLO_BROADCAST, testoPush, route, idPerUtente.get(sub.user_id))));
       // sent = notifiche scritte (righe); saltati = righe athletes non destinatarie.
       return new Response(JSON.stringify({ success: true, sent: destinatari.length, saltati }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ==========================================
+    // MODALITÀ TEAM_INVITO (Team, 06/11/2026)
+    // ==========================================
+    // L'invito in un team: una riga in `notifications` più la push, solo agli
+    // atleti ANCORA invitati (docs/superpowers/specs/2026-11-06-team-design.md §5).
+    // Lo può chiedere solo il coach del team, o un admin.
+    if (mode === 'team_invito' && body.team_id) {
+      const { data: team, error: teamErr } = await supabase
+        .from('team').select('id, nome, coach_id').eq('id', body.team_id).maybeSingle();
+      if (teamErr) throw teamErr;
+      if (!team) {
+        return new Response(JSON.stringify({ error: 'Team non trovato' }), {
+          status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (chiamante.ruoloStaff !== 'admin' && team.coach_id !== chiamante.id) {
+        console.warn(`send-reminders: team_invito di un team altrui rifiutato per ${chiamante.email ?? 'anonimo'}`);
+        return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const route = routeInvito(team.id);
+      const { data: righe, error: rErr } = await supabase
+        .from('team_membri').select('atleta_id, stato').eq('team_id', team.id);
+      if (rErr) throw rErr;
+      const { data: gia, error: giaErr } = await supabase.from('notifications').select('user_id').eq('route', route);
+      if (giaErr) throw giaErr;
+      const richiesti: string[] = Array.isArray(body.atleta_ids) ? body.atleta_ids : [];
+      const destinatari = destinatariInvito(righe || [], richiesti, (gia || []).map((r: any) => r.user_id));
+      if (destinatari.length === 0) {
+        return new Response(JSON.stringify({ success: true, sent: 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const { data: coachRiga } = await supabase.from('athletes').select('name, surname').eq('id', team.coach_id).maybeSingle();
+      const nomeCoach = `${coachRiga?.name ?? ''} ${coachRiga?.surname ?? ''}`.trim() || 'Il tuo coach';
+      const testo = testoInvito(nomeCoach, team.nome);
+      const { data: dbNotifs, error: dbErr } = await supabase.from('notifications').insert(
+        destinatari.map((user_id) => ({ user_id, title: TITOLO_INVITO, message: testo, route })),
+      ).select();
+      // Senza le righe il dedup non funziona: ci si ferma PRIMA di pushare.
+      if (dbErr) throw dbErr;
+      const idPerUtente = new Map<string, string>((dbNotifs || []).map((n: any) => [n.user_id, n.id]));
+      const { data: subscriptions, error: subError } = await supabase
+        .from('push_subscriptions').select('*').in('user_id', destinatari);
+      if (subError) throw subError;
+      await Promise.all((subscriptions || []).map((sub: any) =>
+        sendPush(sub, TITOLO_INVITO, testo, route, idPerUtente.get(sub.user_id))));
+      return new Response(JSON.stringify({ success: true, sent: destinatari.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // ==========================================
