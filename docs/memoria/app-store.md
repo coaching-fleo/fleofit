@@ -97,6 +97,9 @@
   «Apple Health» della policy (sopra, 30 ott), l'URL privacy `https://fleofit.vercel.app/privacy`,
   le etichette privacy di Garmin se il collegamento è aperto a tutti (`garmin.md`, passo 8).
   «Novità» in `DEVLOG.md`.
+  ✅ **Stesso giorno: migrazione delle Scarpe applicata, archiviata da Xcode e caricata su App Store
+  Connect** (dal codice di `55fd947`). Garmin è ancora in beta (produzione non approvata): niente
+  Garmin nelle novità né nelle etichette. Esito della revisione da registrare qui.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non

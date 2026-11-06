@@ -22,7 +22,9 @@
 - **Schema del database congelato** (§0, regola 0-bis): l'approvazione è arrivata, ma lo
   sblocco resta una decisione del committente. **Un'eccezione**, il 09/10/2026: la tabella
   `note_estratte` («Dalle note», `docs/memoria/scheda-atleta.md`).
-- **App Store**: ✅ **la 1.2.2 è approvata e rilasciata** (registrato il 28/10/2026; inviata il
+- **App Store**: ⏳ **la 1.2.3 è caricata su App Store Connect il 06/11/2026** (codice di `55fd947`,
+  Scarpe spente, Garmin ancora in beta quindi non nelle novità; esito da registrare in
+  `docs/memoria/app-store.md`). ✅ **La 1.2.2 è approvata e rilasciata** (registrato il 28/10/2026; inviata il
   26/10, codice di `261a8e4` + versione 1.2.2, build 1 nel `pbxproj`; il task 4 dei Modelli di
   blocco era fuori, nello stash). ⚠️ Contiene l'errore della rubrica (chi guarda spariva dalle
   liste atleti, `escludiDallaRubrica`, corretto il 28/10): la correzione arriva con la 1.2.3. Prima
@@ -86,9 +88,9 @@
    additive, ✅ **applicate il 28/10/2026** (`supabase/schema/garmin_2026-10-27.sql`,
    `docs/memoria/garmin.md`).
    ✅ **Ottava eccezione** (28/10/2026, applicata dal committente): `garmin_fase3_2026-10-28.sql` — colonna `firma` su `garmin_invii`, tolta la chiave esterna verso `athlete_workouts`, accesi i due trigger della Fase 3 (`docs/memoria/garmin.md`).
-   ⏳ **Nona eccezione — PROPOSTA, in attesa del sì** (02/11/2026): le tre tabelle «Scarpe da corsa»
-   (`scarpe_catalogo`, `scarpe_atleta`, `scarpe_uso`) più `funzioni_app` (gli interruttori, 06/11/2026),
-   additive, scritte in `supabase/schema/scarpe_2026-11-02.sql` e **NON applicate** (`docs/memoria/scarpe.md`).
+   ✅ **Nona eccezione** (06/11/2026, applicata a mano dal committente): le tre tabelle «Scarpe da corsa»
+   (`scarpe_catalogo`, `scarpe_atleta`, `scarpe_uso`), il bucket `scarpe` e `funzioni_app` (gli interruttori),
+   additive (`supabase/schema/scarpe_2026-11-02.sql`, `docs/memoria/scarpe.md`). Le Scarpe restano **spente**.
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -363,8 +365,8 @@ staging, **schema congelato** (§0, 0-bis).
 | `note_estratte` | ✅ **applicata il 09/10/2026**: i dati ricavati dalle note degli atleti (standard `VERSIONE` in `estrai-note/regole.ts`). Policy **solo admin** (`USING` e `WITH CHECK`), l'atleta non la legge. La scrive solo `estrai-note`. `main` non la conosce |
 | `modelli_blocco` | ✅ **applicata** (`supabase/schema/modelli_blocco_2026-10-16.sql`): i blocchi (Hyrox), le fasi (Running) e i gruppi (Gym) salvati dal coach per riusarli, nel formato del §5 senza `id` interni. Policy unica: solo il coach proprietario, se è staff — **anche un admin vede solo i suoi**. Nel backup notturno. `main` non la conosce |
 | `garmin_collegamenti` · `garmin_attivita` · `garmin_giornate` · `garmin_invii` | ✅ **applicata il 28/10/2026** (`supabase/schema/garmin_2026-10-27.sql`; `docs/memoria/garmin.md`): il collegamento Garmin dell'atleta e i dati dell'orologio. `garmin_collegamenti` porta i token cifrati, **senza policy** e **fuori dal backup**; le altre tre le legge l'atleta o il suo coach. Le scrivono solo le Edge Function. `main` non le conosce |
-| `scarpe_catalogo` · `scarpe_atleta` · `scarpe_uso` | ⏳ **scritta, NON applicata — serve il sì** (`supabase/schema/scarpe_2026-11-02.sql`; `docs/memoria/scarpe.md`): catalogo dei modelli (dal 03/11 con le colonne `livello`, `ammortizzamento`, `stabilita`, `piastra`, `peso_g`, `stack_mm`, `uso`, `vita_km`, `url_ufficiale`, `foto_url` e il bucket `scarpe`, pubblico, 4 policy su `storage.objects`), le scarpe dell'atleta, con quale scarpa è stato fatto un allenamento. I km **non si salvano**, si calcolano. Senza le tabelle l'app nasconde tutto. `main` non le conosce |
-| `funzioni_app` | ⏳ **nella stessa migrazione, NON applicata**: gli interruttori per accendere una funzione **senza aggiornare l'app** (`nome`, `stato` fra `spenta`/`admin`/`tutti`). La legge chiunque, la scrivono gli admin meno `demo@fleofit.it`. Si legge con `src/lib/funzioniApp.js` (una volta per avvio); riga assente o rete giù = ultima risposta salvata, se no **spenta**. Le Scarpe partono spente (`docs/memoria/scarpe.md`) |
+| `scarpe_catalogo` · `scarpe_atleta` · `scarpe_uso` | ✅ **applicata il 06/11/2026** (`supabase/schema/scarpe_2026-11-02.sql`; `docs/memoria/scarpe.md`): catalogo dei modelli (dal 03/11 con le colonne `livello`, `ammortizzamento`, `stabilita`, `piastra`, `peso_g`, `stack_mm`, `uso`, `vita_km`, `url_ufficiale`, `foto_url` e il bucket `scarpe`, pubblico, 4 policy su `storage.objects`), le scarpe dell'atleta, con quale scarpa è stato fatto un allenamento. I km **non si salvano**, si calcolano. Senza le tabelle l'app nasconde tutto. `main` non le conosce |
+| `funzioni_app` | ✅ **applicata il 06/11/2026**, nella stessa migrazione: gli interruttori per accendere una funzione **senza aggiornare l'app** (`nome`, `stato` fra `spenta`/`admin`/`tutti`). La legge chiunque, la scrivono gli admin meno `demo@fleofit.it`. Si legge con `src/lib/funzioniApp.js` (una volta per avvio); riga assente o rete giù = ultima risposta salvata, se no **spenta**. Le Scarpe partono spente (`docs/memoria/scarpe.md`) |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
 - 🔴 **Dal 16/10/2026 lo staff si cambia in UN posto: la tabella `staff`** (admin e coach).

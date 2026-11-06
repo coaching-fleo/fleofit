@@ -4,9 +4,10 @@
 > `docs/superpowers/plans/2026-11-02-scarpe.md`. Lavoro fatto nel branch `scarpe` (worktree), da `app` @ `12ec861`.
 
 ## Stato
-- ⏳ **Migrazione scritta, NON applicata**: `supabase/schema/scarpe_2026-11-02.sql`. Servirebbe la
-  **nona eccezione** al congelamento (CLAUDE.md §0-bis) e **non c'è il sì**. Applicarla è una
-  decisione del committente, dal SQL editor.
+- ✅ **Migrazione applicata il 06/11/2026** dal committente, a mano dal SQL editor:
+  `supabase/schema/scarpe_2026-11-02.sql` (**nona eccezione**, CLAUDE.md §0-bis). La riga
+  `scarpe` di `funzioni_app` parte `spenta`: ⚠️ **non metterla ad `admin` finché la 1.2.3 è in
+  revisione**, `demo@fleofit.it` è admin. Le righe qui sotto che dicono «non applicata» sono storia.
 - Il codice può stare su `app` prima del sì: senza tabelle, `tabelleAssenti(error)` di `scarpeDb.js`
   fa sparire card del profilo, riga nel foglio RPE e riga coach, e `/scarpe` mostra uno stato vuoto.
   **Mai un alert** per una tabella assente.
