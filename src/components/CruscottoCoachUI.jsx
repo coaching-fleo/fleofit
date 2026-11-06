@@ -352,7 +352,7 @@ const LEGENDA = [['Hyrox', 'bg-brand'], ['Corsa', 'bg-running'], ['Gym', 'bg-gym
 
 function Cella({ cella, compatto, onApri }) {
   const altezza = compatto ? 'h-[30px] text-[10px]' : 'h-[34px] text-[11px]'
-  const base = `${altezza} min-w-0 rounded-lg font-extrabold flex items-center justify-center overflow-hidden whitespace-nowrap px-1`
+  const base = `${altezza} w-full min-w-0 rounded-lg font-extrabold flex items-center justify-center overflow-hidden whitespace-nowrap px-1`
   if (cella.chips.length === 0) {
     return cella.quando === 'futuro'
       ? <span className={`${base} border-[1.5px] border-dashed border-[#444] text-[#555]`} aria-label="Da programmare">+</span>
