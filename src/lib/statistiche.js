@@ -17,7 +17,7 @@ import { partiRipetuta, intensitaRipetuta } from './ripetute'
 /** Durata di un allenamento senza tempo dichiarato. */
 const MINUTI_PREDEFINITI = 45
 /** Minuti stimati per chilometro, per le fasi di corsa definite a distanza. */
-const MINUTI_PER_KM = 6
+export const MINUTI_PER_KM = 6
 
 /**
  * Interpreta una durata scritta a mano, in MINUTI.

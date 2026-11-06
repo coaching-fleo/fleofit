@@ -14,9 +14,13 @@
 // non la scarica mai.
 
 import { Plus, Bell, Radio, Megaphone } from 'lucide-react'
+import { lazy, Suspense } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { cosaGuardare } from '../lib/cosaGuardare'
 import { useCruscottoCoach } from '../useCruscottoCoach'
 import { PolsoTeam, CardOggi, CardSegnali, CardSmaltire, CardPiano, CardGare } from './CruscottoCoachUI'
+
+const BannerScarpe = lazy(() => import('./BannerScarpe'))
 
 /** La frase sotto il saluto: la cosa più urgente, non il conto delle cose. */
 function fraseDelGiorno({ oggi, segnali, voci }) {
@@ -40,6 +44,7 @@ export default function HomeCoachDesktop({
   onNotifiche, onNuovoWorkout, onCalendario, onGuardaLive,
   onApriFeedback, onApriAtleta, onApriScaduto, onApriSeduta, onMessaggio,
 }) {
+  const navigate = useNavigate()
   const { gare, polso, oggi, segnali, piano, notaPiano } = useCruscottoCoach({
     atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura, settimana: true,
   })
@@ -124,6 +129,10 @@ export default function HomeCoachDesktop({
 
         <CardPiano piano={piano} titolo="La settimana" nota={notaPiano} caricamento={caricamento}
           onApri={onApriSeduta} onCalendario={onCalendario} />
+
+        <Suspense fallback={null}>
+          <BannerScarpe ruolo="coach" onApri={() => navigate('/scarpe')} />
+        </Suspense>
 
       </div>
     </div>

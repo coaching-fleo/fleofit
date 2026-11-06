@@ -11,9 +11,10 @@
 // con quanto carico, era nella terza tab, dietro due tocchi e quattro grafici
 // che non si parlavano. Ora è la prima cosa in pagina, e le tab non ci sono più.
 
-import { ChevronDown, ChevronRight, User, UserCog } from 'lucide-react'
+import { ChevronDown, ChevronRight, Footprints, User, UserCog } from 'lucide-react'
 import { CARD, LABEL, RIGA, VETRO } from '../lib/stiliCard'
 import { BRAND, RUNNING } from '../lib/colori'
+import { testoKm } from '../lib/kmScarpe'
 
 // ── L'identità ────────────────────────────────────────────────────────────
 // Erano una foto da 96px, un nome, e quattro celle da 22px con età, altezza,
@@ -308,5 +309,31 @@ export function RigaCoach({ nome, onClick }) {
       <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">Coach: {nome}</span>
       <ChevronRight size={17} className="shrink-0 text-muted" aria-hidden="true" />
     </button>
+  )
+}
+
+/**
+ * «Scarpe: Pegasus 41 · 412 km» — la principale dell'atleta, per il coach.
+ * Solo lettura (nessun bottone: il coach non scrive le scarpe). Con una scarpa
+ * attiva oltre la soglia aggiunge «da cambiare». Senza principale, «Scarpe: 2
+ * attive» solo se c'è da avvisare. Senza scarpe attive: niente.
+ */
+export function RigaScarpeCoach({ scarpe }) {
+  const attive = (scarpe || []).filter(s => !s.ritirata_at)
+  const principale = attive.find(s => s.principale)
+  const daCambiare = attive.some(s => s.stato === 'oltre')
+  // Senza principale la riga serve solo per l'avviso: allora dice quante sono attive.
+  if (!principale && !daCambiare) return null
+  const testo = principale
+    ? `Scarpe: ${principale.modello} · ${testoKm(principale.km)} km`
+    : `Scarpe: ${attive.length} ${attive.length === 1 ? 'attiva' : 'attive'}`
+  return (
+    <div className={`${RIGA} mt-3 px-[15px] py-[13px] flex items-center gap-3`}>
+      <Footprints size={18} className="shrink-0 text-muted" aria-hidden="true" />
+      <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">
+        {testo}
+      </span>
+      {daCambiare && <span className="shrink-0 text-[12px] font-bold text-red-500">da cambiare</span>}
+    </div>
   )
 }

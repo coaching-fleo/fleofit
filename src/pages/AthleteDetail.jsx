@@ -7,6 +7,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
 import { leggiGiornate, oggiItalia } from '../lib/recuperoGarmin'
+import { useScarpaCompletamento } from '../useScarpaCompletamento'
 import { User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, Copy, Activity, CalendarDays, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
 import { vibraSuccesso } from '../lib/aptica'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, differenceInDays } from 'date-fns'
@@ -33,7 +34,7 @@ import { TestataScheda, MenuScheda, IntestazioneSezione } from '../components/Wo
 import { BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import {
   IdentitaAtleta, IconaSocial, CardAndamento, CellaBento, Sparkline,
-  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa, RigaCoach,
+  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa, RigaCoach, RigaScarpeCoach,
 } from '../components/SchedaAtletaUI'
 import FoglioCoach from '../components/FoglioCoach'
 import CalendarioAtleta from '../components/CalendarioAtleta'
@@ -72,6 +73,8 @@ const calculateAge = (dob) => {
 // non scarica né il componente né i suoi conti (spec dati-dalle-note §4).
 const DalleNoteUI = lazy(() => import('../components/DalleNoteUI'))
 const CardRecupero = lazy(() => import('../components/CardRecupero')) // Garmin · Recupero
+// «Scarpe da corsa»: la card del profilo, pigra come le altre card che non tutti vedono.
+const CardProfiloScarpe = lazy(() => import('../components/ScarpeUI').then(m => ({ default: m.CardProfiloScarpe })))
 
 export default function AthleteDetail() {
   const { id: paramId } = useParams()
@@ -126,6 +129,28 @@ export default function AthleteDetail() {
   const [rpeScore, setRpeScore] = useState('5')
   const [rpeNotes, setRpeNotes] = useState('')
   const [savingRpe, setSavingRpe] = useState(false)
+  // «Scarpe da corsa»: solo l'atleta sul proprio profilo. Una lettura sola
+  // serve alla card «Le mie scarpe» e alla riga del foglio RPE (e si rifà dopo
+  // ogni completamento, così i km della card salgono). `scarpe` null = niente
+  // card: tabelle assenti (migrazione non applicata) o lettura fallita, senza alert.
+  const conScarpe = role === 'athlete' && isOwnProfile
+  const scarpaCompletamento = useScarpaCompletamento(conScarpe ? id : null, { setAlertInfo })
+  const scarpe = scarpaCompletamento.scarpe
+
+  // Vista coach (spec §2): le scarpe dell'atleta che guarda, SOLO lettura. Non
+  // passa dall'hook del completamento (che scrive): una lettura pigra, con
+  // scarpeDb fuori dal chunk d'ingresso. Tabelle assenti o errore → niente riga.
+  const [scarpeAtleta, setScarpeAtleta] = useState(null)
+  const guardaScarpe = eStaff(role) && !isOwnProfile
+  useEffect(() => {
+    if (!guardaScarpe || !id) return undefined
+    let vivo = true
+    import('../lib/scarpeDb')
+      .then(m => m.leggiScarpeAtleta(id))
+      .then(r => { if (vivo) setScarpeAtleta(r?.disponibile ? r.scarpe : null) })
+      .catch(e => { console.warn('Scarpe non caricate:', e); if (vivo) setScarpeAtleta(null) })
+    return () => { vivo = false; setScarpeAtleta(null) }
+  }, [guardaScarpe, id])
 
 
   // Gli estratti delle note (src/lib/noteEstratte.js) e lo stato dell'analisi:
@@ -325,6 +350,8 @@ export default function AthleteDetail() {
       const { error } = await supabase.from('athlete_workouts').update({ status: 'pending' }).eq('id', id)
       if (!error) {
         setWorkouts(prev => prev.map(wk => wk.id === id ? { ...wk, status: 'pending' } : wk))
+        // Non conta più nei km della scarpa (non blocca, non rilancia).
+        scarpaCompletamento.annulla(id)
       }
       return
     }
@@ -370,6 +397,9 @@ export default function AthleteDetail() {
       setWorkouts(prev => prev.map(w => w.id === workoutToComplete.id ? { ...w, status: newStatus, notes: finalNote } : w))
       setShowRpeModal(false)
       vibraSuccesso()
+      // La scarpa scelta nel foglio (spec §5): dopo il completamento riuscito,
+      // e un suo errore non lo annulla. Fuori dal profilo proprio non fa niente.
+      scarpaCompletamento.registra(workoutToComplete.id, workoutToComplete.workouts?.sections)
 
       // ⚠️ Solo l'atleta, e questa pagina è anche `/profile`: il coach che
       // spunta un allenamento dalla scheda di qualcun altro non ha niente da
@@ -699,6 +729,7 @@ export default function AthleteDetail() {
             : null} />
         ) : null}
         nota={pausaAtleta.testo} />
+      {guardaScarpe && scarpeAtleta && <RigaScarpeCoach scarpe={scarpeAtleta} />}
       {eAdmin(role) && !isOwnProfile && staffCoach && (
         <div className="mt-3">
           <RigaCoach
@@ -784,6 +815,9 @@ export default function AthleteDetail() {
           onClick={() => navigate(`/workout/${nextEvent.workouts.id}?athlete_id=${id}`)} />
       )}
     </>
+  )
+  const pScarpe = scarpe && (
+    <Suspense fallback={null}><CardProfiloScarpe scarpe={scarpe} /></Suspense>
   )
   const pOggi = (
     <>
@@ -989,6 +1023,7 @@ export default function AthleteDetail() {
           {pOggi}
           {pCalendario}
           {pProssimi}
+          {pScarpe}
           {pStoricoRecord}
           {pBarra}
         </>
@@ -1177,6 +1212,7 @@ export default function AthleteDetail() {
           onSave={handleRpeSubmitAthleteDetail} 
           onCancel={() => { setShowRpeModal(false); setWorkoutToComplete(null); }} 
           saving={savingRpe} 
+          scarpa={scarpaCompletamento.propRiga(workoutToComplete?.workouts?.sections, workoutToComplete?.id)}
         />,
         document.body
       )}

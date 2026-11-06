@@ -5,6 +5,21 @@ import { afterEach, vi } from 'vitest'
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  globalThis.funzioniSpente = undefined
+})
+
+// Gli interruttori delle funzioni (funzioni_app, 06/11/2026): nei test sono
+// ACCESI, così i test di una funzione non devono sapere che esiste
+// l'interruttore. Per provarne una spenta: `globalThis.funzioniSpente = ['scarpe']`
+// (torna accesa dopo ogni test). La logica vera si prova in funzioniApp.test.js.
+vi.mock('../lib/funzioniApp', async (importOriginal) => {
+  const vero = await importOriginal()
+  const spenta = (nome) => (globalThis.funzioniSpente || []).includes(nome)
+  return {
+    ...vero,
+    statoFunzione: async (nome) => (spenta(nome) ? 'spenta' : 'tutti'),
+    funzioneAttiva: async (nome) => !spenta(nome),
+  }
 })
 
 // jsdom non implementa queste due, e i picker in stile iOS le chiamano a ogni

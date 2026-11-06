@@ -491,3 +491,24 @@ describe('Privacy e consenso', () => {
     expect(finto.supabase.auth.updateUser).toHaveBeenCalledWith({ data: { consenso: null } })
   })
 })
+
+describe('La voce «Catalogo scarpe» (solo staff)', () => {
+  // «Scarpe da corsa» (02/11/2026): per lo staff è l'unico ingresso a /scarpe,
+  // che non ha una voce nella tab bar. L'atleta ci arriva dal suo profilo.
+  it('un coach la vede', async () => {
+    montaPagina(<Settings />, { role: 'coach', user: { ...UTENTE, email: 'federico_leo@hotmail.it' } })
+    expect(await screen.findByRole('button', { name: /Catalogo scarpe/ })).toBeInTheDocument()
+  })
+
+  it('all\'atleta non si mostra', () => {
+    montaAtleta()
+    expect(screen.queryByRole('button', { name: /Catalogo scarpe/ })).not.toBeInTheDocument()
+  })
+  it('con le Scarpe spente (funzioni_app) nemmeno il coach la vede', async () => {
+    globalThis.funzioniSpente = ['scarpe']
+    montaPagina(<Settings />, { role: 'coach', user: { ...UTENTE, email: 'federico_leo@hotmail.it' } })
+    expect(await screen.findByRole('button', { name: /Codici invito/ })).toBeInTheDocument()
+    await new Promise(r => setTimeout(r, 0))
+    expect(screen.queryByRole('button', { name: /Catalogo scarpe/ })).not.toBeInTheDocument()
+  })
+})
