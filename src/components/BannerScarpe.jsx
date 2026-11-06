@@ -50,7 +50,7 @@ export default function BannerScarpe({ ruolo, uid, onApri }) {
       <span className="block text-2xl leading-[1.05] font-black tracking-tight max-w-[52%]">{contenuto.titolo}</span>
       <span className="rounded-full bg-black text-white text-sm font-bold px-4 py-2">{contenuto.bottone}</span>
       <FotoScarpa url={contenuto.foto} tipo={contenuto.tipo} tono="scuro" alt=""
-        className="absolute right-2 -top-6 w-[46%] -rotate-12 drop-shadow pointer-events-none" />
+        className="absolute right-2 top-1/2 -translate-y-1/2 w-[46%] -rotate-12 drop-shadow pointer-events-none" />
     </button>
   )
 }

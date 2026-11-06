@@ -13,7 +13,7 @@ export function contenutoBanner({ ruolo, scarpe = [], catalogo = [] }) {
     const cat = catalogo || []
     if (!cat.length) return null
     const m = conFoto(cat)
-    return { titolo: `Il catalogo scarpe · ${cat.length} ${cat.length === 1 ? 'modello' : 'modelli'}`, bottone: 'Apri',
+    return { titolo: 'Il catalogo scarpe', bottone: 'Apri',
       foto: m?.foto_url || null, tipo: m?.tipo || 'allenamento' }
   }
 

@@ -58,7 +58,7 @@ describe('BannerScarpe', () => {
   it('coach: legge solo il catalogo', async () => {
     mocks.elencoCatalogo.mockResolvedValue([{ id: 'm', marca: 'Nike', modello: 'P', foto_url: 'u', tipo: 'gara' }])
     render(<BannerScarpe ruolo="coach" onApri={() => {}} />)
-    expect(await screen.findByRole('button', { name: 'Il catalogo scarpe · 1 modello' })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Il catalogo scarpe' })).toBeTruthy()
     expect(mocks.leggiScarpeAtleta).not.toHaveBeenCalled()
   })
 })

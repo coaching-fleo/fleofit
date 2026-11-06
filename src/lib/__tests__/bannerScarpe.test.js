@@ -49,10 +49,10 @@ describe('contenutoBanner — coach', () => {
     const catalogo = Array.from({ length: 112 }, (_, i) => mod(`k${i}`, 'Zeta', `M${i}`, null))
     catalogo.push(mod('b', 'Brooks', 'Ghost', 'ub', 'ammortizzata'), mod('a', 'Asics', 'Gel', 'ua', 'trail'))
     expect(contenutoBanner({ ruolo: 'coach', catalogo })).toEqual({
-      titolo: 'Il catalogo scarpe · 114 modelli', bottone: 'Apri', foto: 'ua', tipo: 'trail' })
+      titolo: 'Il catalogo scarpe', bottone: 'Apri', foto: 'ua', tipo: 'trail' })
   })
   it('un solo modello: singolare', () => {
-    expect(contenutoBanner({ ruolo: 'coach', catalogo: [mod('a', 'A', 'B', 'u')] }).titolo).toBe('Il catalogo scarpe · 1 modello')
+    expect(contenutoBanner({ ruolo: 'coach', catalogo: [mod('a', 'A', 'B', 'u')] }).titolo).toBe('Il catalogo scarpe')
   })
   it('catalogo vuoto: null', () => {
     expect(contenutoBanner({ ruolo: 'coach', catalogo: [] })).toBeNull()
