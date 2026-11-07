@@ -48,6 +48,14 @@ const DettaglioScarpa = lazy(() => import('./pages/DettaglioScarpa'))
 const ModelloScarpa = lazy(() => import('./pages/ModelloScarpa'))
 const MieiTeam = lazy(() => import('./pages/MieiTeam'))
 const InvitoTeam = lazy(() => import('./pages/InvitoTeam'))
+const Team = lazy(() => import('./pages/Team'))
+const SchedaTeam = lazy(() => import('./pages/SchedaTeam'))
+// /team ha due facce: i team del coach (staff) o i team dell'atleta. Un admin
+// che simula l'atleta ha già `role === 'athlete'` e vede la seconda.
+function TeamIndice() {
+  const { role } = useAuth() || {}
+  return eStaff(role) ? <Team /> : <MieiTeam />
+}
 const Login = lazy(() => import('./pages/Login'))
 const Landing = lazy(() => import('./pages/Landing'))
 // La barra laterale del desktop (solo coach, solo web, finestra ≥ 1024px): pigra,
@@ -897,8 +905,9 @@ function App() {
             <Route path="/scarpe/modello/:id" element={<SoloSeAccesa nome="scarpe"><ModelloScarpa /></SoloSeAccesa>} />
             <Route path="/scarpe/:id" element={<SoloSeAccesa nome="scarpe"><DettaglioScarpa /></SoloSeAccesa>} />
             {/* Il Team ha l'interruttore (funzioni_app): spento, il link porta alla Home. */}
-            <Route path="/team" element={<SoloSeAccesa nome="team"><MieiTeam /></SoloSeAccesa>} />
+            <Route path="/team" element={<SoloSeAccesa nome="team"><TeamIndice /></SoloSeAccesa>} />
             <Route path="/team/invito/:id" element={<SoloSeAccesa nome="team"><InvitoTeam /></SoloSeAccesa>} />
+            <Route path="/team/:id" element={<SoloSeAccesa nome="team"><SchedaTeam /></SoloSeAccesa>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

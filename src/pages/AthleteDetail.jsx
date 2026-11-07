@@ -8,6 +8,7 @@ import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
 import { leggiGiornate, oggiItalia } from '../lib/recuperoGarmin'
 import { useScarpaCompletamento } from '../useScarpaCompletamento'
+import { useFunzione } from '../useFunzione'
 import { User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, Copy, Activity, CalendarDays, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
 import { vibraSuccesso } from '../lib/aptica'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, differenceInDays } from 'date-fns'
@@ -34,7 +35,7 @@ import { TestataScheda, MenuScheda, IntestazioneSezione } from '../components/Wo
 import { BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import {
   IdentitaAtleta, IconaSocial, CardAndamento, CellaBento, Sparkline,
-  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa, RigaCoach, RigaScarpeCoach,
+  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa, RigaCoach, RigaScarpeCoach, RigaTeamCoach,
 } from '../components/SchedaAtletaUI'
 import FoglioCoach from '../components/FoglioCoach'
 import CalendarioAtleta from '../components/CalendarioAtleta'
@@ -151,6 +152,20 @@ export default function AthleteDetail() {
       .catch(e => { console.warn('Scarpe non caricate:', e); if (vivo) setScarpeAtleta(null) })
     return () => { vivo = false; setScarpeAtleta(null) }
   }, [guardaScarpe, id])
+
+  // Team (06/11/2026): i team del coach in cui l'atleta è dentro o invitato,
+  // con l'interruttore acceso. Lettura pigra, teamDb fuori dal chunk d'ingresso.
+  const teamAcceso = useFunzione('team')
+  const [teamAtleta, setTeamAtleta] = useState(null)
+  useEffect(() => {
+    if (!guardaScarpe || !teamAcceso || !id) return undefined
+    let vivo = true
+    import('../lib/teamDb')
+      .then(m => m.leggiTeamAtleta(id))
+      .then(r => { if (vivo) setTeamAtleta(r?.disponibile ? r.team : null) })
+      .catch(e => { console.warn('Team non caricati:', e); if (vivo) setTeamAtleta(null) })
+    return () => { vivo = false; setTeamAtleta(null) }
+  }, [guardaScarpe, teamAcceso, id])
 
 
   // Gli estratti delle note (src/lib/noteEstratte.js) e lo stato dell'analisi:
@@ -730,6 +745,10 @@ export default function AthleteDetail() {
         ) : null}
         nota={pausaAtleta.testo} />
       {guardaScarpe && scarpeAtleta && <RigaScarpeCoach scarpe={scarpeAtleta} />}
+      {guardaScarpe && teamAtleta && (
+        <RigaTeamCoach team={teamAtleta}
+          onApri={() => navigate(teamAtleta.length === 1 ? `/team/${teamAtleta[0].id}` : '/team')} />
+      )}
       {eAdmin(role) && !isOwnProfile && staffCoach && (
         <div className="mt-3">
           <RigaCoach

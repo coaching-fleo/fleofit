@@ -16,8 +16,10 @@ import { useNavigate } from 'react-router-dom'
 import { useRipresa, useRicorda } from '../useRipresa'
 import { format, startOfDay, subDays } from 'date-fns'
 import { supabase } from '../supabaseClient'
-import { User } from 'lucide-react'
+import { User, UsersRound } from 'lucide-react'
 import { useAuth } from '../App'
+import { useFunzione } from '../useFunzione'
+import { VETRO } from '../lib/stiliCard'
 import { escludiDallaRubrica } from '../lib/constants'
 import { inPausa } from '../lib/pausa'
 import { mostraErrore, mostraSuccesso } from '../lib/alert'
@@ -55,6 +57,8 @@ export default function Athletes() {
   const [search, setSearch] = useState(() => ripresa?.search ?? '')
   const [modalOpen, setModalOpen] = useState(false)
   const navigate = useNavigate()
+  // «Team» nella testata, con l'interruttore acceso (funzioni_app).
+  const teamAcceso = useFunzione('team')
 
   useRicorda('atleti', user?.id, ripresa,
     { athletes, eliminati, assegnazioni, caricatoIl, vista, search, caricato: !loading })
@@ -230,7 +234,13 @@ export default function Athletes() {
        comandi della schermata, e farli arrivare in ritardo vorrebbe dire
        ritardare i comandi. Stessa regola dell'archivio. */
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
-      <TestataAtleti dettaglio={dettaglio} onNuovo={() => setModalOpen(true)}>
+      <TestataAtleti dettaglio={dettaglio} onNuovo={() => setModalOpen(true)}
+        azioneSecondaria={teamAcceso && (
+          <button type="button" onClick={() => navigate('/team')}
+            className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-[13px] text-sm font-bold text-white hover:border-white/25 transition ${VETRO}`}>
+            <UsersRound size={17} aria-hidden="true" /> Team
+          </button>
+        )}>
         <CampoRicerca valore={search} onCambia={setSearch}
           etichetta="Cerca un atleta" placeholder="Cerca nome o cognome" />
         <FiltriStato conteggi={conteggi} vista={vista} onCambia={cambiaVista} />

@@ -4,6 +4,52 @@
 // passano i dati già pronti.
 import { ChevronLeft, ChevronRight, Users } from 'lucide-react'
 import { CARD, LABEL, META, RIGA, VETRO } from '../lib/stiliCard'
+import { vibraScelta } from '../lib/aptica'
+import { chiudiTastieraSuInvio } from '../useTastiera'
+
+/**
+ * L'interruttore, `role="switch"` con `aria-checked`. Copia di quello delle
+ * Impostazioni e delle Scarpe: importarlo porterebbe un altro chunk intero.
+ */
+export function Interruttore({ attivo, onCambia, etichetta, occupato = false }) {
+  return (
+    <button type="button" role="switch" aria-checked={attivo} aria-label={etichetta} disabled={occupato}
+      onClick={() => { vibraScelta(); onCambia() }}
+      className={`shrink-0 w-[51px] h-[31px] rounded-full flex items-center p-0.5 transition-colors duration-200 disabled:opacity-50 ${
+        attivo ? 'justify-end bg-brand shadow-[0_6px_12px_-4px_rgba(241,186,23,.5)]' : 'justify-start bg-white/10 border border-white/[.12]'}`}>
+      <span aria-hidden="true"
+        className={`w-[27px] h-[27px] rounded-full transition-colors ${attivo ? 'bg-white shadow-[0_1px_3px_rgba(0,0,0,.4)]' : 'bg-[#8b8f9c]'}`} />
+    </button>
+  )
+}
+
+export const CAMPO_TEAM = 'w-full bg-[#111] border border-[#333] rounded-xl px-4 py-3 text-[15px] font-bold text-white ' +
+  'placeholder-[#5b6070] focus:outline-none focus:border-brand'
+
+/** Un campo di testo con etichetta, e l'errore sotto quando c'è. */
+export function CampoTeam({ etichetta, valore, onChange, errore, ...resto }) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className={LABEL}>{etichetta}</span>
+      <input aria-label={etichetta} enterKeyHint="done" onKeyDown={chiudiTastieraSuInvio}
+        value={valore} onChange={e => onChange(e.target.value)}
+        aria-invalid={errore ? true : undefined}
+        className={`${CAMPO_TEAM} ${errore ? 'border-red-500' : ''}`} {...resto} />
+      {errore && <span className="text-[12.5px] font-medium text-red-500">{errore}</span>}
+    </label>
+  )
+}
+
+/** Una pillola da scegliere (metrica, filtro). */
+export function Pillola({ attivo, onClick, children }) {
+  return (
+    <button type="button" aria-pressed={attivo} onClick={onClick}
+      className={`shrink-0 min-h-9 px-3.5 rounded-full text-[13px] font-bold border transition ${
+        attivo ? 'bg-brand text-black border-brand' : 'bg-white/[.04] text-gray-300 border-white/[.1] hover:border-white/25'}`}>
+      {children}
+    </button>
+  )
+}
 
 /** La testata appiccicata: è cornice, sta fuori dalla cascata. */
 export function TestataTeam({ titolo, dettaglio, onIndietro, azione }) {

@@ -30,7 +30,7 @@ import { vibraScelta } from '../lib/aptica'
  * contenitore lascerebbe scorrere il contenuto sotto la barra di stato, perché
  * l'elemento appiccicato si ferma a `top-0`.
  */
-export function TestataAtleti({ dettaglio, onNuovo, children }) {
+export function TestataAtleti({ dettaglio, onNuovo, azioneSecondaria = null, children }) {
   return (
     <div className="sticky top-0 z-30 -mx-4 px-4 pt-[calc(env(safe-area-inset-top)+0.875rem)] pb-3
                     bg-[#0B0B0B]/85 backdrop-blur-xl border-b border-white/[.06]">
@@ -43,6 +43,7 @@ export function TestataAtleti({ dettaglio, onNuovo, children }) {
             </p>
           )}
         </div>
+        {azioneSecondaria}
         <button onClick={onNuovo}
           className="shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-[13px] bg-brand text-black
                      text-sm font-black hover:brightness-110 transition

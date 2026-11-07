@@ -11,7 +11,7 @@
 // con quanto carico, era nella terza tab, dietro due tocchi e quattro grafici
 // che non si parlavano. Ora è la prima cosa in pagina, e le tab non ci sono più.
 
-import { ChevronDown, ChevronRight, Footprints, User, UserCog } from 'lucide-react'
+import { ChevronDown, ChevronRight, Footprints, User, UserCog, UsersRound } from 'lucide-react'
 import { CARD, LABEL, RIGA, VETRO } from '../lib/stiliCard'
 import { BRAND, RUNNING } from '../lib/colori'
 import { testoKm } from '../lib/kmScarpe'
@@ -318,6 +318,23 @@ export function RigaCoach({ nome, onClick }) {
  * attiva oltre la soglia aggiunge «da cambiare». Senza principale, «Scarpe: 2
  * attive» solo se c'è da avvisare. Senza scarpe attive: niente.
  */
+/**
+ * Team (06/11/2026): i team del coach in cui l'atleta è dentro o invitato.
+ * Senza team, niente riga. Il tocco apre il primo team (o la lista, se sono più).
+ */
+export function RigaTeamCoach({ team, onApri }) {
+  if (!team?.length) return null
+  const nomi = team.map(t => (t.stato === 'invitato' ? `${t.nome} (invitato)` : t.nome)).join(', ')
+  return (
+    <button type="button" onClick={onApri}
+      className={`${RIGA} mt-3 w-full px-[15px] py-[13px] flex items-center gap-3 text-left hover:bg-white/[.055] transition`}>
+      <UsersRound size={18} className="shrink-0 text-muted" aria-hidden="true" />
+      <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{`Team: ${nomi}`}</span>
+      <ChevronRight size={17} aria-hidden="true" className="shrink-0 text-muted" />
+    </button>
+  )
+}
+
 export function RigaScarpeCoach({ scarpe }) {
   const attive = (scarpe || []).filter(s => !s.ritirata_at)
   const principale = attive.find(s => s.principale)
