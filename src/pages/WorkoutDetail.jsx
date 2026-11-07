@@ -59,6 +59,7 @@ import CustomAudioPlayer from '../components/CustomAudioPlayer'
 import RpeModal from '../components/RpeModal'
 import RigaScarpa from '../components/RigaScarpa'
 import { useScarpaCompletamento } from '../useScarpaCompletamento'
+import { useSfidaCompletamento } from '../useSfidaCompletamento'
 import FoglioSposta from '../components/FoglioSposta'
 import { puoSpostare, spostaAssegnazione, avvisaCoachSpostamento } from '../lib/spostaAllenamento'
 import RecapAllenamento from '../components/RecapAllenamento'
@@ -346,6 +347,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [savingAutonomous, setSavingAutonomous] = useState(false)
 
   const [showRpeModal, setShowRpeModal] = useState(false)
+  // Team (spec §4): il risultato della sfida nel foglio RPE. Legge solo a
+  // foglio aperto e solo per l'atleta sui propri allenamenti. Per l'atleta
+  // `workout.date` è già il giorno dell'assegnazione (lo riscrive il fetch).
+  const sfidaCompletamento = useSfidaCompletamento(
+    role === 'athlete' && isOwnProfile ? user?.id : null,
+    showRpeModal ? (workout?.id || null) : null,
+    workout?.date || null,
+    { setAlertInfo })
   // L'assegnazione appena chiusa, per il recap in stile storie (src/lib/recapAllenamento.js).
   const [recapAw, setRecapAw] = useState(null)
   const [rpeScore, setRpeScore] = useState('5')
@@ -766,6 +775,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         // completamento va in coda e la scarpa si assegna dopo, qui sotto.
         // Un suo errore dà un avviso e non annulla il completamento.
         scarpaCompletamento.registra(athleteWorkoutId, workout?.sections)
+        // Il risultato della sfida del team, se c'è: stesso patto della scarpa.
+        sfidaCompletamento.registra()
       }
     }
 
@@ -2736,6 +2747,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           onCancel={annullaRpe} 
           saving={savingNote} 
           scarpa={scarpaCompletamento.propRiga(workout?.sections, athleteWorkoutId)}
+          sfida={sfidaCompletamento.riga}
         />,
         document.body
       )}

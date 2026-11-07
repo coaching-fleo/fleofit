@@ -50,6 +50,7 @@ const MieiTeam = lazy(() => import('./pages/MieiTeam'))
 const InvitoTeam = lazy(() => import('./pages/InvitoTeam'))
 const Team = lazy(() => import('./pages/Team'))
 const SchedaTeam = lazy(() => import('./pages/SchedaTeam'))
+const DettaglioSfida = lazy(() => import('./pages/DettaglioSfida'))
 // /team ha due facce: i team del coach (staff) o i team dell'atleta. Un admin
 // che simula l'atleta ha già `role === 'athlete'` e vede la seconda.
 function TeamIndice() {
@@ -908,6 +909,7 @@ function App() {
             <Route path="/team" element={<SoloSeAccesa nome="team"><TeamIndice /></SoloSeAccesa>} />
             <Route path="/team/invito/:id" element={<SoloSeAccesa nome="team"><InvitoTeam /></SoloSeAccesa>} />
             <Route path="/team/:id" element={<SoloSeAccesa nome="team"><SchedaTeam /></SoloSeAccesa>} />
+            <Route path="/team/:id/sfida/:sfidaId" element={<SoloSeAccesa nome="team"><DettaglioSfida /></SoloSeAccesa>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

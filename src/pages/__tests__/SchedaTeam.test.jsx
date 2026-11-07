@@ -26,6 +26,8 @@ vi.mock('../../lib/teamDb', () => ({
   aggiornaTeam: vi.fn(async () => {}),
   chiudiTeam: vi.fn(async () => {}),
   creaSfida: vi.fn(async () => ({ id: 's9', assegnati: ['b', 'c'] })),
+  rispondi: vi.fn(async () => {}),
+  cancellaMieiRisultati: vi.fn(async () => {}),
 }))
 vi.mock('../../lib/alert', () => ({ mostraErrore: vi.fn(), mostraSuccesso: vi.fn(), mostraAlert: vi.fn() }))
 
@@ -151,5 +153,69 @@ describe('/team — coach', () => {
     await userEvent.click(within(foglio).getByRole('button', { name: 'Crea' }))
     await waitFor(() => expect(db.creaTeam).toHaveBeenCalledWith({ nome: 'Corsa', evento_id: null, classifica_visibile: false }))
     expect(naviga).toHaveBeenCalledWith('/team/nuovo')
+  })
+})
+
+// La faccia dell'atleta (spec §5-§6): il testa a testa quando sono in due, le
+// vittorie quando sono di più, solo se il coach ha reso visibile la classifica;
+// e «Esci dal team», che può portarsi via i propri risultati. L'ordine conta:
+// prima si cancellano i risultati, poi si esce (dopo, la RLS li nasconde).
+describe('/team/:id — atleta', () => {
+  const luca = { id: 'b', email: 'luca@x.it' }
+  const apriDaAtleta = () => montaPagina(<SchedaTeam />, { role: 'athlete', user: luca, percorso: '/team/t1', rotta: '/team/:id' })
+  const chiusa = (id, data, risultati) => ({ id, metrica: 'tempo', data, chiusa_il: `${data}T20:00:00Z`, titolo: 'Hyrox', risultati })
+
+  beforeEach(() => {
+    dati.scheda.membri = dati.scheda.membri.filter(m => m.atleta_id !== 'i')
+    dati.sfide = [
+      chiusa('s1', '2026-11-01', [{ atleta_id: 'b', valore: 240 }, { atleta_id: 'c', valore: 250 }]),
+      chiusa('s2', '2026-11-03', [{ atleta_id: 'b', valore: 260 }, { atleta_id: 'c', valore: 255 }]),
+    ]
+  })
+
+  it('in due, con la classifica visibile: il testa a testa', async () => {
+    dati.scheda.team.classifica_visibile = true
+    apriDaAtleta()
+    const blocco = await screen.findByRole('region', { name: 'Testa a testa' })
+    expect(within(blocco).getByText('1–1')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Vittorie' })).toBeNull()
+  })
+
+  it('in tre: le vittorie, non il testa a testa', async () => {
+    dati.scheda.team.classifica_visibile = true
+    dati.scheda.membri.push({ atleta_id: 'd', nome: 'Dario', cognome: 'Terzo', stato: 'dentro', invitato_il: giorniFa(3), risposto_il: giorniFa(3) })
+    apriDaAtleta()
+    expect(await screen.findByRole('region', { name: 'Vittorie' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Testa a testa' })).toBeNull()
+  })
+
+  it('con la classifica nascosta: né testa a testa né vittorie', async () => {
+    apriDaAtleta()
+    await screen.findByRole('region', { name: 'Membri' })
+    expect(screen.queryByRole('region', { name: 'Testa a testa' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Vittorie' })).toBeNull()
+  })
+
+  it('«Esci dal team» con la cancellazione: prima cancella i risultati, poi esce', async () => {
+    const u = userEvent.setup()
+    apriDaAtleta()
+    await u.click(await screen.findByRole('button', { name: 'Esci dal team' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Esci dal team' })
+    await u.click(within(dialogo).getByRole('checkbox', { name: 'Cancella anche i miei risultati' }))
+    await u.click(within(dialogo).getByRole('button', { name: 'Esci' }))
+    await waitFor(() => expect(db.rispondi).toHaveBeenCalledWith('t1', 'b', 'uscito'))
+    expect(db.cancellaMieiRisultati).toHaveBeenCalledWith('t1', 'b')
+    expect(db.cancellaMieiRisultati.mock.invocationCallOrder[0]).toBeLessThan(db.rispondi.mock.invocationCallOrder[0])
+    expect(naviga).toHaveBeenCalledWith('/team', { replace: true })
+  })
+
+  it('«Esci dal team» senza la scelta: i risultati restano', async () => {
+    const u = userEvent.setup()
+    apriDaAtleta()
+    await u.click(await screen.findByRole('button', { name: 'Esci dal team' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Esci dal team' })
+    await u.click(within(dialogo).getByRole('button', { name: 'Esci' }))
+    await waitFor(() => expect(db.rispondi).toHaveBeenCalledWith('t1', 'b', 'uscito'))
+    expect(db.cancellaMieiRisultati).not.toHaveBeenCalled()
   })
 })

@@ -20,6 +20,7 @@ import { mostraErrore } from '../lib/alert'
 import { sincronizzaBadge } from '../lib/badge'
 import RpeModal from '../components/RpeModal'
 import { useScarpaCompletamento } from '../useScarpaCompletamento'
+import { useSfidaCompletamento } from '../useSfidaCompletamento'
 import RigaNotifica, { SuggerimentoSwipe } from '../components/RigaNotifica'
 import { prendiAccenno } from '../lib/accennoNotifiche'
 import NuovoEvento from '../components/NuovoEvento'
@@ -356,6 +357,13 @@ export default function Home() {
     }, 340)
   }
   const [workoutToComplete, setWorkoutToComplete] = useState(null)
+  // Team (spec §4): se l'allenamento che si completa è in una sfida aperta, il
+  // foglio RPE chiede il risultato. Legge solo a foglio aperto, solo l'atleta.
+  const sfidaCompletamento = useSfidaCompletamento(
+    role === 'athlete' ? user?.id : null,
+    workoutToComplete?.workouts?.id || null,
+    workoutToComplete?.completed_date || null,
+    { setAlertInfo })
   const [rpeScore, setRpeScore] = useState('5')
   const [rpeNotes, setRpeNotes] = useState('')
   const [savingRpe, setSavingRpe] = useState(false)
@@ -1112,6 +1120,8 @@ setNotifications(prev => {
       // completamento va in coda e la scarpa si assegna dopo dalla scheda.
       // Un suo errore dà un avviso e non annulla il completamento.
       scarpaCompletamento.registra(workoutToComplete.id, workoutToComplete.workouts?.sections)
+      // Il risultato della sfida, se c'è: stesso patto della scarpa.
+      sfidaCompletamento.registra()
     }
 
     setSavingRpe(false)
@@ -1814,6 +1824,7 @@ setNotifications(prev => {
           onCancel={() => { setShowRpeModal(false); setWorkoutToComplete(null); }} 
           saving={savingRpe} 
           scarpa={scarpaCompletamento.propRiga(workoutToComplete?.workouts?.sections, workoutToComplete?.id)}
+          sfida={sfidaCompletamento.riga}
         />,
         document.body
       )}

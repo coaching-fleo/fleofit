@@ -12,10 +12,14 @@ import { CARD } from '../lib/stiliCard'
 import { battito } from '../lib/aptica'
 // Pigra: RpeModal sta nel chunk d'ingresso (Home), la riga serve solo a chi ha scarpe.
 const RigaScarpa = lazy(() => import('./RigaScarpa'))
+// Pigra anche questa: serve solo a chi è in una sfida del team.
+const RigaRisultatoSfida = lazy(() => import('./RigaRisultatoSfida'))
 
 // `scarpa` (facoltativa, «Scarpe da corsa»): `{ attive, sceltaId, onCambia }`
 // da `propRiga` di useScarpaCompletamento. Senza, il foglio è quello di sempre.
-export default function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving, scarpa = null }) {
+// `sfida` (facoltativa, Team): la `riga` di useSfidaCompletamento. Con un
+// valore che non si legge, Salva resta spento.
+export default function RpeModal({ score, onScoreChange, notes, onNotesChange, onSave, onCancel, saving, scarpa = null, sfida = null }) {
   const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef(null);
   const isDragging = useRef(false);
@@ -138,6 +142,11 @@ export default function RpeModal({ score, onScoreChange, notes, onNotesChange, o
             <Suspense fallback={null}><RigaScarpa {...scarpa} /></Suspense>
           </div>
         )}
+        {sfida && (
+          <div className="mb-6">
+            <Suspense fallback={null}><RigaRisultatoSfida {...sfida} /></Suspense>
+          </div>
+        )}
         <div className="flex gap-3">
           <button onClick={onCancel} disabled={saving} className="flex-1 py-3.5 bg-[#2a2a2a] text-white font-semibold rounded-xl hover:bg-[#333] transition disabled:opacity-50">Annulla</button>
           {/* ⚠️ Si contrae invece di spegnersi: il salvataggio passa per la rete
@@ -147,7 +156,7 @@ export default function RpeModal({ score, onScoreChange, notes, onNotesChange, o
               completamento. Il perché della forma sta in src/index.css.
               ⚠️ `max-w-[100vw]`: da `none` il CSS non sa interpolare e il
               bottone salterebbe alla pillola invece di contrarsi. */}
-          <button onClick={onSave} disabled={saving} aria-busy={saving || undefined}
+          <button onClick={onSave} disabled={saving || (sfida && !sfida.valido)} aria-busy={saving || undefined}
             className={`relative flex-1 max-w-[100vw] py-3.5 bg-brand text-black font-black rounded-xl
                         hover:brightness-110 overflow-hidden shadow-lg shadow-brand/20
                         transition-[max-width,border-radius,filter] duration-[570ms] ease-[cubic-bezier(.33,1,.68,1)]
