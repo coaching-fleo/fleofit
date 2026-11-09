@@ -91,7 +91,7 @@
    ✅ **Nona eccezione** (06/11/2026, applicata a mano dal committente): le tre tabelle «Scarpe da corsa»
    (`scarpe_catalogo`, `scarpe_atleta`, `scarpe_uso`), il bucket `scarpe` e `funzioni_app` (gli interruttori),
    additive (`supabase/schema/scarpe_2026-11-02.sql`, `docs/memoria/scarpe.md`). Le Scarpe restano **spente**.
-   ⏳ **Decima eccezione** (sì esplicito in sessione il 09/11/2026, la applica a mano il committente; da segnare ✅ quando è fatta): i **Team**
+   ✅ **Decima eccezione** (09/11/2026, sì esplicito in sessione, ✅ **applicata a mano dal committente il 09/11/2026**, `tools/verifica-team.sql` pulita): i **Team**
    (`team`, `team_membri`, `team_sfide`, `team_risultati`, due trigger, la RPC `team_scheda`, la riga
    `team` di `funzioni_app` spenta), additiva (`supabase/schema/team_2026-11-06.sql`, `docs/memoria/team.md`).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
@@ -370,7 +370,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `garmin_collegamenti` · `garmin_attivita` · `garmin_giornate` · `garmin_invii` | ✅ **applicata il 28/10/2026** (`supabase/schema/garmin_2026-10-27.sql`; `docs/memoria/garmin.md`): il collegamento Garmin dell'atleta e i dati dell'orologio. `garmin_collegamenti` porta i token cifrati, **senza policy** e **fuori dal backup**; le altre tre le legge l'atleta o il suo coach. Le scrivono solo le Edge Function. `main` non le conosce |
 | `scarpe_catalogo` · `scarpe_atleta` · `scarpe_uso` | ✅ **applicata il 06/11/2026** (`supabase/schema/scarpe_2026-11-02.sql`; `docs/memoria/scarpe.md`): catalogo dei modelli (dal 03/11 con le colonne `livello`, `ammortizzamento`, `stabilita`, `piastra`, `peso_g`, `stack_mm`, `uso`, `vita_km`, `url_ufficiale`, `foto_url` e il bucket `scarpe`, pubblico, 4 policy su `storage.objects`), le scarpe dell'atleta, con quale scarpa è stato fatto un allenamento. I km **non si salvano**, si calcolano. Senza le tabelle l'app nasconde tutto. `main` non le conosce |
 | `funzioni_app` | ✅ **applicata il 06/11/2026**, nella stessa migrazione: gli interruttori per accendere una funzione **senza aggiornare l'app** (`nome`, `stato` fra `spenta`/`admin`/`tutti`). La legge chiunque, la scrivono gli admin meno `demo@fleofit.it`. Si legge con `src/lib/funzioniApp.js` (una volta per avvio); riga assente o rete giù = ultima risposta salvata, se no **spenta**. Le Scarpe partono spente (`docs/memoria/scarpe.md`) |
-| `team` · `team_membri` · `team_sfide` · `team_risultati` | ⏳ **NON applicata** (`supabase/schema/team_2026-11-06.sql`; `docs/memoria/team.md`): i team di atleti con la sfida interna. Stati e reinvito (3 giorni) li impone il trigger; i nomi dei compagni passano **solo** dalla RPC `team_scheda`. Senza le tabelle l'app nasconde tutto; interruttore `team` spento. Nel backup notturno |
+| `team` · `team_membri` · `team_sfide` · `team_risultati` | ✅ **applicata il 09/11/2026** (`supabase/schema/team_2026-11-06.sql`; `docs/memoria/team.md`): i team di atleti con la sfida interna. Stati e reinvito (3 giorni) li impone il trigger; i nomi dei compagni passano **solo** dalla RPC `team_scheda`. Senza le tabelle l'app nasconde tutto; interruttore `team` spento. Nel backup notturno |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
 - 🔴 **Dal 16/10/2026 lo staff si cambia in UN posto: la tabella `staff`** (admin e coach).
