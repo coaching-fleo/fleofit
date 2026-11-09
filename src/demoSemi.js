@@ -32,7 +32,7 @@ import schedeScarpe from '../tools/scarpe/schede.json'
 // build vera (il modulo demo si pota, gli asset no). Sono le sole tre che esistono.
 const FOTO_SCARPE = ['saucony-endorphin-speed-4', 'puma-deviate-nitro-3', 'on-cloudmonster-2']
 
-export const VERSIONE_SEME = 22
+export const VERSIONE_SEME = 23   // 23: i ritratti degli atleti (tools/demo-foto)
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -136,9 +136,16 @@ const workouts = () => [
 
 // ── gli atleti ──────────────────────────────────────────────────────────────
 
+// I ritratti (disegni, nessuna persona vera) stanno in tools/demo-foto, come le foto delle
+// scarpe: li serve solo il server di sviluppo. Rigenerarli: python3 tools/demo-foto/genera.py
+const RITRATTI = ['at-marco', 'at-luca', 'at-giulia', 'at-andrea', 'at-sara', 'at-paolo',
+  'at-chiara', 'at-elena', 'at-davide', 'at-sofia']
+const ritratto = (id) => (id === COACH ? '/tools/demo-foto/coach-federico.svg'
+  : RITRATTI.includes(id) ? `/tools/demo-foto/${id}.svg` : null)
+
 const A = (id, name, surname, extra = {}) => ({
   id, name, surname, birth_date: '1995-04-12', weight: '74', height: '178',
-  photo_url: null, notes: '', instagram_url: null, strava_url: null, deleted_at: null,
+  photo_url: ritratto(id), notes: '', instagram_url: null, strava_url: null, deleted_at: null,
   ...extra,
 })
 

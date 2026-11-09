@@ -672,3 +672,15 @@ esattamente i pezzi che in prova non si possono provare — ed è bene che
 falliscano in silenzio invece di rompere la pagina.
 
 ---
+
+### I ritratti degli atleti finti (09/11/2026, semi versione 23)
+Su richiesta del committente: con le sole iniziali non si capiva come rendono le foto
+profilo sul fondo scuro. Ogni atleta finto (e Federico) ha un **ritratto disegnato**, SVG,
+in `tools/demo-foto/` — nessuna persona vera, niente da scaricare. Si rigenerano con
+`python3 tools/demo-foto/genera.py` (carnagione, capelli, maglia e sfondo per persona).
+- Stanno in `tools/`, come le foto delle scarpe: li serve solo il server di sviluppo, e
+  l'URL in `demoSemi.js` è scritto a mano (`ritratto`), così Vite non li copia in `dist`.
+  Controllato col build: `grep -rl "demo-foto" dist/` non stampa niente.
+- `coach-demo` resta senza foto: così la demo mostra anche il caso delle iniziali.
+- `src/__tests__/demoRitratti.test.js` verifica che ogni file indicato esista: un URL
+  sbagliato darebbe un'immagine rotta, non le iniziali.
