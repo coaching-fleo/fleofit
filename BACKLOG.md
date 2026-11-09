@@ -52,8 +52,9 @@
 ## ⏳ Team di atleti — accendere e provare sul telefono (09/11/2026)
 ✅ Migrazione applicata e `tools/verifica-team.sql` pulita il 09/11/2026 (decima eccezione, CLAUDE.md §0-bis); il
 codice è su `app`, nascosto dall'interruttore `team` (spento). **Perché conta**: senza push l'invito non arriva.
-✅ `send-reminders` pubblicata (versione 72). Resta, in ordine (`docs/memoria/team.md`): ~~pubblicare `send-reminders`~~ (modalità `team_invito`, solo DOPO la migrazione) → `team` su `admin` e
-prova su iPhone e Android (push dell'invito ad app chiusa, deep link, tasto indietro) → `tutti`.
+✅ `send-reminders` pubblicata il 09/11/2026 (versione 72). Resta, in ordine (`docs/memoria/team.md`): `team` su
+`admin` e prova del lato coach (su `admin` niente push e l'atleta non vede i Team) → `tutti` e prova del lato atleta
+su iPhone e Android (push dell'invito ad app chiusa, deep link, tasto indietro, campo del tempo).
 
 ## 💡 Team — fase B: il risultato dall'orologio
 Quando Garmin sarà attivo per tutti, il risultato della sfida (tempo, distanza) si compila dall'attività abbinata
