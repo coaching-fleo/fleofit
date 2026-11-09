@@ -29,12 +29,32 @@ import { semi, VERSIONE_SEME, COACH_DEMO } from './demoSemi'
 
 const CHIAVE = 'fleofit_demo_db'
 
-/** Le due sole relazioni che l'app chiede nei `select`. */
+/**
+ * Le relazioni che l'app chiede nei `select`. `chiave` = colonna della riga che
+ * punta all'`id` dell'altra tabella (molti a uno, torna un oggetto o null);
+ * `inversa` = colonna dell'ALTRA tabella che punta all'`id` della riga (uno a
+ * molti, torna un array, mai null, come PostgREST).
+ */
 const RELAZIONI = {
   athlete_workouts: {
     workouts: { chiave: 'workout_id', tabella: 'workouts' },
     athletes: { chiave: 'athlete_id', tabella: 'athletes' },
   },
+  // Team (06/11/2026)
+  team: { team_membri: { inversa: 'team_id', tabella: 'team_membri' } },
+  team_membri: { team: { chiave: 'team_id', tabella: 'team' } },
+  team_sfide: {
+    workouts: { chiave: 'workout_id', tabella: 'workouts' },
+    team: { chiave: 'team_id', tabella: 'team' },
+    team_risultati: { inversa: 'sfida_id', tabella: 'team_risultati' },
+  },
+}
+
+const riduci = (riga, campi) => {
+  if (campi.length === 0) return { ...riga }
+  const ridotta = {}
+  for (const c of campi) ridotta[c] = riga[c]
+  return ridotta
 }
 
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
@@ -123,12 +143,12 @@ function proietta(riga, tabella, selezione) {
   for (const rel of relazioni) {
     const def = RELAZIONI[tabella]?.[rel.nome]
     if (!def) { fuori[rel.nome] = null; continue }
+    if (def.inversa) {
+      fuori[rel.nome] = (db()[def.tabella] || []).filter(r => r[def.inversa] === riga.id).map(r => riduci(r, rel.campi))
+      continue
+    }
     const collegata = db()[def.tabella]?.find(r => r.id === riga[def.chiave]) || null
-    if (!collegata) { fuori[rel.nome] = null; continue }
-    if (rel.campi.length === 0) { fuori[rel.nome] = { ...collegata }; continue }
-    const ridotta = {}
-    for (const c of rel.campi) ridotta[c] = collegata[c]
-    fuori[rel.nome] = ridotta
+    fuori[rel.nome] = collegata ? riduci(collegata, rel.campi) : null
   }
   return fuori
 }

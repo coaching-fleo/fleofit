@@ -12,7 +12,7 @@ import { useAuth } from '../App'
 import { eStaff } from '../lib/ruoli'
 import { chiudiSfida, leggiScheda, leggiSfide, salvaRisultato } from '../lib/teamDb'
 import { leggiValore, ordinaSfida, scriviValore, versoDi } from '../lib/sfidaTeam'
-import { ETICHETTE_METRICA, giornoBreve, nomeDa } from '../lib/membriTeam'
+import { ETICHETTE_METRICA, giornoBreve } from '../lib/membriTeam'
 import { separaCodice } from '../lib/codiceWorkout'
 import { mostraErrore } from '../lib/alert'
 import { vibraSuccesso } from '../lib/aptica'
@@ -59,10 +59,11 @@ export default function DettaglioSfida() {
   useEffect(() => { carica() }, [carica])
 
   const membri = useMemo(() => scheda?.membri || [], [scheda])
-  const nome = useMemo(() => nomeDa(membri), [membri])
   const team = scheda?.team
+  // A sfida aperta compare anche chi non ha ancora inserito; a sfida chiusa
+  // solo chi ha un risultato (chi è entrato dopo non c'era).
   const classifica = useMemo(() => (sfida
-    ? ordinaSfida(sfida.risultati, membri.filter(m => m.stato === 'dentro').map(m => m.atleta_id), sfida.metrica)
+    ? ordinaSfida(sfida.risultati, sfida.chiusa_il ? [] : membri.filter(m => m.stato === 'dentro').map(m => m.atleta_id), sfida.metrica)
     : []), [sfida, membri])
   const perId = useMemo(() => new Map(membri.map(m => [m.atleta_id, m])), [membri])
 
@@ -135,7 +136,7 @@ export default function DettaglioSfida() {
                   const ex = !m || m.stato === 'uscito'
                   return (
                     <RigaMembro key={r.atleta_id}
-                      nome={ex ? 'Ex membro' : nome(r.atleta_id)} cognome="" foto={ex ? null : m.foto}
+                      nome={ex ? 'Ex membro' : m.nome} cognome={ex ? '' : m.cognome} foto={ex ? null : m.foto}
                       dettaglio={r.posto ? `${r.posto}°` : 'Non ancora inserito'}
                       azione={(
                         <span className="flex flex-col items-end shrink-0">

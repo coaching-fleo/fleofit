@@ -111,3 +111,19 @@ describe('/team/:id/sfida/:sfidaId', () => {
     expect(screen.queryByRole('button', { name: 'Salva' })).toBeNull()
   })
 })
+
+describe('/team/:id/sfida/:sfidaId — sfida chiusa', () => {
+  it('chi non ha un risultato non compare: può essere entrato dopo', async () => {
+    dati.sfide[0].chiusa_il = '2026-11-06T20:00:00Z'
+    apri()
+    const r = await righe()
+    expect(r).toHaveLength(2)
+    expect(screen.queryByText('Giulia X')).toBeNull()
+  })
+
+  it('le iniziali vengono da nome e cognome', async () => {
+    apri()
+    const [primo] = await righe()
+    expect(within(primo).getByText('SX')).toBeInTheDocument()
+  })
+})

@@ -32,7 +32,7 @@ import schedeScarpe from '../tools/scarpe/schede.json'
 // build vera (il modulo demo si pota, gli asset no). Sono le sole tre che esistono.
 const FOTO_SCARPE = ['saucony-endorphin-speed-4', 'puma-deviate-nitro-3', 'on-cloudmonster-2']
 
-export const VERSIONE_SEME = 21
+export const VERSIONE_SEME = 22
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -285,6 +285,10 @@ const assegnazioni = () => conSettimanaPiena([
   ...regolare('at-sara', 'w-forte', 8),
   AW('at-sara', 'w-forte', nellaSettimana(0, 0), 'completed', 8),
   AW('at-sara', 'w-corsa', giorno(0), 'pending'),
+  // Team: la sfida aperta (ts-3) è oggi, da fare per Sara e già fatta da Luca,
+  // così in `demo:atleta` si prova il risultato dal foglio RPE.
+  AW('at-sara', 'w-scarico', giorno(0), 'pending'),
+  AW('at-luca', 'w-scarico', giorno(0), 'completed', 6),
   // Una corsa di ieri, già chiusa: l'attività Garmin di `attivitaGarmin` le si abbina.
   AW('at-sara', 'w-corsa', giorno(-1), 'completed', null),
   AW('at-sara', 'w-medio', giorno(2), 'pending'),
@@ -514,7 +518,7 @@ const team_membri = () => [
 const team_sfide = () => [
   { id: 'ts-1', team_id: 't-doppia', workout_id: 'w-completo', metrica: 'tempo', verso: 'minore', data: giorno(-6), chiusa_il: fa(5) },
   { id: 'ts-2', team_id: 't-doppia', workout_id: 'w-medio', metrica: 'ripetizioni', verso: 'maggiore', data: giorno(-5), chiusa_il: fa(4) },
-  { id: 'ts-3', team_id: 't-doppia', workout_id: 'w-scarico', metrica: 'kg', verso: 'maggiore', data: giorno(-1), chiusa_il: null },
+  { id: 'ts-3', team_id: 't-doppia', workout_id: 'w-scarico', metrica: 'kg', verso: 'maggiore', data: giorno(0), chiusa_il: null },
 ]
 const team_risultati = () => [
   { sfida_id: 'ts-1', atleta_id: 'at-sara', valore: 4210, fonte: 'manuale', inserito_il: fa(6) },

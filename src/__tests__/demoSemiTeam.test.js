@@ -7,8 +7,8 @@ import { semi, VERSIONE_SEME, COACH_DEMO } from '../demoSemi'
 describe('il team della demo', () => {
   const db = semi()
 
-  it('la versione dei semi è almeno 21', () => {
-    expect(VERSIONE_SEME).toBeGreaterThanOrEqual(21)
+  it('la versione dei semi è almeno 22', () => {
+    expect(VERSIONE_SEME).toBeGreaterThanOrEqual(22)
   })
 
   it('un team del coach finto, con la classifica visibile', () => {
@@ -37,11 +37,36 @@ describe('il team della demo', () => {
     expect(vincitori.sort()).toEqual(['at-luca', 'at-sara'])
   })
 
+  it('la sfida aperta è assegnata a Sara, da fare, nel suo giorno: si prova il foglio RPE', () => {
+    const aperta = db.team_sfide.find(s => !s.chiusa_il)
+    const aw = db.athlete_workouts.find(a => a.athlete_id === 'at-sara' && a.workout_id === aperta.workout_id)
+    expect(aw).toMatchObject({ completed_date: aperta.data, status: 'pending' })
+  })
+
   it("Giulia ha la notifica dell'invito", () => {
     expect(db.notifications.some(n => n.user_id === 'at-giulia' && n.route === '/team/invito/t-doppia')).toBe(true)
   })
 
   it('nella demo la funzione è accesa', () => {
     expect(db.funzioni_app).toContainEqual(expect.objectContaining({ nome: 'team', stato: 'tutti' }))
+  })
+})
+
+// Le pagine del Team leggono con relazioni annidate (membri di un team,
+// risultati e titolo di una sfida, il team di un membro). La demo le deve
+// saper risolvere, o «I miei team» e la scheda si rompono in `npm run demo`.
+describe('le relazioni del Team nella demo', () => {
+  it('team → team_membri, sfida → workouts e team_risultati, membro → team', async () => {
+    const { clientDemo, azzeraDemo } = await import('../supabaseDemo')
+    azzeraDemo()
+    const sb = clientDemo()
+    const { data: team } = await sb.from('team').select('id, team_membri(stato)')
+    expect(team[0].team_membri.map(m => m.stato).sort()).toEqual(['dentro', 'dentro', 'invitato'])
+    const { data: sfide } = await sb.from('team_sfide').select('id, workouts(title), team_risultati(atleta_id, valore), team(classifica_visibile)').eq('id', 'ts-1')
+    expect(sfide[0].team_risultati).toHaveLength(2)
+    expect(sfide[0].workouts.title).toBeTruthy()
+    expect(sfide[0].team.classifica_visibile).toBe(true)
+    const { data: membri } = await sb.from('team_membri').select('stato, team(id, nome)').eq('atleta_id', 'at-sara')
+    expect(membri[0].team.nome).toBe('Doppia Hyrox Milano')
   })
 })
