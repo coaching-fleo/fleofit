@@ -31,6 +31,12 @@ avere più team.
   `ripetizioni`, `kg`, `distanza` il maggiore). L'allenamento viene assegnato a chi è dentro (salta
   chi l'ha già quel giorno). L'atleta inserisce il risultato **a mano** dal foglio RPE o dal
   dettaglio sfida; con Garmin attivo per tutti verrà dall'orologio (fase B).
+- **Insieme** (09/11/2026, richiesta del committente): dal bottone «Assegna» della scheda il coach
+  sceglie **Insieme** (predefinito) o **Sfida**. «Insieme» assegna lo stesso workout a chi è dentro,
+  senza metrica, senza riga in `team_sfide` e senza classifica (`assegnaInsieme` di `teamDb.js`, che
+  con `creaSfida` condivide `chiRiceve` + `assegna`). ⚠️ Un allenamento «Insieme» **non compare nella
+  scheda del team**: per l'atleta è un allenamento come gli altri. Elencarlo lì vorrebbe una colonna o
+  una tabella nuova, cioè una migrazione.
 - **Classifica**: per ogni team il coach sceglie se è **visibile agli atleti**. Spenta: l'atleta
   vede solo il proprio valore. Accenderla con membri dentro chiede conferma.
 - **Confronto**: per seduta (dettaglio sfida), più **testa a testa** quando i dentro sono due e
@@ -66,7 +72,7 @@ Rotte: `/team`, `/team/invito/:id`, `/team/:id`, `/team/:id/sfida/:sfidaId`, tut
 - 🔴 **Nel team entra solo chi segue il coach del team in `coach_atleti`, ANCHE se il coach è un
   admin** (`atleta_del_coach_del_team`, `membro_team`). L'admin vede tutti gli atleti, ma il foglio
   «Invita» propone solo i suoi. Un atleta spostato a un altro coach perde inviti e team, e
-  «Nuova sfida» lo salta. (Revisione del 09/11/2026: prima un admin bastava, e un atleta spostato
+  «Assegna» (insieme o sfida) lo salta. (Revisione del 09/11/2026: prima un admin bastava, e un atleta spostato
   restava nei team di Federico.)
 - **La push dell'invito parte solo con l'interruttore `team` su `tutti`** (`invitiAccesi`): su
   `admin` l'atleta non vede i Team e la notifica lo porterebbe alla Home. Gli inviti fatti su `admin`
@@ -75,7 +81,7 @@ Rotte: `/team`, `/team/invito/:id`, `/team/:id`, `/team/:id/sfida/:sfidaId`, tut
   così il reinvito dopo un rifiuto arriva anche se la notifica vecchia è ancora lì.
 - Il tempo si scrive anche `4.07` o `4,07` (il tastierino di iPhone non ha «:»). Sole cifre =
   secondi, e sotto il campo compare come vengono lette («= 6:47»).
-- «Nuova sfida» legge chi l'ha già **prima** di creare la sfida, e la cancella se le assegnazioni
+- «Assegna» legge chi l'ha già **prima** di creare la sfida, e la cancella se le assegnazioni
   falliscono: mai una sfida orfana.
 - Il risultato dal foglio RPE si scrive **solo online**, come la scarpa; offline si inserisce dal
   dettaglio sfida. Un errore dà un avviso e non tocca il completamento.

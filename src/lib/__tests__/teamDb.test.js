@@ -18,7 +18,7 @@ vi.mock('../../supabaseClient', () => ({ supabase: {
   auth: { getUser: () => attivo().supabase.auth.getUser() },
 } }))
 
-const { creaSfida, leggiMieiTeam, invita, rispondi, leggiScheda, salvaRisultato, sfidaDiAssegnazione } = await import('../teamDb')
+const { creaSfida, assegnaInsieme, leggiMieiTeam, invita, rispondi, leggiScheda, salvaRisultato, sfidaDiAssegnazione } = await import('../teamDb')
 
 beforeEach(() => {
   ctrl.tabelle = {}
@@ -79,6 +79,19 @@ describe('teamDb', () => {
     }
     const r = await creaSfida({ teamId: 't1', workoutId: 'w1', metrica: 'tempo', data: '2026-11-06' })
     expect(r.assegnati).toEqual(['a'])
+  })
+
+  it('assegnaInsieme assegna a chi è dentro e segue il coach, senza creare una sfida', async () => {
+    ctrl.tabelle = {
+      team_membri: [{ atleta_id: 'a', stato: 'dentro' }, { atleta_id: 'b', stato: 'invitato' }, { atleta_id: 'spostato', stato: 'dentro' }],
+      athlete_workouts: [],
+      ...DEL_COACH(['a', 'b']),
+    }
+    const r = await assegnaInsieme({ teamId: 't1', workoutId: 'w1', data: '2026-11-09' })
+    expect(r.assegnati).toEqual(['a'])
+    expect(finti.generico.chiamateA('team_sfide', 'insert')).toHaveLength(0)
+    const ins = finti.generico.chiamateA('athlete_workouts', 'insert')
+    expect(ins[0].args[0]).toEqual([{ athlete_id: 'a', workout_id: 'w1', completed_date: '2026-11-09', status: 'pending' }])
   })
 
   it('creaSfida: se le assegnazioni falliscono, la sfida non resta orfana', async () => {

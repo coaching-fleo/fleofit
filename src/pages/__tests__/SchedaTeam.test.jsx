@@ -26,6 +26,7 @@ vi.mock('../../lib/teamDb', () => ({
   aggiornaTeam: vi.fn(async () => {}),
   chiudiTeam: vi.fn(async () => {}),
   creaSfida: vi.fn(async () => ({ id: 's9', assegnati: ['b', 'c'] })),
+  assegnaInsieme: vi.fn(async () => ({ assegnati: ['b', 'c'] })),
   rispondi: vi.fn(async () => {}),
   cancellaMieiRisultati: vi.fn(async () => {}),
 }))
@@ -116,14 +117,30 @@ describe('/team/:id — coach', () => {
     await waitFor(() => expect(db.invita).toHaveBeenCalledWith('t1', ['n']))
   })
 
+  // 09/11/2026: dallo stesso foglio il coach sceglie se l'allenamento è una
+  // sfida (con la classifica) o soltanto da fare insieme.
+  it('«Insieme» assegna a chi è dentro senza creare una sfida né chiedere cosa si misura', async () => {
+    apriScheda()
+    await userEvent.click(await screen.findByRole('button', { name: 'Assegna' }))
+    const foglio = await screen.findByRole('dialog', { name: 'Allenamento del team' })
+    expect(within(foglio).getByRole('radio', { name: 'Insieme' })).toBeChecked()
+    expect(within(foglio).queryByRole('group', { name: 'Cosa si misura' })).toBeNull()
+    await userEvent.click(within(foglio).getByRole('button', { name: /Hyrox completo/ }))
+    await userEvent.click(within(foglio).getByRole('button', { name: 'Assegna a 2 atleti' }))
+    await waitFor(() => expect(db.assegnaInsieme).toHaveBeenCalledWith(expect.objectContaining({ teamId: 't1', workoutId: 'w1' })))
+    expect(db.creaSfida).not.toHaveBeenCalled()
+  })
+
   it('la nuova sfida dice a quanti atleti va: solo i dentro', async () => {
     apriScheda()
-    await userEvent.click(await screen.findByRole('button', { name: 'Nuova sfida' }))
-    const foglio = await screen.findByRole('dialog', { name: 'Nuova sfida' })
+    await userEvent.click(await screen.findByRole('button', { name: 'Assegna' }))
+    const foglio = await screen.findByRole('dialog', { name: 'Allenamento del team' })
+    await userEvent.click(within(foglio).getByRole('radio', { name: 'Sfida' }))
     await userEvent.click(within(foglio).getByRole('button', { name: /Hyrox completo/ }))
     await userEvent.click(within(foglio).getByRole('button', { name: 'Tempo' }))
     await userEvent.click(within(foglio).getByRole('button', { name: 'Assegna a 2 atleti' }))
     await waitFor(() => expect(db.creaSfida).toHaveBeenCalledWith(expect.objectContaining({ teamId: 't1', workoutId: 'w1', metrica: 'tempo' })))
+    expect(db.assegnaInsieme).not.toHaveBeenCalled()
   })
 
   it('accendere la classifica con membri dentro chiede conferma', async () => {

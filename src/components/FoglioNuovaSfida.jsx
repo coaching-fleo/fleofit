@@ -1,6 +1,7 @@
-// FoglioNuovaSfida — un allenamento del team diventa una sfida (06/11/2026,
-// spec §6). Si sceglie un workout fra quelli del coach, il giorno e cosa si
-// misura. Il bottone dice a quanti va: solo chi è DENTRO adesso.
+// FoglioNuovaSfida — «Allenamento del team» (06/11/2026, spec §6). Si sceglie
+// un workout fra quelli del coach e il giorno, poi COME: «Insieme» (09/11/2026,
+// lo stesso allenamento a tutti, niente classifica) o «Sfida» (si sceglie cosa
+// si misura). Il bottone dice a quanti va: solo chi è DENTRO adesso.
 // ⚠️ X «Chiudi» e «Annulla»: il tasto indietro di Android li trova.
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -22,6 +23,7 @@ export default function FoglioNuovaSfida({ dentro, onCrea, onChiudi }) {
   const [cerca, setCerca] = useState('')
   const [scelto, setScelto] = useState(null)
   const [data, setData] = useState(oggi())
+  const [modo, setModo] = useState('insieme')
   const [metrica, setMetrica] = useState(null)
   const [invio, setInvio] = useState(false)
 
@@ -42,19 +44,19 @@ export default function FoglioNuovaSfida({ dentro, onCrea, onChiudi }) {
     return (workouts || []).filter(w => !q || String(w.title || '').toLowerCase().includes(q)).slice(0, 30)
   }, [workouts, cerca])
 
-  const pronto = !!scelto && !!metrica && !!data && dentro > 0 && !invio
+  const pronto = !!scelto && (modo === 'insieme' || !!metrica) && !!data && dentro > 0 && !invio
   const testo = dentro === 1 ? 'Assegna a 1 atleta' : `Assegna a ${dentro} atleti`
 
   const crea = async () => {
     if (!pronto) return
     setInvio(true)
-    const ok = await onCrea({ workoutId: scelto, metrica, data })
+    const ok = await onCrea(modo === 'sfida' ? { modo, workoutId: scelto, metrica, data } : { modo, workoutId: scelto, data })
     if (ok) sheet.chiudi()
     else setInvio(false)
   }
 
   return (
-    <Foglio titolo="Nuova sfida" {...sheet}>
+    <Foglio titolo="Allenamento del team" {...sheet}>
       <div className="flex flex-col gap-3.5 pb-1">
         <CampoTeam etichetta="Cerca un allenamento" valore={cerca} onChange={setCerca} placeholder="Nome del workout" />
         <ul className="flex flex-col gap-1.5 max-h-[30dvh] overflow-y-auto">
@@ -81,6 +83,19 @@ export default function FoglioNuovaSfida({ dentro, onCrea, onChiudi }) {
           <input type="date" aria-label="Giorno" value={data} onChange={e => setData(e.target.value)} className={CAMPO_TEAM} />
         </label>
         <div className="flex flex-col gap-1.5">
+          <span className={LABEL}>Come</span>
+          <div role="radiogroup" aria-label="Come" className="flex flex-wrap gap-2">
+            {[['insieme', 'Insieme'], ['sfida', 'Sfida']].map(([v, nome]) => (
+              <Pillola key={v} radio attivo={modo === v} onClick={() => setModo(v)}>{nome}</Pillola>
+            ))}
+          </div>
+          <p className="text-[12.5px] text-muted">
+            {modo === 'insieme'
+              ? 'Lo stesso allenamento a tutti, senza classifica.'
+              : 'Ognuno inserisce il risultato e si confrontano.'}
+          </p>
+        </div>
+        {modo === 'sfida' && <div className="flex flex-col gap-1.5">
           <span className={LABEL}>Cosa si misura</span>
           <div role="group" aria-label="Cosa si misura" className="flex flex-wrap gap-2">
             {METRICHE.map(m => (
@@ -92,9 +107,9 @@ export default function FoglioNuovaSfida({ dentro, onCrea, onChiudi }) {
               {metrica === 'tempo' ? 'Vince il tempo più basso.' : 'Vince il numero più alto.'}
             </p>
           )}
-        </div>
+        </div>}
         {dentro === 0 && (
-          <p className="text-[13px] text-gray-400">Nessuno è ancora dentro il team: la sfida non andrebbe a nessuno.</p>
+          <p className="text-[13px] text-gray-400">Nessuno è ancora dentro il team: l'allenamento non andrebbe a nessuno.</p>
         )}
         <div className="flex gap-3 mt-1">
           <button type="button" onClick={sheet.chiudi} className={BOTTONE_QUIETO}>Annulla</button>

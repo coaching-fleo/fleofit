@@ -41,9 +41,11 @@ export function CampoTeam({ etichetta, valore, onChange, errore, ...resto }) {
 }
 
 /** Una pillola da scegliere (metrica, filtro). */
-export function Pillola({ attivo, onClick, children }) {
+// `radio` = una scelta fra alternative (aria-checked), altrimenti un interruttore (aria-pressed).
+export function Pillola({ attivo, onClick, radio = false, children }) {
+  const stato = radio ? { role: 'radio', 'aria-checked': attivo } : { 'aria-pressed': attivo }
   return (
-    <button type="button" aria-pressed={attivo} onClick={onClick}
+    <button type="button" {...stato} onClick={onClick}
       className={`shrink-0 min-h-9 px-3.5 rounded-full text-[13px] font-bold border transition ${
         attivo ? 'bg-brand text-black border-brand' : 'bg-white/[.04] text-gray-300 border-white/[.1] hover:border-white/25'}`}>
       {children}

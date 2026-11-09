@@ -1,6 +1,6 @@
 // SchedaTeam — /team/:id (06/11/2026, spec §6-§7). Due facce sulla stessa rotta:
 //   · coach: Membri (con lo stato in parole, Invita, Reinvita, Annulla invito),
-//     Sfide (Nuova sfida), Impostazioni (classifica visibile, chiudi team);
+//     Sfide («Assegna»: insieme o sfida), Impostazioni (classifica visibile, chiudi team);
 //   · atleta: i compagni dentro, le sfide, e «Esci dal team».
 // I nomi arrivano da `team_scheda` (l'atleta non legge `athletes` altrui).
 // Funzione assente o team non più visibile → torna alla lista.
@@ -10,7 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../App'
 import { eStaff } from '../lib/ruoli'
 import {
-  aggiornaTeam, annullaInvito, cancellaMieiRisultati, chiudiTeam, creaSfida, invita, leggiScheda, leggiSfide, rispondi,
+  aggiornaTeam, annullaInvito, assegnaInsieme, cancellaMieiRisultati, chiudiTeam, creaSfida, invita, leggiScheda, leggiSfide, rispondi,
 } from '../lib/teamDb'
 import { scriviValore, testaATesta, vittorie } from '../lib/sfidaTeam'
 import {
@@ -73,7 +73,10 @@ export default function SchedaTeam() {
     } finally { setOccupato(false) }
   }
   const invitaAtleti = (ids) => fai(async () => { await invita(id, ids); vibraSuccesso() }, 'Invito non partito.')
-  const nuovaSfida = (campi) => fai(async () => { await creaSfida({ teamId: id, ...campi }); vibraSuccesso() }, 'Sfida non creata.')
+  // «Insieme» non crea una sfida: assegna e basta (09/11/2026).
+  const nuovaSfida = ({ modo, ...campi }) => modo === 'sfida'
+    ? fai(async () => { await creaSfida({ teamId: id, ...campi }); vibraSuccesso() }, 'Sfida non creata.')
+    : fai(async () => { await assegnaInsieme({ teamId: id, ...campi }); vibraSuccesso() }, 'Allenamento non assegnato.')
 
   const cambiaClassifica = () => {
     const nuova = !team.classifica_visibile
@@ -167,7 +170,7 @@ export default function SchedaTeam() {
 
           <SezioneTeam etichetta="Sfide"
             azione={staff && !team.chiuso_il && (
-              <button type="button" className={AZIONE} onClick={() => setFoglio('sfida')}>Nuova sfida</button>
+              <button type="button" className={AZIONE} onClick={() => setFoglio('sfida')}>Assegna</button>
             )}>
             {sfide.length === 0 ? (
               <p className="rounded-3xl border border-dashed border-[#333] px-5 py-6 text-[14px] text-gray-400 leading-relaxed text-center">

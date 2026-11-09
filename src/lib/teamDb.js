@@ -187,17 +187,15 @@ export async function annullaInvito(teamId, atletaId) {
 }
 
 /**
- * Una sfida: il workout va a chi è DENTRO adesso (chi entra dopo non la
- * riceve), senza doppioni per chi lo ha già quel giorno. Poi la push di
- * «nuovo allenamento», come quando il coach assegna dal calendario.
+ * Chi del team riceve l'allenamento: chi è DENTRO e segue ancora il coach del
+ * team (un atleta spostato a un altro coach non si può assegnare: la RLS di
+ * athlete_workouts lo rifiuta e farebbe fallire l'insert di tutti, revisione
+ * 09/11/2026), meno chi ha già quel workout quel giorno.
  */
-export async function creaSfida({ teamId, workoutId, metrica, data }) {
+async function chiRiceve(teamId, workoutId, data) {
   const { data: membri, error: e1 } = await supabase.from(MEMBRI)
     .select('atleta_id, stato').eq('team_id', teamId)
   if (e1) throw e1
-  // Solo chi è dentro E segue ancora il coach del team: un atleta spostato a un
-  // altro coach non si può assegnare (la RLS di athlete_workouts lo rifiuta) e
-  // farebbe fallire l'insert di tutti (revisione 09/11/2026).
   const { data: team, error: e0 } = await supabase.from(TEAM).select('coach_id').eq('id', teamId).single()
   if (e0) throw e0
   const { data: suoi, error: e5 } = await supabase.from('coach_atleti').select('athlete_id').eq('coach_id', team.coach_id)
@@ -212,27 +210,47 @@ export async function creaSfida({ teamId, workoutId, metrica, data }) {
   const hanno = new Set((gia || [])
     .filter(a => a.workout_id === workoutId && a.completed_date === data)
     .map(a => a.athlete_id))
-  const assegnati = dentro.filter(id => !hanno.has(id))
+  return dentro.filter(id => !hanno.has(id))
+}
 
+/** Assegna il workout a quegli atleti e manda la push «nuovo allenamento» (non blocca). */
+async function assegna(atleti, workoutId, data) {
+  if (!atleti.length) return
+  const { data: nuove, error } = await supabase.from(ALLENAMENTI)
+    .insert(atleti.map(athlete_id => ({ athlete_id, workout_id: workoutId, completed_date: data, status: 'pending' })))
+    .select('id')
+  if (error) throw error
+  ;(nuove || []).forEach((n) => {
+    Promise.resolve()
+      .then(() => supabase.functions.invoke('send-reminders', { body: { mode: 'immediate', record_id: n.id } }))
+      .catch(console.error)
+  })
+}
+
+/**
+ * Un allenamento da fare INSIEME (09/11/2026): lo stesso workout a tutto il
+ * team, senza sfida, senza metrica, senza classifica. Nessuna riga in
+ * team_sfide: per l'atleta è un allenamento come gli altri.
+ */
+export async function assegnaInsieme({ teamId, workoutId, data }) {
+  const assegnati = await chiRiceve(teamId, workoutId, data)
+  await assegna(assegnati, workoutId, data)
+  return { assegnati }
+}
+
+/** Una sfida: il workout a chi è dentro, più la riga in team_sfide con la metrica. */
+export async function creaSfida({ teamId, workoutId, metrica, data }) {
+  const assegnati = await chiRiceve(teamId, workoutId, data)
   const { data: sfida, error: e2 } = await supabase.from(SFIDE)
     .insert({ team_id: teamId, workout_id: workoutId, metrica, verso: versoDi(metrica), data })
     .select('id').single()
   if (e2) throw e2
-
-  if (assegnati.length) {
-    const { data: nuove, error: e4 } = await supabase.from(ALLENAMENTI)
-      .insert(assegnati.map(athlete_id => ({ athlete_id, workout_id: workoutId, completed_date: data, status: 'pending' })))
-      .select('id')
-    if (e4) {
-      // La sfida non resta orfana: nessuno l'ha ricevuta, e riprovare ne creerebbe un doppione.
-      await supabase.from(SFIDE).delete().eq('id', sfida.id)
-      throw e4
-    }
-    ;(nuove || []).forEach((n) => {
-      Promise.resolve()
-        .then(() => supabase.functions.invoke('send-reminders', { body: { mode: 'immediate', record_id: n.id } }))
-        .catch(console.error)
-    })
+  try {
+    await assegna(assegnati, workoutId, data)
+  } catch (e) {
+    // La sfida non resta orfana: nessuno l'ha ricevuta, e riprovare ne creerebbe un doppione.
+    await supabase.from(SFIDE).delete().eq('id', sfida.id)
+    throw e
   }
   return { id: sfida.id, assegnati }
 }
