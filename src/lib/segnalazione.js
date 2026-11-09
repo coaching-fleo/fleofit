@@ -23,13 +23,19 @@ export const LIMITI = {
   byteTecniciMax: 2048,
 }
 
-/** I sei tipi, nell'ordine del passo 1. `icona` è un nome lucide: il file resta senza React. */
+/**
+ * I sette tipi, nell'ordine del passo 1. `icona` è un nome lucide: il file resta senza React.
+ * «contenuto» (09/11/2026) è la segnalazione di un contenuto illecito, offensivo o
+ * non proprio, che il Digital Services Act chiede di rendere semplice
+ * (docs/memoria/impostazioni.md). Sta prima di «idea», che resta l'ultima.
+ */
 export const TIPI = [
   { id: 'bug', titolo: 'Qualcosa non funziona', dettaglio: 'Un tasto, una schermata, un dato sbagliato', icona: 'Bug' },
   { id: 'lenta', titolo: 'Si blocca o è lenta', dettaglio: 'Si chiude da sola, resta ferma, carica piano', icona: 'Snail' },
   { id: 'notifiche', titolo: 'Notifiche', dettaglio: 'Promemoria e avvisi che non arrivano', icona: 'BellOff' },
   { id: 'timer', titolo: 'Timer e allenamento', dettaglio: 'Il timer guidato, i round, i suoni', icona: 'Timer' },
   { id: 'accesso', titolo: 'Accesso e account', dettaglio: 'Login, password, profilo', icona: 'KeyRound' },
+  { id: 'contenuto', titolo: 'Un contenuto da togliere', dettaglio: 'Una foto, un audio o un testo illecito, offensivo o non tuo', icona: 'Flag' },
   { id: 'idea', titolo: "Un'idea", dettaglio: 'Qualcosa che vorresti nell\'app', icona: 'Lightbulb' },
 ]
 
@@ -55,6 +61,12 @@ const DOMANDE = {
   accesso: [
     { id: 'cosa', testo: 'Cosa non riesci a fare?', opzioni: ['Entrare', 'Cambiare la password', 'Modificare il profilo'] },
     FREQUENZA,
+  ],
+  // Niente «quanto spesso»: un contenuto c'è o non c'è. Quale sia lo dice la
+  // descrizione, che resta obbligatoria come per tutti i tipi.
+  contenuto: [
+    { id: 'cosa', testo: 'Che cosa?', opzioni: ['Foto profilo', 'Nota vocale', 'Testo o nota', 'Nome di un team', 'Altro'] },
+    { id: 'perche', testo: 'Perché va tolto?', opzioni: ['È mia o di altri, usata senza permesso', 'È offensiva', 'È illecita', 'Altro'] },
   ],
   idea: [],
 }

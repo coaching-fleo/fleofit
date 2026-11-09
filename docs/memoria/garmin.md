@@ -25,8 +25,10 @@
   `fonteGarmin` di `attivitaGarmin.js` (il titolo della card «Da Garmin», le voci del calendario, il
   foglio dell'attività), `Garmin · …` in testa alle voci di recupero di `cosaGuardare` (in testa
   perché la riga si tronca), «Durata misurata da Garmin …» nel recap (`fonte` sulla cella di
-  `celleStoria`), `TILE_GARMIN_CONNECT` di `garmin.js` nel `FoglioGarmin` (indirizzo dinamico di
-  Garmin, nessuna copia nel progetto). La story Instagram **non** usa dati Garmin: se un giorno li
+  `celleStoria`), `TILE_GARMIN_CONNECT` di `garmin.js` nel `FoglioGarmin` (⚠️ dal 09/11/2026 una **copia identica**
+  in `public/garmin/garmin-connect-tile.png`, il file `gc-app-tile_@240.png` di `static.garmincdn.com` senza
+  ritocchi: l'indirizzo dinamico di Garmin mandava a Garmin l'IP dell'atleta prima di ogni consenso. Se Garmin
+  cambia la tile va sostituita a mano; da verificare sul PDF delle linee guida che la copia sia ammessa). La story Instagram **non** usa dati Garmin: se un giorno li
   usa, la scritta va nell'immagine. ⚠️ Testi o screenshot di App Store che citano Garmin: badge
   ufficiale (kit `Garmin-Connect-Branding-Assets.zip`, pagina *brand-guidelines/connect*).
 - ✅ **Fase 2 (Recupero) attiva in prova dal 29/10/2026**: sonno, HRV e giornata dell'orologio in

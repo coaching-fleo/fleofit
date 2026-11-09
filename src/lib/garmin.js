@@ -17,13 +17,16 @@ import { leggiJson, scriviJson } from './offlineQueue'
  */
 
 /**
- * La tile ufficiale di Garmin Connect, dall'indirizzo che Garmin stessa indica
- * (developer.garmin.com/brand-guidelines/connect, «Dynamic URLs»): così è sempre
- * l'ultima versione, e non ne teniamo una copia. Le linee guida chiedono nome
- * intero e tile dove si mostra il collegamento, alta almeno 88px, mai ritoccata.
+ * La tile ufficiale di Garmin Connect. Le linee guida chiedono nome intero e
+ * tile dove si mostra il collegamento, alta almeno 88px, mai ritoccata.
+ *
+ * ⚠️ È una COPIA IDENTICA servita da noi (dal 09/11/2026), non l'indirizzo
+ * dinamico di Garmin: caricarla da `static.garmincdn.com` mandava a Garmin l'IP
+ * dell'atleta prima di qualunque consenso. Il file è `gc-app-tile_@240.png`
+ * (xhdpi, 240×240) scaricato da lì senza ritocchi; se Garmin cambia la tile, va
+ * sostituito a mano (docs/memoria/garmin.md).
  */
-export const TILE_GARMIN_CONNECT =
-  'https://static.garmincdn.com/com.garmin.connect/content/images/developer/gc-app-tile/xhdpi/gc-app-tile_@240.png'
+export const TILE_GARMIN_CONNECT = '/garmin/garmin-connect-tile.png'
 
 /** Cambia solo se cambia ciò che l'atleta accetta con la casella. */
 export const VERSIONE_CONSENSO_GARMIN = 1

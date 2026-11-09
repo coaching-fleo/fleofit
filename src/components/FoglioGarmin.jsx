@@ -12,7 +12,8 @@
 // L'interruttore «Manda i workout all'orologio» (Fase 3) c'è solo da collegato;
 // la pagina lo salva chiamando `garmin-training`.
 // La tile in testa è quella ufficiale di Garmin (TILE_GARMIN_CONNECT), a 88px:
-// niente bordi arrotondati né filtri nostri. Senza rete sparisce, il foglio resta.
+// niente bordi arrotondati né filtri nostri. È una copia nel progetto
+// (public/garmin/), quindi c'è anche senza rete; se manca, sparisce e il foglio resta.
 
 import { useState } from 'react'
 import { createPortal } from 'react-dom'

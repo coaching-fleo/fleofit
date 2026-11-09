@@ -386,3 +386,23 @@ localStorage) e `navigator.onLine` è falso, o `getSession()` non risponde entro
 ruolo dell'ultimo accesso riuscito (`fleofit_ruolo_<uid>`; per chi non l'ha ancora salvato, basta
 `fleofit_name_<uid>`), senza consenso né onboarding. Test: `src/__tests__/AvvioSenzaRete.test.jsx`.
 ⚠️ Non provato sul dispositivo: va provato in modalità aereo, con l'app chiusa da più di un'ora.
+
+## L'età minima: 14 anni (09/11/2026)
+
+L'informativa (§15 «Minori», `public/privacy-policy.html`) dice che sotto i 14 anni non ci si iscrive, ma
+`erroreProfilo` (`src/lib/profiloAtleta.js`) accettava chiunque avesse 5 anni: la regola era scritta e non
+applicata. Ora sotto `ETA_MINIMA` (14) il profilo non si salva e compare «Per iscriverti a FLEOFIT devi avere
+almeno 14 anni.». Test: `src/lib/__tests__/profiloAtleta.test.js`.
+
+- ⚠️ **Anni di calendario** (`differenceInYears`), non millisecondi: con il vecchio calcolo a 365,25 giorni
+  il giorno del 14° compleanno sarebbe stato ancora rifiutato.
+- Il controllo vale per chi compila il profilo da adesso: gli **atleti già iscritti** e quelli **inseriti a
+  mano dal coach** (pagina Atleti) non passano di qui.
+- L'account esiste già quando si scrive la data (nasce al login): il blocco ferma l'uso dell'app, non la
+  creazione dell'account.
+- Fra 14 e 18 anni non si chiede nulla in più: l'«accordo» dei genitori resta una dichiarazione
+  dell'informativa. Decisione del committente / dell'avvocato.
+- ⚠️ **App Store Connect, da verificare prima del prossimo invio**: la risposta «Verifica dell'età» è su NO
+  dal rilievo 2.3.6 (`app-store.md`). Una data di nascita dichiarata che sbarra l'accesso potrebbe contare
+  come verifica: rileggere la definizione nel questionario. E lo Store dichiara **16+**, l'informativa 14:
+  incoerenza da chiarire con l'avvocato.

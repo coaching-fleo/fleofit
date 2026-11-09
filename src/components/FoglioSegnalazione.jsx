@@ -19,7 +19,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Bug, Snail, BellOff, Timer, KeyRound, Lightbulb, ChevronLeft, ChevronRight, X, ImagePlus, Send, Check,
+  Bug, Snail, BellOff, Timer, KeyRound, Flag, Lightbulb, ChevronLeft, ChevronRight, X, ImagePlus, Send, Check,
 } from 'lucide-react'
 import { useScorrimentoBloccato } from '../useBottomSheet'
 import { CustomConfirm } from './CustomModals'
@@ -32,7 +32,7 @@ import {
 } from '../lib/segnalazione'
 import { riduciImmagine } from '../lib/immagineRidotta'
 
-const ICONE = { Bug, Snail, BellOff, Timer, KeyRound, Lightbulb }
+const ICONE = { Bug, Snail, BellOff, Timer, KeyRound, Flag, Lightbulb }
 
 /** Una bozza letta da localStorage può essere qualunque cosa: si tiene solo ciò che ha la forma giusta. */
 function bozzaIniziale() {
@@ -296,12 +296,14 @@ export default function FoglioSegnalazione({
               ))}
 
               <label className="flex flex-col gap-2">
-                <span className={LABEL}>{bozza.tipo === 'idea' ? 'Raccontala' : 'Cosa è successo'}</span>
+                <span className={LABEL}>{bozza.tipo === 'idea' ? 'Raccontala' : bozza.tipo === 'contenuto' ? 'Quale contenuto' : 'Cosa è successo'}</span>
                 <textarea
                   aria-label={bozza.tipo === 'idea' ? 'Descrivi la tua idea' : 'Descrivi il problema'}
                   value={bozza.descrizione} maxLength={LIMITI.descrizioneMax} rows={5}
                   onChange={(e) => aggiorna({ descrizione: e.target.value })}
-                  placeholder={bozza.tipo === 'idea' ? 'Cosa vorresti trovare nell\'app?' : 'Cosa stavi facendo, cosa ti aspettavi, cosa è successo invece'}
+                  placeholder={bozza.tipo === 'idea' ? 'Cosa vorresti trovare nell\'app?'
+                    : bozza.tipo === 'contenuto' ? 'Quale contenuto, di chi e dove lo vedi (per esempio: la foto profilo di Marco nel team Hyrox)'
+                    : 'Cosa stavi facendo, cosa ti aspettavi, cosa è successo invece'}
                   className="w-full rounded-xl bg-[#111] border border-[#333] px-3.5 py-3 text-[15px] text-white
                              placeholder:text-gray-600 focus:outline-none focus:border-brand/60 resize-none" />
               </label>

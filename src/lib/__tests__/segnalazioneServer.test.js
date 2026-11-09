@@ -87,6 +87,7 @@ describe('allegati', () => {
 describe('la mail', () => {
   it('l\'oggetto dice tipo e nome', () => {
     expect(oggettoSegnalazione('notifiche', 'Sofia Rossi')).toBe('[FLEOFIT] Notifiche · Sofia Rossi')
+    expect(oggettoSegnalazione('contenuto', 'Sofia Rossi')).toBe('[FLEOFIT] Un contenuto da togliere · Sofia Rossi')
   })
 
   it('il testo porta risposte, descrizione, mittente e dati tecnici', () => {

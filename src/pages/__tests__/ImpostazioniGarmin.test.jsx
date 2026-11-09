@@ -75,10 +75,13 @@ describe('La riga Garmin in Impostazioni', () => {
     await utente.click(riga)
     const foglio = await screen.findByRole('dialog', { name: 'Garmin Connect' })
     // 🔴 Linee guida di marchio Garmin: il collegamento si mostra col nome intero e
-    // la tile ufficiale, dall'indirizzo di Garmin (mai una copia ritoccata).
+    // la tile ufficiale, mai ritoccata. Dal 09/11/2026 è una copia identica servita
+    // da noi: un indirizzo esterno manderebbe a Garmin l'IP dell'atleta prima di
+    // qualunque consenso (docs/memoria/garmin.md).
     const tile = within(foglio).getByRole('img', { name: 'Garmin Connect' })
     expect(tile.getAttribute('src')).toBe(TILE_GARMIN_CONNECT)
-    expect(TILE_GARMIN_CONNECT).toMatch(/^https:\/\/static\.garmincdn\.com\//)
+    expect(TILE_GARMIN_CONNECT).toMatch(/^\/garmin\//)
+    expect(TILE_GARMIN_CONNECT).not.toMatch(/^(https?:)?\/\//)
     const collega = within(foglio).getByRole('button', { name: 'Collega' })
     expect(collega).toBeDisabled()
 

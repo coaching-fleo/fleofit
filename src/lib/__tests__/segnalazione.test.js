@@ -14,9 +14,26 @@ import {
 const descrizioneBuona = 'Il timer si ferma al terzo round'
 
 describe('il catalogo', () => {
-  it('ha i sei tipi, nell\'ordine in cui compaiono', () => {
-    expect(TIPI.map(t => t.id)).toEqual(['bug', 'lenta', 'notifiche', 'timer', 'accesso', 'idea'])
+  it('ha i sette tipi, nell\'ordine in cui compaiono', () => {
+    expect(TIPI.map(t => t.id)).toEqual(['bug', 'lenta', 'notifiche', 'timer', 'accesso', 'contenuto', 'idea'])
     expect(TIPI.find(t => t.id === 'idea').titolo).toBe("Un'idea")
+  })
+
+  // Digital Services Act: chi trova un contenuto illecito o non suo deve poterlo
+  // segnalare in modo semplice (09/11/2026, docs/memoria/impostazioni.md).
+  it('un contenuto da togliere chiede che cosa è e perché', () => {
+    const tipo = TIPI.find(t => t.id === 'contenuto')
+    expect(tipo.titolo).toBe('Un contenuto da togliere')
+    expect(tipo.icona).toBe('Flag')
+    const [cosa, perche] = domandePer('contenuto')
+    expect(cosa.opzioni).toEqual(['Foto profilo', 'Nota vocale', 'Testo o nota', 'Nome di un team', 'Altro'])
+    expect(perche.opzioni).toEqual(['È mia o di altri, usata senza permesso', 'È offensiva', 'È illecita', 'Altro'])
+    expect(domandePer('contenuto')).toHaveLength(2)
+  })
+
+  it('un contenuto da togliere non parte senza dire quale', () => {
+    expect(validaSegnalazione({ tipo: 'contenuto', descrizione: '' }).ok).toBe(false)
+    expect(validaSegnalazione({ tipo: 'contenuto', descrizione: 'La foto profilo di Marco non è sua' }).ok).toBe(true)
   })
 
   it('un\'idea non ha domande', () => {
@@ -30,7 +47,7 @@ describe('il catalogo', () => {
   })
 
   it('ogni problema chiede quanto spesso, come ultima domanda', () => {
-    for (const { id } of TIPI.filter(t => t.id !== 'idea')) {
+    for (const { id } of TIPI.filter(t => t.id !== 'idea' && t.id !== 'contenuto')) {
       expect(domandePer(id).at(-1).id).toBe('frequenza')
       expect(domandePer(id).length).toBeLessThanOrEqual(3)
     }

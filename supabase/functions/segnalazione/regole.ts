@@ -20,6 +20,8 @@ export const TITOLI_TIPO: Record<string, string> = {
   notifiche: 'Notifiche',
   timer: 'Timer e allenamento',
   accesso: 'Accesso e account',
+  // DSA (09/11/2026): un contenuto illecito, offensivo o non proprio.
+  contenuto: 'Un contenuto da togliere',
   idea: "Un'idea",
 };
 

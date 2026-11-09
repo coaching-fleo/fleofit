@@ -308,3 +308,20 @@ ruolo e numero di atleti, il campo email con «Aggiungi coach», «Togli» con `
 - ⚠️ Un coach si aggiunge per email PRIMA che abbia l'account: senza `user_id` non ha
   conteggio e non compare nella scelta della scheda atleta.
 Test: «La voce «Coach»» in `Impostazioni.test.jsx`, `coachAtleti.test.js`.
+
+## «Un contenuto da togliere» (09/11/2026)
+
+Settimo tipo di «Segnala un problema» (`contenuto`, icona `Flag`, prima di «Un'idea»): la segnalazione di
+una foto, un audio o un testo illecito, offensivo o non proprio, che il **Digital Services Act** chiede di
+rendere semplice. Due domande (*Che cosa?* · *Perché va tolto?*), niente «quanto spesso»; la descrizione
+resta obbligatoria (almeno 10 caratteri) e il segnaposto chiede quale contenuto, di chi e dove. Il
+sottotitolo della riga in Impostazioni ora la nomina, così si trova.
+
+- 🔴 **Il tipo sta in due posti**: `TIPI` di `src/lib/segnalazione.js` e `TITOLI_TIPO` di
+  `supabase/functions/segnalazione/regole.ts`. Finché la Edge Function non è ripubblicata, il server
+  **rifiuta** il tipo nuovo e l'utente vede un errore.
+  ✅ Ripubblicata il 09/11/2026 (versione 16 su Supabase). Non provata con un invio vero.
+- Le segnalazioni restano **senza link** (regola dell'08/10): il contenuto si descrive a parole.
+- Arrivano solo a `coaching@federicoleo.it` (mittente `onboarding@resend.dev`).
+- Il codice fa solo arrivare la segnalazione: chi la legge, in quanto tempo, come si toglie il contenuto
+  e come si avvisa chi l'ha caricato è una procedura del committente (e dell'avvocato).
