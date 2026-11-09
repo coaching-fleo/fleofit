@@ -56,6 +56,10 @@ export const DISTANCE_EXERCISES = [
 export const HYBRID_EXERCISES = ['Sandbag Lunges', 'Burpees Broad Jumps']
 export const isHybrid = (name) => HYBRID_EXERCISES.includes(name)
 
+/** Gli esercizi che si misurano solo a tempo (isometrici): niente ripetizioni, distanza o peso. */
+export const TIMED_EXERCISES = ['Plank', 'Hollow Body Hold', 'L-Sit']
+export const isTimed = (name) => TIMED_EXERCISES.includes(name)
+
 export const isDistance = (name) => isErgo(name) || isSled(name) || DISTANCE_EXERCISES.includes(name)
 
 /**
@@ -86,7 +90,7 @@ export const FAMIGLIE_HYROX = [
  * Un esercizio custom ha le regole di uno qualunque: ripetizioni e peso.
  */
 export const misuraEsercizio = (name) =>
-  name === 'Rest' ? 'tempo'
+  name === 'Rest' || isTimed(name) ? 'tempo'
   : isErgo(name) || name === 'Run' ? 'metri · ritmo'
   : isHybrid(name) ? 'reps o metri · kg'
   : isDistance(name) ? 'metri · kg'

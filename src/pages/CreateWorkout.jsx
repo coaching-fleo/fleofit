@@ -16,7 +16,7 @@ import { it } from 'date-fns/locale'
 import { generaTitolo, titoliDelGiorno } from '../lib/workoutTitle'
 import { codiceWorkout, separaCodice, unisciCodice } from '../lib/codiceWorkout'
 import { candidatiNome, nuovoSeme, scegliNome, nomeLibero, eNomeGenerato, nomiGiaUsati } from '../lib/nomeCasuale'
-import { HYROX_EXERCISES, STAZIONI_HYROX, FAMIGLIE_HYROX, misuraEsercizio, isErgo, isSled, isCarry, isHybrid, isDistance } from '../lib/esercizi'
+import { HYROX_EXERCISES, STAZIONI_HYROX, FAMIGLIE_HYROX, misuraEsercizio, isErgo, isSled, isCarry, isHybrid, isDistance, isTimed } from '../lib/esercizi'
 import { mostraErrore } from '../lib/alert'
 import { battito, vibraPresa, vibraScelta, vibraSuccesso } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
@@ -1400,6 +1400,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     : isErgo(selected) ? [vistaMetri(RAPIDI_METRI), vistaPassoErgo()]
     : selected === 'Run' ? [vistaMetri(RAPIDI_METRI), vistaPassoCorsa()]
     : selected === 'Rest' ? [vistaRecupero()]
+    : isTimed(selected) ? [vistaDurata()]
     : isHybrid(selected) ? [hybridMode === 'distance' ? vistaMetri(RAPIDI_METRI_CORTI) : vistaRipetizioni(), vistaPeso()]
     : (isSled(selected) || isCarry(selected)) ? [vistaMetri(RAPIDI_METRI_CORTI), vistaPeso()]
     : isDistance(selected) ? [vistaMetri(RAPIDI_METRI), vistaPeso()]
@@ -1445,6 +1446,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     setSelected(name)
     setAttiva(null)
     if (name === 'Rest' && !/^\d+:\d{2}$/.test(meters)) setMeters('1:00')
+    if (isTimed(name) && !/^\d+:\d{2}$/.test(exTime)) setExTime('0:30')
   }
 
   // «Cambia esercizio»: torna alla lista tenendo i numeri già scritti. Serve
@@ -1458,6 +1460,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   const quantita = () => {
     const isDist = isDistance(selected)
     const isHyb = isHybrid(selected)
+    if (isTimed(selected)) return { meters: '', reps: '' }
     return {
       meters: (isDist || (isHyb && hybridMode === 'distance') || selected === 'Rest') ? meters : '',
       reps: (!isDist && !isHyb && selected !== 'Rest') || (isHyb && hybridMode === 'reps') ? reps : '',
@@ -1474,10 +1477,10 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
       name: selected,
       meters: workoutType === 'Interval' ? '' : finalMeters,
       reps: workoutType === 'Interval' ? '' : finalReps,
-      exTime: workoutType === 'Interval' ? exTime : undefined,
+      exTime: workoutType === 'Interval' || isTimed(selected) ? exTime : undefined,
       ergoPace: isErgo(selected) || (selected === 'Run' && runPaceMode === 'pace') ? ergoPace : undefined,
       speed: selected === 'Run' && runPaceMode === 'speed' ? speed : undefined,
-      kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) || selected === 'Run' || selected === 'Rest' ? '' : kg.replace(' kg', ''),
+      kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) || isTimed(selected) || selected === 'Run' || selected === 'Rest' ? '' : kg.replace(' kg', ''),
       intensity: selected === 'Rest' ? undefined : intensity,
       intervals: workoutType === 'EMOM' && intervalli > 1 ? String(intervalli) : undefined,
       // Con l'incremento spento l'aumento non si mostra ma si tiene, per
