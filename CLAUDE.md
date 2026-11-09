@@ -91,7 +91,7 @@
    ✅ **Nona eccezione** (06/11/2026, applicata a mano dal committente): le tre tabelle «Scarpe da corsa»
    (`scarpe_catalogo`, `scarpe_atleta`, `scarpe_uso`), il bucket `scarpe` e `funzioni_app` (gli interruttori),
    additive (`supabase/schema/scarpe_2026-11-02.sql`, `docs/memoria/scarpe.md`). Le Scarpe restano **spente**.
-   ⏳ **Decima eccezione, IN ATTESA DEL SÌ** (scritta il 06/11/2026, **non applicata**): i **Team**
+   ⏳ **Decima eccezione** (sì esplicito in sessione il 09/11/2026, la applica a mano il committente; da segnare ✅ quando è fatta): i **Team**
    (`team`, `team_membri`, `team_sfide`, `team_risultati`, due trigger, la RPC `team_scheda`, la riga
    `team` di `funzioni_app` spenta), additiva (`supabase/schema/team_2026-11-06.sql`, `docs/memoria/team.md`).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita

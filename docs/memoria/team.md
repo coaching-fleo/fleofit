@@ -4,8 +4,9 @@
 > `docs/superpowers/plans/2026-11-06-team.md`. Lavoro fatto su `app`, da `343669d`.
 
 ## Stato
-- ⏳ **Migrazione scritta e NON applicata**: `supabase/schema/team_2026-11-06.sql` (**decima
-  eccezione**, in attesa del sì, CLAUDE.md §0-bis). Quattro tabelle (`team`, `team_membri`,
+- ⏳ **Migrazione con il sì del committente (09/11/2026), da applicare a mano** dal SQL editor:
+  `supabase/schema/team_2026-11-06.sql` (**decima eccezione**, CLAUDE.md §0-bis). Segnarla ✅ qui,
+  in CLAUDE.md e nel BACKLOG quando è applicata e la verifica è pulita. Quattro tabelle (`team`, `team_membri`,
   `team_sfide`, `team_risultati`), 14 policy, due trigger, la RPC `team_scheda`, e la riga `team`
   di `funzioni_app` che parte **spenta**.
 - Il codice sta su `app` prima del sì: senza tabelle `assente(error)` di `teamDb.js` fa sparire
