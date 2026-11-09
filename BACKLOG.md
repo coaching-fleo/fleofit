@@ -49,6 +49,22 @@
 > [PRODUCT.md](PRODUCT.md) · Design system: [DESIGN.md](DESIGN.md)
 
 
+## ⏳ Team di atleti — applicare la migrazione (serve il sì) (09/11/2026)
+`supabase/schema/team_2026-11-06.sql` è scritta e **non applicata** (decima eccezione, CLAUDE.md §0-bis); il codice è
+su `app`, nascosto dall'interruttore `team` e dalle tabelle assenti. **Perché conta**: senza, i team non esistono.
+**Cosa la blocca**: il sì del committente. Poi, in ordine (`docs/memoria/team.md`): `tools/verifica-team.sql` senza
+`FALLITO` → **pubblicare `send-reminders`** (modalità `team_invito`, solo DOPO la migrazione) → `team` su `admin` e
+prova su iPhone e Android (push dell'invito ad app chiusa, deep link, tasto indietro) → `tutti`.
+
+## 💡 Team — fase B: il risultato dall'orologio
+Quando Garmin sarà attivo per tutti, il risultato della sfida (tempo, distanza) si compila dall'attività abbinata
+invece che a mano (`fonte` diversa da `manuale` in `team_risultati`). **Perché**: meno passi per l'atleta, valori
+più affidabili. **Blocca**: Garmin per tutti (`docs/memoria/garmin.md`).
+
+## 💡 Team — fase C: la classifica cumulativa
+Oggi il confronto è per seduta, più testa a testa e vittorie. La classifica sul periodo (punti per posizione,
+media dei distacchi, …) va decisa col committente: **i criteri non sono ancora scelti**.
+
 ## ⏳ Scarpe da corsa — applicare la migrazione (serve il sì)
 `supabase/schema/scarpe_2026-11-02.sql` è scritta e **non applicata** (nona eccezione, CLAUDE.md §0-bis). Dopo il sì,
 dal SQL editor, controllare con una lettura: 3 tabelle (`scarpe_catalogo`, `scarpe_atleta`, `scarpe_uso`), 6 policy,
