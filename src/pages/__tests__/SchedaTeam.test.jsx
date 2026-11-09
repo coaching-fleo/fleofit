@@ -93,6 +93,26 @@ describe('/team/:id — coach', () => {
     expect(within(riga('Ugo Uscito')).getByText('È uscito')).toBeInTheDocument()
   })
 
+  // Il coach tocca un membro (avatar, nome, riga) e arriva alla sua scheda atleta.
+  it('toccare un membro apre la sua scheda atleta', async () => {
+    apriScheda()
+    const membri = await screen.findByRole('region', { name: 'Membri' })
+    await userEvent.click(within(membri).getByRole('button', { name: 'Scheda di Luca Bianchi' }))
+    expect(naviga).toHaveBeenCalledWith('/athletes/b')
+    await userEvent.click(within(membri).getByRole('button', { name: 'Scheda di Rita Rifiuto' }))
+    expect(naviga).toHaveBeenCalledWith('/athletes/r')
+  })
+
+  it('anche dal podio si apre la scheda atleta', async () => {
+    dati.scheda.membri.push({ atleta_id: 'd', nome: 'Dario', cognome: 'Terzo', stato: 'dentro', invitato_il: giorniFa(3), risposto_il: giorniFa(3) })
+    dati.sfide = [{ id: 's1', metrica: 'tempo', data: '2026-11-01', chiusa_il: '2026-11-01T20:00:00Z', titolo: 'Hyrox',
+      risultati: [{ atleta_id: 'b', valore: 240 }, { atleta_id: 'c', valore: 250 }] }]
+    apriScheda()
+    const podio = await screen.findByRole('region', { name: 'Classifica' })
+    await userEvent.click(within(podio).getByRole('button', { name: 'Scheda di Giulia Neri' }))
+    expect(naviga).toHaveBeenCalledWith('/athletes/c')
+  })
+
   it('«Reinvita» resta spento prima dei 3 giorni, acceso dopo', async () => {
     apriScheda()
     const membri = await screen.findByRole('region', { name: 'Membri' })
@@ -219,6 +239,15 @@ describe('/team/:id — atleta', () => {
     expect(within(podio).getAllByText('1')).toHaveLength(2)
     expect(within(podio).getByText('3')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Testa a testa' })).toBeNull()
+  })
+
+  // La scheda atleta è del coach: da atleta i compagni non si aprono.
+  it('da atleta i compagni non sono toccabili', async () => {
+    dati.scheda.team.classifica_visibile = true
+    apriDaAtleta()
+    const membri = await screen.findByRole('region', { name: 'Membri' })
+    expect(within(membri).getByText('Giulia N.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Scheda di/ })).toBeNull()
   })
 
   it('con la classifica nascosta: né testa a testa né podio', async () => {

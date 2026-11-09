@@ -117,6 +117,8 @@ export default function SchedaTeam() {
     return null
   }
 
+  // Solo il coach apre la scheda atleta (/athletes/:id è sua): per l'atleta i compagni non si toccano.
+  const apriAtleta = staff ? (atletaId) => navigate(`/athletes/${atletaId}`) : null
   // Il coach vede anche chi non è (ancora, o più) dentro, con lo stato e l'azione.
   const fuori = staff ? membri.filter(m => m.stato !== 'dentro') : []
   // Nei posti stretti (righe delle sfide) il nome breve; «Ex membro» resta tale.
@@ -170,7 +172,7 @@ export default function SchedaTeam() {
         <div className="cascata max-w-2xl mx-auto flex flex-col gap-7 mt-2">
           {vedeClassifica && chiuse.length > 0 && coppia && (
             <SezioneTeam etichetta="Testa a testa">
-              <Duello x={coppia.x} y={coppia.y} a={coppia.a} b={coppia.b} ioId={user?.id}>
+              <Duello x={coppia.x} y={coppia.y} a={coppia.a} b={coppia.b} ioId={user?.id} onApri={apriAtleta}>
                 <ul className="flex flex-col border-t border-white/[.07] pt-2">
                   {coppia.sedute.map((sed, i) => {
                     const metrica = chiuse[i]?.metrica
@@ -191,11 +193,11 @@ export default function SchedaTeam() {
 
           {conPodio && (
             <SezioneTeam etichetta="Classifica">
-              <Podio classifica={classifica} ioId={user?.id} />
+              <Podio classifica={classifica} ioId={user?.id} onApri={apriAtleta} />
               {classifica.length > 3 && (
                 <ul className="flex flex-col gap-2">
                   {classifica.slice(3).map(m => (
-                    <RigaClassifica key={m.atleta_id} posto={m.posto} nome={m.nome} cognome={m.cognome} foto={m.foto}
+                    <RigaClassifica key={m.atleta_id} atletaId={m.atleta_id} onApri={apriAtleta} posto={m.posto} nome={m.nome} cognome={m.cognome} foto={m.foto}
                       n={m.n} tu={m.atleta_id === user?.id} />
                   ))}
                 </ul>
@@ -208,14 +210,14 @@ export default function SchedaTeam() {
               {dentro.length === 0 && !(staff && !team.chiuso_il) ? (
                 <p className="text-[14px] text-gray-400 text-center">Nessuno è ancora dentro il team.</p>
               ) : (
-                <StrisciaMembri membri={dentro} ioId={user?.id}
+                <StrisciaMembri membri={dentro} ioId={user?.id} onApri={apriAtleta}
                   onInvita={staff && !team.chiuso_il ? () => setFoglio('invita') : null} />
               )}
             </CartaTeam>
             {fuori.length > 0 && (
               <ul className="flex flex-col gap-2">
                 {fuori.map(m => (
-                  <RigaMembro key={m.atleta_id} nome={m.nome} cognome={m.cognome} foto={m.foto}
+                  <RigaMembro key={m.atleta_id} atletaId={m.atleta_id} onApri={apriAtleta} nome={m.nome} cognome={m.cognome} foto={m.foto}
                     dettaglio={testoStato(m)} azione={azioneMembro(m)} />
                 ))}
               </ul>

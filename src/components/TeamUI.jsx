@@ -95,6 +95,22 @@ export function Avatar({ foto, nome, cognome, dimensione = 40, anello = null }) 
     )
 }
 
+/**
+ * Un membro che si apre: con `onApri` (solo il coach) diventa un bottone che
+ * porta alla scheda atleta; senza, è un contenitore qualunque. Dentro un
+ * bottone il testo va in <span>, mai in <p> o <div>.
+ */
+function Toccabile({ atletaId, nome, cognome, onApri, className = '', children }) {
+  if (!onApri) return <span className={className}>{children}</span>
+  return (
+    <button type="button" aria-label={`Scheda di ${`${nome || ''} ${cognome || ''}`.trim()}`}
+      onClick={() => onApri(atletaId)}
+      className={`${className} text-left rounded-2xl transition active:scale-[.97] hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2`}>
+      {children}
+    </button>
+  )
+}
+
 /** «3 vittorie», «1 vittoria», e mai uno zero. */
 const testoVittorie = (n) => (!n ? 'Nessuna vittoria' : n === 1 ? '1 vittoria' : `${n} vittorie`)
 
@@ -103,7 +119,7 @@ const testoVittorie = (n) => (!n ? 'Nessuna vittoria' : n === 1 ? '1 vittoria' :
  * Il primo cerchio è «Invita» quando c'è `onInvita`.
  * @param membri [{ atleta_id, nome, cognome, foto }]
  */
-export function StrisciaMembri({ membri, ioId, onInvita }) {
+export function StrisciaMembri({ membri, ioId, onInvita, onApri = null }) {
   return (
     <ul className="flex gap-3.5 overflow-x-auto hide-scrollbar -mx-5 px-5 pb-0.5">
       {onInvita && (
@@ -117,11 +133,14 @@ export function StrisciaMembri({ membri, ioId, onInvita }) {
         </li>
       )}
       {membri.map(m => (
-        <li key={m.atleta_id} className="shrink-0 w-[64px] flex flex-col items-center gap-2">
-          <Avatar foto={m.foto} nome={m.nome} cognome={m.cognome} dimensione={60} />
-          <span className="max-w-full text-[12.5px] font-bold text-white truncate">
-            {m.atleta_id === ioId ? 'Tu' : nomeBreve(m.nome, m.cognome)}
-          </span>
+        <li key={m.atleta_id} className="shrink-0 w-[64px]">
+          <Toccabile atletaId={m.atleta_id} nome={m.nome} cognome={m.cognome} onApri={onApri}
+            className="w-full flex flex-col items-center gap-2">
+            <Avatar foto={m.foto} nome={m.nome} cognome={m.cognome} dimensione={60} />
+            <span className="max-w-full text-[12.5px] font-bold text-white truncate">
+              {m.atleta_id === ioId ? 'Tu' : nomeBreve(m.nome, m.cognome)}
+            </span>
+          </Toccabile>
         </li>
       ))}
     </ul>
@@ -136,23 +155,26 @@ const PEDANA = { 1: 'h-[92px]', 2: 'h-[66px]', 3: 'h-[50px]' }
  * Il podio dei primi tre (ordine a schermo 2-1-3). `classifica` è già ordinata
  * e porta `posto` (pari merito = stesso posto) e `n` (le vittorie).
  */
-export function Podio({ classifica, ioId }) {
+export function Podio({ classifica, ioId, onApri = null }) {
   const [primo, secondo, terzo] = classifica
   const slot = (m, gradino) => {
     if (!m) return <div />
     const alto = m.posto === 1 && m.n > 0
     return (
       <div className="min-w-0 flex flex-col items-center">
-        <div className="relative flex flex-col items-center">
-          {alto && <Crown size={22} aria-hidden="true" className="text-brand fill-brand/25 -mb-1 relative z-10 drop-shadow-[0_4px_8px_rgba(241,186,23,.35)]" />}
-          <Avatar foto={m.foto} nome={m.nome} cognome={m.cognome} dimensione={gradino === 1 ? 72 : 56}
-            anello={alto ? 'brand' : 'tenue'} />
-        </div>
-        <p className="mt-2.5 max-w-full px-1 text-[13.5px] font-bold text-white truncate">
-          {m.atleta_id === ioId ? 'Tu' : nomeBreve(m.nome, m.cognome)}
-        </p>
-        {/* Sul podio lo spazio è un terzo di riga: «—» invece di «Nessuna vittoria». */}
-        <p className={`text-[12.5px] font-black tabular-nums whitespace-nowrap ${alto ? 'text-brand' : 'text-gray-300'}`}>{m.n ? testoVittorie(m.n) : '—'}</p>
+        <Toccabile atletaId={m.atleta_id} nome={m.nome} cognome={m.cognome} onApri={onApri}
+          className="max-w-full flex flex-col items-center">
+          <span className="relative flex flex-col items-center">
+            {alto && <Crown size={22} aria-hidden="true" className="text-brand fill-brand/25 -mb-1 relative z-10 drop-shadow-[0_4px_8px_rgba(241,186,23,.35)]" />}
+            <Avatar foto={m.foto} nome={m.nome} cognome={m.cognome} dimensione={gradino === 1 ? 72 : 56}
+              anello={alto ? 'brand' : 'tenue'} />
+          </span>
+          <span className="mt-2.5 max-w-full px-1 text-[13.5px] font-bold text-white truncate">
+            {m.atleta_id === ioId ? 'Tu' : nomeBreve(m.nome, m.cognome)}
+          </span>
+          {/* Sul podio lo spazio è un terzo di riga: «—» invece di «Nessuna vittoria». */}
+          <span className={`text-[12.5px] font-black tabular-nums whitespace-nowrap ${alto ? 'text-brand' : 'text-gray-300'}`}>{m.n ? testoVittorie(m.n) : '—'}</span>
+        </Toccabile>
         <div className={`mt-3 w-full ${PEDANA[gradino]} rounded-t-2xl border border-b-0 flex items-start justify-center pt-2 ${
           alto
             ? 'bg-gradient-to-b from-brand/[.16] to-brand/[.03] border-brand/40'
@@ -176,15 +198,18 @@ export function Podio({ classifica, ioId }) {
 }
 
 /** Dal quarto posto in giù: posizione, avatar, nome, vittorie. */
-export function RigaClassifica({ posto, nome, cognome, foto, n, tu }) {
+export function RigaClassifica({ atletaId, posto, nome, cognome, foto, n, tu, onApri = null }) {
   return (
-    <li className={`${RIGA} flex items-center gap-3 px-3.5 py-2.5`}>
+    <li>
+     <Toccabile atletaId={atletaId} nome={nome} cognome={cognome} onApri={onApri}
+      className={`${RIGA} w-full flex items-center gap-3 px-3.5 py-2.5`}>
       <span className="w-8 h-8 rounded-full bg-white/[.06] text-[14px] font-black tabular-nums text-gray-200 flex items-center justify-center shrink-0">
         {posto}
       </span>
       <Avatar foto={foto} nome={nome} cognome={cognome} />
-      <p className="flex-1 min-w-0 text-[15px] font-bold text-white truncate">{tu ? 'Tu' : `${nome || ''} ${cognome || ''}`.trim()}</p>
+      <span className="flex-1 min-w-0 text-[15px] font-bold text-white truncate">{tu ? 'Tu' : `${nome || ''} ${cognome || ''}`.trim()}</span>
       <span className="shrink-0 text-[13px] font-black tabular-nums text-gray-300">{testoVittorie(n)}</span>
+     </Toccabile>
     </li>
   )
 }
@@ -193,19 +218,20 @@ export function RigaClassifica({ posto, nome, cognome, foto, n, tu }) {
  * Il testa a testa: due avatar e il punteggio in mezzo. Chi è avanti prende la
  * corona e l'anello giallo; a pari nessuno.
  */
-export function Duello({ x, y, a, b, ioId, children }) {
+export function Duello({ x, y, a, b, ioId, onApri = null, children }) {
   const lato = (m, mie, loro) => {
     const avanti = mie > loro
     return (
-      <div className="min-w-0 flex flex-col items-center">
-        <div className="h-[22px] flex items-end">
+      <Toccabile atletaId={m.atleta_id} nome={m.nome} cognome={m.cognome} onApri={onApri}
+        className="min-w-0 flex flex-col items-center">
+        <span className="h-[22px] flex items-end">
           {avanti && <Crown size={20} aria-hidden="true" className="text-brand fill-brand/25 drop-shadow-[0_4px_8px_rgba(241,186,23,.35)]" />}
-        </div>
+        </span>
         <Avatar foto={m.foto} nome={m.nome} cognome={m.cognome} dimensione={64} anello={avanti ? 'brand' : 'tenue'} />
-        <p className="mt-2.5 max-w-full text-[14px] font-bold text-white truncate">
+        <span className="mt-2.5 max-w-full text-[14px] font-bold text-white truncate">
           {m.atleta_id === ioId ? 'Tu' : nomeBreve(m.nome, m.cognome)}
-        </p>
-      </div>
+        </span>
+      </Toccabile>
     )
   }
   return (
@@ -221,14 +247,17 @@ export function Duello({ x, y, a, b, ioId, children }) {
 }
 
 /** Un membro: nome, stato in parole, e un'azione facoltativa (Reinvita, Annulla). */
-export function RigaMembro({ nome, cognome, foto, dettaglio, azione }) {
+export function RigaMembro({ atletaId, nome, cognome, foto, dettaglio, azione, onApri = null }) {
   return (
     <li className={`${RIGA} flex items-center gap-3 px-3.5 py-3`}>
-      <Avatar foto={foto} nome={nome} cognome={cognome} />
-      <div className="flex-1 min-w-0">
-        <p className="text-[15px] font-bold text-white truncate">{`${nome || ''} ${cognome || ''}`.trim()}</p>
-        {dettaglio && <p className={`${META} truncate`}>{dettaglio}</p>}
-      </div>
+      <Toccabile atletaId={atletaId} nome={nome} cognome={cognome} onApri={onApri}
+        className="flex-1 min-w-0 flex items-center gap-3">
+        <Avatar foto={foto} nome={nome} cognome={cognome} />
+        <span className="flex-1 min-w-0">
+          <span className="block text-[15px] font-bold text-white truncate">{`${nome || ''} ${cognome || ''}`.trim()}</span>
+          {dettaglio && <span className={`block ${META} truncate`}>{dettaglio}</span>}
+        </span>
+      </Toccabile>
       {azione}
     </li>
   )

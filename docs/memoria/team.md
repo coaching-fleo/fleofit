@@ -75,6 +75,9 @@ dell'app. Dall'alto:
   sotto in righe con lo stato e l'azione (solo coach).
 - **Sfide**: un'icona per metrica (cronometro, ripeti, manubrio, percorso), lo stato sulla seconda
   riga così il titolo ha tutta la larghezza; «Assegna» è l'unico bottone giallo pieno della pagina.
+- **Il coach tocca un membro** (fila, podio, testa a testa, righe) e va a `/athletes/:id`
+  (`Toccabile` in `TeamUI.jsx`, `apriAtleta` in `SchedaTeam`). Da atleta i compagni non si toccano:
+  la scheda atleta è del coach. Il dettaglio sfida non apre ancora la scheda.
 - ⚠️ Il podio è gamification, che DESIGN.md mette fra gli anti-riferimenti: l'ha chiesto il
   committente. Tenuto sobrio: niente coriandoli, niente medaglie.
 
