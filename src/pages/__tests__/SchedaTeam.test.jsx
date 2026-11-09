@@ -85,7 +85,9 @@ describe('/team/:id — coach', () => {
     apriScheda()
     const membri = await screen.findByRole('region', { name: 'Membri' })
     const riga = (nome) => within(membri).getByText(nome).closest('li')
-    expect(within(riga('Luca Bianchi')).getByText('Dentro')).toBeInTheDocument()
+    // Chi è dentro sta nella fila degli avatar, col nome breve; gli altri in righe con lo stato.
+    expect(within(membri).getByText('Luca B.')).toBeInTheDocument()
+    expect(within(membri).queryByText('Luca Bianchi')).toBeNull()
     expect(within(riga('Ivo Invitato')).getByText('In attesa da 4 giorni')).toBeInTheDocument()
     expect(within(riga('Rita Rifiuto')).getByText('Non ha accettato')).toBeInTheDocument()
     expect(within(riga('Ugo Uscito')).getByText('È uscito')).toBeInTheDocument()
@@ -200,22 +202,30 @@ describe('/team/:id — atleta', () => {
     apriDaAtleta()
     const blocco = await screen.findByRole('region', { name: 'Testa a testa' })
     expect(within(blocco).getByText('1–1')).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Vittorie' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Classifica' })).toBeNull()
   })
 
-  it('in tre: le vittorie, non il testa a testa', async () => {
+  it('in tre: il podio delle vittorie, non il testa a testa', async () => {
     dati.scheda.team.classifica_visibile = true
     dati.scheda.membri.push({ atleta_id: 'd', nome: 'Dario', cognome: 'Terzo', stato: 'dentro', invitato_il: giorniFa(3), risposto_il: giorniFa(3) })
     apriDaAtleta()
-    expect(await screen.findByRole('region', { name: 'Vittorie' })).toBeInTheDocument()
+    const podio = await screen.findByRole('region', { name: 'Classifica' })
+    // Luca e Giulia una vittoria a testa (pari al primo posto), Dario nessuna: terzo, «—» e mai «0».
+    expect(within(podio).getAllByText('1 vittoria')).toHaveLength(2)
+    expect(within(podio).getByText('—')).toBeInTheDocument()
+    expect(within(podio).queryByText(/^0/)).toBeNull()
+    expect(within(podio).getByText('Tu')).toBeInTheDocument()
+    // Pari merito = stesso posto: le pedane dicono 1, 1, 3 (non 1, 2, 3).
+    expect(within(podio).getAllByText('1')).toHaveLength(2)
+    expect(within(podio).getByText('3')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Testa a testa' })).toBeNull()
   })
 
-  it('con la classifica nascosta: né testa a testa né vittorie', async () => {
+  it('con la classifica nascosta: né testa a testa né podio', async () => {
     apriDaAtleta()
     await screen.findByRole('region', { name: 'Membri' })
     expect(screen.queryByRole('region', { name: 'Testa a testa' })).toBeNull()
-    expect(screen.queryByRole('region', { name: 'Vittorie' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Classifica' })).toBeNull()
   })
 
   it('«Esci dal team» con la cancellazione: prima cancella i risultati, poi esce', async () => {

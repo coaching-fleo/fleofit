@@ -61,3 +61,9 @@ export function esitoSfida(s, nome) {
   if (!primi.length) return 'Nessun risultato'
   return primi.length === 1 ? `Vince ${nome(primi[0].atleta_id)}` : 'Pari'
 }
+
+/** «Luca B.»: il nome e l'iniziale del cognome, dove lo spazio è poco (podio, fila dei membri). */
+export const nomeBreve = (nome = '', cognome = '') => {
+  const c = String(cognome || '').trim()
+  return `${String(nome || '').trim()}${c ? ` ${c[0].toUpperCase()}.` : ''}`.trim() || '—'
+}

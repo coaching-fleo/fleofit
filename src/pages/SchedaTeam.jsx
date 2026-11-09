@@ -14,7 +14,7 @@ import {
 } from '../lib/teamDb'
 import { scriviValore, testaATesta, vittorie } from '../lib/sfidaTeam'
 import {
-  ETICHETTE_METRICA, esitoSfida, giorniAlReinvito, giornoBreve, nomeDa, testoReinvito, testoStato,
+  ETICHETTE_METRICA, esitoSfida, giorniAlReinvito, giornoBreve, nomeBreve, nomeDa, testoReinvito, testoStato,
 } from '../lib/membriTeam'
 import { separaCodice } from '../lib/codiceWorkout'
 import { mostraErrore } from '../lib/alert'
@@ -22,11 +22,12 @@ import { vibraSuccesso } from '../lib/aptica'
 import { useIndietro } from '../useIndietro'
 import { CustomConfirm } from '../components/CustomModals'
 import {
-  CartaTeam, Interruttore, RigaMembro, RigaSfida, SezioneTeam, TestataTeam,
+  CartaTeam, Duello, Interruttore, Podio, RigaClassifica, RigaMembro, RigaSfida, SezioneTeam, StrisciaMembri, TestataTeam,
 } from '../components/TeamUI'
 import FoglioInvitaTeam from '../components/FoglioInvitaTeam'
 import FoglioNuovaSfida from '../components/FoglioNuovaSfida'
 import { CARTA_MODALE } from '../lib/stiliCard'
+import { Plus } from 'lucide-react'
 
 const RIPROVA = 'Controlla la connessione e riprova.'
 const AZIONE = 'shrink-0 min-h-9 px-3 rounded-full bg-white/[.07] border border-white/[.12] text-[12.5px] font-bold ' +
@@ -116,7 +117,13 @@ export default function SchedaTeam() {
     return null
   }
 
-  const elencoMembri = staff ? membri : dentro
+  // Il coach vede anche chi non è (ancora, o più) dentro, con lo stato e l'azione.
+  const fuori = staff ? membri.filter(m => m.stato !== 'dentro') : []
+  // Nei posti stretti (righe delle sfide) il nome breve; «Ex membro» resta tale.
+  const nomeCorto = (atletaId) => {
+    const m = membri.find(x => x.atleta_id === atletaId)
+    return m ? nomeBreve(m.nome, m.cognome) : nome(atletaId)
+  }
 
   // ── il confronto: testa a testa in due, vittorie in più ────────────────────
   const vedeClassifica = staff || !!team?.classifica_visibile
@@ -128,6 +135,12 @@ export default function SchedaTeam() {
     return { x, y, ...testaATesta(chiuse, x.atleta_id, y.atleta_id) }
   }, [dentro, chiuse, user?.id])
   const conteggio = vittorie(chiuse)
+  // La classifica per vittorie, pari merito = stesso posto (1, 1, 3).
+  const classifica = dentro
+    .map(m => ({ ...m, n: conteggio.get(m.atleta_id) || 0 }))
+    .sort((p, q) => q.n - p.n)
+  classifica.forEach((r, i) => { r.posto = i > 0 && r.n === classifica[i - 1].n ? classifica[i - 1].posto : i + 1 })
+  const conPodio = vedeClassifica && chiuse.length > 0 && !coppia && dentro.length > 2 && classifica[0]?.n > 0
 
   // ── l'atleta esce ──────────────────────────────────────────────────────────
   const [uscita, setUscita] = useState(null)   // null | { cancella: boolean }
@@ -154,80 +167,85 @@ export default function SchedaTeam() {
         ].filter(Boolean).join(' · ') : null} />
 
       {team && (
-        <div className="cascata max-w-2xl mx-auto flex flex-col gap-6 mt-2">
-          <SezioneTeam etichetta="Membri"
-            azione={staff && !team.chiuso_il && (
-              <button type="button" className={AZIONE} onClick={() => setFoglio('invita')}>Invita</button>
-            )}>
-            <ul className="flex flex-col gap-2">
-              {elencoMembri.map(m => (
-                <RigaMembro key={m.atleta_id} nome={m.nome} cognome={m.cognome} foto={m.foto}
-                  dettaglio={staff ? testoStato(m) : (m.atleta_id === user?.id ? 'Tu' : null)}
-                  azione={azioneMembro(m)} />
-              ))}
-            </ul>
-          </SezioneTeam>
+        <div className="cascata max-w-2xl mx-auto flex flex-col gap-7 mt-2">
+          {vedeClassifica && chiuse.length > 0 && coppia && (
+            <SezioneTeam etichetta="Testa a testa">
+              <Duello x={coppia.x} y={coppia.y} a={coppia.a} b={coppia.b} ioId={user?.id}>
+                <ul className="flex flex-col border-t border-white/[.07] pt-2">
+                  {coppia.sedute.map((sed, i) => {
+                    const metrica = chiuse[i]?.metrica
+                    return (
+                      <li key={chiuse[i]?.id || i} className="flex items-center gap-3 py-2 text-[13.5px]">
+                        <span className="text-muted w-[72px] shrink-0">{giornoBreve(sed.data)}</span>
+                        <span className="flex-1 min-w-0 font-bold truncate">
+                          {sed.vincitore ? (sed.vincitore === user?.id ? 'Tu' : nomeCorto(sed.vincitore)) : (sed.distacco === 0 ? 'Pari' : 'Manca un risultato')}
+                        </span>
+                        {sed.vincitore && <span className="text-gray-300 font-bold tabular-nums shrink-0">{`+${scriviValore(sed.distacco, metrica)}`}</span>}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </Duello>
+            </SezioneTeam>
+          )}
 
-          <SezioneTeam etichetta="Sfide"
-            azione={staff && !team.chiuso_il && (
-              <button type="button" className={AZIONE} onClick={() => setFoglio('sfida')}>Assegna</button>
-            )}>
-            {sfide.length === 0 ? (
-              <p className="rounded-3xl border border-dashed border-[#333] px-5 py-6 text-[14px] text-gray-400 leading-relaxed text-center">
-                {staff ? 'Nessuna sfida ancora. Scegli un allenamento da fare insieme e cosa si misura.' : 'Nessuna sfida ancora.'}
-              </p>
-            ) : (
+          {conPodio && (
+            <SezioneTeam etichetta="Classifica">
+              <Podio classifica={classifica} ioId={user?.id} />
+              {classifica.length > 3 && (
+                <ul className="flex flex-col gap-2">
+                  {classifica.slice(3).map(m => (
+                    <RigaClassifica key={m.atleta_id} posto={m.posto} nome={m.nome} cognome={m.cognome} foto={m.foto}
+                      n={m.n} tu={m.atleta_id === user?.id} />
+                  ))}
+                </ul>
+              )}
+            </SezioneTeam>
+          )}
+
+          <SezioneTeam etichetta="Membri">
+            <CartaTeam>
+              {dentro.length === 0 && !(staff && !team.chiuso_il) ? (
+                <p className="text-[14px] text-gray-400 text-center">Nessuno è ancora dentro il team.</p>
+              ) : (
+                <StrisciaMembri membri={dentro} ioId={user?.id}
+                  onInvita={staff && !team.chiuso_il ? () => setFoglio('invita') : null} />
+              )}
+            </CartaTeam>
+            {fuori.length > 0 && (
               <ul className="flex flex-col gap-2">
-                {sfide.map(s => (
-                  <RigaSfida key={s.id} titolo={separaCodice(s.titolo || '').nome || s.titolo || 'Allenamento'}
-                    data={giornoBreve(s.data)} metrica={ETICHETTE_METRICA[s.metrica]}
-                    esito={staff || team.classifica_visibile ? esitoSfida(s, nome) : (s.chiusa_il ? 'Chiusa' : 'In corso')}
-                    onApri={() => navigate(`/team/${id}/sfida/${s.id}`)} />
+                {fuori.map(m => (
+                  <RigaMembro key={m.atleta_id} nome={m.nome} cognome={m.cognome} foto={m.foto}
+                    dettaglio={testoStato(m)} azione={azioneMembro(m)} />
                 ))}
               </ul>
             )}
           </SezioneTeam>
 
-          {vedeClassifica && chiuse.length > 0 && coppia && (
-            <SezioneTeam etichetta="Testa a testa">
-              <CartaTeam className="flex flex-col gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex-1 min-w-0 text-[15px] font-bold truncate">{coppia.x.atleta_id === user?.id ? 'Tu' : nome(coppia.x.atleta_id)}</span>
-                  <span className="text-[28px] font-black tracking-tight tabular-nums">{`${coppia.a}–${coppia.b}`}</span>
-                  <span className="flex-1 min-w-0 text-[15px] font-bold truncate text-right">{nome(coppia.y.atleta_id)}</span>
-                </div>
-                <ul className="flex flex-col gap-1.5">
-                  {coppia.sedute.map((sed, i) => {
-                    const metrica = chiuse[i]?.metrica
-                    return (
-                      <li key={chiuse[i]?.id || i} className="flex items-center gap-3 text-[13.5px]">
-                        <span className="text-gray-400 w-20 shrink-0">{giornoBreve(sed.data)}</span>
-                        <span className="flex-1 min-w-0 font-bold truncate">
-                          {sed.vincitore ? (sed.vincitore === user?.id ? 'Tu' : nome(sed.vincitore)) : (sed.distacco === 0 ? 'Pari' : 'Manca un risultato')}
-                        </span>
-                        {sed.vincitore && <span className="text-gray-400 shrink-0">{scriviValore(sed.distacco, metrica)}</span>}
-                      </li>
-                    )
-                  })}
-                </ul>
-              </CartaTeam>
-            </SezioneTeam>
-          )}
-
-          {vedeClassifica && chiuse.length > 0 && !coppia && dentro.length > 2 && (
-            <SezioneTeam etichetta="Vittorie">
+          <SezioneTeam etichetta="Sfide"
+            azione={staff && !team.chiuso_il && (
+              <button type="button" onClick={() => setFoglio('sfida')}
+                className="shrink-0 min-h-9 pl-2.5 pr-3.5 rounded-full bg-brand text-black text-[13px] font-black inline-flex items-center gap-1 hover:brightness-110 transition shadow-lg shadow-brand/20">
+                <Plus size={16} strokeWidth={2.75} aria-hidden="true" />
+                Assegna
+              </button>
+            )}>
+            {sfide.length === 0 ? (
+              <p className="rounded-3xl border border-dashed border-[#333] px-5 py-6 text-[14px] text-gray-400 leading-relaxed text-center">
+                {staff ? 'Nessuna sfida ancora. Con «Assegna» scegli un allenamento da fare insieme o in sfida.' : 'Nessuna sfida ancora.'}
+              </p>
+            ) : (
               <ul className="flex flex-col gap-2">
-                {[...dentro].sort((p, q) => (conteggio.get(q.atleta_id) || 0) - (conteggio.get(p.atleta_id) || 0)).map(m => {
-                  const n = conteggio.get(m.atleta_id) || 0
-                  return (
-                    <RigaMembro key={m.atleta_id} nome={m.nome} cognome={m.cognome} foto={m.foto}
-                      dettaglio={m.atleta_id === user?.id ? 'Tu' : null}
-                      azione={<span className="shrink-0 text-[15px] font-black">{n === 1 ? '1 vittoria' : `${n} vittorie`}</span>} />
-                  )
-                })}
+                {sfide.map(s => (
+                  <RigaSfida key={s.id} titolo={separaCodice(s.titolo || '').nome || s.titolo || 'Allenamento'}
+                    data={giornoBreve(s.data)} metrica={ETICHETTE_METRICA[s.metrica]} chiave={s.metrica}
+                    aperta={!s.chiusa_il}
+                    esito={vedeClassifica ? esitoSfida(s, nomeCorto) : 'Chiusa'}
+                    onApri={() => navigate(`/team/${id}/sfida/${s.id}`)} />
+                ))}
               </ul>
-            </SezioneTeam>
-          )}
+            )}
+          </SezioneTeam>
 
           {!staff && dentro.some(m => m.atleta_id === user?.id) && (
             <button type="button" onClick={() => setUscita({ cancella: false })}

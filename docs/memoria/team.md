@@ -52,12 +52,31 @@ avere più team.
 | Accesso ai dati | `src/lib/teamDb.js` |
 | Risultato al completamento | `src/useSfidaCompletamento.js` (solo stati) + `src/lib/sfidaCompletamento.js` (pigro) + `src/components/RigaRisultatoSfida.jsx` (pigra, in `RpeModal`) |
 | Pagine | `Team.jsx` (coach) / `MieiTeam.jsx` (atleta) su `/team`, `SchedaTeam.jsx`, `InvitoTeam.jsx`, `DettaglioSfida.jsx` |
-| Presentazione e fogli | `TeamUI.jsx`, `FoglioNuovoTeam`, `FoglioInvitaTeam`, `FoglioNuovaSfida` |
+| Presentazione e fogli | `TeamUI.jsx` (`Podio`, `Duello`, `RigaClassifica`, `StrisciaMembri`, `RigaSfida`), `FoglioNuovoTeam`, `FoglioInvitaTeam`, `FoglioNuovaSfida` |
 | Notifica dell'invito | `supabase/functions/send-reminders/team.ts` + blocco `team_invito` in `index.ts` |
 | Verifica del database | `tools/verifica-team.sql` (10 casi, nessun `FALLITO`) |
 
 Rotte: `/team`, `/team/invito/:id`, `/team/:id`, `/team/:id/sfida/:sfidaId`, tutte dietro
 `<SoloSeAccesa nome="team">`.
+
+## La scheda del team, com'è disegnata (09/11/2026)
+Ridisegnata su richiesta del committente («indecente»), con tre riferimenti: un podio da classifica,
+una fila di avatar tipo «Quick Send», una lista di classifica. Palette e linguaggio restano quelli
+dell'app. Dall'alto:
+- **In due** (classifica visibile e sfide chiuse): `Duello`, due avatar da 64 e il punteggio «1–1»
+  in mezzo, poi le sedute con il distacco («+0:10»). Chi è avanti prende corona e anello giallo; a
+  pari nessuno.
+- **Da tre in su**: `Podio` (ordine 2-1-3, pedane alte 92/66/50) e, dal quarto posto, `RigaClassifica`.
+  Pari merito = stesso posto (1, 1, 3). L'**altezza** segue la colonna, il **giallo** segue il posto:
+  a pari merito due pedane sono gialle. Sul podio zero vittorie si scrive «—» (non c'è posto per
+  «Nessuna vittoria»). Il podio compare solo se almeno uno ha vinto.
+- **Membri**: `StrisciaMembri`, chi è dentro in fila con il nome breve («Luca B.», `nomeBreve` in
+  `membriTeam.js`); il primo cerchio è «Invita» per il coach. Invitati, rifiutati e usciti stanno
+  sotto in righe con lo stato e l'azione (solo coach).
+- **Sfide**: un'icona per metrica (cronometro, ripeti, manubrio, percorso), lo stato sulla seconda
+  riga così il titolo ha tutta la larghezza; «Assegna» è l'unico bottone giallo pieno della pagina.
+- ⚠️ Il podio è gamification, che DESIGN.md mette fra gli anti-riferimenti: l'ha chiesto il
+  committente. Tenuto sobrio: niente coriandoli, niente medaglie.
 
 ## Trappole
 - 🔴 **I nomi dei compagni passano SOLO da `team_scheda`**: l'atleta legge solo la propria riga di
