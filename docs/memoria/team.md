@@ -14,8 +14,10 @@
 - Il codice sta su `app` prima del sì: senza tabelle `assente(error)` di `teamDb.js` fa sparire
   tutto, senza alert. Con l'interruttore spento le rotte `/team…` stanno dietro `SoloSeAccesa` e le
   righe in Impostazioni, Atleti e scheda atleta non si vedono.
-- ⏳ `send-reminders` ha la modalità nuova **`team_invito`**, **non pubblicata**: va pubblicata
-  **dopo** la migrazione (senza tabelle risponderebbe 403 a tutti).
+- ✅ `send-reminders` con la modalità **`team_invito`** **pubblicata il 09/11/2026 (versione 72)**,
+  dopo la migrazione. Prova a vuoto: senza accesso risponde 403. La versione di prima (71, 30/10
+  ore 10:25) era precedente al testo dei complimenti Garmin (`testi.ts`, 30/10 ore 11:46): con
+  la 72 è partito anche quello.
 - Nessuna prova sul telefono: la fa il committente.
 
 ## Cosa fa

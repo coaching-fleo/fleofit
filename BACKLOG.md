@@ -49,10 +49,10 @@
 > [PRODUCT.md](PRODUCT.md) · Design system: [DESIGN.md](DESIGN.md)
 
 
-## ⏳ Team di atleti — pubblicare send-reminders e accendere (09/11/2026)
+## ⏳ Team di atleti — accendere e provare sul telefono (09/11/2026)
 ✅ Migrazione applicata e `tools/verifica-team.sql` pulita il 09/11/2026 (decima eccezione, CLAUDE.md §0-bis); il
 codice è su `app`, nascosto dall'interruttore `team` (spento). **Perché conta**: senza push l'invito non arriva.
-Resta, in ordine (`docs/memoria/team.md`): **pubblicare `send-reminders`** (modalità `team_invito`, solo DOPO la migrazione) → `team` su `admin` e
+✅ `send-reminders` pubblicata (versione 72). Resta, in ordine (`docs/memoria/team.md`): ~~pubblicare `send-reminders`~~ (modalità `team_invito`, solo DOPO la migrazione) → `team` su `admin` e
 prova su iPhone e Android (push dell'invito ad app chiusa, deep link, tasto indietro) → `tutti`.
 
 ## 💡 Team — fase B: il risultato dall'orologio
