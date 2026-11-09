@@ -259,7 +259,7 @@ export default function SchedaTeam() {
       )}
 
       {foglio === 'invita' && (
-        <FoglioInvitaTeam membri={membri} coachId={user?.id} onInvita={invitaAtleti} onChiudi={() => setFoglio(null)} />
+        <FoglioInvitaTeam membri={membri} coachId={team?.coach_id || user?.id} onInvita={invitaAtleti} onChiudi={() => setFoglio(null)} />
       )}
       {foglio === 'sfida' && (
         <FoglioNuovaSfida dentro={dentro.length} onCrea={nuovaSfida} onChiudi={() => setFoglio(null)} />

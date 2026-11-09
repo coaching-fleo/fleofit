@@ -19,12 +19,17 @@ export default function FoglioInvitaTeam({ membri, coachId, onInvita, onChiudi }
 
   useEffect(() => {
     let vivo = true
-    supabase.from('athletes').select('id, name, surname, photo_url, notes, deleted_at').order('name')
-      .then(({ data, error }) => {
-        if (!vivo) return
-        if (error) { console.warn('Atleti non caricati:', error); setAtleti([]); return }
-        setAtleti(invitabili(data, membri, coachId))
-      })
+    // Solo gli atleti che seguono il coach del team (coach_atleti): un admin li
+    // vede tutti, ma il database accetta nel team solo i suoi (revisione 09/11).
+    Promise.all([
+      supabase.from('athletes').select('id, name, surname, photo_url, notes, deleted_at').order('name'),
+      supabase.from('coach_atleti').select('athlete_id').eq('coach_id', coachId),
+    ]).then(([{ data, error }, { data: suoi, error: e2 }]) => {
+      if (!vivo) return
+      if (error || e2) { console.warn('Atleti non caricati:', error || e2); setAtleti([]); return }
+      const ids = new Set((suoi || []).map(r => r.athlete_id))
+      setAtleti(invitabili((data || []).filter(a => ids.has(a.id)), membri, coachId))
+    })
     return () => { vivo = false }
   }, [membri, coachId])
 

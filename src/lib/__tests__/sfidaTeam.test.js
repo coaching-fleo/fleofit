@@ -28,6 +28,15 @@ describe('sfidaTeam', () => {
     expect(r.map(x => x.atleta_id)).toEqual(['ex', 'a'])
   })
 
+  // Revisione 09/11: su iPhone il tastierino numerico non ha i due punti. Come
+  // leggiTempoScritto dei risultati di gara, «4.07» e «4,07» valgono «4:07».
+  it('leggiValore: il tempo si scrive anche con punto o virgola', () => {
+    expect(leggiValore('4.07', 'tempo')).toBe(247)
+    expect(leggiValore('4,07', 'tempo')).toBe(247)
+    expect(leggiValore('1.02.30', 'tempo')).toBe(3750)
+    expect(leggiValore('4.75', 'tempo')).toBeNull()
+  })
+
   it('leggiValore', () => {
     expect(leggiValore('4:07', 'tempo')).toBe(247)
     expect(leggiValore('1:05:03', 'tempo')).toBe(3903)

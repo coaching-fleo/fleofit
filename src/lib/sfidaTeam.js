@@ -21,7 +21,10 @@ const dentroTetto = (n, metrica) => Number.isFinite(n) && n > 0 && n <= TETTI[me
 
 /** Il testo scritto dall'atleta → numero (secondi per il tempo), o null se non vale. */
 export function leggiValore(testo, metrica) {
-  const t = String(testo ?? '').trim().replace(',', '.')
+  const grezzo = String(testo ?? '').trim()
+  // Il tempo accetta anche punto e virgola al posto dei due punti: il
+  // tastierino di iPhone non ha «:» (come leggiTempoScritto, risultatoGara.js).
+  const t = metrica === 'tempo' ? grezzo.replace(/[.,]/g, ':') : grezzo.replace(',', '.')
   if (!t) return null
   let n
   if (metrica === 'tempo') {

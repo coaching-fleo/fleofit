@@ -35,6 +35,14 @@ export const testoCampo = (valore, metrica) =>
 export const valido = (testo, metrica) =>
   !String(testo ?? '').trim() || leggiValore(testo, metrica) != null
 
+/** Solo cifre per il tempo = secondi: lo si dice prima di salvare («= 6:47»). */
+export function lettura(testo, metrica) {
+  const t = String(testo ?? '').trim()
+  if (metrica !== 'tempo' || !/^\d+$/.test(t)) return null
+  const v = leggiValore(t, metrica)
+  return v == null ? null : `= ${scriviValore(v, metrica)}`
+}
+
 const DOPO = "L'allenamento è salvato: il risultato si inserisce dalla scheda del team."
 
 export async function registra({ sfida, testo, athleteId, avvisa }) {

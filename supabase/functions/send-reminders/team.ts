@@ -17,15 +17,27 @@ export function testoInvito(nomeCoach: string, nomeTeam: string): string {
 }
 
 // Chi riceve: gli atleti richiesti che sono ANCORA invitati (un atleta che ha
-// già risposto non riceve l'invito), senza chi l'ha già ricevuto.
+// già risposto non riceve l'invito), senza chi ha già una notifica di QUESTO
+// invito. Una notifica più vecchia di `invitato_il` è di un invito precedente
+// (poi rifiutato o lasciato): non blocca il reinvito (revisione 09/11/2026).
 export function destinatariInvito(
-  righe: { atleta_id: string; stato: string }[],
+  righe: { atleta_id: string; stato: string; invitato_il?: string | null }[],
   richiesti: string[],
-  giaNotificati: string[],
+  giaNotificati: { user_id: string; created_at?: string | null }[],
 ): string[] {
   const voluti = new Set(richiesti)
-  const gia = new Set(giaNotificati)
   return righe
-    .filter((r) => r.stato === 'invitato' && voluti.has(r.atleta_id) && !gia.has(r.atleta_id))
+    .filter((r) => r.stato === 'invitato' && voluti.has(r.atleta_id))
+    .filter((r) => {
+      const dal = r.invitato_il ? Date.parse(r.invitato_il) : -Infinity
+      return !giaNotificati.some((n) => n.user_id === r.atleta_id
+        && (n.created_at ? Date.parse(n.created_at) : Infinity) >= dal)
+    })
     .map((r) => r.atleta_id)
+}
+
+// La push dell'invito parte solo con l'interruttore `team` su «tutti»: su
+// «admin» l'atleta non vede i Team e la notifica lo porterebbe alla Home.
+export function invitiAccesi(stato: string | null | undefined): boolean {
+  return stato === 'tutti'
 }

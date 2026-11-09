@@ -15,7 +15,7 @@ import { useState, useEffect } from 'react'
  * @param workoutId  il workout che si sta completando, o null
  * @param data       il giorno dell'assegnazione ('yyyy-MM-dd'), o null
  * @param opzioni.setAlertInfo  il setter del CustomAlert della pagina
- * @returns {{ riga: { metrica, testo, onCambia, valido, classificaVisibile } | null, registra: () => Promise<void> }}
+ * @returns {{ riga: { metrica, testo, onCambia, valido, lettura, classificaVisibile } | null, registra: () => Promise<void> }}
  */
 export function useSfidaCompletamento(athleteId, workoutId, data, { setAlertInfo } = {}) {
   // `letto` = { chiave, sfida, mod }: vale solo per l'allenamento letto.
@@ -47,6 +47,7 @@ export function useSfidaCompletamento(athleteId, workoutId, data, { setAlertInfo
       testo,
       onCambia: setTesto,
       valido: mod.valido(testo, sfida.metrica),
+      lettura: mod.lettura(testo, sfida.metrica),
       classificaVisibile: sfida.classifica_visibile,
     },
     registra: () => mod.registra({ sfida, testo, athleteId, avvisa: (i) => setAlertInfo?.(i) }),

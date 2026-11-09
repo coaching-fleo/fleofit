@@ -103,10 +103,14 @@ export default function DettaglioSfida() {
               <label className="flex flex-col gap-1.5">
                 <span className={META}>Il tuo risultato · {ETICHETTE_METRICA[sfida.metrica]}</span>
                 <input aria-label="Il tuo risultato" value={testo} onChange={e => setTesto(e.target.value)}
-                  inputMode={sfida.metrica === 'tempo' || sfida.metrica === 'ripetizioni' ? 'numeric' : 'decimal'}
-                  placeholder={sfida.metrica === 'tempo' ? 'm:ss' : '0'}
+                  inputMode={sfida.metrica === 'ripetizioni' ? 'numeric' : 'decimal'}
+                  placeholder={sfida.metrica === 'tempo' ? '4.07' : '0'}
                   aria-invalid={testo.trim() && valoreLetto == null ? true : undefined}
                   className={CAMPO_TEAM} />
+                {/* Solo cifre per il tempo = secondi: lo si dice prima di salvare. */}
+                {sfida.metrica === 'tempo' && /^\d+$/.test(testo.trim()) && valoreLetto != null && (
+                  <span className={META}>= {scriviValore(valoreLetto, 'tempo')}</span>
+                )}
               </label>
               <button type="button" onClick={salva} disabled={occupato || valoreLetto == null}
                 className="self-end min-h-[44px] px-5 rounded-full bg-brand text-black text-[14px] font-extrabold hover:brightness-110 transition disabled:opacity-50">

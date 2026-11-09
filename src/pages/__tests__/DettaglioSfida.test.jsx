@@ -127,3 +127,18 @@ describe('/team/:id/sfida/:sfidaId — sfida chiusa', () => {
     expect(within(primo).getByText('SX')).toBeInTheDocument()
   })
 })
+
+describe('/team/:id/sfida/:sfidaId — il tempo scritto sul telefono', () => {
+  it('«4.10» vale 4:10; sole cifre mostrano come vengono lette', async () => {
+    const u = userEvent.setup()
+    apri('athlete', luca)
+    const campo = await screen.findByDisplayValue('4:27')
+    await u.clear(campo)
+    await u.type(campo, '250')
+    expect(screen.getByText('= 4:10')).toBeInTheDocument()
+    await u.clear(campo)
+    await u.type(campo, '4.10')
+    await u.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(() => expect(db.salvaRisultato).toHaveBeenCalledWith('s1', 'b', 250))
+  })
+})

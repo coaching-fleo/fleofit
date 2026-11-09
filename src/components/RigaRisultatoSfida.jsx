@@ -12,10 +12,11 @@ const ETICHETTA = { tempo: 'Il tuo tempo', ripetizioni: 'Ripetizioni', kg: 'Kg t
  * @param metrica  'tempo' | 'ripetizioni' | 'kg' | 'distanza'
  * @param testo    il valore scritto
  * @param valido   false = il testo non si legge (Salva resta spento)
+ * @param lettura  «= 6:47» quando il tempo è scritto in sole cifre (secondi), o null
  * @param classificaVisibile  true = «Lo vedono i compagni»
  * @param onCambia (testo) => void
  */
-export default function RigaRisultatoSfida({ metrica, testo, valido, classificaVisibile, onCambia }) {
+export default function RigaRisultatoSfida({ metrica, testo, valido, lettura = null, classificaVisibile, onCambia }) {
   const etichetta = ETICHETTA[metrica] || 'Risultato'
   return (
     <label className="block rounded-2xl bg-[#111] border border-[#333] px-4 py-3">
@@ -24,17 +25,19 @@ export default function RigaRisultatoSfida({ metrica, testo, valido, classificaV
         <span className={`flex-1 min-w-0 truncate ${LABEL}`}>Sfida del team</span>
       </span>
       <input aria-label={etichetta} value={testo} onChange={e => onCambia(e.target.value)}
-        inputMode={metrica === 'tempo' || metrica === 'ripetizioni' ? 'numeric' : 'decimal'}
+        inputMode={metrica === 'ripetizioni' ? 'numeric' : 'decimal'}
         enterKeyHint="done" onKeyDown={chiudiTastieraSuInvio}
-        placeholder={metrica === 'tempo' ? `${etichetta} (m:ss) · facoltativo` : `${etichetta} · facoltativo`}
+        placeholder={metrica === 'tempo' ? `${etichetta} (4.07) · facoltativo` : `${etichetta} · facoltativo`}
         aria-invalid={valido ? undefined : true}
         className={`mt-1.5 w-full bg-transparent text-[18px] font-black placeholder-[#5b6070] focus:outline-none ${valido ? 'text-white' : 'text-red-500'}`} />
       {!valido ? (
         <span className="block mt-1 text-[12.5px] font-medium text-red-500">
-          {metrica === 'tempo' ? 'Scrivilo come 4:07 o 1:02:30' : 'Scrivi solo il numero'}
+          {metrica === 'tempo' ? 'Scrivilo come 4.07 o 1.02.30' : 'Scrivi solo il numero'}
         </span>
-      ) : classificaVisibile && (
-        <span className="block mt-1 text-[12px] font-medium text-gray-500">Lo vedono i compagni</span>
+      ) : (lettura || classificaVisibile) && (
+        <span className="block mt-1 text-[12px] font-medium text-gray-500">
+          {[lettura, classificaVisibile ? 'Lo vedono i compagni' : null].filter(Boolean).join(' · ')}
+        </span>
       )}
     </label>
   )

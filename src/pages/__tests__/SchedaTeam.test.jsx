@@ -40,7 +40,11 @@ const finto = await vi.hoisted(async () => {
       { id: 'c', name: 'Giulia', surname: 'Neri', notes: '', deleted_at: null },
       { id: 'n', name: 'Nora', surname: 'Nuova', notes: '', deleted_at: null },
       { id: 'p', name: 'Pietro', surname: 'Pausa', notes: '[PAUSA: 2026-11-01]\nvacanze', deleted_at: null },
+      // Un admin vede anche gli atleti di altri coach: nel team vanno solo i suoi.
+      { id: 'x', name: 'Xeno', surname: 'Altrui', notes: '', deleted_at: null },
     ],
+    // Il finto client non filtra: qui solo le righe del coach del team (Xeno no).
+    coach_atleti: ['b', 'c', 'n', 'p'].map(athlete_id => ({ athlete_id, coach_id: 'coach1' })),
     workouts: [
       { id: 'w1', title: 'Hyrox completo', date: fra(-3), sections: { category: 'Hyrox' } },
       { id: 'w-gara', title: 'Hyrox Milano', date: fra(20), sections: { category: 'Event', isEvent: true } },
@@ -106,6 +110,7 @@ describe('/team/:id — coach', () => {
     expect(within(foglio).queryByText('Luca Bianchi')).not.toBeInTheDocument()
     expect(within(foglio).queryByText('Giulia Neri')).not.toBeInTheDocument()
     expect(within(foglio).queryByText('Pietro Pausa')).not.toBeInTheDocument()
+    expect(within(foglio).queryByText('Xeno Altrui')).not.toBeInTheDocument()
     await userEvent.click(within(foglio).getByRole('checkbox', { name: 'Nora Nuova' }))
     await userEvent.click(within(foglio).getByRole('button', { name: 'Invita 1 atleta' }))
     await waitFor(() => expect(db.invita).toHaveBeenCalledWith('t1', ['n']))

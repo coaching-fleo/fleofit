@@ -31,6 +31,12 @@ beforeEach(() => {
   }
 })
 
+// Il coach del team e i suoi atleti (il finto client non filtra: solo le righe giuste).
+const DEL_COACH = (ids) => ({
+  team: [{ id: 't1', coach_id: 'c1' }],
+  coach_atleti: ids.map(athlete_id => ({ athlete_id, coach_id: 'c1' })),
+})
+
 describe('teamDb', () => {
   it('creaSfida assegna il workout solo a chi è dentro', async () => {
     ctrl.tabelle = {
@@ -39,6 +45,7 @@ describe('teamDb', () => {
       ],
       team_sfide: [{ id: 's1' }],
       athlete_workouts: [],
+      ...DEL_COACH(['a', 'b', 'c']),
     }
     const r = await creaSfida({ teamId: 't1', workoutId: 'w1', metrica: 'tempo', data: '2026-11-06' })
     expect(r.assegnati).toEqual(['a', 'b'])
@@ -55,9 +62,47 @@ describe('teamDb', () => {
       team_membri: [{ atleta_id: 'a', stato: 'dentro' }, { atleta_id: 'b', stato: 'dentro' }],
       team_sfide: [{ id: 's1' }],
       athlete_workouts: [{ athlete_id: 'a', workout_id: 'w1', completed_date: '2026-11-06' }],
+      ...DEL_COACH(['a', 'b']),
     }
     const r = await creaSfida({ teamId: 't1', workoutId: 'w1', metrica: 'kg', data: '2026-11-06' })
     expect(r.assegnati).toEqual(['b'])
+  })
+
+  // Revisione 09/11: un membro «dentro» passato a un altro coach non si può più
+  // assegnare (la RLS di athlete_workouts lo rifiuta) e faceva fallire tutta la sfida.
+  it('creaSfida salta chi è dentro ma non segue più il coach del team', async () => {
+    ctrl.tabelle = {
+      team_membri: [{ atleta_id: 'a', stato: 'dentro' }, { atleta_id: 'spostato', stato: 'dentro' }],
+      team_sfide: [{ id: 's1' }],
+      athlete_workouts: [],
+      ...DEL_COACH(['a']),
+    }
+    const r = await creaSfida({ teamId: 't1', workoutId: 'w1', metrica: 'tempo', data: '2026-11-06' })
+    expect(r.assegnati).toEqual(['a'])
+  })
+
+  it('creaSfida: se le assegnazioni falliscono, la sfida non resta orfana', async () => {
+    ctrl.tabelle = {
+      team_membri: [{ atleta_id: 'a', stato: 'dentro' }],
+      team_sfide: [{ id: 's1' }],
+      athlete_workouts: [],
+      ...DEL_COACH(['a']),
+    }
+    // Fallisce solo la scrittura: la lettura di chi l'ha già passa.
+    let letture = 0
+    const vero = finti.generico.supabase.from
+    finti.generico.supabase.from = (t) => {
+      if (t === 'athlete_workouts' && letture++ > 0) {
+        return { insert: () => ({ select: async () => ({ data: null, error: { message: 'rls' } }) }) }
+      }
+      return vero(t)
+    }
+    try {
+      await expect(creaSfida({ teamId: 't1', workoutId: 'w1', metrica: 'tempo', data: '2026-11-06' })).rejects.toBeTruthy()
+    } finally {
+      finti.generico.supabase.from = vero
+    }
+    expect(finti.generico.chiamateA('team_sfide', 'delete')).toHaveLength(1)
   })
 
   it('leggiMieiTeam con la tabella assente risponde «non disponibile», senza lanciare', async () => {

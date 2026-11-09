@@ -92,14 +92,24 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- Sono in questo team, in uno di questi stati, E il team è di un mio coach
--- (o di un admin)? Se un admin sposta l'atleta a un altro coach, gli inviti
+-- (anche se il coach è un admin)? Se un admin sposta l'atleta a un altro coach, gli inviti
 -- e i team del coach vecchio smettono di essere visibili.
 create or replace function public.membro_team(t uuid, stati text[]) returns boolean
 language sql stable security definer set search_path = '' as $$
   select exists (
     select 1 from public.team_membri m join public.team x on x.id = m.team_id
      where m.team_id = t and m.atleta_id = auth.uid() and m.stato = any (stati)
-       and (public.e_mio_coach(x.coach_id) or public.utente_admin(x.coach_id)))
+       and public.e_mio_coach(x.coach_id))
+$$;
+
+-- L'atleta `a` segue il coach del team `t`? Vale anche per i team di un admin:
+-- l'admin vede tutti gli atleti, ma nel team mette solo quelli che segue lui
+-- (in coach_atleti). Revisione del 09/11/2026: con «o è un admin» un atleta
+-- spostato a un altro coach restava nei team di Federico.
+create or replace function public.atleta_del_coach_del_team(t uuid, a uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.team x join public.coach_atleti ca on ca.coach_id = x.coach_id
+                  where x.id = t and ca.athlete_id = a)
 $$;
 
 create or replace function public.team_di_sfida(s uuid) returns uuid
@@ -137,7 +147,7 @@ begin
          or (old.stato = 'dentro'   and new.stato = 'uscito')) then
       raise exception 'team_membri: transizione non ammessa (% → %)', old.stato, new.stato;
     end if;
-    if not (public.e_mio_coach(t.coach_id) or public.utente_admin(t.coach_id)) then
+    if not public.e_mio_coach(t.coach_id) then
       raise exception 'team_membri: il team non è di un tuo coach';
     end if;
     if new.stato = 'dentro' and t.chiuso_il is not null then
@@ -154,6 +164,9 @@ begin
   end if;
   if exists (select 1 from public.athletes a where a.id = new.atleta_id and a.deleted_at is not null) then
     raise exception 'team_membri: atleta eliminato';
+  end if;
+  if not public.atleta_del_coach_del_team(new.team_id, new.atleta_id) then
+    raise exception 'team_membri: l''atleta non segue il coach del team';
   end if;
   if tg_op = 'INSERT' then
     if new.stato <> 'invitato' then
@@ -266,7 +279,7 @@ create policy "team_membri lettura" on public.team_membri
 create policy "team_membri invito" on public.team_membri
   as permissive for insert to authenticated
   with check (public.team_mio(team_id) and public.puo_scrivere_messaggi()
-              and public.mio_atleta(atleta_id) and stato = 'invitato');
+              and public.atleta_del_coach_del_team(team_id, atleta_id) and stato = 'invitato');
 create policy "team_membri risposta" on public.team_membri
   as permissive for update to authenticated
   using      ((public.team_mio(team_id) and public.puo_scrivere_messaggi()) or atleta_id = auth.uid())

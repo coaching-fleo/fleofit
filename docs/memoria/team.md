@@ -58,8 +58,20 @@ Rotte: `/team`, `/team/invito/:id`, `/team/:id`, `/team/:id/sfida/:sfidaId`, tut
 - 🔴 **`cancellaMieiRisultati` va chiamata PRIMA di uscire**: dopo, la RLS nasconde le sfide.
 - Il trigger `team_risultati_regole` rifiuta scritture a sfida chiusa e valori oltre i tetti
   (tempo 86400 s, ripetizioni 10000, kg 100000, distanza 1000000 m), gli stessi di `TETTI`.
-- `membro_team()` accetta anche i team di un **admin** (`utente_admin()`): un admin invita atleti
-  che non sono in `coach_atleti` con lui.
+- 🔴 **Nel team entra solo chi segue il coach del team in `coach_atleti`, ANCHE se il coach è un
+  admin** (`atleta_del_coach_del_team`, `membro_team`). L'admin vede tutti gli atleti, ma il foglio
+  «Invita» propone solo i suoi. Un atleta spostato a un altro coach perde inviti e team, e
+  «Nuova sfida» lo salta. (Revisione del 09/11/2026: prima un admin bastava, e un atleta spostato
+  restava nei team di Federico.)
+- **La push dell'invito parte solo con l'interruttore `team` su `tutti`** (`invitiAccesi`): su
+  `admin` l'atleta non vede i Team e la notifica lo porterebbe alla Home. Gli inviti fatti su `admin`
+  restano validi ma **muti**: accendere `tutti` prima di invitare atleti veri.
+- Un invito, una notifica: il dedup vale per **l'invito corrente** (notifiche dopo `invitato_il`),
+  così il reinvito dopo un rifiuto arriva anche se la notifica vecchia è ancora lì.
+- Il tempo si scrive anche `4.07` o `4,07` (il tastierino di iPhone non ha «:»). Sole cifre =
+  secondi, e sotto il campo compare come vengono lette («= 6:47»).
+- «Nuova sfida» legge chi l'ha già **prima** di creare la sfida, e la cancella se le assegnazioni
+  falliscono: mai una sfida orfana.
 - Il risultato dal foglio RPE si scrive **solo online**, come la scarpa; offline si inserisce dal
   dettaglio sfida. Un errore dà un avviso e non tocca il completamento.
 - A sfida **chiusa** la classifica elenca solo chi ha un risultato (chi è entrato dopo non c'era);
@@ -75,6 +87,7 @@ Rotte: `/team`, `/team/invito/:id`, `/team/:id`, `/team/:id/sfida/:sfidaId`, tut
 1. Applicare `team_2026-11-06.sql` dal SQL editor.
 2. Eseguire `tools/verifica-team.sql`: nessuna riga `FALLITO`.
 3. Pubblicare `send-reminders` (porta `team_invito`).
-4. Accendere `team` su `admin` in `funzioni_app` (⚠️ `demo@fleofit.it` è admin) e provare su iPhone e
-   Android: push dell'invito ad app chiusa, deep link `/team/invito/:id`, tasto indietro.
-5. Poi `tutti`.
+4. Accendere `team` su `admin` in `funzioni_app` (⚠️ `demo@fleofit.it` è admin) e provare il lato
+   coach. ⚠️ Su `admin` gli inviti non mandano push e l'atleta non vede i Team.
+5. Poi `tutti`, e prove su iPhone e Android dal lato atleta: push dell'invito ad app chiusa, deep link
+   `/team/invito/:id`, tasto indietro, il campo del tempo col tastierino.

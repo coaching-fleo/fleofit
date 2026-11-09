@@ -80,6 +80,15 @@ describe('useSfidaCompletamento', () => {
     expect(result.current.riga.valido).toBe(true)
   })
 
+  // Solo cifre = secondi: «407» è 6:47, non 4:07. Si dice prima di salvare.
+  it('con sole cifre dice come le legge; con i separatori no', async () => {
+    const { result } = await monta()
+    act(() => result.current.riga.onCambia('407'))
+    expect(result.current.riga.lettura).toBe('= 6:47')
+    act(() => result.current.riga.onCambia('4.07'))
+    expect(result.current.riga.lettura).toBeNull()
+  })
+
   it('registra salva il valore in secondi', async () => {
     const { result } = await monta()
     act(() => result.current.riga.onCambia('4:07'))

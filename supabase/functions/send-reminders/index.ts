@@ -4,7 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
 import { atletaNotificaCoach, atletiDi, coachDi, destinatariNotificaCoach, idStaff, ruoloStaff } from "../_shared/staff.ts"
 import { testoNotificaCoach, testoGarminRegistrato } from "./testi.ts"
-import { TITOLO_INVITO, routeInvito, testoInvito, destinatariInvito } from "./team.ts"
+import { TITOLO_INVITO, routeInvito, testoInvito, destinatariInvito, invitiAccesi } from "./team.ts"
 import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, puoInviareQuestoMessaggio, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm, routeProva } from "./broadcast.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -502,14 +502,19 @@ serve(async (req) => {
           status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      // Con l'interruttore non su «tutti» l'atleta non vedrebbe l'invito: niente push.
+      const { data: funzione } = await supabase.from('funzioni_app').select('stato').eq('nome', 'team').maybeSingle();
+      if (!invitiAccesi(funzione?.stato)) {
+        return new Response(JSON.stringify({ success: true, sent: 0, motivo: 'funzione non accesa per tutti' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
       const route = routeInvito(team.id);
       const { data: righe, error: rErr } = await supabase
-        .from('team_membri').select('atleta_id, stato').eq('team_id', team.id);
+        .from('team_membri').select('atleta_id, stato, invitato_il').eq('team_id', team.id);
       if (rErr) throw rErr;
-      const { data: gia, error: giaErr } = await supabase.from('notifications').select('user_id').eq('route', route);
+      const { data: gia, error: giaErr } = await supabase.from('notifications').select('user_id, created_at').eq('route', route);
       if (giaErr) throw giaErr;
       const richiesti: string[] = Array.isArray(body.atleta_ids) ? body.atleta_ids : [];
-      const destinatari = destinatariInvito(righe || [], richiesti, (gia || []).map((r: any) => r.user_id));
+      const destinatari = destinatariInvito(righe || [], richiesti, gia || []);
       if (destinatari.length === 0) {
         return new Response(JSON.stringify({ success: true, sent: 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }

@@ -61,6 +61,7 @@ declare
   a2 uuid; a2_email text;           -- un altro suo atleta
   fuori uuid;                        -- un atleta non suo
   demo_id uuid;
+  c_admin uuid;                      -- un admin (caso 9-bis)
   w uuid;                            -- un workout qualsiasi
   t uuid; s uuid;
 begin
@@ -206,6 +207,28 @@ begin
     perform pg_temp.deve_fallire(format(
       'update public.team_membri set stato = ''dentro'' where team_id = %L and atleta_id = %L', t, a1),
       '9. accetta l''invito del coach vecchio');
+    raise exception 'SENTINELLA';
+  exception when others then if sqlerrm <> 'SENTINELLA' then raise; end if;
+  end;
+
+  -- ── 9-bis. lo stesso con il team di un ADMIN (il caso vero: Federico) ───
+  -- Un admin non vede passare l'atleta per «suo»: se l'atleta non è in
+  -- coach_atleti con l'admin, invito e team spariscono come per un coach.
+  begin
+    select u.id into c_admin from public.staff s3 join auth.users u on lower(u.email) = s3.email
+     where s3.ruolo = 'admin' and s3.email <> 'demo@fleofit.it' limit 1;
+    if c_admin is not null then
+      insert into public.team (nome, coach_id) values ('verifica 9-bis', c_admin) returning id into t;
+      insert into public.team_membri (team_id, atleta_id, stato) values (t, a1, 'invitato');
+      delete from public.coach_atleti where athlete_id = a1 and coach_id = c_admin;
+      perform pg_temp.come(a1, a1_email);
+      if pg_temp.conta(format('select 1 from public.team where id = %L', t)) <> 0 then
+        raise exception 'FALLITO: 9-bis. il team dell''admin è visibile a un atleta non suo';
+      end if;
+      perform pg_temp.deve_fallire(format(
+        'update public.team_membri set stato = ''dentro'' where team_id = %L and atleta_id = %L', t, a1),
+        '9-bis. accetta l''invito di un admin che non è il suo coach');
+    end if;
     raise exception 'SENTINELLA';
   exception when others then if sqlerrm <> 'SENTINELLA' then raise; end if;
   end;

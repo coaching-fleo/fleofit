@@ -195,12 +195,15 @@ export async function creaSfida({ teamId, workoutId, metrica, data }) {
   const { data: membri, error: e1 } = await supabase.from(MEMBRI)
     .select('atleta_id, stato').eq('team_id', teamId)
   if (e1) throw e1
-  const dentro = (membri || []).filter(m => m.stato === 'dentro').map(m => m.atleta_id)
-
-  const { data: sfida, error: e2 } = await supabase.from(SFIDE)
-    .insert({ team_id: teamId, workout_id: workoutId, metrica, verso: versoDi(metrica), data })
-    .select('id').single()
-  if (e2) throw e2
+  // Solo chi è dentro E segue ancora il coach del team: un atleta spostato a un
+  // altro coach non si può assegnare (la RLS di athlete_workouts lo rifiuta) e
+  // farebbe fallire l'insert di tutti (revisione 09/11/2026).
+  const { data: team, error: e0 } = await supabase.from(TEAM).select('coach_id').eq('id', teamId).single()
+  if (e0) throw e0
+  const { data: suoi, error: e5 } = await supabase.from('coach_atleti').select('athlete_id').eq('coach_id', team.coach_id)
+  if (e5) throw e5
+  const delCoach = new Set((suoi || []).map(r => r.athlete_id))
+  const dentro = (membri || []).filter(m => m.stato === 'dentro' && delCoach.has(m.atleta_id)).map(m => m.atleta_id)
 
   const { data: gia, error: e3 } = await supabase.from(ALLENAMENTI)
     .select('athlete_id, workout_id, completed_date')
@@ -211,11 +214,20 @@ export async function creaSfida({ teamId, workoutId, metrica, data }) {
     .map(a => a.athlete_id))
   const assegnati = dentro.filter(id => !hanno.has(id))
 
+  const { data: sfida, error: e2 } = await supabase.from(SFIDE)
+    .insert({ team_id: teamId, workout_id: workoutId, metrica, verso: versoDi(metrica), data })
+    .select('id').single()
+  if (e2) throw e2
+
   if (assegnati.length) {
     const { data: nuove, error: e4 } = await supabase.from(ALLENAMENTI)
       .insert(assegnati.map(athlete_id => ({ athlete_id, workout_id: workoutId, completed_date: data, status: 'pending' })))
       .select('id')
-    if (e4) throw e4
+    if (e4) {
+      // La sfida non resta orfana: nessuno l'ha ricevuta, e riprovare ne creerebbe un doppione.
+      await supabase.from(SFIDE).delete().eq('id', sfida.id)
+      throw e4
+    }
     ;(nuove || []).forEach((n) => {
       Promise.resolve()
         .then(() => supabase.functions.invoke('send-reminders', { body: { mode: 'immediate', record_id: n.id } }))
