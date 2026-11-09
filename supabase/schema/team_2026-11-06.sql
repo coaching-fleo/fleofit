@@ -193,7 +193,8 @@ create trigger team_membri_regole
 create or replace function public.team_risultati_regole() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare
-  sf public.team_sfide%rowtype;
+  sf    public.team_sfide%rowtype;
+  tetto numeric;
 begin
   if tg_op = 'UPDATE' and (new.sfida_id <> old.sfida_id or new.atleta_id <> old.atleta_id) then
     raise exception 'team_risultati: non si sposta una riga';
@@ -202,9 +203,13 @@ begin
   if sf.chiusa_il is not null then
     raise exception 'team_risultati: la sfida è chiusa';
   end if;
-  if new.valore > case sf.metrica
-       when 'tempo' then 86400 when 'ripetizioni' then 10000
-       when 'kg' then 100000 else 1000000 end then
+  -- ⚠️ Il tetto si calcola PRIMA dell'if: in plpgsql la condizione di un `if`
+  -- finisce al primo `then`, e un `case … when … then` lì dentro la tronca
+  -- («syntax error at end of input», 09/11/2026).
+  tetto := case sf.metrica
+             when 'tempo' then 86400 when 'ripetizioni' then 10000
+             when 'kg' then 100000 else 1000000 end;
+  if new.valore > tetto then
     raise exception 'team_risultati: valore fuori misura per %', sf.metrica;
   end if;
   new.inserito_il := now();

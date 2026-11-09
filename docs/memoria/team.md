@@ -84,6 +84,12 @@ Rotte: `/team`, `/team/invito/:id`, `/team/:id`, `/team/:id/sfida/:sfidaId`, tut
   è dentro con la sfida aperta di oggi da fare. La demo **non** esegue i trigger (`risposto_il`
   resta null). Le relazioni annidate del Team sono in `RELAZIONI` di `supabaseDemo.js`.
 
+- 🔴 **In plpgsql la condizione di un `if` finisce al primo `then`**: un `case … when … then`
+  dentro la condizione la tronca («syntax error at end of input»). Il primo tentativo di applicare
+  la migrazione (09/11/2026) si è fermato lì, e il `begin … commit` ha annullato tutto. Le SQL
+  nuove si controllano prima con il parser vero di Postgres (`@libpg-query/parser`,
+  `parseSync` + `parsePlPgSQLSync`), che quell'errore lo trova.
+
 ## Dopo il sì, in ordine (col committente)
 1. Applicare `team_2026-11-06.sql` dal SQL editor.
 2. Eseguire `tools/verifica-team.sql`: nessuna riga `FALLITO`.
