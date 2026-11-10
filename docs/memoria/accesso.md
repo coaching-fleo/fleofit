@@ -406,3 +406,13 @@ almeno 14 anni.». Test: `src/lib/__tests__/profiloAtleta.test.js`.
   dal rilievo 2.3.6 (`app-store.md`). Una data di nascita dichiarata che sbarra l'accesso potrebbe contare
   come verifica: rileggere la definizione nel questionario. E lo Store dichiara **16+**, l'informativa 14:
   incoerenza da chiarire con l'avvocato.
+
+## Onboarding: il bottone «Inizia ad usare l'app!» non usa più l'invio del modulo (10/11/2026)
+
+Un atleta appena iscritto, aperto il link della mail di conferma, compilava il profilo e il
+bottone non faceva nulla; in console: «Blocked form submission to '' because the form's frame
+is sandboxed and the 'allow-forms' permission is not set». La pagina era finita dentro un
+riquadro con `sandbox` (anteprima di posta / browser interno), che l'app non controlla. Chrome
+lì blocca l'invio PRIMA dell'evento `submit`, quindi `onSubmit` non partiva mai. Ora il bottone
+è `type="button"` con `onClick={handleComplete}` (in `App.jsx`, schermata di onboarding): il clic
+arriva sempre, perché gli script nel riquadro girano. Non rimetterlo `type="submit"`.

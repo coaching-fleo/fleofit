@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home coach · tre proposte</title>
+<link rel="stylesheet" href="comune.css">
+<style>
+.tre{max-width:1400px;margin:0 auto;padding:20px 20px 80px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+@media (max-width:1000px){.tre{grid-template-columns:1fr}}
+.scheda{display:flex;flex-direction:column;border-radius:28px;overflow:hidden;border:1px solid #232326;background:#0f0f10;transition:border-color .25s,transform .35s var(--esce)}
+.scheda:hover{border-color:var(--brand);transform:translateY(-3px)}
+.anteprima{height:460px;overflow:hidden;position:relative;background:#050505}
+.anteprima iframe{width:1440px;height:1100px;border:0;transform:scale(.55);transform-origin:0 0;pointer-events:none;position:absolute;left:calc(50% - 114px);top:-100px}
+.scheda div.t{padding:18px 20px 22px}
+.scheda h2{font-size:20px;font-weight:900;letter-spacing:-.02em}.scheda h2 b{color:var(--brand)}
+.scheda p{color:#9ca3af;font-size:13.5px;line-height:1.55;margin-top:6px}
+</style>
+</head>
+<body>
+<header class="intestazione">
+  <div class="riga-int"><span class="logo">FLEO<b>FIT</b> <span>· Home coach</span></span>
+    <nav class="scelta"><a href="proposta-a.html">Proposta A</a><a href="proposta-b.html">Proposta B</a><a href="proposta-c.html">Proposta C</a></nav></div>
+  <h1>Tre proposte per la Home coach</h1>
+  <p>Stesso contenuto del cruscotto di oggi (polso del team, oggi, da rivedere, da smaltire, prossimi giorni, gare), stessa palette. Cambia come è messo davanti al coach. Ogni proposta ha telefono e desktop. Dati finti.</p>
+</header>
+<section class="tre">
+  <a class="scheda" href="proposta-a.html"><div class="anteprima"><iframe src="proposta-a.html" tabindex="-1" title=""></iframe></div>
+    <div class="t"><h2><b>A</b> · Il giorno</h2><p>La giornata è un anello colorato per categoria, con la settimana in sette bolle sopra. Sotto, una lista sola di cose da guardare.</p></div></a>
+  <a class="scheda" href="proposta-b.html"><div class="anteprima"><iframe src="proposta-b.html" tabindex="-1" title=""></iframe></div>
+    <div class="t"><h2><b>B</b> · Le card</h2><p>Poche card grandi con un bottone ciascuna: la giornata in giallo, feedback e buchi nel programma affiancati, gli atleti di oggi con la foto.</p></div></a>
+  <a class="scheda" href="proposta-c.html"><div class="anteprima"><iframe src="proposta-c.html" tabindex="-1" title=""></iframe></div>
+    <div class="t"><h2><b>C</b> · La lista</h2><p>La più essenziale: una frase che riassume la giornata, quattro numeri, e quattro schede. Sul desktop, la riga scelta si apre accanto.</p></div></a>
+</section>
+</body>
+</html>

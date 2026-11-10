@@ -1,0 +1,102 @@
+/* Stili comuni alle tre proposte della Home coach. Palette di src/index.css, invariata. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+:root{
+  --brand:#f1ba17; --bg:#0B0B0B; --card:#1e1e1e; --alt:#222222; --s2:#2a2a2a; --pozzo:#111111;
+  --bordo:#2a2a2a; --bordo2:#333; --running:#0094C6; --gym:#14B8A6; --custom:#D11149; --ok:#22c55e;
+  --muted:#8b8f99; --testo2:#c9ccd4; --rosso:#ef4444; --arancio:#f97316;
+  --carta:linear-gradient(to bottom,#1c1c1f,#171719);
+  --ombra-carta:0 14px 28px -18px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.06);
+  --esce:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#050505;color:#fff;font-family:Inter,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+::selection{background:rgba(241,186,23,.35);color:#fff}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;text-align:left}
+button:focus-visible,a:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.num{font-variant-numeric:tabular-nums}
+
+/* ── La pagina di presentazione ── */
+.intestazione{max-width:1400px;margin:0 auto;padding:24px 20px 8px}
+.riga-int{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-weight:900;letter-spacing:-.02em;font-size:20px}.logo b{color:var(--brand)}
+.logo span{color:#6b7280;font-weight:700;font-size:15px}
+.scelta{display:flex;gap:4px;background:var(--pozzo);border:1px solid var(--bordo2);border-radius:14px;padding:4px}
+.scelta a{padding:8px 14px;border-radius:10px;font-size:13px;font-weight:700;color:#9ca3af}
+.scelta a[aria-current]{background:var(--s2);color:#fff}
+.intestazione h1{font-size:28px;font-weight:900;letter-spacing:-.03em;margin-top:22px}
+.intestazione p{color:#9ca3af;font-size:14px;line-height:1.55;margin-top:6px;max-width:760px}
+.scena{max-width:1400px;margin:0 auto;padding:24px 20px 80px;display:grid;grid-template-columns:375px minmax(0,1fr);gap:32px;align-items:start}
+@media (max-width:1100px){.scena{grid-template-columns:1fr;justify-items:center}}
+.note{display:flex;flex-direction:column;gap:14px;max-width:560px}
+.note h2{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.note ul{color:#9ca3af;font-size:13.5px;line-height:1.6;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.note li b{color:#e5e7eb}
+.titolo-desk{max-width:1400px;margin:0 auto;padding:8px 20px 14px;font-size:15px;font-weight:800;color:#9ca3af}
+
+/* ── Il telefono ── */
+.telefono{width:375px;max-width:100%;height:812px;border-radius:48px;background:var(--bg);
+  border:1px solid #26262a;box-shadow:0 40px 80px -30px rgba(0,0,0,.9),0 0 0 9px #141416,0 0 0 10px #2a2a2e;
+  overflow:hidden;position:relative;display:flex;flex-direction:column}
+.stato{height:50px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:15px;font-weight:700;position:relative;z-index:3}
+.stato i{width:118px;height:34px;border-radius:20px;background:#000;display:block}
+.scorre{flex:1;overflow-y:auto;padding:4px 16px 130px;scrollbar-width:none;position:relative}
+.scorre::-webkit-scrollbar{display:none}
+.home-bar{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(255,255,255,.85);z-index:5}
+
+/* ── Il desktop ── */
+.desktop{max-width:1400px;margin:0 auto 80px;padding:0 20px}
+.schermo{border-radius:18px;border:1px solid #26262a;background:var(--bg);overflow:hidden;
+  box-shadow:0 40px 80px -40px rgba(0,0,0,.9);display:grid;grid-template-columns:232px minmax(0,1fr);min-height:860px}
+@media (max-width:1100px){.schermo{grid-template-columns:1fr}.lato{display:none!important}}
+.lato{background:#0f0f10;border-right:1px solid #1d1d20;padding:22px 16px;display:flex;flex-direction:column;gap:22px}
+.lato .crea{background:var(--brand);color:#000;font-weight:900;font-size:14px;border-radius:14px;min-height:46px;display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 10px 22px -10px rgba(241,186,23,.5),inset 0 1px 0 rgba(255,255,255,.35)}
+.lato nav{display:flex;flex-direction:column;gap:2px}
+.lato nav a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;color:#9ca3af;font-weight:600;font-size:14px;cursor:pointer}
+.lato nav a:hover{background:#18181a;color:#fff}
+.lato nav a.attiva{background:#1c1c1f;color:#fff}.lato nav a.attiva svg{color:var(--brand)}
+.lato .io{margin-top:auto;display:flex;gap:10px;align-items:center;font-size:13px}
+.lato .io b{display:block}.lato .io span{color:var(--muted);font-size:12px}
+.lato .io .volto{width:36px;height:36px}
+.corpo{padding:28px 32px 40px;min-width:0}
+
+/* ── Pezzi comuni ── */
+.volto{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#2a2a2a;display:block}
+.vetro{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  display:grid;place-items:center;position:relative;color:#e5e7eb;flex-shrink:0}
+.vetro .pallino{position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:50%;background:var(--brand);border:2px solid var(--bg)}
+.tacche{display:inline-flex;gap:3px;align-items:flex-end}
+.tacche i{width:5px;height:16px;border-radius:2px;display:block}
+.tacche i.vuota{border:1px dashed #4a4a4a}
+.meta{color:var(--muted);font-size:12.5px;font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:800;white-space:nowrap}
+.sez{display:flex;align-items:baseline;justify-content:space-between;margin:26px 2px 12px}
+.sez h2{font-size:18px;font-weight:800;letter-spacing:-.02em}
+.sez .link{font-size:13px;font-weight:700;color:var(--brand)}
+.carta{background:var(--carta);border:1px solid var(--bordo);border-radius:24px;box-shadow:var(--ombra-carta)}
+
+/* tab bar capsula con il bottone centrale (Crea workout) */
+.barra{position:absolute;left:12px;right:12px;bottom:20px;height:70px;border-radius:999px;z-index:4;
+  background:rgba(30,30,34,.88);backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);
+  border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 40px -12px rgba(0,0,0,.9);display:flex;align-items:center;padding:0 6px}
+.barra .voce{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#8b8f9c;font-size:10px;font-weight:700}
+.barra .voce.attiva{color:#fff}.barra .voce.attiva svg{color:var(--brand)}
+.barra .centrale{flex:0 0 58px;height:58px;border-radius:50%;justify-content:center;background:var(--brand);color:#000;
+  box-shadow:0 0 0 5px rgba(241,186,23,.16),0 12px 22px -6px rgba(241,186,23,.55),inset 0 1px 0 rgba(255,255,255,.4);margin:0 4px;
+  transition:transform .2s var(--esce)}
+.barra .centrale svg{width:26px;height:26px;stroke-width:2.6}
+.barra .centrale:active{transform:scale(.94)}
+
+/* entrata unica: le sezioni salgono sfasate, una volta */
+@media (prefers-reduced-motion:no-preference){
+  .entra>*{animation:entra .6s var(--esce) both}
+  .entra>*:nth-child(2){animation-delay:.06s}.entra>*:nth-child(3){animation-delay:.12s}
+  .entra>*:nth-child(4){animation-delay:.18s}.entra>*:nth-child(5){animation-delay:.24s}
+  .entra>*:nth-child(n+6){animation-delay:.3s}
+}
+@keyframes entra{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+/* nelle anteprime dell'indice niente entrata: un iframe in secondo piano può fermarla al primo fotogramma */
+.in-anteprima .entra>*{animation:none}
+.in-anteprima .pannello{animation:none}.in-anteprima .note{visibility:hidden}

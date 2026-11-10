@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposta A · Il giorno</title>
+<link rel="stylesheet" href="comune.css">
+<style>
+/* ── Proposta A: il giorno in un anello ── */
+.testa{display:flex;align-items:center;gap:12px;padding:6px 2px 4px}
+.testa .volto{width:46px;height:46px;border:2px solid rgba(241,186,23,.5)}
+.testa .ciao{flex:1;min-width:0}
+.testa .ciao small{display:block;color:var(--muted);font-size:12.5px;font-weight:600}
+.testa .ciao b{font-size:19px;font-weight:800;letter-spacing:-.02em}
+
+.settimana{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:18px}
+.giorno{display:flex;flex-direction:column;align-items:center;gap:7px;padding:6px 0;border-radius:16px;transition:background .2s}
+.giorno:hover{background:#151517}
+.giorno .let{font-size:12px;font-weight:700;color:var(--muted)}
+.giorno .bolla{width:38px;height:38px;position:relative;display:grid;place-items:center;font-size:13.5px;font-weight:800}
+.giorno .bolla svg{position:absolute;inset:0;width:38px;height:38px;transform:rotate(-90deg)}
+.giorno.oggi .let{color:#fff}
+.giorno.oggi .bolla span{background:var(--brand);color:#000;width:28px;height:28px;border-radius:50%;display:grid;place-items:center}
+.giorno .buchi{width:5px;height:5px;border-radius:50%;background:var(--arancio)}
+.giorno .buchi.no{background:transparent}
+
+.anello-carta{margin-top:16px;padding:20px 18px;display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center}
+.anello{position:relative;width:150px;height:150px}
+.anello svg{width:150px;height:150px;transform:rotate(-90deg)}
+.anello .centro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.anello .centro small{font-size:11px;font-weight:700;color:var(--muted);background:#232326;padding:3px 8px;border-radius:999px}
+.anello .centro b{font-size:38px;font-weight:900;letter-spacing:-.04em;line-height:1;margin-top:6px}
+.anello .centro b span{font-size:20px;color:var(--muted);font-weight:800}
+.anello .centro em{font-style:normal;font-size:12px;color:var(--testo2);font-weight:600;margin-top:4px}
+.legenda{display:flex;flex-direction:column;gap:13px}
+.leg{display:flex;align-items:center;gap:10px}
+.leg .barretta{width:4px;height:30px;border-radius:2px;background:#2a2a2d;position:relative;overflow:hidden}
+.leg .barretta i{position:absolute;left:0;right:0;bottom:0;border-radius:2px}
+.leg b{font-size:15px;font-weight:800;display:block;line-height:1.1}
+.leg b span{color:var(--muted);font-weight:700}
+.leg small{font-size:12.5px;font-weight:700}
+
+.allarme{margin-top:12px;padding:14px;border-radius:20px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.28);display:flex;gap:12px;align-items:center}
+.allarme .testo{flex:1;min-width:0}
+.allarme b{font-size:14.5px;font-weight:800;display:block}
+.allarme p{font-size:12.5px;color:#fca5a5;margin-top:2px;line-height:1.35}
+.allarme button{background:#ef4444;color:#fff;font-weight:800;font-size:13px;padding:9px 13px;border-radius:999px;white-space:nowrap}
+
+.lista{display:flex;flex-direction:column}
+.riga{display:flex;gap:12px;align-items:flex-start;padding:13px 4px;border-bottom:1px solid #1c1c1f;transition:background .15s}
+.riga:last-child{border-bottom:0}
+.riga:hover{background:#121214}
+.riga .testo{flex:1;min-width:0}
+.riga .testo b{font-size:14.5px;font-weight:800}
+.riga .testo p{font-size:13.5px;color:var(--testo2);line-height:1.4;margin-top:2px}
+.riga .testo .meta{display:flex;gap:6px;align-items:center;margin-top:5px}
+.riga .chev{color:#4b4b52;margin-top:10px}
+.etichetta{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:6px}
+
+.polso{display:flex;gap:10px;overflow-x:auto;margin:0 -16px;padding:0 16px;scrollbar-width:none}
+.polso::-webkit-scrollbar{display:none}
+.tess{flex:0 0 140px;padding:14px;border-radius:20px}
+.tess small{font-size:12px;font-weight:700;color:var(--muted);display:block}
+.tess b{font-size:27px;font-weight:900;letter-spacing:-.03em;display:block;margin-top:6px;line-height:1}
+.tess b span{font-size:14px;color:var(--testo2);font-weight:700;margin-left:3px}
+.tess em{font-style:normal;font-size:12px;font-weight:700;display:block;margin-top:6px}
+
+.piano{padding:6px 14px 14px}
+.piano table{width:100%;border-collapse:separate;border-spacing:0 6px}
+.piano th{font-size:11.5px;color:var(--muted);font-weight:700;text-align:center;padding:6px 0 0}
+.piano td{text-align:center}
+.piano td:first-child{text-align:left;font-size:13px;font-weight:700;white-space:nowrap}
+.piano td:first-child .volto{width:26px;height:26px;display:inline-block;vertical-align:middle;margin-right:7px}
+.cella{height:26px;border-radius:8px;margin:0 3px;display:grid;place-items:center;font-size:10.5px;font-weight:800}
+.cella.vuota{border:1.5px dashed #3a3a3e;color:#5b5b62}
+.cella.vuota:hover{border-color:var(--brand);color:var(--brand)}
+
+.gara{display:flex;align-items:center;gap:12px;padding:14px;border-radius:20px;margin-bottom:10px}
+.gara .gg{width:52px;height:52px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.gara .gg b{font-size:20px;font-weight:900;line-height:1}.gara .gg small{font-size:10px;font-weight:800}
+.gara .testo{flex:1}.gara .testo b{font-size:14.5px;font-weight:800}
+.mucchio{display:flex}.mucchio .volto{width:26px;height:26px;border:2px solid #19191b;margin-left:-8px}
+.mucchio .volto:first-child{margin-left:0}
+.riga-dest{display:flex;align-items:center;gap:12px;padding:15px;border-radius:20px;margin-top:22px}
+.riga-dest .ic{width:40px;height:40px;border-radius:12px;background:#26262a;display:grid;place-items:center;color:var(--brand)}
+.riga-dest div{flex:1}.riga-dest b{font-size:14.5px;font-weight:800;display:block}
+
+/* desktop */
+.d-testa{display:flex;align-items:center;gap:16px}
+.d-testa h1{font-size:28px;font-weight:900;letter-spacing:-.03em}
+.d-testa .cerca{margin-left:auto;display:flex;align-items:center;gap:10px;background:#141416;border:1px solid var(--bordo);border-radius:14px;padding:0 14px;height:44px;width:340px;color:var(--muted);font-size:14px}
+.d-griglia{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:22px;align-items:start}
+.d-col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.d-carta{padding:18px 18px 8px}
+.d-carta h2{font-size:16px;font-weight:800;letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.d-carta h2 span{font-size:12.5px;color:var(--muted);font-weight:700}
+.d-polso{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.d-polso .tess{flex:none}
+.d-oggi .riga{align-items:center}
+.d-oggi .riga .testo p{font-size:12.5px;color:var(--muted)}
+.d-basso{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:18px;margin-top:18px}
+.d-basso .piano td:first-child{width:130px}
+</style>
+</head>
+<body>
+<main>
+  <section class="scena">
+    <div class="telefono">
+      <div class="stato"><span class="num">9:41</span><i></i><span>●●●</span></div>
+      <div class="scorre entra" id="tel"></div>
+      <div class="home-bar"></div>
+    </div>
+    <div class="note">
+      <h2>L'idea</h2>
+      <ul>
+        <li><b>La giornata è un anello</b>, come le calorie nel primo reference: 3 su 7 fatti, colorato per categoria. Accanto, le quattro categorie con quanti hanno chiuso.</li>
+        <li><b>La settimana in alto</b>, sette bolle: il giorno passato mostra quanto si è completato, il pallino arancione sotto un giorno futuro dice che ci sono atleti da programmare.</li>
+        <li><b>L'allarme rosso solo quando serve</b>: chi oggi ha un allenamento intenso e sta male, con «Alleggerisci» a un tocco.</li>
+        <li><b>«Da guardare»</b> è una lista sola: feedback, fermi e scaduti con la citazione, non un contatore.</li>
+        <li>Il polso del team scorre di lato, i prossimi 3 giorni sono una griglia con i buchi tratteggiati da riempire.</li>
+        <li><b>Il bottone + al centro</b> della tab bar crea un workout, come in tutti e quattro i reference.</li>
+      </ul>
+    </div>
+  </section>
+  <div class="titolo-desk">Desktop</div>
+  <section class="desktop"><div class="schermo" id="desk"></div></section>
+</main>
+<script src="dati.js"></script>
+<script>
+testataPagina('a', 'Proposta A · Il giorno', 'La Home risponde a una domanda: «come sta andando oggi?». Un anello in alto, una lista sola di cose da guardare sotto.');
+
+const C = D.cat;
+const fatti = D.oggi.filter(a => a.stato === 'fatto').length;
+const inCorso = D.oggi.filter(a => a.stato === 'in corso').length;
+
+// Anello a segmenti: uno per atleta, pieno se fatto, a metà se in corso
+function anello(dim = 150, spess = 12) {
+  const r = (dim - spess) / 2, circ = 2 * Math.PI * r, n = D.oggi.length, gap = 6;
+  const seg = circ / n - gap;
+  const ordine = [...D.oggi].sort((a, b) => ({ fatto: 0, 'in corso': 1, 'da fare': 2 }[a.stato] - { fatto: 0, 'in corso': 1, 'da fare': 2 }[b.stato]));
+  return `<svg viewBox="0 0 ${dim} ${dim}">${ordine.map((a, i) => {
+    const col = C[a.cat].colore;
+    const op = a.stato === 'fatto' ? 1 : a.stato === 'in corso' ? .45 : 0;
+    return `<circle cx="${dim/2}" cy="${dim/2}" r="${r}" fill="none" stroke="#2a2a2d" stroke-width="${spess}" stroke-linecap="round"
+        stroke-dasharray="${seg} ${circ - seg}" stroke-dashoffset="${-i * (seg + gap)}"/>
+      ${op ? `<circle cx="${dim/2}" cy="${dim/2}" r="${r}" fill="none" stroke="${col}" stroke-opacity="${op}" stroke-width="${spess}" stroke-linecap="round"
+        stroke-dasharray="${seg} ${circ - seg}" stroke-dashoffset="${-i * (seg + gap)}"/>` : ''}`;
+  }).join('')}</svg>`;
+}
+
+function cartaAnello() {
+  const per = Object.keys(C).map(k => {
+    const tot = D.oggi.filter(a => a.cat === k), f = tot.filter(a => a.stato === 'fatto').length;
+    return { k, tot: tot.length, f };
+  }).filter(x => x.tot);
+  return `<div class="carta anello-carta">
+    <div class="anello">${anello()}
+      <div class="centro"><small>Oggi</small><b class="num">${fatti}<span>/${D.oggi.length}</span></b><em>${inCorso} in corso</em></div>
+    </div>
+    <div class="legenda">${per.map(x => `
+      <div class="leg"><span class="barretta"><i style="height:${x.f / x.tot * 100}%;background:${C[x.k].colore}"></i></span>
+        <div><b class="num">${x.f}<span>/${x.tot}</span></b><small style="color:${C[x.k].colore}">${C[x.k].nome}</small></div></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function settimana() {
+  return `<div class="settimana">${D.settimana.map(g => {
+    const r = 16, c = 2 * Math.PI * r;
+    const giro = g.pct != null ? `<svg viewBox="0 0 38 38"><circle cx="19" cy="19" r="${r}" fill="none" stroke="#2a2a2d" stroke-width="3"/>
+      <circle cx="19" cy="19" r="${r}" fill="none" stroke="${g.pct === 100 ? '#22c55e' : '#f1ba17'}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${c * g.pct / 100} ${c}"/></svg>`
+      : `<svg viewBox="0 0 38 38"><circle cx="19" cy="19" r="${r}" fill="none" stroke="#333" stroke-width="1.5" stroke-dasharray="3 4"/></svg>`;
+    return `<button class="giorno ${g.oggi ? 'oggi' : ''}" aria-label="${g.n} novembre">
+      <span class="let">${g.g}</span><span class="bolla num">${giro}<span>${g.n}</span></span>
+      <i class="buchi ${g.buchi ? '' : 'no'}" title="${g.buchi ? g.buchi + ' da programmare' : ''}"></i></button>`;
+  }).join('')}</div>`;
+}
+
+function allarme() {
+  const a = D.oggi.find(x => x.allarme);
+  return `<div class="allarme">${volto(a.foto)}
+    <div class="testo"><b>${a.nome.split(' ')[0]} sta male, oggi ha intensità ${a.intensita}</b><p>Ha dormito poco e ha poca energia. ${a.titolo.split(' · ')[0]}.</p></div>
+    <button>Alleggerisci</button></div>`;
+}
+
+function rigaGuardare(v) {
+  const t = TIPO[v.tipo];
+  return `<button class="riga">${volto(v.foto)}
+    <div class="testo"><b>${v.nome}</b><p>${v.testo}</p>
+      <div class="meta"><span class="etichetta" style="color:${t.colore};background:${t.colore}1f">${t.etichetta}</span>${v.vocale ? `<span style="color:var(--brand)">${ic('onda')}</span>` : ''}<span>${v.meta}</span></div></div>
+    <span class="chev">${ic('chev')}</span></button>`;
+}
+
+function polso(cls = 'polso') {
+  const p = D.polso;
+  return `<div class="${cls}">
+    <div class="carta tess"><small>Aderenza 7 gg</small><b class="num">${p.aderenza.pct}<span>%</span></b><em style="color:#4ade80">↑ ${p.aderenza.delta} punti</em></div>
+    <div class="carta tess"><small>Come sta il team</small><b>${p.comeSta.parola}</b><em style="color:#fb923c">${p.comeSta.storte} da tenere d'occhio</em></div>
+    <div class="carta tess"><small>RPE medio</small><b class="num">${p.rpe.medio}</b><em style="color:#fb923c">Previsto ${p.rpe.previsto}</em></div>
+    <div class="carta tess"><small>Prossima gara</small><b class="num">${p.gara.giorni}<span>giorni</span></b><em style="color:var(--testo2)">${p.gara.nome}</em></div>
+  </div>`;
+}
+
+function piano(n = 7) {
+  return `<div class="carta piano"><table>
+    <tr><th></th>${D.giorni.map(g => `<th>${g}</th>`).join('')}</tr>
+    ${D.piano.slice(0, n).map(r => `<tr><td>${volto(r.foto)}${r.nome}</td>${r.g.map(c => `<td>${c
+      ? `<div class="cella" style="background:${C[c].colore}26;color:${C[c].colore}">${C[c].nome}</div>`
+      : `<button class="cella vuota" style="width:calc(100% - 6px)" aria-label="Programma">+</button>`}</td>`).join('')}</tr>`).join('')}
+  </table></div>`;
+}
+
+function gare() {
+  return D.gare.map(g => `<button class="carta gara" style="width:100%">
+    <span class="gg" style="background:${C[g.cat].colore}1f;color:${C[g.cat].colore}"><b class="num">${g.giorni}</b><small>giorni</small></span>
+    <div class="testo"><b>${g.nome}</b><div class="meta">${g.data}</div></div>
+    <div class="mucchio">${g.atleti.map(f => volto(f)).join('')}</div></button>`).join('');
+}
+
+// ── Telefono ──
+document.getElementById('tel').innerHTML = `
+  <div>
+    <div class="testa">${volto(D.coach.foto)}<div class="ciao"><small>mar 10 nov · 11 atleti · 1 in pausa</small><b>Buongiorno, Federico</b></div>
+      <button class="vetro" aria-label="Notifiche">${ic('bell')}<i class="pallino"></i></button></div>
+    ${settimana()}
+  </div>
+  <div>${cartaAnello()}${allarme()}</div>
+  <div>
+    <div class="sez"><h2>Da guardare <span class="meta num">· ${D.daGuardare.length}</span></h2><button class="link">Tutto</button></div>
+    <div class="lista">${D.daGuardare.map(rigaGuardare).join('')}</div>
+  </div>
+  <div><div class="sez"><h2>Il team</h2></div>${polso()}</div>
+  <div><div class="sez"><h2>Prossimi 3 giorni</h2><span class="meta">8 buchi</span></div>${piano()}</div>
+  <div><div class="sez"><h2>Gare</h2></div>${gare()}
+    <button class="carta riga-dest" style="width:100%"><span class="ic">${ic('grafico')}</span><div><b>Report settimanale</b><span class="meta">Aderenza, carico e chi richiede un'azione</span></div><span class="chev">${ic('chev')}</span></button>
+  </div>
+  ${tabBar()}`;
+// la tab bar va fuori dallo scorrimento
+const tb = document.querySelector('#tel .barra'); document.querySelector('.telefono').appendChild(tb);
+
+// ── Desktop ──
+document.getElementById('desk').innerHTML = `${lato()}
+  <div class="corpo entra">
+    <div class="d-testa"><div><div class="meta">martedì 10 novembre · 11 atleti · 1 in pausa</div><h1>Buongiorno, Federico</h1></div>
+      <div class="cerca">${ic('search')} Cerca un atleta o chiedi qualcosa…<span style="margin-left:auto;color:var(--brand)">${ic('mic')}</span></div>
+      <button class="vetro" aria-label="Notifiche">${ic('bell')}<i class="pallino"></i></button></div>
+    <div class="d-griglia">
+      <div class="d-col">
+        <div class="carta d-carta"><h2>Questa settimana <span>2 giorni con buchi</span></h2>${settimana()}<div style="height:10px"></div></div>
+        <div>${cartaAnello()}</div>
+        ${polso('d-polso')}
+      </div>
+      <div class="d-col">
+        ${allarme()}
+        <div class="carta d-carta d-oggi"><h2>Oggi in allenamento <span>${fatti}/${D.oggi.length}</span></h2>
+          <div class="lista">${D.oggi.map(a => `<button class="riga">${volto(a.foto)}
+            <div class="testo"><b>${a.nome}</b><p>${a.titolo}</p></div>${tacche(a.comeSta)}
+            <span class="pill" style="color:${a.stato === 'fatto' ? '#4ade80' : a.stato === 'in corso' ? '#f87171' : '#9ca3af'};background:${a.stato === 'fatto' ? 'rgba(34,197,94,.12)' : a.stato === 'in corso' ? 'rgba(239,68,68,.12)' : '#1f1f22'}">${statoTesto(a)}</span></button>`).join('')}</div></div>
+      </div>
+      <div class="d-col">
+        <div class="carta d-carta"><h2>Da guardare <span>${D.daGuardare.length}</span></h2><div class="lista">${D.daGuardare.map(rigaGuardare).join('')}</div></div>
+        <div class="carta d-carta"><h2>Da rivedere nel programma <span>${D.segnali.length}</span></h2><div class="lista">${D.segnali.map(s => `<button class="riga">${volto(s.foto)}<div class="testo"><b>${s.nome}</b><p>${s.testo}</p><div class="meta">${s.meta}</div></div><span class="chev">${ic('chev')}</span></button>`).join('')}</div></div>
+      </div>
+    </div>
+    <div class="d-basso">
+      <div><div class="sez" style="margin-top:6px"><h2>Prossimi 3 giorni</h2><span class="meta">8 buchi da programmare</span></div>${piano()}</div>
+      <div><div class="sez" style="margin-top:6px"><h2>Gare in arrivo</h2></div>${gare()}</div>
+    </div>
+  </div>`;
+</script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposta C · La lista</title>
+<link rel="stylesheet" href="comune.css">
+<style>
+/* ── Proposta C: una frase, quattro schede, una lista ── */
+.testa{display:flex;align-items:flex-start;gap:12px;padding:8px 2px 0}
+.testa .ciao{flex:1;min-width:0}
+.testa small{color:var(--muted);font-size:13px;font-weight:600}
+.testa h1{font-size:34px;font-weight:900;letter-spacing:-.035em;line-height:1.05;margin-top:2px}
+.frase{font-size:16.5px;line-height:1.45;color:var(--testo2);font-weight:500;margin-top:12px;max-width:34ch}
+.frase b{color:#fff;font-weight:800}
+.frase b.g{color:var(--brand)}
+
+.numeri{display:grid;grid-template-columns:repeat(4,1fr);margin-top:18px;border-top:1px solid #1d1d20;border-bottom:1px solid #1d1d20}
+.numeri div{padding:12px 0 12px 10px;border-left:1px solid #1d1d20}
+.numeri div:first-child{border-left:0;padding-left:2px}
+.numeri small{display:block;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}
+.numeri b{display:block;font-size:20px;font-weight:900;letter-spacing:-.03em;margin-top:3px}
+.numeri b span{font-size:12px;color:var(--testo2);font-weight:700;margin-left:1px}
+.numeri em{font-style:normal;font-size:11px;font-weight:700}
+
+.schede{display:flex;gap:8px;margin:18px -16px 0;padding:0 16px;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:2;
+  background:linear-gradient(var(--bg) 80%,transparent);padding-bottom:10px;padding-top:6px}
+.schede::-webkit-scrollbar{display:none}
+.schede button{height:40px;padding:0 16px;border-radius:999px;border:1px solid #333;font-size:14px;font-weight:700;color:#cfd2d8;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:7px;transition:background .25s var(--esce),color .25s,border-color .25s}
+.schede button span{font-size:12px;font-weight:800;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#26262a;display:inline-grid;place-items:center}
+.schede button[aria-selected=true]{background:var(--brand);border-color:var(--brand);color:#000}
+.schede button[aria-selected=true] span{background:rgba(0,0,0,.15)}
+
+.pannello{animation:pann .35s var(--esce)}
+@keyframes pann{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.gruppo-t{font-size:12px;font-weight:800;color:var(--muted);margin:16px 2px 4px;display:flex;justify-content:space-between}
+
+.riga{display:flex;gap:12px;align-items:center;padding:12px 4px;border-bottom:1px solid #18181b;width:100%;transition:background .15s;border-radius:4px}
+.riga:hover{background:#121214}
+.riga .testo{flex:1;min-width:0}
+.riga .testo b{font-size:14.5px;font-weight:800;display:block}
+.riga .testo p{font-size:13px;color:var(--testo2);line-height:1.4;margin-top:1px}
+.riga .testo .meta{margin-top:3px;display:block}
+.riga .azione{font-size:12.5px;font-weight:800;padding:8px 12px;border-radius:999px;white-space:nowrap;background:#222225;color:#e5e7eb;flex-shrink:0}
+.riga.urgente{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:18px;padding:12px;margin-bottom:6px}
+.riga.urgente .azione{background:#ef4444;color:#fff}
+.volto.mini{width:26px;height:26px;margin-left:-8px;border:2px solid var(--bg)}
+.punto{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cat{width:4px;align-self:stretch;border-radius:2px;flex-shrink:0}
+
+.giornata{padding:14px;border-radius:20px;margin-top:10px}
+.giornata .su{display:flex;justify-content:space-between;align-items:center}
+.giornata b{font-size:15px;font-weight:800}
+.giornata .volti{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.giornata .volti .volto{width:34px;height:34px}
+.giornata .volti .manca{outline:2px dashed #f97316;outline-offset:2px;opacity:.85}
+.giornata .bott{background:var(--brand);color:#000;font-weight:800;font-size:13px;padding:8px 14px;border-radius:999px}
+
+/* desktop: lista a sinistra, dettaglio a destra */
+.d-su{display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.d-su .frase{margin-top:6px;max-width:60ch}
+.d-su .cerca{margin-left:auto;display:flex;align-items:center;gap:10px;background:#141416;border:1px solid var(--bordo);border-radius:14px;padding:0 14px;height:44px;width:320px;color:var(--muted);font-size:14px}
+.d-numeri{grid-template-columns:repeat(4,minmax(0,1fr))}
+.d-numeri div{padding:16px 0 16px 18px}.d-numeri b{font-size:26px}.d-numeri small{font-size:12.5px}.d-numeri em{font-size:12.5px}
+.d-due{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:28px;margin-top:6px;align-items:start}
+.d-due .schede{margin:18px 0 0;padding-left:0}
+.d-due .riga[aria-current=true]{background:#17171a;box-shadow:inset 3px 0 0 var(--brand)}
+.dettaglio{position:sticky;top:20px;margin-top:24px;padding:24px;border-radius:28px;min-height:520px}
+.dettaglio .chi{display:flex;gap:14px;align-items:center}
+.dettaglio .chi .volto{width:56px;height:56px}
+.dettaglio .chi b{font-size:20px;font-weight:900;letter-spacing:-.02em;display:block}
+.dettaglio blockquote{font-size:19px;line-height:1.45;font-weight:600;margin-top:22px;color:#f3f4f6;max-width:40ch}
+.dettaglio .vocale{display:flex;align-items:center;gap:12px;margin-top:18px;padding:10px 14px 10px 10px;border-radius:999px;background:#141416;border:1px solid #26262a;width:fit-content}
+.dettaglio .vocale .play{width:36px;height:36px;border-radius:50%;background:var(--brand);color:#000;display:grid;place-items:center}
+.dettaglio .vocale .onde{display:flex;gap:3px;align-items:center}
+.dettaglio .vocale .onde i{width:3px;border-radius:2px;background:#5b5b62}
+.dettaglio .dati{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px}
+.dettaglio .dati div{background:#141416;border:1px solid #232326;border-radius:16px;padding:12px}
+.dettaglio .dati small{font-size:12px;color:var(--muted);font-weight:700;display:block}
+.dettaglio .dati b{font-size:20px;font-weight:900;margin-top:4px;display:block}
+.dettaglio .azioni{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap}
+.dettaglio .azioni button{height:46px;padding:0 18px;border-radius:14px;font-weight:800;font-size:14px}
+.dettaglio .azioni .prima{background:var(--brand);color:#000}
+.dettaglio .azioni .seconda{background:#222225;color:#fff;border:1px solid #2e2e32}
+</style>
+</head>
+<body>
+<main>
+  <section class="scena">
+    <div class="telefono">
+      <div class="stato"><span class="num">9:41</span><i></i><span>●●●</span></div>
+      <div class="scorre entra" id="tel"></div>
+      <div class="home-bar"></div>
+    </div>
+    <div class="note">
+      <h2>L'idea</h2>
+      <ul>
+        <li><b>La Home si legge in una frase</b>: «3 su 7 hanno finito, hai 4 cose da guardare e 5 buchi nel programma». I numeri importanti sono già nella frase.</li>
+        <li><b>Il polso del team è una riga di quattro numeri</b>, senza card: si guarda, non si tocca.</li>
+        <li><b>Quattro schede a pillola</b> (come «Week 1 / Week 2» del secondo reference): <b>Adesso</b>, <b>Oggi</b>, <b>Programma</b>, <b>Gare</b>. Tocca le pillole: funzionano.</li>
+        <li><b>«Adesso» è la lista delle cose da fare</b>, dalla più urgente: ogni riga dice cosa è successo e ha il verbo dell'azione («Alleggerisci», «Ascolta», «Chiama», «Rivedi»).</li>
+        <li>Sul <b>desktop</b> la stessa lista sta a sinistra e la riga scelta si apre a destra: il coach legge il feedback, ascolta la vocale e risponde senza cambiare pagina.</li>
+      </ul>
+    </div>
+  </section>
+  <div class="titolo-desk">Desktop · tocca una riga a sinistra</div>
+  <section class="desktop"><div class="schermo" id="desk"></div></section>
+</main>
+<script src="dati.js"></script>
+<script>
+testataPagina('c', 'Proposta C · La lista', 'La più essenziale: niente card decorative. Una frase che riassume la giornata, una riga di numeri, e una lista di cose da fare, ognuna con il suo verbo.');
+
+const C = D.cat;
+const fatti = D.oggi.filter(a => a.stato === 'fatto').length;
+const buchi = D.piano.reduce((n, r) => n + r.g.filter(x => !x).length, 0);
+const al = D.oggi.find(x => x.allarme);
+
+// «Adesso»: tutto ciò che chiede un'azione, dal più urgente
+const adesso = [
+  { id: 'al', urgente: true, foto: al.foto, nome: al.nome, testo: `Sta male e oggi ha intensità ${al.intensita}`, meta: `Sonno 2 · energia 2 · ${al.titolo}`, azione: 'Alleggerisci', tipo: 'allarme' },
+  ...D.daGuardare.map((v, i) => ({ id: 'g' + i, foto: v.foto, nome: v.nome, testo: v.testo, meta: v.meta, vocale: v.vocale, tipo: v.tipo,
+    azione: v.tipo === 'feedback' ? (v.vocale ? 'Ascolta' : 'Rispondi') : v.tipo === 'fermo' ? 'Chiama' : 'Sposta' })),
+  ...D.segnali.map((s, i) => ({ id: 's' + i, foto: s.foto, nome: s.nome, testo: s.testo, meta: s.meta, azione: 'Rivedi', tipo: 'segnale' })),
+];
+const COL = { allarme: '#ef4444', feedback: '#f1ba17', fermo: '#f97316', scaduto: '#9ca3af', segnale: '#38bdf8' };
+
+const rigaAdesso = (v, sel) => `<button class="riga ${v.urgente ? 'urgente' : ''}" data-id="${v.id}" ${sel ? 'aria-current="true"' : ''}>
+  ${v.urgente ? '' : `<span class="punto" style="background:${COL[v.tipo]}"></span>`}${volto(v.foto)}
+  <div class="testo"><b>${v.nome}</b><p>${v.testo}</p><span class="meta">${v.meta}</span></div>
+  <span class="azione">${v.azione}</span></button>`;
+
+const pannelli = {
+  adesso: (sel) => `<div class="gruppo-t"><span>Dalla più urgente</span><span>${adesso.length}</span></div>${adesso.map(v => rigaAdesso(v, v.id === sel)).join('')}`,
+  oggi: () => ['in corso', 'da fare', 'fatto'].map(st => {
+    const g = D.oggi.filter(a => a.stato === st); if (!g.length) return '';
+    return `<div class="gruppo-t"><span>${st === 'fatto' ? 'Fatto' : st === 'in corso' ? 'In corso' : 'Da fare'}</span><span>${g.length}</span></div>${g.map(a => `
+      <button class="riga"><span class="cat" style="background:${C[a.cat].colore}"></span>${volto(a.foto)}
+        <div class="testo"><b>${a.nome}</b><p>${a.titolo}</p><span class="meta">${C[a.cat].nome} · ${a.min} min · intensità ${a.intensita}${a.rpe ? ' · RPE ' + a.rpe : ''}</span></div>${tacche(a.comeSta)}</button>`).join('')}`;
+  }).join(''),
+  programma: () => D.giorni.map((g, i) => {
+    const mancano = D.piano.filter(r => !r.g[i]);
+    const ci = D.piano.filter(r => r.g[i]);
+    return `<div class="carta giornata"><div class="su"><div><b>${g} novembre</b><div class="meta">${ci.length} programmati · <span style="color:#fb923c">${mancano.length} da programmare</span></div></div>
+      ${mancano.length ? '<button class="bott">Programma</button>' : ''}</div>
+      <div class="volti">${ci.map(r => `<img class="volto" src="${r.foto}" alt="${r.nome}" title="${r.nome}">`).join('')}${mancano.map(r => `<img class="volto manca" src="${r.foto}" alt="${r.nome}" title="${r.nome}: da programmare">`).join('')}</div></div>`;
+  }).join(''),
+  gare: () => D.gare.map(g => `<button class="riga"><span class="cat" style="background:${C[g.cat].colore}"></span>
+      <div class="testo"><b>${g.nome}</b><span class="meta">${g.data} · ${g.atleti.length} ${g.atleti.length === 1 ? 'atleta' : 'atleti'}</span></div>
+      <span style="display:flex">${g.atleti.map(f => volto(f, 'mini')).join('')}</span><b class="num" style="font-size:22px;font-weight:900;margin-left:8px">${g.giorni}<span class="meta"> gg</span></b></button>`).join(''),
+};
+
+const schede = (attiva) => `<div class="schede" role="tablist">${[
+  ['adesso', 'Adesso', adesso.length], ['oggi', 'Oggi', `${fatti}/${D.oggi.length}`], ['programma', 'Programma', buchi], ['gare', 'Gare', D.gare.length],
+].map(([k, t, n]) => `<button role="tab" data-scheda="${k}" aria-selected="${k === attiva}">${t}<span class="num">${n}</span></button>`).join('')}</div>`;
+
+const numeri = (cls = '') => { const p = D.polso; return `<div class="numeri ${cls}">
+  <div><small>Aderenza 7 gg</small><b class="num">${p.aderenza.pct}<span>%</span></b><em style="color:#4ade80">↑ ${p.aderenza.delta}</em></div>
+  <div><small>Come sta</small><b>${p.comeSta.parola}</b><em style="color:#fb923c">${p.comeSta.storte} da guardare</em></div>
+  <div><small>RPE medio</small><b class="num">${p.rpe.medio}</b><em style="color:#fb923c">prev. ${p.rpe.previsto}</em></div>
+  <div><small>Gara</small><b class="num">${p.gara.giorni}<span>gg</span></b><em style="color:var(--muted)">Milano</em></div></div>`; };
+
+const frase = `<b>${fatti} su ${D.oggi.length}</b> hanno già finito. Hai <b class="g">${adesso.length} cose da guardare</b> e <b>${buchi} buchi</b> nei prossimi 3 giorni.`;
+
+// ── Telefono ──
+let schedaTel = 'adesso';
+function disegnaTel() {
+  document.getElementById('tel').innerHTML = `
+    <div><div class="testa"><div class="ciao"><small>Buongiorno, Federico</small><h1>Martedì 10</h1></div>
+      <button class="vetro" aria-label="Cerca">${ic('search')}</button><button class="vetro" aria-label="Notifiche">${ic('bell')}<i class="pallino"></i></button></div>
+      <p class="frase">${frase}</p>${numeri()}</div>
+    <div>${schede(schedaTel)}<div class="pannello">${pannelli[schedaTel]()}</div></div>`;
+}
+disegnaTel();
+document.querySelector('.telefono').insertAdjacentHTML('beforeend', tabBar());
+document.getElementById('tel').addEventListener('click', e => {
+  const b = e.target.closest('[data-scheda]'); if (!b) return;
+  schedaTel = b.dataset.scheda; disegnaTel(); document.getElementById('tel').classList.remove('entra');
+});
+
+// ── Desktop ──
+let schedaD = 'adesso', sel = 'g0';
+function dettaglio() {
+  const v = adesso.find(x => x.id === sel) || adesso[0];
+  const onde = Array.from({ length: 28 }, (_, i) => `<i style="height:${6 + Math.round(Math.abs(Math.sin(i * 1.7)) * 18)}px"></i>`).join('');
+  const titolo = { allarme: 'Da alleggerire oggi', feedback: 'Feedback', fermo: 'Fermo', scaduto: 'Scaduto', segnale: 'Da rivedere nel programma' }[v.tipo];
+  return `<div class="chi">${volto(v.foto)}<div><b>${v.nome}</b><span class="meta" style="color:${COL[v.tipo]}">${titolo}</span></div></div>
+    <blockquote>${v.testo}</blockquote>
+    ${v.vocale ? `<div class="vocale"><span class="play"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg></span><span class="onde">${onde}</span><span class="meta num">0:42</span></div>` : ''}
+    <div class="dati"><div><small>Allenamento</small><b style="font-size:15px">${v.meta.split(' · ')[0]}</b></div>
+      <div><small>RPE</small><b class="num">${(v.meta.match(/RPE (\d+)/) || [])[1] || '—'}</b></div>
+      <div><small>Aderenza 7 gg</small><b class="num">86%</b></div></div>
+    <div class="azioni"><button class="prima">${v.azione}</button><button class="seconda">Apri scheda atleta</button><button class="seconda">Segna come visto</button></div>`;
+}
+function disegnaD() {
+  document.getElementById('desk').innerHTML = `${lato()}
+  <div class="corpo">
+    <div class="d-su"><div><div class="meta">Buongiorno, Federico · 11 atleti · 1 in pausa</div><h1 style="font-size:34px;font-weight:900;letter-spacing:-.035em">Martedì 10 novembre</h1><p class="frase">${frase}</p></div>
+      <div class="cerca">${ic('search')} Cerca o chiedi…<span style="margin-left:auto;color:var(--brand)">${ic('mic')}</span></div></div>
+    ${numeri('d-numeri')}
+    <div class="d-due">
+      <div>${schede(schedaD)}<div class="pannello">${pannelli[schedaD](sel)}</div></div>
+      <div class="carta dettaglio">${dettaglio()}</div>
+    </div>
+  </div>`;
+}
+disegnaD();
+document.getElementById('desk').addEventListener('click', e => {
+  const s = e.target.closest('[data-scheda]'); if (s) { schedaD = s.dataset.scheda; disegnaD(); return; }
+  const r = e.target.closest('[data-id]'); if (r) { sel = r.dataset.id; disegnaD(); }
+});
+</script>
+</body>
+</html>

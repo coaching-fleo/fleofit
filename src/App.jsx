@@ -127,7 +127,7 @@ function Onboarding({ user, onComplete }) {
   }
 
   const handleComplete = async (e) => {
-    e.preventDefault()
+    e?.preventDefault()
     const manca = erroreProfilo({ name, surname, dob, weight, height })
     if (manca) return setErrore(manca)
     setErrore(null)
@@ -253,7 +253,13 @@ function Onboarding({ user, onComplete }) {
             </p>
           )}
 
-          <button type="submit" disabled={saving} className="w-full mt-2 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg flex justify-center items-center">
+          {/* 🔴 type="button" + onClick, NON type="submit" (10/11/2026). Aperto dal
+              link della mail di conferma dentro un riquadro con `sandbox` senza
+              `allow-forms` (anteprime di posta, browser interni), Chrome blocca
+              l'invio del modulo PRIMA dell'evento submit: onSubmit non parte e il
+              bottone sembra morto («Blocked form submission… allow-forms»). Il clic
+              invece arriva sempre, perché gli script lì girano. */}
+          <button type="button" onClick={handleComplete} disabled={saving} className="w-full mt-2 py-3.5 bg-brand text-black font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50 shadow-lg flex justify-center items-center">
             {saving ? 'Salvataggio...' : 'Inizia ad usare l\'app!'}
           </button>
         </form>
