@@ -662,3 +662,10 @@ interruttore, scelta già attiva, slider RPE) e uno in `HomeRecap.test.jsx`
 ⚠️ Si sente solo sul telefono: il Simulatore non ha il Taptic Engine.
 
 ---
+
+### La barra del coach col «+» al centro (11/11/2026)
+Dalla proposta A della Home coach (`tools/design-home/proposta-a.html`): Home · Calendario ·
+«+» · Atleti · Archivio. Il «+» è `Crea` in `Navbar.jsx`, un `NavLink` a `/create` (replace,
+`daBarra`) giallo pieno da 58px con l'alone, senza etichetta (`aria-label="Crea workout"`).
+Sta dentro la capsula: `--altezza-navbar` non è cambiata. La voce «Workout» col manubrio è
+sparita (e con lei il disegno `Manubrio`). La barra dell'atleta è la stessa di prima.

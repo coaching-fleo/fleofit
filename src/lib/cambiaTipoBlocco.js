@@ -23,7 +23,7 @@
 // dentro una riga.
 
 import { leggiEsercizio } from './leggiWorkout'
-import { HYROX_EXERCISES } from './esercizi'
+import { HYROX_EXERCISES, testoBox } from './esercizi'
 import { INTENSITA_PREDEFINITA } from './blocchiIA'
 import { TIPI_CON_INCREMENTO, TIME_CAP_PREDEFINITO, haIncremento } from './incremento'
 
@@ -52,7 +52,7 @@ export const rigaDaEsercizio = (ex) => {
   const misura = pieno(ex.exTime) ? ex.exTime : pieno(ex.meters) ? ex.meters : pieno(ex.reps) ? `${ex.reps} reps` : ''
   const passo = pieno(ex.ergoPace) && ex.ergoPace !== 'Libero' ? `@${ex.ergoPace}` : ''
   const carico = pieno(ex.kg) ? `${ex.kg} kg` : ''
-  const riga = [ex.name, misura, passo, pieno(ex.speed) ? ex.speed : '', carico].filter(Boolean).join(' · ')
+  const riga = [ex.name, misura, passo, pieno(ex.speed) ? ex.speed : '', carico, testoBox(ex)].filter(Boolean).join(' · ')
   return pieno(ex.notes) ? `${riga}${SEP_NOTA}${String(ex.notes).trim()}` : riga
 }
 

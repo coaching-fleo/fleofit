@@ -58,21 +58,30 @@ describe('atletiFermi', () => {
   it('chi non ha NESSUN completamento nella finestra è marcato `oltre`', () => {
     // Il caso che sbaglia in silenzio: senza `oltre`, un atleta sparito da sei
     // mesi verrebbe presentato come "fermo da 45 giorni" — preciso e falso.
-    const righe = atletiFermi([atleta('a')], [], opz)
-    expect(righe[0].giorni).toBe(FINESTRA_STORICO)
+    const righe = atletiFermi([atleta('a')], [assegnazione(1, 'a', -60), assegnazione(2, 'a', -40)], opz)
+    expect(righe[0].giorni).toBe(40)
     expect(righe[0].oltre).toBe(true)
   })
 
-  it('un allenamento assegnato ma NON completato non azzera il contatore', () => {
-    const righe = atletiFermi([atleta('a')], [assegnazione(1, 'a', -1)], opz)
+  it('chi si è appena iscritto, senza niente in programma, NON è fermo', () => {
+    // 11/11/2026: un coach appena registrato vedeva sé stesso «fermo da 45+
+    // giorni». Non si è fermato: non ha mai avuto niente da fare.
+    expect(atletiFermi([atleta('a')], [], opz)).toEqual([])
+    expect(atletiFermi([atleta('a')], [assegnazione(1, 'a', +1)], opz)).toEqual([])
+  })
+
+  it('senza completamenti si conta dal primo allenamento dovuto, e serve la soglia', () => {
+    expect(atletiFermi([atleta('a')], [assegnazione(1, 'a', -1)], opz)).toEqual([])
+    const righe = atletiFermi([atleta('a')], [assegnazione(1, 'a', -1), assegnazione(2, 'a', -7)], opz)
     expect(righe).toHaveLength(1)
+    expect(righe[0].giorni).toBe(7)
     expect(righe[0].oltre).toBe(true)
   })
 
   it('un completamento datato nel futuro non conta come allenamento fatto', () => {
     // Succede: il coach assegna a domani e l\'atleta lo segna in anticipo.
     // Prenderlo come "ultimo allenamento" nasconderebbe un fermo reale.
-    const righe = atletiFermi([atleta('a')], [completata(1, 'a', +2)], opz)
+    const righe = atletiFermi([atleta('a')], [completata(1, 'a', +2), assegnazione(2, 'a', -10)], opz)
     expect(righe).toHaveLength(1)
     expect(righe[0].oltre).toBe(true)
   })
@@ -81,7 +90,7 @@ describe('atletiFermi', () => {
     // La riga in Home scrive «ultimo 18 ago» sotto la barra. Per chi non ha
     // nessun completamento nella finestra quella data non esiste: mostrarne una
     // qualsiasi (il bordo della finestra) sarebbe precisa e falsa.
-    const f = atletiFermi([atleta('a'), atleta('b')], [completata(1, 'a', -9)], opz)
+    const f = atletiFermi([atleta('a'), atleta('b')], [completata(1, 'a', -9), assegnazione(2, 'b', -9)], opz)
     const conStorico = f.find(x => x.id === 'a')
     const senzaStorico = f.find(x => x.id === 'b')
     expect(conStorico.ultimo).toBe(giorno(-9))
@@ -100,7 +109,7 @@ describe('atletiFermi', () => {
   })
 
   it('compone il nome e regge un atleta senza cognome', () => {
-    const righe = atletiFermi([{ id: 'a', name: 'Anna', surname: null }], [], opz)
+    const righe = atletiFermi([{ id: 'a', name: 'Anna', surname: null }], [assegnazione(1, 'a', -9)], opz)
     expect(righe[0].nome).toBe('Anna')
   })
 })
@@ -113,7 +122,7 @@ describe('gli atleti in pausa', () => {
   it('non compaiono fra chi richiede attenzione, per quanto fermi siano', () => {
     // È tutto il punto della funzione: l'atleta ha AVVISATO che si ferma, e
     // continuare a segnalarlo trasforma l'unico allarme della Home in rumore.
-    const righe = atletiFermi([atleta('a'), inPausa('b')], [], opz)
+    const righe = atletiFermi([atleta('a'), inPausa('b')], [assegnazione(1, 'a', -9), assegnazione(2, 'b', -9)], opz)
     expect(righe.map(r => r.id)).toEqual(['a'])
   })
 
@@ -133,7 +142,7 @@ describe('gli atleti in pausa', () => {
 
   it('una nota normale non mette nessuno in pausa', () => {
     const conNota = { ...atleta('b'), notes: 'Preferisce allenarsi la sera' }
-    expect(atletiFermi([conNota], [], opz)).toHaveLength(1)
+    expect(atletiFermi([conNota], [assegnazione(1, 'b', -9)], opz)).toHaveLength(1)
     expect(contaInPausa([conNota])).toBe(0)
   })
 })

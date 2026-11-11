@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { User, ChevronRight, CalendarDays } from 'lucide-react'
 import { corsia } from '../lib/categorie'
 import { TONI_RISPOSTA } from '../lib/comeStai'
+import { CARD } from '../lib/stiliCard'
 
 const CARTA = 'bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl'
 
@@ -38,9 +39,9 @@ function Titolo({ id, children, meta, compatto }) {
 
 // ── Il polso del team ──────────────────────────────────────────────────────
 
-function Tessera({ etichetta, valore, unita, nota, tonoNota = 'text-gray-400', grafico, compatto }) {
+function Tessera({ etichetta, valore, unita, nota, tonoNota = 'text-gray-400', grafico, compatto, griglia }) {
   return (
-    <div className={`${CARTA} !rounded-[20px] flex flex-col gap-1.5 ${compatto ? 'shrink-0 w-[150px] p-3.5' : 'p-[18px] min-w-0'}`}>
+    <div className={`${griglia ? `${CARD} min-w-0 p-3.5` : `${CARTA} !rounded-[20px] ${compatto ? 'shrink-0 w-[150px] p-3.5' : 'p-[18px] min-w-0'}`} flex flex-col gap-1.5`}>
       <span className="text-[13px] font-semibold text-gray-400">{etichetta}</span>
       <div className="flex items-end justify-between gap-2">
         <span className={`${compatto ? 'text-[28px]' : 'text-[34px]'} leading-none font-black tracking-[-.03em] text-white whitespace-nowrap`}>
@@ -80,7 +81,10 @@ function TaccheTeam({ tacche }) {
   )
 }
 
-export function PolsoTeam({ aderenza, rpe, comeSta, gara, compatto = false }) {
+// `griglia` (10/11/2026): le stesse quattro tessere in 2×2, per la Home «Riepilogo».
+// La Home classica non la passa e resta com'era.
+export function PolsoTeam({ aderenza, rpe, comeSta, gara, compatto: compattoDato = false, griglia = false }) {
+  const compatto = compattoDato || griglia
   const segno = (n) => (n > 0 ? `↑ ${n}` : n < 0 ? `↓ ${Math.abs(n)}` : '=')
   const notaComeSta = comeSta.risposte === 0
     ? (comeSta.senzaRisposta > 0 ? `${comeSta.senzaRisposta} non ${comeSta.senzaRisposta === 1 ? 'ha' : 'hanno'} risposto` : 'Nessuna risposta oggi')
@@ -88,22 +92,22 @@ export function PolsoTeam({ aderenza, rpe, comeSta, gara, compatto = false }) {
        comeSta.senzaRisposta > 0 && `${comeSta.senzaRisposta} senza risposta`].filter(Boolean).join(' · ') || `${comeSta.risposte} risposte, tutte buone`
   return (
     <section aria-label="Il polso del team"
-      className={compatto ? 'flex gap-2.5 -mx-4 px-4 overflow-x-auto hide-scrollbar' : 'grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3'}>
-      <Tessera compatto={compatto} etichetta={compatto ? 'Aderenza 7 gg' : 'Aderenza · 7 giorni'}
+      className={griglia ? 'grid grid-cols-2 gap-2.5' : compatto ? 'flex gap-2.5 -mx-4 px-4 overflow-x-auto hide-scrollbar' : 'grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3'}>
+      <Tessera compatto={compatto} griglia={griglia} etichetta={compatto ? 'Aderenza 7 gg' : 'Aderenza · 7 giorni'}
         valore={aderenza.percentuale} unita="%"
         nota={aderenza.percentuale == null ? 'Niente assegnato' : aderenza.delta == null ? `${aderenza.fatti} su ${aderenza.assegnati}` : `${segno(aderenza.delta)} punti${compatto ? '' : ' sulla settimana prima'}`}
         tonoNota={aderenza.delta > 0 ? 'text-green-400' : aderenza.delta < 0 ? 'text-orange-400' : 'text-gray-400'}
         grafico={<BarreAderenza barre={aderenza.barre} />} />
-      <Tessera compatto={compatto} etichetta={compatto ? 'Come sta il team' : 'Come sta il team · oggi'}
+      <Tessera compatto={compatto} griglia={griglia} etichetta={compatto ? 'Come sta il team' : 'Come sta il team · oggi'}
         valore={comeSta.fascia?.etichetta ?? null}
         nota={notaComeSta}
         tonoNota={comeSta.giornateStorte > 0 ? 'text-orange-400' : 'text-gray-400'}
         grafico={<TaccheTeam tacche={comeSta.tacche} />} />
-      <Tessera compatto={compatto} etichetta={compatto ? 'RPE medio' : 'RPE medio · settimana'}
+      <Tessera compatto={compatto} griglia={griglia} etichetta={compatto ? 'RPE medio' : 'RPE medio · settimana'}
         valore={rpe.medio != null ? virgola(rpe.medio) : null}
         nota={rpe.medio == null ? 'Servono almeno 2 RPE' : rpe.prevista != null ? `Previsto ${virgola(rpe.prevista)}` : `${rpe.quanti} dichiarati`}
         tonoNota={rpe.prevista != null && rpe.medio - rpe.prevista >= 1 ? 'text-orange-400' : 'text-gray-400'} />
-      <Tessera compatto={compatto} etichetta="Prossima gara"
+      <Tessera compatto={compatto} griglia={griglia} etichetta="Prossima gara"
         valore={gara ? gara.giorni : null} unita={gara ? (gara.giorni === 1 ? 'giorno' : 'giorni') : null}
         nota={gara ? `${gara.nome} · ${gara.atleti.length} ${gara.atleti.length === 1 ? 'atleta' : 'atleti'}` : 'Nessuna nei prossimi 60 giorni'}
         tonoNota={gara ? 'text-gray-300' : 'text-gray-400'} />
@@ -350,10 +354,15 @@ export function CardSmaltire({ voci = [], caricamento, compatto = false, mostrat
 const BORDO = { Hyrox: 'border-brand', Running: 'border-running', Gym: 'border-gym', Custom: 'border-custom', Event: 'border-white' }
 const LEGENDA = [['Hyrox', 'bg-brand'], ['Corsa', 'bg-running'], ['Gym', 'bg-gym'], ['Libero', 'bg-custom']]
 
-function Cella({ cella, compatto, onApri }) {
+/** Una cella della griglia. Con `onProgramma` la cella vuota futura è un bottone (Riepilogo). */
+export function Cella({ cella, compatto, onApri, onProgramma }) {
   const altezza = compatto ? 'h-[30px] text-[10px]' : 'h-[34px] text-[11px]'
   const base = `${altezza} w-full min-w-0 rounded-lg font-extrabold flex items-center justify-center overflow-hidden whitespace-nowrap px-1`
   if (cella.chips.length === 0) {
+    if (cella.quando === 'futuro' && onProgramma) return (
+      <button type="button" onClick={() => onProgramma(cella)} aria-label="Da programmare"
+        className={`${base} border-[1.5px] border-dashed border-[#3e3e43] text-[#55555c] transition hover:border-brand hover:text-brand`}>+</button>
+    )
     return cella.quando === 'futuro'
       ? <span className={`${base} border-[1.5px] border-dashed border-[#444] text-[#555]`} aria-label="Da programmare">+</span>
       : <span className={`${base} bg-[#161616] border border-[#222]`} aria-label="Niente" />

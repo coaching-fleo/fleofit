@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, createContext, useContext, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate, useNavigationType, useParams } from 'react-router-dom'
 import { supabase } from './supabaseClient'
+import { riscattaCodiceInvito } from './lib/codiceInvitoDb'
 import { App as CapacitorApp } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -405,22 +406,9 @@ function ProtectedRoute() {
           let isAuthorized = false;
 
           if (inviteCode) {
-            const { data } = await supabase.from('invitation_codes').update({
-               used_by: session.user.id,
-               used_at: new Date().toISOString(),
-               is_active: false,
-               used_by_email: session.user.email
-            })
-            .eq('code', inviteCode)
-            .is('used_by', null)
-            .select()
-    
-            if (data && data.length > 0) {
-              isAuthorized = true;
-            } else {
-              const { data: checkData } = await supabase.from('invitation_codes').select('id').eq('code', inviteCode).eq('used_by', session.user.id).maybeSingle()
-              if (checkData) isAuthorized = true;
-            }
+            // Dall'11/11/2026 il riscatto passa da una funzione del database
+            // (src/lib/codiceInvitoDb.js), con il ripiego sull'UPDATE di prima.
+            isAuthorized = await riscattaCodiceInvito(supabase, inviteCode, session.user)
           }
 
           if (!isAuthorized) {

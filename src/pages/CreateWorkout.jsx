@@ -16,7 +16,7 @@ import { it } from 'date-fns/locale'
 import { generaTitolo, titoliDelGiorno } from '../lib/workoutTitle'
 import { codiceWorkout, separaCodice, unisciCodice } from '../lib/codiceWorkout'
 import { candidatiNome, nuovoSeme, scegliNome, nomeLibero, eNomeGenerato, nomiGiaUsati } from '../lib/nomeCasuale'
-import { HYROX_EXERCISES, STAZIONI_HYROX, FAMIGLIE_HYROX, misuraEsercizio, isErgo, isSled, isCarry, isHybrid, isDistance, isTimed } from '../lib/esercizi'
+import { HYROX_EXERCISES, STAZIONI_HYROX, FAMIGLIE_HYROX, misuraEsercizio, isErgo, isSled, isCarry, isHybrid, isDistance, isTimed, conBox, ALTEZZE_BOX, testoBox } from '../lib/esercizi'
 import { mostraErrore } from '../lib/alert'
 import { battito, vibraPresa, vibraScelta, vibraSuccesso } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
@@ -217,7 +217,7 @@ const dettaglioEsercizio = (ex) => {
   const passo = (isErgo(ex.name) || ex.name === 'Run') && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : ''
   const velocita = ex.name === 'Run' && ex.speed && ex.speed !== '-' ? `@ ${ex.speed}` : ''
   const peso = ex.kg ? `${ex.kg}kg` : ''
-  return [misura, passo, velocita, peso].filter(Boolean).join(' ')
+  return [misura, passo, velocita, peso, testoBox(ex)].filter(Boolean).join(' ')
 }
 
 export const getIntensityColor = (val) => {
@@ -1188,6 +1188,8 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     const [exTime, setExTime] = useState(initialExercise?.exTime || '-')
 
   const [kg, setKg] = useState(initialExercise?.kg ? `${initialExercise.kg} kg` : '-')
+  // L'altezza della box (Burpees Box Jump): salvata nuda in `box`, tenuta qui con l'unità.
+  const [box, setBox] = useState(initialExercise?.box ? `${initialExercise.box} cm` : '-')
   const [intensity, setIntensity] = useState(initialExercise?.intensity || '5')
   const [notes, setNotes] = useState(initialExercise?.notes || '')
   // Solo in un EMOM: quanti intervalli di fila dura questo esercizio. Una
@@ -1272,6 +1274,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     if (ultimaVolta.ergoPace) setErgoPace(ultimaVolta.ergoPace)
     if (ultimaVolta.speed) setSpeed(ultimaVolta.speed)
     setKg(ultimaVolta.kg ? `${ultimaVolta.kg} kg` : '-')
+    if (ultimaVolta.box) setBox(`${ultimaVolta.box} cm`)
     if (ultimaVolta.intensity) setIntensity(ultimaVolta.intensity)
     // I modi seguono i valori, o il foglio mostrerebbe la scheda sbagliata:
     // un ibrido riusato «a distanza» resterebbe sulle ripetizioni vuote.
@@ -1339,6 +1342,13 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     }
   }
 
+  // L'altezza della box: le tre standard (50, 60, 75) come scorciatoie, e il
+  // righello per le altre.
+  const vistaBox = () => ({
+    chiave: 'box', etichetta: 'Altezza box', scala: 'altezzaBox', valore: box, onChange: setBox,
+    rapidi: ALTEZZE_BOX,
+  })
+
   const vistaDurata = () => ({
     chiave: 'exTime', etichetta: 'Durata', scala: 'tempo', valore: exTime, onChange: setExTime,
     rapidi: rapidiDi('exTime', RAPIDI_DURATA),
@@ -1401,6 +1411,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
     : selected === 'Run' ? [vistaMetri(RAPIDI_METRI), vistaPassoCorsa()]
     : selected === 'Rest' ? [vistaRecupero()]
     : isTimed(selected) ? [vistaDurata()]
+    : conBox(selected) ? [vistaRipetizioni(), vistaBox()]
     : isHybrid(selected) ? [hybridMode === 'distance' ? vistaMetri(RAPIDI_METRI_CORTI) : vistaRipetizioni(), vistaPeso()]
     : (isSled(selected) || isCarry(selected)) ? [vistaMetri(RAPIDI_METRI_CORTI), vistaPeso()]
     : isDistance(selected) ? [vistaMetri(RAPIDI_METRI), vistaPeso()]
@@ -1481,6 +1492,7 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
       ergoPace: isErgo(selected) || (selected === 'Run' && runPaceMode === 'pace') ? ergoPace : undefined,
       speed: selected === 'Run' && runPaceMode === 'speed' ? speed : undefined,
       kg: kg === 'Nessun peso' || kg === '-' || isErgo(selected) || isTimed(selected) || selected === 'Run' || selected === 'Rest' ? '' : kg.replace(' kg', ''),
+      box: conBox(selected) && box !== '-' ? box.replace(' cm', '') : undefined,
       intensity: selected === 'Rest' ? undefined : intensity,
       intervals: workoutType === 'EMOM' && intervalli > 1 ? String(intervalli) : undefined,
       // Con l'incremento spento l'aumento non si mostra ma si tiene, per

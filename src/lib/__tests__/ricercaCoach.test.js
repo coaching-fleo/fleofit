@@ -126,7 +126,10 @@ describe('cercaWorkout: i workout mai assegnati', () => {
 
 describe('cercaAtleti', () => {
   it('gli inattivi NON comprendono chi è in pausa', () => {
-    const r = cercaAtleti(dati, { inattivi_da_giorni: 5 }, OGGI)
+    // a3 ha anche un allenamento saltato il 01/10: senza, non avrebbe mai avuto
+    // niente da fare e non sarebbe «inattivo» (statisticheCoach.test.js).
+    const conSaltato = { ...dati, assegnazioni: [...dati.assegnazioni, aw('8', 'a3', '2026-10-01', 'pending', emom)] }
+    const r = cercaAtleti(conSaltato, { inattivi_da_giorni: 5 }, OGGI)
     // a2 fermo dal 20/09, a3 mai completato; a4 è in pausa e resta fuori.
     expect(r.risultati.map(x => x.atletaId).sort()).toEqual(['a2', 'a3'])
     expect(r.risultati.find(x => x.atletaId === 'a2').giorniFermo).toBe(19)

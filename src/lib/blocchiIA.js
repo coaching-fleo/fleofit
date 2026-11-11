@@ -11,6 +11,7 @@
  */
 
 import { intervalliDi } from './stazioniEmom'
+import { conBox } from './esercizi'
 import { TIPI_CON_INCREMENTO, TIME_CAP_PREDEFINITO } from './incremento'
 import { basso, passoCorsa, quantoCorsa, trovaEsercizio } from './leggiWorkout'
 import { campiVecchiRipetuta, intensitaRipetuta, MAX_PARTI } from './ripetute'
@@ -53,6 +54,17 @@ const intervalliValidi = (tipo, ex) => {
  */
 const nomeCanonico = (nome) => (typeof nome === 'string' ? trovaEsercizio(nome) ?? nome : nome)
 
+/**
+ * L'altezza della box (11/11/2026): un intero in cm, solo sugli esercizi che
+ * la hanno (`conBox`). «60 cm» → «60»; su un altro esercizio, o se non è un
+ * numero, il campo si toglie — il builder non saprebbe mostrarlo.
+ */
+const boxValida = (nome, box) => {
+  if (!conBox(nome)) return null
+  const n = parseInt(String(box ?? ''), 10)
+  return Number.isFinite(n) && n > 0 ? String(n) : null
+}
+
 /** Rest come esercizio non ha intensità, come nel picker. */
 const senzaIntensita = (ex) => ex?.name === 'Rest'
 
@@ -73,7 +85,8 @@ export function preparaBlocchiIA(blocchi) {
         ...b,
         id: Math.random(),
         exercises: (Array.isArray(b.exercises) ? b.exercises : []).map(ex => {
-          const { intensity, intervals: _intervals, aumento, ...resto } = ex || {}
+          const { intensity, intervals: _intervals, aumento, box, ...resto } = ex || {}
+          const altezza = boxValida(nomeCanonico(resto.name), box)
           const valore = senzaIntensita(ex) ? undefined : (intensitaValida(intensity) ?? INTENSITA_PREDEFINITA)
           const intervalli = intervalliValidi(b.type, ex)
           const n = parseInt(aumento, 10)
@@ -82,6 +95,7 @@ export function preparaBlocchiIA(blocchi) {
             ...(resto.name !== undefined ? { name: nomeCanonico(resto.name) } : {}),
             ...(valore ? { intensity: valore } : {}),
             ...(intervalli ? { intervals: intervalli } : {}),
+            ...(altezza ? { box: altezza } : {}),
             ...(conIncremento && Number.isFinite(n) && n !== 0 ? { aumento: String(n) } : {}),
             id: Math.random(),
           }

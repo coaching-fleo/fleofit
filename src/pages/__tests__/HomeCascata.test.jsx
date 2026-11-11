@@ -64,6 +64,9 @@ beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
   vi.setSystemTime(OGGI)
   window.localStorage.clear()
+  // Questi test provano la Home coach CLASSICA (il cruscotto), che dal 10/11/2026
+  // sta dietro l'interruttore «Home classica»: la Riepilogo ha i suoi (HomeRiepilogo.test.jsx).
+  window.localStorage.setItem('fleofit_home_classica', 'true')
   ctrl.righe = []
   ctrl.atleti = []
 })

@@ -12,6 +12,7 @@
 // che è l'unico punto che sa stimarla.
 
 import { haIncremento, testoForTime, testoTimeCap } from './incremento'
+import { testoBox } from './esercizi'
 
 /** «1 esercizio» / «3 esercizi». Zero non si scrive: un blocco vuoto lo dice da sé. */
 const esercizi = (n) => (n === 1 ? '1 esercizio' : `${n} esercizi`)
@@ -125,5 +126,5 @@ export const specificheEsercizio = (ex, isErgo = () => false) => {
   const velocita = pieno(ex.speed) ? ex.speed : ''
   const carico = pieno(ex.kg) ? `${ex.kg} kg` : ''
 
-  return [misura, passo, velocita, carico].filter(Boolean).join(' · ')
+  return [misura, passo, velocita, carico, testoBox(ex)].filter(Boolean).join(' · ')
 }

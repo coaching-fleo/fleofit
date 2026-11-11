@@ -7,6 +7,7 @@
 // Vedi CLAUDE.md §9 punto 1: src/lib è il posto di questa roba.
 
 import { ERGOMETERS } from './constants'
+import { testoBox } from './esercizi'
 import { fasiEmom } from './stazioniEmom'
 import { haIncremento, testoAumento, giriForTime } from './incremento'
 
@@ -108,7 +109,7 @@ export const buildTimerSequence = (workout) => {
         const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''));
         const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : '';
         const kgStr = ex.kg ? `${ex.kg}kg` : '';
-        return [ex.name, detail, paceStr, kgStr].filter(Boolean).join(' · ');
+        return [ex.name, detail, paceStr, kgStr, testoBox(ex)].filter(Boolean).join(' · ');
       };
       
       if (b.type === 'WarmUp' || b.type === 'Rest') {

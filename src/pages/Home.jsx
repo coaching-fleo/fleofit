@@ -16,6 +16,7 @@ import { battito, vibraPresa, vibraSuccesso } from '../lib/aptica'
 import { Network } from '@capacitor/network'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { leggiJson, scriviJson, leggiCoda, accodaSuStorage, chiaveCacheWorkout, CHIAVE_CODA } from '../lib/offlineQueue'
+import { leggiHomeClassica } from '../lib/homeClassica'
 import { mostraErrore } from '../lib/alert'
 import { sincronizzaBadge } from '../lib/badge'
 import RpeModal from '../components/RpeModal'
@@ -59,6 +60,10 @@ const HomeCoachDesktop = lazy(() => import('../components/HomeCoachDesktop'))
 // Il corpo della Home coach sul telefono: pigro anche lui, perché i conti del
 // cruscotto pesano e l'atleta non deve scaricarli (src/useCruscottoCoach.js).
 const HomeCoachTelefono = lazy(() => import('../components/HomeCoachTelefono'))
+// La Home coach «Riepilogo» (10/11/2026): numeri che aprono liste. La Home di
+// prima (le due qui sopra) resta dietro l'interruttore «Home classica».
+const HomeRiepilogoDesktop = lazy(() => import('../components/HomeRiepilogoDesktop'))
+const HomeRiepilogoTelefono = lazy(() => import('../components/HomeRiepilogoTelefono'))
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARD_BASE, CARTA_MODALE,
          TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
 
@@ -971,6 +976,18 @@ setNotifications(prev => {
 
   const scadutiConQuando = useMemo(() => scaduti.map(x => ({ ...x, quando: quandoScaduto(x) })), [scaduti])
   const fermiInHome = useMemo(() => fermi.slice(0, MASSIMO_FERMI_IN_HOME), [fermi])
+  // Quale Home coach: la «Riepilogo» o, con l'interruttore acceso, quella di prima.
+  // La Riepilogo riceve le liste INTERE (fermi e scaduti): dietro ogni numero
+  // c'è la lista completa; la classica resta con i suoi tagli.
+  const homeClassica = useMemo(() => leggiHomeClassica(), [])
+  const CorpoCoachDesktop = homeClassica ? HomeCoachDesktop : HomeRiepilogoDesktop
+  const CorpoCoachTelefono = homeClassica ? HomeCoachTelefono : HomeRiepilogoTelefono
+  const scadutiTutti = useMemo(() => (homeClassica ? null
+    : allenamentiScaduti(atletiCoach, assegnazioniCoach, { limite: Infinity }).map(x => ({ ...x, quando: quandoScaduto(x) }))),
+  [homeClassica, atletiCoach, assegnazioniCoach])
+  const fermiCoach = homeClassica ? fermiInHome : fermi
+  const scadutiCoach = homeClassica ? scadutiConQuando : scadutiTutti
+  const creaPer = ({ atletaId, data }) => navigate(`/create?athlete_id=${atletaId}&date=${data}`)
   const apriSeduta = (x) => navigate(`/workout/${x.workoutId}?athlete_id=${x.atletaId}`)
 
   /**
@@ -1241,7 +1258,7 @@ setNotifications(prev => {
           Le modali in fondo a questa pagina restano condivise. */}
       {desktop && (
         <Suspense fallback={<div className="min-h-screen" />}>
-          <HomeCoachDesktop
+          <CorpoCoachDesktop
             saluto={getGreeting()} nome={nome || userName}
             dataOggi={format(new Date(), 'EEEE d MMMM', { locale: it })}
             intestazione={`${atletiCoach.length} atleti${inPausa > 0 ? ` · ${inPausa} in pausa` : ''}`}
@@ -1249,9 +1266,12 @@ setNotifications(prev => {
             atleti={atletiCoach} assegnazioni={assegnazioniCoach} comeStai={comeStaiCoach}
             estratti={estrattiCoach} righeGare={gareCoach} copertura={coperturaTre}
             feedback={feedback.elementi} recupero={recuperoCoach}
-            fermi={fermiInHome}
-            scaduti={scadutiConQuando}
+            fermi={fermiCoach}
+            scaduti={scadutiCoach}
             squadra={squadra}
+            onCrea={creaPer}
+            onAnalisi={() => navigate('/analisi')}
+            onReport={() => navigate('/report')}
             live={liveVisibili}
             notificheDaLeggere={unreadCount}
             onNotifiche={openNotifications}
@@ -1375,12 +1395,14 @@ setNotifications(prev => {
 
           {/* Il corpo: pigro, src/components/HomeCoachTelefono.jsx. */}
           <Suspense fallback={<div className="rounded-[20px] border border-[#2a2a2a] bg-[#1e1e1e] h-[104px] animate-pulse" />}>
-            <HomeCoachTelefono
+            <CorpoCoachTelefono
               caricamento={loadingRecent}
               atleti={atletiCoach} assegnazioni={assegnazioniCoach} comeStai={comeStaiCoach}
               estratti={estrattiCoach} righeGare={gareCoach} copertura={coperturaTre}
               squadra={squadra}
-              feedback={feedback.elementi} recupero={recuperoCoach} fermi={fermiInHome} scaduti={scadutiConQuando}
+              feedback={feedback.elementi} recupero={recuperoCoach} fermi={fermiCoach} scaduti={scadutiCoach}
+              onCrea={creaPer}
+              onCalendario={() => navigate('/calendar')}
               onApriAtleta={(a) => navigate(`/athletes/${a.id}`)}
               onApriFeedback={apriFeedback}
               onApriScaduto={apriSeduta}

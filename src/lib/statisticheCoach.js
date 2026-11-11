@@ -72,7 +72,8 @@ const nomeCompleto = (a) => [a?.name, a?.surname].filter(Boolean).join(' ').trim
 
 /**
  * Gli atleti che stanno sparendo: nessun allenamento COMPLETATO da `soglia`
- * giorni o più, **esclusi quelli in pausa**.
+ * giorni o più, **esclusi quelli in pausa** e chi non ha ancora avuto niente
+ * da fare (appena iscritto, o mai programmato nella finestra).
  *
  * Una condizione sola, di proposito. È l'unico allarme della Home coach perché
  * è l'unico a cui la risposta è sempre la stessa — una telefonata — e perché
@@ -95,11 +96,28 @@ export function atletiFermi(atleti = [], assegnazioni = [], { soglia = GIORNI_FE
     if (!precedente || a.completed_date > precedente) ultimoCompletato.set(a.athlete_id, a.completed_date)
   }
 
+  // Il primo allenamento con data già arrivata, per chi non ne ha completato
+  // nessuno: dice da quando gli si chiede qualcosa.
+  const primoDovuto = new Map()
+  for (const a of assegnazioni) {
+    if (!a?.athlete_id || !a.completed_date || a.completed_date > oggiStr) continue
+    if (giorniFa(a.completed_date, oggi) > finestra) continue
+    const precedente = primoDovuto.get(a.athlete_id)
+    if (!precedente || a.completed_date < precedente) primoDovuto.set(a.athlete_id, a.completed_date)
+  }
+
   const fermi = []
   for (const atleta of atletiSeguiti(atleti)) {
     if (!atleta?.id) continue
     const ultimo = ultimoCompletato.get(atleta.id)
-    const giorni = ultimo ? giorniFa(ultimo, oggi) : finestra
+    // ⚠️ Senza completamenti si è «fermi» solo se c'era qualcosa da fare, e da
+    // almeno `soglia` giorni. Chi si è appena iscritto (11/11/2026: un coach
+    // nuovo vedeva SÉ STESSO «fermo da 45+ giorni» al primo accesso) o non ha
+    // ancora niente in programma non si è fermato: non ha cominciato. Quello lo
+    // dice la copertura («senza allenamento»), non l'allarme.
+    const dovuto = primoDovuto.get(atleta.id)
+    if (!ultimo && !dovuto) continue
+    const giorni = ultimo ? giorniFa(ultimo, oggi) : Math.min(giorniFa(dovuto, oggi), finestra)
     if (giorni < soglia) continue
     fermi.push({
       id: atleta.id,

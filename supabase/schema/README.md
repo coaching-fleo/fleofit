@@ -47,6 +47,7 @@ committente (CLAUDE.md §0, regola 0-bis).
 | `come_stai_2026-10-13.sql` | 14/10/2026 | «Come stai oggi», una riga per atleta per giorno |
 | `messaggi_coach_2026-10-15.sql` | 15/10/2026 | La bacheca «Messaggio a tutti» |
 | `multi_coach_2026-10-15.sql` | 16/10/2026 | Più coach: tabelle `staff` e `coach_atleti`, colonne `workouts.creato_da` e `messaggi_coach.destinatari`, e **riscrive** le policy di 12 tabelle (più i vocali in storage). ⚠️ Le policy di questo file sostituiscono quelle della fotografia del 25/08 e dei due file sopra |
+| `codici_invito_2026-11-11.sql` | ⛔ **no** | Codici invito: tempo 1 (due funzioni, additivo) e tempo 2 (toglie le policy aperte, rompe l'iscrizione dalle app 1.2.3 e precedenti). Due sì separati |
 
 ⚠️ La fotografia delle policy (`rls_snapshot_2026-08-25.sql`) è precedente: la policy
 `note_estratte solo admin` sta nel file della migrazione.

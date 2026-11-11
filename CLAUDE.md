@@ -22,7 +22,7 @@
 - **Schema del database congelato** (§0, regola 0-bis): l'approvazione è arrivata, ma lo
   sblocco resta una decisione del committente. **Un'eccezione**, il 09/10/2026: la tabella
   `note_estratte` («Dalle note», `docs/memoria/scheda-atleta.md`).
-- **App Store**: ⏳ **la 1.2.3 è caricata su App Store Connect il 06/11/2026** (codice di `55fd947`,
+- **App Store**: ✅ **la 1.2.3 è approvata** (registrato l'11/11/2026; caricata il 06/11/2026, codice di `55fd947`,
   Scarpe spente, Garmin ancora in beta quindi non nelle novità; esito da registrare in
   `docs/memoria/app-store.md`). ✅ **La 1.2.2 è approvata e rilasciata** (registrato il 28/10/2026; inviata il
   26/10, codice di `261a8e4` + versione 1.2.2, build 1 nel `pbxproj`; il task 4 dei Modelli di
@@ -595,6 +595,8 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   (`rounded-full`, `rgba(30,30,34,.88)`, blur 22 + saturate 170%, ombra proiettata) con
   10px d'aria sopra e 16px sotto. La voce attiva prende un **cerchio** da 36px dietro la
   sola icona, non una pillola dietro icona ed etichetta (§9-quaterdecies).
+  Dall'11/11/2026 quella del **coach** è Home · Calendario · **«+» giallo al centro** (Crea
+  workout, 58px con l'alone) · Atleti · Archivio (proposta A della Home); quella dell'atleta non cambia.
 - **Feedback aptico**: si passa SOLO dai sei verbi di `src/lib/aptica.js` (`battito`,
   `vibraScelta`, `vibraPresa`, `vibraSuccesso`, `vibraErrore`, `vibraRichiamo`), mai da
   `Haptics` o `navigator.vibrate` diretti — il secondo su iPhone non esiste. Dove vibrare e
@@ -618,6 +620,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_garmin_recupero_<uid>` (giorno e login dell'ultimo recupero delle attività Garmin, `docs/memoria/garmin.md`),
   `fleofit_ruolo_<uid>` (il ruolo dell'ultimo accesso con la rete: serve all'avvio senza rete, `src/lib/avvioSenzaRete.js`),
   `fleofit_funzioni` (l'ultimo stato letto degli interruttori di `funzioni_app`: serve all'avvio senza rete, `src/lib/funzioniApp.js`),
+  `fleofit_home_classica` (true = la Home coach di prima, il cruscotto, su questo dispositivo; assente = la «Riepilogo», `src/lib/homeClassica.js`),
   ⏳ `fleofit_messaggi_prova` (TEMPORANEO: le «Prova su di me» nella bacheca del coach),
   `adminRoleOverride`.
   ⚠️ `fleofit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
@@ -711,7 +714,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | Prima di toccare… | Leggi `docs/memoria/…` |
 |---|---|
 | `Home.jsx` (ramo atleta), `HomeAtletaUI`, `HomeAtletaVuotiUI`, `statistiche.js` | `home-atleta.md` |
-| `Home.jsx` (ramo coach), `HomeCoachUI`, `HomeCoachTelefono`, `HomeCoachDesktop`, `CruscottoCoachUI`, `cruscottoCoach.js`, `useCruscottoCoach.js`, `statisticheCoach.js`, `pausa.js` | `home-coach.md` |
+| `Home.jsx` (ramo coach), `HomeCoachUI`, `HomeCoachTelefono`, `HomeCoachDesktop`, `CruscottoCoachUI`, `cruscottoCoach.js`, `useCruscottoCoach.js`, `statisticheCoach.js`, `pausa.js`, `riepilogoCoach.js`, `useRiepilogoCoach.js`, `homeClassica.js`, `RiepilogoCoachUI`, `FoglioListaCoach`, `HomeRiepilogoTelefono`, `HomeRiepilogoDesktop` | `home-coach.md` |
 | `CreateWorkout.jsx`, `CreaWorkoutUI`, `CreaGym`, `SchedaGymUI`, `gym.js`, `eserciziGym.js`, `iaCategorie.js`, `blocchiIA.js`, Edge Function `ai-workout`, `HyroxBlock`, `RunningStepRow`, `Righello`, `FoglioMisure`, `scaleMisura.js`, foglio IA, `codiceWorkout.js`, `nomeCasuale.js`, `stazioniEmom.js`, `incremento.js`, `esercizi.js`, `leggiWorkout.js`, `testoDaFoto.js`, `lettoreTesto.js`, `FoglioDaTesto`, `LettoreTesto.swift`, `LettoreTestoPlugin.java`, salvataggio e bozza, `modelliBlocco.js`, `modelliBloccoDb.js`, `useModelliBlocco.js`, `Modelli.jsx`, `ModelliUI`, `FoglioModello` | `crea-workout.md` |
 | `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF, `comeStai.js`, `FoglioComeStai`, `TVDashboard.jsx`, `TVDashboardUI`, `personeTV.js`, `FoglioPersoneTV`, `codiceTV.js`, `lettoreQR.js`, `FoglioCollegaTV`, `FoglioChiediTV`, `sceltaTV.js`, `CollegaTV`, `LettoreQR.swift`, `LettoreQRPlugin.java`, `avanzaTimer.js`, `sessioneAudio.js`, `liveActivity.js`, `FoglioLiveActivity`, `LiveActivityPlugin.swift`, `AttivitaTimer.swift`, `ios/App/FleoTimer/` | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `CalendarioAtleta`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |

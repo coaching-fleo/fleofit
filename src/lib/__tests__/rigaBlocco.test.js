@@ -110,6 +110,12 @@ describe('le specifiche di un esercizio', () => {
   })
 })
 
+describe('l altezza della box nelle specifiche', () => {
+  it('«10 reps · box 60 cm»', () => {
+    expect(specificheEsercizio({ name: 'Burpees Box Jump', reps: '10', box: '60' })).toBe('10 reps · box 60 cm')
+  })
+})
+
 describe('l incremento a ogni giro nel sottotitolo (src/lib/incremento.js)', () => {
   const exercises = [{ name: 'Burpees', reps: '10', aumento: '5' }, { name: 'Row', meters: '200m' }]
   it('For Time con i giri: quante volte, entro quanto', () => {

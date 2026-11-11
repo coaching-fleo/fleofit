@@ -5,6 +5,15 @@ import { leggiHyrox, leggiCorsa, leggiEsercizio, leggiIntestazione, trovaEserciz
 // del coach (Note, foto della lavagna) vanno aggiunti in fondo, uno per
 // describe, PRIMA di cambiare una regola.
 
+describe('l altezza della box', () => {
+  it('«10 burpees box jump box 60 cm» tiene il nome e l altezza', () => {
+    const ex = leggiEsercizio('10 burpees box jump box 60 cm')
+    expect(ex.name).toBe('Burpees Box Jump')
+    expect(ex.reps).toBe('10')
+    expect(ex.box).toBe('60')
+  })
+})
+
 describe('pulisciRiga', () => {
   it('riduce apici tipografici, × e punti elenco', () => {
     expect(pulisciRiga('• 40″ on 20’’ off × 8')).toBe('40" on 20" off x 8')

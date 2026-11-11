@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { verificaCodiceInvito } from '../lib/codiceInvitoDb'
 import { Mail, Lock } from 'lucide-react'
 import { CustomAlert } from '../components/CustomModals'
 import { Browser } from '@capacitor/browser'
@@ -96,34 +97,28 @@ export default function Login() {
   /**
    * Verifica un codice contro il database.
    *
-   * ⚠️ `maybeSingle()` e non `single()`: con `single()` «nessuna riga» torna
-   * come **errore**, indistinguibile da un guasto di rete — e le due cose
-   * hanno due risposte opposte da dare all'utente («chiedi un codice nuovo»
-   * contro «riprova fra un momento»). Con `maybeSingle()` il codice assente è
-   * `data: null` con `error: null`, e la distinzione esiste.
+   * ⚠️ Tre esiti, non due: «rifiutato» e «offline» hanno due risposte opposte
+   * da dare all'utente («chiedi un codice nuovo» contro «riprova fra un
+   * momento»). La distinzione la tiene `verificaCodiceInvito`.
    */
   const verificaCodice = useCallback(async (daVerificare) => {
     setVerificando(true)
     setAvviso(null)
-    const { data, error } = await supabase
-      .from('invitation_codes')
-      .select('code')
-      .eq('code', daVerificare)
-      .eq('is_active', true)
-      .is('used_by', null)
-      .maybeSingle()
+    // Dall'11/11/2026 la verifica chiede solo «sì o no» al database, senza
+    // leggere la tabella (src/lib/codiceInvitoDb.js).
+    const esito = await verificaCodiceInvito(supabase, daVerificare)
     setVerificando(false)
 
     // L'esito si SENTE: la verifica parte da sola all'ottavo carattere, quindi
     // non c'è un bottone premuto che dica «ora sta rispondendo».
-    if (error) { vibraErrore(); return setAvviso(AVVISO_CODICE_OFFLINE) }
-    if (!data) { vibraErrore(); return setAvviso(AVVISO_CODICE_RIFIUTATO) }
+    if (esito === 'offline') { vibraErrore(); return setAvviso(AVVISO_CODICE_OFFLINE) }
+    if (esito === 'rifiutato') { vibraErrore(); return setAvviso(AVVISO_CODICE_RIFIUTATO) }
 
     // Da qui in poi il codice vive in localStorage: è `ProtectedRoute` a
     // riscattarlo (UPDATE con `used_by`), perché quella scrittura richiede una
     // sessione e a questo punto la sessione non c'è ancora.
-    localStorage.setItem('fleofit_invite_code', data.code)
-    setInvito(data.code)
+    localStorage.setItem('fleofit_invite_code', daVerificare)
+    setInvito(daVerificare)
     vibraSuccesso()
   }, [])
 

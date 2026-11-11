@@ -268,6 +268,17 @@ describe('il righello scrive il vocabolario di prima', () => {
     }
   })
 
+  it('il Burpees Box Jump sceglie l altezza della box: 50, 60 o 75 cm', async () => {
+    await apri('Burpees Box Jump')
+    await userEvent.click(screen.getByRole('button', { name: /^Altezza box:/ }))
+    for (const cm of ['50', '60', '75']) {
+      expect(screen.getByRole('button', { name: `${cm} cm` })).toBeInTheDocument()
+    }
+    await userEvent.click(screen.getByRole('button', { name: '75 cm' }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+    expect(screen.getByText(/box 75 cm/)).toBeInTheDocument()
+  })
+
   it('gli affondi propongono 10, 20 e 30 kg', async () => {
     await apri('Front Lunge')
     await userEvent.click(screen.getByRole('button', { name: /^Peso:/ }))

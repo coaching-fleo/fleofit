@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Home, Calendar, Users, Plus, ChartNoAxesColumn, ChartLine, FolderArchive, Settings, Search, Megaphone, LayoutTemplate } from 'lucide-react'
+import { Home, Calendar, Users, Plus, ChartNoAxesColumn, ChartLine, FolderArchive, Settings, Search, Megaphone, LayoutTemplate, Footprints } from 'lucide-react'
 import { useAuth } from '../App'
+import { useFunzione } from '../useFunzione'
 
 // La barra laterale della versione desktop (docs/piano-web-desktop.md, fase 2):
 // prende il posto della capsula in basso quando `eDesktop` è vero. Si carica
@@ -46,6 +47,9 @@ function Voce({ a, icona: Icona, etichetta, esatta }) {
 export default function BarraLaterale() {
   const { nome } = useAuth()
   const [ricercaAperta, setRicercaAperta] = useState(false)
+  // Le Scarpe (11/11/2026): una voce qui invece del banner nella Home coach.
+  // Solo se l'interruttore `scarpe` di funzioni_app è acceso per chi guarda.
+  const scarpe = useFunzione('scarpe')
 
   useEffect(() => {
     const suTasto = (e) => {
@@ -79,6 +83,7 @@ export default function BarraLaterale() {
         </button>
 
         {VOCI.map(v => <Voce key={v.a} {...v} />)}
+        {scarpe && <Voce a="/scarpe" icona={Footprints} etichetta="Scarpe" />}
 
         <div aria-hidden="true" className="h-px bg-[#1f1f1f] mx-3 my-3" />
         <Voce a="/settings" icona={Settings} etichetta="Impostazioni" />

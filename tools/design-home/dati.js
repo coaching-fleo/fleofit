@@ -130,7 +130,7 @@ window.lato = () => `
     <button class="crea">${ic('plus')} Crea workout</button>
     <nav>
       <a class="attiva">${ic('home')} Home</a><a>${ic('cal')} Calendario</a><a>${ic('users')} Atleti</a>
-      <a>${ic('folder')} Archivio</a><a>${ic('grafico')} Report</a>
+      <a>${ic('folder')} Archivio</a><a>${ic('grafico')} Analisi</a><a>${ic('libro')} Report</a>
     </nav>
     <div class="io">${volto(D.coach.foto)}<div><b>Federico Leo</b><span>Admin</span></div></div>
   </aside>`;
@@ -142,7 +142,7 @@ window.testataPagina = (lettera, titolo, sotto) => {
   t.innerHTML = `
     <div class="riga-int">
       <a href="index.html" class="logo">FLEO<b>FIT</b> <span>· Home coach</span></a>
-      <nav class="scelta">${['a', 'b', 'c'].map(l => `<a href="proposta-${l}.html" ${l === lettera ? 'aria-current="page"' : ''}>Proposta ${l.toUpperCase()}</a>`).join('')}</nav>
+      <nav class="scelta">${['a', 'b', 'b2', 'b3', 'c'].map(l => `<a href="proposta-${l}.html" ${l === lettera ? 'aria-current="page"' : ''}>Proposta ${l.toUpperCase()}</a>`).join('')}</nav>
     </div>
     <h1>${titolo}</h1><p>${sotto}</p>`;
   document.body.prepend(t);

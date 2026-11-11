@@ -1,23 +1,7 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Calendar, Users, User, FolderArchive } from 'lucide-react'
+import { Home, Calendar, Users, User, FolderArchive, Plus } from 'lucide-react'
 import { useAuth } from '../App'
 import { useTastieraAperta } from '../useTastiera'
-
-/**
- * Il manubrio dell'artboard, non quello di lucide.
- *
- * ⚠️ `Dumbbell` di lucide è diagonale con i dischi esagonali: accanto a `Home`,
- * `Calendar` e `Users` — che sono tutte forme diritte e sottili — stona, ed è
- * l'unica icona della barra che non sta sull'orizzontale. Il disegno usa un
- * bilanciere semplice e simmetrico. È la stessa eccezione già fatta per
- * `InstagramIcon` in AthleteDetail: lucide è la convenzione, non un vincolo.
- */
-const Manubrio = ({ size = 21, ...resto }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...resto}>
-    <path d="M6 6v12M3 9v6M18 6v12M21 9v6M6 12h12" />
-  </svg>
-)
 
 // La tab bar dell'artboard `Home Coach.dc.html`, opzione 2b.
 //
@@ -79,6 +63,24 @@ function Voce({ a, icona, children }) {
   )
 }
 
+/**
+ * Il «+» al centro della barra del coach (proposta A della Home, 11/11/2026):
+ * crea un workout. È l'azione che il coach fa più spesso, quindi non è una voce
+ * fra le altre ma il bottone giallo pieno, col suo alone. Niente etichetta:
+ * il più si legge da solo, il nome lo dice `aria-label`. Sta dentro l'altezza
+ * della capsula (58px su ~69 interni): `--altezza-navbar` non cambia.
+ */
+function Crea() {
+  return (
+    <NavLink to="/create" replace state={{ daBarra: true }} aria-label="Crea workout"
+      className="shrink-0 w-[58px] h-[58px] mx-1 rounded-full grid place-items-center text-black
+                 bg-gradient-to-b from-[#f8c83a] to-brand transition-transform duration-200 active:scale-[.94]
+                 shadow-[0_0_0_5px_rgba(241,186,23,.16),0_12px_22px_-6px_rgba(241,186,23,.55),inset_0_1px_0_rgba(255,255,255,.4)]">
+      <Plus size={26} strokeWidth={2.6} aria-hidden="true" />
+    </NavLink>
+  )
+}
+
 export default function Navbar() {
   const { role } = useAuth()
 
@@ -98,23 +100,24 @@ export default function Navbar() {
     // pagina sotto.
     <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none
                     px-3 pt-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-      <nav className="pointer-events-auto max-w-2xl mx-auto flex items-center justify-around gap-0.5 p-2
+      <nav aria-label="Navigazione principale" className="pointer-events-auto max-w-2xl mx-auto flex items-center justify-around gap-0.5 p-2
                       rounded-full bg-[#1e1e22]/[.88] border border-white/[.09]
                       backdrop-blur-[22px] backdrop-saturate-[1.7]
                       shadow-[0_12px_30px_-8px_rgba(0,0,0,.7),inset_0_1px_0_rgba(255,255,255,.06)]">
         <Voce a="/" icona={Home}>Home</Voce>
 
-        {/* ⚠️ Manubrio, non un più: la voce porta al builder ma nomina la
-            SEZIONE, non il gesto. È l'icona dell'artboard, in 2a e in 2b. */}
-        {role !== 'athlete' && <Voce a="/create" icona={Manubrio}>Workout</Voce>}
-
-        <Voce a="/archive" icona={FolderArchive}>Archivio</Voce>
-
-        <Voce a="/calendar" icona={Calendar}>Calendario</Voce>
-
-        {role !== 'athlete' && <Voce a="/athletes" icona={Users}>Atleti</Voce>}
-
-        {role === 'athlete' && <Voce a="/profile" icona={User}>Profilo</Voce>}
+        {role === 'athlete' ? (<>
+          <Voce a="/archive" icona={FolderArchive}>Archivio</Voce>
+          <Voce a="/calendar" icona={Calendar}>Calendario</Voce>
+          <Voce a="/profile" icona={User}>Profilo</Voce>
+        </>) : (<>
+          {/* Il coach (proposta A, 11/11/2026): due voci, il «+», due voci.
+              Prima il builder era la voce «Workout» col manubrio. */}
+          <Voce a="/calendar" icona={Calendar}>Calendario</Voce>
+          <Crea />
+          <Voce a="/athletes" icona={Users}>Atleti</Voce>
+          <Voce a="/archive" icona={FolderArchive}>Archivio</Voce>
+        </>)}
       </nav>
     </div>
   )

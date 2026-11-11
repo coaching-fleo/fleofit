@@ -48,6 +48,9 @@ describe('ai-workout: la categoria della richiesta', () => {
     expect(promptCategoria('Running', '8x400')).toContain('Testo dettato dall\'utente: "8x400"')
     expect(promptCategoria('Custom', 'circuito')).toMatch(/"testo"/)
     expect(promptCategoria('Hyrox', 'emom')).toMatch(/"EMOM"/)
+    // L'altezza della box (11/11/2026): il modello deve sapere del campo «box».
+    expect(promptCategoria('Hyrox', 'box jump 60')).toMatch(/"Burpees Box Jump"/)
+    expect(promptCategoria('Hyrox', 'box jump 60')).toMatch(/"box": "60"/)
   })
   it('la modifica manda l\'allenamento attuale, per ogni forma', () => {
     expect(istruzioniModifica([{ type: 'run', duration: '5 km' }], 'Running')).toMatch(/elenco di fasi[\s\S]*"5 km"|"5 km"[\s\S]*elenco di fasi/)

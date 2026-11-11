@@ -9,7 +9,7 @@ import { ERGOMETERS } from './constants'
 
 export const HYROX_EXERCISES = [
   'Assault Bike', 'Atlas Stone Load', 'Axle Bar Clean', 'Axle Bar Deadlift',
-  'Back Lunge', 'Back Squat', 'Bar Muscle-up', 'Bar Pullover', 'Battle Ropes', 'Bear Crawl', 'Box Jump', 'Burpees', 'Burpees Broad Jumps', 'Burpees Jump',
+  'Back Lunge', 'Back Squat', 'Bar Muscle-up', 'Bar Pullover', 'Battle Ropes', 'Bear Crawl', 'Box Jump', 'Burpees', 'Burpees Box Jump', 'Burpees Broad Jumps', 'Burpees Jump',
   'Chest-to-Bar', 'Clean', 'Cluster', 'Crossover Double Unders', 'Curve Treadmill',
   'D-Ball Clean', 'Deadlift', 'Deficit Deadlift', 'Deficit Handstand Push-up', 'Devil Press', 'Double Unders', 'Dragon Flag', 'Dual Dumbbell Clean and Jerk', 'Dual Dumbbell Snatch', 'Dumbbell Box Step-Over', 'Dumbbell Snatch', 'Dumbbell Step-Up',
   'Echo Bike',
@@ -60,6 +60,22 @@ export const isHybrid = (name) => HYBRID_EXERCISES.includes(name)
 export const TIMED_EXERCISES = ['Plank', 'Hollow Body Hold', 'L-Sit']
 export const isTimed = (name) => TIMED_EXERCISES.includes(name)
 
+/**
+ * Gli esercizi con la box di cui si sceglie l'ALTEZZA (richiesta del
+ * committente, 11/11/2026). L'altezza si salva nel campo `box` dell'esercizio,
+ * in centimetri e senza unità («60»), come `kg` per il peso. Un'app vecchia
+ * sugli Store il campo non lo conosce e semplicemente non lo mostra.
+ */
+export const BOX_EXERCISES = ['Burpees Box Jump', 'Box Jump']
+export const conBox = (name) => BOX_EXERCISES.includes(name)
+/** Le altezze standard, proposte come scorciatoie sotto il righello. */
+export const ALTEZZE_BOX = ['50 cm', '60 cm', '75 cm']
+/** «box 60 cm», o '' se l'altezza non c'è. Una forma sola per scheda, timer, PDF. */
+export const testoBox = (ex) => {
+  const v = String(ex?.box ?? '').trim()
+  return v && v !== '-' ? `box ${v} cm` : ''
+}
+
 export const isDistance = (name) => isErgo(name) || isSled(name) || DISTANCE_EXERCISES.includes(name)
 
 /**
@@ -80,7 +96,7 @@ export const FAMIGLIE_HYROX = [
   { id: 'manubri', nome: 'Manubri e kettlebell', voci: ['Devil Press', 'Dual Dumbbell Clean and Jerk', 'Dual Dumbbell Snatch', 'Dumbbell Snatch', 'Kettlebell Clean and Press', 'Kettlebell Snatch', 'Turkish Get-Up', 'Man Maker'] },
   { id: 'spinta', nome: 'Spinta', voci: ['Push Up', 'Military Press', 'Strict Press', 'Log Press', 'Ring Dips', 'Handstand Push-up', 'Strict Handstand Push-up', 'Deficit Handstand Push-up', 'Freestanding Handstand Push-up'] },
   { id: 'ginnastica', nome: 'Trazioni e ginnastica', voci: ['Pull-up', 'Strict Pull-up', 'Weighted Pull-up', 'Chest-to-Bar', 'Toes-to-Bar', 'Bar Muscle-up', 'Ring Muscle-up', 'Strict Muscle-up', 'Jumping Muscle-up', 'Rope Climb', 'Pegboard Ascent', 'Skin the Cat', 'Bar Pullover', 'Handstand Walk', 'Wall Walk'] },
-  { id: 'salti', nome: 'Burpees, salti e corda', voci: ['Burpees Broad Jumps', 'Burpees', 'Burpees Jump', 'Double Unders', 'Crossover Double Unders', 'Triple Unders', 'Jumping Jack', 'Battle Ropes'] },
+  { id: 'salti', nome: 'Burpees, salti e corda', voci: ['Burpees Broad Jumps', 'Burpees', 'Burpees Jump', 'Burpees Box Jump', 'Double Unders', 'Crossover Double Unders', 'Triple Unders', 'Jumping Jack', 'Battle Ropes'] },
   { id: 'core', nome: 'Core', voci: ['Plank', 'Hollow Body Hold', 'Hollow Rock', 'L-Sit', 'V-Up', 'GHD Sit-up', 'GHD Back Extension', 'GHD Hip Extension', 'Superman Rock', 'Dragon Flag'] },
 ]
 
@@ -94,4 +110,5 @@ export const misuraEsercizio = (name) =>
   : isErgo(name) || name === 'Run' ? 'metri · ritmo'
   : isHybrid(name) ? 'reps o metri · kg'
   : isDistance(name) ? 'metri · kg'
+  : conBox(name) ? 'reps · box'
   : 'reps · kg'

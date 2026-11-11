@@ -115,6 +115,7 @@ const SINONIMI = {
   pullup: 'Pull-up', trazioni: 'Pull-up', trazione: 'Pull-up',
   pushup: 'Push Up', piegamenti: 'Push Up', piegamento: 'Push Up', flession: 'Push Up', flessioni: 'Push Up',
   boxjump: 'Box Jump', bj: 'Box Jump',
+  burpeeboxjump: 'Burpees Box Jump', burpeesboxjump: 'Burpees Box Jump', burpeebox: 'Burpees Box Jump', bbxj: 'Burpees Box Jump',
   dl: 'Deadlift', stacco: 'Deadlift', stacchi: 'Deadlift',
   rdl: 'Romanian Deadlift',
   goblet: 'Kettlebell Goblet Squat', gobletsquat: 'Kettlebell Goblet Squat',
@@ -193,6 +194,10 @@ export const leggiEsercizio = (riga) => {
   if (m) { ex.ergoPace = `Z${m[1]}`; t = togli(t, m.index, m.index + m[0].length) }
   m = t.match(/(\d+)\s*rpm\b/)
   if (m) { ex.ergoPace = `${m[1]} RPM`; t = togli(t, m.index, m.index + m[0].length) }
+
+  // L'altezza della box: «box 60 cm», «60cm» (Burpees Box Jump).
+  m = t.match(/(?:\bbox\s*)?(\d{2,3})\s*cm\b/)
+  if (m) { ex.box = m[1]; t = togli(t, m.index, m.index + m[0].length) }
 
   // Il peso: «2x22,5kg», «24kg», «@ 24».
   m = t.match(/(\d)\s*x\s*(\d+(?:[.,]\d+)?)\s*kg\b/)

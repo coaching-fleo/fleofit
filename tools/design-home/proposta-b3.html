@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposta B3 · Numeri</title>
+<link rel="stylesheet" href="comune.css">
+<style>
+/* ── Proposta B3: la Home mostra numeri, i nomi stanno dietro ogni numero ── */
+.quanti{max-width:1400px;margin:14px auto 0;padding:0 20px;display:flex;align-items:center;gap:12px;color:#9ca3af;font-size:13.5px;font-weight:600}
+.quanti .scelta button{padding:8px 14px;border-radius:10px;font-size:13px;font-weight:700;color:#9ca3af}
+.quanti .scelta button[aria-pressed=true]{background:var(--s2);color:#fff}
+
+.testa{display:flex;align-items:center;gap:12px;padding:6px 2px 4px}
+.testa .volto{width:46px;height:46px}
+.testa .ciao{flex:1;min-width:0}
+.testa .ciao small{display:block;color:var(--muted);font-size:13px;font-weight:600}
+.testa .ciao b{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.cerca{margin-top:16px;display:flex;align-items:center;gap:10px;height:54px;padding:0 6px 0 16px;border-radius:999px;width:100%;
+  background:#161618;border:1px solid #26262a;color:var(--muted);font-size:14.5px;font-weight:500}
+.cerca .lente{color:var(--brand)}.cerca .lente svg{width:20px;height:20px;stroke-width:2.4}
+.cerca .scritta{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cerca .mic{width:42px;height:42px;border-radius:50%;background:var(--brand);color:#000;display:grid;place-items:center}
+
+.eroe{margin-top:18px;position:relative;overflow:hidden;border-radius:28px;background:var(--brand);color:#111;padding:20px 20px 18px;
+  box-shadow:0 22px 40px -22px rgba(241,186,23,.55),inset 0 1px 0 rgba(255,255,255,.4)}
+.eroe .cerchi{position:absolute;right:-60px;top:-50px;width:240px;height:240px;border-radius:50%;
+  background:repeating-radial-gradient(circle,transparent 0 18px,rgba(0,0,0,.07) 18px 30px)}
+.eroe small{font-size:13px;font-weight:700;opacity:.7;position:relative}
+.eroe h2{font-size:26px;font-weight:900;letter-spacing:-.03em;line-height:1.08;margin-top:4px;position:relative;max-width:230px}
+.eroe .pct{position:absolute;right:18px;top:18px;width:58px;height:58px}
+.eroe .pct svg{width:58px;height:58px;transform:rotate(-90deg)}
+.eroe .pct b{position:absolute;inset:0;display:grid;place-items:center;font-size:14px;font-weight:900}
+/* i tre stati di oggi, dentro la card gialla: ognuno si tocca */
+.stati{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px;position:relative}
+.stati button{background:rgba(0,0,0,.08);border-radius:16px;padding:10px 10px 9px;text-align:left;transition:background .2s}
+.stati button:hover{background:rgba(0,0,0,.14)}
+.stati b{display:block;font-size:22px;font-weight:900;letter-spacing:-.03em;line-height:1}
+.stati small{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:800;opacity:.75;margin-top:4px}
+.stati i{width:7px;height:7px;border-radius:50%;display:block}
+.barra-cat{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:14px;gap:2px;position:relative}
+.barra-cat span{display:block;height:100%}
+.leg-cat{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;font-weight:800;position:relative}
+.leg-cat span{display:inline-flex;align-items:center;gap:5px;opacity:.8}
+.leg-cat i{width:8px;height:8px;border-radius:2px;display:block}
+
+/* contatori rossi e colorati */
+.allarme{margin-top:12px;padding:14px;border-radius:22px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.28);display:flex;gap:14px;align-items:center;width:100%}
+.allarme .n{font-size:30px;font-weight:900;color:#f87171;letter-spacing:-.03em;min-width:34px;text-align:center}
+.allarme .testo{flex:1;min-width:0}
+.allarme b{font-size:14.5px;font-weight:800;display:block;line-height:1.3}
+.allarme p{font-size:12.5px;color:#fca5a5;margin-top:3px;line-height:1.35}
+.allarme .vai{background:#ef4444;color:#fff;font-weight:800;font-size:13px;padding:9px 14px;border-radius:999px;white-space:nowrap}
+.coppia{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.tes{border-radius:24px;padding:14px;background:#161618;border:1px solid #26262a;display:flex;flex-direction:column;gap:2px;min-height:150px}
+.tes small{font-size:12px;font-weight:700;color:var(--muted)}
+.tes b{font-size:30px;font-weight:900;letter-spacing:-.03em;line-height:1.05}
+.tes b span{font-size:15px;color:var(--testo2);font-weight:700;margin-left:4px}
+.tes .vai{margin-top:auto;border-radius:18px;padding:12px 12px 12px 14px;display:flex;align-items:center;justify-content:space-between;font-weight:800;font-size:14px}
+.tes .vai i{width:30px;height:30px;border-radius:50%;background:#fff;color:#000;display:grid;place-items:center}
+.tes .vai i svg{width:16px;height:16px;stroke-width:2.6}
+
+/* in allenamento oggi: card con la foto, si scorre a destra (dalla B2) */
+.foto-fila{display:flex;gap:10px;overflow-x:auto;margin:0 -16px;padding:0 16px 4px;scrollbar-width:none;scroll-snap-type:x mandatory}
+.foto-fila::-webkit-scrollbar{display:none}
+.fcard{flex:0 0 148px;height:196px;border-radius:24px;position:relative;overflow:hidden;scroll-snap-align:start;background:#1e1e1e}
+.fcard img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .5s var(--esce)}
+.fcard:hover img{transform:scale(1.04)}
+.fcard::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0) 35%,rgba(0,0,0,.88))}
+.fcard .su{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;z-index:1}
+.fcard .giu{position:absolute;left:12px;right:12px;bottom:12px;z-index:1}
+.fcard .giu b{font-size:15px;font-weight:800;display:block}
+.fcard .giu small{font-size:12px;color:#d1d5db;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fcard .stato-p{font-size:11px;font-weight:800;padding:4px 8px;border-radius:999px;backdrop-filter:blur(8px)}
+.fcard.fatto{opacity:.6}
+.fcard{text-align:left}
+.fcard.ancora{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#161618;border:1.5px dashed #333;color:var(--brand);font-weight:800;font-size:14px}
+.fcard.ancora::after{display:none}
+.fcard.ancora b{font-size:26px;color:#fff;font-weight:900}
+.d-foto{margin:0;padding:0 0 4px}
+.d-foto .fcard{flex:0 0 160px;height:214px}
+
+/* prossimi giorni: una colonna per GIORNO, si scorre di lato */
+.giorni-fila{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:0 16px 4px;scrollbar-width:none;scroll-snap-type:x proximity}
+.giorni-fila::-webkit-scrollbar{display:none}
+.gcard{flex:0 0 118px;border-radius:20px;padding:12px 12px 11px;scroll-snap-align:start;display:flex;flex-direction:column;gap:2px;text-align:left;transition:border-color .2s}
+.gcard:hover{border-color:#3a3a3e}
+.gcard .gg{font-size:12px;font-weight:700;color:var(--muted)}
+.gcard .gg b{color:#e5e7eb;font-size:15px;margin-left:2px}
+.gcard.oggi .gg,.gcard.oggi .gg b{color:var(--brand)}
+.gcard .buchi{font-size:26px;font-weight:900;letter-spacing:-.03em;line-height:1;margin-top:10px;color:#fb923c}
+.gcard .buchi.zero{color:#4ade80}
+.gcard small{font-size:11px;font-weight:700;color:var(--muted);line-height:1.35;white-space:nowrap}
+.gcard small.ok{color:#6b7280;font-weight:600}
+.gcard .mini{display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px;margin-top:8px;background:#26262a}
+.gcard .mini span{display:block;height:100%}
+.sez .nota{font-size:12.5px;font-weight:700;color:#fb923c}
+
+/* da guardare: righe-contatore */
+.contatori{display:flex;flex-direction:column;gap:8px}
+.cont{display:flex;align-items:center;gap:12px;padding:12px 14px 12px 12px;border-radius:22px;width:100%;transition:border-color .2s}
+.cont:hover{border-color:#3a3a3e}
+.cont .ic{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex-shrink:0}
+.cont .testo{flex:1;min-width:0}
+.cont .testo b{font-size:14.5px;font-weight:800;display:block}
+.cont .n{font-size:22px;font-weight:900;letter-spacing:-.03em}
+.cont .chev{color:#55555c}
+.cont.zero{opacity:.5}
+
+.quattro{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.q{padding:14px;border-radius:22px}
+.q small{font-size:12px;font-weight:700;color:var(--muted);display:block}
+.q b{font-size:26px;font-weight:900;letter-spacing:-.03em;display:block;margin-top:6px;line-height:1}
+.q b span{font-size:14px;color:var(--testo2);font-weight:700;margin-left:3px}
+.q em{font-style:normal;font-size:12px;font-weight:700;display:block;margin-top:6px}
+
+.gara{display:flex;align-items:center;gap:12px;padding:14px;border-radius:22px;margin-bottom:8px;width:100%}
+.gara .gg{width:52px;height:52px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.gara .gg b{font-size:20px;font-weight:900;line-height:1}.gara .gg small{font-size:10px;font-weight:800}
+.gara .testo{flex:1;min-width:0}.gara .testo b{font-size:14.5px;font-weight:800}
+.gara .quanti-g{font-size:13px;font-weight:800;color:var(--testo2);white-space:nowrap}
+.dest{display:flex;align-items:center;gap:12px;padding:14px;border-radius:22px;width:100%;margin-bottom:8px}
+.dest .ic{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex-shrink:0}
+.dest .testo{flex:1;min-width:0}.dest b{font-size:15px;font-weight:800;display:block}
+.dest .chev,.gara .chev{color:#55555c}
+
+/* ── il foglio con la lista: si apre da ogni numero ── */
+.foglio-velo{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:8;opacity:0;pointer-events:none;transition:opacity .3s}
+.foglio-velo.aperto{opacity:1;pointer-events:auto}
+.foglio{position:absolute;left:0;right:0;bottom:0;height:88%;z-index:9;background:#151517;border-top:1px solid #2a2a2e;border-radius:28px 28px 0 0;
+  display:flex;flex-direction:column;transform:translateY(102%);transition:transform .45s var(--esce);box-shadow:0 -20px 40px -10px rgba(0,0,0,.7)}
+.foglio.aperto{transform:none}
+.foglio .maniglia{width:40px;height:5px;border-radius:3px;background:#3a3a3e;margin:10px auto 4px}
+.foglio .su{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 18px 4px}
+.foglio h3{font-size:19px;font-weight:900;letter-spacing:-.02em}
+.foglio .chiudi{width:36px;height:36px;border-radius:50%;background:#26262a;display:grid;place-items:center;font-size:18px}
+.foglio .sotto{padding:0 18px;font-size:13px;color:var(--muted);font-weight:600}
+.foglio .campo{margin:12px 18px 0;display:flex;align-items:center;gap:10px;height:46px;border-radius:14px;background:#0f0f10;border:1px solid #2a2a2e;padding:0 14px;color:var(--muted)}
+.foglio .campo:focus-within{border-color:var(--brand)}
+.foglio .campo input{flex:1;background:none;border:0;outline:0;color:#fff;font:inherit;font-size:14.5px;min-width:0}
+.foglio .campo input::placeholder{color:#6b7280}
+.foglio .filtri{display:flex;gap:6px;overflow-x:auto;padding:12px 18px 6px;scrollbar-width:none;flex-shrink:0}
+.foglio .filtri::-webkit-scrollbar{display:none}
+.foglio .filtri button{height:34px;padding:0 13px;border-radius:999px;border:1px solid #333;font-size:12.5px;font-weight:700;color:#cfd2d8;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.foglio .filtri button span{font-size:11px;opacity:.7}
+.foglio .filtri button[aria-pressed=true]{background:#fff;color:#000;border-color:#fff}
+.foglio .lista{flex:1;overflow-y:auto;padding:4px 10px 30px;scrollbar-width:none}
+.foglio .lista::-webkit-scrollbar{display:none}
+.foglio .riga{display:flex;align-items:center;gap:12px;padding:10px 8px;border-bottom:1px solid #1e1e21;width:100%}
+.foglio .riga .volto{width:38px;height:38px}
+.foglio .riga .testo{flex:1;min-width:0}
+.foglio .riga b{font-size:14px;font-weight:800;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foglio .riga small{font-size:12px;color:var(--muted);font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foglio .riga .cat{width:4px;align-self:stretch;border-radius:2px;flex-shrink:0}
+.foglio .riga .stato{font-size:11.5px;font-weight:800;padding:4px 9px;border-radius:999px;white-space:nowrap}
+.foglio .vuoto{padding:40px 20px;text-align:center;color:var(--muted);font-size:14px}
+.foglio .altri{display:block;margin:12px auto;font-size:13px;font-weight:700;color:var(--brand);padding:8px 12px}
+.foglio .tutti{margin:0 18px 18px;height:48px;border-radius:14px;background:var(--brand);color:#000;font-weight:900;font-size:14.5px;flex-shrink:0;text-align:center}
+/* sul desktop il foglio è un pannello a destra */
+.schermo{position:relative;overflow:hidden}
+.schermo .foglio{left:auto;top:0;width:440px;height:100%;border-radius:0;border-top:0;border-left:1px solid #2a2a2e;transform:translateX(102%)}
+.schermo .foglio.aperto{transform:none}
+.schermo .foglio .maniglia{visibility:hidden}
+
+/* desktop */
+.d-testa{display:flex;align-items:center;gap:16px}
+.d-testa h1{font-size:28px;font-weight:900;letter-spacing:-.03em}
+.d-testa .cerca{margin:0 0 0 auto;width:380px;height:48px}
+.d-testa .cerca .mic{width:36px;height:36px}
+.bento{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:22px}
+.bento .eroe{grid-column:span 2;margin:0}
+.bento .eroe h2{font-size:30px;max-width:420px}
+.bento .tes{min-height:100%}
+.d-giorni{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(124px,1fr);gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.d-giorni::-webkit-scrollbar{display:none}
+.d-giorni .gcard{flex:none}
+.d-tre{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.d-dest{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+</style>
+</head>
+<body>
+<main>
+  <div class="quanti">Prova con:
+    <div class="scelta" role="group" aria-label="Quanti atleti">
+      <button data-n="11">11 atleti</button><button data-n="120">120 atleti</button><button data-n="500" aria-pressed="true">500 atleti</button>
+    </div>
+    <span>la Home resta lunga uguale.</span>
+  </div>
+  <section class="scena">
+    <div class="telefono">
+      <div class="stato"><span class="num">9:41</span><i></i><span>●●●</span></div>
+      <div class="scorre entra" id="tel"></div>
+      <div class="home-bar"></div>
+    </div>
+    <div class="note">
+      <h2>L'idea</h2>
+      <ul>
+        <li><b>La Home mostra numeri, non persone.</b> Con 11 o con 500 atleti è lunga uguale (prova i tre bottoni sopra).</li>
+        <li><b>Ogni numero si tocca</b> e apre la lista di quelle persone, con ricerca e filtri. Provalo: funziona.</li>
+        <li><b>Oggi</b>: fatti, in corso, da fare dentro la card gialla, e la barra per categoria.</li>
+        <li><b>In allenamento oggi</b> (dalla B2): le card con la foto, scorrono a destra. Prima chi sta male, poi chi è in corso, chi deve farlo e chi ha finito. Con 400 persone le card arrivano a blocchi di 20 mentre scorri: nessuno resta fuori.</li>
+        <li><b>Prossimi giorni</b>: una card per giorno, scorre di lato come il calendario di oggi. Il numero arancione è chi è da programmare quel giorno.</li>
+        <li><b>Da guardare</b>: feedback, fermi, scaduti e da rivedere sono quattro contatori.</li>
+        <li>Per un atleta preciso si usa la <b>barra di ricerca</b> in alto.</li>
+      </ul>
+    </div>
+  </section>
+  <div class="titolo-desk">Desktop · la lista si apre a destra</div>
+  <section class="desktop"><div class="schermo" id="desk"></div></section>
+</main>
+<script src="dati.js"></script>
+<script>
+testataPagina('b3', 'Proposta B3 · Numeri al posto delle persone', 'La B2 pensata per centinaia di atleti: la Home riassume con numeri, e ogni numero apre la lista delle persone, con ricerca e filtri.');
+
+const C = D.cat;
+const CATS = ['Hyrox', 'Corsa', 'Gym', 'Custom'];
+const FOTO = ['marco', 'giulia', 'sara', 'luca', 'chiara', 'elena', 'davide', 'sofia', 'andrea', 'paolo'].map(n => `foto/at-${n}.svg`);
+const NOMI = ['Marco', 'Giulia', 'Sara', 'Luca', 'Chiara', 'Elena', 'Davide', 'Sofia', 'Andrea', 'Paolo', 'Matteo', 'Francesca', 'Lorenzo', 'Alice', 'Tommaso', 'Martina', 'Simone', 'Giorgia', 'Riccardo', 'Valentina', 'Federica', 'Nicola', 'Irene', 'Alessio', 'Beatrice'];
+const COGNOMI = ['Rinaldi', 'Ferri', 'Conti', 'Bianchi', 'Moretti', 'Gallo', 'Costa', 'Greco', 'Ricci', 'Romano', 'Colombo', 'Marino', 'Bruno', 'Fontana', 'Rizzo', 'Lombardi', 'Barbieri', 'Esposito', 'Mancini', 'Villa'];
+const TITOLI = { Hyrox: ['Sled & Wall Balls', 'EMOM 30′', 'Interval Ski + Row', 'For Time stazioni'], Corsa: ['Lungo lento', 'Ripetute 6×1 km', 'Soglia 3×10′', 'Fondo 10 km'], Gym: ['Forza gambe', 'Spinta', 'Tirata', 'Full body'], Custom: ['Mobilità e core', 'Yoga', 'Core'] };
+const GG = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
+const giorni = Array.from({ length: 14 }, (_, i) => { const d = new Date(2026, 10, 10 + i); return { i, n: d.getDate(), g: GG[d.getDay()] }; });
+
+// Dati finti, sempre uguali per lo stesso numero di atleti
+function genera(N) {
+  let s = 7; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  return Array.from({ length: N }, (_, k) => {
+    const cat = CATS[Math.floor(r() ** 1.3 * 4)];
+    const nome = `${NOMI[k % NOMI.length]} ${COGNOMI[Math.floor(r() * COGNOMI.length)]}`;
+    const oggi = r() < .8;
+    const x = r();
+    const stato = !oggi ? null : x < .45 ? 'fatto' : x < .5 ? 'in corso' : 'da fare';
+    const comeSta = r() < .85 ? [0, 0, 0, 0].map(() => 1 + Math.floor(r() ** .6 * 5)) : null;
+    const intensita = 4 + Math.floor(r() * 6);
+    // prossimi 14 giorni: il coach programma di più i giorni vicini
+    const piano = giorni.map(g => g.i === 0 ? (oggi ? cat : null) : (r() < (g.i <= 3 ? .9 : g.i <= 6 ? .5 : .22) ? (r() < .75 ? cat : CATS[Math.floor(r() * 4)]) : null));
+    return {
+      id: k, nome, foto: FOTO[k % FOTO.length], cat, stato, comeSta, intensita, piano,
+      titolo: TITOLI[cat][Math.floor(r() * TITOLI[cat].length)], rpe: stato === 'fatto' ? 4 + Math.floor(r() * 6) : null,
+      allarme: stato === 'da fare' && intensita >= 8 && comeSta && Math.min(...comeSta) <= 2 && r() < .3,
+      feedback: stato === 'fatto' && r() < .14, fermo: r() < .025, scaduto: r() < .035, segnale: r() < .015,
+      giorniFermo: 5 + Math.floor(r() * 12),
+    };
+  });
+}
+
+let N = 500, A = genera(N);
+
+// ── i conteggi della Home ──
+function conti() {
+  const oggi = A.filter(a => a.stato);
+  const per = (st) => oggi.filter(a => a.stato === st).length;
+  return {
+    oggi: oggi.length, fatti: per('fatto'), inCorso: per('in corso'), daFare: per('da fare'),
+    perCat: CATS.map(c => [c, oggi.filter(a => a.cat === c).length]),
+    allarmi: A.filter(a => a.allarme).length,
+    feedback: A.filter(a => a.feedback).length, fermi: A.filter(a => a.fermo).length,
+    scaduti: A.filter(a => a.scaduto).length, segnali: A.filter(a => a.segnale).length,
+    buchi3: A.filter(a => [1, 2, 3].some(i => !a.piano[i])).length,
+    giorni: giorni.map(g => ({ ...g, ci: A.filter(a => a.piano[g.i]).length, buchi: A.filter(a => !a.piano[g.i]).length,
+      cat: CATS.map(c => [c, A.filter(a => a.piano[g.i] === c).length]) })),
+  };
+}
+
+// ── le liste che si aprono dai numeri ──
+const SOTTO = {
+  oggi: a => `${a.titolo} · ${C[a.cat].nome}`,
+  giorno: a => a.piano[giornoAperto] ? `${C[a.piano[giornoAperto]].nome}` : 'Niente in programma',
+  allarmi: a => `Intensità ${a.intensita} · sonno ${a.comeSta[0]} · energia ${a.comeSta[1]}`,
+  feedback: a => `${a.titolo} · RPE ${a.rpe}`,
+  fermi: a => `Nessun allenamento da ${a.giorniFermo} giorni`,
+  scaduti: a => `${a.titolo} · non segnato`,
+  segnali: a => 'RPE sopra il previsto su 3+ sedute',
+  buchi: a => `Scoperto: ${[1, 2, 3].filter(i => !a.piano[i]).map(i => giorni[i].g + ' ' + giorni[i].n).join(', ')}`,
+};
+const statoPill = (a) => a.stato === 'fatto' ? ['Fatto' + (a.rpe ? ' · RPE ' + a.rpe : ''), '#4ade80', 'rgba(34,197,94,.12)']
+  : a.stato === 'in corso' ? ['In corso', '#f87171', 'rgba(239,68,68,.14)'] : a.stato === 'da fare' ? ['Da fare', '#d1d5db', '#26262a'] : null;
+
+let giornoAperto = 1;
+const LISTE = {
+  oggi: { titolo: 'Oggi', persone: () => A.filter(a => a.stato), filtri: [['Tutti', null], ['Da fare', a => a.stato === 'da fare'], ['In corso', a => a.stato === 'in corso'], ['Fatto', a => a.stato === 'fatto'], ...CATS.map(c => [C[c].nome, a => a.cat === c])], azione: 'Apri il calendario di oggi' },
+  giorno: { titolo: () => `${giorni[giornoAperto].g} ${giorni[giornoAperto].n} novembre`, persone: () => A, chiave: 'giorno',
+    filtri: [['Da programmare', a => !a.piano[giornoAperto]], ['Programmati', a => !!a.piano[giornoAperto]], ['Tutti', null]], azione: 'Programma questo giorno' },
+  allarmi: { titolo: 'Da alleggerire oggi', persone: () => A.filter(a => a.allarme), filtri: [['Tutti', null]], azione: null },
+  feedback: { titolo: 'Feedback da leggere', persone: () => A.filter(a => a.feedback), filtri: [['Tutti', null], ...CATS.map(c => [C[c].nome, a => a.cat === c])], azione: 'Segna tutti come letti' },
+  fermi: { titolo: 'Fermi da 5+ giorni', persone: () => A.filter(a => a.fermo).sort((x, y) => y.giorniFermo - x.giorniFermo), filtri: [['Tutti', null]], azione: null },
+  scaduti: { titolo: 'Allenamenti scaduti', persone: () => A.filter(a => a.scaduto), filtri: [['Tutti', null]], azione: 'Sposta tutti a domani' },
+  segnali: { titolo: 'Da rivedere nel programma', persone: () => A.filter(a => a.segnale), filtri: [['Tutti', null]], azione: null },
+  buchi: { titolo: 'Da programmare · 3 giorni', persone: () => A.filter(a => [1, 2, 3].some(i => !a.piano[i])), filtri: [['Tutti', null], ...[1, 2, 3].map(i => [`${giorni[i].g} ${giorni[i].n}`, a => !a.piano[i]])], azione: 'Apri il calendario' },
+};
+
+// Un foglio per contenitore (telefono, desktop)
+function foglioIn(contenitore) {
+  contenitore.insertAdjacentHTML('beforeend', `<div class="foglio-velo"></div>
+    <section class="foglio" role="dialog" aria-modal="true" aria-label="Lista">
+      <div class="maniglia"></div>
+      <div class="su"><h3></h3><button class="chiudi" aria-label="Chiudi">×</button></div>
+      <div class="sotto"></div>
+      <label class="campo">${ic('search')}<input type="search" placeholder="Cerca per nome"></label>
+      <div class="filtri"></div>
+      <div class="lista"></div>
+      <button class="tutti"></button>
+    </section>`);
+  const f = contenitore.querySelector('.foglio'), velo = contenitore.querySelector('.foglio-velo');
+  const input = f.querySelector('input');
+  let chiave, filtro = 0, quanti = 60;
+  function disegna() {
+    const L = LISTE[chiave], tutte = L.persone();
+    const fn = L.filtri[filtro][1], q = input.value.trim().toLowerCase();
+    const viste = tutte.filter(a => (!fn || fn(a)) && (!q || a.nome.toLowerCase().includes(q)));
+    f.querySelector('h3').textContent = typeof L.titolo === 'function' ? L.titolo() : L.titolo;
+    f.querySelector('.sotto').textContent = `${viste.length} ${viste.length === 1 ? 'atleta' : 'atleti'}${q ? ` per «${input.value.trim()}»` : ''}`;
+    f.querySelector('.filtri').innerHTML = L.filtri.map(([t, g], i) => `<button data-f="${i}" aria-pressed="${i === filtro}">${t}<span class="num">${tutte.filter(a => !g || g(a)).length}</span></button>`).join('');
+    f.querySelector('.lista').innerHTML = viste.length ? viste.slice(0, quanti).map(a => {
+      const p = chiave === 'oggi' ? statoPill(a) : null, cat = chiave === 'giorno' ? a.piano[giornoAperto] : a.cat;
+      return `<button class="riga"><span class="cat" style="background:${cat ? C[cat].colore : '#3a3a3e'}"></span>${volto(a.foto)}
+        <div class="testo"><b>${a.nome}</b><small>${SOTTO[chiave](a)}</small></div>
+        ${p ? `<span class="stato" style="color:${p[1]};background:${p[2]}">${p[0]}</span>` : `<span style="color:#55555c">${ic('chev')}</span>`}</button>`;
+    }).join('') + (viste.length > quanti ? `<button class="altri">Mostra altri ${Math.min(60, viste.length - quanti)} di ${viste.length - quanti}</button>` : '')
+      : `<p class="vuoto">Nessuno${q ? ' con questo nome' : ''}.</p>`;
+    const t = f.querySelector('.tutti'); t.hidden = !L.azione; t.textContent = L.azione || '';
+  }
+  f.addEventListener('click', e => {
+    const b = e.target.closest('[data-f]'); if (b) { filtro = +b.dataset.f; quanti = 60; disegna(); }
+    if (e.target.closest('.altri')) { quanti += 60; disegna(); }
+    if (e.target.closest('.chiudi')) chiudi();
+  });
+  input.addEventListener('input', () => { quanti = 60; disegna(); });
+  velo.addEventListener('click', chiudi);
+  function chiudi() { f.classList.remove('aperto'); velo.classList.remove('aperto'); }
+  return { apri(k) { chiave = k; filtro = 0; quanti = 60; input.value = ''; disegna(); f.querySelector('.lista').scrollTop = 0; f.classList.add('aperto'); velo.classList.add('aperto'); } };
+}
+
+// ── In allenamento oggi: tutti, a blocchi di 20 mentre si scorre a destra ──
+const ORDINE = { 'in corso': 0, 'da fare': 1, fatto: 2 };
+const diOggi = () => A.filter(a => a.stato).sort((x, y) => (y.allarme - x.allarme) || ORDINE[x.stato] - ORDINE[y.stato]);
+const BLOCCO = 20;
+function fcard(a) {
+  const st = a.stato === 'fatto' ? ['rgba(34,197,94,.25)', '#86efac', `RPE ${a.rpe}`] : a.stato === 'in corso' ? ['rgba(239,68,68,.35)', '#fecaca', '● In corso']
+    : a.allarme ? ['rgba(239,68,68,.85)', '#fff', 'Sta male'] : ['rgba(0,0,0,.45)', '#e5e7eb', 'Da fare'];
+  return `<button class="fcard ${a.stato === 'fatto' ? 'fatto' : ''}"><img src="${a.foto}" alt="" loading="lazy">
+    <div class="su"><span class="pill" style="background:${C[a.cat].colore};color:${a.cat === 'Hyrox' ? '#000' : '#fff'}">${C[a.cat].nome}</span>
+      <span class="stato-p" style="background:${st[0]};color:${st[1]}">${st[2]}</span></div>
+    <div class="giu"><b>${a.nome.split(' ')[0]}</b><small>${a.titolo}</small></div></button>`;
+}
+const filaOggi = (cls) => {
+  const tutti = diOggi();
+  return `<div class="foto-fila ${cls}" data-mostrati="${Math.min(BLOCCO, tutti.length)}">${tutti.slice(0, BLOCCO).map(fcard).join('')}${
+    tutti.length > BLOCCO ? `<button class="fcard ancora" data-apri="oggi"><b class="num">+${tutti.length - BLOCCO}</b>Vedi tutti</button>` : ''}</div>`;
+};
+// quando ci si avvicina alla fine, arrivano i prossimi 20: nessuno è lasciato fuori
+document.addEventListener('scroll', e => {
+  const f = e.target; if (!(f instanceof Element) || !f.classList.contains('foto-fila')) return;
+  if (f.scrollLeft + f.clientWidth < f.scrollWidth - 400) return;
+  const tutti = diOggi(), n = +f.dataset.mostrati; if (n >= tutti.length) return;
+  const ancora = f.querySelector('.ancora');
+  ancora.insertAdjacentHTML('beforebegin', tutti.slice(n, n + BLOCCO).map(fcard).join(''));
+  const m = Math.min(n + BLOCCO, tutti.length); f.dataset.mostrati = m;
+  if (m >= tutti.length) ancora.remove(); else ancora.querySelector('b').textContent = `+${tutti.length - m}`;
+}, true);
+
+// ── i pezzi ──
+const cerca = () => `<button class="cerca" data-apri="oggi"><span class="lente">${ic('search')}</span><span class="scritta">Chiedi o cerca un atleta…</span><span class="mic" aria-hidden="true">${ic('mic')}</span></button>`;
+
+function eroe(k) {
+  const r = 24, c = 2 * Math.PI * r, pct = k.oggi ? Math.round(k.fatti / k.oggi * 100) : 0;
+  return `<section class="eroe"><span class="cerchi"></span>
+    <small>Oggi · martedì 10 · ${k.oggi} in programma</small>
+    <h2><span class="num">${k.fatti}</span> di <span class="num">${k.oggi}</span> hanno già finito</h2>
+    <span class="pct"><svg viewBox="0 0 58 58"><circle cx="29" cy="29" r="${r}" fill="none" stroke="rgba(0,0,0,.12)" stroke-width="5"/>
+      <circle cx="29" cy="29" r="${r}" fill="none" stroke="#0B0B0B" stroke-width="5" stroke-linecap="round" stroke-dasharray="${c * pct / 100} ${c}"/></svg><b class="num">${pct}%</b></span>
+    <div class="stati">
+      <button data-apri="oggi" data-filtro="1"><b class="num">${k.daFare}</b><small><i style="background:#0B0B0B;opacity:.5"></i>da fare</small></button>
+      <button data-apri="oggi" data-filtro="2"><b class="num">${k.inCorso}</b><small><i style="background:#dc2626"></i>in corso</small></button>
+      <button data-apri="oggi" data-filtro="3"><b class="num">${k.fatti}</b><small><i style="background:#0B0B0B"></i>fatti</small></button>
+    </div>
+    <div class="barra-cat">${k.perCat.filter(x => x[1]).map(([c, n]) => `<span style="flex:${n};background:${c === 'Hyrox' ? '#0B0B0B' : C[c].colore}"></span>`).join('')}</div>
+    <div class="leg-cat">${k.perCat.filter(x => x[1]).map(([c, n]) => `<span><i style="background:${c === 'Hyrox' ? '#0B0B0B' : C[c].colore}"></i>${C[c].nome} <b class="num">${n}</b></span>`).join('')}</div>
+  </section>`;
+}
+
+const allarme = (k) => k.allarmi ? `<button class="allarme" data-apri="allarmi"><span class="n num">${k.allarmi}</span>
+  <div class="testo"><b>${k.allarmi === 1 ? 'Un atleta sta male' : `${k.allarmi} atleti stanno male`} e oggi ha${k.allarmi === 1 ? '' : 'nno'} un allenamento intenso</b><p>Hanno dormito poco o hanno poca energia.</p></div>
+  <span class="vai">Vedi chi</span></button>` : '';
+
+const tessere = (k) => `
+  <div class="tes"><small>Feedback da leggere</small><b class="num">${k.feedback || '✓'}</b><span class="meta">${k.feedback ? "dall'ultima volta" : 'tutti letti'}</span>
+    <button class="vai" data-apri="feedback" style="background:var(--brand);color:#000">Leggi<i>${ic('freccia')}</i></button></div>
+  <div class="tes"><small>Da programmare</small><b class="num">${k.buchi3 ? `${k.buchi3}<span>atleti</span>` : '✓'}</b><span class="meta">nei prossimi 3 giorni</span>
+    <button class="vai" data-apri="buchi" style="background:var(--running);color:#fff">Programma<i>${ic('freccia')}</i></button></div>`;
+
+const giorniCard = (k, cls) => `<div class="${cls}">${k.giorni.map(g => `
+  <button class="carta gcard ${g.i === 0 ? 'oggi' : ''}" data-giorno="${g.i}">
+    <span class="gg">${g.i === 0 ? 'oggi' : g.g}<b class="num">${g.n}</b></span>
+    ${g.i === 0 ? `<span class="buchi num" style="color:#fff">${g.ci}</span><small>si allenano</small>`
+      : `<span class="buchi num ${g.buchi ? '' : 'zero'}">${g.buchi || '✓'}</span><small>${g.buchi ? 'da programmare' : 'tutti programmati'}</small><small class="ok"><span class="num">${g.ci}</span> già programmati</small>`}
+    <span class="mini">${g.cat.filter(x => x[1]).map(([c, n]) => `<span style="flex:${n};background:${C[c].colore}"></span>`).join('')}<span style="flex:${g.buchi};background:transparent"></span></span>
+  </button>`).join('')}</div>`;
+
+const CONT = [
+  ['feedback', 'Feedback da leggere', 'msg', '#f1ba17', 'note e vocali dopo l\'allenamento'],
+  ['fermi', 'Fermi da 5+ giorni', 'pausa', '#f97316', 'nessun allenamento completato'],
+  ['scaduti', 'Allenamenti scaduti', 'orologio', '#9ca3af', 'non segnati entro il giorno'],
+  ['segnali', 'Da rivedere nel programma', 'grafico', '#38bdf8', 'RPE o carico fuori dal previsto'],
+];
+const contatori = (k) => `<div class="contatori">${CONT.map(([key, t, icona, col, sotto]) => `
+  <button class="carta cont ${k[key] ? '' : 'zero'}" data-apri="${key}"><span class="ic" style="background:${col}1f;color:${col}">${ic(icona)}</span>
+    <div class="testo"><b>${t}</b><span class="meta">${sotto}</span></div><span class="n num" ${k[key] ? '' : 'style="color:#4ade80"'}>${k[key] || '✓'}</span><span class="chev">${ic('chev')}</span></button>`).join('')}</div>`;
+
+function polso() {
+  const p = D.polso;
+  return `<div class="quattro">
+    <div class="carta q"><small>Aderenza 7 gg</small><b class="num">${p.aderenza.pct}<span>%</span></b><em style="color:#4ade80">↑ ${p.aderenza.delta} punti</em></div>
+    <div class="carta q"><small>Come sta il team</small><b>${p.comeSta.parola}</b><em style="color:#fb923c">media di oggi</em></div>
+    <div class="carta q"><small>RPE medio</small><b class="num">${p.rpe.medio}</b><em style="color:#fb923c">Previsto ${p.rpe.previsto}</em></div>
+    <div class="carta q"><small>Prossima gara</small><b class="num">${p.gara.giorni}<span>gg</span></b><em style="color:var(--testo2)">${p.gara.nome}</em></div></div>`;
+}
+
+const gare = (k) => {
+  const quanti = [Math.max(1, Math.round(N * .06)), Math.max(1, Math.round(N * .02))];
+  return D.gare.map((g, i) => `<button class="carta gara">
+    <span class="gg" style="background:${C[g.cat].colore}1f;color:${C[g.cat].colore}"><b class="num">${g.giorni}</b><small>giorni</small></span>
+    <div class="testo"><b>${g.nome}</b><div class="meta">${g.data}</div></div><span class="quanti-g num">${quanti[i]} ${quanti[i] === 1 ? 'atleta' : 'atleti'}</span><span class="chev">${ic('chev')}</span></button>`).join('');
+};
+
+const destinazioni = (cls = '') => `<div class="${cls}">
+  <button class="carta dest"><span class="ic" style="background:rgba(241,186,23,.12);color:var(--brand)">${ic('grafico')}</span>
+    <div class="testo"><b>Analisi</b><span class="meta">Come sta andando, settimana per settimana</span></div><span class="chev">${ic('chev')}</span></button>
+  <button class="carta dest"><span class="ic" style="background:rgba(0,148,198,.14);color:#38bdf8">${ic('libro')}</span>
+    <div class="testo"><b>Report settimanale</b><span class="meta">Aderenza, carico e chi richiede un'azione</span></div><span class="chev">${ic('chev')}</span></button>
+</div>`;
+
+// ── disegno ──
+let fTel, fDesk;
+function disegna() {
+  const k = conti();
+  document.getElementById('tel').innerHTML = `
+    <div><div class="testa">${volto(D.coach.foto)}<div class="ciao"><small>Buongiorno · ${N} atleti</small><b>Federico</b></div>
+      <button class="vetro" aria-label="Notifiche">${ic('bell')}<i class="pallino"></i></button></div>${cerca()}</div>
+    <div>${eroe(k)}${allarme(k)}<div class="coppia">${tessere(k)}</div></div>
+    <div><div class="sez"><h2>In allenamento oggi</h2><button class="link" data-apri="oggi">Tutti</button></div>${filaOggi('')}</div>
+    <div><div class="sez"><h2>Prossimi giorni</h2><button class="link">${ic('cal', 'pic')} Calendario</button></div>${giorniCard(k, 'giorni-fila')}</div>
+    <div><div class="sez"><h2>Da guardare</h2></div>${contatori(k)}</div>
+    <div><div class="sez"><h2>Il team</h2></div>${polso()}</div>
+    <div><div class="sez"><h2>Gare in arrivo</h2></div>${gare(k)}</div>
+    <div><div class="sez"><h2>Approfondisci</h2></div>${destinazioni()}</div>`;
+  document.querySelector('#desk .corpo').innerHTML = `
+    <div class="d-testa"><div><div class="meta">martedì 10 novembre · ${N} atleti</div><h1>Buongiorno, Federico</h1></div>${cerca()}
+      <button class="vetro" aria-label="Notifiche">${ic('bell')}<i class="pallino"></i></button></div>
+    <div class="bento">${eroe(k)}${tessere(k)}</div>
+    ${allarme(k)}
+    <div><div class="sez"><h2>In allenamento oggi</h2><button class="link" data-apri="oggi">Tutti</button></div>${filaOggi('d-foto')}</div>
+    <div><div class="sez"><h2>Prossimi giorni</h2><button class="link">Calendario</button></div>${giorniCard(k, 'd-giorni')}</div>
+    <div class="d-tre">
+      <div><div class="sez"><h2>Da guardare</h2></div>${contatori(k)}</div>
+      <div><div class="sez"><h2>Il team</h2></div>${polso()}</div>
+      <div><div class="sez"><h2>Gare in arrivo</h2></div>${gare(k)}</div>
+    </div>
+    <div><div class="sez"><h2>Approfondisci</h2></div>${destinazioni('d-dest')}</div>`;
+}
+
+document.getElementById('desk').innerHTML = `${lato()}<div class="corpo"></div>`;
+document.querySelector('.telefono').insertAdjacentHTML('beforeend', tabBar());
+fTel = foglioIn(document.querySelector('.telefono'));
+fDesk = foglioIn(document.getElementById('desk'));
+disegna();
+
+// ogni numero apre la sua lista, nel telefono o nel desktop
+document.addEventListener('click', e => {
+  const dove = e.target.closest('.telefono') ? fTel : e.target.closest('#desk') ? fDesk : null;
+  const b = e.target.closest('[data-apri],[data-giorno]');
+  if (!dove || !b || e.target.closest('.foglio')) return;
+  if (b.dataset.giorno) {
+    giornoAperto = +b.dataset.giorno;
+    dove.apri('giorno');
+    // oggi la domanda è «chi si allena», non «chi manca»
+    if (giornoAperto === 0) (e.target.closest('.telefono') || document.getElementById('desk')).querySelector('.foglio [data-f="1"]').click();
+    return;
+  }
+  dove.apri(b.dataset.apri);
+  if (b.dataset.filtro) (e.target.closest('.telefono') || document.getElementById('desk')).querySelector(`.foglio [data-f="${b.dataset.filtro}"]`).click();
+});
+document.querySelector('.quanti').addEventListener('click', e => {
+  const b = e.target.closest('[data-n]'); if (!b) return;
+  N = +b.dataset.n; A = genera(N);
+  document.querySelectorAll('.quanti [data-n]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  disegna();
+});
+</script>
+</body>
+</html>

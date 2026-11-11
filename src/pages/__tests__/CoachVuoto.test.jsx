@@ -25,7 +25,12 @@ const Home = (await import('../Home')).default
 const Athletes = (await import('../Athletes')).default
 const Messaggi = (await import('../Messaggi')).default
 
-beforeEach(() => { window.localStorage.clear() })
+beforeEach(() => {
+  window.localStorage.clear()
+  // Questi test provano la Home coach CLASSICA (il cruscotto), che dal 10/11/2026
+  // sta dietro l'interruttore «Home classica»: la Riepilogo ha i suoi (HomeRiepilogo.test.jsx).
+  window.localStorage.setItem('fleofit_home_classica', 'true')
+})
 
 describe('un coach senza dati', () => {
   it('Atleti: mostra «Nessun atleta ancora»', async () => {

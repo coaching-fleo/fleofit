@@ -305,3 +305,106 @@ Su richiesta del committente la riga «Archivio workout» in fondo alla Home coa
 stata tolta: l'archivio ha ora la sua voce nella tab bar (`Navbar.jsx`). Chi ci arrivava da
 Home e poi toccava la voce vedeva sparire la freccia indietro (`daBarra`, `WorkoutsArchive.jsx`).
 Resta solo «Report settimanale». Le frasi sopra che dicono «l'archivio resta come riga» sono storiche.
+
+## 9-riepilogo. La Home coach «Riepilogo» (10/11/2026)
+
+Proposta B3 (prototipo `tools/design-home/proposta-b3.html`, spec
+`docs/superpowers/specs/2026-11-10-home-coach-riepilogo-design.md`). Il
+cruscotto del 14/10 elencava le **persone**: con centinaia di atleti la Home
+diventava infinita. La Riepilogo mostra **numeri**, e ogni numero apre la lista
+delle persone: la pagina ha la stessa lunghezza con 11 o con 500 atleti.
+
+- **Ordine (telefono)**: card gialla «X di Y hanno già finito» con da fare / in
+  corso / fatti e la barra per categoria · allarme «stanno male» (stessa regola
+  di `oggiConComeSta`) · Feedback da leggere + Da programmare (prossimi 3 giorni,
+  da domani) · In allenamento oggi (foto, scorre) · Prossimi giorni (14 card)
+  · Da guardare (4 contatori) · Il team (2×2, `PolsoTeam griglia`) · Gare (3,
+  con quanti atleti) · Scarpe · Report. Sul desktop gli stessi pezzi in griglia,
+  più **Analisi** (sul telefono Analisi rimanda al Report).
+- **Il foglio** (`FoglioListaCoach`): dal basso sul telefono, pannello a destra
+  sul desktop. Ricerca senza accenti, filtri con i conteggi, **60 righe alla
+  volta**. Tocco: oggi/allarme/scaduti → la seduta; feedback → `apriFeedback`;
+  da programmare e giorno vuoto → `/create?athlete_id=…&date=…`; fermi e da
+  rivedere → la scheda atleta. Niente azioni di massa (fuori da questo lavoro).
+- **La fila delle foto** si disegna **20 alla volta**: le altre arrivano
+  scorrendo (a 400px dalla fine), in coda «+N · Vedi tutti». Nessuno resta fuori.
+- **Le liste sono intere**: la classica taglia i fermi a 4
+  (`MASSIMO_FERMI_IN_HOME`) e gli scaduti a 5; la Riepilogo riceve tutto
+  (`scadutiTutti` in `Home.jsx`, calcolato solo se serve).
+- **Mai uno zero**: contatori, card e giorni a zero dicono ✓ verde.
+- **File**: `src/lib/riepilogoCoach.js` (conti puri), `src/useRiepilogoCoach.js`
+  (conti + cosa mostra ogni lista, condiviso dalle due disposizioni),
+  `RiepilogoCoachUI.jsx`, `FoglioListaCoach.jsx`, `HomeRiepilogoTelefono.jsx`,
+  `HomeRiepilogoDesktop.jsx`. Tutto pigro: `useRiepilogoCoach` porta dentro
+  `useCruscottoCoach` (e quindi «Dalle note»), **mai** da importare in `Home.jsx`.
+- **La Home di prima resta**: interruttore «Home classica» in Impostazioni →
+  Solo coach, per dispositivo (`src/lib/homeClassica.js`, chiave
+  `fleofit_home_classica`). `CruscottoCoachUI`, `HomeCoachTelefono`,
+  `HomeCoachDesktop`, `useCruscottoCoach` non sono cambiati (solo la prop
+  opzionale `griglia` di `PolsoTeam`). I test del cruscotto accendono
+  l'interruttore nel `beforeEach`.
+- **Fuori**: il «+» centrale nella tab bar, Analisi sul telefono, azioni di
+  massa, i conti nel database (con molte centinaia di atleti serviranno: è una
+  funzione nuova, quindi un sì allo schema).
+
+### La profondità della Riepilogo (11/11/2026)
+Il committente: «manca del premium feel, è tutto troppo piatto». Le card erano `#161618` piatte;
+ora ogni card di primo livello è la **carta sollevata** (`CARD` di `src/lib/stiliCard.js`, la
+stessa della Home atleta), le righe dentro restano piatte. Colore nelle ombre solo sugli stati:
+hero gialla (gradiente tonale + luce sul bordo), avviso «sta male» (glow rosso), card «oggi»
+della fila giorni (`GIORNO_OGGI`), bottoni Leggi/Programma. «Da guardare» e «Gare» sono UNA
+carta con righe divise da hairline (`[&+&]:before`), non più quattro card separate. Numeri in
+`tabular-nums`. Anche le tessere del team in modalità `griglia` (`CruscottoCoachUI`) usano `CARD`,
+e il foglio lista ha gradiente, ombra verso l'alto e campo di ricerca incassato.
+«Da guardare», tre giri lo stesso giorno: icona decorativa nel quadratino = «AI slop» per il
+committente; solo numeri grandi senza icone né frecce = «non si capisce che è cliccabile».
+Approvata la terza: il **numero dentro il quadratino colorato** (al posto dell'icona) + freccia
+in un cerchio a destra. Il quadratino e la freccia restano: sono il segnale del tocco.
+Poi, lo stesso giorno: «troppa colorazione in tutta la home». La Riepilogo è ora **in scala di
+grigi**: giallo solo per la card di oggi, i link delle sezioni e il giorno di oggi; rosso solo per
+«sta male». Categorie (pillole sulle foto, barre dei giorni, barra sul giallo in toni di nero),
+conti di «Da guardare», bottoni Leggi/Programma (vetro chiaro) e note del team non si colorano più.
+Il verso di una variazione lo dice la freccia ↑↓, non il colore. In «Da guardare» il numero sta in
+un quadratino e ogni riga ha la freccia in un cerchio: una prova senza (solo numeri grandi) non si
+capiva più che fosse toccabile.
+Ancora lo stesso giorno, tutto grigio era «veramente troppo». **La via di mezzo, quella tenuta**:
+superfici neutre (card, bottoni secondari in vetro, quadratini) e il colore solo nei segni piccoli —
+la cifra di «Da guardare», l'icona e la freccia nel cerchio di Leggi (giallo) e Programma (azzurro),
+il pallino della categoria sulle foto, le barre sottili dei giorni e della card gialla, le note del
+team. Superfici piene di colore: solo la card di oggi e il rosso di chi sta male.
+E ancora (11/11/2026): **niente banner Scarpe nella Riepilogo** (telefono e desktop). Sul desktop
+le Scarpe sono una voce della `BarraLaterale`, visibile solo se `useFunzione('scarpe')` è accesa;
+sul telefono il coach ci arriva da Impostazioni. La Home classica il banner lo tiene. Sul desktop
+le foto di «In allenamento oggi» sono 124×160 (erano 160×214); sul telefono restano 148×196.
+E ancora (11/11/2026): **i «Prossimi giorni» sono il calendario della proposta B2**, non più le card
+dei giorni (`GiorniProssimi` resta nel file ma la Riepilogo non lo usa). `CalendarioProssimi` in
+`RiepilogoCoachUI.jsx`: due settimane (`piano` del cruscotto, `GIORNI_SCORRIMENTO`), nomi fermi a
+sinistra («Andrea C.» sul telefono, intero sul desktop), sul telefono colonne da 64px che si scorrono,
+sul desktop le due settimane si dividono la riga e c'è la legenda. Le celle sono `Cella` di
+`CruscottoCoachUI` (esportata): con `onProgramma` il «+» tratteggiato è un bottone che apre il builder
+per quell'atleta e quel giorno. ⚠️ La nota sopra conta come la card «Da programmare»
+(`notaCalendario` in `useRiepilogoCoach`, chi ha almeno un giorno vuoto nei prossimi 3), NON come
+`notaPiano` della classica (chi non ha niente): insieme dicevano «8 da programmare» e «tutti
+programmati». **Oltre 20 atleti** (scelta del committente fra quattro, 11/11/2026: «prima chi è scoperto»):
+`righeCalendario` di `riepilogoCoach.js` mette in testa chi ha un giorno vuoto nei prossimi 3 e ne
+tiene `MASSIMO_CALENDARIO` (20); sotto c'è «Mostra tutti i N atleti», che apre `FoglioCalendario`
+(tutte le righe e la ricerca per nome; dal basso sul telefono, a destra largo sul desktop). Fino a 20
+l'ordine resta quello del piano. Scartate: filtri sopra il calendario, gruppi per categoria, le card
+dei giorni al posto della griglia. Per provarlo nel demo (10 atleti) si abbassa il tetto a mano.
+Il calendario intero sul **desktop** (11/11/2026) è una finestra al centro (max 1180px, 86vh), non
+un pannello laterale: in testa titolo, ricerca (300px) e chiudi su una riga, la legenda sotto, e la
+riga dei giorni resta ferma (`sticky`) mentre si scorrono gli atleti — per questo lì la griglia non
+scorre di lato (`testaFerma` in `CalendarioProssimi`). Il foglio ordina SEMPRE con
+`primaGliScoperti`, anche sotto i 20: prima diceva «prima chi è da programmare» senza farlo.
+
+## Chi si è appena iscritto non è «fermo» (11/11/2026)
+
+Segnalazione del committente: un coach appena registrato apriva la Home e trovava **sé stesso**
+in «Da smaltire», «Non si allena da 45+ giorni». Lui resta nella rubrica di proposito (chi guarda
+può allenarsi, `scheda-atleta.md`); l'errore era in `atletiFermi`, che dava `giorni = finestra` a
+chiunque non avesse completamenti, **anche a chi non aveva mai avuto niente da fare**.
+Ora, senza completamenti, si è fermi solo se c'è un allenamento con data già arrivata (nella
+finestra) da almeno `GIORNI_FERMO` giorni, e i giorni si contano da quello (tetto: la finestra;
+`oltre` resta vero, quindi «Non si allena da 12+ giorni»). Chi non ha niente in programma lo dice
+la copertura, non l'allarme. Vale per tutti quelli che usano `atletiFermi`: Home classica e
+Riepilogo, fascia della rubrica, previsione, ricerca del coach («inattivi da N giorni»).

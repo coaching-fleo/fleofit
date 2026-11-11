@@ -65,6 +65,9 @@ const attendi = (testo) => waitFor(() => expect(screen.getByText(testo)).toBeInT
 
 beforeEach(() => {
   window.localStorage.clear()
+  // Questi test provano la Home coach CLASSICA (il cruscotto), che dal 10/11/2026
+  // sta dietro l'interruttore «Home classica»: la Riepilogo ha i suoi (HomeRiepilogo.test.jsx).
+  window.localStorage.setItem('fleofit_home_classica', 'true')
   ctrl.atleti.valore = [atleta('a1', 'Luca'), atleta('a2', 'Giulia'), atleta('a3', 'Marco')]
   ctrl.assegnazioni.valore = []
   ctrl.comeStai.valore = []
@@ -177,7 +180,10 @@ describe('Fermi e scaduti', () => {
 
   it('chi non ha nessun allenamento nella finestra non riceve un numero preciso', async () => {
     // «45 giorni» tondi tondi sarebbe un numero falso.
+    // (Con qualcosa da fare, al bordo della finestra: chi non ha MAI avuto niente
+    // in programma non è fermo, è appena arrivato — statisticheCoach.test.js.)
     ctrl.atleti.valore = [atleta('a1', 'Luca')]
+    ctrl.assegnazioni.valore = [riga('v1', 'a1', -45)]
     montaCoach()
     await attendi('Non si allena da 45+ giorni')
   })

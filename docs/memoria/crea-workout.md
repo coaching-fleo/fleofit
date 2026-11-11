@@ -1788,3 +1788,26 @@ scelto il **B · Schede per famiglia**:
   `esercizi.test.js` fallisce finché manca.
 - ⚠️ I test del builder cercano `placeholder /Cerca o scrivi/` e i bottoni
   `Scegli <nome>`: il placeholder e l'`aria-label` vanno tenuti così.
+
+### Burpees Box Jump e l'altezza della box (11/11/2026, richiesta del committente)
+- Esercizio nuovo **Burpees Box Jump** in `HYROX_EXERCISES` e nella famiglia «Burpees, salti e
+  corda»; etichetta corta «Burpee» in `nomeCasuale.js`.
+- **Altezza della box**: campo nuovo `box` dell'esercizio, in cm e **senza unità** (`box: "60"`),
+  come `kg`. È un campo in più dentro il jsonb `sections`: nessuna migrazione. Un'app vecchia sugli
+  Store non lo conosce e non lo mostra.
+- Quali esercizi lo hanno: `BOX_EXERCISES` / `conBox` in `src/lib/esercizi.js` (Burpees
+  Box Jump e, dal 11/11/2026, Box Jump). Nel foglio misure la seconda scheda è
+  **«Altezza box»** al posto del Peso: scala `altezzaBox` di `scaleMisura.js` (20–120 cm, di 5) con
+  le scorciatoie standard **50, 60, 75 cm** (`ALTEZZE_BOX`). Parte vuota: nessuna altezza imposta.
+- Si mostra come «box 60 cm» con **una sola funzione**, `testoBox`: scheda workout
+  (`specificheEsercizio`), timer (`taskDi` di `timerSequence.js`), PDF e story di `WorkoutDetail`,
+  scheda atleta, riga «ultima volta» del builder, e il testo di «Cambia tipo di blocco», che
+  `leggiEsercizio` rilegge («box 60 cm» o «60cm» → `box`).
+- **«Genera con IA»** (11/11/2026): `ISTRUZIONI_HYROX` in `ai-workout/regole.ts` spiega il campo
+  `box` (solo se l'altezza è detta) e `box` è nell'elenco dei campi da non toccare in modifica.
+  `preparaBlocchiIA` lo riduce a un intero in cm e lo **toglie** da ogni esercizio che non ha
+  `conBox`. Sinonimi nuovi in `leggiWorkout.js` («burpee box jump»). ✅ Deploy di `ai-workout`
+  fatto l'11/11/2026.
+- Test: `esercizi.test.js`, `scaleMisura.test.js`, `rigaBlocco.test.js`, `leggiWorkout.test.js` e
+  in `CreaWorkoutBuilder.test.jsx` «il Burpees Box Jump sceglie l altezza della box»; visti fallire
+  togliendo `testoBox` e la lettura di «cm».

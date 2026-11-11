@@ -90,6 +90,33 @@ describe('preparaBlocchiIA — i nomi degli esercizi', () => {
   })
 })
 
+describe('l altezza della box dall IA (11/11/2026)', () => {
+  const esercizi = (exercises) => preparaBlocchiIA([{ type: 'AMRAP', params: {}, exercises }])[0].exercises
+
+  it('tiene la box in cm senza unità sui due esercizi con la box', () => {
+    const [a, b] = esercizi([
+      { name: 'Burpees Box Jump', reps: '10', box: '60 cm' },
+      { name: 'box jump', reps: '15', box: 75 },
+    ])
+    expect(a.box).toBe('60')
+    expect(b.name).toBe('Box Jump')
+    expect(b.box).toBe('75')
+  })
+
+  it('la toglie da un altro esercizio, o se non è un numero', () => {
+    const [a, b] = esercizi([
+      { name: 'Wall Balls', reps: '20', box: '60' },
+      { name: 'Burpees Box Jump', reps: '10', box: 'alta' },
+    ])
+    expect(a).not.toHaveProperty('box')
+    expect(b).not.toHaveProperty('box')
+  })
+
+  it('riconosce «burpee box jump» come Burpees Box Jump', () => {
+    expect(esercizi([{ name: 'burpee box jump' }])[0].name).toBe('Burpees Box Jump')
+  })
+})
+
 describe('blocchiPerIA', () => {
   it('toglie gli id client-side e tiene tutto il resto', () => {
     const [b] = blocchiPerIA([{ id: 0.1, type: 'EMOM', params: { rounds: '12' }, notes: 'n',

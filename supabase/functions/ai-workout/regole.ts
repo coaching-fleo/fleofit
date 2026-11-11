@@ -65,7 +65,7 @@ La sua richiesta è una MODIFICA di questo allenamento (cambiare, togliere, aggi
 spostare, sostituire ${parti} o esercizi), oppure un'aggiunta.
 - Restituisci l'allenamento COMPLETO dopo la modifica: l'intero elenco di ${parti}, comprese le parti che non cambiano.
 - Tutto ciò che la richiesta non tocca resta IDENTICO: stesso elenco di ${parti} nello stesso ordine,
-  stessi esercizi, stessi campi e valori (reps, meters, kg, ergoPace, speed, exTime, intensity,
+  stessi esercizi, stessi campi e valori (reps, meters, kg, box, ergoPace, speed, exTime, intensity,
   intervals, incremento, aumento, timecap, notes, params, duration, pace, serie, recupero, durata, rir, cadenza, dettaglio). Non aggiungere, togliere o riscrivere campi di tua iniziativa.
 - Se la richiesta aggiunge qualcosa senza dire dove, mettilo in fondo.
 - Se la richiesta indica una parte per posizione ("il secondo", "l'ultimo") contali nell'ordine dell'array.
@@ -110,6 +110,12 @@ NOMI DEGLI ESERCIZI: gli ergometri si scrivono ESATTAMENTE così, senza spazi o 
 e, se c'è un passo, "ergoPace" (es. "2:00 /500m"); le calorie vanno nelle "notes" (es. "15 cal").
 Le stazioni Hyrox si scrivono "Sled Push", "Sled Pull", "Burpees Broad Jumps", "Farmers Carry",
 "Sandbag Lunges", "Wall Balls", "Run".
+
+ALTEZZA DELLA BOX: "Box Jump" e "Burpees Box Jump" (burpee seguito dal salto sulla box) hanno il
+campo "box" = l'altezza della box in centimetri, stringa senza unità ("50", "60", "75"; gli standard
+sono 50, 60 e 75). Mettilo solo se l'utente dice l'altezza (es. "box jump da 60", "box a 75 cm");
+altrimenti non scriverlo. "box" esiste solo su questi due esercizi, e non usare "kg" per l'altezza.
+Esempio: { "name": "Burpees Box Jump", "reps": "10", "box": "60", "intensity": "8" }
 
 STAZIONI CONTINUE NEGLI EMOM: in un EMOM ogni esercizio vale UN intervallo, nell'ordine.
 Se l'utente dice che un esercizio occupa più intervalli di fila (es. "minuti 2-3 sled push",

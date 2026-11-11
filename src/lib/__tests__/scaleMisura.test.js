@@ -203,6 +203,19 @@ describe('il numero grande', () => {
   })
 })
 
+describe('l altezza della box', () => {
+  it('va da 20 a 120 cm di 5, scritta «60 cm», e si scrive a mano', () => {
+    const voci = SCALE.altezzaBox.voci.map(v => v.valore)
+    expect(voci[0]).toBe('20 cm')
+    expect(voci.at(-1)).toBe('120 cm')
+    expect(voci).toContain('75 cm')
+    expect(valoreDaTesto('altezzaBox', '65')).toBe('65 cm')
+    expect(testoDaValore('60 cm')).toBe('60')
+    expect(etichettaDi(SCALE.altezzaBox, '62 cm')).toBe('62')
+    expect(indiceVicino(SCALE.altezzaBox, '62 cm')).toBe(voci.indexOf('60 cm'))
+  })
+})
+
 describe('i metri arrivano ai 10 km', () => {
   it('gli ergometri si programmano fino a 10000m, a passi di 500 sopra i 2 km', () => {
     const valori = SCALE.metri.voci.map(v => v.valore)

@@ -47,7 +47,7 @@ const famiglia = (nome) => {
 /** Come un esercizio compare dentro un nome: corto, al singolare. */
 const ETICHETTE = {
   'Wall Balls': 'Wall Ball', 'Burpees': 'Burpee', 'Burpees Broad Jumps': 'Broad Jump',
-  'Burpees Jump': 'Burpee', 'Rowing': 'Row', 'Assault Bike': 'Bike', 'Echo Bike': 'Bike',
+  'Burpees Jump': 'Burpee', 'Burpees Box Jump': 'Burpee', 'Rowing': 'Row', 'Assault Bike': 'Bike', 'Echo Bike': 'Bike',
   'TrueForm Runner': 'Run', 'Curve Treadmill': 'Run', 'Shuttle Run': 'Shuttle',
   'Sandbag Lunges': 'Lunge', 'Farmers Walk': 'Farmers Carry', 'Prowler Push': 'Prowler',
   'Sled Drag': 'Sled', 'Box Jump': 'Box Jump',

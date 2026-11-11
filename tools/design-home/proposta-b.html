@@ -15,8 +15,9 @@
 
 .cerca{margin-top:16px;display:flex;align-items:center;gap:10px;height:54px;padding:0 6px 0 16px;border-radius:999px;
   background:#161618;border:1px solid #26262a;color:var(--muted);font-size:14.5px;font-weight:500}
-.cerca .orb{flex-shrink:0;width:22px;height:22px;border-radius:50%;border:3px solid var(--brand);box-shadow:0 0 12px rgba(241,186,23,.45),inset 0 0 6px rgba(241,186,23,.4)}
-.cerca span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cerca .lente{color:var(--brand)}
+.cerca .lente svg{width:20px;height:20px;stroke-width:2.4}
+.cerca .scritta{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cerca .mic{width:42px;height:42px;border-radius:50%;background:var(--brand);color:#000;display:grid;place-items:center}
 
 /* l'eroe giallo: la giornata */
@@ -141,7 +142,7 @@ const mancano = D.oggi.filter(a => a.stato !== 'fatto');
 const feedback = D.daGuardare.filter(v => v.tipo === 'feedback');
 const altri = D.daGuardare.filter(v => v.tipo !== 'feedback');
 
-const cerca = () => `<div class="cerca"><span class="orb"></span><span>Chiedi o cerca un atleta…</span><button class="mic" aria-label="Detta">${ic('mic')}</button></div>`;
+const cerca = () => `<div class="cerca"><span class="lente">${ic('search')}</span><span class="scritta">Chiedi o cerca un atleta…</span><button class="mic" aria-label="Detta">${ic('mic')}</button></div>`;
 
 function eroe() {
   const r = 24, c = 2 * Math.PI * r;

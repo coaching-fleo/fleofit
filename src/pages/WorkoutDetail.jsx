@@ -44,6 +44,7 @@ import { blockHint } from '../lib/blockHints'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
 import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
 import { ERGOMETERS, escludiDallaRubrica } from '../lib/constants'
+import { testoBox } from '../lib/esercizi'
 import { sincronizzaBadge } from '../lib/badge'
 import { isVoiceNoteValid } from '../lib/notaVocale'
 import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/timerSequence'
@@ -1238,7 +1239,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
              const prefix = (block.type === 'EMOM' || block.type === 'ON/OFF') ? `Min.${etichette[i]}  ` : `· `
              const detail = ex.exTime && ex.exTime !== '-' ? ex.exTime : ((ex.meters && ex.meters !== '-') ? ex.meters : (ex.reps && ex.reps !== '-' ? `${ex.reps} reps` : ''))
              const paceStr = isErgo(ex.name) && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? ` @ ${ex.ergoPace}` : ''
-             const kgStr = ex.kg ? ` @ ${ex.kg}kg` : ''
+             const kgStr = (ex.kg ? ` @ ${ex.kg}kg` : '') + (testoBox(ex) ? ` · ${testoBox(ex)}` : '')
              const aumentoStr = haIncremento(block) && testoAumento(ex) ? `  (${testoAumento(ex)})` : ''
              
              let cx = 25
@@ -2398,7 +2399,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                               const isErgo = ['SkiErg', 'Rowing', 'Assault Bike', 'Echo Bike', 'TrueForm Runner', 'Curve Treadmill'].includes(ex.name);
                               const paceStr = isErgo && ex.ergoPace && ex.ergoPace !== '-' && ex.ergoPace !== 'Libero' ? `@ ${ex.ergoPace}` : '';
                               const kgStr = ex.kg ? `${ex.kg}kg` : '';
-                              const specs = [detail, paceStr, kgStr].filter(Boolean).join(' · ');
+                              const specs = [detail, paceStr, kgStr, testoBox(ex)].filter(Boolean).join(' · ');
                               return (
                                 <div key={j} style={{ display: 'flex', flexDirection: 'column' }}>
                                    <span style={{ fontSize: '18px', fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{ex.name}</span>

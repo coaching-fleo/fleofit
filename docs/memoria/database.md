@@ -375,6 +375,20 @@ un anonimo con la anon key (in chiaro nel bundle) **enumera tutti i codici valid
 Il `signOut()` di `App.jsx` (ramo `/login?error=unauthorized`) è cosmetico. Forma corretta: funzione `security definer` che
 risponde sì/no senza esporre la tabella. **Non additivo → dopo l'approvazione App Store.**
 
+> **11/11/2026 — trovato anche da un coach, e preparata la correzione.** La policy gemella
+> `Authenticated users can select codes` (codici liberi a **qualunque** utente con login) si somma
+> in OR a `codici lettura staff` del multi-coach: un coach nuovo vedeva in Impostazioni i codici
+> liberi degli altri coach, e un atleta iscritto con uno di quelli finiva assegnato all'altro coach
+> (`assegna_coach` legge `created_by`). Correzioni:
+> - **nell'app, subito**: `caricaCodici` di `Settings.jsx` chiede solo `created_by = me` se non sei
+>   admin (test in `Impostazioni.test.jsx`);
+> - **nel database, ⛔ non applicata**: `supabase/schema/codici_invito_2026-11-11.sql`, in **due
+>   tempi**. Tempo 1, additivo: le funzioni `codice_invito_valido` (sì/no, anche per anon) e
+>   `riscatta_codice_invito`, che l'app usa da `src/lib/codiceInvitoDb.js` con il ripiego sul
+>   percorso di prima se non esistono. Tempo 2, restrittivo: toglie le tre policy aperte e lascia
+>   all'atleta solo il codice che ha usato. 🔴 Il tempo 2 impedisce l'iscrizione da 1.2.3 e
+>   precedenti: va dopo che quelle versioni non sono più in uso, o con il costo accettato.
+
 ### 🟠 `push_subscriptions`: `Enable all operations for authenticated users | ALL | true`
 Le policy si sommano in OR: questa annulla le due scritte correttamente accanto a lei. Qualunque
 atleta legge **tutti i token push**. Rimuoverla è restrittivo → dopo l'approvazione.

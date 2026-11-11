@@ -111,6 +111,10 @@ const DISTANZA_CORSA = [
   ...intervallo(11, 42, 1).map(km),
 ]
 
+// L'altezza della box (Burpees Box Jump): cinque centimetri alla volta.
+const ALTEZZA_BOX = intervallo(20, 120, 5)
+  .map(n => voce(`${n} cm`, String(n), n % 10 === 0 ? String(n) : null))
+
 /**
  * Le scale per nome. `unita` è la parola piccola accanto al numero grande;
  * `tastiera` dice che tastiera aprire quando si tocca il numero per scriverlo.
@@ -131,6 +135,7 @@ export const SCALE = {
   velocita: { voci: VELOCITA, unita: 'km/h', tastiera: 'decimal', partenza: '10.0 km/h' },
   durataCorsa: { voci: DURATA_CORSA, unita: '', tastiera: 'numeric', partenza: '10 min' },
   distanzaCorsa: { voci: DISTANZA_CORSA, unita: '', tastiera: 'decimal', partenza: '1 km' },
+  altezzaBox: { voci: ALTEZZA_BOX, unita: 'cm', tastiera: 'numeric', partenza: '60 cm' },
 }
 
 // ── Dal valore alla tacca ─────────────────────────────────────────────────
@@ -154,7 +159,7 @@ export const grandezza = (valore) => {
   if (m) return parseFloat(m[1].replace(',', '.')) * 1000
   m = s.match(/^2x(\d+(?:[.,]\d+)?)\s*(?:kg)?$/)
   if (m) return parseFloat(m[1].replace(',', '.'))
-  m = s.match(/^(\d+(?:[.,]\d+)?)\s*(?:kg|m|rpm|km\/h|reps)?$/)
+  m = s.match(/^(\d+(?:[.,]\d+)?)\s*(?:kg|cm|m|rpm|km\/h|reps)?$/)
   if (m) return parseFloat(m[1].replace(',', '.'))
   return null
 }
@@ -259,6 +264,10 @@ export const valoreDaTesto = (nome, testo) => {
       const n = numeroDaTesto(testo)
       return n && Number.isInteger(n) ? `${n}m` : null
     }
+    case 'altezzaBox': {
+      const n = numeroDaTesto(testo)
+      return n && Number.isInteger(n) ? `${n} cm` : null
+    }
     case 'cadenza': {
       const n = numeroDaTesto(testo)
       return n && Number.isInteger(n) ? `${n} RPM` : null
@@ -279,7 +288,7 @@ export const valoreDaTesto = (nome, testo) => {
 export const testoDaValore = (valore) => {
   const s = String(valore ?? '').trim()
   if (!s || s === '-' || s === 'Max') return ''
-  return s.replace(/^2x/, '').replace(/\s*(kg|km\/h|rpm|\/km|\/500m|min|sec|km|m)$/i, '').replace('.', ',')
+  return s.replace(/^2x/, '').replace(/\s*(kg|km\/h|rpm|\/km|\/500m|min|sec|km|cm|m)$/i, '').replace('.', ',')
 }
 
 /**
@@ -295,7 +304,7 @@ export const etichettaDi = (scala, valore) => {
   if (/^2x/i.test(s)) return s.replace(/^2x/i, '2×').replace(/\s*kg$/i, '').replace('.', ',')
   if (/\d+\s*sec$/i.test(s)) return s.replace(/\s*sec$/i, '″')
   if (/\d+\s*min$/i.test(s)) return s.replace(/\s*min$/i, '′')
-  return s.replace(/\s*(kg|km\/h|rpm|\/km|\/500m|km|m)$/i, '').replace('.', ',')
+  return s.replace(/\s*(kg|km\/h|rpm|\/km|\/500m|km|cm|m)$/i, '').replace('.', ',')
 }
 
 /**

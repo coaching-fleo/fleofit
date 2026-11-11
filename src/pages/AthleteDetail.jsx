@@ -48,6 +48,7 @@ import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 import { partiRipetuta, etichettaParte } from '../lib/ripetute'
 import { giriForTime } from '../lib/incremento'
+import { testoBox } from '../lib/esercizi'
 
 const getRpeColorText = (val) => {
   if (val <= 3) return 'text-green-500';
@@ -2155,9 +2156,9 @@ function AssignWorkoutModal({ athleteId, atleta, storico, dataIniziale, onClose,
                               return (
                                 <p key={j} className="text-sm text-white leading-tight">
                                   <span className="font-medium">{ex.name}</span>
-                                  {(detail || pace || ex.kg) && (
+                                  {(detail || pace || ex.kg || testoBox(ex)) && (
                                     <span className="text-gray-400 text-xs ml-1">
-                                      {detail} {pace} {ex.kg ? `· ${ex.kg}kg` : ''}
+                                      {detail} {pace} {ex.kg ? `· ${ex.kg}kg` : ''} {testoBox(ex) ? `· ${testoBox(ex)}` : ''}
                                     </span>
                                   )}
                                 </p>

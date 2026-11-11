@@ -212,6 +212,27 @@ describe('Le righe del coach', () => {
     expect(screen.queryByText(/Ripristina database totale/i)).not.toBeInTheDocument()
   })
 
+  it('🔴 un coach legge SOLO i codici che ha creato lui', async () => {
+    // La policy «Authenticated users can select codes» lascia leggere a
+    // chiunque abbia fatto login tutti i codici liberi (serve all'atleta per
+    // riscattarlo), e si somma a quella dello staff: senza il filtro qui un
+    // coach nuovo vedeva i codici degli altri coach, e un atleta entrato con
+    // uno di quelli finiva assegnato all'altro coach (11/11/2026).
+    ctrl.codici.valore = [{ id: 'c1', code: 'AAA11111', is_active: true }]
+    montaPagina(<Settings />, { role: 'coach', user: { ...UTENTE, id: 'coach-1', email: 'coach@esempio.it' } })
+    await screen.findByRole('button', { name: /Codici invito/i })
+    await waitFor(() => expect(finto.chiamateA('invitation_codes', 'select')).not.toHaveLength(0))
+    const filtri = finto.chiamateA('invitation_codes', 'eq').map(c => c.args)
+    expect(filtri).toContainEqual(['created_by', 'coach-1'])
+  })
+
+  it('l\'admin continua a vedere i codici di tutti i coach', async () => {
+    montaCoach()
+    await screen.findByRole('button', { name: /Codici invito/i })
+    await waitFor(() => expect(finto.chiamateA('invitation_codes', 'select')).not.toHaveLength(0))
+    expect(finto.chiamateA('invitation_codes', 'eq')).toHaveLength(0)
+  })
+
   it('🔴 e la pagina dell\'atleta non LEGGE nemmeno i codici invito', () => {
     // La guardia sta in due punti — il fetch e il render — e verificarne uno
     // solo lascia passare una versione che scarica l'elenco degli inviti sul
@@ -510,5 +531,24 @@ describe('La voce «Catalogo scarpe» (solo staff)', () => {
     expect(await screen.findByRole('button', { name: /Codici invito/ })).toBeInTheDocument()
     await new Promise(r => setTimeout(r, 0))
     expect(screen.queryByRole('button', { name: /Catalogo scarpe/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('L\'interruttore «Home classica» (solo staff)', () => {
+  // La Home coach «Riepilogo» (10/11/2026) sostituisce il cruscotto, che resta
+  // dietro questo interruttore, per dispositivo.
+  it('un coach lo vede e il tocco lo salva sul dispositivo', async () => {
+    const utente = userEvent.setup()
+    montaCoach()
+    const interruttore = await screen.findByRole('switch', { name: 'Home classica' })
+    expect(interruttore).toHaveAttribute('aria-checked', 'false')
+    await utente.click(interruttore)
+    expect(window.localStorage.getItem('fleofit_home_classica')).toBe('true')
+    expect(interruttore).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('all\'atleta non si mostra', () => {
+    montaAtleta()
+    expect(screen.queryByRole('switch', { name: 'Home classica' })).not.toBeInTheDocument()
   })
 })

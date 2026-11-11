@@ -9,21 +9,54 @@
 // ⚠️ Il foglio ha una X con aria-label «Chiudi»: è così che il tasto indietro
 // di Android lo trova (src/lib/indietroAndroid.js).
 
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Check, UserPlus } from 'lucide-react'
 import { useBottomSheet } from '../useBottomSheet'
+import { useTastieraAperta, useTastieraCheCopre } from '../useTastiera'
 import { VETRO, LABEL } from '../lib/stiliCard'
 
 function Foglio({ titolo, chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo, children }) {
+  // 🔴 «Nuovo coach» finiva sotto la tastiera (segnalato dal committente l'11/11/2026).
+  // Stessa cura di FoglioDaTesto: su Android la webview non si accorcia e il
+  // foglio si solleva di quanto la tastiera copre (`copre`); su iOS il foglio si
+  // accorcia da sé, ma il campo sta in fondo all'elenco e va riportato in vista
+  // scrivendo `scrollTop` a mano, ripetendo per un secondo: la nuova altezza
+  // della webview si assesta quando vuole, e `resize` lì non arriva.
+  const tastieraAperta = useTastieraAperta()
+  const copre = useTastieraCheCopre()
+  const corpo = useRef(null)
+  const portaInVista = useCallback(() => {
+    const lista = corpo.current
+    const campo = document.activeElement
+    if (!lista || !campo || !lista.contains(campo)) return
+    const r = campo.getBoundingClientRect()
+    const f = lista.getBoundingClientRect()
+    const margine = 16
+    // Si porta in vista anche il bottone sotto il campo; se non c'è spazio
+    // per tutto, vince la cima del campo (il controllo dopo).
+    const fondo = campo.form ? campo.form.getBoundingClientRect().bottom : r.bottom
+    let sposta = fondo - (f.bottom - margine)
+    if (r.top - sposta < f.top + margine) sposta = r.top - (f.top + margine)
+    if (sposta > 0) lista.scrollTop += sposta
+  }, [])
+  useEffect(() => {
+    if (!tastieraAperta) return
+    let volte = 0
+    const giro = setInterval(() => {
+      portaInVista()
+      if (++volte >= 12) clearInterval(giro)
+    }, 100)
+    return () => clearInterval(giro)
+  }, [tastieraAperta, copre, portaInVista])
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+    <div className="fixed inset-0 z-[100] flex flex-col justify-end" style={copre ? { paddingBottom: copre } : undefined}>
       <div aria-hidden="true" onClick={chiudi} className={`absolute inset-0 bg-black/85 ${classeVelo}`} style={stileVelo} />
       <div role="dialog" aria-modal="true" aria-label={titolo}
         className={`relative w-full max-w-2xl mx-auto bg-[#1e1e1e] border-t border-[#2a2a2a] rounded-t-3xl px-4
                     pb-[calc(1rem+env(safe-area-inset-bottom))] max-h-[85dvh] flex flex-col
                     shadow-[0_-20px_50px_-12px_rgba(0,0,0,.85)] ${classeFoglio}`}
-        style={stileFoglio}>
+        style={{ ...stileFoglio, ...(copre ? { maxHeight: `calc(85dvh - ${copre}px)` } : {}) }}>
         <button type="button" aria-label="Trascina giù per chiudere" {...maniglia}
           className="w-full pt-3 pb-2.5 flex justify-center touch-none cursor-grab group shrink-0">
           <span aria-hidden="true" className="w-10 h-1 rounded-full bg-white/20 group-hover:bg-white/35" />
@@ -35,7 +68,7 @@ function Foglio({ titolo, chiudi, maniglia, stileFoglio, stileVelo, classeFoglio
             <X size={18} aria-hidden="true" />
           </button>
         </div>
-        <div className="overflow-y-auto overscroll-contain hide-scrollbar flex flex-col gap-2">{children}</div>
+        <div ref={corpo} className="overflow-y-auto overscroll-contain hide-scrollbar flex flex-col gap-2">{children}</div>
       </div>
     </div>,
     document.body
@@ -129,7 +162,7 @@ export function FoglioGestioneCoach({ staff, conteggi = {}, errore, occupato, on
           })}
           <form onSubmit={invia} className="pt-3 flex flex-col gap-2">
             <label htmlFor="nuovo-coach" className={LABEL}>Nuovo coach</label>
-            <input id="nuovo-coach" type="email" inputMode="email" autoCapitalize="none" autoCorrect="off"
+            <input id="nuovo-coach" type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" enterKeyHint="send"
               value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@esempio.it"
               className="w-full px-4 py-3 rounded-xl bg-[#111] border border-[#333] text-white text-[15px] outline-none focus:border-brand" />
             <button type="submit" disabled={!email.trim() || occupato}

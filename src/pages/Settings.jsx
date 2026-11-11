@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer, Footprints, UsersRound } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer, Footprints, UsersRound, LayoutList } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -31,6 +31,7 @@ import { aggiungiCoach, togliCoach, normalizzaEmail } from '../lib/coachAtleti'
 import { liveActivityPossibile, preferenzaLiveActivity, salvaPreferenzaLiveActivity, liveActivityConsentite } from '../lib/liveActivity'
 import { datiTecnici } from '../lib/segnalazione'
 import { dataConsenso } from '../lib/consenso'
+import { leggiHomeClassica, scriviHomeClassica } from '../lib/homeClassica'
 import { apriInformativa } from '../lib/informativa'
 import { leggiCoda } from '../lib/offlineQueue'
 import { useFunzione } from '../useFunzione'
@@ -58,6 +59,9 @@ export default function Settings() {
   // Sul desktop (solo coach, src/useDesktop.js) la pagina va su due colonne.
   const desktop = eDesktop(useSchermoLargo(), role)
   const isSimulatingAthlete = localStorage.getItem('adminRoleOverride') === 'athlete'
+  // La Home coach di prima (cruscotto), dietro un interruttore del dispositivo (10/11/2026).
+  const [homeClassica, setHomeClassica] = useState(() => leggiHomeClassica())
+  const cambiaHomeClassica = () => { const v = !homeClassica; scriviHomeClassica(v); setHomeClassica(v) }
   // Solo admin (D9). Mentre si simula l'atleta il ruolo è `athlete`, ma
   // l'interruttore deve restare per tornare indietro: l'override lo applica
   // `App.jsx` ai soli admin, quindi se c'è, chi guarda è un admin.
@@ -202,9 +206,17 @@ export default function Settings() {
    * formattate qui: `FoglioCodici` è sola presentazione e non deve conoscere
    * né `date-fns` né lo schema di `invitation_codes`.
    */
+  const mioId = user?.id
   const caricaCodici = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('invitation_codes').select('*').order('created_at', { ascending: false })
+    // 🔴 Il coach chiede SOLO i suoi codici. La RLS da sola non basta: la
+    // policy «Authenticated users can select codes» (serve all'atleta per
+    // riscattare un codice) lascia leggere a chiunque abbia fatto login tutti
+    // i codici liberi, e si somma a quella dello staff. Senza questo filtro un
+    // coach vedeva i codici degli altri, e un atleta invitato con uno di quelli
+    // finiva assegnato all'altro coach. L'admin li vede tutti, come prima.
+    let query = supabase.from('invitation_codes').select('*')
+    if (!eAdmin(role)) query = query.eq('created_by', mioId)
+    const { data, error } = await query.order('created_at', { ascending: false })
 
     if (error) {
       setAlertInfo({ title: 'Errore', message: error.message, type: 'error' })
@@ -226,7 +238,7 @@ export default function Settings() {
       riscattato_il: dataRiscatto(c.used_at),
     })))
     setCodiciInCaricamento(false)
-  }, [])
+  }, [role, mioId])
 
   useEffect(() => {
     if (eStaff(role)) caricaCodici()
@@ -855,6 +867,10 @@ export default function Settings() {
             <RigaAzione icona={Ticket} tono="brand" titolo="Codici invito"
               dettaglio={riassuntoCodici(codici) || 'Genera e condividi gli inviti'}
               onClick={() => setFoglioCodiciAperto(true)} />
+            <Separatore />
+            <RigaInterruttore icona={LayoutList} titolo="Home classica"
+              dettaglio="La Home coach di prima, con le persone in elenco. Vale su questo dispositivo."
+              attivo={homeClassica} onCambia={cambiaHomeClassica} />
             {/* «Scarpe da corsa»: per lo staff /scarpe non ha altri ingressi. */}
             {scarpeAccese && (<>
             <Separatore />

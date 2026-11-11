@@ -325,3 +325,13 @@ sottotitolo della riga in Impostazioni ora la nomina, così si trova.
 - Arrivano solo a `coaching@federicoleo.it` (mittente `onboarding@resend.dev`).
 - Il codice fa solo arrivare la segnalazione: chi la legge, in quanto tempo, come si toglie il contenuto
   e come si avvisa chi l'ha caricato è una procedura del committente (e dell'avvocato).
+
+## Il foglio «Coach» e la tastiera (11/11/2026)
+
+Segnalato dal committente: nell'app, toccando «Nuovo coach» la tastiera copriva il campo.
+Il `Foglio` condiviso di `FoglioCoach.jsx` non faceva niente per la tastiera. Ora fa come
+`FoglioDaTesto`: su Android si solleva di `useTastieraCheCopre` (la webview lì non si
+accorcia); su iOS, dove si accorcia da sé, riporta in vista il campo **e** il bottone
+«Aggiungi coach» scrivendo `scrollTop` della lista a mano, ripetendo per ~1 s a tastiera
+aperta (in Capacitor `resize` non arriva e la nuova altezza si assesta quando vuole).
+Il campo ha `enterKeyHint="send"`: Invio manda il modulo. ⚠️ Non provato sul telefono.
