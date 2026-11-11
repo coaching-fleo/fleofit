@@ -100,6 +100,13 @@
   ✅ **Stesso giorno: migrazione delle Scarpe applicata, archiviata da Xcode e caricata su App Store
   Connect** (dal codice di `55fd947`). Garmin è ancora in beta (produzione non approvata): niente
   Garmin nelle novità né nelle etichette. ✅ **Approvata** (detto dal committente l'11/11/2026).
+- **11 nov 2026** — `MARKETING_VERSION` 1.2.3 → **1.2.4** (quattro posti). Test 3242/3242, `npm run ios`
+  fatto, tre grep a posto. ✅ **Inviata in revisione l'11/11/2026** (archivio e invio fatti dal committente
+  con Xcode/Organizer, dal codice di `3bad724`). Novità: Team, Home coach «Riepilogo» e «+» nella barra,
+  notifica «Nuovo atleta», «Storico» nella barra dell'atleta, box jump, Plank/Hollow Body/L-Sit a tempo,
+  segnalazione di un contenuto. Scarpe e Team escono **spente** (`funzioni_app`): ⚠️ durante la revisione
+  **non vanno messe ad `admin`**. Migrazione `codici_invito_2026-11-11.sql` **non applicata**; il tempo 2
+  non va applicato finché ci sono 1.2.3 e precedenti in uso. Esito da registrare qui.
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non

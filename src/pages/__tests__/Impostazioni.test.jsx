@@ -14,7 +14,7 @@ import { CHIAVE_ULTIMO_EXPORT } from '../../lib/rigaImpostazioni'
 // in corso» e il logo FLEOFIT in cima sono usciti per una ragione, e senza un
 // test la prima persona che vuole «far vedere che sta caricando» li rimette.
 
-const ctrl = await vi.hoisted(async () => ({ codici: { valore: [] } }))
+const ctrl = await vi.hoisted(async () => ({ codici: { valore: [] }, erroreSu: [] }))
 
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
@@ -22,7 +22,7 @@ const finto = await vi.hoisted(async () => {
     invitation_codes: ctrl.codici.valore,
     athletes: [{ id: 'a1' }, { id: 'a2' }, { id: 'a3' }],
     workouts: [{ id: 'w1' }, { id: 'w2' }],
-  }))
+  }), { erroreSu: () => ctrl.erroreSu })
 })
 
 vi.mock('../../supabaseClient', () => ({ supabase: finto.supabase }))
@@ -54,6 +54,7 @@ beforeEach(() => {
   finto.chiamate.length = 0
   window.localStorage.clear()
   ctrl.codici.valore = []
+  ctrl.erroreSu = []
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
@@ -550,5 +551,35 @@ describe('L\'interruttore «Home classica» (solo staff)', () => {
   it('all\'atleta non si mostra', () => {
     montaAtleta()
     expect(screen.queryByRole('switch', { name: 'Home classica' })).not.toBeInTheDocument()
+  })
+})
+
+describe('«PDF delle schede» (template del PDF del coach)', () => {
+  it('il coach apre il foglio e salva la SUA riga di pdf_coach', async () => {
+    const utente = userEvent.setup()
+    montaCoach()
+    await utente.click(screen.getByRole('button', { name: /PDF delle schede/ }))
+    const foglio = await screen.findByRole('dialog', { name: 'PDF delle schede' })
+    await utente.type(within(foglio).getByLabelText('Nome in intestazione'), 'Mario Rossi')
+    await utente.type(within(foglio).getByLabelText('Note aggiuntive'), 'Scrivimi')
+    await utente.click(within(foglio).getByRole('button', { name: 'Salva' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'PDF delle schede' })).not.toBeInTheDocument())
+    const [up] = finto.chiamateA('pdf_coach', 'upsert')
+    expect(up.args[0]).toMatchObject({ coach_id: UTENTE.id, nome_firma: 'Mario Rossi', note_finali: 'Scrivimi' })
+    expect(screen.getByText('Coach Mario Rossi')).toBeInTheDocument()
+  })
+
+  it('se la lettura fallisce il foglio NON si apre vuoto (salvare cancellerebbe le note)', async () => {
+    ctrl.erroreSu = ['pdf_coach']
+    const utente = userEvent.setup()
+    montaCoach()
+    await utente.click(screen.getByRole('button', { name: /PDF delle schede/ }))
+    expect(await screen.findByText(/Non riesco a leggere il PDF delle schede/)).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'PDF delle schede' })).not.toBeInTheDocument()
+  })
+
+  it('l\'atleta non ha la riga', () => {
+    montaAtleta()
+    expect(screen.queryByRole('button', { name: /PDF delle schede/ })).not.toBeInTheDocument()
   })
 })

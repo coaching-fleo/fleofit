@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer, Footprints, UsersRound, LayoutList } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer, Footprints, UsersRound, LayoutList, FileText } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -26,6 +26,9 @@ import {
 } from '../components/ImpostazioniUI'
 import FoglioSegnalazione from '../components/FoglioSegnalazione'
 import FoglioGarmin from '../components/FoglioGarmin'
+import { FoglioPdf } from '../components/FoglioPdf'
+import { vibraSuccesso, vibraErrore } from '../lib/aptica'
+import { leggiMioTemplatePdf, salvaTemplatePdf } from '../lib/templatePdf'
 import { FoglioGestioneCoach } from '../components/FoglioCoach'
 import { aggiungiCoach, togliCoach, normalizzaEmail } from '../lib/coachAtleti'
 import { liveActivityPossibile, preferenzaLiveActivity, salvaPreferenzaLiveActivity, liveActivityConsentite } from '../lib/liveActivity'
@@ -91,6 +94,10 @@ export default function Settings() {
   const [sviluppoAperto, setSviluppoAperto] = useState(false)
   const [foglioCodiciAperto, setFoglioCodiciAperto] = useState(false)
   const [foglioSegnalazioneAperto, setFoglioSegnalazioneAperto] = useState(false)
+  // «PDF delle schede»: il template si legge solo quando si apre il foglio
+  // (src/lib/templatePdf.js). `null` = non ancora letto.
+  const [templatePdf, setTemplatePdf] = useState(null)
+  const [foglioPdfAperto, setFoglioPdfAperto] = useState(false)
   const [codici, setCodici] = useState(null)
   // Gestione dei coach (solo admin): `staff` è null finché non è letto.
   const [foglioCoachAperto, setFoglioCoachAperto] = useState(false)
@@ -750,6 +757,33 @@ export default function Settings() {
 
   const apriGestioneCoach = () => { setFoglioCoachAperto(true); caricaStaff() }
 
+  // «PDF delle schede»: si legge la SUA riga, poi si apre. 🔴 Se la lettura
+  // fallisce il foglio NON si apre: vuoto, un salvataggio del solo nome
+  // cancellerebbe le note già salvate. Senza tabella si apre, e il salvataggio
+  // dirà che manca.
+  const apriFoglioPdf = async () => {
+    if (operazione) return
+    setOperazione('pdf')
+    const letto = await leggiMioTemplatePdf(supabase, user?.id)
+    setOperazione(null)
+    if (letto.errore) {
+      setAlertInfo({ title: 'Errore', message: 'Non riesco a leggere il PDF delle schede. Controlla la connessione e riprova.', type: 'error' })
+      return
+    }
+    setTemplatePdf({ nome: letto.nome || '', note: letto.note || '' })
+    setFoglioPdfAperto(true)
+  }
+  const salvaFoglioPdf = async (valori) => {
+    const esito = await salvaTemplatePdf(supabase, user?.id, valori)
+    if (!esito.errore) {
+      setTemplatePdf({ nome: valori.nome.trim(), note: valori.note.trim() })
+      vibraSuccesso()
+    } else {
+      vibraErrore()
+    }
+    return esito
+  }
+
   const aggiungiUnCoach = async (email) => {
     if (!normalizzaEmail(email)) {
       return setAlertInfo({ title: 'Indirizzo non valido', message: 'Scrivi un indirizzo email completo.', type: 'error' })
@@ -867,6 +901,10 @@ export default function Settings() {
             <RigaAzione icona={Ticket} tono="brand" titolo="Codici invito"
               dettaglio={riassuntoCodici(codici) || 'Genera e condividi gli inviti'}
               onClick={() => setFoglioCodiciAperto(true)} />
+            <Separatore />
+            <RigaAzione icona={FileText} titolo="PDF delle schede"
+              dettaglio={templatePdf?.nome ? `Coach ${templatePdf.nome}` : 'Nome e note in fondo ai tuoi PDF'}
+              onClick={apriFoglioPdf} occupato={operazione === 'pdf'} />
             <Separatore />
             <RigaInterruttore icona={LayoutList} titolo="Home classica"
               dettaglio="La Home coach di prima, con le persone in elenco. Vale su questo dispositivo."
@@ -1026,6 +1064,14 @@ export default function Settings() {
       )}
 
       <input type="file" accept=".json" className="hidden" ref={athleteImportRef} onChange={handleImportAthlete} />
+
+      {foglioPdfAperto && (
+        <FoglioPdf
+          valori={templatePdf || { nome: '', note: '' }}
+          nomeAccount={nome}
+          onSalva={salvaFoglioPdf}
+          onChiudi={() => setFoglioPdfAperto(false)} />
+      )}
 
       {foglioCodiciAperto && (
         <FoglioCodici

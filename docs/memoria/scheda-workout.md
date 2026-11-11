@@ -809,3 +809,43 @@ quindi «bianchi sara» trova Sara Bianchi.
   evento) la tengono: non hanno una X loro.
 - Test: `WorkoutDetailScheda.test.jsx`, «il foglio «Assegna Workout»» (visti fallire
   togliendo il filtro).
+
+## Template PDF del coach (11/11/2026)
+
+Richiesta del committente: il PDF della scheda («Esporta PDF») non deve più dire «Coach
+Federico Leo» a tutti; ogni coach mette **il suo nome** in testa e **note aggiuntive sue**,
+uguali in tutti i suoi PDF. Nient'altro si personalizza (né logo, né colori, né sezioni):
+lo ha deciso lui. Spec e piano: `docs/superpowers/specs/2026-11-11-template-pdf-design.md`,
+`docs/superpowers/plans/2026-11-11-template-pdf.md`.
+
+- **Dati**: tabella `pdf_coach` (undicesima eccezione allo schema, `supabase/schema/pdf_coach_2026-11-11.sql`,
+  da applicare a mano). La migrazione semina una riga per ogni membro dello staff col nome
+  della sua riga `athletes`: il giorno dopo il PDF di Federico dice ancora il suo nome.
+- **Di chi è il template**: del coach che ha **creato** il workout (`workouts.creato_da`),
+  chiunque esporti; se quella riga non si legge (un admin che scrive per l'atleta di un altro
+  coach: la RLS non la fa leggere all'atleta) o `creato_da` è vuoto, quella di **chi esporta**.
+  Senza nessuna: solo «FLEOFIT», nessuna nota. 🔴 Mai un nome scritto nel codice.
+- **Tutto passa da `src/lib/templatePdf.js`**: `leggiTemplatePdf` non lancia mai (tabella
+  assente, errore, rete giù = niente template: il PDF si esporta sempre), `salvaTemplatePdf`
+  traduce la tabella assente in «Funzione non ancora attiva…», `scriviNoteAggiuntive` disegna
+  il riquadro e va a una pagina nuova (scura) se finirebbe oltre il glossario a y 240.
+- **Si legge all'esportazione**, dentro `buildPDFDoc`, mai all'apertura della scheda: chi non
+  esporta non paga una richiesta. `buildPDFDoc` ha tre chiamanti (Esporta PDF e le due
+  condivisioni): tutti prendono il template.
+- **Impostazioni → Solo coach → «PDF delle schede»** (`FoglioPdf.jsx`, sola presentazione):
+  modale centrata come «Salva come modello», non un bottom sheet. Il «Salva» usa
+  `BOTTONE_BRAND` e non `CtaPrimaria`, che sta nel chunk condiviso `CreaWorkoutUI`.
+- `templatePdf.js` finisce in un chunk condiviso fra scheda e Impostazioni, **non** in `index`
+  (misurato: index 627,90 → 627,93 KB; lo sforamento dei 620 c'era già prima).
+- Test: `templatePdf.test.js`, `WorkoutDetailPdf.test.jsx` (jsPDF finto che si segna i testi;
+  ⚠️ senza `intensity`, perché l'emoji passa da un canvas che jsdom non ha), `FoglioPdf.test.jsx`
+  e due casi in `Impostazioni.test.jsx`. Tutti visti fallire rompendo il codice.
+- **Correzioni della revisione finale** (11/11/2026, ognuna con un test visto fallire):
+  le note si spezzano a 10 pt (prima con la dimensione lasciata dal corpo, e uscivano dal
+  margine) e si troncano a 41 righe con «…» (600 caratteri di a-capo finivano sopra il
+  glossario anche sulla pagina nuova); 🔴 le Impostazioni leggono con `leggiMioTemplatePdf`,
+  che distingue «nessuna riga» da «lettura fallita», e con la lettura fallita il foglio **non
+  si apre** (vuoto, salvare il solo nome cancellava le note); l'errore RLS `42501` (l'account
+  demo) diventa un messaggio in italiano; la policy di lettura fa leggere all'atleta anche il
+  template di chi gli ha scritto un workout, se no un workout scritto da un admin per
+  l'atleta di un altro coach usciva senza nome.

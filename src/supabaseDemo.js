@@ -187,7 +187,9 @@ function query(tabella) {
         ? { creato_at: new Date().toISOString(), fissato: false, modificato_at: null }
         : tabella === 'modelli_blocco'
           ? { creato_at: new Date().toISOString(), modificato_at: null }
-          : {}
+          : tabella === 'pdf_coach'
+            ? { aggiornato_at: new Date().toISOString() }
+            : {}
       const nuove = (Array.isArray(dati) ? dati : [dati]).map(r => ({ id: uuid(), ...predefiniti, ...r }))
       const inserite = []
       for (const n of nuove) {

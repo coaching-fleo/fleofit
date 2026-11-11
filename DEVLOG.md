@@ -77,6 +77,12 @@ nuove vanno in fondo alla sezione della 1.2.2, sotto un titolo «1.2.3».
 - Ogni coach vede solo i suoi modelli. Servono la connessione per salvarli.
 - Chi ha ancora la 1.2.2 non vede i modelli; i workout fatti con un modello si leggono uguale ovunque.
 
+## PDF delle schede col nome del coach (prossima versione, dopo la 1.2.4)
+- Il PDF della scheda porta in testa **il nome del coach che ha creato il workout** («FLEOFIT - Coach …») e non più «Coach Federico Leo» per tutti.
+- Il coach scrive una volta, in Impostazioni → Solo coach → **«PDF delle schede»**, il nome da mostrare e le sue **note aggiuntive** (fino a 600 caratteri): compaiono in fondo a tutti i suoi PDF, prima del glossario.
+- Serve la tabella `pdf_coach` (`supabase/schema/pdf_coach_2026-11-11.sql`, da applicare a mano). Senza tabella il PDF esce con il solo «FLEOFIT» e il foglio dice che manca.
+- Prove sul telefono, dopo la migrazione: salvare nome e note, esportare il PDF di un proprio workout (nome e riquadro), esportarlo da atleta (stesso nome e note del suo coach); `demo@fleofit.it` non salva.
+
 ## Gestire i coach (multi-coach) — prove sul telefono
 Da fare DOPO che il committente ha applicato `multi_coach_2026-10-15.sql`; prima il foglio dice che serve l'aggiornamento.
 - Impostazioni da admin: la voce «Coach» c'è; da coach non c'è (né il backup).

@@ -123,10 +123,14 @@ export const buildTimerSequence = (workout) => {
         // TUTTI gli esercizi, un ON + OFF ciascuno. Prima era un intervallo per
         // round, e con 4 round e 7 esercizi gli ultimi tre non comparivano mai.
         const esercizi = b.exercises?.length ? b.exercises : [null];
+        // Se dopo l'ON/OFF c'è un blocco Rest, l'ultimo OFF non si fa: si
+        // passa dritti al Rest, che è già il riposo (niente due riposi di fila).
+        const seguitoDaRest = blocks[i + 1]?.type === 'Rest';
         for(let r=1; r<=rounds; r++) {
           esercizi.forEach((ex, k) => {
            const dove = esercizi.length > 1 ? ` · ${k + 1}/${esercizi.length}` : '';
            seq.push({ id: `blk-${i}-${r}-${k}-on`, title: 'WORK (ON)', subtitle: `Round ${r}/${rounds}${dove}`, duration: onSec, theme: 'hyrox', type: 'work', task: taskDi(ex) || 'Lavoro' });
+           if (seguitoDaRest && r === rounds && k === esercizi.length - 1) return;
            seq.push({ id: `blk-${i}-${r}-${k}-off`, title: 'REST (OFF)', subtitle: `Round ${r}/${rounds}${dove}`, duration: offSec, theme: 'rest', type: 'rest', task: 'Riposo' });
           });
         }

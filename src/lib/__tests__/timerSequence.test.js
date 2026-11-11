@@ -72,6 +72,26 @@ describe('espansione dei round', () => {
     expect(lavoro[2].subtitle).toBe('Round 3/3')
   })
 
+  it('ON/OFF seguito da un Rest: niente ultimo OFF, si passa dritti al Rest', () => {
+    const seq = buildTimerSequence(hyrox([
+      { id: 1, type: 'ON/OFF', params: { on: '0:40', off: '0:20', rounds: '2' }, exercises: [{ name: 'Wall Balls', reps: '15' }, { name: 'Burpees', reps: '10' }] },
+      { id: 2, type: 'Rest', params: { duration: '2:00' } },
+    ]))
+    expect(seq.filter(s => s.title === 'WORK (ON)')).toHaveLength(4)
+    expect(seq.filter(s => s.title === 'REST (OFF)')).toHaveLength(3)
+    const ultimoOn = seq.findLastIndex(s => s.title === 'WORK (ON)')
+    expect(seq[ultimoOn + 1].title).toBe('Rest')
+    expect(seq[ultimoOn].nextTask).toBe('Riposo')
+  })
+
+  it('ON/OFF seguito da un altro blocco: l ultimo OFF resta', () => {
+    const seq = buildTimerSequence(hyrox([
+      { id: 1, type: 'ON/OFF', params: { on: '0:40', off: '0:20', rounds: '2' }, exercises: [{ name: 'Wall Balls', reps: '15' }] },
+      { id: 2, type: 'AMRAP', params: { duration: '5:00' }, exercises: [{ name: 'Burpees', reps: '10' }] },
+    ]))
+    expect(seq.filter(s => s.title === 'REST (OFF)')).toHaveLength(2)
+  })
+
   it('ON/OFF: ogni round passa TUTTI gli esercizi, nell ordine', () => {
     // Il caso del 13/10/2026: con 4 round e 7 esercizi il timer faceva 4
     // intervalli e gli ultimi tre esercizi non comparivano mai.

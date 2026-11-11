@@ -103,6 +103,7 @@ import {
 import { RiepilogoWorkout, BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import { partiRipetuta, etichettaParte } from '../lib/ripetute'
 import { filtraPerNome } from '../lib/rigaAtleta'
+import { leggiTemplatePdf, intestazioneCoach, scriviNoteAggiuntive } from '../lib/templatePdf'
 import { CampoRicerca } from '../components/ArchivioUI'
 import {
   TestataScheda, IconaStato, MenuScheda, TitoloScheda, AvvisoRiscaldamento,
@@ -1030,6 +1031,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const buildPDFDoc = async () => {
     const jsPDF = await caricaPdf()
     const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+    // Nome e note del coach che ha creato il workout (src/lib/templatePdf.js):
+    // letti qui, all'esportazione, e mai all'apertura della scheda.
+    const template = await leggiTemplatePdf(supabase, { creatoDa: workout.creato_da, utente: user?.id })
     const s = workout.sections
     const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
     const category = (rawCat === 'Autonomo' || rawCat === 'Custom') ? 'Custom' : (rawCat === 'Event' ? 'Event' : rawCat)
@@ -1049,11 +1053,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     doc.setTextColor(241, 186, 23)
     doc.text('FIT', 20 + fleoWidth, y)
     
-    const fitWidth = doc.getTextWidth('FIT')
-    doc.setTextColor(150, 150, 150)
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
-    doc.text(' - Coach Federico Leo', 20 + fleoWidth + fitWidth, y)
+    const firma = intestazioneCoach(template.nome)
+    if (firma) {
+      const fitWidth = doc.getTextWidth('FIT')
+      doc.setTextColor(150, 150, 150)
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'normal')
+      doc.text(firma, 20 + fleoWidth + fitWidth, y)
+    }
 
     y += 8
     doc.setTextColor(200, 200, 200)
@@ -1286,6 +1293,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       doc.text(lines, 20, y)
       y += lines.length * 5 + 6
     }
+
+    // Le note del coach uguali in tutti i suoi PDF (Impostazioni → «PDF delle schede»).
+    y = scriviNoteAggiuntive(doc, y, template.note)
 
     // Glossario fisso in fondo
     const glossaryY = 240

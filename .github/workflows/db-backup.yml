@@ -69,7 +69,9 @@ jobs:
       # NON garmin_collegamenti: contiene i token (cifrati) e non deve finire in un artifact.
       # Finché la loro migrazione non è applicata la REST API risponde 404 e il job
       # le salta con un avviso (`::warning::`), senza far fallire il backup.
-      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai messaggi_coach note_estratte:athlete_workout_id staff:email coach_atleti:athlete_id.asc,coach_id modelli_blocco garmin_attivita:garmin_id garmin_giornate:athlete_id.asc,giorno garmin_invii:athlete_workout_id scarpe_catalogo scarpe_atleta scarpe_uso:athlete_workout_id funzioni_app:nome team team_membri:team_id.asc,atleta_id team_sfide team_risultati:sfida_id.asc,atleta_id'
+      # pdf_coach (11/11/2026): il template del PDF del coach, chiave coach_id.
+      # Finché la migrazione non è applicata il job la salta con un avviso.
+      TABLES: 'athletes workouts athlete_workouts personal_records invitation_codes notifications come_stai messaggi_coach note_estratte:athlete_workout_id staff:email coach_atleti:athlete_id.asc,coach_id modelli_blocco garmin_attivita:garmin_id garmin_giornate:athlete_id.asc,giorno garmin_invii:athlete_workout_id scarpe_catalogo scarpe_atleta scarpe_uso:athlete_workout_id funzioni_app:nome team team_membri:team_id.asc,atleta_id team_sfide team_risultati:sfida_id.asc,atleta_id pdf_coach:coach_id'
 
       # Tabelle che non devono MAI essere vuote o mancanti:
       # se lo sono, il backup viene considerato non valido e il job fallisce.

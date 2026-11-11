@@ -32,7 +32,7 @@ import schedeScarpe from '../tools/scarpe/schede.json'
 // build vera (il modulo demo si pota, gli asset no). Sono le sole tre che esistono.
 const FOTO_SCARPE = ['saucony-endorphin-speed-4', 'puma-deviate-nitro-3', 'on-cloudmonster-2']
 
-export const VERSIONE_SEME = 23   // 23: i ritratti degli atleti (tools/demo-foto)
+export const VERSIONE_SEME = 24   // 24: pdf_coach, il template del PDF (23: i ritratti degli atleti)
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -649,6 +649,12 @@ export function semi() {
     garmin_giornate: garmin_giornate(),
     messaggi_coach: messaggi_coach(),
     modelli_blocco: modelli_blocco(),
+    // Template del PDF (pdf_coach): i workout finti non hanno `creato_da`, quindi il PDF
+    // usa la riga di chi esporta.
+    pdf_coach: [
+      { coach_id: COACH, nome_firma: 'Federico Leo', note_finali: 'Per dubbi scrivimi su WhatsApp.\nRicordati di mandarmi l\'RPE dopo la seduta.', aggiornato_at: fa(3) },
+      { coach_id: COACH_DEMO.id, nome_firma: 'Coach Demo', note_finali: null, aggiornato_at: fa(3) },
+    ],
     scarpe_catalogo: scarpe_catalogo(),
     scarpe_atleta: scarpe_atleta(),
     scarpe_uso: scarpe_uso(aws),
