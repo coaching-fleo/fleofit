@@ -452,6 +452,13 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/gare-corsa/index.ts"
 
+[functions.mio-coach]
+enabled = true
+# Dice a chi chiama il nome del SUO coach (Home atleta, giorno 1). Il JWT tiene
+# fuori gli anonimi; dentro, l'utente si verifica con Supabase Auth.
+verify_jwt = true
+entrypoint = "./functions/mio-coach/index.ts"
+
 [functions.risultato-hyrox]
 enabled = true
 # Il JWT tiene fuori le chiamate anonime: ogni ricerca costa ~20 richieste a

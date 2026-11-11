@@ -3,6 +3,12 @@ import { testoNotificaCoach, testoGarminRegistrato } from '../../../supabase/fun
 
 describe('testoNotificaCoach', () => {
   const base = { athleteName: 'Sara', workoutTitle: 'Sled' }
+  it('registered: il nome dell\'atleta nuovo, senza genere', () => {
+    expect(testoNotificaCoach({ athleteName: 'Sara Neri', action: 'registered' })).toEqual({
+      title: '👋 Nuovo atleta',
+      bodyMsg: 'Sara Neri ha usato il tuo codice invito: da oggi è tra i tuoi atleti.',
+    })
+  })
   it('completed resta identico senza daGarmin', () => {
     expect(testoNotificaCoach({ ...base, action: 'completed' })).toEqual({ title: '✅ Workout completato!', bodyMsg: 'Sara ha completato: Sled' })
   })

@@ -68,11 +68,29 @@ describe('2a · Il giorno 1', () => {
   it('mostra il benvenuto del coach al posto dei numeri', async () => {
     monta([])
     expect(await screen.findByText(/ti segue da oggi/i)).toBeInTheDocument()
-    expect(screen.getByText('Federico Leo', { exact: false })).toBeInTheDocument()
     expect(screen.getByLabelText('Completa il tuo profilo')).toBeInTheDocument()
     expect(screen.getByText('Hai una gara in programma?')).toBeInTheDocument()
     expect(screen.getByLabelText('Registra il primo allenamento')).toBeInTheDocument()
     expect(screen.getByText('Come funziona')).toBeInTheDocument()
+  })
+
+  // Multi-coach (11/11/2026): il nome è quello del coach DELL'ATLETA, dato
+  // dalla funzione `mio-coach`. Era la costante 'Federico Leo' per tutti.
+  it('scrive il nome del SUO coach, quello che risponde mio-coach', async () => {
+    finto.supabase.functions.invoke.mockImplementation((nome) => Promise.resolve(
+      nome === 'mio-coach' ? { data: { nome: 'Giulia Bianchi' }, error: null } : { data: null, error: null }))
+    monta([])
+    expect(await screen.findByText('Giulia Bianchi', { exact: false })).toBeInTheDocument()
+    expect(screen.queryByText('Federico Leo', { exact: false })).not.toBeInTheDocument()
+    expect(finto.supabase.functions.invoke).toHaveBeenCalledWith('mio-coach', expect.anything())
+    finto.supabase.functions.invoke.mockImplementation(() => Promise.resolve({ data: null, error: null }))
+  })
+
+  it('senza risposta scrive «Il tuo coach», mai un nome inventato', async () => {
+    monta([])
+    await screen.findByText(/ti segue da oggi/i)
+    expect(screen.getByText('Il tuo coach', { selector: 'h2', exact: false })).toBeInTheDocument()
+    expect(screen.queryByText('Federico Leo', { exact: false })).not.toBeInTheDocument()
   })
 
   // 🔴 Il test che vale più di tutti gli altri di questo file, ed è la ragione

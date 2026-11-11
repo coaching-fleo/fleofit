@@ -175,6 +175,15 @@ function Onboarding({ user, onComplete }) {
       }
       localStorage.setItem(`fleofit_name_${user.id}`, nome)
 
+      // «👋 Nuovo atleta» al coach del codice invito (11/11/2026). DOPO la riga
+      // `athletes`: è il suo inserimento a far scattare `assegna_coach`, e senza
+      // quella il server non saprebbe a chi mandarla. Nome e destinatari li
+      // decide il server; una volta sola (se c'è già, non ne crea un'altra).
+      // Non si aspetta: una push che non parte non deve fermare l'ingresso.
+      supabase.functions.invoke('send-reminders', {
+        body: { mode: 'coach_notification', action: 'registered' },
+      }).catch(() => {})
+
       const { data, error: metaError } = await supabase.auth.updateUser({
         data: { role, first_name: nome, last_name: cognome, avatar_url: photoUrl }
       })

@@ -165,6 +165,16 @@ coach, quella è l'unica riga da sostituire con una lettura vera — e
 `BenvenutoCoach` funziona anche senza: senza `coach` scrive «Il tuo coach ti
 segue da oggi».
 
+> ✅ **Dall'11/11/2026 il nome è quello vero.** Col multi-coach la costante
+> `'Federico Leo'` era sbagliata per chi entra col codice di un altro coach. Ora
+> `src/lib/coach.js` chiede il nome alla Edge Function **`mio-coach`** (nuova,
+> nessuna migrazione: legge col service role il primo coach di `coach_atleti` e
+> il suo nome dalla sua riga `athletes`, e risponde solo per chi chiama). La
+> risposta resta in `fleofit_coach_<uid>`; senza risposta e senza copia,
+> «Il tuo coach ti segue da oggi». Mai un nome inventato. ✅ `mio-coach` (v1) e
+> `send-reminders` (v73, con `registered`) **pubblicate l'11/11/2026**; prima del
+> deploy la versione in linea di `send-reminders` era identica al commit `90e1bf1`.
+
 ### ✅ Dal 12/10/2026 «Fissa l'obiettivo» apre «Nuovo evento»
 `CampoObiettivo` e `BannerObiettivoVuoto` aprono `NuovoEvento`, la modale del
 calendario (gara HYROX dalla lista ufficiale o evento a mano): l'obiettivo nasce

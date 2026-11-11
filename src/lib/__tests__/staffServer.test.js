@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   ruoloStaff, atletiDi, coachDi, destinatariNotificaCoach, idStaff, atletaNotificaCoach,
+  nomeCompleto, nomeDi, primoCoachDi,
 } from '../../../supabase/functions/_shared/staff.ts'
 
 // Parte pura di «chi è staff» per le Edge Function: il client del database
@@ -30,6 +31,7 @@ function fintoDb(tabelle, { errore = {} } = {}) {
     auth: {
       admin: {
         listUsers: async () => ({ data: { users: tabelle.utenti || [] }, error: null }),
+        getUserById: async (id) => ({ data: { user: (tabelle.utenti || []).find(u => u.id === id) ?? null }, error: null }),
       },
     },
   }
@@ -129,5 +131,41 @@ describe('atletaNotificaCoach', () => {
   })
   it('un atleta senza id: nessuno', () => {
     expect(atletaNotificaCoach({ athleteId: 'at2' }, { id: null, ruoloStaff: null, servizio: false })).toBeNull()
+  })
+})
+
+// «Mario Rossi ti segue da oggi» e «👋 Nuovo atleta» (11/11/2026).
+describe('nomeCompleto', () => {
+  it('unisce nome e cognome, null se vuoti', () => {
+    expect(nomeCompleto({ name: ' Giulia ', surname: 'Bianchi' })).toBe('Giulia Bianchi')
+    expect(nomeCompleto({ name: 'Giulia', surname: null })).toBe('Giulia')
+    expect(nomeCompleto({ name: '', surname: ' ' })).toBe(null)
+    expect(nomeCompleto(null)).toBe(null)
+  })
+})
+
+describe('nomeDi', () => {
+  it('prima la riga athletes, poi i metadati dell\'account', async () => {
+    const db = fintoDb({
+      athletes: [{ id: 'c1', name: 'Giulia', surname: 'Bianchi' }],
+      utenti: [{ id: 'c2', user_metadata: { first_name: 'Marco', last_name: 'Verdi' } }],
+    })
+    expect(await nomeDi(db, 'c1')).toBe('Giulia Bianchi')
+    expect(await nomeDi(db, 'c2')).toBe('Marco Verdi')
+    expect(await nomeDi(db, 'nessuno')).toBe(null)
+  })
+})
+
+describe('primoCoachDi', () => {
+  it('il coach assegnato per primo; null se non ne ha o la lettura fallisce', async () => {
+    const db = fintoDb({ coach_atleti: [
+      { athlete_id: 'a1', coach_id: 'tardi', creato_at: '2026-11-10T10:00:00Z' },
+      { athlete_id: 'a1', coach_id: 'primo', creato_at: '2026-11-01T10:00:00Z' },
+      { athlete_id: 'a2', coach_id: 'altro', creato_at: '2026-10-01T10:00:00Z' },
+    ] })
+    expect(await primoCoachDi(db, 'a1')).toBe('primo')
+    expect(await primoCoachDi(db, 'a3')).toBe(null)
+    const rotto = fintoDb({}, { errore: { coach_atleti: { message: 'giù' } } })
+    expect(await primoCoachDi(rotto, 'a1')).toBe(null)
   })
 })

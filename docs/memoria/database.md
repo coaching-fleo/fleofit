@@ -70,6 +70,12 @@ Progetto Supabase: `riyqtcssllupakjtoehj`.
   - `immediate` (`record_id`): "Nuovo Allenamento!" all'atleta appena assegnato
   - `voice_note` (`record_id`): "Nuova Nota Vocale!" all'atleta
   - `coach_notification` (`action: 'note' | 'completed' | 'custom_workout'`): notifica agli **admin**
+    > Dall'11/11/2026 c'è anche `action: 'registered'` («👋 Nuovo atleta»): la manda
+    > l'onboarding (`App.jsx`, dopo la riga `athletes`, cioè dopo `assegna_coach`). Solo
+    > un atleta per sé; nome e rotta (`/athletes/<id>`) li decide il server; **una volta
+    > sola** (se esiste già una notifica con quel titolo e quella rotta, non la rifà).
+    > E da quel giorno la notifica in campanella si scrive **prima** delle push: un coach
+    > senza dispositivi iscritti prima non la riceveva nemmeno nell'app.
     (lista admin ricavata da `supabase.auth.admin.listUsers()` paginato)
   - Gestisce badge iOS incrementale e cancella le subscription morte (404/410/UNREGISTERED)
 - **`ai-workout`** — riceve `{ prompt, audioBase64?, mimeType? }`; se c'è audio lo trascrive con

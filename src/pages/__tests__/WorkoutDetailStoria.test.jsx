@@ -116,6 +116,13 @@ describe('il tasto di condivisione', () => {
     expect(within(menu).getByRole('menuitem', { name: /Condividi come storia/ })).toBeInTheDocument()
   })
 
+  it('c’è un tasto in fondo alla scheda, per tutti, che apre lo stesso foglio', async () => {
+    apri({ ruolo: 'admin', utente: 'coach' })
+    await attendi()
+    await userEvent.click(screen.getByRole('button', { name: /^Condividi su Instagram$/i }))
+    expect(screen.getByRole('dialog', { name: /Condividi come storia/i })).toBeInTheDocument()
+  })
+
   it('non lascia la grafica nel DOM quando il foglio è chiuso', async () => {
     // È un albero di decine di nodi: tenerlo montato sempre lo farebbe pesare
     // su ogni apertura di scheda, che è il gesto più frequente dell'app.

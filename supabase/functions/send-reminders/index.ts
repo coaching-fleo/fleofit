@@ -2,8 +2,8 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
-import { atletaNotificaCoach, atletiDi, coachDi, destinatariNotificaCoach, idStaff, ruoloStaff } from "../_shared/staff.ts"
-import { testoNotificaCoach, testoGarminRegistrato } from "./testi.ts"
+import { atletaNotificaCoach, atletiDi, coachDi, destinatariNotificaCoach, idStaff, nomeDi, ruoloStaff } from "../_shared/staff.ts"
+import { TITOLO_REGISTRATO, testoNotificaCoach, testoGarminRegistrato } from "./testi.ts"
 import { TITOLO_INVITO, routeInvito, testoInvito, destinatariInvito, invitiAccesi } from "./team.ts"
 import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, puoInviareQuestoMessaggio, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm, routeProva } from "./broadcast.ts"
 
@@ -660,6 +660,55 @@ serve(async (req) => {
          return new Response(JSON.stringify({ success: true, message: 'Nessun admin trovato o iscritto alle notifiche' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
+      // Un'action non riconosciuta produceva una notifica con titolo generico e
+      // corpo VUOTO, spedita a tutti gli admin. Meglio rifiutare: una push senza
+      // testo non serve a nessuno e non deve poter nascere da un typo.
+      const azioniValide = ['note', 'completed', 'custom_workout', 'moved', 'registered'];
+      if (!azioniValide.includes(body.action)) {
+        console.warn(`coach_notification: action '${body.action}' non riconosciuta, ignorata.`);
+        return new Response(JSON.stringify({ error: `action non valida: ${body.action}` }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // 'registered' (11/11/2026): l'atleta nuovo, finito il profilo, avvisa il
+      // coach del codice che ha usato. La manda solo l'atleta per sé: nome e
+      // rotta li decide il server (dalla sua riga `athletes`), non il corpo.
+      // E una volta sola: se la notifica c'è già (profilo salvato due volte,
+      // o un client che la richiama) non se ne crea un'altra.
+      let corpo = body;
+      let route = body.route || "/";
+      if (body.action === 'registered') {
+        if (chiamante.ruoloStaff || chiamante.servizio || !athleteId) {
+          return new Response(JSON.stringify({ skipped: 'solo l\'atleta, per sé' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        route = `/athletes/${athleteId}`;
+        const { data: giaMandate } = await supabase.from('notifications')
+          .select('id').in('user_id', adminUserIds).eq('route', route).eq('title', TITOLO_REGISTRATO).limit(1);
+        if (giaMandate && giaMandate.length > 0) {
+          return new Response(JSON.stringify({ skipped: 'già notificato' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        corpo = { ...body, athleteName: (await nomeDi(supabase, athleteId)) || 'Un atleta' };
+      }
+
+      // «· da Garmin» lo dice solo il webhook (chiamante di servizio): da un atleta o da
+      // un coach il flag si ignora, il testo direbbe un dato verificato che non lo è.
+      const { title, bodyMsg } = testoNotificaCoach({ ...corpo, daGarmin: body.daGarmin === true && chiamante.servizio });
+
+      // 🔴 Prima la campanella, POI le push (11/11/2026). Fino a qui, un coach
+      // senza dispositivi iscritti alle push non riceveva nemmeno la notifica
+      // nell'app: la funzione usciva prima di scriverla.
+      const notifInserts = adminUserIds.map(adminId => ({
+        user_id: adminId,
+        title,
+        message: bodyMsg,
+        route
+      }));
+      let insertedNotifs: any[] = [];
+      const { data: dbNotifs, error: dbErr } = await supabase.from('notifications').insert(notifInserts).select();
+      if (dbErr) console.error("Errore DB (coach_notification):", dbErr);
+      if (dbNotifs) insertedNotifs = dbNotifs;
+
       // Recupera direttamente dal database solo le iscrizioni push degli admin
       const { data: adminSubscriptions, error: subError } = await supabase
         .from('push_subscriptions')
@@ -673,37 +722,6 @@ serve(async (req) => {
       if (!adminSubscriptions || adminSubscriptions.length === 0) {
          console.log('Attenzione: Nessun dispositivo admin ha le notifiche attive nel database.');
          return new Response(JSON.stringify({ success: true, message: 'Nessun dispositivo admin iscritto' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-
-      // Un'action non riconosciuta produceva una notifica con titolo generico e
-      // corpo VUOTO, spedita a tutti gli admin. Meglio rifiutare: una push senza
-      // testo non serve a nessuno e non deve poter nascere da un typo.
-      const azioniValide = ['note', 'completed', 'custom_workout', 'moved'];
-      if (!azioniValide.includes(body.action)) {
-        console.warn(`coach_notification: action '${body.action}' non riconosciuta, ignorata.`);
-        return new Response(JSON.stringify({ error: `action non valida: ${body.action}` }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      // «· da Garmin» lo dice solo il webhook (chiamante di servizio): da un atleta o da
-      // un coach il flag si ignora, il testo direbbe un dato verificato che non lo è.
-      const { title, bodyMsg } = testoNotificaCoach({ ...body, daGarmin: body.daGarmin === true && chiamante.servizio });
-      const route = body.route || "/";
-
-      const notifInserts = adminUserIds.map(adminId => ({
-        user_id: adminId,
-        title,
-        message: bodyMsg,
-        route
-      }));
-            let insertedNotifs: any[] = [];
-
-      if (notifInserts.length > 0) {
-        const { data: dbNotifs, error: dbErr } = await supabase.from('notifications').insert(notifInserts).select();
-        if (dbErr) console.error("Errore DB (coach_notification):", dbErr);
-                if (dbNotifs) insertedNotifs = dbNotifs;
-
       }
 
       const notifications = [];

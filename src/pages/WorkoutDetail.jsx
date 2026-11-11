@@ -107,7 +107,7 @@ import { CampoRicerca } from '../components/ArchivioUI'
 import {
   TestataScheda, IconaStato, MenuScheda, TitoloScheda, AvvisoRiscaldamento,
   BloccoScheda, RigaEsercizio, IntestazioneSezione, CardNota, EsitoCompletato,
-  RigaAssegnazione, ElencoAssegnazioni, GradimentoWorkout, CtaVetro,
+  RigaAssegnazione, ElencoAssegnazioni, GradimentoWorkout, CtaVetro, BottoneStoria,
 } from '../components/WorkoutDetailUI'
 
 const getIntensityColor = (val) => {
@@ -2202,6 +2202,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     </>
   )
 
+  // Il tasto in fondo alla scheda per lo sticker della storia: lo stesso foglio
+  // della voce di menu, ma dove lo si trova senza cercarlo.
+  const pStoria = <BottoneStoria onClick={apriStoria} />
+
   return (
     /* ⚠️ Niente `page-transition`. Entrano le SEZIONI della scheda — testata,
        titolo, esito, riepilogo, avviso, blocchi, note, assegnazioni — e i
@@ -2231,7 +2235,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         // la colonna sinistra scorre. La barra in fondo diventa un riquadro.
         <div data-disposizione="desktop" className="grid grid-cols-12 gap-6 items-start">
           <div data-colonna="sinistra" className="col-span-8 flex flex-col gap-[15px]">
-            {pOffline}{pTitolo}{pEsito}{pRiepilogo}{pAvviso}{pContenuto}{pNoteCoach}
+            {pOffline}{pTitolo}{pEsito}{pRiepilogo}{pAvviso}{pContenuto}{pNoteCoach}{pStoria}
           </div>
           {/* ⚠️ Ferma, quindi alta al massimo quanto la finestra: con venti
               assegnazioni la sua coda resterebbe irraggiungibile finché la
@@ -2251,7 +2255,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       ) : (
         <>
           {pOffline}{pTitolo}{pEsito}{pComeStai}{pRiepilogo}{pAvviso}{pContenuto}{pNoteCoach}
-          {pVocale}{pNoteAtleta}{pAssegnazioni}
+          {pVocale}{pNoteAtleta}{pAssegnazioni}{pStoria}
       {/* La barra fissa: «Avvia» non dipende più da quanto è lunga la lista dei
           blocchi. Prima stava sopra i blocchi per la stessa ragione, ma lì il
           completamento e l'assegnazione restavano in fondo allo scroll. */}

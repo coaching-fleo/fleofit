@@ -38,7 +38,7 @@ import { HeaderHome, BottoneVetro, HeroOggi, AnelloSettimana, CellaSerie, CellaV
 import { BenvenutoCoach, CampoObiettivo, CardPrimoLibero, ComeFunziona,
          CellaPrimoDato, CellaBloccata, BannerObiettivoVuoto,
          HeroRiposo, CardSettimanaChiusa, CardDomani, RigaFattoComunque } from '../components/HomeAtletaVuotiUI'
-import { COACH } from '../lib/coach'
+import { coachSalvato, leggiMioCoach } from '../lib/coach'
 import { HeaderCoach, BarraRicerca, BannerLive } from '../components/HomeCoachUI'
 import { atletiFermi, allenamentiScaduti, copertura, feedbackNuovi, squadraDelGiorno,
          contaInPausa, FINESTRA_STORICO, GIORNI_COPERTURA, GIORNI_GARE, GIORNI_SEGNALI } from '../lib/statisticheCoach'
@@ -881,6 +881,17 @@ setNotifications(prev => {
     [storicoAtleta, weeklyStatus, upcomingWorkouts]
   )
 
+  // Il nome del coach del giorno 1 («Mario Rossi ti segue da oggi»): si chiede
+  // solo quando la card c'è, e solo all'atleta. Prima l'ultimo salvato su
+  // questo dispositivo, poi la risposta di `mio-coach` (src/lib/coach.js).
+  const [nomeCoach, setNomeCoach] = useState(() => coachSalvato(user?.id))
+  useEffect(() => {
+    if (role !== 'athlete' || !vuoto || !user?.id) return
+    let vivo = true
+    leggiMioCoach(supabase, user.id).then(n => { if (vivo) setNomeCoach(n) })
+    return () => { vivo = false }
+  }, [role, vuoto, user?.id])
+
   // ⚠️ Si contano i COMPLETATI, non le righe di `storicoAtleta`: quelle
   // comprendono gli assegnati ancora da fare. Un atleta con cinque allenamenti
   // in programma e nessuno completato ha `storicoAtleta.length === 5` — non è
@@ -1439,7 +1450,7 @@ setNotifications(prev => {
             <div className="rounded-[26px] border border-white/[.07] bg-[#1a1a1c] h-60 animate-pulse" />
           ) : vuoto ? (
             <>
-              <BenvenutoCoach coach={COACH} onProfilo={() => navigate('/profile')} />
+              <BenvenutoCoach coach={nomeCoach} onProfilo={() => navigate('/profile')} />
               {cardDalCoach}
               {/* `onFissa` apre «Nuovo evento», la stessa modale del
                   calendario: l'obiettivo nasce come workout `Event` e compare

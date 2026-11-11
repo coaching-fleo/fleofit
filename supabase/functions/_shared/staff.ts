@@ -109,3 +109,41 @@ export async function idStaff(db: any): Promise<{ tutti: string[]; admin: string
   }
   return { tutti, admin }
 }
+
+/** «Nome Cognome» da una riga `athletes`, o `null` se è vuota. */
+export function nomeCompleto(riga: { name?: string | null; surname?: string | null } | null | undefined): string | null {
+  const nome = `${(riga?.name || '').trim()} ${(riga?.surname || '').trim()}`.trim()
+  return nome || null
+}
+
+/**
+ * Il nome di una persona (atleta o staff) dalla sua riga `athletes`: anche lo
+ * staff ne ha una, è la sua scheda (lo stesso che fa `elenco_staff`). Se manca,
+ * i metadati dell'account. `null` se non si trova niente: mai un'eccezione.
+ */
+export async function nomeDi(db: any, userId: string): Promise<string | null> {
+  try {
+    const { data } = await db.from('athletes').select('name, surname').eq('id', userId).maybeSingle()
+    const daScheda = nomeCompleto(data)
+    if (daScheda) return daScheda
+  } catch { /* si prova coi metadati */ }
+  try {
+    const { data } = await db.auth.admin.getUserById(userId)
+    const meta = data?.user?.user_metadata || {}
+    return nomeCompleto({ name: meta.first_name, surname: meta.last_name })
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Il coach da nominare all'atleta («Mario Rossi ti segue da oggi»): il PRIMO
+ * assegnato, se ne ha più d'uno. `null` se non ne ha o la lettura fallisce.
+ */
+export async function primoCoachDi(db: any, athleteId: string): Promise<string | null> {
+  const { data, error } = await db.from('coach_atleti')
+    .select('coach_id, creato_at').eq('athlete_id', athleteId)
+  if (error || !data?.length) return null
+  const ordinati = [...data].sort((a: any, b: any) => String(a.creato_at).localeCompare(String(b.creato_at)))
+  return ordinati[0].coach_id ?? null
+}

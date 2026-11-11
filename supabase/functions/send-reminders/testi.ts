@@ -6,6 +6,8 @@ export const SUFFISSO_DA_GARMIN = ' · da Garmin'
 
 export type TestoNotifica = { title: string; bodyMsg: string }
 
+export const TITOLO_REGISTRATO = '👋 Nuovo atleta'
+
 /** Titolo e corpo della notifica al coach per una `action`. `daGarmin` vale solo per `completed`. */
 export function testoNotificaCoach(body: Record<string, any>): TestoNotifica {
   let title = 'Aggiornamento Atleta'
@@ -19,6 +21,11 @@ export function testoNotificaCoach(body: Record<string, any>): TestoNotifica {
   } else if (body.action === 'custom_workout') {
     title = `🏃‍♂️ Nuovo allenamento libero`
     bodyMsg = `${body.athleteName} ha aggiunto: ${body.workoutTitle}`
+  } else if (body.action === 'registered') {
+    // Un atleta nuovo, entrato con il codice invito del coach (11/11/2026).
+    // «tra i tuoi atleti» e non «iscritto/iscritta»: il genere non lo sappiamo.
+    title = TITOLO_REGISTRATO
+    bodyMsg = `${body.athleteName} ha usato il tuo codice invito: da oggi è tra i tuoi atleti.`
   } else if (body.action === 'moved') {
     // `newDate` arriva già scritta per esteso («mer 28 ott»): qui non si formatta.
     title = `📅 Allenamento spostato`

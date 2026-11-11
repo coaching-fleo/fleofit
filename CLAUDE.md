@@ -618,6 +618,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_live_activity` (true/false: la Live Activity del timer; assente = la domanda non è ancora stata fatta),
   `fleofit_messaggio_bozza`, `fleofit_messaggi_visto_fino` (bacheca «Dal coach»),
   `fleofit_garmin_recupero_<uid>` (giorno e login dell'ultimo recupero delle attività Garmin, `docs/memoria/garmin.md`),
+  `fleofit_coach_<uid>` (il nome del coach dell'ultima risposta di `mio-coach`: «… ti segue da oggi» senza rete, `src/lib/coach.js`),
   `fleofit_ruolo_<uid>` (il ruolo dell'ultimo accesso con la rete: serve all'avvio senza rete, `src/lib/avvioSenzaRete.js`),
   `fleofit_funzioni` (l'ultimo stato letto degli interruttori di `funzioni_app`: serve all'avvio senza rete, `src/lib/funzioniApp.js`),
   `fleofit_home_classica` (true = la Home coach di prima, il cruscotto, su questo dispositivo; assente = la «Riepilogo», `src/lib/homeClassica.js`),

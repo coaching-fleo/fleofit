@@ -409,6 +409,8 @@ export function clientDemo() {
         }
         // «Prova su di me»: un solo dispositivo finto, il coach.
         if (nome === 'send-reminders' && opzioni?.body?.mode === 'broadcast_prova') return { data: { success: true, sent: 1 }, error: null }
+        // Il coach dell'atleta (Home, giorno 1): nella demo è il coach dei semi.
+        if (nome === 'mio-coach') return { data: { nome: 'Federico Leo' }, error: null }
         if (nome === 'estrai-note') return { data: { estratte: 0, restano: 0, sospesa: false }, error: null }
         console.info('[demo] Edge Function non chiamata:', nome, opzioni?.body)
         return { data: { ok: true }, error: null }
