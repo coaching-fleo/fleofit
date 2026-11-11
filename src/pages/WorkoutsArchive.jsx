@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
+import { format } from 'date-fns'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useRipresa, useRicorda } from '../useRipresa'
 import { useIndietro } from '../useIndietro'
@@ -10,6 +11,7 @@ import {
   metaWorkout, testoCercabile, raggruppaPerMese, conteggiPerCorsia,
   tipiBlocco, conteggiPerTipo, passaFiltroTipi,
   eserciziFiltrabili, conteggiPerEsercizio, passaFiltroEsercizi, prossimoStatoEsercizio,
+  nelloStorico,
 } from '../lib/rigaArchivio'
 import {
   TestataArchivio, CampoRicerca, FiltriCorsia, IntestazioneSezione,
@@ -23,9 +25,15 @@ const ArchivioDesktop = lazy(() => import('../components/ArchivioDesktop'))
 
 // Tornando da un workout l'archivio riprende dov'era: src/useRipresa.js.
 
-export default function WorkoutsArchive() {
+// `storico` (11/11/2026): la stessa lista, per l'atleta, ristretta agli
+// allenamenti già passati — è la sua voce «Storico» della tab bar, al posto di
+// «Archivio» (`/storico`, src/components/Navbar.jsx). Per il coach non cambia
+// niente: la rotta `/storico` la monta solo la barra dell'atleta.
+export default function WorkoutsArchive({ storico = false }) {
   const { role, user } = useAuth()
-  const ripresa = useRipresa('archivio', user?.id)
+  // Una memoria sua: tornando da una scheda lo storico non deve riprendere la
+  // lista dell'archivio, né il contrario.
+  const ripresa = useRipresa(storico ? 'storico' : 'archivio', user?.id)
   const [workouts, setWorkouts] = useState(() => ripresa?.workouts ?? [])
   const [loading, setLoading] = useState(!ripresa)
   const [searchTerm, setSearchTerm] = useState(() => ripresa?.searchTerm ?? '')
@@ -63,7 +71,7 @@ export default function WorkoutsArchive() {
   }
   const striscia = codiceTV ? <StrisciaTV onEsci={esciDallaTV} /> : null
 
-  useRicorda('archivio', user?.id, ripresa, { workouts, searchTerm, corsiaAttiva, tipiScelti, eserciziScelti, caricato: !loading })
+  useRicorda(storico ? 'storico' : 'archivio', user?.id, ripresa, { workouts, searchTerm, corsiaAttiva, tipiScelti, eserciziScelti, caricato: !loading })
 
   // Caricamento una volta sola, di proposito: `role` e `user` non cambiano
   // senza un rimontaggio della pagina. Aggiungere fetchWorkouts alle dipendenze
@@ -85,6 +93,7 @@ export default function WorkoutsArchive() {
         .eq('athlete_id', user.id)
         .order('created_at', { ascending: false })
       if (!error && data) {
+         const oggi = format(new Date(), 'yyyy-MM-dd')
          const mapped = data.filter(aw => {
            if (!aw.workouts) return false
            const s = aw.workouts.sections || {}
@@ -99,7 +108,7 @@ export default function WorkoutsArchive() {
            created_at: aw.created_at,
            status: aw.status,
            date: aw.completed_date
-         }))
+         })).filter(w => !storico || nelloStorico(w, oggi))
          setWorkouts(mapped)
       }
     } else {
@@ -174,7 +183,7 @@ export default function WorkoutsArchive() {
           onIndietro={null}
           loading={loading}
           gruppi={gruppi}
-          vuoto={<VuotoArchivio conFiltri={conFiltri} onAzzera={azzera} />}
+          vuoto={<VuotoArchivio conFiltri={conFiltri} onAzzera={azzera} storico={storico} />}
           filtri={<>
             {striscia}
             <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
@@ -216,7 +225,8 @@ export default function WorkoutsArchive() {
        tutte le pagine con una testata appiccicata; la testata della Home invece
        scorre via con la pagina, quindi lì è contenuto e la sua voce ce l'ha. */
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
-      <TestataArchivio onIndietro={daBarra ? null : indietro} dettaglio={dettaglio}>
+      <TestataArchivio onIndietro={daBarra ? null : indietro} dettaglio={dettaglio}
+        titolo={storico ? 'Storico' : 'Archivio'}>
         {striscia}
         <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
         {corsie.length > 1 && (
@@ -240,7 +250,7 @@ export default function WorkoutsArchive() {
       {loading ? (
         <ScheletroArchivio />
       ) : gruppi.length === 0 ? (
-        <VuotoArchivio conFiltri={conFiltri} onAzzera={azzera} />
+        <VuotoArchivio conFiltri={conFiltri} onAzzera={azzera} storico={storico} />
       ) : (
         gruppi.map(gruppo => (
           <div key={gruppo.chiave}>

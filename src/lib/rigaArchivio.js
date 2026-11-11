@@ -358,3 +358,17 @@ export const passaFiltroEsercizi = (presenti, scelte = {}, aBlocchi = true) => {
   if (!aBlocchi) return false
   return attive.every(([id, s]) => (s === 'con') === presenti.has(id))
 }
+
+/**
+ * Lo «Storico» dell'atleta (11/11/2026): la sua voce della tab bar al posto di
+ * «Archivio». Sono gli allenamenti già passati — quelli di un giorno prima di
+ * oggi, fatti o no, più quelli di oggi già completati. Il programma di oggi
+ * ancora da fare e quelli dei giorni dopo stanno in Home e nel calendario.
+ * `oggi` è `yyyy-MM-dd`, come `date` (che per l'atleta è `completed_date`).
+ */
+export const nelloStorico = (workout, oggi) => {
+  const data = workout?.date
+  if (!data || !oggi) return false
+  if (data < oggi) return true
+  return data === oggi && workout.status === 'completed'
+}

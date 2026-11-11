@@ -149,6 +149,12 @@ tasto premuto: sono 171 workout da scandagliare nel jsonb.
   e l'archivio si raggiungeva dalla Home. **Il 06/11/2026 il committente l'ha voluta**:
   ora `Navbar.jsx` ha «Archivio» (`FolderArchive`, `/archive`) per tutti i ruoli, **prima**
   di Calendario (centrale per il coach). Coach: 5 voci; atleta: 4.
+  **L'11/11/2026 l'atleta l'ha perso** (scelta del committente): al suo posto c'è
+  **«Storico»** (`History`, `/storico`), cioè `WorkoutsArchive` con `storico`: la stessa
+  lista ristretta al passato con `nelloStorico` di `rigaArchivio.js` (giorni prima di oggi,
+  fatti o no, più quelli di oggi già completati), titolo «Storico», memoria di ripresa
+  sua (`'storico'`). ⚠️ La rotta `/archive` resta anche per l'atleta: ci porta «Cerca
+  nell'archivio» della TV (`CollegaTV`) e la lente del calendario.
 
 ### I file nuovi
 `src/lib/rigaArchivio.js` (logica pura, 30 test) e

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  nelloStorico,
   giornoBreve, riepilogoCorsa, metaWorkout, testoCercabile,
   ordinaPerData, raggruppaPerMese, conteggiPerCorsia,
   tipiBlocco, conteggiPerTipo, passaFiltroTipi,
@@ -281,3 +282,19 @@ describe('filtro per esercizio (Ski, Row)', () => {
   })
 })
 
+
+describe('nelloStorico', () => {
+  const oggi = '2026-11-11'
+  it('tiene i giorni prima di oggi, fatti o no', () => {
+    expect(nelloStorico({ date: '2026-11-10', status: 'pending' }, oggi)).toBe(true)
+    expect(nelloStorico({ date: '2026-11-01', status: 'completed' }, oggi)).toBe(true)
+  })
+  it('di oggi tiene solo quelli già completati', () => {
+    expect(nelloStorico({ date: oggi, status: 'completed' }, oggi)).toBe(true)
+    expect(nelloStorico({ date: oggi, status: 'pending' }, oggi)).toBe(false)
+  })
+  it('lascia fuori i giorni dopo e le righe senza data', () => {
+    expect(nelloStorico({ date: '2026-11-12', status: 'completed' }, oggi)).toBe(false)
+    expect(nelloStorico({ date: null, status: 'completed' }, oggi)).toBe(false)
+  })
+})

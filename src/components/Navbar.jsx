@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Calendar, Users, User, FolderArchive, Plus } from 'lucide-react'
+import { Home, Calendar, Users, User, FolderArchive, History, Plus } from 'lucide-react'
 import { useAuth } from '../App'
 import { useTastieraAperta } from '../useTastiera'
 
@@ -107,7 +107,10 @@ export default function Navbar() {
         <Voce a="/" icona={Home}>Home</Voce>
 
         {role === 'athlete' ? (<>
-          <Voce a="/archive" icona={FolderArchive}>Archivio</Voce>
+          {/* L'atleta non ha l'archivio (11/11/2026, scelta del committente):
+              al suo posto lo storico dei suoi allenamenti già fatti. La rotta
+              `/archive` resta, per «Cerca nell'archivio» della TV. */}
+          <Voce a="/storico" icona={History}>Storico</Voce>
           <Voce a="/calendar" icona={Calendar}>Calendario</Voce>
           <Voce a="/profile" icona={User}>Profilo</Voce>
         </>) : (<>

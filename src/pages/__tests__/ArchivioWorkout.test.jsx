@@ -258,6 +258,16 @@ describe('Archivio — vista atleta', () => {
     expect(within(riga).queryByText(/assegnato a/i)).not.toBeInTheDocument()
   })
 
+  // Lo «Storico» della tab bar (11/11/2026): la stessa lista, solo il passato.
+  it('nello storico mostra il passato e lascia fuori ciò che deve ancora fare', async () => {
+    dati.assegnazioni = [ASSEGNATA(1, 'Fatto ieri', '2020-01-10', 'completed'),
+                         ASSEGNATA(2, 'Fra un mese', '2999-01-01', 'pending')]
+    montaPagina(<WorkoutsArchive storico />, { role: 'athlete' })
+    expect(await screen.findByText('Fatto ieri')).toBeInTheDocument()
+    expect(screen.queryByText('Fra un mese')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Storico' })).toBeInTheDocument()
+  })
+
   it('l\'atleta legge la propria tabella, non quella dei workout', async () => {
     dati.assegnazioni = [ASSEGNATA(1, 'Fatto', '2026-08-22', 'completed')]
     montaPagina(<WorkoutsArchive />, { role: 'athlete' })

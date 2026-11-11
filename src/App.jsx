@@ -892,6 +892,7 @@ function App() {
             <Route path="/profile" element={<AthleteDetail />} />
             <Route path="/workout/:id" element={<SchedaWorkout />} />
             <Route path="/archive" element={<WorkoutsArchive />} />
+            <Route path="/storico" element={<WorkoutsArchive storico />} />
             <Route path="/collega-tv/:codice" element={<CollegaTV />} />
             {/* Riservata al coach: la pagina rimanda l'atleta alla Home da sé,
                 come fa /athletes. Non è una guardia di sicurezza — quella la

@@ -56,7 +56,7 @@ export function StrisciaTV({ onEsci }) {
  * contenitore lascerebbe scorrere il contenuto sotto la barra di stato,
  * perché l'elemento appiccicato si ferma a `top-0`.
  */
-export function TestataArchivio({ onIndietro, dettaglio, children }) {
+export function TestataArchivio({ onIndietro, dettaglio, titolo = 'Archivio', children }) {
   return (
     <div className="sticky top-0 z-30 -mx-4 px-4 pt-[calc(env(safe-area-inset-top)+0.875rem)] pb-3
                     bg-[#0B0B0B]/85 backdrop-blur-xl border-b border-white/[.06]">
@@ -69,7 +69,7 @@ export function TestataArchivio({ onIndietro, dettaglio, children }) {
           </button>
         )}
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-black tracking-[-.03em] text-white leading-none">Archivio</h1>
+          <h1 className="text-2xl font-black tracking-[-.03em] text-white leading-none">{titolo}</h1>
           {dettaglio && (
             <p className="mt-0.5 text-sm font-medium text-gray-400 leading-tight">
               {dettaglio}
@@ -323,16 +323,16 @@ export function ScheletroArchivio() {
  * normale del prodotto, una ricerca senza esiti è un vicolo cieco — e da un
  * vicolo cieco serve la via d'uscita, cioè il bottone che azzera i filtri.
  */
-export function VuotoArchivio({ conFiltri, onAzzera }) {
+export function VuotoArchivio({ conFiltri, onAzzera, storico = false }) {
   return (
     <div className="mt-6 text-center px-6 py-10 rounded-3xl border border-dashed border-white/[.12]">
       <p className="text-gray-300 font-bold">
-        {conFiltri ? 'Nessun workout con questi filtri' : 'Nessun workout in archivio'}
+        {conFiltri ? 'Nessun workout con questi filtri' : storico ? 'Nessun allenamento passato' : 'Nessun workout in archivio'}
       </p>
       <p className="mt-1.5 text-sm text-muted">
         {conFiltri
           ? 'Prova con un altro termine, o togli un filtro.'
-          : 'Gli allenamenti che crei finiscono qui. 🏋️'}
+          : storico ? 'Gli allenamenti che fai finiscono qui. 🏋️' : 'Gli allenamenti che crei finiscono qui. 🏋️'}
       </p>
       {conFiltri && (
         <button onClick={onAzzera}
