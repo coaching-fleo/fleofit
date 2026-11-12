@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { AuthContext } from '../../App'
 import { leggiJson } from '../offlineQueue'
-import { chiaveVisto, ordinaAvvisi, CHIAVE_VISTI } from '../avvisiExtra'
+import { chiaveVisto, ordinaAvvisi, chiaveVistiDi } from '../avvisiExtra'
 
 // Due extra finti: le loro funzioni `avviso` le decide ogni test.
 const avvisi = { a: null, b: null }
@@ -12,8 +12,8 @@ vi.mock('../../useExtra', () => ({ useExtra: () => extra }))
 
 import { useAvvisiExtra, dimenticaVisti } from '../../useAvvisiExtra'
 
-const monta = () => renderHook(() => useAvvisiExtra(), {
-  wrapper: ({ children }) => <AuthContext.Provider value={{ user: { id: 'u1' }, role: 'athlete' }}>{children}</AuthContext.Provider>,
+const monta = (uid = 'u1') => renderHook(() => useAvvisiExtra(), {
+  wrapper: ({ children }) => <AuthContext.Provider value={{ user: { id: uid }, role: 'athlete' }}>{children}</AuthContext.Provider>,
 })
 
 const alta = { chiave: 'x', testo: 'Alta', priorita: 'alta' }
@@ -59,7 +59,7 @@ describe('useAvvisiExtra', () => {
     await waitFor(() => expect(uno.result.current.primo).not.toBeNull())
     act(() => uno.result.current.chiudi('a', 'cambia:s1'))
     expect(uno.result.current.primo).toBeNull()
-    expect(leggiJson(CHIAVE_VISTI, [])).toContain('a:cambia:s1')
+    expect(leggiJson(chiaveVistiDi('u1'), [])).toContain('a:cambia:s1')
 
     avvisi.a = async () => ({ chiave: 'cambia:s2', testo: 'Ride', priorita: 'alta' })
     const due = monta()
@@ -74,6 +74,16 @@ describe('useAvvisiExtra', () => {
     await waitFor(() => expect(home.result.current.primo).not.toBeNull())
     act(() => home.result.current.chiudi('a', 'cambia:s1'))
     expect(barra.result.current.aperti.has('a')).toBe(false)
+  })
+
+  it('chiuso da un utente, lo vede ancora un altro sullo stesso telefono', async () => {
+    avvisi.a = async () => ({ chiave: 'aggiungi', testo: 'Tieni il conto', priorita: 'normale' })
+    const uno = monta('u1')
+    await waitFor(() => expect(uno.result.current.primo).not.toBeNull())
+    act(() => uno.result.current.chiudi('a', 'aggiungi'))
+    uno.unmount()
+    const due = monta('u2')
+    await waitFor(() => expect(due.result.current.primo?.avviso.chiave).toBe('aggiungi'))
   })
 
   it('nessun extra acceso: niente', async () => {

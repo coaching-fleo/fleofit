@@ -63,6 +63,14 @@ describe('Libreria', () => {
     expect(screen.queryByRole('button', { name: 'Torna indietro' })).toBeNull()
     expect(screen.queryByText(/workout ·|corsie/)).toBeNull()
   })
+  it('ogni tab porta al suo pannello (accessibilità)', async () => {
+    monta('/archive?vista=extra')
+    const tab = screen.getByRole('tab', { name: 'Extra' })
+    const pannello = await screen.findByRole('tabpanel')
+    expect(tab.getAttribute('aria-controls')).toBe(pannello.id)
+    expect(pannello).toHaveAttribute('aria-labelledby', tab.id)
+    expect(pannello).toHaveTextContent('griglia extra')
+  })
   it('tutto spento: niente selettore, titolo «Libreria»', () => {
     dati.extra = []
     monta('/archive?vista=extra')

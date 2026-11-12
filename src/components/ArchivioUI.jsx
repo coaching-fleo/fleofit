@@ -350,6 +350,9 @@ export function VuotoArchivio({ conFiltri, onAzzera, storico = false }) {
  * toggle segmentato del §6, indicatore che trasla in 300ms. Il pallino su Extra
  * dice che un extra ha un avviso aperto.
  */
+/** L'id del pannello che il selettore comanda: lo usa WorkoutsArchive. */
+export const PANNELLO_LIBRERIA = 'libreria-pannello'
+
 export function SelettoreLibreria({ vista, onCambia, pallino = false }) {
   const voci = [['workout', 'Workout'], ['extra', 'Extra']]
   return (
@@ -359,6 +362,7 @@ export function SelettoreLibreria({ vista, onCambia, pallino = false }) {
           vista === 'extra' ? 'translate-x-full' : ''}`} />
       {voci.map(([id, etichetta]) => (
         <button key={id} type="button" role="tab" aria-selected={vista === id}
+          id={`libreria-tab-${id}`} aria-controls={PANNELLO_LIBRERIA}
           onClick={() => { if (vista !== id) { vibraScelta(); onCambia(id) } }}
           className={`relative z-10 min-h-[38px] inline-flex items-center justify-center gap-1.5 text-[14px] font-extrabold transition-colors ${
             vista === id ? 'text-white' : 'text-gray-500'}`}>

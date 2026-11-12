@@ -8,8 +8,9 @@ import { montaPagina } from '../../test/montaPagina'
 
 const dati = await vi.hoisted(async () => ({ extra: [], aperti: new Set() }))
 vi.mock('../../useExtra', () => ({ useExtra: () => dati.extra }))
+const avvisi = vi.hoisted(() => ({ chiamate: 0 }))
 vi.mock('../../useAvvisiExtra', () => ({
-  useAvvisiExtra: () => ({ primo: null, altri: 0, aperti: dati.aperti, chiudi: () => {} }),
+  useAvvisiExtra: () => { avvisi.chiamate += 1; return { primo: null, altri: 0, aperti: dati.aperti, chiudi: () => {} } },
 }))
 
 const Navbar = (await import('../Navbar')).default
@@ -18,7 +19,7 @@ const voci = () => within(screen.getByRole('navigation', { name: 'Navigazione pr
   .getAllByRole('link').map(l => l.getAttribute('aria-label') || l.textContent)
 
 describe('Navbar ed Extra', () => {
-  beforeEach(() => { dati.extra = []; dati.aperti = new Set() })
+  beforeEach(() => { dati.extra = []; dati.aperti = new Set(); avvisi.chiamate = 0 })
 
   it('atleta, tutto spento: quattro voci', () => {
     montaPagina(<Navbar />)
@@ -48,5 +49,10 @@ describe('Navbar ed Extra', () => {
     expect(screen.getByRole('link', { name: 'Libreria' })).toHaveAttribute('href', '/archive')
     expect(screen.queryByText('Archivio')).toBeNull()
     expect(screen.queryByRole('link', { name: /novità/ })).toBeNull()
+  })
+  it('coach: la barra non legge gli avvisi (non li mostra)', () => {
+    dati.extra = [{ id: 'scarpe' }]
+    montaPagina(<Navbar />, { role: 'coach' })
+    expect(avvisi.chiamate).toBe(0)
   })
 })

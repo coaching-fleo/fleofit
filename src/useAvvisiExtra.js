@@ -3,22 +3,29 @@ import { useAuth } from './App'
 import { useExtra } from './useExtra'
 import { ruoloExtra } from './lib/extra'
 import { leggiJson, scriviJson } from './lib/offlineQueue'
-import { CHIAVE_VISTI, aggiungiVisto, chiaveVisto, ordinaAvvisi } from './lib/avvisiExtra'
+import { chiaveVistiDi, aggiungiVisto, chiaveVisto, ordinaAvvisi } from './lib/avvisiExtra'
 
 // ⚠️ Una memoria SOLA per tutte le copie dell'hook: la barra (pallino), la card
 // in Home, la Libreria e la pagina Extra. Con uno stato per copia, chiudere la
 // card lasciava acceso il pallino della barra, che resta montata tutta la sessione.
-// Dentro: gli avvisi chiusi (anche su localStorage) e gli ultimi avvisi letti,
-// per chiave `uid:ruolo`. Chi rilegge (la Home a ogni montaggio) aggiorna tutti.
-let memoria = { visti: null, letti: { per: null, voci: [] } }
+// Dentro: gli avvisi chiusi per utente (anche su localStorage) e gli ultimi
+// avvisi letti, per chiave `uid:ruolo`. Chi rilegge (la Home a ogni montaggio)
+// aggiorna tutti.
+const NESSUNO = []
+let memoria = { vistiPer: {}, letti: { per: null, voci: [] } }
 const ascoltatori = new Set()
 const inCorso = new Map()
 
 const cambia = (dopo) => { memoria = { ...memoria, ...dopo }; ascoltatori.forEach(f => f()) }
 const iscrivi = (f) => { ascoltatori.add(f); return () => ascoltatori.delete(f) }
-const leggi = () => {
-  if (memoria.visti === null) memoria = { ...memoria, visti: leggiJson(CHIAVE_VISTI, []) }
-  return memoria
+const leggi = () => memoria
+/** Gli avvisi chiusi da `uid`, letti da localStorage la prima volta. */
+const vistiDi = (uid) => {
+  if (!uid) return NESSUNO
+  if (!(uid in memoria.vistiPer)) {
+    memoria = { ...memoria, vistiPer: { ...memoria.vistiPer, [uid]: leggiJson(chiaveVistiDi(uid), []) } }
+  }
+  return memoria.vistiPer[uid]
 }
 
 /** Legge gli avvisi; due copie che partono insieme fanno una lettura sola. */
@@ -47,7 +54,8 @@ export function useAvvisiExtra() {
   const { user, role } = useAuth() || {}
   const extra = useExtra()
   const uid = user?.id
-  const { visti, letti } = useSyncExternalStore(iscrivi, leggi)
+  const { letti } = useSyncExternalStore(iscrivi, leggi)
+  const visti = vistiDi(uid)
   const per = `${uid || ''}:${role || ''}`
 
   useEffect(() => {
@@ -69,16 +77,17 @@ export function useAvvisiExtra() {
   ), [voci, visti])
 
   const chiudi = useCallback((idExtra, chiave) => {
-    const dopo = aggiungiVisto(leggi().visti, chiaveVisto(idExtra, chiave))
-    scriviJson(CHIAVE_VISTI, dopo)
-    cambia({ visti: dopo })
-  }, [])
+    if (!uid) return
+    const dopo = aggiungiVisto(vistiDi(uid), chiaveVisto(idExtra, chiave))
+    scriviJson(chiaveVistiDi(uid), dopo)
+    cambia({ vistiPer: { ...memoria.vistiPer, [uid]: dopo } })
+  }, [uid])
 
   return { primo, altri, aperti, chiudi }
 }
 
 /** Solo per i test: dimentica la memoria condivisa. */
 export function dimenticaVisti() {
-  memoria = { visti: null, letti: { per: null, voci: [] } }
+  memoria = { vistiPer: {}, letti: { per: null, voci: [] } }
   inCorso.clear()
 }

@@ -49,7 +49,9 @@ export default function Scarpe() {
   const uid = user?.id
   // Lo staff cura il catalogo, tranne l'account del revisore (sola lettura).
   const curaCatalogo = staff && String(user?.email ?? '').trim().toLowerCase() !== ACCOUNT_REVISORE
-  const indietro = useIndietro(staff ? '/settings' : '/profile')
+  // Aperta come prima pagina: il coach torna agli Extra della Libreria (da dove
+  // ci si arriva dal 12/11/2026), l'atleta al profilo, dove c'è la card delle scarpe.
+  const indietro = useIndietro(staff ? '/archive?vista=extra' : '/profile')
   const navigate = useNavigate()
 
   // stato: 'caricamento' | 'pronto' | 'assente' (tabelle mancanti) | 'errore'

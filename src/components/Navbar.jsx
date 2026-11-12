@@ -86,12 +86,21 @@ function Crea() {
   )
 }
 
-export default function Navbar() {
-  const { role } = useAuth()
-  // Gli extra accesi (spec 2026-11-12 §1): `null` mentre si leggono, e allora
-  // la voce non c'è — non deve comparire per poi sparire.
+/**
+ * La voce Extra dell'atleta (spec 2026-11-12 §1). Un componente a parte perché
+ * solo l'atleta legge gli avvisi per il pallino: il coach non li mostra nella
+ * barra, e leggerli lì scaricherebbe dati per niente a ogni avvio.
+ * `extra` è `null` mentre si legge: allora la voce non c'è, non compare per poi sparire.
+ */
+function VoceExtra() {
   const extra = useExtra()
   const { aperti } = useAvvisiExtra()
+  if (!extra?.length) return null
+  return <Voce a="/extra" icona={LayoutGrid} pallino={aperti.size > 0}>Extra</Voce>
+}
+
+export default function Navbar() {
+  const { role } = useAuth()
 
   // Con Keyboard.resize 'native' la webview si rimpicciolisce quando la tastiera
   // sale, e questa barra — essendo ancorata in basso — si incollerebbe sopra la
@@ -121,7 +130,7 @@ export default function Navbar() {
               `/archive` resta, per «Cerca nell'archivio» della TV. */}
           <Voce a="/storico" icona={History}>Storico</Voce>
           <Voce a="/calendar" icona={Calendar}>Calendario</Voce>
-          {extra?.length > 0 && <Voce a="/extra" icona={LayoutGrid} pallino={aperti.size > 0}>Extra</Voce>}
+          <VoceExtra />
           <Voce a="/profile" icona={User}>Profilo</Voce>
         </>) : (<>
           {/* Il coach (proposta A, 11/11/2026): due voci, il «+», due voci.

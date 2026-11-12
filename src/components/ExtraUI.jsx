@@ -38,9 +38,12 @@ export function GrigliaExtra({ voci, onApri }) {
 }
 
 /**
- * La card della Home: un avviso solo, il più importante. ⚠️ La X NON si chiama
- * «Chiudi»: il tasto indietro di Android chiude ciò che ha una X «Chiudi»
- * (src/lib/indietroAndroid.js), e qui chiuderebbe la Home.
+ * La card della Home: un avviso solo, il più importante. Il tasto indietro di
+ * Android non la tocca: `indietroAndroid.js` cerca la X «Chiudi…» solo nelle
+ * modali in portale (fuori da `#root`), e questa card sta dentro la pagina.
+ * ⚠️ Se un giorno finisse in un foglio con `createPortal`, il tasto indietro
+ * premerebbe questa X (l'espressione è `/^chiudi/i`, che vale anche per
+ * «Chiudi l'avviso») invece di chiudere il foglio.
  */
 export function CartaDagliExtra({ extra, avviso, altri, onApri, onChiudi, onApriTutti, className = '' }) {
   const Icona = extra.icona

@@ -176,6 +176,18 @@ describe('/scarpe — atleta', () => {
 })
 
 describe('/scarpe — coach', () => {
+  it('aperta come prima pagina, l\'indietro porta alla Libreria su Extra (12/11/2026)', async () => {
+    montaPagina(
+      <Routes>
+        <Route path="/scarpe" element={<Scarpe />} />
+        <Route path="/archive" element={<p>libreria</p>} />
+        <Route path="/settings" element={<p>impostazioni</p>} />
+      </Routes>,
+      { role: 'admin', user: { id: 'c1', email: 'c@f.it' }, percorso: '/scarpe', rotta: '*' },
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Torna indietro' }))
+    expect(await screen.findByText('libreria')).toBeInTheDocument()
+  })
   it('c\'è «Aggiungi modello» e non «Le mie scarpe»; «Elimina» passa dalla conferma', async () => {
     comeCoach()
     const lista = await catalogo()

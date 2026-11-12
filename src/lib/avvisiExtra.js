@@ -1,10 +1,12 @@
 // Gli avvisi degli extra per la card «Dagli Extra» in Home (spec 2026-11-12 §3).
 // Logica pura: quale avviso mostrare e quanti altri ce ne sono.
 //
-// Un avviso chiuso con la X si ricorda su QUESTO dispositivo, con la sua chiave:
-// se l'avviso cambia (un'altra scarpa da cambiare) la chiave cambia e torna.
+// Un avviso chiuso con la X si ricorda su QUESTO dispositivo e per QUESTO utente
+// (due persone sullo stesso telefono non si nascondono gli avvisi a vicenda), con
+// la sua chiave: se l'avviso cambia (un'altra scarpa da cambiare) torna.
 
-export const CHIAVE_VISTI = 'fleofit_extra_visti'
+/** La chiave localStorage degli avvisi chiusi da un utente. */
+export const chiaveVistiDi = (uid) => `fleofit_extra_visti_${uid}`
 /** Quante chiavi si ricordano al massimo: le più vecchie escono. */
 export const MASSIMO_VISTI = 50
 

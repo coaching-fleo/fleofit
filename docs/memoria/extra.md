@@ -29,8 +29,14 @@ Spariti: «Catalogo scarpe» in Impostazioni, la voce «Scarpe» della barra lat
   Due letture che partono insieme diventano una.
 - Card «Dagli Extra» (`DagliExtra.jsx`): **in fondo** alla Home (atleta, Riepilogo telefono e desktop,
   Home classica), mai in alto: arriva dopo una lettura e sposterebbe gli allenamenti. Un avviso solo, `alta`
-  prima di `normale`, «+N negli Extra». La X si chiama «Chiudi l'avviso», **non** «Chiudi»: il tasto
-  indietro Android chiuderebbe la Home (`indietroAndroid.js`).
+  prima di `normale`, «+N negli Extra». La X si chiama «Chiudi l'avviso». Il tasto indietro di Android
+  non la tocca perché la card sta dentro `#root`: `indietroAndroid.js` cerca la X solo nelle modali in
+  portale. ⚠️ Messa in un foglio con `createPortal`, il tasto indietro premerebbe questa X (`/^chiudi/i`
+  vale anche per «Chiudi l'avviso»).
+- Gli avvisi chiusi stanno in `fleofit_extra_visti_<uid>`: due persone sullo stesso telefono non si
+  nascondono gli avvisi a vicenda.
+- La card non porta margine suo: nella Home la distanza la dà il contenitore (`gap`); solo la Home
+  atleta, che non ha `gap`, le passa `className="mt-8"`.
 - Libreria: il cambio di vista passa di nuovo `location.state`, o si perde `daBarra` e compare la freccia
   «indietro» (trovato nella demo). Sul desktop `?vista=extra` rimanda a `/extra`.
 

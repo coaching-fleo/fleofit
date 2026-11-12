@@ -625,7 +625,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_coach_<uid>` (il nome del coach dell'ultima risposta di `mio-coach`: «… ti segue da oggi» senza rete, `src/lib/coach.js`),
   `fleofit_ruolo_<uid>` (il ruolo dell'ultimo accesso con la rete: serve all'avvio senza rete, `src/lib/avvioSenzaRete.js`),
   `fleofit_funzioni` (l'ultimo stato letto degli interruttori di `funzioni_app`: serve all'avvio senza rete, `src/lib/funzioniApp.js`),
-  `fleofit_extra_visti` (gli avvisi degli Extra chiusi con la X su questo dispositivo, `id:chiave`, massimo 50: `src/lib/avvisiExtra.js`),
+  `fleofit_extra_visti_<uid>` (gli avvisi degli Extra chiusi con la X da quell'utente su questo dispositivo, `id:chiave`, massimo 50: `src/lib/avvisiExtra.js`),
   `fleofit_home_classica` (true = la Home coach di prima, il cruscotto, su questo dispositivo; assente = la «Riepilogo», `src/lib/homeClassica.js`),
   ⏳ `fleofit_messaggi_prova` (TEMPORANEO: le «Prova su di me» nella bacheca del coach),
   `adminRoleOverride`.
@@ -733,7 +733,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute`, `consenso.js`, `Consenso.jsx`, `informativa.js`, `public/privacy-policy.html` | `accesso.md` |
 | `RicercaCoach.jsx`, `ricercaCoach.js`, `dialogoRicerca.js`, `useDettatura.js`, Edge Function `ricerca-coach` | `ricerca.md` |
 | `extra.js`, `extra/*.js`, `useExtra.js`, `avvisiExtra.js`, `useAvvisiExtra.js`, `Extra.jsx`, `ExtraUI`, `DagliExtra`, `SelettoreLibreria`, la voce Extra della `Navbar` | `extra.md` |
-| `kmScarpe.js`, `scarpeDb.js`, `scarpaCompletamento.js`, `useScarpaCompletamento.js`, `Scarpe.jsx`, `DettaglioScarpa.jsx`, `ScarpeUI`, `RigaScarpa`, `RigaScarpeCoach`, `caratteristicheScarpa.js`, `fotoScarpa.js`, `bannerScarpe.js`, `BannerScarpe`, `FotoScarpa`, `ModelloScarpa.jsx`, `ModelloScarpaUI`, `FoglioModelloCatalogo`, `Scarpa3D`, `funzioniApp.js`, `useFunzione.js`, `SoloSeAccesa`, `tools/scarpe/` | `scarpe.md` |
+| `kmScarpe.js`, `scarpeDb.js`, `scarpaCompletamento.js`, `useScarpaCompletamento.js`, `Scarpe.jsx`, `DettaglioScarpa.jsx`, `ScarpeUI`, `RigaScarpa`, `RigaScarpeCoach`, `caratteristicheScarpa.js`, `fotoScarpa.js`, `FotoScarpa`, `ModelloScarpa.jsx`, `ModelloScarpaUI`, `FoglioModelloCatalogo`, `Scarpa3D`, `funzioniApp.js`, `useFunzione.js`, `SoloSeAccesa`, `tools/scarpe/` | `scarpe.md` |
 | `sfidaTeam.js`, `membriTeam.js`, `teamDb.js`, `useSfidaCompletamento.js`, `sfidaCompletamento.js`, `RigaRisultatoSfida`, `Team.jsx`, `MieiTeam.jsx`, `SchedaTeam.jsx`, `InvitoTeam.jsx`, `DettaglioSfida.jsx`, `TeamUI`, `FoglioNuovoTeam`, `FoglioInvitaTeam`, `FoglioNuovaSfida`, `send-reminders/team.ts`, `tools/verifica-team.sql` | `team.md` |
 | `garmin.js`, `FoglioGarmin`, Edge Function `garmin-auth` e `garmin-webhook`, `_shared/garmin*.ts`, `workoutGarmin.ts`, `garminTraining.ts`, Edge Function `garmin-training`, `rigaOrologio.js`, `RigaOrologio`, `attivitaGarmin.ts`, `abbinaGarmin.ts`, `garmin-webhook/attivita.ts`, `attivitaGarmin.js`, `CardDaGarmin`, `RigheGarmin`, `FoglioAttivitaGarmin`, `giornateGarmin.ts`, `garmin-webhook/giornate.ts`, `recuperoGarmin.js`, `CardRecupero`, `send-reminders/testi.ts`, il ramo `fleofit://garmin` di `DeeplinkHandler` | `garmin.md` |
 | `previsione.js`, `stimaWorkout.js`, ogni durata o carico | `carico-e-durata.md` |

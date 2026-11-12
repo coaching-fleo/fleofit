@@ -15,7 +15,7 @@ import {
 } from '../lib/rigaArchivio'
 import {
   TestataArchivio, CampoRicerca, FiltriCorsia, IntestazioneSezione,
-  RigaWorkout, ScheletroArchivio, VuotoArchivio, FiltriTipo, FiltriEsercizio, StrisciaTV, SelettoreLibreria,
+  RigaWorkout, ScheletroArchivio, VuotoArchivio, FiltriTipo, FiltriEsercizio, StrisciaTV, SelettoreLibreria, PANNELLO_LIBRERIA,
 } from '../components/ArchivioUI'
 import { useExtra } from '../useExtra'
 import { useAvvisiExtra } from '../useAvvisiExtra'
@@ -266,6 +266,9 @@ export default function WorkoutsArchive({ storico = false }) {
         </>)}
       </TestataArchivio>
 
+      {/* Con il selettore il contenuto è il suo pannello (role tabpanel). */}
+      <div {...(conSelettore ? { role: 'tabpanel', id: PANNELLO_LIBRERIA,
+        'aria-labelledby': `libreria-tab-${vistaExtra ? 'extra' : 'workout'}` } : {})}>
       {vistaExtra ? (
         <div className="mt-4">
           <Suspense fallback={null}><Extra incorporata /></Suspense>
@@ -309,6 +312,7 @@ export default function WorkoutsArchive({ storico = false }) {
       )}
       </div>
       </>)}
+      </div>
     </div>
   )
 }
