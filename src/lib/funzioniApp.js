@@ -29,9 +29,16 @@ const letture = new Map()
 
 /** Lo stato di una funzione ('spenta' | 'admin' | 'tutti'), letto una volta per avvio. */
 export function statoFunzione(nome) {
-  if (!letture.has(nome)) letture.set(nome, leggiStato(nome))
+  if (!letture.has(nome)) letture.set(nome, leggiStato(nome).then(s => { noti.set(nome, s); return s }))
   return letture.get(nome)
 }
+
+// Gli stati già risolti in questo avvio, leggibili SENZA aspettare: chi si
+// rimonta (la Libreria tornando da un extra) parte dal valore giusto invece che
+// da «non si sa», e non mostra per un fotogramma la cosa sbagliata.
+const noti = new Map()
+/** Lo stato già letto in questo avvio, o `null` se la lettura non è finita. */
+export const statoNoto = (nome) => noti.get(nome) ?? null
 
 async function leggiStato(nome) {
   const salvati = leggiJson(CHIAVE, {})
@@ -58,4 +65,4 @@ export async function funzioneAttiva(nome) {
 }
 
 /** Solo per i test: dimentica le letture fatte. */
-export function azzeraFunzioni() { letture.clear(); ruoloCorrente = null }
+export function azzeraFunzioni() { letture.clear(); noti.clear(); ruoloCorrente = null }

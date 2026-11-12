@@ -5,11 +5,13 @@ import { AuthContext } from '../../App'
 // Qui lo stato degli interruttori lo decide ogni test (il setup li accende tutti).
 const stati = { scarpe: 'tutti' }
 let pendente = false
+let noti = false
 vi.mock('../funzioniApp', async (importOriginal) => {
   const vero = await importOriginal()
   return {
     ...vero,
     statoFunzione: (nome) => (pendente ? new Promise(() => {}) : Promise.resolve(stati[nome] ?? 'spenta')),
+    statoNoto: (nome) => (noti ? (stati[nome] ?? 'spenta') : null),
   }
 })
 
@@ -21,7 +23,13 @@ const monta = (role) => renderHook(() => useExtra(), {
 const ids = (r) => r.current?.map(e => e.id)
 
 describe('useExtra', () => {
-  beforeEach(() => { pendente = false; stati.scarpe = 'tutti' })
+  beforeEach(() => { pendente = false; noti = false; stati.scarpe = 'tutti' })
+
+  it('interruttori già letti in questo avvio: la lista c\'è dal primo render (niente sfarfallio al ritorno)', () => {
+    pendente = true
+    noti = true
+    expect(ids(monta('coach').result)).toEqual(['scarpe'])
+  })
 
   it('finché non si sa, nessun extra (null)', () => {
     pendente = true

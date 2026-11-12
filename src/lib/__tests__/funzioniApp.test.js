@@ -13,7 +13,7 @@ vi.mock('../../supabaseClient', () => ({ supabase: {
   } }) }) }),
 } }))
 
-const { funzioneVisibile, statoFunzione, funzioneAttiva, impostaRuoloFunzioni, azzeraFunzioni } = await import('../funzioniApp')
+const { funzioneVisibile, statoFunzione, statoNoto, funzioneAttiva, impostaRuoloFunzioni, azzeraFunzioni } = await import('../funzioniApp')
 
 beforeEach(() => {
   azzeraFunzioni()
@@ -81,5 +81,16 @@ describe('funzioneAttiva', () => {
     expect(await funzioneAttiva('scarpe')).toBe(false)
     impostaRuoloFunzioni('admin')
     expect(await funzioneAttiva('scarpe')).toBe(true)
+  })
+})
+
+describe('statoNoto', () => {
+  it('null finché la lettura non è finita, poi lo stato letto', async () => {
+    ctrl.risposta = { data: { stato: 'admin' }, error: null }
+    expect(statoNoto('scarpe')).toBeNull()
+    const p = statoFunzione('scarpe')
+    expect(statoNoto('scarpe')).toBeNull()
+    await p
+    expect(statoNoto('scarpe')).toBe('admin')
   })
 })

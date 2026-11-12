@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from './App'
-import { statoFunzione, funzioneVisibile } from './lib/funzioniApp'
+import { statoFunzione, statoNoto, funzioneVisibile } from './lib/funzioniApp'
 import { EXTRA, ruoloExtra } from './lib/extra'
 
 /**
@@ -11,7 +11,13 @@ import { EXTRA, ruoloExtra } from './lib/extra'
  */
 export function useExtra() {
   const { role } = useAuth() || {}
-  const [stati, setStati] = useState(null)
+  // Se gli interruttori sono già stati letti in questo avvio si parte da lì:
+  // senza, ogni rimontaggio passava un fotogramma da `null` (la Libreria tornando
+  // da un extra mostrava i Workout e poi saltava su Extra).
+  const [stati, setStati] = useState(() => {
+    const s = EXTRA.map(e => statoNoto(e.interruttore))
+    return s.every(x => x !== null) ? s : null
+  })
   useEffect(() => {
     let vivo = true
     Promise.all(EXTRA.map(e => statoFunzione(e.interruttore)))
