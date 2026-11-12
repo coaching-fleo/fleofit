@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer, Footprints, UsersRound, LayoutList, FileText } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer, UsersRound, LayoutList, FileText } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -55,8 +55,6 @@ export default function Settings() {
   const [confirmInfo, setConfirmInfo] = useState(null)
   const athleteImportRef = useRef(null)
   const { role, user, nome } = useAuth()
-  // «Catalogo scarpe» c'è solo con l'interruttore acceso (funzioni_app).
-  const scarpeAccese = useFunzione('scarpe')
   // «Team» e «I miei team», con l'interruttore acceso (funzioni_app).
   const teamAcceso = useFunzione('team')
   // Sul desktop (solo coach, src/useDesktop.js) la pagina va su due colonne.
@@ -909,13 +907,7 @@ export default function Settings() {
             <RigaInterruttore icona={LayoutList} titolo="Home classica"
               dettaglio="La Home coach di prima, con le persone in elenco. Vale su questo dispositivo."
               attivo={homeClassica} onCambia={cambiaHomeClassica} />
-            {/* «Scarpe da corsa»: per lo staff /scarpe non ha altri ingressi. */}
-            {scarpeAccese && (<>
-            <Separatore />
-            <RigaAzione icona={Footprints} titolo="Catalogo scarpe"
-              dettaglio="I modelli fra cui scelgono gli atleti"
-              onClick={() => navigate('/scarpe')} />
-            </>)}
+            {/* Il catalogo scarpe sta negli Extra, dalla Libreria (spec 2026-11-12). */}
             {teamAcceso && (<>
             <Separatore />
             <RigaAzione icona={UsersRound} titolo="Team"
