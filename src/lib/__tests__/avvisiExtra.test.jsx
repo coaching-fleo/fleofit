@@ -10,7 +10,7 @@ const finto = (id) => ({ id, avviso: () => Promise.resolve(() => avvisi[id]()) }
 let extra = [finto('a'), finto('b')]
 vi.mock('../../useExtra', () => ({ useExtra: () => extra }))
 
-import { useAvvisiExtra } from '../../useAvvisiExtra'
+import { useAvvisiExtra, dimenticaVisti } from '../../useAvvisiExtra'
 
 const monta = () => renderHook(() => useAvvisiExtra(), {
   wrapper: ({ children }) => <AuthContext.Provider value={{ user: { id: 'u1' }, role: 'athlete' }}>{children}</AuthContext.Provider>,
@@ -38,6 +38,7 @@ describe('ordinaAvvisi', () => {
 describe('useAvvisiExtra', () => {
   beforeEach(() => {
     localStorage.clear()
+    dimenticaVisti()
     extra = [finto('a'), finto('b')]
     avvisi.a = async () => null
     avvisi.b = async () => null
@@ -63,6 +64,16 @@ describe('useAvvisiExtra', () => {
     avvisi.a = async () => ({ chiave: 'cambia:s2', testo: 'Ride', priorita: 'alta' })
     const due = monta()
     await waitFor(() => expect(due.result.current.primo?.avviso.testo).toBe('Ride'))
+  })
+
+  it('chiuso in un punto, sparisce anche negli altri (la card in Home e il pallino della barra)', async () => {
+    avvisi.a = async () => ({ chiave: 'cambia:s1', testo: 'Pegasus', priorita: 'alta' })
+    const home = monta()
+    const barra = monta()
+    await waitFor(() => expect(barra.result.current.aperti.has('a')).toBe(true))
+    await waitFor(() => expect(home.result.current.primo).not.toBeNull())
+    act(() => home.result.current.chiudi('a', 'cambia:s1'))
+    expect(barra.result.current.aperti.has('a')).toBe(false)
   })
 
   it('nessun extra acceso: niente', async () => {

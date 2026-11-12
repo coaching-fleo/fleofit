@@ -55,6 +55,14 @@ describe('Libreria', () => {
     expect(screen.getByTestId('indirizzo')).toHaveTextContent('/archive?vista=extra')
     expect(await screen.findByText('griglia extra incorporata')).toBeInTheDocument()
   })
+  it('arrivati dalla barra, cambiare vista non fa comparire «indietro» né il conteggio dei workout', async () => {
+    monta({ pathname: '/archive', state: { daBarra: true } })
+    expect(screen.queryByRole('button', { name: 'Torna indietro' })).toBeNull()
+    await userEvent.click(screen.getByRole('tab', { name: 'Extra' }))
+    expect(await screen.findByText('griglia extra incorporata')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Torna indietro' })).toBeNull()
+    expect(screen.queryByText(/workout ·|corsie/)).toBeNull()
+  })
   it('tutto spento: niente selettore, titolo «Libreria»', () => {
     dati.extra = []
     monta('/archive?vista=extra')

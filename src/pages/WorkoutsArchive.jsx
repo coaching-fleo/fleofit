@@ -49,7 +49,8 @@ export default function WorkoutsArchive({ storico = false }) {
   const indietro = useIndietro('/')
   // Arrivati dalla tab bar: è una destinazione di pari grado, dietro non c'è
   // niente da cui «tornare» e la freccia non farebbe nulla. Come nel builder.
-  const daBarra = useLocation().state?.daBarra === true
+  const statoArrivo = useLocation().state
+  const daBarra = statoArrivo?.daBarra === true
   const isCoach = role !== 'athlete'
   const desktop = eDesktop(useSchermoLargo(), role)
 
@@ -87,7 +88,9 @@ export default function WorkoutsArchive({ storico = false }) {
     if (v === 'extra') dopo.set('vista', 'extra')
     else dopo.delete('vista')
     return dopo
-  }, { replace: true })
+    // ⚠️ `state` passato di nuovo: senza, il cambio di vista perde `daBarra` e
+    // compare la freccia «indietro» su una destinazione della barra.
+  }, { replace: true, state: statoArrivo })
 
   useRicorda(storico ? 'storico' : 'archivio', user?.id, ripresa, { workouts, searchTerm, corsiaAttiva, tipiScelti, eserciziScelti, caricato: !loading })
 
@@ -245,7 +248,7 @@ export default function WorkoutsArchive({ storico = false }) {
        tutte le pagine con una testata appiccicata; la testata della Home invece
        scorre via con la pagina, quindi lì è contenuto e la sua voce ce l'ha. */
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
-      <TestataArchivio onIndietro={daBarra ? null : indietro} dettaglio={dettaglio}
+      <TestataArchivio onIndietro={daBarra ? null : indietro} dettaglio={vistaExtra ? null : dettaglio}
         titolo={storico ? 'Storico' : isCoach ? 'Libreria' : 'Archivio'}>
         {striscia}
         {conSelettore && <SelettoreLibreria vista={vistaExtra ? 'extra' : 'workout'} onCambia={cambiaVista} pallino={aperti.size > 0} />}
