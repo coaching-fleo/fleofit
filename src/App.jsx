@@ -45,6 +45,7 @@ const Messaggi = lazy(() => import('./pages/Messaggi'))
 const NuovoMessaggio = lazy(() => import('./pages/NuovoMessaggio'))
 const Modelli = lazy(() => import('./pages/Modelli'))
 const Scarpe = lazy(() => import('./pages/Scarpe'))
+const Extra = lazy(() => import('./pages/Extra'))
 const DettaglioScarpa = lazy(() => import('./pages/DettaglioScarpa'))
 const ModelloScarpa = lazy(() => import('./pages/ModelloScarpa'))
 const MieiTeam = lazy(() => import('./pages/MieiTeam'))
@@ -906,6 +907,8 @@ function App() {
             {/* Solo staff: la pagina rimanda l'atleta alla Home da sé, come /analisi. */}
             <Route path="/modelli" element={<Modelli />} />
             {/* Le Scarpe hanno l'interruttore (funzioni_app): spente, il link porta alla Home. */}
+            {/* La sezione Extra: si rimanda da sola alla Home se nessun extra è acceso. */}
+            <Route path="/extra" element={<Extra />} />
             <Route path="/scarpe" element={<SoloSeAccesa nome="scarpe"><Scarpe /></SoloSeAccesa>} />
             <Route path="/scarpe/modello/:id" element={<SoloSeAccesa nome="scarpe"><ModelloScarpa /></SoloSeAccesa>} />
             <Route path="/scarpe/:id" element={<SoloSeAccesa nome="scarpe"><DettaglioScarpa /></SoloSeAccesa>} />
