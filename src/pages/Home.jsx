@@ -52,7 +52,7 @@ import { daRiaprire } from '../lib/ricercaSospesa'
 // Pigro: la ricerca è solo del coach, e il chunk d'ingresso non deve portarsela
 // dietro per ogni atleta che apre l'app (CLAUDE.md §2, peso di `index`).
 const RicercaCoach = lazy(() => import('../components/RicercaCoach'))
-const BannerScarpe = lazy(() => import('../components/BannerScarpe'))
+const DagliExtra = lazy(() => import('../components/DagliExtra'))
 // La Home del coach sulla versione desktop (src/useDesktop.js): pigra, il
 // telefono non la scarica mai.
 import { useSchermoLargo, eDesktop } from '../useDesktop'
@@ -1632,11 +1632,11 @@ setNotifications(prev => {
               }}
             />
           )}
-          {/* In fondo alla lista, non sopra: il banner compare dopo due letture,
+          {/* In fondo alla lista, non sopra: la card compare dopo una lettura,
               e sopra la lista spingerebbe in basso gli allenamenti mentre
               l'atleta li sta per toccare. Sotto non sposta niente di ciò che legge. */}
           <Suspense fallback={null}>
-            <BannerScarpe ruolo="atleta" uid={user?.id} onApri={() => navigate('/scarpe')} />
+            <DagliExtra className="mt-8" />
           </Suspense>
           </>
           )}

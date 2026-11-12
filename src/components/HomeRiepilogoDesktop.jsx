@@ -10,9 +10,11 @@
 import { Plus, Bell, Radio, Megaphone } from 'lucide-react'
 import { useRiepilogoCoach } from '../useRiepilogoCoach'
 import { CARD } from '../lib/stiliCard'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import FoglioListaCoach from './FoglioListaCoach'
 import FoglioCalendario from './FoglioCalendario'
+
+const DagliExtra = lazy(() => import('./DagliExtra'))
 import { CartaOggi, AvvisoStannoMale, CoppiaAzioni, FilaOggi, CalendarioProssimi, ContatoriDaGuardare,
          TeamQuattro, GareRighe, Destinazioni, TitoloSezione } from './RiepilogoCoachUI'
 
@@ -108,6 +110,8 @@ export default function HomeRiepilogoDesktop(props) {
         </>)}
 
         <Destinazioni analisi onReport={onReport} onAnalisi={onAnalisi} />
+
+        <Suspense fallback={null}><DagliExtra /></Suspense>
 
         {r.foglio && <FoglioListaCoach key={r.foglio.titolo} laterale {...r.foglio} onChiudi={r.chiudi} />}
         {calendarioIntero && <FoglioCalendario laterale piano={r.piano} onApri={onApriSeduta} onProgramma={props.onCrea}

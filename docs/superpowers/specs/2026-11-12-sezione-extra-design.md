@@ -104,8 +104,10 @@ Nessun colore nuovo (regola 3). Card neutre, accento `brand` per pallino e selet
 - **Una sola** card, qualunque sia il numero di extra con un avviso.
 - Mostra l'avviso con priorità più alta (a parità, l'ordine del registro); con altri
   avvisi aperti, in fondo «+N negli Extra» → la pagina Extra.
-- Posizione: atleta sotto l'allenamento di oggi; coach nella Home «Riepilogo» sotto
-  «Oggi» (e nella Home classica dove oggi c'è `BannerScarpe`).
+- Posizione: **in fondo** alla Home, dove stava `BannerScarpe` — atleta, Home
+  «Riepilogo» (telefono e desktop) e Home classica. *Corretto in esecuzione* (era «sotto
+  l'allenamento di oggi»): la card arriva dopo una lettura, e sopra la lista spingerebbe
+  in basso gli allenamenti mentre l'atleta li sta per toccare.
 - Icona e nome dell'extra, testo dell'avviso, tocco → `rotta`.
 - **X** che chiude quell'avviso su questo dispositivo: `fleofit_extra_visti`, chiave
   `<id>:<chiave>`, con `leggiJson`/`scriviJson`. Se l'avviso cambia, la chiave cambia

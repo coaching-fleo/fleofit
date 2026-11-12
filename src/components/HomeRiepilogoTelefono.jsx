@@ -9,9 +9,11 @@
 // desktop dalla barra laterale.
 
 import { useRiepilogoCoach } from '../useRiepilogoCoach'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import FoglioListaCoach from './FoglioListaCoach'
 import FoglioCalendario from './FoglioCalendario'
+
+const DagliExtra = lazy(() => import('./DagliExtra'))
 import { CartaOggi, AvvisoStannoMale, CoppiaAzioni, FilaOggi, CalendarioProssimi, ContatoriDaGuardare,
          TeamQuattro, GareRighe, Destinazioni, TitoloSezione } from './RiepilogoCoachUI'
 
@@ -70,6 +72,9 @@ export default function HomeRiepilogoTelefono(props) {
     )}
 
     <Destinazioni onReport={onReport} />
+
+    {/* In fondo: arriva dopo una lettura, sopra sposterebbe ciò che si sta leggendo. */}
+    <Suspense fallback={null}><DagliExtra /></Suspense>
 
     {r.foglio && <FoglioListaCoach key={r.foglio.titolo} {...r.foglio} onChiudi={r.chiudi} />}
     {calendarioIntero && <FoglioCalendario piano={r.piano} onApri={onApriSeduta} onProgramma={props.onCrea}

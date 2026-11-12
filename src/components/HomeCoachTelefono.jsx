@@ -12,20 +12,18 @@
 
 import { ChartNoAxesColumn } from 'lucide-react'
 import { lazy, Suspense } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { cosaGuardare } from '../lib/cosaGuardare'
 import { useCruscottoCoach } from '../useCruscottoCoach'
 import { RigaDestinazione } from './HomeCoachUI'
 import { PolsoTeam, CardOggi, CardSegnali, CardSmaltire, CardPiano, CardGare } from './CruscottoCoachUI'
 
-const BannerScarpe = lazy(() => import('./BannerScarpe'))
+const DagliExtra = lazy(() => import('./DagliExtra'))
 
 export default function HomeCoachTelefono({
   atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura,
   feedback, recupero, fermi, scaduti, caricamento,
   onApriAtleta, onApriFeedback, onApriScaduto, onApriSeduta, onReport,
 }) {
-  const navigate = useNavigate()
   const { gare, polso, oggi, segnali, piano, notaPiano } = useCruscottoCoach({
     atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura, settimana: false,
   })
@@ -59,7 +57,7 @@ export default function HomeCoachTelefono({
     <CardGare compatto gare={gare} onApri={apriGara} />
 
     <Suspense fallback={null}>
-      <BannerScarpe ruolo="coach" onApri={() => navigate('/scarpe')} />
+      <DagliExtra />
     </Suspense>
 
     {/* Il report resta in fondo: materiale di lavoro che si apre sapendo già

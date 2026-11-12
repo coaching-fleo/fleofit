@@ -42,10 +42,10 @@ export function GrigliaExtra({ voci, onApri }) {
  * «Chiudi»: il tasto indietro di Android chiude ciò che ha una X «Chiudi»
  * (src/lib/indietroAndroid.js), e qui chiuderebbe la Home.
  */
-export function CartaDagliExtra({ extra, avviso, altri, onApri, onChiudi, onApriTutti }) {
+export function CartaDagliExtra({ extra, avviso, altri, onApri, onChiudi, onApriTutti, className = '' }) {
   const Icona = extra.icona
   return (
-    <section aria-label="Dagli Extra" className="mt-8 bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl overflow-hidden">
+    <section aria-label="Dagli Extra" className={`${className} bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl overflow-hidden`}>
       <div className="flex items-center gap-3 p-4">
         <button type="button" onClick={() => { vibraScelta(); onApri(extra) }}
           className="flex-1 min-w-0 flex items-center gap-3 text-left">
