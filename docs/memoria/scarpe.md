@@ -30,7 +30,8 @@ Com'è fatto:
   Così banner, card del profilo, riga nel foglio RPE e riga coach spariscono **senza saperlo**: usano
   già `tabelleAssenti`.
 - **Le due cose che non passano da lì.**
-  - La voce «Catalogo scarpe» in Impostazioni usa `useFunzione('scarpe')` (`src/useFunzione.js`).
+  - ~~La voce «Catalogo scarpe» in Impostazioni~~: tolta il 12/11/2026. Dal 12/11 le Scarpe si raggiungono
+    dalla **sezione Extra** (`docs/memoria/extra.md`), che legge l'interruttore con `useExtra`.
   - Le tre rotte `/scarpe…` sono avvolte in `SoloSeAccesa`: spente, riportano alla Home.
 - **Il ruolo.**
   - `App.jsx` lo passa a `funzioniApp.js` con `impostaRuoloFunzioni(role)` **durante il render**:
@@ -162,6 +163,9 @@ Tutto nel catalogo e nelle stesse tabelle: **la migrazione resta non applicata**
 sono nel `.sql` del 02/11, vedi sotto). Senza le tabelle il banner non compare.
 
 ### Il banner in Home (`bannerScarpe.js`, `BannerScarpe.jsx`, pigro)
+> ⚠️ **Tolto il 12/11/2026**: al suo posto la card «Dagli Extra» (`DagliExtra.jsx`), e l'avviso delle
+> Scarpe sta in `src/lib/extra/scarpe.js` (scarpa da cambiare = `alta`, nessuna scarpa = invito `normale`;
+> il coach non ha più la promo del catalogo). Quanto sotto è la storia. Vedi `docs/memoria/extra.md`.
 - **Atleta**: sta **dopo `ListaInArrivo`**, non sotto «Prossimo obiettivo» come chiedeva la spec §9. Motivo: la
   card carica in ritardo e, sopra la lista, spingerebbe giù voci già tappabili; un segnaposto riservato
   collasserebbe quando le tabelle non ci sono. Costo: è meno in vista di quanto voluto.
