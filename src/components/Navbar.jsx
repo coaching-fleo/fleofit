@@ -1,7 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Calendar, Users, User, FolderArchive, History, Plus } from 'lucide-react'
+import { Home, Calendar, Users, User, Library, History, Plus, LayoutGrid } from 'lucide-react'
 import { useAuth } from '../App'
 import { useTastieraAperta } from '../useTastiera'
+import { useExtra } from '../useExtra'
+import { useAvvisiExtra } from '../useAvvisiExtra'
 
 // La tab bar dell'artboard `Home Coach.dc.html`, opzione 2b.
 //
@@ -27,10 +29,12 @@ const voce = ({ isActive }) =>
  * esiste sempre — anche spento — o le voci ballerebbero di 36px passando
  * dall'una all'altra.
  */
-const Cerchio = ({ attiva, icona: Icona }) => (
-  <span className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+const Cerchio = ({ attiva, icona: Icona, pallino }) => (
+  <span className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
     attiva ? 'bg-brand/[.16]' : ''}`}>
     <Icona size={21} aria-hidden="true" />
+    {/* «C'è qualcosa di nuovo» negli Extra (spec 2026-11-12 §3). */}
+    {pallino && <span aria-hidden="true" className="absolute top-1 right-1 w-[7px] h-[7px] rounded-full bg-brand" />}
   </span>
 )
 
@@ -47,15 +51,16 @@ const Etichetta = ({ attiva, children }) => (
  * mai «aperto» ma solo attraversato. Le voci della barra sono destinazioni di
  * pari grado, non passi di un cammino: si sostituiscono, come su iOS.
  */
-function Voce({ a, icona, children }) {
+function Voce({ a, icona, pallino = false, children }) {
   return (
     // `daBarra` dice alla pagina che ci si è arrivati dalla barra, non da un
     // gesto dentro un'altra pagina: il builder lo legge per non mostrare un
     // «indietro» su una destinazione di pari grado (§9-tervicies).
-    <NavLink to={a} replace state={{ daBarra: true }} className={voce}>
+    <NavLink to={a} replace state={{ daBarra: true }} className={voce}
+      aria-label={pallino ? `${children}, novità` : undefined}>
       {({ isActive }) => (
         <>
-          <Cerchio attiva={isActive} icona={icona} />
+          <Cerchio attiva={isActive} icona={icona} pallino={pallino} />
           <Etichetta attiva={isActive}>{children}</Etichetta>
         </>
       )}
@@ -83,6 +88,10 @@ function Crea() {
 
 export default function Navbar() {
   const { role } = useAuth()
+  // Gli extra accesi (spec 2026-11-12 §1): `null` mentre si leggono, e allora
+  // la voce non c'è — non deve comparire per poi sparire.
+  const extra = useExtra()
+  const { aperti } = useAvvisiExtra()
 
   // Con Keyboard.resize 'native' la webview si rimpicciolisce quando la tastiera
   // sale, e questa barra — essendo ancorata in basso — si incollerebbe sopra la
@@ -112,6 +121,7 @@ export default function Navbar() {
               `/archive` resta, per «Cerca nell'archivio» della TV. */}
           <Voce a="/storico" icona={History}>Storico</Voce>
           <Voce a="/calendar" icona={Calendar}>Calendario</Voce>
+          {extra?.length > 0 && <Voce a="/extra" icona={LayoutGrid} pallino={aperti.size > 0}>Extra</Voce>}
           <Voce a="/profile" icona={User}>Profilo</Voce>
         </>) : (<>
           {/* Il coach (proposta A, 11/11/2026): due voci, il «+», due voci.
@@ -119,7 +129,9 @@ export default function Navbar() {
           <Voce a="/calendar" icona={Calendar}>Calendario</Voce>
           <Crea />
           <Voce a="/athletes" icona={Users}>Atleti</Voce>
-          <Voce a="/archive" icona={FolderArchive}>Archivio</Voce>
+          {/* «Libreria» (spec 2026-11-12): i workout e, col selettore, gli Extra.
+              Niente pallino qui: su questa voce si parlerebbe di workout. */}
+          <Voce a="/archive" icona={Library}>Libreria</Voce>
         </>)}
       </nav>
     </div>
