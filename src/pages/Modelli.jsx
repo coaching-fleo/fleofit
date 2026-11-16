@@ -31,7 +31,7 @@ const SPOSTA = ['translate-x-0', 'translate-x-full', 'translate-x-[200%]']
 export default function Modelli() {
   const { role } = useAuth() || {}
   const navigate = useNavigate()
-  const indietro = useIndietro('/create')
+  const indietro = useIndietro('/libreria')
   const [params, setParams] = useSearchParams()
   const richiesta = params.get('categoria')
   const categoria = CATEGORIE_MODELLI.includes(richiesta) ? richiesta : 'Hyrox'

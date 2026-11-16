@@ -16,7 +16,7 @@ export default function DagliExtra({ className = '' }) {
   const navigate = useNavigate()
   if (!primo) return null
   // Il coach la sezione la trova nella Libreria, l'atleta nella sua voce.
-  const sezione = ruoloExtra(role) === 'coach' ? '/archive?vista=extra' : '/extra'
+  const sezione = ruoloExtra(role) === 'coach' ? '/libreria' : '/extra'
   return (
     <CartaDagliExtra className={className} extra={primo.extra} avviso={primo.avviso} altri={altri}
       onApri={(e) => navigate(e.rotta)}

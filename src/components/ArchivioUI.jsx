@@ -344,32 +344,3 @@ export function VuotoArchivio({ conFiltri, onAzzera, storico = false }) {
     </div>
   )
 }
-
-/**
- * Il selettore della Libreria del coach, «Workout · Extra» (spec 2026-11-12 §1):
- * toggle segmentato del §6, indicatore che trasla in 300ms. Il pallino su Extra
- * dice che un extra ha un avviso aperto.
- */
-/** L'id del pannello che il selettore comanda: lo usa WorkoutsArchive. */
-export const PANNELLO_LIBRERIA = 'libreria-pannello'
-
-export function SelettoreLibreria({ vista, onCambia, pallino = false }) {
-  const voci = [['workout', 'Workout'], ['extra', 'Extra']]
-  return (
-    <div role="tablist" aria-label="Libreria" className="relative mt-3 grid grid-cols-2 bg-[#111] p-1.5 rounded-2xl border border-[#333]">
-      <span aria-hidden="true"
-        className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] rounded-xl bg-[#2a2a2a] transition-transform duration-300 ease-out ${
-          vista === 'extra' ? 'translate-x-full' : ''}`} />
-      {voci.map(([id, etichetta]) => (
-        <button key={id} type="button" role="tab" aria-selected={vista === id}
-          id={`libreria-tab-${id}`} aria-controls={PANNELLO_LIBRERIA}
-          onClick={() => { if (vista !== id) { vibraScelta(); onCambia(id) } }}
-          className={`relative z-10 min-h-[38px] inline-flex items-center justify-center gap-1.5 text-[14px] font-extrabold transition-colors ${
-            vista === id ? 'text-white' : 'text-gray-500'}`}>
-          {etichetta}
-          {id === 'extra' && pallino && <span aria-hidden="true" className="w-[7px] h-[7px] rounded-full bg-brand" />}
-        </button>
-      ))}
-    </div>
-  )
-}

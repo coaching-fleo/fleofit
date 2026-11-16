@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { Home, Calendar, Users, User, Library, History, Plus, LayoutGrid } from 'lucide-react'
 import { useAuth } from '../App'
 import { useTastieraAperta } from '../useTastiera'
@@ -51,17 +51,22 @@ const Etichetta = ({ attiva, children }) => (
  * mai «aperto» ma solo attraversato. Le voci della barra sono destinazioni di
  * pari grado, non passi di un cammino: si sostituiscono, come su iOS.
  */
-function Voce({ a, icona, pallino = false, children }) {
+function Voce({ a, icona, pallino = false, anche = [], children }) {
+  // `anche`: le pagine dove questa voce resta accesa pur non essendo la sua
+  // rotta — la Libreria del coach dentro Archivio, Modelli e gli extra.
+  const { pathname } = useLocation()
+  const dentro = anche.some(p => pathname === p || pathname.startsWith(`${p}/`))
   return (
     // `daBarra` dice alla pagina che ci si è arrivati dalla barra, non da un
     // gesto dentro un'altra pagina: il builder lo legge per non mostrare un
     // «indietro» su una destinazione di pari grado (§9-tervicies).
-    <NavLink to={a} replace state={{ daBarra: true }} className={voce}
+    <NavLink to={a} replace state={{ daBarra: true }}
+      className={({ isActive }) => voce({ isActive: isActive || dentro })}
       aria-label={pallino ? `${children}, novità` : undefined}>
       {({ isActive }) => (
         <>
-          <Cerchio attiva={isActive} icona={icona} pallino={pallino} />
-          <Etichetta attiva={isActive}>{children}</Etichetta>
+          <Cerchio attiva={isActive || dentro} icona={icona} pallino={pallino} />
+          <Etichetta attiva={isActive || dentro}>{children}</Etichetta>
         </>
       )}
     </NavLink>
@@ -97,6 +102,17 @@ function VoceExtra() {
   const { aperti } = useAvvisiExtra()
   if (!extra?.length) return null
   return <Voce a="/extra" icona={LayoutGrid} pallino={aperti.size > 0}>Extra</Voce>
+}
+
+/**
+ * La voce Libreria del coach (12/11/2026): apre il MENÙ /libreria e resta accesa
+ * dentro le sue voci — Archivio, Modelli, ogni extra acceso. Niente pallino:
+ * il coach vede le novità nella Libreria stessa.
+ */
+function VoceLibreria() {
+  const extra = useExtra()
+  const anche = ['/archive', '/modelli', ...(extra || []).map(e => e.rotta)]
+  return <Voce a="/libreria" icona={Library} anche={anche}>Libreria</Voce>
 }
 
 export default function Navbar() {
@@ -138,9 +154,8 @@ export default function Navbar() {
           <Voce a="/calendar" icona={Calendar}>Calendario</Voce>
           <Crea />
           <Voce a="/athletes" icona={Users}>Atleti</Voce>
-          {/* «Libreria» (spec 2026-11-12): i workout e, col selettore, gli Extra.
-              Niente pallino qui: su questa voce si parlerebbe di workout. */}
-          <Voce a="/archive" icona={Library}>Libreria</Voce>
+          {/* «Libreria» (12/11/2026): il menù di Archivio, Modelli e degli Extra. */}
+          <VoceLibreria />
         </>)}
       </nav>
     </div>

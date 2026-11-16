@@ -5,9 +5,11 @@
 
 Le funzioni «extra» (le Scarpe; più avanti palestre, biglietti) hanno **un ingresso solo**:
 - **atleta**: la voce **Extra** nella barra, prima di Profilo, solo se almeno un extra è acceso per lui;
-- **coach, telefono**: «Archivio» è diventato **«Libreria»**, col selettore *Workout · Extra*
-  (`/archive?vista=extra`). Sempre su *Workout* all'apertura; niente selettore se tutto è spento,
-  nello `/storico` dell'atleta e in modalità TV (`?tv=`);
+- **coach, telefono**: «Archivio» è diventato **«Libreria»**, che apre un **menù** (`/libreria`,
+  `src/pages/Libreria.jsx`): **Archivio**, **Modelli** (solo coach, voci fisse), poi un extra per ogni
+  interruttore acceso, con la sua riga viva e il pallino giallo se ha un avviso. La voce della barra resta
+  accesa dentro le sue pagine (`/archive`, `/modelli`, le rotte degli extra). L'archivio, il catalogo
+  scarpe e i Modelli, aperti senza storia, tornano alla Libreria. L'atleta che apre `/libreria` torna alla Home;
 - **desktop**: la voce «Extra» nella barra laterale (`/extra`); lì la voce dell'archivio resta «Archivio».
 Spariti: «Catalogo scarpe» in Impostazioni, la voce «Scarpe» della barra laterale, `BannerScarpe`.
 
@@ -37,8 +39,10 @@ Spariti: «Catalogo scarpe» in Impostazioni, la voce «Scarpe» della barra lat
   nascondono gli avvisi a vicenda.
 - La card non porta margine suo: nella Home la distanza la dà il contenitore (`gap`); solo la Home
   atleta, che non ha `gap`, le passa `className="mt-8"`.
-- Libreria: il cambio di vista passa di nuovo `location.state`, o si perde `daBarra` e compare la freccia
-  «indietro» (trovato nella demo). Sul desktop `?vista=extra` rimanda a `/extra`.
+- ⚠️ Fino al 12/11/2026 la Libreria era l'archivio col selettore *Workout · Extra* (`?vista=extra`):
+  il committente l'ha bocciato («mi fa vedere solo l'archivio, non hai creato un menù») ed è stato tolto
+  il 16/11/2026, con `SelettoreLibreria` e la prop `incorporata` di `Extra.jsx`. Un extra nuovo compare
+  nel menù da solo, dal registro: `Libreria.jsx` non si tocca.
 
 ## Pesi
 `index` da **627,93 KB** (già sopra la soglia di 620 prima del lavoro) a **631,15 KB**: +3,2, cioè registro,

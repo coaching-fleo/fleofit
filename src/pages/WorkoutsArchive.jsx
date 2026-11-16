@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
 import { format } from 'date-fns'
-import { Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useRipresa, useRicorda } from '../useRipresa'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
@@ -15,16 +15,13 @@ import {
 } from '../lib/rigaArchivio'
 import {
   TestataArchivio, CampoRicerca, FiltriCorsia, IntestazioneSezione,
-  RigaWorkout, ScheletroArchivio, VuotoArchivio, FiltriTipo, FiltriEsercizio, StrisciaTV, SelettoreLibreria, PANNELLO_LIBRERIA,
+  RigaWorkout, ScheletroArchivio, VuotoArchivio, FiltriTipo, FiltriEsercizio, StrisciaTV,
 } from '../components/ArchivioUI'
-import { useExtra } from '../useExtra'
-import { useAvvisiExtra } from '../useAvvisiExtra'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
 
 // L'archivio a griglia sul desktop (src/useDesktop.js): pigro, il telefono non
 // lo scarica mai.
 const ArchivioDesktop = lazy(() => import('../components/ArchivioDesktop'))
-const Extra = lazy(() => import('./Extra'))
 
 // Tornando da un workout l'archivio riprende dov'era: src/useRipresa.js.
 
@@ -46,12 +43,13 @@ export default function WorkoutsArchive({ storico = false }) {
   // Gli esercizi a tre stati: { SkiErg: 'con' | 'senza' } (src/lib/rigaArchivio.js).
   const [eserciziScelti, setEserciziScelti] = useState(() => ripresa?.eserciziScelti ?? {})
   const navigate = useNavigate()
-  const indietro = useIndietro('/')
+  const isCoach = role !== 'athlete'
+  // Il coach ci arriva dalla Libreria (12/11/2026): senza storia, torna lì.
+  const indietro = useIndietro(isCoach && !storico ? '/libreria' : '/')
   // Arrivati dalla tab bar: è una destinazione di pari grado, dietro non c'è
   // niente da cui «tornare» e la freccia non farebbe nulla. Come nel builder.
   const statoArrivo = useLocation().state
   const daBarra = statoArrivo?.daBarra === true
-  const isCoach = role !== 'athlete'
   const desktop = eDesktop(useSchermoLargo(), role)
 
   // Modalità scelta per la TV (`/archive?tv=<codice>`, da «Cerca nell'archivio»
@@ -74,23 +72,6 @@ export default function WorkoutsArchive({ storico = false }) {
     else navigate(base)
   }
   const striscia = codiceTV ? <StrisciaTV onEsci={esciDallaTV} /> : null
-
-  // La Libreria del coach (spec 2026-11-12 §1): col selettore «Workout · Extra»
-  // se almeno un extra è acceso. La vista sta nell'indirizzo (`?vista=extra`),
-  // così tornando da un extra si torna su Extra. Non nello storico dell'atleta,
-  // non mentre si sceglie per la TV.
-  const extra = useExtra()
-  const { aperti } = useAvvisiExtra()
-  const conSelettore = isCoach && !storico && !codiceTV && extra?.length > 0
-  const vistaExtra = conSelettore && searchParams.get('vista') === 'extra'
-  const cambiaVista = (v) => setSearchParams(prima => {
-    const dopo = new URLSearchParams(prima)
-    if (v === 'extra') dopo.set('vista', 'extra')
-    else dopo.delete('vista')
-    return dopo
-    // ⚠️ `state` passato di nuovo: senza, il cambio di vista perde `daBarra` e
-    // compare la freccia «indietro» su una destinazione della barra.
-  }, { replace: true, state: statoArrivo })
 
   useRicorda(storico ? 'storico' : 'archivio', user?.id, ripresa, { workouts, searchTerm, corsiaAttiva, tipiScelti, eserciziScelti, caricato: !loading })
 
@@ -196,8 +177,6 @@ export default function WorkoutsArchive({ storico = false }) {
   // ⚠️ L'indice della cascata scorre ATTRAVERSO i gruppi. `nth-child` qui non
   // basta: le righe stanno dentro i mesi, quindi ripartirebbe da capo a ogni
   // intestazione e agosto entrerebbe insieme a settembre (src/lib/cascata.js).
-  // Sul desktop gli Extra hanno la loro voce nella barra laterale.
-  if (desktop && vistaExtra) return <Navigate to="/extra" replace />
   if (desktop) {
     return (
       <Suspense fallback={<div className="min-h-screen" />}>
@@ -248,11 +227,9 @@ export default function WorkoutsArchive({ storico = false }) {
        tutte le pagine con una testata appiccicata; la testata della Home invece
        scorre via con la pagina, quindi lì è contenuto e la sua voce ce l'ha. */
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
-      <TestataArchivio onIndietro={daBarra ? null : indietro} dettaglio={vistaExtra ? null : dettaglio}
-        titolo={storico ? 'Storico' : isCoach ? 'Libreria' : 'Archivio'}>
+      <TestataArchivio onIndietro={daBarra ? null : indietro} dettaglio={dettaglio}
+        titolo={storico ? 'Storico' : 'Archivio'}>
         {striscia}
-        {conSelettore && <SelettoreLibreria vista={vistaExtra ? 'extra' : 'workout'} onCambia={cambiaVista} pallino={aperti.size > 0} />}
-        {!vistaExtra && (<>
         <CampoRicerca valore={searchTerm} onCambia={setSearchTerm} />
         {corsie.length > 1 && (
           <FiltriCorsia corsie={corsie} attiva={corsiaAttiva} totale={workouts.length}
@@ -263,17 +240,7 @@ export default function WorkoutsArchive({ storico = false }) {
         {esercizi.length > 0 && (
           <FiltriEsercizio esercizi={esercizi} scelte={eserciziScelti} onCambia={cambiaEsercizio} />
         )}
-        </>)}
       </TestataArchivio>
-
-      {/* Con il selettore il contenuto è il suo pannello (role tabpanel). */}
-      <div {...(conSelettore ? { role: 'tabpanel', id: PANNELLO_LIBRERIA,
-        'aria-labelledby': `libreria-tab-${vistaExtra ? 'extra' : 'workout'}` } : {})}>
-      {vistaExtra ? (
-        <div className="mt-4">
-          <Suspense fallback={null}><Extra incorporata /></Suspense>
-        </div>
-      ) : (<>
 
       {/* 🔴 Tornando dalla scheda le righe non rifanno la cascata (ci sono già),
           ma senza niente al suo posto il ritorno era un taglio secco. La lista
@@ -310,8 +277,6 @@ export default function WorkoutsArchive({ storico = false }) {
           </div>
         ))
       )}
-      </div>
-      </>)}
       </div>
     </div>
   )

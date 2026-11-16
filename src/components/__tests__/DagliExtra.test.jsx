@@ -19,7 +19,7 @@ const monta = (role = 'athlete') => montaPagina(
     <Route path="/" element={<DagliExtra />} />
     <Route path="/scarpe" element={<p>pagina scarpe</p>} />
     <Route path="/extra" element={<p>sezione extra</p>} />
-    <Route path="/archive" element={<p>libreria</p>} />
+    <Route path="/libreria" element={<p>libreria</p>} />
   </Routes>,
   { role, percorso: '/', rotta: '*' },
 )
@@ -43,7 +43,7 @@ describe('DagliExtra', () => {
     await userEvent.click(screen.getByText('+1 negli Extra'))
     expect(screen.getByText('sezione extra')).toBeInTheDocument()
   })
-  it('«+1» porta alla Libreria su Extra per il coach', async () => {
+  it('«+1» porta alla Libreria per il coach', async () => {
     monta('coach')
     await userEvent.click(screen.getByText('+1 negli Extra'))
     expect(screen.getByText('libreria')).toBeInTheDocument()

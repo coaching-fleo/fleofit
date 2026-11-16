@@ -46,9 +46,19 @@ describe('Navbar ed Extra', () => {
     dati.extra = [{ id: 'scarpe' }]
     dati.aperti = new Set(['scarpe'])
     montaPagina(<Navbar />, { role: 'coach' })
-    expect(screen.getByRole('link', { name: 'Libreria' })).toHaveAttribute('href', '/archive')
+    expect(screen.getByRole('link', { name: 'Libreria' })).toHaveAttribute('href', '/libreria')
     expect(screen.queryByText('Archivio')).toBeNull()
     expect(screen.queryByRole('link', { name: /novità/ })).toBeNull()
+  })
+  it('coach: «Libreria» resta accesa dentro le sue voci (archivio, modelli, un extra)', () => {
+    dati.extra = [{ id: 'scarpe', rotta: '/scarpe' }]
+    for (const percorso of ['/archive', '/modelli', '/scarpe/modello/3']) {
+      const { unmount } = montaPagina(<Navbar />, { role: 'coach', percorso })
+      expect(screen.getByRole('link', { name: 'Libreria' })).toHaveClass('text-brand')
+      unmount()
+    }
+    montaPagina(<Navbar />, { role: 'coach', percorso: '/calendar' })
+    expect(screen.getByRole('link', { name: 'Libreria' })).not.toHaveClass('text-brand')
   })
   it('coach: la barra non legge gli avvisi (non li mostra)', () => {
     dati.extra = [{ id: 'scarpe' }]

@@ -600,7 +600,8 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   10px d'aria sopra e 16px sotto. La voce attiva prende un **cerchio** da 36px dietro la
   sola icona, non una pillola dietro icona ed etichetta (§9-quaterdecies).
   Dall'11/11/2026 quella del **coach** è Home · Calendario · **«+» giallo al centro** (Crea
-  workout, 58px con l'alone) · Atleti · Archivio (proposta A della Home); quella dell'atleta non cambia.
+  workout, 58px con l'alone) · Atleti · **Libreria** (proposta A della Home; dal 16/11/2026 Libreria apre il menù
+  `/libreria`, `docs/memoria/extra.md`); quella dell'atleta ha **Extra** prima di Profilo, se un extra è acceso.
 - **Feedback aptico**: si passa SOLO dai sei verbi di `src/lib/aptica.js` (`battito`,
   `vibraScelta`, `vibraPresa`, `vibraSuccesso`, `vibraErrore`, `vibraRichiamo`), mai da
   `Haptics` o `navigator.vibrate` diretti — il secondo su iPhone non esiste. Dove vibrare e
@@ -643,7 +644,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `?serve=invito` (ci manda `ProtectedRoute` a chi è autenticato senza profilo) e
   `?error=unauthorized` (la vecchia uscita, che nessuno produce più — §9-septvicies).
 - **Rotte**: `/`, `/login`, `/tv` (pubblica), `/collega-tv/:codice` (privata; `?altro=1` = parte dalla lista), `/calendar`, `/create`, `/athletes`, `/athletes/:id`,
-  `/profile`, `/workout/:id` (con `?tv=<4 cifre>` collega la TV da sola; con `&chiedi=1` prima chiede — il QR inquadrato a scheda aperta), `/archive` (con `?tv=` sceglie soltanto: il tocco porta alla scheda con `?tv=`), `/report` e `/report/:id` (**solo coach**, §9-vicies e §9-vicies-bis), `/settings`. Deep link workout:
+  `/profile`, `/workout/:id` (con `?tv=<4 cifre>` collega la TV da sola; con `&chiedi=1` prima chiede — il QR inquadrato a scheda aperta), `/archive` (con `?tv=` sceglie soltanto: il tocco porta alla scheda con `?tv=`), `/report` e `/report/:id` (**solo coach**, §9-vicies e §9-vicies-bis), `/libreria` (**solo coach**: il menù di Archivio, Modelli ed Extra), `/settings`. Deep link workout:
   `/workout/<workoutId>?athlete_id=<uid>` — è il formato usato anche in `notifications.route`.
 - **Aggiornamenti ottimistici**: si aggiorna lo state prima della chiamata Supabase e si fa rollback
   in caso di errore (pattern in `toggleTodayWorkout`, `toggleStatus`).
@@ -732,7 +733,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute`, `consenso.js`, `Consenso.jsx`, `informativa.js`, `public/privacy-policy.html` | `accesso.md` |
 | `RicercaCoach.jsx`, `ricercaCoach.js`, `dialogoRicerca.js`, `useDettatura.js`, Edge Function `ricerca-coach` | `ricerca.md` |
-| `extra.js`, `extra/*.js`, `useExtra.js`, `avvisiExtra.js`, `useAvvisiExtra.js`, `Extra.jsx`, `ExtraUI`, `DagliExtra`, `SelettoreLibreria`, la voce Extra della `Navbar` | `extra.md` |
+| `extra.js`, `extra/*.js`, `useExtra.js`, `avvisiExtra.js`, `useAvvisiExtra.js`, `Extra.jsx`, `ExtraUI`, `DagliExtra`, `Libreria.jsx` (il menù del coach), le voci Extra e Libreria della `Navbar` | `extra.md` |
 | `kmScarpe.js`, `scarpeDb.js`, `scarpaCompletamento.js`, `useScarpaCompletamento.js`, `Scarpe.jsx`, `DettaglioScarpa.jsx`, `ScarpeUI`, `RigaScarpa`, `RigaScarpeCoach`, `caratteristicheScarpa.js`, `fotoScarpa.js`, `FotoScarpa`, `ModelloScarpa.jsx`, `ModelloScarpaUI`, `FoglioModelloCatalogo`, `Scarpa3D`, `funzioniApp.js`, `useFunzione.js`, `SoloSeAccesa`, `tools/scarpe/` | `scarpe.md` |
 | `sfidaTeam.js`, `membriTeam.js`, `teamDb.js`, `useSfidaCompletamento.js`, `sfidaCompletamento.js`, `RigaRisultatoSfida`, `Team.jsx`, `MieiTeam.jsx`, `SchedaTeam.jsx`, `InvitoTeam.jsx`, `DettaglioSfida.jsx`, `TeamUI`, `FoglioNuovoTeam`, `FoglioInvitaTeam`, `FoglioNuovaSfida`, `send-reminders/team.ts`, `tools/verifica-team.sql` | `team.md` |
 | `garmin.js`, `FoglioGarmin`, Edge Function `garmin-auth` e `garmin-webhook`, `_shared/garmin*.ts`, `workoutGarmin.ts`, `garminTraining.ts`, Edge Function `garmin-training`, `rigaOrologio.js`, `RigaOrologio`, `attivitaGarmin.ts`, `abbinaGarmin.ts`, `garmin-webhook/attivita.ts`, `attivitaGarmin.js`, `CardDaGarmin`, `RigheGarmin`, `FoglioAttivitaGarmin`, `giornateGarmin.ts`, `garmin-webhook/giornate.ts`, `recuperoGarmin.js`, `CardRecupero`, `send-reminders/testi.ts`, il ramo `fleofit://garmin` di `DeeplinkHandler` | `garmin.md` |
