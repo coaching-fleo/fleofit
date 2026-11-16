@@ -571,6 +571,10 @@ calcola l'app).
   minuto 2 A su SkiErg, B su Burpees, C torna al primo). **Non provato su una TV vera.**
 - ⚠️ La TV gira da `main`: arriva con `app:main`; il bottone sul telefono con la prossima
   versione sugli Store (sul web subito con `app:main`).
+- 🔴 **Con le persone l'intensità sparisce** (segnalato dal committente, 16/11/2026): il ramo
+  `persone` di `EsercizioTV` era un disegno a parte e non la disegnava. Ora sta prima delle
+  pillole dei nomi, al lavoro, «in arrivo» e sulle righe senza nessuno. Test
+  `EsercizioTV.test.jsx` (visto fallire senza la correzione). Provato nell'ambiente di prova.
 
 ## 9-sposta. «Sposta a un altro giorno» dal menu (26/10/2026)
 L'atleta sposta la sua assegnazione da qui (voce del menu ⋯, solo da fare e non gara) o dal

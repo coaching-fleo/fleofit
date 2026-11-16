@@ -362,6 +362,12 @@ export function EsercizioTV({ numero, nome, specifiche, note, intensita, classeI
           )}
           {note && <p className="mt-1.5 text-[24px] text-muted text-pretty break-words">{note}</p>}
         </div>
+        {/* L'intensità resta anche con le persone: è del coach, vale per tutti. */}
+        {intensita && (
+          <span className={`shrink-0 text-[30px] font-black tracking-[.02em] ${classeIntensita}`}>
+            {intensita}/10
+          </span>
+        )}
         {persone.length > 0 && (
           <div className="shrink-0 flex flex-wrap items-center justify-end gap-2.5 max-w-[50%]">
             {inArrivo && (
