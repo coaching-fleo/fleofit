@@ -462,6 +462,13 @@ const messaggi_coach = () => [
   { id: 'mc-4', testo: 'Ottimo lavoro a tutti nella simulazione di sabato. Domani riposo vero: niente corsetta «per sicurezza».', fissato: false, autore: COACH, creato_at: fa(0, 5), modificato_at: fa(0, 2) },
 ]
 
+// «Gruppi di atleti» del coach (16/11/2026): solo una scorciatoia per assegnare.
+// `at-sparito` non esiste più: l'app deve ignorarlo senza contarlo.
+const gruppi_atleti = () => [
+  { id: 'ga-1', coach: COACH, nome: 'Hyrox martedì', atleti: ['at-marco', 'at-luca', 'at-giulia', 'at-sparito'], creato_at: fa(12), modificato_at: null },
+  { id: 'ga-2', coach: COACH, nome: 'Doppie Milano', atleti: ['at-sara', 'at-elena'], creato_at: fa(5), modificato_at: null },
+]
+
 // «Modelli di blocco» del coach: UN blocco, UNA fase o UN gruppo (CLAUDE.md §5),
 // senza nessun `id` interno e i gruppi Gym senza `fase`.
 const modelli_blocco = () => [
@@ -649,6 +656,7 @@ export function semi() {
     garmin_giornate: garmin_giornate(),
     messaggi_coach: messaggi_coach(),
     modelli_blocco: modelli_blocco(),
+    gruppi_atleti: gruppi_atleti(),
     // Template del PDF (pdf_coach): i workout finti non hanno `creato_da`, quindi il PDF
     // usa la riga di chi esporta.
     pdf_coach: [

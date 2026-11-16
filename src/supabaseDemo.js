@@ -185,7 +185,7 @@ function query(tabella) {
       // I default delle colonne, come li applicherebbe Postgres: la riga passata vince.
       const predefiniti = tabella === 'messaggi_coach'
         ? { creato_at: new Date().toISOString(), fissato: false, modificato_at: null }
-        : tabella === 'modelli_blocco'
+        : tabella === 'modelli_blocco' || tabella === 'gruppi_atleti'
           ? { creato_at: new Date().toISOString(), modificato_at: null }
           : tabella === 'pdf_coach'
             ? { aggiornato_at: new Date().toISOString() }
