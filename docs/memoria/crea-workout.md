@@ -1811,3 +1811,23 @@ scelto il **B · Schede per famiglia**:
 - Test: `esercizi.test.js`, `scaleMisura.test.js`, `rigaBlocco.test.js`, `leggiWorkout.test.js` e
   in `CreaWorkoutBuilder.test.jsx` «il Burpees Box Jump sceglie l altezza della box»; visti fallire
   togliendo `testoBox` e la lettura di «cm».
+
+## «Annulla» durante «Genera con IA» (16/11/2026)
+
+Richiesta del committente: partita una generazione, non c'era modo di fermarla
+(il foglio diceva solo «Non chiudere», e velo e maniglia sono spenti apposta,
+§9-quindecies). Ora al posto di «Non chiudere» c'è il bottone **«Annulla»**.
+
+- Torna al foglio a riposo **con il testo ancora dentro**: chi annulla di solito
+  vuole correggere la richiesta, non riscriverla.
+- `chiamaIA` numera ogni richiesta (`richiestaIA`) e passa un `AbortController`
+  a `supabase.functions.invoke` (`signal`). Annullare alza il numero e
+  interrompe la connessione; una risposta che arriva lo stesso, o l'errore
+  dell'interruzione, porta un numero vecchio e **si butta senza avvisi**.
+- ⚠️ Sul server Gemini finisce comunque il suo lavoro: la richiesta conta
+  nella quota anche se annullata. Si smette solo di aspettarla.
+- Il bottone dice esattamente «Annulla», quindi su Android il tasto indietro di
+  sistema annulla la generazione (`indietroAndroid.js`).
+- Test: `CreaWorkoutIA.test.jsx`, «Annulla interrompe la richiesta…» e
+  «annullata, l'interruzione della rete non diventa un messaggio di errore»
+  (visti fallire togliendo i due `if (annullata()) return`).

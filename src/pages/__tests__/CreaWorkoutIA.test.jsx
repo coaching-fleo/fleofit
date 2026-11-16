@@ -310,7 +310,54 @@ describe('fermata la registrazione, il foglio dice di aspettare', () => {
     // 🔴 Il difetto era proprio questo: un bottone spento accanto a un'attesa
     // si legge come «non ha funzionato», e il gesto che ne segue è rifare tutto.
     expect(screen.queryByRole('button', { name: /Genera workout/ })).toBeNull()
-    expect(screen.getByText(/Non chiudere/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Annulla' })).toBeInTheDocument()
+  })
+
+  it('«Annulla» interrompe la richiesta e riporta al testo, che resta lì', async () => {
+    let segnale
+    let rispondi
+    mockRispostaIA = (_nome, opzioni) => {
+      segnale = opzioni.signal
+      return new Promise(r => { rispondi = r })
+    }
+
+    const foglio = await apriIA()
+    await userEvent.type(within(foglio).getByRole('textbox'), 'emom da 12 minuti')
+    await userEvent.click(screen.getByRole('button', { name: /Genera workout/ }))
+    await waitFor(() => expect(screen.getByText(/Sto scrivendo l'allenamento/)).toBeInTheDocument())
+
+    await userEvent.click(within(foglio).getByRole('button', { name: 'Annulla' }))
+
+    expect(segnale.aborted).toBe(true)
+    expect(screen.queryByText(/Sto scrivendo l'allenamento/)).toBeNull()
+    expect(within(foglio).getByRole('textbox')).toHaveValue('emom da 12 minuti')
+    expect(screen.getByRole('button', { name: /Genera workout/ })).toBeEnabled()
+
+    // 🔴 Una risposta che arriva DOPO l'annullamento non deve finire nel
+    // builder né chiudere il foglio: il coach ha detto di no.
+    await act(async () => {
+      rispondi({ data: { blocks: [{ type: 'EMOM', params: { interval: '1:00', rounds: '12' }, exercises: [{ name: 'Burpees', reps: '15' }] }] }, error: null })
+    })
+    await new Promise(r => setTimeout(r, 450))
+    expect(screen.getByRole('dialog', { name: 'Genera con IA' })).toBeInTheDocument()
+    expect(screen.queryByText(/Burpees/)).toBeNull()
+  })
+
+  it('annullata, l\'interruzione della rete non diventa un messaggio di errore', async () => {
+    const avvisi = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mockRispostaIA = (_nome, opzioni) => new Promise((_r, rifiuta) => {
+      opzioni.signal.addEventListener('abort', () => rifiuta(new Error('AbortError')))
+    })
+
+    const foglio = await apriIA()
+    await userEvent.type(within(foglio).getByRole('textbox'), 'emom da 12 minuti')
+    await userEvent.click(screen.getByRole('button', { name: /Genera workout/ }))
+    await waitFor(() => expect(screen.getByText(/Sto scrivendo l'allenamento/)).toBeInTheDocument())
+    await userEvent.click(within(foglio).getByRole('button', { name: 'Annulla' }))
+
+    await new Promise(r => setTimeout(r, 50))
+    // Nessun host montato: l'avviso finirebbe in `console.warn`, e lo si guarda lì.
+    expect(avvisi.mock.calls.filter(([m]) => m === 'AlertHost non montato:')).toHaveLength(0)
   })
 
   it('durante la generazione il foglio non si chiude per sbaglio', async () => {

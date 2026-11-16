@@ -477,6 +477,13 @@ function AiGenerationModal({ onClose, onGenerate, categoria = 'Hyrox', attuali =
   const streamRef = useRef(null)
   const orologio = useRef(null)
   const orologioAttesa = useRef(null)
+  // «Annulla» durante la generazione (16/11/2026). Il numero dice QUALE
+  // richiesta è ancora voluta: una risposta che arriva dopo l'annullamento
+  // porta un numero vecchio e si butta, anche se la rete non l'ha interrotta
+  // (sul server Gemini finisce comunque il suo lavoro: si smette solo di
+  // aspettarlo). Il controller chiude davvero la connessione dove si può.
+  const richiestaIA = useRef(0)
+  const interrompiIA = useRef(null)
   // Quale dei due registratori è in uso ADESSO. Non si può ridecidere allo stop
   // guardando `isNativePlatform`: dipende anche da MediaRecorder e dallo stream,
   // che a quel punto potrebbero non esserci più (stessa nota di VoiceRecorder).
@@ -566,6 +573,8 @@ function AiGenerationModal({ onClose, onGenerate, categoria = 'Hyrox', attuali =
     annullato.current = true
     clearInterval(orologio.current)
     clearTimeout(orologioAttesa.current)
+    richiestaIA.current++
+    interrompiIA.current?.abort()
     try { recognitionRef.current?.stop() } catch { /* già ferma */ }
     if (recorderRef.current && recorderRef.current.state !== 'inactive') {
       try { recorderRef.current.stop() } catch { /* già ferma */ }
@@ -577,10 +586,16 @@ function AiGenerationModal({ onClose, onGenerate, categoria = 'Hyrox', attuali =
   // ── La chiamata a Gemini, una sola per i due percorsi ────────────────────
   const chiamaIA = useCallback(async (body) => {
     iniziaAttesa(!!body.audioBase64)
+    const questa = ++richiestaIA.current
+    const controller = new AbortController()
+    interrompiIA.current = controller
+    const annullata = () => questa !== richiestaIA.current
     try {
       const { data, error } = await supabase.functions.invoke('ai-workout', {
         body: { ...body, categoria, ...(inModifica ? { attuali: ia.perIA(attuali) } : {}) },
+        signal: controller.signal,
       })
+      if (annullata()) return
       if (error) {
         let errorMsg = error.message
         if (error.context && typeof error.context.json === 'function') {
@@ -604,12 +619,17 @@ function AiGenerationModal({ onClose, onGenerate, categoria = 'Hyrox', attuali =
       onGenerate(data?.[ia.chiave] ?? (ia.chiave === 'testo' ? '' : []), data?.modifica === true)
       chiudi()
     } catch (e) {
+      // Annullata dal coach: l'interruzione arriva come errore, ma non lo è.
+      if (annullata()) return
       // ⚠️ Mai il messaggio grezzo: a quota finita era il JSON intero di
       // Google, e l'avviso usciva dalla finestra (src/lib/erroreIA.js).
       console.error('Errore generazione IA:', e?.message)
       mostraErrore(messaggioErroreIA(e?.message))
     } finally {
-      fineAttesa()
+      // Dopo un annullamento l'attesa l'ha già chiusa `annullaGenerazione`,
+      // e magari ne è partita un'altra: non va spenta quella.
+      if (!annullata()) fineAttesa()
+      if (interrompiIA.current === controller) interrompiIA.current = null
     }
   }, [onGenerate, chiudi, iniziaAttesa, fineAttesa, inModifica, attuali, categoria, ia])
 
@@ -793,6 +813,14 @@ function AiGenerationModal({ onClose, onGenerate, categoria = 'Hyrox', attuali =
     }
   }
 
+  /** «Annulla»: si torna al foglio com'era, con il testo ancora dentro. */
+  const annullaGenerazione = () => {
+    richiestaIA.current++
+    interrompiIA.current?.abort()
+    interrompiIA.current = null
+    fineAttesa()
+  }
+
   const handleGenerate = () => {
     if (!text.trim() || loading) return
     chiamaIA({ prompt: text.trim() })
@@ -880,7 +908,12 @@ function AiGenerationModal({ onClose, onGenerate, categoria = 'Hyrox', attuali =
                     : `${ia.attesa.testo} Ci vogliono pochi secondi.`}
               </p>
             </div>
-            <p className={`${LABEL} pt-1`}>Non chiudere</p>
+            {/* Prima c'era «Non chiudere» e basta: una generazione partita
+                con la richiesta sbagliata si poteva solo aspettare. */}
+            <button type="button" onClick={annullaGenerazione}
+              className={`${BOTTONE_QUIETO} mt-1 px-6`}>
+              Annulla
+            </button>
           </div>
         ) : isListening ? (
           // ── In ascolto ──────────────────────────────────────────────────
