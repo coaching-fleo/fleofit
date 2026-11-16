@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { useRipresa, useRicorda } from '../useRipresa'
 import { format, startOfDay, subDays } from 'date-fns'
 import { supabase } from '../supabaseClient'
-import { User, UsersRound } from 'lucide-react'
+import { User, UsersRound, Layers } from 'lucide-react'
 import { useAuth } from '../App'
 import { useFunzione } from '../useFunzione'
 import { VETRO } from '../lib/stiliCard'
@@ -37,10 +37,13 @@ import {
 } from '../components/AtletiUI'
 import { useSchermoLargo, eDesktop } from '../useDesktop'
 import { ultimoAllenamento, quandoFa } from '../lib/tabellaAtleti'
+import { elencoGruppi } from '../lib/gruppiAtletiDb'
 
 // La tabella degli atleti sul desktop (src/useDesktop.js): pigra, il telefono
 // non la scarica mai.
 const AtletiDesktop = lazy(() => import('../components/AtletiDesktop'))
+// «I tuoi gruppi» (16/11/2026): pigro, si scarica quando il coach lo apre.
+const FoglioGruppi = lazy(() => import('../components/FoglioGruppi'))
 
 export default function Athletes() {
   const { role, user } = useAuth()
@@ -59,6 +62,19 @@ export default function Athletes() {
   const navigate = useNavigate()
   // «Team» nella testata, con l'interruttore acceso (funzioni_app).
   const teamAcceso = useFunzione('team')
+  // Gruppi di atleti (16/11/2026): il bottone c'è solo se la tabella esiste.
+  const [gruppi, setGruppi] = useState(null)
+  const [gruppiAperti, setGruppiAperti] = useState(false)
+  const caricaGruppi = useCallback(() => elencoGruppi()
+    .then(r => setGruppi(r.disponibile ? r.gruppi : null))
+    .catch(e => { console.warn('Gruppi non caricati:', e); setGruppi(null) }), [])
+  useEffect(() => { if (role && role !== 'athlete') caricaGruppi() }, [role, caricaGruppi])
+  const foglioGruppi = gruppiAperti && gruppi && (
+    <Suspense fallback={null}>
+      <FoglioGruppi gruppi={gruppi} atleti={athletes} coach={user?.id}
+        onCambiati={caricaGruppi} onChiudi={() => setGruppiAperti(false)} />
+    </Suspense>
+  )
 
   useRicorda('atleti', user?.id, ripresa,
     { athletes, eliminati, assegnazioni, caricatoIl, vista, search, caricato: !loading })
@@ -209,6 +225,7 @@ export default function Athletes() {
           <AtletiDesktop
             dettaglio={dettaglio} search={search} onSearch={setSearch}
             conteggi={conteggi} vista={vista} onVista={cambiaVista} onNuovo={() => setModalOpen(true)}
+            onGruppi={gruppi ? () => setGruppiAperti(true) : null}
             loading={loading} righe={righe} fermi={fermi.length}
             onRichiamo={() => cambiaVista(vista === 'fermi' ? 'attivi' : 'fermi')}
             vuoto={athletes.length === 0 && eliminati.length === 0 ? 'Nessun atleta ancora: aggiungi il primo.'
@@ -218,6 +235,7 @@ export default function Athletes() {
               : null}
           />
         </Suspense>
+        {foglioGruppi}
         {modalOpen && (
           <NewAthleteModal
             onClose={() => setModalOpen(false)}
@@ -235,11 +253,21 @@ export default function Athletes() {
        ritardare i comandi. Stessa regola dell'archivio. */
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
       <TestataAtleti dettaglio={dettaglio} onNuovo={() => setModalOpen(true)}
-        azioneSecondaria={teamAcceso && (
-          <button type="button" onClick={() => navigate('/team')}
-            className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-[13px] text-sm font-bold text-white hover:border-white/25 transition ${VETRO}`}>
-            <UsersRound size={17} aria-hidden="true" /> Team
-          </button>
+        azioneSecondaria={(teamAcceso || gruppi) && (
+          <>
+            {gruppi && (
+              <button type="button" onClick={() => setGruppiAperti(true)}
+                className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-[13px] text-sm font-bold text-white hover:border-white/25 transition ${VETRO}`}>
+                <Layers size={17} aria-hidden="true" /> Gruppi
+              </button>
+            )}
+            {teamAcceso && (
+              <button type="button" onClick={() => navigate('/team')}
+                className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-[13px] text-sm font-bold text-white hover:border-white/25 transition ${VETRO}`}>
+                <UsersRound size={17} aria-hidden="true" /> Team
+              </button>
+            )}
+          </>
         )}>
         <CampoRicerca valore={search} onCambia={setSearch}
           etichetta="Cerca un atleta" placeholder="Cerca nome o cognome" />
@@ -322,6 +350,7 @@ export default function Athletes() {
       )}
       </div>
 
+      {foglioGruppi}
       {modalOpen && (
         <NewAthleteModal
           onClose={() => setModalOpen(false)}

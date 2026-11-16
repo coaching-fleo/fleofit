@@ -6,7 +6,7 @@
 // mobile (Athletes.jsx), che li prepara; qui c'è solo il disegno.
 // Si carica pigra: il telefono non la scarica mai.
 
-import { Plus, User, ChevronRight, RotateCcw, AlertTriangle } from 'lucide-react'
+import { Plus, User, ChevronRight, RotateCcw, AlertTriangle, Layers } from 'lucide-react'
 import { CampoRicerca } from './ArchivioUI'
 import { FiltriStato } from './AtletiUI'
 
@@ -42,7 +42,7 @@ function Stato({ riga }) {
 }
 
 export default function AtletiDesktop({
-  dettaglio, search, onSearch, conteggi, vista, onVista, onNuovo,
+  dettaglio, search, onSearch, conteggi, vista, onVista, onNuovo, onGruppi = null,
   loading, righe, fermi, onRichiamo, vuoto, notaCestino,
 }) {
   return (
@@ -52,10 +52,18 @@ export default function AtletiDesktop({
           <h1 className="text-[34px] font-black tracking-[-.03em] text-white">Atleti</h1>
           {dettaglio && <p className="mt-1 text-sm font-semibold text-gray-400">{dettaglio}</p>}
         </div>
-        <button type="button" onClick={onNuovo}
-          className="inline-flex items-center gap-2 h-11 px-[18px] rounded-xl bg-brand text-black text-sm font-extrabold hover:brightness-110">
-          <Plus size={18} strokeWidth={2.5} aria-hidden="true" />Nuovo atleta
-        </button>
+        <div className="flex items-center gap-3">
+          {onGruppi && (
+            <button type="button" onClick={onGruppi}
+              className="inline-flex items-center gap-2 h-11 px-[18px] rounded-xl bg-[#2a2a2a] border border-[#333] text-white text-sm font-bold hover:border-white/25">
+              <Layers size={17} aria-hidden="true" />Gruppi
+            </button>
+          )}
+          <button type="button" onClick={onNuovo}
+            className="inline-flex items-center gap-2 h-11 px-[18px] rounded-xl bg-brand text-black text-sm font-extrabold hover:brightness-110">
+            <Plus size={18} strokeWidth={2.5} aria-hidden="true" />Nuovo atleta
+          </button>
+        </div>
       </header>
 
       <div className="flex flex-wrap items-center gap-4">
