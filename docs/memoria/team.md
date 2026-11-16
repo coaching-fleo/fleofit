@@ -130,3 +130,15 @@ dell'app. Dall'alto:
    coach. ⚠️ Su `admin` gli inviti non mandano push e l'atleta non vede i Team.
 5. Poi `tutti`, e prove su iPhone e Android dal lato atleta: push dell'invito ad app chiusa, deep link
    `/team/invito/:id`, tasto indietro, il campo del tempo col tastierino.
+
+## Dalla scheda atleta (16/11/2026)
+Il foglio «Team e gruppi» della scheda atleta invita l'atleta in un team aperto, annulla un invito,
+**toglie chi è dentro** (`togliDalTeam`, con conferma) o crea un team nuovo e lo invita.
+✅ Il «togli» vuole `supabase/schema/team_togli_2026-11-16.sql` (una policy: il coach cancella la
+riga anche se è `dentro`), **applicata a mano dal committente il 16/11/2026**; verifica in
+`tools/verifica-team.sql` (casi 11-12). Senza, il foglio direbbe «non è ancora attivo». Anche dalla **scheda del team**
+(16/11/2026): accanto a «Membri» il coach ha **«Modifica»** (non a team chiuso, non senza membri
+dentro), che mostra chi è dentro in righe con **«Togli»**, sempre con conferma (`chiediTogli` in
+`SchedaTeam`). La fila degli avatar resta com'era: il tocco apre la scheda atleta.
+Rispetta l'interruttore `team` e sparisce senza tabelle. Dettagli: `docs/memoria/scheda-atleta.md`,
+«9-team-e-gruppi».

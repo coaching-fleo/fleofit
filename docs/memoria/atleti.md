@@ -125,9 +125,9 @@ Richiesta del committente: «gruppi di atleti che loro non devono accettare, una
 coach per assegnare lo stesso allenamento a più persone». Disegno e piano:
 `docs/superpowers/specs/2026-11-16-gruppi-atleti-design.md`, `docs/superpowers/plans/2026-11-16-gruppi-atleti.md`.
 
-- **Stato**: ⏳ tabella `gruppi_atleti` **scritta, da applicare a mano** dal SQL editor
-  (`supabase/schema/gruppi_atleti_2026-11-16.sql`, dodicesima eccezione di CLAUDE.md §0-bis). Finché
-  non c'è, `elencoGruppi()` risponde `disponibile: false` e bottone, chip e «Salva come gruppo»
+- **Stato**: ✅ tabella `gruppi_atleti` **c'è nel database** (controllo del 16/11/2026: la REST
+  risponde 200, non PGRST205) — `supabase/schema/gruppi_atleti_2026-11-16.sql`, dodicesima eccezione
+  di CLAUDE.md §0-bis. Se mancasse, `elencoGruppi()` risponde `disponibile: false` e bottone, chip e «Salva come gruppo»
   **non compaiono**, senza alert. Nessun interruttore in `funzioni_app`: è accesa appena c'è la tabella.
 - **Non sono i Team**: niente invito, niente consenso, niente notifica. L'atleta non sa di essere in
   un gruppo e non li legge (policy: solo il coach proprietario, anche un admin vede solo i suoi).
@@ -144,3 +144,6 @@ coach per assegnare lo stesso allenamento a più persone». Disegno e piano:
 - Un gruppo non lega niente: le assegnazioni sono le solite, una per atleta. Aggiungere qualcuno a un
   gruppo non gli dà i workout già assegnati.
 - Peso: il chunk `WorkoutDetail` è salito di 4,8 KB (111,35 → 116,11 KB, misurato il 16/11/2026).
+- **Anche dalla scheda atleta** (16/11/2026): voce «Team e gruppi» e riga «Gruppi: …», il foglio
+  `FoglioTeamGruppi` mette o toglie quell'atleta e crea un gruppo con dentro lui
+  (`docs/memoria/scheda-atleta.md`, «9-team-e-gruppi»).

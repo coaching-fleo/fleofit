@@ -67,3 +67,35 @@ export const nomeBreve = (nome = '', cognome = '') => {
   const c = String(cognome || '').trim()
   return `${String(nome || '').trim()}${c ? ` ${c[0].toUpperCase()}.` : ''}`.trim() || '—'
 }
+
+/**
+ * I team da mostrare nella scheda di UN atleta (16/11/2026), ognuno con lo
+ * stato in parole e l'unica azione che il database accetterà:
+ *   · 'invita'  — nessuna riga, o rifiutato/uscito da almeno 3 giorni;
+ *   · 'annulla' — invito in attesa;
+ *   · 'togli'   — dentro (cancella la riga: team_togli_2026-11-16.sql);
+ *   · null      — reinvito troppo presto, atleta in pausa.
+ * Si offrono solo i team APERTI di un coach che l'atleta segue (`coachDi`,
+ * da coach_atleti): negli altri l'invito verrebbe rifiutato. Un team di un
+ * altro coach in cui è già dentro o invitato resta, senza azione.
+ */
+export function teamPerAtleta(team = [], righe = [], { coachDi = [], inPausa = false, adesso = new Date() } = {}) {
+  const perTeam = new Map((righe || []).map(r => [r.team_id, r]))
+  const coach = new Set(coachDi)
+  return (team || []).filter(t => !t.chiuso_il).flatMap((t) => {
+    const r = perTeam.get(t.id)
+    const presente = r && ['dentro', 'invitato'].includes(r.stato)
+    if (!coach.has(t.coach_id)) {
+      return presente ? [{ ...t, stato: r.stato, testo: testoStato(r, adesso), azione: null }] : []
+    }
+    if (r?.stato === 'dentro') return [{ ...t, stato: 'dentro', testo: testoStato(r, adesso), azione: 'togli' }]
+    if (r?.stato === 'invitato') return [{ ...t, stato: 'invitato', testo: testoStato(r, adesso), azione: 'annulla' }]
+    const prima = r ? testoStato(r, adesso) : ''
+    if (r && !puoReinvitare(r.risposto_il, adesso)) {
+      const n = giorniAlReinvito(r.risposto_il, adesso)
+      return [{ ...t, stato: 'attesa', testo: `${prima} · ${testoReinvito(n).toLowerCase()}`, azione: null }]
+    }
+    if (inPausa) return [{ ...t, stato: 'fuori', testo: 'In pausa', azione: null }]
+    return [{ ...t, stato: 'fuori', testo: prima, azione: 'invita' }]
+  })
+}

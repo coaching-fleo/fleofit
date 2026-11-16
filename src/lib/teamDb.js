@@ -34,7 +34,7 @@ const CAMPI_TEAM = ['nome', 'evento_id', 'classifica_visibile']
 /** I team del coach (un admin li vede tutti), con i conteggi dei membri. */
 export async function leggiMieiTeam() {
   const { data, error } = await supabase.from(TEAM)
-    .select('id, nome, evento_id, classifica_visibile, chiuso_il, creato_il, team_membri(stato)')
+    .select('id, nome, coach_id, evento_id, classifica_visibile, chiuso_il, creato_il, team_membri(stato)')
     .order('creato_il', { ascending: false })
   if (error) {
     if (assente(error)) return { disponibile: false, team: [] }
@@ -64,6 +64,22 @@ export async function leggiTeamAtleta(atletaId) {
     disponibile: true,
     team: (data || []).filter(r => r.team).map(r => ({ ...r.team, stato: r.stato, invitato_il: r.invitato_il })),
   }
+}
+
+/**
+ * Le righe di un atleta in TUTTI i team che il coach vede, qualunque stato
+ * (scheda atleta, 16/11/2026: serve sapere anche chi ha rifiutato, e quando,
+ * per il reinvito dopo 3 giorni). Si leggono con `teamPerAtleta` di membriTeam.js.
+ */
+export async function leggiMembriAtleta(atletaId) {
+  const { data, error } = await supabase.from(MEMBRI)
+    .select('team_id, stato, invitato_il, risposto_il')
+    .eq('atleta_id', atletaId)
+  if (error) {
+    if (assente(error)) return { disponibile: false, righe: [] }
+    throw error
+  }
+  return { disponibile: true, righe: data || [] }
 }
 
 /** La scheda con i nomi (RPC team_scheda). `scheda: null` = non è un mio team. */
@@ -184,6 +200,26 @@ export async function annullaInvito(teamId, atletaId) {
   const { error } = await supabase.from(MEMBRI).delete()
     .eq('team_id', teamId).eq('atleta_id', atletaId).eq('stato', 'invitato')
   if (error) throw error
+}
+
+/**
+ * Il coach toglie un atleta da un team: invito in attesa O già dentro
+ * (16/11/2026, supabase/schema/team_togli_2026-11-16.sql). La riga sparisce, così
+ * si può reinvitare subito; i risultati restano come «Ex membro».
+ * 🔴 Senza quella migrazione la RLS lascia cancellare solo gli inviti e, per chi
+ * è dentro, il delete non tocca niente SENZA errore: per questo si chiede la riga
+ * indietro, e zero righe è `NON_TOLTO`.
+ */
+export async function togliDalTeam(teamId, atletaId) {
+  const { data, error } = await supabase.from(MEMBRI).delete()
+    .eq('team_id', teamId).eq('atleta_id', atletaId).in('stato', ['invitato', 'dentro'])
+    .select('atleta_id')
+  if (error) throw error
+  if (!data?.length) {
+    const e = new Error('Atleta non tolto dal team')
+    e.code = 'NON_TOLTO'
+    throw e
+  }
 }
 
 /**

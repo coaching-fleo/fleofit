@@ -62,3 +62,18 @@ export function gruppoUguale(gruppi = [], ids = [], atleti = []) {
     return membri.length === voluti.size && membri.every(m => voluti.has(m.id))
   }) ?? null
 }
+
+/** I gruppi che contengono questo atleta (scheda atleta, 16/11/2026). */
+export function gruppiDi(gruppi = [], atletaId) {
+  return gruppi.filter(g => Array.isArray(g?.atleti) && g.atleti.includes(atletaId))
+}
+
+/**
+ * L'array `atleti` del gruppo con questo atleta dentro (in coda, una volta
+ * sola) o fuori. Gli altri id restano come sono: dalla scheda atleta non si
+ * sa chi il coach vede ancora, e la pulizia la fa l'editor di FoglioGruppi.
+ */
+export function conAtleta(gruppo, atletaId, dentro) {
+  const ids = (Array.isArray(gruppo?.atleti) ? gruppo.atleti : []).filter(id => id !== atletaId)
+  return dentro ? [...ids, atletaId] : ids
+}

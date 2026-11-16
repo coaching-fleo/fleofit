@@ -9,7 +9,7 @@ import { supabase } from '../supabaseClient'
 import { leggiGiornate, oggiItalia } from '../lib/recuperoGarmin'
 import { useScarpaCompletamento } from '../useScarpaCompletamento'
 import { useFunzione } from '../useFunzione'
-import { User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, Copy, Activity, CalendarDays, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
+import { Layers, User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, Copy, Activity, CalendarDays, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
 import { vibraSuccesso } from '../lib/aptica'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -35,11 +35,12 @@ import { TestataScheda, MenuScheda, IntestazioneSezione } from '../components/Wo
 import { BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import {
   IdentitaAtleta, IconaSocial, CardAndamento, CellaBento, Sparkline,
-  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa, RigaCoach, RigaScarpeCoach, RigaTeamCoach,
+  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa, RigaCoach, RigaScarpeCoach, RigaTeamCoach, RigaGruppiCoach,
 } from '../components/SchedaAtletaUI'
 import FoglioCoach from '../components/FoglioCoach'
 import CalendarioAtleta from '../components/CalendarioAtleta'
 import { assegnaAtleta } from '../lib/coachAtleti'
+import { gruppiDi } from '../lib/gruppiAtleti'
 import { leggiStatoGarmin } from '../lib/garmin'
 import { leggiAttivitaPeriodo, abbinaA } from '../lib/attivitaGarmin'
 import CustomAudioPlayer from '../components/CustomAudioPlayer'
@@ -74,6 +75,8 @@ const calculateAge = (dob) => {
 // «Dalle note» si carica solo quando la apre un coach: chi entra in `/profile`
 // non scarica né il componente né i suoi conti (spec dati-dalle-note §4).
 const DalleNoteUI = lazy(() => import('../components/DalleNoteUI'))
+// «Team e gruppi» (16/11/2026): pigro, porta teamDb e gruppiAtletiDb solo quando si apre.
+const FoglioTeamGruppi = lazy(() => import('../components/FoglioTeamGruppi'))
 const CardRecupero = lazy(() => import('../components/CardRecupero')) // Garmin · Recupero
 // «Scarpe da corsa»: la card del profilo, pigra come le altre card che non tutti vedono.
 const CardProfiloScarpe = lazy(() => import('../components/ScarpeUI').then(m => ({ default: m.CardProfiloScarpe })))
@@ -158,6 +161,7 @@ export default function AthleteDetail() {
   // con l'interruttore acceso. Lettura pigra, teamDb fuori dal chunk d'ingresso.
   const teamAcceso = useFunzione('team')
   const [teamAtleta, setTeamAtleta] = useState(null)
+  const [giroTeam, setGiroTeam] = useState(0)
   useEffect(() => {
     if (!guardaScarpe || !teamAcceso || !id) return undefined
     let vivo = true
@@ -165,8 +169,27 @@ export default function AthleteDetail() {
       .then(m => m.leggiTeamAtleta(id))
       .then(r => { if (vivo) setTeamAtleta(r?.disponibile ? r.team : null) })
       .catch(e => { console.warn('Team non caricati:', e); if (vivo) setTeamAtleta(null) })
-    return () => { vivo = false; setTeamAtleta(null) }
-  }, [guardaScarpe, teamAcceso, id])
+    return () => { vivo = false }
+  }, [guardaScarpe, teamAcceso, id, giroTeam])
+  // Cambiando atleta (o ruolo, o interruttore) la riga di prima non resta a schermo.
+  useEffect(() => () => setTeamAtleta(null), [guardaScarpe, teamAcceso, id])
+
+  // Gruppi di atleti (16/11/2026): i gruppi del coach, per la riga «Gruppi:» e
+  // il foglio «Team e gruppi». `null` = tabella assente (o lettura fallita):
+  // niente riga e niente sezione, senza alert. Nessun interruttore: c'è appena
+  // c'è la tabella (docs/memoria/atleti.md).
+  const [gruppiCoach, setGruppiCoach] = useState(null)
+  const [foglioTeamGruppi, setFoglioTeamGruppi] = useState(false)
+  const caricaGruppi = useCallback(() => import('../lib/gruppiAtletiDb')
+    .then(m => m.elencoGruppi())
+    .then(r => setGruppiCoach(r?.disponibile ? r.gruppi : null))
+    .catch(e => { console.warn('Gruppi non caricati:', e); setGruppiCoach(null) }), [])
+  useEffect(() => {
+    if (guardaScarpe) caricaGruppi()
+  }, [guardaScarpe, caricaGruppi])
+  // Il foglio c'è se c'è almeno una delle due cose: i gruppi (tabella) o i team
+  // (interruttore acceso E tabelle presenti, cioè `teamAtleta` non null).
+  const conTeamGruppi = guardaScarpe && (gruppiCoach !== null || teamAtleta !== null)
 
 
   // Gli estratti delle note (src/lib/noteEstratte.js) e lo stato dell'analisi:
@@ -692,6 +715,7 @@ export default function AthleteDetail() {
       onClick: () => navigate(`/report/${id}`),
     },
     { etichetta: 'Modifica scheda', icona: Edit, onClick: () => setShowEditModal(true) },
+    conTeamGruppi && { etichetta: 'Team e gruppi', icona: Layers, onClick: () => setFoglioTeamGruppi(true) },
     role !== 'athlete' && { etichetta: 'Esporta dati', icona: Download, onClick: handleExportData },
     role !== 'athlete' && {
       etichetta: pausaAtleta.inPausa ? `Riattiva ${athlete.name}` : `Metti ${athlete.name} in pausa`,
@@ -749,6 +773,9 @@ export default function AthleteDetail() {
       {guardaScarpe && teamAtleta && (
         <RigaTeamCoach team={teamAtleta}
           onApri={() => navigate(teamAtleta.length === 1 ? `/team/${teamAtleta[0].id}` : '/team')} />
+      )}
+      {guardaScarpe && gruppiCoach && (
+        <RigaGruppiCoach gruppi={gruppiDi(gruppiCoach, id)} onApri={() => setFoglioTeamGruppi(true)} />
       )}
       {eAdmin(role) && !isOwnProfile && staffCoach && (
         <div className="mt-3">
@@ -1004,6 +1031,12 @@ export default function AthleteDetail() {
             <div className="flex-1 min-w-0">{pIdentita}</div>
             {!isOwnProfile && (
               <div className="shrink-0 flex items-center gap-2.5 pt-2">
+                {conTeamGruppi && (
+                  <button type="button" onClick={() => setFoglioTeamGruppi(true)}
+                    className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-[#2a2a2a] border border-[#383838] text-white text-sm font-bold hover:border-[#555]">
+                    <Layers size={17} aria-hidden="true" />Team e gruppi
+                  </button>
+                )}
                 <button type="button" onClick={() => navigate(`/create?athlete_id=${id}`)}
                   className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-[#2a2a2a] border border-[#383838] text-white text-sm font-bold hover:border-[#555]">
                   <Plus size={17} aria-hidden="true" />Crea workout
@@ -1083,6 +1116,20 @@ export default function AthleteDetail() {
       )}
 
       {/* MODAL ASSEGNA WORKOUT DA LISTA */}
+      {foglioTeamGruppi && conTeamGruppi && (
+        <Suspense fallback={null}>
+          <FoglioTeamGruppi
+            atleta={{ id, nome: athlete.name || 'Atleta' }}
+            coach={user?.id}
+            gruppi={gruppiCoach}
+            conTeam={teamAtleta !== null}
+            inPausa={pausaAtleta.inPausa}
+            onGruppiCambiati={caricaGruppi}
+            onTeamCambiati={() => setGiroTeam(n => n + 1)}
+            onChiudi={() => setFoglioTeamGruppi(false)} />
+        </Suspense>
+      )}
+
       {foglioCoachAperto && staffCoach && (
         <FoglioCoach membri={staffCoach} correnti={coachDi}
           onScegli={sceltaCoach} onChiudi={() => setFoglioCoachAperto(false)} />

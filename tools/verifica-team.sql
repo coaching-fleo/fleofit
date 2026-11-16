@@ -245,5 +245,39 @@ begin
     end;
   end if;
 
+  -- ── 11. il coach toglie chi è dentro (team_togli_2026-11-16.sql) ───────
+  begin
+    insert into public.team (nome, coach_id) values ('verifica 11', c_id) returning id into t;
+    insert into public.team_membri (team_id, atleta_id, stato) values (t, a1, 'dentro');
+    perform pg_temp.come(c_id, c_email);
+    if pg_temp.righe(format(
+      'delete from public.team_membri where team_id = %L and atleta_id = %L', t, a1)) <> 1 then
+      raise exception 'FALLITO: 11. il coach non riesce a togliere chi è dentro';
+    end if;
+    -- E lo può reinvitare subito: nessuna riga, nessuna attesa.
+    execute format('insert into public.team_membri (team_id, atleta_id, stato) values (%L, %L, ''invitato'')', t, a1);
+    raise exception 'SENTINELLA';
+  exception when others then if sqlerrm <> 'SENTINELLA' then raise; end if;
+  end;
+
+  -- ── 12. ma non cancella un rifiuto, e l'atleta non cancella la sua riga ─
+  begin
+    insert into public.team (nome, coach_id) values ('verifica 12', c_id) returning id into t;
+    insert into public.team_membri (team_id, atleta_id, stato, risposto_il) values (t, a1, 'rifiutato', now());
+    insert into public.team_membri (team_id, atleta_id, stato) values (t, a2, 'dentro');
+    perform pg_temp.come(c_id, c_email);
+    if pg_temp.righe(format(
+      'delete from public.team_membri where team_id = %L and atleta_id = %L', t, a1)) <> 0 then
+      raise exception 'FALLITO: 12. il coach ha cancellato un rifiuto (scavalca i 3 giorni)';
+    end if;
+    perform pg_temp.come(a2, a2_email);
+    if pg_temp.righe(format(
+      'delete from public.team_membri where team_id = %L and atleta_id = %L', t, a2)) <> 0 then
+      raise exception 'FALLITO: 12. l''atleta ha cancellato la propria riga (deve uscire)';
+    end if;
+    raise exception 'SENTINELLA';
+  exception when others then if sqlerrm <> 'SENTINELLA' then raise; end if;
+  end;
+
   raise notice 'TUTTI I CONTROLLI DEL TEAM SONO PASSATI';
 end $$;

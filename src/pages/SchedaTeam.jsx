@@ -10,7 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../App'
 import { eStaff } from '../lib/ruoli'
 import {
-  aggiornaTeam, annullaInvito, assegnaInsieme, cancellaMieiRisultati, chiudiTeam, creaSfida, invita, leggiScheda, leggiSfide, rispondi,
+  aggiornaTeam, annullaInvito, togliDalTeam, assegnaInsieme, cancellaMieiRisultati, chiudiTeam, creaSfida, invita, leggiScheda, leggiSfide, rispondi,
 } from '../lib/teamDb'
 import { scriviValore, testaATesta, vittorie } from '../lib/sfidaTeam'
 import {
@@ -44,6 +44,8 @@ export default function SchedaTeam() {
   const [foglio, setFoglio] = useState(null)   // 'invita' | 'sfida' | null
   const [conferma, setConferma] = useState(null)
   const [occupato, setOccupato] = useState(false)
+  // «Modifica» sui membri (16/11/2026): mostra chi è dentro in righe, con «Togli».
+  const [gestisci, setGestisci] = useState(false)
 
   const carica = useCallback(async () => {
     try {
@@ -96,6 +98,15 @@ export default function SchedaTeam() {
     message: 'Non si potranno più invitare atleti né creare sfide. La storia delle sfide resta.',
     confirmLabel: 'Chiudi team',
     onConfirm: () => fai(() => chiudiTeam(id), 'Team non chiuso.'),
+  })
+
+  // Togliere chi è dentro (supabase/schema/team_togli_2026-11-16.sql): la riga
+  // sparisce, i risultati restano come «Ex membro», si può reinvitare subito.
+  const chiediTogli = (m) => setConferma({
+    title: `Togli ${`${m.nome || ''} ${m.cognome || ''}`.trim()} dal team?`,
+    message: 'Non vedrà più il team e le sue sfide. I risultati che ha già inserito restano, senza nome. Potrai reinvitarlo quando vuoi.',
+    confirmLabel: 'Togli',
+    onConfirm: () => fai(() => togliDalTeam(id, m.atleta_id), 'Atleta non tolto dal team.'),
   })
 
   const azioneMembro = (m) => {
@@ -205,7 +216,13 @@ export default function SchedaTeam() {
             </SezioneTeam>
           )}
 
-          <SezioneTeam etichetta="Membri">
+          <SezioneTeam etichetta="Membri"
+            azione={staff && !team.chiuso_il && dentro.length > 0 && (
+              <button type="button" onClick={() => setGestisci(g => !g)} aria-pressed={gestisci}
+                className="shrink-0 min-h-9 px-3.5 rounded-full text-[13px] font-bold text-gray-300 hover:text-white transition">
+                {gestisci ? 'Fine' : 'Modifica'}
+              </button>
+            )}>
             <CartaTeam>
               {dentro.length === 0 && !(staff && !team.chiuso_il) ? (
                 <p className="text-[14px] text-gray-400 text-center">Nessuno è ancora dentro il team.</p>
@@ -214,6 +231,19 @@ export default function SchedaTeam() {
                   onInvita={staff && !team.chiuso_il ? () => setFoglio('invita') : null} />
               )}
             </CartaTeam>
+            {gestisci && staff && !team.chiuso_il && dentro.length > 0 && (
+              <ul className="flex flex-col gap-2">
+                {dentro.map(m => (
+                  <RigaMembro key={m.atleta_id} atletaId={m.atleta_id} onApri={apriAtleta} nome={m.nome} cognome={m.cognome} foto={m.foto}
+                    dettaglio={testoStato(m)} azione={(
+                      <button type="button" className={AZIONE.replace('text-white', 'text-red-400')} disabled={occupato}
+                        aria-label={`Togli ${`${m.nome || ''} ${m.cognome || ''}`.trim()}`} onClick={() => chiediTogli(m)}>
+                        Togli
+                      </button>
+                    )} />
+                ))}
+              </ul>
+            )}
             {fuori.length > 0 && (
               <ul className="flex flex-col gap-2">
                 {fuori.map(m => (

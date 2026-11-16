@@ -18,7 +18,7 @@ vi.mock('../../supabaseClient', () => ({ supabase: {
   auth: { getUser: () => attivo().supabase.auth.getUser() },
 } }))
 
-const { creaSfida, assegnaInsieme, leggiMieiTeam, invita, rispondi, leggiScheda, salvaRisultato, sfidaDiAssegnazione } = await import('../teamDb')
+const { creaSfida, assegnaInsieme, leggiMieiTeam, leggiMembriAtleta, togliDalTeam, invita, rispondi, leggiScheda, salvaRisultato, sfidaDiAssegnazione } = await import('../teamDb')
 
 beforeEach(() => {
   ctrl.tabelle = {}
@@ -122,6 +122,25 @@ describe('teamDb', () => {
     ctrl.codice = 'assente'
     ctrl.guasti = ['team']
     await expect(leggiMieiTeam()).resolves.toEqual({ disponibile: false, team: [] })
+  })
+
+  it('leggiMembriAtleta: tutte le righe dell’atleta, e «non disponibile» senza tabella', async () => {
+    ctrl.tabelle = { team_membri: [{ team_id: 't1', atleta_id: 'a', stato: 'rifiutato', invitato_il: 'x', risposto_il: 'y' }] }
+    const r = await leggiMembriAtleta('a')
+    expect(r.disponibile).toBe(true)
+    expect(r.righe[0]).toMatchObject({ team_id: 't1', stato: 'rifiutato', risposto_il: 'y' })
+    ctrl.codice = 'assente'
+    ctrl.guasti = ['team_membri']
+    await expect(leggiMembriAtleta('a')).resolves.toEqual({ disponibile: false, righe: [] })
+  })
+
+  it('togliDalTeam cancella solo invitato o dentro, e zero righe è NON_TOLTO (migrazione mancante)', async () => {
+    ctrl.tabelle = { team_membri: [{ atleta_id: 'a' }] }
+    await togliDalTeam('t1', 'a')
+    const [del] = finti.generico.chiamateA('team_membri', 'in')
+    expect(del.args).toEqual(['stato', ['invitato', 'dentro']])
+    ctrl.tabelle = { team_membri: [] }
+    await expect(togliDalTeam('t1', 'a')).rejects.toMatchObject({ code: 'NON_TOLTO' })
   })
 
   it('leggiMieiTeam conta dentro e in attesa per team', async () => {

@@ -246,3 +246,51 @@ calendario (§9-octodecies).
 4. Il calendario ripete in pagina testi che stanno anche altrove (il workout di
    oggi, «Volume», «Assegna il …»): in `SchedaAtleta.test.jsx` i test delle
    altre sezioni cercano con `fuoriDalCalendario`.
+
+---
+
+## 9-team-e-gruppi. «Team e gruppi» dalla scheda atleta (16/11/2026)
+
+Richiesta del committente: mettere un atleta in un team o in un gruppo **dalla sua pagina**, non
+solo dalle schermate di Team e Atleti.
+
+### Cosa c'è ora
+- La voce di menu **«Team e gruppi»** (tre puntine, fra «Modifica scheda» ed «Esporta dati») e,
+  **sul desktop**, un bottone quieto accanto a «Crea workout». Aprono `FoglioTeamGruppi`
+  (pigro: `teamDb` e `gruppiAtletiDb` non entrano nel chunk della scheda).
+- Sotto l'identità, accanto a «Team: …», la riga **«Gruppi: A, B»** (`RigaGruppiCoach`) quando
+  l'atleta è in almeno un gruppo; il tocco apre lo stesso foglio. Senza gruppi niente riga.
+- **Gruppi**: ogni gruppo del coach è un interruttore — un tocco ce lo mette o lo toglie e
+  salva subito (`aggiornaGruppo` con `conAtleta` di `gruppiAtleti.js`). «Nuovo gruppo» lo crea
+  con dentro **solo questo atleta**.
+- **Team**: i team aperti con lo stato dell'atleta (`teamPerAtleta` di `membriTeam.js`) e
+  l'unica azione che il database accetta: **Invita** (nessuna riga, o rifiutato/uscito da 3+
+  giorni), **Annulla invito** (in attesa), **Togli** (dentro, con conferma), nessuna (reinvito
+  troppo presto, in pausa).
+  «Nuovo team» apre `FoglioNuovoTeam` al posto di questo e, creato il team, invita l'atleta.
+
+### ⚠️ Da sapere
+1. 🔴 **«Togli» su chi è DENTRO vuole `supabase/schema/team_togli_2026-11-16.sql`** (tredicesima
+   eccezione, sì del committente il 16/11/2026, ✅ **applicata a mano dal committente lo stesso giorno**). Cambia una sola policy:
+   il coach può cancellare la riga di `team_membri` se è `invitato` **o `dentro`** (prima solo
+   `invitato`). Si cancella invece di scrivere «uscito» perché `dentro → uscito` il trigger lo lascia
+   solo all'atleta, e «uscito» bloccherebbe il reinvito per 3 giorni: tolto dal coach, l'atleta si
+   reinvita subito. I risultati restano («Ex membro»). Le righe rifiutato/uscito NON si cancellano
+   (sarebbe scavalcare i 3 giorni). **Prima della migrazione** la RLS non cancella niente e non dà
+   errore: `togliDalTeam` chiede la riga indietro e, a zero righe, lancia `NON_TOLTO`; il foglio
+   dice «non è ancora attivo». Verifica: casi 11 e 12 di `tools/verifica-team.sql`.
+2. **Quando si vede**: la sezione Gruppi se c'è la tabella (`elencoGruppi` → `disponibile`); la
+   sezione Team se l'interruttore `team` è acceso **e** le tabelle ci sono (`teamAtleta` non
+   null). Con nessuna delle due la voce di menu sparisce. Mai un alert.
+3. I team offerti sono solo quelli **di un coach che l'atleta segue** (`coach_atleti`, la stessa
+   regola di `atleta_del_coach_del_team`): un admin che guarda l'atleta di un altro coach non
+   vede «Invita» sui propri team, perché l'invito verrebbe rifiutato. Un team di un altro coach
+   in cui l'atleta è già dentro o invitato compare, senza azione.
+4. Dal foglio il gruppo **non si ripulisce** degli id che il coach non vede più (cancellati,
+   passati ad altro coach): `conAtleta` tocca solo questo atleta. La pulizia la fa l'editor di
+   `FoglioGruppi` quando salva.
+5. `leggiMieiTeam` ora porta anche `coach_id`; `leggiMembriAtleta` (teamDb) legge tutte le righe
+   dell'atleta in `team_membri`, qualunque stato, per il conto dei 3 giorni.
+6. Test: `src/lib/__tests__/teamDiAtleta.test.js` (logica) e
+   `src/pages/__tests__/AthleteDetailTeamGruppi.test.jsx` (pagina, interruttore compreso), visti
+   fallire rompendo il codice. Nessuna prova sul telefono: la fa il committente.

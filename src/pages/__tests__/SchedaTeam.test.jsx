@@ -23,6 +23,7 @@ vi.mock('../../lib/teamDb', () => ({
   creaTeam: vi.fn(async () => { if (dati.creaErrore) throw dati.creaErrore; return { id: 'nuovo' } }),
   invita: vi.fn(async (_t, ids) => ({ invitati: ids })),
   annullaInvito: vi.fn(async () => {}),
+  togliDalTeam: vi.fn(async () => {}),
   aggiornaTeam: vi.fn(async () => {}),
   chiudiTeam: vi.fn(async () => {}),
   creaSfida: vi.fn(async () => ({ id: 's9', assegnati: ['b', 'c'] })),
@@ -111,6 +112,25 @@ describe('/team/:id — coach', () => {
     const podio = await screen.findByRole('region', { name: 'Classifica' })
     await userEvent.click(within(podio).getByRole('button', { name: 'Scheda di Giulia Neri' }))
     expect(naviga).toHaveBeenCalledWith('/athletes/c')
+  })
+
+  it('«Togli» su chi è dentro: da «Modifica», e solo dopo la conferma (16/11/2026)', async () => {
+    const u = userEvent.setup()
+    apriScheda()
+    const membri = await screen.findByRole('region', { name: 'Membri' })
+    expect(within(membri).queryByRole('button', { name: /^Togli/ })).not.toBeInTheDocument()
+    await u.click(within(membri).getByRole('button', { name: 'Modifica' }))
+    await u.click(within(membri).getByRole('button', { name: 'Togli Luca Bianchi' }))
+    expect(db.togliDalTeam).not.toHaveBeenCalled()
+    await u.click(await screen.findByRole('button', { name: 'Togli' }))
+    await waitFor(() => expect(db.togliDalTeam).toHaveBeenCalledWith('t1', 'b'))
+  })
+
+  it('a team chiuso niente «Modifica»', async () => {
+    dati.scheda.team.chiuso_il = giorniFa(1)
+    apriScheda()
+    const membri = await screen.findByRole('region', { name: 'Membri' })
+    expect(within(membri).queryByRole('button', { name: 'Modifica' })).not.toBeInTheDocument()
   })
 
   it('«Reinvita» resta spento prima dei 3 giorni, acceso dopo', async () => {
