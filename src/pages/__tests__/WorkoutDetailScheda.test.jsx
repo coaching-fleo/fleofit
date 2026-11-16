@@ -29,7 +29,8 @@ const finto = await vi.hoisted(async () => {
     }],
     athlete_workouts: ctrl.stato.assegnazioni,
     athletes: ctrl.stato.atleti ?? [{ id: 'u1', name: 'Marco', surname: 'Rinaldi' }],
-  }))
+    gruppi_atleti: ctrl.stato.gruppi ?? [],
+  }), { erroreSu: () => ctrl.stato.guasti ?? [], codiceErrore: 'PGRST205' })
 })
 
 vi.mock('../../supabaseClient', () => ({ supabase: finto.supabase }))
@@ -430,6 +431,65 @@ describe('il foglio «Assegna Workout»', () => {
     await apriFoglio()
     await userEvent.type(screen.getByRole('searchbox', { name: 'Cerca un atleta' }), 'zzz')
     expect(screen.getByText('Nessun atleta per «zzz».')).toBeInTheDocument()
+  })
+  describe('i gruppi (16/11/2026)', () => {
+    const G = (id, nome, atleti) => ({ id, coach: 'coach', nome, atleti, creato_at: '2026-11-01T00:00:00Z' })
+    afterEach(() => { delete ctrl.stato.gruppi; delete ctrl.stato.guasti; finto.chiamate.length = 0 })
+
+    it('un tocco sul gruppo spunta i suoi atleti visibili, un secondo li toglie', async () => {
+      ctrl.stato.gruppi = [G('g1', 'Bianchi', ['u2', 'u3', 'sparito']), G('g2', 'Fantasmi', ['sparito'])]
+      await apriFoglio()
+      const chip = await foglio().findByRole('button', { name: 'Gruppo Bianchi, 2 atleti' })
+      expect(foglio().getByRole('button', { name: 'Gruppo Fantasmi, 0 atleti' })).toBeDisabled()
+      await userEvent.click(chip)
+      expect(foglio().getByRole('button', { name: /Procedi \(2\)/ })).toBeInTheDocument()
+      expect(chip).toHaveAttribute('aria-pressed', 'true')
+      await userEvent.click(chip)
+      expect(foglio().queryByRole('button', { name: /Procedi/ })).not.toBeInTheDocument()
+    })
+
+    it('chi è scelto a mano resta quando si tocca un gruppo', async () => {
+      ctrl.stato.gruppi = [G('g1', 'Bianchi', ['u2', 'u3'])]
+      await apriFoglio()
+      await userEvent.click(foglio().getByRole('button', { name: /^Marco Rinaldi/ }))
+      await userEvent.click(await foglio().findByRole('button', { name: /^Gruppo Bianchi/ }))
+      expect(foglio().getByRole('button', { name: /Procedi \(3\)/ })).toBeInTheDocument()
+    })
+
+    it('tabella assente: nessuna riga «Gruppi», nessun alert', async () => {
+      ctrl.stato.guasti = ['gruppi_atleti']
+      await apriFoglio()
+      await userEvent.click(foglio().getByRole('button', { name: /^Marco Rinaldi/ }))
+      await userEvent.click(foglio().getByRole('button', { name: /^Sara Bianchi/ }))
+      expect(foglio().queryByText('Gruppi')).not.toBeInTheDocument()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('«Salva come gruppo» con 2 scelti salva quegli id; nome doppio resta nel foglio', async () => {
+      ctrl.stato.gruppi = [G('g1', 'Bianchi', ['u2', 'u3'])]
+      await apriFoglio()
+      expect(foglio().queryByRole('button', { name: 'Salva come gruppo' })).not.toBeInTheDocument()
+      await userEvent.click(foglio().getByRole('button', { name: /^Marco Rinaldi/ }))
+      await userEvent.click(foglio().getByRole('button', { name: /^Sara Bianchi/ }))
+      await userEvent.click(foglio().getByRole('button', { name: 'Salva come gruppo' }))
+      const dialogo = within(screen.getByRole('dialog', { name: 'Salva come gruppo' }))
+      await userEvent.type(dialogo.getByRole('textbox'), 'bianchi')
+      await userEvent.click(dialogo.getByRole('button', { name: 'Salva' }))
+      expect(dialogo.getByRole('alert')).toHaveTextContent('Hai già un gruppo con questo nome.')
+      expect(finto.chiamateA('gruppi_atleti', 'insert')).toHaveLength(0)
+      await userEvent.clear(dialogo.getByRole('textbox'))
+      await userEvent.type(dialogo.getByRole('textbox'), '  Doppie  ')
+      await userEvent.click(dialogo.getByRole('button', { name: 'Salva' }))
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Salva come gruppo' })).not.toBeInTheDocument())
+      expect(finto.chiamateA('gruppi_atleti', 'insert')[0].args[0]).toEqual({ coach: 'coach', nome: 'Doppie', atleti: ['u1', 'u2'] })
+    })
+
+    it('«Salva come gruppo» sparisce se la scelta è già un gruppo', async () => {
+      ctrl.stato.gruppi = [G('g1', 'Bianchi', ['u2', 'u3'])]
+      await apriFoglio()
+      await userEvent.click(await foglio().findByRole('button', { name: /^Gruppo Bianchi/ }))
+      expect(foglio().queryByRole('button', { name: 'Salva come gruppo' })).not.toBeInTheDocument()
+    })
   })
 })
 

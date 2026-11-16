@@ -105,6 +105,9 @@ import { partiRipetuta, etichettaParte } from '../lib/ripetute'
 import { filtraPerNome } from '../lib/rigaAtleta'
 import { leggiTemplatePdf, intestazioneCoach, scriviNoteAggiuntive } from '../lib/templatePdf'
 import { CampoRicerca } from '../components/ArchivioUI'
+import { ChipGruppi, FoglioNomeGruppo } from '../components/GruppiUI'
+import { alternaGruppo, gruppoUguale } from '../lib/gruppiAtleti'
+import { elencoGruppi, creaGruppo } from '../lib/gruppiAtletiDb'
 import {
   TestataScheda, IconaStato, MenuScheda, TitoloScheda, AvvisoRiscaldamento,
   BloccoScheda, RigaEsercizio, IntestazioneSezione, CardNota, EsitoCompletato,
@@ -313,6 +316,24 @@ export default function WorkoutDetail() {
   const [workoutStatus, setWorkoutStatus] = useState('pending')
 const [selectedAthletes, setSelectedAthletes] = useState([])
   const [assignStep, setAssignStep] = useState(1)
+  // Gruppi di atleti (16/11/2026): una scorciatoia del coach nel foglio di
+  // assegnazione. Tabella assente o lettura fallita = nessun chip, nessun alert.
+  const [gruppi, setGruppi] = useState([])
+  const [nomeGruppoAperto, setNomeGruppoAperto] = useState(false)
+  const caricaGruppi = () => elencoGruppi()
+    .then(r => setGruppi(r.gruppi))
+    .catch(e => { console.warn('Gruppi non caricati:', e); setGruppi([]) })
+  const salvaGruppo = async (nome) => {
+    try {
+      await creaGruppo({ coach: user?.id, nome, atleti: selectedAthletes.map(a => a.id) }, gruppi)
+      setNomeGruppoAperto(false)
+      vibraSuccesso()
+      caricaGruppi()
+      return null
+    } catch (e) {
+      return e?.message || 'Gruppo non salvato. Riprova.'
+    }
+  }
   // La ricerca nel foglio «Assegna Workout»: filtra solo ciò che si vede,
   // le scelte già fatte restano anche se l'atleta esce dal filtro.
   const [cercaAtleta, setCercaAtleta] = useState('')
@@ -1692,7 +1713,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     poi?.()
   }
 
-  const apriAssegna = () => { setAssignModalOpen(true); setSelectedAthletes([]); setAssignStep(1); setCercaAtleta('') }
+  const apriAssegna = () => { setAssignModalOpen(true); setSelectedAthletes([]); setAssignStep(1); setCercaAtleta(''); caricaGruppi() }
 
   const comandoTv = connectedTvCode ? 'telecomando' : 'timer'
   const IconaTimer = timerOpen && !timerMinimized ? ChevronDown
@@ -2494,8 +2515,17 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                       <CampoRicerca valore={cercaAtleta} onCambia={setCercaAtleta}
                         etichetta="Cerca un atleta" placeholder="Cerca nome o cognome" />
                     </div>
-                    <div className="flex justify-between items-center mb-2 px-1">
+                    <ChipGruppi gruppi={gruppi} scelti={selectedAthletes} atleti={athletes}
+                      onAlterna={(g) => setSelectedAthletes(alternaGruppo(g, selectedAthletes, athletes))} />
+                    <div className="flex justify-between items-center mb-2 px-1 gap-3">
                       <span className="text-gray-400 text-sm">Seleziona atleti:</span>
+                      <span className="flex items-center gap-4">
+                      {selectedAthletes.length >= 2 && !gruppoUguale(gruppi, selectedAthletes.map(a => a.id), athletes) && (
+                        <button type="button" onClick={() => setNomeGruppoAperto(true)}
+                          className="text-brand text-xs font-semibold hover:underline">
+                          Salva come gruppo
+                        </button>
+                      )}
                       {visibili.length > 0 && (
                       <button 
                         onClick={() => setSelectedAthletes(tuttiVisibiliScelti
@@ -2506,6 +2536,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                         {tuttiVisibiliScelti ? 'Deseleziona tutti' : 'Seleziona tutti'}
                       </button>
                       )}
+                      </span>
                     </div>
                     {storicoFallito && <PrevisioneNonDisponibile />}
                     {visibili.length === 0 && (
@@ -2590,6 +2621,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           </div>
         </div>,
         document.body
+      )}
+
+      {nomeGruppoAperto && (
+        <FoglioNomeGruppo conteggio={selectedAthletes.length} onSalva={salvaGruppo}
+          onChiudi={() => setNomeGruppoAperto(false)} />
       )}
 
       {/* MODAL ALLENAMENTO AUTONOMO */}
