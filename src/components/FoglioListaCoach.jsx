@@ -28,7 +28,7 @@ const TONI_PILLOLA = {
 
 const atleti = (n) => `${n} ${n === 1 ? 'atleta' : 'atleti'}`
 
-export default function FoglioListaCoach({ titolo, persone = [], filtri = [], filtroIniziale = 0, laterale = false, onScegli, onChiudi }) {
+export default function FoglioListaCoach({ titolo, persone = [], filtri = [], filtroIniziale = 0, laterale = false, onScegli, onFiltro, onChiudi }) {
   const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
   const [testo, setTesto] = useState('')
   const [filtro, setFiltro] = useState(filtroIniziale)
@@ -37,7 +37,7 @@ export default function FoglioListaCoach({ titolo, persone = [], filtri = [], fi
   useEffect(() => { battito() }, [])
   // Un filtro o una ricerca nuovi ripartono dal primo blocco.
   const cerca = (t) => { setTesto(t); setQuante(BLOCCO_LISTA) }
-  const filtra = (i) => { setFiltro(i); setQuante(BLOCCO_LISTA) }
+  const filtra = (i) => { setFiltro(i); setQuante(BLOCCO_LISTA); onFiltro?.(i) }
 
   const conti = useMemo(() => filtri.map(f => (f.prova ? persone.filter(f.prova).length : persone.length)), [filtri, persone])
   const visibili = useMemo(() => {

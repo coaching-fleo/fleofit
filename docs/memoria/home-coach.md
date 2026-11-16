@@ -408,3 +408,22 @@ finestra) da almeno `GIORNI_FERMO` giorni, e i giorni si contano da quello (tett
 `oltre` resta vero, quindi «Non si allena da 12+ giorni»). Chi non ha niente in programma lo dice
 la copertura, non l'allarme. Vale per tutti quelli che usano `atletiFermi`: Home classica e
 Riepilogo, fascia della rubrica, previsione, ricerca del coach («inattivi da N giorni»).
+
+## Riepilogo: indietro riapre la lista (16/11/2026)
+
+Dalla Home «Riepilogo» un tocco su una riga di un foglio (Feedback da leggere,
+Fermi, Scaduti, Da rivedere, In allenamento oggi…) porta a un'altra pagina; la
+Home si smontava e, tornando indietro, il foglio era chiuso: per leggere il
+secondo feedback bisognava riaprire la lista. Ora `useRiepilogoCoach` annota,
+prima di uscire, quale lista era aperta e con che filtro, legata alla voce di
+history (`location.key`), e la riapre solo su un ritorno (POP) a quella voce.
+Memoria di modulo consumata a ogni montaggio: la Home aperta dalla barra parte
+chiusa. La ricerca scritta nel foglio non si riprende. Test in
+`HomeRiepilogo.test.jsx`.
+
+Anche la Home SOTTO il foglio torna dov'era. Col foglio aperto il body è
+`position: fixed` e `window.scrollY` vale 0: la posizione vera sta in
+`body.style.top`, ed è quella che si salva. Al ritorno, a dati caricati, si
+riscrive in `body.style.top` (in un `useEffect`, che gira DOPO il blocco del
+foglio figlio), e `useScorrimentoBloccato` alla chiusura rilegge `top` invece
+della `y` dell'apertura (che era la pagina corta, cioè 0).

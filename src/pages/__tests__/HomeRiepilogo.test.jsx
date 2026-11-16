@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { montaPagina } from '../../test/montaPagina'
+import { render } from '@testing-library/react'
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { montaPagina, UTENTE } from '../../test/montaPagina'
+import { AuthContext } from '../../App'
 
 // La Home coach «Riepilogo» (10/11/2026) e l'interruttore «Home classica».
 // Senza interruttore il coach vede i numeri che aprono liste; acceso, il
@@ -105,4 +108,84 @@ describe('Home coach: Riepilogo o classica', () => {
     // Dentro il foglio: il calendario dei prossimi giorni ha anche lui il nome intero.
     expect(within(screen.getByRole('dialog')).getByText('Luca Rossi')).toBeInTheDocument()
   })
+
+  /** Home e una scheda finta con «Torna» (navigate(-1)), nello stesso router. */
+  const montaConScheda = () => {
+    const Scheda = () => {
+      const navigate = useNavigate()
+      return <>
+        <button type="button" onClick={() => navigate(-1)}>Torna</button>
+        <button type="button" onClick={() => navigate('/')}>Home</button>
+      </>
+    }
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AuthContext.Provider value={{ user: UTENTE, role: 'coach' }}>
+          <Routes><Route path="/" element={<Home />} /><Route path="/workout/:id" element={<Scheda />} /></Routes>
+        </AuthContext.Provider>
+      </MemoryRouter>
+    )
+  }
+
+  it('tornando indietro da un feedback la lista dei feedback si riapre', async () => {
+    const utente = userEvent.setup()
+    ctrl.assegnazioni.valore = [
+      fatta('f1', 'a1', -1, { notes: '[RPE: 9/10]\nGambe pesanti' }),
+      fatta('f2', 'a2', -1, { notes: '[RPE: 6/10]\nTutto bene' }),
+    ]
+    montaConScheda()
+    await utente.click(await screen.findByRole('button', { name: /^Leggi/ }))
+    const foglio = await screen.findByRole('dialog', { name: 'Feedback da leggere' })
+    await utente.click(within(foglio).getByText(/Luca/))
+    await utente.click(await screen.findByRole('button', { name: 'Torna' }))
+    const riaperto = await screen.findByRole('dialog', { name: 'Feedback da leggere' })
+    // Quello aperto è letto: resta l'altro.
+    expect(within(riaperto).getByText(/Giulia/)).toBeInTheDocument()
+  })
+
+  it('tornando indietro la lista di oggi si riapre col filtro scelto', async () => {
+    const utente = userEvent.setup()
+    ctrl.assegnazioni.valore = [riga('o1', 'a1', 0), fatta('o2', 'a2', 0)]
+    montaConScheda()
+    await utente.click(await screen.findByRole('button', { name: 'Tutti' }))
+    const foglio = await screen.findByRole('dialog', { name: 'In allenamento oggi' })
+    await utente.click(within(foglio).getByRole('button', { name: /^Da fare/ }))
+    await utente.click(within(foglio).getByText('Luca Rossi'))
+    await utente.click(await screen.findByRole('button', { name: 'Torna' }))
+    const riaperto = await screen.findByRole('dialog', { name: 'In allenamento oggi' })
+    expect(within(riaperto).getByRole('button', { name: /^Da fare/ })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('una Home aperta dalla barra (non un ritorno) parte con la lista chiusa', async () => {
+    const utente = userEvent.setup()
+    ctrl.assegnazioni.valore = [riga('o1', 'a1', 0)]
+    montaConScheda()
+    await utente.click(await screen.findByRole('button', { name: 'Tutti' }))
+    await utente.click(within(await screen.findByRole('dialog')).getByText('Luca Rossi'))
+    await utente.click(await screen.findByRole('button', { name: 'Home' }))
+    await attendi('In allenamento oggi')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('tornando indietro anche la Home sotto il foglio resta dov\'era', async () => {
+    const utente = userEvent.setup()
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    Object.defineProperty(window, 'scrollY', { value: 640, configurable: true })
+    ctrl.assegnazioni.valore = [riga('o1', 'a1', 0)]
+    montaConScheda()
+    await utente.click(await screen.findByRole('button', { name: 'Tutti' }))
+    await utente.click(within(await screen.findByRole('dialog')).getByText('Luca Rossi'))
+    // Sulla scheda la finestra è in cima; il ritorno non deve ripartire da qui.
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
+    await utente.click(await screen.findByRole('button', { name: 'Torna' }))
+    const riaperto = await screen.findByRole('dialog', { name: 'In allenamento oggi' })
+    await waitFor(() => expect(document.body.style.top).toBe('-640px'))
+    // Chiuso il foglio, la pagina va lì.
+    scrollTo.mockClear()
+    await utente.click(within(riaperto).getByRole('button', { name: 'Chiudi' }))
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 640))
+    delete window.scrollY
+    scrollTo.mockRestore()
+  })
 })
+

@@ -5,7 +5,8 @@
 // lo importano SOLO i pezzi pigri (HomeRiepilogoTelefono/Desktop): si porta
 // dietro le regole di «Dalle note» e non deve finire nel chunk d'ingresso.
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigationType } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useCruscottoCoach } from './useCruscottoCoach'
@@ -26,9 +27,21 @@ const filtriCategorie = (persone) => [...CATEGORIE_RIEPILOGO, 'Event']
   .filter(c => persone.some(p => p.categoria === c))
   .map(c => ({ etichetta: corsia(c).etichetta, prova: (p) => p.categoria === c }))
 
+// 🔴 TORNANDO INDIETRO LA LISTA SI RIAPRE (16/11/2026). Un tocco su una riga
+// del foglio porta a un'altra pagina, e la Home si smonta portandosi via lo
+// stato `lista`: tornando indietro il coach si ritrovava sulla Home, e doveva
+// riaprire «Feedback da leggere» per leggere il secondo. Prima di uscire si
+// annota quale lista era aperta (e con che filtro) insieme alla voce di history
+// (`location.key`); al rimontaggio, se è un ritorno (POP) a QUELLA voce, la si
+// riapre. Memoria di modulo, come useRipresa: dura quanto l'app aperta, e si
+// consuma a ogni montaggio — un'apertura nuova della Home parte chiusa.
+// ⚠️ Qui la chiave `default` va bene (useRipresa la scarta): la Home è quasi
+// sempre la prima pagina della sessione, e il ritorno a lei la ritrova uguale.
+let listaDaRiprendere = null
+
 export function useRiepilogoCoach({
   atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura,
-  feedback = [], fermi = [], scaduti = [],
+  feedback = [], fermi = [], scaduti = [], caricamento = false,
   onApriAtleta, onApriFeedback, onApriScaduto, onApriSeduta, onCrea,
 }) {
   const cruscotto = useCruscottoCoach({ atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura, settimana: false })
@@ -54,10 +67,57 @@ export function useRiepilogoCoach({
     return (r) => m.get(r.id) || r.nome
   }, [atleti])
 
-  const [lista, setLista] = useState(null)
+  const { key } = useLocation()
+  const tipoNavigazione = useNavigationType()
+  // Letta una volta al montaggio, come in useRipresa.
+  const [ripresa] = useState(() => {
+    const m = listaDaRiprendere
+    return m && tipoNavigazione === 'POP' && m.key === key ? m : null
+  })
+  const [lista, setLista] = useState(() => ripresa?.lista ?? null)
+  // Consumata al montaggio, che sia servita o no.
+  useEffect(() => { listaDaRiprendere = null }, [])
+
+  // ⚠️ Anche la Home SOTTO il foglio torna dov'era (16/11/2026). Al ritorno la
+  // pagina si rimonta corta (scheletro), e il foglio riaperto blocca subito lo
+  // scorrimento in cima. La posizione si rimette quando i dati ci sono: sotto
+  // un foglio aperto si scrive in `body.style.top` (il blocco di
+  // useScorrimentoBloccato la rilegge alla chiusura), altrimenti sulla finestra.
+  // ⚠️ `useEffect` e non `useLayoutEffect`: deve girare DOPO il blocco del
+  // foglio (effetto di un figlio, quindi prima), o il blocco memorizzerebbe la
+  // posizione della pagina corta e la sovrascriverebbe.
+  const posizioneRimessa = useRef(false)
+  useEffect(() => {
+    if (posizioneRimessa.current || caricamento || !ripresa?.scrollY) return
+    posizioneRimessa.current = true
+    const body = document.body
+    if (body.style.position === 'fixed') body.style.top = `-${ripresa.scrollY}px`
+    else window.scrollTo(0, ripresa.scrollY)
+  }, [caricamento, ripresa])
+  // Il filtro scelto nel foglio vive nel foglio: lo si tiene qui solo per il ritorno.
+  const filtroScelto = useRef(null)
+  const apri = (l) => { filtroScelto.current = null; setLista(l) }
 
   /** Cosa mostra il foglio, e dove porta il tocco su una riga. */
   const foglio = useMemo(() => {
+    const f = contenutoFoglio()
+    if (!f) return null
+    const { onScegli } = f
+    return {
+      ...f,
+      filtroIniziale: lista.filtroIndice ?? f.filtroIniziale,
+      onFiltro: (i) => { filtroScelto.current = i },
+      onScegli: (p) => {
+        // Col foglio aperto il body è `position: fixed` e window.scrollY vale 0:
+        // la posizione vera sta nel suo `top` (useScorrimentoBloccato).
+        const body = document.body
+        const scrollY = body.style.position === 'fixed' ? -parseFloat(body.style.top || '0') || 0 : window.scrollY
+        listaDaRiprendere = { key, scrollY, lista: { ...lista, filtroIndice: filtroScelto.current ?? lista.filtroIndice } }
+        onScegli(p)
+      },
+    }
+
+    function contenutoFoglio() {
     if (!lista) return null
     const seduta = (p) => onApriSeduta({ workoutId: p.workoutId, atletaId: p.atletaId })
     switch (lista.tipo) {
@@ -141,7 +201,8 @@ export function useRiepilogoCoach({
         }
       default: return null
     }
-  }, [lista, conti, nomeIntero, feedback, fermi, scaduti, segnali, onApriAtleta, onApriFeedback, onApriScaduto, onApriSeduta, onCrea])
+    }
+  }, [key, lista, conti, nomeIntero, feedback, fermi, scaduti, segnali, onApriAtleta, onApriFeedback, onApriScaduto, onApriSeduta, onCrea])
 
   // La nota sopra il calendario conta come la card «Da programmare» (chi ha
   // almeno un giorno vuoto nei prossimi 3), non come la copertura della Home
@@ -152,5 +213,5 @@ export function useRiepilogoCoach({
     ? { avviso: true, testo: `${n} ${n === 1 ? 'atleta' : 'atleti'} con giorni da programmare nei prossimi 3 giorni` }
     : { avviso: false, testo: 'Tutti programmati per i prossimi 3 giorni' }
 
-  return { ...cruscotto, ...conti, notaCalendario, apri: setLista, chiudi: () => setLista(null), foglio }
+  return { ...cruscotto, ...conti, notaCalendario, apri, chiudi: () => setLista(null), foglio }
 }

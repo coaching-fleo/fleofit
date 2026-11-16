@@ -63,8 +63,12 @@ export function useScorrimentoBloccato() {
     body.style.width = '100%'
     body.style.overflow = 'hidden'
     return () => {
+      // La posizione si rilegge da `top` e non dalla `y` dell'apertura: chi
+      // rimette la pagina dov'era MENTRE il foglio è aperto (la Home che torna
+      // con la lista riaperta, useRiepilogoCoach) la scrive lì.
+      const finale = -parseFloat(body.style.top || '0') || y
       Object.assign(body.style, prima)
-      window.scrollTo(0, y)
+      window.scrollTo(0, finale)
     }
   }, [])
 }
