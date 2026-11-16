@@ -7,7 +7,9 @@ Le funzioni «extra» (le Scarpe; più avanti palestre, biglietti) hanno **un in
 - **atleta**: la voce **Extra** nella barra, prima di Profilo, solo se almeno un extra è acceso per lui;
 - **coach, telefono**: «Archivio» è diventato **«Libreria»**, che apre un **menù** (`/libreria`,
   `src/pages/Libreria.jsx`): **Archivio**, **Modelli** (solo coach, voci fisse), poi un extra per ogni
-  interruttore acceso, con la sua riga viva e il pallino giallo se ha un avviso. La voce della barra resta
+  interruttore acceso, con la sua riga viva e il pallino giallo se ha un avviso. **Tasti grossi, non righe**
+  (16/11/2026, il committente: «sembra una schermata impostazioni»): Archivio a tutta larghezza col giallo,
+  le altre a due a due, icona in filigrana; dispari, l'ultima prende la riga intera. La voce della barra resta
   accesa dentro le sue pagine (`/archive`, `/modelli`, le rotte degli extra). L'archivio, il catalogo
   scarpe e i Modelli, aperti senza storia, tornano alla Libreria. L'atleta che apre `/libreria` torna alla Home;
 - **desktop**: la voce «Extra» nella barra laterale (`/extra`); lì la voce dell'archivio resta «Archivio».

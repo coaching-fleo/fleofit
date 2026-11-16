@@ -171,7 +171,7 @@ export function RigaInterruttore({ icona, tono = 'neutro', pieno = false, titolo
  * dalla cosa che l'ha causato costringe a ricordarsi cosa si è appena premuto,
  * e su una pagina con nove comandi non è una domanda banale.
  */
-export function RigaAzione({ icona, tono = 'neutro', titolo, dettaglio, onClick, occupato = false, etichetta, pallino = false }) {
+export function RigaAzione({ icona, tono = 'neutro', titolo, dettaglio, onClick, occupato = false, etichetta }) {
   return (
     <button type="button" onClick={onClick} disabled={occupato} aria-label={etichetta}
       className="w-full px-3.5 py-3.5 flex items-center gap-3 text-left transition
@@ -181,8 +181,6 @@ export function RigaAzione({ icona, tono = 'neutro', titolo, dettaglio, onClick,
         <p className="text-[15px] font-bold text-white">{titolo}</p>
         {dettaglio && <p className="mt-0.5 text-xs font-medium text-muted">{occupato ? 'In corso…' : dettaglio}</p>}
       </div>
-      {/* «C'è qualcosa di nuovo» (gli Extra della Libreria, 12/11/2026). */}
-      {pallino && <span aria-hidden="true" className="w-2 h-2 rounded-full bg-brand shrink-0" />}
       <ChevronRight size={17} className="text-[#5b6070] shrink-0" aria-hidden="true" />
     </button>
   )
