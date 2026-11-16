@@ -98,6 +98,9 @@
    ⏳ **Undicesima eccezione** (11/11/2026, sì esplicito in sessione, **scritta, da applicare a mano**): la tabella
    `pdf_coach` (il nome e le note aggiuntive del coach sul PDF della scheda), additiva
    (`supabase/schema/pdf_coach_2026-11-11.sql`, `docs/memoria/scheda-workout.md`).
+   ⏳ **Dodicesima eccezione** (16/11/2026, sì esplicito in sessione, «A, nel database»; **scritta, da applicare a mano**):
+   la tabella `gruppi_atleti` (i gruppi di comodo del coach per assegnare in un tocco), additiva
+   (`supabase/schema/gruppi_atleti_2026-11-16.sql`, `docs/memoria/atleti.md`).
 1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
    di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
    attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
@@ -376,6 +379,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `funzioni_app` | ✅ **applicata il 06/11/2026**, nella stessa migrazione: gli interruttori per accendere una funzione **senza aggiornare l'app** (`nome`, `stato` fra `spenta`/`admin`/`tutti`). La legge chiunque, la scrivono gli admin meno `demo@fleofit.it`. Si legge con `src/lib/funzioniApp.js` (una volta per avvio); riga assente o rete giù = ultima risposta salvata, se no **spenta**. Le Scarpe partono spente (`docs/memoria/scarpe.md`) |
 | `team` · `team_membri` · `team_sfide` · `team_risultati` | ✅ **applicata il 09/11/2026** (`supabase/schema/team_2026-11-06.sql`; `docs/memoria/team.md`): i team di atleti con la sfida interna. Stati e reinvito (3 giorni) li impone il trigger; i nomi dei compagni passano **solo** dalla RPC `team_scheda`. Senza le tabelle l'app nasconde tutto; interruttore `team` spento. Nel backup notturno |
 | `pdf_coach` | ⏳ **scritta l'11/11/2026, da applicare a mano** (`supabase/schema/pdf_coach_2026-11-11.sql`; `docs/memoria/scheda-workout.md`): una riga per coach, `nome_firma` (≤60) in testa al PDF della scheda e `note_finali` (≤600) nel riquadro «NOTE AGGIUNTIVE». Il PDF usa la riga di `workouts.creato_da`, se no quella di chi esporta. Legge il coach, lo staff, i suoi atleti e chi ha un suo workout; scrive solo il coach sulla sua riga, mai `demo@fleofit.it`. Si legge e scrive **solo** con `src/lib/templatePdf.js`. Nel backup notturno |
+| `gruppi_atleti` | ⏳ **scritta il 16/11/2026, da applicare a mano** (`supabase/schema/gruppi_atleti_2026-11-16.sql`; `docs/memoria/atleti.md`): i gruppi del coach (`nome` ≤40, `atleti` uuid[]), solo una scorciatoia del foglio «Assegna Workout». Policy unica come `modelli_blocco`: solo il coach proprietario, anche un admin vede solo i suoi. L'atleta non li vede. Gli id nell'array che il coach non vede più si ignorano (`src/lib/gruppiAtleti.js`). Senza la tabella l'app nasconde tutto. Nel backup notturno |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
 - 🔴 **Dal 16/10/2026 lo staff si cambia in UN posto: la tabella `staff`** (admin e coach).
@@ -728,7 +732,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `WorkoutDetail.jsx`, `WorkoutDetailUI`, `rigaBlocco.js`, `StoriaUI`, `recapStoria.js`, timer, PDF, `comeStai.js`, `FoglioComeStai`, `TVDashboard.jsx`, `TVDashboardUI`, `personeTV.js`, `FoglioPersoneTV`, `codiceTV.js`, `lettoreQR.js`, `FoglioCollegaTV`, `FoglioChiediTV`, `sceltaTV.js`, `CollegaTV`, `LettoreQR.swift`, `LettoreQRPlugin.java`, `avanzaTimer.js`, `sessioneAudio.js`, `liveActivity.js`, `FoglioLiveActivity`, `LiveActivityPlugin.swift`, `AttivitaTimer.swift`, `ios/App/FleoTimer/`, `templatePdf.js`, `FoglioPdf` | `scheda-workout.md` |
 | `AthleteDetail.jsx`, `SchedaAtletaUI`, `CalendarioAtleta`, `andamento.js`, `DalleNoteUI`, `dalleNote.js`, `noteEstratte.js`, Edge Function `estrai-note` | `scheda-atleta.md` |
 | `WorkoutsArchive.jsx`, `ArchivioUI`, `rigaArchivio.js`, `useRipresa` | `archivio.md` |
-| `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js` | `atleti.md` |
+| `Athletes.jsx`, `AtletiUI`, `rigaAtleta.js`, `gruppiAtleti.js`, `gruppiAtletiDb.js`, `GruppiUI`, `FoglioGruppi` | `atleti.md` |
 | `Calendar.jsx`, `CalendarioUI`, `useSwipeOrizzontale.js`, `rigaCalendario.js`, `NuovoEvento`, `GareCorsa`, `gareCorsa.js`, `gare.js`, `gareHyrox.js`, `RisultatoGara`, `InvitoRisultato`, `GarePassate`, `risultatoGara.js`, Edge Function `gare-hyrox`, `gare-corsa` e `risultato-hyrox` | `calendario.md` |
 | `Messaggi.jsx`, `NuovoMessaggio.jsx`, `MessaggiUI`, `FoglioMessaggio`, `messaggiCoach.js`, Edge Function `send-reminders/broadcast.ts` | `messaggi.md` |
 | `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js`, `Analisi.jsx`, `AnalisiUI.jsx`, `analisi.js`, `components/grafici/`, `storicoEsercizio.js`, `StoricoEsercizio.jsx`, `esportaCsv.js`, `ReportDesktop.jsx` | `report.md` |

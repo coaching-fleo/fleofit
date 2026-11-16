@@ -253,18 +253,21 @@ export default function Athletes() {
        ritardare i comandi. Stessa regola dell'archivio. */
     <div className="px-4 max-w-2xl mx-auto pb-[var(--fondo-pagina)]">
       <TestataAtleti dettaglio={dettaglio} onNuovo={() => setModalOpen(true)}
+        // ⚠️ Con «Gruppi» e «Team» insieme, sotto i 400px di larghezza i due
+        // bottoni restano solo icona: con le parole la testata non ci sta, e
+        // «9 attivi · 1 in pausa» finiva in colonna (visto il 16/11/2026).
         azioneSecondaria={(teamAcceso || gruppi) && (
           <>
             {gruppi && (
               <button type="button" onClick={() => setGruppiAperti(true)}
                 className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-[13px] text-sm font-bold text-white hover:border-white/25 transition ${VETRO}`}>
-                <Layers size={17} aria-hidden="true" /> Gruppi
+                <Layers size={17} aria-hidden="true" /><span className="max-[399px]:sr-only">Gruppi</span>
               </button>
             )}
             {teamAcceso && (
               <button type="button" onClick={() => navigate('/team')}
                 className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-[13px] text-sm font-bold text-white hover:border-white/25 transition ${VETRO}`}>
-                <UsersRound size={17} aria-hidden="true" /> Team
+                <UsersRound size={17} aria-hidden="true" /><span className="max-[399px]:sr-only">Team</span>
               </button>
             )}
           </>

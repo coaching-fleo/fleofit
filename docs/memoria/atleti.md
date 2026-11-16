@@ -118,3 +118,29 @@ ed è la stessa riga in entrambi i casi. Una seconda copia sarebbe stata il modo
 in cui le due cominciano a divergere di un raggio (§9 punto 1).
 
 ---
+
+## Gruppi di atleti (16/11/2026)
+
+Richiesta del committente: «gruppi di atleti che loro non devono accettare, una cosa comoda per il
+coach per assegnare lo stesso allenamento a più persone». Disegno e piano:
+`docs/superpowers/specs/2026-11-16-gruppi-atleti-design.md`, `docs/superpowers/plans/2026-11-16-gruppi-atleti.md`.
+
+- **Stato**: ⏳ tabella `gruppi_atleti` **scritta, da applicare a mano** dal SQL editor
+  (`supabase/schema/gruppi_atleti_2026-11-16.sql`, dodicesima eccezione di CLAUDE.md §0-bis). Finché
+  non c'è, `elencoGruppi()` risponde `disponibile: false` e bottone, chip e «Salva come gruppo»
+  **non compaiono**, senza alert. Nessun interruttore in `funzioni_app`: è accesa appena c'è la tabella.
+- **Non sono i Team**: niente invito, niente consenso, niente notifica. L'atleta non sa di essere in
+  un gruppo e non li legge (policy: solo il coach proprietario, anche un admin vede solo i suoi).
+  Si scrive anche da `demo@fleofit.it`: i gruppi sono suoi e non toccano nessuno.
+- **Dove**: nel foglio «Assegna Workout» di `WorkoutDetail`, sopra «Seleziona atleti:», la riga di
+  chip (`ChipGruppi` di `GruppiUI.jsx`). Un tocco **aggiunge** i membri che mancano; se erano già
+  tutti scelti li **toglie**; chi è stato scelto a mano fuori dal gruppo resta (`alternaGruppo`).
+  Con 2+ scelti che non sono già un gruppo compare «Salva come gruppo». La gestione (crea, rinomina,
+  cambia atleti, elimina) è nel foglio `FoglioGruppi`, dal bottone «Gruppi» della pagina Atleti
+  (accanto a «Team»; sul desktop accanto a «Nuovo atleta»), importato pigro.
+- 🔴 **`atleti` è un array di id, non una tabella di collegamento**: un atleta cancellato o passato a
+  un altro coach RESTA nell'array. Si contano e si assegnano solo i `membriVisibili` (la lista già
+  filtrata da RLS e `deleted_at`); l'editor, salvando, riscrive l'array senza di loro.
+- Un gruppo non lega niente: le assegnazioni sono le solite, una per atleta. Aggiungere qualcuno a un
+  gruppo non gli dà i workout già assegnati.
+- Peso: il chunk `WorkoutDetail` è salito di 4,8 KB (111,35 → 116,11 KB, misurato il 16/11/2026).

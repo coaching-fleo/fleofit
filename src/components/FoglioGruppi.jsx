@@ -65,7 +65,7 @@ function Editor({ gruppo, gruppi, atleti, coach, onFatto, onIndietro }) {
   const [conferma, setConferma] = useState(null)
 
   const visibili = filtraPerNome(atleti, cerca)
-  const alterna = (id) => setScelti(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const alterna = (id) => setScelti(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
 
   const salva = async () => {
     const e = nomeGruppoValido(nome, gruppi, gruppo?.id ?? null)

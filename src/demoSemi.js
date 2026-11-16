@@ -32,7 +32,7 @@ import schedeScarpe from '../tools/scarpe/schede.json'
 // build vera (il modulo demo si pota, gli asset no). Sono le sole tre che esistono.
 const FOTO_SCARPE = ['saucony-endorphin-speed-4', 'puma-deviate-nitro-3', 'on-cloudmonster-2']
 
-export const VERSIONE_SEME = 24   // 24: pdf_coach, il template del PDF (23: i ritratti degli atleti)
+export const VERSIONE_SEME = 25   // 25: gruppi_atleti (24: pdf_coach, il template del PDF; 23: i ritratti degli atleti)
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
