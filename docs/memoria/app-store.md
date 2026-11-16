@@ -106,7 +106,18 @@
   notifica «Nuovo atleta», «Storico» nella barra dell'atleta, box jump, Plank/Hollow Body/L-Sit a tempo,
   segnalazione di un contenuto. Scarpe e Team escono **spente** (`funzioni_app`): ⚠️ durante la revisione
   **non vanno messe ad `admin`**. Migrazione `codici_invito_2026-11-11.sql` **non applicata**; il tempo 2
-  non va applicato finché ci sono 1.2.3 e precedenti in uso. Esito da registrare qui.
+  non va applicato finché ci sono 1.2.3 e precedenti in uso. ✅ **Approvata** (detto dal committente il
+  16/11/2026). Da qui Scarpe e Team si possono accendere (prima `admin`, poi `tutti`).
+- **Per la 1.2.5** (la prossima): 🔗 porta l'entitlement **Associated Domains**
+  (`applinks:fleofit.vercel.app` in `ios/App/App/App.entitlements`, 16/11/2026), cioè l'universal link
+  del link d'invito (`docs/memoria/accesso.md`). Prima dell'archive: (1) su developer.apple.com →
+  Identifiers → `it.federicoleo.fleofit` la capability *Associated Domains* dev'essere accesa (con la
+  firma automatica Xcode di solito lo fa da sé; se l'archive dà un errore di profilo, è questo);
+  (2) il sito su `main` deve già servire `https://fleofit.vercel.app/.well-known/apple-app-site-association`
+  (JSON, `appIDs` `584SHG94SM.it.federicoleo.fleofit`, percorso `/invito/*`): se no, l'app installata non
+  si apre dal link e resta la pagina ponte; (3) dopo l'installazione, provare da WhatsApp un link
+  `/invito/<codice>`: deve aprire l'app sulla card dell'invito. Novità per `DEVLOG.md`: «Il link d'invito
+  apre l'app, o App Store se manca».
 - **26 ago 2026** — ✅ **la causa del rifiuto è chiusa e verificata dai due lati.**
   Punti 1 e 2 sul binario spedito (`tools/verifica-ipa.sh`), punto 3 provato dall'app:
   `demo@fleofit.it` **assegna un workout**. Era esattamente ciò che a maggio non

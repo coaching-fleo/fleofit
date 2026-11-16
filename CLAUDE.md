@@ -30,7 +30,8 @@
   liste atleti, `escludiDallaRubrica`, corretto il 28/10): la correzione arriva con la 1.2.3. Prima
   c'erano la 1.2.0 (`799b119`, 09/10) e la 1.2.1 (`c315006`, inviata il 14/10: il suo esito non è
   stato registrato qui, da confermare su App Store Connect). Novità in [DEVLOG.md](DEVLOG.md),
-  contate da `c315006`. Il prossimo aggiornamento sarà la **1.2.3**.
+  contate da `c315006`. ✅ **La 1.2.4 è approvata** (registrato il 16/11/2026). Il prossimo aggiornamento
+  sarà la **1.2.5**: porta gli universal link del link d'invito, controlli in `docs/memoria/app-store.md`.
   ⚠️ Rischio noto, accettato il 26/10: `demo@fleofit.it` è admin e dalla 1.2.2 può aggiungere e
   togliere coach e spostare atleti (Impostazioni → Coach).
   ⚠️ Prima di archiviare si controlla lo stato della versione su App Store Connect
@@ -627,6 +628,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `fleofit_ruolo_<uid>` (il ruolo dell'ultimo accesso con la rete: serve all'avvio senza rete, `src/lib/avvioSenzaRete.js`),
   `fleofit_funzioni` (l'ultimo stato letto degli interruttori di `funzioni_app`: serve all'avvio senza rete, `src/lib/funzioniApp.js`),
   `fleofit_extra_visti_<uid>` (gli avvisi degli Extra chiusi con la X da quell'utente su questo dispositivo, `id:chiave`, massimo 50: `src/lib/avvisiExtra.js`),
+  `fleofit_referrer_letto` (Android: il codice d'invito del Play Store è già stato letto, una volta per installazione, `src/lib/referrerInvito.js`),
   `fleofit_home_classica` (true = la Home coach di prima, il cruscotto, su questo dispositivo; assente = la «Riepilogo», `src/lib/homeClassica.js`),
   ⏳ `fleofit_messaggi_prova` (TEMPORANEO: le «Prova su di me» nella bacheca del coach),
   `adminRoleOverride`.
@@ -643,7 +645,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 - **Parametri di `/login`**: `?invite=<codice>` (il link del coach, salta le caselle),
   `?serve=invito` (ci manda `ProtectedRoute` a chi è autenticato senza profilo) e
   `?error=unauthorized` (la vecchia uscita, che nessuno produce più — §9-septvicies).
-- **Rotte**: `/`, `/login`, `/tv` (pubblica), `/collega-tv/:codice` (privata; `?altro=1` = parte dalla lista), `/calendar`, `/create`, `/athletes`, `/athletes/:id`,
+- **Rotte**: `/`, `/login`, `/tv` (pubblica), `/invito/:codice` (pubblica: la pagina ponte del link d'invito, `src/lib/linkInvito.js`), `/collega-tv/:codice` (privata; `?altro=1` = parte dalla lista), `/calendar`, `/create`, `/athletes`, `/athletes/:id`,
   `/profile`, `/workout/:id` (con `?tv=<4 cifre>` collega la TV da sola; con `&chiedi=1` prima chiede — il QR inquadrato a scheda aperta), `/archive` (con `?tv=` sceglie soltanto: il tocco porta alla scheda con `?tv=`), `/report` e `/report/:id` (**solo coach**, §9-vicies e §9-vicies-bis), `/libreria` (**solo coach**: il menù di Archivio, Modelli ed Extra), `/settings`. Deep link workout:
   `/workout/<workoutId>?athlete_id=<uid>` — è il formato usato anche in `notifications.route`.
 - **Aggiornamenti ottimistici**: si aggiorna lo state prima della chiamata Supabase e si fa rollback

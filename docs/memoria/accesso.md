@@ -416,3 +416,32 @@ riquadro con `sandbox` (anteprima di posta / browser interno), che l'app non con
 lì blocca l'invio PRIMA dell'evento `submit`, quindi `onSubmit` non partiva mai. Ora il bottone
 è `type="button"` con `onClick={handleComplete}` (in `App.jsx`, schermata di onboarding): il clic
 arriva sempre, perché gli script nel riquadro girano. Non rimetterlo `type="submit"`.
+
+## Il link d'invito apre l'app (16/11/2026)
+
+Design: `docs/superpowers/specs/2026-11-16-link-invito-design.md`.
+
+- «Copia link» in Impostazioni → Codici invito copia `https://fleofit.vercel.app/invito/<codice>`
+  (`linkInvito` di `src/lib/linkInvito.js`). I vecchi `/?invite=<codice>` restano validi:
+  sono già nelle chat. `normalizzaCodice` riconosce entrambe le forme se incollate.
+- La pagina pubblica `/invito/:codice` (`src/pages/Invito.jsx`) sceglie dallo user agent:
+  **PC** → `/login?invite=` subito; **Android** → intent di Chrome (`fleofit://invito/<codice>`,
+  se l'app manca va al Play Store col codice nel `referrer`); **iPhone** → schermata con il
+  codice, «Scarica l'app» (copia il codice e apre App Store), «Ho già l'app», «Continua sul sito».
+  ⚠️ Su iPhone niente `fleofit://` automatico: senza app Safari mostra un errore.
+- `APP_STORE_ID` = `6769451686` (16/11/2026). ⏳ `PLAY_STORE_PUBBLICATO` (false) in `linkInvito.js`:
+  finché l'app non è sul Play Store, l'Android senza app prosegue sul sito.
+- App: `DeeplinkHandler` capisce `fleofit://invito/<codice>` e l'universal link
+  `https://fleofit.vercel.app/invito/<codice>` (prima del ramo OAuth, che li prenderebbe per un
+  login fallito) e apre `/login?invite=`.
+- **Universal link iOS**: `public/.well-known/apple-app-site-association` (solo `/invito/*`,
+  Content-Type JSON in `vercel.json`) + entitlement `applinks:fleofit.vercel.app`. Funzionano
+  solo dopo che il file è su `main` (sito pubblicato) **e** con la prima versione iOS che porta
+  l'entitlement. ⚠️ L'App ID deve avere la capability *Associated Domains* (Xcode con firma
+  automatica la aggiunge; se l'archive dà errore di profilo, va accesa sul portale developer).
+- **Dopo l'installazione**: Android legge il Play Install Referrer al primo avvio
+  (`InstallReferrerPlugin.java`, `src/lib/referrerInvito.js`, una volta sola:
+  `fleofit_referrer_letto`), e se nessuno è entrato apre la card dell'invito. iOS non ha un
+  referrer: il codice viene dagli appunti con «Incolla dagli appunti» (scelta del committente,
+  la (a); la (b) server-side avrebbe chiesto una tabella nuova).
+- Niente App Links Android verificati: servirebbe l'impronta della chiave del Play Store.

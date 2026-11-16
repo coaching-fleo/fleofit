@@ -39,7 +39,9 @@ export const GRUPPO_CODICE = 4
  */
 export function normalizzaCodice(testo) {
   if (typeof testo !== 'string') return ''
-  const daLink = testo.match(/[?&]invite(?:code)?=([^&\s]+)/i)
+  // Dal 16/11/2026 il link è `/invito/<codice>` (src/lib/linkInvito.js): si
+  // riconoscono entrambe le forme, perché le vecchie sono già nelle chat.
+  const daLink = testo.match(/[?&]invite(?:code)?=([^&\s]+)/i) || testo.match(/\/invito\/([^/?#&\s]+)/i)
   const grezzo = daLink ? daLink[1] : testo
   return grezzo.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, LUNGHEZZA_CODICE)
 }

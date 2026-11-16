@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
         // la pagina non li vede. Il gemello iOS è FleoBridgeViewController.
         registerPlugin(LettoreTestoPlugin.class);
         registerPlugin(LettoreQRPlugin.class);
+        registerPlugin(InstallReferrerPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

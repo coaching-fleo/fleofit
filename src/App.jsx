@@ -19,6 +19,8 @@ import Home from './pages/Home'
 // Caricate su richiesta: l'avvio non deve pagare PDF, IA, BLE e TV.
 const Calendar = lazy(() => import('./pages/Calendar'))
 const TVDashboard = lazy(() => import('./pages/TVDashboard'))
+// La pagina ponte del link d'invito (src/lib/linkInvito.js): pubblica.
+const Invito = lazy(() => import('./pages/Invito'))
 const CreateWorkout = lazy(() => import('./pages/CreateWorkout'))
 const Athletes = lazy(() => import('./pages/Athletes'))
 const AthleteDetail = lazy(() => import('./pages/AthleteDetail'))
@@ -94,6 +96,8 @@ import { eUnLinkDiRecupero, recuperoInCorso, avviaRecupero, chiudiRecupero } fro
 import { leggiErroreLink, segnalaLinkFallito } from './lib/esitoLink'
 import { rottaDaDeepLinkGarmin, recuperaAttivitaGarmin } from './lib/garmin'
 import { eLinkDelTimer, eLinkDellaTV, rottaDaLinkTV } from './lib/linkTimer'
+import { codiceDaLinkApp, loginConCodice } from './lib/linkInvito'
+import { codiceDalPlayStore } from './lib/referrerInvito'
 import { impostaRuoloFunzioni } from './lib/funzioniApp'
 import SoloSeAccesa from './components/SoloSeAccesa'
 
@@ -695,6 +699,12 @@ function DeeplinkHandler() {
         // davanti, dov'era. Senza questo il ramo sotto lo prendeva per un login
         // fallito e mandava a /login, chiudendo il timer (src/lib/linkTimer.js).
         if (eLinkDelTimer(event.url)) return;
+        // 🔴 Il link d'invito del coach (fleofit://invito/<codice> dalla pagina
+        // ponte, o l'universal link https://…/invito/<codice>): porta alla card
+        // dell'invito con il codice già dentro. Prima del ramo OAuth sotto, che
+        // senza token lo prenderebbe per un login fallito (src/lib/linkInvito.js).
+        const codiceInvito = codiceDaLinkApp(event.url);
+        if (codiceInvito) return vaiA.current(loginConCodice(codiceInvito), { replace: true });
         // 🔴 Il QR della TV letto con la fotocamera di sistema
         // (fleofit://tv/<codice>): mai /login. Con un codice valido si apre
         // /collega-tv/<codice> (pagina che sceglie il workout da mandare in TV);
@@ -754,6 +764,15 @@ function DeeplinkHandler() {
           vaiA.current(`/login${url.search}${url.hash}`, { replace: true });
         }
       }));
+
+      // 3-ante. Installata dal link d'invito via Play Store: il codice arriva
+      // nel referrer, una volta sola, e porta alla card dell'invito — solo a
+      // chi non è ancora entrato (src/lib/referrerInvito.js). Su iOS non fa niente.
+      codiceDalPlayStore().then(async (codice) => {
+        if (!codice) return;
+        const { data } = await supabase.auth.getSession();
+        if (!data?.session) vaiA.current(loginConCodice(codice), { replace: true });
+      }).catch(() => {});
 
       // 3-bis. Tiene fresco il token push: i token cambiano da soli e senza
       // questo l'utente smetteva di ricevere le notifiche in silenzio.
@@ -881,6 +900,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/tv" element={<TVDashboard />} />
+          <Route path="/invito/:codice" element={<Invito />} />
           {/* Landing pubblica, solo web: nessuno ci arriva dall'app nativa. */}
           <Route path="/benvenuto" element={<Landing />} />
           {/* Un solo <ProtectedRoute> per tutte le pagine private: è la route

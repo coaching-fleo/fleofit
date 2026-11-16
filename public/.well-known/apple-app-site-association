@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["584SHG94SM.it.federicoleo.fleofit"],
+        "components": [
+          { "/": "/invito/*", "comment": "Il link d'invito del coach: apre l'app con il codice (src/lib/linkInvito.js)" }
+        ]
+      }
+    ]
+  }
+}

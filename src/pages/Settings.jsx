@@ -39,6 +39,7 @@ import { apriInformativa } from '../lib/informativa'
 import { leggiCoda } from '../lib/offlineQueue'
 import { useFunzione } from '../useFunzione'
 import { GARMIN_IN_ARRIVO, VERSIONE_CONSENSO_GARMIN, dataCollegamento, leggiStatoGarmin, messaggioEsito, ritornoGarmin } from '../lib/garmin'
+import { linkInvito } from '../lib/linkInvito'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -1071,10 +1072,9 @@ export default function Settings() {
           codici={codici} caricamento={codiciInCaricamento} generando={operazione === 'codice'}
           onGenera={generaCodice}
           onCopia={(c) => copiaTesto(c.code, 'Codice')}
-          onCopiaLink={(c) => {
-            const base = Capacitor.isNativePlatform() ? 'https://fleofit.vercel.app' : window.location.origin
-            copiaTesto(`${base}/?invite=${c.code}`, 'Link')
-          }}
+          // Il link della pagina ponte, sempre sul sito: dal PC prosegue sul
+          // sito, dal telefono apre l'app o lo Store (src/lib/linkInvito.js).
+          onCopiaLink={(c) => copiaTesto(linkInvito(c.code), 'Link')}
           onElimina={eliminaCodice} />
       )}
 

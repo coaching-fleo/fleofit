@@ -3,6 +3,12 @@
 > 🧩 **Dal 02/10/2026 un backlog solo per le app native**, branch `app` (iOS + Android). Le voci
 > Android stanno nella sezione 🤖; tutte le altre valgono per il codice condiviso o per iOS.
 
+> 🔗 **Link d'invito che apre l'app (16/11/2026)**, `docs/memoria/accesso.md`. Restano due gesti
+> (l'ID App Store è messo): (1) pubblicare su
+> `main` perché il sito serva `/.well-known/apple-app-site-association`; (2) la prossima build iOS
+> porta l'entitlement *Associated Domains* (controllare la capability sull'App ID). Su Android,
+> `PLAY_STORE_PUBBLICATO = true` quando l'app è sul Play Store.
+
 > Stato al **22 settembre 2026**. `npm test` → **1025** · `npm run lint` → **41**.
 > ⭐ Il 22/09 è nato il **recap post-allenamento** (CLAUDE.md §9-quadragies): chiudere un
 > allenamento apre quattro schede in stile storie — la seduta appena fatta, la settimana,

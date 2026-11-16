@@ -15,4 +15,5 @@ ext {
     cordovaAndroidVersion = '14.0.1'
     mlkitTextRecognitionVersion = '16.0.1'
     playServicesCodeScannerVersion = '16.1.0'
+    installReferrerVersion = '2.2'
 }
