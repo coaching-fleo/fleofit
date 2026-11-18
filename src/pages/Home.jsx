@@ -64,7 +64,10 @@ const HomeCoachTelefono = lazy(() => import('../components/HomeCoachTelefono'))
 // prima (le due qui sopra) resta dietro l'interruttore «Home classica».
 const HomeRiepilogoDesktop = lazy(() => import('../components/HomeRiepilogoDesktop'))
 const HomeRiepilogoTelefono = lazy(() => import('../components/HomeRiepilogoTelefono'))
-import CartaMioAllenamento from '../components/CartaMioAllenamento'
+// «Il tuo allenamento» (18/11/2026): pigra perché la vede solo il coach e porta
+// `codiceWorkout` (stima, archivio…), che in testa finiva in `index` (+8 kB
+// all'avvio anche per l'atleta). Test: HomeChunk.test.jsx.
+const CartaMioAllenamento = lazy(() => import('../components/CartaMioAllenamento'))
 import { scegliMioAllenamento } from '../lib/mioAllenamento'
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARD_BASE, CARTA_MODALE,
          TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
@@ -1323,7 +1326,7 @@ setNotifications(prev => {
             onApriScaduto={apriSeduta}
             onApriSeduta={apriSeduta}
             onMessaggio={() => navigate('/messaggi')}
-            mio={<CartaMioAllenamento mio={mioAllenamento} onApri={apriMioAllenamento} />}
+            mio={mioAllenamento && <Suspense fallback={null}><CartaMioAllenamento mio={mioAllenamento} onApri={apriMioAllenamento} /></Suspense>}
           />
         </Suspense>
       )}
@@ -1427,7 +1430,9 @@ setNotifications(prev => {
         <div style={{ '--cascata-da': 1 }} className="flex flex-col gap-3.5 mb-6 cascata">
 
           {/* Il coach si allena anche lui (18/11/2026): il suo allenamento in un tocco. */}
-          <CartaMioAllenamento mio={mioAllenamento} onApri={apriMioAllenamento} />
+          {mioAllenamento && (
+            <Suspense fallback={null}><CartaMioAllenamento mio={mioAllenamento} onApri={apriMioAllenamento} /></Suspense>
+          )}
 
           {/* La Live Coach Cam dura quanto un allenamento: è una barra, non una
               sezione con un titolo che per 23 ore al giorno sta sopra il vuoto. */}

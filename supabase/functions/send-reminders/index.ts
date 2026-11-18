@@ -652,7 +652,7 @@ serve(async (req) => {
           console.error('coach_notification: coach dell\'atleta non leggibili, vado agli admin', e);
         }
       }
-      const adminUserIds = destinatariNotificaCoach(suoiCoach, staffIds.admin);
+      const adminUserIds = destinatariNotificaCoach(suoiCoach, staffIds.admin, athleteId);
 
       console.log('Trovati ID Admin:', adminUserIds);
       

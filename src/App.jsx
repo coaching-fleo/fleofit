@@ -95,7 +95,7 @@ import { sincronizzaBadge } from './lib/badge'
 import { gestisciIndietro, puoTornareIndietro } from './lib/indietroAndroid'
 import { eUnLinkDiRecupero, recuperoInCorso, avviaRecupero, chiudiRecupero } from './lib/recuperoPassword'
 import { leggiErroreLink, segnalaLinkFallito } from './lib/esitoLink'
-import { rottaDaDeepLinkGarmin, recuperaAttivitaGarmin } from './lib/garmin'
+import { rottaDaDeepLinkGarmin, recuperaAttivitaGarmin, recuperoPerRuolo } from './lib/garmin'
 import { eLinkDelTimer, eLinkDellaTV, rottaDaLinkTV } from './lib/linkTimer'
 import { codiceDaLinkApp, loginConCodice } from './lib/linkInvito'
 import { codiceDalPlayStore } from './lib/referrerInvito'
@@ -330,11 +330,12 @@ function ProtectedRoute() {
 
   // Garmin: al login e alla prima apertura del giorno si fa rimandare a Garmin
   // l'ultima settimana di attività, per quelle il cui invio si fosse perso
-  // (src/lib/garmin.js, `recuperaAttivitaGarmin`). Solo l'atleta; il giorno
+  // (src/lib/garmin.js, `recuperaAttivitaGarmin`). L'atleta e, dal 18/11/2026,
+  // anche lo staff (il coach che si allena: `recuperoPerRuolo`); il giorno
   // lo controlla la funzione, quindi tornare sull'app più volte non costa.
   const utente = session?.user ?? null
   useEffect(() => {
-    if (role !== 'athlete' || !utente) return
+    if (!recuperoPerRuolo(role) || !utente) return
     const prova = () => { recuperaAttivitaGarmin(supabase, utente) }
     prova()
     const quandoTorna = () => { if (document.visibilityState === 'visible') prova() }

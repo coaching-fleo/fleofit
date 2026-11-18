@@ -73,8 +73,10 @@ export function atletaNotificaCoach(
 }
 
 /** Chi riceve la notifica «un atleta ha fatto qualcosa»: i suoi coach, e se non ne ha gli admin. */
-export function destinatariNotificaCoach(coachIds: string[], adminIds: string[]): string[] {
-  return coachIds.length > 0 ? coachIds : adminIds
+export function destinatariNotificaCoach(coachIds: string[], adminIds: string[], atletaId: string | null = null): string[] {
+  // Mai a chi si è allenato (18/11/2026): il coach che si allena anche lui, con
+  // Garmin che completa da solo, si sarebbe avvisato di sé stesso.
+  return (coachIds.length > 0 ? coachIds : adminIds).filter(id => id !== atletaId)
 }
 
 /**

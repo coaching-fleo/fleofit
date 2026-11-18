@@ -185,8 +185,8 @@ export async function recuperaAttivitaGarmin(supabase, utente, adesso = new Date
   if (!serveRecupero(leggiJson(chiaveRecupero(utente.id), null, storage), oggi, accesso)) return false
   try {
     const { error } = await supabase.functions.invoke('garmin-auth', { body: { azione: 'sincronizza' } })
-    // 403 = staff (anche un admin in «Simula atleta»): non avrà mai Garmin, si
-    // segna come fatto per non richiederlo a ogni ritorno sull'app.
+    // 403 = staff senza profilo atleta: non avrà mai Garmin, si segna come
+    // fatto per non richiederlo a ogni ritorno sull'app.
     if (error && error.context?.status !== 403) return false
   } catch {
     return false
@@ -205,4 +205,13 @@ export function puoCollegareGarmin({ role, simulando, haProfilo }) {
   if (role === 'athlete') return !simulando
   if (role === 'coach' || role === 'admin') return !simulando && !!haProfilo
   return false
+}
+
+/**
+ * Per quali ruoli App.jsx chiede il recupero giornaliero delle attività. Dal
+ * 18/11/2026 anche lo staff: il coach che si allena può avere Garmin. Chi non
+ * ce l'ha riceve 403 (o ok senza collegamento) e il giorno si segna fatto.
+ */
+export function recuperoPerRuolo(role) {
+  return role === 'athlete' || role === 'coach' || role === 'admin'
 }

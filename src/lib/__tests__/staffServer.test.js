@@ -94,6 +94,13 @@ describe('destinatariNotificaCoach', () => {
   it('senza coach, agli admin', () => {
     expect(destinatariNotificaCoach([], ['a1'])).toEqual(['a1'])
   })
+  // Il coach si allena anche lui (18/11/2026): se Garmin completa il suo
+  // allenamento, l'avviso «X ha completato» non deve arrivare a lui stesso.
+  it('mai a chi si è allenato', () => {
+    expect(destinatariNotificaCoach([], ['a1', 'a2'], 'a1')).toEqual(['a2'])
+    expect(destinatariNotificaCoach(['c1', 'c2'], ['a1'], 'c2')).toEqual(['c1'])
+    expect(destinatariNotificaCoach(['c1'], ['a1'], null)).toEqual(['c1'])
+  })
 })
 
 describe('idStaff', () => {

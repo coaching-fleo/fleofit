@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { montaPagina, UTENTE, oggi } from '../../test/montaPagina'
@@ -59,8 +59,9 @@ describe('Il tuo allenamento, nella Home del coach', () => {
   it('con un allenamento di oggi la card c’è, con il nome senza codice', async () => {
     ctrl.assegnazioni.valore = [mia()]
     monta()
-    expect(await screen.findByText('Il tuo allenamento')).toBeInTheDocument()
-    expect(screen.getByText('Lungo lento')).toBeInTheDocument()
+    const carta = await screen.findByRole('button', { name: /^Il tuo allenamento/ })
+    expect(within(carta).getByText('Il tuo allenamento')).toBeInTheDocument()
+    expect(within(carta).getByText('Lungo lento')).toBeInTheDocument()
   })
 
   it('il tocco apre la scheda sul proprio profilo', async () => {

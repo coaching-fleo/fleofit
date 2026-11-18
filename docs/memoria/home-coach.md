@@ -440,6 +440,11 @@ Richiesta del committente: il coach si assegna i workout e li fa come un atleta.
   Il filtro su `athlete_id` si ripete in JS: la card non deve mai mostrare l'allenamento di un altro.
 - **Quale riga**: `scegliMioAllenamento` di `src/lib/mioAllenamento.js` — oggi quello da fare, se no
   quello di oggi fatto (con la spunta), se no il prossimo da fare. Niente → niente card.
+- **La card è pigra** (`lazy` in `Home.jsx`): porta `codiceWorkout` (stima, archivio…) e importata
+  in testa aggiungeva 8 kB a `index` anche per l'atleta. Dopo: `index` 635,59 kB (era 634,11).
+  Test: `HomeChunk.test.jsx`. Il coach compare anche in «In allenamento oggi»: è nella rubrica.
+- ⚠️ Limite noto: se lo stesso workout è assegnato a sé due volte (oggi e un altro giorno), la scheda
+  apre l'assegnazione più lontana (`fetchWorkout` prende la più recente per data), come per gli atleti.
 - Tocco → `/workout/<id>?athlete_id=<me>`: lì `isOwnProfile` dà timer, «Fatto» e foglio RPE
   (`scheda-workout.md`). Test: `HomeMioAllenamento.test.jsx`, `mioAllenamento.test.js`.
 - Spec e piano: `docs/superpowers/specs/2026-11-18-coach-si-allena-design.md`,

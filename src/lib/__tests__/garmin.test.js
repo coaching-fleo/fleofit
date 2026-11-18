@@ -4,7 +4,7 @@ import {
   ritornoGarmin, rottaDaDeepLinkGarmin, MESSAGGI_ESITO, messaggioEsito, dataCollegamento,
   serveRecupero, recuperaAttivitaGarmin,
 } from '../garmin'
-import { puoCollegareGarmin } from '../garmin'
+import { puoCollegareGarmin, recuperoPerRuolo } from '../garmin'
 import { MOTIVI_ERRORE } from '../../../supabase/functions/_shared/garminRegole.ts'
 
 // Perché questi test esistono
@@ -203,5 +203,18 @@ describe('puoCollegareGarmin', () => {
   })
   it('ruolo sconosciuto: no', () => {
     expect(puoCollegareGarmin({ role: null, simulando: false, haProfilo: true })).toBe(false)
+  })
+})
+
+// Il recupero giornaliero delle attività (App.jsx) vale anche per il coach che si
+// allena: senza, un invio perso di Garmin non tornava mai (revisione del 18/11/2026).
+// Lo staff senza profilo riceve un 403 e il giorno si segna fatto lo stesso.
+describe('recuperoPerRuolo', () => {
+  it('atleta, coach e admin sì; nessun ruolo no', () => {
+    expect(recuperoPerRuolo('athlete')).toBe(true)
+    expect(recuperoPerRuolo('coach')).toBe(true)
+    expect(recuperoPerRuolo('admin')).toBe(true)
+    expect(recuperoPerRuolo(null)).toBe(false)
+    expect(recuperoPerRuolo(undefined)).toBe(false)
   })
 })
