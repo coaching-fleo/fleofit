@@ -28,7 +28,7 @@ Garmin aperto a tutti, bug di «Visualizza come atleta». Piano di partenza:
 - Ogni test nuovo si vede fallire rompendo il codice apposta.
 
 ## Decisioni del committente ancora aperte
-1. **Nome sullo Store** (prima di C3): es. «PUSHFIT: Hybrid Training», «PUSHFIT Coach».
+1. **Nome sullo Store** (prima di C3): ✅ **«PUSHFIT: Training»** (deciso il 18/11/2026).
 2. **Indirizzo mittente** (prima di A3): proposta `noreply@pushfit.it`, nome «PUSHFIT».
 3. **Quando togliere `GARMIN_MINUTI_MINIMI`** (A6): a fine prove.
 
@@ -125,7 +125,7 @@ Android (`versionName "1.0"`) si allinea nel piano E.
 - [ ] Timer con Live Activity: testi PUSHFIT, giallo nuovo.
 
 ### C2 · Controlli prima dell'archive 🤖
-- [ ] I tre `grep` di CLAUDE.md §9 (demo presente in `dist`, niente ambiente di prova né HealthKit in `ios/App/App/public`).
+- [x] (18/11, build delle 16:56 con `2a2c5e8`, copia iOS identica a `dist`) I tre `grep` di CLAUDE.md §9 (demo presente in `dist`, niente ambiente di prova né HealthKit in `ios/App/App/public`).
 - [x] `ios/App/App/App.entitlements` ha i tre `applinks:` (`pushfit.it`, `www.pushfit.it`, `fleofit.vercel.app`).
 - [ ] 👤 Archive da Xcode, export, poi `tools/verifica-ipa.sh <file.ipa>` → nessun errore.
 - [ ] Stato della versione su App Store Connect come da `docs/memoria/app-store.md`.
@@ -133,7 +133,7 @@ Android (`versionName "1.0"`) si allinea nel piano E.
 ### C3 · App Store Connect 👤
 - [ ] Informazioni app: **Nome** = decisione 1, sottotitolo (≤30 caratteri, niente «Hyrox»),
   **URL privacy** `https://pushfit.it/privacy`; URL di supporto/marketing su `pushfit.it`.
-- [ ] Versione 1.2.5: screenshot nuovi col logo PUSHFIT (quelli con FLEOFIT vanno tolti), novità di B2, parole chiave.
+- [ ] Versione 1.2.5: screenshot nuovi col logo PUSHFIT (🤖 fatti il 18/11: `tools/app-store-schermate/out/`, 10 da 1206×2622) (quelli con FLEOFIT vanno tolti), novità di B2, parole chiave.
 - [ ] Note per la revisione: cambio di nome dello stesso titolare; account `demo@fleofit.it`
   invariato. ⚠️ Corretto il 18/11: dopo «il coach si allena» `demo@fleofit.it` (admin **con** riga
   `athletes`) **vede** la riga Garmin in Impostazioni, e Garmin è nelle novità: la nota deve dire che

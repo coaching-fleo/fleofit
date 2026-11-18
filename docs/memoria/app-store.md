@@ -601,3 +601,26 @@ chi ne aggiunge uno lo mette in tutti e due i posti. 🔴 `fleofit.vercel.app` *
 rimandato** a pushfit.it finché ci sono app con quel dominio negli entitlements: Apple
 non segue i rimandi quando legge il file. Con la 1.2.5 va cambiato su App Store
 Connect anche l'URL della privacy: `https://pushfit.it/privacy`.
+
+## Screenshot dello Store (18/11/2026, 1.2.5, logo PUSHFIT)
+`tools/app-store-schermate/cattura.mjs` fa 10 catture iPhone 6,3″ (1206×2622, quella che il pannello ha accettato il 18/11: la 6,9″ 1320×2868 è stata RIFIUTATA; `MISURA=69` la rifà comunque), senza alfa, in
+`tools/app-store-schermate/out/` (fuori da git), dall'ambiente di prova: server `store-coach`
+(5192) e `store-atleta` (5193, Sara) di `.claude/launch.json`. `VITE_DEMO_SPENTE=1` tiene spente
+Scarpe e Team come nell'app inviata: **uno screenshot non deve mostrare una funzione che il revisore
+non trova** (2.3.1). Le foto degli atleti finti sono foto Unsplash a licenza libera
+(`tools/demo-foto/fonti.txt`); i disegni `.svg` di prima restano lì. puppeteer-core non è fra le
+dipendenze: si installa in una cartella a parte e la si passa come primo argomento.
+Con titolo sopra (le «intestazioni» delle linee guida Apple): `tools/app-store-schermate/intestazioni.mjs`
+prende le catture e scrive `out/1206x2622-titoli/` alla stessa misura. Logo, etichetta ATLETA/COACH,
+titolo con la parola chiave in giallo (`TITOLI` nello script), telefono che esce dal fondo.
+Niente «Hyrox» nei titoli.
+**Intestazione della pagina prodotto + risultati di ricerca** (creative asset di iOS 27): si usa
+UN asset «Universal» per entrambi, 16:9 **5244×2950 PNG senza alfa**, area sicura 1402×962 a
+(1921, 660) — testo e telefono solo lì, il resto è sfondo che viene tagliato (21:9 nell'intestazione,
+3:2 nella ricerca). Specifiche: developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications.
+`tools/app-store-schermate/universale.mjs` lo fa dalle catture 1206×2622 (`--guide` disegna l'area
+sicura) e fa anche l'intestazione sola 21:9 **3840×1646** (area sicura 1646×661 a (1097, 493)). Come
+Apple taglia davvero lo si vede solo con l'anteprima di App Store Connect. Scelte del committente
+del 18/11, dopo una prima versione bocciata: **logo molto grande** al centro (riempie l'area sicura),
+«Allenati. Migliora.», Home coach e Home atleta ai lati, **niente persone** (le foto degli atleti sullo
+sfondo erano «oscene»), **niente timer**.

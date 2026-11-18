@@ -26,3 +26,4 @@ dist-ssr
 # Tooling locale (skill Claude e stato del pannello design)
 .claude/
 .impeccable/config.local.json
+tools/app-store-schermate/out/

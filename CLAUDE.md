@@ -32,6 +32,8 @@
   stato registrato qui, da confermare su App Store Connect). Novità in [DEVLOG.md](DEVLOG.md),
   contate da `c315006`. ✅ **La 1.2.4 è approvata** (registrato il 16/11/2026). Il prossimo aggiornamento
   sarà la **1.2.5**: porta gli universal link del link d'invito, controlli in `docs/memoria/app-store.md`.
+  🏷️ **Nome sullo Store: «PUSHFIT: Training»** (deciso dal committente il 18/11/2026, con la 1.2.5;
+  niente «Hyrox», marchio registrato). Vale anche per il Play Store.
   ⚠️ Rischio noto, accettato il 26/10: `demo@fleofit.it` è admin e dalla 1.2.2 può aggiungere e
   togliere coach e spostare atleti (Impostazioni → Coach).
   ⚠️ Prima di archiviare si controlla lo stato della versione su App Store Connect

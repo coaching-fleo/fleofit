@@ -136,12 +136,14 @@ const workouts = () => [
 
 // ── gli atleti ──────────────────────────────────────────────────────────────
 
-// I ritratti (disegni, nessuna persona vera) stanno in tools/demo-foto, come le foto delle
-// scarpe: li serve solo il server di sviluppo. Rigenerarli: python3 tools/demo-foto/genera.py
+// I ritratti stanno in tools/demo-foto, come le foto delle scarpe: li serve solo il server di
+// sviluppo e non finiscono nell'app. Dal 18/11/2026 sono foto Unsplash a licenza libera
+// (fonti in tools/demo-foto/fonti.txt), per gli screenshot dell'App Store; i disegni .svg
+// di prima restano lì (python3 tools/demo-foto/genera.py).
 const RITRATTI = ['at-marco', 'at-luca', 'at-giulia', 'at-andrea', 'at-sara', 'at-paolo',
   'at-chiara', 'at-elena', 'at-davide', 'at-sofia']
-const ritratto = (id) => (id === COACH ? '/tools/demo-foto/coach-federico.svg'
-  : RITRATTI.includes(id) ? `/tools/demo-foto/${id}.svg` : null)
+const ritratto = (id) => (id === COACH ? '/tools/demo-foto/coach-federico.jpg'
+  : RITRATTI.includes(id) ? `/tools/demo-foto/${id}.jpg` : null)
 
 const A = (id, name, surname, extra = {}) => ({
   id, name, surname, birth_date: '1995-04-12', weight: '74', height: '178',
@@ -667,7 +669,8 @@ export function semi() {
     scarpe_atleta: scarpe_atleta(),
     scarpe_uso: scarpe_uso(aws),
     // Nella demo le Scarpe sono accese: l'interruttore vero (funzioni_app) parte spento.
-    funzioni_app: [{ nome: 'scarpe', stato: 'tutti', aggiornato_at: fa(1) }, { nome: 'team', stato: 'tutti', aggiornato_at: fa(1) }],
+    // Con VITE_DEMO_SPENTE=1 (gli screenshot dell'App Store) restano spente come nell'app inviata.
+    funzioni_app: ['scarpe', 'team'].map((nome) => ({ nome, stato: import.meta.env.VITE_DEMO_SPENTE ? 'spenta' : 'tutti', aggiornato_at: fa(1) })),
     team: team(),
     team_membri: team_membri(),
     team_sfide: team_sfide(),
