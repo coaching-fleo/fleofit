@@ -614,16 +614,15 @@ attività e invii), senza toccare schema né policy (`stato_garmin` ammette già
 - **Server**: `haProfiloAtleta(client, id)` in `_shared/garminRegole.ts`. `garmin-auth` e
   `garmin-training` (`invia_workout`) rifiutano lo staff **solo se non ha il profilo atleta**
   (403 «… da un account con il profilo atleta»); l'atleta non fa letture in più.
-- ⏳ **Da pubblicare**: `garmin-auth` e `garmin-training` (sì del committente). Finché non sono
-  pubblicate, un coach che tocca «Collega» riceve il 403 vecchio. Sul telefono la riga arriva con
-  l'aggiornamento dell'app che contiene questo lavoro.
+- ✅ **Pubblicate il 18/11/2026** (sì del committente): `garmin-training` e `garmin-auth`
+  (`--no-verify-jwt`), `send-reminders`; senza accesso rispondono 401. Sul telefono la riga arriva
+  con l'aggiornamento dell'app che contiene questo lavoro (sul web dopo `app:main`).
 - **Recupero giornaliero** (`recuperaAttivitaGarmin` in `App.jsx`): ora per tutti i ruoli
   (`recuperoPerRuolo`), altrimenti al coach un invio perso di Garmin non tornava mai. Lo staff
   senza profilo riceve 403 e il giorno si segna fatto.
 - **Mai un avviso a sé stesso**: quando Garmin completa da solo l'allenamento del coach,
   `garmin-webhook` chiama `coach_notification`; `destinatariNotificaCoach` (`_shared/staff.ts`)
-  ora toglie dai destinatari chi si è allenato. ⏳ Serve pubblicare anche **`send-reminders`**
-  (tocca anche la web app: è condivisa).
+  ora toglie dai destinatari chi si è allenato (`send-reminders` pubblicata il 18/11/2026).
 - ⚠️ Rimasto aperto (minore): `scollega` di uno staff la cui riga `athletes` è nel cestino dà 403;
   i token restano finché non passa la cancellazione.
 - Test: `garmin.test.js`, `garminServer.test.js`, `staffServer.test.js`, `ImpostazioniGarmin.test.jsx`.
