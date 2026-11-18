@@ -602,3 +602,19 @@ Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
 
 - **18/11/2026 — portale aggiornato a PUSHFIT**: icona `https://pushfit.it/web-app-manifest-192x192.png`,
   sito e privacy su `pushfit.it`. Redirect URI e webhook **non toccati** (sono di Supabase).
+
+## Il coach collega il suo Garmin (18/11/2026)
+
+Il coach si allena anche lui (`home-coach.md`). Prima lo staff era rifiutato apposta in tre punti;
+ora vale la regola «**staff solo con una riga attiva in `athletes`**» (lì sono legati collegamento,
+attività e invii), senza toccare schema né policy (`stato_garmin` ammette già `atleta = auth.uid()`).
+- **App**: `puoCollegareGarmin({ role, simulando, haProfilo })` di `src/lib/garmin.js`. In Impostazioni
+  lo staff legge la propria riga `athletes`; l'atleta no. L'admin in «Simula atleta» resta senza riga
+  Garmin. Il consenso privacy resta su `atletaVero`.
+- **Server**: `haProfiloAtleta(client, id)` in `_shared/garminRegole.ts`. `garmin-auth` e
+  `garmin-training` (`invia_workout`) rifiutano lo staff **solo se non ha il profilo atleta**
+  (403 «… da un account con il profilo atleta»); l'atleta non fa letture in più.
+- ⏳ **Da pubblicare**: `garmin-auth` e `garmin-training` (sì del committente). Finché non sono
+  pubblicate, un coach che tocca «Collega» riceve il 403 vecchio. Sul telefono la riga arriva con
+  l'aggiornamento dell'app che contiene questo lavoro.
+- Test: `garmin.test.js`, `garminServer.test.js`, `ImpostazioniGarmin.test.jsx`.

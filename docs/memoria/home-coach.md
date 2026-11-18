@@ -427,3 +427,20 @@ Anche la Home SOTTO il foglio torna dov'era. Col foglio aperto il body è
 riscrive in `body.style.top` (in un `useEffect`, che gira DOPO il blocco del
 foglio figlio), e `useScorrimentoBloccato` alla chiusura rilegge `top` invece
 della `y` dell'apertura (che era la pagina corta, cioè 0).
+
+## Il coach si allena anche lui: «Il tuo allenamento» (18/11/2026)
+
+Richiesta del committente: il coach si assegna i workout e li fa come un atleta. Nessuna migrazione:
+6 account su 8 dello staff hanno già una riga `athletes` e le policy ammettono `auth.uid() = athlete_id`.
+- **Card «Il tuo allenamento»** (`CartaMioAllenamento.jsx`) in testa a TUTTE le Home del coach:
+  telefono (primo figlio della `cascata`, prima dei banner Live) e desktop (prop `mio` di
+  `HomeRiepilogoDesktop` e `HomeCoachDesktop`, subito dopo l'`<header>`). Riepilogo e classica uguali.
+- **Una lettura sua** in `Home.jsx` (`athlete_workouts` con `athlete_id = user.id`, da oggi, 20 righe),
+  indipendente dai conti del cruscotto (scelta del committente: quelli sono pigri e arrivano a 14 giorni).
+  Il filtro su `athlete_id` si ripete in JS: la card non deve mai mostrare l'allenamento di un altro.
+- **Quale riga**: `scegliMioAllenamento` di `src/lib/mioAllenamento.js` — oggi quello da fare, se no
+  quello di oggi fatto (con la spunta), se no il prossimo da fare. Niente → niente card.
+- Tocco → `/workout/<id>?athlete_id=<me>`: lì `isOwnProfile` dà timer, «Fatto» e foglio RPE
+  (`scheda-workout.md`). Test: `HomeMioAllenamento.test.jsx`, `mioAllenamento.test.js`.
+- Spec e piano: `docs/superpowers/specs/2026-11-18-coach-si-allena-design.md`,
+  `docs/superpowers/plans/2026-11-18-coach-si-allena.md`.

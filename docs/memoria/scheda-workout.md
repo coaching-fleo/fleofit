@@ -853,3 +853,12 @@ lo ha deciso lui. Spec e piano: `docs/superpowers/specs/2026-11-11-template-pdf-
   demo) diventa un messaggio in italiano; la policy di lettura fa leggere all'atleta anche il
   template di chi gli ha scritto un workout, se no un workout scritto da un admin per
   l'atleta di un altro coach usciva senza nome.
+
+## Il coach sul proprio allenamento (18/11/2026)
+
+Con `athlete_id` = sé stesso (`isOwnProfile`) il coach ha quello che ha l'atleta: scarpe del
+completamento, risultato della sfida del team nel foglio RPE, il link «Com'è andata?» (`?rpe=1`) che
+aspetta i dati Garmin. Prima questi tre volevano `role === 'athlete'`. **Restano solo per l'atleta**
+gli avvisi al coach (`coach_notification` di completato e nota, `avvisaCoachSpostamento`): arriverebbero
+a sé stesso. Test: `WorkoutDetailGarmin.test.jsx` (il link per il coach) e
+`WorkoutDetailNotaCompletamento.test.jsx` (nessun `send-reminders` quando il coach chiude il suo).

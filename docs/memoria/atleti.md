@@ -147,3 +147,11 @@ coach per assegnare lo stesso allenamento a più persone». Disegno e piano:
 - **Anche dalla scheda atleta** (16/11/2026): voce «Team e gruppi» e riga «Gruppi: …», il foglio
   `FoglioTeamGruppi` mette o toglie quell'atleta e crea un gruppo con dentro lui
   (`docs/memoria/scheda-atleta.md`, «9-team-e-gruppi»).
+
+## «Tu» in cima (18/11/2026)
+
+Il coach si allena anche lui (`home-coach.md`, «Il tuo allenamento»): nella lista Atleti (telefono e
+desktop) e nel foglio «Assegna Workout» di `WorkoutDetail` chi guarda va **in cima** con la pillola
+«Tu» (`PillolaTu.jsx`, badge giallo del §6). L'ordine lo fa `primaIo(atleti, ioId)` di
+`src/lib/rigaAtleta.js` (gli altri restano nel loro ordine). Vale anche con la ricerca. Chi non ha una
+riga `athletes` (2 account dello staff al 18/11/2026) semplicemente non compare.
