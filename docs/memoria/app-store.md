@@ -591,3 +591,13 @@ nuovo **arriva con la prossima versione sullo Store**: il revisore, se chiede a 
 QR della TV nel testo. Android non chiede nessun permesso (Google Code Scanner). Dettagli:
 `scheda-workout.md`, 9-tv-qr. Prima di archiviare, controllare che `LettoreQR.swift` sia fra i file del
 target (quattro voci nel `pbxproj`).
+
+### Il dominio pushfit.it negli universal link (18/11/2026)
+`App.entitlements` ora ha `applinks:pushfit.it`, `applinks:www.pushfit.it` e
+`applinks:fleofit.vercel.app` (per i link già mandati). Il file
+`/.well-known/apple-app-site-association` è servito da tutti e tre (stesso progetto
+Vercel). I domini che l'app riconosce sono in `HOST_SITO` di `src/lib/linkInvito.js`:
+chi ne aggiunge uno lo mette in tutti e due i posti. 🔴 `fleofit.vercel.app` **non va
+rimandato** a pushfit.it finché ci sono app con quel dominio negli entitlements: Apple
+non segue i rimandi quando legge il file. Con la 1.2.5 va cambiato su App Store
+Connect anche l'URL della privacy: `https://pushfit.it/privacy`.

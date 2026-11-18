@@ -108,7 +108,7 @@ export default function FoglioCollegaTV({ onCollega, onChiudi, erroreIniziale = 
               <MonitorUp size={22} className="text-brand shrink-0" aria-hidden="true" /> Trasmetti in TV
             </h3>
             <p className="mt-1 text-sm text-muted text-pretty">
-              Sul browser della TV apri <strong className="text-white">fleofit.vercel.app/tv</strong>
+              Sul browser della TV apri <strong className="text-white">pushfit.it/tv</strong>
               {stato === 'codice' ? ' e scrivi qui il codice che vedi.' : ': compare un codice con il suo QR.'}
             </p>
           </div>

@@ -19,7 +19,7 @@ import { it } from 'date-fns/locale'
 export const VERSIONE_CONSENSO = 1
 
 /** L'informativa pubblicata: assoluta, perché dentro l'app nativa `/privacy` non esiste. */
-export const URL_INFORMATIVA = 'https://fleofit.vercel.app/privacy'
+export const URL_INFORMATIVA = 'https://pushfit.it/privacy'
 
 /**
  * `true` se all'utente va chiesto il consenso prima di entrare.

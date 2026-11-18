@@ -20,7 +20,7 @@ export const GARMIN = {
 export const PERMESSI_NOTI = ['ACTIVITY_EXPORT', 'HEALTH_EXPORT', 'WORKOUT_IMPORT'];
 
 /** Le origini web sempre ammesse come ritorno (sito e sviluppo locale); altre arrivano da `extra` (GARMIN_ORIGINI_EXTRA). */
-const ORIGINI_FISSE = ['https://fleofit.vercel.app', 'http://localhost:5173'];
+const ORIGINI_FISSE = ['https://pushfit.it', 'https://www.pushfit.it', 'https://fleofit.vercel.app', 'http://localhost:5173'];
 
 export const MOTIVI_ERRORE = ['annullato', 'scaduto', 'altro_account', 'garmin'];
 

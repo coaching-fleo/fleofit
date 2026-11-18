@@ -1,7 +1,8 @@
 /**
  * Il link d'invito che il coach manda su WhatsApp, e dove porta.
  *
- * Il link è `https://fleofit.vercel.app/invito/<codice>` (dal 16/11/2026; prima
+ * Il link è `https://pushfit.it/invito/<codice>` (dal 18/11/2026; dal 16/11 era
+ * su `fleofit.vercel.app`, che resta valido; prima
  * era `/?invite=<codice>`, che resta valido perché è già nelle chat degli
  * atleti). La pagina `/invito/:codice` (src/pages/Invito.jsx) sceglie per
  * dispositivo: dal PC prosegue sul sito, dal telefono apre l'app o lo Store.
@@ -13,7 +14,14 @@ import { normalizzaCodice } from './codiceInvito'
 import { SCHEMA, eNostroProtocollo } from './schema'
 
 /** L'indirizzo del sito: il link si copia uguale dall'app e dal browser. */
-export const SITO = 'https://fleofit.vercel.app'
+export const SITO = 'https://pushfit.it'
+
+/**
+ * I domini del sito che l'app riconosce come suoi negli universal link: quello
+ * di oggi, il www e `fleofit.vercel.app`, che resta nei link già mandati.
+ * ⚠️ Vanno anche in `applinks:` di ios/App/App/App.entitlements.
+ */
+export const HOST_SITO = ['pushfit.it', 'www.pushfit.it', 'fleofit.vercel.app']
 
 /** Il pacchetto Android (`applicationId` in android/app/build.gradle). */
 export const PACCHETTO_ANDROID = 'it.federicoleo.fleofit'
@@ -88,7 +96,7 @@ export function codiceDaLinkApp(indirizzo) {
   try { url = new URL(indirizzo) } catch { return null }
   let percorso
   if (eNostroProtocollo(url.protocol)) percorso = `/${url.host}${url.pathname}`
-  else if (url.protocol === 'https:' && url.host === new URL(SITO).host) percorso = url.pathname
+  else if (url.protocol === 'https:' && HOST_SITO.includes(url.host.toLowerCase())) percorso = url.pathname
   else return null
   const m = percorso.match(/^\/invito\/([^/?#]+)\/?$/i)
   if (!m) return null

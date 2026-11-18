@@ -102,7 +102,7 @@ async function chiediBackfill(access: string, athleteId: string): Promise<void> 
 }
 
 /** Dove si torna quando non si sa da dove si veniva: mai verso un indirizzo non validato. */
-const RITORNO_DI_RISERVA = 'https://fleofit.vercel.app'
+const RITORNO_DI_RISERVA = 'https://pushfit.it'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

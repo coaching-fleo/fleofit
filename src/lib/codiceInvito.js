@@ -26,7 +26,7 @@ export const GRUPPO_CODICE = 4
  *
  * 🔴 Accetta anche il LINK, e non è una comodità: è come il codice arriva
  * davvero. Impostazioni → Codici invito offre «Copia codice» **e** «Copia
- * link», e il link (`https://fleofit.vercel.app/?invite=7KQ2M4XB`) è quello
+ * link», e il link (`https://pushfit.it/?invite=7KQ2M4XB`) è quello
  * che si manda su WhatsApp, perché apre l'app da solo. Chi lo incolla in un
  * campo che tiene solo lettere e numeri si ritrova dentro `HTTPSFLEOFI` — un
  * codice sbagliato, otto caratteri come quello giusto, e nessun errore che

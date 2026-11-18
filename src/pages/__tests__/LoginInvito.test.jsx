@@ -55,7 +55,7 @@ describe('Il benvenuto', () => {
     const apri = vi.spyOn(window, 'open').mockImplementation(() => null)
     montaPagina(<Login />)
     await userEvent.click(screen.getByRole('button', { name: /informativa privacy/i }))
-    expect(apri).toHaveBeenCalledWith('https://fleofit.vercel.app/privacy', '_blank', 'noopener')
+    expect(apri).toHaveBeenCalledWith('https://pushfit.it/privacy', '_blank', 'noopener')
     expect(screen.queryByText(/Termini/)).not.toBeInTheDocument()
     apri.mockRestore()
   })

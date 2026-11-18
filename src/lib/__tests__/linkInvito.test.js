@@ -13,7 +13,7 @@ const PC = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/
 
 describe('linkInvito', () => {
   it('copia il link della pagina ponte, sempre sul sito', () => {
-    expect(linkInvito(' 7kq2-m4xb')).toBe('https://fleofit.vercel.app/invito/7KQ2M4XB')
+    expect(linkInvito(' 7kq2-m4xb')).toBe('https://pushfit.it/invito/7KQ2M4XB')
   })
   it('il sito riceve il codice dove l’ha sempre ricevuto', () => {
     expect(loginConCodice('7kq2m4xb')).toBe('/login?invite=7KQ2M4XB')
@@ -49,6 +49,8 @@ describe('codiceDaLinkApp', () => {
   it('legge il deep link e l’universal link', () => {
     expect(codiceDaLinkApp(linkApp('7KQ2M4XB'))).toBe('7KQ2M4XB')
     expect(codiceDaLinkApp('https://fleofit.vercel.app/invito/7kq2m4xb')).toBe('7KQ2M4XB')
+    expect(codiceDaLinkApp('https://pushfit.it/invito/7kq2m4xb')).toBe('7KQ2M4XB')
+    expect(codiceDaLinkApp('https://www.pushfit.it/invito/7kq2m4xb')).toBe('7KQ2M4XB')
   })
   it('🔴 lascia stare gli altri link dell’app', () => {
     expect(codiceDaLinkApp('fleofit://login-callback#access_token=x')).toBeNull()

@@ -17,7 +17,7 @@ import logo from '../assets/marchio/pushfit-logo.webp'
 
 // La pagina principale del sito (dal 18/11/2026): «/» e «/benvenuto» sono la
 // stessa pagina, e il canonical dice ai motori di ricerca di contare la radice.
-const URL_PAGINA = 'https://fleofit.vercel.app/'
+const URL_PAGINA = 'https://pushfit.it/'
 const TITOLO_SEO = `App per coach Hyrox e running | ${NOME_APP}`
 const DESCRIZIONE_SEO = 'Crea workout Hyrox, di corsa e da palestra a blocchi, assegnali ai tuoi atleti e segui aderenza, fatica e andamento. L\'app per coach, in italiano.'
 
@@ -133,7 +133,7 @@ function useTestaPagina() {
     meta('property', 'og:title', TITOLO_SEO)
     meta('property', 'og:description', DESCRIZIONE_SEO)
     meta('property', 'og:url', URL_PAGINA)
-    meta('property', 'og:image', 'https://fleofit.vercel.app/web-app-manifest-512x512.png')
+    meta('property', 'og:image', 'https://pushfit.it/web-app-manifest-512x512.png')
     meta('name', 'twitter:card', 'summary')
     const link = document.createElement('link')
     link.rel = 'canonical'; link.href = URL_PAGINA
@@ -470,7 +470,7 @@ function SezioneComputer() {
       </div>
 
       <figure className="lp-finestra">
-        <div className="lp-finestra-barra" aria-hidden="true"><i /><i /><i /><span>fleofit.vercel.app/create</span></div>
+        <div className="lp-finestra-barra" aria-hidden="true"><i /><i /><i /><span>pushfit.it/create</span></div>
         <img src={builderDesktop} alt="Il builder dei workout dal computer: blocchi Hyrox, durata stimata, carico, RPE atteso e blocchi da aggiungere" loading="lazy" decoding="async" />
       </figure>
 
