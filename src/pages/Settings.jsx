@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { chiudiAnteprima } from '../lib/anteprimaAtleta'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
@@ -346,6 +347,7 @@ export default function Settings() {
       message: "Sei sicuro di voler uscire dal tuo account?",
       onConfirm: async () => {
         await supabase.auth.signOut()
+        chiudiAnteprima()
         navigate('/login')
       }
     })
@@ -385,6 +387,7 @@ export default function Settings() {
           return
         }
         await supabase.auth.signOut()
+        chiudiAnteprima()
         navigate('/login')
       }
     })
@@ -410,6 +413,7 @@ export default function Settings() {
           return
         }
         await supabase.auth.signOut()
+        chiudiAnteprima()
         navigate('/login')
       }
     })

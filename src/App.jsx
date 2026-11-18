@@ -104,6 +104,7 @@ import SoloSeAccesa from './components/SoloSeAccesa'
 import Logo from './components/Logo'
 import { eNostroProtocollo } from './lib/schema'
 import { mostraLandingAllaRadice } from './lib/landingRadice'
+import { chiudiAnteprimaSeNonAdmin } from './lib/anteprimaAtleta'
 
 // I campi del profilo. ⚠️ `min-w-0` e `appearance-none` non sono cosmetica: su
 // iOS un `<input type="date">` ignora `w-full` e si allarga quanto il suo
@@ -407,6 +408,7 @@ function ProtectedRoute() {
       const ricordato = ruoloSalvato(session.user.id)
         ?? (nomeSalvato ? (ruoloDb ?? metaRuolo ?? 'athlete') : null)
       if ((senzaConnessione || erroreAtleta) && ricordato) {
+        chiudiAnteprimaSeNonAdmin(ricordato)
         const meta = session.user.user_metadata || {}
         const override = localStorage.getItem('adminRoleOverride')
         setRole(ricordato === 'admin' && override === 'athlete' ? 'athlete' : ricordato)
@@ -417,6 +419,9 @@ function ProtectedRoute() {
         return
       }
       const isAdmin = ruoloDb !== null
+      // La spunta «Visualizza come atleta» vale solo per un admin vero
+      // (src/lib/anteprimaAtleta.js): un atleta entrato dopo non la eredita.
+      chiudiAnteprimaSeNonAdmin(ruoloDb)
 
       if (!isAdmin) {
         if (!rigaAtleta) {

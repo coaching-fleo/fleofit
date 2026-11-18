@@ -335,3 +335,11 @@ accorcia); su iOS, dove si accorcia da sé, riporta in vista il campo **e** il b
 «Aggiungi coach» scrivendo `scrollTop` della lista a mano, ripetendo per ~1 s a tastiera
 aperta (in Capacitor `resize` non arriva e la nuova altezza si assesta quando vuole).
 Il campo ha `enterKeyHint="send"`: Invio manda il modulo. ⚠️ Non provato sul telefono.
+
+## «Visualizza come atleta» non sopravvive all'uscita (18/11/2026)
+Segnalazione del committente: sullo stesso telefono, admin con la spunta accesa → esce →
+entra un atleta vero, e la spunta era ancora lì. Le Impostazioni leggono
+`role === 'athlete'` + `adminRoleOverride` come «admin in anteprima» (`adminReale`,
+`atletaVero`), quindi all'atleta mostravano le righe admin e nascondevano Garmin e consenso.
+Ora `src/lib/anteprimaAtleta.js`: `chiudiAnteprimaSeNonAdmin` in `ProtectedRoute` (anche nel
+ramo senza rete) e `chiudiAnteprima` dopo ogni `signOut` delle Impostazioni.
