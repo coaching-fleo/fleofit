@@ -5,7 +5,16 @@
 > invio dei workout all'orologio) **non esistono ancora**: oggi l'atleta collega e scollega, e
 > il coach vede chi è collegato. Nessun dato Garmin viene usato.
 
-## 🟡 Stato: attivo in prova (28/10/2026)
+## 🟢 Stato: aperto a tutti gli atleti (18/11/2026)
+- ✅ **18/11/2026**: tolto `GARMIN_ATLETI_PROVA` → ogni atleta con l'app dalla 1.2.3 può collegarsi.
+  Prima: la scritta «security review» del dominio era sparita e i 403 fermi dal 17/11 alle 16:08,
+  i dati arrivano di nuovo (controllato dal committente). Etichette privacy «Salute e fitness»
+  pubblicate su App Store Connect. `garmin-auth`, `garmin-webhook` e `garmin-training`
+  ripubblicate (nome PUSHFIT, `pushfit.it` fra le origini). ⏳ **`GARMIN_MINUTI_MINIMI` = 1
+  lasciato apposta per le prove**: vale per TUTTI, un'attività da 1 minuto completa un
+  workout. Da togliere (`secrets unset GARMIN_MINUTI_MINIMI`) quando il committente ha finito.
+
+## Prima: attivo in prova (28/10/2026)
 - 🔄 **17/11/2026: Garmin ha cambiato il programma** (pagine del developer portal datate 06/10/2026).
   Non c'è più una «richiesta di produzione»: c'è **Starter Access** (gratis, fino a **1.000** utenti
   collegati, solo push, **niente storico**, nessun supporto, app marcata «unverified») ed
