@@ -103,14 +103,14 @@ solo dati finti).
 - [x] `npx vitest run src/lib/__tests__/marchio.test.js` e i test della demo → PASS.
 - [x] Commit per nome.
 
-### B2 · Versione e novità
+### B2 · Versione e novità ✅ (18/11/2026: 1.2.5 in quattro configurazioni, novità in DEVLOG)
 **Files:** `ios/App/App.xcodeproj/project.pbxproj` (`MARKETING_VERSION = 1.2.5` nelle tre
 configurazioni, `CURRENT_PROJECT_VERSION = 1`), `DEVLOG.md` (novità contate dalla 1.2.4).
 Android (`versionName "1.0"`) si allinea nel piano E.
-- [ ] Novità in italiano, al massimo 5 righe: nome e aspetto nuovi PUSHFIT; collegamento Garmin
+- [x] Novità in italiano, al massimo 5 righe: nome e aspetto nuovi PUSHFIT; collegamento Garmin
   per tutti; il link d'invito apre l'app; le mail di conferma portano a una pagina PUSHFIT;
   correzioni («Visualizza come atleta»).
-- [ ] Commit per nome.
+- [x] Commit per nome.
 
 ---
 

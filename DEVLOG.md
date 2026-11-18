@@ -2,8 +2,7 @@
 
 Le modifiche fatte dopo la versione **1.2.0**, in vendita sullo Store: build `1.2.0 (3)`, archiviata il
 09/10/2026 alle 10:40 dal commit `799b119`. La **1.2.1** è stata inviata il 14/10/2026 dal codice di
-`c315006`; la **1.2.2** il 26/10/2026 da `261a8e4`. Il prossimo aggiornamento è la **1.2.3**: le voci
-nuove vanno in fondo alla sezione della 1.2.2, sotto un titolo «1.2.3».
+`c315006`; la **1.2.2** il 26/10/2026 da `261a8e4`. Poi 1.2.3 e 1.2.4 (approvate); il prossimo aggiornamento è la **1.2.5**, con le novità qui sotto.
 
 > ⚠️ Fino al 14/10/2026 questo file contava dalla 1.1.0 e credeva la 1.2.0 mai caricata: era
 > stata caricata e approvata. Le voci già uscite con la 1.2.0 stanno in fondo, per storia.
@@ -91,6 +90,20 @@ Da fare DOPO che il committente ha applicato `multi_coach_2026-10-15.sql`; prima
 - Scheda di un atleta da admin: «Coach: <nome>» apre la scelta; sceglierne un altro sposta l'atleta (la riga si aggiorna). Un coach non vede la riga.
 - Nessun coach compare fra i propri atleti (Atleti, Home, Analisi, report, messaggi).
 - Tasto indietro Android: chiude il foglio.
+
+## Testo per App Store Connect — «Novità di questa versione» (1.2.5)
+
+> Preparato il 18/11/2026: ciò che è entrato dopo la 1.2.4 (archiviata dal codice di `3bad724`).
+> Garmin c'è perché dal 18/11 il collegamento è aperto a tutti (etichette privacy fatte).
+> Scarpe e Team restano fuori: si accendono da `funzioni_app`, non con l'aggiornamento.
+
+```
+• Nuovo nome e nuovo aspetto: FLEOFIT diventa PUSHFIT.
+• Collega il tuo orologio Garmin: gli allenamenti di corsa arrivano sull'orologio e le attività tornano nell'app.
+• Il link d'invito del coach apre direttamente l'app.
+• Per i coach: la Libreria con archivio, modelli ed extra, i gruppi di atleti per assegnare in un tocco e il proprio nome sul PDF delle schede.
+• Correzioni e miglioramenti.
+```
 
 ## Testo per App Store Connect — «Novità di questa versione» (1.2.3)
 
