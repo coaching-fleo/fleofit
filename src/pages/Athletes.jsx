@@ -27,7 +27,7 @@ import { atletiFermi, GIORNI_FERMO, FINESTRA_STORICO } from '../lib/statisticheC
 import {
   settimanaDi, aderenzaSettimana, NESSUNA_ADERENZA, metaAtleta, nomeAtleta,
   iniziali, etichettaPausa, giorniRimastiCestino, conteggiStato, filtraPerNome,
-  GIORNI_CESTINO,
+  GIORNI_CESTINO, primaIo,
 } from '../lib/rigaAtleta'
 import { CampoRicerca, IntestazioneSezione } from '../components/ArchivioUI'
 import { voce } from '../lib/cascata'
@@ -171,8 +171,9 @@ export default function Athletes() {
       : vista === 'eliminati' ? eliminati
       : vista === 'fermi' ? attivi.filter(x => idFermi.has(x.id))
       : attivi
-    return filtraPerNome(base, search)
-  }, [vista, attivi, inSosta, eliminati, idFermi, search])
+    // Chi guarda in testa, come «Tu»: il coach si allena anche lui (18/11/2026).
+    return primaIo(filtraPerNome(base, search), user?.id)
+  }, [vista, attivi, inSosta, eliminati, idFermi, search, user?.id])
 
   // La lista degli in pausa che accompagna la vista principale. Restano
   // visibili di proposito (CLAUDE.md §9-decies): la rubrica è l'unico posto in
@@ -215,7 +216,7 @@ export default function Athletes() {
       ultimo: quandoFa(ultimi.get(x.id), oggi) || (idFermi.has(x.id) ? 'da più di 45 giorni' : null),
       stato, pausaTesto: stato === 'pausa' ? etichettaPausa(x) : null,
       giorniCestino: stato === 'eliminato' ? giorniRimastiCestino(x.deleted_at, caricatoIl) : null,
-      onApri: () => apriAtleta(x.id), onRipristina: () => ripristina(x),
+      onApri: () => apriAtleta(x.id), onRipristina: () => ripristina(x), tu: x.id === user?.id,
     })
     const statoVista = vista === 'pausa' ? 'pausa' : vista === 'eliminati' ? 'eliminato' : 'attivo'
     const righe = [...lista.map(x => riga(x, statoVista)), ...sostaVisibili.map(x => riga(x, 'pausa'))]
@@ -321,7 +322,7 @@ export default function Athletes() {
                         foto={x.photo_url} sigla={iniziali(x)}
                         aderenza={aderenze.get(x.id) || NESSUNA_ADERENZA}
                         fermo={idFermi.has(x.id)} onApri={() => apriAtleta(x.id)}
-                        voce={v()} />
+                        tu={x.id === user?.id} voce={v()} />
                     ))}
                   </div>
                 </>

@@ -464,3 +464,15 @@ describe('Rubrica — tornando indietro riprende dov\'era', () => {
     scrollTo.mockRestore()
   })
 })
+
+describe('Il coach si allena anche lui (18/11/2026)', () => {
+  it('chi guarda sta in cima alla lista, con «Tu»', async () => {
+    dati.atleti = [atleta('a1', 'Anna', 'Bianchi'), atleta('u1', 'Zeno', 'Coach'), atleta('a2', 'Bruno', 'Verdi')]
+    dati.assegnazioni = ['a1', 'u1', 'a2'].map(attivoDiRecente)
+    montaPagina(<Athletes />, { role: 'coach' })
+    const righe = await screen.findAllByRole('button', { name: /Anna|Zeno|Bruno/ })
+    expect(righe[0]).toHaveTextContent('Zeno Coach')
+    expect(within(righe[0]).getByText('Tu')).toBeInTheDocument()
+    expect(screen.getAllByText('Tu')).toHaveLength(1)
+  })
+})

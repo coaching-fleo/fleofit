@@ -202,3 +202,14 @@ export function filtraPerNome(atleti = [], termine = '') {
     return parole.every(p => nome.includes(p))
   })
 }
+
+/**
+ * Chi guarda in testa alla lista (18/11/2026): il coach si allena anche lui,
+ * e nella rubrica e nel foglio «Assegna Workout» si trova subito, come «Tu».
+ * Gli altri restano nell'ordine in cui arrivano; la lista ricevuta non cambia.
+ */
+export function primaIo(atleti, ioId) {
+  const lista = atleti || []
+  const io = ioId ? lista.find(a => a?.id === ioId) : null
+  return io ? [io, ...lista.filter(a => a !== io)] : [...lista]
+}

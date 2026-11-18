@@ -11,6 +11,7 @@
 // consultano una volta al mese — e taceva l'unica cosa per cui il coach apre
 // questa schermata, cioè chi sta seguendo il piano e chi si è fermato.
 
+import PillolaTu from './PillolaTu'
 import { useState } from 'react'
 import { ChevronRight, Plus, Trash2, Pause, User, RotateCcw } from 'lucide-react'
 import { CARTA_RIGA, META, VETRO } from '../lib/stiliCard'
@@ -168,14 +169,17 @@ export function AvatarAtleta({ foto, sigla, spento = false, dimensione = 42 }) {
  * alla frazione dipingerebbe di arancione l'intera rubrica ogni lunedì, cioè
  * un allarme che si accende quando non è successo niente.
  */
-export function RigaAtleta({ nome, meta, foto, sigla, aderenza, fermo, onApri, voce }) {
+export function RigaAtleta({ nome, meta, foto, sigla, aderenza, fermo, onApri, voce, tu = false }) {
   return (
     <button onClick={onApri} style={voce}
       className={`${CARTA_RIGA} w-full text-left px-3.5 py-3 flex items-center gap-3
                   hover:border-white/[.14] transition${voce ? ' cascata-voce' : ''}`}>
       <AvatarAtleta foto={foto} sigla={sigla} />
       <span className="flex-1 min-w-0">
-        <span className="block text-[14.5px] font-bold tracking-[-.01em] text-white truncate">{nome}</span>
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[14.5px] font-bold tracking-[-.01em] text-white truncate">{nome}</span>
+          {tu && <PillolaTu />}
+        </span>
         {meta && (
           <span className="block mt-[3px] text-[12px] font-medium text-muted leading-none truncate">
             {meta}

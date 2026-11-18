@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   settimanaDi, aderenzaSettimana, aderenzaDi, MASSIMO_TACCHE, NESSUNA_ADERENZA,
   etaDi, metaAtleta, nomeAtleta, iniziali, etichettaPausa,
-  giorniRimastiCestino, conteggiStato, filtraPerNome,
+  giorniRimastiCestino, conteggiStato, filtraPerNome, primaIo,
 } from '../rigaAtleta'
 
 // Perché questi test esistono
@@ -254,5 +254,22 @@ describe('filtraPerNome', () => {
 
   it('senza termine torna tutto', () => {
     expect(filtraPerNome(lista, '   ')).toHaveLength(2)
+  })
+})
+
+describe('primaIo', () => {
+  const a = [{ id: 'x' }, { id: 'me' }, { id: 'y' }]
+
+  it('chi guarda va in testa, gli altri restano nel loro ordine', () => {
+    expect(primaIo(a, 'me').map(r => r.id)).toEqual(['me', 'x', 'y'])
+  })
+  it('non tocca la lista che riceve', () => {
+    primaIo(a, 'me')
+    expect(a.map(r => r.id)).toEqual(['x', 'me', 'y'])
+  })
+  it('chi guarda non c’è, o non si sa chi è: lista uguale', () => {
+    expect(primaIo(a, 'zz').map(r => r.id)).toEqual(['x', 'me', 'y'])
+    expect(primaIo(a, null).map(r => r.id)).toEqual(['x', 'me', 'y'])
+    expect(primaIo(null, 'me')).toEqual([])
   })
 })

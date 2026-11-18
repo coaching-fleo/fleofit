@@ -8,6 +8,7 @@ import { ChevronUp, Download, Timer, Users, X, User, Send, Edit, Trash2, AlertTr
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
+import PillolaTu from '../components/PillolaTu'
 import FoglioCollegaTV from '../components/FoglioCollegaTV'
 import FoglioChiediTV from '../components/FoglioChiediTV'
 import CustomDatePicker from '../components/CustomDatePicker'
@@ -102,7 +103,7 @@ import {
 // visto in scrittura, e due copie divergerebbero al primo ritocco.
 import { RiepilogoWorkout, BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import { partiRipetuta, etichettaParte } from '../lib/ripetute'
-import { filtraPerNome } from '../lib/rigaAtleta'
+import { filtraPerNome, primaIo } from '../lib/rigaAtleta'
 import { leggiTemplatePdf, intestazioneCoach, scriviNoteAggiuntive } from '../lib/templatePdf'
 import { CampoRicerca } from '../components/ArchivioUI'
 import { ChipGruppi, FoglioNomeGruppo } from '../components/GruppiUI'
@@ -2535,7 +2536,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                   (() => {
                   // «Seleziona tutti» agisce sugli atleti VISIBILI: con un filtro
                   // attivo, selezionare tutti vuol dire «tutti questi».
-                  const visibili = filtraPerNome(athletes, cercaAtleta)
+                  const visibili = primaIo(filtraPerNome(athletes, cercaAtleta), user?.id)
                   const tuttiVisibiliScelti = visibili.length > 0 && visibili.every(v => selectedAthletes.some(sa => sa.id === v.id))
                   return <>
                     <div className="-mt-3.5">
@@ -2589,7 +2590,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                               }
                             </div>
                             <div className="min-w-0">
-                              <p className="text-white font-semibold">{a.name} {a.surname}</p>
+                              <p className="flex items-center gap-1.5 text-white font-semibold"><span className="truncate">{a.name} {a.surname}</span>{a.id === user?.id && <PillolaTu />}</p>
                               <RigaAvviso avviso={previsione?.avvisi.get(a.id)} />
                             </div>
                           </div>

@@ -6,6 +6,7 @@
 // mobile (Athletes.jsx), che li prepara; qui c'è solo il disegno.
 // Si carica pigra: il telefono non la scarica mai.
 
+import PillolaTu from './PillolaTu'
 import { Plus, User, ChevronRight, RotateCcw, AlertTriangle, Layers } from 'lucide-react'
 import { CampoRicerca } from './ArchivioUI'
 import { FiltriStato } from './AtletiUI'
@@ -97,6 +98,7 @@ export default function AtletiDesktop({
               <span className="flex items-center gap-3 min-w-0">
                 <Avatar foto={r.foto} sigla={r.sigla} />
                 <span className="text-[15px] font-bold text-white truncate group-hover:text-brand transition">{r.nome}</span>
+                {r.tu && <PillolaTu />}
               </span>
               <span className="text-[13px] text-gray-400 truncate">{r.meta || '—'}</span>
               <Settimana {...r.aderenza} />
