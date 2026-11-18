@@ -64,6 +64,8 @@ const HomeCoachTelefono = lazy(() => import('../components/HomeCoachTelefono'))
 // prima (le due qui sopra) resta dietro l'interruttore «Home classica».
 const HomeRiepilogoDesktop = lazy(() => import('../components/HomeRiepilogoDesktop'))
 const HomeRiepilogoTelefono = lazy(() => import('../components/HomeRiepilogoTelefono'))
+import CartaMioAllenamento from '../components/CartaMioAllenamento'
+import { scegliMioAllenamento } from '../lib/mioAllenamento'
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARD_BASE, CARTA_MODALE,
          TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
 
@@ -145,6 +147,9 @@ export default function Home() {
   // gli stessi dati.
   const [assegnazioniCoach, setAssegnazioniCoach] = useState([])
   const [atletiCoach, setAtletiCoach] = useState([])
+  // Il coach si allena anche lui (18/11/2026): il suo allenamento di oggi o il
+  // prossimo, per la card in testa alla Home (src/lib/mioAllenamento.js).
+  const [mioAllenamento, setMioAllenamento] = useState(null)
   // Il cruscotto (14/10/2026, src/lib/cruscottoCoach.js): le risposte di oggi a
   // «Come stai», gli estratti delle note delle ultime settimane e le gare dei
   // prossimi due mesi. Tre letture a parte perché nessuna delle tre sta nella
@@ -566,6 +571,27 @@ export default function Home() {
         : '-',
     })
   }, [])
+
+  // «Il tuo allenamento»: una lettura sua, piccola, indipendente dai conti del
+  // cruscotto (pigri e limitati a due settimane). Solo il coach: l'atleta ha la
+  // sua Home. Il filtro su `athlete_id` si ripete qui perché la card non deve
+  // mai mostrare l'allenamento di un altro, nemmeno se la query cambiasse.
+  useEffect(() => {
+    if (!user?.id || !role || role === 'athlete') return
+    let vivo = true
+    const oggiStr = format(new Date(), 'yyyy-MM-dd')
+    supabase.from('athlete_workouts')
+      .select('id, athlete_id, completed_date, status, workouts(id, title, sections)')
+      .eq('athlete_id', user.id)
+      .gte('completed_date', oggiStr)
+      .order('completed_date', { ascending: true })
+      .limit(20)
+      .then(({ data }) => {
+        if (!vivo) return
+        setMioAllenamento(scegliMioAllenamento((data || []).filter(r => r.athlete_id === user.id), oggiStr))
+      }, () => {})
+    return () => { vivo = false }
+  }, [user?.id, role])
 
   useEffect(() => {
     if (!role || !user) return
@@ -991,6 +1017,9 @@ setNotifications(prev => {
   // La Riepilogo riceve le liste INTERE (fermi e scaduti): dietro ogni numero
   // c'è la lista completa; la classica resta con i suoi tagli.
   const homeClassica = useMemo(() => leggiHomeClassica(), [])
+  const apriMioAllenamento = () => {
+    if (mioAllenamento) navigate(`/workout/${mioAllenamento.workoutId}?athlete_id=${user.id}`)
+  }
   const CorpoCoachDesktop = homeClassica ? HomeCoachDesktop : HomeRiepilogoDesktop
   const CorpoCoachTelefono = homeClassica ? HomeCoachTelefono : HomeRiepilogoTelefono
   const scadutiTutti = useMemo(() => (homeClassica ? null
@@ -1294,6 +1323,7 @@ setNotifications(prev => {
             onApriScaduto={apriSeduta}
             onApriSeduta={apriSeduta}
             onMessaggio={() => navigate('/messaggi')}
+            mio={<CartaMioAllenamento mio={mioAllenamento} onApri={apriMioAllenamento} />}
           />
         </Suspense>
       )}
@@ -1395,6 +1425,9 @@ setNotifications(prev => {
             questo contenitore ed è il primo elemento che si vede. Senza, la
             testata e la prima card partirebbero insieme. */
         <div style={{ '--cascata-da': 1 }} className="flex flex-col gap-3.5 mb-6 cascata">
+
+          {/* Il coach si allena anche lui (18/11/2026): il suo allenamento in un tocco. */}
+          <CartaMioAllenamento mio={mioAllenamento} onApri={apriMioAllenamento} />
 
           {/* La Live Coach Cam dura quanto un allenamento: è una barra, non una
               sezione con un titolo che per 23 ore al giorno sta sopra il vuoto. */}

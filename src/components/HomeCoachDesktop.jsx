@@ -42,6 +42,7 @@ export default function HomeCoachDesktop({
   live = [], caricamento, notificheDaLeggere = 0,
   onNotifiche, onNuovoWorkout, onCalendario, onGuardaLive,
   onApriFeedback, onApriAtleta, onApriScaduto, onApriSeduta, onMessaggio,
+  mio = null, // la card «Il tuo allenamento» (18/11/2026), già pronta da Home.jsx
 }) {
   const { gare, polso, oggi, segnali, piano, notaPiano } = useCruscottoCoach({
     atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura, settimana: true,
@@ -98,6 +99,8 @@ export default function HomeCoachDesktop({
             </button>
           </div>
         </header>
+
+        {mio}
 
         {live.map(la => (
           <button key={la.athleteWorkoutId} type="button" onClick={() => onGuardaLive(la)}

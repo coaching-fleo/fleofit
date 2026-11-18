@@ -23,6 +23,7 @@ export default function HomeRiepilogoDesktop(props) {
     saluto, nome, dataOggi, intestazione, live = [], caricamento, notificheDaLeggere = 0,
     feedback = [], fermi = [], scaduti = [],
     onNotifiche, onNuovoWorkout, onCalendario, onGuardaLive, onApriSeduta, onMessaggio, onReport, onAnalisi,
+    mio = null, // la card «Il tuo allenamento» (18/11/2026), già pronta da Home.jsx
   } = props
   const r = useRiepilogoCoach(props)
   const [calendarioIntero, setCalendarioIntero] = useState(false)
@@ -56,6 +57,8 @@ export default function HomeRiepilogoDesktop(props) {
             </button>
           </div>
         </header>
+
+        {mio}
 
         {live.map(la => (
           <button key={la.athleteWorkoutId} type="button" onClick={() => onGuardaLive(la)}
