@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   GARMIN, PERMESSI_NOTI, MOTIVI_ERRORE, generaPkce, sfidaPkce, generaState, urlAutorizzazione,
   ritornoValido, urlRitorno, esitoCallback, cifra, decifra, leggiNotifiche, pianoScollegamento, scaduto,
-  stessoSegreto, atletaEliminato, ammessoAllaProva, permessiDaRisposta, tokenWebhook, urlBackfill,
+  stessoSegreto, atletaEliminato, ammessoAllaProva, permessiDaRisposta, tokenWebhook, urlBackfill, haProfiloAtleta,
 } from '../../../supabase/functions/_shared/garminRegole.ts'
 
 // Perché questi test esistono
@@ -290,5 +290,32 @@ describe('backfill Garmin', () => {
       readFileSync(p, 'utf8').split('\n').filter((r) => /bodyComps/.test(r)))
     expect(righe.length).toBeGreaterThan(0)
     for (const r of righe) expect(r.trim()).toMatch(/^(\/\/|\/\*|\*)/)
+  })
+})
+
+// Il coach si allena anche lui (18/11/2026): lo staff collega Garmin solo se ha
+// una riga in `athletes` (lì finiscono collegamento, attività e invii).
+describe('haProfiloAtleta', () => {
+  const client = (risposta) => {
+    const chiamate = []
+    const catena = {
+      select: (...a) => { chiamate.push(['select', ...a]); return catena },
+      eq: (...a) => { chiamate.push(['eq', ...a]); return catena },
+      is: (...a) => { chiamate.push(['is', ...a]); return catena },
+      maybeSingle: () => Promise.resolve(risposta),
+    }
+    return { chiamate, from: (t) => { chiamate.push(['from', t]); return catena } }
+  }
+
+  it('con la riga attiva: sì, e cerca proprio quella', async () => {
+    const c = client({ data: { id: 'c1' }, error: null })
+    expect(await haProfiloAtleta(c, 'c1')).toBe(true)
+    expect(c.chiamate).toContainEqual(['from', 'athletes'])
+    expect(c.chiamate).toContainEqual(['eq', 'id', 'c1'])
+    expect(c.chiamate).toContainEqual(['is', 'deleted_at', null])
+  })
+  it('senza riga, o con la lettura in errore: no', async () => {
+    expect(await haProfiloAtleta(client({ data: null, error: null }), 'c1')).toBe(false)
+    expect(await haProfiloAtleta(client({ data: null, error: { message: 'x' } }), 'c1')).toBe(false)
   })
 })

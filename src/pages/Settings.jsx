@@ -39,7 +39,7 @@ import { leggiHomeClassica, scriviHomeClassica } from '../lib/homeClassica'
 import { apriInformativa } from '../lib/informativa'
 import { leggiCoda } from '../lib/offlineQueue'
 import { useFunzione } from '../useFunzione'
-import { GARMIN_IN_ARRIVO, VERSIONE_CONSENSO_GARMIN, dataCollegamento, leggiStatoGarmin, messaggioEsito, ritornoGarmin } from '../lib/garmin'
+import { GARMIN_IN_ARRIVO, VERSIONE_CONSENSO_GARMIN, dataCollegamento, leggiStatoGarmin, messaggioEsito, puoCollegareGarmin, ritornoGarmin } from '../lib/garmin'
 import { linkInvito } from '../lib/linkInvito'
 import { NOME_APP } from '../lib/marchio'
 
@@ -70,7 +70,7 @@ export default function Settings() {
   // l'interruttore deve restare per tornare indietro: l'override lo applica
   // `App.jsx` ai soli admin, quindi se c'è, chi guarda è un admin.
   const adminReale = eAdmin(role) || (role === 'athlete' && isSimulatingAthlete)
-  // L'informativa per tutti; il consenso e Garmin solo per l'atleta vero (non
+  // L'informativa per tutti; il consenso solo per l'atleta vero (non
   // l'admin in anteprima, che il consenso non lo dà: src/lib/consenso.js, e
   // che non deve collegare il proprio Garmin a un atleta per sbaglio).
   const atletaVero = role === 'athlete' && !isSimulatingAthlete
@@ -122,12 +122,26 @@ export default function Settings() {
   const inviaInCorso = useRef(false)
   const [inviaOccupato, setInviaOccupato] = useState(false)
 
+  // Il coach si allena anche lui (18/11/2026): Garmin anche allo staff, ma solo
+  // se ha una riga in `athletes` (collegamento e attività sono legati a quella).
+  // L'atleta non fa questa lettura: la riga ce l'ha per costruzione.
+  const staffVero = (role === 'coach' || role === 'admin') && !isSimulatingAthlete
+  const [haProfilo, setHaProfilo] = useState(false)
   useEffect(() => {
-    if (!atletaVero || !user?.id) return
+    if (!staffVero || !user?.id) return
+    let vivo = true
+    supabase.from('athletes').select('id').eq('id', user.id).is('deleted_at', null).maybeSingle()
+      .then(({ data }) => { if (vivo) setHaProfilo(!!data?.id) }, () => {})
+    return () => { vivo = false }
+  }, [staffVero, user?.id])
+  const garminVisibile = puoCollegareGarmin({ role, simulando: isSimulatingAthlete, haProfilo })
+
+  useEffect(() => {
+    if (!garminVisibile || !user?.id) return
     let vivo = true
     leggiStatoGarmin(supabase, user.id).then(s => { if (vivo) setGarmin(s) })
     return () => { vivo = false }
-  }, [atletaVero, user?.id])
+  }, [garminVisibile, user?.id])
 
   /**
    * Il ritorno da Garmin: `/settings?garmin=ok|errore[&motivo=…]`, dal sito
@@ -144,12 +158,12 @@ export default function Settings() {
     if (!esitoGarmin) return
     const info = messaggioEsito(esitoGarmin, motivoGarmin)
     navigate('/settings', { replace: true })
-    const rilettura = atletaVero && user?.id ? leggiStatoGarmin(supabase, user.id) : Promise.resolve(null)
+    const rilettura = garminVisibile && user?.id ? leggiStatoGarmin(supabase, user.id) : Promise.resolve(null)
     rilettura.then(s => {
       if (s) setGarmin(s)
       setAlertInfo(info)
     })
-  }, [esitoGarmin, motivoGarmin, atletaVero, user?.id, navigate])
+  }, [esitoGarmin, motivoGarmin, garminVisibile, user?.id, navigate])
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -993,8 +1007,8 @@ export default function Settings() {
             onClick={() => navigate('/team')} />
         </Sezione>
       )}
-      {/* ── Dispositivi: solo l'atleta vero, e solo se `stato_garmin` esiste ── */}
-      {atletaVero && garmin.disponibile && (
+      {/* ── Dispositivi: l'atleta vero o il coach con il profilo atleta, e solo se `stato_garmin` esiste ── */}
+      {garminVisibile && garmin.disponibile && (
         <Sezione etichetta="Dispositivi">
           <RigaAzione icona={Watch} titolo="Garmin Connect" dettaglio={dettaglioGarmin}
             onClick={() => setFoglioGarminAperto(true)} occupato={operazione === 'garmin'} />
@@ -1099,7 +1113,7 @@ export default function Settings() {
           onAttivaNotifiche={toggleNotifiche} />
       )}
 
-      {foglioGarminAperto && atletaVero && garmin.disponibile && (
+      {foglioGarminAperto && garminVisibile && garmin.disponibile && (
         <FoglioGarmin
           stato={garmin.stato} dal={garmin.dal} permessi={garmin.permessi}
           inviaWorkout={garmin.inviaWorkout} inviaOccupato={inviaOccupato} onInviaWorkout={cambiaInviaWorkout}

@@ -21,7 +21,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import {
-  ammessoAllaProva, atletaEliminato, cifra, esitoCallback, generaPkce, generaState, ritornoValido, stessoSegreto,
+  ammessoAllaProva, atletaEliminato, haProfiloAtleta, cifra, esitoCallback, generaPkce, generaState, ritornoValido, stessoSegreto,
   urlAutorizzazione, urlRitorno, type TipoBackfill,
 } from "../_shared/garminRegole.ts"
 import {
@@ -246,9 +246,11 @@ async function azioneAtleta(req: Request): Promise<Response> {
   } catch { return risposta({ error: 'Richiesta non valida' }, 400); }
 
   const admin = servizio();
-  // Lo staff non collega niente: nemmeno un admin in «Simula atleta».
-  if (await ruoloStaff(admin, utente.email ?? null)) {
-    return risposta({ error: 'Garmin si collega solo da un account atleta' }, 403);
+  // Dal 18/11/2026 il coach si allena anche lui e collega il suo Garmin, ma
+  // solo se ha una riga in `athletes`: lì finiscono collegamento e attività.
+  // L'atleta non passa da questa lettura (la riga ce l'ha per costruzione).
+  if (await ruoloStaff(admin, utente.email ?? null) && !(await haProfiloAtleta(admin, utente.id))) {
+    return risposta({ error: 'Garmin si collega da un account con il profilo atleta' }, 403);
   }
 
   if (corpo.azione === 'inizia') {

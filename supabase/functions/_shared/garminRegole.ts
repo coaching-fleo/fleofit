@@ -228,3 +228,17 @@ export function urlBackfill(tipo: TipoBackfill, daSec: number, aSec: number): st
   return `https://apis.garmin.com/wellness-api/rest/backfill/${tipo}`
     + `?summaryStartTimeInSeconds=${Math.floor(daSec)}&summaryEndTimeInSeconds=${Math.floor(aSec)}`;
 }
+
+// ── Il coach si allena anche lui (18/11/2026) ─────────────────────────────
+/**
+ * Chi è dello staff collega Garmin solo se ha una riga attiva in `athletes`:
+ * collegamento, attività e invii sono legati a quell'id. Una lettura che
+ * fallisce vale «no» (lo chiede solo lo staff: l'atleta non passa di qui).
+ * Il client è quello con la service role, passato da chi chiama.
+ */
+// deno-lint-ignore no-explicit-any
+export async function haProfiloAtleta(client: any, id: string): Promise<boolean> {
+  const { data, error } = await client.from('athletes').select('id')
+    .eq('id', id).is('deleted_at', null).maybeSingle();
+  return !error && !!data?.id;
+}

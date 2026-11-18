@@ -4,6 +4,7 @@ import {
   ritornoGarmin, rottaDaDeepLinkGarmin, MESSAGGI_ESITO, messaggioEsito, dataCollegamento,
   serveRecupero, recuperaAttivitaGarmin,
 } from '../garmin'
+import { puoCollegareGarmin } from '../garmin'
 import { MOTIVI_ERRORE } from '../../../supabase/functions/_shared/garminRegole.ts'
 
 // Perché questi test esistono
@@ -186,5 +187,21 @@ describe('recupero delle attività Garmin (login e apertura)', () => {
     expect(await recuperaAttivitaGarmin(finto(), null, OGGI, memoria())).toBe(false)
     const s = { functions: { invoke: () => Promise.reject(new Error('rete')) } }
     expect(await recuperaAttivitaGarmin(s, utente, OGGI, memoria())).toBe(false)
+  })
+})
+
+// Il coach si allena anche lui (18/11/2026): chi vede «Garmin Connect» in Impostazioni.
+describe('puoCollegareGarmin', () => {
+  it('l\'atleta sì, l\'admin in «Simula atleta» no', () => {
+    expect(puoCollegareGarmin({ role: 'athlete', simulando: false, haProfilo: false })).toBe(true)
+    expect(puoCollegareGarmin({ role: 'athlete', simulando: true, haProfilo: true })).toBe(false)
+  })
+  it('coach e admin solo con il profilo atleta', () => {
+    expect(puoCollegareGarmin({ role: 'coach', simulando: false, haProfilo: true })).toBe(true)
+    expect(puoCollegareGarmin({ role: 'admin', simulando: false, haProfilo: true })).toBe(true)
+    expect(puoCollegareGarmin({ role: 'coach', simulando: false, haProfilo: false })).toBe(false)
+  })
+  it('ruolo sconosciuto: no', () => {
+    expect(puoCollegareGarmin({ role: null, simulando: false, haProfilo: true })).toBe(false)
   })
 })

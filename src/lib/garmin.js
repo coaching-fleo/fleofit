@@ -194,3 +194,15 @@ export async function recuperaAttivitaGarmin(supabase, utente, adesso = new Date
   scriviJson(chiaveRecupero(utente.id), { giorno: oggi, accesso }, storage)
   return true
 }
+
+/**
+ * Chi vede «Garmin Connect» in Impostazioni (18/11/2026). L'atleta vero sì;
+ * l'admin in «Simula atleta» no (l'interruttore resta dell'atleta vero). Lo
+ * staff — il coach che si allena anche lui — solo se ha una riga in `athletes`,
+ * perché collegamento e attività sono legati a quell'id.
+ */
+export function puoCollegareGarmin({ role, simulando, haProfilo }) {
+  if (role === 'athlete') return !simulando
+  if (role === 'coach' || role === 'admin') return !simulando && !!haProfilo
+  return false
+}

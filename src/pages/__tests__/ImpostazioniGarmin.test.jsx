@@ -12,11 +12,11 @@ import { TESTO_CONSENSO_GARMIN, TILE_GARMIN_CONNECT, MESSAGGI_ESITO, GARMIN_IN_A
 // (Review Focus 2). E il consenso è separato: «Collega» resta spento finché la
 // casella non è spuntata, perché è quella spunta a renderlo un consenso.
 
-const ctrl = await vi.hoisted(async () => ({ stato: { valore: [] } }))
+const ctrl = await vi.hoisted(async () => ({ stato: { valore: [] }, atleti: { valore: [] } }))
 
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
-  return fintoSupabase(() => ({ 'rpc:stato_garmin': ctrl.stato.valore }))
+  return fintoSupabase(() => ({ 'rpc:stato_garmin': ctrl.stato.valore, athletes: ctrl.atleti.valore }))
 })
 
 vi.mock('../../supabaseClient', () => ({ supabase: finto.supabase }))
@@ -50,6 +50,7 @@ beforeEach(() => {
   finto.chiamate.length = 0
   window.localStorage.clear()
   ctrl.stato.valore = []
+  ctrl.atleti.valore = []
   finto.supabase.rpc.mockClear()
   finto.supabase.functions.invoke.mockReset()
   finto.supabase.functions.invoke.mockImplementation(() => Promise.resolve({ data: null, error: null }))
@@ -205,7 +206,15 @@ describe('La riga Garmin in Impostazioni', () => {
     expect(within(foglio).getByRole('button', { name: 'Collega di nuovo' })).toBeInTheDocument()
   })
 
-  it('staff e admin in «Simula atleta» non hanno la riga', async () => {
+  it('il coach che si allena (con il profilo atleta) ha la riga, come l\'atleta (18/11/2026)', async () => {
+    ctrl.stato.valore = COLLEGATO
+    ctrl.atleti.valore = [{ id: UTENTE.id }]
+    montaPagina(<Settings />, { role: 'coach', user: { ...UTENTE, email: 'coach@fleofit.it' } })
+    expect(await screen.findByRole('button', { name: /Garmin Connect/ })).toBeInTheDocument()
+    expect(finto.supabase.rpc).toHaveBeenCalledWith('stato_garmin', { atleta: UTENTE.id })
+  })
+
+  it('staff senza profilo atleta e admin in «Simula atleta» non hanno la riga', async () => {
     ctrl.stato.valore = COLLEGATO
     const { unmount } = montaPagina(<Settings />, { role: 'coach', user: { ...UTENTE, email: 'coach@fleofit.it' } })
     await screen.findByRole('button', { name: /Informativa privacy/ })

@@ -30,7 +30,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
-import { stessoSegreto } from "../_shared/garminRegole.ts"
+import { haProfiloAtleta, stessoSegreto } from "../_shared/garminRegole.ts"
 import {
   ErroreGarmin, accessValido, cancellaWorkoutGarmin, creaWorkoutGarmin, programmaGarmin, spostaProgrammaGarmin,
 } from "../_shared/garmin.ts"
@@ -401,9 +401,10 @@ async function azioneUtente(req: Request): Promise<Response> {
 
   if (corpo.azione === 'invia_workout') {
     if (typeof corpo.acceso !== 'boolean') return risposta({ error: 'Richiesta non valida' }, 400);
-    // L'interruttore è dell'atleta: lo staff (anche in «Simula atleta») non lo tocca.
-    if (await ruoloStaff(admin, utente.email ?? null)) {
-      return risposta({ error: 'Garmin si gestisce solo da un account atleta' }, 403);
+    // L'interruttore è di chi ha collegato il suo Garmin: dal 18/11/2026 anche
+    // il coach che si allena, se ha una riga in `athletes` (garmin-auth).
+    if (await ruoloStaff(admin, utente.email ?? null) && !(await haProfiloAtleta(admin, utente.id))) {
+      return risposta({ error: 'Garmin si gestisce da un account con il profilo atleta' }, 403);
     }
     const { data: righe, error } = await admin.from('garmin_collegamenti')
       .update({ invia_workout: corpo.acceso, aggiornato_at: new Date().toISOString() })
