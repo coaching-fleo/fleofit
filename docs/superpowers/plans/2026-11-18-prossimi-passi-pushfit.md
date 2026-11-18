@@ -72,7 +72,7 @@ Garmin aperto a tutti, bug di «Visualizza come atleta». Piano di partenza:
 - [x] 👤 «Segnala un problema»: il mittente è un secret, nessun codice da cambiare.
   `npx supabase secrets set SEGNALAZIONI_MITTENTE="PUSHFIT <noreply@pushfit.it>" --project-ref riyqtcssllupakjtoehj`
   (era `onboarding@resend.dev`, che consegna solo al proprietario dell'account Resend). Secret impostato il 18/11.
-- [ ] 👤 Prova: Impostazioni → Segnala un problema → la mail arriva.
+- [x] 👤 Prova: Impostazioni → Segnala un problema → la mail arriva. ✅ 18/11, confermato dal committente.
 - [x] 🤖 Memoria: `docs/memoria/accesso.md` (SMTP) e `privacy-in-stand-by` (sbloccata la mail dei
   cambi di policy, voce in cima al BACKLOG).
 
@@ -126,7 +126,7 @@ Android (`versionName "1.0"`) si allinea nel piano E.
 
 ### C2 · Controlli prima dell'archive 🤖
 - [ ] I tre `grep` di CLAUDE.md §9 (demo presente in `dist`, niente ambiente di prova né HealthKit in `ios/App/App/public`).
-- [ ] `ios/App/App/App.entitlements` ha i tre `applinks:` (`pushfit.it`, `www.pushfit.it`, `fleofit.vercel.app`).
+- [x] `ios/App/App/App.entitlements` ha i tre `applinks:` (`pushfit.it`, `www.pushfit.it`, `fleofit.vercel.app`).
 - [ ] 👤 Archive da Xcode, export, poi `tools/verifica-ipa.sh <file.ipa>` → nessun errore.
 - [ ] Stato della versione su App Store Connect come da `docs/memoria/app-store.md`.
 
@@ -135,7 +135,12 @@ Android (`versionName "1.0"`) si allinea nel piano E.
   **URL privacy** `https://pushfit.it/privacy`; URL di supporto/marketing su `pushfit.it`.
 - [ ] Versione 1.2.5: screenshot nuovi col logo PUSHFIT (quelli con FLEOFIT vanno tolti), novità di B2, parole chiave.
 - [ ] Note per la revisione: cambio di nome dello stesso titolare; account `demo@fleofit.it`
-  invariato; Garmin non è visibile agli account staff (il revisore entra come staff).
+  invariato. ⚠️ Corretto il 18/11: dopo «il coach si allena» `demo@fleofit.it` (admin **con** riga
+  `athletes`) **vede** la riga Garmin in Impostazioni, e Garmin è nelle novità: la nota deve dire che
+  serve un orologio Garmin e un account Garmin Connect, e che senza l'orologio la funzione non si prova.
+  ✅ 18/11: Scarpe e Team **spenti** per l'invio (`funzioni_app.stato = 'spenta'`, prima `admin`):
+  il revisore non li vede. ⚠️ Spenti anche per gli admin veri finché non si riaccendono.
+- [ ] 🤖 All'approvazione della 1.2.5 riaccendere: `update funzioni_app set stato='admin' where nome in ('scarpe','team')`.
 - [ ] Inviare. 🤖 All'esito: registrarlo in `docs/memoria/app-store.md` e in CLAUDE.md «Stato».
 
 ---
