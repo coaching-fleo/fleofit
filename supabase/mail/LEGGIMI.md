@@ -19,4 +19,7 @@ non esiste ancora.
 ⚠️ `torna={{ .RedirectTo }}` va **per ultimo** nell'indirizzo: la pagina lo
 legge fino in fondo, con la sua query (`?inviteCode=…`).
 
-⚠️ Quando il sito passa a `pushfit.it`, si cambia l'indirizzo nei due modelli.
+I link puntano a `https://pushfit.it/conferma` (dominio collegato a Vercel il 18/11/2026;
+`www.pushfit.it` non risponde, quindi non si usa). Chi aveva chiesto la mail dal
+vecchio sito torna comunque su `fleofit.vercel.app`: è fra i `SITI` ammessi da
+`src/lib/confermaLink.js`.
