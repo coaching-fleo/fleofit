@@ -403,11 +403,11 @@ const notifications = [
 ]
 
 const invitation_codes = [
-  { id: 'i1', code: 'FLEO-2026-AAA', is_active: true, created_by: COACH,
+  { id: 'i1', code: 'PUSH-2026-AAA', is_active: true, created_by: COACH,
     used_by: null, used_by_email: null, used_at: null, created_at: new Date().toISOString() },
-  { id: 'i2', code: 'FLEO-2026-BBB', is_active: true, created_by: COACH,
+  { id: 'i2', code: 'PUSH-2026-BBB', is_active: true, created_by: COACH,
     used_by: null, used_by_email: null, used_at: null, created_at: new Date().toISOString() },
-  { id: 'i3', code: 'FLEO-2026-CCC', is_active: false, created_by: COACH,
+  { id: 'i3', code: 'PUSH-2026-CCC', is_active: false, created_by: COACH,
     used_by: 'at-sofia', used_by_email: 'sofia@esempio.invalid',
     used_at: giorno(-20), created_at: new Date(Date.now() - 30 * 86400000).toISOString() },
 ]

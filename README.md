@@ -1,6 +1,6 @@
-# FLEOFIT 🏋️‍♂️
+# PUSHFIT 🏋️‍♂️
 
-FLEOFIT è una piattaforma avanzata per il fitness coaching, progettata specificamente per atleti e allenatori focalizzati su discipline come l'**Hyrox** e il **Running**. Creata con un'interfaccia moderna in puro stile app nativa, l'applicazione offre un'esperienza utente premium, fluida e altamente interattiva sia per il coach che per l'atleta.
+PUSHFIT (prima FLEOFIT) è una piattaforma avanzata per il fitness coaching, progettata specificamente per atleti e allenatori focalizzati su discipline come l'**Hyrox** e il **Running**. Creata con un'interfaccia moderna in puro stile app nativa, l'applicazione offre un'esperienza utente premium, fluida e altamente interattiva sia per il coach che per l'atleta.
 
 ## 🌟 Caratteristiche Principali
 

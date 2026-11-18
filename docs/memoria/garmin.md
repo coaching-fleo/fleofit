@@ -599,3 +599,6 @@ Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
 2. `supabase functions deploy garmin-webhook --no-verify-jwt` e `supabase functions deploy garmin-auth --no-verify-jwt`.
 3. Scollegare e ricollegare Garmin sull'atleta di prova (parte il backfill di 30 giorni), poi: `select giorno, giornata is not null as g, sonno is not null as s, hrv is not null as h from garmin_giornate order by giorno desc limit 10;`
 4. Aprire la scheda dell'atleta di prova e il suo profilo: card «Recupero».
+
+- **18/11/2026 — portale aggiornato a PUSHFIT**: icona `https://pushfit.it/web-app-manifest-192x192.png`,
+  sito e privacy su `pushfit.it`. Redirect URI e webhook **non toccati** (sono di Supabase).

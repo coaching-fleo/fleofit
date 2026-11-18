@@ -1,4 +1,4 @@
-# CLAUDE.md — Memoria globale progetto FLEOFIT · app iOS + Android
+# CLAUDE.md — Memoria globale progetto PUSHFIT (prima FLEOFIT) · app iOS + Android
 
 > Documento di memoria persistente per Claude. Leggere **sempre** questo file prima di
 > toccare il codice o proporre modifiche grafiche.
@@ -154,7 +154,7 @@
 
 ## 1. Cos'è il progetto
 
-**FLEOFIT** è l'app di coaching personale di **Federico Leo**, specializzata su **Hyrox** e
+**PUSHFIT** (fino al 17/11/2026 FLEOFIT) è l'app di coaching personale di **Federico Leo**, specializzata su **Hyrox** e
 **Running**. Serve a seguire gli atleti passo per passo: il coach crea e assegna workout, l'atleta
 li esegue con un timer guidato, li segna come completati con RPE e note, e il coach vede tutto in
 tempo reale.
@@ -165,8 +165,11 @@ tempo reale.
   (worker in timeout dopo 10 minuti; in locale gira in poco più di un minuto) —
   sul Mac la copia per Xcode
 - **App bundle iOS**: `it.federicoleo.fleofit` (resta, §0 punto 1) — display name `PUSHFIT` (dal 17/11/2026)
-- **Deploy web**: Vercel (`https://fleofit.vercel.app`), SPA rewrite in `vercel.json`
-- **Deep link scheme**: `fleofit://` (usato per OAuth callback e reset password su iOS)
+- **Deploy web**: Vercel, **`https://pushfit.it`** (dal 18/11/2026; `www.pushfit.it` rimanda lì).
+  `https://fleofit.vercel.app` resta acceso come alias **senza rimando** finché le app vecchie
+  (universal link) sono in giro. SPA rewrite in `vercel.json`
+- **Deep link scheme**: `fleofit://`, e dalla 1.2.5 anche `pushfit://` in lettura (OAuth callback,
+  reset password, Garmin); il passaggio in tre tempi è in `src/lib/schema.js`
 
 ---
 
@@ -179,7 +182,7 @@ tempo reale.
 | Branch | Cos'è | Push |
 |---|---|---|
 | **`app`** | **Il branch di lavoro**: l'unico codice, per web, iOS e Android | `git push origin app` — salvataggio. Vercel ne fa una **preview** protetta, non tocca il sito |
-| **`main`** (default su GitHub) | **Ciò che è pubblicato sul web**: Vercel lo pubblica su `https://fleofit.vercel.app` a ogni push | `git push origin app:main` — **pubblica il sito per tutti**. Solo su richiesta esplicita del committente |
+| **`main`** (default su GitHub) | **Ciò che è pubblicato sul web**: Vercel lo pubblica su `https://pushfit.it` a ogni push | `git push origin app:main` — **pubblica il sito per tutti**. Solo su richiesta esplicita del committente |
 | ~~`ios-version`~~ · ~~`android-version`~~ | storia, non ci si lavora più. ⚠️ `ios-version` **non va cancellato**: GitHub Pages lo pubblica, privacy policy compresa | — |
 
 - 🔴 **Mai commit diretti su `main`**: `main` si muove solo in avanti, portato a `app`. Se un
@@ -720,7 +723,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 
 ## 10. Idee/direzioni note per il futuro
 
-- Possibile **rebranding** (nome diverso da FLEOFIT) mantenendo la palette.
+- ✅ **Rebranding fatto**: FLEOFIT → PUSHFIT il 17/11/2026 (§0 punto 1).
 - Modifiche grafiche/UI attese, palette invariata.
 - Integrazione **Strava/Garmin** via `cloud-sync` già predisposta lato client (`CloudSyncService`).
 - Ruolo `coach` separato da `admin`, già abbozzato ma disattivato.

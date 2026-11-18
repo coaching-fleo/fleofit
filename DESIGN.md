@@ -1,8 +1,8 @@
 ---
-name: FLEOFIT
+name: PUSHFIT
 description: Coaching Hyrox e Running — la lavagna scura di un coach, con un solo tratto giallo che dice cosa conta.
 colors:
-  brand: "#f1ba17"
+  brand: "#f1c517"
   bg: "#0B0B0B"
   surface: "#222222"
   surface2: "#2a2a2a"
@@ -119,13 +119,13 @@ components:
     height: "144px"
 ---
 
-# Design System: FLEOFIT
+# Design System: PUSHFIT
 
 ## Overview
 
 **Creative North Star: "La Lavagna del Coach"**
 
-FLEOFIT è una superficie scura su cui una sola mano scrive. Il fondo quasi-nero non è
+PUSHFIT è una superficie scura su cui una sola mano scrive. Il fondo quasi-nero non è
 un tema, è la lavagna: sta lì per sparire, per far esistere solo quello che il coach ha
 deciso che oggi conta. Il giallo brand è il gesso — compare poco, e ogni volta che compare
 significa "questo". Tutto il resto del sistema è grigio ordinato: quattro toni di superficie
@@ -146,7 +146,7 @@ l'app impara il colore prima della parola.
 
 **Anti-riferimenti confermati:** l'app fitness generalista (gradienti saturi, illustrazioni
 allegre, badge, coriandoli, gamification) e la dashboard SaaS enterprise (griglie di widget
-grigi, tabelle dense senza gerarchia, look da pannello di amministrazione). FLEOFIT non deve
+grigi, tabelle dense senza gerarchia, look da pannello di amministrazione). PUSHFIT non deve
 somigliare a nessuna delle due.
 
 **Key Characteristics:**
@@ -163,7 +163,7 @@ Una palette quasi interamente acromatica, con un solo accento caldo e tre colori
 esistono per identificare la disciplina, mai per decorare.
 
 ### Primary
-- **Gesso Ambra** (`#f1ba17`): l'accento del sistema e il colore della categoria **Hyrox**.
+- **Gesso Ambra** (`#f1c517`): l'accento del sistema e il colore della categoria **Hyrox**.
   Marca la CTA primaria (fondo pieno, testo nero), la voce attiva della navbar, il bordo in
   focus di ogni input, il giorno selezionato nel date picker, il valore attivo negli scroll
   picker, la "FIT" del logo. È il colore più usato del progetto (416 occorrenze) proprio
@@ -288,8 +288,9 @@ Dal 26/08/2026 esiste un livello dichiarato per questo: **l'etichetta di cella**
 ⚠️ Non usarla dentro un anello o un contenitore stretto senza ridurre il `tracking`: a
 `.1em` «COMPLETATI» è più largo dell'anello da 112px e ne tocca il tratto.
 
-**La Regola del Logo.** Il marchio è sempre `FLEO` bianco + `FIT` in Gesso Ambra, peso 900,
-`tracking-tight`, in un unico `<h1>`. Nessuna variante di colore, spaziatura o peso.
+**La Regola del Logo.** Dal 17/11/2026 il marchio è l'immagine PUSHFIT (`PUSH` bianco + `FIT` in
+Gesso Ambra, corsivo) di `src/assets/marchio/`, mostrata **solo** con `<Logo altezza={…} />`.
+Mai riscritto come testo, nessuna variante di colore, spaziatura o peso.
 
 ## Layout
 
@@ -357,13 +358,13 @@ direzione opposta, `#111111` (pozzetto: input, contenitori incassati). Il pozzet
 livello che scende sotto la card.
 
 L'ombra esiste, ma ha un solo mestiere: **dire che qualcosa è attivo**. Il glow colorato
-(`shadow-lg shadow-[#f1ba17]/20`) accompagna la CTA primaria, il giorno selezionato, la
+(`shadow-lg shadow-[#f1c517]/20`) accompagna la CTA primaria, il giorno selezionato, la
 pillola di stato del workout di oggi. `shadow-2xl` è riservato alle modali, dove serve a
 staccare il dialogo dall'overlay `bg-black/85`.
 
 ### Shadow Vocabulary
 - **Glow di stato** (`box-shadow: 0 10px 15px -3px rgba(241,186,23,0.2)` — Tailwind
-  `shadow-lg shadow-[#f1ba17]/20`, declinato nel colore della categoria): elemento attivo,
+  `shadow-lg shadow-[#f1c517]/20`, declinato nel colore della categoria): elemento attivo,
   primario o selezionato.
 - **Alone di puntino** (`box-shadow: 0 0 8px rgba(241,186,23,0.4)`): i pallini del calendario
   settimanale, dove segnala il giorno completato in quella categoria.
@@ -435,7 +436,7 @@ cerchio pieno; un'azione con testo è sempre un rettangolo a 12px. Non si mescol
 - **Forma:** angoli generosi (12px, `rounded-xl`); a piena larghezza dentro le card.
 - **Primaria:** fondo Gesso Ambra pieno, testo nero, peso 700-900, padding verticale 12-14px
   (`py-3` / `py-3.5`). Nelle azioni conclusive porta il glow di stato
-  (`shadow-lg shadow-[#f1ba17]/20`).
+  (`shadow-lg shadow-[#f1c517]/20`).
 - **Hover / Active:** `hover:brightness-110` (mai un secondo colore), transizione 300ms
   `ease-out`. Su iOS l'hover non esiste: il feedback reale è la micro-scala, più
   l'aptico **solo se il tocco cambia uno stato o produce un esito** (vedi sotto).
@@ -450,7 +451,7 @@ cerchio pieno; un'azione con testo è sempre un rettangolo a 12px. Non si mescol
 - **Angoli:** 24px (`rounded-3xl`); 16px per le card annidate.
 - **Fondo:** `#1e1e1e`, bordo 1px `#2a2a2a`.
 - **Padding interno:** 20px (`p-5`) o 24px (`p-6`); 16px per le card interne.
-- **Hover:** il bordo passa al colore della categoria (`hover:border-[#f1ba17]` e derivati).
+- **Hover:** il bordo passa al colore della categoria (`hover:border-[#f1c517]` e derivati).
   È l'unico effetto di hover previsto sulle card: nessun sollevamento, nessuna ombra.
 - **Icona in filigrana:** molte card portano un'icona lucide da 64-80px in
   `absolute top-0 right-0 p-6 opacity-10 -rotate-12`, che sale a `opacity-20` in hover.
@@ -459,7 +460,7 @@ cerchio pieno; un'azione con testo è sempre un rettangolo a 12px. Non si mescol
 ### Inputs / Fields
 - **Stile:** pozzetto `#111` con bordo `#333`, testo bianco, placeholder `gray-600`,
   padding `12px 16px`, raggio 12px.
-- **Focus:** `focus:outline-none` + `focus:border-[#f1ba17]` — il bordo cambia colore e basta.
+- **Focus:** `focus:outline-none` + `focus:border-[#f1c517]` — il bordo cambia colore e basta.
   Nel contesto Running il bordo diventa `#0094C6`, in quello Custom `#D11149`: **il focus
   parla la lingua della categoria in cui si trova**.
 - **iOS:** `font-size: 16px` forzato su input/textarea/select (regola `@supports` in

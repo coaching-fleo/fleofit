@@ -25,7 +25,7 @@ non ancora una funzionalità.
 
 ## Product Purpose
 
-FLEOFIT è l'app di coaching personale di Federico Leo, specializzata su **Hyrox** e
+PUSHFIT (fino al 17/11/2026 FLEOFIT) è l'app di coaching personale di Federico Leo, specializzata su **Hyrox** e
 **Running**. Chiude il ciclo coach↔atleta dentro un unico strumento: il coach compone il
 workout, lo assegna a una data, l'atleta lo riceve (push), lo esegue, lo chiude con RPE e
 note, e il coach vede il risultato in tempo reale.
@@ -104,23 +104,23 @@ di coaching, non un sign-up.
 
 ## Brand Commitments
 
-- **Nome "FLEOFIT" provvisorio.** Può cambiare. È già presente in decine di punti
-  (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`, chiavi `fleofit_*`, deep link
-  `fleofit://`): un cambio nome è un refactor coordinato, non un find&replace.
-- **Logo:** sempre `FLEO` bianco + `FIT` giallo brand.
-- **Palette vincolante:** giallo `#f1ba17` (brand/Hyrox), fondo `#0B0B0B`, azzurro
+- **Nome: PUSHFIT** dal 17/11/2026 (prima FLEOFIT), dominio `pushfit.it`. Il nome si scrive solo
+  con `NOME_APP` di `src/lib/marchio.js`. Restano `fleofit` apposta: bundle id, `fleofit.vercel.app`
+  (alias), `demo@fleofit.it`, lo schema `fleofit://` finché le app vecchie sono in giro (CLAUDE.md §0 punto 1).
+- **Logo:** l'immagine PUSHFIT (`PUSH` bianco + `FIT` giallo brand), sempre con `<Logo />`.
+- **Palette vincolante:** giallo `#f1c517` (dal 18/11/2026; prima `#f1ba17`) (brand/Hyrox), fondo `#0B0B0B`, azzurro
   `#0094C6` (Running), rosso magenta `#D11149` (Custom), bianco (Evento).
   **I colori sono corretti e vanno mantenuti come default.**
 - **Dark mode only.** Nessun tema chiaro previsto.
 - **Font:** Inter, titoli `font-black` con `tracking-tight`.
-- **Bundle iOS:** `it.federicoleo.fleofit`, display name FLEOFIT.
+- **Bundle iOS:** `it.federicoleo.fleofit`, display name PUSHFIT.
 - **Voce:** italiano diretto, seconda persona singolare, tono da coach (saluto orario +
   frase motivazionale del giorno).
 
 ## Evidence on Hand
 
 - **Codice in produzione su due fronti:** web app live su Vercel
-  (`https://fleofit.vercel.app`) e build **1.1.0 (3)** caricata su App Store Connect il
+  (`https://pushfit.it`, prima `https://fleofit.vercel.app`, che resta come alias) e build **1.1.0 (3)** caricata su App Store Connect il
   24/08/2026 dopo un rifiuto (2.3.1(a) + 3.2.1(viii)); storia e correzioni in CLAUDE.md §9-ter.
 - **Asset di marca reali:** `assets/icon.png`, `assets/splash.png`, `icons/*.webp`,
   `public/` (favicon, manifest, apple-touch-icon), `src/assets/hero.png`.

@@ -445,3 +445,29 @@ Design: `docs/superpowers/specs/2026-11-16-link-invito-design.md`.
   referrer: il codice viene dagli appunti con «Incolla dagli appunti» (scelta del committente,
   la (a); la (b) server-side avrebbe chiesto una tabella nuova).
 - Niente App Links Android verificati: servirebbe l'impronta della chiave del Play Store.
+
+## Le mail di Supabase passano da Resend, mittente `noreply@pushfit.it` (18/11/2026)
+
+- **Perché**: l'SMTP gratuito di Supabase consegnava male (un'iscrizione del 18/11 non ha
+  mai ricevuto la conferma: l'account è stato confermato a mano) ed è limitato a 2 mail l'ora.
+- **Com'è fatto**: dominio `pushfit.it` verificato su Resend (regione EU). DNS su Aruba:
+  TXT `resend._domainkey` (DKIM), CNAME `send` → `send.forge.rmta.net`, CNAME `rsend` →
+  `rsend-euw1.forge.rmta.net`, più il `_dmarc` che c'era già. Supabase → Custom SMTP:
+  `smtp.resend.com`, porta 465, utente `resend`, password = la chiave Resend «supabase-smtp»
+  (**solo invio**, sta solo su Supabase, mai in un file), mittente `PUSHFIT <noreply@pushfit.it>`.
+  Rate limit delle mail alzato a **30 l'ora**.
+- Anche «Segnala un problema» manda da `noreply@pushfit.it` (secret `SEGNALAZIONI_MITTENTE`,
+  impostato il 18/11; la chiave è un'altra, `RESEND_API_KEY`).
+- ⚠️ Aruba pubblica le modifiche DNS a blocchi: il seriale della zona (`dig SOA pushfit.it
+  @dns.technorail.com`) dice se il cambio è uscito. Se una mail non arriva, la consegna si
+  guarda su Resend → Emails, non nei log di Supabase.
+- Il punto 3 più su (recupero password a un relay Apple) ora si può chiudere registrando
+  `pushfit.it` nel servizio di inoltro di Apple: non fatto.
+- **Google (18/11/2026)**: `pushfit.it` verificato su Search Console (TXT `google-site-verification`
+  sul dominio principale, su Aruba, accanto all'SPF: **non toglierlo**, Google lo ricontrolla).
+  Branding di «Accedi con Google» aggiornato a PUSHFIT (logo 120×120, home e privacy su
+  `pushfit.it`). ⚠️ Trovato quel giorno: l'app OAuth era in stato **Test** (entrano con Google solo
+  gli utenti di prova, 12 account Google nel database all'11/11); messa **In produzione** lo stesso
+  giorno (ID client controllato uguale a quello di Supabase) e verifica del branding inviata.
+  Finché Google non la approva l'accesso funziona, solo senza logo. Sotto il nome Google continua a scrivere
+  `riyqtcssllupakjtoehj.supabase.co`: senza il dominio personalizzato di Supabase (a pagamento) resta così.
