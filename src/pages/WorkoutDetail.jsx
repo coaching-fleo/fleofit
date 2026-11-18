@@ -311,9 +311,10 @@ export default function WorkoutDetail() {
   const [alertInfo, setAlertInfo] = useState(null)
   const [confirmInfo, setConfirmInfo] = useState(null)
   // «Scarpe da corsa» (spec §2 e §5): la scarpa legata a una corsa completata.
-  // Solo l'atleta sui propri allenamenti; il coach che guarda o completa per
-  // conto di un atleta non legge e non scrive niente.
-  const scarpaCompletamento = useScarpaCompletamento(role === 'athlete' && isOwnProfile ? user?.id : null, { setAlertInfo })
+  // Solo chi è sui PROPRI allenamenti (dal 18/11/2026 anche il coach che si
+  // allena); il coach che guarda o completa per conto di un atleta non legge
+  // e non scrive niente.
+  const scarpaCompletamento = useScarpaCompletamento(isOwnProfile ? user?.id : null, { setAlertInfo })
   const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [athleteWorkoutId, setAthleteWorkoutId] = useState(null)
   // «Aggiungi le statistiche della gara»: rifà la ricerca su un tempo già salvato senza link.
@@ -390,10 +391,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
 
   const [showRpeModal, setShowRpeModal] = useState(false)
   // Team (spec §4): il risultato della sfida nel foglio RPE. Legge solo a
-  // foglio aperto e solo per l'atleta sui propri allenamenti. Per l'atleta
+  // foglio aperto e solo sui propri allenamenti (anche del coach, 18/11/2026). Per l'atleta
   // `workout.date` è già il giorno dell'assegnazione (lo riscrive il fetch).
   const sfidaCompletamento = useSfidaCompletamento(
-    role === 'athlete' && isOwnProfile ? user?.id : null,
+    isOwnProfile ? user?.id : null,
     showRpeModal ? (workout?.id || null) : null,
     workout?.date || null,
     { setAlertInfo })
@@ -769,7 +770,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const garminLetto = garmin.awId === athleteWorkoutId
   useEffect(() => {
     if (!chiedeRpe || loading || rpeDaLinkFatto.current) return
-    const mio = athleteWorkoutId && isOwnProfile && role === 'athlete'
+    const mio = athleteWorkoutId && isOwnProfile
     if (mio && !garminLetto) return
     rpeDaLinkFatto.current = true
     if (mio) {

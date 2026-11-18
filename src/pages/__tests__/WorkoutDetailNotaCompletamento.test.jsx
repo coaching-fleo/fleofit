@@ -45,10 +45,10 @@ const assegnazione = (status, data = '2026-08-28') => ([{
   athletes: { id: 'u1', name: 'Marco', surname: 'Rinaldi', photo_url: null },
 }])
 
-function apri() {
+function apri(role = 'athlete') {
   return render(
     <MemoryRouter initialEntries={['/workout/w1?athlete_id=u1']}>
-      <AuthContext.Provider value={{ user: { id: 'u1', email: 'a@b.it', user_metadata: {} }, role: 'athlete' }}>
+      <AuthContext.Provider value={{ user: { id: 'u1', email: 'a@b.it', user_metadata: {} }, role }}>
         <Routes><Route path="/workout/:id" element={<WorkoutDetail />} /></Routes>
       </AuthContext.Provider>
     </MemoryRouter>
@@ -150,5 +150,25 @@ describe('la nota su un allenamento già completato', () => {
     await waitFor(() => expect(scritture()).toHaveLength(1))
     expect(scritture()[0].notes).toContain('Correzione: 9 kg')
     expect(screen.queryByRole('dialog', { name: /Hai completato l.allenamento/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('il coach che si allena (18/11/2026)', () => {
+  beforeEach(() => { ctrl.stato = { data: '2026-08-28', sections: HYROX, assegnazioni: assegnazione('pending') } })
+
+  it('segna fatto il proprio allenamento, e nessun avviso parte verso un coach', async () => {
+    finto.supabase.functions.invoke.mockClear()
+    const utente = userEvent.setup()
+    apri('coach')
+    await attendi()
+    await scriviEConferma(utente, 'Ripetute dure')
+
+    const domanda = await screen.findByRole('dialog', { name: /Hai completato l.allenamento/ })
+    await utente.click(within(domanda).getByRole('button', { name: /Sì, l.ho fatto/ }))
+    await utente.click(await screen.findByRole('button', { name: /Fatto!/ }))
+
+    await waitFor(() => expect(scritture().some(w => w.status === 'completed')).toBe(true))
+    const avvisi = finto.supabase.functions.invoke.mock.calls.filter(([nome]) => nome === 'send-reminders')
+    expect(avvisi).toEqual([])
   })
 })

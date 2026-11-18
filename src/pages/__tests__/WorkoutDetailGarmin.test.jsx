@@ -184,6 +184,13 @@ describe('il link «Com\'è andata?» (?rpe=1)', () => {
     expect(screen.queryByRole('dialog', { name: /Recap/ })).not.toBeInTheDocument()
   })
 
+  it('al coach che si allena, sul SUO allenamento, si apre come all\'atleta (18/11/2026)', async () => {
+    apri({ ruolo: 'coach', utente: 'u1', url: '/workout/w1?athlete_id=u1&rpe=1' })
+    await attendi()
+    expect(await screen.findByRole('button', { name: /Fatto!/ })).toBeInTheDocument()
+    await waitFor(() => expect(ultimoUrl).toBe('/workout/w1?athlete_id=u1'))
+  })
+
   it('al coach non si apre', async () => {
     apri({ ruolo: 'admin', utente: 'coach1', url: '/workout/w1?athlete_id=u1&rpe=1' })
     await attendi()
