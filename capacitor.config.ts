@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'it.federicoleo.fleofit',
-  appName: 'FLEOFIT',
+  appName: 'PUSHFIT',
   webDir: 'dist',
   bundledWebRuntime: false,
 

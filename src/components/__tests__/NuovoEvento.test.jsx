@@ -108,7 +108,7 @@ describe('NuovoEvento → Corsa', () => {
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Tutta Italia' }))
     expect(screen.queryByText(/Nessuna gara trovata/)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Corri Roma 10/ })).toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('fleofit_corsa_regione'))).toBe('')
+    expect(JSON.parse(localStorage.getItem('pushfit_corsa_regione'))).toBe('')
   })
 
   it('una ricerca senza risultati lascia i filtri toccabili', async () => {
@@ -127,7 +127,7 @@ describe('NuovoEvento → Corsa', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Mezza di Monza/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Maratona di Venezia/ })).not.toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('fleofit_corsa_regione'))).toBe('lombardia')
+    expect(JSON.parse(localStorage.getItem('pushfit_corsa_regione'))).toBe('lombardia')
 
     await userEvent.click(screen.getByRole('button', { name: 'Lombardia' }))
     expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Lombardia' })).toHaveAttribute('aria-pressed', 'true')

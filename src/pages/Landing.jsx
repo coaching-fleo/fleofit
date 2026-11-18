@@ -5,6 +5,8 @@ import { COLORI, TIPI_BLOCCO, PROFILO_CORSA, STAZIONI, ATLETI } from './landingD
 import builderDesktop from '../assets/landing/builder-desktop.webp'
 import AppFinta from './LandingApp'
 import './Landing.css'
+import { NOME_APP } from '../lib/marchio'
+import logo from '../assets/marchio/pushfit-logo.webp'
 
 /* ─────────────────────────────────────────────────────────────────────────
    Landing pubblica /benvenuto (solo web), rivolta ai COACH.
@@ -13,8 +15,10 @@ import './Landing.css'
    capitolo; in mezzo la persona la usa come vuole. docs/memoria/landing.md.
    ───────────────────────────────────────────────────────────────────────── */
 
-const URL_PAGINA = 'https://fleofit.vercel.app/benvenuto'
-const TITOLO_SEO = 'App per coach Hyrox e running | FLEOFIT'
+// La pagina principale del sito (dal 18/11/2026): «/» e «/benvenuto» sono la
+// stessa pagina, e il canonical dice ai motori di ricerca di contare la radice.
+const URL_PAGINA = 'https://fleofit.vercel.app/'
+const TITOLO_SEO = `App per coach Hyrox e running | ${NOME_APP}`
 const DESCRIZIONE_SEO = 'Crea workout Hyrox, di corsa e da palestra a blocchi, assegnali ai tuoi atleti e segui aderenza, fatica e andamento. L\'app per coach, in italiano.'
 
 const ridotto = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -40,7 +44,7 @@ function useInVista(ref, { soglia = 0.35, unaVolta = false } = {}) {
 
 const FAQ = [
   {
-    d: 'Cos\'è FLEOFIT?',
+    d: `Cos'è ${NOME_APP}?`,
     r: 'È un\'app per coach di Hyrox, running e palestra. Crei gli allenamenti a blocchi, li assegni ai tuoi atleti, loro li eseguono dall\'app e ti mandano fatica percepita (RPE) e note. Tu vedi aderenza, carico e andamento di tutta la squadra.',
   },
   {
@@ -82,7 +86,7 @@ const DATI_STRUTTURATI = {
     },
     {
       '@type': 'SoftwareApplication',
-      name: 'FLEOFIT',
+      name: NOME_APP,
       applicationCategory: 'HealthApplication',
       operatingSystem: 'iOS, Web',
       inLanguage: 'it-IT',
@@ -604,7 +608,7 @@ function SezioneTV() {
         <div className="lp-tv">
           <div className={`lp-tv-schermo ${acceso ? 'acceso' : ''}`}>
             <div className="lp-tv-attesa" aria-hidden={acceso}>
-              <div className="lp-tv-logo">FLEO<b>FIT</b> <span>TV</span></div>
+              <div className="lp-tv-logo"><img src={logo} alt={NOME_APP} /> <span>TV</span></div>
               <div className="lp-tv-codice">
                 {CODICE.split('').map((c, i) => <span key={i} className={i < cifre ? 'preso' : ''}>{c}</span>)}
               </div>
@@ -684,7 +688,7 @@ export default function Landing() {
   return (
     <div className="lp">
       <header className={`lp-nav ${scorso ? 'scorso' : ''}`}>
-        <Link to="/benvenuto" className="lp-logo" aria-label="FLEOFIT">FLEO<b>FIT</b></Link>
+        <Link to="/" className="lp-logo" aria-label={NOME_APP}><img src={logo} alt="" /></Link>
         <nav className="lp-nav-azioni" aria-label="Accesso">
           <Link to="/tv" className="lp-btn lp-btn-piccolo lp-btn-secondario"><Tv size={16} aria-hidden="true" /><span>Schermata TV</span></Link>
           <Link to="/login" className="lp-btn lp-btn-piccolo lp-btn-primario"><LogIn size={16} aria-hidden="true" /><span>Accedi</span></Link>
@@ -708,7 +712,7 @@ export default function Landing() {
       </main>
 
       <footer className="lp-piede">
-        <span className="lp-logo lp-logo-piccolo">FLEO<b>FIT</b></span>
+        <span className="lp-logo lp-logo-piccolo"><img src={logo} alt={NOME_APP} /></span>
         <span>L'app per coach di Hyrox, running e palestra</span>
         <a href="/privacy">Privacy</a>
       </footer>

@@ -3,7 +3,7 @@
 // I nomi dei blocchi e il formato dei parametri sono quelli dell'app (CLAUDE.md §5).
 
 export const COLORI = {
-  hyrox: '#f1ba17',
+  hyrox: '#f1c517',
   corsa: '#0094C6',
   gym: '#14B8A6',
   ia: '#a855f7',

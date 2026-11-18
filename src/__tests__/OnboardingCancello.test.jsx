@@ -63,7 +63,7 @@ const App = (await import('../App')).default
 beforeEach(() => {
   window.history.pushState({}, '', '/')
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-  localStorage.setItem('fleofit_invite_code', 'ABCD1234')
+  localStorage.setItem('pushfit_invite_code', 'ABCD1234')
 })
 
 describe("L'onboarding dell'atleta nuovo", () => {

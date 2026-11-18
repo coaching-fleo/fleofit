@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { Home, Calendar, Users, Plus, ChartNoAxesColumn, ChartLine, FolderArchive, Settings, Search, Megaphone, LayoutTemplate, LayoutGrid } from 'lucide-react'
 import { useAuth } from '../App'
 import { useExtra } from '../useExtra'
+import Logo from './Logo'
 
 // La barra laterale della versione desktop (docs/piano-web-desktop.md, fase 2):
 // prende il posto della capsula in basso quando `eDesktop` è vero. Si carica
@@ -69,8 +70,8 @@ export default function BarraLaterale() {
       <nav aria-label="Navigazione principale"
         className="print:hidden sticky top-0 h-screen w-[232px] shrink-0 flex flex-col gap-1 px-4 pt-7 pb-6
                    bg-[#0f0f0f] border-r border-[#1c1c1c]">
-        <div className="px-3 pb-6 flex items-baseline gap-2">
-          <span className="text-2xl font-black tracking-[-.03em] text-white">FLEO<span className="text-brand">FIT</span></span>
+        <div className="px-3 pb-6 flex items-center gap-2">
+          <Logo altezza={17} />
           <span className="text-[11px] font-bold uppercase tracking-[.08em] text-gray-400">Coach</span>
         </div>
 

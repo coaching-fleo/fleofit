@@ -1031,7 +1031,7 @@ describe('La modale «Bozza Trovata»', () => {
   // vocabolario di PRIMA del rework, e il suo velo arrivava a nero pieno nello
   // stesso fotogramma in cui la carta cominciava a entrare — un nero che si
   // accende secco copre qualunque movimento ci sia dietro.
-  const conBozza = () => localStorage.setItem('fleofit_workout_draft', JSON.stringify({
+  const conBozza = () => localStorage.setItem('pushfit_workout_draft', JSON.stringify({
     sourceId: null, modo: 'nuovo', title: 'Hyrox Soglia', date: '2026-09-22', workoutIntensity: '7',
     category: 'Hyrox', blocks: [], runningSteps: [], coachNotes: '',
   }))

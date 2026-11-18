@@ -4,6 +4,8 @@ import { CARD, CARTA_RIGA_BASE, LABEL, RIGA, VETRO } from '../lib/stiliCard'
 import { celleCodice, GRUPPO_CODICE } from '../lib/codiceInvito'
 import { useBottomSheet } from '../useBottomSheet'
 import { useSchermoLargo } from '../useDesktop'
+import { NOME_APP } from '../lib/marchio'
+import Logo from './Logo'
 
 /**
  * I pezzi visivi dell'accesso (artboard `Login.dc.html`, opzione 1b).
@@ -42,7 +44,7 @@ export function Guscio({ tinta = 'ambra', children }) {
       <div className="min-h-screen flex bg-[#0B0B0B]">
         <div className="relative flex-1 min-w-0 hidden lg:flex flex-col justify-between p-14 overflow-hidden border-r border-[#1c1c1c]"
           style={{ background: 'radial-gradient(90% 70% at 20% 15%,#2b2210 0%,#16130b 45%,#0B0B0B 100%)' }}>
-          <p className="text-[28px] font-black tracking-[-.03em] text-white">FLEO<span className="text-brand">FIT</span></p>
+          <p className="leading-none"><Logo altezza={22} /></p>
           <div className="max-w-[520px]">
             <p className="text-[44px] leading-[1.05] font-black tracking-[-.035em] text-white">
               Programma, segui e correggi.<br /><span className="text-brand">Tutto il team in una pagina.</span>
@@ -72,8 +74,8 @@ export function Guscio({ tinta = 'ambra', children }) {
 /**
  * Il marchio, e sta solo qui.
  *
- * La Regola del Logo (DESIGN.md): `FLEO` bianco + `FIT` ambra, peso 900,
- * `tracking-tight`, in un `<h1>` solo. Il benvenuto è l'unico posto dell'app
+ * La Regola del Logo (DESIGN.md): `PUSH` bianco + `FIT` ambra: è l'immagine di
+ * `<Logo />` (dal 17/11/2026), in un `<h1>` solo. Il benvenuto è l'unico posto dell'app
  * in cui sta a peso Display — nei passi successivi resta il titolo del passo e
  * basta, perché ripetere il marchio sopra ogni schermo toglie spazio all'unica
  * riga che dice dove si è.
@@ -81,8 +83,8 @@ export function Guscio({ tinta = 'ambra', children }) {
 export function Marchio() {
   return (
     <div className="flex flex-col items-center gap-3 hero-transition">
-      <h1 className="text-[48px] leading-none font-black tracking-[-.03em] text-white">
-        FLEO<span className="text-brand">FIT</span>
+      <h1 className="leading-none">
+        <Logo altezza={36} />
       </h1>
       <p className={`${LABEL} tracking-[.16em] text-[11px]`}>Hyrox &amp; Running</p>
     </div>
@@ -188,7 +190,7 @@ export function CaselleCodice({ valore, onChange, errore = false, disabled = fal
   const celle = celleCodice(valore)
   const bordo = (cella) => {
     if (errore) return 'bg-red-500/[.08] border-red-500/45'
-    if (cella.attiva && !disabled) return 'bg-[#111] border-[1.5px] border-brand shadow-[0_10px_15px_-3px_rgba(241,186,23,.2)]'
+    if (cella.attiva && !disabled) return 'bg-[#111] border-[1.5px] border-brand shadow-[0_10px_15px_-3px_rgba(241,197,23,.2)]'
     return cella.carattere ? 'bg-[#111] border-[#383838]' : 'bg-[#111] border-[#333]'
   }
   return (
@@ -294,7 +296,7 @@ export function CardInvitoValido({ codice }) {
       </div>
       <p className="text-[11px] font-bold uppercase tracking-[.12em] text-green-500 mb-1.5">Invito valido</p>
       <p className="text-[21px] font-black tracking-[-.02em] leading-[1.25] text-white mb-4.5">
-        Il tuo coach ti ha<br />invitato su FLEOFIT
+        Il tuo coach ti ha<br />invitato su {NOME_APP}
       </p>
       <div className="w-full rounded-[18px] bg-black/40 border border-white/[.07] p-3.5 flex items-center gap-3 text-left">
         <div className="w-10 h-10 rounded-full bg-surface2 border border-[#3a3a3a] text-gray-400 flex items-center justify-center shrink-0">
@@ -359,7 +361,7 @@ export function CtaGialla({ etichetta, onClick, disabled }) {
   return (
     <button
       type="button" onClick={onClick} disabled={disabled}
-      className="w-full bg-brand rounded-2xl p-4 flex items-center justify-center gap-2.5 text-black font-extrabold text-[16.5px] tracking-[-.01em] shadow-[0_10px_15px_-3px_rgba(241,186,23,.2)] hover:brightness-110 transition disabled:opacity-50"
+      className="w-full bg-brand rounded-2xl p-4 flex items-center justify-center gap-2.5 text-black font-extrabold text-[16.5px] tracking-[-.01em] shadow-[0_10px_15px_-3px_rgba(241,197,23,.2)] hover:brightness-110 transition disabled:opacity-50"
     >
       {etichetta}
       {!disabled && <ArrowRight size={18} />}
@@ -401,7 +403,7 @@ export function FoglioAiuto({ onChiudi, onScrivi }) {
 
         <h2 className="text-[23px] font-black tracking-[-.025em] text-white mb-2">Il codice te lo dà il coach</h2>
         <p className="text-sm leading-[1.55] font-medium text-muted mb-5">
-          FLEOFIT non è un'app a cui ci si iscrive da soli: si entra su invito di un coach, così il tuo programma arriva già collegato al suo.
+          {NOME_APP} non è un'app a cui ci si iscrive da soli: si entra su invito di un coach, così il tuo programma arriva già collegato al suo.
         </p>
         <div className="flex flex-col gap-2.5 mb-5">
           {passi.map(([titolo, testo], i) => (
@@ -415,7 +417,7 @@ export function FoglioAiuto({ onChiudi, onScrivi }) {
         </div>
         <button type="button" onClick={onScrivi} className="w-full bg-surface2 border border-[#383838] rounded-2xl p-[15px] flex items-center justify-center gap-2.5 text-white text-base font-bold mb-2.5 hover:bg-[#333] transition">
           <MessageCircle size={18} className="text-gray-400" />
-          Scrivi a FLEOFIT
+          Scrivi a {NOME_APP}
         </button>
         <button type="button" onClick={chiudi} className="w-full text-center text-[15px] font-bold text-brand py-2">
           Torna al codice

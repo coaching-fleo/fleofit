@@ -6,7 +6,7 @@
 // qualche ora per tutti invece che da ogni telefono.
 // Perché una funzione NUOVA: `main` non la chiama, quindi pubblicarla non
 // tocca la web app in produzione (CLAUDE.md §1.1). Nessuna tabella: la copia
-// vive nella memoria dell'istanza, e nel telefono (`fleofit_cache_gare_hyrox`).
+// vive nella memoria dell'istanza, e nel telefono (`pushfit_cache_gare_hyrox`).
 //
 // Nessun secret richiesto.
 

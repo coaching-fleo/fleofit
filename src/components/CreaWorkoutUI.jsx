@@ -414,7 +414,7 @@ export function CtaPrimaria({ onClick, disabled, children, icona: Icona, iconaCo
       className={`relative flex-1 max-w-[100vw] min-h-[52px] rounded-2xl bg-brand text-black text-[16.5px] font-black tracking-[-.01em]
                  flex items-center justify-center gap-2.5 hover:brightness-110 active:scale-[.99]
                  overflow-hidden transition-[max-width,border-radius,filter] duration-[570ms] ease-[cubic-bezier(.33,1,.68,1)]
-                 shadow-[0_14px_26px_-10px_rgba(241,186,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]
+                 shadow-[0_14px_26px_-10px_rgba(241,197,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]
                  ${attesa ? 'cta-contratta' : 'disabled:opacity-50'}`}>
       {/* ⚠️ L'etichetta sfuma in 150ms, molto prima che la contrazione finisca:
           deve sparire mentre c'è ancora spazio, o si vedrebbe tagliata dai

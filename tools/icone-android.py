@@ -3,7 +3,7 @@
 Uso:  python tools/icone-android.py
 
 ⚠️ Non si usa `npx capacitor-assets generate`: scala l'icona intera dentro il
-primo piano adattivo, e la maschera circolare di Android taglia «FLEOFIT» ai
+primo piano adattivo, e la maschera circolare di Android taglia la scritta ai
 lati. Qui si ritaglia la sola scritta e la si mette nella zona sicura (il
 cerchio centrale da 66dp su 108dp), con il fondo #0B0B0B come colore a parte.
 """

@@ -57,7 +57,7 @@ export function TestataCalendario({ mese, anno, onCerca, onNuovo }) {
         </button>
         <button aria-label="Aggiungi un evento o una gara" onClick={onNuovo}
           className="w-10 h-10 rounded-full flex items-center justify-center bg-brand text-black
-                     shadow-[0_10px_22px_-8px_rgba(241,186,23,.5),inset_0_1px_0_rgba(255,255,255,.35)]
+                     shadow-[0_10px_22px_-8px_rgba(241,197,23,.5),inset_0_1px_0_rgba(255,255,255,.35)]
                      hover:brightness-110 transition">
           <Plus size={19} strokeWidth={2.6} />
         </button>
@@ -199,7 +199,7 @@ export function CellaGiorno({ numero, segno, selezionato, oggi, etichetta, onCli
   const attivo = segno.n > 0
 
   const sfondo = selezionato
-    ? 'bg-brand shadow-[0_10px_22px_-8px_rgba(241,186,23,.6),inset_0_1px_0_rgba(255,255,255,.4)]'
+    ? 'bg-brand shadow-[0_10px_22px_-8px_rgba(241,197,23,.6),inset_0_1px_0_rgba(255,255,255,.4)]'
     : segno.tuttiFatti ? 'bg-green-500/10'
     : attivo ? 'bg-white/[.04]'
     : 'hover:bg-white/[.03]'

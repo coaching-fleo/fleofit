@@ -15,7 +15,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import { leggiJson, scriviJson } from './offlineQueue'
 
-export const CHIAVE_LIVE_ACTIVITY = 'fleofit_live_activity'
+export const CHIAVE_LIVE_ACTIVITY = 'pushfit_live_activity'
 
 const LiveActivity = registerPlugin('LiveActivity')
 

@@ -166,7 +166,7 @@ beforeEach(() => {
   qr.apriImpostazioni.mockImplementation(() => Promise.resolve())
   supabase.from.mockClear()
   dimenticaTV()
-  localStorage.removeItem('fleofit_tv_code')
+  localStorage.removeItem('pushfit_tv_code')
   indirizzo.search = ''
   indirizzo.pathname = ''
   indirizzo.vai = null
@@ -176,12 +176,12 @@ describe('alla riapertura', () => {
   // Segnalato dal committente il 04/11/2026: chiusa e riaperta l'app, la scheda
   // si diceva ancora collegata alla TV dell'ultima volta.
   it('un codice rimasto in localStorage da una vecchia sessione non collega niente, e va via', async () => {
-    localStorage.setItem('fleofit_tv_code', '4321')
+    localStorage.setItem('pushfit_tv_code', '4321')
     apriScheda()
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Scheda di prova' })).toBeInTheDocument())
     expect(screen.getByRole('button', { name: /^TV$/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Scollega TV/i })).not.toBeInTheDocument()
-    expect(localStorage.getItem('fleofit_tv_code')).toBeNull()
+    expect(localStorage.getItem('pushfit_tv_code')).toBeNull()
   })
 
   it('la TV collegata a un altro workout non risulta collegata qui', async () => {
@@ -273,7 +273,7 @@ describe('collegare la TV dall app, con il QR', () => {
     const foglio = await apriFoglioTV()
     await userEvent.click(within(foglio).getByRole('button', { name: /Inquadra il QR/i }))
 
-    expect(await within(foglio).findByText('Questo non è il codice della TV FLEOFIT')).toBeInTheDocument()
+    expect(await within(foglio).findByText('Questo non è il codice della TV PUSHFIT')).toBeInTheDocument()
     expect(within(foglio).getByRole('button', { name: /Inquadra il QR/i })).toBeInTheDocument()
     expect(within(foglio).getByRole('button', { name: /Inserisci il codice/i })).toBeInTheDocument()
     expect(tv.stato.aggiornamenti).toHaveLength(0)
@@ -300,7 +300,7 @@ describe('collegare la TV dall app, con il QR', () => {
     await waitFor(() => expect(qr.leggiQR).toHaveBeenCalledTimes(1))
     expect(await within(foglio).findByRole('button', { name: /Inquadra il QR/i })).toBeEnabled()
     expect(within(foglio).getByRole('button', { name: /Inserisci il codice/i })).toBeInTheDocument()
-    expect(within(foglio).queryByText('Questo non è il codice della TV FLEOFIT')).not.toBeInTheDocument()
+    expect(within(foglio).queryByText('Questo non è il codice della TV PUSHFIT')).not.toBeInTheDocument()
     expect(within(foglio).queryByRole('alert')).not.toBeInTheDocument()
   })
 

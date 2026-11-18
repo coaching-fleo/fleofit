@@ -168,7 +168,7 @@ describe('accodaSuStorage — il giro completo', () => {
 
 describe('chiaveCacheWorkout', () => {
   it('è per atleta: due utenti non condividono la cache', () => {
-    expect(chiaveCacheWorkout('uid-1')).toBe('fleofit_cache_workouts_uid-1')
+    expect(chiaveCacheWorkout('uid-1')).toBe('pushfit_cache_workouts_uid-1')
     expect(chiaveCacheWorkout('uid-1')).not.toBe(chiaveCacheWorkout('uid-2'))
   })
 })

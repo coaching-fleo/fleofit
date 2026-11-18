@@ -70,7 +70,7 @@ describe('Home coach: Riepilogo o classica', () => {
   })
 
   it('con «Home classica» acceso torna il cruscotto', async () => {
-    window.localStorage.setItem('fleofit_home_classica', 'true')
+    window.localStorage.setItem('pushfit_home_classica', 'true')
     montaCoach()
     await attendi('Da smaltire')
     expect(screen.queryByText('In allenamento oggi')).not.toBeInTheDocument()

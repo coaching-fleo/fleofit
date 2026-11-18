@@ -11,7 +11,7 @@ import Striscia from '../grafici/Striscia'
 describe('Linea', () => {
   it('un valore mancante interrompe la linea invece di scendere a zero', () => {
     const { container } = render(
-      <Linea titolo="Aderenza" colore="#f1ba17" punti={[
+      <Linea titolo="Aderenza" colore="#f1c517" punti={[
         { etichetta: 'a', valore: 50 }, { etichetta: 'b', valore: 60 },
         { etichetta: 'c', valore: null },
         { etichetta: 'd', valore: 70 }, { etichetta: 'e', valore: 80 },
@@ -22,7 +22,7 @@ describe('Linea', () => {
   })
 
   it('senza nessun valore dice che non ci sono dati', () => {
-    render(<Linea titolo="Aderenza" colore="#f1ba17" punti={[{ etichetta: 'a', valore: null }]} />)
+    render(<Linea titolo="Aderenza" colore="#f1c517" punti={[{ etichetta: 'a', valore: null }]} />)
     expect(screen.getByText(/nessun dato/i)).toBeInTheDocument()
   })
 })
@@ -31,8 +31,8 @@ describe('BarreImpilate', () => {
   it('una barra per parte non vuota, con il valore nel titolo', () => {
     const { container } = render(
       <BarreImpilate titolo="Minuti" colonne={[
-        { etichetta: '12 ott', parti: [{ nome: 'Hyrox', valore: 60, colore: '#f1ba17' }, { nome: 'Running', valore: 0, colore: '#0094C6' }] },
-        { etichetta: '19 ott', parti: [{ nome: 'Hyrox', valore: 30, colore: '#f1ba17' }, { nome: 'Running', valore: 45, colore: '#0094C6' }] },
+        { etichetta: '12 ott', parti: [{ nome: 'Hyrox', valore: 60, colore: '#f1c517' }, { nome: 'Running', valore: 0, colore: '#0094C6' }] },
+        { etichetta: '19 ott', parti: [{ nome: 'Hyrox', valore: 30, colore: '#f1c517' }, { nome: 'Running', valore: 45, colore: '#0094C6' }] },
       ]} />
     )
     expect(container.querySelectorAll('rect[data-parte]')).toHaveLength(3)

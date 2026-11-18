@@ -51,7 +51,7 @@ export default function HomeRiepilogoDesktop(props) {
               <Megaphone size={18} aria-hidden="true" />Messaggi
             </button>
             <button type="button" onClick={onNuovoWorkout}
-              className="inline-flex items-center gap-2 h-11 px-[18px] rounded-xl bg-gradient-to-b from-[#f8c83a] to-brand text-black text-sm font-extrabold shadow-[0_10px_22px_-10px_rgba(241,186,23,.6),inset_0_1px_0_rgba(255,255,255,.45)] transition hover:brightness-110">
+              className="inline-flex items-center gap-2 h-11 px-[18px] rounded-xl bg-gradient-to-b from-[#f8c83a] to-brand text-black text-sm font-extrabold shadow-[0_10px_22px_-10px_rgba(241,197,23,.6),inset_0_1px_0_rgba(255,255,255,.45)] transition hover:brightness-110">
               <Plus size={18} strokeWidth={2.5} aria-hidden="true" />Nuovo workout
             </button>
           </div>

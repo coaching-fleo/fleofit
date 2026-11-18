@@ -18,6 +18,8 @@ import { VETRO } from '../lib/stiliCard'
 import { TYPE_COLORS } from '../lib/blockColors'
 import { BRAND, RUNNING, CUSTOM } from '../lib/colori'
 import { partiRipetuta, etichettaParte } from '../lib/ripetute'
+import { NOME_APP } from '../lib/marchio'
+import Logo from './Logo'
 
 /**
  * La carta sollevata (`CARD_BASE` di stiliCard) in scala TV: stesso gradiente,
@@ -58,11 +60,11 @@ export function ControlliTV({ audioAttivo, onRuota, ruotato = false }) {
   )
 }
 
-/** La Regola del Logo di DESIGN.md: `FLEO` bianco, `FIT` ambra, peso 900. */
+/** Il logo (`<Logo />`, dal 17/11/2026) seguito da «TV». */
 function MarchioTV({ grande = false }) {
   return (
-    <span className={`font-black tracking-[-.035em] leading-none text-white ${grande ? 'text-[132px]' : 'text-[44px]'}`}>
-      FLEO<span className="text-brand">FIT</span>
+    <span className={`inline-flex items-center leading-none ${grande ? 'text-[132px]' : 'text-[44px]'}`}>
+      <Logo altezza={grande ? 100 : 33} />
       <span className={`ml-[.28em] font-extrabold tracking-[.14em] text-muted align-middle ${grande ? 'text-[40px]' : 'text-[18px]'}`}>TV</span>
     </span>
   )
@@ -81,7 +83,7 @@ export function AttesaTV({ codice, audioAttivo, onRuota, ruotato, qr = null }) {
       {/* Un'unica luce ambra dietro il codice: stato («qui»), non atmosfera. */}
       <span aria-hidden="true"
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[1400px] h-[1400px] pointer-events-none
-                   bg-[radial-gradient(closest-side,rgba(241,186,23,.09),transparent_70%)]" />
+                   bg-[radial-gradient(closest-side,rgba(241,197,23,.09),transparent_70%)]" />
 
       <div className="absolute top-12 right-12 z-10">
         <ControlliTV audioAttivo={audioAttivo} onRuota={onRuota} ruotato={ruotato} />
@@ -121,7 +123,7 @@ export function AttesaTV({ codice, audioAttivo, onRuota, ruotato, qr = null }) {
               <img src={qr} alt="Codice QR per collegare il telefono"
                 className="block w-[200px] h-[200px] [image-rendering:pixelated]" />
             </div>
-            <p className="text-[28px] font-semibold text-gray-300">oppure inquadralo con l'app FLEOFIT</p>
+            <p className="text-[28px] font-semibold text-gray-300">oppure inquadralo con l'app {NOME_APP}</p>
           </div>
         )}
 
@@ -283,7 +285,7 @@ export function BloccoTV({ tipo, hint, sottotitolo, durata, lavoro, numero, atti
   const hex = (TYPE_COLORS[tipo] || {}).hex || '#9ca3af'
   return (
     <div className={`${CARTA_TV} relative overflow-hidden border-2 flex flex-col transition-all duration-500 ${
-      attivo ? 'border-brand/70 shadow-[0_0_70px_-10px_rgba(241,186,23,.35)]' : 'border-white/[.07]'}`}>
+      attivo ? 'border-brand/70 shadow-[0_0_70px_-10px_rgba(241,197,23,.35)]' : 'border-white/[.07]'}`}>
       <span aria-hidden="true" className="absolute left-0 inset-y-0"
         style={attivo
           ? { width: 10, background: BRAND }
@@ -387,7 +389,7 @@ export function EsercizioTV({ numero, nome, specifiche, note, intensita, classeI
   }
   return (
     <div className={`flex items-center gap-6 px-7 py-5 transition-all duration-500 ${attivo
-      ? 'rounded-[28px] bg-brand/[.10] border-2 border-brand/60 shadow-[0_0_40px_-12px_rgba(241,186,23,.45)]'
+      ? 'rounded-[28px] bg-brand/[.10] border-2 border-brand/60 shadow-[0_0_40px_-12px_rgba(241,197,23,.45)]'
       : RIGA_TV}`}>
       {numero != null && (
         <span aria-hidden="true"

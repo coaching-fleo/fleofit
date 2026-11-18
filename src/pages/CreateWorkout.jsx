@@ -2722,7 +2722,7 @@ function Costruttore() {
   const sourceId = editId || duplicateId
   // «Modalità modello» (16/10/2026): il builder per UN blocco, da /modelli.
   // `nuovo` con `categoria`, o l'id di un modello da modificare. Qui dentro la
-  // bozza del workout (`fleofit_workout_draft`) non si legge, non si scrive e
+  // bozza del workout (`pushfit_workout_draft`) non si legge, non si scrive e
   // non si cancella: aprire un modello non deve toccare un workout a metà.
   const modello = searchParams.get('modello')
   const categoriaModello = searchParams.get('categoria')
@@ -3110,7 +3110,7 @@ function Costruttore() {
       setCaricato(true)
     }
 
-    const draftStr = localStorage.getItem('fleofit_workout_draft')
+    const draftStr = localStorage.getItem('pushfit_workout_draft')
     if (draftStr) {
       try {
         const draft = JSON.parse(draftStr)
@@ -3141,17 +3141,17 @@ function Costruttore() {
               setConfirmInfo(null)
             },
             onCancel: () => {
-              localStorage.removeItem('fleofit_workout_draft')
+              localStorage.removeItem('pushfit_workout_draft')
               setConfirmInfo(null)
               fetchWorkoutToEdit()
             }
           })
           return
         } else {
-          localStorage.removeItem('fleofit_workout_draft')
+          localStorage.removeItem('pushfit_workout_draft')
         }
       } catch {
-        localStorage.removeItem('fleofit_workout_draft')
+        localStorage.removeItem('pushfit_workout_draft')
       }
     }
     fetchWorkoutToEdit()
@@ -3232,16 +3232,16 @@ function Costruttore() {
     if (bozzaDiPartenza.current === null) { bozzaDiPartenza.current = firma; return }
     if (firma === bozzaDiPartenza.current) {
       // Tornato com'era aperto: non c'è più niente da ripristinare.
-      if (sourceId) localStorage.removeItem('fleofit_workout_draft')
+      if (sourceId) localStorage.removeItem('pushfit_workout_draft')
       return
     }
     if (hasUnsavedChanges) {
-      scriviJson('fleofit_workout_draft', { sourceId: sourceId || null, modo: modoBozza, ...corpo })
+      scriviJson('pushfit_workout_draft', { sourceId: sourceId || null, modo: modoBozza, ...corpo })
     }
   }, [title, date, workoutIntensity, category, blocks, runningSteps, gymGroups, coachNotes, sourceId, modoBozza, hasUnsavedChanges, saved, caricato, modello])
 
   useEffect(() => {
-    if (saved && !modello) localStorage.removeItem('fleofit_workout_draft')
+    if (saved && !modello) localStorage.removeItem('pushfit_workout_draft')
   }, [saved, modello])
 
   // Il gesto del dito in corso, per il blocco del «tira giù» qui sotto. In un
@@ -3378,7 +3378,7 @@ function Costruttore() {
         setPendingPath(INDIETRO)
         setShowExitConfirm(true)
       } else {
-        localStorage.removeItem('fleofit_workout_draft')
+        localStorage.removeItem('pushfit_workout_draft')
         indietro()
       }
     }
@@ -4230,7 +4230,7 @@ function Costruttore() {
               </button>
               <button 
                 onClick={() => {
-                  if (!modello) localStorage.removeItem('fleofit_workout_draft')
+                  if (!modello) localStorage.removeItem('pushfit_workout_draft')
                   // ⚠️ `pendingPath` è o una rotta intercettata (una stringa)
                   // o la sentinella del tasto indietro, che NON è una rotta:
                   // passarla a `navigate` porterebbe su `/-1`.

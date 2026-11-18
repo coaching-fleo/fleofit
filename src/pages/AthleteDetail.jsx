@@ -1675,7 +1675,7 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role, proprioPr
     setSaving(false)
     if (error) { setAlertInfo({ title: 'Errore', message: 'Errore: ' + error.message, type: 'error' }); return }
     
-    localStorage.setItem(`fleofit_name_${athlete.id}`, form.name)
+    localStorage.setItem(`pushfit_name_${athlete.id}`, form.name)
     supabase.auth.updateUser({ data: { first_name: form.name, last_name: form.surname, avatar_url: photo_url } }).catch(()=>{})
 
     onSaved()

@@ -40,8 +40,8 @@ const apri = async (url) => {
   render(<MemoryRouter initialEntries={[url]}><CreateWorkout /></MemoryRouter>)
   await waitFor(() => expect(document.querySelector('[data-codice]')).toBeInTheDocument())
 }
-const bozza = () => localStorage.getItem('fleofit_workout_draft')
-const semina = (extra) => localStorage.setItem('fleofit_workout_draft', JSON.stringify({
+const bozza = () => localStorage.getItem('pushfit_workout_draft')
+const semina = (extra) => localStorage.setItem('pushfit_workout_draft', JSON.stringify({
   sourceId: 'w1', title: 'Originale (Copia)', date: '2026-10-05', workoutIntensity: '9',
   category: 'Hyrox', blocks: EMOM.blocks, runningSteps: [], coachNotes: '', ...extra,
 }))

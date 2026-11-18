@@ -7,7 +7,7 @@
 
 import { leggiJson, scriviJson } from './offlineQueue'
 
-export const CHIAVE_HOME_CLASSICA = 'fleofit_home_classica'
+export const CHIAVE_HOME_CLASSICA = 'pushfit_home_classica'
 
 export function leggiHomeClassica(storage = globalThis.localStorage) {
   return leggiJson(CHIAVE_HOME_CLASSICA, false, storage) === true

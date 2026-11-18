@@ -369,7 +369,7 @@ export function FoglioParametri({ titolo, sottotitolo, misure, attiva, onAttiva,
           <button type="button" onClick={conferma_}
             className="mt-3.5 w-full min-h-[52px] rounded-2xl bg-brand text-black text-[16.5px] font-black tracking-[-.01em]
                        flex items-center justify-center gap-2.5 hover:brightness-110 active:scale-[.99] transition
-                       shadow-[0_14px_26px_-10px_rgba(241,186,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]">
+                       shadow-[0_14px_26px_-10px_rgba(241,197,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]">
             <Plus size={19} aria-hidden="true" /> {conferma}
           </button>
         )}

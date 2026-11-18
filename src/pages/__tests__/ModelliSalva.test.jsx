@@ -54,7 +54,7 @@ const GRUPPO = {
 
 /** Il builder al passo 2, con il workout ripreso dalla bozza. */
 async function conBozza(bozza) {
-  localStorage.setItem('fleofit_workout_draft', JSON.stringify({
+  localStorage.setItem('pushfit_workout_draft', JSON.stringify({
     sourceId: null, modo: 'nuovo', title: 'Prova', date: '2026-10-26', workoutIntensity: '7',
     blocks: [], runningSteps: [], gymGroups: [], coachNotes: '', ...bozza,
   }))

@@ -11,7 +11,7 @@ import { erroreProfilo } from '../profiloAtleta'
 
 const profilo = (dob) => ({ name: 'Sara', surname: 'Rossi', dob, weight: '', height: '' })
 const oggi = new Date('2026-11-09T10:00:00')
-const MINORE = 'Per iscriverti a FLEOFIT devi avere almeno 14 anni.'
+const MINORE = 'Per iscriverti a PUSHFIT devi avere almeno 14 anni.'
 
 describe('erroreProfilo — età minima', () => {
   it('rifiuta chi compie 14 anni domani', () => {

@@ -13,7 +13,7 @@ import SwiftUI
 // suo: `Text(timerInterval:)` e `ProgressView(timerInterval:)`. Sono loro a far
 // scorrere tempo e anello fra un passo e l'altro. Il cambio di passo lo manda
 // l'app (col telefono bloccato, l'orologio nativo di LiveActivityPlugin.swift):
-// se non arriva in tempo, `isStale` è vero e la riga in basso dice di aprire FLEOFIT.
+// se non arriva in tempo, `isStale` è vero e la riga in basso dice di aprire PUSHFIT.
 
 // 🔴 Il tocco apre l'app con un link SUO: con `fleofit://` e basta l'app lo
 // prendeva per un login fallito e ricaricava tutto, chiudendo il timer.
@@ -53,7 +53,7 @@ struct TimerLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(s.compitoVisibile).font(.headline).lineLimit(1)
-                        Text(contesto.isStale ? "Apri FLEOFIT per il passo successivo" : s.poi)
+                        Text(contesto.isStale ? "Apri PUSHFIT per il passo successivo" : s.poi)
                             .font(.caption.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -104,7 +104,7 @@ private struct BloccoSchermo: View {
                     .frame(width: 52, height: 52)
                 VStack(alignment: .leading, spacing: 1) {
                     (Text("FLEO").foregroundColor(.white.opacity(0.55))
-                     + Text("FIT").foregroundColor(Color(esadecimale: "#f1ba17"))
+                     + Text("FIT").foregroundColor(Color(esadecimale: "#f1c517"))
                      + Text(" · \(contesto.attributes.categoria)").foregroundColor(.white.opacity(0.55)))
                         .font(.system(size: 11, weight: .heavy))
                         .lineLimit(1)
@@ -117,7 +117,7 @@ private struct BloccoSchermo: View {
             }
             VStack(alignment: .leading, spacing: 6) {
                 BarraAllenamento(stato: s, tinta: tinta)
-                Text(contesto.isStale ? "Apri FLEOFIT per il passo successivo" : s.poi)
+                Text(contesto.isStale ? "Apri PUSHFIT per il passo successivo" : s.poi)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.6))
                     .lineLimit(1)
@@ -249,13 +249,13 @@ private func mmss(_ secondi: Int) -> String {
 }
 
 private extension Color {
-    /// `#rrggbb` → Color. Un valore illeggibile diventa il giallo FLEOFIT.
+    /// `#rrggbb` → Color. Un valore illeggibile diventa il giallo PUSHFIT.
     init(esadecimale: String) {
         var testo = esadecimale.trimmingCharacters(in: .whitespaces)
         if testo.hasPrefix("#") { testo.removeFirst() }
         var valore: UInt64 = 0
         guard testo.count == 6, Scanner(string: testo).scanHexInt64(&valore) else {
-            self = Color(red: 241 / 255, green: 186 / 255, blue: 23 / 255)
+            self = Color(red: 241 / 255, green: 197 / 255, blue: 23 / 255)
             return
         }
         self = Color(red: Double((valore >> 16) & 0xff) / 255,

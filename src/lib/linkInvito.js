@@ -10,6 +10,7 @@
  * Logica pura: niente `window`, il chiamante passa user agent e indirizzi.
  */
 import { normalizzaCodice } from './codiceInvito'
+import { SCHEMA, eNostroProtocollo } from './schema'
 
 /** L'indirizzo del sito: il link si copia uguale dall'app e dal browser. */
 export const SITO = 'https://fleofit.vercel.app'
@@ -64,7 +65,7 @@ export function urlPlayStore(codice) {
 }
 
 /** Il deep link dell'app (schema già dichiarato su iOS e Android). */
-export const linkApp = (codice) => `fleofit://invito/${normalizzaCodice(codice)}`
+export const linkApp = (codice) => `${SCHEMA}://invito/${normalizzaCodice(codice)}`
 
 /**
  * L'intent di Chrome per Android: app installata = si apre con
@@ -73,7 +74,7 @@ export const linkApp = (codice) => `fleofit://invito/${normalizzaCodice(codice)}
  */
 export function intentAndroid(codice, fallback) {
   const pulito = normalizzaCodice(codice)
-  return `intent://invito/${pulito}#Intent;scheme=fleofit;package=${PACCHETTO_ANDROID};` +
+  return `intent://invito/${pulito}#Intent;scheme=${SCHEMA};package=${PACCHETTO_ANDROID};` +
     `S.browser_fallback_url=${encodeURIComponent(fallback)};end`
 }
 
@@ -86,7 +87,7 @@ export function codiceDaLinkApp(indirizzo) {
   let url
   try { url = new URL(indirizzo) } catch { return null }
   let percorso
-  if (url.protocol === 'fleofit:') percorso = `/${url.host}${url.pathname}`
+  if (eNostroProtocollo(url.protocol)) percorso = `/${url.host}${url.pathname}`
   else if (url.protocol === 'https:' && url.host === new URL(SITO).host) percorso = url.pathname
   else return null
   const m = percorso.match(/^\/invito\/([^/?#]+)\/?$/i)

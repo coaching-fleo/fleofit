@@ -3,7 +3,7 @@
    I colori sono quelli dell'app (CLAUDE.md §6): nessun valore nuovo. */
 
 .lp {
-  --brand: #f1ba17;
+  --brand: #f1c517;
   --running: #0094C6;
   --gym: #14B8A6;
   --ia: #a855f7;
@@ -141,7 +141,7 @@
   transition: background .2s ease, color .2s ease, transform .4s var(--molla);
 }
 .lp-tipi-elenco button:hover { background: #242424; color: #fff; }
-.lp-tipi-elenco button.attivo { background: rgba(241, 186, 23, .1); color: var(--brand); transform: translateX(4px); }
+.lp-tipi-elenco button.attivo { background: rgba(241, 197, 23, .1); color: var(--brand); transform: translateX(4px); }
 .lp-tipo-vista { padding: clamp(22px, 3.4vw, 44px); min-width: 0; display: flex; flex-direction: column; }
 .lp-tipo-testa { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; animation: lp-entra .45s var(--esce) both; }
 .lp-pillola-grande { min-height: 34px; padding: 0 16px; font-size: .95rem; }
@@ -157,7 +157,7 @@
 .lp-segmento.riposo { background: color-mix(in srgb, var(--riposo) 70%, #0B0B0B); height: 45%; }
 .lp-segmento.giro { background: var(--brand); opacity: .9; }
 .lp-segmento.giro:nth-child(even) { opacity: .62; }
-.lp-segmento.cap { background: repeating-linear-gradient(135deg, rgba(241, 186, 23, .5) 0 6px, transparent 6px 12px); border: 1.5px dashed var(--brand); }
+.lp-segmento.cap { background: repeating-linear-gradient(135deg, rgba(241, 197, 23, .5) 0 6px, transparent 6px 12px); border: 1.5px dashed var(--brand); }
 .lp-tipi:not(.visto) .lp-segmento { animation-play-state: paused; }
 @keyframes lp-cresce { from { transform: scaleY(0); opacity: 0; } }
 .lp-forma-asse { display: flex; justify-content: space-between; font-size: .75rem; font-weight: 700; color: var(--muted); margin-top: 10px; }
@@ -207,11 +207,11 @@
 .lp-tv-codice { display: flex; gap: 1.6cqw; }
 .lp-tv-codice span {
   width: 8.5cqw; height: 10.5cqw; border-radius: 1.4cqw; display: grid; place-items: center;
-  background: var(--card); border: .25cqw solid rgba(241, 186, 23, .3);
+  background: var(--card); border: .25cqw solid rgba(241, 197, 23, .3);
   font-family: var(--tondo); font-size: 6cqw; font-weight: 800; color: var(--brand);
   transition: background .3s, border-color .3s, transform .4s var(--molla);
 }
-.lp-tv-codice span.preso { background: rgba(241, 186, 23, .12); border-color: var(--brand); transform: translateY(-.6cqw); }
+.lp-tv-codice span.preso { background: rgba(241, 197, 23, .12); border-color: var(--brand); transform: translateY(-.6cqw); }
 .lp-tv-attesa-nota { font-size: 1.9cqw; color: var(--muted); font-weight: 600; }
 
 .lp-tv-live { opacity: 0; transform: scale(1.04); filter: blur(8px); padding: 3.4cqw 4cqw; display: flex; flex-direction: column; gap: 2.4cqw; }
@@ -251,8 +251,8 @@
   font-family: var(--tondo); font-size: 1.6rem; font-weight: 800;
   transition: border-color .25s, background .25s;
 }
-.lp-collega-caselle span.piena { border-color: rgba(241, 186, 23, .5); animation: lp-cifra .3s var(--molla) both; }
-.lp-collega-caselle span.cursore { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(241, 186, 23, .15); }
+.lp-collega-caselle span.piena { border-color: rgba(241, 197, 23, .5); animation: lp-cifra .3s var(--molla) both; }
+.lp-collega-caselle span.cursore { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(241, 197, 23, .15); }
 .lp-collega-ok {
   display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: .9rem; font-weight: 700; color: #4ade80;
   opacity: 0; transform: translateY(6px); transition: opacity .35s ease .3s, transform .5s var(--molla) .3s;
@@ -317,7 +317,7 @@
   position: absolute; top: 4.4em; right: -4.2em; z-index: 5; font-size: 15em;
   display: flex; align-items: center; gap: .45em; padding: .65em 1.05em; border-radius: 99em; white-space: nowrap;
   font-weight: 800; color: #000; background: var(--brand); pointer-events: none;
-  box-shadow: 0 1.2em 2.4em -.6em rgba(241, 186, 23, .55), 0 0 0 .25em rgba(241, 186, 23, .2);
+  box-shadow: 0 1.2em 2.4em -.6em rgba(241, 197, 23, .55), 0 0 0 .25em rgba(241, 197, 23, .2);
   transform: translateZ(5em); animation: lp-galleggia 2.4s ease-in-out infinite; transition: opacity .35s ease, scale .35s ease;
 }
 .lp-toccalo svg { width: 1.1em; height: 1.1em; }
@@ -407,7 +407,7 @@
 }
 .lp-indice-lista button span { font-size: .72rem; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; width: 18px; }
 .lp-indice-lista button:hover { background: #262626; color: #fff; }
-.lp-indice-lista button.qui { color: var(--brand); background: rgba(241, 186, 23, .08); }
+.lp-indice-lista button.qui { color: var(--brand); background: rgba(241, 197, 23, .08); }
 .lp-indice-lista button.qui span { color: var(--brand); }
 @media (max-width: 859px) {
   .lp-indice { left: 10px; }
@@ -426,7 +426,7 @@
 .lp-oggetto .lp-telefono { pointer-events: auto; }
 .lp-apertura { pointer-events: none; }
 .lp-apertura > * { pointer-events: auto; }
-.lp-prova { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 8px 14px; border-radius: 999px; font-size: .9rem; font-weight: 700; color: var(--brand); background: rgba(241, 186, 23, .08); border: 1px solid rgba(241, 186, 23, .25); }
+.lp-prova { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 8px 14px; border-radius: 999px; font-size: .9rem; font-weight: 700; color: var(--brand); background: rgba(241, 197, 23, .08); border: 1px solid rgba(241, 197, 23, .25); }
 .lp-capitolo-testo.attivo .lp-prova svg { animation: lp-tocca 1.8s ease-in-out infinite; }
 @keyframes lp-tocca { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(2px) scale(.88); } }
 
@@ -453,3 +453,7 @@
 @media (prefers-reduced-motion: reduce) {
   .lp *, .lp *::before, .lp *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; transition-delay: 0ms !important; }
 }
+
+/* Il logo PUSHFIT è un'immagine (dal 17/11/2026): alto quanto le lettere di prima. */
+.lp-logo img { display: block; height: .78em; width: auto; }
+.lp-tv-logo img { display: inline-block; height: .78em; width: auto; vertical-align: middle; }

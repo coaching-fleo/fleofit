@@ -8,7 +8,7 @@ import { MESSAGGIO_SENZA_RETE } from '../../lib/modelliBloccoDb'
 // ────────────────────────────
 // La «modalità modello» (16/10/2026) riusa il builder dei workout per UN
 // blocco. Tre cose si romperebbero in silenzio: la bozza del workout
-// (`fleofit_workout_draft`) cancellata o sovrascritta aprendo un modello — il
+// (`pushfit_workout_draft`) cancellata o sovrascritta aprendo un modello — il
 // coach perderebbe il workout lasciato a metà —; un modello in modifica salvato
 // come uno nuovo (un doppione invece di una correzione); e un id che non c'è
 // più, che lascerebbe un builder vuoto senza dire perché.
@@ -128,14 +128,14 @@ describe('il builder in modalità modello', () => {
       category: 'Hyrox', blocks: [{ id: 0.5, type: 'AMRAP', params: { duration: '12:00' }, exercises: [] }],
       runningSteps: [], gymGroups: [], coachNotes: 'non toccare',
     })
-    localStorage.setItem('fleofit_workout_draft', bozza)
+    localStorage.setItem('pushfit_workout_draft', bozza)
     monta('/create?modello=nuovo&categoria=Hyrox')
     expect(screen.queryByRole('dialog', { name: 'Bozza Trovata' })).toBeNull()
     await scegliBlocco('EMOM')
-    expect(localStorage.getItem('fleofit_workout_draft')).toBe(bozza)
+    expect(localStorage.getItem('pushfit_workout_draft')).toBe(bozza)
     await userEvent.click(screen.getByRole('button', { name: 'Salva modello' }))
     await screen.findByTestId('posizione')
-    expect(localStorage.getItem('fleofit_workout_draft')).toBe(bozza)
+    expect(localStorage.getItem('pushfit_workout_draft')).toBe(bozza)
   })
 
   it('un modello esistente si apre con la sua fase e il suo nome, e si aggiorna', async () => {
@@ -196,7 +196,7 @@ describe('il builder in modalità modello', () => {
       category: 'Hyrox', blocks: [{ id: 0.5, type: 'AMRAP', params: { duration: '12:00' }, exercises: [] }],
       runningSteps: [], gymGroups: [], coachNotes: '',
     })
-    localStorage.setItem('fleofit_workout_draft', bozza)
+    localStorage.setItem('pushfit_workout_draft', bozza)
     render(
       <AuthContext.Provider value={{ user: { id: 'u1' }, role: 'admin' }}>
         <MemoryRouter initialEntries={['/create?modello=m1']}>
@@ -211,7 +211,7 @@ describe('il builder in modalità modello', () => {
     expect(await screen.findByRole('dialog', { name: 'Bozza Trovata' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Nome del modello')).toBeNull()
     expect(screen.queryByText('5 km')).toBeNull()
-    expect(localStorage.getItem('fleofit_workout_draft')).toBe(bozza)
+    expect(localStorage.getItem('pushfit_workout_draft')).toBe(bozza)
   })
 
   it('finché il modello non arriva non mostra un builder vuoto da riempire', async () => {

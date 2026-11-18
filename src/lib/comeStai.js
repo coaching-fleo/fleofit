@@ -95,7 +95,7 @@ export function daChiedereOggi({ risposta, saltato, oggi }) {
 // ── Il giorno saltato: una memoria del dispositivo ─────────────────────────
 
 /** Chiave localStorage: il giorno in cui l'atleta ha scelto «Salta» (CLAUDE.md §8). */
-export const CHIAVE_SALTATO = 'fleofit_come_stai_saltato'
+export const CHIAVE_SALTATO = 'pushfit_come_stai_saltato'
 export const leggiSaltato = () => leggiJson(CHIAVE_SALTATO, null)
 export const segnaSaltato = (giorno) => scriviJson(CHIAVE_SALTATO, giorno)
 

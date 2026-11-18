@@ -107,7 +107,7 @@ describe('Il passo 2 — il codice', () => {
     await scrivi(utente, '7kq2m4xb')
 
     expect(await screen.findByText('7KQ2M4XB')).toBeInTheDocument()
-    expect(localStorage.getItem('fleofit_invite_code')).toBe('7KQ2M4XB')
+    expect(localStorage.getItem('pushfit_invite_code')).toBe('7KQ2M4XB')
   })
 
   // ⚠️ La minuscola arriva davvero: la tastiera iOS parte in maiuscolo, ma
@@ -133,7 +133,7 @@ describe('Il passo 2 — il codice', () => {
 
     expect(await screen.findByText(/non è valido, o è già stato usato/i)).toBeInTheDocument()
     expect(screen.queryByText(/Invito valido/i)).not.toBeInTheDocument()
-    expect(localStorage.getItem('fleofit_invite_code')).toBeNull()
+    expect(localStorage.getItem('pushfit_invite_code')).toBeNull()
   })
 
   // 🔴 Una lettura fallita NON è un codice sbagliato, e i due rimedi sono
@@ -152,7 +152,7 @@ describe('Il passo 2 — il codice', () => {
   // Chi arriva da `ProtectedRoute` ha già detto chi è: la schermata lo ripete,
   // perché «non c'è ancora un profilo» senza un nome è un'accusa generica.
   it('dice per quale indirizzo manca il profilo', async () => {
-    localStorage.setItem('fleofit_invito_atteso', JSON.stringify({ email: 'marco.riva@gmail.com', provider: 'google' }))
+    localStorage.setItem('pushfit_invito_atteso', JSON.stringify({ email: 'marco.riva@gmail.com', provider: 'google' }))
     montaPagina(<Login />, { percorso: '/login?serve=invito', rotta: '/login' })
 
     expect(await screen.findByText(/marco\.riva@gmail\.com/)).toBeInTheDocument()

@@ -361,7 +361,7 @@ export default function CalendarioTeam({ onVistaMese }) {
             </div>
             {giorni.map(g => (
               <div key={chiave(g)}
-                className={`sticky top-0 z-20 bg-[#141414] px-2.5 py-3 border-b border-[#262626] border-l border-[#1f1f1f] flex flex-col gap-0.5 ${isToday(g) ? 'shadow-[inset_0_0_0_999px_rgba(241,186,23,.06)]' : ''}`}>
+                className={`sticky top-0 z-20 bg-[#141414] px-2.5 py-3 border-b border-[#262626] border-l border-[#1f1f1f] flex flex-col gap-0.5 ${isToday(g) ? 'shadow-[inset_0_0_0_999px_rgba(241,197,23,.06)]' : ''}`}>
                 <span className={`text-xs font-bold uppercase tracking-[.06em] ${isToday(g) ? 'text-brand' : 'text-gray-400'}`}>
                   {format(g, 'EEE', { locale: it })}
                 </span>

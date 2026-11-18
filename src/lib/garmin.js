@@ -2,6 +2,8 @@ import { Capacitor } from '@capacitor/core'
 import { format, isValid, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { leggiJson, scriviJson } from './offlineQueue'
+import { NOME_APP } from './marchio'
+import { SCHEMI_RE } from './schema'
 
 /**
  * Il collegamento Garmin Connect, lato app (Fase 0: collegare e scollegare).
@@ -33,7 +35,7 @@ export const VERSIONE_CONSENSO_GARMIN = 1
 
 /** Il testo esatto della casella del consenso. */
 export const TESTO_CONSENSO_GARMIN =
-  'Acconsento che FLEOFIT riceva i dati del mio account Garmin e li usi, anche con l\'IA, come descritto nell\'informativa'
+  `Acconsento che ${NOME_APP} riceva i dati del mio account Garmin e li usi, anche con l'IA, come descritto nell'informativa`
 
 // Nello stesso ordine di `PERMESSI_NOTI` del server.
 const ETICHETTE_PERMESSI = [
@@ -97,7 +99,7 @@ export function ritornoGarmin() {
 // System WebView Android non aggiornata) leggeva `fleofit://garmin?…` come un
 // percorso opaco, con hostname vuoto. Con il parser il ritorno da Garmin
 // finiva nel ramo del login (Review Focus 1).
-const DEEP_LINK_GARMIN = /^fleofit:\/\/garmin(?:[/?#]|$)/i
+const DEEP_LINK_GARMIN = new RegExp(`^${SCHEMI_RE}://garmin(?:[/?#]|$)`, 'i')
 
 export function rottaDaDeepLinkGarmin(url) {
   if (typeof url !== 'string' || !DEEP_LINK_GARMIN.test(url)) return null
@@ -115,7 +117,7 @@ export function rottaDaDeepLinkGarmin(url) {
 export const MESSAGGI_ESITO = {
   ok: {
     titolo: 'Garmin collegato',
-    testo: 'I dati del tuo Garmin arriveranno a FLEOFIT dalla prossima sincronizzazione.',
+    testo: `I dati del tuo Garmin arriveranno a ${NOME_APP} dalla prossima sincronizzazione.`,
   },
   errore: {
     titolo: 'Garmin non collegato',
@@ -161,7 +163,7 @@ export function dataCollegamento(iso) {
 // login e alla prima apertura del giorno si chiede a `garmin-auth` di farsi
 // rimandare gli ultimi 7 giorni. Il webhook non duplica niente (`garmin_id`).
 
-const chiaveRecupero = (uid) => `fleofit_garmin_recupero_${uid}`
+const chiaveRecupero = (uid) => `pushfit_garmin_recupero_${uid}`
 
 /**
  * Se chiedere il recupero: la prima volta, un giorno nuovo, o un login nuovo

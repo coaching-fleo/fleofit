@@ -1,6 +1,14 @@
 # Landing `/benvenuto` (dal 02/11/2026)
 
-Pagina pubblica, **solo web**: nessuno ci arriva dall'app nativa. Rotta in `App.jsx`,
+Pagina pubblica, **solo web**: nessuno ci arriva dall'app nativa.
+
+> **Dal 18/11/2026 è la pagina principale del sito** (richiesta del committente): chi apre
+> `/` dal browser senza essere entrato vede la landing, senza redirect (l'indirizzo resta `/`).
+> La decide `mostraLandingAllaRadice` di `src/lib/landingRadice.js`, chiamata da
+> `ProtectedRoute`: solo radice **nuda** (un `?` o un `#` possono portare il ritorno del
+> login o un invito, e vanno al login come prima) e **mai nell'app nativa**. Le altre pagine
+> private senza sessione vanno ancora a `/login`. `/benvenuto` resta valida; il canonical
+> ora è la radice. Chi è entrato, su `/`, vede la Home come sempre. Rotta in `App.jsx`,
 codice in `src/pages/Landing.jsx` + `Landing.css` (classi tutte `lp-`) + `landingDati.js`.
 
 ## A chi parla

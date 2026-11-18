@@ -1,3 +1,6 @@
+// ⚠️ PRIMO import, e deve restare primo: trasloca le chiavi fleofit_* → pushfit_*
+// prima che gli altri moduli leggano localStorage (src/lib/chiaviLocali.js).
+import './lib/traslocoChiavi'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

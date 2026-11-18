@@ -132,7 +132,7 @@ export function messaggioResend(
 }
 
 export const oggettoSegnalazione = (tipo: string, nome: string) =>
-  `[FLEOFIT] ${TITOLI_TIPO[tipo] ?? 'Segnalazione'} · ${nome}`;
+  `[PUSHFIT] ${TITOLI_TIPO[tipo] ?? 'Segnalazione'} · ${nome}`;
 
 export function testoSegnalazione(c: Corpo, nome: string, email: string): string {
   const righe = [

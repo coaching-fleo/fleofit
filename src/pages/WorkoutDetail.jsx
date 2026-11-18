@@ -113,6 +113,24 @@ import {
   BloccoScheda, RigaEsercizio, IntestazioneSezione, CardNota, EsitoCompletato,
   RigaAssegnazione, ElencoAssegnazioni, GradimentoWorkout, CtaVetro, BottoneStoria,
 } from '../components/WorkoutDetailUI'
+import { NOME_APP, MARCHIO_PRIMA, MARCHIO_SECONDA } from '../lib/marchio'
+import logoPng from '../assets/marchio/pushfit-logo.png'
+import Logo from '../components/Logo'
+
+/** Il logo come data URL per jsPDF; null se non si carica (il PDF scrive il nome). */
+async function logoPerPdf() {
+  try {
+    const blob = await (await fetch(logoPng)).blob()
+    return await new Promise((ok, ko) => {
+      const r = new FileReader()
+      r.onload = () => ok(r.result)
+      r.onerror = ko
+      r.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
 
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
@@ -357,7 +375,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // Un altro workout nella stessa pagina: la TV è collegata a quello di prima.
   const connectedTvCode = tvQui.workoutId === id ? tvQui.codice : tvCollegata(id)
   // La vecchia memoria permanente (fino al 04/11/2026): va via, se c'è ancora.
-  useEffect(() => { try { localStorage.removeItem('fleofit_tv_code') } catch { /* niente */ } }, [])
+  useEffect(() => { try { localStorage.removeItem('pushfit_tv_code') } catch { /* niente */ } }, [])
 
   // Voice Notes
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null)
@@ -530,7 +548,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     if (status.connected) {
       const wRes = await supabase.from('workouts').select('*').eq('id', id).single()
       data = wRes.data
-      if (data) localStorage.setItem(`fleofit_cache_w_${id}`, JSON.stringify(data))
+      if (data) localStorage.setItem(`pushfit_cache_w_${id}`, JSON.stringify(data))
 
       if (queryAthleteId && data) {
         const awRes = await supabase.from('athlete_workouts')
@@ -540,7 +558,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           .order('completed_date', { ascending: false })
           .limit(1)
         awData = awRes.data
-        if (awData) localStorage.setItem(`fleofit_cache_aw_${id}_${queryAthleteId}`, JSON.stringify(awData))
+        if (awData) localStorage.setItem(`pushfit_cache_aw_${id}_${queryAthleteId}`, JSON.stringify(awData))
       }
       
       if (role !== 'athlete' && data) {
@@ -549,15 +567,15 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           .eq('workout_id', data.id)
           .order('completed_date', { ascending: false })
         allAwData = allRes.data
-        if (allAwData) localStorage.setItem(`fleofit_cache_all_aw_${id}`, JSON.stringify(allAwData))
+        if (allAwData) localStorage.setItem(`pushfit_cache_all_aw_${id}`, JSON.stringify(allAwData))
       }
     } else {
-      data = JSON.parse(localStorage.getItem(`fleofit_cache_w_${id}`) || 'null')
+      data = JSON.parse(localStorage.getItem(`pushfit_cache_w_${id}`) || 'null')
       if (queryAthleteId) {
-        awData = JSON.parse(localStorage.getItem(`fleofit_cache_aw_${id}_${queryAthleteId}`) || 'null')
+        awData = JSON.parse(localStorage.getItem(`pushfit_cache_aw_${id}_${queryAthleteId}`) || 'null')
       }
       if (role !== 'athlete') {
-        allAwData = JSON.parse(localStorage.getItem(`fleofit_cache_all_aw_${id}`) || 'null')
+        allAwData = JSON.parse(localStorage.getItem(`pushfit_cache_all_aw_${id}`) || 'null')
       }
     }
 
@@ -1068,19 +1086,29 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     
     doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(255, 255, 255)
-    doc.text('FLEO', 20, y)
-    const fleoWidth = doc.getTextWidth('FLEO')
-    doc.setTextColor(241, 186, 23)
-    doc.text('FIT', 20 + fleoWidth, y)
-    
+    // Il logo PUSHFIT è un'immagine (dal 17/11/2026): 4,6 mm di lettere,
+    // la larghezza segue il rapporto 2000×249. Senza immagine, il nome in testo.
+    const logoPdf = await logoPerPdf()
+    const ALTEZZA_LOGO = 4.6
+    let larghezzaLogo
+    if (logoPdf) {
+      larghezzaLogo = ALTEZZA_LOGO * (2000 / 249)
+      doc.addImage(logoPdf, 'PNG', 20, y - ALTEZZA_LOGO, larghezzaLogo, ALTEZZA_LOGO)
+    } else {
+      doc.setTextColor(255, 255, 255)
+      doc.text(MARCHIO_PRIMA, 20, y)
+      const primaWidth = doc.getTextWidth(MARCHIO_PRIMA)
+      doc.setTextColor(241, 197, 23)
+      doc.text(MARCHIO_SECONDA, 20 + primaWidth, y)
+      larghezzaLogo = primaWidth + doc.getTextWidth(MARCHIO_SECONDA)
+    }
+
     const firma = intestazioneCoach(template.nome)
     if (firma) {
-      const fitWidth = doc.getTextWidth('FIT')
       doc.setTextColor(150, 150, 150)
       doc.setFontSize(12)
       doc.setFont('helvetica', 'normal')
-      doc.text(firma, 20 + fleoWidth + fitWidth, y)
+      doc.text(firma, 20 + larghezzaLogo + (logoPdf ? 1.5 : 0), y)
     }
 
     y += 8
@@ -1104,7 +1132,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     } else if (type === 'Event') {
       doc.setTextColor(255, 255, 255)
     } else {
-      doc.setTextColor(241, 186, 23)
+      doc.setTextColor(241, 197, 23)
     }
     doc.setFont('helvetica', 'bold')
     doc.text(`[ ${type.toUpperCase()} ]`, 20, y)
@@ -1121,7 +1149,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       } else if (type === 'Event') {
         doc.setTextColor(255, 255, 255)
       } else {
-        doc.setTextColor(241, 186, 23)
+        doc.setTextColor(241, 197, 23)
       }
       doc.setFont('helvetica', 'bold')
       doc.text('INTENSITA\': ', 20, y)
@@ -1302,7 +1330,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       doc.setDrawColor(60, 60, 60)
       doc.line(20, y, 190, y)
       y += 6
-      doc.setTextColor(241, 186, 23)
+      doc.setTextColor(241, 197, 23)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(11)
       doc.text('NOTE COACH', 20, y)
@@ -2355,9 +2383,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             {/* HEADER: FLEOFIT LOGO & DATE */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
-                <div style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '0.5px', lineHeight: 1 }}>
-                  <span style={{ color: '#fff' }}>FLEO</span>
-                  <span style={{ color: BRAND }}>FIT</span>
+                <div style={{ lineHeight: 1 }}>
+                  <Logo altezza={24} />
                 </div>
                 <div style={{ color: '#888', fontSize: '16px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '6px' }}>
                   {workout.date && isValid(parseISO(workout.date)) ? format(parseISO(workout.date), 'dd MMM yyyy', { locale: it }) : ''}
@@ -2484,7 +2511,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                 Coach Federico Leo
               </div>
               <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, letterSpacing: '0.5px' }}>
-                @FLEOFIT
+                @{NOME_APP}
               </div>
             </div>
 

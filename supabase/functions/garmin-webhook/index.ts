@@ -1,5 +1,5 @@
 // garmin-webhook — le notifiche che Garmin ci spinge: deregistrazioni (l'atleta
-// ha tolto FLEOFIT da Garmin Connect), cambi di permessi e, dalla Fase 1, le
+// ha tolto PUSHFIT da Garmin Connect), cambi di permessi e, dalla Fase 1, le
 // attività dell'orologio (salvate e, se si può, abbinate al workout: attivita.ts)
 // e, dalla Fase 2, sonno, HRV e giornata (giornate.ts).
 // Spec: docs/superpowers/specs/2026-10-27-garmin-design.md.

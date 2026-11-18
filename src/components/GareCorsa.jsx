@@ -23,7 +23,7 @@ import { LABEL } from '../lib/stiliCard'
  * di gara, nome nel calendario e salvataggio restano in NuovoEvento, uguali
  * per Hyrox e Corsa.
  *
- * La regione scelta si ricorda (`fleofit_corsa_regione`): chi corre in
+ * La regione scelta si ricorda (`pushfit_corsa_regione`): chi corre in
  * Lombardia non deve sceglierla ogni volta.
  */
 export default function GareCorsa({ oggi = format(new Date(), 'yyyy-MM-dd'), gara, onScegli, onCambia, onAltro }) {

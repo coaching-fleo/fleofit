@@ -20,14 +20,14 @@
 // Se una pagina inizia a usare `.or()` o una relazione nuova, va aggiunta qui:
 // il sintomo è una lista vuota, non un errore.
 //
-// I dati vivono in `localStorage` sotto `fleofit_demo_db`, così quello che si
+// I dati vivono in `localStorage` sotto `pushfit_demo_db`, così quello che si
 // fa sopravvive a un ricaricamento. Si azzera con il bottone in pagina oppure
-//     localStorage.removeItem('fleofit_demo_db')
+//     localStorage.removeItem('pushfit_demo_db')
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { semi, VERSIONE_SEME, COACH_DEMO } from './demoSemi'
 
-const CHIAVE = 'fleofit_demo_db'
+const CHIAVE = 'pushfit_demo_db'
 
 /**
  * Le relazioni che l'app chiede nei `select`. `chiave` = colonna della riga che
@@ -107,14 +107,14 @@ function segnaVecchiComeLetti(base) {
     .filter(a => a.status === 'completed' && a.completed_date < soglia)
     .map(a => a.id)
   try {
-    localStorage.setItem(`fleofit_feedback_visti_${UTENTE.id}`, JSON.stringify(vecchi))
+    localStorage.setItem(`pushfit_feedback_visti_${UTENTE.id}`, JSON.stringify(vecchi))
   } catch (e) { console.warn('[demo] non riesco a segnare i feedback letti', e) }
 }
 
 /** Azzera tutto e ricomincia dal seme. Usato dal pannello in pagina. */
 export function azzeraDemo() {
   localStorage.removeItem(CHIAVE)
-  localStorage.removeItem(`fleofit_feedback_visti_${UTENTE.id}`)
+  localStorage.removeItem(`pushfit_feedback_visti_${UTENTE.id}`)
   DB = null
 }
 
@@ -322,13 +322,13 @@ const SESSIONE = { user: UTENTE, access_token: 'demo', refresh_token: 'demo' }
 // passa su un BroadcastChannel col nome del canale; `postgres_changes` riceve
 // gli update/delete fatti dall'altra scheda (`avvisaModifiche`). Il resto tace.
 const BC = typeof BroadcastChannel !== 'undefined'
-const modifiche = BC ? new BroadcastChannel('fleofit_demo_modifiche') : null
+const modifiche = BC ? new BroadcastChannel('pushfit_demo_modifiche') : null
 const avvisaModifiche = (tabella, eventType, righe) => {
   for (const r of righe) modifiche?.postMessage({ tabella, eventType, new: eventType === 'DELETE' ? {} : { ...r }, old: { ...r } })
 }
 
 const canale = (nome) => {
-  const bc = BC ? new BroadcastChannel(`fleofit_demo_${nome}`) : null
+  const bc = BC ? new BroadcastChannel(`pushfit_demo_${nome}`) : null
   const ascolti = []
   const c = {
     on: (tipo, filtro, cb) => {
@@ -361,8 +361,8 @@ const canale = (nome) => {
 }
 
 export function clientDemo() {
-  console.info('%c[FLEOFIT] AMBIENTE DI PROVA — dati finti, nessuna scrittura reale',
-    'background:#f1ba17;color:#000;font-weight:bold;padding:2px 6px;border-radius:4px')
+  console.info('%c[PUSHFIT] AMBIENTE DI PROVA — dati finti, nessuna scrittura reale',
+    'background:#f1c517;color:#000;font-weight:bold;padding:2px 6px;border-radius:4px')
   return {
     __demo: true,
     from: (tabella) => query(tabella),
@@ -382,6 +382,7 @@ export function clientDemo() {
       updateUser: async () => ({ data: { user: UTENTE }, error: null }),
       setSession: async () => ({ data: { session: SESSIONE }, error: null }),
       resetPasswordForEmail: async () => ({ data: {}, error: null }),
+      verifyOtp: async () => ({ data: { session: SESSIONE, user: UTENTE }, error: null }),
     },
     storage: {
       from: () => ({

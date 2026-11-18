@@ -18,7 +18,7 @@ export const MOTIVATIONS = [
 
 export function getDailyMotivation() {
   const today = new Date().toISOString().split('T')[0]
-  const savedData = JSON.parse(localStorage.getItem('fleofit_motivation') || '{}')
+  const savedData = JSON.parse(localStorage.getItem('pushfit_motivation') || '{}')
   
   // Se oggi ha già pescato una frase E quella frase esiste ancora nell'elenco, usiamo quella
   if (savedData.date === today && savedData.quote && MOTIVATIONS.includes(savedData.quote)) return savedData.quote
@@ -28,6 +28,6 @@ export function getDailyMotivation() {
   const availableMotivations = MOTIVATIONS.filter(m => !history.includes(m))
   const pool = availableMotivations.length > 0 ? availableMotivations : MOTIVATIONS
   const selectedQuote = pool[Math.floor(Math.random() * pool.length)]
-  localStorage.setItem('fleofit_motivation', JSON.stringify({ date: today, quote: selectedQuote, history: [selectedQuote, ...history].slice(0, 10) }))
+  localStorage.setItem('pushfit_motivation', JSON.stringify({ date: today, quote: selectedQuote, history: [selectedQuote, ...history].slice(0, 10) }))
   return selectedQuote
 }

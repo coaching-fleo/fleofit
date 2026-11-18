@@ -59,7 +59,7 @@ describe('il catalogo', () => {
 
   it('la bozza vuota e la chiave', () => {
     expect(bozzaVuota()).toEqual({ tipo: null, risposte: {}, descrizione: '' })
-    expect(CHIAVE_BOZZA).toBe('fleofit_segnalazione_bozza')
+    expect(CHIAVE_BOZZA).toBe('pushfit_segnalazione_bozza')
   })
 })
 

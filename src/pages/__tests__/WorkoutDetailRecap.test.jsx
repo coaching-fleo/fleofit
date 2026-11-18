@@ -78,7 +78,7 @@ beforeEach(() => {
   ctrl.stato = { sections: HYROX, assegnazioni: assegnazione() }
   // «Come stai oggi» si chiede segnando come completato, prima dell'RPE: qui
   // non è il soggetto, quindi oggi risulta già saltato.
-  window.localStorage.setItem('fleofit_come_stai_saltato', JSON.stringify(new Date().toLocaleDateString('sv-SE')))
+  window.localStorage.setItem('pushfit_come_stai_saltato', JSON.stringify(new Date().toLocaleDateString('sv-SE')))
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })

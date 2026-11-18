@@ -16,7 +16,7 @@
 // La regola che ne è uscita: **una lettura che fallisce si ripara da sola**.
 // Meglio ripartire da zero che restare bloccati per sempre su un valore rotto.
 
-export const CHIAVE_CODA = 'fleofit_offline_queue'
+export const CHIAVE_CODA = 'pushfit_offline_queue'
 
 /**
  * Legge un JSON da localStorage senza mai lanciare.
@@ -84,4 +84,4 @@ export function accodaSuStorage(payload, storage = globalThis.localStorage, ora 
 }
 
 /** Chiave della cache dei workout, che è per atleta. */
-export const chiaveCacheWorkout = (uid) => `fleofit_cache_workouts_${uid}`
+export const chiaveCacheWorkout = (uid) => `pushfit_cache_workouts_${uid}`

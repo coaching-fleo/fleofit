@@ -74,8 +74,8 @@ describe('testoValido', () => {
 
 describe('costanti e riesportazioni', () => {
   it('ci sono', () => {
-    expect(CHIAVE_BOZZA).toBe('fleofit_messaggio_bozza')
-    expect(CHIAVE_VISTO).toBe('fleofit_messaggi_visto_fino')
+    expect(CHIAVE_BOZZA).toBe('pushfit_messaggio_bozza')
+    expect(CHIAVE_VISTO).toBe('pushfit_messaggi_visto_fino')
     expect(MAX_CARATTERI).toBe(2000)
     expect(typeof anteprima).toBe('function')
     expect(typeof routeMessaggio).toBe('function')
@@ -115,6 +115,6 @@ describe('prove in bacheca (temporaneo)', () => {
     const buona = nuovaProva({ testo: 'x', fissato: false })
     expect(proveValide([buona, { id: 'm1', testo: 'vero' }, null, 'x'])).toEqual([buona])
     expect(proveValide(null)).toEqual([])
-    expect(CHIAVE_PROVE).toBe('fleofit_messaggi_prova')
+    expect(CHIAVE_PROVE).toBe('pushfit_messaggi_prova')
   })
 })

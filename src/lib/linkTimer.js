@@ -1,4 +1,5 @@
 import { codiceDaQR } from './codiceTV'
+import { SCHEMA, eNostroProtocollo } from './schema'
 
 // Il link che apre l'app dal tocco sulla Live Activity del timer
 // (ios/App/FleoTimer/TimerLiveActivity.swift, `widgetURL`).
@@ -11,12 +12,12 @@ import { codiceDaQR } from './codiceTV'
 //
 // File a parte, e non dentro liveActivity.js, perché lo importa App.jsx: tutto
 // ciò che sta qui finisce nel chunk d'ingresso.
-export const LINK_TIMER = 'fleofit://timer'
+export const LINK_TIMER = `${SCHEMA}://timer`
 
 export function eLinkDelTimer(indirizzo) {
   try {
     const url = new URL(indirizzo)
-    return url.protocol === 'fleofit:' && (url.host === 'timer' || url.pathname.replace(/^\/+/, '') === 'timer')
+    return eNostroProtocollo(url.protocol) && (url.host === 'timer' || url.pathname.replace(/^\/+/, '') === 'timer')
   } catch {
     return false
   }
@@ -34,7 +35,7 @@ export function eLinkDelTimer(indirizzo) {
 export function eLinkDellaTV(indirizzo) {
   try {
     const url = new URL(indirizzo)
-    return url.protocol === 'fleofit:' && url.host === 'tv'
+    return eNostroProtocollo(url.protocol) && url.host === 'tv'
   } catch {
     return false
   }

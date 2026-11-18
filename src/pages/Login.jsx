@@ -22,6 +22,8 @@ import {
   TestataPasso, CaselleCodice, BottoneIncolla, AvvisoCodice, RigaAiuto,
   CardInvitoValido, CardProfilo, CtaGialla, FoglioAiuto, CampoTesto,
 } from '../components/LoginUI'
+import { NOME_APP } from '../lib/marchio'
+import { SCHEMA } from '../lib/schema'
 
 /**
  * L'accesso, rifatto sull'artboard `Login.dc.html` opzione 1b (04/09/2026).
@@ -92,7 +94,7 @@ export default function Login() {
   // comunque un campo vero su cui funziona l'incolla di sistema.
   const puoIncollare = typeof navigator !== 'undefined' && !!navigator.clipboard?.readText
 
-  const baseUrl = isNativo ? 'fleofit://login-callback' : (typeof window !== 'undefined' ? window.location.origin : '')
+  const baseUrl = isNativo ? `${SCHEMA}://login-callback` : (typeof window !== 'undefined' ? window.location.origin : '')
 
   /**
    * Verifica un codice contro il database.
@@ -117,7 +119,7 @@ export default function Login() {
     // Da qui in poi il codice vive in localStorage: è `ProtectedRoute` a
     // riscattarlo (UPDATE con `used_by`), perché quella scrittura richiede una
     // sessione e a questo punto la sessione non c'è ancora.
-    localStorage.setItem('fleofit_invite_code', daVerificare)
+    localStorage.setItem('pushfit_invite_code', daVerificare)
     setInvito(daVerificare)
     vibraSuccesso()
   }, [])
@@ -166,7 +168,7 @@ export default function Login() {
     // Arriva da `ProtectedRoute`: autenticato, ma senza un profilo. Il codice
     // è l'unica cosa che manca, e adesso sappiamo per chi.
     if (searchParams.get('serve') === 'invito') {
-      const atteso = leggiJson('fleofit_invito_atteso', null)
+      const atteso = leggiJson('pushfit_invito_atteso', null)
       if (atteso?.email) setEmailNota(atteso.email)
       if (atteso?.provider) setRipresa(atteso.provider === 'email' ? 'email' : atteso.provider)
       // ⚠️ Si consuma subito: è un passaggio di consegne fra due caricamenti
@@ -174,7 +176,7 @@ export default function Login() {
       // il passo 2 su questo telefono si vedrebbe in testa l'indirizzo di
       // qualcun altro — e la schermata dell'invito è l'ultima in cui si può
       // scrivere il nome sbagliato.
-      localStorage.removeItem('fleofit_invito_atteso')
+      localStorage.removeItem('pushfit_invito_atteso')
       setVista('codice')
       navigate('/login', { replace: true })
     }
@@ -246,7 +248,7 @@ export default function Login() {
         // Sul nativo Apple riconosce l'app dal bundle id del binario:
         // ASAuthorization ignora questi due campi, che il plugin però esige.
         clientId: 'it.federicoleo.fleofit',
-        redirectURI: 'fleofit://login-callback',
+        redirectURI: `${SCHEMA}://login-callback`,
         scopes: 'email name',
         // Al plugin l'HASH, a Supabase il valore in chiaro: vedi lib/appleLogin.js.
         ...(nonce ? { nonce: nonce.hash } : {}),
@@ -279,7 +281,7 @@ export default function Login() {
   }
 
   const entraConGoogle = async () => {
-    const codiceInvito = localStorage.getItem('fleofit_invite_code')
+    const codiceInvito = localStorage.getItem('pushfit_invite_code')
     const redirectUrl = codiceInvito ? `${baseUrl}?inviteCode=${codiceInvito}` : baseUrl
 
     try {
@@ -351,7 +353,7 @@ export default function Login() {
 
   /** Passo 2, percorso email: il codice è valido, manca solo la password. */
   const creaProfilo = async () => {
-    const codiceInvito = localStorage.getItem('fleofit_invite_code')
+    const codiceInvito = localStorage.getItem('pushfit_invite_code')
     if (!codiceInvito) {
       setAlertInfo({ title: 'Accesso Negato', message: 'Per registrarti è necessario un codice di invito valido.', type: 'error' })
       return
@@ -679,7 +681,7 @@ export default function Login() {
             // Non c'è nessun canale di assistenza nel prodotto: l'unico
             // indirizzo che l'app conosce è quello del coach, ed è anche
             // l'unica risposta sensata a «non ho un codice».
-            window.location.href = 'mailto:coaching@federicoleo.it?subject=' + encodeURIComponent('FLEOFIT — non ho un codice invito')
+            window.location.href = 'mailto:coaching@federicoleo.it?subject=' + encodeURIComponent(`${NOME_APP} — non ho un codice invito`)
           }}
         />
       )}

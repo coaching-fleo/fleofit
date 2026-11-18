@@ -41,7 +41,7 @@ import { CARD, LABEL } from '../lib/stiliCard'
 export function BenvenutoCoach({ coach, onProfilo }) {
   return (
     <div className="relative overflow-hidden rounded-[26px] bg-brand p-[22px] pt-6
-                    shadow-[0_26px_50px_-22px_rgba(241,186,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]">
+                    shadow-[0_26px_50px_-22px_rgba(241,197,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]">
       <div aria-hidden="true" className="absolute -top-4 -right-3 opacity-[.13] -rotate-12 text-black">
         <Dumbbell size={132} />
       </div>
@@ -302,7 +302,7 @@ export function CardSettimanaChiusa({ minuti, scarto, fatti, totale, barre = [] 
       <div aria-hidden="true" className="flex h-10 items-end gap-1.5">
         {barre.map((v, i) => (
           <span key={i} style={{ height: `${Math.max(10, v)}%` }}
-            className={`flex-1 rounded-[3px] ${v >= 85 ? 'bg-brand shadow-[0_0_10px_rgba(241,186,23,.5)]' : v > 0 ? 'bg-brand/40' : 'bg-white/10'}`} />
+            className={`flex-1 rounded-[3px] ${v >= 85 ? 'bg-brand shadow-[0_0_10px_rgba(241,197,23,.5)]' : v > 0 ? 'bg-brand/40' : 'bg-white/10'}`} />
         ))}
       </div>
     </div>

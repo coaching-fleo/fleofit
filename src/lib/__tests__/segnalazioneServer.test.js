@@ -86,8 +86,8 @@ describe('allegati', () => {
 
 describe('la mail', () => {
   it('l\'oggetto dice tipo e nome', () => {
-    expect(oggettoSegnalazione('notifiche', 'Sofia Rossi')).toBe('[FLEOFIT] Notifiche · Sofia Rossi')
-    expect(oggettoSegnalazione('contenuto', 'Sofia Rossi')).toBe('[FLEOFIT] Un contenuto da togliere · Sofia Rossi')
+    expect(oggettoSegnalazione('notifiche', 'Sofia Rossi')).toBe('[PUSHFIT] Notifiche · Sofia Rossi')
+    expect(oggettoSegnalazione('contenuto', 'Sofia Rossi')).toBe('[PUSHFIT] Un contenuto da togliere · Sofia Rossi')
   })
 
   it('il testo porta risposte, descrizione, mittente e dati tecnici', () => {
@@ -116,7 +116,7 @@ describe('la mail', () => {
 
 describe('messaggioResend', () => {
   const msg = () => messaggioResend(corpo(), {
-    nome: 'Sofia Rossi', email: 'sofia@esempio.it', mittente: 'FLEOFIT <a@b.it>', destinatario: 'coach@b.it',
+    nome: 'Sofia Rossi', email: 'sofia@esempio.it', mittente: 'PUSHFIT <a@b.it>', destinatario: 'coach@b.it',
   })
 
   it('🔴 non ha «Rispondi a»: alle segnalazioni non si risponde (committente, 08/10/2026)', () => {
@@ -126,9 +126,9 @@ describe('messaggioResend', () => {
 
   it('va al destinatario, con oggetto, testo, HTML e allegati', () => {
     const m = msg()
-    expect(m.from).toBe('FLEOFIT <a@b.it>')
+    expect(m.from).toBe('PUSHFIT <a@b.it>')
     expect(m.to).toEqual(['coach@b.it'])
-    expect(m.subject).toBe('[FLEOFIT] Notifiche · Sofia Rossi')
+    expect(m.subject).toBe('[PUSHFIT] Notifiche · Sofia Rossi')
     expect(m.text).toContain('Sofia Rossi <sofia@esempio.it>')
     expect(m.html).toContain('Sofia Rossi')
     expect(m.attachments).toEqual([])

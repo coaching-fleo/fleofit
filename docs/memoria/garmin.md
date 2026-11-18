@@ -6,6 +6,25 @@
 > il coach vede chi è collegato. Nessun dato Garmin viene usato.
 
 ## 🟡 Stato: attivo in prova (28/10/2026)
+- 🔄 **17/11/2026: Garmin ha cambiato il programma** (pagine del developer portal datate 06/10/2026).
+  Non c'è più una «richiesta di produzione»: c'è **Starter Access** (gratis, fino a **1.000** utenti
+  collegati, solo push, **niente storico**, nessun supporto, app marcata «unverified») ed
+  **Enterprise Access** (a pagamento: onboarding da 1.000 $, canone mensile, contratto commerciale,
+  storico, utenti illimitati, supporto). FAQ: con Starter si può «lanciare subito»; quando l'app
+  cresce Garmin la mette «under review» e può limitare i nuovi collegamenti finché non ha
+  controllato sito pubblico, privacy policy pubblicata e requisiti. FLEOFIT è Starter: in *API
+  Configuration* tutte le API risultano «Approved». ✅ **Decisione del committente (17/11/2026): si resta
+  su Starter**, Enterprise non si chiede (sotto i 1.000 atleti non serve; si rinuncia allo storico
+  del primo collegamento). Non riproporlo, a meno che serva lo storico o si avvicini il tetto. ⚠️ Nello stesso giorno *Endpoint Configuration*
+  mostra su ogni riga accesa «The domain riyqtcssllupakjtoehj.supabase.co is currently in security
+  review», e la Partner Verification rilanciata dà Coverage rossa (7 domini senza dati in 24 ore)
+  e Active User 0 su 2. «Niente storico» in Starter: il recupero dei 30 giorni potrebbe non arrivare.
+  🔴 **Dati fermi dal 13/11/2026**: l'ultima riga di `garmin_giornate` è delle 00:28 UTC del 13/11.
+  Il 17/11 alle 15:00 il test HTTP mostra 7 push (WELLNESS_DAILY, WELLNESS_SLEEP, HRV) finite in
+  **403**, ma il webhook risponde sempre 200, anche con un token sbagliato (provato con `curl`
+  lo stesso giorno: 200). Il 403 quindi nasce prima della funzione: con ogni probabilità
+  è la «security review» del dominio da parte di Garmin, oppure Cloudflare davanti a Supabase.
+  Lato codice non c'è niente da correggere. Da ricontrollare quando la scritta della review sparisce.
 - ⏳ **`GARMIN_MINUTI_MINIMI` (30/10/2026), solo per le prove**: secret di Supabase che abbassa i
   10 minuti sotto cui un'attività non completa mai un workout (`minutiMinimi` di
   `_shared/abbinaGarmin.ts`, letto da `garmin-webhook/attivita.ts`). Intero da 1 a 60; assente o

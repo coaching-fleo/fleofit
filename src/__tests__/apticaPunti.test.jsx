@@ -79,11 +79,11 @@ describe('le scelte fra pari', () => {
   it('🔴 ritoccare la scelta GIÀ attiva non vibra: non è cambiato niente', async () => {
     const utente = userEvent.setup()
     const onClick = vi.fn()
-    const { rerender } = render(<CardCategoria attiva nome="Hyrox" icona={Dumbbell} colore="#f1ba17" descrizione="" onClick={onClick} />)
+    const { rerender } = render(<CardCategoria attiva nome="Hyrox" icona={Dumbbell} colore="#f1c517" descrizione="" onClick={onClick} />)
     await utente.click(screen.getByRole('button'))
     expect(A.vibraScelta).not.toHaveBeenCalled()
     expect(onClick).toHaveBeenCalledTimes(1)
-    rerender(<CardCategoria attiva={false} nome="Hyrox" icona={Dumbbell} colore="#f1ba17" descrizione="" onClick={onClick} />)
+    rerender(<CardCategoria attiva={false} nome="Hyrox" icona={Dumbbell} colore="#f1c517" descrizione="" onClick={onClick} />)
     await utente.click(screen.getByRole('button'))
     expect(A.vibraScelta).toHaveBeenCalledTimes(1)
   })

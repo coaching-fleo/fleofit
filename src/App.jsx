@@ -21,6 +21,7 @@ const Calendar = lazy(() => import('./pages/Calendar'))
 const TVDashboard = lazy(() => import('./pages/TVDashboard'))
 // La pagina ponte del link d'invito (src/lib/linkInvito.js): pubblica.
 const Invito = lazy(() => import('./pages/Invito'))
+const Conferma = lazy(() => import('./pages/Conferma'))
 const CreateWorkout = lazy(() => import('./pages/CreateWorkout'))
 const Athletes = lazy(() => import('./pages/Athletes'))
 const AthleteDetail = lazy(() => import('./pages/AthleteDetail'))
@@ -100,6 +101,9 @@ import { codiceDaLinkApp, loginConCodice } from './lib/linkInvito'
 import { codiceDalPlayStore } from './lib/referrerInvito'
 import { impostaRuoloFunzioni } from './lib/funzioniApp'
 import SoloSeAccesa from './components/SoloSeAccesa'
+import Logo from './components/Logo'
+import { eNostroProtocollo } from './lib/schema'
+import { mostraLandingAllaRadice } from './lib/landingRadice'
 
 // I campi del profilo. ⚠️ `min-w-0` e `appearance-none` non sono cosmetica: su
 // iOS un `<input type="date">` ignora `w-full` e si allarga quanto il suo
@@ -179,7 +183,7 @@ function Onboarding({ user, onComplete }) {
         setErrore('Non siamo riusciti a salvare il profilo: ' + dbError.message)
         return
       }
-      localStorage.setItem(`fleofit_name_${user.id}`, nome)
+      localStorage.setItem(`pushfit_name_${user.id}`, nome)
 
       // «👋 Nuovo atleta» al coach del codice invito (11/11/2026). DOPO la riga
       // `athletes`: è il suo inserimento a far scattare `assegna_coach`, e senza
@@ -210,7 +214,7 @@ function Onboarding({ user, onComplete }) {
     <div className="min-h-[100dvh] bg-[#0B0B0B] flex flex-col items-center justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="w-full max-w-md min-w-0 bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-5 sm:p-6 shadow-2xl">
         <div className="flex flex-col items-center mb-6">
-          <h1 className="text-4xl font-black text-white tracking-tight mb-3">FLEO<span className="text-brand">FIT</span></h1>
+          <h1 className="mb-4 leading-none"><Logo altezza={28} /></h1>
           <h2 className="text-2xl font-bold text-white text-center">Completiamo il profilo!</h2>
           <p className="text-gray-400 text-sm mt-1 text-center">Abbiamo bisogno di qualche informazione in più per iniziare.</p>
         </div>
@@ -397,8 +401,8 @@ function ProtectedRoute() {
       // disconnetteva. Si entra col ruolo dell'ultimo accesso riuscito, e le
       // pagine mostrano le loro copie in cache (src/lib/avvioSenzaRete.js).
       // ⚠️ Chi è già entrato prima di questa versione non ha il ruolo salvato,
-      // ma ha il nome (`fleofit_name_<uid>`): vuol dire che il profilo c'è.
-      const nomeSalvato = localStorage.getItem(`fleofit_name_${session.user.id}`)
+      // ma ha il nome (`pushfit_name_<uid>`): vuol dire che il profilo c'è.
+      const nomeSalvato = localStorage.getItem(`pushfit_name_${session.user.id}`)
       const metaRuolo = session.user.user_metadata?.role
       const ricordato = ruoloSalvato(session.user.id)
         ?? (nomeSalvato ? (ruoloDb ?? metaRuolo ?? 'athlete') : null)
@@ -417,7 +421,7 @@ function ProtectedRoute() {
       if (!isAdmin) {
         if (!rigaAtleta) {
           const urlParams = new URLSearchParams(window.location.search)
-          const inviteCode = localStorage.getItem('fleofit_invite_code') || urlParams.get('inviteCode')
+          const inviteCode = localStorage.getItem('pushfit_invite_code') || urlParams.get('inviteCode')
           let isAuthorized = false;
 
           if (inviteCode) {
@@ -453,8 +457,8 @@ function ProtectedRoute() {
             // ⚠️ `scriviJson` e non `setItem` diretto: regola 0-bis di
             // CLAUDE.md §9. Se fallisce non cambia niente di essenziale — il
             // passo 2 si apre lo stesso, solo senza l'email in testa.
-            localStorage.removeItem('fleofit_invite_code')
-            scriviJson('fleofit_invito_atteso', {
+            localStorage.removeItem('pushfit_invite_code')
+            scriviJson('pushfit_invito_atteso', {
               email: session.user.email || '',
               provider: session.user.app_metadata?.provider || '',
             })
@@ -463,7 +467,7 @@ function ProtectedRoute() {
             return;
           }
         } else {
-          localStorage.removeItem('fleofit_invite_code')
+          localStorage.removeItem('pushfit_invite_code')
         }
       }
 
@@ -479,7 +483,7 @@ function ProtectedRoute() {
       setNeedsConsenso(false)
 
       const meta = session.user.user_metadata || {}
-      const name = localStorage.getItem(`fleofit_name_${session.user.id}`) || meta.first_name || meta.full_name?.split(' ')[0] || session.user.email?.split('@')[0] || ''
+      const name = localStorage.getItem(`pushfit_name_${session.user.id}`) || meta.first_name || meta.full_name?.split(' ')[0] || session.user.email?.split('@')[0] || ''
       setUserName(name)
 
       let r = meta.role
@@ -512,7 +516,7 @@ function ProtectedRoute() {
           return
         }
         setUserName(rigaAtleta.name)
-        localStorage.setItem(`fleofit_name_${session.user.id}`, rigaAtleta.name)
+        localStorage.setItem(`pushfit_name_${session.user.id}`, rigaAtleta.name)
         // Solo dopo un accesso completo con la rete: è ciò che l'avvio senza
         // rete userà la prossima volta.
         salvaRuolo(session.user.id, isAdmin ? ruoloDb : r)
@@ -547,6 +551,9 @@ function ProtectedRoute() {
   if (loading) return apertura
 
   if (!session) {
+    // Sul sito, la radice nuda mostra la landing a chi non è entrato
+    // (dal 18/11/2026, src/lib/landingRadice.js). L'app nativa va al login.
+    if (mostraLandingAllaRadice(location, Capacitor.isNativePlatform())) return <Landing />
     // ⚠️ Niente apertura qui: si sta uscendo verso il login, e un velo che si
     // dissolve sopra un redirect è un velo che nessuno vede.
     return <Navigate to={`/login${location.search}${location.hash}`} replace />
@@ -730,12 +737,12 @@ function DeeplinkHandler() {
         }
 
         const url = new URL(event.url);
-        if (url.protocol === 'fleofit:') {
+        if (eNostroProtocollo(url.protocol)) {
           Browser.close().catch(() => {});
           
           // 1. Estrae eventuale codice invito dalla URL per non perderlo
           const inviteCode = url.searchParams.get('inviteCode');
-          if (inviteCode) localStorage.setItem('fleofit_invite_code', inviteCode);
+          if (inviteCode) localStorage.setItem('pushfit_invite_code', inviteCode);
 
           // 2. Estrae i token di accesso direttamente dall'hash
           const hashParams = new URLSearchParams(url.hash.substring(1));
@@ -901,7 +908,10 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/tv" element={<TVDashboard />} />
           <Route path="/invito/:codice" element={<Invito />} />
-          {/* Landing pubblica, solo web: nessuno ci arriva dall'app nativa. */}
+          <Route path="/conferma" element={<Conferma />} />
+          {/* Landing pubblica, solo web: nessuno ci arriva dall'app nativa. Dal
+              18/11/2026 la stessa pagina si vede anche su «/» a chi non è
+              entrato (ProtectedRoute, src/lib/landingRadice.js). */}
           <Route path="/benvenuto" element={<Landing />} />
           {/* Un solo <ProtectedRoute> per tutte le pagine private: è la route
               di layout, e le pagine sono sue figlie. Non riavvolgerne nessuna. */}

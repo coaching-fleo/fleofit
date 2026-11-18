@@ -71,12 +71,12 @@ export async function spostaAssegnazione(supabase, awId, data) {
 
 /**
  * Il nome con cui la push presenta l'atleta: lo stesso ripiego della Home
- * (`fleofit_name_<uid>`, poi i metadati dell'accesso). È una stringa nuda,
+ * (`pushfit_name_<uid>`, poi i metadati dell'accesso). È una stringa nuda,
  * non JSON: per questo non passa da `leggiJson`.
  */
 export function nomeAtleta(user) {
   let salvato = null
-  try { salvato = localStorage.getItem(`fleofit_name_${user?.id}`) } catch { /* storage non disponibile */ }
+  try { salvato = localStorage.getItem(`pushfit_name_${user?.id}`) } catch { /* storage non disponibile */ }
   const meta = user?.user_metadata || {}
   return salvato || meta.first_name || meta.full_name?.split(' ')[0] || 'Atleta'
 }

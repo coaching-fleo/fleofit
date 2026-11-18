@@ -14,6 +14,7 @@
 
 import { FolderArchive, ChevronRight, Mic, Search } from 'lucide-react'
 import { META } from '../lib/stiliCard'
+import Logo from './Logo'
 
 // ── Header ────────────────────────────────────────────────────────────────
 // Il logo resta, al contrario della Home atleta: il coach usa anche la web app,
@@ -27,8 +28,8 @@ export function HeaderCoach({ dataOggi, atleti, inPausa = 0, azioni }) {
           {dataOggi}{atleti > 0 ? ` · ${atleti} ${atleti === 1 ? 'atleta' : 'atleti'}` : ''}
           {inPausa > 0 && <span className="text-[#5b6070]"> · {inPausa} in pausa</span>}
         </p>
-        <h1 className="text-[26px] font-black tracking-[-.03em] leading-none text-white">
-          FLEO<span className="text-brand">FIT</span>{' '}
+        <h1 className="flex items-center gap-2 leading-none">
+          <Logo altezza={15} className="max-w-[60%]" />
           <span className="text-[19px] font-extrabold tracking-[-.02em] text-muted">Coach</span>
         </h1>
       </div>

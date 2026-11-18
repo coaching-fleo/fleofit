@@ -13,7 +13,7 @@
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
 
-export const CHIAVE_BOZZA = 'fleofit_segnalazione_bozza'
+export const CHIAVE_BOZZA = 'pushfit_segnalazione_bozza'
 
 export const LIMITI = {
   descrizioneMin: 10,

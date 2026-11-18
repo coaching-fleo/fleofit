@@ -129,7 +129,7 @@ export function scriviNoteAggiuntive(doc, y, note) {
     doc.line(20, y, 190, y)
     y += 6
   }
-  doc.setTextColor(241, 186, 23)
+  doc.setTextColor(241, 197, 23)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)
   doc.text('NOTE AGGIUNTIVE', 20, y)

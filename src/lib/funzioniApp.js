@@ -16,7 +16,7 @@ import { supabase } from '../supabaseClient'
 import { leggiJson, scriviJson } from './offlineQueue'
 
 export const STATI_FUNZIONE = ['spenta', 'admin', 'tutti']
-const CHIAVE = 'fleofit_funzioni'
+const CHIAVE = 'pushfit_funzioni'
 
 /** Pura: con questo stato, chi ha questo ruolo vede la funzione? */
 export function funzioneVisibile(stato, ruolo) {

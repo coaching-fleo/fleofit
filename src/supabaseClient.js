@@ -24,3 +24,14 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 export const supabase = import.meta.env.VITE_DEMO === '1'
   ? clientDemo()
   : createClient(supabaseUrl, supabaseKey)
+
+// La pagina dei link delle mail (`/conferma`, src/lib/confermaLink.js) verifica
+// il codice con un client A PARTE, che non salva niente: la sessione non deve
+// restare nel browser in cui si apre la mail (magari quello del computer, per
+// un reset chiesto dal telefono), ma passare all'app o al sito con il rimando.
+export function clientVerifica() {
+  if (import.meta.env.VITE_DEMO === '1') return supabase
+  return createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'pushfit-verifica' },
+  })
+}

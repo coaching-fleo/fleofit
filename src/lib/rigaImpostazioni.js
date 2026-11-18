@@ -19,7 +19,7 @@ import { it } from 'date-fns/locale'
  * 28 ago»: sono due affermazioni diverse, e la seconda sarebbe falsa per chi
  * cambia telefono.
  */
-export const CHIAVE_ULTIMO_EXPORT = 'fleofit_ultimo_export'
+export const CHIAVE_ULTIMO_EXPORT = 'pushfit_ultimo_export'
 
 /** «1 attivo» / «3 attivi» — l'accordo che una `${n} attivi` sbaglia su uno. */
 const conta = (n, singolare, plurale) => `${n} ${n === 1 ? singolare : plurale}`

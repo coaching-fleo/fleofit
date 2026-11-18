@@ -20,28 +20,28 @@ const adesso = 1_000_000
 
 describe('statoLiveActivity — cosa riceve la Live Activity', () => {
   it('un passo in corso: fine e inizio in date assolute, il giro dal sottotitolo', () => {
-    const s = statoLiveActivity({ sequence: seq, idx: 1, timeLeft: 30, isRunning: true, colore: '#f1ba17', adesso })
+    const s = statoLiveActivity({ sequence: seq, idx: 1, timeLeft: 30, isRunning: true, colore: '#f1c517', adesso })
     expect(s).toMatchObject({
       fase: 'work', etichetta: 'ON', compito: 'Wall Balls · 20 reps · 9kg',
-      giro: 1, giri: 8, colore: '#f1ba17', restante: 30, inPausa: false, cronometro: false,
+      giro: 1, giri: 8, colore: '#f1c517', restante: 30, inPausa: false, cronometro: false,
       fine: adesso + 30_000, inizio: adesso - 10_000, frazione: 0.75,
     })
     expect(s.poi).toBe('Poi: Riposo · 0:20')
   })
 
   it('il riposo è verde, la preparazione bianca, «Completato» verde pieno', () => {
-    expect(statoLiveActivity({ sequence: seq, idx: 2, timeLeft: 20, isRunning: true, colore: '#f1ba17', adesso }).colore).toBe('#4ade80')
-    expect(statoLiveActivity({ sequence: seq, idx: 0, timeLeft: 10, isRunning: true, colore: '#f1ba17', adesso }).colore).toBe('#ffffff')
-    expect(statoLiveActivity({ sequence: seq, idx: 3, timeLeft: 0, isRunning: false, colore: '#f1ba17', adesso }).colore).toBe('#22c55e')
+    expect(statoLiveActivity({ sequence: seq, idx: 2, timeLeft: 20, isRunning: true, colore: '#f1c517', adesso }).colore).toBe('#4ade80')
+    expect(statoLiveActivity({ sequence: seq, idx: 0, timeLeft: 10, isRunning: true, colore: '#f1c517', adesso }).colore).toBe('#ffffff')
+    expect(statoLiveActivity({ sequence: seq, idx: 3, timeLeft: 0, isRunning: false, colore: '#f1c517', adesso }).colore).toBe('#22c55e')
   })
 
   it('in pausa non ci sono date: il numero resta fermo', () => {
-    const s = statoLiveActivity({ sequence: seq, idx: 1, timeLeft: 30, isRunning: false, colore: '#f1ba17', adesso })
+    const s = statoLiveActivity({ sequence: seq, idx: 1, timeLeft: 30, isRunning: false, colore: '#f1c517', adesso })
     expect(s).toMatchObject({ inPausa: true, fine: null, inizio: null, restante: 30 })
   })
 
   it('l\'allenamento intero: dove si è e quando finisce', () => {
-    const s = statoLiveActivity({ sequence: seq, idx: 1, timeLeft: 30, isRunning: true, colore: '#f1ba17', adesso })
+    const s = statoLiveActivity({ sequence: seq, idx: 1, timeLeft: 30, isRunning: true, colore: '#f1c517', adesso })
     // fatti 10 + 10 = 20 s su 70, mancano 30 + 20 = 50
     expect(s.inizioAllenamento).toBe(adesso - 20_000)
     expect(s.fineAllenamento).toBe(adesso + 50_000)
@@ -56,7 +56,7 @@ describe('statoLiveActivity — cosa riceve la Live Activity', () => {
   })
 
   it('l\'ultimo passo prima della fine lo dice', () => {
-    expect(statoLiveActivity({ sequence: seq, idx: 2, timeLeft: 20, isRunning: true, colore: '#f1ba17', adesso }).poi).toBe('Poi: fine allenamento')
+    expect(statoLiveActivity({ sequence: seq, idx: 2, timeLeft: 20, isRunning: true, colore: '#f1c517', adesso }).poi).toBe('Poi: fine allenamento')
   })
 
   it('senza giri (EMOM su più minuti compresi) il giro è zero o il primo', () => {
@@ -85,7 +85,7 @@ describe('preferenza — si chiede una volta sola', () => {
 
 describe('programmaLiveActivity — i passi che il blocco schermo fa da solo', () => {
   it('ogni passo comincia un secondo dopo lo zero del precedente, come il timer dell\'app', () => {
-    const p = programmaLiveActivity({ sequence: seq, idx: 0, timeLeft: 10, isRunning: true, colore: '#f1ba17', adesso })
+    const p = programmaLiveActivity({ sequence: seq, idx: 0, timeLeft: 10, isRunning: true, colore: '#f1c517', adesso })
     expect(p.map(x => x.quando)).toEqual([adesso, adesso + 11_000, adesso + 52_000, adesso + 73_000])
     expect(p.map(x => x.stato.fase)).toEqual(['prep', 'work', 'rest', 'done'])
     // Il passo programmato finisce dove comincia il successivo, meno lo zero.
@@ -95,7 +95,7 @@ describe('programmaLiveActivity — i passi che il blocco schermo fa da solo', (
 
   it('coincide con avanzaSequenza: dove il programma dice un passo, l\'app è lì', async () => {
     const { avanzaSequenza } = await import('../avanzaTimer')
-    const p = programmaLiveActivity({ sequence: seq, idx: 0, timeLeft: 10, isRunning: true, colore: '#f1ba17', adesso })
+    const p = programmaLiveActivity({ sequence: seq, idx: 0, timeLeft: 10, isRunning: true, colore: '#f1c517', adesso })
     for (const { quando, stato } of p.slice(1)) {
       const secondi = (quando - adesso) / 1000
       const qui = avanzaSequenza(seq, 0, 10, secondi)
@@ -109,14 +109,14 @@ describe('programmaLiveActivity — i passi che il blocco schermo fa da solo', (
   })
 
   it('parte dal tempo che resta, non dalla durata piena', () => {
-    const p = programmaLiveActivity({ sequence: seq, idx: 1, timeLeft: 5, isRunning: true, colore: '#f1ba17', adesso })
+    const p = programmaLiveActivity({ sequence: seq, idx: 1, timeLeft: 5, isRunning: true, colore: '#f1c517', adesso })
     expect(p[1].quando).toBe(adesso + 6_000)
   })
 
   it('in pausa e a cronometro non prevede niente', () => {
-    expect(programmaLiveActivity({ sequence: seq, idx: 1, timeLeft: 5, isRunning: false, colore: '#f1ba17', adesso })).toHaveLength(1)
+    expect(programmaLiveActivity({ sequence: seq, idx: 1, timeLeft: 5, isRunning: false, colore: '#f1c517', adesso })).toHaveLength(1)
     const cron = [seq[0], { id: 's', title: 'For Time', subtitle: '', duration: 0, type: 'stopwatch', task: 'Vai' }, seq[3]]
-    const p = programmaLiveActivity({ sequence: cron, idx: 0, timeLeft: 10, isRunning: true, colore: '#f1ba17', adesso })
+    const p = programmaLiveActivity({ sequence: cron, idx: 0, timeLeft: 10, isRunning: true, colore: '#f1c517', adesso })
     expect(p.map(x => x.stato.fase)).toEqual(['prep', 'stopwatch'])
   })
 })

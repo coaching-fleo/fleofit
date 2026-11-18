@@ -87,7 +87,7 @@ export function CartaAccount({ nome, email, ruolo, etichettaDispositivo, childre
       {/* L'alone caldo in alto a destra: è atmosfera, non uno stato. Resta
           inerte ai tocchi, o si mangia il bersaglio della pillola del ruolo. */}
       <span aria-hidden="true" className="pointer-events-none absolute -top-[45%] -right-[30%] w-[260px] h-[260px]
-                   bg-[radial-gradient(closest-side,rgba(241,186,23,.15),transparent_70%)]" />
+                   bg-[radial-gradient(closest-side,rgba(241,197,23,.15),transparent_70%)]" />
 
       <div className="relative px-[18px] pt-5 pb-4 flex items-center gap-3.5">
         <span aria-hidden="true"
@@ -134,7 +134,7 @@ export function Separatore() {
  */
 export function Interruttore({ attivo, onCambia, occupato = false, etichetta, tono = 'brand' }) {
   const acceso = tono === 'rosso' ? 'bg-red-500 shadow-[0_6px_12px_-4px_rgba(239,68,68,.5)]'
-    : 'bg-brand shadow-[0_6px_12px_-4px_rgba(241,186,23,.5)]'
+    : 'bg-brand shadow-[0_6px_12px_-4px_rgba(241,197,23,.5)]'
   return (
     <button type="button" role="switch" aria-checked={attivo} aria-label={etichetta}
       onClick={() => { vibraScelta(); onCambia() }} disabled={occupato}

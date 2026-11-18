@@ -1,4 +1,4 @@
-// La Corsa di FLEOFIT tradotta nel formato Garmin Training API (v1, POST /workout).
+// La Corsa di PUSHFIT tradotta nel formato Garmin Training API (v1, POST /workout).
 //
 // Pura: niente rete, niente import Deno (solo `./ripetute.ts`), così si prova con
 // Vitest da `src/lib/__tests__/workoutGarmin.test.js`.
@@ -44,8 +44,8 @@ export type GarminStep = GarminWorkoutStep | GarminRepeatStep
 export type GarminWorkout = {
   workoutName: string
   sport: 'RUNNING'
-  workoutProvider: 'FLEOFIT'
-  workoutSourceId: 'FLEOFIT'
+  workoutProvider: 'PUSHFIT'
+  workoutSourceId: 'PUSHFIT'
   steps: GarminStep[]
 }
 
@@ -162,8 +162,8 @@ export function corsaVersoGarmin(w: { title: string; sections: unknown }): Garmi
   return {
     workoutName: testo(w.title).slice(0, MAX_TESTO),
     sport: 'RUNNING',
-    workoutProvider: 'FLEOFIT',
-    workoutSourceId: 'FLEOFIT',
+    workoutProvider: 'PUSHFIT',
+    workoutSourceId: 'PUSHFIT',
     steps,
   }
 }

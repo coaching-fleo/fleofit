@@ -67,7 +67,7 @@ const GYM = MOD('dddd', 'Gym', 'Panca 4×8', {
 const ROTTO = MOD('eeeee', 'Hyrox', 'Senza tipo', { exercises: [] })
 
 async function conBozza(bozza) {
-  localStorage.setItem('fleofit_workout_draft', JSON.stringify({
+  localStorage.setItem('pushfit_workout_draft', JSON.stringify({
     sourceId: null, modo: 'nuovo', title: 'Prova', date: '2026-10-26', workoutIntensity: '7',
     blocks: [], runningSteps: [], gymGroups: [], coachNotes: '', ...bozza,
   }))
@@ -229,7 +229,7 @@ describe('andare ai modelli dal builder', () => {
     </AuthContext.Provider>
   )
   const conBozzaRipresa = async () => {
-    localStorage.setItem('fleofit_workout_draft', JSON.stringify({
+    localStorage.setItem('pushfit_workout_draft', JSON.stringify({
       sourceId: null, modo: 'nuovo', title: 'A metà', date: '2026-10-26', workoutIntensity: '7',
       category: 'Hyrox', blocks: [EMOM_NEL_WORKOUT], runningSteps: [], gymGroups: [], coachNotes: '',
     }))
@@ -244,14 +244,14 @@ describe('andare ai modelli dal builder', () => {
     await userEvent.click(await screen.findByRole('link', { name: /Gestisci i modelli/ }))
     expect(await screen.findByText('pagina dei modelli')).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'Sei sicuro?' })).toBeNull()
-    expect(JSON.parse(localStorage.getItem('fleofit_workout_draft')).blocks).toHaveLength(1)
+    expect(JSON.parse(localStorage.getItem('pushfit_workout_draft')).blocks).toHaveLength(1)
   })
 
   it('l\'icona «Modelli» fa lo stesso', async () => {
     await conBozzaRipresa()
     await userEvent.click(screen.getByRole('button', { name: 'Modelli' }))
     expect(await screen.findByText('pagina dei modelli')).toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('fleofit_workout_draft')).blocks).toHaveLength(1)
+    expect(JSON.parse(localStorage.getItem('pushfit_workout_draft')).blocks).toHaveLength(1)
   })
 })
 

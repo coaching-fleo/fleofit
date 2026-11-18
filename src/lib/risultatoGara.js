@@ -25,7 +25,7 @@ export const PREFISSO_RIGA = '🏁 Tempo HYROX:'
 // non un marcatore: dalla web app si apre, e se l'atleta lo cancella si
 // perdono solo gli split, non il tempo.
 export const PREFISSO_LINK = '🔗 Risultato ufficiale:'
-export const CHIAVE_IGNORATE = 'fleofit_gare_senza_risultato'
+export const CHIAVE_IGNORATE = 'pushfit_gare_senza_risultato'
 
 // Dopo due mesi la domanda «com'è andata?» non ha più senso.
 const GIORNI_PER_CHIEDERE = 60
@@ -203,7 +203,7 @@ export async function dettaglioRisultato(supabase, { stagione, idp, evento }) {
 
 // ── «Non ho partecipato» ────────────────────────────────────────────────────
 // Una memoria del dispositivo, non un dato: chi cambia telefono si vede rifare
-// la domanda, e non è un danno (CLAUDE.md §8, come `fleofit_ultimo_export`).
+// la domanda, e non è un danno (CLAUDE.md §8, come `pushfit_ultimo_export`).
 
 export function leggiIgnorate(storage = globalThis.localStorage) {
   const v = leggiJson(CHIAVE_IGNORATE, [], storage)
@@ -286,7 +286,7 @@ export function tempoDallaNota(note) {
 // dà le date: il giorno lo sceglie l'atleta, aiutato dal giorno della
 // settimana che a volte è nella categoria («HYROX PRO - Saturday»).
 
-export const CHIAVE_CACHE_PASSATE = 'fleofit_cache_gare_passate'
+export const CHIAVE_CACHE_PASSATE = 'pushfit_cache_gare_passate'
 const DURATA_CACHE_PASSATE = 12 * 3_600_000
 
 /** L'elenco delle gare di tutte le stagioni: dalla copia se fresca, altrimenti dal server. */
@@ -377,11 +377,11 @@ export async function salvaGaraPassata(supabase, { athleteId, gara, giorno, risu
 
 // ── Le statistiche sulla scheda della gara ──────────────────────────────────
 
-const chiaveDettaglio = (r) => `fleofit_cache_risultato_${r.stagione}_${r.idp}`
+const chiaveDettaglio = (r) => `pushfit_cache_risultato_${r.stagione}_${r.idp}`
 
 /**
  * Il dettaglio di un risultato già salvato. Un risultato ufficiale non cambia
- * più: la prima lettura resta nel telefono (`fleofit_cache_risultato_…`) e la
+ * più: la prima lettura resta nel telefono (`pushfit_cache_risultato_…`) e la
  * scheda si apre anche offline, senza chiedere di nuovo al sito.
  */
 export async function statisticheSalvate(supabase, rif, storage = globalThis.localStorage) {

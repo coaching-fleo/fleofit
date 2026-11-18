@@ -8,8 +8,8 @@
 import { leggiJson, scriviJson } from './offlineQueue'
 import { normalizza } from './gare'
 
-export const CHIAVE_CACHE_GARE_CORSA = 'fleofit_cache_gare_corsa'
-export const CHIAVE_REGIONE = 'fleofit_corsa_regione'
+export const CHIAVE_CACHE_GARE_CORSA = 'pushfit_cache_gare_corsa'
+export const CHIAVE_REGIONE = 'pushfit_corsa_regione'
 
 const DURATA_CACHE = 12 * 3_600_000
 // Sale quando cambia la forma di una gara: una copia di forma vecchia si butta.

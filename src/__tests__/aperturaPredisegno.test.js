@@ -61,7 +61,8 @@ describe('il pre-disegno dell\'apertura', () => {
   it('il marchio ha lo stesso corpo di quello di React', () => {
     const html = leggi('index.html')
     const jsx = leggi('src/components/Apertura.jsx')
-    expect(/#apertura-prima h1\s*\{[^}]*font-size:\s*44px/s.test(html)).toBe(true)
-    expect(jsx).toContain('text-[44px]')
+    // Dal 17/11/2026 il logo è un'immagine: conta l'altezza, 33px in tutti e due.
+    expect(/#apertura-prima img\s*\{[^}]*height:\s*33px/s.test(html)).toBe(true)
+    expect(jsx).toContain('altezza={33}')
   })
 })

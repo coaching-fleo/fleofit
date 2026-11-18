@@ -10,7 +10,7 @@
 // scrivere a un atleta una riga destinata al coach.
 //
 // Secret richiesto:  RESEND_API_KEY
-// Facoltativi:       SEGNALAZIONI_MITTENTE     (predefinito FLEOFIT <onboarding@resend.dev>)
+// Facoltativi:       SEGNALAZIONI_MITTENTE     (predefinito PUSHFIT <onboarding@resend.dev>)
 //                    SEGNALAZIONI_DESTINATARIO (predefinito coaching@federicoleo.it)
 // ⚠️ Con il mittente `onboarding@resend.dev` Resend consegna SOLO all'indirizzo
 // con cui è stato creato l'account: va bene finché il destinatario è quello.
@@ -27,7 +27,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const MITTENTE = Deno.env.get('SEGNALAZIONI_MITTENTE') || 'FLEOFIT <onboarding@resend.dev>';
+const MITTENTE = Deno.env.get('SEGNALAZIONI_MITTENTE') || 'PUSHFIT <onboarding@resend.dev>';
 const DESTINATARIO = Deno.env.get('SEGNALAZIONI_DESTINATARIO') || 'coaching@federicoleo.it';
 
 // Due limiti, uno sopra l'altro:

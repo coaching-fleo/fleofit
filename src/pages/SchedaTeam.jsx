@@ -326,7 +326,7 @@ export default function SchedaTeam() {
             </p>
             <label className="flex items-center gap-3 mb-5 text-[14.5px] font-bold">
               <input type="checkbox" checked={uscita.cancella} onChange={e => setUscita({ cancella: e.target.checked })}
-                className="w-5 h-5 accent-[#f1ba17]" />
+                className="w-5 h-5 accent-[#f1c517]" />
               Cancella anche i miei risultati
             </label>
             <div className="flex gap-3">

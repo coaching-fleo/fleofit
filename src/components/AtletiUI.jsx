@@ -47,7 +47,7 @@ export function TestataAtleti({ dettaglio, onNuovo, azioneSecondaria = null, chi
         <button onClick={onNuovo}
           className="shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-[13px] bg-brand text-black
                      text-sm font-black hover:brightness-110 transition
-                     shadow-[0_10px_22px_-10px_rgba(241,186,23,.6),inset_0_1px_0_rgba(255,255,255,.35)]">
+                     shadow-[0_10px_22px_-10px_rgba(241,197,23,.6),inset_0_1px_0_rgba(255,255,255,.35)]">
           <Plus size={17} strokeWidth={2.6} aria-hidden="true" /> Nuovo
         </button>
       </div>
@@ -87,7 +87,7 @@ function ChipStato({ etichetta, conteggio, punto, soloIcona, attivo, onClick }) 
     <button onClick={() => { vibraScelta(); onClick() }} aria-pressed={attivo}
       aria-label={soloIcona ? `${etichetta} (${conteggio})` : undefined}
       className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] transition ${attivo
-        ? 'bg-brand text-black font-black tracking-[-.01em] shadow-[0_8px_18px_-8px_rgba(241,186,23,.6)]'
+        ? 'bg-brand text-black font-black tracking-[-.01em] shadow-[0_8px_18px_-8px_rgba(241,197,23,.6)]'
         : 'bg-white/[.05] border border-white/[.09] text-gray-200 font-bold hover:bg-white/[.08]'}`}>
       {punto && !attivo && <span className={`w-1.5 h-1.5 rounded-full ${punto}`} aria-hidden="true" />}
       {soloIcona

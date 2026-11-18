@@ -6,7 +6,7 @@
 // rimpicciolisce con la colonna e il punto diventa un granello.
 const ALTA = 26
 
-export default function Striscia({ titolo, voci = [], fascia, minimo = 0, massimo = 2.5, colore = '#f1ba17', formato = (v) => String(v).replace('.', ',') }) {
+export default function Striscia({ titolo, voci = [], fascia, minimo = 0, massimo = 2.5, colore = '#f1c517', formato = (v) => String(v).replace('.', ',') }) {
   const x = (v) => ((Math.min(Math.max(v, minimo), massimo) - minimo) / (massimo - minimo)) * 100
   const pc = (n) => `${n}%`
   return (

@@ -23,9 +23,10 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Download, Send, Loader2 } from 'lucide-react'
-import { coloreCategoria, conVelo, BRAND } from '../lib/colori'
+import { coloreCategoria, conVelo } from '../lib/colori'
 import { useBottomSheet } from '../useBottomSheet'
 import { vibraScelta } from '../lib/aptica'
+import Logo from './Logo'
 
 /**
  * La misura della grafica in punti CSS. Esportata a `FATTORE_STORIA` dà
@@ -261,10 +262,7 @@ function Contenuto({ recap, colore, sfondo }) {
       {/* Il marchio, come la firma di Strava in fondo alla sua. È anche
           l'unica ragione per cui questa grafica conviene al coach. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginTop: '20px' }}>
-        <span style={{ fontSize: '17px', fontWeight: 900, letterSpacing: '0.4px' }}>
-          <span style={{ color: '#fff' }}>FLEO</span>
-          <span style={{ color: BRAND }}>FIT</span>
-        </span>
+        <Logo altezza={13} />
         <span style={{ flex: 1, height: '1px', background: sfondo ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.22)' }} />
       </div>
     </>

@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom'
 import { BOTTONE_BRAND, BOTTONE_QUIETO, CARTA_MODALE, TESTO_MODALE, TITOLO_MODALE } from '../lib/stiliCard'
+import Logo from './Logo'
 
 /**
  * La domanda sulla Live Activity, la prima volta che si apre il timer o il
@@ -39,7 +40,7 @@ function Anteprima() {
           strokeDasharray="97.4" strokeDashoffset="30" className="text-brand" />
       </svg>
       <div className="min-w-0 flex-1">
-        <div className="text-[10px] font-black tracking-wider text-white/50">FLEO<span className="text-brand">FIT</span> · HYROX</div>
+        <div className="flex items-center gap-1 text-[10px] font-black tracking-wider text-white/50"><Logo altezza={8} className="opacity-60" /> · HYROX</div>
         <div className="text-sm font-bold text-white truncate">Wall Balls · 20 reps</div>
         <div className="text-[11px] font-semibold text-white/50">Giro 1 di 8</div>
       </div>

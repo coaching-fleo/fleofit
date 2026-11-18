@@ -96,7 +96,7 @@ export function ProposteSettimana({ voci = [], settimana, verdetto }) {
           cambia colore nell'istante in cui l'animazione finisce — WebKit la rende
           sul layer GPU e la ridipinge dalla CPU quando il layer viene liberato
           (misurato sul simulatore, src/index.css). */}
-      <div aria-hidden="true" style={{ '--alone-rgb': '241 186 23', '--alone-alfa': .16 }}
+      <div aria-hidden="true" style={{ '--alone-rgb': '241 197 23', '--alone-alfa': .16 }}
         className="alone -top-[208px] -right-[176px] h-[416px] w-[416px]" />
       <div aria-hidden="true" className="pointer-events-none absolute top-0 right-0 p-[18px] opacity-[.08] -rotate-12">
         <ClipboardList size={92} className="text-brand" />
@@ -386,7 +386,7 @@ export function BarraAtleta({ onScheda, onCrea }) {
       <button onClick={onCrea}
         className="flex-1 min-h-[50px] rounded-2xl bg-brand text-black text-[16px] font-black tracking-[-.01em]
                    flex items-center justify-center gap-2 transition hover:brightness-110 active:scale-[.99]
-                   shadow-[0_14px_26px_-10px_rgba(241,186,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]">
+                   shadow-[0_14px_26px_-10px_rgba(241,197,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]">
         <Plus size={19} strokeWidth={2.6} aria-hidden="true" /> Crea workout
       </button>
     </div>

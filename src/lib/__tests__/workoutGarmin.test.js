@@ -56,8 +56,8 @@ describe('corsaVersoGarmin', () => {
 
   it('struttura e ordine dei passi', () => {
     expect(w.sport).toBe('RUNNING')
-    expect(w.workoutProvider).toBe('FLEOFIT')
-    expect(w.workoutSourceId).toBe('FLEOFIT')
+    expect(w.workoutProvider).toBe('PUSHFIT')
+    expect(w.workoutSourceId).toBe('PUSHFIT')
     expect(w.workoutName).toBe('Ripetute · AB12')
     expect(w.steps.map(s => s.type)).toEqual(['WorkoutStep', 'WorkoutRepeatStep', 'WorkoutStep'])
     expect(w.steps[1]).toMatchObject({ repeatValue: 3, repeatType: 'REPEAT_UNTIL_STEPS_CMPLT', skipLastRestStep: false })

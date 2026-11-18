@@ -59,7 +59,7 @@ export function CartaOggi({ stati, perCategoria = [], onApri, compatto = false }
   return (
     <section aria-label="Oggi"
       className={`relative overflow-hidden rounded-[28px] bg-gradient-to-b from-[#f8c83a] via-brand to-[#e6aa0e] text-[#111] ${compatto ? 'p-5' : 'p-6'}
-                  shadow-[0_30px_56px_-26px_rgba(241,186,23,.7),0_2px_6px_rgba(0,0,0,.35),inset_0_1px_0_rgba(255,255,255,.55),inset_0_-1px_0_rgba(0,0,0,.14)]`}>
+                  shadow-[0_30px_56px_-26px_rgba(241,197,23,.7),0_2px_6px_rgba(0,0,0,.35),inset_0_1px_0_rgba(255,255,255,.55),inset_0_-1px_0_rgba(0,0,0,.14)]`}>
       <span aria-hidden="true" className="absolute -right-[60px] -top-[50px] w-[240px] h-[240px] rounded-full
         bg-[repeating-radial-gradient(circle,transparent_0_18px,rgba(0,0,0,.07)_18px_30px)]" />
       {totale === 0 ? (
@@ -246,7 +246,7 @@ export function FilaOggi({ righe = [], onApri, onTutti, compatto = false }) {
 
 /** Oggi è il giorno «selezionato» della fila: è stato, quindi porta il glow del brand. */
 const GIORNO_OGGI = 'rounded-[22px] bg-gradient-to-b from-[#26220f] to-[#171610] border border-brand/35 ' +
-  'shadow-[0_18px_34px_-20px_rgba(241,186,23,.4),inset_0_1px_0_rgba(255,255,255,.08)]'
+  'shadow-[0_18px_34px_-20px_rgba(241,197,23,.4),inset_0_1px_0_rgba(255,255,255,.08)]'
 
 export function GiorniProssimi({ giorni = [], onApri, compatto = false }) {
   return (

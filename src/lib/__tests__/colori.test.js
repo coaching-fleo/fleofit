@@ -61,10 +61,10 @@ describe('coloreCategoria', () => {
 describe('conVelo', () => {
   // ⚠️ Questi tre valori erano scritti a mano dentro uno style inline della
   // story Instagram, con i canali copiati a occhio: invisibili a qualunque
-  // ricerca di "#f1ba17". Devono restare IDENTICI a com'erano, o la grafica
+  // ricerca di "#f1c517". Devono restare IDENTICI a com'erano, o la grafica
   // cambia senza che nessuno l'abbia deciso.
   it('riproduce esattamente i valori che erano scritti a mano', () => {
-    expect(conVelo(BRAND, 0.2)).toBe('rgba(241, 186, 23, 0.2)')
+    expect(conVelo(BRAND, 0.2)).toBe('rgba(241, 197, 23, 0.2)')
     expect(conVelo(RUNNING, 0.2)).toBe('rgba(0, 148, 198, 0.2)')
     expect(conVelo(CUSTOM, 0.2)).toBe('rgba(209, 17, 73, 0.2)')
   })
@@ -77,7 +77,7 @@ describe('conVelo', () => {
 
 describe('coloreDaClasse', () => {
   // 🔴 Nasce da una regressione vera, del 26/08/2026. Un componente riceveva la
-  // classe come prop e faceva `activeColor.includes('f1ba17')` — confrontava il
+  // classe come prop e faceva `activeColor.includes('f1c517')` — confrontava il
   // nome di una classe con un codice esadecimale. Nel momento in cui la classe
   // è diventata `bg-brand`, il confronto ha smesso di funzionare in silenzio e
   // TUTTI gli slider di intensità hanno cominciato a brillare di rosso, perché

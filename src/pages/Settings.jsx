@@ -40,6 +40,7 @@ import { leggiCoda } from '../lib/offlineQueue'
 import { useFunzione } from '../useFunzione'
 import { GARMIN_IN_ARRIVO, VERSIONE_CONSENSO_GARMIN, dataCollegamento, leggiStatoGarmin, messaggioEsito, ritornoGarmin } from '../lib/garmin'
 import { linkInvito } from '../lib/linkInvito'
+import { NOME_APP } from '../lib/marchio'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -180,7 +181,7 @@ export default function Settings() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
     CapApp.getInfo()
-      .then(info => setVersione(`FLEOFIT ${info.version} · build ${info.build}`))
+      .then(info => setVersione(`${NOME_APP} ${info.version} · build ${info.build}`))
       .catch(e => console.error('Versione app non letta:', e))
   }, [])
 
@@ -258,7 +259,7 @@ export default function Settings() {
 
       // Salviamo in un file JSON
       const dataStr = JSON.stringify(backup, null, 2)
-      const fileName = `FLEOFIT_Full_Backup_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.json`
+      const fileName = `${NOME_APP}_Full_Backup_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.json`
 
       if (Capacitor.isNativePlatform()) {
         const result = await Filesystem.writeFile({
@@ -267,7 +268,7 @@ export default function Settings() {
           directory: Directory.Cache,
           encoding: Encoding.UTF8
         })
-        await Share.share({ title: 'Backup FLEOFIT', files: [result.uri] })
+        await Share.share({ title: `Backup ${NOME_APP}`, files: [result.uri] })
       } else {
         const blob = new Blob([dataStr], { type: 'application/json' })
         const url = URL.createObjectURL(blob)
@@ -398,7 +399,7 @@ export default function Settings() {
   const ritiraConsenso = () => {
     setConfirmInfo({
       title: 'Ritirare il consenso?',
-      message: 'Senza consenso non puoi usare FLEOFIT: uscirai dall\'account, e al prossimo accesso ti verrà chiesto di nuovo. I tuoi dati restano finché non elimini l\'account.',
+      message: `Senza consenso non puoi usare ${NOME_APP}: uscirai dall'account, e al prossimo accesso ti verrà chiesto di nuovo. I tuoi dati restano finché non elimini l'account.`,
       onConfirm: async () => {
         setConfirmInfo(null)
         setOperazione('consenso')
@@ -453,7 +454,7 @@ export default function Settings() {
   const scollegaGarmin = () => {
     setConfirmInfo({
       title: 'Scollegare Garmin?',
-      message: 'FLEOFIT smetterà di ricevere i dati del tuo Garmin e cancellerà quelli già arrivati. Puoi ricollegarlo quando vuoi.',
+      message: `${NOME_APP} smetterà di ricevere i dati del tuo Garmin e cancellerà quelli già arrivati. Puoi ricollegarlo quando vuoi.`,
       confirmLabel: 'Sì, scollega',
       onConfirm: async () => {
         setConfirmInfo(null)
@@ -856,7 +857,7 @@ export default function Settings() {
               icona={Timer} tono="brand"
               titolo="Live Activity"
               dettaglio={!laAttiva ? 'Spenta: il timer resta solo nell\'app'
-                : laConsentite === false ? 'Spenta da iOS: Impostazioni → FLEOFIT → Live Activity'
+                : laConsentite === false ? `Spenta da iOS: Impostazioni → ${NOME_APP} → Live Activity`
                 : 'Il timer sul blocco schermo e nella Dynamic Island'}
               attivo={laAttiva} onCambia={cambiaLiveActivity} />
           </>
@@ -1002,7 +1003,7 @@ export default function Settings() {
         {atletaVero && (<>
           <Separatore />
           <RigaAzione icona={ShieldOff} titolo="Ritira il consenso"
-            dettaglio="Senza consenso non puoi usare FLEOFIT"
+            dettaglio={`Senza consenso non puoi usare ${NOME_APP}`}
             onClick={ritiraConsenso} occupato={operazione === 'consenso'} />
         </>)}
       </Sezione>

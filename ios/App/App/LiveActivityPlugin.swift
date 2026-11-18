@@ -77,7 +77,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    /// `{ valore }`: false se iOS ha spento le Live Activity per FLEOFIT.
+    /// `{ valore }`: false se iOS ha spento le Live Activity per PUSHFIT.
     @objc func disponibile(_ call: CAPPluginCall) {
         if #available(iOS 16.2, *) {
             call.resolve(["valore": ActivityAuthorizationInfo().areActivitiesEnabled])
@@ -392,7 +392,7 @@ private final class Suoni {
 
     private static func diario(_ testo: String) {
         let s = AVAudioSession.sharedInstance()
-        NSLog("[FLEOFIT audio] %@ · categoria %@ · opzioni %lu · altra musica %@",
+        NSLog("[PUSHFIT audio] %@ · categoria %@ · opzioni %lu · altra musica %@",
               testo, s.category.rawValue, s.categoryOptions.rawValue, s.isOtherAudioPlaying ? "sì" : "no")
     }
 

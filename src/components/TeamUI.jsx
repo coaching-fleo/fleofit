@@ -17,7 +17,7 @@ export function Interruttore({ attivo, onCambia, etichetta, occupato = false }) 
     <button type="button" role="switch" aria-checked={attivo} aria-label={etichetta} disabled={occupato}
       onClick={() => { vibraScelta(); onCambia() }}
       className={`shrink-0 w-[51px] h-[31px] rounded-full flex items-center p-0.5 transition-colors duration-200 disabled:opacity-50 ${
-        attivo ? 'justify-end bg-brand shadow-[0_6px_12px_-4px_rgba(241,186,23,.5)]' : 'justify-start bg-white/10 border border-white/[.12]'}`}>
+        attivo ? 'justify-end bg-brand shadow-[0_6px_12px_-4px_rgba(241,197,23,.5)]' : 'justify-start bg-white/10 border border-white/[.12]'}`}>
       <span aria-hidden="true"
         className={`w-[27px] h-[27px] rounded-full transition-colors ${attivo ? 'bg-white shadow-[0_1px_3px_rgba(0,0,0,.4)]' : 'bg-[#8b8f9c]'}`} />
     </button>
@@ -165,7 +165,7 @@ export function Podio({ classifica, ioId, onApri = null }) {
         <Toccabile atletaId={m.atleta_id} nome={m.nome} cognome={m.cognome} onApri={onApri}
           className="max-w-full flex flex-col items-center">
           <span className="relative flex flex-col items-center">
-            {alto && <Crown size={22} aria-hidden="true" className="text-brand fill-brand/25 -mb-1 relative z-10 drop-shadow-[0_4px_8px_rgba(241,186,23,.35)]" />}
+            {alto && <Crown size={22} aria-hidden="true" className="text-brand fill-brand/25 -mb-1 relative z-10 drop-shadow-[0_4px_8px_rgba(241,197,23,.35)]" />}
             <Avatar foto={m.foto} nome={m.nome} cognome={m.cognome} dimensione={gradino === 1 ? 72 : 56}
               anello={alto ? 'brand' : 'tenue'} />
           </span>
@@ -225,7 +225,7 @@ export function Duello({ x, y, a, b, ioId, onApri = null, children }) {
       <Toccabile atletaId={m.atleta_id} nome={m.nome} cognome={m.cognome} onApri={onApri}
         className="min-w-0 flex flex-col items-center">
         <span className="h-[22px] flex items-end">
-          {avanti && <Crown size={20} aria-hidden="true" className="text-brand fill-brand/25 drop-shadow-[0_4px_8px_rgba(241,186,23,.35)]" />}
+          {avanti && <Crown size={20} aria-hidden="true" className="text-brand fill-brand/25 drop-shadow-[0_4px_8px_rgba(241,197,23,.35)]" />}
         </span>
         <Avatar foto={m.foto} nome={m.nome} cognome={m.cognome} dimensione={64} anello={avanti ? 'brand' : 'tenue'} />
         <span className="mt-2.5 max-w-full text-[14px] font-bold text-white truncate">

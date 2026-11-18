@@ -127,7 +127,7 @@ describe('RisultatoGara', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Non ho partecipato' }))
     expect(onSalvato).toHaveBeenCalled()
     expect(finto.chiamateA('athlete_workouts', 'update')).toHaveLength(0)
-    expect(JSON.parse(localStorage.getItem('fleofit_gare_senza_risultato'))).toEqual(['aw1'])
+    expect(JSON.parse(localStorage.getItem('pushfit_gare_senza_risultato'))).toEqual(['aw1'])
   })
 
   it('senza cognome nel profilo non cerca finché non lo si scrive', async () => {

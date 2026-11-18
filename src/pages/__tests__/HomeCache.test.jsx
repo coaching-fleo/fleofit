@@ -6,7 +6,7 @@ import { chiaveCacheWorkout } from '../../lib/offlineQueue'
 // Perché questi test esistono
 // ────────────────────────────
 // «Compaiono già i riquadri, ma non sono popolati»: segnalazione del
-// committente, 31/08/2026. La cache `fleofit_cache_workouts_<uid>` veniva
+// committente, 31/08/2026. La cache `pushfit_cache_workouts_<uid>` veniva
 // SCRITTA a ogni fetch riuscito e riletta **solo se la rete falliva**, quindi
 // online i riquadri restavano vuoti ad aspettare il server anche quando i dati
 // dell'ultima volta erano lì. Ora la pagina si dipinge dalla cache prima di

@@ -10,7 +10,7 @@ import { normalizza } from './gare'
 
 export { normalizza, gareFuture, giorniGara, periodoGara, blocchettoData, quandoGara, perMese, giornoProposto } from './gare'
 
-export const CHIAVE_CACHE_GARE = 'fleofit_cache_gare_hyrox'
+export const CHIAVE_CACHE_GARE = 'pushfit_cache_gare_hyrox'
 
 // Più corta della copia del server (6 ore) non serve: il calendario HYROX non
 // cambia nell'arco di una giornata in un modo che conti per chi si iscrive.

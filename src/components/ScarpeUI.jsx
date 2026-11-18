@@ -127,7 +127,7 @@ function Interruttore({ attivo, onCambia, etichetta }) {
     <button type="button" role="switch" aria-checked={attivo} aria-label={etichetta}
       onClick={() => { vibraScelta(); onCambia() }}
       className={`shrink-0 w-[51px] h-[31px] rounded-full flex items-center p-0.5 transition-colors duration-200 ${
-        attivo ? 'justify-end bg-brand shadow-[0_6px_12px_-4px_rgba(241,186,23,.5)]' : 'justify-start bg-white/10 border border-white/[.12]'}`}>
+        attivo ? 'justify-end bg-brand shadow-[0_6px_12px_-4px_rgba(241,197,23,.5)]' : 'justify-start bg-white/10 border border-white/[.12]'}`}>
       <span aria-hidden="true"
         className={`w-[27px] h-[27px] rounded-full transition-colors ${attivo ? 'bg-white shadow-[0_1px_3px_rgba(0,0,0,.4)]' : 'bg-[#8b8f9c]'}`} />
     </button>

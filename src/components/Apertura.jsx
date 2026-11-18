@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { menoMovimento } from '../useNumeroCheSale'
+import Logo from './Logo'
 
 /**
  * L'apertura dell'app.
@@ -112,8 +113,8 @@ export function Apertura({ pronto, onFine }) {
     // bisogno del ritaglio: se ne va prima che l'arco parta.
     <div aria-hidden="true" className="fixed inset-0 z-[200]">
       <div className={`apertura absolute inset-0 ${esce ? 'apertura-esce' : ''}`} />
-      {/* Il marchio, con la Regola del Logo di DESIGN.md: `FLEO` bianco,
-          `FIT` ambra, peso 900, in un h1 solo.
+      {/* Il marchio, l'immagine di `<Logo />` (dal 17/11/2026), alta
+          33px come nel pre-disegno di index.html, in un h1 solo.
           ⚠️ CENTRATO, e una stesura precedente lo metteva al 38% per paura che
           l'arco lo tagliasse a metà. Paura infondata: il marchio se ne va in
           260ms e l'arco parte a 390ms, quindi quando la curva passa dal centro
@@ -124,9 +125,8 @@ export function Apertura({ pronto, onFine }) {
             `.apertura-esce`: il marchio non ha più nessun'altra classe — non ha
             un'entrata, vedi sopra — quindi un selettore che pendesse da quella
             non avrebbe niente a cui attaccarsi, e l'uscita sparirebbe. */}
-        <h1 className={`text-[44px] leading-none font-black tracking-[-.03em] text-white
-                      ${esce ? 'apertura-marchio-via' : ''}`}>
-          FLEO<span className="text-brand">FIT</span>
+        <h1 className={`leading-none ${esce ? 'apertura-marchio-via' : ''}`}>
+          <Logo altezza={33} />
         </h1>
       </div>
     </div>

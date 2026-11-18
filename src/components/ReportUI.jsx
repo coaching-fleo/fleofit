@@ -130,7 +130,7 @@ export function EroeSettimana({
           cambia colore nell'istante in cui l'animazione finisce — WebKit la rende
           sul layer GPU e la ridipinge dalla CPU quando il layer viene liberato
           (misurato sul simulatore, src/index.css). */}
-      <div aria-hidden="true" style={{ '--alone-rgb': '241 186 23', '--alone-alfa': .16 }}
+      <div aria-hidden="true" style={{ '--alone-rgb': '241 197 23', '--alone-alfa': .16 }}
         className="alone -top-[208px] -right-[176px] h-[416px] w-[416px]" />
 
       <div className="relative flex flex-col gap-4">
@@ -424,7 +424,7 @@ export function SezioneProgramma({ prossima, onApriAtleta, onCrea }) {
           questo è il solo punto in cui il coach deve creare qualcosa. */}
       <button onClick={onCrea}
         className="w-full rounded-[14px] py-3 bg-brand text-black text-sm font-black flex items-center justify-center gap-2
-                   shadow-[0_12px_26px_-12px_rgba(241,186,23,.6),inset_0_1px_0_rgba(255,255,255,.35)]
+                   shadow-[0_12px_26px_-12px_rgba(241,197,23,.6),inset_0_1px_0_rgba(255,255,255,.35)]
                    transition active:scale-[.99] hover:brightness-110">
         <Plus size={17} strokeWidth={2.6} aria-hidden="true" /> Crea workout
       </button>

@@ -1,4 +1,5 @@
 import { differenceInYears } from 'date-fns'
+import { NOME_APP } from './marchio'
 
 /** L'età minima per iscriversi, la stessa dell'informativa (§15 «Minori»). */
 export const ETA_MINIMA = 14
@@ -18,7 +19,7 @@ export function erroreProfilo({ name, surname, dob, weight, height }, oggi = new
   if (anni > 110) return 'Controlla la data di nascita.'
   // Informativa §15: sotto i 14 anni non ci si iscrive (09/11/2026,
   // docs/memoria/accesso.md). Anni di CALENDARIO: il giorno del compleanno vale.
-  if (anni < ETA_MINIMA) return `Per iscriverti a FLEOFIT devi avere almeno ${ETA_MINIMA} anni.`
+  if (anni < ETA_MINIMA) return `Per iscriverti a ${NOME_APP} devi avere almeno ${ETA_MINIMA} anni.`
   const peso = weight === '' ? null : Number(String(weight).replace(',', '.'))
   if (peso !== null && !(peso >= 25 && peso <= 300)) return 'Il peso va scritto in kg, fra 25 e 300.'
   const altezza = height === '' ? null : Number(String(height).replace(',', '.'))

@@ -142,7 +142,7 @@ const BOTTONE_MODALE = 'flex-1 min-h-[52px] rounded-2xl text-[15.5px] transition
 export const BOTTONE_QUIETO = `${BOTTONE_MODALE} ${VETRO} font-bold text-white hover:border-white/25`
 /** Il primario: la stessa ombra ambra della CTA, perché è la stessa promessa. */
 export const BOTTONE_BRAND = `${BOTTONE_MODALE} bg-brand text-black font-black hover:brightness-110 ` +
-  'shadow-[0_14px_26px_-10px_rgba(241,186,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]'
+  'shadow-[0_14px_26px_-10px_rgba(241,197,23,.5),inset_0_1px_0_rgba(255,255,255,.4)]'
 /** Il distruttivo: rosso, e mai la primaria di un dialogo che non elimina. */
 export const BOTTONE_PERICOLO = `${BOTTONE_MODALE} bg-red-600 text-white font-black hover:bg-red-500 ` +
   'shadow-[0_14px_26px_-10px_rgba(220,38,38,.55),inset_0_1px_0_rgba(255,255,255,.25)]'

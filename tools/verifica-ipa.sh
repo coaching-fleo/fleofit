@@ -98,7 +98,7 @@ fi
 #    chiave di localStorage escono dal bundle in momenti diversi, e ognuna da
 #    sola è una mezza verità.
 RESIDUI=0
-for traccia in "AMBIENTE DI PROVA" "at-sara" "fleofit_demo_db"; do
+for traccia in "AMBIENTE DI PROVA" "at-sara" "pushfit_demo_db"; do
   if grep -rqs -- "$traccia" "$APP" 2>/dev/null; then
     echo "❌ ambiente di prova nel binario: «$traccia»"
     RESIDUI=$((RESIDUI + 1))

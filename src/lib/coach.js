@@ -9,12 +9,12 @@
 // funzione SQL sarebbe una migrazione (schema congelato, CLAUDE.md §0). Lo dà
 // la Edge Function `mio-coach`, che risponde solo per chi chiama.
 //
-// La risposta si tiene sul dispositivo (`fleofit_coach_<uid>`): senza rete, o
+// La risposta si tiene sul dispositivo (`pushfit_coach_<uid>`): senza rete, o
 // prima che la funzione sia pubblicata, `BenvenutoCoach` usa l'ultima, e senza
 // nemmeno quella scrive «Il tuo coach ti segue da oggi». Mai un nome inventato.
 import { leggiJson, scriviJson } from './offlineQueue'
 
-const chiave = (uid) => `fleofit_coach_${uid}`
+const chiave = (uid) => `pushfit_coach_${uid}`
 
 /** L'ultimo nome salvato su questo dispositivo, o `null`. */
 export function coachSalvato(uid) {

@@ -38,7 +38,7 @@ export function entro(promessa, ms) {
     .finally(() => clearTimeout(t))
 }
 
-const chiaveRuolo = (uid) => `fleofit_ruolo_${uid}`
+const chiaveRuolo = (uid) => `pushfit_ruolo_${uid}`
 
 /** Il ruolo deciso all'ultimo accesso riuscito con la rete: 'admin', 'coach', 'athlete' o null. */
 export const ruoloSalvato = (uid, storage = globalThis.localStorage) =>

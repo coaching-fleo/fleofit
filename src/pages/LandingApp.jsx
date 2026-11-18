@@ -6,6 +6,8 @@ import {
   Sparkles, Plus, Repeat2, Check, X, Undo2, Send, AlertTriangle, TrendingUp, Mic,
 } from 'lucide-react'
 import './LandingApp.css'
+import logo from '../assets/marchio/pushfit-logo.webp'
+import { NOME_APP } from '../lib/marchio'
 
 /* ─────────────────────────────────────────────────────────────────────────
    L'app FINTA dentro il telefono della landing: si tocca come quella vera,
@@ -17,7 +19,7 @@ import './LandingApp.css'
 const LARGO = 402
 
 const CAT = {
-  hyrox: { nome: 'Hyrox', colore: '#f1ba17' },
+  hyrox: { nome: 'Hyrox', colore: '#f1c517' },
   corsa: { nome: 'Running', colore: '#0094C6' },
   gym: { nome: 'Gym', colore: '#14B8A6' },
 }
@@ -32,7 +34,7 @@ const ATLETI = [
   { id: 'davide', nome: 'Davide Ricci', oggi: { titolo: 'Hyrox forte · sled', cat: 'hyrox', fatto: false }, aderenza: 64, carico: [300, 220, 150, 120], avviso: '3 allenamenti saltati di fila' },
 ]
 const iniziali = (n) => n.split(' ').map((p) => p[0]).join('')
-const coloreRpe = (r) => (r <= 3 ? '#22c55e' : r <= 6 ? '#f1ba17' : r <= 8 ? '#f97316' : '#ef4444')
+const coloreRpe = (r) => (r <= 3 ? '#22c55e' : r <= 6 ? '#f1c517' : r <= 8 ? '#f97316' : '#ef4444')
 
 // I nove blocchi Hyrox, con la riga che li descrive e il parametro che mostrano.
 const TIPI = ['WarmUp', 'Cash In', 'ON/OFF', 'EMOM', 'AMRAP', 'For Time', 'Interval', 'Rest', 'Cash Out']
@@ -219,7 +221,7 @@ function Home({ apri, qui }) {
   return (
     <>
       <Testa sopra={format(oggi, 'EEE d MMMM', { locale: it }) + ` · ${ATLETI.length} atleti`}
-        titolo={<>FLEO<b>FIT</b> <span className="lm-coach">Coach</span></>}
+        titolo={<><img className="lm-logo" src={logo} alt={NOME_APP} /> <span className="lm-coach">Coach</span></>}
         destra={<button className="lm-tondo lm-campana" aria-label="Notifiche"><Bell size={18} /><i /></button>} />
       <div className="lm-cerca"><Search size={16} /> Cerca atleti, workout, note…</div>
       <div className="lm-tre">

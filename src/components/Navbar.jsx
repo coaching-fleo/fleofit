@@ -85,7 +85,7 @@ function Crea() {
     <NavLink to="/create" replace state={{ daBarra: true }} aria-label="Crea workout"
       className="shrink-0 w-[58px] h-[58px] mx-1 rounded-full grid place-items-center text-black
                  bg-gradient-to-b from-[#f8c83a] to-brand transition-transform duration-200 active:scale-[.94]
-                 shadow-[0_0_0_5px_rgba(241,186,23,.16),0_12px_22px_-6px_rgba(241,186,23,.55),inset_0_1px_0_rgba(255,255,255,.4)]">
+                 shadow-[0_0_0_5px_rgba(241,197,23,.16),0_12px_22px_-6px_rgba(241,197,23,.55),inset_0_1px_0_rgba(255,255,255,.4)]">
       <Plus size={26} strokeWidth={2.6} aria-hidden="true" />
     </NavLink>
   )

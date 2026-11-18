@@ -4,6 +4,7 @@ import { X, MonitorUp, ScanLine, Keyboard, Settings } from 'lucide-react'
 import { codiceDaQR } from '../lib/codiceTV'
 import { qrDisponibile, leggiQR, apriImpostazioni } from '../lib/lettoreQR'
 import { vibraSuccesso } from '../lib/aptica'
+import { NOME_APP } from '../lib/marchio'
 
 // Il foglio «Trasmetti in TV» della scheda workout (30/10/2026, spec
 // docs/superpowers/specs/2026-10-30-tv-qr-design.md §1).
@@ -25,7 +26,7 @@ import { vibraSuccesso } from '../lib/aptica'
 // `onCollega(codice)` → `{ ok: true }` | `{ errore }`. A collegamento riuscito
 // il foglio lo chiude chi lo monta (e apre il telecomando).
 
-const MSG_QR_ESTRANEO = 'Questo non è il codice della TV FLEOFIT'
+const MSG_QR_ESTRANEO = `Questo non è il codice della TV ${NOME_APP}`
 const MSG_SENZA_FOTOCAMERA = 'La fotocamera non si è aperta: scrivi il codice che vedi sulla TV.'
 
 export default function FoglioCollegaTV({ onCollega, onChiudi, erroreIniziale = null, sopraIlTimer = false }) {
@@ -136,7 +137,7 @@ export default function FoglioCollegaTV({ onCollega, onChiudi, erroreIniziale = 
         {stato === 'permesso' && (
           <div className="mt-5 flex flex-col gap-3">
             <p role="alert" className="text-sm text-gray-300 text-pretty">
-              FLEOFIT non ha il permesso di usare la fotocamera. Puoi darglielo dalle Impostazioni, oppure scrivere il codice.
+              {NOME_APP} non ha il permesso di usare la fotocamera. Puoi darglielo dalle Impostazioni, oppure scrivere il codice.
             </p>
             <button onClick={() => apriImpostazioni().catch(() => {})}
               className={`${bottoneGrande} bg-brand text-black hover:brightness-110`}>

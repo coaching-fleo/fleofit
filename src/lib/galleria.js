@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { Media } from '@capacitor-community/media'
+import { NOME_APP } from './marchio'
 
 /**
  * Salva un'immagine nella galleria del telefono, su iOS e su Android.
@@ -12,7 +13,7 @@ import { Media } from '@capacitor-community/media'
  * in Google Foto e in Files sotto quel nome — e non serve nessun permesso,
  * perché è spazio dell'app e non la galleria pubblica.
  */
-export const ALBUM_ANDROID = 'FLEOFIT'
+export const ALBUM_ANDROID = NOME_APP
 
 export async function salvaInGalleria(path, nomeFile) {
   if (Capacitor.getPlatform() !== 'android') {

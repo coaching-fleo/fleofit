@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, waitFor } from '@testing-library/react'
+import { render, waitFor, screen } from '@testing-library/react'
+// La landing vera vuole IntersectionObserver, che jsdom non ha: qui basta sapere che si monta.
+vi.mock('../pages/Landing', () => ({ default: () => <p>LANDING</p> }))
 import { AuthRetryableFetchError } from '@supabase/supabase-js'
 
 // Perché questi test esistono
@@ -39,7 +41,7 @@ beforeEach(() => {
   window.history.pushState({}, '', '/')
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   localStorage.setItem('sb-prova-auth-token', JSON.stringify(salvata))
-  localStorage.setItem('fleofit_name_u7', 'Sara')
+  localStorage.setItem('pushfit_name_u7', 'Sara')
   onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
   finto.supabase.auth.signOut.mockClear()
 })
@@ -76,10 +78,22 @@ describe("L'avvio senza rete", () => {
     expect(finto.supabase.auth.signOut).not.toHaveBeenCalled()
   })
 
+  // Da una pagina privata. Sulla radice nuda il sito mostra la landing
+  // (dal 18/11/2026, src/lib/landingRadice.js): lo prova il test sotto.
   it('senza sessione salvata si va al login come prima', async () => {
     localStorage.removeItem('sb-prova-auth-token')
     finto.supabase.auth.getSession = vi.fn(() => Promise.resolve({ data: { session: null }, error: null }))
+    window.history.pushState({}, '', '/calendar')
     render(<App />)
     await waitFor(() => expect(window.location.pathname).toBe('/login'))
+  })
+
+  it('senza sessione, sul web, la radice mostra la landing e non manda al login', async () => {
+    localStorage.removeItem('sb-prova-auth-token')
+    finto.supabase.auth.getSession = vi.fn(() => Promise.resolve({ data: { session: null }, error: null }))
+    window.history.pushState({}, '', '/')
+    render(<App />)
+    expect(await screen.findByText('LANDING')).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/')
   })
 })

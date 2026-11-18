@@ -88,7 +88,7 @@ const BARRE_SPARKLINE = 6
  * non ha nemmeno un `created_at` su cui appoggiarsi. Conseguenza da conoscere:
  * il "letto" è per dispositivo, non per account.
  */
-const chiaveFeedbackVisti = (uid) => `fleofit_feedback_visti_${uid}`
+const chiaveFeedbackVisti = (uid) => `pushfit_feedback_visti_${uid}`
 
 /**
  * Quanti atleti fermi entrano nell'eroe.
@@ -379,7 +379,7 @@ export default function Home() {
   const [syncingQueue, setSyncingQueue] = useState(false)
 
   const meta = user?.user_metadata || {}
-  const fallbackName = localStorage.getItem(`fleofit_name_${user?.id}`) || meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
+  const fallbackName = localStorage.getItem(`pushfit_name_${user?.id}`) || meta.first_name || meta.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''
   // ⚠️ `nome` arriva dall'AuthContext, che l'ha già letto all'avvio: qui c'era
   // una TERZA `select` su `athletes` per lo stesso dato (§9-noviesdecies).
   // Il ripiego resta perché i test montano la pagina senza contesto completo.

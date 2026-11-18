@@ -9,12 +9,12 @@ describe('AttesaTV: il QR', () => {
     render(<AttesaTV codice="1234" audioAttivo ruotato={false} onRuota={() => {}} qr="data:image/png;base64,xx" />)
     const img = screen.getByAltText('Codice QR per collegare il telefono')
     expect(img.getAttribute('src')).toBe('data:image/png;base64,xx')
-    expect(screen.getByText("oppure inquadralo con l'app FLEOFIT")).toBeTruthy()
+    expect(screen.getByText("oppure inquadralo con l'app PUSHFIT")).toBeTruthy()
   })
   it('senza QR non mostra né immagine né didascalia', () => {
     render(<AttesaTV codice="1234" audioAttivo ruotato={false} onRuota={() => {}} qr={null} />)
     expect(screen.queryByAltText('Codice QR per collegare il telefono')).toBeNull()
-    expect(screen.queryByText("oppure inquadralo con l'app FLEOFIT")).toBeNull()
+    expect(screen.queryByText("oppure inquadralo con l'app PUSHFIT")).toBeNull()
   })
 
   // Leggibilità da lontano: il margine bianco (zona di rispetto) lo dà la

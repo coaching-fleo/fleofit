@@ -534,7 +534,7 @@ describe('L\'interruttore «Home classica» (solo staff)', () => {
     const interruttore = await screen.findByRole('switch', { name: 'Home classica' })
     expect(interruttore).toHaveAttribute('aria-checked', 'false')
     await utente.click(interruttore)
-    expect(window.localStorage.getItem('fleofit_home_classica')).toBe('true')
+    expect(window.localStorage.getItem('pushfit_home_classica')).toBe('true')
     expect(interruttore).toHaveAttribute('aria-checked', 'true')
   })
 

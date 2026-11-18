@@ -12,8 +12,8 @@ import { testoAccettabile } from '../../supabase/functions/send-reminders/broadc
 
 export { anteprima, routeMessaggio, puoInviareBroadcast, MAX_CARATTERI } from '../../supabase/functions/send-reminders/broadcast.ts'
 
-export const CHIAVE_BOZZA = 'fleofit_messaggio_bozza'
-export const CHIAVE_VISTO = 'fleofit_messaggi_visto_fino'
+export const CHIAVE_BOZZA = 'pushfit_messaggio_bozza'
+export const CHIAVE_VISTO = 'pushfit_messaggi_visto_fino'
 
 const istante = (x) => new Date(x).getTime()
 
@@ -74,7 +74,7 @@ export function esitoProva(risposta) {
 // in bacheca anche ciò che manda con «Prova su di me» (fissato compreso), per
 // verificare la funzione; poi si toglie. Vivono SOLO sul telefono del coach
 // (localStorage): nessun atleta le vede, il database non le conosce.
-export const CHIAVE_PROVE = 'fleofit_messaggi_prova'
+export const CHIAVE_PROVE = 'pushfit_messaggi_prova'
 
 /** Una prova nuova, nella forma di una riga di `messaggi_coach` più `prova: true`. */
 export function nuovaProva({ testo, fissato }, adesso = new Date()) {

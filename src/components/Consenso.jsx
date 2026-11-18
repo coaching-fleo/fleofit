@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Check } from 'lucide-react'
 import { apriInformativa } from '../lib/informativa'
+import { NOME_APP } from '../lib/marchio'
+import Logo from './Logo'
 
 /**
  * La schermata del consenso: dopo l'accesso (e il codice invito), prima
@@ -30,7 +32,7 @@ export default function Consenso({ onAccetta, onRifiuta }) {
     <div className="min-h-screen bg-[#0B0B0B] flex flex-col items-center justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] page-transition">
       <div className="w-full max-w-md bg-[#1e1e1e] border border-[#2a2a2a] rounded-3xl p-6 shadow-2xl">
         <div className="flex flex-col items-center mb-6">
-          <h1 className="text-4xl font-black text-white tracking-tight mb-3">FLEO<span className="text-brand">FIT</span></h1>
+          <h1 className="mb-4 leading-none"><Logo altezza={28} /></h1>
           <h2 className="text-2xl font-bold text-white text-center">I tuoi dati</h2>
           <p className="text-gray-400 text-sm mt-2 text-center leading-relaxed">
             Per seguirti, il tuo coach usa dati sul tuo allenamento e sulla tua salute,
@@ -54,7 +56,7 @@ export default function Consenso({ onAccetta, onRifiuta }) {
         </div>
 
         <p className="text-muted text-xs mt-4 leading-relaxed">
-          Puoi ritirare il consenso quando vuoi da Impostazioni. Senza consenso non puoi usare FLEOFIT.
+          Puoi ritirare il consenso quando vuoi da Impostazioni. Senza consenso non puoi usare {NOME_APP}.
         </p>
 
         <button type="button" onClick={accetta} disabled={!letto || !acconsento || invio}

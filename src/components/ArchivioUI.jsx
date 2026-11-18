@@ -170,7 +170,7 @@ export function FiltriTipo({ tipi, scelti, onCambia }) {
           <button key={tipo} onClick={() => { vibraScelta(); onCambia(tipo) }} aria-pressed={attivo}
             aria-label={`${tipo}, ${n} workout`}
             className={`min-w-0 px-1 py-1.5 rounded-full text-[12.5px] truncate transition ${attivo
-              ? 'bg-brand text-black font-black shadow-[0_8px_18px_-8px_rgba(241,186,23,.6)]'
+              ? 'bg-brand text-black font-black shadow-[0_8px_18px_-8px_rgba(241,197,23,.6)]'
               : 'bg-white/[.03] border border-white/[.07] text-gray-300 font-bold hover:bg-white/[.07]'}`}>
             {tipo}
           </button>
@@ -200,7 +200,7 @@ export function FiltriEsercizio({ esercizi, scelte, onCambia }) {
             aria-label={stato === 'con' ? `Solo con ${etichetta}`
               : stato === 'senza' ? `Solo senza ${etichetta}` : `${etichetta}, ${n} workout`}
             className={`shrink-0 px-3.5 py-1.5 rounded-full text-[12.5px] transition ${stato === 'con'
-              ? 'bg-brand text-black font-black shadow-[0_8px_18px_-8px_rgba(241,186,23,.6)]'
+              ? 'bg-brand text-black font-black shadow-[0_8px_18px_-8px_rgba(241,197,23,.6)]'
               : stato === 'senza'
                 ? 'bg-red-500/15 border border-red-500/40 text-red-400 font-black'
                 : 'bg-white/[.03] border border-white/[.07] text-gray-300 font-bold hover:bg-white/[.07]'}`}>
@@ -217,7 +217,7 @@ function ChipCorsia({ etichetta, conteggio, punto, attivo, onClick }) {
     <button onClick={() => { vibraScelta(); onClick() }} aria-pressed={attivo}
       className={`shrink-0 inline-flex items-center gap-1.5 pl-3 pr-3 py-1.5 rounded-full
                   text-[13px] transition ${attivo
-        ? 'bg-brand text-black font-black tracking-[-.01em] shadow-[0_8px_18px_-8px_rgba(241,186,23,.6)]'
+        ? 'bg-brand text-black font-black tracking-[-.01em] shadow-[0_8px_18px_-8px_rgba(241,197,23,.6)]'
         : 'bg-white/[.05] border border-white/[.09] text-gray-200 font-bold hover:bg-white/[.08]'}`}>
       {punto && !attivo && <span className={`w-1.5 h-1.5 rounded-full ${punto}`} />}
       {etichetta}

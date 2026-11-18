@@ -112,7 +112,7 @@ describe('messaggi dell\'esito', () => {
   it('ok, motivi noti e un motivo sconosciuto', () => {
     expect(messaggioEsito('ok')).toEqual({
       title: 'Garmin collegato',
-      message: 'I dati del tuo Garmin arriveranno a FLEOFIT dalla prossima sincronizzazione.',
+      message: 'I dati del tuo Garmin arriveranno a PUSHFIT dalla prossima sincronizzazione.',
       type: 'success',
     })
     expect(messaggioEsito('errore', 'altro_account').message)

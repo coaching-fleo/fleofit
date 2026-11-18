@@ -102,10 +102,11 @@ describe('il PDF della scheda', () => {
     expect(testi).toContain('Scrivimi su WhatsApp')
   })
 
-  it('senza template: solo FLEOFIT, nessuna firma e nessuna nota', async () => {
+  // In jsdom il PNG del logo non si scarica: il PDF ripiega sul nome in testo.
+  it('senza template: solo il marchio, nessuna firma e nessuna nota', async () => {
     ctrl.stato = { pdf_coach: [] }
     const testi = await esporta()
-    expect(testi).toContain('FLEO')
+    expect(testi).toContain('PUSH')
     expect(testi.some(t => t.includes('Coach'))).toBe(false)
     expect(testi).not.toContain('NOTE AGGIUNTIVE')
   })

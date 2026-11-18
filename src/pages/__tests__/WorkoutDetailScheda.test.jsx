@@ -508,7 +508,7 @@ describe('la grafica per Instagram', () => {
     // sono i due modi «ovvi» di nascondere questa card — e i due che
     // spegnerebbero l'export senza che niente in pagina cambi.
     expect(grafica).toBeVisible()
-    expect(within(grafica).getByText('@FLEOFIT')).toBeInTheDocument()
+    expect(within(grafica).getByText('@PUSHFIT')).toBeInTheDocument()
     // Ed è fuori dal flusso, non in fondo alla pagina come prima.
     expect(grafica).toHaveStyle({ position: 'fixed', left: '-10000px' })
   })

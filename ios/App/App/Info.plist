@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>FLEOFIT</string>
+	<string>PUSHFIT</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -30,6 +30,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>fleofit</string>
+				<string>pushfit</string>
 			</array>
 		</dict>
 	</array>
@@ -40,13 +41,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>FLEOFIT usa la fotocamera per fotografare un workout scritto, su una lavagna o un foglio, e trasformarlo in blocchi, per la foto del profilo e per inquadrare il codice QR della TV.</string>
+	<string>PUSHFIT usa la fotocamera per fotografare un workout scritto, su una lavagna o un foglio, e trasformarlo in blocchi, per la foto del profilo e per inquadrare il codice QR della TV.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>FLEOFIT ha bisogno del microfono per permetterti di registrare e inviare note vocali.</string>
+	<string>PUSHFIT ha bisogno del microfono per permetterti di registrare e inviare note vocali.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>FLEOFIT necessita di questo permesso per salvare la grafica del tuo allenamento direttamente nella galleria fotografica.</string>
+	<string>PUSHFIT necessita di questo permesso per salvare la grafica del tuo allenamento direttamente nella galleria fotografica.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>FLEOFIT necessita di questo permesso per salvare la grafica del tuo allenamento direttamente nella galleria fotografica.</string>
+	<string>PUSHFIT necessita di questo permesso per salvare la grafica del tuo allenamento direttamente nella galleria fotografica.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

@@ -6,7 +6,7 @@
 // la sua chiave: se l'avviso cambia (un'altra scarpa da cambiare) torna.
 
 /** La chiave localStorage degli avvisi chiusi da un utente. */
-export const chiaveVistiDi = (uid) => `fleofit_extra_visti_${uid}`
+export const chiaveVistiDi = (uid) => `pushfit_extra_visti_${uid}`
 /** Quante chiavi si ricordano al massimo: le più vecchie escono. */
 export const MASSIMO_VISTI = 50
 

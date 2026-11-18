@@ -97,7 +97,7 @@ export function HeroOggi({ titolo, categoria, stato, meta = [], completato, onOp
       <div aria-hidden="true"
         style={completato
           ? { '--alone-rgb': '34 197 94', '--alone-alfa': .10 }
-          : { '--alone-rgb': '241 186 23', '--alone-alfa': .14 }}
+          : { '--alone-rgb': '241 197 23', '--alone-alfa': .14 }}
         className="alone -top-[208px] -right-[176px] h-[416px] w-[416px]" />
       <div aria-hidden="true" className="pointer-events-none absolute top-0 right-0 p-[18px] opacity-[.09] -rotate-12">
         <Icona size={104} className={completato ? 'text-green-500' : c.txt} />
@@ -134,7 +134,7 @@ export function HeroOggi({ titolo, categoria, stato, meta = [], completato, onOp
             className={`flex-1 min-h-[50px] rounded-[15px] font-black text-[15px] inline-flex items-center justify-center gap-2 transition active:scale-[.98]
               ${completato
                 ? 'bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25'
-                : 'bg-brand text-black shadow-[0_12px_24px_-8px_rgba(241,186,23,.45),inset_0_1px_0_rgba(255,255,255,.35)] hover:brightness-110'}`}>
+                : 'bg-brand text-black shadow-[0_12px_24px_-8px_rgba(241,197,23,.45),inset_0_1px_0_rgba(255,255,255,.35)] hover:brightness-110'}`}>
             <CheckCircle2 size={18} /> {completato ? 'Fatto' : 'Completa'}
           </button>
           <button onClick={onOpen}
@@ -211,7 +211,7 @@ export function AnelloSettimana({ weeklyStatus = [], onGiorno, etichetta = 'Sett
               <span className={`text-[11px] font-bold ${d.isToday ? 'text-white' : 'text-muted'}`}>{d.dayName.charAt(0)}</span>
               <Punto
                 {...(apribile ? { onClick: () => onGiorno(previsto), 'aria-label': `Apri ${previsto.title}`, type: 'button' } : { 'aria-hidden': 'true' })}
-                className={`block rounded-full ${colore} ${d.isToday ? 'w-2.5 h-2.5 shadow-[0_0_8px_rgba(241,186,23,.6)]' : 'w-[7px] h-[7px]'}`} />
+                className={`block rounded-full ${colore} ${d.isToday ? 'w-2.5 h-2.5 shadow-[0_0_8px_rgba(241,197,23,.6)]' : 'w-[7px] h-[7px]'}`} />
             </div>
           )
         })}
@@ -238,7 +238,7 @@ export function CellaSerie({ giorni, ultime = [] }) {
       <div aria-hidden="true" className="flex items-end gap-1 h-[34px] mt-3">
         {ultime.map((v, i) => (
           <span key={i} style={{ height: `${Math.max(12, v)}%` }}
-            className={`flex-1 rounded-[3px] ${i === ultime.length - 1 ? 'bg-brand shadow-[0_0_10px_rgba(241,186,23,.5)]' : 'bg-brand/30'}`} />
+            className={`flex-1 rounded-[3px] ${i === ultime.length - 1 ? 'bg-brand shadow-[0_0_10px_rgba(241,197,23,.5)]' : 'bg-brand/30'}`} />
         ))}
       </div>
     </div>

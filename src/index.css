@@ -1,7 +1,7 @@
 /* 🔴 `source(none)` disattiva la scoperta automatica delle classi, e la sorgente
    viene dichiarata esplicitamente qui sotto.
    Senza, Tailwind scandaglia TUTTO il progetto — compresi i file .md. CLAUDE.md e
-   DESIGN.md contengono classi come `bg-[#f1ba17]` come esempi di documentazione,
+   DESIGN.md contengono classi come `bg-[#f1c517]` come esempi di documentazione,
    e Tailwind ci generava sopra regole vere, finite nel CSS di produzione.
    Scoperto il 26/08/2026 verificando che un rebranding fosse davvero una modifica
    di una riga: quattro regole tenevano in vita il vecchio giallo, e venivano dagli
@@ -11,7 +11,7 @@
 @source "../index.html";
 
 @theme {
-  --color-brand: #f1ba17;
+  --color-brand: #f1c517;
   --color-bg: #0B0B0B;
   --color-surface: #222222;
   --color-surface2: #2a2a2a;
@@ -190,7 +190,7 @@ input[type="date"]::-webkit-date-and-time-value {
    arbitrario è una trappola: il glow lo accompagna nella stessa regola. */
 .anello-progresso {
   animation: ringIn 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
-  filter: drop-shadow(0 0 8px rgba(241, 186, 23, 0.45));
+  filter: drop-shadow(0 0 8px rgba(241, 197, 23, 0.45));
 }
 
 /* Entrata dell'eroe di oggi: sale di 8px mentre appare.
@@ -526,7 +526,7 @@ input[type="date"]::-webkit-date-and-time-value {
 }
 .apertura-esce {
   animation: aperturaArco .43s .39s cubic-bezier(.33, 1, .68, 1) both;
-  filter: drop-shadow(0 2px 12px rgb(241 186 23 / .42));
+  filter: drop-shadow(0 2px 12px rgb(241 197 23 / .42));
 }
 .apertura-marchio-via { animation: aperturaMarchioVia .26s cubic-bezier(.33, 1, .68, 1) both; }
 

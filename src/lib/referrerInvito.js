@@ -6,7 +6,7 @@
  * rilegge con il plugin nativo `InstallReferrer`
  * (android/…/InstallReferrerPlugin.java) e apre la card dell'invito.
  *
- * ⚠️ Si legge UNA volta per installazione (`fleofit_referrer_letto`): il Play
+ * ⚠️ Si legge UNA volta per installazione (`pushfit_referrer_letto`): il Play
  * Store riconsegna lo stesso referrer per 90 giorni, e senza la memoria chi
  * esce dall'account si ritroverebbe il codice di allora a ogni avvio.
  * Solo Android: su iOS e sul web il plugin non c'è e non succede niente.
@@ -16,7 +16,7 @@ import { leggiJson, scriviJson } from './offlineQueue'
 import { codiceDaReferrer } from './linkInvito'
 
 const InstallReferrer = registerPlugin('InstallReferrer')
-export const CHIAVE_REFERRER = 'fleofit_referrer_letto'
+export const CHIAVE_REFERRER = 'pushfit_referrer_letto'
 
 /**
  * Il codice arrivato dal Play Store, o `null`. Non rilancia mai.

@@ -31,6 +31,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="fleofit" />
+                <!-- Il nome nuovo (17/11/2026): l'app riconosce anche pushfit://, src/lib/schema.js. -->
+                <data android:scheme="pushfit" />
             </intent-filter>
 
         </activity>

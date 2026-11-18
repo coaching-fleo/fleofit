@@ -105,11 +105,15 @@
    ✅ **applicata a mano dal committente il 16/11/2026**, «Success», verifica senza errori): una policy di `team_membri` —
    il coach toglie anche chi è `dentro` (`supabase/schema/team_togli_2026-11-16.sql`,
    `docs/memoria/scheda-atleta.md`, «9-team-e-gruppi»).
-1. **Il nome "FLEOFIT" è provvisorio.** Potrà cambiare in futuro. Quando scrivi codice nuovo, evita
-   di hardcodare il brand ovunque: preferisci costanti/variabili riutilizzabili. Il nome è comunque
-   attualmente presente in decine di punti (logo JSX, PDF, story IG, TV, `appId`, `Info.plist`,
-   chiavi localStorage `fleofit_*`, deep link `fleofit://`) — se si cambia nome serve un refactor
-   coordinato, non un semplice find&replace.
+1. 🏷️ **Dal 17/11/2026 l'app si chiama PUSHFIT** (prima FLEOFIT; dominio comprato `pushfit.it`,
+   da collegare più avanti). Il nome si scrive **solo** con `NOME_APP` di `src/lib/marchio.js`, il logo
+   è l'immagine di `src/assets/marchio/` e si mostra **solo** con `<Logo altezza={…} />`
+   (`components/Logo.jsx`): `marchio.test.js` fallisce se «FLEOFIT» o una chiave `fleofit_` tornano.
+   Restano `fleofit` **apposta**: il bundle id `it.federicoleo.fleofit` (cambiarlo = app nuova sugli
+   Store), il dominio `fleofit.vercel.app`, `demo@fleofit.it`. Le chiavi del dispositivo sono `pushfit_*`
+   e quelle vecchie le trasloca `src/lib/chiaviLocali.js`, PRIMO import di `main.jsx`. Lo schema
+   `fleofit://` passa a `pushfit://` in tre tempi (`src/lib/schema.js`): oggi l'app li riconosce
+   tutti e due ma scrive ancora `fleofit://`. Piano: `docs/superpowers/plans/2026-11-17-rinomina-pushfit.md`.
 2. **La grafica attuale è la baseline, non un vincolo eterno.** Modifiche di layout/UI sono attese
    e benvenute.
 3. **I COLORI SONO CORRETTI E VANNO MANTENUTI COME DEFAULT.** Non proporre palette alternative se
@@ -160,7 +164,7 @@ tempo reale.
   disco di rete: fino all'08/10/2026 stava su `Z:`, e lì la suite di test non partiva
   (worker in timeout dopo 10 minuti; in locale gira in poco più di un minuto) —
   sul Mac la copia per Xcode
-- **App bundle iOS**: `it.federicoleo.fleofit` — display name `FLEOFIT`
+- **App bundle iOS**: `it.federicoleo.fleofit` (resta, §0 punto 1) — display name `PUSHFIT` (dal 17/11/2026)
 - **Deploy web**: Vercel (`https://fleofit.vercel.app`), SPA rewrite in `vercel.json`
 - **Deep link scheme**: `fleofit://` (usato per OAuth callback e reset password su iOS)
 
@@ -520,7 +524,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 
 | Token | Hex | Uso |
 |---|---|---|
-| **Brand / giallo FLEOFIT** | `#f1ba17` | accento primario, categoria **Hyrox**, CTA principali, stato attivo navbar, logo "FIT" |
+| **Brand / giallo PUSHFIT** | `#f1c517` (dal 18/11/2026; prima `#f1ba17`) | accento primario, categoria **Hyrox**, CTA principali, stato attivo navbar, logo "FIT" |
 | **Background** | `#0B0B0B` | sfondo pagina |
 | **Surface card** | `#1e1e1e` | card, modali, header |
 | **Surface alt** | `#222222` | navbar, input, blocchi builder |
@@ -565,7 +569,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 ### Linguaggio visivo
 - **Dark mode only.** Nessun tema chiaro previsto.
 - Font: **Inter**, `sans-serif` di sistema come fallback. Titoli in `font-black` (900) con
-  `tracking-tight`. Logo sempre `FLEO` bianco + `FIT` giallo.
+  `tracking-tight`. Logo: dal 17/11/2026 è l'immagine PUSHFIT (`PUSH` bianco + `FIT` giallo, corsivo), sempre con `<Logo />`.
 - **Raggi**: `rounded-3xl` (24px) per card e modali · `rounded-2xl` (16px) per card interne e
   bottoni larghi · `rounded-xl` (12px) per input e bottoni piccoli · `rounded-full` per icon-button
   (11×11 o 10×10) e pillole di stato.
@@ -621,28 +625,28 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
 
 ## 8. Convenzioni da rispettare
 
-- **Chiavi localStorage** (tutte con prefisso `fleofit_`, tranne `adminRoleOverride`):
-  `fleofit_name_<uid>`, `fleofit_invite_code`, `fleofit_motivation`, `fleofit_workout_draft`,
-  `fleofit_offline_queue`, `fleofit_cache_workouts_<uid>`, `fleofit_cache_w_<id>`,
-  `fleofit_cache_aw_<id>_<athleteId>`, `fleofit_cache_all_aw_<id>`, ~~`fleofit_tv_code`~~ (dal 04/11/2026 la TV collegata sta solo in memoria, `codiceTV.js`; la scheda la cancella se la trova),
-  `fleofit_ultimo_export`, `fleofit_invito_atteso`, `fleofit_segnalazione_bozza`,
-  `fleofit_cache_gare_hyrox`, `fleofit_cache_gare_corsa`, `fleofit_corsa_regione`, `fleofit_gare_senza_risultato`, `fleofit_cache_gare_passate`,
-  `fleofit_cache_risultato_<stagione>_<idp>`,
-  `fleofit_come_stai_saltato` (il giorno in cui l'atleta ha scelto «Salta»: memoria del dispositivo),
-  `fleofit_live_activity` (true/false: la Live Activity del timer; assente = la domanda non è ancora stata fatta),
-  `fleofit_messaggio_bozza`, `fleofit_messaggi_visto_fino` (bacheca «Dal coach»),
-  `fleofit_garmin_recupero_<uid>` (giorno e login dell'ultimo recupero delle attività Garmin, `docs/memoria/garmin.md`),
-  `fleofit_coach_<uid>` (il nome del coach dell'ultima risposta di `mio-coach`: «… ti segue da oggi» senza rete, `src/lib/coach.js`),
-  `fleofit_ruolo_<uid>` (il ruolo dell'ultimo accesso con la rete: serve all'avvio senza rete, `src/lib/avvioSenzaRete.js`),
-  `fleofit_funzioni` (l'ultimo stato letto degli interruttori di `funzioni_app`: serve all'avvio senza rete, `src/lib/funzioniApp.js`),
-  `fleofit_extra_visti_<uid>` (gli avvisi degli Extra chiusi con la X da quell'utente su questo dispositivo, `id:chiave`, massimo 50: `src/lib/avvisiExtra.js`),
-  `fleofit_referrer_letto` (Android: il codice d'invito del Play Store è già stato letto, una volta per installazione, `src/lib/referrerInvito.js`),
-  `fleofit_home_classica` (true = la Home coach di prima, il cruscotto, su questo dispositivo; assente = la «Riepilogo», `src/lib/homeClassica.js`),
-  ⏳ `fleofit_messaggi_prova` (TEMPORANEO: le «Prova su di me» nella bacheca del coach),
+- **Chiavi localStorage** (tutte con prefisso `pushfit_`, tranne `adminRoleOverride`):
+  `pushfit_name_<uid>`, `pushfit_invite_code`, `pushfit_motivation`, `pushfit_workout_draft`,
+  `pushfit_offline_queue`, `pushfit_cache_workouts_<uid>`, `pushfit_cache_w_<id>`,
+  `pushfit_cache_aw_<id>_<athleteId>`, `pushfit_cache_all_aw_<id>`, ~~`pushfit_tv_code`~~ (dal 04/11/2026 la TV collegata sta solo in memoria, `codiceTV.js`; la scheda la cancella se la trova),
+  `pushfit_ultimo_export`, `pushfit_invito_atteso`, `pushfit_segnalazione_bozza`,
+  `pushfit_cache_gare_hyrox`, `pushfit_cache_gare_corsa`, `pushfit_corsa_regione`, `pushfit_gare_senza_risultato`, `pushfit_cache_gare_passate`,
+  `pushfit_cache_risultato_<stagione>_<idp>`,
+  `pushfit_come_stai_saltato` (il giorno in cui l'atleta ha scelto «Salta»: memoria del dispositivo),
+  `pushfit_live_activity` (true/false: la Live Activity del timer; assente = la domanda non è ancora stata fatta),
+  `pushfit_messaggio_bozza`, `pushfit_messaggi_visto_fino` (bacheca «Dal coach»),
+  `pushfit_garmin_recupero_<uid>` (giorno e login dell'ultimo recupero delle attività Garmin, `docs/memoria/garmin.md`),
+  `pushfit_coach_<uid>` (il nome del coach dell'ultima risposta di `mio-coach`: «… ti segue da oggi» senza rete, `src/lib/coach.js`),
+  `pushfit_ruolo_<uid>` (il ruolo dell'ultimo accesso con la rete: serve all'avvio senza rete, `src/lib/avvioSenzaRete.js`),
+  `pushfit_funzioni` (l'ultimo stato letto degli interruttori di `funzioni_app`: serve all'avvio senza rete, `src/lib/funzioniApp.js`),
+  `pushfit_extra_visti_<uid>` (gli avvisi degli Extra chiusi con la X da quell'utente su questo dispositivo, `id:chiave`, massimo 50: `src/lib/avvisiExtra.js`),
+  `pushfit_referrer_letto` (Android: il codice d'invito del Play Store è già stato letto, una volta per installazione, `src/lib/referrerInvito.js`),
+  `pushfit_home_classica` (true = la Home coach di prima, il cruscotto, su questo dispositivo; assente = la «Riepilogo», `src/lib/homeClassica.js`),
+  ⏳ `pushfit_messaggi_prova` (TEMPORANEO: le «Prova su di me» nella bacheca del coach),
   `adminRoleOverride`.
-  ⚠️ `fleofit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
+  ⚠️ `pushfit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
   dice «l'hai esportato da qui», e su un telefono nuovo semplicemente non c'è (§9-duoetvicies).
-  ⚠️ `fleofit_invito_atteso` è un passaggio di consegne fra due caricamenti della pagina —
+  ⚠️ `pushfit_invito_atteso` è un passaggio di consegne fra due caricamenti della pagina —
   `ProtectedRoute` lo scrive prima del `signOut()`, il passo 2 del login lo legge e lo
   **cancella subito** (§9-septvicies). Non è una preferenza: lasciarlo lì vorrebbe dire
   mostrare l'indirizzo di qualcun altro in testa alla schermata dell'invito.
@@ -707,7 +711,7 @@ Ognuna è già costata almeno una volta; la storia di ciascuna è nel file indic
 Il primo è quello mancato a maggio; storia e motivi in `docs/memoria/app-store.md`.
 ```bash
 grep -l "demo@fleofit.it" dist/assets/*.js                                  # DEVE stampare un file
-grep -l "AMBIENTE DI PROVA\|at-sara\|fleofit_demo_db" ios/App/App/public/assets/*.js   # NON deve stampare niente
+grep -l "AMBIENTE DI PROVA\|at-sara\|pushfit_demo_db" ios/App/App/public/assets/*.js   # NON deve stampare niente
 grep -rl "Apple Health\|NSHealth\|capacitor-health\|developer.healthkit" ios/App/App/public/assets/ ios/App/App/*.plist ios/App/App/App.entitlements ios/App/CapApp-SPM/Package.swift   # NON deve stampare niente
 ```
 Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.

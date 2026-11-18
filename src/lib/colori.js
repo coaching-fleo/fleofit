@@ -9,7 +9,7 @@
 // `--color-running`, `--color-custom`, `--color-gym`, `--color-ia`). Sono due elenchi perché
 // vivono in due mondi diversi, non perché siano indipendenti: cambiarne uno
 // solo produce un'app di due colori. CLAUDE.md §6.
-export const BRAND = '#f1ba17'
+export const BRAND = '#f1c517'
 export const RUNNING = '#0094C6'
 export const CUSTOM = '#D11149'
 // Verde acqua: scelto dal committente il 13/10/2026 per la categoria Gym.
@@ -33,7 +33,7 @@ export const coloreCategoria = (categoria) => {
  * Serve dove il colore finisce in uno `style` inline rasterizzato da
  * html-to-image (la story Instagram): lì una variabile CSS non viene risolta,
  * e la forma `rgba(...)` era scritta a mano — con i canali copiati a occhio,
- * quindi invisibile a qualunque ricerca di `#f1ba17`.
+ * quindi invisibile a qualunque ricerca di `#f1c517`.
  */
 export const conVelo = (hex, opacita) => {
   const n = parseInt(hex.replace('#', ''), 16)
@@ -45,7 +45,7 @@ export const conVelo = (hex, opacita) => {
  *
  * ⚠️ Serve dove un componente riceve la classe come prop (`activeColor="bg-running"`)
  * e deve ricavarne anche un valore, per esempio per un'ombra inline.
- * Prima quel codice faceva `activeColor.includes('f1ba17')`, cioè confrontava il
+ * Prima quel codice faceva `activeColor.includes('f1c517')`, cioè confrontava il
  * nome della classe con un codice esadecimale: ha smesso di funzionare in
  * silenzio nel momento in cui la classe è diventata `bg-brand` (26/08/2026), e
  * TUTTI gli slider di intensità hanno cominciato a brillare di rosso.

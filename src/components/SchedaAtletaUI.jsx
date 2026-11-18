@@ -209,7 +209,7 @@ export function BarraFasce({ distribuzione }) {
   if (!total) return <div className="mt-[13px] h-2 rounded-full bg-white/[.06]" />
   const fasce = [
     ['Leggero 1-4', light, '#22c55e'],
-    ['Moderato 5-6', moderate, '#f1ba17'],
+    ['Moderato 5-6', moderate, '#f1c517'],
     ['Impegnativo 7-8', hard, '#f97316'],
     ['Massimale 9-10', extreme, '#ef4444'],
   ]

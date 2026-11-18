@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { montaPagina } from '../../test/montaPagina'
 import { formatNotePausa } from '../../lib/pausa'
@@ -67,7 +67,7 @@ beforeEach(() => {
   window.localStorage.clear()
   // Questi test provano la Home coach CLASSICA (il cruscotto), che dal 10/11/2026
   // sta dietro l'interruttore «Home classica»: la Riepilogo ha i suoi (HomeRiepilogo.test.jsx).
-  window.localStorage.setItem('fleofit_home_classica', 'true')
+  window.localStorage.setItem('pushfit_home_classica', 'true')
   ctrl.atleti.valore = [atleta('a1', 'Luca'), atleta('a2', 'Giulia'), atleta('a3', 'Marco')]
   ctrl.assegnazioni.valore = []
   ctrl.comeStai.valore = []
@@ -94,7 +94,7 @@ describe('Da smaltire: il feedback in entrata', () => {
     montaCoach()
     await userEvent.click(await screen.findByLabelText('Ascolta: Luca Rossi'))
     await waitFor(() =>
-      expect(JSON.parse(window.localStorage.getItem('fleofit_feedback_visti_u1'))).toEqual(['f1']))
+      expect(JSON.parse(window.localStorage.getItem('pushfit_feedback_visti_u1'))).toEqual(['f1']))
   })
 
   it('una nota vocale cancellata non è una cosa da smaltire', async () => {
@@ -320,7 +320,9 @@ describe('La Home dell\'admin non è anche la Home di un atleta', () => {
   it('la testata è quella del coach, non il saluto dell\'atleta', async () => {
     montaAdmin()
     await attendi('Da smaltire')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('FLEOFIT Coach')
+    const testata = screen.getByRole('heading', { level: 1 })
+    expect(testata).toHaveTextContent('Coach')
+    expect(within(testata).getByAltText('PUSHFIT')).toBeInTheDocument()
   })
 
   it('la testata dice quanti atleti segue, e la settimana ISO non c\'è più', async () => {
