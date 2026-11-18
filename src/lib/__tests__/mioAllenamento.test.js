@@ -44,4 +44,12 @@ describe('scegliMioAllenamento', () => {
     expect(r.awId).toBe(5)
     expect(r.categoria).toBe('Hyrox')
   })
+
+  // Il committente, 18/11/2026: solo i workout, mai gli eventi (le gare).
+  it('una gara non è il prossimo allenamento, oggi né dopo', () => {
+    const gara = (id, data) => riga(id, data, 'pending', { sections: { category: 'Event', isEvent: true } })
+    expect(scegliMioAllenamento([gara(1, oggi), riga(2, '2026-11-20')], oggi).awId).toBe(2)
+    expect(scegliMioAllenamento([gara(1, '2026-11-19'), riga(2, '2026-11-20')], oggi).awId).toBe(2)
+    expect(scegliMioAllenamento([gara(1, '2026-11-19')], oggi)).toBeNull()
+  })
 })

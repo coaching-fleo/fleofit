@@ -311,6 +311,23 @@ describe('2c · Il giorno di riposo', () => {
     expect(screen.queryByText('Domani')).not.toBeInTheDocument()
   })
 
+  // 🔴 Il committente, 18/11/2026: «sul prossimo allenamento non voglio che si
+  // vedano gli eventi, solo i workout». La gara ha già il suo banner
+  // (Prossimo obiettivo); qui saltava davanti all'allenamento vero.
+  it('il prossimo è un workout: una gara prima di lui non lo prende', async () => {
+    const gara = seduta('2026-09-10', { stato: 'pending', titolo: 'Gara Milano', id: 'g' })
+    gara.workouts.sections = { category: 'Event', isEvent: true, isAutonomous: true }
+    monta([
+      seduta('2026-09-07', { minuti: 50, rpe: 7, id: 'a' }),
+      gara,
+      seduta('2026-09-12', { stato: 'pending', titolo: 'Hyrox Sabato', id: 'c' }),
+    ])
+    expect(await screen.findByText('In arrivo', { selector: 'span' })).toBeInTheDocument()
+    expect(screen.queryByText('Domani')).not.toBeInTheDocument()
+    // (la gara resta un pallino nell'anello della settimana: quello è il calendario)
+    expect(screen.getAllByText('Hyrox Sabato').length).toBeGreaterThan(0)
+  })
+
   it('con un allenamento oggi il riposo non compare affatto', async () => {
     monta([seduta('2026-09-09', { stato: 'pending', titolo: 'Hyrox Oggi' })])
     expect(await screen.findByText('Hyrox Oggi')).toBeInTheDocument()

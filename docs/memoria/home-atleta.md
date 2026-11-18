@@ -300,3 +300,13 @@ dice il gesto che serve: verso sinistra finché c'è qualcosa da leggere, poi ve
   figlio con `overflow-hidden` perde l'altezza minima. Con più notifiche di quante ne
   stanno nel foglio, le righe venivano schiacciate e i testi si accavallavano (visto sul
   telefono il 29/10/2026, non nel browser con le tre notifiche di prova).
+
+## Il prossimo allenamento è sempre un workout, mai una gara (18/11/2026)
+
+Il committente: «sul prossimo allenamento non voglio che si vedano gli eventi, solo i workout».
+La card «Domani / In arrivo» (`CardDomani`) e la lista «In arrivo» (`ListaInArrivo`) leggono
+`prossimiWorkout` di `Home.jsx`: i prossimi senza categoria `Event` (`categoriaDi`), i primi tre.
+La gara ha già il suo banner («Prossimo obiettivo») e resta un pallino nell'anello della settimana.
+⚠️ `upcomingWorkouts` invece tiene **tutto**, gare comprese, e non è più tagliato a tre: lo usa
+`senzaStorico` per sapere se c'è qualcosa in programma, e una gara conta. Test: `HomeVuoti.test.jsx`.
+Lo stesso vale per la card del coach «Il tuo allenamento» (`mioAllenamento.js`, `home-coach.md`).

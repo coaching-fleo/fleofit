@@ -31,7 +31,7 @@ import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 import { durataWorkout, numeroBlocchi, rpeAtteso, mediaRpeCategoria, serieGiorni, barreUltimiGiorni,
          senzaStorico, minutiSettimana, scartoMinutiSettimana, MINIMO_PRECEDENTI } from '../lib/statistiche'
-import { parolaPezzi } from '../lib/categorie'
+import { categoriaDi, parolaPezzi } from '../lib/categorie'
 import { parseNotesAndRpe, formatNotesWithRpe, rpeDichiarato } from '../lib/rpe'
 import { gradimentoDi } from '../lib/gradimento'
 import { HeaderHome, BottoneVetro, HeroOggi, AnelloSettimana, CellaSerie, CellaVolume, BannerObiettivo, ListaInArrivo } from '../components/HomeAtletaUI'
@@ -122,6 +122,12 @@ export default function Home() {
   
   const [todayWorkouts, setTodayWorkouts] = useState([])
   const [upcomingWorkouts, setUpcomingWorkouts] = useState([])
+  // Il prossimo allenamento e la lista «In arrivo» mostrano solo i workout, mai
+  // le gare (committente, 18/11/2026): la gara ha il suo banner, «Prossimo
+  // obiettivo». I primi tre, come prima.
+  const prossimiWorkout = useMemo(
+    () => upcomingWorkouts.filter(w => categoriaDi(w.workouts?.sections) !== 'Event').slice(0, 3),
+    [upcomingWorkouts])
   const [nextEventHome, setNextEventHome] = useState(null)
   // L'ultima gara HYROX già corsa senza un tempo: la Home chiede «com'è
   // andata?» e porta alla scheda, dove la ricerca parte da sola.
@@ -492,7 +498,9 @@ export default function Home() {
     const todayWs = data.filter(w => w.completed_date === todayStr)
     setTodayWorkouts(todayWs)
 
-    const upcoming = data.filter(w => w.completed_date > todayStr && w.status !== 'completed').slice(0, 3)
+    // Tutti i prossimi, gare comprese: a `senzaStorico` basta sapere se c'è
+    // qualcosa. Quello che si MOSTRA come prossimo allenamento è `prossimiWorkout`.
+    const upcoming = data.filter(w => w.completed_date > todayStr && w.status !== 'completed')
     setUpcomingWorkouts(upcoming)
 
     const events = data.filter(w => (w.workouts?.sections?.category === 'Event') && w.completed_date >= todayStr).sort((a, b) => a.completed_date.localeCompare(b.completed_date))
@@ -1567,8 +1575,8 @@ setNotifications(prev => {
                 onRivedi={() => navigate('/calendar')} />
               <CardSettimanaChiusa minuti={weeklyStats.time} scarto={scartoSettimana}
                 fatti={settimana.fatti} totale={settimana.assegnati} barre={barreSettimana} />
-              {upcomingWorkouts[0]?.workouts && (() => {
-                const prossimo = upcomingWorkouts[0]
+              {prossimiWorkout[0]?.workouts && (() => {
+                const prossimo = prossimiWorkout[0]
                 const fra = differenceInDays(parseISO(prossimo.completed_date), startOfDay(new Date()))
                 return (
                   <CardDomani
@@ -1651,7 +1659,7 @@ setNotifications(prev => {
             </div>
           ) : (
             <ListaInArrivo
-              items={upcomingWorkouts}
+              items={prossimiWorkout}
               onOpen={(w) => navigate(`/workout/${w.workouts.id}?athlete_id=${user.id}`)}
               onAggiungiLibero={role === 'athlete' ? () => setAutonomousModalOpen(true) : null}
               azioniRiga={(w) => {

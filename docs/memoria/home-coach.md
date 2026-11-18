@@ -440,6 +440,7 @@ Richiesta del committente: il coach si assegna i workout e li fa come un atleta.
   Il filtro su `athlete_id` si ripete in JS: la card non deve mai mostrare l'allenamento di un altro.
 - **Quale riga**: `scegliMioAllenamento` di `src/lib/mioAllenamento.js` — oggi quello da fare, se no
   quello di oggi fatto (con la spunta), se no il prossimo da fare. Niente → niente card.
+  **Mai le gare** (categoria `Event`, committente 18/11/2026): solo workout, come per l'atleta.
 - **La card è pigra** (`lazy` in `Home.jsx`): porta `codiceWorkout` (stima, archivio…) e importata
   in testa aggiungeva 8 kB a `index` anche per l'atleta. Dopo: `index` 635,59 kB (era 634,11).
   Test: `HomeChunk.test.jsx`. Il coach compare anche in «In allenamento oggi»: è nella rubrica.
