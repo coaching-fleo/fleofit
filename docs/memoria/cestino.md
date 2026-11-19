@@ -70,6 +70,16 @@ i 13 casi passata.
 - Il backup notturno salva `cestino_workout` solo dopo il prossimo `app:main` (il workflow
   gira da `main`).
 
+## Nella demo (`npm run demo`)
+
+Dal 19/11/2026 `src/demoCestino.js` fa nel database finto quello che fanno il trigger e le
+cascate: all'eliminazione di un workout copia nel cestino e toglie assegnazioni, sfide e log;
+risponde alle RPC `cestino_voci` e `ripristina_workout`. È uno specchio **semplificato**: niente
+note estratte, scarpe, Garmin; tutti vedono tutto il cestino. Prima mancava, e il cestino in
+demo restava vuoto (il database finto risponde con una lista vuota a ogni tabella che non ha).
+⚠️ Chi cambia la copia o il ripristino nel SQL cambia anche questo file
+(`src/__tests__/demoCestino.test.js`).
+
 ## Come si verifica
 
 Dopo l'applicazione, incollare `tools/verifica-cestino.sql` nel SQL editor: tredici casi (il 13 solo dopo `cestino_admin_2026-11-19.sql`), nessuna

@@ -26,6 +26,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { semi, VERSIONE_SEME, COACH_DEMO } from './demoSemi'
+import { eliminaWorkoutDemo, vociCestinoDemo, ripristinaWorkoutDemo } from './demoCestino'
 
 const CHIAVE = 'pushfit_demo_db'
 
@@ -218,6 +219,10 @@ function query(tabella) {
     if (azione === 'delete') {
       const tocca = filtrate()
       const ids = new Set(tocca.map(r => r.id))
+      // Il trigger del cestino e le cascate del database vero (demoCestino.js).
+      if (tabella === 'workouts') {
+        eliminaWorkoutDemo(db(), tocca, { staffIds: new Set([STAFF_ADMIN_ID, COACH_DEMO.id]), utente: UTENTE })
+      }
       db()[tabella] = tab.filter(r => !ids.has(r.id))
       salvaDb(db())
       avvisaModifiche(tabella, 'DELETE', tocca)
@@ -307,8 +312,9 @@ function query(tabella) {
 // `VITE_DEMO_RUOLO=coach` (npm run demo:coach) entra come il coach finto di
 // demoSemi.js (ruolo `coach` in `staff`): l'interfaccia senza le voci da admin.
 const COME_COACH = import.meta.env.VITE_DEMO_RUOLO === 'coach'
+const STAFF_ADMIN_ID = '0118e43f-8791-4fd6-8032-bee028334c99'
 const UTENTE = {
-  id: import.meta.env.VITE_DEMO_ATLETA || (COME_COACH ? COACH_DEMO.id : '0118e43f-8791-4fd6-8032-bee028334c99'),
+  id: import.meta.env.VITE_DEMO_ATLETA || (COME_COACH ? COACH_DEMO.id : STAFF_ADMIN_ID),
   email: COME_COACH ? COACH_DEMO.email : 'coaching@federicoleo.it',
   user_metadata: { first_name: COME_COACH ? 'Coach' : 'Federico' },
   // Iscritto da 20 giorni: serve alla regola «dalla tua iscrizione» della
@@ -440,6 +446,18 @@ export function clientDemo() {
       // Al coach (o all'admin, la sessione di default) tutti i membri; all'atleta
       // invitato o dentro solo chi è invitato o dentro; a chiunque altro null.
       if (nome === 'team_scheda') return { data: schedaTeamFinta(db(), argomenti?.t), error: null }
+      // Il cestino dei workout (demoCestino.js): stessi errori della funzione vera.
+      if (nome === 'cestino_voci' || nome === 'ripristina_workout') {
+        try {
+          const data = nome === 'cestino_voci'
+            ? vociCestinoDemo(db(), argomenti?.c)
+            : ripristinaWorkoutDemo(db(), argomenti?.c, argomenti?.assegnazioni, argomenti?.sfide)
+          salvaDb(db())
+          return { data, error: null }
+        } catch (e) {
+          return { data: null, error: { message: e.message, code: 'P0001' } }
+        }
+      }
       return { data: null, error: null }
     },
   }
