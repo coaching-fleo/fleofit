@@ -3,25 +3,27 @@
 // Qui la logica pura: quanto manca, come si legge una riga e una voce del
 // ripristino, quali voci partono spuntate, chi entra nel cestino.
 
-import { format } from 'date-fns'
+import { addDays, differenceInCalendarDays, format } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { separaCodice } from './codiceWorkout'
 import { rpeDichiarato } from './rpe'
 
 export const GIORNI_CESTINO = 14
 
-const GIORNO_MS = 86_400_000
-
-/** Giorni interi prima della cancellazione definitiva, mai sotto zero. */
+/** Giorni prima della cancellazione definitiva, mai sotto zero. */
 export function giorniRimasti(eliminatoIl, ora = new Date()) {
-  const scadenza = new Date(eliminatoIl).getTime() + GIORNI_CESTINO * GIORNO_MS
-  const giorni = Math.floor((scadenza - ora.getTime()) / GIORNO_MS)
-  return Number.isFinite(giorni) ? Math.max(0, giorni) : 0
+  // Giorni di calendario fino all'ultimo giorno in cui è ancora nel cestino
+  // (il giorno dell'eliminazione + 14): il cron delle 00:10 UTC lo toglie la
+  // notte dopo. Appena eliminato = 14, l'ultimo giorno = 0.
+  const eliminato = new Date(eliminatoIl)
+  if (Number.isNaN(eliminato.getTime())) return 0
+  const giorni = differenceInCalendarDays(addDays(eliminato, GIORNI_CESTINO), ora)
+  return Math.max(0, giorni)
 }
 
 const testoScadenza = (giorni) => {
-  if (giorni <= 0) return 'si cancella oggi'
-  if (giorni === 1) return 'si cancella domani'
+  if (giorni <= 0) return 'si cancella stanotte'
+  if (giorni === 1) return 'resta fino a domani'
   return `si cancella tra ${giorni} giorni`
 }
 

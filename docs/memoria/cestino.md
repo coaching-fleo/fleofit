@@ -55,6 +55,13 @@ i 13 casi passata.
   workout andrà nel cestino per 14 giorni…», tranne per l'allenamento libero
   (`finisceNelCestino`, che deve dire lo stesso del trigger).
 
+## Quanto manca
+
+`giorniRimasti` conta i giorni di **calendario** fino all'ultimo giorno in cui la riga è ancora
+lì (giorno dell'eliminazione + 14); il cron delle 00:10 UTC la toglie la notte dopo. Appena
+eliminato: «si cancella tra 14 giorni»; il giorno prima: «resta fino a domani»; l'ultimo: «si
+cancella stanotte». Fino al 19/11/2026 contava le 24 ore intere e appena eliminato diceva 13.
+
 ## Trappole
 
 - Se la copia fallisce, **fallisce anche la delete**: meglio un errore a schermo che un workout

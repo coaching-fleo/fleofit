@@ -9,13 +9,19 @@ import {
 const ORA = new Date('2026-11-19T11:00:00Z')
 
 describe('giorniRimasti', () => {
-  it('conta i giorni interi prima dei 14', () => {
+  // Giorni di CALENDARIO fino all'ultimo giorno in cui la riga è ancora lì
+  // (eliminato + 14): il cron delle 00:10 UTC la toglie la notte dopo.
+  it('appena eliminato: 14', () => {
     expect(GIORNI_CESTINO).toBe(14)
+    expect(giorniRimasti('2026-11-19T10:00:00Z', ORA)).toBe(14)
+  })
+
+  it('eliminato ieri: 13', () => {
     expect(giorniRimasti('2026-11-18T16:29:00Z', ORA)).toBe(13)
   })
 
   it('non scende mai sotto zero', () => {
-    expect(giorniRimasti('2026-11-05T10:00:00Z', new Date('2026-11-19T09:00:00Z'))).toBe(0)
+    expect(giorniRimasti('2026-11-05T10:00:00Z', ORA)).toBe(0)
     expect(giorniRimasti('2026-10-01T10:00:00Z', ORA)).toBe(0)
   })
 })
@@ -27,9 +33,10 @@ describe('rigaCestino', () => {
   }
 
   it('dice quanto manca', () => {
+    expect(rigaCestino({ ...riga, eliminato_il: '2026-11-19T10:00:00Z' }, ORA).scade).toBe('si cancella tra 14 giorni')
     expect(rigaCestino(riga, ORA).scade).toBe('si cancella tra 13 giorni')
-    expect(rigaCestino({ ...riga, eliminato_il: '2026-11-06T12:00:00Z' }, ORA).scade).toBe('si cancella domani')
-    expect(rigaCestino({ ...riga, eliminato_il: '2026-11-05T12:00:00Z' }, ORA).scade).toBe('si cancella oggi')
+    expect(rigaCestino({ ...riga, eliminato_il: '2026-11-06T12:00:00Z' }, ORA).scade).toBe('resta fino a domani')
+    expect(rigaCestino({ ...riga, eliminato_il: '2026-11-05T12:00:00Z' }, ORA).scade).toBe('si cancella stanotte')
   })
 
   it('separa il nome dal codice', () => {
