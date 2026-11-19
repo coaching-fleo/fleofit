@@ -55,6 +55,14 @@
 > [PRODUCT.md](PRODUCT.md) · Design system: [DESIGN.md](DESIGN.md)
 
 
+## ⏳ Cestino dei workout — applicare la migrazione (serve il sì) (19/11/2026)
+Codice, test e migrazione pronti (`docs/memoria/cestino.md`). Restano: (1) il **sì** del
+committente e l'applicazione di `supabase/schema/cestino_workout_2026-11-19.sql`; (2)
+`tools/verifica-cestino.sql` nel SQL editor; (3) un `app:main` perché il backup notturno salvi
+`cestino_workout`. 💡 Dopo: gli audio delle note vocali dei workout eliminati restano orfani
+nel bucket (serve l'API Storage, una Edge Function: stesso problema di
+`delete_expired_voice_notes`, `database.md`).
+
 ## ⏳ Team di atleti — accendere e provare sul telefono (09/11/2026)
 ✅ Migrazione applicata e `tools/verifica-team.sql` pulita il 09/11/2026 (decima eccezione, CLAUDE.md §0-bis); il
 codice è su `app`, nascosto dall'interruttore `team` (spento). **Perché conta**: senza push l'invito non arriva.

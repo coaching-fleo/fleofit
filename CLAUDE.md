@@ -107,6 +107,10 @@
    ✅ **applicata a mano dal committente il 16/11/2026**, «Success», verifica senza errori): una policy di `team_membri` —
    il coach toglie anche chi è `dentro` (`supabase/schema/team_togli_2026-11-16.sql`,
    `docs/memoria/scheda-atleta.md`, «9-team-e-gruppi»).
+   ⏳ **Quattordicesima eccezione** (19/11/2026, **scritta, sì da chiedere prima di applicarla**): il
+   **cestino dei workout** — tabella `cestino_workout`, trigger `before delete` su `workouts`, RPC
+   `cestino_voci` e `ripristina_workout`, cron `svuota-cestino-workout`; additiva
+   (`supabase/schema/cestino_workout_2026-11-19.sql`, `docs/memoria/cestino.md`).
 1. 🏷️ **Dal 17/11/2026 l'app si chiama PUSHFIT** (prima FLEOFIT; dominio comprato `pushfit.it`,
    da collegare più avanti). Il nome si scrive **solo** con `NOME_APP` di `src/lib/marchio.js`, il logo
    è l'immagine di `src/assets/marchio/` e si mostra **solo** con `<Logo altezza={…} />`
@@ -393,6 +397,7 @@ staging, **schema congelato** (§0, 0-bis).
 | `team` · `team_membri` · `team_sfide` · `team_risultati` | ✅ **applicata il 09/11/2026** (`supabase/schema/team_2026-11-06.sql`; `docs/memoria/team.md`): i team di atleti con la sfida interna. Stati e reinvito (3 giorni) li impone il trigger; i nomi dei compagni passano **solo** dalla RPC `team_scheda`. Senza le tabelle l'app nasconde tutto; interruttore `team` spento. Nel backup notturno |
 | `pdf_coach` | ⏳ **scritta l'11/11/2026, da applicare a mano** (`supabase/schema/pdf_coach_2026-11-11.sql`; `docs/memoria/scheda-workout.md`): una riga per coach, `nome_firma` (≤60) in testa al PDF della scheda e `note_finali` (≤600) nel riquadro «NOTE AGGIUNTIVE». Il PDF usa la riga di `workouts.creato_da`, se no quella di chi esporta. Legge il coach, lo staff, i suoi atleti e chi ha un suo workout; scrive solo il coach sulla sua riga, mai `demo@fleofit.it`. Si legge e scrive **solo** con `src/lib/templatePdf.js`. Nel backup notturno |
 | `gruppi_atleti` | ✅ **c'è nel database** (controllo del 16/11/2026) (`supabase/schema/gruppi_atleti_2026-11-16.sql`; `docs/memoria/atleti.md`): i gruppi del coach (`nome` ≤40, `atleti` uuid[]), solo una scorciatoia del foglio «Assegna Workout». Policy unica come `modelli_blocco`: solo il coach proprietario, anche un admin vede solo i suoi. L'atleta non li vede. Gli id nell'array che il coach non vede più si ignorano (`src/lib/gruppiAtleti.js`). Senza la tabella l'app nasconde tutto. Nel backup notturno |
+| `cestino_workout` | ⏳ **scritta il 19/11/2026, da applicare** (`supabase/schema/cestino_workout_2026-11-19.sql`; `docs/memoria/cestino.md`): una riga per workout eliminato, con la `copia` jsonb di tutto ciò che aveva attaccato. La scrive SOLO il trigger `cestino_copia` (prima di ogni delete su `workouts`, anche dalle app vecchie); fuori gli allenamenti liberi (autore = un atleta). La vede l'autore se è staff, altrimenti gli admin. Nessun delete dal client: la svuota il cron dopo 14 giorni. Si ripristina solo con `ripristina_workout`. Senza la tabella l'app nasconde tutto. Nel backup notturno |
 | `personal_records` · `notifications` · `push_subscriptions` · `invitation_codes` · `tv_sessions` | `push_subscriptions.badge_count` è riletto da `send-reminders`: il badge si scrive solo con `sincronizzaBadge` (§8) |
 
 - 🔴 **Dal 16/10/2026 lo staff si cambia in UN posto: la tabella `staff`** (admin e coach).
@@ -766,6 +771,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | test, lint, `src/test/`, ambiente di prova, navigazione e tasto indietro | `qualita-e-test.md` |
 | `useDesktop.js`, `BarraLaterale`, `HomeCoachDesktop`, `CalendarioTeam`, `calendarioTeam.js`, `cosaGuardare.js`, `CreaWorkoutDesktop`, `AtletiDesktop`, `ArchivioDesktop`, `tabellaAtleti.js`, ogni cosa della versione desktop (solo coach) | `../piano-web-desktop.md` |
 | `Landing.jsx`, `Landing.css`, `LandingApp.jsx`, `landingDati.js`, `src/assets/landing/`, `tools/landing-schermate/` | `landing.md` |
+| `cestino.js`, `cestinoDb.js`, `Cestino.jsx`, `CestinoUI`, `FoglioRipristino`, il trigger `cestino_copia`, `tools/verifica-cestino.sql`, il testo della conferma di eliminazione nella scheda | `cestino.md` |
 | merge, `main`, Vercel | `branch.md` |
 | dove sta un file e a cosa serve | `struttura.md` |
 | le funzionalità per sommi capi | `funzionalita.md` |

@@ -115,6 +115,9 @@ storage per sempre. Non compaiono in nessun elenco, non finiscono nel backup, e 
 cancellati — cosa che conta se un atleta chiede la cancellazione dei propri dati.
 Il modo corretto è l'API Storage (`supabase.storage.from('voice-notes').remove([...])`).
 
+⚠️ Dal 19/11/2026 lo stesso vale per le note vocali dei workout eliminati: il cestino
+(`cestino.md`) non le tocca, e dopo 14 giorni restano orfane nel bucket come prima.
+
 ⚠️ Il gestore `EXCEPTION WHEN OTHERS THEN` della funzione è **vuoto**: ogni errore su una riga
 viene inghiottito in silenzio, senza log né conteggio. Gira ogni ora da mesi e non esiste un
 indizio su quante righe abbia saltato.
@@ -137,6 +140,7 @@ Si ispeziona con `select jobid, jobname, schedule, active, command from cron.job
 | `reminder-sera` | `0 20 * * *` | `send-reminders` con `{"mode":"evening"}` |
 | `cleanup-voice-notes` | `0 * * * *` (ogni ora) | `delete_expired_voice_notes()` |
 | `cleanup-expired-athletes` | `0 0 * * *` | `delete_expired_athletes()` |
+| `svuota-cestino-workout` | `10 0 * * *` | cancella le righe di `cestino_workout` più vecchie di 14 giorni (dal 19/11/2026, **da applicare**; `cestino.md`) |
 
 I due `cleanup` chiamano funzioni SQL che **non sono nel repository** e che nessuno aveva
 registrato: `supabase/schema/` non le contiene perché la fotografia copre solo le policy RLS.
