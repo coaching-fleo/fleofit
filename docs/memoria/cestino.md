@@ -18,8 +18,8 @@ recuperabile per 14 giorni dal coach che l'ha creato.
 `svuota-cestino-workout` = job 6, SELECT di `authenticated` sulle sole 8 colonne della lista.
 Verifica: i 12 casi passati lo stesso giorno (dopo aver corretto il caso 11: come «ex coach»
 sceglieva una persona dello staff con riga atleta).
-⏳ `cestino_admin_2026-11-19.sql` (l'admin vede tutto): scritta, da applicare; poi la verifica
-deve passare anche il caso 13.
+✅ `cestino_admin_2026-11-19.sql` (l'admin vede tutto): applicata lo stesso giorno, verifica con
+i 13 casi passata.
 
 ## Come funziona
 
