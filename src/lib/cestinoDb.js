@@ -23,6 +23,16 @@ export async function elencoCestino() {
   return { disponibile: true, righe }
 }
 
+/**
+ * C'è il cestino nel database? Serve alla conferma di eliminazione per non
+ * promettere un cestino che non c'è. Ogni errore = false: meglio il vecchio
+ * «definitivamente» che una promessa falsa.
+ */
+export async function cestinoDisponibile() {
+  const { error } = await supabase.from(TABELLA).select('id').limit(1)
+  return !error
+}
+
 /** Le voci a spunte del ripristino (assegnazioni e sfide). */
 export async function vociCestino(id) {
   const { data, error } = await supabase.rpc('cestino_voci', { c: id })

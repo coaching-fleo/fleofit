@@ -85,7 +85,11 @@ create policy "cestino_workout lettura" on public.cestino_workout
   as permissive for select to authenticated
   using (public.cestino_mio(creato_da));
 
-revoke all on public.cestino_workout from anon;
+-- Solo le colonne della lista: la `copia` (note, nomi, risultati) si legge
+-- soltanto da cestino_voci, che nasconde ciò che il coach non vede più.
+revoke all on public.cestino_workout from anon, authenticated;
+grant select (id, workout_id, titolo, data_workout, creato_da, eliminato_da, eliminato_da_nome, eliminato_il)
+  on public.cestino_workout to authenticated;
 
 -- ── 3. la copia, prima della delete ───────────────────────────────────────
 create function public.cestino_copia() returns trigger
@@ -94,8 +98,11 @@ declare
   nome  text;
   copia jsonb;
 begin
-  -- Allenamento libero (autore = un atleta): fuori dal cestino.
-  if old.creato_da is not null and not public.cestino_staff(old.creato_da) then
+  -- Allenamento libero (autore = un atleta, workout autonomo): fuori dal
+  -- cestino. Il workout di un ex coach (autore non più staff, non autonomo)
+  -- entra, e lo vedono gli admin.
+  if old.creato_da is not null and not public.cestino_staff(old.creato_da)
+     and coalesce(old.sections ->> 'isAutonomous', '') = 'true' then
     return old;
   end if;
 
@@ -191,8 +198,11 @@ begin
                  'atleta', coalesce(a ->> 'nome_atleta', 'Atleta'),
                  'stato', a -> 'riga' ->> 'status',
                  'data', a -> 'riga' ->> 'completed_date',
-                 'notes', a -> 'riga' ->> 'notes',
-                 'nota_vocale', coalesce(a -> 'riga' ->> 'voice_note_url', '') <> ''
+                 -- Note e nota vocale solo di chi il coach vede ancora.
+                 'notes', case when public.cestino_motivo_atleta((a -> 'riga' ->> 'athlete_id')::uuid) is null
+                               then a -> 'riga' ->> 'notes' end,
+                 'nota_vocale', public.cestino_motivo_atleta((a -> 'riga' ->> 'athlete_id')::uuid) is null
+                                and coalesce(a -> 'riga' ->> 'voice_note_url', '') <> ''
                                 and position('#deleted=' in a -> 'riga' ->> 'voice_note_url') = 0,
                  'ripristinabile', public.cestino_motivo_atleta((a -> 'riga' ->> 'athlete_id')::uuid) is null,
                  'motivo', public.cestino_motivo_atleta((a -> 'riga' ->> 'athlete_id')::uuid)

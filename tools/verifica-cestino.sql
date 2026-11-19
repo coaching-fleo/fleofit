@@ -11,7 +11,7 @@
 --
 -- Servono, fra i dati veri: due coach (ruolo 'coach' in staff, non il demo),
 -- il primo con almeno DUE atleti in coach_atleti; un admin (non il demo);
--- un atleta che NON è del primo coach.
+-- un atleta che NON è del primo coach (fa anche da «ex coach» nel caso 11).
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- Diventa l'utente `uid` fino alla fine della (sotto)transazione.
@@ -66,6 +66,19 @@ begin
     insert into public.athlete_workouts (athlete_id, workout_id, status, notes, voice_note_url)
       values (a, w, 'completed', 'ok [RPE: 7/10]', 'https://esempio/voice-notes/x.m4a');
   end loop;
+  return w;
+end $$;
+
+-- Un allenamento libero dell'atleta `a` (autonomo, come lo crea l'app).
+create or replace function pg_temp.libero(a uuid) returns uuid
+language plpgsql as $$
+declare w uuid;
+begin
+  insert into public.workouts (title, date, sections, coach_notes, creato_da)
+    values ('verifica cestino', current_date, '{"category":"Custom","isAutonomous":true}'::jsonb, '', a)
+    returning id into w;
+  insert into public.athlete_workouts (athlete_id, workout_id, status, notes)
+    values (a, w, 'completed', 'ok');
   return w;
 end $$;
 
@@ -130,7 +143,7 @@ begin
 
   -- ── 2. allenamento libero dell'atleta: fuori dal cestino ───────────────
   begin
-    w := pg_temp.workout(a1, array[a1]);
+    w := pg_temp.libero(a1);
     delete from public.workouts where id = w;
     if exists (select 1 from public.cestino_workout where workout_id = w) then
       raise exception 'FALLITO: 2. libero fuori (è finito nel cestino)';
@@ -273,8 +286,44 @@ begin
     w := pg_temp.workout(c_id, array[a1]);
     delete from public.workouts where id = w;
     perform pg_temp.come(c_id, c_email);
-    if pg_temp.righe(format('delete from public.cestino_workout where workout_id = %L', w)) <> 0 then
+    -- Zero righe o permesso negato: tutti e due vogliono dire «non si può».
+    begin
+      n := pg_temp.righe(format('delete from public.cestino_workout where workout_id = %L', w));
+    exception when insufficient_privilege then n := 0;
+    end;
+    if n <> 0 then
       raise exception 'FALLITO: 10. nessun delete dal client (il coach ha svuotato il cestino)';
+    end if;
+    raise exception 'SENTINELLA';
+  exception when others then if sqlerrm <> 'SENTINELLA' then raise; end if;
+  end;
+
+  -- ── 11. workout di un ex coach (autore non staff, non autonomo): entra, agli admin
+  begin
+    w := pg_temp.workout(fuori, array[a1]);
+    delete from public.workouts where id = w;
+    if not exists (select 1 from public.cestino_workout where workout_id = w) then
+      raise exception 'FALLITO: 11. ex coach (il workout non è finito nel cestino)';
+    end if;
+    perform pg_temp.come(adm, adm_email);
+    select count(*) into n from public.cestino_workout where workout_id = w;
+    if n <> 1 then raise exception 'FALLITO: 11. ex coach (l''admin non lo vede)'; end if;
+    raise exception 'SENTINELLA';
+  exception when others then if sqlerrm <> 'SENTINELLA' then raise; end if;
+  end;
+
+  -- ── 12. la copia non si legge dal client; niente note di chi non è più suo
+  begin
+    w := pg_temp.workout(c_id, array[fuori]);
+    delete from public.workouts where id = w;
+    select id into cid from public.cestino_workout where workout_id = w;
+    perform pg_temp.come(c_id, c_email);
+    perform pg_temp.deve_fallire(format(
+      'select copia from public.cestino_workout where id = %L', cid), 'permission denied', '12. copia leggibile dal client');
+    v := public.cestino_voci(cid);
+    if (v -> 0 ->> 'ripristinabile')::boolean or v -> 0 ->> 'notes' is not null
+       or (v -> 0 ->> 'nota_vocale')::boolean then
+      raise exception 'FALLITO: 12. note di un atleta non più suo: %', v -> 0;
     end if;
     raise exception 'SENTINELLA';
   exception when others then if sqlerrm <> 'SENTINELLA' then raise; end if;

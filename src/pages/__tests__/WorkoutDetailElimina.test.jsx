@@ -11,7 +11,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 
 // Dal 19/11/2026 la conferma dice anche dove va il workout: nel cestino per 14
 // giorni, tranne l'allenamento libero di un atleta (docs/memoria/cestino.md).
-const ctrl = await vi.hoisted(async () => ({ creato_da: null, assegnazioni: [] }))
+const ctrl = await vi.hoisted(async () => ({ creato_da: null, assegnazioni: [], cestino: true }))
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
   return fintoSupabase(() => ({
@@ -22,6 +22,7 @@ const finto = await vi.hoisted(async () => {
   }))
 })
 vi.mock('../../supabaseClient', () => ({ supabase: finto.supabase }))
+vi.mock('../../lib/cestinoDb', () => ({ cestinoDisponibile: () => Promise.resolve(ctrl.cestino) }))
 vi.mock('jspdf', () => ({ default: class {}, jsPDF: class {} }))
 vi.mock('html-to-image', () => ({ toPng: vi.fn(), toBlob: vi.fn() }))
 vi.mock('@capacitor/network', () => ({ Network: {
@@ -84,4 +85,24 @@ it('l\'allenamento libero di un atleta: resta il testo di sempre', async () => {
   const conferma = await apriConferma()
   await waitFor(() => expect(within(conferma)
     .getByText('Questa azione eliminerà definitivamente il workout dal calendario e non può essere annullata.')).toBeInTheDocument())
+})
+
+// Revisione finale (19/11/2026): la conferma non promette un cestino che non
+// c'è (migrazione non applicata) e, se il workout è di un altro, dice che va
+// nel cestino di chi l'ha creato.
+it('cestino non ancora nel database: resta il testo di sempre', async () => {
+  ctrl.creato_da = 'c1'
+  ctrl.cestino = false
+  ctrl.assegnazioni = [{ id: 'aw1', athlete_id: 'at1', workout_id: 'w1', status: 'pending', notes: null }]
+  const conferma = await apriConferma()
+  await waitFor(() => expect(within(conferma)
+    .getByText('Questa azione eliminerà definitivamente il workout dal calendario e non può essere annullata.')).toBeInTheDocument())
+  ctrl.cestino = true
+})
+
+it('il workout di un altro coach: va nel cestino di chi l\'ha creato', async () => {
+  ctrl.creato_da = 'c2'
+  ctrl.assegnazioni = [{ id: 'aw1', athlete_id: 'at1', workout_id: 'w1', status: 'pending', notes: null }]
+  const conferma = await apriConferma()
+  expect(await within(conferma).findByText('Il workout andrà per 14 giorni nel cestino di chi l\'ha creato: da lì potrà ripristinarlo.')).toBeInTheDocument()
 })

@@ -14,7 +14,7 @@ vi.mock('../../supabaseClient', () => ({
   get supabase() { return f.supabase },
 }))
 
-const { elencoCestino, vociCestino, ripristinaWorkout } = await import('../cestinoDb')
+const { elencoCestino, vociCestino, ripristinaWorkout, cestinoDisponibile } = await import('../cestinoDb')
 
 const R = (id, eliminato_il) => ({ id, workout_id: 'w' + id, titolo: 'T' + id, data_workout: '2026-11-16', eliminato_il })
 
@@ -82,5 +82,23 @@ describe('ripristinaWorkout', () => {
     ctrl.rpc = { 'rpc:ripristina_workout': { error: { message: 'cestino: id occupato' } } }
     await expect(ripristinaWorkout('c1', { assegnazioni: [], sfide: [] }))
       .rejects.toThrow('Esiste già un workout con questo identificativo.')
+  })
+})
+
+describe('cestinoDisponibile', () => {
+  it('tabella presente: true', async () => {
+    await expect(cestinoDisponibile()).resolves.toBe(true)
+  })
+
+  it('tabella assente: false', async () => {
+    ctrl.guasti = ['cestino_workout']
+    monta('42P01')
+    await expect(cestinoDisponibile()).resolves.toBe(false)
+  })
+
+  it('un altro errore: false, per non promettere un cestino che forse non c\'è', async () => {
+    ctrl.guasti = ['cestino_workout']
+    monta('08006')
+    await expect(cestinoDisponibile()).resolves.toBe(false)
   })
 })

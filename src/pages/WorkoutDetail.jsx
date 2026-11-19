@@ -24,6 +24,7 @@ import { Network } from '@capacitor/network'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { vibraRichiamo, vibraSuccesso } from '../lib/aptica'
 import { GIORNI_CESTINO, finisceNelCestino } from '../lib/cestino'
+import { cestinoDisponibile } from '../lib/cestinoDb'
 
 // 🔴 jspdf e html-to-image si caricano SOLO quando si esporta, e non è una
 // rifinitura: importati in testa finivano nel chunk della scheda, che pesava
@@ -307,6 +308,15 @@ export default function WorkoutDetail() {
   const [editingNote, setEditingNote] = useState('')
   const [savingNote, setSavingNote] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  // C'è il cestino nel database? (docs/memoria/cestino.md) Finché non si sa, la
+  // conferma dice il testo di sempre.
+  const [conCestino, setConCestino] = useState(false)
+  useEffect(() => {
+    if (role === 'athlete') return undefined
+    let vivo = true
+    cestinoDisponibile().then(si => { if (vivo) setConCestino(si) }).catch(() => {})
+    return () => { vivo = false }
+  }, [role])
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [alertInfo, setAlertInfo] = useState(null)
@@ -2719,8 +2729,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               {/* Il cestino (19/11/2026, docs/memoria/cestino.md): ci va il workout
                   del coach, non l'allenamento libero di un atleta né ciò che
                   l'atleta toglie dal suo calendario. */}
-              {role !== 'athlete' && finisceNelCestino(workout, assignments.map(a => a.athlete_id))
-                ? `Il workout andrà nel cestino per ${GIORNI_CESTINO} giorni: da lì potrai ripristinarlo.`
+              {role !== 'athlete' && conCestino && finisceNelCestino(workout, assignments.map(a => a.athlete_id))
+                ? (workout?.creato_da && workout.creato_da !== user?.id
+                    ? `Il workout andrà per ${GIORNI_CESTINO} giorni nel cestino di chi l'ha creato: da lì potrà ripristinarlo.`
+                    : `Il workout andrà nel cestino per ${GIORNI_CESTINO} giorni: da lì potrai ripristinarlo.`)
                 : 'Questa azione eliminerà definitivamente il workout dal calendario e non può essere annullata.'}
             </p>
             <div className="flex gap-3 mt-2">

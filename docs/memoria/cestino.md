@@ -17,10 +17,11 @@ recuperabile per 14 giorni dal coach che l'ha creato.
 - **La copia la fa il database**, non l'app: trigger `cestino_workout_copia`
   (`before delete on workouts`) → funzione `cestino_copia()`. Così copre anche la 1.2.4 sugli
   Store e il sito, che eliminano con un `delete()` diretto.
-- **Chi entra**: workout con `creato_da` **staff** (admin o coach) o **null** (i 138 Custom ed
-  Eventi di prima del 16/10/2026: non si sa chi li ha scritti). Restano fuori quelli con
-  autore un atleta: gli allenamenti liberi, compresi quelli che `garmin-webhook/attivita.ts`
-  crea e cancella da sé.
+- **Chi entra**: tutti i workout tranne l'**allenamento libero**: autore non staff **e**
+  `sections.isAutonomous = true` (compresi quelli che `garmin-webhook/attivita.ts` crea e
+  cancella da sé). Entrano quindi anche i workout senza autore (i 138 Custom ed Eventi di prima
+  del 16/10/2026) e quelli di un **ex coach** (autore non più staff): li vedono gli admin.
+  Al 19/11/2026 i 31 workout con autore non staff erano tutti autonomi.
 - **Chi vede**: l'autore, se è ancora staff. Se l'autore è null o non è più staff, gli admin
   (`cestino_mio`). ⚠️ Un admin **non** vede il cestino di un coach.
 - **Cosa si salva** in `copia` (jsonb): il workout; le assegnazioni con le loro `note_estratte`,
@@ -31,6 +32,9 @@ recuperabile per 14 giorni dal coach che l'ha creato.
   **stesso id**, così i link delle notifiche già inviate funzionano. Tornano solo le voci
   spuntate; **nessuna notifica**. Le voci le dà `cestino_voci(c)`, con `ripristinabile` e
   `motivo` («atleta eliminato», «non è più tra i tuoi atleti», «team sciolto»).
+- **La `copia` non si legge dal client**: `authenticated` ha il SELECT solo sulle colonne della
+  lista. Le voci passano da `cestino_voci`, che per un atleta non più del coach non mostra note
+  né nota vocale.
 - **Nessuno svuota a mano**: niente policy di delete. Il cron `svuota-cestino-workout`
   (`10 0 * * *` UTC) cancella dopo 14 giorni.
 - **App**: voce **Cestino** nella Libreria (solo se la tabella c'è, con «N workout» o «Vuoto»),
@@ -56,5 +60,5 @@ recuperabile per 14 giorni dal coach che l'ha creato.
 
 ## Come si verifica
 
-Dopo l'applicazione, incollare `tools/verifica-cestino.sql` nel SQL editor: dieci casi, nessuna
+Dopo l'applicazione, incollare `tools/verifica-cestino.sql` nel SQL editor: dodici casi, nessuna
 traccia lasciata. Atteso `TUTTI I CONTROLLI DEL CESTINO SONO PASSATI`.
