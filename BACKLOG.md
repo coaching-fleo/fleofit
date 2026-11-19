@@ -55,6 +55,14 @@
 > [PRODUCT.md](PRODUCT.md) · Design system: [DESIGN.md](DESIGN.md)
 
 
+## ⏳ Promemoria notifiche — provare sul telefono (19/11/2026)
+Arriva con la 1.2.5. Prove del committente, su iPhone e Android:
+1. Account atleta senza notifiche (permesso mai chiesto), con un workout assegnato: apri l'app → compare «Non perderti un allenamento»; «Attiva» → richiesta del sistema → le push arrivano.
+2. Permesso negato prima: il bottone dice «Apri Impostazioni», si aprono quelle dell'app; attivate e tornati nell'app, il foglio non torna.
+3. Coach: assegna un workout → «Sappi quando si allenano».
+4. «Non ora» → non ricompare per 3 giorni; tasto indietro di Android = «Non ora».
+Testi da confermare. Dettagli in `docs/memoria/impostazioni.md`.
+
 ## ⏳ Cestino dei workout — applicare la migrazione (serve il sì) (19/11/2026)
 Codice, test e migrazione pronti (`docs/memoria/cestino.md`). Restano: (1) il **sì** del
 committente e l'applicazione di `supabase/schema/cestino_workout_2026-11-19.sql`; (2)

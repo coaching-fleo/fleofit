@@ -656,6 +656,7 @@ era in realtà un ON/OFF»: perderla trasformerebbe l'allenamento senza errori a
   `pushfit_extra_visti_<uid>` (gli avvisi degli Extra chiusi con la X da quell'utente su questo dispositivo, `id:chiave`, massimo 50: `src/lib/avvisiExtra.js`),
   `pushfit_referrer_letto` (Android: il codice d'invito del Play Store è già stato letto, una volta per installazione, `src/lib/referrerInvito.js`),
   `pushfit_home_classica` (true = la Home coach di prima, il cruscotto, su questo dispositivo; assente = la «Riepilogo», `src/lib/homeClassica.js`),
+  `pushfit_promemoria_notifiche` (quante volte ha detto «Non ora» al foglio delle notifiche, l'ultima data, «Non chiedermelo più»: memoria del dispositivo, `src/lib/promemoriaNotifiche.js`),
   ⏳ `pushfit_messaggi_prova` (TEMPORANEO: le «Prova su di me» nella bacheca del coach),
   `adminRoleOverride`.
   ⚠️ `pushfit_ultimo_export` è una memoria **del dispositivo**, non un registro dei backup:
@@ -758,7 +759,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `Calendar.jsx`, `CalendarioUI`, `useSwipeOrizzontale.js`, `rigaCalendario.js`, `NuovoEvento`, `GareCorsa`, `gareCorsa.js`, `gare.js`, `gareHyrox.js`, `RisultatoGara`, `InvitoRisultato`, `GarePassate`, `risultatoGara.js`, Edge Function `gare-hyrox`, `gare-corsa` e `risultato-hyrox` | `calendario.md` |
 | `Messaggi.jsx`, `NuovoMessaggio.jsx`, `MessaggiUI`, `FoglioMessaggio`, `messaggiCoach.js`, Edge Function `send-reminders/broadcast.ts` | `messaggi.md` |
 | `WeeklyReport.jsx`, `AthleteReport.jsx`, `report*.js`, `Analisi.jsx`, `AnalisiUI.jsx`, `analisi.js`, `components/grafici/`, `storicoEsercizio.js`, `StoricoEsercizio.jsx`, `esportaCsv.js`, `ReportDesktop.jsx` | `report.md` |
-| `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione` | `impostazioni.md` |
+| `Settings.jsx`, `ImpostazioniUI`, `rigaImpostazioni.js`, `FoglioSegnalazione`, `segnalazione.js`, Edge Function `segnalazione`, `promemoriaNotifiche.js`, `permessoNotifiche.js`, `InvitoNotifiche`, `FoglioNotifiche` | `impostazioni.md` |
 | `Login.jsx`, `LoginUI`, `codiceInvito.js`, `appleLogin.js`, `ProtectedRoute`, `consenso.js`, `Consenso.jsx`, `informativa.js`, `public/privacy-policy.html` | `accesso.md` |
 | `RicercaCoach.jsx`, `ricercaCoach.js`, `dialogoRicerca.js`, `useDettatura.js`, Edge Function `ricerca-coach` | `ricerca.md` |
 | `extra.js`, `extra/*.js`, `useExtra.js`, `avvisiExtra.js`, `useAvvisiExtra.js`, `Extra.jsx`, `ExtraUI`, `DagliExtra`, `Libreria.jsx` (il menù del coach), le voci Extra e Libreria della `Navbar` | `extra.md` |

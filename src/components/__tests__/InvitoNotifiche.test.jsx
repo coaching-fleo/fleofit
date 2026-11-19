@@ -25,9 +25,9 @@ vi.mock('@capacitor/app', () => ({
   },
 }))
 
-import InvitoNotifiche, { _azzeraApertura } from '../InvitoNotifiche'
+import InvitoNotifiche from '../InvitoNotifiche'
 import { segnalaMomentoNotifiche } from '../../lib/permessoNotifiche'
-import { CHIAVE_PROMEMORIA_NOTIFICHE, leggiStato } from '../../lib/promemoriaNotifiche'
+import { CHIAVE_PROMEMORIA_NOTIFICHE, leggiStato, _azzeraApertura } from '../../lib/promemoriaNotifiche'
 
 const oggi = () => format(new Date(), 'yyyy-MM-dd')
 const segnala = async (ruolo = 'athlete') => { await act(async () => { segnalaMomentoNotifiche(ruolo) }) }

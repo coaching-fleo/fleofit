@@ -343,3 +343,36 @@ entra un atleta vero, e la spunta era ancora lì. Le Impostazioni leggono
 `atletaVero`), quindi all'atleta mostravano le righe admin e nascondevano Garmin e consenso.
 Ora `src/lib/anteprimaAtleta.js`: `chiudiAnteprimaSeNonAdmin` in `ProtectedRoute` (anche nel
 ramo senza rete) e `chiudiAnteprima` dopo ogni `signOut` delle Impostazioni.
+
+## Promemoria notifiche — il foglio per chi non le ha (19/11/2026)
+
+Fino ad allora le notifiche si accendevano **solo** dall'interruttore delle
+Impostazioni: l'app non le chiedeva mai, e chi non ci andava restava senza per
+sempre. Progetto: `docs/superpowers/specs/2026-11-19-promemoria-notifiche-design.md`.
+
+- **Chi e quando.** `InvitoNotifiche`, montato una volta in `ProtectedRoute`,
+  aspetta l'evento `pushfit:momento-notifiche` (`segnalaMomentoNotifiche` di
+  `src/lib/permessoNotifiche.js`). Lo lanciano la Home dell'atleta quando ha un
+  allenamento `pending` da oggi in poi (`haAllenamentiDaFare`) e le tre
+  assegnazioni del coach (CreateWorkout, WorkoutDetail, AthleteDetail).
+  `momentiNotifiche.test.js` fallisce se un'assegnazione nuova (`mode:
+  'immediate'`) non segnala. CalendarioTeam no: è solo desktop, cioè web.
+- **Cadenza** (`src/lib/promemoriaNotifiche.js`): dopo ogni «Non ora» 3, 7, 14,
+  30, 60 giorni; al sesto non si chiede più. «Non chiedermelo più» dalla seconda
+  volta. Al massimo una volta per apertura dell'app (flag del modulo). Se le
+  notifiche risultano attive, il conteggio si azzera.
+- **«Attiva».** Permesso mai chiesto → richiesta del sistema, e se concesso il
+  token lo salva `rinfrescaTokenPush` (un solo posto che scrive
+  `push_subscriptions`). Permesso già negato → «Apri Impostazioni», con il
+  metodo `impostazioni` del plugin del **lettore QR** (c'è su iOS e Android); al
+  ritorno nell'app (`appStateChange`) si ricontrolla. Un «no» del sistema conta
+  come «Non ora».
+- **Solo app nativa**: sul web `statoPermesso` dice `non-disponibile` e il foglio
+  non compare. **Niente database**: lo stato è `pushfit_promemoria_notifiche`.
+- ⚠️ L'interruttore delle Impostazioni, spento, toglie le righe di
+  `push_subscriptions` ma lascia il permesso del telefono: per il promemoria
+  quella persona ha le notifiche «attive» e non vede il foglio. È voluto: le ha
+  spente lei.
+- **Peso** (misurato il 19/11/2026): `index` da 635,98 a 639,12 KB (già sopra il
+  `chunkSizeWarningLimit` di 620 **prima** di questo lavoro); `FoglioNotifiche`
+  è pigro, 2,43 KB in un chunk suo.

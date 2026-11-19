@@ -62,3 +62,15 @@ export const azzera = (storage = globalThis.localStorage) => scriviStato(inizial
  */
 export const haAllenamentiDaFare = (righe, oggiStr) =>
   (righe || []).some(r => r?.status === 'pending' && typeof r.completed_date === 'string' && r.completed_date >= oggiStr)
+
+// Al massimo una volta per apertura dell'app: un flag del modulo, non di un
+// componente, così un rimontaggio non lo azzera.
+let aperturaUsata = false
+/** Prende il turno di questa apertura: true solo la prima volta. */
+export function usaApertura() {
+  if (aperturaUsata) return false
+  aperturaUsata = true
+  return true
+}
+/** Solo per i test. */
+export const _azzeraApertura = () => { aperturaUsata = false }
