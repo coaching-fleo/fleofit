@@ -12,6 +12,7 @@ import Navbar from './components/Navbar'
 import { useSchermoLargo, eDesktop } from './useDesktop'
 import { Apertura } from './components/Apertura'
 import Consenso from './components/Consenso'
+import InvitoNotifiche from './components/InvitoNotifiche'
 import { serveConsenso, datiConsenso } from './lib/consenso'
 import { erroreProfilo } from './lib/profiloAtleta'
 import Home from './pages/Home'
@@ -606,6 +607,9 @@ function ProtectedRoute() {
     // test montano le pagine da sole e non lo passano (montaPagina.jsx).
     <AuthContext.Provider value={{ user: session.user, role, nome: userName }}>
       {apertura}
+      {/* Propone le notifiche a chi non le ha, quando la Home o un'assegnazione
+          lo segnala (src/components/InvitoNotifiche.jsx). Solo nell'app nativa. */}
+      <InvitoNotifiche userId={session.user.id} />
       {/* Lo spazio per la tab bar viene da --altezza-navbar (src/index.css),
           non da un `pb-16` scritto qui: la barra è alta quanto è alta, e
           questo numero deve seguirla da solo. */}
