@@ -11,7 +11,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 
 // Dal 19/11/2026 la conferma dice anche dove va il workout: nel cestino per 14
 // giorni, tranne l'allenamento libero di un atleta (docs/memoria/cestino.md).
-const ctrl = await vi.hoisted(async () => ({ creato_da: null, assegnazioni: [], cestino: true }))
+const ctrl = await vi.hoisted(async () => ({ creato_da: null, assegnazioni: [], cestino: true, ruolo: 'admin' }))
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
   return fintoSupabase(() => ({
@@ -35,7 +35,7 @@ const WorkoutDetail = (await import('../WorkoutDetail')).default
 
 const monta = (voci, indice) => render(
   <MemoryRouter initialEntries={voci} initialIndex={indice}>
-    <AuthContext.Provider value={{ user: { id: 'c1', email: 'a@b.it', user_metadata: {} }, role: 'admin' }}>
+    <AuthContext.Provider value={{ user: { id: 'c1', email: 'a@b.it', user_metadata: {} }, role: ctrl.ruolo }}>
       <Routes>
         <Route path="/workout/:id" element={<WorkoutDetail />} />
         <Route path="/" element={<p>Home</p>} />
@@ -100,9 +100,19 @@ it('cestino non ancora nel database: resta il testo di sempre', async () => {
   ctrl.cestino = true
 })
 
-it('il workout di un altro coach: va nel cestino di chi l\'ha creato', async () => {
+it('il workout di un altro coach, eliminato da un coach: va nel cestino di chi l\'ha creato', async () => {
   ctrl.creato_da = 'c2'
+  ctrl.ruolo = 'coach'
   ctrl.assegnazioni = [{ id: 'aw1', athlete_id: 'at1', workout_id: 'w1', status: 'pending', notes: null }]
   const conferma = await apriConferma()
   expect(await within(conferma).findByText('Il workout andrà per 14 giorni nel cestino di chi l\'ha creato: da lì potrà ripristinarlo.')).toBeInTheDocument()
+  ctrl.ruolo = 'admin'
+})
+
+// Dal 19/11/2026 (cestino_admin_2026-11-19.sql) l'admin vede il cestino di tutti.
+it('il workout di un altro coach, eliminato da un admin: potrai ripristinarlo', async () => {
+  ctrl.creato_da = 'c2'
+  ctrl.assegnazioni = [{ id: 'aw1', athlete_id: 'at1', workout_id: 'w1', status: 'pending', notes: null }]
+  const conferma = await apriConferma()
+  expect(await within(conferma).findByText('Il workout andrà nel cestino per 14 giorni: da lì potrai ripristinarlo.')).toBeInTheDocument()
 })

@@ -12,6 +12,15 @@ log delle richieste di Supabase (rete Apple, iPhone, sessione del demo). Si è r
 dal backup notturno. Il committente ha chiesto una rete: un workout eliminato resta
 recuperabile per 14 giorni dal coach che l'ha creato.
 
+## Stato
+
+✅ Applicata a mano dal committente il 19/11/2026: tabella, trigger acceso, cron
+`svuota-cestino-workout` = job 6, SELECT di `authenticated` sulle sole 8 colonne della lista.
+Verifica: i 12 casi passati lo stesso giorno (dopo aver corretto il caso 11: come «ex coach»
+sceglieva una persona dello staff con riga atleta).
+⏳ `cestino_admin_2026-11-19.sql` (l'admin vede tutto): scritta, da applicare; poi la verifica
+deve passare anche il caso 13.
+
 ## Come funziona
 
 - **La copia la fa il database**, non l'app: trigger `cestino_workout_copia`
@@ -22,8 +31,11 @@ recuperabile per 14 giorni dal coach che l'ha creato.
   cancella da sé). Entrano quindi anche i workout senza autore (i 138 Custom ed Eventi di prima
   del 16/10/2026) e quelli di un **ex coach** (autore non più staff): li vedono gli admin.
   Al 19/11/2026 i 31 workout con autore non staff erano tutti autonomi.
-- **Chi vede**: l'autore, se è ancora staff. Se l'autore è null o non è più staff, gli admin
-  (`cestino_mio`). ⚠️ Un admin **non** vede il cestino di un coach.
+- **Chi vede**: un coach vede solo i suoi. Un admin vede e ripristina **tutto**, il cestino di
+  ogni coach compreso (`cestino_mio`). ⚠️ Fino al 19/11/2026 l'admin vedeva solo i suoi, quelli
+  senza autore e quelli di un ex coach: lo ha cambiato `cestino_admin_2026-11-19.sql`, chiesto
+  dal committente perché nel calendario l'admin vede già i workout di tutti. Anche
+  `demo@fleofit.it` è admin: il revisore di App Store vede il cestino di tutti (rischio accettato).
 - **Cosa si salva** in `copia` (jsonb): il workout; le assegnazioni con le loro `note_estratte`,
   la `scarpe_uso`, gli id delle `garmin_attivita` abbinate e il nome dell'atleta; le sfide dei
   team con i risultati e il nome del team; gli id dei `team` con `evento_id` sul workout; i
@@ -60,5 +72,5 @@ recuperabile per 14 giorni dal coach che l'ha creato.
 
 ## Come si verifica
 
-Dopo l'applicazione, incollare `tools/verifica-cestino.sql` nel SQL editor: dodici casi, nessuna
+Dopo l'applicazione, incollare `tools/verifica-cestino.sql` nel SQL editor: tredici casi (il 13 solo dopo `cestino_admin_2026-11-19.sql`), nessuna
 traccia lasciata. Atteso `TUTTI I CONTROLLI DEL CESTINO SONO PASSATI`.

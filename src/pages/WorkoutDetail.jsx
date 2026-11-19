@@ -2730,7 +2730,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
                   del coach, non l'allenamento libero di un atleta né ciò che
                   l'atleta toglie dal suo calendario. */}
               {role !== 'athlete' && conCestino && finisceNelCestino(workout, assignments.map(a => a.athlete_id))
-                ? (workout?.creato_da && workout.creato_da !== user?.id
+                ? (role !== 'admin' && workout?.creato_da && workout.creato_da !== user?.id
                     ? `Il workout andrà per ${GIORNI_CESTINO} giorni nel cestino di chi l'ha creato: da lì potrà ripristinarlo.`
                     : `Il workout andrà nel cestino per ${GIORNI_CESTINO} giorni: da lì potrai ripristinarlo.`)
                 : 'Questa azione eliminerà definitivamente il workout dal calendario e non può essere annullata.'}

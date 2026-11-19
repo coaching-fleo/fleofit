@@ -1,6 +1,7 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Verifica del CESTINO DEI WORKOUT (supabase/schema/cestino_workout_2026-11-19.sql).
--- Eseguire nell'SQL editor di Supabase DOPO aver applicato la migrazione.
+-- Eseguire nell'SQL editor di Supabase DOPO aver applicato la migrazione
+-- e cestino_admin_2026-11-19.sql (il caso 13 ha bisogno di tutte e due).
 --
 -- NON LASCIA TRACCE: ogni caso crea i suoi dati di prova, li prova come un
 -- utente vero (ruolo `authenticated` + JWT finto) e poi annulla tutto con
@@ -11,7 +12,7 @@
 --
 -- Servono, fra i dati veri: due coach (ruolo 'coach' in staff, non il demo),
 -- il primo con almeno DUE atleti in coach_atleti; un admin (non il demo);
--- un atleta che NON è del primo coach (fa anche da «ex coach» nel caso 11).
+-- un atleta (non staff) che NON è del primo coach (fa anche da «ex coach» nel caso 11).
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- Diventa l'utente `uid` fino alla fine della (sotto)transazione.
@@ -115,6 +116,7 @@ begin
    where ca.coach_id = c_id and ca.athlete_id <> a1 order by ca.athlete_id limit 1;
   select a.id into fuori from public.athletes a
    where a.deleted_at is null and a.id <> c_id
+     and not public.cestino_staff(a.id)   -- uno staff con riga atleta non fa da «ex coach»
      and not exists (select 1 from public.coach_atleti ca where ca.athlete_id = a.id and ca.coach_id = c_id)
    limit 1;
   if fuori is null then raise exception 'Dati mancanti: un atleta non del coach'; end if;
@@ -324,6 +326,23 @@ begin
     if (v -> 0 ->> 'ripristinabile')::boolean or v -> 0 ->> 'notes' is not null
        or (v -> 0 ->> 'nota_vocale')::boolean then
       raise exception 'FALLITO: 12. note di un atleta non più suo: %', v -> 0;
+    end if;
+    raise exception 'SENTINELLA';
+  exception when others then if sqlerrm <> 'SENTINELLA' then raise; end if;
+  end;
+
+  -- ── 13. l'admin vede e ripristina il cestino di un coach (cestino_admin_2026-11-19.sql)
+  begin
+    w := pg_temp.workout(c_id, array[a1]);
+    delete from public.workouts where id = w;
+    select id into cid from public.cestino_workout where workout_id = w;
+    perform pg_temp.come(adm, adm_email);
+    select count(*) into n from public.cestino_workout where workout_id = w;
+    if n <> 1 then raise exception 'FALLITO: 13. admin (non vede il cestino del coach)'; end if;
+    perform public.ripristina_workout(cid, '{}', '{}');
+    perform pg_temp.io();
+    if not exists (select 1 from public.workouts where id = w) then
+      raise exception 'FALLITO: 13. admin (il ripristino non ha rimesso il workout)';
     end if;
     raise exception 'SENTINELLA';
   exception when others then if sqlerrm <> 'SENTINELLA' then raise; end if;
