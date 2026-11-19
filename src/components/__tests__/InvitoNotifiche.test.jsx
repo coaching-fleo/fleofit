@@ -33,6 +33,7 @@ const oggi = () => format(new Date(), 'yyyy-MM-dd')
 const segnala = async (ruolo = 'athlete') => { await act(async () => { segnalaMomentoNotifiche(ruolo) }) }
 
 beforeEach(() => {
+  window.history.pushState({}, '', '/')
   _azzeraApertura()
   localStorage.removeItem(CHIAVE_PROMEMORIA_NOTIFICHE)
   Object.values(permesso).forEach(f => f.mockReset())
@@ -149,6 +150,18 @@ describe('InvitoNotifiche', () => {
     await act(async () => { fireEvent.click(await screen.findByText('Apri Impostazioni')) })
     await act(async () => { await app.ascoltatore({ isActive: true }) })
     expect(leggiStato().rifiuti).toBe(1)
+  })
+
+  it('atleta fuori dalla Home (es. nel timer): non compare, e il turno resta', async () => {
+    window.history.pushState({}, '', '/workout/42')
+    render(<InvitoNotifiche userId="u1" />)
+    await segnala('athlete')
+    await act(async () => {})
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(permesso.statoPermesso).not.toHaveBeenCalled()
+    window.history.pushState({}, '', '/')
+    await segnala('athlete')
+    expect(await screen.findByRole('dialog')).toBeTruthy()
   })
 
   it('sul web non compare mai', async () => {

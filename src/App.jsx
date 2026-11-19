@@ -13,6 +13,7 @@ import { useSchermoLargo, eDesktop } from './useDesktop'
 import { Apertura } from './components/Apertura'
 import Consenso from './components/Consenso'
 import InvitoNotifiche from './components/InvitoNotifiche'
+import { usaApertura } from './lib/promemoriaNotifiche'
 import { serveConsenso, datiConsenso } from './lib/consenso'
 import { erroreProfilo } from './lib/profiloAtleta'
 import Home from './pages/Home'
@@ -580,6 +581,8 @@ function ProtectedRoute() {
         // cancello (ruolo, onboarding) va avanti da dove si era fermato.
         const user = data?.user
           ?? { ...session.user, user_metadata: { ...session.user.user_metadata, consenso } }
+        // Appena dato il consenso, niente foglio delle notifiche in questa apertura.
+        usaApertura()
         await handleSession({ ...session, user })
       }}
       onRifiuta={async () => {
@@ -592,7 +595,7 @@ function ProtectedRoute() {
     // Finito il profilo si rifà il cancello da capo con l'utente aggiornato,
     // come dopo il consenso: è il giro più recente, quindi vince su quelli
     // partiti prima che la riga atleta esistesse.
-    return <>{apertura}<Onboarding user={session.user} onComplete={(user) => handleSession({ ...session, user })} /></>
+    return <>{apertura}<Onboarding user={session.user} onComplete={(user) => { usaApertura(); handleSession({ ...session, user }) }} /></>
   }
 
   // Gli interruttori delle funzioni (funzioni_app) chiedono il ruolo anche da

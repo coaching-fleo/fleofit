@@ -22,4 +22,9 @@ describe('momenti delle notifiche', () => {
     const s = leggi('Home.jsx')
     expect(s).toMatch(/if \(haAllenamentiDaFare\(.*\) segnalaMomentoNotifiche\('athlete'\)/)
   })
+
+  it('dopo consenso e registrazione il turno di questa apertura è già preso', () => {
+    const s = readFileSync(join(__dirname, '../../App.jsx'), 'utf8')
+    expect(conta(s, 'usaApertura()')).toBe(2)
+  })
 })

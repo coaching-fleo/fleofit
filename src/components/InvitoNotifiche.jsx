@@ -24,7 +24,12 @@ export default function InvitoNotifiche({ userId }) {
   const ritorno = useRef(null)
 
   useEffect(() => {
+    // L'atleta lo riceve solo sulla Home: la risposta della rete può arrivare
+    // quando è già entrato nell'allenamento, e «mai durante il timer» vale.
+    const fuoriPosto = (ruolo) => ruolo !== 'coach' && window.location.pathname !== '/'
     const momento = async (e) => {
+      const ruolo = e.detail?.ruolo === 'coach' ? 'coach' : 'athlete'
+      if (fuoriPosto(ruolo)) return
       // Il turno si prende PRIMA di aspettare il permesso: due momenti di fila
       // (assegnazione multipla, Home rimontata) devono dare un foglio solo.
       if (!usaApertura()) return
@@ -32,8 +37,8 @@ export default function InvitoNotifiche({ userId }) {
       if (permesso === 'attive') { azzera(); return }
       if (permesso === 'non-disponibile') return
       const stato = leggiStato()
-      if (!deveChiedere(stato, new Date())) return
-      setFoglio({ ruolo: e.detail?.ruolo === 'coach' ? 'coach' : 'athlete', negate: permesso === 'negate', mai: mostraMai(stato) })
+      if (!deveChiedere(stato, new Date()) || fuoriPosto(ruolo)) return
+      setFoglio({ ruolo, negate: permesso === 'negate', mai: mostraMai(stato) })
     }
     window.addEventListener(EVENTO_MOMENTO, momento)
     return () => {
