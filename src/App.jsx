@@ -50,6 +50,7 @@ const Modelli = lazy(() => import('./pages/Modelli'))
 const Scarpe = lazy(() => import('./pages/Scarpe'))
 const Extra = lazy(() => import('./pages/Extra'))
 const Libreria = lazy(() => import('./pages/Libreria'))
+const Cestino = lazy(() => import('./pages/Cestino'))
 const DettaglioScarpa = lazy(() => import('./pages/DettaglioScarpa'))
 const ModelloScarpa = lazy(() => import('./pages/ModelloScarpa'))
 const MieiTeam = lazy(() => import('./pages/MieiTeam'))
@@ -948,6 +949,7 @@ function App() {
             <Route path="/extra" element={<Extra />} />
             {/* Il menù del coach (Archivio, Modelli, Extra): rimanda l'atleta alla Home da sé. */}
             <Route path="/libreria" element={<Libreria />} />
+            <Route path="/cestino" element={<Cestino />} />
             <Route path="/scarpe" element={<SoloSeAccesa nome="scarpe"><Scarpe /></SoloSeAccesa>} />
             <Route path="/scarpe/modello/:id" element={<SoloSeAccesa nome="scarpe"><ModelloScarpa /></SoloSeAccesa>} />
             <Route path="/scarpe/:id" element={<SoloSeAccesa nome="scarpe"><DettaglioScarpa /></SoloSeAccesa>} />

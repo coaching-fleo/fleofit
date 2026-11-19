@@ -16,6 +16,8 @@ const scarpe = {
   stato: () => Promise.resolve(async () => dati.riga),
 }
 vi.mock('../../useExtra', () => ({ useExtra: () => dati.extra }))
+const cestino = await vi.hoisted(async () => ({ risposta: { disponibile: false, righe: [] } }))
+vi.mock('../../lib/cestinoDb', () => ({ elencoCestino: () => Promise.resolve(cestino.risposta) }))
 vi.mock('../../useAvvisiExtra', () => ({
   useAvvisiExtra: () => ({ primo: null, altri: 0, aperti: dati.aperti, chiudi: () => {} }),
 }))
@@ -28,6 +30,7 @@ const monta = (role = 'coach') => montaPagina(
     <Route path="/archive" element={<p>pagina archivio</p>} />
     <Route path="/modelli" element={<p>pagina modelli</p>} />
     <Route path="/scarpe" element={<p>pagina scarpe</p>} />
+    <Route path="/cestino" element={<p>pagina cestino</p>} />
     <Route path="/" element={<p>home</p>} />
   </Routes>,
   { role, percorso: '/libreria', rotta: '*' },
@@ -35,7 +38,10 @@ const monta = (role = 'coach') => montaPagina(
 const voci = () => screen.getAllByRole('button').map(b => b.getAttribute('aria-label') || b.querySelector('p')?.textContent)
 
 describe('Libreria', () => {
-  beforeEach(() => { dati.extra = [scarpe]; dati.aperti = new Set(); dati.riga = null })
+  beforeEach(() => {
+    dati.extra = [scarpe]; dati.aperti = new Set(); dati.riga = null
+    cestino.risposta = { disponibile: false, righe: [] }
+  })
 
   it('il menù: Archivio, Modelli, poi gli extra accesi', () => {
     monta()
@@ -77,5 +83,23 @@ describe('Libreria', () => {
   it('l\'atleta non ha la Libreria: torna alla Home', () => {
     monta('athlete')
     expect(screen.getByText('home')).toBeInTheDocument()
+  })
+  it('il Cestino, dopo Modelli, con quanti workout contiene', async () => {
+    cestino.risposta = { disponibile: true, righe: [{ id: 'c1' }, { id: 'c2' }] }
+    monta()
+    expect(await screen.findByText('2 workout')).toBeInTheDocument()
+    expect(voci()).toEqual(['Archivio', 'Modelli', 'Cestino', 'Scarpe da corsa'])
+    await userEvent.click(screen.getByText('Cestino'))
+    expect(screen.getByText('pagina cestino')).toBeInTheDocument()
+  })
+  it('il Cestino vuoto lo dice', async () => {
+    cestino.risposta = { disponibile: true, righe: [] }
+    monta()
+    expect(await screen.findByText('Vuoto')).toBeInTheDocument()
+  })
+  it('senza la tabella del cestino la voce non c\'è', async () => {
+    monta()
+    await new Promise(r => setTimeout(r, 0))
+    expect(voci()).toEqual(['Archivio', 'Modelli', 'Scarpe da corsa'])
   })
 })

@@ -1,5 +1,6 @@
 // La Libreria del coach (12/11/2026, richiesta del committente): la voce della
-// barra apre un MENÙ, non l'archivio. Voci fisse Archivio e Modelli, poi un
+// barra apre un MENÙ, non l'archivio. Voci fisse Archivio e Modelli, poi il
+// Cestino se la sua tabella c'è (19/11/2026, docs/memoria/cestino.md), poi un
 // extra per ogni interruttore acceso (registro src/lib/extra.js, docs/memoria/extra.md).
 // Un extra nuovo compare qui da solo, senza toccare questa pagina.
 //
@@ -7,12 +8,16 @@
 
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { FolderArchive, LayoutTemplate } from 'lucide-react'
+import { FolderArchive, LayoutTemplate, Trash2 } from 'lucide-react'
 import { useAuth } from '../App'
 import { useExtra } from '../useExtra'
 import { useAvvisiExtra } from '../useAvvisiExtra'
 import { CARD } from '../lib/stiliCard'
 import { vibraScelta } from '../lib/aptica'
+import { elencoCestino } from '../lib/cestinoDb'
+
+const CESTINO = { id: 'cestino', nome: 'Cestino', icona: Trash2, rotta: '/cestino' }
+const quantiNelCestino = (n) => (n === 0 ? 'Vuoto' : n === 1 ? '1 workout' : `${n} workout`)
 
 const FISSE = [
   { id: 'archivio', nome: 'Archivio', icona: FolderArchive, rotta: '/archive', dettaglio: 'Tutti i tuoi workout' },
@@ -27,6 +32,18 @@ export default function Libreria() {
   const uid = user?.id
   // Le righe vive degli extra («12 modelli»), chieste dopo il montaggio.
   const [righe, setRighe] = useState({})
+  // Quanti workout nel cestino; null = tabella assente o non ancora letta,
+  // e la voce non si mostra. Chiesto dopo il montaggio: non ritarda il disegno.
+  const [nelCestino, setNelCestino] = useState(null)
+
+  useEffect(() => {
+    if (role === 'athlete') return undefined
+    let vivo = true
+    elencoCestino()
+      .then(({ disponibile, righe: r }) => { if (vivo) setNelCestino(disponibile ? r.length : null) })
+      .catch(e => console.warn('Cestino non letto:', e))
+    return () => { vivo = false }
+  }, [role])
 
   useEffect(() => {
     if (!extra?.length) return undefined
@@ -45,6 +62,7 @@ export default function Libreria() {
   const apri = (rotta) => { vibraScelta(); navigate(rotta) }
   const voci = [
     ...FISSE.map(f => ({ ...f, pallino: false })),
+    ...(nelCestino == null ? [] : [{ ...CESTINO, dettaglio: quantiNelCestino(nelCestino), pallino: false }]),
     ...(extra || []).map(e => ({
       id: e.id, nome: e.nome, icona: e.icona, rotta: e.rotta,
       dettaglio: righe[e.id] || e.descrizione.coach, pallino: aperti.has(e.id),
