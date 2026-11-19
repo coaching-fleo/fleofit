@@ -50,6 +50,7 @@ import VoiceRecorder from '../components/VoiceRecorder'
 import { partiRipetuta, etichettaParte } from '../lib/ripetute'
 import { giriForTime } from '../lib/incremento'
 import { testoBox } from '../lib/esercizi'
+import { segnalaMomentoNotifiche } from '../lib/permessoNotifiche'
 
 const getRpeColorText = (val) => {
   if (val <= 3) return 'text-green-500';
@@ -2004,6 +2005,7 @@ function AssignWorkoutModal({ athleteId, atleta, storico, dataIniziale, onClose,
           }).catch(console.error)
         })
       }
+      segnalaMomentoNotifiche('coach')
       onAssigned()
     }
   }

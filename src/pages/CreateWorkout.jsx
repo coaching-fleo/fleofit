@@ -55,6 +55,7 @@ import { FoglioSalvaModello } from '../components/FoglioModello'
 import { SezioneModelli, CampoNomeModello } from '../components/ModelliUI'
 import { bloccoDaModello, contenutoDaBlocco, nomeProposto, nomeValido, CATEGORIE_MODELLI } from '../lib/modelliBlocco'
 import { leggiModello, salvaModello, aggiornaModello, MESSAGGIO_SENZA_RETE } from '../lib/modelliBloccoDb'
+import { segnalaMomentoNotifiche } from '../lib/permessoNotifiche'
 
 // Il lettore dei workout scritti si scarica solo quando si apre il foglio.
 const FoglioDaTesto = lazy(() => import('../components/FoglioDaTesto'))
@@ -3621,6 +3622,7 @@ function Costruttore() {
           supabase.functions.invoke('send-reminders', {
             body: { mode: 'immediate', record_id: newAssignment.id }
           }).catch(console.error)
+          segnalaMomentoNotifiche('coach')
         }
       }
       setSaving(false)

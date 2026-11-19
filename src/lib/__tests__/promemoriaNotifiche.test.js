@@ -80,3 +80,16 @@ describe('promemoriaNotifiche', () => {
     expect(leggiStato(st)).toEqual(STATO_INIZIALE)
   })
 })
+
+import { haAllenamentiDaFare } from '../promemoriaNotifiche'
+
+describe('haAllenamentiDaFare', () => {
+  it('vero con un pending da oggi in poi, falso altrimenti', () => {
+    expect(haAllenamentiDaFare([{ status: 'pending', completed_date: '2026-11-19' }], '2026-11-19')).toBe(true)
+    expect(haAllenamentiDaFare([{ status: 'pending', completed_date: '2026-11-25' }], '2026-11-19')).toBe(true)
+    expect(haAllenamentiDaFare([{ status: 'pending', completed_date: '2026-11-18' }], '2026-11-19')).toBe(false)
+    expect(haAllenamentiDaFare([{ status: 'completed', completed_date: '2026-11-20' }], '2026-11-19')).toBe(false)
+    expect(haAllenamentiDaFare([], '2026-11-19')).toBe(false)
+    expect(haAllenamentiDaFare(null, '2026-11-19')).toBe(false)
+  })
+})

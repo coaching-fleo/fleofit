@@ -53,3 +53,12 @@ export const scriviStato = (stato, storage = globalThis.localStorage) =>
   scriviJson(CHIAVE_PROMEMORIA_NOTIFICHE, normalizza(stato), storage)
 
 export const azzera = (storage = globalThis.localStorage) => scriviStato(iniziale(), storage)
+
+/**
+ * L'atleta ha qualcosa da fare da oggi in poi? È il «momento giusto» per lui:
+ * le notifiche servono a non perdersi proprio quelli.
+ * @param {Array<{status: string, completed_date: string}>|null} righe  athlete_workouts
+ * @param {string} oggiStr 'yyyy-MM-dd'
+ */
+export const haAllenamentiDaFare = (righe, oggiStr) =>
+  (righe || []).some(r => r?.status === 'pending' && typeof r.completed_date === 'string' && r.completed_date >= oggiStr)

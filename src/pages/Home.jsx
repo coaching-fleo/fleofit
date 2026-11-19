@@ -69,6 +69,8 @@ const HomeRiepilogoTelefono = lazy(() => import('../components/HomeRiepilogoTele
 // all'avvio anche per l'atleta). Test: HomeChunk.test.jsx.
 const CartaMioAllenamento = lazy(() => import('../components/CartaMioAllenamento'))
 import { scegliMioAllenamento } from '../lib/mioAllenamento'
+import { segnalaMomentoNotifiche } from '../lib/permessoNotifiche'
+import { haAllenamentiDaFare } from '../lib/promemoriaNotifiche'
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARD_BASE, CARTA_MODALE,
          TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
 
@@ -731,6 +733,8 @@ export default function Home() {
             }
 
             if (data) applicaStoricoAtleta(data)
+            // Il momento giusto per proporre le notifiche (src/components/InvitoNotifiche.jsx).
+            if (haAllenamentiDaFare(data, format(new Date(), 'yyyy-MM-dd'))) segnalaMomentoNotifiche('athlete')
           })
         )
       }

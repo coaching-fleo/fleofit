@@ -117,6 +117,7 @@ import {
   RigaAssegnazione, ElencoAssegnazioni, GradimentoWorkout, CtaVetro, BottoneStoria,
 } from '../components/WorkoutDetailUI'
 import { NOME_APP, MARCHIO_PRIMA, MARCHIO_SECONDA } from '../lib/marchio'
+import { segnalaMomentoNotifiche } from '../lib/permessoNotifiche'
 import logoPng from '../assets/marchio/pushfit-logo.png'
 import Logo from '../components/Logo'
 
@@ -899,6 +900,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           }).catch(console.error)
         })
       }
+      segnalaMomentoNotifiche('coach')
       setAssignModalOpen(false)
             setSelectedAthletes([])
       setAssignStep(1)
