@@ -23,6 +23,7 @@ import { KeepAwake } from '@capacitor-community/keep-awake'
 import { Network } from '@capacitor/network'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { vibraRichiamo, vibraSuccesso } from '../lib/aptica'
+import { GIORNI_CESTINO, finisceNelCestino } from '../lib/cestino'
 
 // 🔴 jspdf e html-to-image si caricano SOLO quando si esporta, e non è una
 // rifinitura: importati in testa finivano nel chunk della scheda, che pesava
@@ -2715,7 +2716,12 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
             </div>
             <h2 className={TITOLO_MODALE}>Sei sicuro?</h2>
             <p className={TESTO_MODALE}>
-              Questa azione eliminerà definitivamente il workout dal calendario e non può essere annullata.
+              {/* Il cestino (19/11/2026, docs/memoria/cestino.md): ci va il workout
+                  del coach, non l'allenamento libero di un atleta né ciò che
+                  l'atleta toglie dal suo calendario. */}
+              {role !== 'athlete' && finisceNelCestino(workout, assignments.map(a => a.athlete_id))
+                ? `Il workout andrà nel cestino per ${GIORNI_CESTINO} giorni: da lì potrai ripristinarlo.`
+                : 'Questa azione eliminerà definitivamente il workout dal calendario e non può essere annullata.'}
             </p>
             <div className="flex gap-3 mt-2">
               <button 

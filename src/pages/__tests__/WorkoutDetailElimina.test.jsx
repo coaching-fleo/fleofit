@@ -9,12 +9,15 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 // suo stato. Qui la rotta è montata SENZA la chiave che App.jsx le dà adesso:
 // è proprio la condizione del difetto, e la finestra deve chiudersi lo stesso.
 
+// Dal 19/11/2026 la conferma dice anche dove va il workout: nel cestino per 14
+// giorni, tranne l'allenamento libero di un atleta (docs/memoria/cestino.md).
+const ctrl = await vi.hoisted(async () => ({ creato_da: null, assegnazioni: [] }))
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
   return fintoSupabase(() => ({
-    workouts: [{ id: 'w1', title: 'Hyrox Strength #1', date: '2026-08-28', coach_notes: '',
+    workouts: [{ id: 'w1', title: 'Hyrox Strength #1', date: '2026-08-28', coach_notes: '', creato_da: ctrl.creato_da,
       sections: { category: 'Hyrox', blocks: [{ id: 'b1', type: 'AMRAP', params: { duration: '10:00' }, exercises: [] }] } }],
-    athlete_workouts: [],
+    athlete_workouts: ctrl.assegnazioni,
     athletes: [],
   }))
 })
@@ -59,4 +62,26 @@ it('se la scheda era la prima pagina della sessione, eliminare porta alla Home',
   monta(['/workout/w1'], 0)
   await elimina()
   expect(await screen.findByText('Home')).toBeInTheDocument()
+})
+
+async function apriConferma() {
+  monta(['/workout/w1'], 0)
+  await userEvent.click(await screen.findByRole('button', { name: /Altre azioni/i }))
+  await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: /Elimina/ }))
+  return screen.getByRole('dialog', { name: 'Sei sicuro?' })
+}
+
+it('il workout del coach: la conferma dice che va nel cestino', async () => {
+  ctrl.creato_da = 'c1'
+  ctrl.assegnazioni = [{ id: 'aw1', athlete_id: 'at1', workout_id: 'w1', status: 'pending', notes: null }]
+  const conferma = await apriConferma()
+  expect(within(conferma).getByText('Il workout andrà nel cestino per 14 giorni: da lì potrai ripristinarlo.')).toBeInTheDocument()
+})
+
+it('l\'allenamento libero di un atleta: resta il testo di sempre', async () => {
+  ctrl.creato_da = 'at1'
+  ctrl.assegnazioni = [{ id: 'aw1', athlete_id: 'at1', workout_id: 'w1', status: 'pending', notes: null }]
+  const conferma = await apriConferma()
+  await waitFor(() => expect(within(conferma)
+    .getByText('Questa azione eliminerà definitivamente il workout dal calendario e non può essere annullata.')).toBeInTheDocument())
 })
