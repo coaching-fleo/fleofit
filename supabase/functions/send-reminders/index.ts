@@ -5,6 +5,7 @@ import webpush from "npm:web-push@3.6.7"
 import { atletaNotificaCoach, atletiDi, coachDi, destinatariNotificaCoach, idStaff, nomeDi, ruoloStaff } from "../_shared/staff.ts"
 import { TITOLO_REGISTRATO, testoNotificaCoach, testoGarminRegistrato } from "./testi.ts"
 import { TITOLO_INVITO, routeInvito, testoInvito, destinatariInvito, invitiAccesi } from "./team.ts"
+import { ATTESA_TEST_MS, TITOLO_TEST, TESTO_TEST, ROUTE_TEST, TITOLO_TEST_FALLITA, puoProvareNotifica, dispositivoDi } from "./notificaTest.ts"
 import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, puoInviareQuestoMessaggio, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm, routeProva } from "./broadcast.ts"
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -170,7 +171,7 @@ serve(async (req) => {
     const APPLICA_CONTROLLO_CRON = true;
     const APPLICA_CONTROLLO_ADMIN = true;
     const chiamante = await identificaChiamante(req);
-    const soloAdmin = ['immediate', 'voice_note', 'broadcast', 'broadcast_prova'];
+    const soloAdmin = ['immediate', 'voice_note', 'broadcast', 'broadcast_prova', 'notifica_test'];
     const modiCron = ['morning', 'evening'];
 
     console.log(`send-reminders: mode='${mode}' ruolo=${chiamante.ruolo ?? 'nessuno'} email=${chiamante.email ?? 'nessuna'} admin=${chiamante.admin}`);
@@ -381,6 +382,46 @@ serve(async (req) => {
       const consegnate = esiti.filter((e) => e.ok).length;
       const motivi = [...new Set(esiti.filter((e) => !e.ok).map((e) => e.motivo || 'ERRORE'))];
       return new Response(JSON.stringify({ success: true, sent: (subscriptions || []).length, consegnate, motivi }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ==========================================
+    // NOTIFICA DI PROVA (solo admin, solo questo telefono, dopo 5 secondi)
+    // ==========================================
+    // L'app manda il token del telefono da cui parte la richiesta; si risponde
+    // subito e la push parte dopo, in sottofondo (EdgeRuntime.waitUntil), così
+    // chi prova può chiudere l'app. notificaTest.ts spiega il resto.
+    if (mode === 'notifica_test') {
+      if (!puoProvareNotifica(chiamante)) {
+        return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const { data: iscrizioni, error: subError } = await supabase
+        .from('push_subscriptions').select('*').eq('user_id', chiamante.id);
+      if (subError) throw subError;
+      const sub = dispositivoDi(iscrizioni, chiamante.id!, body.endpoint);
+      if (!sub) {
+        console.warn(`notifica_test: dispositivo non iscritto per ${chiamante.email}`);
+        return new Response(JSON.stringify({ error: 'dispositivo_sconosciuto' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const lavoro = (async () => {
+        await new Promise((r) => setTimeout(r, ATTESA_TEST_MS));
+        const esito = await sendPush(sub, TITOLO_TEST, TESTO_TEST, ROUTE_TEST);
+        console.log(`notifica_test: ${chiamante.email} sub ${sub.id} → ${esito.ok ? 'consegnata' : esito.motivo}`);
+        if (!esito.ok) {
+          await supabase.from('notifications').insert({
+            user_id: chiamante.id, title: TITOLO_TEST_FALLITA,
+            message: `Firebase l'ha rifiutata: ${esito.motivo ?? 'motivo sconosciuto'}`, route: '/settings',
+          });
+        }
+      })().catch((e) => console.error('notifica_test:', e));
+      // deno-lint-ignore no-explicit-any
+      const runtime = (globalThis as any).EdgeRuntime;
+      if (typeof runtime?.waitUntil === 'function') runtime.waitUntil(lavoro);
+      else await lavoro;
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // ==========================================

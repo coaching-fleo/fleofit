@@ -376,3 +376,16 @@ sempre. Progetto: `docs/superpowers/specs/2026-11-19-promemoria-notifiche-design
 - **Peso** (misurato il 19/11/2026): `index` da 635,98 a 639,12 KB (già sopra il
   `chunkSizeWarningLimit` di 620 **prima** di questo lavoro); `FoglioNotifiche`
   è pigro, 2,43 KB in un chunk suo.
+
+## 9-notifica-di-prova (20/11/2026)
+
+Solo admin, in «Strumenti sviluppo»: **«Notifica di prova»** manda una push vera **solo al
+dispositivo da cui la si chiede**, dopo 5 secondi (il tempo di chiudere l'app o bloccare il
+telefono e vederla come un atleta, icona e nome compresi).
+- L'app legge il SUO token (`tokenDiQuestoDispositivo` di `src/lib/notificaTest.js`: FCM
+  nell'app, endpoint Web Push nel browser) e chiama `send-reminders` con
+  `mode: 'notifica_test'`. Il server (`send-reminders/notificaTest.ts`) cerca quella riga di
+  `push_subscriptions` **fra quelle di chi chiede**: un token altrui non vale.
+- Risponde subito, la push parte in sottofondo con `EdgeRuntime.waitUntil`. Non scrive in
+  `notifications`; se Firebase la rifiuta, scrive lì «Notifica di prova non consegnata» col motivo.
+- ✅ `send-reminders` pubblicata il 20/11/2026 con questo modo (è la stessa funzione del sito e dei promemoria: controllare che il `morning` del giorno dopo sia andato).

@@ -3,7 +3,7 @@ import { chiudiAnteprima } from '../lib/anteprimaAtleta'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer, UsersRound, LayoutList, FileText } from 'lucide-react'
+import { UserCheck, HardDriveDownload, Eye, EyeOff, KeyRound, X, Bell, BellRing, Ticket, Wrench, Trash2, LifeBuoy, Users, ShieldCheck, ShieldOff, Watch, Timer, UsersRound, LayoutList, FileText, Send } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -21,6 +21,7 @@ import { Share } from '@capacitor/share'
 import { Browser } from '@capacitor/browser'
 import { CHIAVE_ULTIMO_EXPORT, etichettaRuolo, riassuntoBackup, riassuntoCodici, senzaPassword } from '../lib/rigaImpostazioni'
 import { CARD } from '../lib/stiliCard'
+import { tokenDiQuestoDispositivo, esitoNotificaTest } from '../lib/notificaTest'
 import {
   BottoneEsci, CartaAccount, EtichettaSezione, FoglioCodici, PiediPagina, RigaAzione, RigaInterruttore,
   RigaPericolo, RigaPieghevole, Separatore, Sezione, TestataImpostazioni,
@@ -669,6 +670,25 @@ export default function Settings() {
     setOperazione(null)
   }
 
+  // «Notifica di prova» (20/11/2026): una push vera solo a QUESTO telefono,
+  // dopo 5 secondi, per vederla come la vede un atleta (src/lib/notificaTest.js).
+  const provaNotifica = async () => {
+    if (operazione) return
+    setOperazione('notificaTest')
+    try {
+      const endpoint = await tokenDiQuestoDispositivo()
+      let esito
+      if (!endpoint) esito = esitoNotificaTest(null, { senzaToken: true })
+      else {
+        const { data, error } = await supabase.functions.invoke('send-reminders', { body: { mode: 'notifica_test', endpoint } })
+        esito = esitoNotificaTest(error ? null : data)
+      }
+      setAlertInfo({ title: esito.errore ? 'Notifica di prova' : 'Notifica in arrivo', message: esito.testo, type: esito.errore ? 'error' : 'success' })
+    } finally {
+      setOperazione(null)
+    }
+  }
+
   /**
    * L'interruttore delle notifiche. I due percorsi esistevano già: quello che
    * non esisteva era un comando che dicesse dov'è, invece di dire dove andrà.
@@ -962,6 +982,10 @@ export default function Settings() {
                   dettaglio="Un solo profilo da file .json. L'esportazione si fa dalla sua scheda."
                   onClick={() => athleteImportRef.current?.click()}
                   occupato={operazione === 'importAtleta'} />
+                <Separatore />
+                <RigaAzione icona={Send} tono="brand" titolo="Notifica di prova"
+                  dettaglio="Solo su questo dispositivo, fra 5 secondi"
+                  onClick={provaNotifica} occupato={operazione === 'notificaTest'} />
               </div>
               <div className="flex gap-2.5">
                 <button type="button" onClick={testMorningReminder} disabled={loading}
