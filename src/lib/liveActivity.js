@@ -144,6 +144,6 @@ export const aggiornaLiveActivity = (programma, { beep = true } = {}) =>
 export const chiudiLiveActivity = (stato) =>
   LiveActivity.termina({ stato }).catch(() => {})
 
-/** Le Live Activity spente da iOS (Impostazioni → FLEOFIT): false, o null se non si sa. */
+/** Le Live Activity spente da iOS (Impostazioni → PUSHFIT): false, o null se non si sa. */
 export const liveActivityConsentite = () =>
   LiveActivity.disponibile().then(r => !!r?.valore).catch(() => null)

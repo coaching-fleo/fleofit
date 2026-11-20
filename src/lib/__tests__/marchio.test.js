@@ -41,6 +41,21 @@ describe('marchio', () => {
     expect(righeCon(/FLEOFIT|FLEO<|>FLEO\b|'FLEO'/)).toEqual([])
   })
 
+  // 20/11/2026: la Live Activity del timer scriveva ancora «FLEO»+«FIT» in Swift, e
+  // l'estensione del timer si chiamava FLEOFIT. Il test sopra guarda solo src/.
+  it('il timer iOS e i nomi delle app native non scrivono più FLEOFIT', () => {
+    const ios = join(RADICE, '..', 'ios', 'App')
+    const file = [
+      join(ios, 'FleoTimer', 'TimerLiveActivity.swift'),
+      join(ios, 'App.xcodeproj', 'project.pbxproj'),
+    ]
+    const trovate = file.flatMap((p) => readFileSync(p, 'utf8').split('\n')
+      .map((r, i) => ({ r, i }))
+      .filter(({ r }) => !/^\s*\/\//.test(r) && /"FLEO"|DisplayName = FLEOFIT/.test(r))
+      .map(({ i }) => `${relative(ios, p)}:${i + 1}`))
+    expect(trovate).toEqual([])
+  })
+
   it('nessuna chiave del dispositivo usa più il prefisso fleofit_', () => {
     expect(righeCon(/fleofit_/, TRASLOCO)).toEqual([])
   })

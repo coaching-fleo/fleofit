@@ -103,7 +103,7 @@ private struct BloccoSchermo: View {
                     .overlay(Text(s.giroCorto).font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(.white))
                     .frame(width: 52, height: 52)
                 VStack(alignment: .leading, spacing: 1) {
-                    (Text("FLEO").foregroundColor(.white.opacity(0.55))
+                    (Text("PUSH").foregroundColor(.white.opacity(0.55))
                      + Text("FIT").foregroundColor(Color(esadecimale: "#f1c517"))
                      + Text(" · \(contesto.attributes.categoria)").foregroundColor(.white.opacity(0.55)))
                         .font(.system(size: 11, weight: .heavy))
