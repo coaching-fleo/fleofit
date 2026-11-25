@@ -87,6 +87,19 @@ export function filtraPerNome(persone = [], testo = '') {
 /** Oltre quante righe il calendario della Home si taglia (11/11/2026). */
 export const MASSIMO_CALENDARIO = 20
 
+/** Quante righe del calendario si vedono sul telefono senza scorrere il riquadro (25/11/2026). */
+export const RIGHE_CALENDARIO_TELEFONO = 6
+
+/**
+ * Quante righe del calendario si vedono sul desktop, dall'altezza della finestra.
+ * Il riquadro non supera circa metà finestra, così sopra e sotto resta la Home da
+ * scorrere; mai meno di 8 righe, mai più di 15. Una riga è 36px (cella 30 + spazio 6).
+ */
+export function righeCalendarioDesktop(altezzaFinestra) {
+  const h = Number(altezzaFinestra) || 0
+  return Math.min(15, Math.max(8, Math.floor((h * 0.5 - 40) / 36)))
+}
+
 /**
  * Le righe del calendario della Home. Fino a `massimo` atleti tutte, nell'ordine
  * del piano. Oltre: prima chi ha un giorno vuoto fra domani e i `giorni` dopo

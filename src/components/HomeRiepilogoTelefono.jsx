@@ -12,6 +12,8 @@ import { useRiepilogoCoach } from '../useRiepilogoCoach'
 import { lazy, Suspense, useState } from 'react'
 import FoglioListaCoach from './FoglioListaCoach'
 import FoglioCalendario from './FoglioCalendario'
+import FoglioSedutaOggi from './FoglioSedutaOggi'
+import { RIGHE_CALENDARIO_TELEFONO } from '../lib/riepilogoCoach'
 
 const DagliExtra = lazy(() => import('./DagliExtra'))
 import { CartaOggi, AvvisoStannoMale, CoppiaAzioni, FilaOggi, CalendarioProssimi, ContatoriDaGuardare,
@@ -20,7 +22,7 @@ import { CartaOggi, AvvisoStannoMale, CoppiaAzioni, FilaOggi, CalendarioProssimi
 export default function HomeRiepilogoTelefono(props) {
   const { caricamento, feedback = [], fermi = [], scaduti = [], onApriSeduta, onReport, onCalendario } = props
   const r = useRiepilogoCoach(props)
-  const [calendarioIntero, setCalendarioIntero] = useState(false)
+  const [calendarioIntero, setCalendarioIntero] = useState(() => !!r.foglioCalendarioRipreso)
   const apriGara = (g) => { if (g.workoutId) onApriSeduta({ workoutId: g.workoutId, atletaId: g.atleti[0]?.id }) }
 
   if (caricamento) return (<>
@@ -43,13 +45,15 @@ export default function HomeRiepilogoTelefono(props) {
 
     <section>
       <TitoloSezione azione={r.ordinate.length ? 'Tutti' : null} onAzione={() => r.apri({ tipo: 'oggi' })}>In allenamento oggi</TitoloSezione>
-      <FilaOggi compatto righe={r.ordinate} onApri={(x) => onApriSeduta({ workoutId: x.workoutId, atletaId: x.id })}
+      <FilaOggi compatto righe={r.ordinate} onApri={r.apriSeduta} posizione={r.filaRipresa}
         onTutti={() => r.apri({ tipo: 'oggi' })} />
     </section>
 
     <section>
       <TitoloSezione azione={onCalendario ? 'Calendario' : null} onAzione={onCalendario}>Prossimi giorni</TitoloSezione>
       <CalendarioProssimi piano={r.piano} nota={r.notaCalendario} onApri={onApriSeduta} onProgramma={props.onCrea}
+        righeVisibili={RIGHE_CALENDARIO_TELEFONO} onAtleta={props.onApriAtleta}
+        posizione={r.posizioneCalendario} onPosizione={r.ricordaCalendario}
         onTutti={() => setCalendarioIntero(true)} />
     </section>
 
@@ -77,7 +81,11 @@ export default function HomeRiepilogoTelefono(props) {
     <Suspense fallback={null}><DagliExtra /></Suspense>
 
     {r.foglio && <FoglioListaCoach key={r.foglio.titolo} {...r.foglio} onChiudi={r.chiudi} />}
-    {calendarioIntero && <FoglioCalendario piano={r.piano} onApri={onApriSeduta} onProgramma={props.onCrea}
+    {r.sedutaAperta && <FoglioSedutaOggi seduta={r.sedutaAperta} ripreso={r.corpoSedutaRipreso}
+        onAtleta={r.vaiAtletaDaSeduta} onAllenamento={r.vaiAllenamentoDaSeduta} onChiudi={r.chiudiSeduta} />}
+      {calendarioIntero && <FoglioCalendario piano={r.piano} ripreso={r.foglioCalendarioRipreso}
+      onAtleta={props.onApriAtleta} onUscita={r.ricordaFoglioCalendario}
+      onApri={onApriSeduta} onProgramma={props.onCrea}
       onChiudi={() => setCalendarioIntero(false)} />}
   </>)
 }

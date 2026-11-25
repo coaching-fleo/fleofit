@@ -9,7 +9,7 @@
 // cruscotto. Mai uno «0» in pagina: al suo posto ✓ verde (CLAUDE.md §9).
 // `compatto` = telefono.
 
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { ArrowRight, ChevronRight, CalendarPlus, MessageCircle, ChartNoAxesColumn, BookOpen } from 'lucide-react'
 import { corsia } from '../lib/categorie'
 import { Volto, PolsoTeam, Cella } from './CruscottoCoachUI'
@@ -215,22 +215,31 @@ function CardFoto({ r, onApri, compatto }) {
 }
 
 /** La fila delle foto: 20 alla volta, le altre arrivano scorrendo. Nessuno resta fuori. */
-export function FilaOggi({ righe = [], onApri, onTutti, compatto = false }) {
-  const [quante, setQuante] = useState(BLOCCO_FILA)
+export function FilaOggi({ righe = [], onApri, onTutti, compatto = false, posizione = null }) {
+  // Al ritorno (indietro) riparte con le card che erano disegnate e dov'era.
+  const [quante, setQuante] = useState(() => Math.max(BLOCCO_FILA, posizione?.quante || 0))
   const fila = useRef(null)
   const suScorri = () => {
     const f = fila.current
     if (!f || quante >= righe.length) return
     if (f.scrollLeft + f.clientWidth >= f.scrollWidth - 400) setQuante(q => q + BLOCCO_FILA)
   }
+  const rimessa = useRef(false)
+  useLayoutEffect(() => {
+    if (rimessa.current || !posizione || !righe.length || !fila.current) return
+    rimessa.current = true
+    fila.current.scrollLeft = posizione.left || 0
+  }, [posizione, righe.length])
+  // Il tocco passa anche dove sta la fila: serve a chi la deve riprendere.
+  const tocca = (r) => onApri(r, { left: fila.current?.scrollLeft || 0, quante })
   if (!righe.length) return (
     <p className={`${CARTA} px-4 py-5 text-sm text-gray-400`}>Nessuno si allena oggi.</p>
   )
   const restano = righe.length - Math.min(quante, righe.length)
   return (
-    <div ref={fila} onScroll={suScorri}
+    <div ref={fila} onScroll={suScorri} data-fila-oggi
       className={`flex gap-2.5 overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-1 ${compatto ? '-mx-4 px-4' : ''}`}>
-      {righe.slice(0, quante).map(r => <CardFoto key={`${r.id}-${r.workoutId}`} r={r} onApri={onApri} compatto={compatto} />)}
+      {righe.slice(0, quante).map(r => <CardFoto key={`${r.id}-${r.workoutId}`} r={r} onApri={tocca} compatto={compatto} />)}
       {restano > 0 && (
         <button type="button" onClick={onTutti}
           className={`${compatto ? 'w-[148px] h-[196px] rounded-3xl' : 'w-[124px] h-[160px] rounded-[20px]'} shrink-0 snap-start bg-white/[.025] border-[1.5px] border-dashed border-white/[.12]
@@ -404,11 +413,40 @@ export function LegendaCalendario() {
 /** «Andrea Conti» → «Andrea C.»: nella colonna ferma il cognome intero non ci sta. */
 const nomeCorto = (n = '') => { const [p, ...r] = n.trim().split(/\s+/); return r.length ? `${p} ${r[0][0]}.` : p }
 
-export function CalendarioProssimi({ piano, nota, desktop = false, massimo = MASSIMO_CALENDARIO, nudo = false, onApri, onProgramma, onTutti }) {
-  if (!piano?.righe?.length) return <p className={`${nudo ? '' : CARTA} px-4 py-5 text-sm text-gray-400`}>{nudo ? 'Nessuno con questo nome.' : 'Nessun atleta da programmare.'}</p>
+export function CalendarioProssimi({ piano, nota, desktop = false, massimo = MASSIMO_CALENDARIO, nudo = false, righeVisibili = null,
+  posizione = null, onPosizione, onAtleta, onApri, onProgramma, onTutti }) {
+  const scatola = useRef(null)
+  // C'è altro sotto? Allora la sfumatura in fondo dice che si scorre.
+  const [altroSotto, setAltroSotto] = useState(false)
+  const conta = piano?.righe?.length || 0
+  // 🔴 SCORRE DENTRO, MA MAI PIÙ ALTO DI `righeVisibili` RIGHE (25/11/2026). Il
+  // tetto si misura sulla riga vera (la prima che resta fuori), non si calcola:
+  // l'altezza della testata dei giorni dipende dal carattere. Poche righe in
+  // pagina lasciano spazio sopra e sotto per scorrere la Home: un riquadro alto
+  // quanto lo schermo intrappolerebbe il dito nel calendario.
+  // Al ritorno dalla scheda (indietro) riprende la posizione dentro il riquadro.
+  useLayoutEffect(() => {
+    const el = scatola.current
+    if (!el) return
+    const prima = righeVisibili ? el.querySelectorAll('[data-riga]')[righeVisibili] : null
+    el.style.maxHeight = prima && prima.offsetTop > 0 ? `${prima.offsetTop - 6}px` : ''
+    if (posizione && !el.dataset.ripreso) {
+      el.dataset.ripreso = '1'
+      el.scrollTop = posizione.top || 0
+      el.scrollLeft = posizione.left || 0
+    }
+    setAltroSotto(el.scrollTop + el.clientHeight < el.scrollHeight - 2)
+  }, [righeVisibili, conta, posizione])
+  if (!conta) return <p className={`${nudo ? '' : CARTA} px-4 py-5 text-sm text-gray-400`}>{nudo ? 'Nessuno con questo nome.' : 'Nessun atleta da programmare.'}</p>
   // Oltre `massimo` atleti: prima chi è scoperto nei prossimi 3 giorni, solo i
   // primi `massimo`, e «Mostra tutti» apre il foglio col calendario intero.
   const { righe, nascoste } = righeCalendario(piano, { massimo })
+  // Prima di lasciare la Home si annota dov'era il riquadro, per il ritorno.
+  const esci = (fn) => (...a) => {
+    const el = scatola.current
+    if (el) onPosizione?.({ top: el.scrollTop, left: el.scrollLeft })
+    fn(...a)
+  }
   // Telefono: colonne fisse che si scorrono. Desktop: le due settimane si dividono la riga.
   const colonne = { gridTemplateColumns: desktop
     ? `176px repeat(${piano.giorni.length}, minmax(56px, 1fr))`
@@ -418,15 +456,22 @@ export function CalendarioProssimi({ piano, nota, desktop = false, massimo = MAS
   // lato, così la riga dei giorni può restare ferma in alto (sticky) mentre il
   // foglio scorre in verticale. Uno scorrimento orizzontale la intrappolerebbe.
   const testaFerma = nudo && desktop
+  // Nella Home il riquadro scorre in verticale: la riga dei giorni resta ferma in alto.
+  const scorreDentro = !!righeVisibili && righe.length > righeVisibili
+  const testaInAlto = testaFerma || scorreDentro
+  const sfondoTesta = testaFerma ? 'bg-[#18181b]' : 'bg-[#1a1a1d]'
   return (
     <section className={nudo ? 'pb-4' : `${CARTA} pt-4 pb-4`}>
       {(nota || (desktop && !nudo)) && <div className="px-4 pb-3 flex flex-wrap items-start justify-between gap-3">
         {nota && <p className={`text-[13px] font-semibold ${nota.avviso ? 'text-orange-400' : 'text-green-400'}`}>{nota.testo}</p>}
         {desktop && <LegendaCalendario />}
       </div>}
-      <div className={testaFerma ? 'pr-5' : 'overflow-x-auto hide-scrollbar snap-x snap-proximity overscroll-x-contain pr-4'}>
+      <div className="relative">
+      <div ref={scatola} data-calendario
+        onScroll={scorreDentro ? (e) => { const el = e.currentTarget; setAltroSotto(el.scrollTop + el.clientHeight < el.scrollHeight - 2) } : undefined}
+        className={testaFerma ? 'pr-5' : `relative overflow-x-auto hide-scrollbar snap-x snap-proximity overscroll-x-contain pr-4 ${scorreDentro ? 'overflow-y-auto' : ''}`}>
         <div className={`${desktop ? 'min-w-full' : 'w-max'} flex flex-col gap-1.5`}>
-          <div className={`grid gap-1.5 ${testaFerma ? 'sticky top-0 z-20 py-2 bg-[#18181b] shadow-[0_8px_12px_-10px_rgba(0,0,0,.9)]' : ''}`} style={colonne}>
+          <div className={`grid gap-1.5 ${testaInAlto ? `sticky top-0 z-20 py-2 ${sfondoTesta} shadow-[0_8px_12px_-10px_rgba(0,0,0,.9)]` : ''}`} style={colonne}>
             <span className={nomeFisso} />
             {piano.giorni.map(d => {
               const g = parseISO(d.data)
@@ -439,16 +484,23 @@ export function CalendarioProssimi({ piano, nota, desktop = false, massimo = MAS
               )
             })}
           </div>
-          {righe.map(r => (
-            <div key={r.id} className="grid gap-1.5 items-center" style={colonne}>
-              <span className={`${nomeFisso} text-[13px] font-bold text-white`}>
-                <span className="shrink-0 [&>span]:w-6 [&>span]:h-6 [&>span]:text-[9px]"><Volto foto={r.foto} nome={r.nome} piccolo /></span><span className="truncate" title={r.nome}>{desktop ? r.nome : nomeCorto(r.nome)}</span>
-              </span>
-              {r.celle.map(c => <Cella key={c.data} cella={c} compatto onApri={onApri}
-                onProgramma={onProgramma ? (cella) => onProgramma({ atletaId: r.id, data: cella.data }) : undefined} />)}
-            </div>
-          ))}
+          {righe.map(r => {
+            const volto = <><span className="shrink-0 [&>span]:w-6 [&>span]:h-6 [&>span]:text-[9px]"><Volto foto={r.foto} nome={r.nome} piccolo /></span><span className="truncate" title={r.nome}>{desktop ? r.nome : nomeCorto(r.nome)}</span></>
+            return (
+              <div key={r.id} data-riga className="grid gap-1.5 items-center" style={colonne}>
+                {onAtleta
+                  ? <button type="button" onClick={esci(() => onAtleta(r))} aria-label={`Scheda di ${r.nome}`}
+                      className={`${nomeFisso} text-left text-[13px] font-bold text-white transition hover:text-brand`}>{volto}</button>
+                  : <span className={`${nomeFisso} text-[13px] font-bold text-white`}>{volto}</span>}
+                {r.celle.map(c => <Cella key={c.data} cella={c} compatto onApri={onApri ? esci(onApri) : onApri}
+                  onProgramma={onProgramma ? esci((cella) => onProgramma({ atletaId: r.id, data: cella.data })) : undefined} />)}
+              </div>
+            )
+          })}
         </div>
+      </div>
+      {scorreDentro && <div aria-hidden="true"
+        className={`pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#18181a] to-transparent transition-opacity duration-200 ${altroSotto ? 'opacity-100' : 'opacity-0'}`} />}
       </div>
       {nascoste > 0 && onTutti && (
         <div className="px-4 pt-3">

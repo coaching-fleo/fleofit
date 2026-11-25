@@ -105,7 +105,7 @@ import {
 // visto in scrittura, e due copie divergerebbero al primo ritocco.
 import { RiepilogoWorkout, BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import { partiRipetuta, etichettaParte } from '../lib/ripetute'
-import { filtraPerNome, primaIo } from '../lib/rigaAtleta'
+import { filtraPerNome, filtraAssegnazioniPerNome, primaIo } from '../lib/rigaAtleta'
 import { leggiTemplatePdf, intestazioneCoach, scriviNoteAggiuntive } from '../lib/templatePdf'
 import { CampoRicerca } from '../components/ArchivioUI'
 import { ChipGruppi, FoglioNomeGruppo } from '../components/GruppiUI'
@@ -114,7 +114,7 @@ import { elencoGruppi, creaGruppo } from '../lib/gruppiAtletiDb'
 import {
   TestataScheda, IconaStato, MenuScheda, TitoloScheda, AvvisoRiscaldamento,
   BloccoScheda, RigaEsercizio, IntestazioneSezione, CardNota, EsitoCompletato,
-  RigaAssegnazione, ElencoAssegnazioni, GradimentoWorkout, CtaVetro, BottoneStoria,
+  RigaAssegnazione, ElencoAssegnazioni, MAX_RIGHE_ASSEGNAZIONI, GradimentoWorkout, CtaVetro, BottoneStoria,
 } from '../components/WorkoutDetailUI'
 import { NOME_APP, MARCHIO_PRIMA, MARCHIO_SECONDA } from '../lib/marchio'
 import { segnalaMomentoNotifiche } from '../lib/permessoNotifiche'
@@ -369,6 +369,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // La ricerca nel foglio «Assegna Workout»: filtra solo ciò che si vede,
   // le scelte già fatte restano anche se l'atleta esce dal filtro.
   const [cercaAtleta, setCercaAtleta] = useState('')
+  // La ricerca dentro «Assegnato a»: compare solo oltre MAX_RIGHE_ASSEGNAZIONI.
+  const [cercaAssegnato, setCercaAssegnato] = useState('')
   const [assignments, setAssignments] = useState([])
   const [currentAthleteName, setCurrentAthleteName] = useState('')
 
@@ -2237,6 +2239,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       ) : null}
     </>
   )
+  // Sotto la soglia la ricerca non si vede: un termine rimasto scritto non deve
+  // nascondere nessuno.
+  const assegnatiVisibili = assignments.length > MAX_RIGHE_ASSEGNAZIONI
+    ? filtraAssegnazioniPerNome(assignments, cercaAssegnato)
+    : assignments
   const pAssegnazioni = (
     <>
       {/* ASSEGNAZIONI (SOLO COACH) — un elenco, non N card con N ombre */}
@@ -2251,8 +2258,17 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <IntestazioneSezione etichetta="Assegnato a"
             dettaglio={assignments.length === 1 ? '1 atleta' : `${assignments.length} atleti`} />
           {gradimentoAssegnazioni && <GradimentoWorkout {...gradimentoAssegnazioni} />}
-          <ElencoAssegnazioni>
-            {assignments.map(a => (
+          {assignments.length > MAX_RIGHE_ASSEGNAZIONI && (
+            <div className="-mt-3.5">
+              <CampoRicerca valore={cercaAssegnato} onCambia={setCercaAssegnato}
+                etichetta="Cerca fra gli assegnati" placeholder="Cerca nome o cognome" />
+            </div>
+          )}
+          {assegnatiVisibili.length === 0 ? (
+            <p className="px-1 text-[13px] font-semibold text-muted">Nessun atleta con questo nome.</p>
+          ) : (
+          <ElencoAssegnazioni scorre={assignments.length > MAX_RIGHE_ASSEGNAZIONI}>
+            {assegnatiVisibili.map(a => (
               <RigaAssegnazione
                 key={a.id}
                 nome={`${a.athletes?.name || ''} ${a.athletes?.surname || ''}`.trim() || 'Atleta'}
@@ -2271,6 +2287,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
               />
             ))}
           </ElencoAssegnazioni>
+          )}
         </div>
       )}
     </>

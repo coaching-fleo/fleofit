@@ -85,19 +85,9 @@ describe('la nota dal profilo, su un allenamento di oggi non completato', () => 
   })
 })
 
-describe('la nota dal profilo, su un allenamento programmato più avanti', () => {
-  beforeEach(() => { dati.assegnazioni = assegnazione('pending', '2099-01-01') })
-
-  it('con il sì mostra l’avviso della data futura, e non lo chiude subito', async () => {
-    const utente = userEvent.setup()
-    apri()
-    await scriviEConferma(utente, 'Fatto in anticipo')
-    await utente.click(within(await domanda()).getByRole('button', { name: /Sì, l.ho fatto/ }))
-
-    expect(await screen.findByRole('dialog', { name: 'Attenzione' })).toBeInTheDocument()
-    expect(scritture()).toEqual([])
-  })
-})
+// Dal 25/11/2026 (il ridisegno della scheda) gli allenamenti dei prossimi giorni
+// sono righe che aprono la scheda dell'allenamento: lì si scrive la nota, e la
+// regola della data futura la copre WorkoutDetailNotaCompletamento.test.jsx.
 
 describe('la nota dal profilo, su un allenamento già completato', () => {
   beforeEach(() => { dati.assegnazioni = assegnazione('completed') })

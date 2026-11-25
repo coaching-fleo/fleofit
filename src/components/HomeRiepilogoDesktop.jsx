@@ -10,9 +10,11 @@
 import { Plus, Bell, Radio, Megaphone } from 'lucide-react'
 import { useRiepilogoCoach } from '../useRiepilogoCoach'
 import { CARD } from '../lib/stiliCard'
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import FoglioListaCoach from './FoglioListaCoach'
 import FoglioCalendario from './FoglioCalendario'
+import FoglioSedutaOggi from './FoglioSedutaOggi'
+import { righeCalendarioDesktop } from '../lib/riepilogoCoach'
 
 const DagliExtra = lazy(() => import('./DagliExtra'))
 import { CartaOggi, AvvisoStannoMale, CoppiaAzioni, FilaOggi, CalendarioProssimi, ContatoriDaGuardare,
@@ -26,7 +28,14 @@ export default function HomeRiepilogoDesktop(props) {
     mio = null, // la card «Il tuo allenamento» (18/11/2026), già pronta da Home.jsx
   } = props
   const r = useRiepilogoCoach(props)
-  const [calendarioIntero, setCalendarioIntero] = useState(false)
+  const [calendarioIntero, setCalendarioIntero] = useState(() => !!r.foglioCalendarioRipreso)
+  // Le righe del calendario seguono l'altezza della finestra (righeCalendarioDesktop).
+  const [righeVisibili, setRigheVisibili] = useState(() => righeCalendarioDesktop(window.innerHeight))
+  useEffect(() => {
+    const misura = () => setRigheVisibili(righeCalendarioDesktop(window.innerHeight))
+    window.addEventListener('resize', misura)
+    return () => window.removeEventListener('resize', misura)
+  }, [])
   const apriGara = (g) => { if (g.workoutId) onApriSeduta({ workoutId: g.workoutId, atletaId: g.atleti[0]?.id }) }
 
   return (
@@ -83,13 +92,15 @@ export default function HomeRiepilogoDesktop(props) {
 
           <section>
             <TitoloSezione azione={r.ordinate.length ? 'Tutti' : null} onAzione={() => r.apri({ tipo: 'oggi' })}>In allenamento oggi</TitoloSezione>
-            <FilaOggi righe={r.ordinate} onApri={(x) => onApriSeduta({ workoutId: x.workoutId, atletaId: x.id })}
+            <FilaOggi righe={r.ordinate} onApri={r.apriSeduta} posizione={r.filaRipresa}
               onTutti={() => r.apri({ tipo: 'oggi' })} />
           </section>
 
           <section>
             <TitoloSezione azione="Calendario" onAzione={onCalendario}>Prossimi giorni</TitoloSezione>
             <CalendarioProssimi desktop piano={r.piano} nota={r.notaCalendario} onApri={onApriSeduta} onProgramma={props.onCrea}
+              righeVisibili={righeVisibili} onAtleta={props.onApriAtleta}
+              posizione={r.posizioneCalendario} onPosizione={r.ricordaCalendario}
               onTutti={() => setCalendarioIntero(true)} />
           </section>
 
@@ -117,7 +128,11 @@ export default function HomeRiepilogoDesktop(props) {
         <Suspense fallback={null}><DagliExtra /></Suspense>
 
         {r.foglio && <FoglioListaCoach key={r.foglio.titolo} laterale {...r.foglio} onChiudi={r.chiudi} />}
-        {calendarioIntero && <FoglioCalendario laterale piano={r.piano} onApri={onApriSeduta} onProgramma={props.onCrea}
+        {r.sedutaAperta && <FoglioSedutaOggi laterale seduta={r.sedutaAperta} ripreso={r.corpoSedutaRipreso}
+              onAtleta={r.vaiAtletaDaSeduta} onAllenamento={r.vaiAllenamentoDaSeduta} onChiudi={r.chiudiSeduta} />}
+            {calendarioIntero && <FoglioCalendario laterale piano={r.piano} ripreso={r.foglioCalendarioRipreso}
+      onAtleta={props.onApriAtleta} onUscita={r.ricordaFoglioCalendario}
+      onApri={onApriSeduta} onProgramma={props.onCrea}
           onChiudi={() => setCalendarioIntero(false)} />}
       </div>
     </div>

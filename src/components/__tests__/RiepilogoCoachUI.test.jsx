@@ -87,4 +87,31 @@ describe('RiepilogoCoachUI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mostra tutti i 25 atleti' }))
     expect(onTutti).toHaveBeenCalled()
   })
+
+  it('nel calendario il nome apre la scheda atleta e annota prima la posizione del riquadro', () => {
+    const piano = {
+      giorni: [{ data: '2026-11-11', oggi: true }],
+      righe: [{ id: 'a1', nome: 'Luca Rossi', celle: [{ data: '2026-11-11', quando: 'oggi', chips: [] }] }],
+    }
+    const ordine = []
+    const onPosizione = vi.fn(() => ordine.push('posizione'))
+    const onAtleta = vi.fn(() => ordine.push('atleta'))
+    render(<CalendarioProssimi piano={piano} onApri={vi.fn()} onAtleta={onAtleta} onPosizione={onPosizione} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Scheda di Luca Rossi' }))
+    expect(onAtleta).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }))
+    expect(onPosizione).toHaveBeenCalledWith({ top: 0, left: 0 })
+    expect(ordine).toEqual(['posizione', 'atleta'])
+  })
+
+  it('al ritorno il riquadro riprende la posizione annotata', () => {
+    const piano = {
+      giorni: [{ data: '2026-11-11', oggi: true }],
+      righe: Array.from({ length: 10 }, (_, i) => ({ id: `a${i}`, nome: `Atleta ${i}`, celle: [{ data: '2026-11-11', quando: 'oggi', chips: [] }] })),
+    }
+    const { container } = render(<CalendarioProssimi piano={piano} righeVisibili={6} posizione={{ top: 120, left: 40 }} onApri={vi.fn()} />)
+    const el = container.querySelector('[data-calendario]')
+    expect(el.scrollTop).toBe(120)
+    expect(el.scrollLeft).toBe(40)
+    expect(el.className).toContain('overflow-y-auto')
+  })
 })

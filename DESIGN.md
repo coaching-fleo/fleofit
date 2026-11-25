@@ -504,6 +504,53 @@ Contenitore pozzetto `#111` con `p-1.5`, bordo `#333`, raggio 16px, e un indicat
 sono maiuscole `text-xs` peso 700, colorate nella corsia attiva. Usato per lista/calendario,
 tempo/distanza, passo/velocità, reps/metri.
 
+### La Testata con Foto (componente firma, dal 25/11/2026)
+Nata col foglio veloce di «In allenamento oggi» e scelta dal committente come stile da
+ripetere («mi piace moltissimo»). Si usa **solo** con `TestataFoto` di
+`src/components/TestataFoto.jsx`; oggi la montano il foglio veloce (`FoglioSedutaOggi`) e la
+scheda atleta (`TestataAtleta` in `SchedaAtletaUI`). Le regole:
+- **La foto è la testata**: niente cerchio da 96px, la persona riempie la parte alta e sfuma
+  nel fondo di ciò che sta sotto (nessun bordo, nessuna card). In alto un velo scuro al 45%
+  per i bottoni; in basso il nome grande (30px sul foglio, 32px telefono / 40px desktop sulla scheda),
+  peso 900, `tracking-tight`, bianco.
+- **Il ritaglio si sceglie, non si subisce** (`modoFoto` di `src/lib/testataFoto.js`):
+  *piena* se della foto resta visibile almeno il 45% dell'altezza (il telefono), ritagliata
+  dal 22% dall'alto dove sta il viso; *ancorata* se taglierebbe di più (il desktop): la foto
+  alla sua proporzione, a destra, sfumata a sinistra verso il nome, larga finché se ne vede il
+  60% (massimo 82% della testata); dietro, la stessa foto sfocata e scurita tinge il resto.
+- **Senza foto, il monogramma**: le iniziali alte quasi quanto la testata (78% dell'altezza
+  misurata), in alto a destra dove starebbe il viso, nel colore dato al 20% su un velo radiale
+  dello stesso colore al 30%. Il colore è la corsia della categoria nel foglio veloce, il giallo
+  del marchio nella scheda atleta. Mai un'icona utente generica.
+- **Chi può aggiungere la foto lo dice lì**: lo slot `senzaFoto` (la scheda atleta ci mette la
+  pillola «Aggiungi foto», che apre la modifica atleta).
+- **Bottoni sulla foto**: sempre `BOTTONE_SU_FOTO` (cerchio vetro scuro con blur) e pillole
+  `PILLOLA_SU_FOTO`; mai bottoni gialli pieni sopra la foto, la CTA gialla resta sotto.
+- Niente bottoni dentro bottoni: con `onClick` la testata intera è un bottone *sotto* il testo;
+  se negli slot servono bottoni veri, niente `onClick`.
+
+### La scheda atleta (ridisegnata il 25/11/2026)
+Lo stile del foglio veloce esteso a tutta la pagina (`AthleteDetail`, pezzi in
+`SchedaAtletaUI` e `SedutaUI`). L'ordine è del committente: **testata con foto → obiettivo →
+come sta andando → oggi → prossimi allenamenti e calendario → profilo (scarpe, team, gruppi,
+coach) → dalle note → storico e record**. Sul desktop: a sinistra dati, calendario, note,
+storico; a destra obiettivo, oggi, profilo (niente `sticky`: la colonna è più alta dello schermo).
+- **Superficie unica** `SUPERFICIE`: `#18181b`, bordo bianco all'8%, raggio 24px.
+- **Titoli di sezione** (`TitoloSezione`): 20px, peso 900, bianchi, con un dettaglio grigio a
+  destra (il numero, la data). Niente etichette maiuscole *sopra* le sezioni.
+- **Numeri grandi** (`NumeriSeduta`, `CardAnalisi`): cifre 28–34px peso 900 con l'unità in
+  grigio, etichetta maiuscola piccola sopra, colonne divise da un filo; le misure su 10
+  (intensità, aderenza) hanno le **dieci tacche** nel colore della corsia o del marchio.
+- **Obiettivo**: il conto alla rovescia è il numero più grande della pagina (64px), velo bianco
+  della corsia Gara in alto a destra.
+- **Oggi**: velo della corsia in testa alla card, corsia + stato, titolo 24px, numeri, blocchi in
+  sequenza (`SequenzaSeduta`), «Segna fatto» neutro e «Apri» pieno nel colore della corsia; nota
+  vocale e nota in un pozzetto `#111` sotto.
+- **Prossimi**: righe d'agenda (giorno grande a sinistra, puntino della corsia, titolo su due
+  righe) in una superficie sola; il tocco apre l'allenamento.
+- **Profilo**: righe in un gruppo unico diviso da fili (`GRUPPO_RIGHE`), come le impostazioni
+  di iOS, non card impilate.
+
 ### Empty States
 
 **La Regola dello Zero che Non Si Scrive.** ⚠️ Aggiunta il 09/09/2026 con il rework degli

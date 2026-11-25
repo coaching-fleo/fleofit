@@ -11,6 +11,8 @@ import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useCruscottoCoach } from './useCruscottoCoach'
 import { corsia } from './lib/categorie'
+import { anteprimaSeduta } from './lib/anteprimaSeduta'
+import { rpeDichiarato, testoNota } from './lib/rpe'
 import { oggiPerStato, oggiPerCategoria, ordinaOggi, giorniDaProgrammare, scopertiTreGiorni, CATEGORIE_RIEPILOGO } from './lib/riepilogoCoach'
 
 const PILLOLA_OGGI = (r) => (
@@ -38,6 +40,13 @@ const filtriCategorie = (persone) => [...CATEGORIE_RIEPILOGO, 'Event']
 // ⚠️ Qui la chiave `default` va bene (useRipresa la scarta): la Home è quasi
 // sempre la prima pagina della sessione, e il ritorno a lei la ritrova uguale.
 let listaDaRiprendere = null
+
+/** Dove sta la Home. Con un foglio aperto il body è `position: fixed` e window.scrollY
+ *  vale 0: la posizione vera sta nel suo `top` (useScorrimentoBloccato). */
+const posizionePagina = () => {
+  const body = document.body
+  return body.style.position === 'fixed' ? -parseFloat(body.style.top || '0') || 0 : window.scrollY
+}
 
 export function useRiepilogoCoach({
   atleti, assegnazioni, comeStai, estratti, righeGare, squadra, copertura,
@@ -75,6 +84,8 @@ export function useRiepilogoCoach({
     return m && tipoNavigazione === 'POP' && m.key === key ? m : null
   })
   const [lista, setLista] = useState(() => ripresa?.lista ?? null)
+  // Il foglio veloce di «In allenamento oggi» (più sotto): {atletaId, workoutId, fila}.
+  const [seduta, setSeduta] = useState(() => ripresa?.seduta ?? null)
   // Consumata al montaggio, che sia servita o no.
   useEffect(() => { listaDaRiprendere = null }, [])
 
@@ -108,10 +119,11 @@ export function useRiepilogoCoach({
       filtroIniziale: lista.filtroIndice ?? f.filtroIniziale,
       onFiltro: (i) => { filtroScelto.current = i },
       onScegli: (p) => {
+        // Una lista che apre il foglio veloce resta dov'è: non si esce dalla Home.
+        if (f.apreFoglio) return onScegli(p)
         // Col foglio aperto il body è `position: fixed` e window.scrollY vale 0:
         // la posizione vera sta nel suo `top` (useScorrimentoBloccato).
-        const body = document.body
-        const scrollY = body.style.position === 'fixed' ? -parseFloat(body.style.top || '0') || 0 : window.scrollY
+        const scrollY = posizionePagina()
         listaDaRiprendere = { key, scrollY, lista: { ...lista, filtroIndice: filtroScelto.current ?? lista.filtroIndice } }
         onScegli(p)
       },
@@ -134,7 +146,9 @@ export function useRiepilogoCoach({
           ...filtriCategorie(persone),
         ]
         const iniziale = { 'da fare': 1, 'in corso': 2, fatto: 3 }[lista.filtro] || 0
-        return { titolo: 'In allenamento oggi', persone, filtri, filtroIniziale: iniziale, onScegli: seduta }
+        // Anche dalla lista il tocco apre il foglio veloce (25/11/2026), sopra la lista.
+        return { titolo: 'In allenamento oggi', persone, filtri, filtroIniziale: iniziale, apreFoglio: true,
+          onScegli: (p) => setSeduta({ atletaId: p.atletaId, workoutId: p.workoutId, fila: null }) }
       }
       case 'allarmi':
         return {
@@ -213,5 +227,52 @@ export function useRiepilogoCoach({
     ? { avviso: true, testo: `${n} ${n === 1 ? 'atleta' : 'atleti'} con giorni da programmare nei prossimi 3 giorni` }
     : { avviso: false, testo: 'Tutti programmati per i prossimi 3 giorni' }
 
-  return { ...cruscotto, ...conti, notaCalendario, apri, chiudi: () => setLista(null), foglio }
+  // Il calendario «Prossimi giorni» scorre dentro (25/11/2026): prima di uscire da
+  // un suo tocco (scheda atleta, seduta, builder) si annota dove stavano la Home e
+  // il riquadro, e al ritorno (POP) a questa voce si riprendono tutti e due.
+  const ricordaCalendario = (calendario) => {
+    listaDaRiprendere = { key, scrollY: posizionePagina(), lista: null, calendario }
+  }
+  // Lo stesso dal foglio «Mostra tutti» (25/11/2026): al ritorno il foglio si riapre
+  // con la ricerca scritta e dov'era, sopra la Home dov'era.
+  const ricordaFoglioCalendario = (foglioCalendario) => {
+    listaDaRiprendere = { key, scrollY: posizionePagina(), lista: null, foglioCalendario }
+  }
+  // 🔴 IL FOGLIO VELOCE DI «IN ALLENAMENTO OGGI» (25/11/2026). Il tocco su una foto
+  // non porta più dritto alla seduta: apre un foglio con l'atleta e il riassunto
+  // dell'allenamento, e da lì si va alla scheda atleta o alla scheda allenamento.
+  // Uscendo si annotano: quale foglio, dove stava la fila delle foto (e quante ne
+  // erano disegnate), dove stava il corpo del foglio, dove stava la Home.
+  const apriSeduta = (r, fila = null) => setSeduta({ atletaId: r.id, workoutId: r.workoutId, fila })
+  const sedutaAperta = useMemo(() => {
+    if (!seduta) return null
+    const r = conti.ordinate.find(x => x.id === seduta.atletaId && x.workoutId === seduta.workoutId)
+    if (!r) return null
+    const oggiData = format(new Date(), 'yyyy-MM-dd')
+    const delGiorno = (assegnazioni || []).filter(a => a?.athlete_id === r.id && a.workouts?.id === r.workoutId)
+    const ass = delGiorno.find(a => a.completed_date === oggiData) || delGiorno[0] || null
+    const completato = r.stato === 'completato'
+    return {
+      ...r,
+      nomeIntero: nomeIntero(r),
+      anteprima: anteprimaSeduta(ass?.workouts?.sections),
+      rpe: completato ? rpeDichiarato(ass?.notes) : null,
+      nota: completato ? testoNota(ass?.notes) : '',
+      comeSta: (comeStai || []).find(c => c?.athlete_id === r.id) || null,
+    }
+  }, [seduta, conti, assegnazioni, comeStai, nomeIntero])
+  const esciDaSeduta = (corpo, vai) => {
+    // Se il foglio veloce sta sopra una lista, al ritorno tornano tutti e due.
+    const sotto = lista ? { ...lista, filtroIndice: filtroScelto.current ?? lista.filtroIndice } : null
+    listaDaRiprendere = { key, scrollY: posizionePagina(), lista: sotto, seduta: { ...seduta, corpo } }
+    vai()
+  }
+  const vaiAtletaDaSeduta = (corpo) => esciDaSeduta(corpo, () => onApriAtleta({ id: seduta.atletaId }))
+  const vaiAllenamentoDaSeduta = (corpo) => esciDaSeduta(corpo, () => onApriSeduta({ workoutId: seduta.workoutId, atletaId: seduta.atletaId }))
+
+  return { ...cruscotto, ...conti, notaCalendario, apri, chiudi: () => setLista(null), foglio,
+    sedutaAperta, apriSeduta, chiudiSeduta: () => setSeduta(null), vaiAtletaDaSeduta, vaiAllenamentoDaSeduta,
+    filaRipresa: ripresa?.seduta?.fila ?? null, corpoSedutaRipreso: ripresa?.seduta?.corpo ?? null,
+    ricordaCalendario, posizioneCalendario: ripresa?.calendario ?? null,
+    ricordaFoglioCalendario, foglioCalendarioRipreso: ripresa?.foglioCalendario ?? null }
 }

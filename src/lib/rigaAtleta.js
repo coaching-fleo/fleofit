@@ -204,6 +204,16 @@ export function filtraPerNome(atleti = [], termine = '') {
 }
 
 /**
+ * La ricerca dentro «Assegnato a» della scheda workout (25/11/2026): le stesse
+ * regole di `filtraPerNome`, ma sulle assegnazioni, che portano l'atleta in
+ * `athletes`. L'ordine resta quello ricevuto.
+ */
+export function filtraAssegnazioniPerNome(assegnazioni = [], termine = '') {
+  if (!String(termine || '').trim()) return assegnazioni
+  return assegnazioni.filter(a => filtraPerNome([a?.athletes || {}], termine).length > 0)
+}
+
+/**
  * Chi guarda in testa alla lista (18/11/2026): il coach si allena anche lui,
  * e nella rubrica e nel foglio «Assegna Workout» si trova subito, come «Tu».
  * Gli altri restano nell'ordine in cui arrivano; la lista ricevuta non cambia.

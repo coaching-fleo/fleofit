@@ -42,6 +42,13 @@ export const STAZIONI_HYROX = [
   'Rowing', 'Farmers Carry', 'Sandbag Lunges', 'Wall Balls',
 ]
 
+/**
+ * Ciò che sta in cima alla lista «Tutti» del builder: le otto stazioni e
+ * subito dopo Wall Balls il Run. Il Run NON entra in STAZIONI_HYROX, che dà il numero di gara
+ * (1–8) e la scheda «Stazioni» (richiesta del committente, 25/11/2026).
+ */
+export const IN_CIMA_HYROX = [...STAZIONI_HYROX, 'Run']
+
 export const isErgo = (name) => ERGOMETERS.includes(name)
 
 export const SLED_EXERCISES = ['Sled Push', 'Sled Pull', 'Prowler Push', 'Sled Drag']

@@ -11,42 +11,60 @@
 // con quanto carico, era nella terza tab, dietro due tocchi e quattro grafici
 // che non si parlavano. Ora è la prima cosa in pagina, e le tab non ci sono più.
 
-import { ChevronDown, ChevronRight, Footprints, Layers, User, UserCog, UsersRound } from 'lucide-react'
-import { CARD, LABEL, RIGA, VETRO } from '../lib/stiliCard'
-import { BRAND, RUNNING } from '../lib/colori'
+import { Camera, ChevronDown, ChevronLeft, ChevronRight, Footprints, Layers, MoreHorizontal, Trash2, UserCog, UsersRound } from 'lucide-react'
+import { ETICHETTA_NUMERO } from './SedutaUI'
+import TestataFoto from './TestataFoto'
+import { BOTTONE_SU_FOTO, PILLOLA_SU_FOTO } from '../lib/testataFoto'
+import { RIGA } from '../lib/stiliCard'
+import { BRAND, conVelo } from '../lib/colori'
 import { testoKm } from '../lib/kmScarpe'
 
-// ── L'identità ────────────────────────────────────────────────────────────
-// Erano una foto da 96px, un nome, e quattro celle da 22px con età, altezza,
-// peso e numero di workout: mezzo schermo per dati che si inseriscono una
-// volta e non si consultano mai. Diventano una riga sotto il nome.
+// ── La testata con la foto (25/11/2026) ──────────────────────────────────
+// Era una foto da 56px accanto al nome. Ora è lo stile del foglio veloce di
+// «In allenamento oggi», piaciuto al committente: la foto grande in testa
+// (TestataFoto, che sceglie fra foto piena e foto intera a destra per non
+// tagliare il viso), il nome grande sopra, social e anagrafica sotto il nome.
+// Indietro e menu sono bottoni di vetro sulla foto. Sul telefono va da bordo a
+// bordo e passa sotto la barra di stato; sul desktop sta nella colonna, con i
+// bottoni della scheda in basso a destra.
+// Senza foto: il monogramma, e chi può modificare la scheda vede «Aggiungi foto».
+// ⚠️ Il nome resta un <h1>: i test della scheda lo cercano lì.
 
-export function IdentitaAtleta({ foto, nome, anagrafica, onErroreFoto, social, pillola, nota }) {
+export function TestataAtleta({
+  foto, nome, anagrafica, social, pillola, onErroreFoto, onIndietro, onMenu, onAggiungiFoto, azioni, desktop = false,
+}) {
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex items-center gap-[13px]">
-        <span className={`shrink-0 w-14 h-14 rounded-full overflow-hidden flex items-center justify-center
-                          ${VETRO} text-muted`}>
-          {foto
-            ? <img src={foto} alt="" className="w-full h-full object-cover" onError={onErroreFoto} />
-            : <User size={28} aria-hidden="true" />}
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-[22px] font-black tracking-[-.02em] text-white leading-[1.1] text-balance">{nome}</h1>
-            {social}
-          </div>
-          {anagrafica && (
-            <p className="mt-[5px] text-xs text-muted tracking-[.01em]">{anagrafica}</p>
-          )}
+    <TestataFoto foto={foto} nome={nome} fondo="#0B0B0B" onErroreFoto={onErroreFoto}
+      classe={desktop ? 'h-[300px] rounded-[28px]' : 'h-[calc(env(safe-area-inset-top)+312px)]'}
+      margineAlto={desktop ? '0px' : 'env(safe-area-inset-top)'}
+      sopraSinistra={onIndietro && (
+        <button type="button" aria-label="Torna indietro" onClick={onIndietro} className={`-ml-1 ${BOTTONE_SU_FOTO}`}>
+          <ChevronLeft size={23} aria-hidden="true" />
+        </button>
+      )}
+      sopraDestra={(
+        <button type="button" aria-label="Altre azioni" onClick={onMenu} className={BOTTONE_SU_FOTO}>
+          <MoreHorizontal size={21} aria-hidden="true" />
+        </button>
+      )}
+      etichetta={pillola && <div className="mb-2">{pillola}</div>}
+      titolo={(
+        <h1 className={`${desktop ? 'text-[40px]' : 'text-[32px]'} leading-[1.04] font-black tracking-[-.035em] text-white text-balance break-words`}>
+          {nome}
+        </h1>
+      )}
+      sotto={(anagrafica || social) && (
+        <div className="mt-2 flex items-center gap-2.5 flex-wrap">
+          {social && <span className="flex items-center gap-2.5">{social}</span>}
+          {anagrafica && <p className="text-[13px] font-semibold text-white/70 tracking-[.01em]">{anagrafica}</p>}
         </div>
-      </div>
-      {pillola}
-      {/* ⚠️ È `pausaAtleta.testo`, mai `athlete.notes` grezzo: il marcatore
-          `[PAUSA: …]` è uno stato, e mostrarlo qui lo farebbe leggere come
-          testo scritto dal coach (CLAUDE.md §9-decies). */}
-      {nota && <p className="text-sm text-muted whitespace-pre-wrap text-pretty">{nota}</p>}
-    </div>
+      )}
+      senzaFoto={onAggiungiFoto && (
+        <button type="button" onClick={onAggiungiFoto} className={PILLOLA_SU_FOTO}>
+          <Camera size={15} aria-hidden="true" /> Aggiungi foto
+        </button>
+      )}
+      azione={azioni} />
   )
 }
 
@@ -77,136 +95,149 @@ export function IconaSocial({ etichetta, icona: Icona, href, colore, onClick }) 
   )
 }
 
-// ── L'eroe ────────────────────────────────────────────────────────────────
-// Aderenza a 30 giorni nell'anello, e accanto il carico delle ultime quattro
-// settimane. Una riga sotto dice a parole cosa dicono i due numeri insieme: è
-// la frase su cui si decide se caricare o scaricare, ed è l'unica ragione per
-// cui i due grafici stanno nella stessa card invece che uno sotto l'altro.
+// ── Il ridisegno della pagina (25/11/2026) ────────────────────────────────
+// Il committente: «salva questo stile e applicalo anche alla scheda atleta.
+// Voglio proprio cambiare tutta la scheda». L'ordine è il suo: obiettivo, dati,
+// oggi, calendario; poi il resto. Lo stile è quello del foglio veloce: superfici
+// `#18181b` a 24px, titoli di sezione grandi (niente etichette in maiuscoletto
+// sopra), NUMERI grandi con le tacche, il colore della corsia dove c'è una
+// categoria. DESIGN.md, «La scheda atleta».
 
-export function CardAndamento({ titolo, percentuale, fatti, assegnati, settimane, delta, frase, dettaglio }) {
+/** La pelle di ogni sezione: la stessa del foglio veloce. */
+export const SUPERFICIE = 'rounded-[24px] bg-[#18181b] border border-white/[.08]'
+
+/** Il titolo di una sezione: grande, bianco, con un dettaglio a destra se serve. */
+export function TitoloSezione({ titolo, dettaglio, azione }) {
+  return (
+    <div className="flex items-end justify-between gap-3 px-1">
+      <h2 className="text-[20px] leading-tight font-black tracking-[-.02em] text-white">{titolo}</h2>
+      {azione || (dettaglio != null && <span className="pb-0.5 text-[13px] font-bold text-muted tabular-nums">{dettaglio}</span>)}
+    </div>
+  )
+}
+
+const quando = (giorni) => giorni <= 0 ? 'Oggi' : giorni === 1 ? 'Domani' : null
+
+/**
+ * L'obiettivo: la prossima gara. Il conto alla rovescia è il numero più grande
+ * della pagina, ed è giusto: è la data verso cui tende tutta la programmazione.
+ * Il tocco apre la gara. Senza gara la sezione non c'è.
+ */
+export function CardObiettivo({ titolo, data, giorni, onClick }) {
+  const subito = quando(giorni)
+  const settimane = Math.floor(giorni / 7)
+  return (
+    <button type="button" onClick={onClick} aria-label={`Obiettivo: ${titolo}, ${subito || `fra ${giorni} giorni`}`}
+      className={`${SUPERFICIE} group relative w-full overflow-hidden isolate p-5 pr-4 text-left transition hover:border-white/25 active:scale-[.99]`}>
+      {/* Il velo bianco della corsia Gara, in alto a destra dove sta il numero. */}
+      <span className="absolute inset-0 -z-10" aria-hidden="true"
+        style={{ background: 'radial-gradient(90% 120% at 100% 0%, rgba(255,255,255,.09), transparent 60%)' }} />
+      <span className="flex items-center gap-5">
+        <span className="flex-1 min-w-0">
+          <span className="flex items-center gap-1.5 text-[13px] font-extrabold text-white/85">
+            <i className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,.6)]" aria-hidden="true" />Obiettivo
+          </span>
+          <b className="mt-1.5 block text-[22px] leading-[1.1] font-black tracking-[-.02em] text-white break-words [text-wrap:balance]">{titolo}</b>
+          <span className="mt-1.5 block text-[13px] font-bold text-gray-300 first-letter:uppercase">{data}</span>
+        </span>
+        <span className="shrink-0 text-right">
+          {subito ? (
+            <b className="block text-[40px] leading-none font-black tracking-[-.04em] text-white">{subito}</b>
+          ) : (<>
+            <b className="block text-[64px] leading-[.85] font-black tracking-[-.06em] text-white tabular-nums">{giorni}</b>
+            <span className="mt-1.5 block text-[13px] font-extrabold text-gray-400">{settimane >= 2 ? `giorni · ${settimane} sett.` : 'giorni'}</span>
+          </>)}
+        </span>
+      </span>
+    </button>
+  )
+}
+
+/** Dieci tacche: la stessa misura dell'intensità del foglio veloce. */
+function Tacche({ piene, colore, totale = 10 }) {
+  return (
+    <span className="mt-2 flex gap-[3px]" aria-hidden="true">
+      {Array.from({ length: totale }, (_, i) => (
+        <i key={i} className="h-1.5 flex-1 rounded-full" style={{ background: i < piene ? colore : 'rgba(255,255,255,.1)' }} />
+      ))}
+    </span>
+  )
+}
+
+const CIFRA = 'block mt-1 text-[30px] leading-none font-black tracking-[-.04em] text-white tabular-nums'
+const UNITA = 'ml-0.5 text-[14px] font-extrabold tracking-normal text-gray-400'
+
+/**
+ * «Come sta andando»: i dati in una sezione sola. Tre numeri grandi in fila
+ * (aderenza con le sue tacche, volume, sforzo con le fasce di RPE), poi il
+ * carico delle ultime quattro settimane e la frase che li mette insieme — è la
+ * riga su cui si decide se caricare o scaricare.
+ */
+export function CardAnalisi({ aderenza, volume, sforzo, settimane, delta, frase, dettaglio, children }) {
   const massimo = Math.max(...settimane.map(s => s.load), 1)
   const suGiu = delta == null ? null : delta >= 0
-
   return (
-    <div className={`${CARD} p-[18px] hero-transition`}>
-      <p className={`${LABEL} mb-3.5`}>{titolo}</p>
-
-      <div className="flex items-center gap-[18px]">
-        <Anello percentuale={percentuale} sotto={`${fatti}/${assegnati}`} />
-
-        <div className="flex-1 min-w-0">
-          <p className={`${LABEL} tracking-[.08em] mb-2`}>Carico · min × RPE</p>
-          {/* 62 = 44 di barra + 5 di gap + 13 di etichetta. Alla prima prova a
-              393px erano 34, e con quattro colonne larghe 52px le barre si
-              leggevano come fasce orizzontali tutte uguali: la differenza fra
-              una settimana e l'altra, che è l'unica cosa che il grafico deve
-              dire, spariva nell'aspetto. */}
-          <div className="flex items-end gap-[7px] h-[62px]" role="img"
-            aria-label={settimane.map(s => `${s.breve}: ${Math.round(s.load)} punti`).join(', ')}>
-            {settimane.map((s, i) => {
-              const ultima = i === settimane.length - 1
-              return (
-                <div key={s.startStr} className="flex-1 flex flex-col items-center gap-[5px]">
-                  <div className="w-full rounded-md transition-[height] duration-700 ease-out"
-                    style={{
-                      // Il minimo di 3px non è estetica: una settimana a zero
-                      // e una settimana senza dati diventerebbero lo stesso
-                      // nulla, e sono due cose diverse.
-                      height: `${Math.max((s.load / massimo) * 44, s.load > 0 ? 3 : 0)}px`,
-                      background: ultima ? BRAND : '#2f2f33',
-                    }} />
-                  <span className={`text-[11px] font-bold ${ultima ? 'text-brand' : 'text-muted'}`}>
-                    {s.breve}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+    <section className={`${SUPERFICIE} p-5 flex flex-col gap-5`} aria-label="Andamento">
+      <div className="grid grid-cols-[1.15fr_1fr_1fr] [&>*+*]:border-l [&>*+*]:border-white/[.08] [&>*+*]:pl-3.5 [&>*]:pr-3.5 [&>*:last-child]:pr-0">
+        <div className="min-w-0" role="img" aria-label={`Aderenza ${aderenza.percentuale}%, ${aderenza.fatti}/${aderenza.assegnati} allenamenti`}>
+          <span className={ETICHETTA_NUMERO} aria-hidden="true">Aderenza</span>
+          <b className={CIFRA} aria-hidden="true">{aderenza.percentuale}<small className={UNITA}>%</small></b>
+          <Tacche piene={Math.round(aderenza.percentuale / 10)} colore={BRAND} />
+          <span className="mt-1.5 block text-[12px] font-bold text-muted" aria-hidden="true">{aderenza.fatti} su {aderenza.assegnati}</span>
+        </div>
+        <div className="min-w-0">
+          <span className={ETICHETTA_NUMERO}>Volume</span>
+          <b className={CIFRA}>{volume.minuti}<small className={UNITA}>min</small></b>
+          <span className={`mt-2 block text-[12px] font-bold leading-snug ${volume.notaColore}`}>{volume.nota}</span>
+        </div>
+        <div className="min-w-0">
+          <span className={ETICHETTA_NUMERO}>Sforzo</span>
+          <b className={CIFRA}>{sforzo.valore}{sforzo.unita && <small className={UNITA}>{sforzo.unita}</small>}</b>
+          {sforzo.distribuzione && <BarraFasce distribuzione={sforzo.distribuzione} />}
+          <span className="mt-1.5 block text-[12px] font-bold leading-snug text-muted">{sforzo.nota}</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5 mt-4 pt-3.5 border-t border-white/[.07]">
-        {suGiu !== null && (
-          <span className={`shrink-0 text-[11px] font-extrabold rounded-full px-2 py-1 ${
-            suGiu ? 'bg-green-500/[.12] text-green-400' : 'bg-orange-500/[.12] text-orange-400'}`}>
-            {suGiu ? '+' : ''}{delta}%
-          </span>
-        )}
-        <p className="text-[12.5px] leading-[1.45] text-gray-300 text-pretty">
+      <div className="pt-4 border-t border-white/[.08]">
+        <div className="flex items-baseline justify-between">
+          <span className={ETICHETTA_NUMERO}>Carico · 4 settimane</span>
+          {suGiu !== null && (
+            <span className={`text-[13px] font-extrabold tabular-nums ${suGiu ? 'text-green-400' : 'text-orange-400'}`}>
+              {suGiu ? '+' : ''}{delta}%
+            </span>
+          )}
+        </div>
+        <div className="mt-3 flex items-end gap-2 h-[76px]" role="img"
+          aria-label={settimane.map(s => `${s.breve}: ${Math.round(s.load)} punti`).join(', ')}>
+          {settimane.map((s, i) => {
+            const ultima = i === settimane.length - 1
+            return (
+              <div key={s.startStr} className="flex-1 flex flex-col items-center gap-1.5">
+                <div className="w-full rounded-[7px] transition-[height] duration-700 ease-out"
+                  style={{
+                    // Il minimo di 3px: una settimana a zero e una senza dati sono due cose diverse.
+                    height: `${Math.max((s.load / massimo) * 56, s.load > 0 ? 3 : 0)}px`,
+                    background: ultima ? BRAND : 'rgba(255,255,255,.14)',
+                    boxShadow: ultima ? '0 8px 20px -8px rgba(241,197,23,.6)' : undefined,
+                  }} />
+                <span className={`text-[11px] font-bold ${ultima ? 'text-brand' : 'text-muted'}`}>{s.breve}</span>
+              </div>
+            )
+          })}
+        </div>
+        <p className="mt-3 text-[14px] leading-[1.45] text-gray-200 text-pretty">
           {frase}{dettaglio && <span className="text-muted"> {dettaglio}</span>}
         </p>
       </div>
-    </div>
-  )
-}
-
-/** L'anello dell'aderenza. r=40 → circonferenza 251, da cui il `251` sotto. */
-function Anello({ percentuale, sotto }) {
-  return (
-    // ⚠️ L'etichetta non è ridondante: letti da VoiceOver i due numeri dentro
-    // l'anello suonano «33 percento 1 barra 3», che non dice di cosa. Ed è
-    // l'unico appiglio che il grafico offre a chi non lo vede.
-    <div className="shrink-0 relative w-24 h-24" role="img"
-      aria-label={`Aderenza ${percentuale}%, ${sotto} allenamenti`}>
-      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90" aria-hidden="true">
-        <circle cx="50" cy="50" r="40" fill="none" stroke="#333" strokeWidth="8" />
-        <circle cx="50" cy="50" r="40" fill="none" stroke={BRAND} strokeWidth="8" strokeLinecap="round"
-          strokeDasharray={`${(percentuale / 100) * 251} 251`}
-          className="transition-all duration-1000 ease-out" />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
-        <span className="text-[23px] font-black text-white leading-none">
-          {percentuale}<span className="text-[13px]">%</span>
-        </span>
-        <span className="mt-0.5 text-[11px] font-bold text-muted">{sotto}</span>
-      </div>
-    </div>
-  )
-}
-
-// ── Il bento ──────────────────────────────────────────────────────────────
-// Il grafico del volume e quello della distribuzione RPE erano due card intere
-// dentro una tab. Sono due numeri con la loro forma sotto.
-
-export function CellaBento({ etichetta, valore, unita, nota, notaColore = 'text-muted', children, coda }) {
-  return (
-    <div className={`${CARD} p-[15px] flex flex-col`}>
-      <p className={`${LABEL} tracking-[.08em]`}>{etichetta}</p>
-      <p className="mt-1.5 text-[26px] font-black text-white leading-none">
-        {valore}
-        {unita && <span className="pl-[3px] text-[13px] font-semibold text-muted">{unita}</span>}
-      </p>
-      {nota && <p className={`mt-[3px] text-[11px] font-bold ${notaColore}`}>{nota}</p>}
       {children}
-      {coda && <p className="mt-2 text-[11px] font-bold text-muted">{coda}</p>}
-    </div>
-  )
-}
-
-/** Lo sparkline del volume: valori già normalizzati a 0-100, in ordine. */
-export function Sparkline({ valori }) {
-  if (valori.length < 2) return null
-  const punti = valori.map((v, i) => `${(i / (valori.length - 1)) * 100},${34 - (v / 100) * 32}`)
-  return (
-    <svg viewBox="0 0 100 34" preserveAspectRatio="none" width="100%" height="34" aria-hidden="true"
-      className="mt-[9px] block overflow-visible">
-      <defs>
-        <linearGradient id="sparkVolume" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(0,148,198,.45)" />
-          <stop offset="100%" stopColor="rgba(0,148,198,0)" />
-        </linearGradient>
-      </defs>
-      <polygon points={`0,34 ${punti.join(' ')} 100,34`} fill="url(#sparkVolume)" />
-      <polyline points={punti.join(' ')} fill="none" stroke={RUNNING} strokeWidth="2.5"
-        vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    </section>
   )
 }
 
 /** Le quattro fasce di RPE come una barra sola. */
 export function BarraFasce({ distribuzione }) {
   const { light, moderate, hard, extreme, total } = distribuzione
-  if (!total) return <div className="mt-[13px] h-2 rounded-full bg-white/[.06]" />
+  if (!total) return <div className="mt-2 h-1.5 rounded-full bg-white/[.1]" />
   const fasce = [
     ['Leggero 1-4', light, '#22c55e'],
     ['Moderato 5-6', moderate, '#f1c517'],
@@ -214,42 +245,52 @@ export function BarraFasce({ distribuzione }) {
     ['Massimale 9-10', extreme, '#ef4444'],
   ]
   return (
-    <div className="mt-[13px] flex h-2 rounded-full overflow-hidden" role="img"
+    <div className="mt-2 flex gap-[3px] h-1.5" role="img"
       aria-label={fasce.filter(([, n]) => n > 0).map(([e, n]) => `${e}: ${n}`).join(', ')}>
       {fasce.map(([etichetta, n, colore]) => n > 0 && (
-        <div key={etichetta} style={{ width: `${(n / total) * 100}%`, background: colore }} />
+        <div key={etichetta} className="rounded-full" style={{ width: `${(n / total) * 100}%`, background: colore }} />
       ))}
     </div>
   )
 }
 
-// ── Le righe ──────────────────────────────────────────────────────────────
-
-/** Il prossimo evento, in una riga invece che in un banner alto quanto una card. */
-export function RigaObiettivo({ titolo, giorni, onClick }) {
+/**
+ * Un allenamento in programma, in una riga: il giorno grande a sinistra (come
+ * un'agenda), il puntino della corsia, il titolo. Il tocco apre l'allenamento,
+ * dove stanno stato, note e nota vocale.
+ */
+export function RigaProssimo({ giorno, mese, settimana, titolo, categoria, colore, dettaglio, onApri, onRimuovi }) {
   return (
-    <button type="button" onClick={onClick}
-      className={`${CARD} w-full px-4 py-3.5 flex items-center gap-[13px] text-left
-                  border-white/[.14] hover:border-white/25 transition`}>
-      <span className={`shrink-0 w-[38px] h-[38px] rounded-full ${VETRO} flex items-center justify-center text-white`}>
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <rect x="3" y="4" width="18" height="18" rx="3" /><path d="M3 10h18M8 2v4M16 2v4" />
-        </svg>
-      </span>
-      <span className="flex-1 min-w-0">
-        <span className={`block ${LABEL} tracking-[.09em]`}>Prossimo obiettivo</span>
-        <span className="block mt-[3px] text-[15px] font-bold text-white leading-tight truncate">{titolo}</span>
-      </span>
-      <span className="shrink-0 text-right">
-        <span className="block text-[22px] font-black text-white leading-none">{giorni}</span>
-        <span className="block mt-px text-[11px] font-bold text-muted">
-          {giorni === 1 ? 'giorno' : 'giorni'}
+    <li className="relative flex items-stretch">
+      <button type="button" onClick={onApri}
+        className="flex-1 min-w-0 flex items-center gap-4 py-3 pl-4 pr-2 text-left transition hover:bg-white/[.04] rounded-[18px]">
+        <span className="shrink-0 w-11 text-center">
+          <span className="block text-[11px] font-extrabold uppercase tracking-[.08em] text-muted">{settimana}</span>
+          <b className="block text-[24px] leading-none font-black tracking-[-.03em] text-white tabular-nums">{giorno}</b>
+          <span className="block mt-0.5 text-[11px] font-bold text-muted">{mese}</span>
         </span>
-      </span>
-    </button>
+        <span className="flex-1 min-w-0">
+          <span className="flex items-center gap-1.5 text-[12px] font-extrabold text-white/70">
+            <i className="w-2 h-2 rounded-full shrink-0" style={{ background: colore, boxShadow: `0 0 8px ${conVelo(colore, 0.5)}` }} aria-hidden="true" />
+            {categoria}{dettaglio && <span className="font-bold text-muted">· {dettaglio}</span>}
+          </span>
+          <b className="mt-0.5 block text-[16px] leading-snug font-extrabold text-white line-clamp-2 break-words">{titolo}</b>
+        </span>
+        {!onRimuovi && <ChevronRight size={17} className="shrink-0 text-muted" aria-hidden="true" />}
+      </button>
+      {onRimuovi && (
+        <button type="button" onClick={onRimuovi} aria-label="Elimina l'allenamento" title="Rimuovi assegnazione"
+          className="shrink-0 w-11 grid place-items-center text-muted hover:text-red-500 transition">
+          <Trash2 size={17} aria-hidden="true" />
+        </button>
+      )}
+    </li>
   )
 }
+
+/** Il contenitore delle righe del profilo: una superficie sola, righe divise da un filo. */
+export const GRUPPO_RIGHE = `${SUPERFICIE} overflow-hidden divide-y divide-white/[.07] empty:hidden`
+const RIGA_IN_GRUPPO = 'w-full px-4 py-[15px] flex items-center gap-3 text-left'
 
 /**
  * Una sezione che si apre in pagina.
@@ -303,8 +344,7 @@ export function PillolaPausa({ dal }) {
 export function RigaCoach({ nome, onClick }) {
   return (
     <button type="button" onClick={onClick}
-      className={`${RIGA} w-full px-[15px] py-[13px] flex items-center gap-3 text-left
-                  hover:bg-white/[.055] transition`}>
+      className={`${RIGA_IN_GRUPPO} hover:bg-white/[.04] transition`}>
       <UserCog size={18} className="shrink-0 text-muted" aria-hidden="true" />
       <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">Coach: {nome}</span>
       <ChevronRight size={17} className="shrink-0 text-muted" aria-hidden="true" />
@@ -327,7 +367,7 @@ export function RigaTeamCoach({ team, onApri }) {
   const nomi = team.map(t => (t.stato === 'invitato' ? `${t.nome} (invitato)` : t.nome)).join(', ')
   return (
     <button type="button" onClick={onApri}
-      className={`${RIGA} mt-3 w-full px-[15px] py-[13px] flex items-center gap-3 text-left hover:bg-white/[.055] transition`}>
+      className={`${RIGA_IN_GRUPPO} hover:bg-white/[.04] transition`}>
       <UsersRound size={18} className="shrink-0 text-muted" aria-hidden="true" />
       <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{`Team: ${nomi}`}</span>
       <ChevronRight size={17} aria-hidden="true" className="shrink-0 text-muted" />
@@ -343,7 +383,7 @@ export function RigaGruppiCoach({ gruppi, onApri }) {
   if (!gruppi?.length) return null
   return (
     <button type="button" onClick={onApri}
-      className={`${RIGA} mt-3 w-full px-[15px] py-[13px] flex items-center gap-3 text-left hover:bg-white/[.055] transition`}>
+      className={`${RIGA_IN_GRUPPO} hover:bg-white/[.04] transition`}>
       <Layers size={18} className="shrink-0 text-muted" aria-hidden="true" />
       <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{`Gruppi: ${gruppi.map(g => g.nome).join(', ')}`}</span>
       <ChevronRight size={17} aria-hidden="true" className="shrink-0 text-muted" />
@@ -361,7 +401,7 @@ export function RigaScarpeCoach({ scarpe }) {
     ? `Scarpe: ${principale.modello} · ${testoKm(principale.km)} km`
     : `Scarpe: ${attive.length} ${attive.length === 1 ? 'attiva' : 'attive'}`
   return (
-    <div className={`${RIGA} mt-3 px-[15px] py-[13px] flex items-center gap-3`}>
+    <div className={RIGA_IN_GRUPPO}>
       <Footprints size={18} className="shrink-0 text-muted" aria-hidden="true" />
       <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">
         {testo}

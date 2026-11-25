@@ -50,6 +50,11 @@ const menoMovimento = () => {
 export function useScorrimentoBloccato() {
   useEffect(() => {
     const body = document.body
+    // Un foglio aperto SOPRA un altro (25/11/2026: il foglio veloce sopra la lista
+    // «In allenamento oggi»): il blocco c'è già, e rifarlo scriverebbe `top: -0px`
+    // (window.scrollY sotto un body fisso vale 0), portando la Home in cima.
+    // Lo lascia a chi l'ha messo, che lo toglierà alla sua chiusura.
+    if (body.style.position === 'fixed') return
     const y = window.scrollY || 0
     const prima = {
       position: body.style.position, top: body.style.top,

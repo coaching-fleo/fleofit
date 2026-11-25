@@ -32,7 +32,7 @@ import schedeScarpe from '../tools/scarpe/schede.json'
 // build vera (il modulo demo si pota, gli asset no). Sono le sole tre che esistono.
 const FOTO_SCARPE = ['saucony-endorphin-speed-4', 'puma-deviate-nitro-3', 'on-cloudmonster-2']
 
-export const VERSIONE_SEME = 25   // 25: gruppi_atleti (24: pdf_coach, il template del PDF; 23: i ritratti degli atleti)
+export const VERSIONE_SEME = 28   // 28: una foto per ognuno (af-…, coach-demo); 27: 50 atleti in più (af-01…af-50); 25: gruppi_atleti (24: pdf_coach, il template del PDF; 23: i ritratti degli atleti)
 
 const COACH = '0118e43f-8791-4fd6-8032-bee028334c99'
 
@@ -142,8 +142,40 @@ const workouts = () => [
 // di prima restano lì (python3 tools/demo-foto/genera.py).
 const RITRATTI = ['at-marco', 'at-luca', 'at-giulia', 'at-andrea', 'at-sara', 'at-paolo',
   'at-chiara', 'at-elena', 'at-davide', 'at-sofia']
+// Dal 25/11/2026 hanno una foto anche i 50 atleti in più (af-…) e il «Coach Demo»: ognuno la
+// sua, mai la stessa due volte (fonti.txt, controllato da demoRitratti.test.js).
 const ritratto = (id) => (id === COACH ? '/tools/demo-foto/coach-federico.jpg'
-  : RITRATTI.includes(id) ? `/tools/demo-foto/${id}.jpg` : null)
+  : RITRATTI.includes(id) || id === 'coach-demo' || /^af-\d{2}$/.test(id) ? `/tools/demo-foto/${id}.jpg` : null)
+
+// ── 50 atleti in più (25/11/2026) ───────────────────────────────────────────
+// Per provare le liste lunghe (il calendario della Home che scorre, «Mostra tutti»
+// oltre 20, la rubrica). Id `af-…` e non `at-…`: fuori dai test degli scenari scritti
+// a mano. Nomi e programma sono fissi, non a caso, così la demo è uguale a ogni azzeramento.
+const NOMI_IN_PIU = ['Alessio', 'Beatrice', 'Carlo', 'Denise', 'Emanuele', 'Federica', 'Gabriele',
+  'Ilaria', 'Jacopo', 'Laura', 'Matteo', 'Noemi', 'Omar', 'Paola', 'Riccardo', 'Silvia', 'Tommaso',
+  'Valentina', 'Walter', 'Alice', 'Bruno', 'Camilla', 'Diego', 'Erica', 'Filippo']
+const COGNOMI_IN_PIU = ['Galli', 'Lombardi', 'Marino', 'Costa', 'Gallo', 'Fontana', 'Barbieri',
+  'Santoro', 'Rinaldi', 'Caruso', 'Mancini', 'Colombo', 'Testa', 'Serra', 'Vitale', 'Pellegrini',
+  'Cattaneo', 'Martini', 'Leone', 'Longo', 'Gentile', 'Bellini', 'Farina', 'Ruggiero', 'Bianco']
+const ATLETI_IN_PIU = Array.from({ length: 50 }, (_, i) => [
+  `af-${String(i + 1).padStart(2, '0')}`,
+  NOMI_IN_PIU[i % NOMI_IN_PIU.length],
+  COGNOMI_IN_PIU[(i * 7 + Math.floor(i / NOMI_IN_PIU.length) * 3) % COGNOMI_IN_PIU.length],
+])
+// Sei settimane tipo; ogni quarto atleta ha un buco nei prossimi giorni (da programmare).
+const SETTIMANE_TIPO = [
+  ['w-leggero', 'w-corsa2', 'w-medio', null, 'w-gym', 'w-completo2', null],
+  ['w-forte', 'w-corsa', 'w-gym', 'w-completo', null, 'w-lungo', null],
+  ['w-medio', null, 'w-corsa2', 'w-medio', 'w-gym', null, 'w-corsa2'],
+  ['w-corsa', 'w-gym', null, 'w-corsa2', 'w-medio', null, 'w-libero'],
+  [null, 'w-medio', 'w-gym', null, 'w-corsa', 'w-leggero', null],
+  ['w-lungo', 'w-gym', 'w-corsa2', null, 'w-medio', 'w-libero', null],
+]
+const pianoInPiu = () => Object.fromEntries(ATLETI_IN_PIU.map(([id], i) => {
+  const piano = [...SETTIMANE_TIPO[i % SETTIMANE_TIPO.length]]
+  if (i % 4 === 0) { piano[(i + 1) % 7] = null; piano[(i + 2) % 7] = null }
+  return [id, piano]
+}))
 
 const A = (id, name, surname, extra = {}) => ({
   id, name, surname, birth_date: '1995-04-12', weight: '74', height: '178',
@@ -165,6 +197,7 @@ const atleti = () => [
   A('at-elena', 'Elena', 'Moretti'),                         // → nessun avviso (il silenzio)
   A('at-davide', 'Davide', 'Ricci'),                         // → rientro dopo 9 giorni
   A('at-sofia', 'Sofia', 'Greco'),                           // → atleta nuova, nessuna seduta
+  ...ATLETI_IN_PIU.map(([id, nome, cognome]) => A(id, nome, cognome)),
 ]
 
 // ── le assegnazioni ─────────────────────────────────────────────────────────
@@ -263,6 +296,9 @@ const noteEstratte = (aws, ws) => aws
 
 const assegnazioni = () => conSettimanaPiena([
   // Marco: leggero e costante. Un workout massimale gli fa saltare il carico.
+  // I 50 in più: due atleti su tre con due settimane di sedute fatte (gli altri appena arrivati).
+  ...ATLETI_IN_PIU.filter((_, i) => i % 3 !== 2)
+    .flatMap(([id], i) => regolare(id, ['w-medio', 'w-corsa2', 'w-gym'][i % 3], 5 + (i % 4), 2, [-2, -1])),
   ...regolare('at-marco', 'w-leggero', 4),
   AW('at-marco', 'w-leggero', nellaSettimana(0, 0), 'completed', 4, 'Tutto liscio'),
 
@@ -379,7 +415,7 @@ const settimanaPiena = () => {
   for (let scarto = 0; scarto < 7; scarto++) {
     const data = giorno(scarto)
     const settimana = (new Date(`${data}T12:00:00`).getDay() + 6) % 7
-    for (const [atleta, piano] of Object.entries(PIANO)) {
+    for (const [atleta, piano] of Object.entries({ ...PIANO, ...pianoInPiu() })) {
       const workout = piano[settimana]
       if (workout) fuori.push({ atleta, workout, data })
     }

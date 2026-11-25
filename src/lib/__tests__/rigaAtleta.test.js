@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   settimanaDi, aderenzaSettimana, aderenzaDi, MASSIMO_TACCHE, NESSUNA_ADERENZA,
   etaDi, metaAtleta, nomeAtleta, iniziali, etichettaPausa,
-  giorniRimastiCestino, conteggiStato, filtraPerNome, primaIo,
+  giorniRimastiCestino, conteggiStato, filtraPerNome, filtraAssegnazioniPerNome, primaIo,
 } from '../rigaAtleta'
 
 // Perché questi test esistono
@@ -271,5 +271,22 @@ describe('primaIo', () => {
     expect(primaIo(a, 'zz').map(r => r.id)).toEqual(['x', 'me', 'y'])
     expect(primaIo(a, null).map(r => r.id)).toEqual(['x', 'me', 'y'])
     expect(primaIo(null, 'me')).toEqual([])
+  })
+})
+
+describe('filtraAssegnazioniPerNome', () => {
+  const assegnazioni = [
+    { id: 1, athletes: { name: 'Marco', surname: 'Rossi' } },
+    { id: 2, athletes: { name: 'Chiara', surname: 'Donati' } },
+    { id: 3, athletes: null },
+  ]
+
+  it("cerca nell'atleta dell'assegnazione, anche a parole invertite", () => {
+    expect(filtraAssegnazioniPerNome(assegnazioni, 'rossi marco').map(a => a.id)).toEqual([1])
+    expect(filtraAssegnazioniPerNome(assegnazioni, 'don').map(a => a.id)).toEqual([2])
+  })
+
+  it('senza termine torna tutto, anche chi non ha atleta', () => {
+    expect(filtraAssegnazioniPerNome(assegnazioni, ' ')).toHaveLength(3)
   })
 })

@@ -420,8 +420,19 @@ export function GradimentoWorkout({ si, no, nessuna, risposte }) {
   )
 }
 
-export function ElencoAssegnazioni({ children }) {
-  return <div className={`${CARD} px-1.5 py-1 divide-y divide-white/[.07]`}>{children}</div>
+// Oltre sei atleti l'elenco non si allunga più: scorre dentro la sua card, e
+// sopra compare la ricerca per nome (25/11/2026, richiesta del committente).
+// Una riga è 55,5px (avatar e due righe di testo, py-2, 1px di divisore), misurata
+// nel browser il 25/11/2026; più py-1 del contenitore. Se la riga cambia, cambia qui.
+export const MAX_RIGHE_ASSEGNAZIONI = 6
+
+export function ElencoAssegnazioni({ children, scorre = false }) {
+  return (
+    <div className={`${CARD} px-1.5 py-1 divide-y divide-white/[.07] ${
+      scorre ? 'max-h-[calc(6*55.5px+.5rem)] overflow-y-auto overscroll-contain' : ''}`}>
+      {children}
+    </div>
+  )
 }
 
 /**

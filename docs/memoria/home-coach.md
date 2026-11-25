@@ -397,6 +397,66 @@ riga dei giorni resta ferma (`sticky`) mentre si scorrono gli atleti — per que
 scorre di lato (`testaFerma` in `CalendarioProssimi`). Il foglio ordina SEMPRE con
 `primaGliScoperti`, anche sotto i 20: prima diceva «prima chi è da programmare» senza farlo.
 
+### Il calendario scorre dentro (25/11/2026)
+Richiesta del committente: «Prossimi giorni» non allunga più la Home. `CalendarioProssimi` riceve
+`righeVisibili` e diventa un riquadro che scorre in verticale (e di lato sul telefono), con la riga
+dei giorni ferma in alto e una sfumatura in fondo finché c'è altro sotto. Il tetto si **misura**
+sulla prima riga che resta fuori (`[data-riga]`), non si calcola.
+- **Telefono: 6 righe** (`RIGHE_CALENDARIO_TELEFONO`): 263px su 812, un terzo dello schermo, così
+  sopra e sotto resta Home da scorrere e il dito non resta intrappolato nel riquadro.
+- **Desktop: dall'altezza della finestra** (`righeCalendarioDesktop`, metà finestra, fra 8 e 15
+  righe; misurato nel demo: carta = 96 + 36·righe px). 1366×768 → 8 righe (carta ~58% della
+  finestra) · 1440×900 e 1536×864 → 9 · 1920×1080 → 12 (~55%) · 1920×1200 → 14 · 2560×1440 → 15 (~49%).
+  Segue il ridimensionamento della finestra.
+- **Il nome apre la scheda atleta** (`onAtleta` → `onApriAtleta`). Ogni uscita dal riquadro (nome,
+  cella, «+») annota pagina e riquadro con `ricordaCalendario` di `useRiepilogoCoach`, nella stessa
+  memoria della lista (`listaDaRiprendere`, `lista: null`): al ritorno (POP) tornano la pagina,
+  lo scorrimento verticale e quello di lato. Il foglio «Mostra tutti» non è cambiato: oltre 20
+  atleti resta lui (il riquadro ne disegna al massimo 20, `MASSIMO_CALENDARIO`).
+  Test: `RiepilogoCoachUI.test.jsx`, `HomeRiepilogo.test.jsx`, `riepilogoCoach.test.js`.
+- **Anche nel foglio «Mostra tutti»** (`FoglioCalendario`) il nome apre la scheda atleta. Ogni
+  uscita dal foglio (nome, cella, «+») annota con `ricordaFoglioCalendario` la ricerca scritta, lo
+  scorrimento verticale del corpo (`[data-corpo-foglio]`) e quello di lato; al ritorno (POP) la Home
+  riapre il foglio con `ripreso` (`foglioCalendarioRipreso`), sopra la Home dov'era.
+- **Il demo ha 50 atleti in più** (`af-01…af-50` in `demoSemi.js`, seme 27), senza ritratto, per
+  provare le liste lunghe.
+
+### «In allenamento oggi»: il foglio veloce (25/11/2026)
+Richiesta del committente: il tocco su una foto della fila non porta più dritto alla seduta, apre
+`FoglioSedutaOggi` (dal basso sul telefono, finestra al centro sul desktop): testata con foto e
+nome intero (→ scheda atleta), «Come sta oggi» 2×2 se ha risposto, la card dell'allenamento
+(categoria, stato, titolo senza codice, ~minuti e intensità, una riga per blocco/tratto/gruppo da
+`anteprimaSeduta` di `src/lib/anteprimaSeduta.js`, e se fatto RPE e nota) che porta alla scheda
+allenamento. La durata è `durataStimataReale`: niente minuti per Custom e Gara.
+- Il foglio si alimenta dai dati già in Home (`assegnazioni`, `comeStai`): nessuna lettura in più.
+- **Ritorno**: `vaiAtletaDaSeduta` / `vaiAllenamentoDaSeduta` di `useRiepilogoCoach` annotano in
+  `listaDaRiprendere.seduta` quale seduta, la fila (`scrollLeft` e quante card erano disegnate,
+  passate da `FilaOggi` col tocco) e lo scorrimento del corpo del foglio; al POP tornano tutti, più la Home.
+- **Anche la lista «Tutti»** apre il foglio veloce (`apreFoglio` nel contenuto del foglio: il tocco
+  non esce dalla Home e non annota niente). Il foglio veloce sta SOPRA la lista; uscendo da lì si
+  annotano tutti e due (`lista` col filtro + `seduta`) e al ritorno tornano entrambi.
+  🔴 Due fogli impilati: `useScorrimentoBloccato` non rifà il blocco se il body è già fisso —
+  rifarlo scriveva `top: -0px` (scrollY sotto un body fisso è 0) e la Home sotto saltava in cima.
+- **Il ridisegno (25/11/2026, «troppo spoglio, poco d'impatto»)**: il foglio usa le mosse che la
+  Home già possiede. Testata = la foto a tutta larghezza (come le card della fila) che sfuma nel
+  fondo `#18181b`, stato in alto, corsia e nome a 30px in basso, pillola «Scheda ›»: tutta la
+  testata è il bottone della scheda atleta. Senza foto: iniziali enormi in filigrana su un velo
+  del colore della corsia. Poi i numeri grandi (durata in min, intensità con 10 tacche nel colore
+  della corsia, RPE se fatto: celle che mancano non si mostrano), «Come sta oggi» a tacche 1–5
+  nella scala di `TONI_RISPOSTA` con la fascia (Bene / Così così / Non bene), i blocchi come
+  sequenza con puntini uniti da un filo (riscaldamento/recupero neutri, il resto nella corsia),
+  la nota in un pozzetto, e il bottone «Apri allenamento» pieno nel colore della corsia col suo
+  glow (unica CTA del foglio). I dettagli del blocco vanno a capo sotto il nome: sulla stessa
+  riga si mangiavano il nome.
+- **La foto (25/11/2026, «sul desktop viene troppo tagliata»)**: la testata è diventata il
+  componente condiviso `TestataFoto` (`DESIGN.md`, «La Testata con Foto»), che sceglie fra foto
+  *piena* e *ancorata* a destra secondo quanta foto resterebbe visibile (`modoFoto`), e senza foto
+  disegna il monogramma alto quanto la testata. La stessa testata ora apre la scheda atleta
+  (`scheda-atleta.md`, «9-testata-con-foto»).
+- ⚠️ Nel demo un cambio ai hook con la pagina aperta dà «Rendered more hooks» (aggiornamento a
+  caldo): si ricarica la pagina, non è un errore del codice.
+- Test: `anteprimaSeduta.test.js`, `HomeRiepilogo.test.jsx`.
+
 ## Chi si è appena iscritto non è «fermo» (11/11/2026)
 
 Segnalazione del committente: un coach appena registrato apriva la Home e trovava **sé stesso**

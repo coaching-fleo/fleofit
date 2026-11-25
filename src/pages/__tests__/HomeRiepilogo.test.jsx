@@ -121,7 +121,7 @@ describe('Home coach: Riepilogo o classica', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <AuthContext.Provider value={{ user: UTENTE, role: 'coach' }}>
-          <Routes><Route path="/" element={<Home />} /><Route path="/workout/:id" element={<Scheda />} /></Routes>
+          <Routes><Route path="/" element={<Home />} /><Route path="/workout/:id" element={<Scheda />} /><Route path="/athletes/:id" element={<Scheda />} /></Routes>
         </AuthContext.Provider>
       </MemoryRouter>
     )
@@ -151,6 +151,8 @@ describe('Home coach: Riepilogo o classica', () => {
     const foglio = await screen.findByRole('dialog', { name: 'In allenamento oggi' })
     await utente.click(within(foglio).getByRole('button', { name: /^Da fare/ }))
     await utente.click(within(foglio).getByText('Luca Rossi'))
+    // Dalla lista si passa dal foglio veloce (25/11/2026).
+    await utente.click(within(await screen.findByRole('dialog', { name: 'Oggi: Luca Rossi' })).getByRole('button', { name: 'Apri allenamento' }))
     await utente.click(await screen.findByRole('button', { name: 'Torna' }))
     const riaperto = await screen.findByRole('dialog', { name: 'In allenamento oggi' })
     expect(within(riaperto).getByRole('button', { name: /^Da fare/ })).toHaveAttribute('aria-pressed', 'true')
@@ -162,6 +164,7 @@ describe('Home coach: Riepilogo o classica', () => {
     montaConScheda()
     await utente.click(await screen.findByRole('button', { name: 'Tutti' }))
     await utente.click(within(await screen.findByRole('dialog')).getByText('Luca Rossi'))
+    await utente.click(within(await screen.findByRole('dialog', { name: 'Oggi: Luca Rossi' })).getByRole('button', { name: 'Apri allenamento' }))
     await utente.click(await screen.findByRole('button', { name: 'Home' }))
     await attendi('In allenamento oggi')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -175,17 +178,95 @@ describe('Home coach: Riepilogo o classica', () => {
     montaConScheda()
     await utente.click(await screen.findByRole('button', { name: 'Tutti' }))
     await utente.click(within(await screen.findByRole('dialog')).getByText('Luca Rossi'))
+    // Il foglio veloce sopra la lista non sposta la Home sotto (useScorrimentoBloccato).
+    expect(document.body.style.top).toBe('-640px')
+    await utente.click(within(await screen.findByRole('dialog', { name: 'Oggi: Luca Rossi' })).getByRole('button', { name: 'Apri allenamento' }))
     // Sulla scheda la finestra è in cima; il ritorno non deve ripartire da qui.
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
     await utente.click(await screen.findByRole('button', { name: 'Torna' }))
-    const riaperto = await screen.findByRole('dialog', { name: 'In allenamento oggi' })
+    const veloce = await screen.findByRole('dialog', { name: 'Oggi: Luca Rossi' })
+    const riaperto = screen.getByRole('dialog', { name: 'In allenamento oggi' })
     await waitFor(() => expect(document.body.style.top).toBe('-640px'))
-    // Chiuso il foglio, la pagina va lì.
+    // Chiusi i due fogli, la pagina va lì.
+    await utente.click(within(veloce).getByRole('button', { name: 'Chiudi' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Oggi: Luca Rossi' })).not.toBeInTheDocument())
+    expect(document.body.style.top).toBe('-640px')
     scrollTo.mockClear()
     await utente.click(within(riaperto).getByRole('button', { name: 'Chiudi' }))
     await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 640))
     delete window.scrollY
     scrollTo.mockRestore()
+  })
+
+  it('dal calendario il nome apre la scheda atleta, e tornando indietro Home e riquadro sono dov\'erano', async () => {
+    const utente = userEvent.setup()
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    Object.defineProperty(window, 'scrollY', { value: 900, configurable: true })
+    montaConScheda()
+    const nome = await screen.findByRole('button', { name: 'Scheda di Luca Rossi' })
+    const riquadro = document.querySelector('[data-calendario]')
+    riquadro.scrollTop = 72
+    riquadro.scrollLeft = 128
+    await utente.click(nome)
+    expect(await screen.findByRole('button', { name: 'Torna' })).toBeInTheDocument()
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
+    await utente.click(screen.getByRole('button', { name: 'Torna' }))
+    await screen.findByRole('button', { name: 'Scheda di Luca Rossi' })
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 900))
+    const ripreso = document.querySelector('[data-calendario]')
+    expect(ripreso.scrollTop).toBe(72)
+    expect(ripreso.scrollLeft).toBe(128)
+    delete window.scrollY
+    scrollTo.mockRestore()
+  })
+
+  it('dal foglio «Mostra tutti» il nome apre la scheda, e tornando il foglio si riapre con la ricerca e dov\'era', async () => {
+    const utente = userEvent.setup()
+    ctrl.atleti.valore = [atleta('a1', 'Luca'), ...Array.from({ length: 22 }, (_, i) => atleta(`x${i}`, `Nome${i}`))]
+    montaConScheda()
+    await utente.click(await screen.findByRole('button', { name: /^Mostra tutti/ }))
+    const foglio = await screen.findByRole('dialog', { name: 'Prossimi giorni' })
+    await utente.type(within(foglio).getByRole('searchbox', { name: 'Cerca per nome' }), 'Rossi')
+    document.querySelector('[data-corpo-foglio]').scrollTop = 64
+    await utente.click(within(foglio).getByRole('button', { name: 'Scheda di Luca Rossi' }))
+    await utente.click(await screen.findByRole('button', { name: 'Torna' }))
+    const riaperto = await screen.findByRole('dialog', { name: 'Prossimi giorni' })
+    expect(within(riaperto).getByRole('searchbox', { name: 'Cerca per nome' })).toHaveValue('Rossi')
+    await waitFor(() => expect(document.querySelector('[data-corpo-foglio]').scrollTop).toBe(64))
+  })
+
+  it('in «In allenamento oggi» la foto apre il foglio veloce; allenamento e atleta portano alle schede, e tornando il foglio è aperto', async () => {
+    const utente = userEvent.setup()
+    ctrl.assegnazioni.valore = [fatta('o1', 'a1', 0, { notes: '[RPE: 7/10]\nBuone sensazioni' })]
+    montaConScheda()
+    await utente.click(await screen.findByRole('button', { name: /^Luca, / }))
+    let foglio = await screen.findByRole('dialog', { name: 'Oggi: Luca Rossi' })
+    expect(within(foglio).getByText('Buone sensazioni')).toBeInTheDocument()
+    await utente.click(within(foglio).getByRole('button', { name: 'Apri allenamento' }))
+    expect(await screen.findByRole('button', { name: 'Torna' })).toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: 'Torna' }))
+    foglio = await screen.findByRole('dialog', { name: 'Oggi: Luca Rossi' })
+    await utente.click(within(foglio).getByRole('button', { name: 'Scheda di Luca Rossi' }))
+    await utente.click(await screen.findByRole('button', { name: 'Torna' }))
+    expect(await screen.findByRole('dialog', { name: 'Oggi: Luca Rossi' })).toBeInTheDocument()
+  })
+
+  it('anche dalla lista «Tutti» il tocco apre il foglio veloce, e tornando ci sono lista e foglio', async () => {
+    const utente = userEvent.setup()
+    ctrl.assegnazioni.valore = [riga('o1', 'a1', 0), fatta('o2', 'a2', 0)]
+    montaConScheda()
+    await utente.click(await screen.findByRole('button', { name: 'Tutti' }))
+    const lista = await screen.findByRole('dialog', { name: 'In allenamento oggi' })
+    await utente.click(within(lista).getByRole('button', { name: /^Da fare/ }))
+    await utente.click(within(lista).getByText('Luca Rossi'))
+    // Non si è usciti dalla Home: il foglio veloce sta sopra la lista.
+    const veloce = await screen.findByRole('dialog', { name: 'Oggi: Luca Rossi' })
+    expect(screen.queryByRole('button', { name: 'Torna' })).not.toBeInTheDocument()
+    await utente.click(within(veloce).getByRole('button', { name: 'Scheda di Luca Rossi' }))
+    await utente.click(await screen.findByRole('button', { name: 'Torna' }))
+    expect(await screen.findByRole('dialog', { name: 'Oggi: Luca Rossi' })).toBeInTheDocument()
+    const riaperta = screen.getByRole('dialog', { name: 'In allenamento oggi' })
+    expect(within(riaperta).getByRole('button', { name: /^Da fare/ })).toHaveAttribute('aria-pressed', 'true')
   })
 })
 

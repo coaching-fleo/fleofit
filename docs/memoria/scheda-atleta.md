@@ -294,3 +294,56 @@ solo dalle schermate di Team e Atleti.
 6. Test: `src/lib/__tests__/teamDiAtleta.test.js` (logica) e
    `src/pages/__tests__/AthleteDetailTeamGruppi.test.jsx` (pagina, interruttore compreso), visti
    fallire rompendo il codice. Nessuna prova sul telefono: la fa il committente.
+
+## 9-testata-con-foto. La testata della scheda è la foto (25/11/2026)
+
+Richiesta del committente: lo stile della testata del foglio veloce di «In allenamento oggi»
+(`docs/memoria/home-coach.md`) «mi piace moltissimo», va anche sulla scheda atleta.
+
+### Cosa c'è ora
+- `TestataAtleta` (in `SchedaAtletaUI.jsx`) sostituisce `IdentitaAtleta` e, qui, la
+  `TestataScheda` (che resta nella scheda workout): monta `TestataFoto` (`src/components/TestataFoto.jsx`), la stessa del foglio.
+  La regola grafica è in `DESIGN.md`, «La Testata con Foto».
+- **Telefono**: da bordo a bordo, passa sotto la barra di stato (in `AthleteDetail` il wrapper
+  `-mx-4 -mt-[calc(env(safe-area-inset-top)+1rem)]`), alta 312px più la safe area. Indietro e
+  menu «…» sono bottoni di vetro sulla foto (`BOTTONE_SU_FOTO`).
+- **Desktop**: sta nella colonna, alta 300px con raggio 28px; i bottoni della scheda
+  (`azioniDesktop`) stanno in basso a destra, sulla foto, in vetro (`VETRO_FOTO`).
+- **Il ritaglio**: la foto è *piena* o *ancorata* a seconda di quanto ne resterebbe visibile
+  (`modoFoto` di `src/lib/testataFoto.js`): sul desktop una foto verticale a tutta larghezza
+  diventava una fascia con naso e bocca — era la segnalazione del committente.
+- **Senza foto**: il monogramma giallo (iniziali alte il 78% della testata) e la pillola
+  «Aggiungi foto», che apre la modale di modifica atleta (lì c'è il caricamento della foto).
+  Una foto rotta (`onErroreFoto`) torna al monogramma.
+
+### ⚠️ Da sapere
+- Il nome resta un `<h1>`: i test della scheda lo cercano lì.
+- `data-modo-foto` sulla testata dice `piena` / `ancorata` / `monogramma`: serve alle prove.
+- Nel demo `af-01…af-50` sono senza ritratto: il posto dove guardare il monogramma
+  (es. `/athletes/af-10`).
+
+## 9-scheda-ridisegnata. Tutta la scheda nello stile del foglio veloce (25/11/2026)
+
+Il committente, dopo la testata: «non hai applicato lo stile… voglio proprio cambiare tutta la
+scheda». Riferimento: Sara Villa nel demo (`/athletes/at-sara`: gara, Garmin, scarpe, team,
+gruppi, coach). Ordine chiesto: obiettivo, dati analitici, oggi, calendario; il resto deciso da
+Claude, «lo cambiamo insieme». Regola grafica in `DESIGN.md`, «La scheda atleta».
+
+### Cosa c'è ora
+- `CardObiettivo` (al posto di `RigaObiettivo`), `CardAnalisi` (al posto di `CardAndamento` +
+  le due `CellaBento` + `Sparkline`), `TitoloSezione`, `RigaProssimo`, `SUPERFICIE`,
+  `GRUPPO_RIGHE` in `SchedaAtletaUI.jsx`. `NumeriSeduta` e `SequenzaSeduta` in
+  `components/SedutaUI.jsx`, condivisi col foglio veloce della Home.
+- La card di oggi (`TodayAthleteWorkoutCard`) mostra numeri e blocchi da `anteprimaSeduta`.
+- Il recupero Garmin sta nella sezione «Come sta andando», sotto i numeri.
+- Scarpe, team, gruppi e coach non stanno più sotto la foto: un gruppo solo più in basso.
+
+### ⚠️ Da sapere
+- 🔴 **I prossimi allenamenti non hanno più nota, nota vocale e «segna fatto» nella lista**: sono
+  righe che aprono la scheda dell'allenamento, dove ci sono tutte e tre. Resta il cestino
+  (coach, o atleta sui suoi liberi). Lo storico invece tiene `WorkoutEntryCard` com'era.
+  Il test della nota su un allenamento futuro dal profilo è stato tolto per questo
+  (`AthleteDetailNotaCompletamento.test.jsx`).
+- La sezione dei prossimi si chiama `region` «In programma», non «Calendario»: un test controlla
+  che l'atleta sul proprio profilo NON abbia una regione «Calendario».
+- Il titolo «Come sta andando» è un `<h2>` con «30 giorni» a parte (i test lo cercano così).

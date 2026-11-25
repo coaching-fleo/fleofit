@@ -862,3 +862,15 @@ aspetta i dati Garmin. Prima questi tre volevano `role === 'athlete'`. **Restano
 gli avvisi al coach (`coach_notification` di completato e nota, `avvisaCoachSpostamento`): arriverebbero
 a sé stesso. Test: `WorkoutDetailGarmin.test.jsx` (il link per il coach) e
 `WorkoutDetailNotaCompletamento.test.jsx` (nessun `send-reminders` quando il coach chiude il suo).
+
+## «Assegnato a»: sei righe, poi scorre, con la ricerca (25/11/2026)
+
+Richiesta del committente: con molti atleti l'elenco «Assegnato a» (solo coach) era lungo quanto la
+scheda. Oltre `MAX_RIGHE_ASSEGNAZIONI` (6, in `WorkoutDetailUI.jsx`) l'`ElencoAssegnazioni` riceve
+`scorre` e si ferma a sei righe con lo scorrimento dentro la card, e sopra compare `CampoRicerca`
+(«Cerca fra gli assegnati»), con le regole di `filtraPerNome` (anche a parole invertite) via
+`filtraAssegnazioniPerNome` di `src/lib/rigaAtleta.js`. Fino a sei la ricerca non c'è e un termine
+rimasto scritto non filtra niente. Ricerca senza risultati: «Nessun atleta con questo nome.».
+⚠️ L'altezza massima è `6 × 55,5px` (la riga misurata nel browser, avatar + due righe di testo):
+con 51px, la prima stima, se ne vedevano cinque e mezzo. Se la riga cambia, va rimisurata.
+Test: `WorkoutDetailAssegnati.test.jsx`, `rigaAtleta.test.js`.

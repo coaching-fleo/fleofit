@@ -9,7 +9,7 @@ import { supabase } from '../supabaseClient'
 import { leggiGiornate, oggiItalia } from '../lib/recuperoGarmin'
 import { useScarpaCompletamento } from '../useScarpaCompletamento'
 import { useFunzione } from '../useFunzione'
-import { Layers, User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, Timer, Flame, FolderArchive, Copy, Activity, CalendarDays, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
+import { ChevronRight, Layers, User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, FolderArchive, Copy, Activity, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
 import { vibraSuccesso } from '../lib/aptica'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -20,7 +20,12 @@ import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { generaTitolo, titoloOppureGenerato, titoliDelGiorno } from '../lib/workoutTitle'
-import { parseNotesAndRpe, formatNotesWithRpe } from '../lib/rpe'
+import { parseNotesAndRpe, formatNotesWithRpe, rpeDichiarato } from '../lib/rpe'
+import { categoriaDi, corsia } from '../lib/categorie'
+import { coloreCategoria, conVelo } from '../lib/colori'
+import { separaCodice } from '../lib/codiceWorkout'
+import { anteprimaSeduta } from '../lib/anteprimaSeduta'
+import { NumeriSeduta, SequenzaSeduta } from '../components/SedutaUI'
 import { gradimentoDi } from '../lib/gradimento'
 import { isVoiceNoteValid } from '../lib/notaVocale'
 import { parseNotePausa, formatNotePausa } from '../lib/pausa'
@@ -31,11 +36,11 @@ import { previsioneWorkout } from '../lib/previsione'
 import { RigaAvviso, AvvisoEsteso } from '../components/PrevisioneUI'
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
          RIGA, TESTO_MODALE, TITOLO_MODALE, TONO_BOLLA } from '../lib/stiliCard'
-import { TestataScheda, MenuScheda, IntestazioneSezione } from '../components/WorkoutDetailUI'
+import { MenuScheda } from '../components/WorkoutDetailUI'
 import { BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import {
-  IdentitaAtleta, IconaSocial, CardAndamento, CellaBento, Sparkline,
-  BarraFasce, RigaObiettivo, RigaApribile, RigaAzione, PillolaPausa, RigaCoach, RigaScarpeCoach, RigaTeamCoach, RigaGruppiCoach,
+  TestataAtleta, IconaSocial, CardAnalisi, CardObiettivo, TitoloSezione, RigaProssimo, SUPERFICIE, GRUPPO_RIGHE,
+  RigaApribile, RigaAzione, PillolaPausa, RigaCoach, RigaScarpeCoach, RigaTeamCoach, RigaGruppiCoach,
 } from '../components/SchedaAtletaUI'
 import FoglioCoach from '../components/FoglioCoach'
 import CalendarioAtleta from '../components/CalendarioAtleta'
@@ -701,7 +706,7 @@ export default function AthleteDetail() {
   // confronta con la propria settimana, «+24%» va prima ritradotto in minuti.
   const delta = andamento.volume.delta
   const testoDelta = delta === 0 ? 'come la settimana prima'
-    : `${delta > 0 ? '+' : '−'}${Math.abs(delta)} sulla settimana prima`
+    : `${delta > 0 ? '+' : '−'}${Math.abs(delta)} sulla sett. prima`
   const coloreDelta = delta === 0 ? 'text-muted' : delta > 0 ? 'text-green-500' : 'text-orange-400'
 
   // I tre bottoni che stavano in testata. Il nome dell'atleta è nell'etichetta
@@ -727,25 +732,41 @@ export default function AthleteDetail() {
 
   // I pezzi della scheda, scritti una volta: il telefono li impila, il
   // desktop li mette su due colonne. L'ordine sul telefono è quello di sempre.
-  const pTestata = (
-    <>
-      {/* La testata porta un menu e basta. Esporta, Modifica e Pausa erano tre
-          bottoni dello stesso peso in cima alla pagina: tre comandi che si
-          usano una volta, messi sopra il contenuto che si legge ogni volta.
-          ⚠️ Nessun «indietro» sul proprio profilo: `/profile` è una voce della
-          navbar, non una pagina in cui si è entrati da qualche parte. */}
-      <TestataScheda
-        onIndietro={role !== 'athlete' && !isOwnProfile ? indietro : null}
-        onMenu={() => setMenuAperto(true)} />
-    </>
-  )
+  // Sul desktop i bottoni della scheda stanno sulla foto, in basso a destra:
+  // vetro i secondari, giallo pieno l'unico primario (Assegna).
+  const VETRO_FOTO = 'inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-white/[.12] backdrop-blur-md border border-white/[.14] text-white text-sm font-bold hover:bg-white/[.2] transition'
+  const azioniDesktop = desktop && !isOwnProfile ? (
+    <div className="flex items-center gap-2.5">
+      {conTeamGruppi && (
+        <button type="button" onClick={() => setFoglioTeamGruppi(true)} className={VETRO_FOTO}>
+          <Layers size={17} aria-hidden="true" />Team e gruppi
+        </button>
+      )}
+      <button type="button" onClick={() => navigate(`/create?athlete_id=${id}`)} className={VETRO_FOTO}>
+        <Plus size={17} aria-hidden="true" />Crea workout
+      </button>
+      <button type="button" onClick={() => setAssignModalOpen(true)}
+        className="inline-flex items-center gap-2 h-11 px-[18px] rounded-xl bg-brand text-black text-sm font-extrabold hover:brightness-110 shadow-lg shadow-brand/20">
+        <Dumbbell size={17} aria-hidden="true" />Assegna
+      </button>
+    </div>
+  ) : null
   const pIdentita = (
     <>
       {/* 🔴 La pillola «In pausa» è nascosta all'atleta, e non è pudore: questa
           pagina è anche `/profile`. La pausa è uno stato interno della
           programmazione del coach, e dirla con una pillola arancione invece
           che parlandoci è il modo sbagliato (CLAUDE.md §9-decies). */}
-      <IdentitaAtleta
+      {/* La testata con la foto (25/11/2026, TestataAtleta): sul telefono da bordo a
+          bordo, sotto la barra di stato — il margine negativo annulla il padding
+          della pagina. Indietro e menu sono sulla foto; sul desktop anche i bottoni. */}
+      <div className={desktop ? '' : '-mx-4 -mt-[calc(env(safe-area-inset-top)+1rem)]'}>
+      <TestataAtleta
+        desktop={desktop}
+        onIndietro={role !== 'athlete' && !isOwnProfile ? indietro : null}
+        onMenu={() => setMenuAperto(true)}
+        onAggiungiFoto={() => setShowEditModal(true)}
+        azioni={azioniDesktop}
         foto={athlete.photo_url}
         nome={`${athlete.name} ${athlete.surname || ''}`.trim()}
         onErroreFoto={() => setAthlete({ ...athlete, photo_url: null })}
@@ -769,69 +790,41 @@ export default function AthleteDetail() {
             ? format(parseISO(pausaAtleta.dal), parseISO(pausaAtleta.dal).getFullYear() === new Date().getFullYear() ? 'd MMM' : 'd MMM yyyy', { locale: it })
             : null} />
         ) : null}
-        nota={pausaAtleta.testo} />
-      {guardaScarpe && scarpeAtleta && <RigaScarpeCoach scarpe={scarpeAtleta} />}
-      {guardaScarpe && teamAtleta && (
-        <RigaTeamCoach team={teamAtleta}
-          onApri={() => navigate(teamAtleta.length === 1 ? `/team/${teamAtleta[0].id}` : '/team')} />
-      )}
-      {guardaScarpe && gruppiCoach && (
-        <RigaGruppiCoach gruppi={gruppiDi(gruppiCoach, id)} onApri={() => setFoglioTeamGruppi(true)} />
-      )}
-      {eAdmin(role) && !isOwnProfile && staffCoach && (
-        <div className="mt-3">
-          <RigaCoach
-            nome={coachDi.length === 0 ? 'nessuno' : coachDi.map(c => {
-              const m = staffCoach.find(x => x.user_id === c)
-              return m ? (m.nome || m.email) : 'sconosciuto'
-            }).join(', ')}
-            onClick={() => setFoglioCoachAperto(true)} />
-        </div>
-      )}
+      />
+      </div>
+      {/* ⚠️ È `pausaAtleta.testo`, mai `athlete.notes` grezzo: il marcatore
+          `[PAUSA: …]` è uno stato, e mostrarlo qui lo farebbe leggere come
+          testo scritto dal coach (CLAUDE.md §9-decies). */}
+      {pausaAtleta.testo && <p className="text-sm text-muted whitespace-pre-wrap text-pretty">{pausaAtleta.testo}</p>}
     </>
   )
+  // Il ridisegno (25/11/2026, docs/memoria/scheda-atleta.md «9-scheda-ridisegnata»):
+  // i dati in una sezione sola — tre numeri grandi, il carico, la frase — e il
+  // recupero dall'orologio subito sotto, dentro la stessa sezione.
   const pAndamento = (
-    <>
-      {/* L'EROE — «come sta andando».
-          Era la terza tab, dietro due tocchi, spezzata in quattro grafici che
-          non si parlavano: aderenza, volume, carico, RPE. Sono la stessa
-          domanda, e la risposta si legge solo mettendoli sulla stessa riga. */}
-      <CardAndamento
-        titolo={`${isOwnProfile ? 'Come stai andando' : 'Come sta andando'} · ${GIORNI_ADERENZA} giorni`}
-        percentuale={andamento.aderenza.percentuale}
-        fatti={andamento.aderenza.fatti}
-        assegnati={andamento.aderenza.assegnati}
-        settimane={andamento.settimane}
-        delta={andamento.carico.delta}
-        frase={andamento.frase.testo}
-        dettaglio={andamento.frase.dettaglio} />
-    </>
+    <CardAnalisi
+      aderenza={andamento.aderenza}
+      volume={{ minuti: andamento.volume.minuti, nota: testoDelta, notaColore: coloreDelta }}
+      sforzo={{
+        valore: andamento.sforzo.medio != null ? String(andamento.sforzo.medio).replace('.', ',') : '—',
+        unita: andamento.sforzo.medio != null ? 'RPE' : null,
+        distribuzione: andamento.sforzo.distribuzione,
+        nota: andamento.sforzo.quanti > 0 ? `${andamento.sforzo.duri} su ${andamento.sforzo.quanti} da 7 in su` : 'nessun RPE dichiarato',
+      }}
+      settimane={andamento.settimane}
+      delta={andamento.carico.delta}
+      frase={andamento.frase.testo}
+      dettaglio={andamento.frase.dettaglio} />
   )
   const pRecupero = giornate.length > 0 && (
     <Suspense fallback={null}><CardRecupero righe={giornate} /></Suspense>
   )
-  const pBento = (
-    <>
-      <div className="grid grid-cols-[1.05fr_1fr] gap-3">
-        <CellaBento
-          etichetta="Volume" valore={andamento.volume.minuti} unita="min"
-          nota={testoDelta} notaColore={coloreDelta} coda="4 settimane">
-          <Sparkline valori={andamento.volume.barre} />
-        </CellaBento>
-        <CellaBento
-          etichetta="Sforzo"
-          valore={andamento.sforzo.medio != null ? String(andamento.sforzo.medio).replace('.', ',') : '—'}
-          unita={andamento.sforzo.medio != null ? 'RPE' : null}
-          nota={andamento.sforzo.medio != null
-            ? `medio · ${andamento.sforzo.quanti} workout`
-            : 'nessun RPE dichiarato'}
-          coda={andamento.sforzo.quanti > 0
-            ? `${andamento.sforzo.duri} su ${andamento.sforzo.quanti} da 7 in su`
-            : null}>
-          <BarraFasce distribuzione={andamento.sforzo.distribuzione} />
-        </CellaBento>
-      </div>
-    </>
+  const pDati = (
+    <section className="flex flex-col gap-3" aria-label="Dati">
+      <TitoloSezione titolo={isOwnProfile ? 'Come stai andando' : 'Come sta andando'} dettaglio={`${GIORNI_ADERENZA} giorni`} />
+      {pAndamento}
+      {pRecupero}
+    </section>
   )
   const pNote = (
     <>
@@ -851,18 +844,13 @@ export default function AthleteDetail() {
       )}
     </>
   )
-  const pObiettivo = (
-    <>
-      {/* Il banner del prossimo obiettivo era alto quanto una card, con un
-          numero da 30px: teneva il peso di un eroe per un dato che cambia una
-          volta al giorno. È una riga, e resta cliccabile com'era. */}
-      {nextEvent && (
-        <RigaObiettivo
-          titolo={`${nextEvent.workouts.title} · ${format(parseISO(nextEvent.completed_date), 'd MMM', { locale: it })}`}
-          giorni={countdownDays}
-          onClick={() => navigate(`/workout/${nextEvent.workouts.id}?athlete_id=${id}`)} />
-      )}
-    </>
+  // L'obiettivo: la prima cosa sotto la foto, col numero più grande della pagina.
+  const pObiettivo = nextEvent && (
+    <CardObiettivo
+      titolo={separaCodice(nextEvent.workouts.title).nome || nextEvent.workouts.title}
+      data={format(parseISO(nextEvent.completed_date), 'EEEE d MMMM', { locale: it })}
+      giorni={countdownDays}
+      onClick={() => navigate(`/workout/${nextEvent.workouts.id}?athlete_id=${id}`)} />
   )
   const pScarpe = scarpe && (
     <Suspense fallback={null}><CardProfiloScarpe scarpe={scarpe} /></Suspense>
@@ -870,8 +858,8 @@ export default function AthleteDetail() {
   const pOggi = (
     <>
       {todayWorkoutsList.length > 0 && (
-        <div className="flex flex-col gap-2.5">
-          <IntestazioneSezione etichetta="Oggi" />
+        <section className="flex flex-col gap-3" aria-label="Oggi">
+          <TitoloSezione titolo="Oggi" dettaglio={format(new Date(), 'EEEE d MMMM', { locale: it })} />
           {todayWorkoutsList.map(entry => (
             <TodayAthleteWorkoutCard
               key={entry.id}
@@ -887,7 +875,7 @@ export default function AthleteDetail() {
               onEditAutonomous={openEditAutonomous}
             />
           ))}
-        </div>
+        </section>
       )}
     </>
   )
@@ -898,23 +886,23 @@ export default function AthleteDetail() {
           vorrebbe dire che il coach non può più vedere cos'ha assegnato senza
           aprire il calendario, e l'atleta non sa cosa lo aspetta domani. */}
       {upcomingWorkoutsList.length > 0 && (
-        <div className="flex flex-col gap-2.5">
-          <IntestazioneSezione etichetta="Prossimi allenamenti" dettaglio={`${upcomingWorkoutsList.length}`} />
-          {upcomingWorkoutsList.map(entry => (
-            <WorkoutEntryCard
-              key={entry.id}
-              entry={entry}
-              onToggleStatus={toggleWorkoutStatus}
-              onUpdateNote={updateWorkoutNote}
-              onRemove={requestRemoveWorkout}
-              navigate={navigate}
-              athleteId={id}
-              onUploadVoiceNote={uploadVoiceNote}
-              onDeleteVoiceNote={deleteVoiceNote}
-              role={role}
-            />
-          ))}
-        </div>
+        <ul className={`${SUPERFICIE} p-1.5 flex flex-col`} aria-label="Prossimi allenamenti in programma">
+          {upcomingWorkoutsList.map(entry => {
+            const cat = categoriaDi(entry.workouts?.sections)
+            const giorno = parseISO(entry.completed_date)
+            const auto = entry.workouts?.sections?.isAutonomous === true
+            return (
+              <RigaProssimo key={entry.id}
+                giorno={format(giorno, 'd')} mese={format(giorno, 'MMM', { locale: it })}
+                settimana={format(giorno, 'EEE', { locale: it })}
+                titolo={separaCodice(entry.workouts.title).nome || entry.workouts.title}
+                categoria={corsia(cat).etichetta} colore={coloreCategoria(cat)}
+                dettaglio={entry.status === 'completed' ? 'fatto' : null}
+                onApri={() => navigate(`/workout/${entry.workouts.id}?athlete_id=${id}`)}
+                onRimuovi={role !== 'athlete' || auto ? () => requestRemoveWorkout(entry.id) : null} />
+            )
+          })}
+        </ul>
       )}
     </>
   )
@@ -930,6 +918,35 @@ export default function AthleteDetail() {
       leggiLibere={leggiLibere}
       onAbbina={abbinaAttivita}
     />
+  )
+  const pPiano = (upcomingWorkoutsList.length > 0 || pCalendario) && (
+    <section className="flex flex-col gap-3" aria-label="In programma">
+      <TitoloSezione titolo="Prossimi allenamenti" dettaglio={upcomingWorkoutsList.length || null} />
+      {pProssimi}
+      {pCalendario}
+    </section>
+  )
+  // Il resto (25/11/2026): scarpe, team, gruppi e coach in un gruppo solo,
+  // come le impostazioni di iOS, invece di quattro card una sotto l'altra.
+  const pProfilo = (
+    <div className={GRUPPO_RIGHE} aria-label="Profilo">
+      {guardaScarpe && scarpeAtleta && <RigaScarpeCoach scarpe={scarpeAtleta} />}
+      {guardaScarpe && teamAtleta && (
+        <RigaTeamCoach team={teamAtleta}
+          onApri={() => navigate(teamAtleta.length === 1 ? `/team/${teamAtleta[0].id}` : '/team')} />
+      )}
+      {guardaScarpe && gruppiCoach && (
+        <RigaGruppiCoach gruppi={gruppiDi(gruppiCoach, id)} onApri={() => setFoglioTeamGruppi(true)} />
+      )}
+      {eAdmin(role) && !isOwnProfile && staffCoach && (
+          <RigaCoach
+            nome={coachDi.length === 0 ? 'nessuno' : coachDi.map(c => {
+              const m = staffCoach.find(x => x.user_id === c)
+              return m ? (m.nome || m.email) : 'sconosciuto'
+            }).join(', ')}
+            onClick={() => setFoglioCoachAperto(true)} />
+      )}
+    </div>
   )
   const pStoricoRecord = (
     <>
@@ -1021,63 +1038,41 @@ export default function AthleteDetail() {
   )
 
   return (
-    <div className={`${desktop ? 'px-10 max-w-[1320px] pt-6 gap-6' : 'px-4 max-w-2xl gap-[14px] pt-[calc(env(safe-area-inset-top)+1rem)]'} mx-auto min-h-[100dvh] flex flex-col page-transition
+    <div className={`${desktop ? 'px-10 max-w-[1320px] pt-6 gap-6' : 'px-4 max-w-2xl gap-7 pt-[calc(env(safe-area-inset-top)+1rem)]'} mx-auto min-h-[100dvh] flex flex-col page-transition
                     pb-[var(--altezza-navbar)]
                     bg-[radial-gradient(120%_46%_at_50%_0%,#17160f_0%,#0B0B0B_54%)]`}>
 
+      {/* L'ordine è quello del committente (25/11/2026): obiettivo, dati, oggi,
+          calendario; poi il resto. Sul desktop i dati e il calendario a sinistra,
+          obiettivo e oggi a destra, sempre in vista. */}
       {desktop ? (
         <>
-          {pTestata}
-          <div className="flex items-start justify-between gap-6">
-            <div className="flex-1 min-w-0">{pIdentita}</div>
-            {!isOwnProfile && (
-              <div className="shrink-0 flex items-center gap-2.5 pt-2">
-                {conTeamGruppi && (
-                  <button type="button" onClick={() => setFoglioTeamGruppi(true)}
-                    className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-[#2a2a2a] border border-[#383838] text-white text-sm font-bold hover:border-[#555]">
-                    <Layers size={17} aria-hidden="true" />Team e gruppi
-                  </button>
-                )}
-                <button type="button" onClick={() => navigate(`/create?athlete_id=${id}`)}
-                  className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-[#2a2a2a] border border-[#383838] text-white text-sm font-bold hover:border-[#555]">
-                  <Plus size={17} aria-hidden="true" />Crea workout
-                </button>
-                <button type="button" onClick={() => setAssignModalOpen(true)}
-                  className="inline-flex items-center gap-2 h-11 px-[18px] rounded-xl bg-brand text-black text-sm font-extrabold hover:brightness-110">
-                  <Dumbbell size={17} aria-hidden="true" />Assegna
-                </button>
-              </div>
-            )}
-          </div>
+          {pIdentita}
           <div className="grid grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] gap-6 items-start">
-            <div className="flex flex-col gap-[14px] min-w-0">
-              {pAndamento}
-              {pRecupero}
-              {pBento}
+            <div className="flex flex-col gap-7 min-w-0">
+              {pDati}
+              {pPiano}
               {pNote}
-              {pCalendario}
               {pStoricoRecord}
             </div>
-            <div className="flex flex-col gap-[14px] min-w-0 sticky top-6">
+            <div className="flex flex-col gap-7 min-w-0">
               {pObiettivo}
               {pOggi}
-              {pProssimi}
+              {pProfilo}
+              {pScarpe}
             </div>
           </div>
         </>
       ) : (
         <>
-          {pTestata}
           {pIdentita}
-          {pAndamento}
-          {pRecupero}
-          {pBento}
-          {pNote}
           {pObiettivo}
+          {pDati}
           {pOggi}
-          {pCalendario}
-          {pProssimi}
+          {pPiano}
+          {pProfilo}
           {pScarpe}
+          {pNote}
           {pStoricoRecord}
           {pBarra}
         </>
@@ -1399,15 +1394,22 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
       noteRef.current.style.height = `${noteRef.current.scrollHeight}px`
     }
   }, [note])
-  
+
   const hasChanges = note !== parsed.text
 
-  const rawCat = entry.workouts?.sections?.category || (entry.workouts?.sections?.steps ? 'Running' : 'Hyrox')
-  const isAuto = entry.workouts?.sections?.isAutonomous === true || rawCat === 'Autonomo'
-  const isEvent = rawCat === 'Event' || entry.workouts?.sections?.isEvent === true
-  const isCustom = rawCat === 'Custom' || isAuto
-  const category = isEvent ? 'Event' : (isCustom ? 'Custom' : rawCat)
-  const isRun = category === 'Running'
+  // Il ridisegno (25/11/2026): la card di oggi parla come il foglio veloce della
+  // Home — corsia e stato, il titolo grande, i numeri, i blocchi in sequenza.
+  const sections = entry.workouts?.sections
+  const category = categoriaDi(sections)
+  const isAuto = sections?.isAutonomous === true || sections?.category === 'Autonomo'
+  const isEvent = category === 'Event'
+  const c = corsia(category)
+  const colore = coloreCategoria(category)
+  const fatto = entry.status === 'completed'
+  const { nome: titolo } = separaCodice(entry.workouts?.title || '')
+  const anteprima = useMemo(() => anteprimaSeduta(sections), [sections])
+  const rpe = fatto ? rpeDichiarato(entry.notes) : null
+  const apri = () => navigate(`/workout/${entry.workouts.id}?athlete_id=${athleteId}`)
 
   const handleSaveNote = async () => {
     setSaving(true)
@@ -1417,107 +1419,90 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
   }
 
   return (
-    <div 
-      className={`rounded-3xl p-5 transition border relative overflow-hidden group ${
-        entry.status === 'completed'
-          ? 'bg-green-500/10 border-green-500/30'
-          : (isEvent ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-white/50' : isRun ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-running/50' : isCustom ? 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-custom/50' : 'bg-gradient-to-br from-[#2a2a2a] to-[#1e1e1e] border-brand/50')
-      }`}
-    >
-      <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-        {entry.status === 'completed' ? <CheckCircle2 size={80} className="text-green-500 -rotate-12" /> : (isEvent ? <CalendarDays size={80} className="text-white/30 -rotate-12" /> : isRun ? <Timer size={80} className="text-running -rotate-12" /> : isCustom ? <Dumbbell size={80} className="text-custom -rotate-12" /> : <Flame size={80} className="text-brand -rotate-12" />)}
-      </div>
-      <div className="relative z-10 flex flex-col gap-4">
-        <div className="flex justify-between items-start gap-2">
-           <div className="flex items-center gap-4 cursor-pointer flex-1 min-w-0" onClick={() => navigate(`/workout/${entry.workouts.id}?athlete_id=${athleteId}`)}>
-             <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg shrink-0 ${
-               entry.status === 'completed' ? 'bg-green-500 text-black shadow-green-500/20' : (isEvent ? 'bg-white text-black shadow-white/20' : isRun ? 'bg-running text-white shadow-running/20' : isCustom ? 'bg-custom text-white shadow-custom/20' : 'bg-brand text-black shadow-brand/20')
-             }`}>
-               {entry.status === 'completed' ? <CheckCircle2 size={24} /> : (isEvent ? <CalendarDays size={24} /> : isRun ? <Timer size={24} /> : <Dumbbell size={24} />)}
-             </div>
-             <div className="min-w-0">
-               <h3 className="text-white font-bold text-xl leading-tight group-hover:underline underline-offset-4 truncate">{entry.workouts.title}</h3>
-               <p className={`text-sm font-medium mt-1 ${entry.status === 'completed' ? 'text-green-400' : (isEvent ? 'text-gray-300' : isRun ? 'text-running' : isCustom ? 'text-custom' : 'text-brand')}`}>
-                 {entry.status === 'completed' ? 'Completato! 🎉' : (isEvent ? 'In programma oggi 🏁' : 'Da fare oggi 🔥')}
-               </p>
-             </div>
-           </div>
-           
-           <div className="flex flex-col items-end gap-2 shrink-0">
-             <button 
-               onClick={() => onToggleStatus(entry.id, entry.status, entry.completed_date)}
-               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition border bg-[#111]/50 backdrop-blur-md ${
-                 entry.status === 'completed' 
-                   ? 'border-green-500 text-green-500 hover:bg-green-500/20' 
-                     : `border-[#333] text-gray-300 ${isEvent ? 'hover:border-white hover:text-white' : isRun ? 'hover:border-running hover:text-running' : isCustom ? 'hover:border-custom hover:text-custom' : 'hover:border-brand hover:text-brand'}`
-               }`}
-             >
-               {entry.status === 'completed' ? <CheckCircle2 size={14} /> : <Circle size={14} />} {entry.status === 'completed' ? 'Fatto' : 'Segna fatto'}
-             </button>
-             
-             {(role !== 'athlete' || isAuto) && (
-               <div className="flex items-center gap-1 mt-1">
-                 {role === 'athlete' && isAuto && onEditAutonomous && (
-                   <button aria-label="Modifica l'allenamento libero" 
-                     onClick={(e) => { e.stopPropagation(); onEditAutonomous(entry); }}
-                     className="text-muted hover:text-brand transition p-1"
-                     title="Modifica allenamento libero"
-                   >
-                     <Edit size={16} />
-                   </button>
-                 )}
-                 <button aria-label="Elimina l'allenamento" 
-                   onClick={(e) => { e.stopPropagation(); onRemove(entry.id); }}
-                   className="text-muted hover:text-red-500 transition p-1"
-                   title={isAuto ? "Elimina allenamento libero" : "Rimuovi assegnazione"}
-                 >
-                   <Trash2 size={16} />
-                 </button>
-               </div>
-             )}
-           </div>
+    <article className={`${SUPERFICIE} relative overflow-hidden isolate`}>
+      {/* Il velo della corsia in testa: dice la categoria prima di leggerla. */}
+      <span className="absolute inset-x-0 top-0 h-40 -z-10" aria-hidden="true"
+        style={{ background: `radial-gradient(100% 100% at 0% 0%, ${conVelo(fatto ? '#22c55e' : colore, 0.16)}, transparent 70%)` }} />
+      <div className="p-5 flex flex-col gap-5">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 text-[13px] font-extrabold text-white/85">
+            <i className={`w-2 h-2 rounded-full ${c.dot}`} style={{ boxShadow: `0 0 8px ${conVelo(colore, 0.6)}` }} aria-hidden="true" />{c.etichetta}
+          </span>
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${fatto ? 'bg-green-500 text-black' : 'bg-white/[.08] text-white'}`}>
+            {fatto ? 'Completato! 🎉' : (isEvent ? 'In programma oggi 🏁' : 'Da fare oggi 🔥')}
+          </span>
+          <span className="flex-1" />
+          {(role !== 'athlete' || isAuto) && (<>
+            {role === 'athlete' && isAuto && onEditAutonomous && (
+              <button aria-label="Modifica l'allenamento libero" title="Modifica allenamento libero"
+                onClick={(e) => { e.stopPropagation(); onEditAutonomous(entry) }}
+                className="-my-2 w-9 h-9 grid place-items-center rounded-full text-muted hover:text-brand transition">
+                <Edit size={17} />
+              </button>
+            )}
+            <button aria-label="Elimina l'allenamento" title={isAuto ? 'Elimina allenamento libero' : 'Rimuovi assegnazione'}
+              onClick={(e) => { e.stopPropagation(); onRemove(entry.id) }}
+              className="-my-2 -mr-2 w-9 h-9 grid place-items-center rounded-full text-muted hover:text-red-500 transition">
+              <Trash2 size={17} />
+            </button>
+          </>)}
         </div>
 
-        <div className="pt-2 border-t border-white/5">
+        <button type="button" onClick={apri} className="-mt-2 text-left group">
+          <h3 className="text-[24px] leading-[1.08] font-black tracking-[-.03em] text-white [text-wrap:balance] break-words group-hover:underline underline-offset-4 decoration-2"
+            style={{ textDecorationColor: colore }}>
+            {titolo || entry.workouts.title}
+          </h3>
+        </button>
+
+        <NumeriSeduta minuti={anteprima.minuti} intensita={parseFloat(sections?.intensity) || null} rpe={rpe} colore={colore} compatto />
+        {anteprima.righe.length > 0 && <SequenzaSeduta righe={anteprima.righe} colore={colore} massimo={5} />}
+
+        <div className="flex gap-2.5">
+          <button type="button" onClick={() => onToggleStatus(entry.id, entry.status, entry.completed_date)}
+            className={`flex-1 h-12 rounded-2xl flex items-center justify-center gap-2 text-[15px] font-extrabold transition active:scale-[.98] ${
+              fatto ? 'bg-green-500/15 text-green-400 border border-green-500/40' : 'bg-white/[.07] text-white border border-white/[.1] hover:bg-white/[.11]'}`}>
+            {fatto ? <CheckCircle2 size={18} /> : <Circle size={18} />} {fatto ? 'Fatto' : 'Segna fatto'}
+          </button>
+          <button type="button" onClick={apri}
+            className={`h-12 px-5 rounded-2xl ${c.bg} ${c.testoSuBg} text-[15px] font-black flex items-center gap-1.5 transition hover:brightness-110 active:scale-[.98]`}
+            style={{ boxShadow: `0 12px 24px -12px ${conVelo(colore, 0.6)}` }}>
+            Apri <ChevronRight size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        {/* La nota vocale e la nota scritta: in un pozzetto, sotto le azioni. */}
+        <div className="rounded-2xl bg-[#111] border border-white/[.06] p-3.5 flex flex-col gap-3">
           {entry.voice_note_url ? (
-            <div className="mb-3">
-              <p className="text-brand text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Nota Vocale del Coach</p>
+            <div>
+              <p className="mb-1.5 text-xs font-bold text-white/80 flex items-center gap-1.5"><Mic size={13} className={c.txt} /> Nota Vocale del Coach</p>
               <CustomAudioPlayer src={entry.voice_note_url} onDelete={() => onDeleteVoiceNote(entry.id)} role={role} />
             </div>
           ) : eStaff(role) ? (
-            <div className="mb-3">
-              <p className="text-brand text-xs font-bold mb-1.5 flex items-center gap-1"><Mic size={12}/> Invia Nota Vocale</p>
+            <div>
+              <p className="mb-1.5 text-xs font-bold text-white/80 flex items-center gap-1.5"><Mic size={13} className={c.txt} /> Invia Nota Vocale</p>
               <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />
             </div>
           ) : null}
-          {parsed.rpe !== '5' && entry.status === 'completed' && (
-            <div className="mb-2 inline-flex items-center gap-1.5 bg-[#111] px-2 py-1 rounded border border-[#333]">
-              <span className="text-muted text-[11px] font-bold uppercase tracking-wider">Sforzo:</span>
-              <span className={`text-xs font-bold ${getRpeColorText(parseInt(parsed.rpe))}`}>{parsed.rpe}/10</span>
-            </div>
-          )}
           <textarea
-          ref={noteRef}
-          className={`w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none resize-none text-base transition-all duration-200 overflow-hidden ${isEvent ? 'focus:border-white' : isRun ? 'focus:border-running' : isCustom ? 'focus:border-custom' : 'focus:border-brand'}`}
+            ref={noteRef}
+            className="w-full bg-transparent border-0 px-1 py-1 text-white placeholder-gray-500 focus:outline-none resize-none text-base overflow-hidden"
             rows={2}
             placeholder="Note dell'atleta su questo workout..."
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
-        <div className={`transition-all duration-300 ease-out overflow-hidden ${hasChanges ? 'max-h-16 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}`}>
-          <div className="flex justify-end">
-              <button
-                onClick={handleSaveNote}
-                disabled={saving}
-                className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${isEvent ? 'bg-white text-black' : isRun ? 'bg-running text-white' : isCustom ? 'bg-custom text-white' : 'bg-brand text-black'}`}
-              >
+          <div className={`transition-all duration-300 ease-out overflow-hidden ${hasChanges ? 'max-h-16 opacity-100' : 'max-h-0 opacity-0 -mt-3'}`}>
+            <div className="flex justify-end">
+              <button onClick={handleSaveNote} disabled={saving}
+                className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${c.bg} ${c.testoSuBg}`}>
                 {saving ? 'Salvataggio...' : 'Conferma note'}
               </button>
             </div>
-        </div>
+          </div>
         </div>
       </div>
-    </div>
+    </article>
   )
 }
 

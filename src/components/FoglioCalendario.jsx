@@ -10,7 +10,7 @@
 // quattordici colonne e vuole la larghezza; in testa titolo, ricerca e legenda
 // su due righe, e la riga dei giorni resta ferma mentre si scorrono gli atleti.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Search } from 'lucide-react'
 import { useBottomSheet } from '../useBottomSheet'
@@ -39,17 +39,38 @@ function Chiudi({ onClick }) {
   )
 }
 
-export default function FoglioCalendario({ piano, laterale = false, onApri, onProgramma, onChiudi }) {
+export default function FoglioCalendario({ piano, laterale = false, ripreso = null, onAtleta, onUscita, onApri, onProgramma, onChiudi }) {
   const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
-  const [testo, setTesto] = useState('')
-  useEffect(() => { battito() }, [])
+  // Al ritorno da una scheda (indietro) riparte dalla ricerca scritta prima.
+  const [testo, setTesto] = useState(() => ripreso?.testo ?? '')
+  useEffect(() => { if (!ripreso) battito() }, [ripreso])
+  // `corpo` scorre in verticale; il riquadro della griglia ([data-calendario]) di lato.
+  const corpo = useRef(null)
 
   const ordinate = useMemo(() => primaGliScoperti(piano?.righe || []), [piano])
   const filtrato = useMemo(() => ({ ...piano, righe: filtraPerNome(ordinate, testo) }), [piano, ordinate, testo])
   const n = filtrato.righe.length
   const sottotitolo = `${n} ${n === 1 ? 'atleta' : 'atleti'}${testo.trim() ? ` per «${testo.trim()}»` : ' · prima chi è da programmare'}`
+  // 🔴 USCENDO DAL FOGLIO SI ANNOTA DOV'ERA (25/11/2026): ricerca, scorrimento
+  // verticale e di lato. Al ritorno (POP) la Home riapre il foglio con `ripreso`.
+  function annota() {
+    const lato = corpo.current?.querySelector('[data-calendario]')
+    onUscita?.({ testo, top: corpo.current?.scrollTop || 0, left: lato?.scrollLeft || 0 })
+  }
+  // La posizione si rimette una volta, quando le righe ci sono.
+  const rimesso = useRef(false)
+  useLayoutEffect(() => {
+    if (rimesso.current || !ripreso || !n || !corpo.current) return
+    rimesso.current = true
+    corpo.current.scrollTop = ripreso.top || 0
+    const lato = corpo.current.querySelector('[data-calendario]')
+    if (lato) lato.scrollLeft = ripreso.left || 0
+  }, [ripreso, n])
   const griglia = (
-    <CalendarioProssimi nudo desktop={laterale} piano={filtrato} massimo={Infinity} onApri={onApri} onProgramma={onProgramma} />
+    <CalendarioProssimi nudo desktop={laterale} piano={filtrato} massimo={Infinity}
+      onAtleta={onAtleta && ((r) => { annota(); onAtleta(r) })}
+      onApri={onApri && ((ch) => { annota(); onApri(ch) })}
+      onProgramma={onProgramma && ((x) => { annota(); onProgramma(x) })} />
   )
 
   if (laterale) return createPortal(
@@ -70,7 +91,7 @@ export default function FoglioCalendario({ piano, laterale = false, onApri, onPr
           </div>
           <LegendaCalendario />
         </div>
-        <div className="flex-1 overflow-y-auto">{griglia}</div>
+        <div ref={corpo} data-corpo-foglio className="flex-1 overflow-y-auto">{griglia}</div>
       </div>
     </div>,
     document.body,
@@ -95,7 +116,7 @@ export default function FoglioCalendario({ piano, laterale = false, onApri, onPr
           <Chiudi onClick={chiudi} />
         </div>
         <Ricerca testo={testo} onTesto={setTesto} classe="mx-4 mt-3.5 mb-3" />
-        <div className="flex-1 overflow-y-auto">{griglia}</div>
+        <div ref={corpo} data-corpo-foglio className="flex-1 overflow-y-auto">{griglia}</div>
       </div>
     </div>,
     document.body,

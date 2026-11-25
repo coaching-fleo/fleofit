@@ -548,14 +548,27 @@ describe('la lista esercizi per famiglie', () => {
   const STAZIONI = ['SkiErg', 'Sled Push', 'Sled Pull', 'Burpees Broad Jumps',
     'Rowing', 'Farmers Carry', 'Sandbag Lunges', 'Wall Balls']
 
-  it('si apre su «Tutti»: prima le stazioni in ordine di gara, poi il resto senza ripeterle', async () => {
+  it('si apre su «Tutti»: prima le stazioni in ordine di gara e il Run, poi il resto senza ripeterli', async () => {
     await apriLista()
     expect(screen.getByRole('button', { name: 'Tutti' })).toHaveAttribute('aria-pressed', 'true')
     const lista = nomi()
-    expect(lista.slice(0, 8)).toEqual(STAZIONI)
-    expect(lista[8]).toBe('Assault Bike')
+    expect(lista.slice(0, 9)).toEqual([...STAZIONI, 'Run'])
+    expect(lista[9]).toBe('Assault Bike')
     expect(lista.length).toBeGreaterThan(100)
     expect(new Set(lista).size).toBe(lista.length)
+  })
+
+  it('un esercizio già nel blocco resta nella lista: si mette quante volte si vuole', async () => {
+    // Prima spariva dopo il primo inserimento (richiesta del committente, 25/11/2026).
+    await apriLista()
+    await userEvent.click(screen.getByRole('button', { name: 'Scegli Run' }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Esercizio/ }))
+    expect(nomi()).toContain('Run')
+    await userEvent.click(screen.getByRole('button', { name: 'Scegli Run' }))
+    await userEvent.click(screen.getByRole('button', { name: /Aggiungi esercizio/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Esercizio/ }))
+    expect(nomi()).toContain('Run')
   })
 
   it('una pillola restringe alla sua famiglia', async () => {

@@ -97,14 +97,15 @@ describe('L\'eroe «come sta andando»', () => {
     // l'aderenza di ogni atleta ogni volta che il coach gli programma qualcosa.
     comeCoach()
     await attendi()
-    expect(screen.getByText(/Come sta andando · 30 giorni/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Come sta andando' })).toBeInTheDocument()
+    expect(screen.getByText('30 giorni')).toBeInTheDocument()
     expect(screen.getByLabelText('Aderenza 33%, 1/3 allenamenti')).toBeInTheDocument()
   })
 
   it('dà del tu sul proprio profilo, e della terza persona al coach', async () => {
     comeAtleta()
     await attendi()
-    expect(screen.getByText(/Come stai andando · 30 giorni/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Come stai andando' })).toBeInTheDocument()
   })
 
   it('la frase accompagna i numeri invece di lasciarli soli', async () => {

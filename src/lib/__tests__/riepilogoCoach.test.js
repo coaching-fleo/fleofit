@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { oggiPerStato, oggiPerCategoria, ordinaOggi, giorniDaProgrammare, scopertiTreGiorni, filtraPerNome, righeCalendario } from '../riepilogoCoach'
+import { oggiPerStato, oggiPerCategoria, ordinaOggi, giorniDaProgrammare, scopertiTreGiorni, filtraPerNome, righeCalendario, righeCalendarioDesktop } from '../riepilogoCoach'
 
 const cella = (data, quando, categorie = []) => ({ data, quando, chips: categorie.map((c, i) => ({ id: `${data}-${i}`, workoutId: `w-${data}-${i}`, categoria: c, completato: false, titolo: 'X' })) })
 const giorni = [
@@ -82,6 +82,16 @@ describe('riepilogoCoach', () => {
       // 12 scoperti (1, 3, … 23) in testa
       expect(r.righe.slice(0, 12).every(x => Number(x.id.slice(1)) % 2 === 1)).toBe(true)
       expect(r.righe.slice(12).every(x => Number(x.id.slice(1)) % 2 === 0)).toBe(true)
+    })
+  })
+
+  describe('righeCalendarioDesktop', () => {
+    it('segue l\'altezza della finestra fra 8 e 15 righe', () => {
+      expect(righeCalendarioDesktop(650)).toBe(8)   // 1366×768
+      expect(righeCalendarioDesktop(780)).toBe(9)   // 1440×900
+      expect(righeCalendarioDesktop(950)).toBe(12)  // 1920×1080
+      expect(righeCalendarioDesktop(1300)).toBe(15) // 2560×1440
+      expect(righeCalendarioDesktop(undefined)).toBe(8)
     })
   })
 })

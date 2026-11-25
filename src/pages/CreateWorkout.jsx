@@ -16,7 +16,7 @@ import { it } from 'date-fns/locale'
 import { generaTitolo, titoliDelGiorno } from '../lib/workoutTitle'
 import { codiceWorkout, separaCodice, unisciCodice } from '../lib/codiceWorkout'
 import { candidatiNome, nuovoSeme, scegliNome, nomeLibero, eNomeGenerato, nomiGiaUsati } from '../lib/nomeCasuale'
-import { HYROX_EXERCISES, STAZIONI_HYROX, FAMIGLIE_HYROX, misuraEsercizio, isErgo, isSled, isCarry, isHybrid, isDistance, isTimed, conBox, ALTEZZE_BOX, testoBox } from '../lib/esercizi'
+import { HYROX_EXERCISES, STAZIONI_HYROX, IN_CIMA_HYROX, FAMIGLIE_HYROX, misuraEsercizio, isErgo, isSled, isCarry, isHybrid, isDistance, isTimed, conBox, ALTEZZE_BOX, testoBox } from '../lib/esercizi'
 import { mostraErrore } from '../lib/alert'
 import { battito, vibraPresa, vibraScelta, vibraSuccesso } from '../lib/aptica'
 import { TYPE_COLORS } from '../lib/blockColors'
@@ -1207,7 +1207,7 @@ function CartaEsercizio({ nome, onClick }) {
   )
 }
 
-function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initialExercise, intervalloBlocco, conAumento = false }) {
+function ExercisePicker({ onAdd, onClose, workoutType, initialExercise, intervalloBlocco, conAumento = false }) {
   const [search, setSearch] = useState(initialExercise?.name || '')
   const [selected, setSelected] = useState(initialExercise?.name || null)
   const [hybridMode, setHybridMode] = useState(initialExercise?.meters && initialExercise.meters !== '-' ? 'distance' : 'reps')
@@ -1457,21 +1457,21 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
   // fino a 120 bottoni. Il memo evita il ricalcolo, il limite evita il disegno.
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return HYROX_EXERCISES.filter(ex =>
-      ex.toLowerCase().includes(q) && (!existingNames.includes(ex) || ex === initialExercise?.name)
-    )
-  }, [search, existingNames, initialExercise?.name])
+    return HYROX_EXERCISES.filter(ex => ex.toLowerCase().includes(q))
+  }, [search])
 
   // Si apre su «Tutti», e le pillole restringono a una famiglia (richiesta del
   // committente, 30/10/2026). In «Tutti» le otto stazioni stanno in cima, in
   // ordine di gara, e il resto sotto in ordine alfabetico senza ripeterle.
   // Cercando, la lista torna una sola: chi scrive sa già cosa vuole.
+  // Dal 25/11/2026 in cima c'è anche il Run, subito dopo Wall Balls, e un
+  // esercizio già nel blocco NON sparisce più dalla lista: lo stesso movimento
+  // si mette quante volte si vuole (richieste del committente).
   const [scheda, setScheda] = useState('tutti')
   const corpoRef = useRef(null)
-  const disponibile = (ex) => !existingNames.includes(ex) || ex === initialExercise?.name
-  const listaScheda = scheda === 'stazioni' ? STAZIONI_HYROX.filter(disponibile)
-    : scheda === 'tutti' ? [...STAZIONI_HYROX, ...HYROX_EXERCISES.filter(ex => !STAZIONI_HYROX.includes(ex))].filter(disponibile)
-    : (FAMIGLIE_HYROX.find(f => f.id === scheda)?.voci || []).filter(disponibile)
+  const listaScheda = scheda === 'stazioni' ? STAZIONI_HYROX
+    : scheda === 'tutti' ? [...IN_CIMA_HYROX, ...HYROX_EXERCISES.filter(ex => !IN_CIMA_HYROX.includes(ex))]
+    : (FAMIGLIE_HYROX.find(f => f.id === scheda)?.voci || [])
   const LIMITE_LISTA = 40
   const visibili = search ? filtered.slice(0, LIMITE_LISTA) : listaScheda
   const nascosti = search ? filtered.length - visibili.length : 0
@@ -1610,10 +1610,10 @@ function ExercisePicker({ onAdd, onClose, existingNames = [], workoutType, initi
               )}
               {visibili.map((ex, i) => (
                 <div key={ex} className="flex flex-col">
-                  {!search && scheda === 'tutti' && i === 0 && STAZIONI_HYROX.includes(ex) && (
+                  {!search && scheda === 'tutti' && i === 0 && IN_CIMA_HYROX.includes(ex) && (
                     <p className={`${LABEL} px-1 pb-0.5`}>Stazioni Hyrox · ordine di gara</p>
                   )}
-                  {!search && scheda === 'tutti' && !STAZIONI_HYROX.includes(ex) && (i === 0 || STAZIONI_HYROX.includes(visibili[i - 1])) && (
+                  {!search && scheda === 'tutti' && !IN_CIMA_HYROX.includes(ex) && (i === 0 || IN_CIMA_HYROX.includes(visibili[i - 1])) && (
                     <p className={`${LABEL} px-1 pt-3 pb-0.5`}>Tutti gli esercizi</p>
                   )}
                   {/* Fra due stazioni, in gara, c'è un chilometro di corsa. */}
@@ -2198,7 +2198,6 @@ export const HyroxBlock = memo(function HyroxBlock({ block, index, total, isOpen
             <ExercisePicker 
               workoutType={block.type}
               intervalloBlocco={block.params?.interval}
-              existingNames={esercizi.map(e => e.name)}
               initialExercise={editingExercise}
               conAumento={incremento}
               onClose={() => { setPickerOpen(false); setEditingExercise(null); }}
