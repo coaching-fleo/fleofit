@@ -547,7 +547,8 @@ storico; a destra obiettivo, oggi, profilo (niente `sticky`: la colonna è più 
   sequenza (`SequenzaSeduta`), «Segna fatto» neutro e «Apri» pieno nel colore della corsia; nota
   vocale e nota in un pozzetto `#111` sotto.
 - **Prossimi**: righe d'agenda (giorno grande a sinistra, puntino della corsia, titolo su due
-  righe) in una superficie sola; il tocco apre l'allenamento.
+  righe) in una superficie sola; il tocco apre l'allenamento, il bottone «Nota» apre sotto la
+  riga nota vocale e nota scritta nel pozzetto `#111`.
 - **Profilo**: righe in un gruppo unico diviso da fili (`GRUPPO_RIGHE`), come le impostazioni
   di iOS, non card impilate.
 

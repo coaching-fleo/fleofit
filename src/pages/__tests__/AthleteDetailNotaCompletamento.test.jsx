@@ -85,9 +85,30 @@ describe('la nota dal profilo, su un allenamento di oggi non completato', () => 
   })
 })
 
-// Dal 25/11/2026 (il ridisegno della scheda) gli allenamenti dei prossimi giorni
-// sono righe che aprono la scheda dell'allenamento: lì si scrive la nota, e la
-// regola della data futura la copre WorkoutDetailNotaCompletamento.test.jsx.
+describe('la nota dal profilo, su un allenamento programmato più avanti', () => {
+  beforeEach(() => { dati.assegnazioni = assegnazione('pending', '2099-01-01') })
+
+  it('con il sì mostra l’avviso della data futura, e non lo chiude subito', async () => {
+    const utente = userEvent.setup()
+    apri()
+    // Dal 25/11/2026 la nota dei prossimi allenamenti si apre sotto la riga.
+    const bottone = await screen.findByRole('button', { name: 'Nota' })
+    expect(bottone).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByPlaceholderText(/note dell'atleta su questo workout/i)).not.toBeInTheDocument()
+    await utente.click(bottone)
+    await scriviEConferma(utente, 'Fatto in anticipo')
+    await utente.click(within(await domanda()).getByRole('button', { name: /Sì, l.ho fatto/ }))
+
+    expect(await screen.findByRole('dialog', { name: 'Attenzione' })).toBeInTheDocument()
+    expect(scritture()).toEqual([])
+  })
+
+  it('una nota già scritta si vede nella riga anche chiusa', async () => {
+    dati.assegnazioni = [{ ...assegnazione('pending', '2099-01-01')[0], notes: 'Portare le scarpe da sled' }]
+    apri()
+    expect(await screen.findByText('Portare le scarpe da sled')).toBeInTheDocument()
+  })
+})
 
 describe('la nota dal profilo, su un allenamento già completato', () => {
   beforeEach(() => { dati.assegnazioni = assegnazione('completed') })

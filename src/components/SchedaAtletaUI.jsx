@@ -11,7 +11,7 @@
 // con quanto carico, era nella terza tab, dietro due tocchi e quattro grafici
 // che non si parlavano. Ora è la prima cosa in pagina, e le tab non ci sono più.
 
-import { Camera, ChevronDown, ChevronLeft, ChevronRight, Footprints, Layers, MoreHorizontal, Trash2, UserCog, UsersRound } from 'lucide-react'
+import { Camera, ChevronDown, ChevronLeft, ChevronRight, Footprints, Layers, MessageSquareText, Mic, MoreHorizontal, Trash2, UserCog, UsersRound } from 'lucide-react'
 import { ETICHETTA_NUMERO } from './SedutaUI'
 import TestataFoto from './TestataFoto'
 import { BOTTONE_SU_FOTO, PILLOLA_SU_FOTO } from '../lib/testataFoto'
@@ -256,34 +256,54 @@ export function BarraFasce({ distribuzione }) {
 
 /**
  * Un allenamento in programma, in una riga: il giorno grande a sinistra (come
- * un'agenda), il puntino della corsia, il titolo. Il tocco apre l'allenamento,
- * dove stanno stato, note e nota vocale.
+ * un'agenda), il puntino della corsia, il titolo. Il tocco apre l'allenamento.
+ * La nota (scritta e vocale) si apre sotto la riga col bottone della nota
+ * (25/11/2026, il committente: «rimetti le note nei prossimi allenamenti»):
+ * chiusa, la riga ne mostra l'inizio, così si vede chi l'ha già.
  */
-export function RigaProssimo({ giorno, mese, settimana, titolo, categoria, colore, dettaglio, onApri, onRimuovi }) {
+export function RigaProssimo({ giorno, mese, settimana, titolo, categoria, colore, dettaglio, onApri, onRimuovi,
+  anteprimaNota, vocale = false, notaAperta = false, onNota, children }) {
+  const conNota = !!anteprimaNota || vocale
   return (
-    <li className="relative flex items-stretch">
-      <button type="button" onClick={onApri}
-        className="flex-1 min-w-0 flex items-center gap-4 py-3 pl-4 pr-2 text-left transition hover:bg-white/[.04] rounded-[18px]">
-        <span className="shrink-0 w-11 text-center">
-          <span className="block text-[11px] font-extrabold uppercase tracking-[.08em] text-muted">{settimana}</span>
-          <b className="block text-[24px] leading-none font-black tracking-[-.03em] text-white tabular-nums">{giorno}</b>
-          <span className="block mt-0.5 text-[11px] font-bold text-muted">{mese}</span>
-        </span>
-        <span className="flex-1 min-w-0">
-          <span className="flex items-center gap-1.5 text-[12px] font-extrabold text-white/70">
-            <i className="w-2 h-2 rounded-full shrink-0" style={{ background: colore, boxShadow: `0 0 8px ${conVelo(colore, 0.5)}` }} aria-hidden="true" />
-            {categoria}{dettaglio && <span className="font-bold text-muted">· {dettaglio}</span>}
+    <li className={`flex flex-col rounded-[18px] transition-colors ${notaAperta ? 'bg-white/[.04]' : ''}`}>
+      <div className="relative flex items-stretch">
+        <button type="button" onClick={onApri}
+          className="flex-1 min-w-0 flex items-center gap-4 py-3 pl-4 pr-2 text-left transition hover:bg-white/[.04] rounded-[18px]">
+          <span className="shrink-0 w-11 text-center">
+            <span className="block text-[11px] font-extrabold uppercase tracking-[.08em] text-muted">{settimana}</span>
+            <b className="block text-[24px] leading-none font-black tracking-[-.03em] text-white tabular-nums">{giorno}</b>
+            <span className="block mt-0.5 text-[11px] font-bold text-muted">{mese}</span>
           </span>
-          <b className="mt-0.5 block text-[16px] leading-snug font-extrabold text-white line-clamp-2 break-words">{titolo}</b>
-        </span>
-        {!onRimuovi && <ChevronRight size={17} className="shrink-0 text-muted" aria-hidden="true" />}
-      </button>
-      {onRimuovi && (
-        <button type="button" onClick={onRimuovi} aria-label="Elimina l'allenamento" title="Rimuovi assegnazione"
-          className="shrink-0 w-11 grid place-items-center text-muted hover:text-red-500 transition">
-          <Trash2 size={17} aria-hidden="true" />
+          <span className="flex-1 min-w-0">
+            <span className="flex items-center gap-1.5 text-[12px] font-extrabold text-white/70">
+              <i className="w-2 h-2 rounded-full shrink-0" style={{ background: colore, boxShadow: `0 0 8px ${conVelo(colore, 0.5)}` }} aria-hidden="true" />
+              {categoria}{dettaglio && <span className="font-bold text-muted">· {dettaglio}</span>}
+            </span>
+            <b className="mt-0.5 block text-[16px] leading-snug font-extrabold text-white line-clamp-2 break-words">{titolo}</b>
+            {conNota && !notaAperta && (
+              <span className="mt-1 flex items-center gap-1.5 text-[13px] text-gray-400 min-w-0">
+                {vocale && <Mic size={13} className="shrink-0" style={{ color: colore }} aria-label="Nota vocale" />}
+                {anteprimaNota && <span className="truncate">{anteprimaNota}</span>}
+              </span>
+            )}
+          </span>
+          {!onRimuovi && !onNota && <ChevronRight size={17} className="shrink-0 text-muted" aria-hidden="true" />}
         </button>
-      )}
+        {onNota && (
+          <button type="button" onClick={onNota} aria-expanded={notaAperta} aria-label="Nota"
+            className={`relative shrink-0 w-11 grid place-items-center transition ${notaAperta ? 'text-white' : 'text-muted hover:text-white'}`}>
+            <MessageSquareText size={18} aria-hidden="true" />
+            {conNota && !notaAperta && <i className="absolute top-[calc(50%-12px)] right-2 w-2 h-2 rounded-full" style={{ background: colore }} aria-hidden="true" />}
+          </button>
+        )}
+        {onRimuovi && (
+          <button type="button" onClick={onRimuovi} aria-label="Elimina l'allenamento" title="Rimuovi assegnazione"
+            className="shrink-0 w-11 grid place-items-center text-muted hover:text-red-500 transition">
+            <Trash2 size={17} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+      {notaAperta && <div className="px-3 pb-3">{children}</div>}
     </li>
   )
 }

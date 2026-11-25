@@ -339,11 +339,11 @@ Claude, «lo cambiamo insieme». Regola grafica in `DESIGN.md`, «La scheda atle
 - Scarpe, team, gruppi e coach non stanno più sotto la foto: un gruppo solo più in basso.
 
 ### ⚠️ Da sapere
-- 🔴 **I prossimi allenamenti non hanno più nota, nota vocale e «segna fatto» nella lista**: sono
-  righe che aprono la scheda dell'allenamento, dove ci sono tutte e tre. Resta il cestino
-  (coach, o atleta sui suoi liberi). Lo storico invece tiene `WorkoutEntryCard` com'era.
-  Il test della nota su un allenamento futuro dal profilo è stato tolto per questo
-  (`AthleteDetailNotaCompletamento.test.jsx`).
+- **Le note dei prossimi allenamenti** (rimesse il 25/11/2026 su richiesta del committente): la
+  riga ha un bottone «Nota» (`aria-expanded`) che apre sotto la nota vocale e la nota scritta, con
+  lo stesso salvataggio di prima (`ProssimoConNota` in `AthleteDetail`). Chiusa, la riga mostra
+  l'inizio della nota e il microfono se c'è la vocale. «Segna fatto» non c'è nella riga: si fa
+  dalla scheda dell'allenamento. Lo storico tiene `WorkoutEntryCard` com'era.
 - La sezione dei prossimi si chiama `region` «In programma», non «Calendario»: un test controlla
   che l'atleta sul proprio profilo NON abbia una regione «Calendario».
 - Il titolo «Come sta andando» è un `<h2>` con «30 giorni» a parte (i test lo cercano così).

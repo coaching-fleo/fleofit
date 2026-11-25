@@ -892,7 +892,8 @@ export default function AthleteDetail() {
             const giorno = parseISO(entry.completed_date)
             const auto = entry.workouts?.sections?.isAutonomous === true
             return (
-              <RigaProssimo key={entry.id}
+              <ProssimoConNota key={entry.id} entry={entry} role={role}
+                onUpdateNote={updateWorkoutNote} onUploadVoiceNote={uploadVoiceNote} onDeleteVoiceNote={deleteVoiceNote}
                 giorno={format(giorno, 'd')} mese={format(giorno, 'MMM', { locale: it })}
                 settimana={format(giorno, 'EEE', { locale: it })}
                 titolo={separaCodice(entry.workouts.title).nome || entry.workouts.title}
@@ -1781,6 +1782,73 @@ function EditAthleteModal({ athlete, onClose, onSaved, onDelete, role, proprioPr
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * Un allenamento dei prossimi giorni con la sua nota (25/11/2026): la riga
+ * d'agenda, e sotto, aperta col bottone della nota, la nota vocale e la nota
+ * scritta — le stesse di prima del ridisegno, con lo stesso salvataggio
+ * (`onUpdateNote`, che su un allenamento non fatto chiede prima se è fatto).
+ */
+function ProssimoConNota({ entry, role, onUpdateNote, onUploadVoiceNote, onDeleteVoiceNote, ...riga }) {
+  const parsed = parseNotesAndRpe(entry.notes)
+  const [aperta, setAperta] = useState(false)
+  const [note, setNote] = useState(parsed.text)
+  const [saving, setSaving] = useState(false)
+  const noteRef = useRef(null)
+  const [notePrima, setNotePrima] = useState(entry.notes)
+  if (notePrima !== entry.notes) { setNotePrima(entry.notes); setNote(parseNotesAndRpe(entry.notes).text) }
+
+  useEffect(() => {
+    if (aperta && noteRef.current) {
+      noteRef.current.style.height = 'auto'
+      noteRef.current.style.height = `${noteRef.current.scrollHeight}px`
+    }
+  }, [note, aperta])
+
+  const cat = categoriaDi(entry.workouts?.sections)
+  const c = corsia(cat)
+  const hasChanges = note !== parsed.text
+  const handleSaveNote = async () => {
+    setSaving(true)
+    await onUpdateNote(entry.id, formatNotesWithRpe(parsed.rpe, note, parsed.gradimento), entry.workouts?.title)
+    setSaving(false)
+  }
+
+  return (
+    <RigaProssimo {...riga} anteprimaNota={parsed.text?.trim() || null} vocale={!!entry.voice_note_url}
+      notaAperta={aperta} onNota={() => setAperta(v => !v)}>
+      <div className="rounded-2xl bg-[#111] border border-white/[.06] p-3.5 flex flex-col gap-3">
+        {entry.voice_note_url ? (
+          <div>
+            <p className="mb-1.5 text-xs font-bold text-white/80 flex items-center gap-1.5"><Mic size={13} className={c.txt} /> Nota Vocale del Coach</p>
+            <CustomAudioPlayer src={entry.voice_note_url} onDelete={() => onDeleteVoiceNote(entry.id)} role={role} />
+          </div>
+        ) : eStaff(role) ? (
+          <div>
+            <p className="mb-1.5 text-xs font-bold text-white/80 flex items-center gap-1.5"><Mic size={13} className={c.txt} /> Invia Nota Vocale</p>
+            <VoiceRecorder onSave={(blob, ext) => onUploadVoiceNote(entry.id, blob, ext)} />
+          </div>
+        ) : null}
+        <textarea
+          ref={noteRef}
+          className="w-full bg-transparent border-0 px-1 py-1 text-white placeholder-gray-500 focus:outline-none resize-none text-base overflow-hidden"
+          rows={2}
+          placeholder="Inserisci o modifica le note dell'atleta su questo workout..."
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+        <div className={`transition-all duration-300 ease-out overflow-hidden ${hasChanges ? 'max-h-16 opacity-100' : 'max-h-0 opacity-0 -mt-3'}`}>
+          <div className="flex justify-end">
+            <button onClick={handleSaveNote} disabled={saving}
+              className={`font-bold px-4 py-1.5 rounded-xl text-sm hover:brightness-110 transition disabled:opacity-50 ${c.bg} ${c.testoSuBg}`}>
+              {saving ? 'Salvataggio...' : 'Conferma'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </RigaProssimo>
   )
 }
 
