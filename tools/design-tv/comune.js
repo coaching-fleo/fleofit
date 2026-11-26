@@ -89,12 +89,38 @@ const BREVE = {
   ],
 }
 
+// Un ON/OFF da solo, 10″ di lavoro e 5″ di riposo, senza riscaldamento:
+// il timer mette da sé solo i 10″ di preparazione.
+const ONOFF = {
+  titolo: 'ON/OFF lampo · 10″/5″',
+  categoria: 'Allenamento Hyrox', colore: '#f1c517', intensita: 8, onoff: true,
+  blocchi: [
+    { tipo: 'ON/OFF', hint: '10″ lavoro · 5″ riposo', durata: 3 * 3 * 15, giri: 3, esercizi: [
+      { nome: 'Burpees', q: 'Max', spec: 'Max reps', int: 8 },
+      { nome: 'Wall Balls', q: 'Max', x: '9 kg', spec: 'Max reps · 9 kg', int: 8 },
+      { nome: 'Mountain Climbers', q: 'Max', spec: 'Max reps', int: 7 },
+    ] },
+  ],
+}
+
 // ── La sequenza del timer (versione semplice di buildTimerSequence) ──────
 
 function sequenza(w) {
   const s = []
   const b = w.blocchi
-  if (w.breve) {
+  if (w.onoff) {
+    s.push({ b: 0, tema: 'prep', compito: 'Preparati!', poi: 'ON/OFF · Burpees', dur: 10 })
+    const e = b[0].esercizi
+    for (let g = 1; g <= 3; g++) {
+      for (let k = 0; k < 3; k++) {
+        s.push({ b: 0, tema: 'lavoro', etichetta: `Giro ${g} di 3`, es: k, giro: g, compito: e[k].nome, spec: e[k].spec, poi: 'Riposo 0:05', dur: 10 })
+        // Come in timerSequence.js: l'ultimo OFF si salta solo se dopo c'è un Rest.
+        const ultimo = g === 3 && k === 2
+        s.push({ b: 0, tema: 'riposo', etichetta: `Giro ${g} di 3`, giro: g, prossimo: ultimo ? null : (k + 1) % 3,
+          compito: 'Riposo', poi: ultimo ? 'Fine' : e[(k + 1) % 3].nome, dur: 5 })
+      }
+    }
+  } else if (w.breve) {
     s.push({ b: 0, tema: 'prep', compito: 'Preparati!', poi: 'Riscaldamento', dur: 10 })
     s.push({ b: 0, tema: 'base', compito: 'Riscaldamento libero', poi: 'EMOM · Wall Balls', dur: 360 })
     const e = b[1].esercizi
@@ -108,7 +134,7 @@ function sequenza(w) {
     s.push({ b: 0, tema: 'base', compito: 'Riscaldamento libero', poi: 'Cash In · SkiErg', dur: 480 })
     s.push({ b: 1, tema: 'lavoro', compito: 'SkiErg, poi Sled Push', poi: 'Pausa, poi EMOM', crono: true, dur: 0 })
     // La pausa dopo il Cash In: si riparte quando il telefono preme Avanti.
-    s.push({ b: 2, pausa: true, tema: 'pausa', compito: 'Pausa', spec: 'Si riparte con Avanti sul telefono', poi: 'EMOM · 12 minuti', crono: true, dur: 0 })
+    s.push({ b: 2, pausa: true, tema: 'pausa', compito: 'Pronti per l\'EMOM', poi: 'Si riparte quando premi Avanti sul telefono', crono: true, dur: 0 })
     const emom = b[2].esercizi
     for (let m = 0; m < 12; m++) {
       const k = m % 3
@@ -125,7 +151,7 @@ function sequenza(w) {
           compito: 'Riposo', poi: ultimo ? 'Pausa, poi Cash Out' : oo[(k + 1) % 3].nome, dur: 15 })
       }
     }
-    s.push({ b: 5, pausa: true, tema: 'pausa', compito: 'Pausa', spec: 'Si riparte con Avanti sul telefono', poi: 'Cash Out · 2 giri', crono: true, dur: 0 })
+    s.push({ b: 5, pausa: true, tema: 'pausa', compito: 'Pronti per il Cash Out', poi: 'Si riparte quando premi Avanti sul telefono', crono: true, dur: 0 })
     s.push({ b: 5, tema: 'lavoro', etichetta: 'Giro 1 di 2', giro: 1, compito: 'Rowing, poi Wall Balls', poi: 'Riposo 1:00', crono: true, dur: 0 })
     s.push({ b: 5, tema: 'riposo', etichetta: 'Giro 1 di 2', giro: 1, compito: 'Riposo', poi: 'Giro 2 · Rowing', dur: 60 })
     s.push({ b: 5, tema: 'lavoro', etichetta: 'Giro 2 di 2', giro: 2, compito: 'Rowing, poi Wall Balls', poi: 'Fine', crono: true, dur: 0 })
@@ -147,6 +173,7 @@ function sequenza(w) {
 const SCENE = {
   hyrox: { w: HYROX, partenza: 8, t: 38 },   // EMOM, minuto 5
   breve: { w: BREVE, partenza: 8, t: 41 },   // EMOM, minuto 7
+  onoff: { w: ONOFF, partenza: 0, t: 10 },   // dalla preparazione
   corsa: { w: CORSA, partenza: 4, t: 64 },   // ripetuta 2, corsa
 }
 
@@ -197,7 +224,7 @@ const TV = {
       <div class="telecomando" ${new URLSearchParams(location.search).has('pulita') ? 'hidden' : ''}>
         <a href="index.html">Tutte le proposte</a>
         <span class="sep"></span>
-        <button data-scena="hyrox">Hyrox lungo</button><button data-scena="breve">EMOM corto</button><button data-scena="corsa">Corsa</button>
+        <button data-scena="hyrox">Hyrox lungo</button><button data-scena="breve">EMOM corto</button><button data-scena="corsa">Corsa</button><button data-scena="onoff">ON/OFF 10/5</button>
         <span class="sep"></span>
         <button data-v="-1" aria-label="Passo precedente">◀</button><span id="pos" class="num"></span><button data-v="1" aria-label="Passo successivo">▶</button>
         <button data-pausa>Pausa</button>

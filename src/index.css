@@ -581,3 +581,12 @@ input[type="date"]::-webkit-date-and-time-value {
   -webkit-appearance: none;
   appearance: none;
 }
+
+/* La locandina della TV (/tv, 26/11/2026): gli esercizi di un blocco uno per
+   riga o in fila con un pallino in mezzo. La disposizione la sceglie
+   `useAdattaTesto`, quella che lascia il testo più grande. */
+.locandina-lista[data-disposizione="fila"] .lista-righe { display: flex; flex-wrap: wrap; column-gap: 1.1em; row-gap: .05em; }
+.locandina-lista[data-disposizione="fila"] .lista-righe li + li::before {
+  content: ""; display: inline-block; vertical-align: middle; width: .28em; height: .28em; border-radius: 50%;
+  background: #4b5563; margin-right: .45em; margin-left: -.65em;
+}

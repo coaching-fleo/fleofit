@@ -479,6 +479,9 @@ Non fatto (da decidere): nessun avviso al coach quando qualcuno sta male.
 
 ## 9-tv-grafica. La TV in linea con il resto dell'app (15/10/2026)
 
+> ⚠️ **Superata il 26/11/2026** dalla 9-tv-carosello (locandina + carosello, pausa, niente
+> rotazione). Restano validi il patto «grafica nel file UI» e «niente avviso Prima di iniziare».
+
 `/tv` era l'ultima schermata di prima del redesign: bordi da 4px, `#1e1e1e` piatto, il logo
 due volte, il giallo ovunque. Rifatta **solo la grafica**, su richiesta esplicita del
 committente: «non toccare il codice per il timer».
@@ -899,3 +902,52 @@ la virgola; intervallo dal più lento al più veloce, `10,9 – 12,0 km/h`.
 - Dal Garmin: un'attività `TREADMILL_RUNNING` abbinata mostra «Su tapis roulant» nella card «Da
   Garmin» (`suTapisRoulant` di `attivitaGarmin.js`), per atleta e coach.
 Test: `tapisRoulant.test.js`, `WorkoutDetailTapis.test.jsx`, `WorkoutDetailGarmin.test.jsx`.
+
+## 9-tv-carosello. La TV nuova: locandina, carosello e pausa (26/11/2026)
+Richiesta del committente: sulla sua TV 4K la TV di prima veniva piccola, e voleva «la sensazione
+della lavagna del box» senza confusione. Scelta la **proposta D** fra i prototipi di
+`tools/design-tv/` (le altre, scartate, restano lì; storia anche in memoria `tv-redesign`).
+Ritorno alla TV di prima: `docs/superpowers/plans/2026-11-26-tv-redesign-ritorno.md`.
+- **Due momenti.** Workout caricato ma timer non ancora partito → **locandina** (`LocandinaTV`):
+  PUSHFIT grande a sinistra con categoria, titolo, intensità, durata stimata, numero di blocchi,
+  note del coach, «Allenamento di oggi» col tasto play; a destra **il workout intero**, un
+  riquadro per blocco (`vociLocandina`: Hyrox, corsa, Gym; Custom ed Evento mettono le note).
+  Timer partito → **carosello** (`InCorsoTV`): logo grande in alto (richiesta del committente),
+  timer, e il blocco in corso al centro con i vicini rimpiccioliti ai lati.
+- 🔴 **«Partito» non è «timer aperto»**: collegando la TV il telefono apre il timer in pausa sulla
+  preparazione, e la locandina sparirebbe subito. Partito = `isRunning`, o `currentIdx > 0`, o il
+  tempo è già sceso (`avviato` in `TVDashboard.jsx`).
+- **Pesi leggeri** (500–700) e aria: le versioni in grassetto («lavagne») sono state scartate perché
+  caotiche. Linguetta «4x» sui blocchi a più giri, «2/4» coi pallini sul blocco in corso (`giriTV`,
+  `giroInCorso`: il giro si legge dall'id solo in ON/OFF, Interval e For Time vecchi).
+- **Riposo e «Poi»** (richiesta del 26/11): nell'OFF la carta diventa verde, chip «Riposo», cifre
+  verdi, e il prossimo esercizio ha l'etichetta gialla **«Poi»** col contorno tratteggiato; gli
+  altri si abbassano. Prima del via la prima riga è «Poi» e la carta dice «Si parte da qui». Con più
+  persone niente «Poi»: le pillole coi nomi, tratteggiate quando dicono dove si andrà, **anche nella
+  preparazione e nella pausa** (stessa regola di 9-tv-persone, ora in `statoCarosello`).
+- **La pausa** dopo il Cash In e prima del Cash Out (`pausePrima` di `timerSequence.js`; mai davanti
+  a un Rest, una sola fra Cash In e Cash Out): uno step `pausa-<blocco>` a **cronometro**, tema
+  `rest`, che finisce **solo con Avanti sul telefono** (decisione del committente). Sulla TV ha la
+  sua carta: il blocco che viene, chi parte da dove, o l'invito ad aggiungere le persone dal
+  telefono. Se dopo un ON/OFF c'è una pausa, il suo ultimo OFF non si fa (come col Rest).
+  ⚠️ **Arriva anche nelle app sugli Store**: cambia la sequenza del timer sul telefono.
+- 🔴 **Telefoni vecchi**: il telefono nuovo manda `pause: true` nel `timer_state`, e solo allora la
+  TV costruisce la sequenza con le pause (`buildTimerSequence(workout, { pause })`). Un'app vecchia
+  non le ha: con indici diversi `statoTV` non saprebbe più andare avanti da sola, e il carosello
+  mostrerebbe carte di pausa che il telefono non attraversa.
+- **Il testo si adatta** (`src/useAdattaTesto.js`): ricerca binaria sulla `font-size` dei nodi con
+  `data-adatta` (la lista della locandina prova anche «un esercizio per riga» contro «in fila» e
+  tiene la più grande). 🔴 Le righe di una carta stanno in fondo con `mt-auto` e **non**
+  `justify-end`: con justify-end ciò che non ci sta esce dall'alto, `scrollHeight` non lo vede, e il
+  primo esercizio spariva (successo nella carta di pausa). E niente margini negativi sulle righe:
+  facevano traboccare la larghezza e il testo finiva al minimo.
+- **Tolto il bottone per ruotare** lo schermo (richiesta del committente: la verticale avrà un
+  disegno suo, BACKLOG). Locandina e carosello sono su 1920×1080 esatti; lo schermo del codice
+  resta ad altezza libera e si rimpicciolisce con la scala, come prima.
+- Logica in `src/lib/schermoTV.js` (test `schermoTV.test.js`, visti fallire rompendo `pausePrima` e
+  la regola della preparazione), presentazione in `TVDashboardUI.jsx` (`RigaCartaTV.test.jsx` al
+  posto di `EsercizioTV.test.jsx`, stessi controlli sull'intensità con le persone). Timer, beep,
+  audio e canale realtime di `TVDashboard.jsx` non sono cambiati.
+- Provato nell'ambiente di prova (TV in una scheda, telefono nell'altra): locandina, preparazione,
+  Cash In, pausa, ON/OFF al lavoro e nel riposo, persone, pausa prima del Cash Out, fine; locandina
+  di corsa e Gym. **Non provato su una TV vera né sul telefono vero.**

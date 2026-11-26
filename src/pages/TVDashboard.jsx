@@ -2,22 +2,18 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { KeepAwake } from '@capacitor-community/keep-awake'
-import { blockHint } from '../lib/blockHints'
-import { ERGOMETERS } from '../lib/constants'
-import { etichetteStazioni } from '../lib/stazioniEmom'
-import { haIncremento, testoAumento } from '../lib/incremento'
-import { coloreCategoria } from '../lib/colori'
-import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
-import { sottotitoloBlocco, specificheEsercizio } from '../lib/rigaBlocco'
-import { esercizioInCorso, esercizioInArrivo } from '../lib/esercizioInCorso'
-import { personePerEsercizio, bloccoAScaglioni } from '../lib/personeTV'
+import { coloreCategoria, BRAND } from '../lib/colori'
+import { mmss, riepilogoWorkout } from '../lib/stimaWorkout'
+import { minutiGym } from '../lib/gym'
+import { bloccoAScaglioni } from '../lib/personeTV'
 import QRCode from 'qrcode'
 import { contenutoQR } from '../lib/codiceTV'
-import { buildTimerSequence } from '../lib/timerSequence'
+import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/timerSequence'
 import { statoTV, beepTV } from '../lib/avanzaTimer'
+import { vociLocandina, voceBlocco, statoCarosello, nomeFase, ACCENTO_TEMA } from '../lib/schermoTV'
+import useAdattaTesto from '../useAdattaTesto'
 import {
-  AttesaTV, CaricamentoTV, ErroreTV, TestataTV, TimerTV, BloccoTV, EsercizioTV,
-  NotaBloccoTV, CorsaTV, CartaCorsaTV, NotaCoachTV, LeggendaTV,
+  AttesaTV, CaricamentoTV, ErroreTV, LocandinaTV, InCorsoTV,
 } from '../components/TVDashboardUI'
 
 // --- AUDIO GENERATOR HELPER ---
@@ -69,9 +65,6 @@ if (typeof window !== 'undefined') {
   longerBeepURI = createBeepURI(1200, 1500);
 }
 
-const isErgo = (name) => ERGOMETERS.includes(name)
-
-
 const getIntensityColor = (val) => {
   const num = parseInt(val, 10);
   if (isNaN(num)) return 'text-muted';
@@ -87,7 +80,6 @@ export default function TVDashboard() {
   const [workout, setWorkout] = useState(null)
   const [status, setStatus] = useState('waiting') // 'waiting', 'loading', 'active'
   const [error, setError] = useState(null)
-  const [rotated, setRotated] = useState(false)
 
   // Il QR del codice: si rifà quando il codice cambia; se fallisce resta solo il codice.
   // Senza margine (lo dà la carta bianca di AttesaTV, 4 moduli) e a 400px: il
@@ -205,7 +197,14 @@ export default function TVDashboard() {
   // La TV conta da sola fra un messaggio del telefono e l'altro: col telefono
   // bloccato i messaggi smettono di arrivare, e fino al 29/10/2026 il timer qui
   // si fermava sull'ultimo numero (src/lib/avanzaTimer.js).
-  const sequenza = useMemo(() => (workout ? buildTimerSequence(workout) : []), [workout])
+  // Le pause dopo il Cash In e prima del Cash Out (26/11/2026) solo se il
+  // telefono dice di averle: un'app vecchia sugli Store non le ha, e con la
+  // sequenza diversa la TV non saprebbe più andare avanti da sola.
+  const pauseDalTelefono = timerState?.pause === true
+  const sequenza = useMemo(
+    () => (workout ? buildTimerSequence(workout, { pause: pauseDalTelefono }) : []),
+    [workout, pauseDalTelefono],
+  )
   const [adesso, setAdesso] = useState(() => Date.now())
   useEffect(() => {
     if (!timerState?.isRunning) return
@@ -244,19 +243,12 @@ export default function TVDashboard() {
       const container = document.getElementById('tv-canvas-container');
       const inner = document.getElementById('tv-inner-content');
       if (container && inner) {
+        // Solo orizzontale dal 26/11/2026: la TV ruotata avrà un disegno suo.
         const screenW = window.innerWidth;
         const screenH = window.innerHeight;
-        const isRotated = inner.style.transform.includes('rotate(90deg)');
-        
-        if (isRotated) {
-           const requiredVisualWidth = inner.scrollHeight;
-           let finalScale = Math.min(screenW / Math.max(1920, requiredVisualWidth), screenH / 1080);
-           container.style.transform = `scale(${finalScale})`;
-        } else {
-           const requiredVisualHeight = Math.max(1080, inner.scrollHeight);
-           let finalScale = Math.min(screenW / 1920, screenH / requiredVisualHeight);
-           container.style.transform = `scale(${finalScale})`;
-        }
+        const requiredVisualHeight = Math.max(1080, inner.scrollHeight);
+        const finalScale = Math.min(screenW / 1920, screenH / requiredVisualHeight);
+        container.style.transform = `scale(${finalScale})`;
       }
     };
     updateScale();
@@ -351,44 +343,64 @@ export default function TVDashboard() {
     }
   }, [])
 
+  // ── Cosa mostrare: la locandina prima del via, il carosello col timer ──
+  // Calcolato qui in cima (e non dentro renderContent) perché useAdattaTesto è
+  // un hook: va chiamato sempre, anche sullo schermo del codice.
+  const schermo = useMemo(() => {
+    if (!workout) return null
+    const s = workout.sections || {}
+    const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
+    const isAuto = rawCat === 'Custom' || rawCat === 'Autonomo' || s?.isAutonomous
+    const category = rawCat === 'Event' ? 'Event' : (isAuto ? 'Custom' : rawCat)
+    const blocks = category === 'Hyrox' ? getNormalizedBlocks(workout) : []
+    const voci = vociLocandina({ categoria: category, blocks, sections: s })
+    const secondi = category === 'Hyrox' ? riepilogoWorkout(blocks).secondi
+      : category === 'Gym' ? minutiGym(s.gym || []) * 60 : 0
+    const minuti = Math.round(secondi / 60)
+    const durata = secondi <= 0 ? null
+      : secondi < 600 ? { etichetta: 'Durata', valore: mmss(secondi) }
+      : { etichetta: 'Circa', valore: minuti >= 60 ? `${Math.floor(minuti / 60)} h ${String(minuti % 60).padStart(2, '0')}` : `${minuti} min` }
+    return {
+      category, blocks, voci, durata,
+      conTimer: haTimerGuidato(workout),
+      vociBlocchi: blocks.map((b, k) => voceBlocco(b, k)),
+      etichetta: category === 'Event' ? 'Gara / Evento'
+        : category === 'Custom' ? 'Allenamento libero'
+        : category === 'Running' ? 'Allenamento di corsa'
+        : category === 'Gym' ? 'Allenamento Gym'
+        : 'Allenamento Hyrox',
+    }
+  }, [workout])
+
+  // «Avviato» non è «timer aperto»: collegando la TV il telefono apre il timer
+  // in pausa sulla preparazione, e la locandina deve restare finché non si preme
+  // Avvia. Partito = sta andando, o è già andato avanti almeno di un secondo.
+  const avviato = !!schermo?.conTimer && !!timerState && (
+    timerState.isRunning || timerState.currentIdx > 0 || timerState.timeLeft < (timerState.step?.duration ?? 0))
+  // Più persone sfasate sullo stesso timer: arrivano dal telefono insieme al
+  // `timer_state` (src/lib/personeTV.js).
+  const persone = timerState && Array.isArray(timerState.persone) && timerState.persone.length > 0
+    ? timerState.persone : null
+  const passo = lastTimerState?.step
+  const carosello = useMemo(() => (schermo && avviato
+    ? statoCarosello({ blocks: schermo.blocks, sequenza, step: passo, persone })
+    : null), [schermo, avviato, sequenza, passo, persone])
+
+  const chiavePersone = persone ? persone.map(p => `${p.nome}${p.partenza}`).join() : ''
+  const refLista = useAdattaTesto([schermo, avviato])
+  const refCarosello = useAdattaTesto([schermo, avviato, chiavePersone, carosello?.corrente, passo?.type, passo?.id === 'prep'])
+
   const renderContent = () => {
     if (error) {
       return <ErroreTV messaggio={error} />
     }
 
     if (status === 'waiting') {
-      return <AttesaTV codice={code} qr={qr} audioAttivo={audioUnlocked} ruotato={rotated} onRuota={() => setRotated(!rotated)} />
+      return <AttesaTV codice={code} qr={qr} audioAttivo={audioUnlocked} />
     }
 
-    if (status === 'loading') {
+    if (status === 'loading' || !schermo) {
       return <CaricamentoTV />
-    }
-
-    const s = workout?.sections || {}
-    const rawCat = s?.category || (s?.main?.type === 'Running' || s?.steps ? 'Running' : 'Hyrox')
-    const isAuto = rawCat === 'Custom' || rawCat === 'Autonomo' || s?.isAutonomous
-    const isEvent = rawCat === 'Event'
-    const category = isEvent ? 'Event' : (isAuto ? 'Custom' : rawCat)
-    const isRunning = category === 'Running'
-    
-    let blocks = []
-    if (s.blocks) blocks = s.blocks
-    else {
-      if (s.warmup) blocks.push({ id: 'w', type: 'WarmUp', params: { duration: s.warmup.duration }, notes: s.warmup.notes })
-      if (s.cashIn?.length > 0) blocks.push({ id: 'ci', type: 'Cash In', exercises: s.cashIn })
-      if (s.main && !isRunning) blocks.push({ id: 'm', type: s.main.type === 'EMOM' && s.main.params?.on ? 'ON/OFF' : s.main.type, params: s.main.params || {}, exercises: s.main.exercises || [] })
-      if (s.cashOut?.length > 0) blocks.push({ id: 'co', type: 'Cash Out', exercises: s.cashOut })
-    }
-
-    const mainBlock = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type)) || blocks[0] || { type: 'Hyrox' }
-    const type = isEvent ? 'Event' : (isAuto ? 'Custom' : (isRunning ? 'Running' : mainBlock.type))
-
-    let activeIdx = -1;
-    if (statoMostrato?.step?.id) {
-      const parts = statoMostrato.step.id.split('-');
-      if (parts[0] === 'blk' || parts[0] === 'run' || parts[0] === 'step') {
-        activeIdx = parseInt(parts[1], 10);
-      }
     }
 
     const formatT = (totalSeconds) => {
@@ -398,149 +410,77 @@ export default function TVDashboard() {
       return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
-    const totalItems = (isRunning ? 1 : blocks.length) + (workout.coach_notes ? 1 : 0);
-    
-    let cols = 1;
-    let rows = 1;
-    if (!rotated) {
-      if (totalItems === 1) { cols = 1; rows = 1; }
-      else if (totalItems === 2) { cols = 2; rows = 1; }
-      else if (totalItems === 3) { cols = 3; rows = 1; }
-      else if (totalItems === 4) { cols = 2; rows = 2; }
-      else if (totalItems === 5 || totalItems === 6) { cols = 3; rows = 2; }
-      else if (totalItems === 7 || totalItems === 8) { cols = 4; rows = 2; }
-      else { cols = Math.ceil(totalItems / 2); rows = 2; }
-    }
-
     // Solo lettura dello stato che arriva dal telefono: nessun conto sul tempo,
     // solo come mostrarlo. Gli step a cronometro (duration 0) non hanno una fine,
     // quindi niente barra.
-    const passo = lastTimerState?.step
-    const avanzamento = passo?.duration > 0 && lastTimerState
+    const fine = passo?.type === 'done'
+    const avanzamento = fine ? 1 : passo?.duration > 0 && lastTimerState
       ? (passo.duration - lastTimerState.timeLeft) / passo.duration
       : null
-    // Più persone sfasate sullo stesso timer: arrivano dal telefono insieme al
-    // `timer_state` (src/lib/personeTV.js). Senza, resta la riga ambra di sempre.
-    const persone = timerState && Array.isArray(timerState.persone) && timerState.persone.length > 0
-      ? timerState.persone : null
-    // Il blocco su cui stanno le persone: quello in corso, o il prossimo a scaglioni.
-    // Nel riposo di un ON/OFF restano qui, sull'esercizio che viene dopo; solo
-    // dopo l'ultimo riposo del blocco passano al prossimo EMOM o ON/OFF.
-    const idStep = statoMostrato?.step?.id
-    const bloccoAttivo = blocks[activeIdx]
-    const attivoFinito = !!persone && !!bloccoAttivo && bloccoAScaglioni(bloccoAttivo)
-      && esercizioInCorso(bloccoAttivo, activeIdx, idStep) == null
-      && esercizioInArrivo(bloccoAttivo, activeIdx, idStep) == null
-    const bloccoPersone = persone
-      ? blocks.findIndex((b, i) => (attivoFinito ? i > activeIdx : i >= activeIdx) && bloccoAScaglioni(b))
-      : -1
-
     // Con più persone il compito del timer («Wall Balls») vale per una sola:
-    // nel blocco a scaglioni la fascia rimanda ai colori delle righe.
-    const inGruppo = bloccoPersone >= 0 && bloccoPersone === activeIdx
+    // nel blocco a scaglioni il timer rimanda ai colori delle righe.
+    const inGruppo = !!carosello?.inGruppo
+    const accento = ACCENTO_TEMA[passo?.theme] || BRAND
+    const fase = [nomeFase(passo), /^Round/.test(passo?.subtitle || '') || passo?.pausa ? passo.subtitle : '']
+      .filter(Boolean).join(' · ')
 
-    const etichettaCategoria = category === 'Event' ? 'Gara / Evento'
-      : category === 'Custom' ? 'Allenamento libero'
-      : isRunning ? 'Allenamento di corsa'
-      : category === 'Gym' ? 'Allenamento Gym'
-      : 'Allenamento Hyrox'
+    // Il piede della carta di pausa: chi parte da dove, o come aggiungere le persone.
+    const piedePausa = (b) => !bloccoAScaglioni(b)
+      ? 'Si parte tutti insieme.'
+      : persone
+        ? <>Ognuno parte dal suo colore. Per cambiare: <b className="font-semibold text-gray-200">Persone sulla TV</b>, sul telefono.</>
+        : <>Siete in più? Aggiungi le persone dal telefono, in <b className="font-semibold text-gray-200">Persone sulla TV</b>: ognuno parte da un esercizio diverso.</>
+
+    const carte = carosello
+      ? carosello.tappe.map((tappa, j) => ({
+          chiave: `${tappa.tipo}-${tappa.k ?? ''}`,
+          tappa,
+          voce: tappa.k != null ? schermo.vociBlocchi[tappa.k] : null,
+          stato: carosello.carte[j],
+          piede: tappa.tipo === 'pausa' ? piedePausa(schermo.blocks[tappa.k]) : null,
+        }))
+      : []
 
     return (
-      <div className={`w-full min-h-full flex flex-col relative ${rotated ? 'px-10 pt-10 pb-10 gap-7' : 'px-14 pt-12 pb-14 gap-10'}`}>
-        <TestataTV
-          coloreCategoria={coloreCategoria(category)}
-          etichettaCategoria={etichettaCategoria}
+      <>
+        <LocandinaTV
+          visibile={!avviato}
+          etichettaCategoria={schermo.etichetta}
+          coloreCategoria={coloreCategoria(schermo.category)}
           titolo={workout.title}
           intensita={workout.sections?.intensity}
           classeIntensita={getIntensityColor(workout.sections?.intensity)}
+          durata={schermo.durata}
+          quantiBlocchi={schermo.category === 'Hyrox' ? schermo.blocks.length : 0}
+          nota={workout.coach_notes}
+          voci={schermo.voci}
+          conTimer={schermo.conTimer}
           audioAttivo={audioUnlocked}
-          onRuota={() => setRotated(!rotated)}
-          stretto={rotated}
+          refLista={refLista}
         />
-
-        <div className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${timerState ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-          <div className="overflow-hidden">
-            <div className={`transition-all duration-500 pb-2 ${timerState ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8'}`}>
-              <TimerTV
-                titolo={passo?.title}
-                sottotitolo={passo?.subtitle}
-                compito={inGruppo ? (passo?.type === 'rest' ? 'Riposo · poi al tuo colore' : 'Ognuno al suo colore') : passo?.task}
-                poi={inGruppo ? null : passo?.nextTask}
-                tempo={lastTimerState ? formatT(lastTimerState.timeLeft) : '0:00'}
-                avanzamento={avanzamento}
-                tema={passo?.theme}
-                inPausa={!!lastTimerState && !lastTimerState.isRunning && passo?.type !== 'done'}
-                stretto={rotated}
-              />
-              {persone && <div className="mt-6"><LeggendaTV persone={persone} /></div>}
-            </div>
-          </div>
-        </div>
-
-        {/* Blocks */}
-        <div className="w-full flex-1 min-h-0">
-           <div 
-             className={rotated ? "flex flex-col gap-8 w-full h-full" : "grid gap-8 w-full h-full"}
-             style={!rotated ? {
-               gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-               gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`
-             } : undefined}
-           >
-             {!isRunning && type !== 'Custom' && type !== 'Event' ? (
-                blocks.map((block, idx) => {
-                  const esercizi = block.exercises || []
-                  const riposo = ['WarmUp', 'Rest'].includes(block.type)
-                  const numerato = block.type === 'EMOM' || block.type === 'ON/OFF'
-                  // In un EMOM il numero sono i minuti, anche «2–3» (src/lib/stazioniEmom.js).
-                  const etichette = etichetteStazioni(esercizi, block.type)
-                  const durata = mmss(durataBlocco(block))
-                  // EMOM e ON/OFF: l'esercizio che sta girando, letto dall'id dello step.
-                  const corrente = statoMostrato ? esercizioInCorso(block, idx, statoMostrato.step?.id) : null
-                  // Con le persone, il blocco in corso colora ogni riga di chi ci sta sopra.
-                  // Nel riposo e prima del via (preparazione, riscaldamento, Rest) le righe
-                  // dicono invece dove andrà ognuno, «in arrivo».
-                  const arrivo = idx === activeIdx ? esercizioInArrivo(block, idx, idStep) : null
-                  const posizione = idx !== activeIdx ? 0 : corrente ?? arrivo
-                  const inArrivo = idx !== activeIdx || corrente == null
-                  const chiDove = persone && idx === bloccoPersone && posizione != null
-                    ? personePerEsercizio(posizione, esercizi.length, persone) : null
-                  return (
-                    <BloccoTV key={block.id || idx}
-                      tipo={block.type}
-                      hint={blockHint(block.type)}
-                      sottotitolo={sottotitoloBlocco(block)}
-                      durata={durata !== '0:00' ? durata : null}
-                      lavoro={BLOCCHI_DI_LAVORO.has(block.type)}
-                      numero={blocks.length > 1 ? idx + 1 : null}
-                      attivo={idx === activeIdx}>
-                      {riposo ? (
-                        block.notes ? <NotaBloccoTV>{block.notes}</NotaBloccoTV> : null
-                      ) : esercizi.map((ex, i) => (
-                        <EsercizioTV key={ex.id || i}
-                          numero={numerato ? etichette[i] : null}
-                          nome={ex.name}
-                          specifiche={[specificheEsercizio(ex, isErgo), haIncremento(block) ? testoAumento(ex) : ''].filter(Boolean).join(' · ')}
-                          note={ex.notes}
-                          intensita={ex.intensity}
-                          classeIntensita={getIntensityColor(ex.intensity)}
-                          attivo={i === corrente}
-                          persone={chiDove ? chiDove[i] : null}
-                          inArrivo={inArrivo} />
-                      ))}
-                    </BloccoTV>
-                  )
-                })
-              ) : isRunning ? (
-                  <CartaCorsaTV>
-                    <CorsaTV passi={s?.steps || s?.main?.steps || []} attivo={activeIdx} classeIntensita={getIntensityColor} />
-                  </CartaCorsaTV>
-              ) : null}
-
-              {/* Note Coach */}
-              {workout.coach_notes && <NotaCoachTV>{workout.coach_notes}</NotaCoachTV>}
-           </div>
-        </div>
-      </div>
+        {schermo.conTimer && (
+          <InCorsoTV
+            visibile={avviato}
+            titolo={workout.title}
+            audioAttivo={audioUnlocked}
+            timer={{
+              fase,
+              colore: accento,
+              compito: inGruppo ? (passo?.type === 'rest' ? 'Riposo · poi al tuo colore' : 'Ognuno al suo colore') : passo?.task,
+              poi: inGruppo ? null : passo?.nextTask,
+              tempo: fine || !lastTimerState ? null : formatT(lastTimerState.timeLeft),
+              inPausa: !!lastTimerState && !lastTimerState.isRunning && !fine,
+              avanzamento,
+              coloreCifre: passo?.theme === 'rest' ? ACCENTO_TEMA.rest : '#ffffff',
+            }}
+            carte={carte}
+            corrente={carosello?.corrente ?? 0}
+            classeIntensita={getIntensityColor}
+            notaLibera={workout.coach_notes}
+            refCarosello={refCarosello}
+          />
+        )}
+      </>
     )
   }
 
@@ -571,14 +511,10 @@ export default function TVDashboard() {
       >
         <div 
           id="tv-inner-content"
-          className="bg-[#0B0B0B] text-white relative transition-all duration-500 ease-in-out flex flex-col"
-          style={{
-            width: rotated ? '1080px' : '1920px',
-            minHeight: rotated ? '1920px' : '1080px',
-            height: 'max-content',
-            transform: rotated ? 'rotate(90deg)' : 'none',
-            transformOrigin: 'center'
-          }}
+          className="bg-[#0B0B0B] text-white relative flex flex-col overflow-hidden"
+          // Locandina e carosello sono disegnati su 1920×1080 esatti; lo schermo
+          // del codice è più alto e si rimpicciolisce con la scala, come prima.
+          style={{ width: '1920px', minHeight: '1080px', height: status === 'active' && schermo ? '1080px' : 'max-content' }}
         >
           {renderContent()}
         </div>

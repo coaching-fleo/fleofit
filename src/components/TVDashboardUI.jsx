@@ -2,30 +2,35 @@
 //
 // Stesso patto di WorkoutDetailUI e degli altri *UI.jsx: SOLA PRESENTAZIONE.
 // Ricevono testo già formattato e callback già esistenti. Il timer, i beep, il
-// canale realtime e la scala del canvas stanno in pages/TVDashboard.jsx e lì
-// restano: se qui dentro compare un `useEffect`, una `supabase` o un calcolo
-// sul tempo che resta, è finito nel file sbagliato.
+// canale realtime e la scala del canvas stanno in pages/TVDashboard.jsx; cosa
+// è acceso e cosa no lo decide src/lib/schermoTV.js. Se qui dentro compare un
+// `useEffect`, una `supabase` o un calcolo sul tempo che resta, è finito nel
+// file sbagliato.
 //
-// Il rework in una riga: la TV era l'ultima schermata di prima del redesign —
-// bordi da 4px, `#1e1e1e` piatto, il logo ripetuto due volte e il giallo
-// dappertutto. Ora parla la stessa lingua della scheda workout: la carta
-// sollevata, la spina colorata del blocco, la sovrascritta con il pallino
-// della corsia, il vetro per i controlli. Tutto in scala da 1920×1080, cioè
-// grande abbastanza da leggersi dall'altra parte della sala.
+// Dal 26/11/2026 la TV ha DUE MOMENTI (prototipo tools/design-tv/proposta-d.html,
+// scelto dal committente; storia in docs/memoria/scheda-workout.md, 9-tv-carosello):
+// - prima del via, la LOCANDINA: PUSHFIT grande a sinistra, il workout intero a
+//   destra, un riquadro per blocco — la lavagna del box, senza confusione;
+// - col timer partito dal telefono, il CAROSELLO: il blocco in corso al centro,
+//   i vicini più piccoli ai lati.
+// Pesi leggeri (500–700), aria, niente bordi dove basta lo spazio: le «lavagne»
+// in grassetto sono state scartate perché caotiche. Solo orizzontale: la TV
+// in verticale avrà un disegno suo (BACKLOG).
 
-import { Volume2, VolumeX, RotateCcwSquare, ClipboardList, Pause, MonitorUp } from 'lucide-react'
-import { VETRO } from '../lib/stiliCard'
-import { TYPE_COLORS } from '../lib/blockColors'
-import { BRAND, RUNNING, CUSTOM } from '../lib/colori'
-import { partiRipetuta, etichettaParte } from '../lib/ripetute'
+// ⚠️ Le righe di una carta stanno in fondo con `mt-auto` sulla prima e NON con
+// `justify-end`: con justify-end ciò che non ci sta esce dall'ALTO, dove
+// `scrollHeight` non lo vede, e useAdattaTesto lo dava per buono (26/11/2026).
+import { Volume2, VolumeX, Pause, MonitorUp, Play, Repeat } from 'lucide-react'
+import { BRAND } from '../lib/colori'
+import { VERDE_TV } from '../lib/schermoTV'
 import { NOME_APP } from '../lib/marchio'
 import Logo from './Logo'
 
+const VERDE = VERDE_TV
+
 /**
- * La carta sollevata (`CARD_BASE` di stiliCard) in scala TV: stesso gradiente,
- * stessa hairline chiara in alto, ombra e raggio proporzionati a 1920px.
- * Senza bordo di proposito: chi la usa lo dichiara (vedi la trappola dei due
- * bordi in stiliCard.js).
+ * La carta sollevata in scala TV: stesso gradiente della scheda, ombra e raggio
+ * proporzionati a 1920px. La usano lo schermo del codice e quello d'errore.
  */
 const CARTA_TV = 'rounded-[40px] bg-gradient-to-b from-[#1c1c1f] to-[#171719] ' +
   'shadow-[0_40px_70px_-36px_rgba(0,0,0,.9),inset_0_2px_0_rgba(255,255,255,.06)]'
@@ -33,64 +38,49 @@ const CARTA_TV = 'rounded-[40px] bg-gradient-to-b from-[#1c1c1f] to-[#171719] ' 
 // ── I controlli ───────────────────────────────────────────────────────────
 
 /**
- * Audio e rotazione. L'audio è un cerchio di vetro, come le icone di stato
- * della scheda; l'audio spento è l'unico che chiede attenzione, perché senza un
- * «OK» sul telecomando la TV resta muta.
- *
- * ⚠️ La rotazione NON è una freccia circolare: sembrava «ricarica la pagina»
- * (15/10/2026). È il quadrato con la freccia curva di Foto su iOS, il simbolo
- * che il committente ha scelto: quello che tutti riconoscono come «ruota».
+ * L'audio: un cerchio discreto quando è attivo, rosso e pulsante quando è
+ * spento, perché senza un «OK» sul telecomando la TV resta muta.
+ * ⚠️ Il bottone per ruotare lo schermo è stato tolto il 26/11/2026: la TV in
+ * verticale avrà un disegno suo, più avanti.
  */
-export function ControlliTV({ audioAttivo, onRuota, ruotato = false }) {
+export function AudioTV({ audioAttivo }) {
   return (
-    <div className="flex items-center gap-4 shrink-0">
-      <span title="Suoni TV" aria-label={audioAttivo ? 'Audio attivo' : 'Audio spento'}
-        className={`w-[76px] h-[76px] rounded-full flex items-center justify-center border-2 ${
-          audioAttivo ? 'bg-brand/[.12] border-brand/35 text-brand' : 'bg-red-500/[.12] border-red-500/35 text-red-400 animate-pulse'}`}>
-        {audioAttivo ? <Volume2 size={34} /> : <VolumeX size={34} />}
-      </span>
-      <button type="button" onClick={onRuota}
-        aria-label={ruotato ? 'Passa allo schermo orizzontale' : 'Passa allo schermo verticale'}
-        title="Ruota lo schermo"
-        className={`w-[76px] h-[76px] rounded-full flex items-center justify-center ${VETRO} text-gray-200
-                    hover:text-white hover:border-white/25 transition`}>
-        <RotateCcwSquare size={34} aria-hidden="true" />
-      </button>
-    </div>
-  )
-}
-
-/** Il logo (`<Logo />`, dal 17/11/2026) seguito da «TV». */
-function MarchioTV({ grande = false }) {
-  return (
-    <span className={`inline-flex items-center leading-none ${grande ? 'text-[132px]' : 'text-[44px]'}`}>
-      <Logo altezza={grande ? 100 : 33} />
-      <span className={`ml-[.28em] font-extrabold tracking-[.14em] text-muted align-middle ${grande ? 'text-[40px]' : 'text-[18px]'}`}>TV</span>
+    <span title="Suoni TV" aria-label={audioAttivo ? 'Audio attivo' : 'Audio spento'}
+      className={`w-[64px] h-[64px] rounded-full flex items-center justify-center border-2 shrink-0 ${
+        audioAttivo ? 'bg-white/[.05] border-white/[.08] text-gray-300' : 'bg-red-500/[.12] border-red-500/35 text-red-400 animate-pulse'}`}>
+      {audioAttivo ? <Volume2 size={28} /> : <VolumeX size={28} />}
     </span>
   )
 }
 
-// ── Attesa: il codice da inserire sul telefono ────────────────────────────
+/** Il logo (`<Logo />`) seguito da «TV»: schermo del codice e caricamento. */
+function MarchioTV() {
+  return (
+    <span className="inline-flex items-center leading-none">
+      <Logo altezza={100} />
+      <span className="ml-[.28em] text-[40px] font-extrabold tracking-[.14em] text-muted align-middle">TV</span>
+    </span>
+  )
+}
+
+// ── Il codice da inserire sul telefono ────────────────────────────────────
 
 /**
  * Lo schermo che la TV mostra finché un telefono non si collega. È una sola
  * cosa da fare, e il codice è l'unico punto giallo dello schermo.
  */
-export function AttesaTV({ codice, audioAttivo, onRuota, ruotato, qr = null }) {
+export function AttesaTV({ codice, audioAttivo, qr = null }) {
   const cifre = (codice || '····').split('')
   return (
     <div className="relative flex-1 w-full flex flex-col items-center justify-center p-16 overflow-hidden">
-      {/* Un'unica luce ambra dietro il codice: stato («qui»), non atmosfera. */}
       <span aria-hidden="true"
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[1400px] h-[1400px] pointer-events-none
                    bg-[radial-gradient(closest-side,rgba(241,197,23,.09),transparent_70%)]" />
 
-      <div className="absolute top-12 right-12 z-10">
-        <ControlliTV audioAttivo={audioAttivo} onRuota={onRuota} ruotato={ruotato} />
-      </div>
+      <div className="absolute top-12 right-12 z-10"><AudioTV audioAttivo={audioAttivo} /></div>
 
-      <div className={`relative flex flex-col items-center text-center ${ruotato ? 'gap-16' : 'gap-14'}`}>
-        <MarchioTV grande />
+      <div className="relative flex flex-col items-center text-center gap-14">
+        <MarchioTV />
 
         <div className="flex flex-col items-center gap-5">
           <span className="flex items-center gap-3 text-[24px] font-bold uppercase tracking-[.16em] text-muted">
@@ -127,22 +117,26 @@ export function AttesaTV({ codice, audioAttivo, onRuota, ruotato, qr = null }) {
           </div>
         )}
 
-        {!audioAttivo && (
-          <p className="flex items-center gap-3 rounded-full px-8 py-4 bg-red-500/[.1] border-2 border-red-500/30
-                        text-[30px] font-bold text-red-300 animate-pulse">
-            <VolumeX size={32} aria-hidden="true" />
-            Premi «OK» sul telecomando per attivare l'audio
-          </p>
-        )}
+        {!audioAttivo && <AvvisoAudio />}
       </div>
     </div>
+  )
+}
+
+function AvvisoAudio() {
+  return (
+    <p className="flex items-center gap-3 rounded-full px-8 py-4 bg-red-500/[.1] border-2 border-red-500/30
+                  text-[30px] font-bold text-red-300 animate-pulse">
+      <VolumeX size={32} aria-hidden="true" />
+      Premi «OK» sul telecomando per attivare l'audio
+    </p>
   )
 }
 
 export function CaricamentoTV() {
   return (
     <div className="flex-1 w-full flex flex-col items-center justify-center gap-8">
-      <MarchioTV grande />
+      <MarchioTV />
       <span className="text-[34px] font-bold uppercase tracking-[.16em] text-brand animate-pulse">
         Collegamento in corso…
       </span>
@@ -160,385 +154,379 @@ export function ErroreTV({ messaggio }) {
   )
 }
 
-// ── La testata del workout ────────────────────────────────────────────────
+// ── La locandina: il workout intero, prima del via ───────────────────────
 
-/**
- * Come `TitoloScheda`: la categoria è la sovrascritta, con il pallino della
- * corsia, e il titolo prende tutto lo spazio. Il marchio sta in piccolo a
- * destra, accanto ai controlli: in una sala serve a dire «questa è la TV di
- * FLEOFIT», non a competere con il nome dell'allenamento.
- */
-export function TestataTV({ coloreCategoria, etichettaCategoria, titolo, intensita, classeIntensita, audioAttivo, onRuota, stretto = false }) {
+/** Le due strisce gialle in diagonale e una luce morbida: solo nella locandina. */
+function SfondoLocandina({ visibile }) {
+  const striscia = 'absolute bg-brand transition-[transform,opacity] duration-1000 ease-out'
   return (
-    <div className="flex items-start justify-between gap-10 shrink-0 px-2">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-4 mb-4 flex-wrap">
-          <span aria-hidden="true" className="w-4 h-4 rounded-full" style={{ background: coloreCategoria }} />
-          <span className="text-[26px] font-bold uppercase tracking-[.12em]" style={{ color: coloreCategoria }}>
-            {etichettaCategoria}
-          </span>
-          {intensita && (
-            <span className={`text-[26px] font-bold uppercase tracking-[.08em] ${classeIntensita}`}>
-              · Intensità {intensita}/10
-            </span>
-          )}
-        </div>
-        <h1 className={`${stretto ? 'text-[60px]' : 'text-[76px]'} font-black tracking-[-.04em] leading-[1.04] text-white text-pretty break-words`}>
-          {titolo}
-        </h1>
-      </div>
-      <div className="flex items-center gap-8 shrink-0 pt-1">
-        {/* Ruotata la TV è larga 1080px: il marchio cede il posto al titolo. */}
-        {!stretto && <MarchioTV />}
-        <ControlliTV audioAttivo={audioAttivo} onRuota={onRuota} ruotato={stretto} />
-      </div>
+    <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
+      <span className="absolute -left-[300px] -top-[400px] w-[1500px] h-[1400px] rotate-[-28deg]
+                       bg-[linear-gradient(90deg,rgba(255,255,255,.035),rgba(255,255,255,0)_70%)]" />
+      <span className={striscia} style={{ left: 900, top: 0, width: 700, height: 12,
+        transform: `skewX(-32deg) translateX(${visibile ? 0 : 420}px)`, opacity: visibile ? 1 : 0 }} />
+      <span className={striscia} style={{ left: 330, bottom: 0, width: 780, height: 30,
+        transform: `skewX(-32deg) translateX(${visibile ? 0 : -900}px)`, opacity: visibile ? 1 : 0 }} />
     </div>
   )
 }
 
-// ── Il timer ──────────────────────────────────────────────────────────────
-
-/**
- * Il colore della fascia segue il tema dello step, come il timer sul telefono
- * (`SCHEMES` di WorkoutDetail): lavoro, riposo e preparazione si riconoscono
- * da lontano prima di leggere una parola. Solo il colore: lo sfondo resta la
- * carta, perché una fascia piena larga 1840px sarebbe un muro.
- */
-const ACCENTO_TEMA = {
-  prep: BRAND,
-  run: RUNNING,
-  rest: '#4ade80',
-  hyrox: CUSTOM,
-  emom: BRAND,
-  base: '#ffffff',
-  done: '#4ade80',
-  custom: CUSTOM,
+/** La linguetta della cartellina: «4x», o «2/4» con i pallini sul blocco in corso. */
+function Linguetta({ giri, giro = null, className = '' }) {
+  return (
+    <span className={`inline-flex items-center gap-[.35em] text-brand font-bold ${className}`}>
+      <Repeat className="w-[.9em] h-[.9em]" strokeWidth={2.5} aria-hidden="true" />
+      <span className="tabular-nums">{giro ? `${giro}/${giri}` : `${giri}x`}</span>
+      {giro && giri <= 8 && (
+        <span className="flex gap-[.3em] ml-[.15em]" aria-hidden="true">
+          {Array.from({ length: giri }, (_, g) => (
+            <i key={g} className={`block w-[.45em] h-[.45em] rounded-full border-[.09em] ${
+              g < giro - 1 ? 'bg-brand/45 border-transparent' : g === giro - 1 ? 'bg-brand border-brand' : 'border-brand/45'}`} />
+          ))}
+        </span>
+      )}
+    </span>
+  )
 }
 
 /**
- * La fascia del timer. Riceve tutto già pronto: il tempo formattato, la quota
- * di avanzamento (0–1, o `null` per i cronometri liberi, che non hanno una
- * fine) e lo step successivo.
+ * Una voce della lista a destra: numero, nome del blocco, linguetta, didascalia
+ * e durata in testa, gli esercizi sotto. Tutto in `em`: la pagina adatta la
+ * grandezza del testo perché il workout ci stia intero (`useAdattaTesto`).
  */
-export function TimerTV({ titolo, sottotitolo, compito, poi, tempo, avanzamento, tema, inPausa, stretto = false }) {
-  const accento = ACCENTO_TEMA[tema] || BRAND
+function VoceLocandina({ voce }) {
   return (
-    <div className={`${CARTA_TV} relative overflow-hidden border-2`}
-      style={{ borderColor: `${accento}4d` }}>
-      <span aria-hidden="true" className="absolute left-0 inset-y-0 w-[10px]" style={{ background: accento }} />
-      <span aria-hidden="true"
-        className="absolute -top-[60%] -left-[8%] w-[900px] h-[900px] pointer-events-none"
-        style={{ background: `radial-gradient(closest-side, ${accento}1f, transparent 70%)` }} />
+    <>
+      {voce.pausaPrima && (
+        <div className="shrink-0 flex items-center gap-[.5em] px-[.7em] text-[.7em] font-semibold"
+          style={{ color: VERDE }}>
+          <Pause className="w-[1em] h-[1em]" aria-hidden="true" /> Pausa
+          <span aria-hidden="true" className="flex-1 border-t-[.08em] border-dashed" style={{ borderColor: `${VERDE}59` }} />
+        </div>
+      )}
+      <div className="shrink-0 rounded-[.55em] bg-white/[.04] px-[.7em] pt-[.42em] pb-[.5em]">
+        <div className="flex items-baseline gap-[.55em] whitespace-nowrap">
+          <span className="w-[1.1em] text-[.8em] font-medium text-gray-500 tabular-nums">{voce.numero}</span>
+          <h3 className="text-[1.06em] font-semibold tracking-[-.01em]">{voce.titolo}</h3>
+          {voce.giri && (
+            <Linguetta giri={voce.giri}
+              className="self-center text-[.68em] px-[.5em] py-[.1em] rounded-t-[.4em] border-[.07em] border-b-transparent border-brand/55" />
+          )}
+          {voce.hint && <span className="text-[.72em] font-medium text-gray-500">{voce.hint}</span>}
+          {voce.durata && <span className="ml-auto text-[.8em] font-medium text-gray-400 tabular-nums">{voce.durata}</span>}
+        </div>
+        {voce.righe.length > 0 ? (
+          <ul className="lista-righe pl-[1.65em] mt-[.15em]">
+            {voce.righe.map(r => (
+              <li key={r.id} className="text-[.86em] leading-[1.4] text-gray-300 whitespace-nowrap">
+                {r.nome}{r.specifiche && <span className="ml-[.35em] text-[.88em] text-gray-500">{r.specifiche}</span>}
+              </li>
+            ))}
+          </ul>
+        ) : voce.nota ? (
+          <p className="pl-[1.9em] mt-[.1em] text-[.8em] text-gray-500 truncate">{voce.nota}</p>
+        ) : null}
+      </div>
+    </>
+  )
+}
 
-      {/* Stretto (TV ruotata, 1080px): il tempo va sopra e il compito sotto,
-          invece di contendersi una riga che non basta a nessuno dei due. */}
-      <div className={`relative flex ${stretto ? 'flex-col-reverse items-stretch gap-3 pl-14 pr-12 py-8' : 'items-center gap-12 pl-16 pr-14 py-10'}`}>
-        <div className="flex-1 min-w-0 flex flex-col gap-3">
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-[30px] font-extrabold uppercase tracking-[.14em]" style={{ color: accento }}>
-              {titolo}
+/**
+ * La locandina. `voci` vengono da `vociLocandina` (src/lib/schermoTV.js);
+ * senza voci (Custom, Evento) a destra vanno le note del coach. `refLista` è
+ * del contenitore che la pagina adatta.
+ */
+export function LocandinaTV({
+  visibile, etichettaCategoria, coloreCategoria, titolo, intensita, classeIntensita, durata, quantiBlocchi,
+  nota, voci, conTimer, audioAttivo, refLista,
+}) {
+  const notaADestra = voci.length === 0
+  return (
+    <section aria-hidden={!visibile}
+      className={`absolute inset-0 transition-[opacity,transform] duration-[800ms] ease-out ${
+        visibile ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-[160px] pointer-events-none'}`}>
+      <SfondoLocandina visibile={visibile} />
+      <div className="absolute left-[120px] top-0 bottom-0 w-[820px] flex flex-col">
+        <div className="mt-[96px] flex items-center gap-[14px] text-[26px] font-semibold text-[#c9ccd4]">
+          <i aria-hidden="true" className="w-[12px] h-[12px] rounded-full" style={{ background: coloreCategoria }} />
+          {etichettaCategoria}
+        </div>
+        <h1 className="mt-[28px] text-[60px] font-bold tracking-[-.025em] leading-[1.08] text-balance line-clamp-3 break-words">{titolo}</h1>
+        <div className="mt-[20px] flex gap-[28px] text-[26px] font-medium text-gray-400">
+          {intensita && <span>Intensità <b className={`font-semibold ${classeIntensita}`}>{intensita}/10</b></span>}
+          {durata && <span>{durata.etichetta} <b className="font-semibold text-gray-200">{durata.valore}</b></span>}
+          {quantiBlocchi > 0 && <span><b className="font-semibold text-gray-200">{quantiBlocchi}</b> {quantiBlocchi === 1 ? 'blocco' : 'blocchi'}</span>}
+        </div>
+        {nota && !notaADestra && (
+          <p className="mt-[26px] max-w-[640px] text-[27px] leading-[1.5] text-gray-400 line-clamp-5 whitespace-pre-line">{nota}</p>
+        )}
+
+        <div className="mt-auto mb-[120px]">
+          <Logo altezza={107} className="-ml-[6px]" />
+          <div className="flex items-center gap-[30px] mt-[22px]">
+            <span className="text-[76px] font-bold tracking-[-.02em] leading-none bg-gradient-to-b from-gray-300 to-gray-500 bg-clip-text text-transparent">
+              Allenamento di oggi
             </span>
-            {sottotitolo && (
-              <span className="text-[28px] font-bold tracking-[.04em] text-muted">· {sottotitolo}</span>
+            {conTimer && (
+              <span aria-hidden="true" className="relative shrink-0 w-[92px] h-[92px]">
+                <span className="absolute inset-0 rounded-full bg-brand/40 animate-ping [animation-duration:2.4s]" />
+                <span className="relative w-full h-full rounded-full bg-brand text-black flex items-center justify-center">
+                  <Play size={38} fill="currentColor" className="ml-[6px]" />
+                </span>
+              </span>
             )}
+          </div>
+          {conTimer && <p className="mt-[24px] text-[26px] text-gray-400">Avvia il timer dal telefono per cominciare.</p>}
+          {!audioAttivo && <div className="mt-[28px] [&>p]:text-[24px] [&>p]:px-6 [&>p]:py-3 [&>p]:inline-flex"><AvvisoAudio /></div>}
+        </div>
+      </div>
+
+      <div className="absolute left-[1020px] right-[88px] top-[150px] bottom-[100px] flex flex-col">
+        <h2 className="text-[36px] font-bold tracking-[-.015em] pb-[22px] border-b-2 border-white/[.08]">Il workout</h2>
+        {notaADestra ? (
+          <p className="mt-[28px] text-[34px] leading-[1.5] text-gray-300 whitespace-pre-line line-clamp-[14] break-words">
+            {nota || 'Allenamento libero: il cronometro parte dal telefono.'}
+          </p>
+        ) : (
+          <div ref={refLista} data-adatta="lista" data-disposizione="colonna"
+            className="locandina-lista flex-1 min-h-0 overflow-hidden text-[30px] pt-[.5em] flex flex-col gap-[.34em]">
+            {voci.map(v => <VoceLocandina key={v.id} voce={v} />)}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+// ── In corso: testata, timer e carosello ─────────────────────────────────
+
+/**
+ * La testata: il logo GRANDE (richiesta del committente, 26/11/2026: «molto più
+ * grande durante il workout») e il titolo accanto.
+ */
+function TestataInCorso({ titolo, audioAttivo }) {
+  return (
+    <div className="absolute left-[72px] right-[72px] top-[40px] h-[80px] flex items-center gap-[30px]">
+      <Logo altezza={66} />
+      <span className="min-w-0 flex-1 truncate text-[30px] font-medium text-gray-400 pl-[30px] border-l-2 border-white/10">{titolo}</span>
+      <AudioTV audioAttivo={audioAttivo} />
+    </div>
+  )
+}
+
+/** Il timer: fase, compito e «Poi» a sinistra, il tempo grande a destra, la barra sotto. */
+function TimerInCorso({ fase, colore, compito, poi, tempo, inPausa, avanzamento, coloreCifre }) {
+  return (
+    <>
+      <div className="absolute left-[72px] right-[72px] top-[140px] h-[214px] flex items-center gap-[60px]">
+        <div className="flex-1 min-w-0 flex flex-col gap-[14px]">
+          <div className="flex items-center gap-[14px] text-[30px] font-semibold" style={{ color: colore }}>
+            <i aria-hidden="true" className="w-[14px] h-[14px] rounded-full bg-current" />
+            {fase}
             {inPausa && (
-              <span className="flex items-center gap-2 rounded-full px-5 py-1.5 bg-white/[.08] border-2 border-white/[.14]
-                               text-[22px] font-extrabold uppercase tracking-[.12em] text-gray-200">
+              <span className="ml-[10px] inline-flex items-center gap-[10px] text-[24px] px-[16px] py-[5px] rounded-full bg-white/[.08] text-gray-300">
                 <Pause size={22} aria-hidden="true" /> In pausa
               </span>
             )}
           </div>
-          <span className={`${stretto ? 'text-[52px]' : 'text-[60px]'} font-black tracking-[-.03em] leading-[1.08] text-white truncate`}>{compito}</span>
+          <div className="text-[66px] font-bold tracking-[-.025em] leading-[1.05] truncate">{compito}</div>
           {poi && (
-            <span className="text-[28px] font-semibold text-gray-400 truncate">
-              <span className="font-extrabold uppercase tracking-[.12em] text-muted mr-3">Poi</span>{poi}
-            </span>
+            <div className="text-[28px] text-gray-400 truncate">
+              <b className="font-semibold text-gray-500 mr-[12px]">Poi</b>{poi}
+            </div>
           )}
         </div>
-
-        <span className={`shrink-0 ${stretto ? 'text-[140px]' : 'text-[170px]'} font-black tabular-nums tracking-[-.05em] leading-none transition-opacity ${
-          inPausa ? 'text-white/45' : 'text-white'}`}
-          style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {tempo}
-        </span>
-      </div>
-
-      {avanzamento != null && (
-        <div aria-hidden="true" className="relative h-[10px] bg-white/[.06]">
-          <span className="absolute left-0 inset-y-0 transition-[width] duration-1000 ease-linear"
-            style={{ width: `${Math.min(1, Math.max(0, avanzamento)) * 100}%`, background: accento }} />
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── I blocchi ─────────────────────────────────────────────────────────────
-
-/**
- * Un blocco come nella scheda (`BloccoScheda`): la spina a sinistra nel colore
- * di TYPE_COLORS, nome e didascalia in testa, durata a destra, gli esercizi
- * sotto. Il blocco in corso prende il bordo e la spina ambra: è l'unica cosa
- * gialla della griglia, quindi si trova con un'occhiata.
- */
-export function BloccoTV({ tipo, hint, sottotitolo, durata, lavoro, numero, attivo, children }) {
-  const hex = (TYPE_COLORS[tipo] || {}).hex || '#9ca3af'
-  return (
-    <div className={`${CARTA_TV} relative overflow-hidden border-2 flex flex-col transition-all duration-500 ${
-      attivo ? 'border-brand/70 shadow-[0_0_70px_-10px_rgba(241,197,23,.35)]' : 'border-white/[.07]'}`}>
-      <span aria-hidden="true" className="absolute left-0 inset-y-0"
-        style={attivo
-          ? { width: 10, background: BRAND }
-          : { width: lavoro ? 8 : 6, background: hex, opacity: lavoro ? 1 : 0.6 }} />
-
-      <div className="flex items-start gap-6 pl-12 pr-10 pt-9 pb-7 shrink-0">
-        {numero != null && (
-          <span aria-hidden="true"
-            className={`shrink-0 w-[60px] h-[60px] rounded-full flex items-center justify-center text-[28px] font-black tabular-nums ${
-              attivo ? 'bg-brand text-black' : `${VETRO} text-gray-300`}`}>
-            {numero}
-          </span>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="text-[40px] font-black tracking-[-.025em] leading-[1.1] text-white break-words">{tipo}</p>
-          {(hint || sottotitolo) && (
-            <p className="mt-2 text-[24px] font-semibold text-muted text-pretty">
-              {hint}
-              {hint && sottotitolo && <span aria-hidden="true"> · </span>}
-              {sottotitolo && <span className="font-bold tracking-[.02em] text-gray-300">{sottotitolo}</span>}
-            </p>
-          )}
-        </div>
-        {durata && (
-          <span className={`shrink-0 pt-1 text-[34px] font-extrabold tabular-nums tracking-[.01em] ${
-            attivo ? 'text-brand' : lavoro ? 'text-gray-100' : 'text-gray-400'}`}>
-            {durata}
-          </span>
-        )}
-      </div>
-
-      {children && (
-        <div className="flex-1 flex flex-col gap-4 pl-12 pr-10 pb-10">{children}</div>
-      )}
-    </div>
-  )
-}
-
-/** Il pozzetto delle righe annidate (`RIGA` di stiliCard), in scala TV. */
-const RIGA_TV = 'rounded-[28px] bg-white/[.035] border-2 border-white/[.06] shadow-[inset_0_2px_0_rgba(255,255,255,.05)]'
-
-/**
- * Un esercizio: come `RigaEsercizio`, il nome è il nome, le specifiche stanno
- * sotto e l'intensità in coda. `numero` è il minuto di un EMOM (anche «2–3»,
- * src/lib/stazioniEmom.js): `min-w` e non `w`, così il cerchio si allunga.
- */
-export function EsercizioTV({ numero, nome, specifiche, note, intensita, classeIntensita, attivo = false, persone = null, inArrivo = false }) {
-  // `attivo`: l'esercizio che sta girando in un EMOM o nell'ON di un ON/OFF
-  // (src/lib/esercizioInCorso.js). Bordo e fondo ambra, numero pieno: dentro un
-  // blocco già acceso è l'unica riga gialla.
-  // `persone`: con più persone sfasate (src/lib/personeTV.js) la riga prende il
-  // colore di chi ci sta sopra, al posto dell'ambra, e i loro nomi in coda.
-  // `inArrivo`: nel riposo e prima del via la riga dice dove andrà ognuno — bordo
-  // tratteggiato, niente alone, «POI» davanti ai nomi: si legge come «prossimo»,
-  // non come «adesso».
-  if (persone) {
-    const colore = persone[0]?.colore
-    const stile = !colore ? undefined : inArrivo
-      ? { borderColor: colore, borderStyle: 'dashed', background: `${colore}14` }
-      : { borderColor: colore, background: `${colore}33`, boxShadow: `0 0 60px -6px ${colore}99` }
-    return (
-      <div className={`flex items-center gap-6 px-7 py-5 transition-all duration-500 ${colore ? 'rounded-[28px] border-[3px]' : RIGA_TV}`}
-        style={stile}>
-        {numero != null && (
-          <span aria-hidden="true"
-            className={`shrink-0 min-w-[58px] h-[58px] px-3 rounded-full border-2 flex items-center justify-center
-                       text-[26px] font-extrabold tabular-nums whitespace-nowrap ${colore && !inArrivo ? 'text-black' : 'bg-white/[.06] border-white/15 text-gray-200'}`}
-            style={colore ? (inArrivo ? { borderColor: colore, color: colore } : { background: colore, borderColor: colore }) : undefined}>
-            {numero}
-          </span>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="text-[36px] font-extrabold tracking-[-.015em] leading-[1.15] text-white break-words">{nome}</p>
-          {specifiche && (
-            <p className="mt-1.5 text-[28px] font-semibold tracking-[.01em] text-gray-300 break-words">{specifiche}</p>
-          )}
-          {note && <p className="mt-1.5 text-[24px] text-muted text-pretty break-words">{note}</p>}
-        </div>
-        {/* L'intensità resta anche con le persone: è del coach, vale per tutti. */}
-        {intensita && (
-          <span className={`shrink-0 text-[30px] font-black tracking-[.02em] ${classeIntensita}`}>
-            {intensita}/10
-          </span>
-        )}
-        {persone.length > 0 && (
-          <div className="shrink-0 flex flex-wrap items-center justify-end gap-2.5 max-w-[50%]">
-            {inArrivo && (
-              <span className="text-[22px] font-extrabold uppercase tracking-[.14em] text-gray-300 mr-1">Poi</span>
-            )}
-            {persone.map(p => (
-              <span key={p.id ?? p.nome}
-                className={`px-4 h-[52px] rounded-full flex items-center text-[26px] font-black whitespace-nowrap ${inArrivo ? 'border-[3px]' : 'text-black'}`}
-                style={inArrivo ? { borderColor: p.colore, color: p.colore, background: '#0b0b0b' } : { background: p.colore }}>
-                {p.nome}
-              </span>
-            ))}
+        {tempo != null && (
+          <div className={`text-[210px] font-bold tracking-[-.045em] leading-none tabular-nums transition-colors duration-500 ${inPausa ? 'text-white/35' : ''}`}
+            style={inPausa ? undefined : { color: coloreCifre }}>
+            {tempo}
           </div>
         )}
       </div>
-    )
-  }
-  return (
-    <div className={`flex items-center gap-6 px-7 py-5 transition-all duration-500 ${attivo
-      ? 'rounded-[28px] bg-brand/[.10] border-2 border-brand/60 shadow-[0_0_40px_-12px_rgba(241,197,23,.45)]'
-      : RIGA_TV}`}>
-      {numero != null && (
-        <span aria-hidden="true"
-          className={`shrink-0 min-w-[58px] h-[58px] px-3 rounded-full border-2 flex items-center justify-center
-                      text-[26px] font-extrabold tabular-nums whitespace-nowrap ${attivo
-            ? 'bg-brand border-brand text-black' : 'bg-brand/[.13] border-brand/30 text-brand'}`}>
-          {numero}
-        </span>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-[36px] font-extrabold tracking-[-.015em] leading-[1.15] text-white break-words">{nome}</p>
-        {specifiche && (
-          <p className="mt-1.5 text-[28px] font-semibold tracking-[.01em] text-gray-300 break-words">{specifiche}</p>
-        )}
-        {note && <p className="mt-1.5 text-[24px] text-muted text-pretty break-words">{note}</p>}
+      <div aria-hidden="true" className="absolute left-[72px] right-[72px] top-[366px] h-[4px] rounded-full bg-white/[.07] overflow-hidden">
+        <span className="block h-full transition-[width,background-color] duration-1000 ease-linear"
+          style={{ width: `${Math.min(1, Math.max(0, avanzamento ?? 0)) * 100}%`, background: colore }} />
       </div>
-      {intensita && (
-        <span className={`shrink-0 text-[30px] font-black tracking-[.02em] ${classeIntensita}`}>
-          {intensita}/10
-        </span>
-      )}
-    </div>
+    </>
   )
 }
 
-/** La leggenda delle persone sfasate: un pallino colorato e il nome per ognuna. */
-export function LeggendaTV({ persone }) {
+/** Le pillole dei nomi: piene al lavoro, tratteggiate quando dicono dove si andrà. */
+function PilloleChi({ chi, inArrivo }) {
+  if (!chi?.length) return null
   return (
-    <div className="flex flex-wrap items-center gap-x-8 gap-y-3 px-2">
-      {persone.map(p => (
-        <span key={p.id ?? p.nome} className="flex items-center gap-3 text-[30px] font-extrabold text-white">
-          <span aria-hidden="true" className="w-[26px] h-[26px] rounded-full" style={{ background: p.colore }} />
+    <span className="flex gap-[.25em] shrink-0">
+      {chi.map(p => (
+        <span key={p.id ?? p.nome}
+          className={`text-[.75em] font-bold rounded-full whitespace-nowrap ${inArrivo ? 'px-[.42em] py-[.02em] border-[3px] border-dashed' : 'px-[.5em] py-[.12em]'}`}
+          style={inArrivo ? { borderColor: p.colore, color: p.colore } : { background: p.colore, color: '#0b0b0b' }}>
           {p.nome}
         </span>
       ))}
-    </div>
+    </span>
   )
 }
 
-/** WarmUp e Rest non hanno esercizi: resta la nota, se il coach l'ha scritta. */
-export function NotaBloccoTV({ children }) {
-  return <p className="text-[30px] font-medium leading-[1.45] text-gray-300 text-pretty">{children}</p>
-}
-
-// ── La corsa ──────────────────────────────────────────────────────────────
-
-const PASSI = {
-  warmup:   { etichetta: 'Riscaldamento', colore: '#fb923c' },
-  run:      { etichetta: 'Corsa',         colore: RUNNING },
-  recover:  { etichetta: 'Recupero',      colore: '#4ade80' },
-  cooldown: { etichetta: 'Defaticamento', colore: '#9ca3af' },
-  repeat:   { etichetta: 'Ripetute',      colore: '#c084fc' },
-}
-
-function MezzaRipetuta({ etichetta, durata, passo, colorePasso, intensita, classeIntensita }) {
+/**
+ * Una riga della carta. `adesso`: l'esercizio in lavoro (giallo). `poi`: quello
+ * che viene, nel riposo e prima del via — pieno, col contorno tratteggiato e
+ * l'etichetta «Poi», mai spento (segnalato dal committente: «sembra quello
+ * appena fatto»). `chi`: con più persone, chi ci sta o ci andrà.
+ */
+export function RigaCartaTV({ riga, adesso = false, poi = false, chi = null, inArrivo = false, spenta = false, classeIntensita }) {
+  const colore = !inArrivo && chi?.[0]?.colore
   return (
-    <div className={`${RIGA_TV} flex items-center gap-6 px-7 py-5`}>
-      <span className="shrink-0 w-[150px] text-[22px] font-extrabold uppercase tracking-[.12em] text-muted">{etichetta}</span>
-      <p className="flex-1 min-w-0 text-[34px] font-extrabold text-white break-words">
-        {durata}
-        {passo && <span className="ml-4 font-bold whitespace-nowrap" style={{ color: colorePasso }}>@{passo}</span>}
-      </p>
-      {intensita && <span className={`shrink-0 text-[30px] font-black ${classeIntensita(intensita)}`}>{intensita}/10</span>}
+    <li className={`flex items-baseline gap-[.45em] px-[.5em] py-[.26em] rounded-[.45em] transition-[background-color,opacity] duration-500 ${
+      spenta ? 'opacity-[.38]' : ''}`}
+      style={adesso ? { background: 'rgba(241,197,23,.12)' }
+        : poi ? { background: 'rgba(241,197,23,.08)', outline: '3px dashed rgba(241,197,23,.9)', outlineOffset: -3 }
+        : colore ? { background: `${colore}29` } : undefined}>
+      <span className={`w-[.85em] shrink-0 text-[.7em] font-semibold tabular-nums ${adesso ? 'text-brand' : poi ? 'text-white' : 'text-gray-500'}`}>
+        {riga.numero ?? ''}
+      </span>
+      {poi && (
+        <span className="self-center shrink-0 text-[.55em] font-bold text-black bg-brand px-[.6em] py-[.12em] rounded-full">Poi</span>
+      )}
+      <span className={`shrink-0 font-semibold tracking-[-.01em] whitespace-nowrap ${adesso ? 'text-brand' : 'text-white'}`}>{riga.nome}</span>
+      <span className="flex-1 min-w-0 truncate text-[.7em] text-gray-400">{riga.specifiche}</span>
+      <PilloleChi chi={chi} inArrivo={inArrivo} />
+      {riga.intensita && (
+        <span className={`shrink-0 text-[.65em] font-semibold ${classeIntensita(riga.intensita)}`}>{riga.intensita}/10</span>
+      )}
+    </li>
+  )
+}
+
+const LARGHEZZA_CARTA = 900
+const SOVRAPPOSIZIONE = 64
+
+/**
+ * Una carta del carosello: un blocco, una pausa, il cronometro libero o la
+ * fine. `voce` arriva da `voceBlocco`, `stato` da `statoCarosello`.
+ */
+function CartaTV({ tappa, voce, stato, piede, classeIntensita, notaLibera, titoloWorkout }) {
+  const { ora, fatta } = stato
+  const pausa = tappa.tipo === 'pausa'
+  const verde = pausa || tappa.tipo === 'fine' || (ora && stato.riposo)
+  const sfondo = verde
+    ? 'linear-gradient(170deg,#1a2620,#141a16 60%,#161618)'
+    : ora ? 'linear-gradient(170deg,#26241b,#18170f 60%,#161618)' : 'linear-gradient(170deg,#1f1f23,#161618)'
+  const ombra = `0 50px 80px -40px rgba(0,0,0,.9)${ora ? `, inset 0 3px 0 ${verde ? VERDE : BRAND}` : ''}`
+  const linguetta = tappa.tipo === 'blocco' && voce?.giri
+
+  return (
+    <div className="relative shrink-0 h-full flex flex-col transition-[transform,opacity] duration-[900ms] ease-out"
+      style={{ width: LARGHEZZA_CARTA, marginRight: -SOVRAPPOSIZIONE, transform: `scale(${ora ? 1 : 0.8})`,
+        opacity: ora ? 1 : fatta ? 0.22 : 0.38, zIndex: ora ? 1 : 0 }}>
+      <div className={`self-start h-[56px] px-[24px] flex items-center rounded-t-[22px] bg-[#1d1d21] -mb-px text-[28px] ${linguetta ? '' : 'invisible'}`}>
+        {linguetta && <Linguetta giri={voce.giri} giro={ora ? stato.giro : null} />}
+      </div>
+      <div className={`flex-1 min-h-0 rounded-[36px] ${linguetta ? 'rounded-tl-none' : ''} px-[44px] pt-[36px] pb-[40px] flex flex-col relative overflow-hidden`}
+        style={{ background: sfondo, boxShadow: ombra }}>
+
+        {tappa.tipo === 'fine' ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center gap-[14px]">
+            <h2 className="text-[80px] font-bold tracking-[-.025em] leading-none" style={{ color: VERDE }}>Bravi, è finito!</h2>
+            <p className="text-[34px] text-gray-400 truncate max-w-full">{titoloWorkout}</p>
+          </div>
+        ) : tappa.tipo === 'libero' ? (
+          <>
+            <h2 className="text-[54px] font-bold tracking-[-.025em] leading-none">Allenamento libero</h2>
+            <p className="mt-[24px] text-[34px] leading-[1.4] text-[#c9ccd4] whitespace-pre-line line-clamp-[8] break-words">
+              {notaLibera || 'Cronometro libero: si va avanti dal telefono.'}
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="flex items-start gap-[28px] shrink-0">
+              {pausa ? (
+                <span className="inline-flex items-center gap-[12px] text-[30px] font-semibold px-[22px] py-[10px] rounded-full"
+                  style={{ color: VERDE, background: 'rgba(74,222,128,.12)' }}>
+                  <Pause size={28} aria-hidden="true" /> Pausa
+                </span>
+              ) : (
+                <span className="text-[104px] font-extralight leading-[.8] tracking-[-.04em] tabular-nums"
+                  style={{ color: ora ? (verde ? VERDE : BRAND) : 'rgba(255,255,255,.55)' }}>
+                  {voce.numero}
+                </span>
+              )}
+              <div className="flex-1" />
+              {!pausa && ora && (stato.riposo || stato.prep) && (
+                <span className="self-center inline-flex items-center gap-[10px] text-[30px] font-semibold px-[22px] py-[8px] rounded-full"
+                  style={stato.riposo ? { color: VERDE, background: 'rgba(74,222,128,.14)' } : { color: BRAND, background: 'rgba(241,197,23,.12)' }}>
+                  {stato.riposo ? <><Pause size={26} aria-hidden="true" /> Riposo</> : 'Si parte da qui'}
+                </span>
+              )}
+              {pausa
+                ? <span className="self-center text-[28px] font-medium text-gray-400">Prossimo blocco</span>
+                : voce.durata && <span className="text-[34px] font-semibold text-gray-400 tabular-nums">{voce.durata}</span>}
+            </div>
+            <h2 className={`${pausa ? 'mt-[20px]' : 'mt-[22px]'} text-[54px] font-bold tracking-[-.025em] leading-none shrink-0`}>{voce.titolo}</h2>
+            {(pausa ? [voce.hint, voce.durata, voce.giri ? `${voce.giri} giri` : ''].filter(Boolean).join(' · ') : voce.hint) && (
+              <p className="mt-[10px] text-[28px] text-gray-400 shrink-0 truncate">
+                {pausa ? [voce.hint, voce.durata, voce.giri ? `${voce.giri} giri` : ''].filter(Boolean).join(' · ') : voce.hint}
+              </p>
+            )}
+            {voce.righe.length > 0 ? (
+              <ul data-adatta="carta" className="flex-1 min-h-0 mt-[14px] -mx-[20px] overflow-hidden flex flex-col gap-[.12em] text-[40px] [&>li:first-child]:mt-auto">
+                {voce.righe.map((r, i) => {
+                  const chi = stato.chi?.[i] || null
+                  const conPersone = !!stato.chi
+                  return (
+                    <RigaCartaTV key={r.id} riga={r} classeIntensita={classeIntensita}
+                      adesso={stato.adesso === i} poi={stato.poi === i}
+                      chi={chi} inArrivo={stato.inArrivo}
+                      spenta={ora && stato.riposo && !conPersone && stato.poi !== i} />
+                  )
+                })}
+              </ul>
+            ) : (
+              <p className="mt-auto text-[36px] leading-[1.35] text-[#c9ccd4] font-medium line-clamp-4">{voce.nota || ''}</p>
+            )}
+            {piede && (
+              <p className="mt-[18px] pt-[18px] border-t-2 border-white/[.07] text-[27px] text-gray-400 shrink-0">{piede}</p>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }
 
 /**
- * I passi di una corsa, in colonna. Il passo in corso prende la riga
- * azzurra della corsia; gli altri restano pozzetti.
+ * Lo schermo col timer partito: testata, timer e carosello. `carte` sono le
+ * tappe di `statoCarosello` già accoppiate alle loro voci e ai loro piedi.
  */
-export function CorsaTV({ passi, attivo, classeIntensita }) {
+export function InCorsoTV({
+  visibile, titolo, audioAttivo, timer, carte, corrente, classeIntensita, notaLibera, refCarosello,
+}) {
+  const passo = LARGHEZZA_CARTA - SOVRAPPOSIZIONE
   return (
-    <div className="flex flex-col gap-5">
-      {passi.map((step, i) => {
-        const p = PASSI[step.type] || { etichetta: '', colore: '#ffffff' }
-        const acceso = i === attivo
-        return (
-          <div key={step.id || i}
-            className={`relative overflow-hidden rounded-[30px] border-2 pl-10 pr-8 py-6 flex flex-col gap-4 transition-all duration-500 ${
-              acceso ? 'bg-running/[.12] border-running/60 shadow-[0_0_60px_-12px_rgba(0,148,198,.45)]'
-                     : 'bg-white/[.025] border-white/[.06]'}`}>
-            <span aria-hidden="true" className="absolute left-0 inset-y-0 w-[8px]" style={{ background: p.colore, opacity: acceso ? 1 : 0.7 }} />
-            <div className="flex items-center gap-5">
-              <span className="text-[28px] font-extrabold uppercase tracking-[.12em]" style={{ color: p.colore }}>{p.etichetta}</span>
-              {step.type === 'repeat' && (
-                <span className={`rounded-full px-5 py-1 ${VETRO} text-[28px] font-black text-white tabular-nums`}>×{step.rounds}</span>
-              )}
-            </div>
-
-            {step.type === 'repeat' ? (
-              <div className="flex flex-col gap-3">
-                {partiRipetuta(step).map(parte => (
-                  <MezzaRipetuta key={parte.id} etichetta={etichettaParte(parte)} durata={parte.duration} passo={parte.pace}
-                    colorePasso={parte.tipo === 'recover' ? '#4ade80' : RUNNING}
-                    intensita={parte.intensity} classeIntensita={classeIntensita} />
-                ))}
-                {step.notes && <p className="text-[26px] text-muted text-pretty break-words">{step.notes}</p>}
-              </div>
-            ) : (
-              <div className="flex items-start gap-6">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[42px] font-black tracking-[-.02em] text-white break-words">
-                    {step.duration}
-                    {step.pace && <span className="ml-5 text-[34px] font-bold text-gray-400 whitespace-nowrap">@{step.pace}</span>}
-                  </p>
-                  {step.notes && <p className="mt-2 text-[26px] text-muted text-pretty break-words">{step.notes}</p>}
-                </div>
-                {step.intensity && (
-                  <span className={`shrink-0 pt-2 text-[32px] font-black ${classeIntensita(step.intensity)}`}>{step.intensity}/10</span>
-                )}
-              </div>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-/** Il contenitore della corsa: una carta con la spina azzurra della corsia. */
-export function CartaCorsaTV({ children }) {
-  return (
-    <div className={`${CARTA_TV} relative overflow-hidden border-2 border-running/25 pl-12 pr-10 py-10 flex flex-col gap-7`}>
-      <span aria-hidden="true" className="absolute left-0 inset-y-0 w-[8px] bg-running" />
-      <p className="text-[40px] font-black tracking-[-.025em] text-white">Allenamento di corsa</p>
-      {children}
-    </div>
-  )
-}
-
-// ── Avviso e note ─────────────────────────────────────────────────────────
-
-// ⚠️ Sulla TV non c'è l'avviso «Prima di iniziare»: tolto su richiesta del
-// committente il 15/10/2026 (prima carta della griglia, poi fascia in fondo:
-// invasivo in entrambe le forme). Resta nella scheda, `AvvisoRiscaldamento`.
-
-/** Le note del coach: la `CardNota` ambra della scheda, in scala TV. */
-export function NotaCoachTV({ children }) {
-  return (
-    <div className="rounded-[40px] px-12 py-10 flex flex-col gap-5 border-2"
-      style={{ background: `${BRAND}0f`, borderColor: `${BRAND}47` }}>
-      <div className="flex items-center gap-4">
-        <ClipboardList size={32} style={{ color: BRAND }} aria-hidden="true" />
-        <span className="text-[26px] font-bold uppercase tracking-[.12em]" style={{ color: BRAND }}>Note del coach</span>
+    <section aria-hidden={!visibile}
+      className={`absolute inset-0 transition-[opacity,transform] duration-[800ms] ease-out ${
+        visibile ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-[160px] pointer-events-none'}`}>
+      <TestataInCorso titolo={titolo} audioAttivo={audioAttivo} />
+      <TimerInCorso {...timer} />
+      <div ref={refCarosello} className="absolute left-0 right-0 top-[394px] h-[630px]">
+        <div className="absolute left-0 top-0 h-full flex transition-transform duration-[900ms] ease-out"
+          style={{ transform: `translateX(${960 - corrente * passo - LARGHEZZA_CARTA / 2}px)` }}>
+          {carte.map(c => (
+            <CartaTV key={c.chiave} tappa={c.tappa} voce={c.voce} stato={c.stato} piede={c.piede}
+              classeIntensita={classeIntensita} notaLibera={notaLibera} titoloWorkout={titolo} />
+          ))}
+        </div>
       </div>
-      <p className="text-[36px] font-semibold leading-[1.45] text-gray-200 whitespace-pre-wrap text-pretty break-words">
-        {children}
-      </p>
-    </div>
+      <div aria-hidden="true" className="absolute left-0 right-0 bottom-[22px] flex justify-center gap-[14px]">
+        {carte.filter(c => c.tappa.tipo !== 'fine').map((c, j) => {
+          const ora = j === corrente
+          const pausa = c.tappa.tipo === 'pausa'
+          return (
+            <i key={c.chiave} className="block h-[6px] rounded-full transition-all duration-500"
+              style={{ width: pausa ? (ora ? 40 : 12) : ora ? 72 : 34,
+                background: ora ? (pausa ? VERDE : BRAND) : j < corrente ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.18)' }} />
+          )
+        })}
+      </div>
+    </section>
   )
 }

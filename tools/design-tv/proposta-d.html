@@ -50,21 +50,27 @@
 .eroe p{margin-top:24px;font-size:26px;color:#9ca3af}
 @keyframes respiro{0%{box-shadow:0 0 0 0 rgba(241,197,23,.45)}80%,100%{box-shadow:0 0 0 30px rgba(241,197,23,0)}}
 
-.dx{position:absolute;left:1060px;right:96px;top:150px;bottom:110px;display:flex;flex-direction:column}
+.dx{position:absolute;left:1020px;right:88px;top:150px;bottom:100px;display:flex;flex-direction:column}
 .dx h2{font-size:36px;font-weight:700;letter-spacing:-.015em;padding-bottom:22px;border-bottom:2px solid rgba(255,255,255,.08)}
-.lista{flex:1;min-height:0;overflow:hidden;font-size:30px;padding-top:.3em}
-.bl{padding:.42em 0 .5em;border-bottom:1px solid rgba(255,255,255,.06)}
+.lista{flex:1;min-height:0;overflow:hidden;font-size:30px;padding-top:.5em;display:flex;flex-direction:column;gap:.34em}
+.bl{flex-shrink:0;padding:.42em .7em .5em;border-radius:.55em;background:rgba(255,255,255,.04)}
 .bl-testa{display:flex;align-items:baseline;gap:.55em}
-.bl-n{width:1.4em;font-size:.8em;font-weight:500;color:#6b7280;font-variant-numeric:tabular-nums}
+.bl-n{width:1.1em;font-size:.8em;font-weight:500;color:#6b7280;font-variant-numeric:tabular-nums}
 .bl h3{font-size:1.06em;font-weight:650;letter-spacing:-.01em}
 .bl .tag{display:inline-flex;align-items:center;gap:.25em;font-size:.68em;font-weight:700;color:var(--brand);padding:.1em .5em;border-radius:.4em .4em 0 0;
   border:.07em solid rgba(241,197,23,.55);border-bottom-color:transparent;align-self:center}
 .bl .hint{font-size:.72em;color:#6b7280;font-weight:500}
 .bl .dur{margin-left:auto;font-size:.8em;font-weight:500;color:#9ca3af;font-variant-numeric:tabular-nums}
-.bl ul{list-style:none;padding-left:1.95em;margin-top:.12em}
-.bl li{font-size:.86em;line-height:1.45;color:#d1d5db;display:flex;gap:.45em;align-items:baseline}
+.bl ul{list-style:none;padding-left:1.65em;margin-top:.15em;display:flex;flex-wrap:wrap;column-gap:1.1em;row-gap:.05em}
+.bl li{font-size:.86em;line-height:1.4;color:#d1d5db;display:flex;gap:.35em;align-items:baseline;white-space:nowrap}
+.bl li + li::before{content:"";align-self:center;width:.28em;height:.28em;border-radius:50%;background:#4b5563;margin-right:.45em;margin-left:-.65em}
 .bl li .sp{font-size:.88em;color:#6b7280}
-.bl .nota{padding-left:2.2em;font-size:.8em;color:#6b7280;margin-top:.1em}
+.bl .nota{padding-left:1.9em;font-size:.8em;color:#6b7280;margin-top:.1em}
+/* La pausa fra i blocchi: una riga, non un riquadro. */
+.lista.in-colonna .bl ul{display:block}
+.lista.in-colonna .bl li + li::before{display:none}
+.bl-pausa{flex-shrink:0;display:flex;align-items:center;gap:.5em;padding:0 .7em;font-size:.7em;font-weight:600;color:#4ade80}
+.bl-pausa::after{content:"";flex:1;border-top:.08em dashed rgba(74,222,128,.35)}
 
 /* ── In corso ───────────────────────────────────────────────────────── */
 .alto{position:absolute;left:72px;right:72px;top:52px;height:64px;display:flex;align-items:center;gap:26px}
@@ -85,9 +91,9 @@
 .barra{position:absolute;left:72px;right:72px;top:384px;height:4px;border-radius:9px;background:rgba(255,255,255,.07);overflow:hidden}
 .barra span{display:block;height:100%;transition:width 1s linear,background-color .4s}
 
-.carosello{position:absolute;left:0;right:0;top:436px;height:560px}
+.carosello{position:absolute;left:0;right:0;top:418px;height:598px}
 .pista{position:absolute;left:0;top:0;height:100%;display:flex;gap:0;transition:transform .9s var(--esce)}
-.card{position:relative;flex:0 0 900px;margin-right:-64px;height:560px;display:flex;flex-direction:column;
+.card{position:relative;flex:0 0 900px;margin-right:-64px;height:598px;display:flex;flex-direction:column;
   transform:scale(.8);opacity:.38;transition:transform .9s var(--esce),opacity .9s var(--esce)}
 .card.ora{transform:scale(1);opacity:1;z-index:1}
 .card.fatta{opacity:.22}
@@ -113,13 +119,42 @@
 .card li .int{font-size:26px;font-weight:600}
 .card li.adesso{background:rgba(241,197,23,.12)}
 .card li.adesso .mn,.card li.adesso .nm{color:var(--brand)}
-.card li.poi{box-shadow:inset 0 0 0 2px rgba(241,197,23,.35)}
+/* Il prossimo esercizio (nel riposo e prima del via): pieno e marcato, mai spento. */
+.card .tag-poi{display:none}
+.card li.poi{background:rgba(241,197,23,.08);outline:3px dashed rgba(241,197,23,.9);outline-offset:-3px}
+.card li.poi .tag-poi{display:inline-flex;align-self:center;font-size:22px;font-weight:700;color:#000;background:var(--brand);padding:3px 14px;border-radius:99px}
+.card li.poi .nm,.card li.poi .mn{color:#fff}
+/* Il riposo si vede su tutta la carta: bordo verde, chip, il resto si abbassa. */
+.card .chip-stato{margin-left:auto;margin-right:28px;display:inline-flex;align-items:center;gap:10px;font-size:30px;font-weight:600;
+  padding:8px 22px;border-radius:99px;align-self:center}
+.card .chip-stato:empty{display:none}
+.card.riposo .chip-stato{color:#4ade80;background:rgba(74,222,128,.14)}
+.card.prep .chip-stato{color:var(--brand);background:rgba(241,197,23,.12)}
+.card.ora.riposo .dentro{background:linear-gradient(170deg,#1a2620,#141a16 60%,#161618);box-shadow:0 50px 80px -40px rgba(0,0,0,.9),inset 0 3px 0 #4ade80}
+.card.ora.riposo .num{color:#4ade80}
+.card.riposo li:not(.poi):not(.di-qualcuno){opacity:.38}
+.card.riposo li:has(.chi span){opacity:1!important}
 .card .nota{margin-top:auto;font-size:36px;line-height:1.35;color:#c9ccd4;font-weight:500}
 .card.finale .dentro{align-items:center;justify-content:center;text-align:center}
 .card.finale h2{font-size:80px;color:var(--ok);margin:0}
 .card.finale .hint{font-size:34px}
 
-.puntini{position:absolute;left:0;right:0;bottom:34px;display:flex;justify-content:center;gap:14px}
+.card.pausa .dentro{background:linear-gradient(170deg,#1a2620,#141a16 60%,#161618)}
+.card.pausa.ora .dentro{box-shadow:0 50px 80px -40px rgba(0,0,0,.9),inset 0 3px 0 #4ade80}
+.card .chip{display:inline-flex;align-items:center;gap:12px;font-size:30px;font-weight:600;color:#4ade80;padding:10px 22px;border-radius:99px;background:rgba(74,222,128,.12)}
+.card .prossimo{font-size:28px;font-weight:500;color:#9ca3af}
+.card.pausa h2{margin-top:20px}
+.card.pausa li{padding-top:8px;padding-bottom:8px}
+.card .piede{margin-top:18px;padding-top:18px;border-top:2px solid rgba(255,255,255,.07);font-size:27px;color:#9ca3af;display:flex;gap:14px;align-items:center}
+.card .piede b{color:#e5e7eb;font-weight:600}
+.card li .chi{display:flex;gap:10px;flex-shrink:0}
+.card li .chi span{font-size:30px;font-weight:700;padding:5px 20px;border-radius:99px;color:#0b0b0b}
+.card li .chi span.dopo{background:transparent!important;border:3px dashed currentColor;padding:2px 17px}
+.card li.di-qualcuno{background:color-mix(in srgb,var(--pc) 16%,transparent)}
+.card li.di-qualcuno .nm{color:#fff}
+.puntini i.p{width:12px}
+.puntini i.p.ora{width:40px;background:#4ade80}
+.puntini{position:absolute;left:0;right:0;bottom:26px;display:flex;justify-content:center;gap:14px}
 .puntini i{width:34px;height:6px;border-radius:9px;background:rgba(255,255,255,.18);transition:all .6s var(--esce)}
 .puntini i.fatto{background:rgba(255,255,255,.5)}
 .puntini i.ora{width:72px;background:var(--brand)}
@@ -130,7 +165,7 @@
 <body>
 <div id="tela" class="attesa"></div>
 <script>
-window.pulsantiExtra = '<span class="sep"></span><button data-extra="via">Avvia dal telefono</button>'
+window.pulsantiExtra = '<span class="sep"></span><button data-extra="via">Avvia dal telefono</button><button data-extra="persone">Persone: nessuna</button>'
 </script>
 <script src="comune.js"></script>
 <script>
@@ -138,16 +173,30 @@ const NOTE_COACH = {
   hyrox: 'Ritmo da gara: spingi sui carry e tieni i Wall Balls senza pause. Recupero vero solo nel Rest.',
   breve: 'Ogni minuto parte con il bip. Quello che avanza è il tuo recupero.',
   corsa: 'Le ripetute a 4:00 /km precise: meglio regolari che veloci la prima.',
+  onoff: 'Dieci secondi a tutta, cinque per respirare. Tre giri.',
 }
 let modo = new URLSearchParams(location.search).has('avviato') ? 'corsa' : 'attesa'
+let conPersone = new URLSearchParams(location.search).has('persone')
 let wFatto = null
+let tappe = []
 
 const minuti = (w) => Math.round(w.blocchi.reduce((a, b) => a + (b.durata || b.stima || 0), 0) / 60)
+const secondi = (w) => w.blocchi.reduce((a, b) => a + (b.durata || b.stima || 0), 0)
 const durataTesto = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`)
+const aScaglioni = (b) => b && (b.tipo === 'EMOM' || b.tipo === 'ON/OFF') && (b.esercizi || []).length > 1
+
+function righe(b) {
+  return `<ul>${b.esercizi.map((e, i) => `
+    <li data-i="${i}"><span class="mn">${e.etichetta ? '' : (b.minuti || b.tipo === 'ON/OFF') ? i + 1 : ''}</span>
+      <span class="tag-poi">Poi</span><span class="nm" ${e.etichetta ? `style="color:${e.colore}"` : ''}>${e.q ? e.q + ' ' : ''}${e.nome}</span>
+      <span class="sp">${e.x || ''}</span><span class="chi"></span>
+      ${e.int ? `<span class="int" style="color:${coloreIntensita(e.int)}">${e.int}/10</span>` : ''}</li>`).join('')}</ul>`
+}
 
 function scheletro(s) {
   const w = s.w
   const lista = w.blocchi.map((b, k) => `
+    ${b.pausaPrima ? `<div class="bl-pausa">${icona('pausa')} Pausa</div>` : ''}
     <div class="bl">
       <div class="bl-testa"><span class="bl-n">${k + 1}</span><h3>${b.tipo}</h3>
         ${b.giri > 1 ? `<span class="tag">${icona('giri')}${b.giri}x</span>` : ''}
@@ -157,20 +206,34 @@ function scheletro(s) {
         : (b.note ? `<p class="nota">${b.note}</p>` : '')}
     </div>`).join('')
 
-  const card = (b, k) => `
-    <div class="card" data-k="${k}">
-      ${b.giri > 1 ? `<div class="tab" data-tab>${icona('giri')}<span>${b.giri}x</span></div>` : '<div class="tab vuota"></div>'}
-      <div class="dentro">
-        <div class="cima"><span class="num">${k + 1}</span><span class="dur">${durataBlocco(b)}</span></div>
-        <h2>${b.tipo}</h2>${b.hint ? `<p class="hint">${b.hint}</p>` : ''}
-        ${(b.esercizi || []).length ? `<ul>${b.esercizi.map((e, i) => `
-          <li data-i="${i}"><span class="mn">${e.etichetta ? '' : (b.minuti || b.tipo === 'ON/OFF') ? i + 1 : ''}</span>
-            <span class="nm" ${e.etichetta ? `style="color:${e.colore}"` : ''}>${e.q ? e.q + ' ' : ''}${e.nome}</span>
-            <span class="sp">${e.x || ''}</span>
-            ${e.int ? `<span class="int" style="color:${coloreIntensita(e.int)}">${e.int}/10</span>` : ''}</li>`).join('')}</ul>`
-          : `<p class="nota">${b.note || ''}</p>`}
-      </div>
-    </div>`
+  // Le tappe del carosello: i blocchi, con una pausa davanti a quelli che la vogliono.
+  tappe = []
+  w.blocchi.forEach((b, k) => { if (b.pausaPrima) tappe.push({ k, pausa: true }); tappe.push({ k }) })
+  tappe.push({ fine: true })
+
+  const card = (t, j) => {
+    if (t.fine) return `<div class="card finale" data-t="${j}"><div class="tab vuota"></div>
+      <div class="dentro"><h2>Bravi, è finito!</h2><p class="hint">${w.titolo}</p></div></div>`
+    const b = w.blocchi[t.k]
+    const ha = (b.esercizi || []).length
+    if (t.pausa) return `
+      <div class="card pausa" data-t="${j}"><div class="tab vuota"></div>
+        <div class="dentro">
+          <div class="cima"><span class="chip">${icona('pausa')} Pausa</span><span class="prossimo">Prossimo blocco</span></div>
+          <h2>${b.tipo}</h2>
+          <p class="hint">${[b.hint, durataBlocco(b), b.giri > 1 ? `${b.giri} giri` : ''].filter(Boolean).join(' · ')}</p>
+          ${ha ? righe(b) : ''}
+          <p class="piede" data-piede></p>
+        </div></div>`
+    return `
+      <div class="card" data-t="${j}">
+        ${b.giri > 1 ? `<div class="tab" data-tab>${icona('giri')}<span>${b.giri}x</span></div>` : '<div class="tab vuota"></div>'}
+        <div class="dentro">
+          <div class="cima"><span class="num">${t.k + 1}</span><span class="chip-stato" data-stato></span><span class="dur">${durataBlocco(b)}</span></div>
+          <h2>${b.tipo}</h2>${b.hint ? `<p class="hint">${b.hint}</p>` : ''}
+          ${ha ? righe(b) : `<p class="nota">${b.note || ''}</p>`}
+        </div></div>`
+  }
 
   const tela = document.getElementById('tela')
   tela.innerHTML = `
@@ -182,7 +245,7 @@ function scheletro(s) {
         <div class="categoria"><i style="background:${w.colore}"></i>${w.categoria}</div>
         <h1>${w.titolo}</h1>
         <div class="meta"><span>Intensità <b style="color:${coloreIntensita(w.intensita)}">${w.intensita}/10</b></span>
-          <span>Circa <b>${durataTesto(minuti(w))}</b></span><span><b>${w.blocchi.length}</b> blocchi</span></div>
+          <span>${secondi(w) < 600 ? `Durata <b>${mmss(secondi(w))}</b>` : `Circa <b>${durataTesto(minuti(w))}</b>`}</span><span><b>${w.blocchi.length}</b> ${w.blocchi.length === 1 ? 'blocco' : 'blocchi'}</span></div>
         <p class="descr">${NOTE_COACH[TV.scena] || ''}</p>
         <div class="eroe">
           <img src="logo.png" alt="PUSHFIT">
@@ -200,15 +263,22 @@ function scheletro(s) {
         <div class="cifre" id="cifre"></div>
       </div>
       <div class="barra"><span id="barra"></span></div>
-      <div class="carosello"><div class="pista" id="pista">
-        ${w.blocchi.map(card).join('')}
-        <div class="card finale" data-k="${w.blocchi.length}"><div class="tab vuota"></div>
-          <div class="dentro"><h2>Bravi, è finito!</h2><p class="hint">${w.titolo}</p></div></div>
-      </div></div>
-      <div class="puntini" id="puntini">${w.blocchi.map(() => '<i></i>').join('')}</div>
+      <div class="carosello"><div class="pista" id="pista">${tappe.map(card).join('')}</div></div>
+      <div class="puntini" id="puntini">${tappe.filter(t => !t.fine).map(t => `<i class="${t.pausa ? 'p' : ''}"></i>`).join('')}</div>
     </section>`
-  adatta(document.getElementById('lista'), 16, 34)
+  // Esercizi uno per riga se ci stanno grandi; se no in fila, per tenere il testo grande.
+  const elLista = document.getElementById('lista')
+  elLista.classList.add('in-colonna')
+  const inColonna = adatta(elLista, 16, 40)
+  elLista.classList.remove('in-colonna')
+  const inFila = adatta(elLista, 16, 40)
+  if (inColonna >= inFila) { elLista.classList.add('in-colonna'); adatta(elLista, 16, 40) }
   wFatto = w
+}
+
+// Chi sta su quale esercizio: `pos` è l'esercizio della persona che parte dal primo.
+function personeSu(i, pos, n) {
+  return PERSONE.filter(p => (p.da + pos) % n === i)
 }
 
 window.disegna = (s) => {
@@ -219,48 +289,89 @@ window.disegna = (s) => {
 
   const { passo, w } = s
   const f = testoFase(s)
+  const bAtt = w.blocchi[passo.b]
+  const inGruppo = conPersone && !passo.pausa && aScaglioni(bAtt) && passo.tema !== 'prep'
   document.getElementById('fase').innerHTML = `<i></i>${f.testo}${s.inPausa ? `<span class="pausa">${icona('pausa')} In pausa</span>` : ''}`
   document.getElementById('fase').style.color = f.colore
-  document.getElementById('compito').innerHTML = `${passo.compito}${passo.spec ? `<small>${passo.spec}</small>` : ''}`
-  document.getElementById('poi').innerHTML = passo.poi ? `<b>Poi</b>${passo.poi}` : ''
+  const compito = inGruppo ? (passo.tema === 'riposo' ? 'Riposo · poi al tuo colore' : 'Ognuno al suo colore') : passo.compito
+  document.getElementById('compito').innerHTML = `${compito}${passo.spec && !inGruppo ? `<small>${passo.spec}</small>` : ''}`
+  document.getElementById('poi').innerHTML = passo.poi && !inGruppo ? `<b>Poi</b>${passo.poi}` : ''
   const cifre = document.getElementById('cifre')
   cifre.textContent = passo.fine ? '' : s.tempo
   cifre.classList.toggle('ferme', s.inPausa)
+  cifre.style.color = ['riposo', 'pausa'].includes(passo.tema) && !s.inPausa ? f.colore : ''
   const barra = document.getElementById('barra')
   barra.style.width = `${(s.avanzamento ?? (passo.fine ? 1 : 0)) * 100}%`
   barra.style.backgroundColor = f.colore
 
-  // Il carosello: il blocco in corso al centro della TV.
-  const k = passo.fine ? w.blocchi.length : passo.b
+  // Il carosello: la tappa in corso al centro della TV.
+  const t = passo.fine ? tappe.length - 1 : tappe.findIndex(x => x.k === passo.b && !!x.pausa === !!passo.pausa)
   const passoCard = 900 - 64
-  document.getElementById('pista').style.transform = `translateX(${960 - k * passoCard - 450}px)`
+  document.getElementById('pista').style.transform = `translateX(${960 - t * passoCard - 450}px)`
   document.querySelectorAll('.card').forEach(c => {
-    const j = Number(c.dataset.k)
-    c.classList.toggle('ora', j === k)
-    c.classList.toggle('fatta', j < k)
-    const b = w.blocchi[j]
-    const acceso = j === k && passo.tema !== 'prep'
+    const j = Number(c.dataset.t)
+    const tappa = tappe[j]
+    c.classList.toggle('ora', j === t)
+    c.classList.toggle('fatta', j < t)
+    const b = w.blocchi[tappa.k]
+    const acceso = j === t && passo.tema !== 'prep'
     const tab = c.querySelector('[data-tab]')
     if (tab && b) {
       tab.innerHTML = acceso && passo.giro
         ? `${icona('giri')}<span>${passo.giro}/${b.giri}</span>${b.giri <= 8 ? `<span class="pallini">${Array.from({ length: b.giri }, (_, g) => `<i class="${g < passo.giro - 1 ? 'fatto' : g === passo.giro - 1 ? 'ora' : ''}"></i>`).join('')}</span>` : ''}`
         : `${icona('giri')}<span>${b.giri}x</span>`
     }
+    // Dove sta ognuno: nella pausa dove PARTIRÀ (tratteggiato), al lavoro dove
+    // è adesso (pieno), nel riposo dove andrà (tratteggiato).
+    const n = (b?.esercizi || []).length
+    let pos = null, dopo = false
+    if (conPersone && aScaglioni(b) && j === t) {
+      if (tappa.pausa || passo.tema === 'prep') { pos = 0; dopo = true }
+      else if (passo.tema === 'riposo' && passo.prossimo != null) { pos = passo.prossimo; dopo = true }
+      else if (passo.tema !== 'riposo' && passo.es != null && passo.tema !== 'prep') pos = passo.es
+    }
     c.querySelectorAll('li').forEach(li => {
       const i = Number(li.dataset.i)
       const e = b?.esercizi?.[i]
       const corsa = !!e?.etichetta
-      li.classList.toggle('adesso', acceso && passo.es === i && (passo.tema !== 'riposo' || corsa))
-      li.classList.toggle('poi', acceso && passo.tema === 'riposo' && !corsa && passo.prossimo === i)
+      const chi = pos != null ? personeSu(i, pos, n) : []
+      li.querySelector('.chi').innerHTML = chi.map(p => `<span class="${dopo ? 'dopo' : ''}" style="background:${p.colore};color:${dopo ? p.colore : '#0b0b0b'}">${p.nome}</span>`).join('')
+      li.classList.toggle('di-qualcuno', chi.length > 0 && !dopo)
+      if (chi.length && !dopo) li.style.setProperty('--pc', chi[0].colore)
+      const persone = pos != null
+      li.classList.toggle('adesso', !persone && !tappa.pausa && acceso && passo.es === i && (passo.tema !== 'riposo' || corsa))
+      const prossima = j !== t || tappa.pausa ? null
+        : passo.tema === 'prep' ? 0
+        : passo.tema === 'riposo' && !corsa ? passo.prossimo : null
+      li.classList.toggle('poi', !persone && prossima === i)
     })
+    const inRiposo = j === t && !tappa.pausa && passo.tema === 'riposo' && !b?.esercizi?.[passo.es ?? -1]?.etichetta
+    const inPrep = j === t && passo.tema === 'prep'
+    c.classList.toggle('riposo', inRiposo)
+    c.classList.toggle('prep', inPrep)
+    const chip = c.querySelector('[data-stato]')
+    if (chip) chip.innerHTML = inRiposo ? `${icona('pausa')} Riposo` : inPrep ? 'Si parte da qui' : ''
+    const piede = c.querySelector('[data-piede]')
+    if (piede) {
+      piede.innerHTML = !aScaglioni(b) ? `${icona('giri')} Si parte tutti insieme.`
+        : conPersone ? `<span>Ognuno parte dal suo colore. Per cambiare: <b>Persone sulla TV</b>, sul telefono.</span>`
+        : `<span>Siete in più? Aggiungi le persone dal telefono, in <b>Persone sulla TV</b>: ognuno parte da un esercizio diverso.</span>`
+    }
   })
+  const punti = tappe.filter(x => !x.fine)
   document.querySelectorAll('#puntini i').forEach((p, j) => {
-    p.className = j < k ? 'fatto' : j === k ? 'ora' : ''
+    p.classList.toggle('fatto', j < t)
+    p.classList.toggle('ora', j === t)
   })
   return null
 }
 
 window.suExtra = (b) => {
+  if (b.dataset.extra === 'persone') {
+    conPersone = !conPersone
+    b.textContent = conPersone ? 'Persone: 3' : 'Persone: nessuna'
+    return TV.disegna()
+  }
   if (modo === 'attesa') {
     modo = 'corsa'; TV.i = 0; TV.t = TV.passi[0].dur; TV.inCorsa = true
     b.textContent = 'Torna all\'attesa'
@@ -271,7 +382,8 @@ window.suExtra = (b) => {
 }
 
 TV.avvia()
-if (modo === 'corsa') document.querySelector('[data-extra]').textContent = 'Torna all\'attesa'
+if (modo === 'corsa') document.querySelector('[data-extra="via"]').textContent = 'Torna all\'attesa'
+if (conPersone) document.querySelector('[data-extra="persone"]').textContent = 'Persone: 3'
 </script>
 </body>
 </html>

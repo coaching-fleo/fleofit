@@ -3,6 +3,12 @@
 > 🧩 **Dal 02/10/2026 un backlog solo per le app native**, branch `app` (iOS + Android). Le voci
 > Android stanno nella sezione 🤖; tutte le altre valgono per il codice condiviso o per iOS.
 
+> 📺 **TV nuova (26/11/2026)**, `docs/memoria/scheda-workout.md` (9-tv-carosello). Da fare: (1) provarla
+> sulla TV 4K vera e col telefono vero (locandina, pausa dopo il Cash In che finisce con Avanti, persone);
+> (2) la pausa cambia il timer sul telefono, quindi arriva con la prossima versione sugli Store; (3) **la
+> TV in verticale**: il bottone per ruotare è stato tolto, serve un disegno dedicato. Ritorno alla TV di
+> prima: `docs/superpowers/plans/2026-11-26-tv-redesign-ritorno.md`.
+
 > 🔗 **Link d'invito che apre l'app (16/11/2026)**, `docs/memoria/accesso.md`. Restano due gesti
 > (l'ID App Store è messo): (1) pubblicare su
 > `main` perché il sito serva `/.well-known/apple-app-site-association`; (2) la prossima build iOS
