@@ -498,10 +498,17 @@ Spec: `docs/superpowers/specs/2026-11-26-coach-sposta-data-design.md`.
   (`RigaProssimo`, `onSposta`) e nel suo calendario (`CalendarioAtleta`, `onSposta`); il foglio si apre
   subito con la sola assegnazione e legge le altre della seduta dopo. Dopo lo spostamento il calendario
   va al giorno nuovo (`giornoDaMostrare`).
-- **Mai sugli allenamenti liberi**: hanno il loro «Modifica» con data e testo.
+- **Mai sugli allenamenti liberi**: hanno il loro «Modifica» con data e testo. Nel calendario
+  dell'atleta la riga del libero non ha il bottone (`puoSpostare` di `CalendarioAtleta`).
+- ⚠️ **Più coach**: con «Tutti» un coach sposta solo i suoi atleti (RLS), e `workouts.date` la
+  cambia solo chi ha creato il workout (`creato_da`): per gli altri l'update tocca 0 righe senza
+  errore. Gli atleti si spostano lo stesso; resta vecchia solo la data in testa senza atleta. Accettato.
 - **Push all'atleta**: `send-reminders`, modo `athlete_moved` (`record_ids`, `newDate` già scritta);
   testo e destinatari in `send-reminders/testi.ts` (`testoSpostatoDalCoach`, `daAvvisareSpostamento`):
   un coach avvisa solo i suoi, mai chi l'ha svolto, niente push per una data passata.
+  🔴 **La data della push la scrive il server dalla riga** (`completed_date`), mai dal corpo: con
+  `newDate` dal client si poteva mandare testo libero a molti atleti. Il demo è escluso
+  (`puoInviareBroadcast`, come la bacheca); al massimo 200 `record_ids` (`idsSpostamento`).
   ⏳ **Scritta il 26/11/2026, NON pubblicata**: finché non c'è il deploy la chiamata fallisce in silenzio
   e lo spostamento resta.
 - Garmin: i trigger degli invii reagiscono già a ogni modifica di assegnazione e workout.

@@ -955,10 +955,10 @@ export default function AthleteDetail() {
       assegnazioni={workouts}
       onApri={(workoutId) => navigate(`/workout/${workoutId}?athlete_id=${id}`)}
       onAssegna={(data) => { setDataAssegnazione(data); setAssignModalOpen(true) }}
-      onSposta={puoSpostareQui ? (w) => {
-        if (!spostabile(w.sections)) return
-        apriSposta({ id: w.aw_id, status: w.status, completed_date: w.date }, w.id, w.title)
-      } : undefined}
+      onSposta={puoSpostareQui
+        ? (w) => apriSposta({ id: w.aw_id, status: w.status, completed_date: w.date }, w.id, w.title)
+        : undefined}
+      puoSpostare={(w) => spostabile(w.sections)}
       giornoDaMostrare={giornoDaMostrare}
       leggiLibere={leggiLibere}
       onAbbina={abbinaAttivita}

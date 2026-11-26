@@ -174,6 +174,12 @@ describe('CalendarioAtleta · sposta', () => {
     expect(onSposta).toHaveBeenCalledWith(expect.objectContaining({ id: 'w2', aw_id: 'aw2' }))
   })
 
+  it('dove la pagina dice di no la riga non ha «Sposta» (un libero)', async () => {
+    await monta({ onSposta: vi.fn(), puoSpostare: (w) => w.id !== 'w2' })
+    await userEvent.click(cella(addDays(inizio, 1)))
+    expect(screen.queryByRole('button', { name: 'Sposta Long Run a un altro giorno' })).toBeNull()
+  })
+
   it('giornoDaMostrare in un altro mese porta il calendario lì', async () => {
     const { rerender } = render(<CalendarioAtleta assegnazioni={assegnazioni} onApri={vi.fn()} onAssegna={vi.fn()} />)
     await apri()
