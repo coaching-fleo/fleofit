@@ -509,8 +509,8 @@ Spec: `docs/superpowers/specs/2026-11-26-coach-sposta-data-design.md`.
   🔴 **La data della push la scrive il server dalla riga** (`completed_date`), mai dal corpo: con
   `newDate` dal client si poteva mandare testo libero a molti atleti. Il demo è escluso
   (`puoInviareBroadcast`, come la bacheca); al massimo 200 `record_ids` (`idsSpostamento`).
-  ⏳ **Scritta il 26/11/2026, NON pubblicata**: finché non c'è il deploy la chiamata fallisce in silenzio
-  e lo spostamento resta.
+  ✅ **Pubblicata il 26/11/2026** (versione 78, dal commit `c4d1dcb`). Verificato: con la chiave anonima
+  `athlete_moved` risponde 403. Se la push non parte, lo spostamento resta fatto lo stesso.
 - Garmin: i trigger degli invii reagiscono già a ogni modifica di assegnazione e workout.
 - Test: `spostaAllenamento.test.js`, `FoglioSposta.test.jsx`, `WorkoutDetailSposta.test.jsx`,
   `AthleteDetailSposta.test.jsx`, `CalendarioAtleta.test.jsx`, `testiNotifiche.test.js`.
