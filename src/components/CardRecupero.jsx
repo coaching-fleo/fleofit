@@ -9,7 +9,7 @@
 // L'arancione (orange-400) è solo per HRV, FC e sonno con un segnale.
 import { Watch, Moon, Activity, Heart, BatteryCharging, Gauge, Smile } from 'lucide-react'
 import { TitoloSezione } from './SchedaAtletaUI'
-import { etichettaGiorno, segno } from '../lib/recuperoGarmin'
+import { etichettaGiorno, segno } from '../lib/riepilogoRecupero'
 import { DOMANDE, parolaRisposta } from '../lib/comeStai'
 
 const ARANCIO = '#fb923c'

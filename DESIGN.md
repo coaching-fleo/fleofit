@@ -551,6 +551,14 @@ storico; a destra obiettivo, oggi, profilo (niente `sticky`: la colonna è più 
   riga nota vocale e nota scritta nel pozzetto `#111`.
 - **Profilo**: righe in un gruppo unico diviso da fili (`GRUPPO_RIGHE`), come le impostazioni
   di iOS, non card impilate.
+- **Recupero** (da Garmin, 26/11/2026, `CardRecupero`): una sezione sua sotto «Come sta
+  andando», fatta di **tessere** — la forma delle reference del committente, senza vetro.
+  Tessera `#18181b`, bordo bianco all'8%, raggio 26px; in alto icona e nome, poi il numero a
+  38px peso 800 con l'unità piccola, una pillola tonda con lo scarto dalla media, in fondo le
+  **colonnine delle ultime 7 notti** con la media tratteggiata. Il dato fuori norma ha la
+  **tessera tinta** (sfumatura e bordo `orange-400`), e solo lui: Body Battery e stress mai.
+  In testa la tessera della frase, poi il sonno largo con le fasi, in fondo «Come ha detto di
+  stare» a parole con le cinque tacche. Niente linee, niente cursori, niente punteggio unico.
 
 ### Empty States
 

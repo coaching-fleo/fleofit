@@ -7,6 +7,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
 import { leggiGiornate, oggiItalia } from '../lib/recuperoGarmin'
+import { riepilogoRecupero, GIORNI_LETTURA } from '../lib/riepilogoRecupero'
+import { leggiComeStai } from '../lib/comeStai'
 import { useScarpaCompletamento } from '../useScarpaCompletamento'
 import { useFunzione } from '../useFunzione'
 import { CalendarClock, ChevronRight, Layers, User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, FolderArchive, Copy, Activity, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
@@ -102,17 +104,25 @@ export default function AthleteDetail() {
   const [athlete, setAthlete] = useState(null)
   const [workouts, setWorkouts] = useState([])
   const [prs, setPrs] = useState([])
-  // Garmin · Recupero: le giornate degli ultimi 28 giorni di chi è mostrato. Un errore dà [].
+  // Garmin · Recupero (26/11/2026, sezione a tessere): 42 giorni di giornate —
+  // 28 di media PRIMA della fila di notti storte, che può arrivare a 14 — e la
+  // risposta di oggi a «Come stai». Un errore dà [] / null.
   const [giornate, setGiornate] = useState([])
+  const [comeStaiOggi, setComeStaiOggi] = useState(null)
   useEffect(() => {
     setGiornate([]) // mai i dati dell'atleta di prima
+    setComeStaiOggi(null)
     if (!id) return undefined
     let vivo = true
     const a = oggiItalia()
-    const da = new Date(Date.parse(`${a}T00:00:00Z`) - 27 * 86400000).toISOString().slice(0, 10)
+    const da = new Date(Date.parse(`${a}T00:00:00Z`) - (GIORNI_LETTURA - 1) * 86400000).toISOString().slice(0, 10)
     leggiGiornate(supabase, id, da, a).then(r => { if (vivo) setGiornate(r || []) }).catch(() => { if (vivo) setGiornate([]) })
+    leggiComeStai(id, a).then(r => { if (vivo) setComeStaiOggi(r || null) }).catch(() => { if (vivo) setComeStaiOggi(null) })
     return () => { vivo = false }
   }, [id])
+  const riepilogo = useMemo(
+    () => riepilogoRecupero(giornate, { comeStai: comeStaiOggi, proprio: id === user?.id }),
+    [giornate, comeStaiOggi, id, user?.id])
   // Le tre tab sono diventate due sezioni che si aprono in pagina, più un menu
   // per i comandi che erano tre bottoni in testata (CLAUDE.md §9-terdecies).
   const [menuAperto, setMenuAperto] = useState(false)
@@ -823,15 +833,18 @@ export default function AthleteDetail() {
       frase={andamento.frase.testo}
       dettaglio={andamento.frase.dettaglio} />
   )
-  const pRecupero = giornate.length > 0 && (
-    <Suspense fallback={null}><CardRecupero righe={giornate} /></Suspense>
+  // La sezione «Recupero» sta subito sotto i dati, sempre (telefono e desktop).
+  const pRecupero = riepilogo && (
+    <Suspense fallback={null}><CardRecupero riepilogo={riepilogo} proprio={isOwnProfile} /></Suspense>
   )
   const pDati = (
-    <section className="flex flex-col gap-3" aria-label="Dati">
-      <TitoloSezione titolo={isOwnProfile ? 'Come stai andando' : 'Come sta andando'} dettaglio={`${GIORNI_ADERENZA} giorni`} />
-      {pAndamento}
+    <>
+      <section className="flex flex-col gap-3" aria-label="Dati">
+        <TitoloSezione titolo={isOwnProfile ? 'Come stai andando' : 'Come sta andando'} dettaglio={`${GIORNI_ADERENZA} giorni`} />
+        {pAndamento}
+      </section>
       {pRecupero}
-    </section>
+    </>
   )
   const pNote = (
     <>

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import CardRecupero from '../CardRecupero'
-import { riepilogoRecupero } from '../../lib/recuperoGarmin'
+import { riepilogoRecupero } from '../../lib/riepilogoRecupero'
 
 // La sezione «Recupero» a tessere (26/11/2026): la card riceve il riepilogo
 // già calcolato e lo disegna.

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   serieRecupero, segnaliRecupero, segnaliTeam, leggiGiornate, leggiGiornateFra, METRICHE,
-  riepilogoRecupero, etichettaGiorno, GIORNI_LETTURA,
 } from '../recuperoGarmin'
+import { riepilogoRecupero, etichettaGiorno, GIORNI_LETTURA } from '../riepilogoRecupero'
 import { fintoSupabase } from '../../test/fintoSupabase'
 
 const OGGI = new Date('2026-10-29T10:00:00Z')

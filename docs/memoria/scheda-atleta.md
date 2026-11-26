@@ -335,7 +335,7 @@ Claude, «lo cambiamo insieme». Regola grafica in `DESIGN.md`, «La scheda atle
   `GRUPPO_RIGHE` in `SchedaAtletaUI.jsx`. `NumeriSeduta` e `SequenzaSeduta` in
   `components/SedutaUI.jsx`, condivisi col foglio veloce della Home.
 - La card di oggi (`TodayAthleteWorkoutCard`) mostra numeri e blocchi da `anteprimaSeduta`.
-- Il recupero Garmin sta nella sezione «Come sta andando», sotto i numeri.
+- Il recupero Garmin sta subito sotto «Come sta andando», in una sezione sua a tessere (26/11/2026, `docs/memoria/garmin.md`, «La sezione Recupero»).
 - Scarpe, team, gruppi e coach non stanno più sotto la foto: un gruppo solo più in basso.
 
 ### ⚠️ Da sapere

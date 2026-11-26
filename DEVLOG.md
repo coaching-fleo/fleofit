@@ -10,6 +10,7 @@ Le modifiche fatte dopo la versione **1.2.0**, in vendita sullo Store: build `1.
 ---
 
 ## Allenamento
+- **Recupero da Garmin rifatto** nella scheda atleta: una sezione a tessere con in testa una frase su cosa non va e da quante notti, il sonno con punteggio e fasi, HRV, frequenza a riposo, Body Battery e stress con le ultime 7 notti, e accanto come l'atleta ha detto di stare stamattina.
 - Nuovo **«Come stai oggi?»**: prima di allenarsi, una volta al giorno, quattro risposte da 1 a 5 (sonno, energia, dolori, stress). Si può saltare e non blocca mai il timer; il coach vede le risposte sulla scheda dell'allenamento e nella pagina Analisi.
 - Scrivendo la **nota** su un allenamento non ancora segnato come fatto, l'app chiede se l'hai completato: la nota si salva insieme al completamento.
 

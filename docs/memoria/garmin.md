@@ -632,6 +632,41 @@ Edge Function toccata. La versione in km/h della scheda: `scheda-workout.md`, «
 - **18/11/2026 — portale aggiornato a PUSHFIT**: icona `https://pushfit.it/web-app-manifest-192x192.png`,
   sito e privacy su `pushfit.it`. Redirect URI e webhook **non toccati** (sono di Supabase).
 
+## La sezione Recupero della scheda atleta (26/11/2026)
+
+Richiesta del committente: rifare la card nello stile della scheda ridisegnata e mostrare più
+dati («in base a quello che propongono le altre app e a quello che vogliono i coach»). Spec
+`docs/superpowers/specs/2026-11-26-recupero-garmin-scheda-design.md`, piano
+`docs/superpowers/plans/2026-11-26-recupero-garmin-scheda.md`, lavagna
+`tools/design-garmin-scheda/index.html` (proposta 1). Niente migrazioni.
+
+### Cosa c'è, dove
+| Cosa | Dove |
+|---|---|
+| Tutto ciò che la sezione mostra, già calcolato (`riepilogoRecupero`, `etichettaGiorno`, `segno`, `GIORNI_LETTURA`) | `src/lib/riepilogoRecupero.js` |
+| La sezione a tessere | `src/components/CardRecupero.jsx` (pigra) |
+| Lettura di 42 giorni + «Come stai» di oggi | `AthleteDetail.jsx` (`riepilogo`, `pRecupero` fuori da `pDati`) |
+| Test | `riepilogoRecupero` in `recuperoGarmin.test.js`, `CardRecupero.test.jsx`, `AthleteDetailRecupero.test.jsx` |
+
+### Decisioni
+- **La frase, non un punteggio 0–100** (scelta del committente): dice cosa non va e da quante notti.
+- **Tinta e colonnine arancioni solo per HRV, FC, sonno con un segnale** di `segnaliRecupero`.
+  Body Battery (carica della notte) e stress non hanno una soglia: mai tinti, niente soglie inventate.
+- **La media** di una tessera: i 28 giorni prima della fila del suo segnale; senza segnale, i 28
+  prima dell'ultimo giorno con un dato (notti basse comprese). Meno di 14 valori: niente media,
+  e la frase dice «Servono 14 notti… ne ha N».
+- **«Come ha detto di stare»**: solo la risposta di oggi, **a parole** (regola di `comeStai.js`).
+- Il cursore sulla normalità è stato provato e scartato («poco intuitivo»), la linea dei 28 giorni pure.
+- Garmin non manda la sequenza delle fasi del sonno, solo i totali: niente grafico a scalini.
+
+### ⚠️ Trappole
+- 🔴 `riepilogoRecupero` sta in un file suo **apposta**: `recuperoGarmin.js` è importato in modo
+  statico dalla Home e finisce nel chunk `index`. Messo lì, `index` cresceva di 3 KB (misurato:
+  639,87 → 643,06 KB). Nel file a parte `index` resta a 639,7 KB.
+- La scheda legge **42 giorni** (`GIORNI_LETTURA`), non 28: con 28 la media non avrebbe abbastanza
+  giorni prima di una fila di notti storte.
+- Nel demo le giornate di Sara finiscono ieri: la colonnina di oggi è vuota, ed è giusto così.
+
 ## Il coach collega il suo Garmin (18/11/2026)
 
 Il coach si allena anche lui (`home-coach.md`). Prima lo staff era rifiutato apposta in tre punti;

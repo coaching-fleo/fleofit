@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scheda atleta · il recupero da Garmin</title>
+<style>
+:root{--brand:#f1c517;--muted:#848d9c;--giu:#fb923c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050505;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.int{max-width:1400px;margin:0 auto;padding:34px 28px 10px}
+.int h1{font-size:28px;font-weight:900;letter-spacing:-.03em}
+.int p{color:#9ca3af;font-size:14px;line-height:1.55;margin-top:8px}
+.colonne{max-width:1400px;margin:0 auto;padding:24px 28px 80px;display:grid;grid-template-columns:repeat(3,393px);gap:40px;justify-content:center}
+@media (max-width:1330px){.colonne{grid-template-columns:repeat(2,393px)}}
+@media (max-width:880px){.colonne{grid-template-columns:393px}}
+.didascalia{margin-bottom:14px;min-height:96px}
+.didascalia h2{font-size:18px;font-weight:900;letter-spacing:-.02em}
+.didascalia h2 b{color:var(--brand)}
+.didascalia p{color:#9ca3af;font-size:13px;line-height:1.5;margin-top:5px}
+
+.tel{width:393px;height:852px;border-radius:52px;background:#0B0B0B;position:relative;overflow:hidden;
+  box-shadow:0 0 0 10px #1a1a1c,0 0 0 11px #2c2c30,0 40px 80px -30px rgba(0,0,0,.9)}
+.isola{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:36px;border-radius:20px;background:#000;z-index:80}
+.scorre{position:absolute;inset:0;overflow-y:auto;padding:62px 16px 120px;scrollbar-width:none;display:flex;flex-direction:column;gap:10px}
+.scorre::-webkit-scrollbar{display:none}
+.scorre>*{flex-shrink:0}
+
+.titolo{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:0 4px;margin-top:14px}
+.titolo h3{font-size:20px;line-height:1.2;font-weight:900;letter-spacing:-.02em}
+.titolo span{font-size:13px;font-weight:700;color:var(--muted);padding-bottom:2px}
+
+/* la tessera: la forma delle reference, senza vetro */
+.t{border-radius:26px;background:#18181b;border:1px solid rgba(255,255,255,.08);padding:16px 16px 15px;min-width:0;position:relative;overflow:hidden}
+.t.fuori{background:linear-gradient(160deg,rgba(251,146,60,.16),rgba(251,146,60,.04) 60%),#18181b;border-color:rgba(251,146,60,.28)}
+.capo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#d4d4d8}
+.capo svg{width:17px;height:17px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.t.fuori .capo svg{color:var(--giu)}
+.capo .dx{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted)}
+.cifra{display:flex;align-items:baseline;gap:3px;margin-top:14px;font-size:38px;line-height:.95;font-weight:800;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.cifra small{font-size:15px;font-weight:700;letter-spacing:0;color:#a1a1aa}
+.cifra.piccola{font-size:30px}
+.chip{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:11.5px;font-weight:800;margin-top:10px;white-space:nowrap}
+.chip.giu{background:rgba(251,146,60,.16);color:var(--giu)}
+.chip.ok{background:rgba(255,255,255,.07);color:#a1a1aa}
+.griglia{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tre{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.frase{font-size:15px;line-height:1.45;color:#e5e7eb;text-wrap:pretty}
+.frase b{color:#fff;font-weight:800}
+.frase span{color:#a1a1aa}
+.fonte{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#6b7280;padding:2px 6px}
+.fonte i{width:6px;height:6px;border-radius:50%;background:#6b7280}
+.contesto{opacity:.3;pointer-events:none;border-radius:24px;background:#18181b;border:1px solid rgba(255,255,255,.08);height:200px;padding:20px}
+.contesto b{font-size:30px;font-weight:900}
+.et{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.fase{min-width:0}
+.fase .p{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted)}
+.fase .p i{width:7px;height:7px;border-radius:50%}
+.fase b{display:block;margin-top:5px;font-size:16px;font-weight:800;letter-spacing:-.02em}
+.segmenti{display:flex;gap:3px;margin-top:8px}
+.segmenti i{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.1)}
+.segmenti i.on{background:#e5e7eb}
+.segmenti.giu i.on{background:var(--giu)}
+</style>
+</head>
+<body>
+<div class="int">
+  <h1>Il recupero da Garmin · cosa mettere in fondo alle tessere</h1>
+  <p>Le tessere restano come le hai viste: icona e nome, numero grande, pillola della differenza, tessera tinta quando il dato è fuori norma. Cambia solo il fondo, al posto del cursore. Ho cercato tre modi che si capiscano <b>senza spiegazione</b>, e nessuno è una linea. I dati sono INVENTATI (Sara del demo, tre notti storte).</p>
+</div>
+<div class="colonne">
+  <div>
+    <div class="didascalia">
+      <h2><b>1</b> · Le ultime 7 notti in colonnine</h2>
+      <p>Una colonnina per notte, la riga tratteggiata è la sua media. Le notti storte sono arancioni. Si vede quando è cominciato, come i passi della reference.</p>
+    </div>
+    <div class="tel"><div class="isola"></div><div class="scorre" id="F1"></div></div>
+  </div>
+  <div>
+    <div class="didascalia">
+      <h2><b>2</b> · Stanotte contro di solito</h2>
+      <p>Due barre una sotto l'altra: quella di stanotte e quella della sua media. Il confronto è quello che il coach si chiede, scritto in barre lunghe e corte.</p>
+    </div>
+    <div class="tel"><div class="isola"></div><div class="scorre" id="F2"></div></div>
+  </div>
+  <div>
+    <div class="didascalia">
+      <h2><b>3</b> · Una scala a tre: basso, normale, alto</h2>
+      <p>Tre segmenti con la parola sotto; si accende quello in cui sta. Il più immediato, ma dice solo dove sta, non di quanto né da quando.</p>
+    </div>
+    <div class="tel"><div class="isola"></div><div class="scorre" id="F3"></div></div>
+  </div>
+</div>
+
+<script>
+const ICONE = {
+  luna: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  hrv: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  cuore: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  batteria: '<path d="M15 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><path d="M6 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1"/><path d="m11 7-3 5h4l-3 5"/><line x1="22" x2="22" y1="11" y2="13"/>',
+  viso: '<circle cx="12" cy="12" r="10"/><path d="M8 15s1.5-1.5 4-1.5 4 1.5 4 1.5"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>',
+  orologio: '<circle cx="12" cy="12" r="6"/><polyline points="12 10 12 12 13 13"/><path d="m16.13 7.66-.81-4.05a2 2 0 0 0-2-1.61h-2.68a2 2 0 0 0-2 1.61l-.78 4.05"/><path d="m7.88 16.36.8 4a2 2 0 0 0 2 1.61h2.72a2 2 0 0 0 2-1.61l.81-4.05"/>',
+}
+const ic = n => `<svg viewBox="0 0 24 24">${ICONE[n]}</svg>`
+
+// ── dati inventati (come demoSemi.js), con un po' di rumore per non fare zigzag ──
+const N = 28, giorni = []
+let seme = 7; const caso = () => (seme = (seme * 9301 + 49297) % 233280) / 233280 - .5
+for (let i = N; i >= 1; i--) {
+  const storta = i <= 3
+  giorni.push({
+    storta,
+    sonno: storta ? 5.3 + caso() * .4 : 7.3 + caso() * 1.1,
+    hrv: storta ? 50 + caso() * 3 : 60 + caso() * 7,
+    fc: storta ? 58 + caso() : 52 + caso() * 2.5,
+    bb: storta ? 36 + caso() * 6 : 62 + caso() * 16,
+    stress: storta ? 31 + caso() * 4 : 30 + caso() * 10,
+  })
+}
+const base = giorni.slice(0, N - 3)
+const media = k => base.reduce((s, g) => s + g[k], 0) / base.length
+const dev = k => { const m = media(k); return Math.sqrt(base.reduce((s, g) => s + (g[k] - m) ** 2, 0) / base.length) }
+const ieri = giorni[N - 1]
+
+
+const sette = giorni.slice(N - 7)
+const LETTERE = ['G', 'V', 'S', 'D', 'L', 'M', 'oggi']
+function colonnine(k, fuori) {
+  const vals = sette.map(g => g[k]), m = media(k)
+  const hi = Math.max(...vals, m) * 1.05, lo = Math.min(...vals, m) * .7
+  const h = v => 6 + ((v - lo) / (hi - lo)) * 40
+  return `<div style="position:relative;margin-top:14px">
+    <div style="position:absolute;left:-2px;right:-2px;bottom:${h(m) + 16}px;border-top:1.5px dashed rgba(255,255,255,.3)"></div>
+    <div style="display:flex;align-items:flex-end;gap:5px;height:46px">
+      ${sette.map(g => `<i style="flex:1;height:${h(g[k])}px;border-radius:4px;background:${g.storta && fuori ? 'var(--giu)' : 'rgba(255,255,255,.22)'}"></i>`).join('')}
+    </div>
+    <div style="display:flex;gap:5px;margin-top:5px">${LETTERE.map((l, j) => `<span style="flex:1;text-align:center;font-size:9.5px;font-weight:800;color:${j === 6 ? '#fff' : '#71717a'}">${j === 6 ? '' : l}</span>`).join('')}</div>
+  </div>`
+}
+const FMT = { hrv: v => Math.round(v) + ' ms', fc: v => Math.round(v) + ' bpm', bb: v => '+' + Math.round(v), stress: v => Math.round(v) }
+function confronto(k, fuori) {
+  const v = giorni[N - 1][k], m = media(k), max = Math.max(v, m) * 1.08
+  const riga = (et, x, col) => `<div style="display:grid;grid-template-columns:52px 1fr;align-items:center;gap:6px">
+    <span style="font-size:10.5px;font-weight:800;color:var(--muted)">${et}</span>
+    <div style="height:8px;border-radius:4px;background:rgba(255,255,255,.06)"><div style="height:100%;width:${x / max * 100}%;border-radius:4px;background:${col}"></div></div></div>`
+  return `<div style="display:flex;flex-direction:column;gap:7px;margin-top:14px">
+    ${riga('Stanotte', v, fuori ? 'var(--giu)' : '#fff')}${riga('Di solito', m, 'rgba(255,255,255,.28)')}</div>`
+}
+const VERSO = { hrv: 0, fc: 2, bb: 0, stress: 1 }
+function scala(k, fuori) {
+  const acceso = fuori ? VERSO[k] : 1
+  return `<div style="margin-top:14px"><div style="display:flex;gap:4px">${[0, 1, 2].map(i => `<i style="flex:1;height:8px;border-radius:4px;background:${i === acceso ? (fuori ? 'var(--giu)' : '#fff') : 'rgba(255,255,255,.1)'}"></i>`).join('')}</div>
+    <div style="display:flex;gap:4px;margin-top:5px">${['Basso', 'Normale', 'Alto'].map((e, i) => `<span style="flex:1;text-align:center;font-size:10.5px;font-weight:800;color:${i === acceso ? (fuori ? 'var(--giu)' : '#fff') : '#52525b'}">${e}</span>`).join('')}</div></div>`
+}
+
+function cursore(k, fuori) {
+  const vals = giorni.map(g => g[k]), m = media(k), d = dev(k)
+  const lo = Math.min(...vals, m - 2.2 * d), hi = Math.max(...vals, m + 2.2 * d)
+  const pc = v => ((v - lo) / (hi - lo)) * 100
+  return `<div style="position:relative;height:18px;margin-top:14px">
+    <div style="position:absolute;left:0;right:0;top:8px;height:2px;background:rgba(255,255,255,.12);border-radius:2px"></div>
+    <div style="position:absolute;left:0;top:4px;width:1.5px;height:10px;background:rgba(255,255,255,.2)"></div>
+    <div style="position:absolute;right:0;top:4px;width:1.5px;height:10px;background:rgba(255,255,255,.2)"></div>
+    <div style="position:absolute;top:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.28);left:${pc(m - d)}%;width:${pc(m + d) - pc(m - d)}%"></div>
+    <div style="position:absolute;top:3px;height:12px;width:20px;margin-left:-10px;border-radius:6px;left:${pc(vals[N - 1])}%;background:${fuori ? 'var(--giu)' : '#fff'};box-shadow:0 0 14px ${fuori ? 'rgba(251,146,60,.6)' : 'rgba(255,255,255,.3)'}"></div>
+  </div>`
+}
+function linea(k, fuori, h = 38) {
+  const w = 160, vals = giorni.map(g => g[k]), m = media(k)
+  const lo = Math.min(...vals, m), hi = Math.max(...vals, m)
+  const x = i => 2 + i * (w - 4) / (N - 1), y = v => 3 + (1 - (v - lo) / (hi - lo)) * (h - 6)
+  const pts = vals.map((v, i) => `${x(i)},${y(v)}`)
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" style="display:block;margin-top:12px;overflow:visible">
+    <line x1="0" x2="${w}" y1="${y(m)}" y2="${y(m)}" stroke="#52525b" stroke-dasharray="2 3"/>
+    <path d="M${pts.slice(0, N - 3).join('L')}" fill="none" stroke="#d4d4d8" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M${pts.slice(N - 4).join('L')}" fill="none" stroke="${fuori ? 'var(--giu)' : '#d4d4d8'}" stroke-width="${fuori ? 2.2 : 1.6}" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${x(N - 1)}" cy="${y(vals[N - 1])}" r="3.2" fill="${fuori ? 'var(--giu)' : '#fff'}"/></svg>`
+}
+
+const contesto = `<div class="titolo" style="margin-top:0"><h3>Come sta andando</h3><span>30 giorni</span></div>
+  <div class="contesto"><span class="et">Aderenza · Volume · Sforzo</span><div style="margin-top:8px;display:flex;gap:28px"><b>86%</b><b>312</b><b>6,8</b></div></div>`
+const titolo = `<div class="titolo"><h3>Recupero</h3><span>da Garmin</span></div>`
+
+const frase = `<div class="t fuori">
+  <div class="capo">${ic('orologio')}Da guardare<span class="dx">da 3 notti</span></div>
+  <p class="frase" style="margin-top:10px"><b>Dorme poco e recupera male:</b> HRV −15%, sonno sotto le 6 ore, FC a riposo +6. <span>Stamattina ha detto energia 2 su 5.</span></p>
+</div>`
+
+const oreMin = h => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}<small>h</small>&thinsp;${String(m % 60).padStart(2, '0')}<small>m</small>` }
+const fasi = [['Profondo', '45m', '#e5e7eb'], ['REM', '50m', '#a1a1aa'], ['Leggero', '3h 40m', '#52525b'], ['Sveglio', '25m', 'var(--giu)']]
+const sonno = `<div class="t fuori">
+  <div class="capo">${ic('luna')}Sonno<span class="dx">stanotte</span></div>
+  <div style="display:flex;align-items:flex-end;gap:22px">
+    <div><div class="cifra">${oreMin(ieri.sonno)}</div><span class="chip giu">−2h 05m dalla media</span></div>
+    <div style="padding-bottom:4px"><div class="cifra piccola">57</div><span style="font-size:11.5px;font-weight:700;color:var(--muted)">punteggio · media 80</span></div>
+  </div>
+  <div style="display:flex;gap:3px;height:8px;margin-top:16px">
+    ${[[45, '#e5e7eb'], [50, '#a1a1aa'], [220, '#52525b'], [25, 'var(--giu)']].map(([v, c]) => `<i style="flex:${v};background:${c};border-radius:4px"></i>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px">
+    ${fasi.map(([e, v, c]) => `<div class="fase"><span class="p"><i style="background:${c}"></i>${e}</span><b>${v}</b></div>`).join('')}
+  </div>
+</div>`
+
+const tessera = (fondo, { icona, nome, valore, unita, chip, fuori, k }) => `<div class="t ${fuori ? 'fuori' : ''}">
+  <div class="capo">${ic(icona)}${nome}</div>
+  <div class="cifra">${valore}<small>${unita}</small></div>
+  <span class="chip ${fuori ? 'giu' : 'ok'}">${chip}</span>
+  ${({ colonnine, confronto, scala })[fondo](k, fuori)}
+</div>`
+const dati = [
+  { icona: 'hrv', nome: 'HRV notte', valore: Math.round(ieri.hrv), unita: 'ms', chip: '−15% sulla media', fuori: true, k: 'hrv' },
+  { icona: 'cuore', nome: 'FC a riposo', valore: Math.round(ieri.fc), unita: 'bpm', chip: '+6 sulla media', fuori: true, k: 'fc' },
+  { icona: 'batteria', nome: 'Body Battery', valore: '+' + Math.round(ieri.bb), unita: '', chip: 'ricarica, media +62', fuori: true, k: 'bb' },
+  { icona: 'viso', nome: 'Stress', valore: Math.round(ieri.stress), unita: '/100', chip: 'nella norma', fuori: false, k: 'stress' },
+]
+const comeSta = [['Sonno', 2], ['Energia', 2], ['Dolori', 4], ['Stress', 3]]
+const comeHaDetto = `<div class="t">
+  <div class="capo">${ic('viso')}Come ha detto di stare<span class="dx">stamattina, 7:50</span></div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px">
+    ${comeSta.map(([e, n]) => `<div><span style="font-size:12px;font-weight:700;color:var(--muted)">${e}</span>
+      <b style="display:block;margin-top:3px;font-size:22px;font-weight:800;letter-spacing:-.03em;${n <= 2 ? 'color:var(--giu)' : ''}">${n}<small style="font-size:12px;color:#71717a;font-weight:700">/5</small></b>
+      <span class="segmenti ${n <= 2 ? 'giu' : ''}">${[1, 2, 3, 4, 5].map(x => `<i class="${x <= n ? 'on' : ''}"></i>`).join('')}</span></div>`).join('')}
+  </div>
+</div>`
+const fonte = `<div class="fonte"><i></i>Ultimo dato: stanotte · media sulle 4 settimane prima</div>`
+
+for (const [id, fondo] of [['F1', 'colonnine'], ['F2', 'confronto'], ['F3', 'scala']]) {
+  document.getElementById(id).innerHTML =
+    contesto + titolo + frase + sonno + `<div class="griglia">${dati.map(d => tessera(fondo, d)).join('')}</div>` + comeHaDetto + fonte
+}
+</script>
+</body>
+</html>
