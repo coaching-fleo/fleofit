@@ -93,7 +93,10 @@ allontanava man mano che il coach lavorava.
    È rimasta lo stesso: finisce in `workouts.sections.intensity`, e la scheda, il
    PDF e la story la leggono. Toglierla dall'interfaccia vorrebbe dire perdere un
    campo che il coach controlla e che tre superfici mostrano.
-5. **Nome e data vivono SOLO nello step 1.** Il ritorno è la testata dello step 2,
+5. ⚠️ *Superato il 26/11/2026 («Tocca e parti», in fondo a questo file): nome e
+   data non stanno più al passo 1, si cambiano da `FoglioNomeData`, che si apre
+   dalla stessa testata.*
+   **Nome e data vivono SOLO nello step 1.** Il ritorno è la testata dello step 2,
    che è un bottone (`aria-label="Modifica nome e data"`). Senza quel ritorno un
    workout aperto in modifica — che parte già al passo 2 — non sarebbe più
    rinominabile. C'è un test che lo prende.
@@ -1831,3 +1834,40 @@ Richiesta del committente: partita una generazione, non c'era modo di fermarla
 - Test: `CreaWorkoutIA.test.jsx`, «Annulla interrompe la richiesta…» e
   «annullata, l'interruzione della rete non diventa un messaggio di errore»
   (visti fallire togliendo i due `if (annullata()) return`).
+
+
+## Il primo schermo «Tocca e parti» (26/11/2026)
+
+Segnalazione del committente: il bottone «Costruisci l'allenamento» finiva in
+fondo allo schermo (lo spingeva il `mt-auto` della pagina), e la data al passo 1
+non serviva: parte già giusta, oggi o il giorno del Calendario (`?date=`), e quasi
+nessuno la cambia. Quattro versioni messe a confronto sulla lavagna
+`tools/design-crea-workout/` (voce `design-crea-workout` di `.claude/launch.json`);
+scelta la **A**. Spec e piano in `docs/superpowers/specs|plans/2026-11-26-crea-workout-primo-schermo*`.
+
+### Cosa c'è ora (solo telefono)
+- **Passo 1 = la domanda e le quattro card.** Sotto il titolo «Tocca per iniziare.
+  Nome e data li cambi dopo, se servono.» Il tocco sulla card fa `setCategory` **e**
+  `setStep(2)`: niente più bottone, la `BarraAzioni` del passo 1 è vuota.
+- **`CardCategoria`** ha una freccia al posto del pallino radio, e l'icona tinta
+  del colore della categoria anche da spenta. `aria-pressed` resta: tornando al
+  passo 1 dice quale categoria ha il workout.
+- **Passo 2**: il titolo (`aria-label="Modifica nome e data"`) apre
+  **`FoglioNomeData`** invece di tornare al passo 1. Sotto la testata due pillole:
+  la categoria (`aria-label="Cambia categoria: …"`, fa `handleBack`, quindi con dei
+  blocchi chiede la stessa conferma della freccia) e la data (`etichettaData` di
+  `src/lib/etichettaData.js`: «Oggi, gio 26 nov», «Domani, …», «Ieri, …», «Mar 1
+  dic»), che apre lo stesso foglio. Il sottotitolo della testata sul telefono non
+  c'è più: lo dicono le pillole. Sul desktop non cambia niente.
+
+### ⚠️ Da sapere
+- **Il foglio scrive DAL VIVO** nello stato della pagina, come il campo di prima:
+  «Fatto» e la X chiudono e basta. Non aggiungere un «Annulla» senza salvare il
+  valore di partenza.
+- **«Fatto» ha `onMouseDown` annullato** (come `BarraAzioni`): con la tastiera
+  aperta iOS la chiude al mousedown e il primo tocco cadeva nel vuoto.
+- La data resta quella di sempre (`date`, `?date=` o oggi): `workouts.date`, il
+  titolo generato e la data dell'atleta in modifica (`awId`) non cambiano.
+- I test che andavano al passo 2 con «nome + Costruisci» ora toccano la card
+  (`/Hyrox/` di solito); `alPasso2(nome)` di `CreaWorkoutBuilder.test.jsx` scrive il
+  nome nel foglio.
