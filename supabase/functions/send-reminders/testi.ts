@@ -49,3 +49,26 @@ export function testoGarminRegistrato(workoutTitle: string, workoutId: string, a
     route: `/workout/${workoutId}?athlete_id=${athleteId}&rpe=1`,
   }
 }
+
+/**
+ * La push all'atleta quando il coach gli sposta un allenamento (26/11/2026,
+ * modo `athlete_moved`). `newDate` arriva già scritta («gio 4 dic»).
+ */
+export function testoSpostatoDalCoach({ workoutTitle, newDate }: { workoutTitle: string; newDate: string }): TestoNotifica {
+  return { title: '📅 Allenamento spostato', bodyMsg: `${workoutTitle} ora è ${newDate}` }
+}
+
+/**
+ * Chi avvisare fra le assegnazioni spostate: mai chi l'ha già svolto (è una
+ * correzione, non un avviso); un coach solo i suoi atleti, un admin (o il
+ * servizio) tutti, nessun altro nessuno.
+ */
+export function daAvvisareSpostamento<T extends { athlete_id: string; status: string }>(
+  righe: T[],
+  { ruoloStaff, servizio = false, mieiAtleti }: { ruoloStaff: 'admin' | 'coach' | null; servizio?: boolean; mieiAtleti: string[] },
+): T[] {
+  const daFare = righe.filter(r => r.status !== 'completed')
+  if (servizio || ruoloStaff === 'admin') return daFare
+  if (ruoloStaff === 'coach') return daFare.filter(r => mieiAtleti.includes(r.athlete_id))
+  return []
+}

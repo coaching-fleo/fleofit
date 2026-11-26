@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { testoNotificaCoach, testoGarminRegistrato } from '../../../supabase/functions/send-reminders/testi.ts'
+import { testoNotificaCoach, testoGarminRegistrato, testoSpostatoDalCoach, daAvvisareSpostamento } from '../../../supabase/functions/send-reminders/testi.ts'
 
 describe('testoNotificaCoach', () => {
   const base = { athleteName: 'Sara', workoutTitle: 'Sled' }
@@ -32,5 +32,32 @@ describe('testoGarminRegistrato', () => {
       bodyMsg: "Complimenti! Sled · registrato da Garmin. Com'è andata?",
       route: '/workout/w1?athlete_id=a1&rpe=1',
     })
+  })
+})
+
+// Il coach sposta un allenamento (26/11/2026): l'atleta lo sa.
+describe('testoSpostatoDalCoach', () => {
+  it('titolo e data nuova', () => {
+    expect(testoSpostatoDalCoach({ workoutTitle: 'Sled', newDate: 'gio 4 dic' })).toEqual({
+      title: '📅 Allenamento spostato', bodyMsg: 'Sled ora è gio 4 dic',
+    })
+  })
+})
+
+describe('daAvvisareSpostamento', () => {
+  const righe = [
+    { id: 'a', athlete_id: 'x', status: 'pending' },
+    { id: 'b', athlete_id: 'y', status: 'pending' },
+    { id: 'c', athlete_id: 'x', status: 'completed' },
+  ]
+  it('l\'admin avvisa tutti i non svolti', () => {
+    expect(daAvvisareSpostamento(righe, { ruoloStaff: 'admin', mieiAtleti: [] }).map(r => r.id)).toEqual(['a', 'b'])
+  })
+  it('il coach solo i suoi atleti', () => {
+    expect(daAvvisareSpostamento(righe, { ruoloStaff: 'coach', mieiAtleti: ['x'] }).map(r => r.id)).toEqual(['a'])
+  })
+  it('il servizio come l\'admin, nessun ruolo nessuno', () => {
+    expect(daAvvisareSpostamento(righe, { ruoloStaff: null, servizio: true, mieiAtleti: [] })).toHaveLength(2)
+    expect(daAvvisareSpostamento(righe, { ruoloStaff: null, mieiAtleti: ['x'] })).toEqual([])
   })
 })
