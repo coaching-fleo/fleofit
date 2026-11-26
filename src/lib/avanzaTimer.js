@@ -80,3 +80,29 @@ export function beepTV(prima, adesso) {
   if (adesso.timeLeft <= 3) return 'corto'
   return null
 }
+
+// Il tasto «indietro» del timer, come in un lettore musicale (richiesta del
+// committente, 26/11/2026): se il passo in corso è già andato avanti di almeno
+// `RICOMINCIA_DOPO` secondi lo si ricomincia; altrimenti si torna al passo
+// prima. Così il primo tocco rifà l'esercizio, il secondo (subito dopo) va
+// indietro. Da «Completato» si torna sempre all'ultimo passo.
+export const RICOMINCIA_DOPO = 3
+
+export function tornaIndietro(sequence, idx, timeLeft) {
+  const passo = sequence[idx]
+  if (!passo) return { idx, timeLeft, ricomincia: false }
+  const cronometro = passo.type === 'stopwatch'
+  const inizio = cronometro ? 0 : (passo.duration || 0)
+  const trascorsi = cronometro ? timeLeft : inizio - timeLeft
+  if (passo.type !== 'done' && (trascorsi >= RICOMINCIA_DOPO || (idx === 0 && trascorsi > 0))) {
+    return { idx, timeLeft: inizio, ricomincia: true }
+  }
+  if (idx === 0) return { idx, timeLeft, ricomincia: false }
+  return { idx: idx - 1, timeLeft: sequence[idx - 1].duration || 0, ricomincia: false }
+}
+
+/** Il tasto indietro serve? No solo all'inizio del primo passo, a tempo pieno. */
+export const puoTornareIndietro = (sequence, idx, timeLeft) => {
+  const r = tornaIndietro(sequence, idx, timeLeft)
+  return r.idx !== idx || r.timeLeft !== timeLeft
+}

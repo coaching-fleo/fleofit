@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { avanzaSequenza, statoTV, beepTV } from '../avanzaTimer'
+import { avanzaSequenza, statoTV, beepTV, tornaIndietro, puoTornareIndietro } from '../avanzaTimer'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -115,5 +115,35 @@ describe('beepTV — i beep sulla TV seguono il suo orologio', () => {
     expect(beepTV(stato(1, 2), stato(1, 2))).toBeNull()
     expect(beepTV(stato(3, 4, seq[3]), stato(3, 3, seq[3]))).toBeNull()
     expect(beepTV(null, stato(1, 3))).toBeNull()
+  })
+})
+
+describe('tornaIndietro: come un lettore musicale', () => {
+  const seq = [
+    { id: 'prep', type: 'work', duration: 10 },
+    { id: 'a', type: 'work', duration: 60 },
+    { id: 'p', type: 'stopwatch', duration: 0 },
+    { id: 'b', type: 'work', duration: 30 },
+    { id: 'done', type: 'done', duration: 0 },
+  ]
+  it('a passo già avviato da 3 secondi o più lo ricomincia', () => {
+    expect(tornaIndietro(seq, 1, 50)).toEqual({ idx: 1, timeLeft: 60, ricomincia: true })
+    expect(tornaIndietro(seq, 1, 57)).toEqual({ idx: 1, timeLeft: 60, ricomincia: true })
+  })
+  it('appena cominciato torna al passo prima, a tempo pieno', () => {
+    expect(tornaIndietro(seq, 1, 59)).toEqual({ idx: 0, timeLeft: 10, ricomincia: false })
+    expect(tornaIndietro(seq, 3, 30)).toEqual({ idx: 2, timeLeft: 0, ricomincia: false })
+  })
+  it('il cronometro conta in su: ricomincia da zero', () => {
+    expect(tornaIndietro(seq, 2, 40)).toEqual({ idx: 2, timeLeft: 0, ricomincia: true })
+    expect(tornaIndietro(seq, 2, 1)).toEqual({ idx: 1, timeLeft: 60, ricomincia: false })
+  })
+  it('sul primo passo ricomincia anche dopo un secondo, e a tempo pieno non fa niente', () => {
+    expect(tornaIndietro(seq, 0, 9)).toEqual({ idx: 0, timeLeft: 10, ricomincia: true })
+    expect(puoTornareIndietro(seq, 0, 10)).toBe(false)
+    expect(puoTornareIndietro(seq, 0, 9)).toBe(true)
+  })
+  it('da «Completato» torna all’ultimo passo', () => {
+    expect(tornaIndietro(seq, 4, 120)).toEqual({ idx: 3, timeLeft: 30, ricomincia: false })
   })
 })

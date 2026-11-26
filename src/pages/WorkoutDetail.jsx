@@ -51,7 +51,7 @@ import { testoBox } from '../lib/esercizi'
 import { sincronizzaBadge } from '../lib/badge'
 import { isVoiceNoteValid } from '../lib/notaVocale'
 import { buildTimerSequence, getNormalizedBlocks, haTimerGuidato } from '../lib/timerSequence'
-import { avanzaSequenza } from '../lib/avanzaTimer'
+import { avanzaSequenza, tornaIndietro, puoTornareIndietro } from '../lib/avanzaTimer'
 import { suonaSopraLaMusica, ripristinaSessioneAudio } from '../lib/sessioneAudio'
 import { liveActivityDaChiedere, liveActivityAttiva, salvaPreferenzaLiveActivity, statoLiveActivity, programmaLiveActivity, avviaLiveActivity, aggiornaLiveActivity, chiudiLiveActivity } from '../lib/liveActivity'
 import FoglioLiveActivity from '../components/FoglioLiveActivity'
@@ -2972,6 +2972,12 @@ const SCHEMES = {
 function WorkoutTimer({ sequence, onClose, tvCode, persone = [], onPersone, eserciziPerPersone = null, isMinimized, onMinimize, onMaximize, athleteWorkoutId, athleteName, workoutTitle, coloreCategoria: coloreLA = BRAND, categoriaLiveActivity = 'HYROX' }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(sequence[0]?.duration || 0);
+  // «Indietro» che ricomincia il passo in corso: indice e passo non cambiano,
+  // quindi il timer va riancorato a mano (è nelle dipendenze del suo effetto).
+  const [riavvio, setRiavvio] = useState(0);
+  // Sulla TV il workout intero al posto del carosello, col timer che continua
+  // (richiesta del committente, 26/11/2026). Va alla TV nel `timer_state`.
+  const [workoutSullaTV, setWorkoutSullaTV] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -3101,7 +3107,7 @@ function WorkoutTimer({ sequence, onClose, tvCode, persone = [], onPersone, eser
         // `persone`: chi fa l'allenamento insieme e da dove parte (src/lib/personeTV.js).
         // `pause`: questa sequenza ha le pause dopo il Cash In e prima del Cash
         // Out (26/11/2026); la TV la ricostruisce uguale solo se lo sa.
-        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx], persone, pause: true }
+        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx], persone, pause: true, mostraWorkout: workoutSullaTV }
       }).catch(()=>{});
     }
     if (liveChannelRef.current) {
@@ -3111,7 +3117,7 @@ function WorkoutTimer({ sequence, onClose, tvCode, persone = [], onPersone, eser
         payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx] }
       }).catch(()=>{});
     }
-  }, [currentIdx, timeLeft, isRunning, sequence, tvJoined, athleteWorkoutId, persone]);
+  }, [currentIdx, timeLeft, isRunning, sequence, tvJoined, athleteWorkoutId, persone, workoutSullaTV]);
 
   // La Live Activity (blocco schermo e Dynamic Island, solo iPhone, se l'atleta
   // l'ha attivata). Parte al primo «Avvia» e si aggiorna solo quando cambia il
@@ -3315,7 +3321,7 @@ function WorkoutTimer({ sequence, onClose, tvCode, persone = [], onPersone, eser
     timerRef.current = setTimeout(tick, Math.max(50, partenza + 1000 - Date.now()));
 
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [isRunning, currentIdx, sequence, playBeep]);
+  }, [isRunning, currentIdx, sequence, playBeep, riavvio]);
 
   const handleNext = () => {
     if (currentIdx < sequence.length - 1) {
@@ -3330,13 +3336,15 @@ function WorkoutTimer({ sequence, onClose, tvCode, persone = [], onPersone, eser
     }
   };
 
+  // Come un lettore musicale (src/lib/avanzaTimer.js): il primo tocco
+  // ricomincia il passo in corso, il secondo torna a quello prima.
   const handlePrev = () => {
-    if (currentIdx > 0) {
-      const prevStep = sequence[currentIdx - 1];
-      setCurrentIdx(currentIdx - 1);
-      setTimeLeft(prevStep.duration || 0);
-    }
+    const dopo = tornaIndietro(sequence, currentIdx, timeLeft);
+    setCurrentIdx(dopo.idx);
+    setTimeLeft(dopo.timeLeft);
+    if (dopo.ricomincia) setRiavvio(n => n + 1);
   };
+  const puoIndietro = puoTornareIndietro(sequence, currentIdx, timeLeft);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -3453,8 +3461,14 @@ return createPortal(
         </div>
 
         {/* Telecomando TV: chi fa l'allenamento insieme e da dove parte (src/lib/personeTV.js). */}
-        {tvCode && eserciziPerPersone && onPersone && (
-          <div className="flex justify-center shrink-0">
+        {tvCode && (
+          <div className="flex justify-center gap-2.5 shrink-0 flex-wrap">
+            {/* Il workout intero sulla TV: il timer qui non si ferma. */}
+            <button aria-pressed={workoutSullaTV} onClick={() => setWorkoutSullaTV(v => !v)}
+              className={`h-11 px-5 rounded-full flex items-center gap-2.5 backdrop-blur-md font-bold text-sm ${workoutSullaTV ? 'bg-white text-black shadow-lg' : currentTheme.card}`}>
+              {workoutSullaTV ? <><Timer size={18} /> Torna al timer sulla TV</> : <><ClipboardList size={18} /> Workout sulla TV</>}
+            </button>
+            {eserciziPerPersone && onPersone && (
             <button aria-label="Persone sulla TV" onClick={() => setPersoneAperto(true)}
               className={`h-11 px-5 rounded-full flex items-center gap-2.5 backdrop-blur-md font-bold text-sm ${currentTheme.card}`}>
               <Users size={18} />
@@ -3464,6 +3478,7 @@ return createPortal(
                 </span>
               ) : 'Persone sulla TV'}
             </button>
+            )}
           </div>
         )}
         {personeAperto && (
@@ -3472,7 +3487,7 @@ return createPortal(
         )}
 
         <div className="p-8 pb-16 flex items-center justify-center gap-6 shrink-0">
-          <button aria-label="Passaggio precedente" onClick={handlePrev} disabled={currentIdx === 0} className={`w-16 h-16 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md disabled:opacity-30 ${currentTheme.icon}`}><StepBack size={28} /></button>
+          <button aria-label="Passaggio precedente" onClick={handlePrev} disabled={!puoIndietro} className={`w-16 h-16 bg-black/20 rounded-full flex items-center justify-center backdrop-blur-md disabled:opacity-30 ${currentTheme.icon}`}><StepBack size={28} /></button>
           {!isDone && (
             <button aria-label={isRunning ? 'Metti in pausa il timer' : 'Avvia il timer'} onClick={initAudioAndPlay} className={`w-24 h-24 rounded-full flex items-center justify-center shadow-2xl hover:scale-105 transition-transform ${currentTheme.btnBg}`}>
               {isRunning ? <Pause size={40} fill="currentColor" /> : <Play size={40} fill="currentColor" className="ml-2" />}

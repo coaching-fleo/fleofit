@@ -377,6 +377,9 @@ export default function TVDashboard() {
   // Avvia. Partito = sta andando, o è già andato avanti almeno di un secondo.
   const avviato = !!schermo?.conTimer && !!timerState && (
     timerState.isRunning || timerState.currentIdx > 0 || timerState.timeLeft < (timerState.step?.duration ?? 0))
+  // Il telefono può richiamare il workout intero a timer partito, senza fermarlo
+  // (26/11/2026): la locandina torna davanti, col tempo che scorre nel piede.
+  const mostraWorkout = avviato && timerState?.mostraWorkout === true
   // Più persone sfasate sullo stesso timer: arrivano dal telefono insieme al
   // `timer_state` (src/lib/personeTV.js).
   const persone = timerState && Array.isArray(timerState.persone) && timerState.persone.length > 0
@@ -387,7 +390,7 @@ export default function TVDashboard() {
     : null), [schermo, avviato, sequenza, passo, persone])
 
   const chiavePersone = persone ? persone.map(p => `${p.nome}${p.partenza}`).join() : ''
-  const refLista = useAdattaTesto([schermo, avviato])
+  const refLista = useAdattaTesto([schermo, avviato, mostraWorkout])
   const refCarosello = useAdattaTesto([schermo, avviato, chiavePersone, carosello?.corrente, passo?.type, passo?.id === 'prep'])
 
   const renderContent = () => {
@@ -444,7 +447,16 @@ export default function TVDashboard() {
     return (
       <>
         <LocandinaTV
-          visibile={!avviato}
+          visibile={!avviato || mostraWorkout}
+          inCorso={mostraWorkout ? {
+            fase: fase || nomeFase(passo),
+            colore: accento,
+            tempo: fine || !lastTimerState ? null : formatT(lastTimerState.timeLeft),
+            inPausa: !!lastTimerState && !lastTimerState.isRunning && !fine,
+            // Il blocco in corso (o quello che viene, nella pausa): solo Hyrox ha
+            // una carta per blocco nello stesso ordine.
+            blocco: schermo.category === 'Hyrox' ? carosello?.tappe[carosello.corrente]?.k ?? null : null,
+          } : null}
           etichettaCategoria={schermo.etichetta}
           coloreCategoria={coloreCategoria(schermo.category)}
           titolo={workout.title}
@@ -457,10 +469,11 @@ export default function TVDashboard() {
           conTimer={schermo.conTimer}
           audioAttivo={audioUnlocked}
           refLista={refLista}
+          classeIntensitaRiga={getIntensityColor}
         />
         {schermo.conTimer && (
           <InCorsoTV
-            visibile={avviato}
+            visibile={avviato && !mostraWorkout}
             titolo={workout.title}
             audioAttivo={audioUnlocked}
             timer={{

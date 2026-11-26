@@ -924,10 +924,20 @@ Richiesta del committente: sulla sua TV 4K la TV di prima veniva piccola, e vole
 della lavagna del box» senza confusione. Scelta la **proposta D** fra i prototipi di
 `tools/design-tv/` (le altre, scartate, restano lì; storia anche in memoria `tv-redesign`).
 Ritorno alla TV di prima: `docs/superpowers/plans/2026-11-26-tv-redesign-ritorno.md`.
-- **Due momenti.** Workout caricato ma timer non ancora partito → **locandina** (`LocandinaTV`):
-  PUSHFIT grande a sinistra con categoria, titolo, intensità, durata stimata, numero di blocchi,
-  note del coach, «Allenamento di oggi» col tasto play; a destra **il workout intero**, un
-  riquadro per blocco (`vociLocandina`: Hyrox, corsa, Gym; Custom ed Evento mettono le note).
+- **Due momenti.** Workout caricato ma timer non ancora partito → **locandina** (`LocandinaTV`).
+  Dal secondo giro del 26/11 è **come la TV di prima**: PUSHFIT in alto a sinistra, accanto
+  categoria, intensità, durata, numero di blocchi e titolo; sotto le note del coach; poi la
+  **griglia dei blocchi in ordine** (`BloccoLocandina`, `colonneLocandina`: fino a 4 in una riga,
+  poi due righe), ogni esercizio **numerato su una riga sua**, nome e specifiche accanto, la pausa
+  come cerchio verde fra due carte. In fondo «Avvia il timer dal telefono». Custom ed Evento: le note.
+  🔴 La prima versione (logo a sinistra, workout «in fila» a destra separato da pallini) è stata
+  **scartata dal committente**: su uno schermo piccolo non si capiva l'ordine degli esercizi.
+  **Profondità** (richiesta del 26/11: «poca profondità, sembrano AI slop»): la carta è sollevata
+  (`CARTA_LOCANDINA`: luce sullo spigolo in alto, ombra di contatto e ombra lunga), gli esercizi
+  stanno in un **pozzetto incassato** (`POZZETTO`), il numero del blocco è grande e sottile come nel
+  carosello; un blocco senza esercizi mette la sua durata nel pozzetto. Il carosello non cambia.
+  🔴 Niente `break-words` nelle carte: spezzava «WarmUp» in «WarmU/p» e nascondeva il trabocco a
+  `useAdattaTesto`, che così non rimpiccioliva.
   Timer partito → **carosello** (`InCorsoTV`): logo grande in alto (richiesta del committente),
   timer, e il blocco in corso al centro con i vicini rimpiccioliti ai lati.
 - 🔴 **«Partito» non è «timer aperto»**: collegando la TV il telefono apre il timer in pausa sulla
@@ -952,11 +962,21 @@ Ritorno alla TV di prima: `docs/superpowers/plans/2026-11-26-tv-redesign-ritorno
   non le ha: con indici diversi `statoTV` non saprebbe più andare avanti da sola, e il carosello
   mostrerebbe carte di pausa che il telefono non attraversa.
 - **Il testo si adatta** (`src/useAdattaTesto.js`): ricerca binaria sulla `font-size` dei nodi con
-  `data-adatta` (la lista della locandina prova anche «un esercizio per riga» contro «in fila» e
-  tiene la più grande). 🔴 Le righe di una carta stanno in fondo con `mt-auto` e **non**
+  `data-adatta` (`griglia` per la locandina, `carta` per il carosello). 🔴 Le righe di una carta stanno in fondo con `mt-auto` e **non**
   `justify-end`: con justify-end ciò che non ci sta esce dall'alto, `scrollHeight` non lo vede, e il
   primo esercizio spariva (successo nella carta di pausa). E niente margini negativi sulle righe:
   facevano traboccare la larghezza e il testo finiva al minimo.
+- **«Workout sulla TV»** (telecomando del telefono, 26/11/2026): a timer partito riporta sulla TV
+  la locandina, **senza fermare il timer**. Il telefono manda `mostraWorkout` nel `timer_state`
+  (stato `workoutSullaTV` in `WorkoutDetail.jsx`); la TV mostra la locandina con il blocco in corso
+  cerchiato di giallo e «Adesso» (solo Hyrox: una carta per blocco nello stesso ordine) e nel piede
+  fase e tempo che scorre. «Torna al timer sulla TV» riporta il carosello. Un telefono vecchio non
+  lo manda: la TV resta com'era.
+- **«Indietro» come un lettore musicale** (`tornaIndietro` di `src/lib/avanzaTimer.js`): se il passo
+  è avviato da almeno 3 secondi lo ricomincia, altrimenti torna al passo prima; sul primo passo è
+  spento solo a tempo pieno. Ricominciare non cambia indice: il timer si riancora con il contatore
+  `riavvio`, nelle dipendenze dell'effetto del tick. ⚠️ Vale per **ogni** timer, anche senza TV, e
+  arriva sugli Store con la prossima versione.
 - **Tolto il bottone per ruotare** lo schermo (richiesta del committente: la verticale avrà un
   disegno suo, BACKLOG). Locandina e carosello sono su 1920×1080 esatti; lo schermo del codice
   resta ad altezza libera e si rimpicciolisce con la scala, come prima.

@@ -155,21 +155,14 @@ export function ErroreTV({ messaggio }) {
 }
 
 // ── La locandina: il workout intero, prima del via ───────────────────────
-
-/** Le due strisce gialle in diagonale e una luce morbida: solo nella locandina. */
-function SfondoLocandina({ visibile }) {
-  const striscia = 'absolute bg-brand transition-[transform,opacity] duration-1000 ease-out'
-  return (
-    <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
-      <span className="absolute -left-[300px] -top-[400px] w-[1500px] h-[1400px] rotate-[-28deg]
-                       bg-[linear-gradient(90deg,rgba(255,255,255,.035),rgba(255,255,255,0)_70%)]" />
-      <span className={striscia} style={{ left: 900, top: 0, width: 700, height: 12,
-        transform: `skewX(-32deg) translateX(${visibile ? 0 : 420}px)`, opacity: visibile ? 1 : 0 }} />
-      <span className={striscia} style={{ left: 330, bottom: 0, width: 780, height: 30,
-        transform: `skewX(-32deg) translateX(${visibile ? 0 : -900}px)`, opacity: visibile ? 1 : 0 }} />
-    </div>
-  )
-}
+//
+// Seconda versione (26/11/2026). La prima — PUSHFIT grande a sinistra, il
+// workout in una lista stretta a destra con gli esercizi in fila separati da
+// pallini — su uno schermo piccolo era confusa: non si capiva l'ordine degli
+// esercizi (segnalato dal committente). Si torna alla struttura della TV di
+// prima, che «si capiva meglio a colpo d'occhio»: i blocchi uno accanto
+// all'altro nell'ordine in cui si fanno, ognuno con i suoi esercizi uno
+// sotto l'altro e numerati. Il logo sta in alto.
 
 /** La linguetta della cartellina: «4x», o «2/4» con i pallini sul blocco in corso. */
 function Linguetta({ giri, giro = null, className = '' }) {
@@ -190,109 +183,179 @@ function Linguetta({ giri, giro = null, className = '' }) {
 }
 
 /**
- * Una voce della lista a destra: numero, nome del blocco, linguetta, didascalia
- * e durata in testa, gli esercizi sotto. Tutto in `em`: la pagina adatta la
- * grandezza del testo perché il workout ci stia intero (`useAdattaTesto`).
+ * Un blocco della locandina: la linguetta dei giri sopra, numero e nome in
+ * testa con didascalia e durata, gli esercizi numerati uno per riga col nome
+ * sopra e le specifiche sotto. Tutto in `em`: la pagina adatta la grandezza del
+ * testo perché il workout ci stia intero (`useAdattaTesto`).
  */
-function VoceLocandina({ voce }) {
+// La carta della locandina ha tre piani, perché da lontano si legga come un
+// oggetto e non come un rettangolo piatto (richiesta del committente, 26/11/2026:
+// «poca profondità, sembrano AI slop»): la carta sollevata dal fondo, con la
+// luce dall'alto e l'ombra a terra; il pozzetto incassato con gli esercizi;
+// il numero del blocco grande e sottile, lo stesso segno del carosello.
+const CARTA_LOCANDINA = {
+  background: 'linear-gradient(180deg,#26262b 0%,#1c1c20 38%,#161619 100%)',
+  boxShadow: [
+    'inset 0 1px 0 rgba(255,255,255,.09)', // lo spigolo in alto prende la luce
+    'inset 0 0 0 1px rgba(255,255,255,.045)',
+    '0 2px 0 rgba(0,0,0,.55)', // il contatto col fondo
+    '0 28px 50px -18px rgba(0,0,0,.85)', // l'ombra lunga
+  ].join(','),
+}
+const POZZETTO = {
+  background: 'linear-gradient(180deg,#0d0d0f,#121214)',
+  boxShadow: 'inset 0 .12em .35em rgba(0,0,0,.75), inset 0 0 0 1px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.05)',
+}
+
+function BloccoLocandina({ voce, classeIntensita, adesso = false }) {
   return (
-    <>
+    <div className="relative min-w-0 flex flex-col">
       {voce.pausaPrima && (
-        <div className="shrink-0 flex items-center gap-[.5em] px-[.7em] text-[.7em] font-semibold"
-          style={{ color: VERDE }}>
-          <Pause className="w-[1em] h-[1em]" aria-hidden="true" /> Pausa
-          <span aria-hidden="true" className="flex-1 border-t-[.08em] border-dashed" style={{ borderColor: `${VERDE}59` }} />
-        </div>
+        // La pausa prima del blocco: un cerchio verde nello spazio fra le due carte.
+        <span title="Pausa" aria-label="Pausa"
+          className="absolute -left-[.7em] top-[3.4em] z-[1] w-[1.4em] h-[1.4em] -translate-x-1/2 rounded-full flex items-center justify-center"
+          style={{ background: '#12301f', color: VERDE, boxShadow: '0 0 0 .14em #0B0B0B, 0 .3em .6em rgba(0,0,0,.6)' }}>
+          <Pause className="w-[.75em] h-[.75em]" aria-hidden="true" />
+        </span>
       )}
-      <div className="shrink-0 rounded-[.55em] bg-white/[.04] px-[.7em] pt-[.42em] pb-[.5em]">
-        <div className="flex items-baseline gap-[.55em] whitespace-nowrap">
-          <span className="w-[1.1em] text-[.8em] font-medium text-gray-500 tabular-nums">{voce.numero}</span>
-          <h3 className="text-[1.06em] font-semibold tracking-[-.01em]">{voce.titolo}</h3>
-          {voce.giri && (
-            <Linguetta giri={voce.giri}
-              className="self-center text-[.68em] px-[.5em] py-[.1em] rounded-t-[.4em] border-[.07em] border-b-transparent border-brand/55" />
-          )}
-          {voce.hint && <span className="text-[.72em] font-medium text-gray-500">{voce.hint}</span>}
-          {voce.durata && <span className="ml-auto text-[.8em] font-medium text-gray-400 tabular-nums">{voce.durata}</span>}
+      <div className={`self-start h-[1.55em] px-[.6em] flex items-center rounded-t-[.5em] -mb-px text-[.72em] ${voce.giri ? '' : 'invisible'}`}
+        style={{ background: '#26262b', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.09)' }}>
+        {voce.giri ? <Linguetta giri={voce.giri} /> : '·'}
+      </div>
+      <div className={`flex-1 min-h-0 rounded-[.8em] ${voce.giri ? 'rounded-tl-none' : ''} p-[.5em] pt-[.55em] flex flex-col`}
+        style={adesso ? { ...CARTA_LOCANDINA, boxShadow: `${CARTA_LOCANDINA.boxShadow},0 0 0 .1em ${BRAND},0 0 1.2em -.2em rgba(241,197,23,.35)` } : CARTA_LOCANDINA}>
+        <div className="flex items-start gap-[.45em] px-[.3em]">
+          <span className="shrink-0 text-[2.1em] font-extralight leading-[.82] tracking-[-.05em] text-brand tabular-nums">
+            {voce.numero}
+          </span>
+          <div className="flex-1 min-w-0 pt-[.12em]">
+            <div className="flex items-baseline gap-[.4em]">
+              <h3 className="flex-1 min-w-0 text-[1.08em] font-semibold tracking-[-.015em] leading-[1.12]">{voce.titolo}</h3>
+              {adesso && <span className="shrink-0 self-center px-[.5em] py-[.12em] rounded-full bg-brand text-black text-[.56em] font-bold">Adesso</span>}
+              {voce.durata && (voce.righe.length > 0 || voce.nota) && <span className="shrink-0 text-[.78em] font-semibold text-gray-300 tabular-nums">{voce.durata}</span>}
+            </div>
+            {voce.hint && <p className="mt-[.15em] text-[.64em] font-medium text-gray-500">{voce.hint}</p>}
+          </div>
         </div>
         {voce.righe.length > 0 ? (
-          <ul className="lista-righe pl-[1.65em] mt-[.15em]">
-            {voce.righe.map(r => (
-              <li key={r.id} className="text-[.86em] leading-[1.4] text-gray-300 whitespace-nowrap">
-                {r.nome}{r.specifiche && <span className="ml-[.35em] text-[.88em] text-gray-500">{r.specifiche}</span>}
+          <ol className="mt-[.5em] flex-1 rounded-[.55em] px-[.35em] py-[.2em] flex flex-col" style={POZZETTO}>
+            {voce.righe.map((r, i) => (
+              <li key={r.id} className={`flex items-baseline gap-[.45em] py-[.32em] ${i ? 'border-t border-white/[.05]' : ''}`}>
+                <span className="shrink-0 w-[1.3em] text-center text-[.72em] font-bold text-brand tabular-nums">
+                  {r.numero ?? i + 1}
+                </span>
+                {/* Nome e specifiche sulla stessa riga: va a capo solo se non ci sta.
+                    Niente break-words: una parola spezzata («WarmU-p») si legge male e
+                    nasconde il trabocco alla misura, che invece rimpicciolisce tutto. */}
+                <p className="flex-1 min-w-0 leading-[1.25]">
+                  <span className="text-[.9em] font-semibold text-gray-100">{r.nome}</span>
+                  {r.specifiche && <span className="ml-[.45em] text-[.68em] text-gray-400 inline-block">{r.specifiche}</span>}
+                </p>
+                {r.intensita && (
+                  <span className={`shrink-0 text-[.6em] font-semibold ${classeIntensita(r.intensita)}`}>{r.intensita}/10</span>
+                )}
               </li>
             ))}
-          </ul>
+          </ol>
         ) : voce.nota ? (
-          <p className="pl-[1.9em] mt-[.1em] text-[.8em] text-gray-500 truncate">{voce.nota}</p>
+          <p className="mt-[.5em] rounded-[.55em] px-[.6em] py-[.45em] text-[.7em] text-gray-400" style={POZZETTO}>{voce.nota}</p>
+        ) : voce.durata ? (
+          // Un blocco senza esercizi (riscaldamento, riposo): il pozzetto porta il suo tempo,
+          // invece di restare una scatola vuota.
+          <div className="mt-[.5em] flex-1 rounded-[.55em] flex items-center justify-center" style={POZZETTO}>
+            <span className="text-[1.9em] font-extralight tracking-[-.03em] text-gray-500 tabular-nums">{voce.durata}</span>
+          </div>
         ) : null}
       </div>
-    </>
+    </div>
   )
 }
 
+/** Quante colonne: come la TV di prima, fino a 4 in una riga, poi due righe. */
+const colonneLocandina = (n) => (n <= 4 ? Math.max(1, n) : n <= 6 ? 3 : n <= 8 ? 4 : Math.ceil(n / 2))
+
 /**
  * La locandina. `voci` vengono da `vociLocandina` (src/lib/schermoTV.js);
- * senza voci (Custom, Evento) a destra vanno le note del coach. `refLista` è
- * del contenitore che la pagina adatta.
+ * senza voci (Custom, Evento) al posto dei blocchi vanno le note del coach.
+ * `refLista` è della griglia che la pagina adatta. `classeIntensita` è la
+ * classe già pronta dell'intensità del workout; `classeIntensitaRiga` la
+ * funzione che la dà per ogni esercizio.
  */
 export function LocandinaTV({
   visibile, etichettaCategoria, coloreCategoria, titolo, intensita, classeIntensita, durata, quantiBlocchi,
-  nota, voci, conTimer, audioAttivo, refLista,
+  nota, voci, conTimer, audioAttivo, refLista, classeIntensitaRiga, inCorso = null,
 }) {
-  const notaADestra = voci.length === 0
+  const soloNota = voci.length === 0
+  const colonne = colonneLocandina(voci.length)
+  const righe = Math.ceil(voci.length / colonne) || 1
   return (
     <section aria-hidden={!visibile}
-      className={`absolute inset-0 transition-[opacity,transform] duration-[800ms] ease-out ${
+      style={{ background: 'radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,.035), transparent 60%)' }}
+      className={`absolute inset-0 px-[64px] pt-[40px] pb-[34px] flex flex-col transition-[opacity,transform] duration-[800ms] ease-out ${
         visibile ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-[160px] pointer-events-none'}`}>
-      <SfondoLocandina visibile={visibile} />
-      <div className="absolute left-[120px] top-0 bottom-0 w-[820px] flex flex-col">
-        <div className="mt-[96px] flex items-center gap-[14px] text-[26px] font-semibold text-[#c9ccd4]">
-          <i aria-hidden="true" className="w-[12px] h-[12px] rounded-full" style={{ background: coloreCategoria }} />
-          {etichettaCategoria}
-        </div>
-        <h1 className="mt-[28px] text-[60px] font-bold tracking-[-.025em] leading-[1.08] text-balance line-clamp-3 break-words">{titolo}</h1>
-        <div className="mt-[20px] flex gap-[28px] text-[26px] font-medium text-gray-400">
-          {intensita && <span>Intensità <b className={`font-semibold ${classeIntensita}`}>{intensita}/10</b></span>}
-          {durata && <span>{durata.etichetta} <b className="font-semibold text-gray-200">{durata.valore}</b></span>}
-          {quantiBlocchi > 0 && <span><b className="font-semibold text-gray-200">{quantiBlocchi}</b> {quantiBlocchi === 1 ? 'blocco' : 'blocchi'}</span>}
-        </div>
-        {nota && !notaADestra && (
-          <p className="mt-[26px] max-w-[640px] text-[27px] leading-[1.5] text-gray-400 line-clamp-5 whitespace-pre-line">{nota}</p>
-        )}
-
-        <div className="mt-auto mb-[120px]">
-          <Logo altezza={107} className="-ml-[6px]" />
-          <div className="flex items-center gap-[30px] mt-[22px]">
-            <span className="text-[76px] font-bold tracking-[-.02em] leading-none bg-gradient-to-b from-gray-300 to-gray-500 bg-clip-text text-transparent">
-              Allenamento di oggi
+      {/* In alto, su una riga: il logo, il titolo con categoria e numeri, l'audio. */}
+      <div className="shrink-0 flex items-center gap-[36px]">
+        <Logo altezza={70} className="-ml-[4px] shrink-0" />
+        <div className="flex-1 min-w-0 pl-[36px] border-l-2 border-white/10">
+          <div className="flex items-center gap-[24px] text-[24px] font-medium text-gray-400 whitespace-nowrap">
+            <span className="flex items-center gap-[12px] font-semibold text-[#c9ccd4]">
+              <i aria-hidden="true" className="w-[12px] h-[12px] rounded-full" style={{ background: coloreCategoria }} />
+              {etichettaCategoria}
             </span>
-            {conTimer && (
-              <span aria-hidden="true" className="relative shrink-0 w-[92px] h-[92px]">
-                <span className="absolute inset-0 rounded-full bg-brand/40 animate-ping [animation-duration:2.4s]" />
-                <span className="relative w-full h-full rounded-full bg-brand text-black flex items-center justify-center">
-                  <Play size={38} fill="currentColor" className="ml-[6px]" />
-                </span>
-              </span>
-            )}
+            {intensita && <span>Intensità <b className={`font-semibold ${classeIntensita}`}>{intensita}/10</b></span>}
+            {durata && <span>{durata.etichetta} <b className="font-semibold text-gray-200">{durata.valore}</b></span>}
+            {quantiBlocchi > 0 && <span><b className="font-semibold text-gray-200">{quantiBlocchi}</b> {quantiBlocchi === 1 ? 'blocco' : 'blocchi'}</span>}
           </div>
-          {conTimer && <p className="mt-[24px] text-[26px] text-gray-400">Avvia il timer dal telefono per cominciare.</p>}
-          {!audioAttivo && <div className="mt-[28px] [&>p]:text-[24px] [&>p]:px-6 [&>p]:py-3 [&>p]:inline-flex"><AvvisoAudio /></div>}
+          <h1 className="mt-[4px] text-[54px] font-bold tracking-[-.03em] leading-[1.1] truncate">{titolo}</h1>
         </div>
+        <AudioTV audioAttivo={audioAttivo} />
       </div>
+      {nota && !soloNota && (
+        <p className="shrink-0 mt-[18px] max-w-[1600px] text-[26px] leading-[1.4] text-gray-400 line-clamp-2 whitespace-pre-line">{nota}</p>
+      )}
 
-      <div className="absolute left-[1020px] right-[88px] top-[150px] bottom-[100px] flex flex-col">
-        <h2 className="text-[36px] font-bold tracking-[-.015em] pb-[22px] border-b-2 border-white/[.08]">Il workout</h2>
-        {notaADestra ? (
-          <p className="mt-[28px] text-[34px] leading-[1.5] text-gray-300 whitespace-pre-line line-clamp-[14] break-words">
+      {/* I blocchi, nell'ordine in cui si fanno. */}
+      {soloNota ? (
+        <div className="flex-1 min-h-0 mt-[34px] rounded-[32px] bg-gradient-to-b from-[#1c1c1f] to-[#161618] px-[48px] py-[40px] overflow-hidden">
+          <p className="text-[38px] leading-[1.5] text-gray-200 whitespace-pre-line break-words">
             {nota || 'Allenamento libero: il cronometro parte dal telefono.'}
           </p>
-        ) : (
-          <div ref={refLista} data-adatta="lista" data-disposizione="colonna"
-            className="locandina-lista flex-1 min-h-0 overflow-hidden text-[30px] pt-[.5em] flex flex-col gap-[.34em]">
-            {voci.map(v => <VoceLocandina key={v.id} voce={v} />)}
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 mt-[22px] overflow-hidden">
+          <div ref={refLista} data-adatta="griglia"
+            className="h-full overflow-hidden text-[30px] grid gap-x-[1.4em] gap-y-[.55em] pb-[.6em]"
+            style={{ gridTemplateColumns: `repeat(${colonne}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${righe}, 1fr)` }}>
+            {voci.map((v, k) => <BloccoLocandina key={v.id} voce={v} classeIntensita={classeIntensitaRiga} adesso={inCorso?.blocco === k} />)}
           </div>
+        </div>
+      )}
+
+      {/* In fondo: cosa fare per partire. */}
+      <div className="shrink-0 mt-[20px] h-[60px] flex items-center gap-[22px]">
+        {inCorso ? (
+          // Il workout richiamato dal telefono a timer partito: il tempo continua qui sotto.
+          <div className="flex items-center gap-[22px]">
+            <span className="shrink-0 h-[60px] px-[26px] rounded-full flex items-center gap-[16px] bg-white/[.06]"
+              style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,.07)' }}>
+              <i aria-hidden="true" className={`w-[14px] h-[14px] rounded-full ${inCorso.inPausa ? '' : 'animate-pulse'}`} style={{ background: inCorso.colore }} />
+              <span className="text-[26px] font-semibold text-gray-300">{inCorso.inPausa ? 'In pausa' : inCorso.fase}</span>
+              {inCorso.tempo && <span className="text-[40px] font-semibold tabular-nums tracking-[-.02em]" style={{ color: inCorso.colore }}>{inCorso.tempo}</span>}
+            </span>
+            <p className="text-[26px] font-medium text-gray-500">Il timer continua. Per tornarci: <b className="font-semibold text-gray-300">Torna al timer sulla TV</b>, sul telefono.</p>
+          </div>
+        ) : conTimer && (
+          <>
+            <span aria-hidden="true" className="relative shrink-0 w-[56px] h-[56px]">
+              <span className="absolute inset-0 rounded-full bg-brand/40 animate-ping [animation-duration:2.4s]" />
+              <span className="relative w-full h-full rounded-full bg-brand text-black flex items-center justify-center">
+                <Play size={24} fill="currentColor" className="ml-[3px]" />
+              </span>
+            </span>
+            <p className="text-[30px] font-medium text-gray-300">Avvia il timer dal telefono per cominciare.</p>
+          </>
         )}
+        {!audioAttivo && <div className="ml-auto [&>p]:text-[24px] [&>p]:px-6 [&>p]:py-3"><AvvisoAudio /></div>}
       </div>
     </section>
   )
