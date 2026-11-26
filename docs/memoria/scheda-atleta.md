@@ -347,3 +347,7 @@ Claude, «lo cambiamo insieme». Regola grafica in `DESIGN.md`, «La scheda atle
 - La sezione dei prossimi si chiama `region` «In programma», non «Calendario»: un test controlla
   che l'atleta sul proprio profilo NON abbia una regione «Calendario».
 - Il titolo «Come sta andando» è un `<h2>` con «30 giorni» a parte (i test lo cercano così).
+
+
+## Il coach sposta la data dalla scheda atleta (26/11/2026)
+«Sposta» su Oggi, In programma e nel calendario dell'atleta. Tutto in `calendario.md` §9-sposta-coach.

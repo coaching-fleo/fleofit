@@ -14,6 +14,7 @@ Le modifiche fatte dopo la versione **1.2.0**, in vendita sullo Store: build `1.
 - Scrivendo la **nota** su un allenamento non ancora segnato come fatto, l'app chiede se l'hai completato: la nota si salva insieme al completamento.
 
 ## Creazione dei workout (coach)
+- **Spostare la data è un tocco**: nella scheda dell'allenamento si tocca la data in testa (o «Sposta» accanto a un atleta), nella scheda dell'atleta c'è «Sposta» su ogni allenamento in programma. Si sposta un atleta solo o tutta la seduta: chi l'ha già fatto resta dov'è. L'atleta riceve una notifica.
 - **Duplicando o salvando come nuovo**, la copia non è più assegnata agli atleti dell'originale e parte senza le note del coach.
 - **«Genera con IA» ora modifica anche**: se ci sono già blocchi (fatti a mano o dall'IA) basta chiedere la modifica — «porta l'EMOM a 16 minuti», «togli il Cash Out» — e l'IA riscrive l'allenamento cambiando solo quello; la modifica si può annullare.
 - I blocchi scritti dall'IA arrivano **tutti aperti**, pronti da rileggere.

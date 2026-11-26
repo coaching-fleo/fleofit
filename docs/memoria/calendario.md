@@ -474,6 +474,40 @@ calendario che da scheda del workout».
   parte, lo spostamento resta fatto lo stesso.
 
 
+## 9-sposta-coach — Il coach sposta la data (26/11/2026)
+Richiesta del committente: «cambiare data workout ad un atleta non facile», dalla scheda del
+workout e dalla scheda dell'atleta, sia per un atleta solo sia per tutta la seduta.
+Spec: `docs/superpowers/specs/2026-11-26-coach-sposta-data-design.md`.
+- **Un foglio solo**, `FoglioSposta`, con `modo="coach"`. Senza quella prop resta il foglio dell'atleta
+  (§9-sposta), identico: `onConferma(data)` con un solo argomento. In modo coach: `onConferma(data, portata)`.
+- **Due portate**: «Solo {nome}» scrive solo `athlete_workouts.completed_date` di quella riga, **mai**
+  `workouts.date`; «Tutti (n)» sposta la seduta (`spostaDalCoach` di `src/lib/spostaAllenamento.js`).
+- 🔴 **«Tutti» è la seduta di QUEL giorno**, non tutte le assegnazioni del workout: il coach riusa lo
+  stesso workout in giorni diversi (in demo uno ne aveva 124, trovato in prova il 26/11). `n` = chi ha
+  la seduta quel giorno; il toggle compare solo con un atleta in mano e almeno un altro quel giorno.
+  `workouts.date` cambia **solo** se era quel giorno. Chi l'ha già svolto resta, e il foglio lo dice
+  («1 resta dove sta: già svolto»). Ordine: prima `workouts.date`, poi le assegnazioni; se la seconda
+  fallisce rimette la data del workout (`spostaPerTutti`).
+  ⚠️ Non si distingue più «spostato da sé»: un'assegnazione su un altro giorno è un'altra seduta.
+- Il coach può scegliere **anche il passato** (correggere un giorno registrato male) e spostare un
+  allenamento **già svolto**, uno alla volta. Le gare si spostano anche loro.
+- **Dove**: scheda workout — la data in testa è un bottone «Cambia data» (`TitoloScheda`, prop `onData`),
+  la voce nel menu ⋯, il calendarietto accanto al cestino in «Assegnato a» (solo quell'atleta).
+  ⚠️ Con un atleta aperto `workout.date` è già il SUO giorno: la data vera della seduta è lo stato
+  `dataWorkout`. Scheda atleta — «Sposta» su Oggi (`TodayAthleteWorkoutCard`), In programma
+  (`RigaProssimo`, `onSposta`) e nel suo calendario (`CalendarioAtleta`, `onSposta`); il foglio si apre
+  subito con la sola assegnazione e legge le altre della seduta dopo. Dopo lo spostamento il calendario
+  va al giorno nuovo (`giornoDaMostrare`).
+- **Mai sugli allenamenti liberi**: hanno il loro «Modifica» con data e testo.
+- **Push all'atleta**: `send-reminders`, modo `athlete_moved` (`record_ids`, `newDate` già scritta);
+  testo e destinatari in `send-reminders/testi.ts` (`testoSpostatoDalCoach`, `daAvvisareSpostamento`):
+  un coach avvisa solo i suoi, mai chi l'ha svolto, niente push per una data passata.
+  ⏳ **Scritta il 26/11/2026, NON pubblicata**: finché non c'è il deploy la chiamata fallisce in silenzio
+  e lo spostamento resta.
+- Garmin: i trigger degli invii reagiscono già a ogni modifica di assegnazione e workout.
+- Test: `spostaAllenamento.test.js`, `FoglioSposta.test.jsx`, `WorkoutDetailSposta.test.jsx`,
+  `AthleteDetailSposta.test.jsx`, `CalendarioAtleta.test.jsx`, `testiNotifiche.test.js`.
+
 ## 9-swipe-mese — Lo swipe cambia mese (27/10/2026)
 
 Richiesta del committente: «su mobile se faccio swipe voglio che cambi mese»,

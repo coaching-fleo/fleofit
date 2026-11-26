@@ -967,3 +967,7 @@ Ritorno alla TV di prima: `docs/superpowers/plans/2026-11-26-tv-redesign-ritorno
 - Provato nell'ambiente di prova (TV in una scheda, telefono nell'altra): locandina, preparazione,
   Cash In, pausa, ON/OFF al lavoro e nel riposo, persone, pausa prima del Cash Out, fine; locandina
   di corsa e Gym. **Non provato su una TV vera né sul telefono vero.**
+
+
+## Il coach sposta la data dalla scheda (26/11/2026)
+La data in testa è il comando («Cambia data»), più la voce nel menu ⋯ e il calendarietto in «Assegnato a». Tutto in `calendario.md` §9-sposta-coach.
