@@ -87,6 +87,25 @@ describe('la card «Da Garmin»', () => {
     expect(screen.queryByText('Distanza')).not.toBeInTheDocument()
   })
 
+  it('un\'attività sul tapis roulant lo dice, all\'atleta e al coach', async () => {
+    ctrl.stato.garmin = [{ ...ATTIVITA, tipo: 'TREADMILL_RUNNING', distanza_m: 8000 }]
+    const { unmount } = apri()
+    await attendi()
+    expect(await screen.findByText('Su tapis roulant')).toBeInTheDocument()
+    unmount()
+    apri({ ruolo: 'admin', utente: 'coach1' })
+    await attendi()
+    expect(await screen.findByText('Su tapis roulant')).toBeInTheDocument()
+  })
+
+  it('una corsa all\'aperto no', async () => {
+    ctrl.stato.garmin = [{ ...ATTIVITA, tipo: 'RUNNING', distanza_m: 8000 }]
+    apri()
+    await attendi()
+    expect(await screen.findByText('Garmin Forerunner 265')).toBeInTheDocument()
+    expect(screen.queryByText('Su tapis roulant')).not.toBeInTheDocument()
+  })
+
   it('senza attività, o con la lettura che fallisce, non c\'è', async () => {
     ctrl.stato.erroreSu = ['garmin_attivita']
     apri()

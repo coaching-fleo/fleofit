@@ -550,6 +550,12 @@ Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
    non devono esserci timeout (la funzione risponde subito e lavora in sottofondo).
 4. Se la prima prova risponde 404: correggere `GARMIN_TRAINING` e ripubblicare.
 
+### Tapis roulant (26/11/2026)
+Sull'orologio non cambia niente: lo stesso allenamento di corsa si avvia con il profilo Tapis
+roulant. L'attività arriva come `TREADMILL_RUNNING`, che completa già la Corsa, e la card «Da
+Garmin» mostra «Su tapis roulant» (`suTapisRoulant` di `src/lib/attivitaGarmin.js`). Nessuna
+Edge Function toccata. La versione in km/h della scheda: `scheda-workout.md`, «Outdoor | Tapis roulant».
+
 ## Fase 2 · Recupero
 > Scritta il 29/10/2026. Piano: `docs/superpowers/plans/2026-10-29-garmin-fase-2-recupero.md`,
 > spec: `docs/superpowers/specs/2026-10-27-garmin-design.md` §4. ✍️ **Codice scritto, in attesa del

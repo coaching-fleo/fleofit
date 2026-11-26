@@ -56,6 +56,12 @@ export function fonteGarmin(attivita) {
   return /^garmin\b/i.test(d) ? d : `Garmin ${d}`
 }
 
+/**
+ * La corsa è stata fatta sul tapis roulant: l'atleta ha avviato l'allenamento
+ * con il profilo Tapis roulant dell'orologio (spec 2026-11-26-tapis-roulant).
+ */
+export const suTapisRoulant = (attivita) => attivita?.tipo === 'TREADMILL_RUNNING'
+
 /** `42′`, oppure `1 h 05′` oltre l'ora. */
 export function durataGarmin(secondi) {
   if (!positivo(secondi)) return null

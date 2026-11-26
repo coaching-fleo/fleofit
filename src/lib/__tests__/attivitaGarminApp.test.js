@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   righeDaGarmin, nomeTipoAttivita, TIPI_ATTIVITA, durataGarmin, minutiVeri,
   annullaAbbinamento, abbinaA, vociLibere, candidatiAbbina, dispositivoGarmin, fonteGarmin, leggiAttivitaPeriodo,
+  suTapisRoulant,
 } from '../attivitaGarmin'
 import { fintoSupabase } from '../../test/fintoSupabase'
 
@@ -44,6 +45,14 @@ describe('righeDaGarmin', () => {
     expect(valori(righeDaGarmin({ ...corsa, tipo: 'TREADMILL_RUNNING' })).Passo).toBe('5:07 /km')
     expect(valori(righeDaGarmin({ ...corsa, tipo: 'TRAIL_RUNNING' })).Passo).toBe('5:07 /km')
     expect(valori(righeDaGarmin({ ...corsa, tipo: 'TRACK_RUNNING' })).Passo).toBe('5:07 /km')
+  })
+})
+
+describe('suTapisRoulant', () => {
+  it('solo una corsa al chiuso dell\'orologio', () => {
+    expect(suTapisRoulant({ tipo: 'TREADMILL_RUNNING' })).toBe(true)
+    expect(suTapisRoulant({ tipo: 'RUNNING' })).toBe(false)
+    expect(suTapisRoulant(null)).toBe(false)
   })
 })
 

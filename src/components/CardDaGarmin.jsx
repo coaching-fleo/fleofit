@@ -1,7 +1,7 @@
 import { Watch } from 'lucide-react'
 import { CardNota } from './WorkoutDetailUI'
 import RigheGarmin from './RigheGarmin'
-import { fonteGarmin } from '../lib/attivitaGarmin'
+import { fonteGarmin, suTapisRoulant } from '../lib/attivitaGarmin'
 
 // Grigia: sono dati dell'orologio, non una categoria (spec Garmin §6).
 const GRIGIO = '#9ca3af'
@@ -15,6 +15,11 @@ const GRIGIO = '#9ca3af'
 export default function CardDaGarmin({ attivita, onNonEraQuesto, inCorso = false }) {
   return (
     <CardNota etichetta={fonteGarmin(attivita)} icona={Watch} colore={GRIGIO}>
+      {suTapisRoulant(attivita) && (
+        <span className="self-start px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-400/10 text-gray-300 border border-gray-400/30">
+          Su tapis roulant
+        </span>
+      )}
       <RigheGarmin attivita={attivita} />
       {onNonEraQuesto && (
         <div className="flex justify-end">

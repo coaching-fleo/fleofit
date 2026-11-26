@@ -874,3 +874,21 @@ rimasto scritto non filtra niente. Ricerca senza risultati: «Nessun atleta con 
 ⚠️ L'altezza massima è `6 × 55,5px` (la riga misurata nel browser, avatar + due righe di testo):
 con 51px, la prima stima, se ne vedevano cinque e mezzo. Se la riga cambia, va rimisurata.
 Test: `WorkoutDetailAssegnati.test.jsx`, `rigaAtleta.test.js`.
+
+## Corsa: «Outdoor | Tapis roulant» (26/11/2026)
+Spec `docs/superpowers/specs/2026-11-26-tapis-roulant-design.md`, piano `docs/superpowers/plans/2026-11-26-tapis-roulant.md`.
+Il coach scrive la corsa in min/km come sempre; nella scheda di una Corsa l'atleta (e il coach)
+passa a «Tapis roulant» e vede i km/h da impostare (`stepsTapis` di `src/lib/tapisRoulant.js`,
+interruttore `components/InterruttoreTapis.jsx`). `km/h = 60 / min al km`, arrotondata a 0,1 con
+la virgola; intervallo dal più lento al più veloce, `10,9 – 12,0 km/h`.
+- Si convertono **solo** `m:ss /km` e `m:ss - m:ss /km` (anche con `–` o senza spazi): zone,
+  «Libero», «Gara», testi misti restano come sono.
+- L'interruttore c'è solo se almeno un ritmo si converte (`haRitmiConvertibili`); parte sempre da
+  Outdoor, nessun ricordo.
+- Solo lo stato della pagina: `sections` non cambia, niente database.
+- **Non** lo seguono: il timer guidato (per la Corsa non esiste, `haTimerGuidato`), la **TV** (legge
+  il workout dal database: servirebbe cambiare il protocollo), PDF, story e testo condiviso (la
+  versione del coach).
+- Dal Garmin: un'attività `TREADMILL_RUNNING` abbinata mostra «Su tapis roulant» nella card «Da
+  Garmin» (`suTapisRoulant` di `attivitaGarmin.js`), per atleta e coach.
+Test: `tapisRoulant.test.js`, `WorkoutDetailTapis.test.jsx`, `WorkoutDetailGarmin.test.jsx`.
