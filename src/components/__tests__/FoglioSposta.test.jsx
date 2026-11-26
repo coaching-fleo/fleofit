@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { addDays, format } from 'date-fns'
+import { addDays, format, subMonths, startOfMonth, setDate } from 'date-fns'
 import FoglioSposta from '../FoglioSposta'
 import { dataBreve, giornoBreve } from '../../lib/spostaAllenamento'
 
@@ -44,5 +44,55 @@ describe('FoglioSposta', () => {
     await user.click(screen.getByRole('button', { name: 'Chiudi' }))
     await user.click(screen.getByRole('button', { name: 'Annulla' }))
     expect(onChiudi).toHaveBeenCalledTimes(2)
+  })
+})
+
+// Il coach (26/11/2026): può correggere anche un giorno passato, e con più
+// atleti sceglie se spostare solo quello che guarda o tutta la seduta.
+describe('FoglioSposta · coach', () => {
+  const ass = [
+    { id: 'a', status: 'pending', completed_date: domani },
+    { id: 'b', status: 'completed', completed_date: domani },
+    { id: 'c', status: 'pending', completed_date: domani },
+  ]
+
+  it('il coach conferma anche una data passata', async () => {
+    const meseFa = startOfMonth(subMonths(new Date(), 2))
+    const quindici = format(setDate(meseFa, 15), 'yyyy-MM-dd')
+    const onConferma = vi.fn(() => Promise.resolve(true))
+    render(<FoglioSposta modo="coach" nomeAtleta="Marco" titolo="Corsa" dataAttuale={format(meseFa, 'yyyy-MM-dd')}
+      onChiudi={vi.fn()} onConferma={onConferma} />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Scegli una data' }))
+    await user.click(screen.getByRole('button', { name: '15' }))
+    await user.click(screen.getByRole('button', { name: `Sposta a ${giornoBreve(quindici)}` }))
+    expect(onConferma).toHaveBeenCalledWith(quindici, 'solo')
+  })
+
+  it('toggle «Solo · Tutti» e «Sposta tutti a …»', async () => {
+    const onConferma = vi.fn(() => Promise.resolve(true))
+    render(<FoglioSposta modo="coach" nomeAtleta="Marco" titolo="Corsa" dataAttuale={domani}
+      assegnazioni={ass} dataWorkout={domani} onChiudi={vi.fn()} onConferma={onConferma} />)
+    expect(screen.getByRole('radio', { name: 'Solo Marco' })).toHaveAttribute('aria-checked', 'true')
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('radio', { name: 'Tutti (3)' }))
+    expect(screen.getByText('1 resta dove sta: 1 già svolto')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: dataBreve(dopodomani) }))
+    await user.click(screen.getByRole('button', { name: `Sposta tutti a ${giornoBreve(dopodomani)}` }))
+    expect(onConferma).toHaveBeenCalledWith(dopodomani, 'tutti')
+  })
+
+  it('con una sola assegnazione niente scelta', () => {
+    render(<FoglioSposta modo="coach" nomeAtleta="Marco" titolo="Corsa" dataAttuale={domani}
+      assegnazioni={[ass[0]]} dataWorkout={domani} onChiudi={vi.fn()} onConferma={vi.fn()} />)
+    expect(screen.queryByRole('radiogroup')).toBeNull()
+  })
+
+  it('senza atleta parte da «Tutti»', () => {
+    render(<FoglioSposta modo="coach" titolo="Corsa" dataAttuale={domani}
+      assegnazioni={ass} dataWorkout={domani} onChiudi={vi.fn()} onConferma={vi.fn()} />)
+    expect(screen.getByText(/In che giorno lo sposti\?/)).toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup')).toBeNull()
+    expect(screen.getByText('1 resta dove sta: 1 già svolto')).toBeInTheDocument()
   })
 })
