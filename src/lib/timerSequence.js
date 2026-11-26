@@ -78,7 +78,39 @@ export const haTimerGuidato = (workout) => {
   return rawCat !== 'Running' && rawCat !== 'Gym'
 }
 
-export const buildTimerSequence = (workout) => {
+/**
+ * Davanti a quali blocchi c'è una PAUSA (26/11/2026, richiesta del committente):
+ * dopo il Cash In e prima del Cash Out si tira il fiato, si guarda il blocco che
+ * viene e, se si è in più, si decide chi parte da dove. Torna gli indici dei
+ * blocchi che la pausa precede.
+ *
+ * Niente pausa davanti a un Rest (è già il riposo) né prima di un Cash Out che
+ * arriva dopo un Rest. Cash In seguito da Cash Out: una pausa sola.
+ */
+export const pausePrima = (blocks = []) => {
+  const indici = new Set()
+  blocks.forEach((b, k) => {
+    if (k === 0 || !b || b.type === 'Rest') return
+    const prima = blocks[k - 1]
+    if (prima?.type === 'Cash In' || (b.type === 'Cash Out' && prima?.type !== 'Rest')) indici.add(k)
+  })
+  return indici
+}
+
+/** «Pronti per l'EMOM», «Pronti per il Cash Out». */
+const prontiPer = (tipo = '') => `Pronti per ${/^[aeiouAEIOU]/.test(tipo) ? `l'${tipo}` : `il ${tipo}`}`
+
+/**
+ * `pause`: le pause dopo il Cash In e prima del Cash Out (`pausePrima`). Il
+ * telefono le mette sempre; la TV le mette solo se il telefono dice di averle
+ * (`pause: true` nel `timer_state`), perché un'app vecchia sugli Store non le
+ * ha, e con indici diversi la TV non saprebbe più andare avanti da sola.
+ *
+ * Una pausa è un CRONOMETRO (`type: 'stopwatch'`): sale e finisce solo con
+ * «Avanti» sul telefono, come il Cash In. `pausa: true` e `blocco` (l'indice del
+ * blocco che viene dopo) servono alla TV per disegnarla.
+ */
+export const buildTimerSequence = (workout, { pause = true } = {}) => {
   // Senza questa guardia un workout di corsa cadrebbe nel ramo Hyrox e
   // produrrebbe una sequenza senza senso. Il chiamante controlla già
   // haTimerGuidato, ma la funzione non deve dipendere dalla sua correttezza.
@@ -96,7 +128,11 @@ export const buildTimerSequence = (workout) => {
     seq.push({ id: 'custom-blk', title: 'ALLENAMENTO', subtitle: 'Cronometro libero', duration: 0, theme: 'custom', type: 'stopwatch', task: workout.title || 'Workout Custom' });
   } else {
     const blocks = getNormalizedBlocks(workout);
+    const conPausa = pause ? pausePrima(blocks) : new Set();
     blocks.forEach((b, i) => {
+      if (conPausa.has(i)) {
+        seq.push({ id: `pausa-${i}`, title: 'PAUSA', subtitle: `Poi ${b.type}`, duration: 0, theme: 'rest', type: 'stopwatch', pausa: true, blocco: i, task: prontiPer(b.type) });
+      }
       const exNames = (b.exercises || []).map(e => e.name).join(' • ');
       
       // Il primo giro con l'aumento di ogni esercizio: «Burpees · 20 reps +10 ogni giro».
@@ -125,7 +161,8 @@ export const buildTimerSequence = (workout) => {
         const esercizi = b.exercises?.length ? b.exercises : [null];
         // Se dopo l'ON/OFF c'è un blocco Rest, l'ultimo OFF non si fa: si
         // passa dritti al Rest, che è già il riposo (niente due riposi di fila).
-        const seguitoDaRest = blocks[i + 1]?.type === 'Rest';
+        // Lo stesso se dopo c'è una pausa (`pausePrima`).
+        const seguitoDaRest = blocks[i + 1]?.type === 'Rest' || conPausa.has(i + 1);
         for(let r=1; r<=rounds; r++) {
           esercizi.forEach((ex, k) => {
            const dove = esercizi.length > 1 ? ` · ${k + 1}/${esercizi.length}` : '';

@@ -3058,7 +3058,9 @@ function WorkoutTimer({ sequence, onClose, tvCode, persone = [], onPersone, eser
         type: 'broadcast',
         event: 'timer_state',
         // `persone`: chi fa l'allenamento insieme e da dove parte (src/lib/personeTV.js).
-        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx], persone }
+        // `pause`: questa sequenza ha le pause dopo il Cash In e prima del Cash
+        // Out (26/11/2026); la TV la ricostruisce uguale solo se lo sa.
+        payload: { currentIdx, timeLeft, isRunning, step: sequence[currentIdx], persone, pause: true }
       }).catch(()=>{});
     }
     if (liveChannelRef.current) {
@@ -3400,7 +3402,7 @@ return createPortal(
           </div>
 
           <div className="w-full min-h-[70px] flex flex-col items-center justify-center">
-            <p className={`font-medium text-sm px-4 h-5 mb-2 ${currentTheme.sub}`}>{currentStep?.type === 'stopwatch' ? 'Cronometro libero. Usa le frecce in basso per cambiare blocco.' : ''}</p>
+            <p className={`font-medium text-sm px-4 h-5 mb-2 ${currentTheme.sub}`}>{currentStep?.pausa ? 'Pausa: quando siete pronti, premi Avanti.' : currentStep?.type === 'stopwatch' ? 'Cronometro libero. Usa le frecce in basso per cambiare blocco.' : ''}</p>
             {currentStep?.nextTask && (
               <div className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full backdrop-blur-md max-w-full ${currentTheme.card}`}>
                 <span className={`font-semibold text-sm truncate ${currentTheme.cardLabel}`}>Next: <span className={currentTheme.text}>{currentStep.nextTask}</span></span>
