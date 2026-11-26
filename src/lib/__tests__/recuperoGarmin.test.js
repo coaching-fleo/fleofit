@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   serieRecupero, segnaliRecupero, segnaliTeam, leggiGiornate, leggiGiornateFra, METRICHE,
+  riepilogoRecupero, etichettaGiorno, GIORNI_LETTURA,
 } from '../recuperoGarmin'
 import { fintoSupabase } from '../../test/fintoSupabase'
 
@@ -164,5 +165,130 @@ describe('bordi: mezzanotte italiana e finestre', () => {
     expect(tipi([...fila, ...hrvAl(intervallo(19, 31), 60)])).toEqual([])
     expect(tipi([...fila, ...hrvAl([...intervallo(19, 31), 32], 60)])).toEqual([])
     expect(tipi([...fila, ...hrvAl(intervallo(32, 45), 60)])).toEqual([])
+  })
+})
+
+// ── La sezione «Recupero» della scheda atleta (26/11/2026) ──────────────────
+// Una giornata completa: `indietro` giorni fa, storta o no.
+function giornataCompleta(indietro, storta = false, extra = {}) {
+  return {
+    athlete_id: 'a1', giorno: giorno(indietro),
+    hrv: { media_notte: storta ? 51 : 60 },
+    giornata: { fc_riposo: storta ? 58 : 52, body_battery_carica: extra.bb ?? 62, stress_medio: 30 },
+    sonno: { ore: storta ? 5.5 : 7.4, punteggio: storta ? 57 : 80 },
+  }
+}
+// 28 notti normali (da 30 a 3 giorni fa) e 3 storte (2, 1, oggi).
+const storto = (extra) => [
+  ...Array.from({ length: 28 }, (_, i) => giornataCompleta(30 - i)),
+  ...[2, 1, 0].map(i => giornataCompleta(i, true, extra)),
+]
+const normali = (n) => Array.from({ length: n }, (_, i) => giornataCompleta(n - 1 - i))
+const tessera = (r, chiave) => r.tessere.find(t => t.chiave === chiave)
+
+describe('riepilogoRecupero', () => {
+  it('legge 42 giorni', () => { expect(GIORNI_LETTURA).toBe(42) })
+
+  it('righe vuote o senza dati → null', () => {
+    expect(riepilogoRecupero([], { oggi: OGGI })).toBeNull()
+    expect(riepilogoRecupero([{ athlete_id: 'a1', giorno: giorno(0) }], { oggi: OGGI })).toBeNull()
+  })
+
+  it('28 notti normali + 3 storte → segnali, frase completa', () => {
+    const r = riepilogoRecupero(storto(), { oggi: OGGI })
+    expect(r.stato).toBe('segnali')
+    expect(r.titolo).toBe('Da guardare')
+    expect(r.giorni).toBe(3)
+    expect(r.frase.forte).toBe('Dorme poco e recupera meno del solito:')
+    expect(r.frase.testo).toBe('HRV −15%, FC a riposo +6, sotto le 6 ore di sonno.')
+    const hrv = tessera(r, 'hrv')
+    expect(hrv).toMatchObject({ fuori: true, media: 60, scarto: -15, valore: 51, giorno: giorno(0) })
+    expect(hrv.notti).toHaveLength(7)
+    expect(hrv.notti.map(n => n.fila)).toEqual([false, false, false, false, true, true, true])
+    expect(tessera(r, 'fc')).toMatchObject({ fuori: true, media: 52, scarto: 6 })
+    expect(r.sonno).toMatchObject({ fuori: true, ore: 5.5, punteggio: 57, mediaPunteggio: 80 })
+    expect(r.sonno.mediaOre).toBeCloseTo(7.4)
+    expect(r.tessere.map(t => t.chiave)).toEqual(['hrv', 'fc', 'bb', 'stress'])
+  })
+
+  it('bb e stress non sono mai fuori', () => {
+    const r = riepilogoRecupero(storto({ bb: 30 }), { oggi: OGGI })
+    const bb = tessera(r, 'bb')
+    // Senza segnale la media è sui 28 giorni prima di oggi: comprende le due notti basse.
+    expect(bb).toMatchObject({ fuori: false, valore: 30, scarto: -30 })
+    expect(bb.media).toBeCloseTo((26 * 62 + 2 * 30) / 28)
+    expect(bb.notti.every(n => n.fila === false)).toBe(true)
+    expect(tessera(r, 'stress').fuori).toBe(false)
+  })
+
+  it('5 notti → pochi', () => {
+    const r = riepilogoRecupero(normali(5), { oggi: OGGI })
+    expect(r.stato).toBe('pochi')
+    expect(r.giorni).toBeNull()
+    expect(r.frase).toEqual({ forte: null, testo: 'Servono 14 notti per conoscere la sua media: ne ha 5.', nota: null })
+    for (const t of r.tessere) expect(t).toMatchObject({ media: null, scarto: null })
+    expect(r.sonno).toMatchObject({ mediaOre: null, mediaPunteggio: null })
+  })
+
+  it('20 notti normali → norma', () => {
+    const r = riepilogoRecupero(normali(20), { oggi: OGGI })
+    expect(r.stato).toBe('norma')
+    expect(r.giorni).toBeNull()
+    expect(r.frase.testo).toBe('Tutto nella sua norma nelle ultime notti.')
+    expect(tessera(r, 'hrv')).toMatchObject({ media: 60, scarto: 0, fuori: false })
+  })
+
+  it('proprio: seconda persona', () => {
+    expect(riepilogoRecupero(storto(), { oggi: OGGI, proprio: true }).frase.forte).toBe('Dormi poco e recuperi meno del solito:')
+    expect(riepilogoRecupero(normali(5), { oggi: OGGI, proprio: true }).frase.testo)
+      .toBe('Servono 14 notti per conoscere la tua media: ne hai 5.')
+    expect(riepilogoRecupero(normali(20), { oggi: OGGI, proprio: true }).frase.testo).toBe('Tutto nella tua norma nelle ultime notti.')
+    expect(riepilogoRecupero(normali(20), { oggi: OGGI, proprio: true, comeStai: { sonno: 2, energia: 4, dolori: 4, stress: 4 } }).frase.nota)
+      .toBe('Stamattina hai detto: sonno «Scarso».')
+  })
+
+  it('solo HRV o solo sonno: la frase forte cambia', () => {
+    const soloHrv = storto().map(r => ({ ...r, giornata: { ...r.giornata, fc_riposo: 52 }, sonno: { ore: 7.4 } }))
+    expect(riepilogoRecupero(soloHrv, { oggi: OGGI }).frase).toMatchObject({ forte: 'Recupera meno del solito:', testo: 'HRV −15%.' })
+    const soloSonno = storto().map(r => ({ ...r, hrv: { media_notte: 60 }, giornata: { ...r.giornata, fc_riposo: 52 } }))
+    expect(riepilogoRecupero(soloSonno, { oggi: OGGI }).frase).toMatchObject({ forte: 'Dorme poco:', testo: 'Sotto le 6 ore di sonno.' })
+  })
+
+  it('come stai: nota solo con risposte ≤ 2', () => {
+    const conMale = { sonno: 1, energia: 2, dolori: 3, stress: 4 }
+    const r = riepilogoRecupero(storto(), { oggi: OGGI, comeStai: conMale })
+    expect(r.frase.nota).toBe('Stamattina ha detto: sonno «Pessimo», energia «Poca».')
+    expect(r.comeStai).toBe(conMale)
+    expect(riepilogoRecupero(storto(), { oggi: OGGI, comeStai: { sonno: 3, energia: 3, dolori: 3, stress: 3 } }).frase.nota).toBeNull()
+    expect(riepilogoRecupero(storto(), { oggi: OGGI }).comeStai).toBeNull()
+  })
+
+  it('una notte senza dato è valore null nelle colonnine', () => {
+    const r = riepilogoRecupero(normali(20).filter(x => x.giorno !== giorno(2)), { oggi: OGGI })
+    const notti = tessera(r, 'hrv').notti
+    expect(notti.map(n => n.giorno)).toEqual([6, 5, 4, 3, 2, 1, 0].map(giorno))
+    expect(notti[4].valore).toBeNull()
+    expect(notti[3].valore).toBe(60)
+  })
+
+  it('una metrica senza nessun valore non ha tessera; senza sonno, sonno è null', () => {
+    const r = riepilogoRecupero(normali(20).map(x => ({ athlete_id: 'a1', giorno: x.giorno, hrv: x.hrv })), { oggi: OGGI })
+    expect(r.tessere.map(t => t.chiave)).toEqual(['hrv'])
+    expect(r.sonno).toBeNull()
+  })
+
+  it('fasi e punteggio del sonno', () => {
+    const conFasi = [{ athlete_id: 'a1', giorno: giorno(0), sonno: { ore: 5.3, punteggio: 57, profondo_min: 45, rem_min: 50, leggero_min: 220, sveglio_min: 25 } }]
+    expect(riepilogoRecupero(conFasi, { oggi: OGGI }).sonno.fasi).toEqual({ profondo: 45, rem: 50, leggero: 220, sveglio: 25 })
+    const senza = [{ athlete_id: 'a1', giorno: giorno(0), sonno: { ore: 5.3 } }]
+    expect(riepilogoRecupero(senza, { oggi: OGGI }).sonno).toMatchObject({ fasi: {}, punteggio: null })
+  })
+})
+
+describe('etichettaGiorno', () => {
+  it('oggi e ieri sono «stanotte», prima il giorno', () => {
+    expect(etichettaGiorno(giorno(0), OGGI)).toBe('stanotte')
+    expect(etichettaGiorno(giorno(1), OGGI)).toBe('stanotte')
+    expect(etichettaGiorno(giorno(3), OGGI)).toBe('lun 26')
   })
 })
