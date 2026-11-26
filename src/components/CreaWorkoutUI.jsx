@@ -86,6 +86,11 @@ export function TestataCrea({ passo, onIndietro, titolo, codice, sottotitolo, on
 // Erano tre segmenti stretti dentro un toggle, cioè una scelta presentata come
 // un dettaglio. È invece LA domanda del primo schermo: tre card con il nome, la
 // corsia di colore e una riga che dice cosa aspettarsi.
+// Dal 26/11/2026 la card è anche il bottone che va avanti («Tocca e parti»,
+// docs/memoria/crea-workout.md): niente più pallino di scelta, una freccia.
+// L'icona porta già il colore della categoria, così si riconosce prima di
+// sceglierla. `aria-pressed` resta: dice quale categoria ha il workout quando
+// si torna qui dal passo 2.
 export function CardCategoria({ attiva, colore, testoSuColore = '#fff', icona: Icona, nome, descrizione, onClick }) {
   return (
     <button type="button" onClick={() => { if (!attiva) vibraScelta(); onClick() }} aria-pressed={attiva}
@@ -105,10 +110,11 @@ export function CardCategoria({ attiva, colore, testoSuColore = '#fff', icona: I
           style={{ background: `radial-gradient(closest-side, ${colore}26, transparent 70%)` }} />
       )}
 
-      <span className="relative w-[46px] h-[46px] rounded-[14px] shrink-0 flex items-center justify-center"
-        style={attiva ? { background: colore, color: testoSuColore } : undefined}>
-        {!attiva && <span aria-hidden="true" className={`absolute inset-0 rounded-[14px] ${VETRO}`} />}
-        <Icona size={22} className={attiva ? '' : 'relative text-gray-400'} />
+      <span className="relative w-[46px] h-[46px] rounded-[14px] shrink-0 flex items-center justify-center border"
+        style={attiva
+          ? { background: colore, color: testoSuColore, borderColor: colore }
+          : { background: `${colore}1f`, color: colore, borderColor: `${colore}40` }}>
+        <Icona size={22} />
       </span>
 
       <span className="relative flex-1 min-w-0">
@@ -116,11 +122,8 @@ export function CardCategoria({ attiva, colore, testoSuColore = '#fff', icona: I
         <span className="block mt-[3px] text-[12.5px] font-medium text-muted">{descrizione}</span>
       </span>
 
-      <span aria-hidden="true"
-        className="relative w-[22px] h-[22px] rounded-full shrink-0 border-2 flex items-center justify-center"
-        style={attiva ? { borderColor: colore, background: colore } : { borderColor: 'rgba(255,255,255,.16)' }}>
-        {attiva && <span className="w-[9px] h-[9px] rounded-full bg-black/85" />}
-      </span>
+      <ChevronRight size={19} aria-hidden="true" className="relative shrink-0"
+        style={{ color: attiva ? colore : '#5b6070' }} />
     </button>
   )
 }

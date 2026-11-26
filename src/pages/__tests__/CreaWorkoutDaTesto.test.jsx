@@ -50,8 +50,8 @@ beforeEach(() => {
 
 async function alPasso2(categoria) {
   render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
-  if (categoria) await userEvent.click(screen.getByRole('button', { name: new RegExp(categoria) }))
-  await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+  // Dal 26/11/2026 il tocco sulla categoria porta già al passo 2.
+  await userEvent.click(screen.getByRole('button', { name: new RegExp(categoria || 'Hyrox') }))
 }
 
 /** Sceglie un'immagine il cui testo letto è `testo`; torna il foglio, a lettura finita. */

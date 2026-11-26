@@ -50,9 +50,7 @@ const CreateWorkout = (await import('../CreateWorkout')).default
 // Porta il builder Running al passo 2 con una fase già inserita.
 async function builderConUnaFase(tipo = 'Corsa') {
   render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
-  await userEvent.type(screen.getByLabelText('Nome del workout'), 'Corsa')
   await userEvent.click(screen.getByRole('button', { name: /Corsa/ }))
-  await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
   await userEvent.click(screen.getByRole('button', { name: /Aggiungi la prima fase/ }))
   await userEvent.click(screen.getByRole('button', { name: tipo }))
   await userEvent.click(within(screen.getByRole('dialog', { name: 'Nuova fase' })).getByRole('button', { name: 'Aggiungi fase' }))

@@ -3,6 +3,8 @@ import { render, screen, within, fireEvent, waitFor } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { CARTA_MODALE } from '../../lib/stiliCard'
+import { format } from 'date-fns'
+import { etichettaData } from '../../lib/etichettaData'
 
 // Perché questi test esistono
 // ────────────────────────────
@@ -57,11 +59,22 @@ async function confermaBlocco() {
 
 const monta = () => render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
 
-async function alPasso2(nome = 'Prova') {
+// Dal 26/11/2026 il tocco sulla categoria porta già al passo 2, e il nome si
+// scrive nel foglio «Nome e data» che si apre dalla testata.
+async function alPasso2(nome) {
   monta()
-  await userEvent.type(screen.getByLabelText('Nome del workout'), nome)
-  await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+  await userEvent.click(screen.getByRole('button', { name: /Hyrox/ }))
+  if (nome) await scriviNome(nome)
 }
+
+async function scriviNome(nome) {
+  await userEvent.click(screen.getByRole('button', { name: 'Modifica nome e data' }))
+  await userEvent.type(screen.getByLabelText('Nome del workout'), nome)
+  await userEvent.click(within(screen.getByRole('dialog', { name: 'Nome e data' })).getByRole('button', { name: 'Fatto' }))
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nome e data' })).not.toBeInTheDocument())
+}
+
+const INVITO = 'Tocca per iniziare. Nome e data li cambi dopo, se servono.'
 
 async function aggiungiBlocco(tipo) {
   await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
@@ -99,17 +112,33 @@ beforeEach(() => {
 })
 
 describe('lo step 1 fa una domanda sola', () => {
-  it('il nome è facoltativo anche per Hyrox: si prosegue senza', async () => {
+  it('non ha più nome, data né bottone: solo la domanda e le card', () => {
     monta()
-    expect(screen.getByRole('button', { name: /Costruisci l'allenamento/ })).toBeEnabled()
+    expect(screen.getByText(INVITO)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Nome del workout')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Costruisci l'allenamento/ })).not.toBeInTheDocument()
+  })
+
+  it('il tocco su una card porta al passo 2 con quella categoria', async () => {
+    monta()
+    await userEvent.click(screen.getByRole('button', { name: /Corsa/ }))
+    expect(screen.getByRole('button', { name: /Aggiungi la prima fase/ })).toBeInTheDocument()
+    expect(screen.queryByText(INVITO)).not.toBeInTheDocument()
+  })
+
+  it('il nome è facoltativo anche per Hyrox: si prosegue senza', async () => {
+    await alPasso2()
     expect(screen.queryByText(/Serve un nome/)).not.toBeInTheDocument()
+    expect(document.querySelector('[data-riepilogo]')).toBeInTheDocument()
   })
 
   it('senza nome la testata mostra un nome dai blocchi, e il codice li segue', async () => {
-    monta()
     // Senza blocchi non c'è ancora niente da cui ricavare un nome.
+    await alPasso2()
+    await userEvent.click(screen.getByRole('button', { name: 'Modifica nome e data' }))
     expect(screen.getByLabelText('Nome del workout')).toHaveAttribute('placeholder', 'Facoltativo · lo scelgo dai blocchi')
-    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Nome e data' })).getByRole('button', { name: 'Fatto' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nome e data' })).not.toBeInTheDocument())
     const testata = () => screen.getByRole('button', { name: 'Modifica nome e data' })
 
     await aggiungiBlocco('EMOM')                 // 1:00 × 10 round, vuoto
@@ -132,13 +161,14 @@ describe('lo step 1 fa una domanda sola', () => {
     // workoutTitle.js ne genera uno. Il bottone deve saperlo.
     monta()
     await userEvent.click(screen.getByRole('button', { name: /Custom/ }))
-    expect(screen.getByRole('button', { name: /Costruisci l'allenamento/ })).toBeEnabled()
+    expect(screen.queryByText(/Serve un nome/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Modifica nome e data' })).toHaveTextContent(/Allenamento libero/)
   })
 
-  it('la categoria scelta è dichiarata, non solo colorata', async () => {
+  it('la categoria scelta è dichiarata, non solo colorata, quando si torna qui', async () => {
     monta()
-    expect(screen.getByRole('button', { name: /Hyrox/ })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(screen.getByRole('button', { name: /Corsa/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Torna al passo 1' }))
     expect(screen.getByRole('button', { name: /Corsa/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: /Hyrox/ })).toHaveAttribute('aria-pressed', 'false')
   })
@@ -147,12 +177,33 @@ describe('lo step 1 fa una domanda sola', () => {
 describe('nome e data restano raggiungibili dal passo 2', () => {
   // ⚠️ Non è un dettaglio: al passo 2 il campo non esiste più. Senza questo
   // ritorno, un workout aperto in modifica non sarebbe più rinominabile.
-  it('la testata riporta al passo 1', async () => {
+  it('la testata apre il foglio, e il nome scritto resta', async () => {
     await alPasso2('Hyrox Strength #1')
     expect(screen.queryByLabelText('Nome del workout')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Modifica nome e data' })).toHaveTextContent('Hyrox Strength #1')
 
     await userEvent.click(screen.getByRole('button', { name: 'Modifica nome e data' }))
     expect(screen.getByLabelText('Nome del workout')).toHaveValue('Hyrox Strength #1')
+    // Si resta al passo 2: il foglio sta sopra al builder, non lo sostituisce.
+    expect(document.querySelector('[data-riepilogo]')).toBeInTheDocument()
+  })
+
+  it('la pillola della data dice il giorno, e apre lo stesso foglio', async () => {
+    await alPasso2()
+    await userEvent.click(screen.getByRole('button', { name: etichettaData(format(new Date(), 'yyyy-MM-dd')) }))
+    expect(screen.getByRole('dialog', { name: 'Nome e data' })).toBeInTheDocument()
+  })
+
+  it('dal calendario la pillola porta quel giorno', async () => {
+    render(<MemoryRouter initialEntries={['/create?date=2026-12-01']}><CreateWorkout /></MemoryRouter>)
+    await userEvent.click(screen.getByRole('button', { name: /Hyrox/ }))
+    expect(screen.getByRole('button', { name: etichettaData('2026-12-01') })).toBeInTheDocument()
+  })
+
+  it('la pillola della categoria riporta alle card', async () => {
+    await alPasso2()
+    await userEvent.click(screen.getByRole('button', { name: 'Cambia categoria: Hyrox' }))
+    expect(screen.getByText(INVITO)).toBeInTheDocument()
   })
 })
 
@@ -172,15 +223,15 @@ describe('il tasto indietro della testata', () => {
 
   it('aperto dalla tab bar, al passo 1 non c\'è', () => {
     montaDaBarra()
-    expect(screen.getByRole('button', { name: /Costruisci l'allenamento/ })).toBeInTheDocument()
+    expect(screen.getByText(INVITO)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Torna indietro' })).not.toBeInTheDocument()
   })
 
   it('al passo 2 c\'è sempre, e riporta al passo 1', async () => {
     montaDaBarra()
-    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Hyrox/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Torna al passo 1' }))
-    expect(screen.getByLabelText('Nome del workout')).toBeInTheDocument()
+    expect(screen.getByText(INVITO)).toBeInTheDocument()
   })
 
   it('con dei blocchi chiede conferma, e Annulla resta al passo 2', async () => {
@@ -188,10 +239,10 @@ describe('il tasto indietro della testata', () => {
     await aggiungiBlocco('AMRAP')
     await userEvent.click(screen.getByRole('button', { name: 'Torna al passo 1' }))
     const dialogo = screen.getByRole('dialog', { name: 'Sei sicuro?' })
-    expect(screen.queryByLabelText('Nome del workout')).not.toBeInTheDocument()
+    expect(screen.queryByText(INVITO)).not.toBeInTheDocument()
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Annulla' }))
     expect(screen.queryByRole('dialog', { name: 'Sei sicuro?' })).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Nome del workout')).not.toBeInTheDocument()
+    expect(screen.queryByText(INVITO)).not.toBeInTheDocument()
   })
 
   it('confermando torna al passo 1, e i blocchi restano', async () => {
@@ -199,8 +250,9 @@ describe('il tasto indietro della testata', () => {
     await aggiungiBlocco('AMRAP')
     await userEvent.click(screen.getByRole('button', { name: 'Torna al passo 1' }))
     await userEvent.click(within(screen.getByRole('dialog', { name: 'Sei sicuro?' })).getByRole('button', { name: 'Conferma' }))
-    expect(screen.getByLabelText('Nome del workout')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+    expect(screen.getByText(INVITO)).toBeInTheDocument()
+    // Ritoccare la stessa categoria riporta al builder com'era.
+    await userEvent.click(screen.getByRole('button', { name: /Hyrox/ }))
     expect(cella('Blocchi')).toBe('1')
   })
 })
@@ -693,11 +745,6 @@ describe('«Salva workout» sta in fondo, non davanti', () => {
     expect(barra.className).not.toMatch(/border-t/)
   })
 
-  it('e nemmeno quella dello step 1', async () => {
-    monta()
-    await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
-    expect(contenitoreDi(/Costruisci l'allenamento/).className).not.toMatch(/sticky|fixed/)
-  })
 })
 
 describe('il passo: prima il modo, poi il valore', () => {
@@ -873,7 +920,6 @@ describe('le fasi di corsa', () => {
   const apriFase = async () => {
     monta()
     await userEvent.click(screen.getByRole('button', { name: /Corsa/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
     await userEvent.click(screen.getByRole('button', { name: /Aggiungi la prima fase/ }))
   }
 
@@ -1026,8 +1072,7 @@ describe('Il passo che entra', () => {
     expect(document.querySelector('.page-transition')).toBeNull()
     expect([...passo1.classList].some((c) => c.startsWith('animate-in'))).toBe(false)
 
-    await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
-    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Hyrox/ }))
 
     // Anche il passo 2, e dev'essere un nodo NUOVO: se fosse lo stesso, il
     // keyframe non ripartirebbe e il cambio resterebbe netto.

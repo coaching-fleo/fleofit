@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useMemo, useCallback, memo, lazy, Suspense
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
-import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Dices, Undo2, ScanText, Repeat2, Repeat, TrendingUp, Minus, BookmarkPlus, Search, Route } from 'lucide-react'
+import { Plus, Trash2, Save, X, ChevronRight, Timer, Dumbbell, ChevronUp, ChevronDown, AlertTriangle, BicepsFlexed, Copy, ChevronLeft, Wand2, Mic, Square, FileText, ArrowRight, Undo2, CalendarDays, ScanText, Repeat2, Repeat, TrendingUp, Minus, BookmarkPlus, Search, Route } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
 import { Capacitor } from '@capacitor/core'
 import { VoiceRecorder } from '@independo/capacitor-voice-recorder'
-import CustomDatePicker from '../components/CustomDatePicker'
+import FoglioNomeData from '../components/FoglioNomeData'
+import { etichettaData } from '../lib/etichettaData'
 import { useTouchDrag } from '../useTouchDrag'
 import { blockHint } from '../lib/blockHints'
 import { cambiaTipoBlocco } from '../lib/cambiaTipoBlocco'
@@ -26,7 +27,7 @@ import { BOLLA_MODALE, BOTTONE_BRAND, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CA
 import { durataBlocco, mmss, BLOCCHI_DI_LAVORO } from '../lib/stimaWorkout'
 import { caricoPrevisto, collocazioneCarico } from '../lib/previsione'
 import {
-  TestataCrea, CardCategoria, RigaCampo, RiepilogoWorkout, SpinaBlocco, DurataBlocco,
+  TestataCrea, CardCategoria, RiepilogoWorkout, SpinaBlocco, DurataBlocco,
   NumeroEsercizio, CardIA, BottoneGhost, BarraAzioni, CtaPrimaria, BottoneQuadrato,
   RigaUltimaVolta, RigaTesto,
 } from '../components/CreaWorkoutUI'
@@ -2735,6 +2736,8 @@ function Costruttore() {
   const defaultDate = searchParams.get('date')
 
   const [step, setStep] = useState(modello ? 2 : 1) // 1=tipo, 2=build
+  // Il foglio «Nome e data» del passo 2 (telefono).
+  const [foglioNomeData, setFoglioNomeData] = useState(false)
   // Sul desktop il passo 1 non c'è: categoria, nome e data stanno nella
   // colonna di destra, accanto ai blocchi (src/components/CreaWorkoutDesktop.jsx).
   const { role, user: utente } = useAuth() || {}
@@ -3758,11 +3761,44 @@ function Costruttore() {
         onIndietro={passo === 1 && daBarra && !sourceId ? null : handleBack}
         titolo={modello ? (modello === 'nuovo' ? 'Nuovo modello' : 'Modifica modello') : passo === 2 ? nomeMostrato : null}
         codice={passo === 2 && !modello ? codice : null}
-        sottotitolo={modello ? categoriaCorrente(category).nome : passo === 2 ? sottotitoloWorkout : null}
-        onTitolo={passo === 2 && !desktop && !modello ? () => setStep(1) : null}
+        // Sul telefono data e categoria le dicono le pillole sotto la testata.
+        sottotitolo={modello ? categoriaCorrente(category).nome : passo === 2 && desktop ? sottotitoloWorkout : null}
+        onTitolo={passo === 2 && !desktop && !modello ? () => setFoglioNomeData(true) : null}
         onModelli={modello ? null : () => navigate('/modelli')}
         senzaPassi={!!modello}
       />
+
+      {/* Le due pillole del passo 2: la categoria (torna alle card, con la
+          stessa conferma della freccia se ci sono blocchi) e la data (apre il
+          foglio). Solo telefono: sul desktop stanno nella colonna di destra. */}
+      {passo === 2 && !desktop && !modello && !inAttesaModello && (
+        <div className="flex flex-wrap gap-2 -mt-1.5">
+          {(() => {
+            const c = categoriaCorrente(category)
+            const Icona = ICONA_CATEGORIA[c.id]
+            return (
+              <button type="button" onClick={handleBack} aria-label={`Cambia categoria: ${c.nome}`}
+                className="h-[30px] px-[11px] rounded-full border inline-flex items-center gap-1.5 text-[12.5px] font-bold active:scale-95 transition"
+                style={{ background: `${c.colore}1f`, borderColor: `${c.colore}55`, color: c.colore }}>
+                <Icona size={14} aria-hidden="true" /> {c.nome}
+              </button>
+            )
+          })()}
+          <button type="button" onClick={() => setFoglioNomeData(true)}
+            className={`h-[30px] px-[11px] rounded-full ${VETRO} inline-flex items-center gap-1.5 text-[12.5px] font-bold text-gray-300 active:scale-95 transition`}>
+            <CalendarDays size={14} aria-hidden="true" /> {etichettaData(date)}
+          </button>
+        </div>
+      )}
+      {foglioNomeData && (
+        <FoglioNomeData
+          nome={title} onNome={setTitle}
+          segnaposto={nomeAutomatico || (category === 'Gym' ? 'Facoltativo · lo scelgo dagli esercizi' : 'Facoltativo · lo scelgo dai blocchi')}
+          onAltroNome={conNomeCasuale && nomeCasuale && !title.trim() ? () => { setNomeFissato(null); setSemeNome(s => s + 1) } : null}
+          data={date} onData={setDate}
+          onChiudi={() => setFoglioNomeData(false)}
+        />
+      )}
 
       {modello && !inAttesaModello && <CampoNomeModello valore={nomeDelModello} onChange={setNomeModello} />}
       {inAttesaModello && <div className={`${CARD} h-40 animate-pulse`} aria-label="Carico il modello" />}
@@ -3778,6 +3814,11 @@ function Costruttore() {
             <h1 className="text-[29px] font-black tracking-[-.035em] leading-[1.1] text-white">
               Che tipo di<br />allenamento è?
             </h1>
+            {/* Dal 26/11/2026 nome e data non stanno più qui: spingevano il
+                bottone in fondo allo schermo, ed erano facoltativi. Il tocco
+                sulla card porta dritto al builder; nome e data si cambiano dal
+                foglio che si apre dalla testata (FoglioNomeData). */}
+            <p className="mt-2 text-[13.5px] font-medium text-muted">Tocca per iniziare. Nome e data li cambi dopo, se servono.</p>
           </div>
 
           <div className="flex flex-col gap-[11px]">
@@ -3790,49 +3831,9 @@ function Costruttore() {
                 icona={ICONA_CATEGORIA[c.id]}
                 nome={c.nome}
                 descrizione={c.descrizione}
-                onClick={() => setCategory(c.id)}
+                onClick={() => { setCategory(c.id); setStep(2) }}
               />
             ))}
-          </div>
-
-          <div className="h-px bg-white/[.07]" />
-
-          {/* Nome e data scendono SOTTO la scelta: si compilano una volta e si
-              dimenticano, e in cima resta la domanda che conta. */}
-          <div className="flex flex-col gap-2.5">
-            <RigaCampo etichetta="Nome">
-              <div className="flex items-center gap-2">
-                <input
-                  aria-label="Nome del workout"
-                  enterKeyHint="done"
-                  onKeyDown={chiudiTastieraSuInvio}
-                  className="w-full bg-transparent text-[15.5px] font-bold text-white placeholder-[#5b6070] focus:outline-none"
-                  placeholder={nomeAutomatico || (category === 'Gym' ? 'Facoltativo · lo scelgo dagli esercizi' : 'Facoltativo · lo scelgo dai blocchi')}
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                />
-                {/* Il nome casuale non piace? Se ne pesca un altro. Solo a
-                    campo vuoto: un nome scritto non si sostituisce. */}
-                {conNomeCasuale && nomeCasuale && !title.trim() && (
-                  <button
-                    type="button"
-                    aria-label="Un altro nome"
-                    onClick={() => { vibraScelta(); setNomeFissato(null); setSemeNome(s => s + 1) }}
-                    className="shrink-0 -my-1 p-1.5 rounded-full text-[#8a8f9c] hover:text-white active:scale-90 transition"
-                  >
-                    <Dices size={18} />
-                  </button>
-                )}
-              </div>
-            </RigaCampo>
-            <RigaCampo etichetta="Data">
-              <CustomDatePicker
-                date={date}
-                onChange={setDate}
-                placeholder="Scegli la data"
-                className="text-[15.5px] font-bold"
-              />
-            </RigaCampo>
           </div>
 
         </div>
@@ -4091,11 +4092,8 @@ function Costruttore() {
       {!desktop && (<>
       <div className="mt-auto" />
       <BarraAzioni ancorata={false}>
-        {passo === 1 ? (
-          <CtaPrimaria onClick={() => setStep(2)} iconaCoda={ArrowRight}>
-            Costruisci l'allenamento
-          </CtaPrimaria>
-        ) : inAttesaModello ? null : modello ? (
+        {/* Al passo 1 niente: la card è il bottone (26/11/2026). */}
+        {passo === 1 ? null : inAttesaModello ? null : modello ? (
           <CtaPrimaria onClick={salvaQuestoModello} disabled={!bloccoModello || !nomeValido(nomeDelModello)} attesa={salvandoModello}>
             Salva modello
           </CtaPrimaria>

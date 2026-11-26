@@ -127,8 +127,7 @@ afterEach(() => {
 /** Arriva allo step 2 e apre il foglio dell'IA. */
 async function apriIA() {
   render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
-  await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
-  await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+  await userEvent.click(screen.getByRole('button', { name: /Hyrox/ }))
   await userEvent.click(screen.getByRole('button', { name: /Genera con IA/ }))
   return screen.getByRole('dialog', { name: 'Genera con IA' })
 }
@@ -228,8 +227,7 @@ describe('la dettatura fa vedere che la voce arriva', () => {
       navigator.mediaDevices = { getUserMedia: vi.fn(() => Promise.resolve(finteTracce())) }
 
       render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
-      await utente.type(screen.getByLabelText('Nome del workout'), 'Prova')
-      await utente.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+      await utente.click(screen.getByRole('button', { name: /Hyrox/ }))
       await utente.click(screen.getByRole('button', { name: /Genera con IA/ }))
       await utente.click(screen.getByRole('button', { name: /Detta/ }))
       await waitFor(() => expect(screen.getByText(/Parla pure/)).toBeInTheDocument())
@@ -255,8 +253,7 @@ describe('la dettatura fa vedere che la voce arriva', () => {
       navigator.mediaDevices = { getUserMedia: vi.fn(() => Promise.resolve(finteTracce())) }
 
       render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
-      await utente.type(screen.getByLabelText('Nome del workout'), 'Prova')
-      await utente.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+      await utente.click(screen.getByRole('button', { name: /Hyrox/ }))
       await utente.click(screen.getByRole('button', { name: /Genera con IA/ }))
       await utente.click(screen.getByRole('button', { name: /Detta/ }))
 
@@ -281,8 +278,7 @@ describe('la dettatura fa vedere che la voce arriva', () => {
       navigator.mediaDevices = { getUserMedia: vi.fn(() => Promise.resolve(finteTracce())) }
 
       render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
-      await utente.type(screen.getByLabelText('Nome del workout'), 'Prova')
-      await utente.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+      await utente.click(screen.getByRole('button', { name: /Hyrox/ }))
       await utente.click(screen.getByRole('button', { name: /Genera con IA/ }))
       await utente.click(screen.getByRole('button', { name: /Detta/ }))
 
@@ -572,8 +568,6 @@ describe('«Genera con IA» in OGNI categoria (12/10/2026)', () => {
   async function alPasso2(nome) {
     render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
     await userEvent.click(screen.getByRole('button', { name: new RegExp(nome) }))
-    await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
-    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
   }
 
   it('il passo 2 di ogni categoria ha la card', async () => {
@@ -582,7 +576,6 @@ describe('«Genera con IA» in OGNI categoria (12/10/2026)', () => {
     for (const nome of tutte) {
       const { unmount } = render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
       await userEvent.click(screen.getByRole('button', { name: new RegExp(nome) }))
-      await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
       expect(screen.getByRole('button', { name: /Genera con IA/ }), nome).toBeInTheDocument()
       unmount()
       localStorage.clear()

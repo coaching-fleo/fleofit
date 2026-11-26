@@ -67,8 +67,7 @@ async function confermaBlocco() {
 // Porta il builder al passo 2 con un blocco WarmUp già inserito.
 async function builderConUnBlocco() {
   render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
-  await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
-  await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+  await userEvent.click(screen.getByRole('button', { name: /Hyrox/ }))
   await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
   await userEvent.click(screen.getByText('WarmUp'))
   await confermaBlocco()
@@ -123,8 +122,7 @@ describe('modificare un blocco non ridisegna gli altri', () => {
     // blockHint riceve block.type, quindi due blocchi dello stesso tipo
     // sarebbero indistinguibili.
     render(<MemoryRouter><CreateWorkout /></MemoryRouter>)
-    await userEvent.type(screen.getByLabelText('Nome del workout'), 'Prova')
-    await userEvent.click(screen.getByRole('button', { name: /Costruisci l'allenamento/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Hyrox/ }))
     await userEvent.click(screen.getByRole('button', { name: /Aggiungi blocco/i }))
     await userEvent.click(screen.getByText('AMRAP'))
     await confermaBlocco()
