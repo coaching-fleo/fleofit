@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useIndietro } from '../useIndietro'
 import { supabase } from '../supabaseClient'
-import { ChevronUp, Download, Timer, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, CalendarDays, Mic, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, WifiOff, ClipboardList, Undo2, Image as ImmagineIcona, Share2, HeartPulse } from 'lucide-react'
+import { CalendarClock, ChevronUp, Download, Timer, Users, X, User, Send, Edit, Trash2, AlertTriangle, Check, BicepsFlexed, Copy, CheckCircle2, CalendarDays, Mic, Play, Pause, MonitorUp, StepForward, StepBack, Volume2, VolumeX, ChevronDown, WifiOff, ClipboardList, Undo2, Image as ImmagineIcona, Share2, HeartPulse } from 'lucide-react'
 import { format, parseISO, isValid, isBefore, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { CustomAlert, CustomConfirm } from '../components/CustomModals'
@@ -65,7 +65,7 @@ import RigaScarpa from '../components/RigaScarpa'
 import { useScarpaCompletamento } from '../useScarpaCompletamento'
 import { useSfidaCompletamento } from '../useSfidaCompletamento'
 import FoglioSposta from '../components/FoglioSposta'
-import { puoSpostare, spostaAssegnazione, avvisaCoachSpostamento } from '../lib/spostaAllenamento'
+import { puoSpostare, spostaAssegnazione, avvisaCoachSpostamento, chiSiSposta, spostaPerTutti, daAvvisare, avvisaAtletiSpostamento } from '../lib/spostaAllenamento'
 import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
@@ -434,6 +434,11 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const [menuOpen, setMenuOpen] = useState(false)
   // «Sposta l'allenamento»: l'atleta sceglie un altro giorno (src/lib/spostaAllenamento.js).
   const [spostaAperto, setSpostaAperto] = useState(false)
+  // Il coach sposta (26/11/2026, §9-sposta-coach): `{ aw }` = l'assegnazione
+  // di partenza (null = la seduta, per tutti). `dataWorkout` è `workouts.date`
+  // vera: con un atleta aperto `workout.date` è già il SUO giorno.
+  const [spostaCoach, setSpostaCoach] = useState(null)
+  const [dataWorkout, setDataWorkout] = useState(null)
 
   // La grafica da mettere sopra una storia. `storiaSfondo` parte a false —
   // cioè sullo sticker TRASPARENTE — perché è quello il gesto richiesto: la
@@ -648,6 +653,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         })))
     }
 
+    setDataWorkout(data?.date ?? null)
     setWorkout(finalWorkout)
     setLoading(false)
   }
@@ -1854,12 +1860,40 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     return true
   }
 
+  // Il coach: un atleta solo (`solo`, mai `workouts.date`) o tutta la seduta
+  // (`tutti`: chi l'ha svolto o l'ha spostato resta dov'è, `chiSiSposta`).
+  const coachPuoSpostare = puoAssegnare && !isAuto
+  const assegnazioneAperta = assignments.find(a => a.athletes?.id && a.athletes.id === queryAthleteId) || null
+  const spostaDalCoach = async (data, portata) => {
+    const aw = spostaCoach?.aw
+    let spostati = []
+    let errore = null
+    if (portata === 'solo' && aw) {
+      errore = (await spostaAssegnazione(supabase, aw.id, data)).error
+      if (aw.status !== 'completed') spostati = [aw.id]
+    } else {
+      const { siSpostano } = chiSiSposta(assignments, dataWorkout)
+      errore = (await spostaPerTutti(supabase, { workoutId: id, dataOriginale: dataWorkout, ids: siSpostano, nuovaData: data })).error
+      spostati = siSpostano
+    }
+    if (errore) {
+      setAlertInfo({ title: 'Errore', message: "Non sono riuscito a spostare l'allenamento. Controlla la connessione e riprova.", type: 'error' })
+      return false
+    }
+    setSpostaCoach(null)
+    vibraSuccesso()
+    if (daAvvisare({ nuovaData: data })) avvisaAtletiSpostamento(supabase, { awIds: spostati, data })
+    fetchWorkout()
+    return true
+  }
+
   const vociMenu = [
     puoAssegnare && { etichetta: 'Duplica', icona: Copy, onClick: () => navigate(`/create?duplicate=${id}`) },
     puoAssegnare && !isAuto && { etichetta: 'Modifica', icona: Edit, onClick: apriModifica },
     isAuto && { etichetta: 'Modifica', icona: Edit, onClick: openEditAutonomous },
     eAtleta && completato && { etichetta: 'Segna come da fare', icona: Undo2, onClick: toggleStatus },
     eAtleta && puoSpostare({ status: workoutStatus, evento: isEvent }) && { etichetta: 'Sposta a un altro giorno', icona: CalendarDays, onClick: () => setSpostaAperto(true) },
+    coachPuoSpostare && !eAtleta && { etichetta: 'Sposta a un altro giorno', icona: CalendarDays, onClick: () => setSpostaCoach({ aw: assegnazioneAperta }) },
     type !== 'Event' && { etichetta: 'Esporta PDF', icona: Download, onClick: exportPDF },
     { etichetta: 'Condividi come storia', icona: Share2, onClick: apriStoria },
     // ⚠️ Le due voci qui sotto esportano la SCHEDA (il programma, blocco per
@@ -2030,6 +2064,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           ? format(parseISO(workout.date), 'EEE d MMM', { locale: it })
           : null}
         titolo={workout.title}
+        onData={coachPuoSpostare ? () => setSpostaCoach({ aw: assegnazioneAperta }) : null}
         intensita={s?.intensity}
         classeIntensita={getIntensityColor(s?.intensity)}
       />
@@ -2275,13 +2310,20 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
         setTuttiAssegnati(false)
         navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`, { replace: true })
       }}
-      azione={eStaff(role) ? (
+      azione={eStaff(role) ? (<>
+        {coachPuoSpostare && (
+          <button aria-label={`Sposta la data di ${a.athletes?.name || 'atleta'}`}
+            onClick={() => setSpostaCoach({ aw: a, soloLui: true })}
+            className="shrink-0 p-1.5 text-[#5b6070] hover:text-brand transition rounded-lg hover:bg-white/[.06]">
+            <CalendarClock size={16} />
+          </button>
+        )}
         <button aria-label={`Rimuovi l'assegnazione di ${a.athletes?.name || 'atleta'}`}
           onClick={() => handleRemoveAssignment(a.id)}
           className="shrink-0 p-1.5 text-[#5b6070] hover:text-red-500 transition rounded-lg hover:bg-white/[.06]">
           <Trash2 size={16} />
         </button>
-      ) : null}
+      </>) : null}
     />
   )
   const pAssegnazioni = (
@@ -2385,6 +2427,14 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       )}
 
       {menuOpen && <MenuScheda onChiudi={() => setMenuOpen(false)} voci={vociMenu} />}
+      {spostaCoach && (
+        <FoglioSposta modo="coach" titolo={workout.title}
+          dataAttuale={spostaCoach.aw?.completed_date || dataWorkout}
+          nomeAtleta={spostaCoach.aw?.athletes?.name || null}
+          assegnazioni={spostaCoach.soloLui ? [spostaCoach.aw] : assignments}
+          dataWorkout={dataWorkout}
+          onChiudi={() => setSpostaCoach(null)} onConferma={spostaDalCoach} />
+      )}
       {spostaAperto && (
         <FoglioSposta titolo={workout.title} dataAttuale={workout.date}
           onChiudi={() => setSpostaAperto(false)} onConferma={spostaQui} />

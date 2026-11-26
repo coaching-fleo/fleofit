@@ -17,7 +17,7 @@
 // lettura la stessa cosa che ha visto in scrittura.
 
 import { createPortal } from 'react-dom'
-import { ChevronLeft, MoreHorizontal, ChevronDown, Activity, Check, User, ThumbsUp, ThumbsDown, Minus, Repeat, ChevronRight } from 'lucide-react'
+import { ChevronLeft, MoreHorizontal, ChevronDown, Activity, Check, User, ThumbsUp, ThumbsDown, Minus, Repeat, ChevronRight, CalendarDays } from 'lucide-react'
 import { CARD, LABEL, RIGA, VETRO } from '../lib/stiliCard'
 import { useBottomSheet } from '../useBottomSheet'
 import { SpinaBlocco, DurataBlocco, NumeroEsercizio } from './CreaWorkoutUI'
@@ -125,7 +125,8 @@ export function MenuScheda({ onChiudi, voci, etichetta = "Azioni sull'allenament
 // pallino della corsia e la data accanto. Il titolo prende lo spazio che aveva
 // l'intestazione FLEOFIT, che in una pagina di dettaglio non dice niente.
 
-export function TitoloScheda({ dot, etichettaCategoria, testoCategoria, data, titolo, intensita, classeIntensita }) {
+// `onData` (26/11/2026): per il coach la data è il comando per spostarla.
+export function TitoloScheda({ dot, etichettaCategoria, testoCategoria, data, titolo, intensita, classeIntensita, onData }) {
   return (
     <div>
       <div className="flex items-center gap-[7px] mb-[7px] flex-wrap">
@@ -133,8 +134,14 @@ export function TitoloScheda({ dot, etichettaCategoria, testoCategoria, data, ti
         <span className={`text-[11px] font-bold uppercase tracking-[.11em] ${testoCategoria}`}>
           {etichettaCategoria}
         </span>
-        {data && (
+        {data && !onData && (
           <span className="text-[11px] font-bold uppercase tracking-[.07em] text-muted">· {data}</span>
+        )}
+        {data && onData && (
+          <button type="button" onClick={onData} aria-label="Cambia data"
+            className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-[.07em] text-muted hover:text-white transition rounded-md">
+            · {data}<CalendarDays size={12} aria-hidden="true" className="text-brand" />
+          </button>
         )}
         {intensita && (
           <span className={`text-[11px] font-bold uppercase tracking-[.07em] ${classeIntensita}`}>
