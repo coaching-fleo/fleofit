@@ -181,3 +181,26 @@ describe('la copia parte pulita', () => {
     expect(finto.chiamateA('athlete_workouts', 'insert')[0].args[0].athlete_id).toBe('a1')
   })
 })
+
+// «Tocca e parti» (26/11/2026): in modifica il builder si apre al passo 2, e il
+// nome si cambia dal foglio «Nome e data». La pillola della categoria deve
+// tornare alle card anche qui: prima ci si arrivava toccando il titolo.
+describe('in modifica, nome e categoria si cambiano da dentro', () => {
+  it('la testata apre il foglio e il nome cambia davvero', async () => {
+    await apri('/create?edit=w1')
+    await userEvent.click(screen.getByRole('button', { name: 'Modifica nome e data' }))
+    const campo = screen.getByLabelText('Nome del workout')
+    await userEvent.clear(campo)
+    await userEvent.type(campo, 'Rinominato')
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Nome e data' })).getByRole('button', { name: 'Fatto' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nome e data' })).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Modifica nome e data' })).toHaveTextContent('Rinominato')
+  })
+
+  it('la pillola della categoria torna alle card, senza uscire', async () => {
+    await apri('/create?edit=w1')
+    await userEvent.click(screen.getByRole('button', { name: 'Cambia categoria: Hyrox' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Sei sicuro?' })).getByRole('button', { name: 'Conferma' }))
+    expect(screen.getByText('Tocca per iniziare. Nome e data li cambi dopo, se servono.')).toBeInTheDocument()
+  })
+})

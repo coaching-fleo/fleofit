@@ -3349,6 +3349,26 @@ function Costruttore() {
     }
   }, [hasUnsavedChanges, saved])
 
+  // Dal passo 2 alle card della categoria. Con dei blocchi (o delle fasi) già
+  // composti chiede conferma: si legge come «butto via tutto», anche se lo
+  // stato resta. La usa la freccia (solo per un workout nuovo: in modifica la
+  // freccia esce) e la pillola della categoria, che invece torna alle card
+  // ANCHE in modifica — è l'unico modo di cambiare categoria a un workout
+  // aperto, da quando il titolo apre il foglio «Nome e data» (26/11/2026).
+  const tornaAlleCategorie = () => {
+    const composti = category === 'Running' ? runningSteps.length : category === 'Hyrox' ? blocks.length
+      : category === 'Gym' ? gymGroups.length : 0
+    if (composti > 0) {
+      setConfirmInfo({
+        title: 'Sei sicuro?',
+        message: 'Torni alla scelta della categoria. I blocchi restano, ma se cambi categoria non verranno salvati.',
+        onConfirm: () => setStep(1),
+      })
+    } else {
+      setStep(1)
+    }
+  }
+
   const handleBack = () => {
     // Modalità modello: niente passo 1 e niente bozza da cancellare.
     if (modello) {
@@ -3361,21 +3381,7 @@ function Costruttore() {
       return
     }
     if (step === 2 && !sourceId) {
-      // Con dei blocchi (o delle fasi) già composti la freccia chiede
-      // conferma: si legge come «butto via tutto», anche se lo stato resta.
-      // Il tocco sul titolo invece torna al passo 1 senza chiedere: è il
-      // gesto deliberato di chi vuole cambiare nome o data.
-      const composti = category === 'Running' ? runningSteps.length : category === 'Hyrox' ? blocks.length
-        : category === 'Gym' ? gymGroups.length : 0
-      if (composti > 0) {
-        setConfirmInfo({
-          title: 'Sei sicuro?',
-          message: 'Torni alla scelta di nome, data e categoria. I blocchi restano, ma se cambi categoria non verranno salvati.',
-          onConfirm: () => setStep(1),
-        })
-      } else {
-        setStep(1)
-      }
+      tornaAlleCategorie()
     } else {
       if (hasUnsavedChanges && !saved) {
         setPendingPath(INDIETRO)
@@ -3768,8 +3774,8 @@ function Costruttore() {
         senzaPassi={!!modello}
       />
 
-      {/* Le due pillole del passo 2: la categoria (torna alle card, con la
-          stessa conferma della freccia se ci sono blocchi) e la data (apre il
+      {/* Le due pillole del passo 2: la categoria (torna alle card, anche in
+          modifica, con la conferma se ci sono blocchi) e la data (apre il
           foglio). Solo telefono: sul desktop stanno nella colonna di destra. */}
       {passo === 2 && !desktop && !modello && !inAttesaModello && (
         <div className="flex flex-wrap gap-2 -mt-1.5">
@@ -3777,7 +3783,7 @@ function Costruttore() {
             const c = categoriaCorrente(category)
             const Icona = ICONA_CATEGORIA[c.id]
             return (
-              <button type="button" onClick={handleBack} aria-label={`Cambia categoria: ${c.nome}`}
+              <button type="button" onClick={tornaAlleCategorie} aria-label={`Cambia categoria: ${c.nome}`}
                 className="h-[30px] px-[11px] rounded-full border inline-flex items-center gap-1.5 text-[12.5px] font-bold active:scale-95 transition"
                 style={{ background: `${c.colore}1f`, borderColor: `${c.colore}55`, color: c.colore }}>
                 <Icona size={14} aria-hidden="true" /> {c.nome}
