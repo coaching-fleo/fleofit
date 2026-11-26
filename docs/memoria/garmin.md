@@ -470,6 +470,29 @@ server `https://apis.garmin.com/wellness-api`), con la sessione del committente.
    `garmin-auth` «recupero di 7 giorni chiesto», e l'attività compare.
 4. `select tipo, count(*) from garmin_attivita group by tipo;` per correggere i nomi dei tipi nuovi.
 
+## Che cosa è stato fatto decide dove va (26/11/2026)
+> Richiesta del committente: «se faccio una corsa non ha senso che me l'assegni a un allenamento
+> Hyrox». Prima `TIPI_PER_CATEGORIA` metteva la corsa anche fra i tipi Hyrox: con solo un Hyrox
+> quel giorno, la corsa lo completava. ✅ `garmin-webhook` e `garmin-auth` **pubblicate il
+> 26/11/2026**. ⏳ Prova vera ancora da fare. Niente migrazioni.
+
+- La tabella ora è **`CATEGORIE_PER_TIPO`** (tipo Garmin → categorie, in ordine di preferenza);
+  `TIPI_PER_CATEGORIA` ne è derivata. Corsa (tutti e quattro i tipi) → solo Running · `HYROX`,
+  `INDOOR_ROWING`, `OTHER` → Hyrox · `HIIT`, `INDOOR_CARDIO` → Hyrox poi Gym ·
+  `STRENGTH_TRAINING` → Gym poi Hyrox. Tutto il resto (bici, nuoto, camminata, yoga…) non
+  completa niente.
+- **La prima categoria con qualcosa da fare quel giorno decide**: se lì ce n'è più d'uno o la
+  durata non torna, nessun abbinamento e voce grigia; **non** si scende alla categoria dopo (sarebbe
+  un allenamento diverso da quello voluto). Se la preferita è già fatta, si passa alla seconda.
+- **Altrimenti diventa allenamento libero (Custom)**: `diventaLibero` guarda solo le assegnazioni
+  delle categorie del tipo. Una corsa con solo un Hyrox da fare → corsa libera, l'Hyrox resta da
+  fare. ⚠️ **Cambiato**: un Custom o una gara di quel giorno **non bloccano più** la creazione del
+  libero (prima restava voce grigia). Costo: se il coach ha assegnato un Custom «corsa 40′», la
+  corsa diventa un libero in più e il Custom resta da fare.
+- ⚠️ `HYROX` (il profilo Hyrox degli orologi recenti, «Hyrox» in `TIPI_ATTIVITA`/`NOMI_TIPI`) è un
+  nome **non visto arrivare**: da controllare con `select tipo, count(*) from garmin_attivita group by tipo;`.
+- «Abbina a…» a mano non cambia: offre qualunque allenamento del giorno.
+
 ## Fase 3 · Corsa all'orologio
 > Scritta il 28/10/2026. Piano: `docs/superpowers/plans/2026-10-28-garmin-fase-3-corsa.md`,
 > spec: `docs/superpowers/specs/2026-10-27-garmin-design.md` §5, §7, §9. ✍️ **Codice scritto, in

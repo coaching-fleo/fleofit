@@ -38,6 +38,36 @@ describe('tabella dei tipi', () => {
   })
 })
 
+describe('che cosa è stato fatto decide dove va (26/11/2026)', () => {
+  it('🔴 una corsa NON completa un Hyrox, nessun tipo di corsa', () => {
+    for (const tipo of ['RUNNING', 'TRAIL_RUNNING', 'TREADMILL_RUNNING', 'TRACK_RUNNING']) {
+      expect(scegli({ tipo }, [cand({ categoria: 'Hyrox' })])).toBeNull()
+      expect(scegli({ tipo }, [cand({ categoria: 'Gym' })])).toBeNull()
+    }
+  })
+  it('una corsa con Hyrox e Corsa lo stesso giorno completa la Corsa', () => {
+    expect(scegli({ tipo: 'RUNNING' }, [cand({ id: 'h', categoria: 'Hyrox' }), cand({ id: 'r' })])).toBe('r')
+  })
+  it('forza con Gym e Hyrox completa il Gym; HIIT completa l’Hyrox', () => {
+    const c = [cand({ id: 'h', categoria: 'Hyrox' }), cand({ id: 'g', categoria: 'Gym' })]
+    expect(scegli({ tipo: 'STRENGTH_TRAINING' }, c)).toBe('g')
+    expect(scegli({ tipo: 'HIIT' }, c)).toBe('h')
+    expect(scegli({ tipo: 'INDOOR_CARDIO' }, c)).toBe('h')
+  })
+  it('se la categoria preferita c’è ma è ambigua, non si scende alla seconda', () => {
+    const c = [cand({ id: 'g', categoria: 'Gym', durataStimataMin: 120 }), cand({ id: 'h', categoria: 'Hyrox' })]
+    expect(scegli({ tipo: 'STRENGTH_TRAINING' }, c)).toBeNull()
+  })
+  it('la categoria preferita già fatta lascia il posto alla seconda', () => {
+    const c = [cand({ id: 'g', categoria: 'Gym', completato: true }), cand({ id: 'h', categoria: 'Hyrox' })]
+    expect(scegli({ tipo: 'STRENGTH_TRAINING' }, c)).toBe('h')
+  })
+  it('il profilo Hyrox dell’orologio completa solo un Hyrox', () => {
+    expect(scegli({ tipo: 'HYROX' }, [cand({ categoria: 'Hyrox' })])).toBe('aw1')
+    expect(scegli({ tipo: 'HYROX' }, [cand({ categoria: 'Running' })])).toBeNull()
+  })
+})
+
 describe('durata', () => {
   it('9:59 no, 10:00 si', () => {
     expect(scegli({ durata_s: 599 })).toBeNull()
@@ -134,14 +164,22 @@ describe('allenamento libero da Garmin (nessun workout assegnato)', () => {
     expect(libero({}, [cand({ completato: true })])).toBe(false)
     expect(libero({}, [cand({ completato: true, haAttivita: true })])).toBe(true)
   })
-  it('un Custom o una gara di quel giorno la bloccano: si abbina a mano', () => {
-    expect(libero({}, [cand({ categoria: 'Custom' })])).toBe(false)
-    expect(libero({}, [cand({ categoria: 'Event' })])).toBe(false)
-    expect(libero({}, [cand({ categoria: null })])).toBe(false)
+  it('un Custom o una gara di quel giorno non la bloccano più (26/11/2026)', () => {
+    expect(libero({}, [cand({ categoria: 'Custom' })])).toBe(true)
+    expect(libero({}, [cand({ categoria: 'Event' })])).toBe(true)
+    expect(libero({}, [cand({ categoria: null })])).toBe(true)
   })
   it('un workout di un tipo che non c’entra non la blocca', () => {
     expect(libero({ tipo: 'CYCLING' }, [cand({ categoria: 'Gym' })])).toBe(true)
     expect(libero({ tipo: 'RUNNING' }, [cand({ categoria: 'Gym' })])).toBe(true)
+  })
+  it('🔴 una corsa con solo un Hyrox da fare diventa libera, non blocca e non lo completa', () => {
+    expect(libero({ tipo: 'RUNNING' }, [cand({ categoria: 'Hyrox' })])).toBe(true)
+    expect(libero({ tipo: 'TREADMILL_RUNNING' }, [cand({ categoria: 'Hyrox' })])).toBe(true)
+  })
+  it('una bici o una camminata diventano libere anche con un Hyrox da fare', () => {
+    expect(libero({ tipo: 'CYCLING' }, [cand({ categoria: 'Hyrox' })])).toBe(true)
+    expect(libero({ tipo: 'WALKING' }, [cand({ categoria: 'Hyrox' })])).toBe(true)
   })
   it('un altro giorno non conta', () => {
     expect(libero({}, [cand({ giorno: '2026-10-27' })])).toBe(true)

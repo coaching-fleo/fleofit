@@ -62,7 +62,7 @@ describe('nomeTipoAttivita', () => {
     expect(nomeTipoAttivita('INDOOR_ROWING')).toBe('Vogatore')
     expect(nomeTipoAttivita('BOH')).toBe('Attività')
     expect(nomeTipoAttivita(undefined)).toBe('Attività')
-    expect(Object.keys(TIPI_ATTIVITA)).toHaveLength(20)
+    expect(Object.keys(TIPI_ATTIVITA)).toHaveLength(21)
     expect(nomeTipoAttivita('CYCLING')).toBe('Ciclismo')
   })
 })

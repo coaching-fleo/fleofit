@@ -9,6 +9,7 @@
 // libero creato dal webhook): `abbinaGarmin.test.js` controlla che coincidano.
 export const TIPI_ATTIVITA = {
   RUNNING: 'Corsa',
+  HYROX: 'Hyrox',
   TREADMILL_RUNNING: 'Tapis roulant',
   TRAIL_RUNNING: 'Trail',
   TRACK_RUNNING: 'Pista',

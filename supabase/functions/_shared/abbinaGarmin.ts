@@ -7,12 +7,34 @@
 // (docs/memoria/garmin.md, «Fase 1 · formato verificato»).
 const CORSA = ['RUNNING', 'TRAIL_RUNNING', 'TREADMILL_RUNNING', 'TRACK_RUNNING'];
 
-/** Custom ed Event non ci sono: non si completano mai in automatico. */
-export const TIPI_PER_CATEGORIA: Record<'Running' | 'Hyrox' | 'Gym', string[]> = {
-  Running: [...CORSA],
-  Hyrox: [...CORSA, 'INDOOR_CARDIO', 'HIIT', 'STRENGTH_TRAINING', 'INDOOR_ROWING', 'OTHER'],
-  Gym: ['STRENGTH_TRAINING', 'INDOOR_CARDIO', 'HIIT'],
+/**
+ * Che cosa è stato fatto decide dove va (richiesta del committente, 26/11/2026):
+ * per ogni tipo di Garmin le categorie che può completare, in ordine di
+ * preferenza. Una corsa completa SOLO una Corsa: se quel giorno non c'è, diventa
+ * un allenamento libero (Custom), mai un Hyrox o un Gym. Un tipo che non è qui
+ * (bici, nuoto, camminata, yoga…) non completa niente e diventa libero.
+ * Custom ed Event non ci sono: non si completano mai in automatico.
+ * ⚠️ `HYROX` è il profilo Hyrox degli orologi recenti: nome da verificare alla
+ * prima attività vera (`select tipo from garmin_attivita`).
+ */
+export const CATEGORIE_PER_TIPO: Record<string, ('Running' | 'Hyrox' | 'Gym')[]> = {
+  ...Object.fromEntries(CORSA.map((t) => [t, ['Running']])),
+  HYROX: ['Hyrox'],
+  INDOOR_ROWING: ['Hyrox'],
+  HIIT: ['Hyrox', 'Gym'],
+  INDOOR_CARDIO: ['Hyrox', 'Gym'],
+  STRENGTH_TRAINING: ['Gym', 'Hyrox'],
+  // «Altro» è come registra un Hyrox chi non ha il profilo apposta.
+  OTHER: ['Hyrox'],
 };
+
+/** La stessa tabella vista dalla categoria (la legge il test). */
+export const TIPI_PER_CATEGORIA: Record<'Running' | 'Hyrox' | 'Gym', string[]> = {
+  Running: [], Hyrox: [], Gym: [],
+};
+for (const [tipo, categorie] of Object.entries(CATEGORIE_PER_TIPO)) {
+  for (const c of categorie) TIPI_PER_CATEGORIA[c].push(tipo);
+}
 
 export const MINUTI_MINIMI = 10;
 
@@ -65,14 +87,17 @@ export function scegliAbbinamento(
   if (a.durata_s == null || a.durata_s < minutiMinimi * 60) return null;
   const durata = a.durata_s;
 
-  const giusti = candidati.filter((c) => {
-    if (c.giorno !== a.giorno || c.completato) return false;
-    const tipi = c.categoria ? (TIPI_PER_CATEGORIA as Record<string, string[]>)[c.categoria] : undefined;
-    if (!tipi || !tipi.includes(a.tipo)) return false;
-    if (c.durataStimataMin != null && durata < FRAZIONE_STIMA * c.durataStimataMin * 60) return false;
-    return true;
-  });
-  return giusti.length === 1 ? giusti[0].id : null;
+  // Categoria per categoria, nell'ordine del tipo: la prima che quel giorno ha
+  // qualcosa da fare decide. Se lì ce n'è più d'uno, o la durata non torna,
+  // nessun abbinamento (si sceglie a mano): non si scende alla categoria dopo,
+  // che sarebbe un allenamento diverso da quello che l'atleta voleva fare.
+  for (const categoria of CATEGORIE_PER_TIPO[a.tipo] ?? []) {
+    const daFare = candidati.filter((c) => c.giorno === a.giorno && !c.completato && c.categoria === categoria);
+    if (!daFare.length) continue;
+    const giusti = daFare.filter((c) => c.durataStimataMin == null || durata >= FRAZIONE_STIMA * c.durataStimataMin * 60);
+    return giusti.length === 1 ? giusti[0].id : null;
+  }
+  return null;
 }
 
 // ── L'allenamento libero da Garmin (04/11/2026) ─────────────────────────────
@@ -88,6 +113,7 @@ export function scegliAbbinamento(
  */
 export const NOMI_TIPI: Record<string, string> = {
   RUNNING: 'Corsa',
+  HYROX: 'Hyrox',
   TREADMILL_RUNNING: 'Tapis roulant',
   TRAIL_RUNNING: 'Trail',
   TRACK_RUNNING: 'Pista',
@@ -130,11 +156,13 @@ export function titoloLibero(tipo: string, giorno: string, esistenti: string[] =
 /**
  * Se l'attività, che non ha completato niente, deve diventare un allenamento
  * libero. Le stesse soglie di `scegliAbbinamento` (collegamento, 7 giorni,
- * minuti) e in più: nessuna assegnazione di quel giorno che potrebbe essere
- * QUESTA attività. Quelle restano voce grigia, da abbinare a mano:
- * - una da fare di un tipo compatibile, anche se la durata non torna o sono due;
- * - una già segnata a mano senza attività (sarebbe un doppione);
- * - un Custom o una gara (Custom ed Event non hanno tipi: possono essere tutto).
+ * minuti) e in più: nessuna assegnazione di quel giorno, della categoria di
+ * QUESTA attività, che potrebbe essere lei. Quelle restano voce grigia, da
+ * abbinare a mano:
+ * - una da fare della categoria giusta, anche se la durata non torna o sono due;
+ * - una già segnata a mano senza attività (sarebbe un doppione).
+ * Un workout di un'altra categoria non conta (26/11/2026): con un Hyrox da fare
+ * e una corsa fatta, la corsa diventa libera. Nemmeno un Custom o una gara.
  * `haAttivita`: l'assegnazione ha già la sua attività di Garmin (la corsa del
  * mattino abbinata non ferma il giro in bici della sera).
  */
@@ -146,10 +174,10 @@ export function diventaLibero(
   if (Date.parse(a.inizio) < Date.parse(collegatoAt)) return false
   if (adesso && Date.parse(a.inizio) < Date.parse(adesso) - GIORNI_MASSIMI * 86400_000) return false
   if (a.durata_s == null || a.durata_s < minutiMinimi * 60) return false
+  const categorie: string[] = CATEGORIE_PER_TIPO[a.tipo] ?? []
   return !candidati.some((c) => {
     if (c.giorno !== a.giorno) return false
     if (c.completato && c.haAttivita) return false
-    const tipi = c.categoria ? (TIPI_PER_CATEGORIA as Record<string, string[]>)[c.categoria] : undefined
-    return !tipi || tipi.includes(a.tipo)
+    return c.categoria != null && categorie.includes(c.categoria)
   })
 }
