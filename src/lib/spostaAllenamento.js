@@ -143,3 +143,19 @@ export function avvisaAtletiSpostamento(supabase, { awIds, data }) {
     body: { mode: 'athlete_moved', record_ids: awIds, newDate: dataBreve(data) },
   }).catch(console.error)
 }
+
+/**
+ * Lo spostamento del coach, uguale dalla scheda workout e dalla scheda atleta:
+ * `solo` scrive solo l'assegnazione `aw` (mai `workouts.date`); `tutti` sposta
+ * la seduta con `chiSiSposta` + `spostaPerTutti`. `spostati` = chi avvisare
+ * (mai chi l'ha già svolto).
+ */
+export async function spostaDalCoach(supabase, { portata, aw, assegnazioni, dataWorkout, workoutId, nuovaData }) {
+  if (portata === 'solo' && aw) {
+    const { error } = await spostaAssegnazione(supabase, aw.id, nuovaData)
+    return { error, spostati: error || aw.status === 'completed' ? [] : [aw.id] }
+  }
+  const { siSpostano } = chiSiSposta(assegnazioni, dataWorkout)
+  const { error } = await spostaPerTutti(supabase, { workoutId, dataOriginale: dataWorkout, ids: siSpostano, nuovaData })
+  return { error, spostati: error ? [] : siSpostano }
+}

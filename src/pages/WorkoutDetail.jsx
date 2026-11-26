@@ -65,7 +65,7 @@ import RigaScarpa from '../components/RigaScarpa'
 import { useScarpaCompletamento } from '../useScarpaCompletamento'
 import { useSfidaCompletamento } from '../useSfidaCompletamento'
 import FoglioSposta from '../components/FoglioSposta'
-import { puoSpostare, spostaAssegnazione, avvisaCoachSpostamento, chiSiSposta, spostaPerTutti, daAvvisare, avvisaAtletiSpostamento } from '../lib/spostaAllenamento'
+import { puoSpostare, spostaAssegnazione, avvisaCoachSpostamento, daAvvisare, avvisaAtletiSpostamento, spostaDalCoach } from '../lib/spostaAllenamento'
 import RecapAllenamento from '../components/RecapAllenamento'
 import VoiceRecorder from '../components/VoiceRecorder'
 import { BOLLA_MODALE, BOTTONE_PERICOLO, BOTTONE_QUIETO, CARD, CARTA_MODALE,
@@ -1864,18 +1864,10 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // (`tutti`: chi l'ha svolto o l'ha spostato resta dov'è, `chiSiSposta`).
   const coachPuoSpostare = puoAssegnare && !isAuto
   const assegnazioneAperta = assignments.find(a => a.athletes?.id && a.athletes.id === queryAthleteId) || null
-  const spostaDalCoach = async (data, portata) => {
-    const aw = spostaCoach?.aw
-    let spostati = []
-    let errore = null
-    if (portata === 'solo' && aw) {
-      errore = (await spostaAssegnazione(supabase, aw.id, data)).error
-      if (aw.status !== 'completed') spostati = [aw.id]
-    } else {
-      const { siSpostano } = chiSiSposta(assignments, dataWorkout)
-      errore = (await spostaPerTutti(supabase, { workoutId: id, dataOriginale: dataWorkout, ids: siSpostano, nuovaData: data })).error
-      spostati = siSpostano
-    }
+  const confermaSpostaCoach = async (data, portata) => {
+    const { error: errore, spostati } = await spostaDalCoach(supabase, {
+      portata, aw: spostaCoach?.aw, assegnazioni: assignments, dataWorkout, workoutId: id, nuovaData: data,
+    })
     if (errore) {
       setAlertInfo({ title: 'Errore', message: "Non sono riuscito a spostare l'allenamento. Controlla la connessione e riprova.", type: 'error' })
       return false
@@ -2433,7 +2425,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           nomeAtleta={spostaCoach.aw?.athletes?.name || null}
           assegnazioni={spostaCoach.soloLui ? [spostaCoach.aw] : assignments}
           dataWorkout={dataWorkout}
-          onChiudi={() => setSpostaCoach(null)} onConferma={spostaDalCoach} />
+          onChiudi={() => setSpostaCoach(null)} onConferma={confermaSpostaCoach} />
       )}
       {spostaAperto && (
         <FoglioSposta titolo={workout.title} dataAttuale={workout.date}

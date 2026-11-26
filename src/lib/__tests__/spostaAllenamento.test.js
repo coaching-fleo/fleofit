@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { format } from 'date-fns'
 import {
   puoSpostare, giorniProposti, nomeGiorno, dataBreve, eNelPassato, spostaAssegnazione, avvisaCoachSpostamento,
-  chiSiSposta, spostaPerTutti, daAvvisare, avvisaAtletiSpostamento,
+  chiSiSposta, spostaPerTutti, daAvvisare, avvisaAtletiSpostamento, spostaDalCoach,
 } from '../spostaAllenamento'
 
 // L'atleta sposta da solo un allenamento. Si sposta l'ASSEGNAZIONE, mai il
@@ -149,5 +149,28 @@ describe('avvisaAtletiSpostamento', () => {
     const invoke = vi.fn(() => Promise.resolve({}))
     await avvisaAtletiSpostamento({ functions: { invoke } }, { awIds: [], data: '2026-10-29' })
     expect(invoke).not.toHaveBeenCalled()
+  })
+})
+
+describe('spostaDalCoach', () => {
+  const ass = [
+    { id: 'a', status: 'pending', completed_date: '2026-12-02' },
+    { id: 'b', status: 'completed', completed_date: '2026-12-02' },
+  ]
+  it('«solo» scrive solo quell\'assegnazione, e la avvisa se non svolta', async () => {
+    const db = fintoDb()
+    const r = await spostaDalCoach(db, { portata: 'solo', aw: ass[0], assegnazioni: ass, dataWorkout: '2026-12-02', workoutId: 'w1', nuovaData: '2026-12-04' })
+    expect(r).toEqual({ error: null, spostati: ['a'] })
+    expect(db.chiamate).toEqual([['athlete_workouts', { completed_date: '2026-12-04' }, { eq: ['id', 'a'] }]])
+  })
+  it('«solo» su uno svolto: si scrive ma non si avvisa', async () => {
+    const r = await spostaDalCoach(fintoDb(), { portata: 'solo', aw: ass[1], assegnazioni: ass, dataWorkout: '2026-12-02', workoutId: 'w1', nuovaData: '2026-11-20' })
+    expect(r.spostati).toEqual([])
+  })
+  it('«tutti» passa da chiSiSposta', async () => {
+    const db = fintoDb()
+    const r = await spostaDalCoach(db, { portata: 'tutti', aw: null, assegnazioni: ass, dataWorkout: '2026-12-02', workoutId: 'w1', nuovaData: '2026-12-04' })
+    expect(r).toEqual({ error: null, spostati: ['a'] })
+    expect(db.chiamate[1]).toEqual(['athlete_workouts', { completed_date: '2026-12-04' }, { in: ['id', ['a']] }])
   })
 })
