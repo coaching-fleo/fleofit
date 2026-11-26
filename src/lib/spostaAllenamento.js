@@ -91,3 +91,55 @@ export function avvisaCoachSpostamento(supabase, { athleteName, workoutTitle, da
     body: { mode: 'coach_notification', action: 'moved', athleteName, workoutTitle, newDate: dataBreve(data), route },
   }).catch(console.error)
 }
+
+// ── Il coach sposta (26/11/2026, docs/superpowers/specs/2026-11-26-coach-sposta-data-design.md) ──
+
+/**
+ * «Sposta per tutti»: chi segue la seduta e chi resta dov'è.
+ * Si spostano solo le assegnazioni NON svolte rimaste sulla data del workout;
+ * chi l'ha già fatto, o l'aveva spostato (da sé o dal coach, una per una),
+ * resta: riscrivergli la data cambierebbe la sua storia senza che se ne accorga.
+ */
+export function chiSiSposta(assegnazioni, dataWorkout) {
+  const siSpostano = []
+  const restano = { svolti: 0, spostatiDaSe: 0 }
+  for (const a of assegnazioni || []) {
+    if (a.status === 'completed') restano.svolti++
+    else if (a.completed_date !== dataWorkout) restano.spostatiDaSe++
+    else siSpostano.push(a.id)
+  }
+  return { siSpostano, restano }
+}
+
+/**
+ * Sposta la seduta: prima `workouts.date`, poi le assegnazioni scelte.
+ * Se la seconda scrittura fallisce si rimette la data del workout com'era,
+ * così non resta un workout spostato con gli atleti fermi al giorno vecchio.
+ */
+export async function spostaPerTutti(supabase, { workoutId, dataOriginale, ids, nuovaData }) {
+  const { error: errWorkout } = await supabase.from('workouts').update({ date: nuovaData }).eq('id', workoutId)
+  if (errWorkout) return { error: errWorkout }
+  if (!ids?.length) return { error: null }
+  const { error } = await supabase.from('athlete_workouts').update({ completed_date: nuovaData }).in('id', ids)
+  if (error) {
+    await supabase.from('workouts').update({ date: dataOriginale }).eq('id', workoutId)
+    return { error }
+  }
+  return { error: null }
+}
+
+/** Una data nel passato è una correzione del coach, non un avviso: niente push. */
+export function daAvvisare({ nuovaData, oggi = new Date() }) {
+  return !eNelPassato(nuovaData, oggi)
+}
+
+/**
+ * L'atleta lo viene a sapere (`send-reminders`, modo `athlete_moved`). Come
+ * l'avviso al coach, la push non blocca niente: se non parte lo spostamento resta.
+ */
+export function avvisaAtletiSpostamento(supabase, { awIds, data }) {
+  if (!awIds?.length) return Promise.resolve()
+  return supabase.functions.invoke('send-reminders', {
+    body: { mode: 'athlete_moved', record_ids: awIds, newDate: dataBreve(data) },
+  }).catch(console.error)
+}
