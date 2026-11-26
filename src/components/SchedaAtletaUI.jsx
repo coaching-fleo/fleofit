@@ -11,7 +11,7 @@
 // con quanto carico, era nella terza tab, dietro due tocchi e quattro grafici
 // che non si parlavano. Ora è la prima cosa in pagina, e le tab non ci sono più.
 
-import { Camera, ChevronDown, ChevronLeft, ChevronRight, Footprints, Layers, MessageSquareText, Mic, MoreHorizontal, Trash2, UserCog, UsersRound } from 'lucide-react'
+import { CalendarClock, Camera, ChevronDown, ChevronLeft, ChevronRight, Footprints, Layers, MessageSquareText, Mic, MoreHorizontal, Trash2, UserCog, UsersRound } from 'lucide-react'
 import { ETICHETTA_NUMERO } from './SedutaUI'
 import TestataFoto from './TestataFoto'
 import { BOTTONE_SU_FOTO, PILLOLA_SU_FOTO } from '../lib/testataFoto'
@@ -261,7 +261,8 @@ export function BarraFasce({ distribuzione }) {
  * (25/11/2026, il committente: «rimetti le note nei prossimi allenamenti»):
  * chiusa, la riga ne mostra l'inizio, così si vede chi l'ha già.
  */
-export function RigaProssimo({ giorno, mese, settimana, titolo, categoria, colore, dettaglio, onApri, onRimuovi,
+// `onSposta` (26/11/2026): il coach sposta la data, §9-sposta-coach.
+export function RigaProssimo({ giorno, mese, settimana, titolo, categoria, colore, dettaglio, onApri, onRimuovi, onSposta,
   anteprimaNota, vocale = false, notaAperta = false, onNota, children }) {
   const conNota = !!anteprimaNota || vocale
   return (
@@ -287,13 +288,19 @@ export function RigaProssimo({ giorno, mese, settimana, titolo, categoria, color
               </span>
             )}
           </span>
-          {!onRimuovi && !onNota && <ChevronRight size={17} className="shrink-0 text-muted" aria-hidden="true" />}
+          {!onRimuovi && !onNota && !onSposta && <ChevronRight size={17} className="shrink-0 text-muted" aria-hidden="true" />}
         </button>
         {onNota && (
           <button type="button" onClick={onNota} aria-expanded={notaAperta} aria-label="Nota"
             className={`relative shrink-0 w-11 grid place-items-center transition ${notaAperta ? 'text-white' : 'text-muted hover:text-white'}`}>
             <MessageSquareText size={18} aria-hidden="true" />
             {conNota && !notaAperta && <i className="absolute top-[calc(50%-12px)] right-2 w-2 h-2 rounded-full" style={{ background: colore }} aria-hidden="true" />}
+          </button>
+        )}
+        {onSposta && (
+          <button type="button" onClick={onSposta} aria-label="Sposta l'allenamento" title="Sposta a un altro giorno"
+            className="shrink-0 w-11 grid place-items-center text-muted hover:text-brand transition">
+            <CalendarClock size={17} aria-hidden="true" />
           </button>
         )}
         {onRimuovi && (

@@ -162,3 +162,22 @@ describe('CalendarioAtleta · attività Garmin libere', () => {
     expect(screen.queryByText('Nessun allenamento')).not.toBeInTheDocument()
   })
 })
+
+// Il coach sposta dalla scheda atleta (26/11/2026): ogni riga ha «Sposta», e
+// dopo lo spostamento il calendario va dove l'allenamento è finito.
+describe('CalendarioAtleta · sposta', () => {
+  it('«Sposta» passa la riga del giorno', async () => {
+    const onSposta = vi.fn()
+    await monta({ onSposta })
+    await userEvent.click(cella(addDays(inizio, 1)))
+    await userEvent.click(screen.getByRole('button', { name: 'Sposta Long Run a un altro giorno' }))
+    expect(onSposta).toHaveBeenCalledWith(expect.objectContaining({ id: 'w2', aw_id: 'aw2' }))
+  })
+
+  it('giornoDaMostrare in un altro mese porta il calendario lì', async () => {
+    const { rerender } = render(<CalendarioAtleta assegnazioni={assegnazioni} onApri={vi.fn()} onAssegna={vi.fn()} />)
+    await apri()
+    rerender(<CalendarioAtleta assegnazioni={assegnazioni} onApri={vi.fn()} onAssegna={vi.fn()} giornoDaMostrare={chiave(addMonths(inizio, 1))} />)
+    expect(await screen.findByText('Mese dopo')).toBeInTheDocument()
+  })
+})

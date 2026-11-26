@@ -9,7 +9,7 @@ import { supabase } from '../supabaseClient'
 import { leggiGiornate, oggiItalia } from '../lib/recuperoGarmin'
 import { useScarpaCompletamento } from '../useScarpaCompletamento'
 import { useFunzione } from '../useFunzione'
-import { ChevronRight, Layers, User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, FolderArchive, Copy, Activity, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
+import { CalendarClock, ChevronRight, Layers, User, Upload, Trash2, AlertTriangle, Plus, Edit, X, Download, Dumbbell, Search, CheckCircle2, Circle, Trophy, FolderArchive, Copy, Activity, Mic, Check, Eye, PauseCircle, PlayCircle, ChartNoAxesColumn } from 'lucide-react'
 import { vibraSuccesso } from '../lib/aptica'
 import { format, parseISO, differenceInYears, isBefore, startOfDay, isValid, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -56,6 +56,8 @@ import { partiRipetuta, etichettaParte } from '../lib/ripetute'
 import { giriForTime } from '../lib/incremento'
 import { testoBox } from '../lib/esercizi'
 import { segnalaMomentoNotifiche } from '../lib/permessoNotifiche'
+import FoglioSposta from '../components/FoglioSposta'
+import { spostaDalCoach, daAvvisare, avvisaAtletiSpostamento } from '../lib/spostaAllenamento'
 
 const getRpeColorText = (val) => {
   if (val <= 3) return 'text-green-500';
@@ -121,6 +123,11 @@ export default function AthleteDetail() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [socialModalType, setSocialModalType] = useState(null)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
+  // Il coach sposta (26/11/2026, §9-sposta-coach): `{ aw, workoutId, titolo,
+  // assegnazioni, dataWorkout }`. Si apre subito con la sola assegnazione
+  // dell'atleta; le altre della seduta arrivano dopo (e con loro «Tutti»).
+  const [spostando, setSpostando] = useState(null)
+  const [giornoDaMostrare, setGiornoDaMostrare] = useState(null)
   // Il giorno da cui parte la finestra Assegna: quello scelto nel calendario,
   // altrimenti oggi (null).
   const [dataAssegnazione, setDataAssegnazione] = useState(null)
@@ -855,6 +862,36 @@ export default function AthleteDetail() {
   const pScarpe = scarpe && (
     <Suspense fallback={null}><CardProfiloScarpe scarpe={scarpe} /></Suspense>
   )
+  // ⚠️ Solo chi programma, e mai sugli allenamenti liberi (quelli hanno il loro «Modifica»).
+  const puoSpostareQui = role !== 'athlete' && !isOwnProfile
+  const spostabile = (sections) => puoSpostareQui && sections?.isAutonomous !== true
+  const apriSposta = (aw, workoutId, titolo) => {
+    setSpostando({ aw, workoutId, titolo, assegnazioni: [aw], dataWorkout: aw.completed_date })
+    Promise.all([
+      supabase.from('athlete_workouts').select('id, status, completed_date').eq('workout_id', workoutId),
+      supabase.from('workouts').select('date').eq('id', workoutId).maybeSingle(),
+    ]).then(([tutte, w]) => {
+      if (tutte.error || w.error || !tutte.data?.length) return
+      setSpostando(s => s && s.aw.id === aw.id
+        ? { ...s, assegnazioni: tutte.data, dataWorkout: w.data?.date || s.dataWorkout } : s)
+    }).catch(() => {})
+  }
+  const confermaSposta = async (data, portata) => {
+    const { error, spostati } = await spostaDalCoach(supabase, {
+      portata, aw: spostando.aw, assegnazioni: spostando.assegnazioni,
+      dataWorkout: spostando.dataWorkout, workoutId: spostando.workoutId, nuovaData: data,
+    })
+    if (error) {
+      setAlertInfo({ title: 'Errore', message: "Non sono riuscito a spostare l'allenamento. Controlla la connessione e riprova.", type: 'error' })
+      return false
+    }
+    setSpostando(null)
+    vibraSuccesso()
+    if (daAvvisare({ nuovaData: data })) avvisaAtletiSpostamento(supabase, { awIds: spostati, data })
+    setGiornoDaMostrare(data)
+    fetchAthleteData(true)
+    return true
+  }
   const pOggi = (
     <>
       {todayWorkoutsList.length > 0 && (
@@ -873,6 +910,7 @@ export default function AthleteDetail() {
               onUploadVoiceNote={uploadVoiceNote}
               onDeleteVoiceNote={deleteVoiceNote}
               onEditAutonomous={openEditAutonomous}
+              onSposta={spostabile(entry.workouts?.sections) ? () => apriSposta(entry, entry.workouts.id, entry.workouts.title) : null}
             />
           ))}
         </section>
@@ -900,7 +938,8 @@ export default function AthleteDetail() {
                 categoria={corsia(cat).etichetta} colore={coloreCategoria(cat)}
                 dettaglio={entry.status === 'completed' ? 'fatto' : null}
                 onApri={() => navigate(`/workout/${entry.workouts.id}?athlete_id=${id}`)}
-                onRimuovi={role !== 'athlete' || auto ? () => requestRemoveWorkout(entry.id) : null} />
+                onRimuovi={role !== 'athlete' || auto ? () => requestRemoveWorkout(entry.id) : null}
+                onSposta={spostabile(entry.workouts?.sections) ? () => apriSposta(entry, entry.workouts.id, entry.workouts.title) : null} />
             )
           })}
         </ul>
@@ -916,6 +955,11 @@ export default function AthleteDetail() {
       assegnazioni={workouts}
       onApri={(workoutId) => navigate(`/workout/${workoutId}?athlete_id=${id}`)}
       onAssegna={(data) => { setDataAssegnazione(data); setAssignModalOpen(true) }}
+      onSposta={puoSpostareQui ? (w) => {
+        if (!spostabile(w.sections)) return
+        apriSposta({ id: w.aw_id, status: w.status, completed_date: w.date }, w.id, w.title)
+      } : undefined}
+      giornoDaMostrare={giornoDaMostrare}
       leggiLibere={leggiLibere}
       onAbbina={abbinaAttivita}
     />
@@ -1130,6 +1174,13 @@ export default function AthleteDetail() {
       {foglioCoachAperto && staffCoach && (
         <FoglioCoach membri={staffCoach} correnti={coachDi}
           onScegli={sceltaCoach} onChiudi={() => setFoglioCoachAperto(false)} />
+      )}
+
+      {spostando && (
+        <FoglioSposta modo="coach" titolo={spostando.titolo} dataAttuale={spostando.aw.completed_date}
+          nomeAtleta={athlete?.name || 'Atleta'} assegnazioni={spostando.assegnazioni}
+          dataWorkout={spostando.dataWorkout} portataIniziale="solo"
+          onChiudi={() => setSpostando(null)} onConferma={confermaSposta} />
       )}
 
       {assignModalOpen && createPortal(
@@ -1379,7 +1430,7 @@ function SocialLinkModal({ athlete, type, onClose, onSaved }) {
   )
 }
 
-function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous, onUploadVoiceNote, onDeleteVoiceNote }) {
+function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove, navigate, athleteId, role, onEditAutonomous, onUploadVoiceNote, onDeleteVoiceNote, onSposta }) {
   const parsed = parseNotesAndRpe(entry.notes)
   const [note, setNote] = useState(parsed.text)
   const [saving, setSaving] = useState(false)
@@ -1439,6 +1490,13 @@ function TodayAthleteWorkoutCard({ entry, onToggleStatus, onUpdateNote, onRemove
                 onClick={(e) => { e.stopPropagation(); onEditAutonomous(entry) }}
                 className="-my-2 w-9 h-9 grid place-items-center rounded-full text-muted hover:text-brand transition">
                 <Edit size={17} />
+              </button>
+            )}
+            {onSposta && (
+              <button aria-label="Sposta l'allenamento" title="Sposta a un altro giorno"
+                onClick={(e) => { e.stopPropagation(); onSposta() }}
+                className="-my-2 w-9 h-9 grid place-items-center rounded-full text-muted hover:text-brand transition">
+                <CalendarClock size={17} />
               </button>
             )}
             <button aria-label="Elimina l'allenamento" title={isAuto ? 'Elimina allenamento libero' : 'Rimuovi assegnazione'}

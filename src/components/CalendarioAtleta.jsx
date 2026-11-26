@@ -49,13 +49,23 @@ const FoglioAttivitaGarmin = lazy(() => import('./FoglioAttivitaGarmin'))
  * file resta senza `supabase`. «Abbina a…» lo scrive `onAbbina(attivita, awId)`
  * della scheda, che ricarica lo storico; qui si rilegge il mese.
  */
-export default function CalendarioAtleta({ nome, assegnazioni = [], onApri, onAssegna, leggiLibere, onAbbina }) {
+// `onSposta(w)` (26/11/2026): il coach sposta la riga (§9-sposta-coach).
+// `giornoDaMostrare` ('yyyy-MM-dd'): quando cambia, il calendario va a quel giorno
+// — dopo uno spostamento si vede dove è finito, come nella pagina Calendario.
+export default function CalendarioAtleta({ nome, assegnazioni = [], onApri, onAssegna, leggiLibere, onAbbina, onSposta, giornoDaMostrare }) {
   const [aperto, setAperto] = useState(false)
   const [mese, setMese] = useState(() => new Date())
   const [giornoScelto, setGiornoScelto] = useState(() => new Date())
   const [libere, setLibere] = useState([])
   const [attivitaAperta, setAttivitaAperta] = useState(null)
   const [rilettura, setRilettura] = useState(0)
+
+  useEffect(() => {
+    const d = dataValida(giornoDaMostrare)
+    if (!d) return
+    setMese(d)
+    setGiornoScelto(d)
+  }, [giornoDaMostrare])
 
   useEffect(() => {
     if (!aperto || !leggiLibere) return
@@ -145,6 +155,7 @@ export default function CalendarioAtleta({ nome, assegnazioni = [], onApri, onAs
                 // Una gara non ha «da fare» né «fatto»: resta bianca (eEvento).
                 stato={eEvento(w) ? null : (w.status === 'completed' ? 'fatto' : 'da fare')}
                 onApri={() => onApri(w.id)}
+                onSposta={onSposta ? () => onSposta(w) : undefined}
               />
             )
           })}
