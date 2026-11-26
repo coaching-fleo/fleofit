@@ -326,6 +326,22 @@ gente che non ha modo di verificare niente. Perciò:
    non si legge — cosa di cui ci si accorge dopo aver pubblicato. Sullo sticker
    non si applica, perché è l'atleta a decidere dove appoggiarlo.
 
+### Logo in cima e anteprima che non taglia (26/11/2026)
+Richiesta del committente: «PUSHFIT bello grande in cima» e «se il workout è
+troppo lungo viene tagliato in fondo».
+- Il logo è passato dalla firma da 13px in fondo a `<Logo altezza={ALTEZZA_LOGO} />`
+  (34px, ≈273px di larghezza) **in cima**, in tutti e due i formati.
+- Il taglio era dell'**anteprima**: la cornice era fissa a 9:16 con
+  `overflow: hidden`, e uno sticker più alto di 640 usciva sopra e sotto. Ora
+  `FoglioStoria` misura lo sticker vero (con un ResizeObserver) e la cornice
+  cresce con lui. Il PNG già prendeva l'altezza da `offsetHeight`.
+- 🔴 **Niente più «+N esercizi»** (stesso giorno): «vorrei vederlo sempre
+  tutto, piuttosto lo facciamo molto lungo». Tolti `MASSIMO_RIGHE` e
+  `MASSIMO_RIGHE_NOTA`: l'elenco e le note del libero escono interi, lo
+  sticker si allunga, la storia con sfondo si rimpicciolisce. I nomi lunghi
+  vanno a capo invece di finire in «…». Questo supera quanto scritto sopra su
+  `MASSIMO_RIGHE`.
+
 ### 🔴 html-to-image non si può provare da un browser incorporato
 Verificato il 01/09: nella preview integrata `toPng` **resta appeso** anche su un
 `div` da 40px — il suo `<img src="data:image/svg+xml…">` interno non emette mai

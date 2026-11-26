@@ -79,6 +79,12 @@ const BORDO_STICKER = { alto: 44, lato: 30, basso: 40 }
  */
 const RESPIRO_ALTO = 44
 
+/**
+ * L'altezza delle lettere del logo in cima: largo ×8,03, quindi ≈273px sui
+ * 300 utili dello sticker.
+ */
+const ALTEZZA_LOGO = 34
+
 // La stessa pila di font dell'app (src/index.css): Inter era dichiarato ma non
 // caricato da nessuna parte, quindi su iOS il testo è San Francisco. Scrivere
 // qui un font diverso darebbe una grafica che non somiglia all'app.
@@ -95,7 +101,7 @@ const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Robo
 // il nome dell'esercizio prende il corpo più grande della pagina dopo il
 // titolo, le specifiche stanno in colonna a destra invece che in coda al nome
 // (una riga sola da leggere invece di due informazioni da separare a occhio),
-// e l'elenco si ferma a `MASSIMO_RIGHE` dicendolo, invece di rimpicciolirsi.
+// e l'elenco è sempre intero: lo sticker si allunga (dal 26/11/2026).
 
 function RigaBlocco({ titolo, dettaglio, colore, primo }) {
   return (
@@ -110,8 +116,7 @@ function RigaBlocco({ titolo, dettaglio, colore, primo }) {
       {dettaglio && (
         <span style={{
           fontSize: '12.5px', fontWeight: 700, letterSpacing: '0.02em',
-          color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap',
-          overflow: 'hidden', textOverflow: 'ellipsis',
+          color: 'rgba(255,255,255,0.5)', minWidth: 0, wordBreak: 'break-word',
         }}>{dettaglio}</span>
       )}
     </div>
@@ -121,11 +126,11 @@ function RigaBlocco({ titolo, dettaglio, colore, primo }) {
 function RigaEsercizio({ nome, specifiche }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginTop: '2px' }}>
-      {/* ⚠️ Il nome cede per primo, non le specifiche: «Sled Push» troncato in
-          «Sled Pu…» resta riconoscibile, «125 kg» troncato in «125 k» no. */}
+      {/* Il nome va a capo invece di troncarsi (dal 26/11/2026: si deve
+          leggere tutto); le specifiche restano su una riga, a destra. */}
       <span style={{
         fontSize: '19px', fontWeight: 700, color: '#fff', letterSpacing: '-0.25px',
-        flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        lineHeight: 1.2, flex: 1, minWidth: 0, wordBreak: 'break-word',
       }}>{nome}</span>
       {specifiche && (
         <span style={{
@@ -159,14 +164,7 @@ function Elenco({ righe, colore }) {
             }}>{r.testo}</div>
           )
         }
-        // «+4 esercizi»: una lista troncata che lo dichiara è leggibile, una
-        // lista intera in corpo 9 non lo è.
-        return (
-          <div key={i} style={{
-            fontSize: '14px', fontWeight: 700, marginTop: '12px',
-            letterSpacing: '0.02em', color: 'rgba(255,255,255,0.5)',
-          }}>{r.testo}</div>
-        )
+        return null
       })}
     </div>
   )
@@ -207,13 +205,21 @@ function Cella({ cella }) {
  * ⚠️ È un componente e non due copie perché lo sticker e la storia con lo
  * sfondo devono dire **la stessa cosa**: cambia la cornice, non il contenuto.
  */
-function Contenuto({ recap, colore, sfondo }) {
+function Contenuto({ recap, colore }) {
   // Una gara, o un libero senza note: non c'è niente da elencare, e il titolo
   // diventa il contenuto invece di essere l'etichetta di ciò che sta sotto.
   const solaIntestazione = recap.righe.length === 0
 
   return (
     <>
+      {/* Il marchio in cima e GRANDE (richiesta del committente, 26/11/2026):
+          la grafica verrà guardata piccola sopra la storia di qualcun altro, e
+          una firma da 13px in fondo non la leggeva nessuno. È anche l'unica
+          ragione per cui questa grafica conviene al coach. */}
+      <div style={{ marginBottom: '18px', lineHeight: 0 }}>
+        <Logo altezza={ALTEZZA_LOGO} />
+      </div>
+
       {/* L'occhiello: la corsia e il giorno in cui l'allenamento è stato
           fatto. Il pallino è il colore della categoria — la stessa Regola
           della Corsia di tutta l'app, che qui esce dall'app insieme a lei. */}
@@ -259,12 +265,6 @@ function Contenuto({ recap, colore, sfondo }) {
         </div>
       )}
 
-      {/* Il marchio, come la firma di Strava in fondo alla sua. È anche
-          l'unica ragione per cui questa grafica conviene al coach. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginTop: '20px' }}>
-        <Logo altezza={13} />
-        <span style={{ flex: 1, height: '1px', background: sfondo ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.22)' }} />
-      </div>
     </>
   )
 }
@@ -312,7 +312,7 @@ export function GraficaStoria({ recap, sfondo = false, nodoRef }) {
       // punto più chiaro dello scatto.
       textShadow: '0 1px 4px rgba(0,0,0,0.55)',
     }}>
-      <Contenuto recap={recap} colore={colore} sfondo={false} />
+      <Contenuto recap={recap} colore={colore} />
     </div>
   )
 }
@@ -370,7 +370,7 @@ function StoriaConSfondo({ recap, colore, nodoRef }) {
         transform: scala < 1 ? `scale(${scala})` : undefined,
         transformOrigin: 'bottom center',
       }}>
-        <Contenuto recap={recap} colore={colore} sfondo />
+        <Contenuto recap={recap} colore={colore} />
       </div>
     </div>
   )
@@ -386,7 +386,7 @@ function StoriaConSfondo({ recap, colore, nodoRef }) {
  * basso o la lascia minuscola. Si misura, come l'altezza della navbar
  * (CLAUDE.md §9-quaterdecies).
  */
-function useScalaAnteprima(riferimento) {
+function useScalaAnteprima(riferimento, altezza) {
   const [scala, setScala] = useState(0.5)
 
   useLayoutEffect(() => {
@@ -395,7 +395,7 @@ function useScalaAnteprima(riferimento) {
     const misura = () => {
       const r = nodo.getBoundingClientRect()
       if (r.width === 0 || r.height === 0) return
-      setScala(Math.min(r.width / LARGHEZZA_STORIA, r.height / ALTEZZA_STORIA))
+      setScala(Math.min(r.width / LARGHEZZA_STORIA, r.height / altezza))
     }
     misura()
     // ⚠️ E una seconda volta al fotogramma dopo: al montaggio il foglio sta
@@ -413,7 +413,7 @@ function useScalaAnteprima(riferimento) {
     const osservatore = new ResizeObserver(misura)
     osservatore.observe(nodo)
     return () => { cancelAnimationFrame(fotogramma); osservatore.disconnect() }
-  }, [riferimento])
+  }, [riferimento, altezza])
 
   return scala
 }
@@ -442,7 +442,27 @@ function Segmento({ attivo, onClick, children }) {
 export function FoglioStoria({ recap, sfondo, onSfondo, onChiudi, onSalva, onCondividi, occupato }) {
   const { chiudi, maniglia, stileFoglio, stileVelo, classeFoglio, classeVelo } = useBottomSheet(onChiudi)
   const riquadro = useRef(null)
-  const scala = useScalaAnteprima(riquadro)
+  // 🔴 La cornice è 9:16, ma uno sticker lungo (un Hyrox da dodici righe) è
+  // più alto di 640: con la cornice fissa l'anteprima lo tagliava sopra e
+  // sotto, e sembrava che l'immagine uscisse senza la fine. Si misura lo
+  // sticker vero e la cornice cresce con lui; il file esportato ha già la sua
+  // altezza (`offsetHeight` in WorkoutDetail).
+  const grafica = useRef(null)
+  const [altezzaGrafica, setAltezzaGrafica] = useState(ALTEZZA_STORIA)
+  useLayoutEffect(() => {
+    const nodo = grafica.current
+    if (!nodo) return
+    const misura = () => {
+      const h = nodo.offsetHeight
+      setAltezzaGrafica(h ? Math.max(ALTEZZA_STORIA, h) : ALTEZZA_STORIA)
+    }
+    misura()
+    if (typeof ResizeObserver === 'undefined') return
+    const osservatore = new ResizeObserver(misura)
+    osservatore.observe(nodo)
+    return () => osservatore.disconnect()
+  }, [recap, sfondo])
+  const scala = useScalaAnteprima(riquadro, altezzaGrafica)
 
   const cambiaSfondo = (valore) => { if (valore !== sfondo) vibraScelta(); onSfondo(valore) }
 
@@ -474,7 +494,7 @@ export function FoglioStoria({ recap, sfondo, onSfondo, onChiudi, onSalva, onCon
             nero, cioè proprio la cosa che non è. */}
         <div ref={riquadro} className="flex-1 min-h-0 flex items-center justify-center overflow-hidden">
           <div style={{
-            width: LARGHEZZA_STORIA * scala, height: ALTEZZA_STORIA * scala,
+            width: LARGHEZZA_STORIA * scala, height: altezzaGrafica * scala,
             borderRadius: 18 * scala + 6, overflow: 'hidden', position: 'relative',
             background: sfondo ? '#0B0B0B'
               : 'linear-gradient(160deg, #4a5361 0%, #2b3140 42%, #6b6255 100%)',
@@ -487,7 +507,7 @@ export function FoglioStoria({ recap, sfondo, onSfondo, onChiudi, onSalva, onCon
                 perché il riquadro non lo riempie più — con `top left` lo
                 sticker resterebbe appiccicato in cima con il vuoto sotto, che
                 è esattamente l'impressione sbagliata. */}
-            <div style={{ transform: `scale(${scala})`, transformOrigin: 'center' }}>
+            <div ref={grafica} style={{ transform: `scale(${scala})`, transformOrigin: 'center', flexShrink: 0 }}>
               <GraficaStoria recap={recap} sfondo={sfondo} />
             </div>
           </div>

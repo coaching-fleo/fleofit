@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { righeAllenamento, celleStoria, recapStoria, MASSIMO_RIGHE } from '../recapStoria'
+import { righeAllenamento, celleStoria, recapStoria } from '../recapStoria'
 import { parametriBlocco } from '../rigaBlocco'
 
 // Perché questo test esiste
@@ -90,58 +90,19 @@ describe('righeAllenamento — che cosa si è fatto', () => {
     expect(righe[3]).toMatchObject({ nome: 'Recupero', specifiche: '1 min' })
   })
 
-  it('si ferma a MASSIMO_RIGHE e dichiara quanti esercizi restano fuori', () => {
-    // 🔴 L'immagine verrà guardata piccola: poche righe in corpo grande, non
-    // tutte le righe in corpo 9. Una lista troncata che lo dice è leggibile.
-    const tanti = Array.from({ length: 12 }, (_, i) => ex(`Esercizio ${i}`, { reps: '10' }))
+  it('elenca SEMPRE tutto, senza «+N esercizi»', () => {
+    // 🔴 Decisione del committente (26/11/2026): «vorrei vederlo sempre
+    // tutto, piuttosto lo facciamo molto lungo». Lo sticker si allunga.
+    const tanti = Array.from({ length: 20 }, (_, i) => ex(`Esercizio ${i}`, { reps: '10' }))
     const righe = righeAllenamento({ sections: { category: 'Hyrox', blocks: [
       blocco('For Time', { rounds: '2' }, tanti),
       blocco('Cash Out', { rounds: '1' }, [ex('Rowing', { meters: '1000m' })]),
     ] } })
 
-    expect(righe.length).toBe(MASSIMO_RIGHE)
-    const coda = righe[righe.length - 1]
-    expect(coda.genere).toBe('altri')
-    // 13 esercizi in tutto: quelli che non ci stanno si dichiarano, non
-    // spariscono in silenzio.
-    const mostrati = righe.filter(r => r.genere === 'esercizio').length
-    expect(mostrati).toBeGreaterThan(0)
-    expect(coda.testo).toBe(`+${13 - mostrati} esercizi`)
-  })
-
-  it('non chiude mai l’elenco con un’intestazione orfana', () => {
-    // Un blocco nominato e poi tagliato promette un contenuto che non c'è: è
-    // peggio che non nominarlo affatto.
-    //
-    // ⚠️ Con blocchi da UN esercizio le righe si alternano b,e,b,e… quindi
-    // l'ultima riga che ci starebbe (indice MASSIMO_RIGHE − 2) è
-    // un'intestazione — ma solo se MASSIMO_RIGHE è pari. Con blocchi tutti
-    // uguali e più grandi il taglio cade su un esercizio e il test passa anche
-    // senza la potatura: verificato, la mutazione non cadeva. L'assunzione è
-    // scritta qui sotto perché se un giorno decade il test lo dica, invece di
-    // tornare verde per il motivo sbagliato.
-    expect(MASSIMO_RIGHE % 2).toBe(0)
-
-    const blocchi = Array.from({ length: MASSIMO_RIGHE }, (_, i) =>
-      blocco('For Time', { rounds: '1' }, [ex(`Ex ${i}`, { reps: '10' })]))
-    const righe = righeAllenamento({ sections: { category: 'Hyrox', blocks: blocchi } })
-
-    const vere = righe.filter(r => r.genere !== 'altri')
-    expect(vere[vere.length - 1].genere).toBe('esercizio')
-    const mostrati = vere.filter(r => r.genere === 'esercizio').length
-    expect(righe[righe.length - 1]).toMatchObject({
-      genere: 'altri', testo: `+${MASSIMO_RIGHE - mostrati} esercizi`,
-    })
-  })
-
-  it('il «+N» conta gli ESERCIZI rimasti fuori, non le righe', () => {
-    // Le intestazioni non sono cose che si fanno: sommarle darebbe un numero
-    // che non corrisponde a niente di contabile nella scheda.
-    const blocchi = Array.from({ length: 8 }, (_, i) =>
-      blocco('For Time', { rounds: '1' }, [ex(`Ex ${i}`, { reps: '10' }), ex(`Ex ${i}b`, { reps: '10' })]))
-    const righe = righeAllenamento({ sections: { category: 'Hyrox', blocks: blocchi } })
-    const mostrati = righe.filter(r => r.genere === 'esercizio').length
-    expect(righe[righe.length - 1].testo).toBe(`+${16 - mostrati} esercizi`)
+    expect(righe.some(r => r.genere === 'altri')).toBe(false)
+    expect(righe.filter(r => r.genere === 'esercizio').length).toBe(21)
+    expect(righe.filter(r => r.genere === 'blocco').length).toBe(2)
+    expect(righe[righe.length - 1]).toMatchObject({ nome: 'Rowing' })
   })
 })
 

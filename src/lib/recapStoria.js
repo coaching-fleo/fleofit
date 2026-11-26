@@ -11,10 +11,8 @@
 // cosa che qualcuno voglia davvero sapere guardando la storia di qualcun altro.
 //
 // ⚠️ Il vincolo che governa ogni scelta qui dentro: **l'immagine verrà guardata
-// piccola.** Quindi poche righe e corpo grande, non tutte le righe e corpo
-// piccolo. Da qui `MASSIMO_RIGHE` e il «+N esercizi» che chiude l'elenco
-// quando non ci sta: una lista troncata che lo dichiara è leggibile, una lista
-// intera in corpo 9 non lo è.
+// piccola.** Quindi corpo grande. L'elenco però è sempre INTERO (dal
+// 26/11/2026): lo sticker si allunga quanto serve, mai «+N esercizi».
 //
 // 🔴 La regola che governa i numeri: **niente valori inventati.**
 // La durata è una STIMA (src/lib/stimaWorkout.js) e lo deve dire; l'RPE è
@@ -37,19 +35,12 @@ import { riepilogoWorkout, minutiStimati, decimale } from './stimaWorkout'
 import { gruppiPerElenco, riepilogoGym } from './gym'
 import { partiRipetuta, etichettaParte } from './ripetute'
 
-/**
- * Quante righe l'elenco può occupare prima di dover dire «e altri N».
- *
- * ⚠️ È una misura, non un gusto: è quanto entra sopra le celle dei numeri
- * mantenendo il corpo a cui un esercizio si legge ancora quando la storia è
- * vista in piccolo. Alzarlo senza rimpicciolire il testo fa uscire l'elenco
- * dal riquadro; alzarlo rimpicciolendo il testo disfa il motivo per cui
- * l'elenco esiste.
- */
-export const MASSIMO_RIGHE = 12
-
-/** Quante righe di note stanno in un allenamento libero, che non ha esercizi. */
-export const MASSIMO_RIGHE_NOTA = 5
+// 🔴 NESSUN TETTO di righe (decisione del committente, 26/11/2026). Fino a
+// quel giorno l'elenco si fermava a 12 righe e chiudeva con «+N esercizi»; il
+// committente non lo voleva: «vorrei vederlo sempre tutto, piuttosto lo
+// facciamo molto lungo». Lo sticker si ritaglia sul contenuto, quindi
+// cresce; la storia con lo sfondo (9:16 fisso) si rimpicciolisce. Non
+// rimettere un «+N».
 
 const isErgo = (nome) => ERGOMETERS.includes(nome)
 
@@ -119,41 +110,12 @@ const gruppiCorsa = (steps = []) => steps.map(step => {
   }
 })
 
-/**
- * I gruppi appiattiti in righe, entro il budget.
- *
- * ⚠️ Un'intestazione **orfana** non deve mai chiudere l'elenco: «EMOM · ogni
- * 1:00 × 24» seguito da niente promette un contenuto che è stato tagliato, ed
- * è peggio che non nominare affatto quel blocco.
- *
- * ⚠️ Il «+N» conta gli **esercizi** rimasti fuori, non le righe: le
- * intestazioni non sono cose che si fanno, e sommarle darebbe un numero che
- * non corrisponde a niente di contabile nella scheda.
- */
-const impagina = (gruppi, massimo = MASSIMO_RIGHE) => {
-  const tutte = []
-  for (const g of gruppi) {
-    if (g.intestazione) tutte.push(g.intestazione)
-    tutte.push(...g.esercizi)
-  }
-  if (tutte.length <= massimo) return tutte
+/** I gruppi appiattiti in righe: tutte, intestazione e poi i suoi esercizi. */
+const impagina = (gruppi) => gruppi.flatMap(g => g.intestazione ? [g.intestazione, ...g.esercizi] : g.esercizi)
 
-  const totale = tutte.filter(r => r.genere === 'esercizio').length
-  const tenute = tutte.slice(0, massimo - 1)
-  while (tenute.length > 0 && tenute[tenute.length - 1].genere === 'blocco') tenute.pop()
-
-  const esclusi = totale - tenute.filter(r => r.genere === 'esercizio').length
-  if (esclusi <= 0) return tenute
-  return [...tenute, {
-    genere: 'altri',
-    testo: `+${esclusi} ${esclusi === 1 ? 'esercizio' : 'esercizi'}`,
-  }]
-}
-
-/** Le prime righe di un testo libero, senza righe vuote in mezzo. */
+/** Le righe di un testo libero, tutte, senza righe vuote in mezzo. */
 const righeNota = (testo) => String(testo || '')
   .split('\n').map(r => r.trim()).filter(Boolean)
-  .slice(0, MASSIMO_RIGHE_NOTA)
   .map(r => ({ genere: 'testo', testo: r }))
 
 /**
