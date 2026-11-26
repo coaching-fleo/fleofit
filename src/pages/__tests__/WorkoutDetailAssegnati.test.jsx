@@ -1,16 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 
-// Perché questi test esistono (25/11/2026)
+// Perché questi test esistono (25/11/2026, rivisti il 26/11/2026)
 // ────────────────────────────────────────
 // «Assegnato a» con trenta atleti era una colonna lunga quanto la scheda.
-// Oltre sei righe l'elenco scorre dentro la sua card e sopra compare la
-// ricerca per nome. Le regressioni da prendere:
-//  1. fino a sei la ricerca NON c'è (sarebbe rumore su una lista corta);
-//  2. oltre sei c'è, e filtra davvero, anche a parole invertite;
-//  3. una ricerca senza risultati lo dice, invece di lasciare una card vuota.
+// Oltre sei atleti la scheda ne mostra cinque e sotto c'è «Vedi tutti gli N
+// atleti», che apre il foglio con l'elenco intero e la ricerca. Da prendere:
+//  1. fino a sei si vedono tutti, senza tasto né ricerca;
+//  2. oltre sei se ne vedono cinque, e il tasto c'è;
+//  3. il tasto apre il foglio con tutti, e la ricerca lì filtra (anche a
+//     parole invertite) o dice che non c'è nessuno;
+//  4. l'atleta aperto in quel momento resta visibile anche se è oltre i cinque.
 
 const ctrl = await vi.hoisted(async () => ({ stato: {} }))
 
@@ -44,9 +46,9 @@ const assegnazioni = (n) => NOMI.slice(0, n).map(([name, surname], i) => ({
   athletes: { id: `a${i}`, name, surname, photo_url: null },
 }))
 
-function apri() {
+function apri(indirizzo = '/workout/w1') {
   return render(
-    <MemoryRouter initialEntries={['/workout/w1']}>
+    <MemoryRouter initialEntries={[indirizzo]}>
       <AuthContext.Provider value={{ user: { id: 'coach', email: 'c@f.it', user_metadata: {} }, role: 'admin' }}>
         <Routes><Route path="/workout/:id" element={<WorkoutDetail />} /></Routes>
       </AuthContext.Provider>
@@ -55,33 +57,58 @@ function apri() {
 }
 
 const campo = () => screen.queryByRole('searchbox', { name: 'Cerca fra gli assegnati' })
+const tasto = () => screen.queryByRole('button', { name: /Vedi tutti/ })
 
 beforeEach(() => { ctrl.stato = {} })
 
 describe('«Assegnato a» nella scheda workout', () => {
-  it('fino a sei atleti non mostra la ricerca', async () => {
+  it('fino a sei atleti li mostra tutti, senza tasto né ricerca', async () => {
     ctrl.stato.assegnazioni = assegnazioni(6)
     apri()
     await waitFor(() => expect(screen.getByText('6 atleti')).toBeInTheDocument())
+    expect(screen.getByText('Anna Gallo')).toBeInTheDocument()
+    expect(tasto()).toBeNull()
     expect(campo()).toBeNull()
   })
 
-  it('oltre sei mostra la ricerca, e la ricerca filtra', async () => {
+  it('oltre sei ne mostra cinque e il tasto «Vedi tutti»', async () => {
     ctrl.stato.assegnazioni = assegnazioni(8)
     apri()
-    await waitFor(() => expect(campo()).toBeInTheDocument())
-    expect(screen.getByText('Giulia Ricci')).toBeInTheDocument()
+    await waitFor(() => expect(tasto()).toBeInTheDocument())
+    expect(tasto()).toHaveTextContent('Vedi tutti gli atleti (8)')
+    expect(screen.getByText('Paolo Neri')).toBeInTheDocument()
+    expect(screen.queryByText('Anna Gallo')).toBeNull()
+    expect(screen.queryByText('Giulia Ricci')).toBeNull()
+    expect(campo()).toBeNull()
+  })
+
+  it('il tasto apre il foglio con tutti, e la ricerca filtra', async () => {
+    ctrl.stato.assegnazioni = assegnazioni(8)
+    apri()
+    await waitFor(() => expect(tasto()).toBeInTheDocument())
+    await userEvent.click(tasto())
+    const foglio = screen.getByRole('dialog', { name: 'Tutti gli assegnati' })
+    expect(within(foglio).getByText('Giulia Ricci')).toBeInTheDocument()
 
     await userEvent.type(campo(), 'rossi marco')
-    expect(screen.getByText('Marco Rossi')).toBeInTheDocument()
-    expect(screen.queryByText('Giulia Ricci')).toBeNull()
+    expect(within(foglio).getByText('Marco Rossi')).toBeInTheDocument()
+    expect(within(foglio).queryByText('Giulia Ricci')).toBeNull()
   })
 
   it('una ricerca senza risultati lo dice', async () => {
     ctrl.stato.assegnazioni = assegnazioni(8)
     apri()
-    await waitFor(() => expect(campo()).toBeInTheDocument())
+    await waitFor(() => expect(tasto()).toBeInTheDocument())
+    await userEvent.click(tasto())
     await userEvent.type(campo(), 'zzz')
     expect(screen.getByText('Nessun atleta con questo nome.')).toBeInTheDocument()
+  })
+
+  it('l\'atleta aperto resta visibile anche oltre i primi cinque', async () => {
+    ctrl.stato.assegnazioni = assegnazioni(8)
+    apri('/workout/w1?athlete_id=a7')
+    await waitFor(() => expect(tasto()).toBeInTheDocument())
+    expect(screen.getAllByText('Giulia Ricci').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Paolo Neri')).toBeNull()
   })
 })

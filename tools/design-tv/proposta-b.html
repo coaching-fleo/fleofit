@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV · Proposta B · Lavagna e cronometro</title>
+<link rel="stylesheet" href="comune.css">
+<style>
+/* B · LAVAGNA E CRONOMETRO. La lavagna prende tutta l'altezza a sinistra,
+   il cronometro sta in una colonna a destra, come il timer appeso accanto
+   alla lavagna del box. */
+#tela{padding:40px 44px 44px 52px;display:grid;grid-template-columns:minmax(0,1fr) 540px;gap:36px}
+
+.sx{display:flex;flex-direction:column;gap:26px;min-height:0;min-width:0}
+.testa{display:flex;align-items:baseline;gap:22px;height:54px;flex-shrink:0}
+.testa h1{font-size:48px;font-weight:900;letter-spacing:-.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.testa small{font-size:30px;font-weight:700;white-space:nowrap}
+.lavagna{flex:1}
+
+.crono{border-radius:44px;background:var(--carta);box-shadow:var(--ombra);border:3px solid color-mix(in srgb,var(--c) 55%,transparent);
+  display:flex;flex-direction:column;padding:36px 40px 40px;position:relative;overflow:hidden}
+.crono .riempi{position:absolute;left:0;right:0;bottom:0;background:var(--c);opacity:.13;transition:height 1s linear}
+.crono .su{display:flex;align-items:center;justify-content:space-between;position:relative}
+.crono .su .controlli span{width:60px;height:60px;font-size:26px}
+.crono .fase{position:relative;margin-top:auto;font-size:40px;font-weight:800;color:var(--c);line-height:1.15}
+.crono .pausa{display:inline-flex;align-items:center;gap:10px;margin-top:12px;font-size:26px;font-weight:800;padding:6px 18px;border-radius:99px;background:rgba(255,255,255,.1);color:#e5e7eb}
+.crono .cifre{position:relative;font-size:200px;font-weight:900;letter-spacing:-.06em;line-height:.9;margin:10px 0 6px -8px}
+.crono .cifre.ferme{color:rgba(255,255,255,.4)}
+.crono .compito{position:relative;font-size:58px;font-weight:900;letter-spacing:-.03em;line-height:1.05}
+.crono .spec{position:relative;margin-top:8px;font-size:38px;font-weight:700;color:var(--testo2)}
+.crono .poi{position:relative;margin-top:auto;padding-top:26px;border-top:2px solid rgba(255,255,255,.1);font-size:32px;font-weight:700;color:#d1d5db;line-height:1.2}
+.crono .poi b{display:block;font-size:26px;color:var(--muted);margin-bottom:6px}
+</style>
+</head>
+<body>
+<div id="tela"></div>
+<script src="comune.js"></script>
+<script>
+window.disegna = (s) => {
+  const { w, passo } = s
+  const f = testoFase(s)
+  return `
+  <div class="sx">
+    <div class="testa"><h1>${w.titolo}</h1><small style="color:${coloreIntensita(w.intensita)}">Intensità ${w.intensita}/10</small></div>
+    <div class="lavagna" id="lavagna"></div>
+  </div>
+  <div class="crono" style="--c:${f.colore}">
+    <span class="riempi" style="height:${(s.avanzamento ?? 0) * 100}%"></span>
+    <div class="su"><img src="logo.png" alt="PUSHFIT" height="32">
+      <div class="controlli"><span class="audio">${icona('audio')}</span><span>${icona('ruota')}</span></div></div>
+    <div class="fase">${f.testo}${s.inPausa ? `<br><span class="pausa">${icona('pausa')} In pausa</span>` : ''}</div>
+    <div class="cifre num ${s.inPausa ? 'ferme' : ''}">${passo.fine ? '✓' : s.tempo}</div>
+    <div class="compito">${passo.compito}</div>
+    ${passo.spec ? `<div class="spec">${passo.spec}</div>` : ''}
+    ${passo.poi ? `<div class="poi"><b>Poi</b>${passo.poi}</div>` : '<div class="poi" style="border:0"></div>'}
+  </div>`
+}
+window.dopo = () => lavagna(document.getElementById('lavagna'), TV.stato(), 3)
+TV.avvia()
+</script>
+</body>
+</html>

@@ -105,7 +105,8 @@ import {
 // visto in scrittura, e due copie divergerebbero al primo ritocco.
 import { RiepilogoWorkout, BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../components/CreaWorkoutUI'
 import { partiRipetuta, etichettaParte } from '../lib/ripetute'
-import { filtraPerNome, filtraAssegnazioniPerNome, primaIo } from '../lib/rigaAtleta'
+import { filtraPerNome, primaIo } from '../lib/rigaAtleta'
+import FoglioAssegnati from '../components/FoglioAssegnati'
 import { leggiTemplatePdf, intestazioneCoach, scriviNoteAggiuntive } from '../lib/templatePdf'
 import { CampoRicerca } from '../components/ArchivioUI'
 import { ChipGruppi, FoglioNomeGruppo } from '../components/GruppiUI'
@@ -114,7 +115,7 @@ import { elencoGruppi, creaGruppo } from '../lib/gruppiAtletiDb'
 import {
   TestataScheda, IconaStato, MenuScheda, TitoloScheda, AvvisoRiscaldamento,
   BloccoScheda, RigaEsercizio, IntestazioneSezione, CardNota, EsitoCompletato,
-  RigaAssegnazione, ElencoAssegnazioni, MAX_RIGHE_ASSEGNAZIONI, GradimentoWorkout, CtaVetro, BottoneStoria,
+  RigaAssegnazione, ElencoAssegnazioni, MAX_RIGHE_ASSEGNAZIONI, RIGHE_ASSEGNAZIONI_ANTEPRIMA, BottoneTuttiAssegnati, GradimentoWorkout, CtaVetro, BottoneStoria,
 } from '../components/WorkoutDetailUI'
 import { NOME_APP, MARCHIO_PRIMA, MARCHIO_SECONDA } from '../lib/marchio'
 import { segnalaMomentoNotifiche } from '../lib/permessoNotifiche'
@@ -377,8 +378,9 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // La ricerca nel foglio «Assegna Workout»: filtra solo ciò che si vede,
   // le scelte già fatte restano anche se l'atleta esce dal filtro.
   const [cercaAtleta, setCercaAtleta] = useState('')
-  // La ricerca dentro «Assegnato a»: compare solo oltre MAX_RIGHE_ASSEGNAZIONI.
-  const [cercaAssegnato, setCercaAssegnato] = useState('')
+  // «Vedi tutti gli atleti» di «Assegnato a»: oltre MAX_RIGHE_ASSEGNAZIONI la
+  // scheda ne mostra pochi, l'elenco intero (con la ricerca) sta nel foglio.
+  const [tuttiAssegnati, setTuttiAssegnati] = useState(false)
   const [assignments, setAssignments] = useState([])
   const [currentAthleteName, setCurrentAthleteName] = useState('')
 
@@ -2252,11 +2254,36 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       ) : null}
     </>
   )
-  // Sotto la soglia la ricerca non si vede: un termine rimasto scritto non deve
-  // nascondere nessuno.
-  const assegnatiVisibili = assignments.length > MAX_RIGHE_ASSEGNAZIONI
-    ? filtraAssegnazioniPerNome(assignments, cercaAssegnato)
-    : assignments
+  // Oltre la soglia la scheda mostra solo le prime righe e un tasto per il foglio
+  // con tutti: niente scorrimento senza fine. L'atleta aperto in questo momento
+  // resta visibile anche se è oltre le prime righe.
+  const assegnatiTroppi = assignments.length > MAX_RIGHE_ASSEGNAZIONI
+  const assegnatiVisibili = !assegnatiTroppi ? assignments : (() => {
+    const primi = assignments.slice(0, RIGHE_ASSEGNAZIONI_ANTEPRIMA)
+    const aperto = assignments.find(a => a.athletes?.id && a.athletes.id === queryAthleteId)
+    return aperto && !primi.includes(aperto) ? [...primi.slice(0, -1), aperto] : primi
+  })()
+  const rigaAssegnazione = (a) => (
+    <RigaAssegnazione
+      key={a.id}
+      nome={`${a.athletes?.name || ''} ${a.athletes?.surname || ''}`.trim() || 'Atleta'}
+      foto={a.athletes?.photo_url}
+      dettaglio={dettaglioAssegnazione(a)}
+      fatto={a.status === 'completed'}
+      selezionata={queryAthleteId === a.athletes?.id}
+      onApri={() => {
+        setTuttiAssegnati(false)
+        navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`, { replace: true })
+      }}
+      azione={eStaff(role) ? (
+        <button aria-label={`Rimuovi l'assegnazione di ${a.athletes?.name || 'atleta'}`}
+          onClick={() => handleRemoveAssignment(a.id)}
+          className="shrink-0 p-1.5 text-[#5b6070] hover:text-red-500 transition rounded-lg hover:bg-white/[.06]">
+          <Trash2 size={16} />
+        </button>
+      ) : null}
+    />
+  )
   const pAssegnazioni = (
     <>
       {/* ASSEGNAZIONI (SOLO COACH) — un elenco, non N card con N ombre */}
@@ -2271,37 +2298,17 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           <IntestazioneSezione etichetta="Assegnato a"
             dettaglio={assignments.length === 1 ? '1 atleta' : `${assignments.length} atleti`} />
           {gradimentoAssegnazioni && <GradimentoWorkout {...gradimentoAssegnazioni} />}
-          {assignments.length > MAX_RIGHE_ASSEGNAZIONI && (
-            <div className="-mt-3.5">
-              <CampoRicerca valore={cercaAssegnato} onCambia={setCercaAssegnato}
-                etichetta="Cerca fra gli assegnati" placeholder="Cerca nome o cognome" />
-            </div>
-          )}
-          {assegnatiVisibili.length === 0 ? (
-            <p className="px-1 text-[13px] font-semibold text-muted">Nessun atleta con questo nome.</p>
-          ) : (
-          <ElencoAssegnazioni scorre={assignments.length > MAX_RIGHE_ASSEGNAZIONI}>
-            {assegnatiVisibili.map(a => (
-              <RigaAssegnazione
-                key={a.id}
-                nome={`${a.athletes?.name || ''} ${a.athletes?.surname || ''}`.trim() || 'Atleta'}
-                foto={a.athletes?.photo_url}
-                dettaglio={dettaglioAssegnazione(a)}
-                fatto={a.status === 'completed'}
-                selezionata={queryAthleteId === a.athletes?.id}
-                onApri={() => navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`, { replace: true })}
-                azione={eStaff(role) ? (
-                  <button aria-label={`Rimuovi l'assegnazione di ${a.athletes?.name || 'atleta'}`}
-                    onClick={() => handleRemoveAssignment(a.id)}
-                    className="shrink-0 p-1.5 text-[#5b6070] hover:text-red-500 transition rounded-lg hover:bg-white/[.06]">
-                    <Trash2 size={16} />
-                  </button>
-                ) : null}
-              />
-            ))}
+          <ElencoAssegnazioni>
+            {assegnatiVisibili.map(rigaAssegnazione)}
           </ElencoAssegnazioni>
+          {assegnatiTroppi && (
+            <BottoneTuttiAssegnati quanti={assignments.length} onClick={() => setTuttiAssegnati(true)} />
           )}
         </div>
+      )}
+      {tuttiAssegnati && assegnatiTroppi && (
+        <FoglioAssegnati assegnati={assignments} rigaDi={rigaAssegnazione}
+          onChiudi={() => setTuttiAssegnati(false)} />
       )}
     </>
   )

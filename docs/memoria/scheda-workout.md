@@ -863,17 +863,24 @@ gli avvisi al coach (`coach_notification` di completato e nota, `avvisaCoachSpos
 a sé stesso. Test: `WorkoutDetailGarmin.test.jsx` (il link per il coach) e
 `WorkoutDetailNotaCompletamento.test.jsx` (nessun `send-reminders` quando il coach chiude il suo).
 
-## «Assegnato a»: sei righe, poi scorre, con la ricerca (25/11/2026)
+## «Assegnato a»: cinque righe e «Vedi tutti gli atleti» (25/11 → 26/11/2026)
 
 Richiesta del committente: con molti atleti l'elenco «Assegnato a» (solo coach) era lungo quanto la
-scheda. Oltre `MAX_RIGHE_ASSEGNAZIONI` (6, in `WorkoutDetailUI.jsx`) l'`ElencoAssegnazioni` riceve
-`scorre` e si ferma a sei righe con lo scorrimento dentro la card, e sopra compare `CampoRicerca`
-(«Cerca fra gli assegnati»), con le regole di `filtraPerNome` (anche a parole invertite) via
-`filtraAssegnazioniPerNome` di `src/lib/rigaAtleta.js`. Fino a sei la ricerca non c'è e un termine
-rimasto scritto non filtra niente. Ricerca senza risultati: «Nessun atleta con questo nome.».
-⚠️ L'altezza massima è `6 × 55,5px` (la riga misurata nel browser, avatar + due righe di testo):
-con 51px, la prima stima, se ne vedevano cinque e mezzo. Se la riga cambia, va rimisurata.
-Test: `WorkoutDetailAssegnati.test.jsx`, `rigaAtleta.test.js`.
+scheda. Prima versione (25/11): oltre sei righe l'elenco scorreva dentro la sua card, con la ricerca
+sopra. **Il 26/11 il committente l'ha cambiata**: anche così era uno scorrimento senza fine. Ora:
+- fino a `MAX_RIGHE_ASSEGNAZIONI` (6, in `WorkoutDetailUI.jsx`) si vedono tutti, senza tasto né ricerca;
+- oltre, la scheda mostra le prime `RIGHE_ASSEGNAZIONI_ANTEPRIMA` (5: un tasto che svela una riga sola
+  non vale il tocco) e sotto `BottoneTuttiAssegnati`, «Vedi tutti gli atleti (N)»;
+- il tasto apre `components/FoglioAssegnati.jsx`, foglio dal basso alto 85dvh con l'elenco intero che
+  scorre e `CampoRicerca` («Cerca fra gli assegnati», regole di `filtraPerNome` via
+  `filtraAssegnazioniPerNome` di `src/lib/rigaAtleta.js`; senza risultati «Nessun atleta con questo nome.»).
+  Le righe le disegna la pagina (`rigaAssegnazione`, passata come `rigaDi`): identiche, cestino compreso.
+  Toccarne una chiude il foglio e apre quell'atleta (`replace`, come in scheda).
+- l'atleta aperto (`athlete_id`) resta sempre fra le righe visibili: se è oltre le prime cinque prende
+  il posto della quinta.
+- ⚠️ Il foglio sta a `z-[140]`, sotto il `CustomConfirm` (150): il cestino di una riga chiede conferma
+  sopra il foglio.
+Test: `WorkoutDetailAssegnati.test.jsx` (verificati rompendo il codice), `rigaAtleta.test.js`.
 
 ## Corsa: «Outdoor | Tapis roulant» (26/11/2026)
 Spec `docs/superpowers/specs/2026-11-26-tapis-roulant-design.md`, piano `docs/superpowers/plans/2026-11-26-tapis-roulant.md`.

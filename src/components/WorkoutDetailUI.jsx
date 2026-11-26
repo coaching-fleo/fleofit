@@ -17,7 +17,7 @@
 // lettura la stessa cosa che ha visto in scrittura.
 
 import { createPortal } from 'react-dom'
-import { ChevronLeft, MoreHorizontal, ChevronDown, Activity, Check, User, ThumbsUp, ThumbsDown, Minus, Repeat } from 'lucide-react'
+import { ChevronLeft, MoreHorizontal, ChevronDown, Activity, Check, User, ThumbsUp, ThumbsDown, Minus, Repeat, ChevronRight } from 'lucide-react'
 import { CARD, LABEL, RIGA, VETRO } from '../lib/stiliCard'
 import { useBottomSheet } from '../useBottomSheet'
 import { SpinaBlocco, DurataBlocco, NumeroEsercizio } from './CreaWorkoutUI'
@@ -420,18 +420,30 @@ export function GradimentoWorkout({ si, no, nessuna, risposte }) {
   )
 }
 
-// Oltre sei atleti l'elenco non si allunga più: scorre dentro la sua card, e
-// sopra compare la ricerca per nome (25/11/2026, richiesta del committente).
-// Una riga è 55,5px (avatar e due righe di testo, py-2, 1px di divisore), misurata
-// nel browser il 25/11/2026; più py-1 del contenitore. Se la riga cambia, cambia qui.
+// Oltre sei atleti l'elenco si ferma alle prime CINQUE righe e sotto compare
+// «Vedi tutti gli N atleti», che apre `FoglioAssegnati` con l'elenco intero e la
+// ricerca (26/11/2026, richiesta del committente: anche lo scorrimento dentro la
+// card, la versione del 25/11, era uno scorrimento senza fine). Cinque e non sei:
+// un tasto che svela una riga sola non vale il tocco.
 export const MAX_RIGHE_ASSEGNAZIONI = 6
+export const RIGHE_ASSEGNAZIONI_ANTEPRIMA = 5
 
-export function ElencoAssegnazioni({ children, scorre = false }) {
+export function ElencoAssegnazioni({ children }) {
   return (
-    <div className={`${CARD} px-1.5 py-1 divide-y divide-white/[.07] ${
-      scorre ? 'max-h-[calc(6*55.5px+.5rem)] overflow-y-auto overscroll-contain' : ''}`}>
+    <div className={`${CARD} px-1.5 py-1 divide-y divide-white/[.07]`}>
       {children}
     </div>
+  )
+}
+
+export function BottoneTuttiAssegnati({ quanti, onClick }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="self-stretch h-11 rounded-2xl bg-white/[.06] border border-white/[.1] text-sm font-bold text-white
+                 hover:bg-white/[.09] transition flex items-center justify-center gap-1.5">
+      Vedi tutti gli atleti ({quanti})
+      <ChevronRight size={16} className="text-muted" aria-hidden="true" />
+    </button>
   )
 }
 

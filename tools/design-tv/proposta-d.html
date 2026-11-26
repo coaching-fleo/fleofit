@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV · Proposta D · Attesa e carosello</title>
+<link rel="stylesheet" href="comune.css">
+<style>
+/* D · ATTESA E CAROSELLO. Due momenti.
+   Prima del via: PUSHFIT grande a sinistra, il workout intero a destra,
+   come una locandina. Quando il telefono fa partire il timer: un carosello
+   di blocchi, quello in corso al centro e i vicini più piccoli ai lati.
+   Pesi leggeri (500–700), niente bordi dove basta lo spazio. */
+#tela{font-weight:500}
+
+/* ── Lo sfondo: due strisce gialle in diagonale, come nel riferimento ── */
+.sfondo{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.sfondo .luce{position:absolute;left:-300px;top:-400px;width:1500px;height:1400px;transform:rotate(-28deg);
+  background:linear-gradient(90deg,rgba(255,255,255,.035),rgba(255,255,255,0) 70%)}
+.sfondo .striscia{position:absolute;background:var(--brand);transform:skewX(-32deg);transition:transform 1s var(--esce),opacity 1s}
+.sfondo .s1{left:900px;top:0;width:700px;height:12px}
+.sfondo .s2{left:330px;bottom:0;width:780px;height:30px}
+.corsa .sfondo .s1{transform:skewX(-32deg) translateX(420px);opacity:.0}
+.corsa .sfondo .s2{transform:skewX(-32deg) translateX(-900px);opacity:0}
+
+.vista{position:absolute;inset:0;transition:opacity .8s var(--esce),transform .9s var(--esce)}
+.attesa .vista-corsa,.corsa .vista-attesa{opacity:0;pointer-events:none}
+.attesa .vista-corsa{transform:translateX(160px)}
+.corsa .vista-attesa{transform:translateX(-160px)}
+
+.controlli{position:absolute;top:56px;right:72px;z-index:2}
+.controlli span{width:60px;height:60px;font-size:26px;background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.08)}
+
+/* ── Attesa ─────────────────────────────────────────────────────────── */
+.sx{position:absolute;left:120px;top:0;bottom:0;width:820px;display:flex;flex-direction:column}
+.categoria{margin-top:96px;display:flex;align-items:center;gap:14px;font-size:26px;font-weight:600;color:#c9ccd4}
+.categoria i{width:12px;height:12px;border-radius:50%}
+.sx h1{margin-top:28px;font-size:60px;font-weight:700;letter-spacing:-.025em;line-height:1.08;text-wrap:balance}
+.meta{margin-top:20px;display:flex;gap:28px;font-size:26px;font-weight:500;color:#9ca3af}
+.meta b{font-weight:600;color:#e5e7eb}
+.descr{margin-top:26px;max-width:640px;font-size:27px;line-height:1.5;color:#9ca3af;font-weight:400}
+.eroe{margin-top:auto;margin-bottom:120px}
+.eroe img{display:block;width:860px;height:auto;margin-left:-6px}
+.eroe .oggi{display:flex;align-items:center;gap:30px;margin-top:22px}
+.eroe .oggi span{font-size:76px;font-weight:700;letter-spacing:-.02em;line-height:1;
+  background:linear-gradient(180deg,#d1d5db,#6b7280);-webkit-background-clip:text;background-clip:text;color:transparent}
+.eroe .via{width:92px;height:92px;border-radius:50%;background:var(--brand);color:#000;display:grid;place-items:center;font-size:38px;flex-shrink:0;
+  box-shadow:0 0 0 0 rgba(241,197,23,.5);animation:respiro 2.4s ease-out infinite}
+.eroe .via svg{fill:#000;stroke:none;margin-left:6px}
+.eroe p{margin-top:24px;font-size:26px;color:#9ca3af}
+@keyframes respiro{0%{box-shadow:0 0 0 0 rgba(241,197,23,.45)}80%,100%{box-shadow:0 0 0 30px rgba(241,197,23,0)}}
+
+.dx{position:absolute;left:1060px;right:96px;top:150px;bottom:110px;display:flex;flex-direction:column}
+.dx h2{font-size:36px;font-weight:700;letter-spacing:-.015em;padding-bottom:22px;border-bottom:2px solid rgba(255,255,255,.08)}
+.lista{flex:1;min-height:0;overflow:hidden;font-size:30px;padding-top:.3em}
+.bl{padding:.42em 0 .5em;border-bottom:1px solid rgba(255,255,255,.06)}
+.bl-testa{display:flex;align-items:baseline;gap:.55em}
+.bl-n{width:1.4em;font-size:.8em;font-weight:500;color:#6b7280;font-variant-numeric:tabular-nums}
+.bl h3{font-size:1.06em;font-weight:650;letter-spacing:-.01em}
+.bl .tag{display:inline-flex;align-items:center;gap:.25em;font-size:.68em;font-weight:700;color:var(--brand);padding:.1em .5em;border-radius:.4em .4em 0 0;
+  border:.07em solid rgba(241,197,23,.55);border-bottom-color:transparent;align-self:center}
+.bl .hint{font-size:.72em;color:#6b7280;font-weight:500}
+.bl .dur{margin-left:auto;font-size:.8em;font-weight:500;color:#9ca3af;font-variant-numeric:tabular-nums}
+.bl ul{list-style:none;padding-left:1.95em;margin-top:.12em}
+.bl li{font-size:.86em;line-height:1.45;color:#d1d5db;display:flex;gap:.45em;align-items:baseline}
+.bl li .sp{font-size:.88em;color:#6b7280}
+.bl .nota{padding-left:2.2em;font-size:.8em;color:#6b7280;margin-top:.1em}
+
+/* ── In corso ───────────────────────────────────────────────────────── */
+.alto{position:absolute;left:72px;right:72px;top:52px;height:64px;display:flex;align-items:center;gap:26px}
+.alto img{height:28px}
+.alto span{font-size:28px;font-weight:500;color:#9ca3af;padding-left:26px;border-left:2px solid rgba(255,255,255,.1)}
+
+.timer{position:absolute;left:72px;right:72px;top:146px;height:220px;display:flex;align-items:center;gap:60px}
+.timer .ora{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+.fase{display:flex;align-items:center;gap:14px;font-size:30px;font-weight:600}
+.fase i{width:14px;height:14px;border-radius:50%;background:currentColor}
+.fase .pausa{margin-left:10px;display:inline-flex;align-items:center;gap:10px;font-size:24px;padding:5px 16px;border-radius:99px;background:rgba(255,255,255,.08);color:#d1d5db}
+.compito{font-size:68px;font-weight:700;letter-spacing:-.025em;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.compito small{font-size:40px;font-weight:500;color:#9ca3af;margin-left:20px;letter-spacing:0}
+.poi{font-size:28px;color:#9ca3af}
+.poi b{font-weight:600;color:#6b7280;margin-right:12px}
+.cifre{font-size:232px;font-weight:700;letter-spacing:-.045em;line-height:1;font-variant-numeric:tabular-nums;transition:color .4s}
+.cifre.ferme{color:rgba(255,255,255,.35)}
+.barra{position:absolute;left:72px;right:72px;top:384px;height:4px;border-radius:9px;background:rgba(255,255,255,.07);overflow:hidden}
+.barra span{display:block;height:100%;transition:width 1s linear,background-color .4s}
+
+.carosello{position:absolute;left:0;right:0;top:436px;height:560px}
+.pista{position:absolute;left:0;top:0;height:100%;display:flex;gap:0;transition:transform .9s var(--esce)}
+.card{position:relative;flex:0 0 900px;margin-right:-64px;height:560px;display:flex;flex-direction:column;
+  transform:scale(.8);opacity:.38;transition:transform .9s var(--esce),opacity .9s var(--esce)}
+.card.ora{transform:scale(1);opacity:1;z-index:1}
+.card.fatta{opacity:.22}
+.card .tab{align-self:flex-start;display:inline-flex;align-items:center;gap:12px;height:56px;padding:0 24px 0 22px;margin-left:0;
+  border-radius:22px 22px 0 0;background:#1d1d21;color:var(--brand);font-size:28px;font-weight:700;margin-bottom:-1px}
+.card .tab .pallini i{width:13px;height:13px;border-width:2.5px}
+.card .tab.vuota{visibility:hidden}
+.card .dentro{flex:1;min-height:0;border-radius:36px;background:linear-gradient(170deg,#1f1f23,#161618);padding:40px 48px 44px;
+  display:flex;flex-direction:column;position:relative;overflow:hidden;box-shadow:0 50px 80px -40px rgba(0,0,0,.9)}
+.card .tab:not(.vuota) + .dentro{border-top-left-radius:0}
+.card.ora .dentro{background:linear-gradient(170deg,#26241b,#18170f 60%,#161618);box-shadow:0 50px 80px -40px rgba(0,0,0,.9),inset 0 3px 0 var(--brand)}
+.card .cima{display:flex;align-items:flex-start;justify-content:space-between}
+.card .num{font-size:120px;font-weight:200;line-height:.8;color:rgba(255,255,255,.55);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.card.ora .num{color:var(--brand)}
+.card .dur{font-size:34px;font-weight:600;color:#9ca3af;font-variant-numeric:tabular-nums}
+.card h2{margin-top:26px;font-size:54px;font-weight:700;letter-spacing:-.025em;line-height:1}
+.card .hint{margin-top:10px;font-size:28px;color:#9ca3af}
+.card ul{list-style:none;margin-top:auto;display:flex;flex-direction:column;gap:6px}
+.card li{display:flex;align-items:baseline;gap:18px;padding:12px 20px;margin:0 -20px;border-radius:18px;transition:background-color .5s,color .5s}
+.card li .mn{width:34px;font-size:28px;font-weight:600;color:#6b7280;font-variant-numeric:tabular-nums}
+.card li .nm{font-size:40px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.card li .sp{font-size:28px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.card li .int{font-size:26px;font-weight:600}
+.card li.adesso{background:rgba(241,197,23,.12)}
+.card li.adesso .mn,.card li.adesso .nm{color:var(--brand)}
+.card li.poi{box-shadow:inset 0 0 0 2px rgba(241,197,23,.35)}
+.card .nota{margin-top:auto;font-size:36px;line-height:1.35;color:#c9ccd4;font-weight:500}
+.card.finale .dentro{align-items:center;justify-content:center;text-align:center}
+.card.finale h2{font-size:80px;color:var(--ok);margin:0}
+.card.finale .hint{font-size:34px}
+
+.puntini{position:absolute;left:0;right:0;bottom:34px;display:flex;justify-content:center;gap:14px}
+.puntini i{width:34px;height:6px;border-radius:9px;background:rgba(255,255,255,.18);transition:all .6s var(--esce)}
+.puntini i.fatto{background:rgba(255,255,255,.5)}
+.puntini i.ora{width:72px;background:var(--brand)}
+
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="tela" class="attesa"></div>
+<script>
+window.pulsantiExtra = '<span class="sep"></span><button data-extra="via">Avvia dal telefono</button>'
+</script>
+<script src="comune.js"></script>
+<script>
+const NOTE_COACH = {
+  hyrox: 'Ritmo da gara: spingi sui carry e tieni i Wall Balls senza pause. Recupero vero solo nel Rest.',
+  breve: 'Ogni minuto parte con il bip. Quello che avanza è il tuo recupero.',
+  corsa: 'Le ripetute a 4:00 /km precise: meglio regolari che veloci la prima.',
+}
+let modo = new URLSearchParams(location.search).has('avviato') ? 'corsa' : 'attesa'
+let wFatto = null
+
+const minuti = (w) => Math.round(w.blocchi.reduce((a, b) => a + (b.durata || b.stima || 0), 0) / 60)
+const durataTesto = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`)
+
+function scheletro(s) {
+  const w = s.w
+  const lista = w.blocchi.map((b, k) => `
+    <div class="bl">
+      <div class="bl-testa"><span class="bl-n">${k + 1}</span><h3>${b.tipo}</h3>
+        ${b.giri > 1 ? `<span class="tag">${icona('giri')}${b.giri}x</span>` : ''}
+        ${b.hint ? `<span class="hint">${b.hint}</span>` : ''}<span class="dur">${durataBlocco(b)}</span></div>
+      ${(b.esercizi || []).length
+        ? `<ul>${b.esercizi.map(e => `<li><span>${e.q ? e.q + ' ' : ''}${e.nome}</span>${e.x ? `<span class="sp">${e.x}</span>` : ''}</li>`).join('')}</ul>`
+        : (b.note ? `<p class="nota">${b.note}</p>` : '')}
+    </div>`).join('')
+
+  const card = (b, k) => `
+    <div class="card" data-k="${k}">
+      ${b.giri > 1 ? `<div class="tab" data-tab>${icona('giri')}<span>${b.giri}x</span></div>` : '<div class="tab vuota"></div>'}
+      <div class="dentro">
+        <div class="cima"><span class="num">${k + 1}</span><span class="dur">${durataBlocco(b)}</span></div>
+        <h2>${b.tipo}</h2>${b.hint ? `<p class="hint">${b.hint}</p>` : ''}
+        ${(b.esercizi || []).length ? `<ul>${b.esercizi.map((e, i) => `
+          <li data-i="${i}"><span class="mn">${e.etichetta ? '' : (b.minuti || b.tipo === 'ON/OFF') ? i + 1 : ''}</span>
+            <span class="nm" ${e.etichetta ? `style="color:${e.colore}"` : ''}>${e.q ? e.q + ' ' : ''}${e.nome}</span>
+            <span class="sp">${e.x || ''}</span>
+            ${e.int ? `<span class="int" style="color:${coloreIntensita(e.int)}">${e.int}/10</span>` : ''}</li>`).join('')}</ul>`
+          : `<p class="nota">${b.note || ''}</p>`}
+      </div>
+    </div>`
+
+  const tela = document.getElementById('tela')
+  tela.innerHTML = `
+    <div class="sfondo"><span class="luce"></span><span class="striscia s1"></span><span class="striscia s2"></span></div>
+    <div class="controlli"><span class="audio">${icona('audio')}</span><span>${icona('ruota')}</span></div>
+
+    <section class="vista vista-attesa">
+      <div class="sx">
+        <div class="categoria"><i style="background:${w.colore}"></i>${w.categoria}</div>
+        <h1>${w.titolo}</h1>
+        <div class="meta"><span>Intensità <b style="color:${coloreIntensita(w.intensita)}">${w.intensita}/10</b></span>
+          <span>Circa <b>${durataTesto(minuti(w))}</b></span><span><b>${w.blocchi.length}</b> blocchi</span></div>
+        <p class="descr">${NOTE_COACH[TV.scena] || ''}</p>
+        <div class="eroe">
+          <img src="logo.png" alt="PUSHFIT">
+          <div class="oggi"><span>Allenamento di oggi</span><div class="via"><svg class="i" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></div></div>
+          <p>Avvia il timer dal telefono per cominciare.</p>
+        </div>
+      </div>
+      <div class="dx"><h2>Il workout</h2><div class="lista" id="lista">${lista}</div></div>
+    </section>
+
+    <section class="vista vista-corsa">
+      <div class="alto"><img src="logo.png" alt="PUSHFIT"><span>${w.titolo}</span></div>
+      <div class="timer">
+        <div class="ora"><div class="fase" id="fase"></div><div class="compito" id="compito"></div><div class="poi" id="poi"></div></div>
+        <div class="cifre" id="cifre"></div>
+      </div>
+      <div class="barra"><span id="barra"></span></div>
+      <div class="carosello"><div class="pista" id="pista">
+        ${w.blocchi.map(card).join('')}
+        <div class="card finale" data-k="${w.blocchi.length}"><div class="tab vuota"></div>
+          <div class="dentro"><h2>Bravi, è finito!</h2><p class="hint">${w.titolo}</p></div></div>
+      </div></div>
+      <div class="puntini" id="puntini">${w.blocchi.map(() => '<i></i>').join('')}</div>
+    </section>`
+  adatta(document.getElementById('lista'), 16, 34)
+  wFatto = w
+}
+
+window.disegna = (s) => {
+  if (s.w !== wFatto) scheletro(s)
+  const tela = document.getElementById('tela')
+  tela.className = modo
+  if (modo === 'attesa') return null
+
+  const { passo, w } = s
+  const f = testoFase(s)
+  document.getElementById('fase').innerHTML = `<i></i>${f.testo}${s.inPausa ? `<span class="pausa">${icona('pausa')} In pausa</span>` : ''}`
+  document.getElementById('fase').style.color = f.colore
+  document.getElementById('compito').innerHTML = `${passo.compito}${passo.spec ? `<small>${passo.spec}</small>` : ''}`
+  document.getElementById('poi').innerHTML = passo.poi ? `<b>Poi</b>${passo.poi}` : ''
+  const cifre = document.getElementById('cifre')
+  cifre.textContent = passo.fine ? '' : s.tempo
+  cifre.classList.toggle('ferme', s.inPausa)
+  const barra = document.getElementById('barra')
+  barra.style.width = `${(s.avanzamento ?? (passo.fine ? 1 : 0)) * 100}%`
+  barra.style.backgroundColor = f.colore
+
+  // Il carosello: il blocco in corso al centro della TV.
+  const k = passo.fine ? w.blocchi.length : passo.b
+  const passoCard = 900 - 64
+  document.getElementById('pista').style.transform = `translateX(${960 - k * passoCard - 450}px)`
+  document.querySelectorAll('.card').forEach(c => {
+    const j = Number(c.dataset.k)
+    c.classList.toggle('ora', j === k)
+    c.classList.toggle('fatta', j < k)
+    const b = w.blocchi[j]
+    const acceso = j === k && passo.tema !== 'prep'
+    const tab = c.querySelector('[data-tab]')
+    if (tab && b) {
+      tab.innerHTML = acceso && passo.giro
+        ? `${icona('giri')}<span>${passo.giro}/${b.giri}</span>${b.giri <= 8 ? `<span class="pallini">${Array.from({ length: b.giri }, (_, g) => `<i class="${g < passo.giro - 1 ? 'fatto' : g === passo.giro - 1 ? 'ora' : ''}"></i>`).join('')}</span>` : ''}`
+        : `${icona('giri')}<span>${b.giri}x</span>`
+    }
+    c.querySelectorAll('li').forEach(li => {
+      const i = Number(li.dataset.i)
+      const e = b?.esercizi?.[i]
+      const corsa = !!e?.etichetta
+      li.classList.toggle('adesso', acceso && passo.es === i && (passo.tema !== 'riposo' || corsa))
+      li.classList.toggle('poi', acceso && passo.tema === 'riposo' && !corsa && passo.prossimo === i)
+    })
+  })
+  document.querySelectorAll('#puntini i').forEach((p, j) => {
+    p.className = j < k ? 'fatto' : j === k ? 'ora' : ''
+  })
+  return null
+}
+
+window.suExtra = (b) => {
+  if (modo === 'attesa') {
+    modo = 'corsa'; TV.i = 0; TV.t = TV.passi[0].dur; TV.inCorsa = true
+    b.textContent = 'Torna all\'attesa'
+  } else {
+    modo = 'attesa'; b.textContent = 'Avvia dal telefono'
+  }
+  TV.disegna()
+}
+
+TV.avvia()
+if (modo === 'corsa') document.querySelector('[data-extra]').textContent = 'Torna all\'attesa'
+</script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+/* Comune alle tre proposte della TV. Palette di src/index.css, invariata. */
+:root{
+  --brand:#f1c517; --bg:#0B0B0B; --running:#0094C6; --custom:#D11149; --ok:#4ade80;
+  --muted:#8b8f99; --testo2:#c9ccd4;
+  --carta:linear-gradient(to bottom,#1c1c1f,#171719);
+  --ombra:0 40px 70px -36px rgba(0,0,0,.9), inset 0 2px 0 rgba(255,255,255,.06);
+  --esce:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;color:#fff;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',Roboto,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.num{font-variant-numeric:tabular-nums}
+svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* La tela: sempre 1920×1080, scalata da comune.js. */
+#tela{position:absolute;width:1920px;height:1080px;transform-origin:0 0;background:var(--bg);overflow:hidden}
+
+/* I controlli in alto a destra, come oggi. */
+.controlli{display:flex;gap:18px;align-items:center}
+.controlli span{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:32px;
+  background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.1);color:#d1d5db}
+.controlli span.audio{background:rgba(241,197,23,.12);border-color:rgba(241,197,23,.35);color:var(--brand)}
+.logo{display:block}
+
+/* La linguetta della cartellina: stesso fondo della carta, attaccata in alto a sinistra. */
+.linguetta{position:relative;z-index:1;margin-bottom:-2px;align-self:flex-start;display:inline-flex;align-items:center;gap:14px;
+  height:68px;padding:0 26px 0 22px;border-radius:26px 26px 0 0;background:#1c1c1f;
+  border:2px solid rgba(255,255,255,.08);border-bottom:0;color:var(--brand);font-size:34px}
+.linguetta b{font-size:38px;font-weight:900;letter-spacing:-.01em}
+.linguetta.accesa{border-color:rgba(241,197,23,.7)}
+.pallini{display:flex;gap:9px;margin-left:6px}
+.pallini i{width:16px;height:16px;border-radius:50%;border:3px solid rgba(241,197,23,.45)}
+.pallini i.fatto{background:rgba(241,197,23,.45);border-color:transparent}
+.pallini i.ora{background:var(--brand);border-color:var(--brand)}
+.con-linguetta{border-top-left-radius:0 !important}
+
+/* Il telecomando delle proposte: FUORI dalla TV. */
+.telecomando{position:fixed;left:0;right:0;bottom:0;height:56px;display:flex;align-items:center;gap:10px;padding:0 18px;
+  background:#111;border-top:1px solid #2a2a2a;font-size:13px;font-weight:700;color:#9ca3af;z-index:9}
+.telecomando a{color:#fff}
+.telecomando button{padding:7px 12px;border-radius:9px;background:#222;color:#d1d5db}
+.telecomando button[aria-pressed]{background:var(--brand);color:#000}
+.telecomando .sep{width:1px;height:24px;background:#333;margin:0 4px}
+.telecomando .aiuto{margin-left:auto;color:#6b7280;font-weight:600}
+.telecomando[hidden]{display:none}
+
+/* ── La lavagna: tutto in em, la grandezza la decide adatta() ─────────── */
+.lavagna{overflow:hidden;min-height:0;min-width:0;display:flex;gap:.6em;align-items:flex-start}
+.lavagna .colonna{flex:1 1 0;min-width:0}
+.blocco{break-inside:avoid;display:flex;flex-direction:column;margin-bottom:.4em}
+.blocco .ling{align-self:flex-start;display:inline-flex;align-items:center;gap:.3em;height:1.25em;padding:0 .5em 0 .4em;margin-bottom:-.06em;
+  position:relative;z-index:1;border-radius:.5em .5em 0 0;background:#1c1c1f;border:.06em solid rgba(255,255,255,.09);border-bottom:0;
+  color:var(--brand);font-size:.72em;font-weight:900}
+.blocco .ling .pallini{gap:.22em;margin-left:.15em}
+.blocco .ling .pallini i{width:.38em;height:.38em;border-width:.08em}
+.blocco .carta{background:var(--carta);box-shadow:var(--ombra);border:.06em solid rgba(255,255,255,.08);border-radius:.6em;
+  padding:.3em .5em .34em .7em;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:.08em}
+.blocco .ling + .carta{border-top-left-radius:0}
+.blocco .carta::before{content:"";position:absolute;left:0;top:0;bottom:0;width:.16em;background:var(--spina,#9ca3af)}
+.blocco header{display:flex;align-items:baseline;gap:.4em;margin-bottom:.04em;min-width:0}
+.blocco h3{flex-shrink:0;white-space:nowrap;font-size:1.08em;font-weight:900;letter-spacing:-.03em;line-height:1.1}
+.blocco .hint{flex:1 1 0;min-width:0;font-size:.62em;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blocco .dur{margin-left:auto;font-size:.8em;font-weight:800;color:#d1d5db;white-space:nowrap}
+.blocco .r{display:flex;align-items:center;gap:.4em;padding:.07em .3em;margin:0 -.3em;border-radius:.35em;border:.06em solid transparent;line-height:1.12}
+.blocco .r .t{flex:1;min-width:0;overflow:hidden;display:flex;flex-wrap:wrap;align-items:baseline;column-gap:.35em}
+.blocco .xx{white-space:nowrap}
+.blocco .pz{text-wrap:balance}
+.blocco .q{font-weight:900;color:#fff}
+.blocco .nm{font-weight:800;color:#e5e7eb}
+.blocco .xx{font-size:.8em;font-weight:700;color:var(--muted)}
+.blocco .n{flex-shrink:0;min-width:1.35em;height:1.35em;padding:0 .25em;border-radius:99px;display:grid;place-items:center;font-size:.7em;font-weight:900;
+  color:var(--brand);background:rgba(241,197,23,.12);border:.08em solid rgba(241,197,23,.3)}
+.blocco .et{flex-shrink:0;font-size:.62em;font-weight:900;width:5.4em}
+.blocco .int{flex-shrink:0;font-size:.68em;font-weight:900}
+.blocco .nota{font-size:.7em;font-weight:600;color:#c9ccd4;line-height:1.25}
+/* stati */
+.blocco.fatto{opacity:.45}
+.blocco.fatto h3::before{content:"✓ ";color:var(--ok)}
+.blocco.ora .carta{border-color:rgba(241,197,23,.8);box-shadow:0 0 1.4em -.4em rgba(241,197,23,.45),var(--ombra)}
+.blocco.ora .ling{border-color:rgba(241,197,23,.8)}
+.blocco.ora .carta::before{background:var(--brand)}
+.blocco.ora .dur{color:var(--brand)}
+.blocco .r.ora{background:rgba(241,197,23,.16);border-color:rgba(241,197,23,.8)}
+.blocco .r.ora .n{background:var(--brand);color:#000;border-color:var(--brand)}
+.blocco .r.ora .nm,.blocco .r.ora .q{color:#fff}
+.blocco .r.poi{border-style:dashed;border-color:rgba(241,197,23,.6)}

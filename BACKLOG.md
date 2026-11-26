@@ -228,6 +228,25 @@ Fatto e verde nei test (`docs/memoria/scheda-workout.md`, 9-tv-qr), ma **mai pro
 > 🔴 Motivo per cui conta: linea guida Apple **5.1.2(i)** — note degli atleti mandate a IA di
 > terze parti (Groq, Gemini) senza informativa né permesso esplicito. Chiude anche la #47.
 
+## 🔒 Captcha sul login (Cloudflare Turnstile) — da valutare, NON accendere dal pannello (26/11/2026)
+
+> **Cosa**: la protezione captcha di Supabase Auth (Dashboard → Authentication → Attack Protection,
+> `https://supabase.com/dashboard/project/riyqtcssllupakjtoehj/auth/protection`) con Cloudflare
+> Turnstile. Ferma i bot su registrazione, login con password e reset password.
+> 🔴 **Non accenderla dal pannello prima del codice**: da acceso Supabase rifiuta ogni `signUp`,
+> `signInWithPassword` e `resetPasswordForEmail` senza `captchaToken`, e oggi l'app non ne manda
+> nessuno (`Login.jsx`, più il `signInWithPassword` di `Settings.jsx`). Si bloccherebbe il login con
+> email e password sul sito **e su tutte le app già sugli Store**, che non si possono correggere.
+> **Perché oggi non serve**: la registrazione è già chiusa dal codice invito, Supabase ha i suoi
+> limiti sulle richieste ripetute, e gli utenti sono pochi e conosciuti. Diventa utile se compaiono
+> account `auth.users` che nessuno ha creato, mail di reset a raffica o login sospetti.
+> **Come si farebbe, in quest'ordine**: (1) widget Turnstile nel login e `captchaToken` passato alle
+> tre chiamate; provarlo anche su iOS e Android, dove l'app non gira su un dominio normale
+> (`capacitor://localhost`, `https://localhost`) e Turnstile vuole l'elenco dei domini permessi;
+> (2) una release su entrambi gli Store; (3) aspettare che quasi tutti abbiano aggiornato;
+> (4) solo allora accendere il captcha nel pannello. Da verificare se vale anche per
+> `signInWithIdToken` (Apple) e per OAuth (Google).
+
 ## ✅ Prima della submission App Store — i tre controlli sono chiusi
 
 > Chiusi il 26/08/2026. Restano qui, barrati, perché **vanno rifatti a ogni build

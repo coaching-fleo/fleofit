@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV · Proposta C · La lavagna a righe</title>
+<link rel="stylesheet" href="comune.css">
+<style>
+/* C · LA LAVAGNA A RIGHE. Il workout si legge dall'alto in basso, un blocco
+   per riga, come lo scrive un coach col pennarello: a sinistra il blocco, a
+   destra gli esercizi uno dopo l'altro. Il cronometro è una fascia in fondo,
+   e tutto lo sfondo cambia colore con la fase (ambra lavoro, verde riposo). */
+#tela{padding:40px 52px 40px;display:flex;flex-direction:column;gap:24px;transition:background-color .9s var(--esce)}
+
+.testa{display:flex;align-items:baseline;gap:22px;height:54px;flex-shrink:0}
+.testa h1{font-size:48px;font-weight:900;letter-spacing:-.03em}
+.testa small{font-size:30px;font-weight:700}
+.testa .destra{margin-left:auto;align-self:center;display:flex;align-items:center;gap:28px}
+.testa .controlli span{width:58px;height:58px;font-size:26px}
+
+.lavagna{flex:1;display:grid;grid-template-columns:max-content minmax(0,1fr);grid-auto-rows:max-content;row-gap:.32em;align-content:center;align-items:stretch}
+.riga-b{flex-shrink:0;display:grid;grid-column:1/-1;grid-template-columns:subgrid;align-items:center;column-gap:.8em;
+  padding:.28em .6em .28em .7em;border-radius:.55em;background:var(--carta);border:.06em solid rgba(255,255,255,.08);position:relative;overflow:hidden}
+.riga-b::before{content:"";position:absolute;left:0;top:0;bottom:0;width:.16em;background:var(--spina)}
+.riga-b .chi{display:flex;flex-direction:column;gap:.04em;min-width:5.2em}
+.riga-b .chi h3{font-size:1.05em;font-weight:900;letter-spacing:-.03em;line-height:1.05;white-space:nowrap}
+.riga-b .chi .info{display:flex;align-items:center;gap:.4em;font-size:.62em;font-weight:800;color:var(--muted);white-space:nowrap}
+.riga-b .chi .giri{display:inline-flex;align-items:center;gap:.25em;color:var(--brand);padding:.05em .45em;border-radius:.4em;border:.08em solid rgba(241,197,23,.4)}
+.riga-b .es{overflow:hidden;min-width:0;display:flex;flex-wrap:wrap;gap:.18em .5em;align-items:center}
+.riga-b .r{display:flex;align-items:center;gap:.32em;padding:.08em .35em;border-radius:.35em;border:.06em solid transparent;white-space:nowrap;line-height:1.1}
+.riga-b .q{font-weight:900}.riga-b .nm{font-weight:800;color:#e5e7eb}.riga-b .xx{font-size:.78em;font-weight:700;color:var(--muted)}
+.riga-b .n{min-width:1.3em;height:1.3em;padding:0 .2em;border-radius:99px;display:grid;place-items:center;font-size:.66em;font-weight:900;color:var(--brand);background:rgba(241,197,23,.12);border:.08em solid rgba(241,197,23,.3)}
+.riga-b .et{font-size:.62em;font-weight:900}
+.riga-b .int{font-size:.6em;font-weight:900}
+.riga-b .nota{font-size:.72em;font-weight:600;color:#c9ccd4}
+.riga-b.fatto{opacity:.42}
+.riga-b.fatto h3::before{content:"✓ ";color:var(--ok)}
+.riga-b.ora{border-color:rgba(241,197,23,.85);box-shadow:0 0 1.2em -.4em rgba(241,197,23,.45)}
+.riga-b.ora::before{background:var(--brand)}
+.riga-b .r.ora{background:rgba(241,197,23,.18);border-color:rgba(241,197,23,.85)}
+.riga-b .r.ora .n{background:var(--brand);color:#000}
+.riga-b .r.poi{border-style:dashed;border-color:rgba(241,197,23,.6)}
+
+.fascia{height:170px;flex-shrink:0;display:flex;align-items:center;gap:40px;padding:0 48px;border-radius:40px;position:relative;overflow:hidden;
+  background:rgba(0,0,0,.35);border:3px solid color-mix(in srgb,var(--c) 60%,transparent)}
+.fascia .riempi{position:absolute;inset:0 auto 0 0;background:var(--c);opacity:.16;transition:width 1s linear}
+.fascia .cifre{position:relative;font-size:170px;font-weight:900;letter-spacing:-.055em;line-height:1}
+.fascia .cifre.ferme{color:rgba(255,255,255,.4)}
+.fascia .testo{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.fascia .fase{font-size:34px;font-weight:800;color:var(--c);display:flex;gap:16px;align-items:center}
+.fascia .fase .pausa{display:inline-flex;align-items:center;gap:8px;font-size:24px;padding:4px 16px;border-radius:99px;background:rgba(255,255,255,.1);color:#e5e7eb}
+.fascia .compito{font-size:62px;font-weight:900;letter-spacing:-.03em;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fascia .compito small{font-size:38px;font-weight:700;color:var(--testo2);margin-left:16px}
+.fascia .poi{position:relative;max-width:520px;font-size:32px;font-weight:700;color:#d1d5db;text-align:right;line-height:1.2}
+.fascia .poi b{display:block;font-size:26px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="tela"></div>
+<script src="comune.js"></script>
+<script>
+const FONDI = { prep: '#1a1505', base: '#101012', lavoro: '#1a1505', corsa: '#05141b', riposo: '#061a0d', fine: '#061a0d' }
+
+function rigaBlocco(b, k, s) {
+  const { passo } = s
+  const acceso = k === passo.b && passo.tema !== 'prep' && !passo.fine
+  const stato = passo.fine || k < passo.b ? 'fatto' : acceso ? 'ora' : ''
+  const g = acceso ? passo.giro : null
+  const giri = b.giri > 1 ? `<span class="giri">${icona('giri')}<span class="num">${g ? `${g}/${b.giri}` : `${b.giri}x`}</span></span>` : ''
+  const es = (b.esercizi || []).map((e, i) => {
+    const corsa = !!e.etichetta
+    const ora = acceso && passo.es === i && (passo.tema !== 'riposo' || corsa)
+    const poi = acceso && !ora && passo.tema === 'riposo' && passo.prossimo === i
+    const n = corsa ? `<span class="et" style="color:${e.colore}">${e.etichetta}</span>`
+      : (b.minuti || b.tipo === 'ON/OFF') ? `<span class="n num">${i + 1}</span>` : ''
+    const stile = ora && corsa ? `style="background:${e.colore}2e;border-color:${e.colore}"` : ''
+    return `<span class="r ${ora ? 'ora' : ''} ${poi ? 'poi' : ''}" ${stile}>${n}${scritta(e)}${e.int ? `<span class="int" style="color:${coloreIntensita(e.int)}">${e.int}/10</span>` : ''}</span>`
+  }).join('') || (b.note ? `<span class="nota">${b.note}</span>` : '')
+  return `<div class="riga-b ${stato}" style="--spina:${SPINE[b.tipo] || '#9ca3af'}">
+    <div class="chi"><h3>${b.tipo}</h3><span class="info">${giri}<span class="num">${durataBlocco(b)}</span></span></div>
+    <div class="es">${es}</div></div>`
+}
+
+window.disegna = (s) => {
+  const { w, passo } = s
+  const f = testoFase(s)
+  const temaVero = w.corsa && passo.tema === 'lavoro' ? 'corsa' : passo.tema
+  document.getElementById('tela').style.backgroundColor = FONDI[temaVero]
+  return `
+  <div class="testa"><h1>${w.titolo}</h1><small style="color:${coloreIntensita(w.intensita)}">Intensità ${w.intensita}/10</small>
+    <div class="destra"><img src="logo.png" alt="PUSHFIT" height="34">
+      <div class="controlli"><span class="audio">${icona('audio')}</span><span>${icona('ruota')}</span></div></div></div>
+  <div class="lavagna" id="lavagna">${w.blocchi.map((b, k) => rigaBlocco(b, k, s)).join('')}</div>
+  <div class="fascia" style="--c:${f.colore}">
+    <span class="riempi" style="width:${(s.avanzamento ?? 0) * 100}%"></span>
+    <span class="cifre num ${s.inPausa ? 'ferme' : ''}">${passo.fine ? '✓' : s.tempo}</span>
+    <div class="testo">
+      <span class="fase">${f.testo}${s.inPausa ? `<span class="pausa">${icona('pausa')} In pausa</span>` : ''}</span>
+      <span class="compito">${passo.compito}${passo.spec ? `<small>${passo.spec}</small>` : ''}</span>
+    </div>
+    ${passo.poi ? `<div class="poi"><b>Poi</b>${passo.poi}</div>` : ''}
+  </div>`
+}
+// Qui il controllo è che nessuna riga vada oltre lo spazio: si allarga finché ci sta.
+window.dopo = () => adatta(document.getElementById('lavagna'))
+TV.avvia()
+</script>
+</body>
+</html>
