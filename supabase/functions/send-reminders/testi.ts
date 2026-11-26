@@ -50,12 +50,33 @@ export function testoGarminRegistrato(workoutTitle: string, workoutId: string, a
   }
 }
 
+const GIORNI_BREVI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab']
+const MESI_BREVI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic']
+
+/** 'yyyy-MM-dd' → «ven 4 dic» (come `dataBreve` dell'app); '' se non è una data. */
+export function dataSpostamento(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso ?? ''))
+  if (!m) return ''
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
+  if (isNaN(d.getTime())) return ''
+  return `${GIORNI_BREVI[d.getUTCDay()]} ${d.getUTCDate()} ${MESI_BREVI[d.getUTCMonth()]}`
+}
+
+/** Gli id delle assegnazioni dal corpo: solo stringhe, al massimo 200. */
+export function idsSpostamento(ids: unknown): string[] {
+  if (!Array.isArray(ids)) return []
+  return ids.filter((x): x is string => typeof x === 'string').slice(0, 200)
+}
+
 /**
  * La push all'atleta quando il coach gli sposta un allenamento (26/11/2026,
- * modo `athlete_moved`). `newDate` arriva già scritta («gio 4 dic»).
+ * modo `athlete_moved`). ⚠️ La data viene dalla riga (`completed_date`), MAI
+ * dal corpo della chiamata: un testo libero arrivava così in una push a molti
+ * atleti (revisione finale, 26/11/2026).
  */
-export function testoSpostatoDalCoach({ workoutTitle, newDate }: { workoutTitle: string; newDate: string }): TestoNotifica {
-  return { title: '📅 Allenamento spostato', bodyMsg: `${workoutTitle} ora è ${newDate}` }
+export function testoSpostatoDalCoach({ workoutTitle, completedDate }: { workoutTitle: string; completedDate: string }): TestoNotifica {
+  const data = dataSpostamento(completedDate)
+  return { title: '📅 Allenamento spostato', bodyMsg: data ? `${workoutTitle} ora è ${data}` : `${workoutTitle} ha una data nuova` }
 }
 
 /**

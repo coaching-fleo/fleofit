@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.39.3"
 import webpush from "npm:web-push@3.6.7"
 import { atletaNotificaCoach, atletiDi, coachDi, destinatariNotificaCoach, idStaff, nomeDi, ruoloStaff } from "../_shared/staff.ts"
-import { TITOLO_REGISTRATO, testoNotificaCoach, testoGarminRegistrato, testoSpostatoDalCoach, daAvvisareSpostamento } from "./testi.ts"
+import { TITOLO_REGISTRATO, testoNotificaCoach, testoGarminRegistrato, testoSpostatoDalCoach, daAvvisareSpostamento, idsSpostamento } from "./testi.ts"
 import { TITOLO_INVITO, routeInvito, testoInvito, destinatariInvito, invitiAccesi } from "./team.ts"
 import { ATTESA_TEST_MS, TITOLO_TEST, TESTO_TEST, ROUTE_TEST, TITOLO_TEST_FALLITA, puoProvareNotifica, dispositivoDi } from "./notificaTest.ts"
 import { TITOLO_BROADCAST, TITOLO_PROVA, ROUTE_BACHECA, puoInviareBroadcast, puoInviareQuestoMessaggio, anteprima, routeMessaggio, destinatariBroadcast, testoAccettabile, motivoFcm, routeProva } from "./broadcast.ts"
@@ -179,7 +179,8 @@ serve(async (req) => {
     // 'broadcast' è più stretto: l'account demo è admin ma non deve notificare tutti.
     // 'broadcast_prova' segue la stessa regola: il demo non manda niente, nemmeno a sé.
     // 'team_invito' (Team, 06/11/2026) segue la stessa regola: staff, mai il demo.
-    if ((mode === 'broadcast' || mode === 'broadcast_prova' || mode === 'team_invito') && !puoInviareBroadcast(chiamante.email, chiamante.ruoloStaff ?? null)) {
+    // 'athlete_moved' come la bacheca: il demo (App Review) non notifica nessuno.
+    if ((mode === 'broadcast' || mode === 'broadcast_prova' || mode === 'team_invito' || mode === 'athlete_moved') && !puoInviareBroadcast(chiamante.email, chiamante.ruoloStaff ?? null)) {
       console.warn(`send-reminders: '${mode}' NON autorizzata per ${chiamante.email ?? 'anonimo'}`);
       return new Response(JSON.stringify({ error: 'Non autorizzato' }), {
         status: 403,
@@ -636,11 +637,12 @@ serve(async (req) => {
     // 26/11/2026, docs/memoria/calendario.md §9-sposta-coach. Staff soltanto
     // (`soloAdmin`); un coach avvisa solo i suoi atleti (`daAvvisareSpostamento`).
     // ==========================================
-    if (mode === 'athlete_moved' && Array.isArray(body.record_ids) && body.record_ids.length > 0) {
+    const idsSpostati = mode === 'athlete_moved' ? idsSpostamento(body.record_ids) : [];
+    if (mode === 'athlete_moved' && idsSpostati.length > 0) {
       const { data: righe, error: awError } = await supabase
         .from('athlete_workouts')
-        .select('id, athlete_id, workout_id, status, workouts(title)')
-        .in('id', body.record_ids);
+        .select('id, athlete_id, workout_id, status, completed_date, workouts(title)')
+        .in('id', idsSpostati);
       if (awError) throw awError;
 
       const mieiAtleti = chiamante.ruoloStaff === 'coach' && chiamante.id
@@ -654,7 +656,7 @@ serve(async (req) => {
       for (const r of daAvvisare) {
         const { title, bodyMsg } = testoSpostatoDalCoach({
           workoutTitle: (r.workouts as any)?.title || 'Il tuo allenamento',
-          newDate: String(body.newDate || ''),
+          completedDate: String((r as any).completed_date || ''),
         });
         const route = `/workout/${r.workout_id}?athlete_id=${r.athlete_id}`;
         const { data: dbNotifs, error: dbErr } = await supabase.from('notifications')

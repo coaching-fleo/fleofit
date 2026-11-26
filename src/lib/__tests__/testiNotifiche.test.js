@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { testoNotificaCoach, testoGarminRegistrato, testoSpostatoDalCoach, daAvvisareSpostamento } from '../../../supabase/functions/send-reminders/testi.ts'
+import { testoNotificaCoach, testoGarminRegistrato, testoSpostatoDalCoach, daAvvisareSpostamento, dataSpostamento, idsSpostamento } from '../../../supabase/functions/send-reminders/testi.ts'
 
 describe('testoNotificaCoach', () => {
   const base = { athleteName: 'Sara', workoutTitle: 'Sled' }
@@ -37,10 +37,29 @@ describe('testoGarminRegistrato', () => {
 
 // Il coach sposta un allenamento (26/11/2026): l'atleta lo sa.
 describe('testoSpostatoDalCoach', () => {
-  it('titolo e data nuova', () => {
-    expect(testoSpostatoDalCoach({ workoutTitle: 'Sled', newDate: 'gio 4 dic' })).toEqual({
-      title: '📅 Allenamento spostato', bodyMsg: 'Sled ora è gio 4 dic',
+  // ⚠️ La data la scrive il server dalla riga vera, non dal corpo della
+  // chiamata: un testo libero in una push a molti atleti era possibile
+  // (revisione finale, 26/11/2026).
+  it('titolo e data presa dalla riga', () => {
+    expect(testoSpostatoDalCoach({ workoutTitle: 'Sled', completedDate: '2026-12-04' })).toEqual({
+      title: '📅 Allenamento spostato', bodyMsg: 'Sled ora è ven 4 dic',
     })
+  })
+})
+
+describe('dataSpostamento', () => {
+  it('«ven 4 dic», e niente per una data non valida', () => {
+    expect(dataSpostamento('2026-12-04')).toBe('ven 4 dic')
+    expect(dataSpostamento('2026-11-30')).toBe('lun 30 nov')
+    expect(dataSpostamento('<b>ciao</b>')).toBe('')
+  })
+})
+
+describe('idsSpostamento', () => {
+  it('solo stringhe, al massimo 200', () => {
+    expect(idsSpostamento(['a', 3, null, 'b'])).toEqual(['a', 'b'])
+    expect(idsSpostamento(Array.from({ length: 300 }, (_, i) => `x${i}`))).toHaveLength(200)
+    expect(idsSpostamento('a')).toEqual([])
   })
 })
 
