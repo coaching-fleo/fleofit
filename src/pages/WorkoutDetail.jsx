@@ -303,7 +303,11 @@ export default function WorkoutDetail() {
   const [workout, setWorkout] = useState(null)
   const [loading, setLoading] = useState(true)
   // «Outdoor | Tapis roulant» della Corsa: solo a schermo, parte da Outdoor (src/lib/tapisRoulant.js).
-  const [tapis, setTapis] = useState(false)
+  // Si ricorda PER QUALE workout è stato scelto: un'altra corsa aperta senza
+  // smontare la pagina (stessa rotta, id diverso) riparte da Outdoor da sola.
+  const [tapisPer, setTapisPer] = useState(null)
+  const tapis = tapisPer !== null && tapisPer === id
+  const setTapis = (scelto) => setTapisPer(scelto ? id : null)
   const igRef = useRef(null)
 
   const [assignModalOpen, setAssignModalOpen] = useState(false)

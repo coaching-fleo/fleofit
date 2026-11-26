@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom'
 
 // La scheda di una Corsa: l'interruttore «Outdoor | Tapis roulant» e i ritmi
 // in km/h (src/lib/tapisRoulant.js, spec 2026-11-26-tapis-roulant-design.md).
@@ -11,7 +11,8 @@ const ctrl = await vi.hoisted(async () => ({ stato: {} }))
 const finto = await vi.hoisted(async () => {
   const { fintoSupabase } = await import('../../test/fintoSupabase')
   return fintoSupabase(() => ({
-    workouts: [{ id: 'w1', title: 'Lungo del sabato', date: '2026-08-28', coach_notes: '', sections: ctrl.stato.sections }],
+    // ⚠️ Il finto non filtra per id: il workout «aperto» lo decide il test.
+    workouts: [{ id: ctrl.stato.idW || 'w1', title: ctrl.stato.titolo || 'Lungo del sabato', date: '2026-08-28', coach_notes: '', sections: ctrl.stato.sections }],
     athlete_workouts: ctrl.stato.assegnazioni,
     athletes: [{ id: 'u1', name: 'Marco', surname: 'Rinaldi' }],
     garmin_attivita: ctrl.stato.garmin,
@@ -48,11 +49,16 @@ const assegnazione = () => ([{
   athletes: { id: 'u1', name: 'Marco', surname: 'Rinaldi', photo_url: null },
 }])
 
+function VaiAW2() {
+  const navigate = useNavigate()
+  return <button type="button" onClick={() => navigate('/workout/w2?athlete_id=u1')}>vai a w2</button>
+}
+
 function apri({ ruolo = 'athlete', utente = 'u1', url = '/workout/w1?athlete_id=u1' } = {}) {
   return render(
     <MemoryRouter initialEntries={[url]}>
       <AuthContext.Provider value={{ user: { id: utente, email: 'a@b.it', user_metadata: {} }, role: ruolo }}>
-        <Routes><Route path="/workout/:id" element={<WorkoutDetail />} /></Routes>
+        <Routes><Route path="/workout/:id" element={<><WorkoutDetail /><VaiAW2 /></>} /></Routes>
       </AuthContext.Provider>
     </MemoryRouter>
   )
@@ -92,6 +98,18 @@ describe('Outdoor | Tapis roulant', () => {
     await attendi()
     await userEvent.click(screen.getByRole('button', { name: 'Tapis roulant' }))
     await userEvent.click(screen.getByRole('button', { name: 'Outdoor' }))
+    expect(screen.getByText('@5:00 - 5:30 /km')).toBeInTheDocument()
+  })
+
+  it('passando a un\'altra corsa riparte da Outdoor', async () => {
+    apri()
+    await attendi()
+    await userEvent.click(screen.getByRole('button', { name: 'Tapis roulant' }))
+    ctrl.stato.idW = 'w2'
+    ctrl.stato.titolo = 'Ripetute del martedì'
+    await userEvent.click(screen.getByRole('button', { name: 'vai a w2' }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Ripetute del martedì' })).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Outdoor' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('@5:00 - 5:30 /km')).toBeInTheDocument()
   })
 
