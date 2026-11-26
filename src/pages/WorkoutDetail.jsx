@@ -120,6 +120,8 @@ import { NOME_APP, MARCHIO_PRIMA, MARCHIO_SECONDA } from '../lib/marchio'
 import { segnalaMomentoNotifiche } from '../lib/permessoNotifiche'
 import logoPng from '../assets/marchio/pushfit-logo.png'
 import Logo from '../components/Logo'
+import InterruttoreTapis from '../components/InterruttoreTapis'
+import { stepsTapis, haRitmiConvertibili } from '../lib/tapisRoulant'
 
 /** Il logo come data URL per jsPDF; null se non si carica (il PDF scrive il nome). */
 async function logoPerPdf() {
@@ -300,6 +302,8 @@ export default function WorkoutDetail() {
 
   const [workout, setWorkout] = useState(null)
   const [loading, setLoading] = useState(true)
+  // «Outdoor | Tapis roulant» della Corsa: solo a schermo, parte da Outdoor (src/lib/tapisRoulant.js).
+  const [tapis, setTapis] = useState(false)
   const igRef = useRef(null)
 
   const [assignModalOpen, setAssignModalOpen] = useState(false)
@@ -1687,6 +1691,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   const isCustom = rawCat === 'Custom' || isAuto
   const category = isEvent ? 'Event' : (isCustom ? 'Custom' : rawCat)
   const isRunning = category === 'Running'
+  const stepsCorsa = s?.steps || s?.main?.steps || []
   const blocks = getNormalizedBlocks(workout)
   const mainBlock = blocks.find(b => ['EMOM', 'ON/OFF', 'AMRAP', 'For Time'].includes(b.type)) || blocks[0] || { type: 'Hyrox' }
   const isGym = category === 'Gym'
@@ -2159,9 +2164,13 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           </p>
         </div>
       ) : isRunning ? (
-        <div className={`${CARD} px-4 py-[15px]`}>
-          <RunningList steps={s?.steps || s?.main?.steps || []} />
-        </div>
+        <>
+          {/* Solo se almeno un ritmo diventa km/h: con sole zone non cambierebbe niente. */}
+          {haRitmiConvertibili(stepsCorsa) && <InterruttoreTapis tapis={tapis} onCambia={setTapis} />}
+          <div className={`${CARD} px-4 py-[15px]`}>
+            <RunningList steps={tapis ? stepsTapis(stepsCorsa) : stepsCorsa} />
+          </div>
+        </>
       ) : null}
     </>
   )
