@@ -2424,7 +2424,6 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
           dataAttuale={spostaCoach.aw?.completed_date || dataWorkout}
           nomeAtleta={spostaCoach.aw?.athletes?.name || null}
           assegnazioni={spostaCoach.soloLui ? [spostaCoach.aw] : assignments}
-          dataWorkout={dataWorkout}
           onChiudi={() => setSpostaCoach(null)} onConferma={confermaSpostaCoach} />
       )}
       {spostaAperto && (

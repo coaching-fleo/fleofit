@@ -98,11 +98,13 @@ describe('chiSiSposta', () => {
     { id: 'c', status: 'pending', completed_date: '2026-12-03' },
     { id: 'd', status: 'pending', completed_date: '2026-12-02' },
   ]
-  it('sposta solo i non svolti rimasti sulla data del workout', () => {
-    expect(chiSiSposta(ass, '2026-12-02')).toEqual({ siSpostano: ['a', 'd'], restano: { svolti: 1, spostatiDaSe: 1 } })
+  // ⚠️ Lo stesso workout può essere assegnato in giorni diversi (il coach lo
+  // riusa): «tutti» è la seduta di QUEL giorno, gli altri giorni non c'entrano.
+  it('sposta solo i non svolti di quel giorno; gli altri giorni non contano', () => {
+    expect(chiSiSposta(ass, '2026-12-02')).toEqual({ siSpostano: ['a', 'd'], svolti: 1, totale: 3 })
   })
   it('lista vuota', () => {
-    expect(chiSiSposta([], '2026-12-02')).toEqual({ siSpostano: [], restano: { svolti: 0, spostatiDaSe: 0 } })
+    expect(chiSiSposta([], '2026-12-02')).toEqual({ siSpostano: [], svolti: 0, totale: 0 })
   })
 })
 
@@ -121,6 +123,11 @@ describe('spostaPerTutti', () => {
     const { error } = await spostaPerTutti(db, { workoutId: 'w1', dataOriginale: '2026-12-02', ids: ['a'], nuovaData: '2026-12-04' })
     expect(error).toBeTruthy()
     expect(db.chiamate[2]).toEqual(['workouts', { date: '2026-12-02' }, { eq: ['id', 'w1'] }])
+  })
+  it('senza aggiornaWorkout scrive solo le assegnazioni', async () => {
+    const db = fintoDb()
+    await spostaPerTutti(db, { workoutId: 'w1', dataOriginale: '2026-12-02', ids: ['a'], nuovaData: '2026-12-04', aggiornaWorkout: false })
+    expect(db.chiamate).toEqual([['athlete_workouts', { completed_date: '2026-12-04' }, { in: ['id', ['a']] }]])
   })
   it('se il workout fallisce non tocca le assegnazioni', async () => {
     const db = fintoDb({ workouts: { message: 'x' } })
@@ -172,5 +179,12 @@ describe('spostaDalCoach', () => {
     const r = await spostaDalCoach(db, { portata: 'tutti', aw: null, assegnazioni: ass, dataWorkout: '2026-12-02', workoutId: 'w1', nuovaData: '2026-12-04' })
     expect(r).toEqual({ error: null, spostati: ['a'] })
     expect(db.chiamate[1]).toEqual(['athlete_workouts', { completed_date: '2026-12-04' }, { in: ['id', ['a']] }])
+  })
+  it('«tutti» da un giorno che non è quello del workout: workouts.date non si tocca', async () => {
+    const db = fintoDb()
+    const altro = [...ass, { id: 'c', status: 'pending', completed_date: '2026-12-09' }, { id: 'e', status: 'pending', completed_date: '2026-12-09' }]
+    const r = await spostaDalCoach(db, { portata: 'tutti', aw: altro[2], assegnazioni: altro, dataWorkout: '2026-12-02', workoutId: 'w1', nuovaData: '2026-12-10' })
+    expect(r.spostati).toEqual(['c', 'e'])
+    expect(db.chiamate).toEqual([['athlete_workouts', { completed_date: '2026-12-10' }, { in: ['id', ['c', 'e']] }]])
   })
 })

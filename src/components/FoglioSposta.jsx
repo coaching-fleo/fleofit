@@ -9,15 +9,10 @@ import {
 import { separaCodice } from '../lib/codiceWorkout'
 import { giorniProposti, nomeGiorno, dataBreve, giornoBreve, eNelPassato, chiSiSposta } from '../lib/spostaAllenamento'
 
-/** «1 resta dove sta: 1 già svolto» / «3 restano dove sono: 2 già svolti, 1 spostato da sé». */
-function testoRestano({ svolti, spostatiDaSe }) {
-  const k = svolti + spostatiDaSe
-  if (k === 0) return null
-  const pezzi = [
-    svolti > 0 && `${svolti} già svolt${svolti === 1 ? 'o' : 'i'}`,
-    spostatiDaSe > 0 && `${spostatiDaSe} spostat${spostatiDaSe === 1 ? 'o' : 'i'} da sé`,
-  ].filter(Boolean)
-  return `${k} ${k === 1 ? 'resta dove sta' : 'restano dove sono'}: ${pezzi.join(', ')}`
+/** «1 resta dove sta: già svolto» / «2 restano dove sono: già svolti». */
+function testoRestano(svolti) {
+  if (!svolti) return null
+  return svolti === 1 ? '1 resta dove sta: già svolto' : `${svolti} restano dove sono: già svolti`
 }
 
 /**
@@ -34,25 +29,28 @@ function testoRestano({ svolti, spostatiDaSe }) {
  *
  * `modo="coach"` (26/11/2026, docs/memoria/calendario.md §9-sposta-coach):
  * - il passato si può scegliere (il coach corregge un giorno registrato male);
- * - con `nomeAtleta` e più di un'assegnazione compare «Solo X · Tutti (n)»;
- * - con «Tutti» il foglio dice chi resta dov'è (`chiSiSposta`).
+ * - con `nomeAtleta` e altri atleti sulla STESSA seduta (stesso giorno) compare
+ *   «Solo X · Tutti (n)»: lo stesso workout in un altro giorno è un'altra seduta;
+ * - con «Tutti» il foglio dice chi resta dov'è (`chiSiSposta`): chi l'ha svolto.
  * `onConferma(data, portata)` in modo coach (`portata`: 'solo' | 'tutti'); l'atleta riceve solo la data.
  */
 export default function FoglioSposta({
   titolo, dataAttuale, onChiudi, onConferma,
-  modo = 'atleta', nomeAtleta = null, assegnazioni = [], dataWorkout = null, portataIniziale = null,
+  modo = 'atleta', nomeAtleta = null, assegnazioni = [], portataIniziale = null,
 }) {
   const coach = modo === 'coach'
   const [scelta, setScelta] = useState(null)
   const [salvando, setSalvando] = useState(false)
   const [portata, setPortata] = useState(portataIniziale || (coach && !nomeAtleta ? 'tutti' : 'solo'))
-  const conScelta = coach && !!nomeAtleta && assegnazioni.length > 1
+  // La seduta è quella del giorno di partenza: chi ha lo stesso workout un
+  // altro giorno non c'entra (`chiSiSposta`).
+  const seduta = coach ? chiSiSposta(assegnazioni, dataAttuale) : null
+  const conScelta = coach && !!nomeAtleta && seduta.totale > 1
   const tutti = coach && portata === 'tutti'
-  // Con «Tutti» il giorno di partenza è quello della seduta, non quello dell'atleta.
-  const partenza = tutti && dataWorkout ? dataWorkout : dataAttuale
+  const partenza = dataAttuale
   const giorni = giorniProposti(partenza)
   const valida = scelta && scelta !== partenza && (coach || !eNelPassato(scelta))
-  const restano = tutti ? testoRestano(chiSiSposta(assegnazioni, dataWorkout || dataAttuale).restano) : null
+  const restano = tutti ? testoRestano(seduta.svolti) : null
   const nome = separaCodice(titolo || '').nome || 'Allenamento'
 
   const conferma = async () => {
@@ -77,7 +75,7 @@ export default function FoglioSposta({
         {conScelta && (
           <div role="radiogroup" aria-label="Chi sposti" className="relative grid grid-cols-2 bg-[#111] p-1.5 rounded-2xl border border-[#333]">
             <span aria-hidden="true" className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] rounded-xl bg-[#2a2a2a] transition-transform duration-300 ease-out ${tutti ? 'translate-x-full' : ''}`} />
-            {[['solo', `Solo ${nomeAtleta}`], ['tutti', `Tutti (${assegnazioni.length})`]].map(([valore, etichetta]) => (
+            {[['solo', `Solo ${nomeAtleta}`], ['tutti', `Tutti (${seduta.totale})`]].map(([valore, etichetta]) => (
               <button key={valore} type="button" role="radio" aria-checked={portata === valore}
                 onClick={() => { setPortata(valore); setScelta(null) }}
                 className={`relative z-10 py-2 text-[13px] font-bold truncate px-2 ${portata === valore ? 'text-white' : 'text-muted'}`}>

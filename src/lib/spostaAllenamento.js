@@ -95,20 +95,19 @@ export function avvisaCoachSpostamento(supabase, { athleteName, workoutTitle, da
 // ── Il coach sposta (26/11/2026, docs/superpowers/specs/2026-11-26-coach-sposta-data-design.md) ──
 
 /**
- * «Sposta per tutti»: chi segue la seduta e chi resta dov'è.
- * Si spostano solo le assegnazioni NON svolte rimaste sulla data del workout;
- * chi l'ha già fatto, o l'aveva spostato (da sé o dal coach, una per una),
- * resta: riscrivergli la data cambierebbe la sua storia senza che se ne accorga.
+ * «Sposta per tutti»: la seduta di QUEL giorno (`giorno`), non tutte le
+ * assegnazioni del workout. ⚠️ Il coach riusa lo stesso workout in giorni
+ * diversi: chi ce l'ha un altro giorno è un'altra seduta e non si tocca
+ * (trovato in prova il 26/11/2026: in demo un workout ne aveva 124).
+ * Di quel giorno si spostano i NON svolti; chi l'ha già fatto resta, perché
+ * riscrivergli la data cambierebbe la sua storia senza che se ne accorga.
+ * `totale` = quanti hanno la seduta quel giorno, svolti compresi.
  */
-export function chiSiSposta(assegnazioni, dataWorkout) {
-  const siSpostano = []
-  const restano = { svolti: 0, spostatiDaSe: 0 }
-  for (const a of assegnazioni || []) {
-    if (a.status === 'completed') restano.svolti++
-    else if (a.completed_date !== dataWorkout) restano.spostatiDaSe++
-    else siSpostano.push(a.id)
-  }
-  return { siSpostano, restano }
+export function chiSiSposta(assegnazioni, giorno) {
+  const delGiorno = (assegnazioni || []).filter(a => a.completed_date === giorno)
+  const svolti = delGiorno.filter(a => a.status === 'completed').length
+  const siSpostano = delGiorno.filter(a => a.status !== 'completed').map(a => a.id)
+  return { siSpostano, svolti, totale: delGiorno.length }
 }
 
 /**
@@ -116,13 +115,15 @@ export function chiSiSposta(assegnazioni, dataWorkout) {
  * Se la seconda scrittura fallisce si rimette la data del workout com'era,
  * così non resta un workout spostato con gli atleti fermi al giorno vecchio.
  */
-export async function spostaPerTutti(supabase, { workoutId, dataOriginale, ids, nuovaData }) {
-  const { error: errWorkout } = await supabase.from('workouts').update({ date: nuovaData }).eq('id', workoutId)
-  if (errWorkout) return { error: errWorkout }
+export async function spostaPerTutti(supabase, { workoutId, dataOriginale, ids, nuovaData, aggiornaWorkout = true }) {
+  if (aggiornaWorkout) {
+    const { error: errWorkout } = await supabase.from('workouts').update({ date: nuovaData }).eq('id', workoutId)
+    if (errWorkout) return { error: errWorkout }
+  }
   if (!ids?.length) return { error: null }
   const { error } = await supabase.from('athlete_workouts').update({ completed_date: nuovaData }).in('id', ids)
   if (error) {
-    await supabase.from('workouts').update({ date: dataOriginale }).eq('id', workoutId)
+    if (aggiornaWorkout) await supabase.from('workouts').update({ date: dataOriginale }).eq('id', workoutId)
     return { error }
   }
   return { error: null }
@@ -147,7 +148,8 @@ export function avvisaAtletiSpostamento(supabase, { awIds, data }) {
 /**
  * Lo spostamento del coach, uguale dalla scheda workout e dalla scheda atleta:
  * `solo` scrive solo l'assegnazione `aw` (mai `workouts.date`); `tutti` sposta
- * la seduta con `chiSiSposta` + `spostaPerTutti`. `spostati` = chi avvisare
+ * la seduta del giorno di `aw` (o di `dataWorkout` senza atleta) e tocca
+ * `workouts.date` solo se era proprio quel giorno. `spostati` = chi avvisare
  * (mai chi l'ha già svolto).
  */
 export async function spostaDalCoach(supabase, { portata, aw, assegnazioni, dataWorkout, workoutId, nuovaData }) {
@@ -155,7 +157,10 @@ export async function spostaDalCoach(supabase, { portata, aw, assegnazioni, data
     const { error } = await spostaAssegnazione(supabase, aw.id, nuovaData)
     return { error, spostati: error || aw.status === 'completed' ? [] : [aw.id] }
   }
-  const { siSpostano } = chiSiSposta(assegnazioni, dataWorkout)
-  const { error } = await spostaPerTutti(supabase, { workoutId, dataOriginale: dataWorkout, ids: siSpostano, nuovaData })
+  const giorno = aw?.completed_date || dataWorkout
+  const { siSpostano } = chiSiSposta(assegnazioni, giorno)
+  const { error } = await spostaPerTutti(supabase, {
+    workoutId, dataOriginale: dataWorkout, ids: siSpostano, nuovaData, aggiornaWorkout: giorno === dataWorkout,
+  })
   return { error, spostati: error ? [] : siSpostano }
 }

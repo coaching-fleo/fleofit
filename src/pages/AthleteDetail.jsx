@@ -1179,7 +1179,7 @@ export default function AthleteDetail() {
       {spostando && (
         <FoglioSposta modo="coach" titolo={spostando.titolo} dataAttuale={spostando.aw.completed_date}
           nomeAtleta={athlete?.name || 'Atleta'} assegnazioni={spostando.assegnazioni}
-          dataWorkout={spostando.dataWorkout} portataIniziale="solo"
+          portataIniziale="solo"
           onChiudi={() => setSpostando(null)} onConferma={confermaSposta} />
       )}
 

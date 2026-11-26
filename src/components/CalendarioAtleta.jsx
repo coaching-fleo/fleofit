@@ -60,12 +60,14 @@ export default function CalendarioAtleta({ nome, assegnazioni = [], onApri, onAs
   const [attivitaAperta, setAttivitaAperta] = useState(null)
   const [rilettura, setRilettura] = useState(0)
 
-  useEffect(() => {
+  // Si segue `giornoDaMostrare` durante il render, non in un effetto: è lo
+  // schema che React consiglia per uno stato che dipende da una prop.
+  const [mostratoPrima, setMostratoPrima] = useState(giornoDaMostrare)
+  if (giornoDaMostrare !== mostratoPrima) {
+    setMostratoPrima(giornoDaMostrare)
     const d = dataValida(giornoDaMostrare)
-    if (!d) return
-    setMese(d)
-    setGiornoScelto(d)
-  }, [giornoDaMostrare])
+    if (d) { setMese(d); setGiornoScelto(d) }
+  }
 
   useEffect(() => {
     if (!aperto || !leggiLibere) return

@@ -76,7 +76,7 @@ describe('FoglioSposta · coach', () => {
     expect(screen.getByRole('radio', { name: 'Solo Marco' })).toHaveAttribute('aria-checked', 'true')
     const user = userEvent.setup()
     await user.click(screen.getByRole('radio', { name: 'Tutti (3)' }))
-    expect(screen.getByText('1 resta dove sta: 1 già svolto')).toBeInTheDocument()
+    expect(screen.getByText('1 resta dove sta: già svolto')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: dataBreve(dopodomani) }))
     await user.click(screen.getByRole('button', { name: `Sposta tutti a ${giornoBreve(dopodomani)}` }))
     expect(onConferma).toHaveBeenCalledWith(dopodomani, 'tutti')
@@ -93,6 +93,20 @@ describe('FoglioSposta · coach', () => {
       assegnazioni={ass} dataWorkout={domani} onChiudi={vi.fn()} onConferma={vi.fn()} />)
     expect(screen.getByText(/In che giorno lo sposti\?/)).toBeInTheDocument()
     expect(screen.queryByRole('radiogroup')).toBeNull()
-    expect(screen.getByText('1 resta dove sta: 1 già svolto')).toBeInTheDocument()
+    expect(screen.getByText('1 resta dove sta: già svolto')).toBeInTheDocument()
+  })
+
+  it('«Tutti» conta solo chi ha la seduta quel giorno', () => {
+    const altri = [...ass, { id: 'x', status: 'pending', completed_date: dopodomani }]
+    render(<FoglioSposta modo="coach" nomeAtleta="Marco" titolo="Corsa" dataAttuale={domani}
+      assegnazioni={altri} onChiudi={vi.fn()} onConferma={vi.fn()} />)
+    expect(screen.getByRole('radio', { name: 'Tutti (3)' })).toBeInTheDocument()
+  })
+
+  it('niente scelta se quel giorno ce l\'ha solo lui', () => {
+    const soli = [ass[0], { id: 'x', status: 'pending', completed_date: dopodomani }]
+    render(<FoglioSposta modo="coach" nomeAtleta="Marco" titolo="Corsa" dataAttuale={domani}
+      assegnazioni={soli} onChiudi={vi.fn()} onConferma={vi.fn()} />)
+    expect(screen.queryByRole('radiogroup')).toBeNull()
   })
 })
