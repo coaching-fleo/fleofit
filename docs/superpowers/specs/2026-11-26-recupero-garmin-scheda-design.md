@@ -69,8 +69,8 @@ fuori norma ha la sfumatura arancione e il bordo arancione al 28%.
   non si tingono mai e la loro pillola resta grigia: niente soglie nuove inventate.
 - **Le colonnine arancioni** sono i giorni della fila del segnale, nient'altro.
 - **La media** è quella di `serieRecupero` (28 giorni, almeno 14 valori). Senza media:
-  niente pillola né riga tratteggiata, e al posto della frase «Servono 14 notti per
-  conoscere la sua media: ne ha N» (la soglia con il progresso, regola dello zero).
+  niente pillola né riga tratteggiata, e al posto della frase «Servono 15 notti per
+  conoscere la sua media: ne ha N» (corretto dopo la revisione: la media vuole 14 valori prima dell'ultima notte) (la soglia con il progresso, regola dello zero).
 - **Nessun segnale e media nota**: la tessera della frase c'è, neutra, «Tutto nella sua
   norma nelle ultime notti».
 - **Un dato che manca non ha tessera** (né zero né «—» al posto del numero). Senza

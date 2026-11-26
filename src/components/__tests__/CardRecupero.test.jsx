@@ -82,6 +82,14 @@ describe('CardRecupero', () => {
     expect(tessera.textContent).not.toMatch(/\d\s*\/\s*5/)
   })
 
+  it('una tessera col dato vecchio dice il giorno, anche se il sonno è di stanotte', () => {
+    const righe = Array.from({ length: 20 }, (_, i) => completa(i))
+      .map(r => (r.giorno >= giorno(2) ? { ...r, hrv: undefined } : r))
+    disegna(righe)
+    expect(within(document.querySelector('[data-tessera="hrv"]')).getByText('lun 26')).toBeTruthy()
+    expect(within(document.querySelector('[data-tessera="fc"]')).queryByText(/lun|mar|mer|gio|ven|sab|dom/)).toBeNull()
+  })
+
   it('ultimo dato vecchio → il giorno al posto di stanotte', () => {
     disegna(Array.from({ length: 20 }, (_, i) => completa(i + 3)))
     expect(screen.getByText(/Ultimo dato: lun 26/)).toBeTruthy()

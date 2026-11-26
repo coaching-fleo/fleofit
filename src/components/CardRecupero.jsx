@@ -98,12 +98,14 @@ function testoScarto(chiave, scarto) {
   return chiave === 'hrv' ? `${segno(scarto)}% sulla media` : `${segno(scarto)} sulla media`
 }
 
-function TesseraNumero({ t }) {
+function TesseraNumero({ t, oggi }) {
   const d = TESSERE[t.chiave]
   const pillola = testoScarto(t.chiave, t.scarto)
+  // Il giorno solo se il dato non è di stanotte: le tessere possono avere date diverse.
+  const quando = etichettaGiorno(t.giorno, oggi)
   return (
     <Tessera fuori={t.fuori} data-tessera={t.chiave}>
-      <Capo icona={d.icona} nome={d.nome} fuori={t.fuori} />
+      <Capo icona={d.icona} nome={d.nome} fuori={t.fuori} dettaglio={quando === 'stanotte' ? null : quando} />
       <b className={CIFRA}>{d.valore(t.valore)}{d.unita && <small className={UNITA}>{d.unita}</small>}</b>
       {pillola && <Pillola testo={pillola} fuori={t.fuori} />}
       <Colonnine notti={t.notti} media={t.media} fuori={t.fuori} etichetta={`${d.nome}, ultime 7 notti`} />
@@ -211,7 +213,7 @@ export default function CardRecupero({ riepilogo, oggi = new Date(), proprio = f
       {sonno && <TesseraSonno s={sonno} oggi={oggi} />}
       {tessere.length > 0 && (
         <div className="grid grid-cols-2 gap-2.5">
-          {tessere.map(t => <TesseraNumero key={t.chiave} t={t} />)}
+          {tessere.map(t => <TesseraNumero key={t.chiave} t={t} oggi={oggi} />)}
         </div>
       )}
       {comeStai && <TesseraComeStai risposte={comeStai} proprio={proprio} />}

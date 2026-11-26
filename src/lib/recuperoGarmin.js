@@ -15,7 +15,8 @@ export const ORE_SONNO = 6
 export const FILA_MASSIMA = 14
 
 export const METRICHE = [
-  { chiave: 'sonno', etichetta: 'Sonno', unita: 'h', leggi: r => r.sonno?.ore },
+  // Zero ore = l'orologio non era al polso (giornateGarmin.ts somma fasi tutte a 0): un dato che manca.
+  { chiave: 'sonno', etichetta: 'Sonno', unita: 'h', leggi: r => { const v = r.sonno?.ore; return v == null || v > 0 ? v : null } },
   { chiave: 'hrv', etichetta: 'HRV notturna', unita: 'ms', leggi: r => r.hrv?.media_notte },
   { chiave: 'fc', etichetta: 'FC a riposo', unita: 'bpm', leggi: r => r.giornata?.fc_riposo },
 ]

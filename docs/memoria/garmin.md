@@ -654,7 +654,12 @@ dati («in base a quello che propongono le altre app e a quello che vogliono i c
   Body Battery (carica della notte) e stress non hanno una soglia: mai tinti, niente soglie inventate.
 - **La media** di una tessera: i 28 giorni prima della fila del suo segnale; senza segnale, i 28
   prima dell'ultimo giorno con un dato (notti basse comprese). Meno di 14 valori: niente media,
-  e la frase dice «Servono 14 notti… ne ha N».
+  e la frase dice «Servono 15 notti… ne ha N» (14 valori PRIMA dell'ultima notte: 15 in tutto;
+  N è la metrica più avanti, contata come la conta la media).
+- **Dati fermi**: se l'ultimo dato di tutta la sezione è più vecchio di ieri, la frase dice «Nessun
+  dato dall'orologio dopo lun 19» e non «nella norma». Ogni tessera col dato non di stanotte dice il giorno.
+- **Zero = manca**: 0 ore di sonno (orologio tolto) e Body Battery 0 sono dati assenti, anche per i
+  segnali della Home (`METRICHE` di `recuperoGarmin.js`); una fase del sonno a 0 non compare.
 - **«Come ha detto di stare»**: solo la risposta di oggi, **a parole** (regola di `comeStai.js`).
 - Il cursore sulla normalità è stato provato e scartato («poco intuitivo»), la linea dei 28 giorni pure.
 - Garmin non manda la sequenza delle fasi del sonno, solo i totali: niente grafico a scalini.
