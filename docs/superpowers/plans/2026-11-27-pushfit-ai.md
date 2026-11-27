@@ -36,6 +36,7 @@ La spec ha sei fasi indipendenti (§13). Qui:
 - `src/lib/pianoIA/` non importa React, Capacitor, Supabase, `jspdf`, `html-to-image`: è logica pura.
 - `supabase/functions/_shared/pianoIA/richieste.ts` **senza import** (si prova con vitest e si usa da Deno).
 - Modelli, ID esatti: `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-opus-5-5`; Groq `openai/gpt-oss-120b`.
+- **Scelta del committente (27/11/2026): Sonnet 5.5 per il compito forte, Haiku 5.5 per il leggero.** Il modello non si scrive mai nel codice dei compiti: si legge da `MODELLI` (Task 8), così cambiarlo è una configurazione.
 - Prezzi in $ per milione di token (spec §8.1): Haiku 5.5 0,10 / 0,50; Sonnet 5.5 2 / 10, cache 0,10; Opus 5.5 4 / 20, cache 0,20; Batch −50%.
 - Su Sonnet 5.5 e Opus 5.5: niente `thinking: disabled`, niente `tool_choice` forzato → **`output_config.format`** con schema JSON; `fallbacks: "default"` con beta `server-side-fallback-2026-07-01` sulle chiamate **non** batch (il Batch lo rifiuta).
 - L'RPE si legge **solo** con `rpeDichiarato` (`src/lib/rpe.js`); la durata **solo** con `durataBlocco` / `rpeAtteso` di `src/lib/stimaWorkout.js`; i nomi con `trovaEsercizio`.
@@ -339,6 +340,9 @@ it('modello sconosciuto → eccezione con il nome', () => expect(() => costoChia
 **Interfaces:**
 - Consumes: forme di `profiloPerIA` (Task 1), `SedutaBase` (Task 2), `SCHEMA_DIFFERENZE` (Task 5; lo schema si **copia** nel `.ts`, e un test controlla che i due coincidano, come `colori.test.js`)
 - Produces:
+  - `COMPITI = ['adattamento', 'revisione', 'rete', 'analisi']` e `MODELLI_PREDEFINITI = { adattamento: 'claude-sonnet-5-5', revisione: 'claude-sonnet-5-5', rete: 'claude-sonnet-5-5', analisi: 'claude-haiku-5-5' }`
+  - `modelloPer(compito, env: Record<string,string|undefined>) -> string` — legge `PIANO_IA_MODELLO_<COMPITO>` (es. `PIANO_IA_MODELLO_ANALISI`) se presente, altrimenti il predefinito; un compito sconosciuto lancia. Cambiare modello = cambiare un secret della Edge Function, senza aggiornare l'app
+  - `fornitoreDi(modello) -> 'anthropic'|'groq'` (dal prefisso: `claude-` → anthropic, `openai/gpt-oss` → groq); un modello senza fornitore noto lancia. Un fornitore nuovo (OpenAI, Mistral, Google) = una funzione `richiesta<Fornitore>` e un ramo qui, nient'altro
   - `ISTRUZIONI_ADATTAMENTO: string`, `ISTRUZIONI_ANALISI: string` — testo fisso, **nessuna data né dato utente** (prefisso in cache)
   - `richiestaAdattamento({ modello, regole, sedute: SedutaBase[], profilo, batch = false }) -> object` — corpo per `client.messages.create`: `system` = istruzioni + regole del team con `cache_control: { type: 'ephemeral' }`; un messaggio `user` con profilo e sedute in JSON; `output_config: { format: { type: 'json_schema', schema: { sedute: [{ posto, differenze, perche }] } }, effort: 'medium' }`; `max_tokens: 16000`; senza `batch`, anche `betas: ['server-side-fallback-2026-07-01']` e `fallbacks: 'default'`
   - `richiestaAnalisi({ modello, riassunto, seduta, prossime: SedutaBase[] }) -> object` — stessa forma, `effort: 'low'`, `max_tokens: 4000`, schema `{ prossime: [{ posto, differenze }], frase: string }` (la frase per l'utente, ≤ 140 caratteri)
@@ -353,6 +357,15 @@ it('in batch niente fallbacks; fuori batch fallbacks default', () => { … })
 it('nessun thinking disabled e nessun tool_choice', () => { const r = richiestaAdattamento(a); expect(r.thinking).toBeUndefined(); expect(r.tool_choice).toBeUndefined() })
 it('lo schema delle differenze coincide con SCHEMA_DIFFERENZE di src/lib/pianoIA/differenze.js', () => { … })
 it('leggiRisposta: refusal, max_tokens e JSON rotto non lanciano', () => { … })
+it('modelloPer: predefinito Sonnet/Haiku, sovrascritto dalla variabile del compito', () => {
+  expect(modelloPer('analisi', {})).toBe('claude-haiku-5-5')
+  expect(modelloPer('revisione', { PIANO_IA_MODELLO_REVISIONE: 'claude-opus-5-5' })).toBe('claude-opus-5-5')
+  expect(() => modelloPer('chat', {})).toThrow('chat')
+})
+it('fornitoreDi riconosce Claude e Groq e rifiuta un modello ignoto', () => {
+  expect(fornitoreDi('claude-haiku-5-5')).toBe('anthropic'); expect(fornitoreDi('openai/gpt-oss-120b')).toBe('groq')
+  expect(() => fornitoreDi('gpt-6-luna')).toThrow()
+})
 ```
 - [ ] **Step 2: FAIL.** `npx vitest run src/lib/pianoIA/__tests__/richieste.test.js`
 - [ ] **Step 3: Implementare.** Le istruzioni dicono, in italiano: rispetta la struttura del programma del coach; cambia solo quello che il profilo richiede (attrezzatura, esclusioni, carichi per categoria e sesso, volume per livello, stazioni deboli); rispondi solo con differenze; nomi degli esercizi solo dal picker; mai diagnosi. Le istruzioni di formato dei blocchi si riprendono da `CATEGORIE_IA` di `ai-workout/regole.ts` dove servono.

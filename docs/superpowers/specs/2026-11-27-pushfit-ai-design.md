@@ -44,6 +44,7 @@ anche allora dentro le regole del team.
 | D8 | Il prezzo lo propone questo design, con i margini (§10) |
 | D9 | Motore: **programmi del team adattati dall'IA (1)**, con lo **scheletro + regole (2) come rete di sicurezza** (§5) |
 | D10 | Lo sviluppo si fa sul branch `pushfit-ai` |
+| D11 | Modelli: **Claude Sonnet 5.5** per piano, revisione e rete di sicurezza; **Claude Haiku 5.5** per l'analisi dopo la seduta. Il modello di ogni compito è una configurazione (secret `PIANO_IA_MODELLO_<COMPITO>`), cambiabile senza aggiornare l'app, dopo una prova sul banco (§8.4) |
 
 Scelte fatte in questo design (correggibili, segnate «proposta»): registrazione aperta,
 nessuna approvazione umana del singolo piano, admin che approva le regole del team,
@@ -287,6 +288,13 @@ Per ogni modello candidato:
 - giudizio alla cieca di 2 coach del team: «la firmerei / con piccole correzioni / la rifarei»
   — soglia ≥ 80% senza «la rifarei»;
 - token e tempo misurati → i costi veri del §9 sostituiscono le stime.
+
+### 8.4 Cambiare modello un giorno
+- **Dentro Anthropic** (es. Haiku → un Haiku nuovo, Sonnet → Opus per la revisione): si cambia il secret `PIANO_IA_MODELLO_<COMPITO>` della Edge Function. Minuti, nessun aggiornamento dell'app sugli Store.
+- **Un altro fornitore** (OpenAI, Mistral, Google): si aggiunge la sua funzione di richiesta accanto a quella di Claude (le istruzioni e lo schema delle differenze restano gli stessi) e un ramo in `fornitoreDi`. Circa un giorno di lavoro.
+- **Prima di ogni cambio**: giro del banco di prova sul modello nuovo (stesse soglie del §8.2, costo pochi dollari) e confronto con quello attuale.
+- **Poi gradualmente**: una quota di utenti sul modello nuovo, confrontando in `uso_ia` e `piano_sedute.modello` costo, sedute tornate alla versione del team e allarmi. Tornare indietro = rimettere il secret di prima.
+- Si salva sempre **quale modello** ha scritto ogni seduta, così ogni confronto si fa sui dati.
 
 ### 8.3 Fine-tuning: no
 Le regole del team devono valere subito; un coach scrive decine di workout, non migliaia;
