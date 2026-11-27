@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PUSHFIT · prova del piano IA (solo locale)</title>
+<!--
+  Pagina di prova SOLO LOCALE della fase 0 del piano IA (branch pushfit-ai).
+  Non fa parte dell'app né del sito: Vite la serve in sviluppo perché sta
+  nella cartella del progetto, ma il build prende solo index.html.
+  Usa la logica vera di src/lib/pianoIA e i programmi INVENTATI del banco.
+  Nessuna chiamata all'IA, nessun dato vero, niente database.
+-->
+<link rel="stylesheet" href="./stile.css">
+</head>
+<body>
+  <header class="testata">
+    <div>
+      <p class="etichetta">Solo in locale · nessuna IA chiamata · dati inventati</p>
+      <h1>Il piano <span class="giallo">IA</span>, provato a mano</h1>
+      <p class="sotto">A sinistra rispondi al questionario come un utente nuovo. A destra vedi cosa fa il codice: quale programma del team sceglie, le settimane, e quali sedute l'IA dovrà adattare. In fondo simuli un allenamento fatto.</p>
+    </div>
+    <label class="caso">Parti da un caso del banco
+      <select id="caso"></select>
+    </label>
+  </header>
+
+  <main class="griglia">
+    <form id="questionario" class="colonna" autocomplete="off"></form>
+    <section class="colonna" id="piano"></section>
+  </main>
+
+  <section class="dopo">
+    <h2>Dopo l'allenamento <span class="grigio">— cosa arriva all'IA e quali allarmi partono</span></h2>
+    <div class="griglia">
+      <form id="feedback" class="colonna"></form>
+      <div class="colonna" id="analisi"></div>
+    </div>
+  </section>
+
+  <script type="module" src="./pagina.js"></script>
+</body>
+</html>

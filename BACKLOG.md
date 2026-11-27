@@ -61,6 +61,13 @@
 > [PRODUCT.md](PRODUCT.md) · Design system: [DESIGN.md](DESIGN.md)
 
 
+## 💡 PUSHFIT AI — i test degli atleti, da sviluppare col coach (27/11/2026)
+Il coach li vuole **fondamentali**, ma li definirà più avanti, anche con proposte nostre. Linee guida già date
+(`docs/superpowers/specs/2026-11-27-metodo-team.md`, §7): diversi per **doppia** (3000 m di corsa, 1000 m di
+SkiErg e di Rower, 50 wall ball) e **singola** (5000 m di corsa, 2000 m di SkiErg e di Rower, 100 wall ball).
+Mancano: ogni quanto, come misurare forza e rapporto peso-potenza, come i risultati cambiano il piano.
+Perché conta: senza test il piano non sa chi ha davanti (§6.7). Blocca: le decisioni del coach.
+
 ## ⏳ Promemoria notifiche — provare sul telefono (19/11/2026)
 Arriva con la 1.2.5. Prove del committente, su iPhone e Android:
 1. Account atleta senza notifiche (permesso mai chiesto), con un workout assegnato: apri l'app → compare «Non perderti un allenamento»; «Attiva» → richiesta del sistema → le push arrivano.
