@@ -777,6 +777,7 @@ Poi `tools/verifica-ipa.sh` sull'`.ipa` esportato.
 | `useDesktop.js`, `BarraLaterale`, `HomeCoachDesktop`, `CalendarioTeam`, `calendarioTeam.js`, `cosaGuardare.js`, `CreaWorkoutDesktop`, `AtletiDesktop`, `ArchivioDesktop`, `tabellaAtleti.js`, ogni cosa della versione desktop (solo coach) | `../piano-web-desktop.md` |
 | `Landing.jsx`, `Landing.css`, `LandingApp.jsx`, `landingDati.js`, `src/assets/landing/`, `tools/landing-schermate/` | `landing.md` |
 | `cestino.js`, `cestinoDb.js`, `Cestino.jsx`, `CestinoUI`, `FoglioRipristino`, il trigger `cestino_copia`, `tools/verifica-cestino.sql`, il testo della conferma di eliminazione nella scheda | `cestino.md` |
+| `src/lib/pianoIA/`, `supabase/functions/_shared/pianoIA/`, `tools/prova-piano-ia/` (solo sul branch `pushfit-ai`) | `piano-ia.md` |
 | merge, `main`, Vercel | `branch.md` |
 | dove sta un file e a cosa serve | `struttura.md` |
 | le funzionalità per sommi capi | `funzionalita.md` |
