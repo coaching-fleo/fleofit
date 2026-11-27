@@ -107,6 +107,8 @@ import { RiepilogoWorkout, BarraAzioni, CtaPrimaria, BottoneQuadrato } from '../
 import { partiRipetuta, etichettaParte } from '../lib/ripetute'
 import { filtraPerNome, primaIo } from '../lib/rigaAtleta'
 import FoglioAssegnati from '../components/FoglioAssegnati'
+import FoglioAtletaAssegnato from '../components/FoglioAtletaAssegnato'
+import { riscontroAssegnazione } from '../lib/riscontroAtleta'
 import { leggiTemplatePdf, intestazioneCoach, scriviNoteAggiuntive } from '../lib/templatePdf'
 import { CampoRicerca } from '../components/ArchivioUI'
 import { ChipGruppi, FoglioNomeGruppo } from '../components/GruppiUI'
@@ -381,6 +383,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
   // «Vedi tutti gli atleti» di «Assegnato a»: oltre MAX_RIGHE_ASSEGNAZIONI la
   // scheda ne mostra pochi, l'elenco intero (con la ricerca) sta nel foglio.
   const [tuttiAssegnati, setTuttiAssegnati] = useState(false)
+  // L'atleta di «Assegnato a» toccato: il suo foglio (nota, vocale, scheda atleta).
+  const [assegnatoAperto, setAssegnatoAperto] = useState(null)
   const [assignments, setAssignments] = useState([])
   const [currentAthleteName, setCurrentAthleteName] = useState('')
 
@@ -2290,6 +2294,8 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
     const aperto = assignments.find(a => a.athletes?.id && a.athletes.id === queryAthleteId)
     return aperto && !primi.includes(aperto) ? [...primi.slice(0, -1), aperto] : primi
   })()
+  // Letto da `assignments` a ogni giro: tolta l'assegnazione col cestino, il foglio sparisce da sé.
+  const assegnatoScelto = assegnatoAperto ? assignments.find(a => a.id === assegnatoAperto) || null : null
   const rigaAssegnazione = (a) => (
     <RigaAssegnazione
       key={a.id}
@@ -2298,10 +2304,7 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       dettaglio={dettaglioAssegnazione(a)}
       fatto={a.status === 'completed'}
       selezionata={queryAthleteId === a.athletes?.id}
-      onApri={() => {
-        setTuttiAssegnati(false)
-        navigate(`/workout/${id}?athlete_id=${a.athletes?.id}`, { replace: true })
-      }}
+      onApri={() => setAssegnatoAperto(a.id)}
       azione={eStaff(role) ? (<>
         {coachPuoSpostare && (
           <button aria-label={`Sposta la data di ${a.athletes?.name || 'atleta'}`}
@@ -2343,6 +2346,17 @@ const [selectedAthletes, setSelectedAthletes] = useState([])
       {tuttiAssegnati && assegnatiTroppi && (
         <FoglioAssegnati assegnati={assignments} rigaDi={rigaAssegnazione}
           onChiudi={() => setTuttiAssegnati(false)} />
+      )}
+      {assegnatoScelto && (
+        <FoglioAtletaAssegnato r={riscontroAssegnazione(assegnatoScelto)} laterale={desktop}
+          selezionato={queryAthleteId === assegnatoScelto.athletes?.id}
+          onChiudi={() => setAssegnatoAperto(null)}
+          onScheda={() => navigate(`/athletes/${assegnatoScelto.athletes?.id}`)}
+          onAllenamento={() => {
+            setAssegnatoAperto(null)
+            setTuttiAssegnati(false)
+            navigate(`/workout/${id}?athlete_id=${assegnatoScelto.athletes?.id}`, { replace: true })
+          }} />
       )}
     </>
   )

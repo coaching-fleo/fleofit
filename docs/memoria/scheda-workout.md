@@ -991,3 +991,18 @@ Ritorno alla TV di prima: `docs/superpowers/plans/2026-11-26-tv-redesign-ritorno
 
 ## Il coach sposta la data dalla scheda (26/11/2026)
 La data in testa è il comando («Cambia data»), più la voce nel menu ⋯ e il calendarietto in «Assegnato a». Tutto in `calendario.md` §9-sposta-coach.
+
+
+## Toccare un atleta di «Assegnato a» apre il suo foglio (26/11/2026)
+Richiesta del committente: dalla scheda workout, toccando un atleta, leggere la sua nota se l'ha
+completato, ascoltare il vocale, o aprire la sua scheda atleta.
+- `components/FoglioAtletaAssegnato.jsx`, con la **cornice del foglio dei feedback della Home**
+  (`FoglioListaCoach`: `useBottomSheet`, gradiente, maniglia, X `aria-label="Chiudi"`); pannello a destra sul desktop.
+- I dati li prepara `riscontroAssegnazione` di `src/lib/riscontroAtleta.js`: RPE con `rpeDichiarato`
+  (mai un 5 di ripiego), gradimento, testo senza marcatori né righe della gara (`senzaRisultato`).
+- Il vocale si **ascolta** soltanto (`CustomAudioPlayer` senza `onDelete`): si elimina dalla scheda sull'atleta.
+- Il tocco di prima (cambiare la scheda su quell'atleta, `replace`) è diventato «Vedi il suo allenamento»,
+  nascosto se la scheda mostra già lui. «Apri la scheda atleta» → `/athletes/:id`; anche la testata ci porta.
+- z-[145]: si apre anche sopra `FoglioAssegnati` (140), sotto il `CustomConfirm` (150).
+- Il foglio legge l'assegnazione da `assignments` per id: tolta col cestino, sparisce da solo.
+- Test: `WorkoutDetailAssegnati.test.jsx`, `riscontroAtleta.test.js`. **Non provato sul telefono vero.**

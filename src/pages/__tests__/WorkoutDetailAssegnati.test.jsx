@@ -50,7 +50,10 @@ function apri(indirizzo = '/workout/w1') {
   return render(
     <MemoryRouter initialEntries={[indirizzo]}>
       <AuthContext.Provider value={{ user: { id: 'coach', email: 'c@f.it', user_metadata: {} }, role: 'admin' }}>
-        <Routes><Route path="/workout/:id" element={<WorkoutDetail />} /></Routes>
+        <Routes>
+          <Route path="/workout/:id" element={<WorkoutDetail />} />
+          <Route path="/athletes/:id" element={<p>Scheda atleta aperta</p>} />
+        </Routes>
       </AuthContext.Provider>
     </MemoryRouter>
   )
@@ -110,5 +113,68 @@ describe('«Assegnato a» nella scheda workout', () => {
     await waitFor(() => expect(tasto()).toBeInTheDocument())
     expect(screen.getAllByText('Giulia Ricci').length).toBeGreaterThan(0)
     expect(screen.queryByText('Paolo Neri')).toBeNull()
+  })
+})
+
+// Toccare un atleta (26/11/2026, richiesta del committente): si apre il suo
+// foglio con la nota, il vocale e il passaggio alla scheda atleta. Prima il
+// tocco cambiava subito la scheda: ora è «Vedi il suo allenamento».
+describe('il foglio dell\'atleta toccato in «Assegnato a»', () => {
+  const fatto = () => {
+    const [primo, ...resto] = assegnazioni(3)
+    return [{ ...primo, status: 'completed', completed_date: '2026-09-01',
+      notes: '[RPE: 8/10]\n[GRADIMENTO: si]\nGambe pesanti', voice_note_url: 'https://x/v.m4a' }, ...resto]
+  }
+  const tocca = async (nome) => {
+    await waitFor(() => expect(screen.getByText(nome)).toBeInTheDocument())
+    await userEvent.click(screen.getByText(nome))
+    return screen.getByRole('dialog', { name: nome })
+  }
+
+  it('mostra la nota senza marcatori, l\'RPE, il gradimento e il vocale', async () => {
+    ctrl.stato.assegnazioni = fatto()
+    apri()
+    const foglio = await tocca('Marco Rossi')
+    expect(within(foglio).getByText('Gambe pesanti')).toBeInTheDocument()
+    expect(within(foglio).getByText('8')).toBeInTheDocument()
+    expect(within(foglio).getByText('Gli è piaciuto')).toBeInTheDocument()
+    expect(within(foglio).getByRole('button', { name: 'Riproduci la nota vocale' })).toBeInTheDocument()
+    // Qui si ascolta e basta: il cestino del vocale non c'è.
+    expect(within(foglio).queryByRole('button', { name: 'Elimina la nota vocale' })).toBeNull()
+    expect(foglio.textContent).not.toContain('GRADIMENTO')
+  })
+
+  it('a chi non l\'ha fatto dice che non l\'ha ancora completato, senza vocale', async () => {
+    ctrl.stato.assegnazioni = fatto()
+    apri()
+    const foglio = await tocca('Luca Bianchi')
+    expect(within(foglio).getByText('Non l\'ha ancora completato.')).toBeInTheDocument()
+    expect(within(foglio).queryByRole('button', { name: 'Riproduci la nota vocale' })).toBeNull()
+  })
+
+  it('«Apri la scheda atleta» porta alla scheda atleta', async () => {
+    ctrl.stato.assegnazioni = fatto()
+    apri()
+    const foglio = await tocca('Marco Rossi')
+    await userEvent.click(within(foglio).getByRole('button', { name: /Apri la scheda atleta/ }))
+    expect(await screen.findByText('Scheda atleta aperta')).toBeInTheDocument()
+  })
+
+  it('«Vedi il suo allenamento» chiude il foglio e apre la scheda su di lui', async () => {
+    ctrl.stato.assegnazioni = fatto()
+    apri()
+    const foglio = await tocca('Luca Bianchi')
+    await userEvent.click(within(foglio).getByRole('button', { name: /Vedi il suo allenamento/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Luca Bianchi' })).toBeNull())
+  })
+
+  it('aperto dal foglio «Vedi tutti», ci si apre sopra', async () => {
+    ctrl.stato.assegnazioni = assegnazioni(8)
+    apri()
+    await waitFor(() => expect(tasto()).toBeInTheDocument())
+    await userEvent.click(tasto())
+    const tutti = screen.getByRole('dialog', { name: 'Tutti gli assegnati' })
+    await userEvent.click(within(tutti).getByText('Giulia Ricci'))
+    expect(screen.getByRole('dialog', { name: 'Giulia Ricci' })).toBeInTheDocument()
   })
 })
