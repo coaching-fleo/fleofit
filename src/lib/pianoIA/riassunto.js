@@ -7,8 +7,27 @@
 
 import { rpeDichiarato, testoNota } from '../rpe.js'
 import { rpeAtteso } from '../stimaWorkout.js'
+import { punteggio } from '../comeStai.js'
 
 export const PAROLE_DOLORE = ['dolore', 'male', 'fitta', 'infortun', 'strappo', 'tendin', 'gonfio']
+
+// Si cerca la PAROLA, non le lettere: «normale» e «animale» contengono «male».
+// Ogni voce vale come inizio di parola senza l'ultima vocale («dolori», «fitte»,
+// «gonfiore»); «male» solo intera («male», «mali»). E una negazione subito
+// prima la spegne: «nessun dolore», «senza fitte», «non ho male», «non mi fa male».
+// Nel dubbio si avvisa: perdersi un dolore vero costa più di una domanda in più.
+const NEGAZIONI = ['nessun', 'nessuno', 'nessuna', 'niente', 'senza', 'zero']
+const eDolore = (parola) => PAROLE_DOLORE.some(p => (p === 'male'
+  ? /^mal[ei]$/.test(parola)
+  : parola.startsWith(/[aeiou]$/.test(p) ? p.slice(0, -1) : p)))
+const negata = (t, i) => NEGAZIONI.includes(t[i - 1]) || NEGAZIONI.includes(t[i - 2]) ||
+  (t[i - 2] === 'non' && t[i - 1] === 'ho') || (t[i - 3] === 'non' && t[i - 2] === 'mi' && t[i - 1] === 'fa')
+
+/** C'è una parola di dolore non negata nella nota? */
+export function parlaDiDolore(testo) {
+  const t = (testo || '').toLowerCase().split(/[^a-zàèéìòù]+/).filter(Boolean)
+  return t.some((parola, i) => eDolore(parola) && !negata(t, i))
+}
 
 const GIORNO_MS = 24 * 60 * 60 * 1000
 const giornoDi = (oggi, meno = 0) => new Date(Date.UTC(oggi.getUTCFullYear(), oggi.getUTCMonth(), oggi.getUTCDate()) - meno * GIORNO_MS)
@@ -29,7 +48,9 @@ function aderenza(sedute, oggi, giorni) {
   return finestra.length ? finestra.filter(fatta).length / finestra.length : null
 }
 
-const mediaComeStai = (c) => (c.sonno + c.energia + c.dolori + c.stress) / 4
+// Una risposta saltata è null e resta fuori dalla media (come in comeStai.js):
+// contarla 0 farebbe «stare male» chi ha solo saltato una domanda.
+const mediaComeStai = (c) => punteggio(c)
 
 export function riassuntoFeedback({ sedute = [], comeStai = [], oggi }) {
   const prima = passate(sedute, oggi)
@@ -46,7 +67,7 @@ export function riassuntoFeedback({ sedute = [], comeStai = [], oggi }) {
     aderenza28: aderenza(sedute, oggi, 28),
     rpeScarto: unDecimale(media(scarti)),
     carichi: { meno: recenti.filter(s => s.carichi === 'meno').length, piu: recenti.filter(s => s.carichi === 'piu').length },
-    comeStaiMedia: unDecimale(media((comeStai || []).filter(c => c.data >= da7).map(mediaComeStai))),
+    comeStaiMedia: unDecimale(media((comeStai || []).filter(c => c.data >= da7).map(mediaComeStai).filter(v => v !== null))),
     sedutePassate: prima.length,
   }
 }
@@ -56,7 +77,8 @@ export function allarmi({ sedute = [], comeStai = [], oggi }) {
   const cs = [...(comeStai || [])].sort((a, b) => b.data.localeCompare(a.data))
   if (cs.length >= 2 && cs[0].data >= giornoDi(oggi, 2)) {
     const consecutivi = (new Date(cs[0].data) - new Date(cs[1].data)) === GIORNO_MS
-    if (consecutivi && mediaComeStai(cs[0]) <= 2 && mediaComeStai(cs[1]) <= 2) fuori.push('come_stai_basso')
+    const basso = (c) => { const v = mediaComeStai(c); return v !== null && v <= 2 }
+    if (consecutivi && basso(cs[0]) && basso(cs[1])) fuori.push('come_stai_basso')
   }
 
   const prima = passate(sedute, oggi)
@@ -68,8 +90,7 @@ export function allarmi({ sedute = [], comeStai = [], oggi }) {
     const dich = rpeDichiarato(ultima.notes)
     const atteso = rpeAtteso(ultima.blocks || [])
     if (dich !== null && atteso !== null && dich >= 9 && atteso <= 7) fuori.push('rpe_alto')
-    const nota = testoNota(ultima.notes).toLowerCase()
-    if (PAROLE_DOLORE.some(p => nota.includes(p))) fuori.push('dolore')
+    if (parlaDiDolore(testoNota(ultima.notes))) fuori.push('dolore')
   }
   return fuori
 }

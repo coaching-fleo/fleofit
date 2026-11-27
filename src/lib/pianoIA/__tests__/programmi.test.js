@@ -70,3 +70,11 @@ describe('validaProgramma', () => {
     expect(errori).toContain('settimana 3: minuti non validi')
   })
 })
+
+describe('revisione finale: programmi corti', () => {
+  it('un programma di 4 settimane con la gara fra 1 non si sceglie (la settimana gara cadrebbe dopo la gara)', () => {
+    const fasi = ['base', 'scarico', 'specifico', 'gara']
+    const corto = { ...p12x4, id: 'corto', settimane: fasi.map((fase, i) => ({ ...p12x4.settimane[i], n: i + 1, fase })) }
+    expect(scegliProgramma([corto], { ...profiloMigliorare, settimaneAllaGara: 1 })).toBeNull()
+  })
+})

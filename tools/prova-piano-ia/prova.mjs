@@ -16,6 +16,7 @@
 // ⚠️ I compiti con --modello COSTANO soldi veri: si lanciano con il sì del committente.
 
 import { mkdirSync, writeFileSync, readdirSync, readFileSync, appendFileSync } from 'node:fs'
+import { perCaso } from './perCaso.mjs'
 import { validaRisposte, controlloSicurezza, profiloPerIA } from '../../src/lib/pianoIA/questionario.js'
 import { scegliProgramma } from '../../src/lib/pianoIA/programmi.js'
 import { validaSeduta } from '../../src/lib/pianoIA/validaSeduta.js'
@@ -90,11 +91,10 @@ async function chiama(corpo, modello) {
 
 const costo = (modello, t) => costoChiamata({ modello, tokenIn: t.in, tokenInCache: t.cache, tokenOut: t.out })
 
-async function adattamento(modello, casi) {
-  const righe = []
-  for (const c of casi) {
+async function adattamento(modello, casi, salva) {
+  return perCaso(casi, async (c) => {
     const { profilo, scelta, settimana } = prepara(c)
-    if (!scelta) { righe.push({ caso: c.id, saltato: 'rete di sicurezza (fase 2)' }); continue }
+    if (!scelta) return { caso: c.id, saltato: 'rete di sicurezza (fase 2)' }
     const corpo = richiestaAdattamento({ modello, regole: REGOLE, sedute: settimana.sedute, profilo })
     const { message, secondi, token } = await chiama(corpo, modello)
     const r = leggiRisposta(message)
@@ -103,17 +103,15 @@ async function adattamento(modello, casi) {
       const esito = adattaSeduta(s.sections, proposta?.differenze ?? [], opzioniPer(c, s))
       return { posto: s.posto, origine: esito.origine, errori: esito.errori, perche: proposta?.perche ?? null, differenze: proposta?.differenze ?? [], sections: esito.sections }
     })
-    righe.push({ caso: c.id, modello, motivo: r.motivo, secondi, token, costo: costo(modello, token), sedute })
     console.log(`${c.id}  ${r.ok ? 'ok' : r.motivo}  ${secondi.toFixed(1)} s  ${costo(modello, token).toFixed(4)} $  adattate ${sedute.filter(s => s.origine === 'adattata').length}/${sedute.length}`)
-  }
-  return righe
+    return { caso: c.id, modello, motivo: r.motivo, secondi, token, costo: costo(modello, token), sedute }
+  }, salva)
 }
 
-async function analisi(modello, casi) {
-  const righe = []
-  for (const c of casi.filter(x => x.storico)) {
+async function analisi(modello, casi, salva) {
+  return perCaso(casi.filter(x => x.storico), async (c) => {
     const { scelta, settimana } = prepara(c)
-    if (!scelta) continue
+    if (!scelta) return null
     const storico = c.storico.map(s => ({ ...s, blocks: settimana.sedute[0].sections.blocks ?? [] }))
     const riassunto = riassuntoFeedback({ sedute: storico, comeStai: [], oggi: OGGI })
     const prossime = settimana.sedute.slice(0, 2)
@@ -125,14 +123,14 @@ async function analisi(modello, casi) {
       const proposta = r.ok ? (r.dati.prossime || []).find(x => x.posto === s.posto) : null
       return { posto: s.posto, ...adattaSeduta(s.sections, proposta?.differenze ?? [], opzioniPer(c, s)), differenze: proposta?.differenze ?? [] }
     })
-    righe.push({ caso: c.id, modello, riassunto, motivo: r.motivo, frase: r.dati?.frase ?? null, secondi, token, costo: costo(modello, token), prossime: esiti })
     console.log(`${c.id}  ${r.ok ? 'ok' : r.motivo}  ${secondi.toFixed(1)} s  «${r.dati?.frase ?? ''}»`)
-  }
-  return righe
+    return { caso: c.id, modello, riassunto, motivo: r.motivo, frase: r.dati?.frase ?? null, secondi, token, costo: costo(modello, token), prossime: esiti }
+  }, salva)
 }
 
 function riepilogo(compito, modello, righe) {
-  const fatte = righe.filter(r => !r.saltato)
+  // Le righe 'errore' (429, 5xx…) non hanno token né sedute: fuori dalle medie.
+  const fatte = righe.filter(r => !r.saltato && r.motivo !== 'errore')
   const sedute = fatte.flatMap(r => r.sedute ?? r.prossime ?? [])
   const salute = sedute.filter(s => !s.errori.some(e => e.tipo === 'esclusione' || e.tipo === 'attrezzatura')).length
   const altri = sedute.filter(s => !s.errori.some(e => e.tipo === 'formato' || e.tipo === 'nome' || e.tipo === 'durata')).length
@@ -183,10 +181,12 @@ else {
   fornitoreDi(modello)
   const solo = argomento('--solo')
   const casi = solo ? CASI.filter(c => c.id === solo) : CASI
-  const righe = compito === 'adattamento' ? await adattamento(modello, casi) : await analisi(modello, casi)
   mkdirSync(CARTELLA, { recursive: true })
   const nome = `${oggiVero}-${compito}-${modello.replace(/\//g, '_')}`
-  writeFileSync(new URL(`${nome}.json`, CARTELLA), JSON.stringify(righe, null, 2))
+  const salva = (righe) => writeFileSync(new URL(`${nome}.json`, CARTELLA), JSON.stringify(righe, null, 2))
+  const righe = compito === 'adattamento' ? await adattamento(modello, casi, salva) : await analisi(modello, casi, salva)
+  const errori = righe.filter(r => r.motivo === 'errore').length
+  if (errori) console.log(`\n⚠️ ${errori} casi finiti in errore (sono nel file, con il messaggio)`)
   const riga = riepilogo(compito, modello, righe)
   const file = new URL(`${oggiVero}-riepilogo.md`, CARTELLA)
   try { readFileSync(file) } catch {

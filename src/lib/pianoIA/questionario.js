@@ -16,6 +16,9 @@ export const DOMANDE_SICUREZZA = [
 ]
 
 const numero = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+// Tempi e anni: 0 o meno è un campo vuoto (Number('') === 0), non un dato.
+// Senza, «non so» diventerebbe un 5 km in 0:00 e un livello avanzato.
+const positivo = (v) => { const n = numero(v); return n !== null && n > 0 ? n : null }
 
 /** Controlla la forma delle risposte. Gli errori sono i nomi dei campi. */
 export function validaRisposte(r) {
@@ -42,7 +45,7 @@ export function controlloSicurezza(r) {
 
 export function livelloStimato(r) {
   const anni = numero(r?.anniAllenamento)
-  const hyrox = numero(r?.ultimoTempoHyroxMin)
+  const hyrox = positivo(r?.ultimoTempoHyroxMin)
   if ((hyrox !== null && hyrox < 75) || (anni !== null && anni >= 3)) return 'avanzato'
   if ((anni === null || anni < 1) && hyrox === null) return 'principiante'
   return 'intermedio'
@@ -83,9 +86,9 @@ export function profiloPerIA(r, oggi) {
     minutiSeduta: r.minutiSeduta,
     attrezzatura: { ...r.attrezzatura },
     stazioniDeboli: [...(r.stazioniDeboli || [])],
-    tempo5kSec: numero(r.tempo5kSec),
-    ultimoTempoHyroxMin: numero(r.ultimoTempoHyroxMin),
-    tempoObiettivoMin: numero(r.tempoObiettivoMin),
+    tempo5kSec: positivo(r.tempo5kSec),
+    ultimoTempoHyroxMin: positivo(r.ultimoTempoHyroxMin),
+    tempoObiettivoMin: positivo(r.tempoObiettivoMin),
     esclusioni: [...(r.esclusioni || [])],
   }
 }

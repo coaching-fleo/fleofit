@@ -81,6 +81,9 @@ export function scegliProgramma(programmi, profilo) {
   for (const p of programmi || []) {
     const punteggio = punteggioProgramma(p, profilo)
     if (punteggio < SOGLIA_PROGRAMMA) continue
+    // Se accorciando non si arriva alla data, la settimana gara cadrebbe dopo
+    // la gara vera: quel programma non va bene (meglio la rete di sicurezza).
+    if (famigliaPer(profilo) !== 'senza_gara' && settimaneUsate(p, profilo).length !== profilo.settimaneAllaGara) continue
     if (!migliore || punteggio > migliore.punteggio ||
         (punteggio === migliore.punteggio && giro(p, profilo) < giro(migliore.programma, profilo))) {
       migliore = { programma: p, punteggio }

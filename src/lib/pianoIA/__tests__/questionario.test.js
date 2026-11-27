@@ -72,3 +72,16 @@ describe('questionario', () => {
     expect(profiloPerIA({ ...base, eta: 64 }, new Date('2026-11-27')).fasciaEta).toBe('60+')
   })
 })
+
+describe('revisione finale: zero e negativi', () => {
+  it('un tempo Hyrox 0 (campo vuoto passato da Number) non fa un avanzato', () => {
+    expect(livelloStimato({ anniAllenamento: null, ultimoTempoHyroxMin: 0 })).toBe('principiante')
+  })
+
+  it('tempi e peso a 0 o negativi arrivano all’IA come null', () => {
+    const p = profiloPerIA({ ...base, tempo5kSec: 0, ultimoTempoHyroxMin: -5, tempoObiettivoMin: 0 }, new Date('2026-11-27T12:00:00Z'))
+    expect(p.tempo5kSec).toBeNull()
+    expect(p.ultimoTempoHyroxMin).toBeNull()
+    expect(p.tempoObiettivoMin).toBeNull()
+  })
+})

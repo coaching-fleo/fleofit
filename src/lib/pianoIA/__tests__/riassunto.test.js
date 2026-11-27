@@ -74,3 +74,27 @@ describe('allarmi', () => {
     expect(con([seduta('2026-11-26', 'completed', '[RPE: 6/10]\ntutto bene')])).toEqual([])
   })
 })
+
+describe('revisione finale: falsi allarmi', () => {
+  it('«Come stai» con una risposta saltata: la media ignora il vuoto, non lo conta 0', () => {
+    const r = riassuntoFeedback({ sedute: [], comeStai: [{ data: '2026-11-26', sonno: null, energia: 2, dolori: 2, stress: 2 }], oggi })
+    expect(r.comeStaiMedia).toBe(2)
+  })
+
+  it('ha dormito benissimo e saltato il resto per due giorni: nessun come_stai_basso', () => {
+    const riga = (data) => ({ data, sonno: 5, energia: null, dolori: null, stress: null })
+    expect(allarmi({ sedute: [], comeStai: [riga('2026-11-26'), riga('2026-11-27')], oggi })).not.toContain('come_stai_basso')
+  })
+
+  it('«normale», «animale», «nessun dolore»: nessun allarme dolore', () => {
+    for (const nota of ['[RPE: 6/10]\nSessione normale, tutto ok', 'forte come un animale', 'nessun dolore oggi', 'senza fitte, tutto bene']) {
+      expect(allarmi({ sedute: [seduta('2026-11-26', 'completed', nota)], oggi })).not.toContain('dolore')
+    }
+  })
+
+  it('«mi fa male il ginocchio» e «dolore alla spalla» restano allarmi', () => {
+    for (const nota of ['mi fa male il ginocchio', 'Dolore alla spalla', 'credo di avere una tendinite']) {
+      expect(allarmi({ sedute: [seduta('2026-11-26', 'completed', nota)], oggi })).toContain('dolore')
+    }
+  })
+})
