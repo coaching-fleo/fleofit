@@ -190,10 +190,12 @@ export function richiestaGroqAnalisi(
 }
 
 /** Legge la risposta di Claude: controlla lo stop_reason PRIMA del contenuto. */
-export function leggiRisposta(message: any): { ok: boolean, dati: any, motivo: 'refusal' | 'max_tokens' | 'json' | null } {
+type Messaggio = { stop_reason?: string, content?: { type?: string, text?: string }[] } | null | undefined
+
+export function leggiRisposta(message: Messaggio): { ok: boolean, dati: Record<string, unknown> | null, motivo: 'refusal' | 'max_tokens' | 'json' | null } {
   if (message?.stop_reason === 'refusal') return { ok: false, dati: null, motivo: 'refusal' }
   if (message?.stop_reason === 'max_tokens') return { ok: false, dati: null, motivo: 'max_tokens' }
-  const blocco = Array.isArray(message?.content) ? message.content.find((b: any) => b?.type === 'text') : null
+  const blocco = Array.isArray(message?.content) ? message.content.find(b => b?.type === 'text') : null
   try {
     const dati = JSON.parse(blocco?.text ?? '')
     return dati && typeof dati === 'object' ? { ok: true, dati, motivo: null } : { ok: false, dati: null, motivo: 'json' }
