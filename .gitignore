@@ -27,3 +27,6 @@ dist-ssr
 .claude/
 .impeccable/config.local.json
 tools/app-store-schermate/out/
+
+# Banco di prova del piano IA: risultati locali delle prove (costano, non si versionano)
+tools/prova-piano-ia/risultati/
